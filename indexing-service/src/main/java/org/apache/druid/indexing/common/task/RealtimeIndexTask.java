@@ -42,8 +42,8 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TimeChunkLockAcquireAction;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.NoopQueryRunner;
 import org.apache.druid.query.Query;
@@ -56,6 +56,7 @@ import org.apache.druid.segment.realtime.FireDepartment;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.RealtimeMetricsMonitor;
 import org.apache.druid.segment.realtime.SegmentPublisher;
+import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
 import org.apache.druid.segment.realtime.firehose.ClippedFirehoseFactory;
 import org.apache.druid.segment.realtime.firehose.EventReceiverFirehoseFactory;
 import org.apache.druid.segment.realtime.firehose.TimedShutoffFirehoseFactory;
@@ -66,18 +67,22 @@ import org.apache.druid.segment.realtime.plumber.Plumbers;
 import org.apache.druid.segment.realtime.plumber.RealtimePlumberSchool;
 import org.apache.druid.segment.realtime.plumber.VersioningPolicy;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
+import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.utils.CloseableUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.util.Map;
+import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
 
+@Deprecated
 public class RealtimeIndexTask extends AbstractTask
 {
   public static final String CTX_KEY_LOOKUP_TIER = "lookupTier";
@@ -179,6 +184,17 @@ public class RealtimeIndexTask extends AbstractTask
   }
 
   @Override
+  @JsonIgnore
+  @Nonnull
+  public Set<ResourceAction> getInputSourceResources() throws UOE
+  {
+    throw new UOE(StringUtils.format(
+        "Task type [%s], does not support input source based security",
+        getType()
+    ));
+  }
+
+  @Override
   public String getNodeType()
   {
     return "realtime";
@@ -208,7 +224,7 @@ public class RealtimeIndexTask extends AbstractTask
   }
 
   @Override
-  public TaskStatus run(final TaskToolbox toolbox) throws Exception
+  public TaskStatus runTask(final TaskToolbox toolbox) throws Exception
   {
     runThread = Thread.currentThread();
 
@@ -246,9 +262,7 @@ public class RealtimeIndexTask extends AbstractTask
             "Cannot acquire a lock for interval[%s]",
             segment.getInterval()
         );
-        if (lock.isRevoked()) {
-          throw new ISE(StringUtils.format("Lock for interval [%s] was revoked.", segment.getInterval()));
-        }
+        lock.assertNotRevoked();
         toolbox.getSegmentAnnouncer().announceSegment(segment);
       }
 
@@ -275,9 +289,7 @@ public class RealtimeIndexTask extends AbstractTask
               "Cannot acquire a lock for interval[%s]",
               segment.getInterval()
           );
-          if (lock.isRevoked()) {
-            throw new ISE(StringUtils.format("Lock for interval [%s] was revoked.", segment.getInterval()));
-          }
+          lock.assertNotRevoked();
         }
         toolbox.getSegmentAnnouncer().announceSegments(segments);
       }
@@ -293,6 +305,16 @@ public class RealtimeIndexTask extends AbstractTask
             toolbox.getTaskActionClient().submit(new LockReleaseAction(segment.getInterval()));
           }
         }
+      }
+
+      @Override
+      public void announceSegmentSchemas(String taskId, SegmentSchemas sinksSchema, SegmentSchemas sinksSchemaChange)
+      {
+      }
+
+      @Override
+      public void removeSegmentSchemasForTask(String taskId)
+      {
       }
     };
 
@@ -319,9 +341,7 @@ public class RealtimeIndexTask extends AbstractTask
               "Cannot acquire a lock for interval[%s]",
               interval
           );
-          if (lock.isRevoked()) {
-            throw new ISE(StringUtils.format("Lock for interval [%s] was revoked.", interval));
-          }
+          lock.assertNotRevoked();
           return lock.getVersion();
         }
         catch (IOException e) {

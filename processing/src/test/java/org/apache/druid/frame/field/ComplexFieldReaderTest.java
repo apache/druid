@@ -104,12 +104,26 @@ public class ComplexFieldReaderTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void test_isNull_null()
+  {
+    writeToMemory(null);
+    Assert.assertTrue(new ComplexFieldReader(SERDE).isNull(memory, MEMORY_POSITION));
+  }
+
+  @Test
+  public void test_isNull_aValue()
+  {
+    writeToMemory("foo");
+    Assert.assertFalse(new ComplexFieldReader(SERDE).isNull(memory, MEMORY_POSITION));
+  }
+
+  @Test
   public void test_makeColumnValueSelector_null()
   {
     writeToMemory(null);
 
     final ColumnValueSelector<?> readSelector =
-        new ComplexFieldReader(SERDE).makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
+        new ComplexFieldReader(SERDE).makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION, -1));
 
     Assert.assertNull(readSelector.getObject());
   }
@@ -120,7 +134,7 @@ public class ComplexFieldReaderTest extends InitializedNullHandlingTest
     writeToMemory("foo");
 
     final ColumnValueSelector<?> readSelector =
-        new ComplexFieldReader(SERDE).makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
+        new ComplexFieldReader(SERDE).makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION, -1));
 
     Assert.assertEquals("foo", readSelector.getObject());
   }

@@ -29,7 +29,7 @@ import java.util.Objects;
 @JsonTypeName(InsertCannotBeEmptyFault.CODE)
 public class InsertCannotBeEmptyFault extends BaseMSQFault
 {
-  static final String CODE = "InsertCannotBeEmpty";
+  public static final String CODE = "InsertCannotBeEmpty";
 
   private final String dataSource;
 
@@ -38,7 +38,8 @@ public class InsertCannotBeEmptyFault extends BaseMSQFault
       @JsonProperty("dataSource") final String dataSource
   )
   {
-    super(CODE, "No rows to insert for dataSource [%s]", dataSource);
+    super(CODE, "No rows to insert for dataSource[%s]. Set failOnEmptyInsert : false"
+                + " in the query context to allow empty inserts.", dataSource);
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
   }
 

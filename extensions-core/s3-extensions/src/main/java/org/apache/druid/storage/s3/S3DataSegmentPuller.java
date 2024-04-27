@@ -22,8 +22,8 @@ package org.apache.druid.storage.s3;
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
+import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.S3Object;
-import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.io.ByteSource;
@@ -158,7 +158,7 @@ public class S3DataSegmentPuller implements URIDataPuller
     return new FileObject()
     {
       S3Object s3Object = null;
-      S3ObjectSummary objectSummary = null;
+      ObjectMetadata objectMetadata = null;
 
       @Override
       public URI toUri()
@@ -234,11 +234,10 @@ public class S3DataSegmentPuller implements URIDataPuller
         if (s3Object != null) {
           return s3Object.getObjectMetadata().getLastModified().getTime();
         }
-        if (objectSummary == null) {
-          objectSummary =
-              S3Utils.getSingleObjectSummary(s3Client, coords.getBucket(), coords.getPath());
+        if (objectMetadata == null) {
+          objectMetadata = S3Utils.getSingleObjectMetadata(s3Client, coords.getBucket(), coords.getPath());
         }
-        return objectSummary.getLastModified().getTime();
+        return objectMetadata.getLastModified().getTime();
       }
 
       @Override
@@ -267,9 +266,9 @@ public class S3DataSegmentPuller implements URIDataPuller
   {
     try {
       final CloudObjectLocation coords = new CloudObjectLocation(S3Utils.checkURI(uri));
-      final S3ObjectSummary objectSummary =
-          S3Utils.getSingleObjectSummary(s3Client, coords.getBucket(), coords.getPath());
-      return StringUtils.format("%d", objectSummary.getLastModified().getTime());
+      final ObjectMetadata objectMetadata =
+          S3Utils.getSingleObjectMetadata(s3Client, coords.getBucket(), coords.getPath());
+      return StringUtils.format("%d", objectMetadata.getLastModified().getTime());
     }
     catch (AmazonClientException e) {
       if (AWSClientUtil.isClientExceptionRecoverable(e)) {

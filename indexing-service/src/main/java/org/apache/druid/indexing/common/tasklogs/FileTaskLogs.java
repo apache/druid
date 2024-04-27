@@ -66,6 +66,15 @@ public class FileTaskLogs implements TaskLogs
   }
 
   @Override
+  public void pushTaskStatus(String taskid, File statusFile) throws IOException
+  {
+    FileUtils.mkdirp(config.getDirectory());
+    final File outputFile = fileForTask(taskid, statusFile.getName());
+    Files.copy(statusFile, outputFile);
+    log.info("Wrote task status to: %s", outputFile);
+  }
+
+  @Override
   public Optional<InputStream> streamTaskLog(final String taskid, final long offset) throws IOException
   {
     final File file = fileForTask(taskid, "log");
@@ -80,6 +89,17 @@ public class FileTaskLogs implements TaskLogs
   public Optional<InputStream> streamTaskReports(final String taskid) throws IOException
   {
     final File file = fileForTask(taskid, "report.json");
+    if (file.exists()) {
+      return Optional.of(LogUtils.streamFile(file, 0));
+    } else {
+      return Optional.absent();
+    }
+  }
+
+  @Override
+  public Optional<InputStream> streamTaskStatus(final String taskid) throws IOException
+  {
+    final File file = fileForTask(taskid, "status.json");
     if (file.exists()) {
       return Optional.of(LogUtils.streamFile(file, 0));
     } else {

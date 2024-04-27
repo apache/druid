@@ -45,14 +45,14 @@ The following example log4j2.xml is based upon the micro quickstart:
 
   <Appenders>
     <Console name="Console" target="SYSTEM_OUT">
-      <PatternLayout pattern="%d{ISO8601} %p [%t] %c - %m%n"/>
+      <PatternLayout pattern="%d{ISO8601} %p [%t] %c -%notEmpty{ [%markerSimpleName]} %m%n"/>
     </Console>
 
     <!-- Rolling Files-->
     <RollingRandomAccessFile name="FileAppender"
                              fileName="${sys:druid.log.path}/${sys:druid.node.type}.log"
                              filePattern="${sys:druid.log.path}/${sys:druid.node.type}.%d{yyyyMMdd}.log">
-      <PatternLayout pattern="%d{ISO8601} %p [%t] %c - %m%n"/>
+      <PatternLayout pattern="%d{ISO8601} %p [%t] %c -%notEmpty{ [%markerSimpleName]} %m%n"/>
       <Policies>
         <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
       </Policies>
@@ -105,13 +105,17 @@ The following example log4j2.xml is based upon the micro quickstart:
 </Configuration>
 ```
 
-> NOTE:
-> Although Druid shares the log4j configuration file task peon processes,
-> the appenders in this file DO NOT take effect for peon processes. Peons always output logs to standard output.
-> Middle Managers redirect task logs from standard output to [long-term storage](index.md#log-long-term-storage).
->
-> However, log level settings do take effect for these task peon processes.
-> This means you can configure loggers at different logging level for task logs using `log4j2.xml`.
+Peons always output logs to standard output. Middle Managers redirect task logs from standard output to
+[long-term storage](index.md#log-long-term-storage).
+
+:::info
+ NOTE:
+ Druid shares the log4j configuration file among all services, including task peon processes.
+ However, you must define a console appender in the logger for your peon processes.
+ If you don't define a console appender, Druid creates and configures a new console appender
+ that retains the log level, such as `info` or `warn`, but does not retain any other appender
+ configuration, including non-console ones.
+:::
 
 ## Log directory
 The included log4j2.xml configuration for Druid and ZooKeeper writes logs to the `log` directory at the root of the distribution.
@@ -132,19 +136,6 @@ Java runtime itself.
 This file is not rotated, but it is generally small due to the low volume of messages.
 If necessary, you can truncate it using the Linux command `truncate --size 0 log/historical.stdout.log`.
 
-## Avoid reflective access warnings in logs
-
-On Java 11, you may see warnings like the following in the logs:
-
-```
-WARNING: An illegal reflective access operation has occurred
-WARNING: Use --illegal-access=warn to enable warnings of further illegal reflective access operations
-WARNING: All illegal access operations will be denied in a future release
-```
-
-To avoid these, add the `--add-exports` and `--add-opens` command line parameters described in the documentation section
-about [Java strong encapsulation](../operations/java.md#strong-encapsulation).
-
 ## Set the logs to asynchronously write
 
 If your logs are really chatty, you can set them to write asynchronously.
@@ -155,7 +146,7 @@ The following example shows a `log4j2.xml` that configures some of the more chat
 <Configuration status="WARN">
   <Appenders>
     <Console name="Console" target="SYSTEM_OUT">
-      <PatternLayout pattern="%d{ISO8601} %p [%t] %c - %m%n"/>
+      <PatternLayout pattern="%d{ISO8601} %p [%t] %c -%notEmpty{ [%markerSimpleName]} %m%n"/>
     </Console>
   </Appenders>
   

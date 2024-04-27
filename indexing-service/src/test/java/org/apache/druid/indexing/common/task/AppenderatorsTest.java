@@ -38,6 +38,7 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.incremental.AppendableIndexSpec;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
@@ -46,6 +47,7 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorConfig;
@@ -169,20 +171,18 @@ public class AppenderatorsTest
           maxRowsInMemory,
           maxSizeInBytes == 0L ? getDefaultMaxBytesInMemory() : maxSizeInBytes,
           skipBytesInMemoryOverheadCheck,
-          new IndexSpec(),
+          IndexSpec.DEFAULT,
           0,
           false,
           0L,
           OffHeapMemorySegmentWriteOutMediumFactory.instance(),
           IndexMerger.UNLIMITED_MAX_COLUMNS_TO_MERGE,
-          basePersistDirectory == null ? createNewBasePersistDirectory() : basePersistDirectory
+          basePersistDirectory == null ? createNewBasePersistDirectory() : basePersistDirectory,
+          null
       );
       metrics = new FireDepartmentMetrics();
 
-      IndexIO indexIO = new IndexIO(
-          objectMapper,
-          () -> 0
-      );
+      IndexIO indexIO = new IndexIO(objectMapper, ColumnConfig.DEFAULT);
       IndexMergerV9 indexMerger = new IndexMergerV9(
           objectMapper,
           indexIO,
@@ -246,7 +246,8 @@ public class AppenderatorsTest
               indexMerger,
               rowIngestionMeters,
               new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0),
-              false
+              false,
+              CentralizedDatasourceSchemaConfig.create()
           );
           break;
         case "CLOSED_SEGMENTS":
@@ -261,7 +262,8 @@ public class AppenderatorsTest
               indexMerger,
               rowIngestionMeters,
               new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0),
-              false
+              false,
+              CentralizedDatasourceSchemaConfig.create()
           );
 
           break;
@@ -277,7 +279,8 @@ public class AppenderatorsTest
               indexMerger,
               rowIngestionMeters,
               new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0),
-              false
+              false,
+              CentralizedDatasourceSchemaConfig.create()
           );
           break;
         default:
@@ -350,6 +353,7 @@ public class AppenderatorsTest
       private final IndexSpec indexSpecForIntermediatePersists;
       @Nullable
       private final SegmentWriteOutMediumFactory segmentWriteOutMediumFactory;
+      private final int numPersistThreads;
 
       public TestIndexTuningConfig(
           AppendableIndexSpec appendableIndexSpec,
@@ -362,7 +366,8 @@ public class AppenderatorsTest
           Long pushTimeout,
           @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
           Integer maxColumnsToMerge,
-          File basePersistDirectory
+          File basePersistDirectory,
+          Integer numPersistThreads
       )
       {
         this.appendableIndexSpec = appendableIndexSpec;
@@ -379,6 +384,8 @@ public class AppenderatorsTest
 
         this.partitionsSpec = null;
         this.indexSpecForIntermediatePersists = this.indexSpec;
+
+        this.numPersistThreads = numPersistThreads == null ? DEFAULT_NUM_PERSIST_THREADS : numPersistThreads;
       }
 
       @Override
@@ -468,6 +475,12 @@ public class AppenderatorsTest
       }
 
       @Override
+      public int getNumPersistThreads()
+      {
+        return numPersistThreads;
+      }
+
+      @Override
       public boolean equals(Object o)
       {
         if (this == o) {
@@ -485,6 +498,7 @@ public class AppenderatorsTest
                maxPendingPersists == that.maxPendingPersists &&
                reportParseExceptions == that.reportParseExceptions &&
                pushTimeout == that.pushTimeout &&
+               numPersistThreads == that.numPersistThreads &&
                Objects.equals(partitionsSpec, that.partitionsSpec) &&
                Objects.equals(indexSpec, that.indexSpec) &&
                Objects.equals(indexSpecForIntermediatePersists, that.indexSpecForIntermediatePersists) &&
@@ -508,7 +522,8 @@ public class AppenderatorsTest
             maxPendingPersists,
             reportParseExceptions,
             pushTimeout,
-            segmentWriteOutMediumFactory
+            segmentWriteOutMediumFactory,
+            numPersistThreads
         );
       }
 
@@ -528,6 +543,7 @@ public class AppenderatorsTest
                ", reportParseExceptions=" + reportParseExceptions +
                ", pushTimeout=" + pushTimeout +
                ", segmentWriteOutMediumFactory=" + segmentWriteOutMediumFactory +
+               ", numPersistThreads=" + numPersistThreads +
                '}';
       }
     }

@@ -19,9 +19,9 @@
 
 package org.apache.druid.storage.google;
 
+import com.google.cloud.storage.Storage;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Injector;
-import org.apache.druid.common.gcp.GcpMockModule;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.segment.loading.OmniDataSegmentKiller;
 import org.junit.Assert;
@@ -32,22 +32,33 @@ public class GoogleStorageDruidModuleTest
   @Test
   public void testSegmentKillerBoundedSingleton()
   {
-    Injector injector = createInjector();
+    // This test is primarily validating 2 things
+    // 1. That the Google credentials are loaded lazily, they are loaded as part of instantiation of the
+    //    HttpRquestInitializer, the test throws an exception from that method, meaning that if they are not loaded
+    //    lazily, the exception should end up thrown.
+    // 2. That the same object is returned.
+    Injector injector = GuiceInjectors.makeStartupInjectorWithModules(ImmutableList.of(new GoogleStorageDruidModule()));
     OmniDataSegmentKiller killer = injector.getInstance(OmniDataSegmentKiller.class);
     Assert.assertTrue(killer.getKillers().containsKey(GoogleStorageDruidModule.SCHEME));
     Assert.assertSame(
         killer.getKillers().get(GoogleStorageDruidModule.SCHEME).get(),
         killer.getKillers().get(GoogleStorageDruidModule.SCHEME).get()
     );
+
+    final Storage storage = injector.getInstance(Storage.class);
+    Assert.assertSame(storage, injector.getInstance(Storage.class));
   }
 
-  private static Injector createInjector()
+  @Test
+  public void testLazyInstantiation()
   {
-    return GuiceInjectors.makeStartupInjectorWithModules(
-        ImmutableList.of(
-            new GcpMockModule(),
-            new GoogleStorageDruidModule()
-        )
-    );
+    // This test is primarily validating 2 things
+    // 1. That the Google credentials are loaded lazily, they are loaded as part of instantiation of the
+    //    HttpRquestInitializer, the test throws an exception from that method, meaning that if they are not loaded
+    //    lazily, the exception should end up thrown.
+    // 2. That the same object is returned.
+    Injector injector = GuiceInjectors.makeStartupInjectorWithModules(ImmutableList.of(new GoogleStorageDruidModule()));
+    final GoogleStorage instance = injector.getInstance(GoogleStorage.class);
+    Assert.assertSame(instance, injector.getInstance(GoogleStorage.class));
   }
 }

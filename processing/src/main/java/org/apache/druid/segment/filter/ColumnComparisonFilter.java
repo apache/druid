@@ -20,6 +20,7 @@
 package org.apache.druid.segment.filter;
 
 import com.google.common.base.Preconditions;
+import org.apache.druid.math.expr.Evals;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.Filter;
@@ -31,12 +32,12 @@ import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnProcessorFactory;
 import org.apache.druid.segment.ColumnProcessors;
-import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.DimensionSelector;
-import org.apache.druid.segment.column.BitmapColumnIndex;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.IndexedInts;
+import org.apache.druid.segment.index.BitmapColumnIndex;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -46,6 +47,11 @@ import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+/**
+ * Compares values between columns, first converting them all to strings. This filter behaves like "not distinct from",
+ * e.g. given columns x and y, the SQL equivalent would be "x is not distinct from y" (and so ignores
+ * {@code includeUnknown}).
+ */
 public class ColumnComparisonFilter implements Filter
 {
   private final List<DimensionSpec> dimensions;
@@ -77,13 +83,13 @@ public class ColumnComparisonFilter implements Filter
   public static ValueMatcher makeValueMatcher(final List<Supplier<String[]>> valueGetters)
   {
     if (valueGetters.isEmpty()) {
-      return BooleanValueMatcher.of(true);
+      return ValueMatchers.allTrue();
     }
 
     return new ValueMatcher()
     {
       @Override
-      public boolean matches()
+      public boolean matches(boolean includeUnknown)
       {
         // Keep all values to compare against each other.
         String[][] values = new String[valueGetters.size()][];
@@ -135,21 +141,9 @@ public class ColumnComparisonFilter implements Filter
   }
 
   @Override
-  public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, ColumnIndexSelector indexSelector)
-  {
-    return false;
-  }
-
-  @Override
   public Set<String> getRequiredColumns()
   {
     return dimensions.stream().map(DimensionSpec::getDimension).collect(Collectors.toSet());
-  }
-
-  @Override
-  public double estimateSelectivity(ColumnIndexSelector indexSelector)
-  {
-    throw new UnsupportedOperationException();
   }
 
   @Override
@@ -230,6 +224,26 @@ public class ColumnComparisonFilter implements Filter
           return NULL_VALUE;
         }
         return new String[]{Long.toString(selector.getLong())};
+      };
+    }
+
+    @Override
+    public Supplier<String[]> makeArrayProcessor(
+        BaseObjectColumnValueSelector<?> selector,
+        @Nullable ColumnCapabilities columnCapabilities
+    )
+    {
+      return () -> {
+        final Object o = selector.getObject();
+        if (o instanceof Object[]) {
+          final Object[] arr = (Object[]) o;
+          final String[] s = new String[arr.length];
+          for (int i = 0; i < arr.length; i++) {
+            s[i] = Evals.asString(arr[i]);
+          }
+          return s;
+        }
+        return NULL_VALUE;
       };
     }
 

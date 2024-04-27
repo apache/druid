@@ -39,6 +39,10 @@
                 "name": "dim2"
               },
               {
+                "type": "root",
+                "name": "metric1"
+              },
+              {
                 "type": "path",
                 "name": "listextracted",
                 "expr": "$.listDim[1]"

@@ -28,17 +28,17 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.query.extraction.MapLookupExtractor;
 import org.apache.druid.query.lookup.namespace.ExtractionNamespace;
 import org.apache.druid.server.lookup.namespace.cache.CacheScheduler;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.Supplier;
 
 @JsonTypeName("cachedNamespace")
 public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
@@ -169,6 +169,22 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
     return lookupIntrospectHandler;
   }
 
+  @Override
+  public void awaitInitialization() throws InterruptedException, TimeoutException
+  {
+    long timeout = extractionNamespace.getLoadTimeoutMills();
+    if (entry.getCacheState() == CacheScheduler.NoCache.CACHE_NOT_INITIALIZED) {
+      LOG.info("Cache not initialized yet for namespace %s waiting for %s mills", extractionNamespace, timeout);
+      entry.awaitTotalUpdatesWithTimeout(1, timeout);
+    }
+  }
+
+  @Override
+  public boolean isInitialized()
+  {
+    return entry.getCacheState() instanceof CacheScheduler.VersionedCache;
+  }
+
   @JsonProperty
   public ExtractionNamespace getExtractionNamespace()
   {
@@ -208,23 +224,18 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
         throw new ISE("%s: %s, extractorID = %s", entry, noCacheReason, extractorID);
       }
       CacheScheduler.VersionedCache versionedCache = (CacheScheduler.VersionedCache) cacheState;
-      Map<String, String> map = versionedCache.getCache();
       final byte[] v = StringUtils.toUtf8(versionedCache.getVersion());
       final byte[] id = StringUtils.toUtf8(extractorID);
-      return new MapLookupExtractor(map, isInjective())
-      {
-        @Override
-        public byte[] getCacheKey()
-        {
-          return ByteBuffer
+      final byte injectiveByte = isInjective() ? (byte) 1 : (byte) 0;
+      final Supplier<byte[]> cacheKey = () ->
+          ByteBuffer
               .allocate(CLASS_CACHE_KEY.length + id.length + 1 + v.length + 1 + 1)
               .put(CLASS_CACHE_KEY)
               .put(id).put((byte) 0xFF)
               .put(v).put((byte) 0xFF)
-              .put(isOneToOne() ? (byte) 1 : (byte) 0)
+              .put(injectiveByte)
               .array();
-        }
-      };
+      return versionedCache.asLookupExtractor(isInjective(), cacheKey);
     }
     finally {
       readLock.unlock();

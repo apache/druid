@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.seekablestream;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.Lists;
 import org.apache.druid.data.input.InputFormat;
@@ -29,6 +30,7 @@ import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.indexing.common.task.FilteringCloseableInputRowIterator;
 import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.transform.TransformSpec;
@@ -44,7 +46,7 @@ import java.util.function.Predicate;
 
 /**
  * Abstraction for parsing stream data which internally uses {@link org.apache.druid.data.input.InputEntityReader}
- * or {@link InputRowParser}. This class will be useful untill we remove the deprecated InputRowParser.
+ * or {@link InputRowParser}. This class will be useful until we remove the deprecated {@link InputRowParser}.
  */
 class StreamChunkParser<RecordType extends ByteEntity>
 {
@@ -90,6 +92,25 @@ class StreamChunkParser<RecordType extends ByteEntity>
     this.parseExceptionHandler = parseExceptionHandler;
   }
 
+  @VisibleForTesting
+  StreamChunkParser(
+      @Nullable InputRowParser<ByteBuffer> parser,
+      @Nullable SettableByteEntityReader<RecordType> byteEntityReader,
+      Predicate<InputRow> rowFilter,
+      RowIngestionMeters rowIngestionMeters,
+      ParseExceptionHandler parseExceptionHandler
+  )
+  {
+    if (parser == null && byteEntityReader == null) {
+      throw new IAE("Either parser or byteEntityReader should be set");
+    }
+    this.parser = parser;
+    this.byteEntityReader = byteEntityReader;
+    this.rowFilter = rowFilter;
+    this.rowIngestionMeters = rowIngestionMeters;
+    this.parseExceptionHandler = parseExceptionHandler;
+  }
+
   List<InputRow> parse(@Nullable List<RecordType> streamChunk, boolean isEndOfShard) throws IOException
   {
     if (streamChunk == null || streamChunk.isEmpty()) {
@@ -108,11 +129,13 @@ class StreamChunkParser<RecordType extends ByteEntity>
     }
   }
 
-  private List<InputRow> parseWithParser(InputRowParser<ByteBuffer> parser, List<? extends ByteEntity> valueBytess)
+  private List<InputRow> parseWithParser(InputRowParser<ByteBuffer> parser, List<? extends ByteEntity> valueBytes)
   {
     final FluentIterable<InputRow> iterable = FluentIterable
-        .from(valueBytess)
-        .transformAndConcat(bytes -> parser.parseBatch(bytes.getBuffer()));
+        .from(valueBytes)
+        .transform(entity -> entity.getBuffer().duplicate() /* Parsing may need to modify buffer position */)
+        .transform(this::incrementProcessedBytes)
+        .transformAndConcat(parser::parseBatch);
 
     final FilteringCloseableInputRowIterator rowIterator = new FilteringCloseableInputRowIterator(
         CloseableIterators.withEmptyBaggage(iterable.iterator()),
@@ -123,6 +146,16 @@ class StreamChunkParser<RecordType extends ByteEntity>
     return Lists.newArrayList(rowIterator);
   }
 
+  /**
+   * Increments the processed bytes with the number of bytes remaining in the
+   * given buffer. This method must be called before reading the buffer.
+   */
+  private ByteBuffer incrementProcessedBytes(final ByteBuffer recordByteBuffer)
+  {
+    rowIngestionMeters.incrementProcessedBytes(recordByteBuffer.remaining());
+    return recordByteBuffer;
+  }
+
   private List<InputRow> parseWithInputFormat(
       SettableByteEntityReader byteEntityReader,
       List<? extends ByteEntity> valueBytess
@@ -130,6 +163,7 @@ class StreamChunkParser<RecordType extends ByteEntity>
   {
     final List<InputRow> rows = new ArrayList<>();
     for (ByteEntity valueBytes : valueBytess) {
+      rowIngestionMeters.incrementProcessedBytes(valueBytes.getBuffer().remaining());
       byteEntityReader.setEntity(valueBytes);
       try (FilteringCloseableInputRowIterator rowIterator = new FilteringCloseableInputRowIterator(
           byteEntityReader.read(),
@@ -138,6 +172,9 @@ class StreamChunkParser<RecordType extends ByteEntity>
           parseExceptionHandler
       )) {
         rowIterator.forEachRemaining(rows::add);
+      }
+      catch (ParseException pe) {
+        parseExceptionHandler.handle(pe);
       }
     }
     return rows;

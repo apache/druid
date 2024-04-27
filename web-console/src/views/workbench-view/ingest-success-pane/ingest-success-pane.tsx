@@ -16,12 +16,13 @@
  * limitations under the License.
  */
 
-import { SqlTableRef } from 'druid-query-toolkit';
+import { T } from '@druid-toolkit/query';
 import React from 'react';
 
-import { Execution, WorkbenchQuery } from '../../../druid-models';
+import type { Execution } from '../../../druid-models';
+import { WorkbenchQuery } from '../../../druid-models';
 import { formatDuration, pluralIfNeeded } from '../../../utils';
-import { ExecutionDetailsTab } from '../execution-details-pane/execution-details-pane';
+import type { ExecutionDetailsTab } from '../execution-details-pane/execution-details-pane';
 
 import './ingest-success-pane.scss';
 
@@ -38,24 +39,20 @@ export const IngestSuccessPane = React.memo(function IngestSuccessPane(
 
   const datasource = execution.getIngestDatasource();
   if (!datasource) return null;
+  const table = T(datasource);
+  const rows = execution.getOutputNumTotalRows();
 
-  const { stages } = execution;
-  const lastStage = stages?.getLastStage();
+  const warnings = execution.stages?.getWarningCount() || 0;
 
-  const rows =
-    stages && lastStage && lastStage.definition.processor.type === 'segmentGenerator'
-      ? stages.getTotalCounterForStage(lastStage, 'input0', 'rows') // Assume input0 since we know the segmentGenerator will only ever have one stage input
-      : -1;
+  const { duration } = execution;
+  const segmentStatusDescription = execution.getSegmentStatusDescription();
 
-  const table = SqlTableRef.create(datasource);
-
-  const warnings = stages?.getWarningCount() || 0;
-
-  const duration = execution.duration;
   return (
     <div className="ingest-success-pane">
       <p>
-        {`${rows < 0 ? 'Data' : pluralIfNeeded(rows, 'row')} inserted into '${datasource}'.`}
+        {`${typeof rows === 'number' ? pluralIfNeeded(rows, 'row') : 'Data'} inserted into ${T(
+          datasource,
+        )}.`}
         {warnings > 0 && (
           <>
             {' '}
@@ -68,10 +65,12 @@ export const IngestSuccessPane = React.memo(function IngestSuccessPane(
       </p>
       <p>
         {duration ? `Insert query took ${formatDuration(duration)}. ` : `Insert query completed. `}
+        {segmentStatusDescription ? segmentStatusDescription.label + ' ' : ''}
         <span className="action" onClick={() => onDetails(execution.id)}>
           Show details
         </span>
       </p>
+
       {onQueryTab && (
         <p>
           Open new tab with:{' '}

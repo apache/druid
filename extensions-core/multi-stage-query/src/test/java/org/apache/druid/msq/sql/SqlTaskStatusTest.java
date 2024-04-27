@@ -21,8 +21,9 @@ package org.apache.druid.msq.sql;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.ErrorResponse;
 import org.apache.druid.indexer.TaskState;
-import org.apache.druid.query.QueryException;
 import org.apache.druid.segment.TestHelper;
 import org.junit.Assert;
 import org.junit.Test;
@@ -34,22 +35,23 @@ public class SqlTaskStatusTest
   {
     final ObjectMapper mapper = TestHelper.makeJsonMapper();
 
+    DruidException underlyingException = DruidException.forPersona(DruidException.Persona.DEVELOPER)
+        .ofCategory(DruidException.Category.INVALID_INPUT)
+        .build("error message");
+
     final SqlTaskStatus status = new SqlTaskStatus(
         "taskid",
         TaskState.FAILED,
-        new QueryException(
-            "error code",
-            "error message",
-            "error class",
-            "host"
-        )
+        new ErrorResponse(underlyingException)
     );
 
     final SqlTaskStatus status2 = mapper.readValue(mapper.writeValueAsString(status), SqlTaskStatus.class);
 
     Assert.assertEquals(status.getTaskId(), status2.getTaskId());
     Assert.assertEquals(status.getState(), status2.getState());
-    Assert.assertEquals(status.getError().getErrorCode(), status2.getError().getErrorCode());
+    Assert.assertNotNull(status.getError());
+    Assert.assertNotNull(status2.getError());
+    Assert.assertEquals(status.getError().getAsMap(), status2.getError().getAsMap());
   }
 
   @Test

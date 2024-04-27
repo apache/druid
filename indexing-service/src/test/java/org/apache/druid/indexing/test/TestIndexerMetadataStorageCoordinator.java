@@ -25,19 +25,26 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
+import org.apache.druid.indexing.overlord.SegmentCreateRequest;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.metadata.PendingSegmentRecord;
+import org.apache.druid.metadata.ReplaceTaskLock;
+import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.PartialShardSpec;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataStorageCoordinator
@@ -46,6 +53,7 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   private final Set<DataSegment> published = Sets.newConcurrentHashSet();
   private final Set<DataSegment> nuked = Sets.newConcurrentHashSet();
   private final List<DataSegment> unusedSegments;
+  private int deleteSegmentsCount = 0;
 
   public TestIndexerMetadataStorageCoordinator()
   {
@@ -83,7 +91,7 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   }
 
   @Override
-  public List<Pair<DataSegment, String>> retrieveUsedSegmentsAndCreatedDates(String dataSource)
+  public List<Pair<DataSegment, String>> retrieveUsedSegmentsAndCreatedDates(String dataSource, List<Interval> intervals)
   {
     return ImmutableList.of();
   }
@@ -99,10 +107,32 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   }
 
   @Override
-  public List<DataSegment> retrieveUnusedSegmentsForInterval(String dataSource, Interval interval)
+  public List<DataSegment> retrieveUnusedSegmentsForInterval(
+      String dataSource,
+      Interval interval,
+      @Nullable Integer limit,
+      @Nullable DateTime maxUsedStatusLastUpdatedTime
+  )
+  {
+    return retrieveUnusedSegmentsForInterval(dataSource, interval, null, limit, maxUsedStatusLastUpdatedTime);
+  }
+
+  @Override
+  public List<DataSegment> retrieveUnusedSegmentsForInterval(
+      String dataSource,
+      Interval interval,
+      @Nullable List<String> versions,
+      @Nullable Integer limit,
+      @Nullable DateTime maxUsedStatusLastUpdatedTime
+  )
   {
     synchronized (unusedSegments) {
-      return ImmutableList.copyOf(unusedSegments);
+      return ImmutableList.copyOf(
+          unusedSegments.stream()
+                        .filter(ds -> !nuked.contains(ds))
+                        .limit(limit != null ? limit : Long.MAX_VALUE)
+                        .iterator()
+      );
     }
   }
 
@@ -113,7 +143,10 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   }
 
   @Override
-  public Set<DataSegment> announceHistoricalSegments(Set<DataSegment> segments)
+  public Set<DataSegment> commitSegments(
+      Set<DataSegment> segments,
+      final SegmentSchemaMapping segmentSchemaMapping
+  )
   {
     Set<DataSegment> added = new HashSet<>();
     for (final DataSegment segment : segments) {
@@ -125,15 +158,60 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   }
 
   @Override
-  public SegmentPublishResult announceHistoricalSegments(
+  public Map<SegmentCreateRequest, SegmentIdWithShardSpec> allocatePendingSegments(
+      String dataSource,
+      Interval interval,
+      boolean skipSegmentLineageCheck,
+      List<SegmentCreateRequest> requests
+  )
+  {
+    return Collections.emptyMap();
+  }
+
+  @Override
+  public SegmentPublishResult commitReplaceSegments(
+      Set<DataSegment> replaceSegments,
+      Set<ReplaceTaskLock> locksHeldByReplaceTask,
+      SegmentSchemaMapping segmentSchemaMapping
+  )
+  {
+    return SegmentPublishResult.ok(commitSegments(replaceSegments, segmentSchemaMapping));
+  }
+
+  @Override
+  public SegmentPublishResult commitAppendSegments(
+      Set<DataSegment> appendSegments,
+      Map<DataSegment, ReplaceTaskLock> appendSegmentToReplaceLock,
+      String taskGroup,
+      SegmentSchemaMapping segmentSchemaMapping
+  )
+  {
+    return SegmentPublishResult.ok(commitSegments(appendSegments, segmentSchemaMapping));
+  }
+
+  @Override
+  public SegmentPublishResult commitAppendSegmentsAndMetadata(
+      Set<DataSegment> appendSegments,
+      Map<DataSegment, ReplaceTaskLock> appendSegmentToReplaceLock,
+      DataSourceMetadata startMetadata,
+      DataSourceMetadata endMetadata,
+      String taskGroup,
+      SegmentSchemaMapping segmentSchemaMapping
+  )
+  {
+    return SegmentPublishResult.ok(commitSegments(appendSegments, segmentSchemaMapping));
+  }
+
+  @Override
+  public SegmentPublishResult commitSegmentsAndMetadata(
       Set<DataSegment> segments,
-      Set<DataSegment> segmentsToDrop,
-      DataSourceMetadata oldCommitMetadata,
-      DataSourceMetadata newCommitMetadata
+      @Nullable DataSourceMetadata startMetadata,
+      @Nullable DataSourceMetadata endMetadata,
+      SegmentSchemaMapping segmentSchemaMapping
   )
   {
     // Don't actually compare metadata, just do it!
-    return SegmentPublishResult.ok(announceHistoricalSegments(segments));
+    return SegmentPublishResult.ok(commitSegments(segments, segmentSchemaMapping));
   }
 
   @Override
@@ -161,7 +239,8 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
       Interval interval,
       PartialShardSpec partialShardSpec,
       String maxVersion,
-      boolean skipSegmentLineageCheck
+      boolean skipSegmentLineageCheck,
+      String taskAllocatorId
   )
   {
     return new SegmentIdWithShardSpec(
@@ -170,6 +249,14 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
         maxVersion,
         partialShardSpec.complete(objectMapper, 0, 0)
     );
+  }
+
+  @Override
+  public List<PendingSegmentRecord> upgradePendingSegmentsOverlappingWith(
+      Set<DataSegment> replaceSegments
+  )
+  {
+    return Collections.emptyList();
   }
 
   @Override
@@ -187,11 +274,36 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   @Override
   public void deleteSegments(Set<DataSegment> segments)
   {
+    deleteSegmentsCount++;
     nuked.addAll(segments);
   }
 
   @Override
   public void updateSegmentMetadata(Set<DataSegment> segments)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public DataSegment retrieveSegmentForId(final String id, boolean includeUnused)
+  {
+    return null;
+  }
+
+  @Override
+  public int deleteUpgradeSegmentsForTask(final String taskId)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public int deletePendingSegmentsForTaskAllocatorId(final String taskGroup)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public List<PendingSegmentRecord> getPendingSegments(String datasource, Interval interval)
   {
     throw new UnsupportedOperationException();
   }
@@ -204,6 +316,11 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   public Set<DataSegment> getNuked()
   {
     return ImmutableSet.copyOf(nuked);
+  }
+
+  public int getDeleteSegmentsCount()
+  {
+    return deleteSegmentsCount;
   }
 
   public void setUnusedSegments(List<DataSegment> newUnusedSegments)

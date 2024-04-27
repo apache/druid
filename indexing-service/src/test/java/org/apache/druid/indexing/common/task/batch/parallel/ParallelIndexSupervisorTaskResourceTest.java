@@ -21,7 +21,6 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.AbstractInputSource;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSplit;
@@ -35,6 +34,7 @@ import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.SegmentAllocators;
@@ -48,6 +48,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.appenderator.SegmentAllocator;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.server.security.AuthConfig;
@@ -66,6 +67,7 @@ import javax.ws.rs.core.Response;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -337,11 +339,14 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
         .stream()
         .filter(entry -> !runningSpecs.containsKey(entry.getKey()))
         .map(entry -> entry.getValue().getSpec())
+        .sorted(Comparator.comparing(SubTaskSpec::getId))
         .collect(Collectors.toList());
 
     response = task.getCompleteSubTaskSpecs(newRequest());
     Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(completeSubTaskSpecs, response.getEntity());
+    List<SubTaskSpec<SinglePhaseSubTask>> actual = (List<SubTaskSpec<SinglePhaseSubTask>>) response.getEntity();
+    actual.sort(Comparator.comparing(SubTaskSpec::getId));
+    Assert.assertEquals(completeSubTaskSpecs, actual);
 
     // subTaskSpec
     final String subTaskId = runningSpecs.keySet().iterator().next();
@@ -450,6 +455,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
             null,
             null,
             null,
+            null,
             null
         )
     );
@@ -538,7 +544,8 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
           supervisorTask.getId(),
           supervisorTask.getGroupId(),
           supervisorTask.getIngestionSchema(),
-          supervisorTask.getContext()
+          supervisorTask.getContext(),
+          CentralizedDatasourceSchemaConfig.create(true)
       );
       this.supervisorTask = supervisorTask;
     }
@@ -662,7 +669,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
     }
 
     @Override
-    public TaskStatus run(final TaskToolbox toolbox) throws Exception
+    public TaskStatus runTask(final TaskToolbox toolbox) throws Exception
     {
       while (state == TaskState.RUNNING) {
         Thread.sleep(100);
@@ -708,7 +715,13 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
       );
 
       taskClient.report(
-          new PushedSegmentsReport(getId(), Collections.emptySet(), Collections.singleton(segment), ImmutableMap.of())
+          new PushedSegmentsReport(
+              getId(),
+              Collections.emptySet(),
+              Collections.singleton(segment),
+              new TaskReport.ReportMap(),
+              null
+          )
       );
       return TaskStatus.fromCode(getId(), state);
     }

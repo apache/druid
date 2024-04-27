@@ -44,6 +44,12 @@ public abstract class BaseMSQFault implements MSQFault
   BaseMSQFault(final String errorCode, @Nullable final String errorMessage)
   {
     this.errorCode = Preconditions.checkNotNull(errorCode, "errorCode");
+    Preconditions.checkArgument(
+        !errorCode.contains(MSQFaultUtils.ERROR_CODE_DELIMITER),
+        "Error code[%s] contains restricted characters[%s]",
+        errorCode,
+        MSQFaultUtils.ERROR_CODE_DELIMITER
+    );
     this.errorMessage = errorMessage;
   }
 
@@ -99,7 +105,7 @@ public abstract class BaseMSQFault implements MSQFault
   @Override
   public String toString()
   {
-    return getCodeWithMessage();
+    return MSQFaultUtils.generateMessageWithErrorCode(this);
   }
 
   private static String format(

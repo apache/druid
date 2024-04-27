@@ -21,12 +21,15 @@ package org.apache.druid.query.aggregation.datasketches.hll;
 
 import org.apache.datasketches.hll.HllSketch;
 import org.apache.datasketches.hll.TgtHllType;
+import org.apache.druid.java.util.common.StringEncoding;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.aggregation.TestObjectColumnSelector;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
@@ -45,6 +48,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.List;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class HllSketchAggregatorFactoryTest
@@ -53,6 +57,7 @@ public class HllSketchAggregatorFactoryTest
   private static final String FIELD_NAME = "fieldName";
   private static final int LG_K = HllSketchAggregatorFactory.DEFAULT_LG_K;
   private static final String TGT_HLL_TYPE = TgtHllType.HLL_4.name();
+  private static final StringEncoding STRING_ENCODING = StringEncoding.UTF16LE;
   private static final boolean ROUND = true;
   private static final double ESTIMATE = Math.PI;
 
@@ -61,7 +66,7 @@ public class HllSketchAggregatorFactoryTest
   @Before
   public void setUp()
   {
-    target = new TestHllSketchAggregatorFactory(NAME, FIELD_NAME, LG_K, TGT_HLL_TYPE, ROUND);
+    target = new TestHllSketchAggregatorFactory(NAME, FIELD_NAME, LG_K, TGT_HLL_TYPE, STRING_ENCODING, ROUND);
   }
 
   @Test
@@ -71,33 +76,15 @@ public class HllSketchAggregatorFactoryTest
   }
 
   @Test
-  public void testGetRequiredColumns()
+  public void testStringEncoding()
   {
-    List<AggregatorFactory> aggregatorFactories = target.getRequiredColumns();
-    Assert.assertEquals(1, aggregatorFactories.size());
-    HllSketchAggregatorFactory aggregatorFactory = (HllSketchAggregatorFactory) aggregatorFactories.get(0);
-    Assert.assertEquals(FIELD_NAME, aggregatorFactory.getName());
-    Assert.assertEquals(FIELD_NAME, aggregatorFactory.getFieldName());
-    Assert.assertEquals(LG_K, aggregatorFactory.getLgK());
-    Assert.assertEquals(TGT_HLL_TYPE, aggregatorFactory.getTgtHllType());
-    Assert.assertEquals(ROUND, aggregatorFactory.isRound());
-  }
-
-
-  @Test
-  public void testWithName()
-  {
-    List<AggregatorFactory> aggregatorFactories = target.getRequiredColumns();
-    Assert.assertEquals(1, aggregatorFactories.size());
-    HllSketchAggregatorFactory aggregatorFactory = (HllSketchAggregatorFactory) aggregatorFactories.get(0);
-    Assert.assertEquals(aggregatorFactory, aggregatorFactory.withName(aggregatorFactory.getName()));
-    Assert.assertEquals("newTest", aggregatorFactory.withName("newTest").getName());
+    Assert.assertEquals(STRING_ENCODING, target.getStringEncoding());
   }
 
   @Test
   public void testFinalizeComputationNull()
   {
-    Assert.assertNull(target.finalizeComputation(null));
+    Assert.assertEquals(0.0D, target.finalizeComputation(null));
   }
 
   @Test
@@ -124,6 +111,7 @@ public class HllSketchAggregatorFactoryTest
         FIELD_NAME,
         LG_K,
         TGT_HLL_TYPE,
+        STRING_ENCODING,
         !ROUND
     );
     Object actual = t.finalizeComputation(getMockSketch());
@@ -134,7 +122,9 @@ public class HllSketchAggregatorFactoryTest
   @Test
   public void testEqualsSameObject()
   {
+    //noinspection EqualsWithItself
     Assert.assertEquals(target, target);
+    Assert.assertArrayEquals(target.getCacheKey(), target.getCacheKey());
   }
 
   @Test
@@ -157,9 +147,11 @@ public class HllSketchAggregatorFactoryTest
         FIELD_NAME,
         LG_K,
         TGT_HLL_TYPE,
+        STRING_ENCODING,
         ROUND
     );
     Assert.assertNotEquals(target, other);
+    Assert.assertFalse(Arrays.equals(target.getCacheKey(), other.getCacheKey()));
   }
 
   @Test
@@ -170,9 +162,11 @@ public class HllSketchAggregatorFactoryTest
         FIELD_NAME + "-diff",
         LG_K,
         TGT_HLL_TYPE,
+        STRING_ENCODING,
         ROUND
     );
     Assert.assertNotEquals(target, other);
+    Assert.assertFalse(Arrays.equals(target.getCacheKey(), other.getCacheKey()));
   }
 
   @Test
@@ -183,9 +177,11 @@ public class HllSketchAggregatorFactoryTest
         FIELD_NAME,
         LG_K + 1,
         TGT_HLL_TYPE,
+        STRING_ENCODING,
         ROUND
     );
     Assert.assertNotEquals(target, other);
+    Assert.assertFalse(Arrays.equals(target.getCacheKey(), other.getCacheKey()));
   }
 
   @Test
@@ -196,9 +192,11 @@ public class HllSketchAggregatorFactoryTest
         FIELD_NAME,
         LG_K,
         TgtHllType.HLL_8.name(),
+        STRING_ENCODING,
         ROUND
     );
     Assert.assertNotEquals(target, other);
+    Assert.assertFalse(Arrays.equals(target.getCacheKey(), other.getCacheKey()));
   }
 
   @Test
@@ -209,9 +207,13 @@ public class HllSketchAggregatorFactoryTest
         FIELD_NAME,
         LG_K,
         TGT_HLL_TYPE,
+        STRING_ENCODING,
         !ROUND
     );
     Assert.assertNotEquals(target, other);
+
+    // Rounding does not affect per-segment results, so it does not affect cache key
+    Assert.assertArrayEquals(target.getCacheKey(), other.getCacheKey());
   }
 
   @Test
@@ -222,9 +224,11 @@ public class HllSketchAggregatorFactoryTest
         FIELD_NAME,
         LG_K,
         TGT_HLL_TYPE,
+        STRING_ENCODING,
         ROUND
     );
     Assert.assertEquals(target, other);
+    Assert.assertArrayEquals(target.getCacheKey(), other.getCacheKey());
   }
 
   @Test
@@ -236,8 +240,13 @@ public class HllSketchAggregatorFactoryTest
                                        .collect(Collectors.toList());
 
     for (Field field : toStringFields) {
-      String expectedToken = formatFieldForToString(field);
-      Assert.assertTrue("Missing \"" + expectedToken + "\"", string.contains(expectedToken));
+      if ("shouldFinalize".equals(field.getName()) || "stringEncoding".equals(field.getName())) {
+        // Skip; not included in the toString if it has the default value.
+        continue;
+      }
+
+      Pattern expectedPattern = testPatternForToString(field);
+      Assert.assertTrue("Missing \"" + field.getName() + "\"", expectedPattern.matcher(string).find());
     }
   }
 
@@ -256,11 +265,15 @@ public class HllSketchAggregatorFactoryTest
                       "col",
                       null,
                       null,
+                      null,
+                      null,
                       false
                   ),
                   new HllSketchBuildAggregatorFactory(
                       "hllBuildRound",
                       "col",
+                      null,
+                      null,
                       null,
                       null,
                       true
@@ -270,6 +283,8 @@ public class HllSketchAggregatorFactoryTest
                       "col",
                       null,
                       null,
+                      null,
+                      null,
                       false
                   ),
                   new HllSketchMergeAggregatorFactory(
@@ -277,7 +292,18 @@ public class HllSketchAggregatorFactoryTest
                       "col",
                       null,
                       null,
+                      null,
+                      null,
                       true
+                  ),
+                  new HllSketchMergeAggregatorFactory(
+                      "hllMergeNoFinalize",
+                      "col",
+                      null,
+                      null,
+                      null,
+                      false,
+                      false
                   )
               )
               .postAggregators(
@@ -288,7 +314,14 @@ public class HllSketchAggregatorFactoryTest
                   new FieldAccessPostAggregator("hllMerge-access", "hllMerge"),
                   new FinalizingFieldAccessPostAggregator("hllMerge-finalize", "hllMerge"),
                   new FieldAccessPostAggregator("hllMergeRound-access", "hllMergeRound"),
-                  new FinalizingFieldAccessPostAggregator("hllMergeRound-finalize", "hllMergeRound")
+                  new FinalizingFieldAccessPostAggregator("hllMergeRound-finalize", "hllMergeRound"),
+                  new FieldAccessPostAggregator("hllMergeNoFinalize-access", "hllMergeNoFinalize"),
+                  new FinalizingFieldAccessPostAggregator("hllMergeNoFinalize-finalize", "hllMergeNoFinalize"),
+                  new HllSketchToEstimatePostAggregator(
+                      "hllMergeNoFinalize-estimate",
+                      new FieldAccessPostAggregator(null, "hllMergeNoFinalize"),
+                      false
+                  )
               )
               .build();
 
@@ -300,6 +333,7 @@ public class HllSketchAggregatorFactoryTest
                     .add("hllBuildRound", null)
                     .add("hllMerge", null)
                     .add("hllMergeRound", null)
+                    .add("hllMergeNoFinalize", HllSketchMergeAggregatorFactory.TYPE)
                     .add("hllBuild-access", HllSketchBuildAggregatorFactory.TYPE)
                     .add("hllBuild-finalize", ColumnType.DOUBLE)
                     .add("hllBuildRound-access", HllSketchBuildAggregatorFactory.TYPE)
@@ -308,9 +342,28 @@ public class HllSketchAggregatorFactoryTest
                     .add("hllMerge-finalize", ColumnType.DOUBLE)
                     .add("hllMergeRound-access", HllSketchMergeAggregatorFactory.TYPE)
                     .add("hllMergeRound-finalize", ColumnType.LONG)
+                    .add("hllMergeNoFinalize-access", HllSketchMergeAggregatorFactory.TYPE)
+                    .add("hllMergeNoFinalize-finalize", HllSketchMergeAggregatorFactory.TYPE)
+                    .add("hllMergeNoFinalize-estimate", ColumnType.DOUBLE)
                     .build(),
         new TimeseriesQueryQueryToolChest().resultArraySignature(query)
     );
+  }
+
+  @Test
+  public void testFoldWithNullObject()
+  {
+    TestHllSketchAggregatorFactory factory = new TestHllSketchAggregatorFactory(
+        NAME,
+        FIELD_NAME,
+        LG_K,
+        TGT_HLL_TYPE,
+        STRING_ENCODING,
+        !ROUND
+    );
+    AggregateCombiner aggregateCombiner = factory.makeAggregateCombiner();
+    TestObjectColumnSelector objectColumnSelector = new TestObjectColumnSelector(new Object[] {null});
+    aggregateCombiner.fold(objectColumnSelector);
   }
 
   private static boolean isToStringField(Field field)
@@ -319,9 +372,9 @@ public class HllSketchAggregatorFactoryTest
     return Modifier.isPrivate(modfiers) && !Modifier.isStatic(modfiers) && Modifier.isFinal(modfiers);
   }
 
-  private static String formatFieldForToString(Field field)
+  private static Pattern testPatternForToString(Field field)
   {
-    return " " + field.getName() + "=";
+    return Pattern.compile("\\b" + Pattern.quote(field.getName()) + "=");
   }
 
   // Helper for testing abstract base class
@@ -338,10 +391,11 @@ public class HllSketchAggregatorFactoryTest
         String fieldName,
         @Nullable Integer lgK,
         @Nullable String tgtHllType,
+        @Nullable StringEncoding stringEncoding,
         boolean round
     )
     {
-      super(name, fieldName, lgK, tgtHllType, round);
+      super(name, fieldName, lgK, tgtHllType, stringEncoding, null, round);
     }
 
     @Override
@@ -377,7 +431,14 @@ public class HllSketchAggregatorFactoryTest
     @Override
     public AggregatorFactory withName(String newName)
     {
-      return new TestHllSketchAggregatorFactory(newName, getFieldName(), getLgK(), getTgtHllType(), isRound());
+      return new TestHllSketchAggregatorFactory(
+          newName,
+          getFieldName(),
+          getLgK(),
+          getTgtHllType(),
+          getStringEncoding(),
+          isRound()
+      );
     }
   }
 }

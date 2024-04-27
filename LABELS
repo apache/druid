@@ -37,7 +37,7 @@ This product bundles JSR311 API version 1.1.1, copyright Oracle and/or its affil
 This product bundles Expression Language 3.0 version 3.0.0., copyright Oracle and/or its affiliates.,
  which is available under the CDDL 1.1. For details, see licenses/bin/javax.CDDL11
   * https://github.com/javaee/el-spec
-  * org.glassfish:javax.el
+  * org.glassfish:jakarta.el
   
 This product bundles Jersey version 1.9, copyright Oracle and/or its affiliates.,
  which is available under the CDDL 1.1. For details, see licenses/bin/jersey.CDDL11

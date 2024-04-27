@@ -1,0 +1,1 @@
+SELECT col4 , LAG(col4) OVER ( PARTITION BY col3 ORDER BY col1 ) LAG_col4 FROM "fewRowsAllData.parquet"

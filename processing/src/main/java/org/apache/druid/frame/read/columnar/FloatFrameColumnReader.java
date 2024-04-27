@@ -22,14 +22,16 @@ package org.apache.druid.frame.read.columnar;
 import org.apache.datasketches.memory.Memory;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.frame.Frame;
-import org.apache.druid.frame.write.columnar.FloatFrameColumnWriter;
+import org.apache.druid.frame.write.columnar.FloatFrameMaker;
 import org.apache.druid.frame.write.columnar.FrameColumnWriters;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.query.rowsandcols.column.Column;
+import org.apache.druid.query.rowsandcols.column.ColumnAccessorBasedColumn;
+import org.apache.druid.query.rowsandcols.column.accessor.FloatColumnAccessorBase;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.FloatColumnSelector;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
-import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.NumericColumn;
 import org.apache.druid.segment.data.ReadableOffset;
 import org.apache.druid.segment.vector.BaseFloatVectorValueSelector;
@@ -37,6 +39,7 @@ import org.apache.druid.segment.vector.ReadableVectorInspector;
 import org.apache.druid.segment.vector.ReadableVectorOffset;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class FloatFrameColumnReader implements FrameColumnReader
@@ -49,19 +52,34 @@ public class FloatFrameColumnReader implements FrameColumnReader
   }
 
   @Override
+  public Column readRACColumn(Frame frame)
+  {
+    final FloatFrameColumn frameCol = makeFloatFrameColumn(frame);
+
+    return new ColumnAccessorBasedColumn(frameCol);
+  }
+
+  @Override
   public ColumnPlus readColumn(final Frame frame)
+  {
+    final FloatFrameColumn frameCol = makeFloatFrameColumn(frame);
+
+    return new ColumnPlus(
+        frameCol,
+        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(frameCol.getType())
+                              .setHasNulls(NullHandling.sqlCompatible() && frameCol.hasNulls),
+        frame.numRows()
+    );
+  }
+
+  @Nonnull
+  private FloatFrameColumn makeFloatFrameColumn(Frame frame)
   {
     final Memory memory = frame.region(columnNumber);
     validate(memory, frame.numRows());
 
     final boolean hasNulls = getHasNulls(memory);
-
-    return new ColumnPlus(
-        new FloatFrameColumn(frame, hasNulls, memory),
-        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.FLOAT)
-                              .setHasNulls(NullHandling.sqlCompatible() && hasNulls),
-        frame.numRows()
-    );
+    return new FloatFrameColumn(frame, hasNulls, memory);
   }
 
   private void validate(final Memory region, final int numRows)
@@ -69,7 +87,7 @@ public class FloatFrameColumnReader implements FrameColumnReader
     final long memorySize = region.getCapacity();
 
     // Check if column is big enough for a header
-    if (memorySize < FloatFrameColumnWriter.DATA_OFFSET) {
+    if (memorySize < FloatFrameMaker.DATA_OFFSET) {
       throw new ISE("Column is not big enough for a header");
     }
 
@@ -79,10 +97,10 @@ public class FloatFrameColumnReader implements FrameColumnReader
     }
 
     final boolean hasNulls = getHasNulls(region);
-    final int sz = FloatFrameColumnWriter.valueSize(hasNulls);
+    final int sz = FloatFrameMaker.valueSize(hasNulls);
 
     // Check column length again, now that we know exactly how long it should be.
-    if (memorySize != FloatFrameColumnWriter.DATA_OFFSET + (long) sz * numRows) {
+    if (memorySize != FloatFrameMaker.DATA_OFFSET + (long) sz * numRows) {
       throw new ISE("Column does not have the correct length");
     }
   }
@@ -92,7 +110,7 @@ public class FloatFrameColumnReader implements FrameColumnReader
     return memory.getByte(Byte.BYTES) != 0;
   }
 
-  private static class FloatFrameColumn implements NumericColumn
+  private static class FloatFrameColumn extends FloatColumnAccessorBase implements NumericColumn
   {
     private final Frame frame;
     private final boolean hasNulls;
@@ -108,9 +126,9 @@ public class FloatFrameColumnReader implements FrameColumnReader
     {
       this.frame = frame;
       this.hasNulls = hasNulls;
-      this.sz = FloatFrameColumnWriter.valueSize(hasNulls);
+      this.sz = FloatFrameMaker.valueSize(hasNulls);
       this.memory = memory;
-      this.memoryPosition = FloatFrameColumnWriter.DATA_OFFSET;
+      this.memoryPosition = FloatFrameMaker.DATA_OFFSET;
     }
 
     @Override
@@ -122,13 +140,13 @@ public class FloatFrameColumnReader implements FrameColumnReader
         public float getFloat()
         {
           assert NullHandling.replaceWithDefault() || !isNull();
-          return FloatFrameColumn.this.getFloat(frame.physicalRow(offset.getOffset()));
+          return FloatFrameColumn.this.getFloatInternal(frame.physicalRow(offset.getOffset()));
         }
 
         @Override
         public boolean isNull()
         {
-          return FloatFrameColumn.this.isNull(frame.physicalRow(offset.getOffset()));
+          return FloatFrameColumn.this.isNullInternal(frame.physicalRow(offset.getOffset()));
         }
 
         @Override
@@ -182,10 +200,10 @@ public class FloatFrameColumnReader implements FrameColumnReader
 
             for (int i = 0; i < offset.getCurrentVectorSize(); i++) {
               final int physicalRow = frame.physicalRow(i + start);
-              floatVector[i] = getFloat(physicalRow);
+              floatVector[i] = getFloatInternal(physicalRow);
 
               if (hasNulls) {
-                nullVector[i] = isNull(physicalRow);
+                nullVector[i] = isNullInternal(physicalRow);
               }
             }
           } else {
@@ -193,10 +211,10 @@ public class FloatFrameColumnReader implements FrameColumnReader
 
             for (int i = 0; i < offset.getCurrentVectorSize(); i++) {
               final int physicalRow = frame.physicalRow(offsets[i]);
-              floatVector[i] = getFloat(physicalRow);
+              floatVector[i] = getFloatInternal(physicalRow);
 
               if (hasNulls) {
-                nullVector[i] = isNull(physicalRow);
+                nullVector[i] = isNullInternal(physicalRow);
               }
             }
           }
@@ -222,7 +240,7 @@ public class FloatFrameColumnReader implements FrameColumnReader
         throw new ISE("Row [%d] out of bounds", rowNum);
       }
 
-      return (long) getFloat(frame.physicalRow(rowNum));
+      return (long) getFloatInternal(frame.physicalRow(rowNum));
     }
 
     @Override
@@ -237,7 +255,25 @@ public class FloatFrameColumnReader implements FrameColumnReader
       // Do nothing.
     }
 
-    private boolean isNull(final int physicalRow)
+    @Override
+    public int numRows()
+    {
+      return length();
+    }
+
+    @Override
+    public boolean isNull(int rowNum)
+    {
+      return isNullInternal(frame.physicalRow(rowNum));
+    }
+
+    @Override
+    public float getFloat(int rowNum)
+    {
+      return getFloatInternal(frame.physicalRow(rowNum));
+    }
+
+    private boolean isNullInternal(final int physicalRow)
     {
       if (hasNulls) {
         final long rowPosition = memoryPosition + (long) sz * physicalRow;
@@ -247,7 +283,7 @@ public class FloatFrameColumnReader implements FrameColumnReader
       }
     }
 
-    private float getFloat(final int physicalRow)
+    private float getFloatInternal(final int physicalRow)
     {
       final long rowPosition = memoryPosition + (long) sz * physicalRow;
 

@@ -120,7 +120,7 @@ public class DoublesSketchToRankPostAggregatorTest
     final PostAggregator postAgg = new DoublesSketchToRankPostAggregator(
         "rank",
         new FieldAccessPostAggregator("field", "sketch"),
-        4
+        3
     );
 
     final double rank = (double) postAgg.compute(fields);

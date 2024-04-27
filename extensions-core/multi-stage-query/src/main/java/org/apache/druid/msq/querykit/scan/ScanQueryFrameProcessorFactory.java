@@ -23,25 +23,19 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
-import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import org.apache.druid.collections.ResourceHolder;
-import org.apache.druid.frame.FrameType;
-import org.apache.druid.frame.allocation.MemoryAllocator;
 import org.apache.druid.frame.channel.WritableFrameChannel;
-import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.processor.FrameProcessor;
-import org.apache.druid.frame.write.FrameWriters;
-import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.msq.kernel.FrameContext;
 import org.apache.druid.msq.querykit.BaseLeafFrameProcessorFactory;
-import org.apache.druid.msq.querykit.LazyResourceHolder;
 import org.apache.druid.query.scan.ScanQuery;
-import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.join.JoinableFactoryWrapper;
+import org.apache.druid.segment.SegmentReference;
 
 import javax.annotation.Nullable;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Function;
 
 @JsonTypeName("scan")
 public class ScanQueryFrameProcessorFactory extends BaseLeafFrameProcessorFactory
@@ -58,10 +52,9 @@ public class ScanQueryFrameProcessorFactory extends BaseLeafFrameProcessorFactor
   private final AtomicLong runningCountForLimit;
 
   @JsonCreator
-  public ScanQueryFrameProcessorFactory(
-      @JsonProperty("query") ScanQuery query
-  )
+  public ScanQueryFrameProcessorFactory(@JsonProperty("query") ScanQuery query)
   {
+    super(query);
     this.query = Preconditions.checkNotNull(query, "query");
     this.runningCountForLimit =
         query.isLimited() && query.getOrderBys().isEmpty() ? new AtomicLong() : null;
@@ -74,33 +67,22 @@ public class ScanQueryFrameProcessorFactory extends BaseLeafFrameProcessorFactor
   }
 
   @Override
-  protected FrameProcessor<Long> makeProcessor(
+  protected FrameProcessor<Object> makeProcessor(
       ReadableInput baseInput,
-      Int2ObjectMap<ReadableInput> sideChannels,
+      Function<SegmentReference, SegmentReference> segmentMapFn,
       ResourceHolder<WritableFrameChannel> outputChannelHolder,
-      ResourceHolder<MemoryAllocator> allocatorHolder,
-      RowSignature signature,
-      ClusterBy clusterBy,
+      ResourceHolder<FrameWriterFactory> frameWriterFactoryHolder,
       FrameContext frameContext
   )
   {
     return new ScanQueryFrameProcessor(
         query,
-        baseInput,
-        sideChannels,
-        new JoinableFactoryWrapper(frameContext.joinableFactory()),
-        outputChannelHolder,
-        new LazyResourceHolder<>(() -> Pair.of(
-            FrameWriters.makeFrameWriterFactory(
-                FrameType.ROW_BASED,
-                allocatorHolder.get(),
-                signature,
-                clusterBy.getColumns()
-            ),
-            allocatorHolder
-        )),
         runningCountForLimit,
-        frameContext.memoryParameters().getBroadcastJoinMemory()
+        frameContext.jsonMapper(),
+        baseInput,
+        segmentMapFn,
+        outputChannelHolder,
+        frameWriterFactoryHolder
     );
   }
 }

@@ -38,7 +38,7 @@ public class RequestLogLine
 {
   private static final Joiner JOINER = Joiner.on("\t");
 
-  private final Query query;
+  private final Query<?> query;
   private final String sql;
   private final Map<String, Object> sqlQueryContext;
   private final DateTime timestamp;
@@ -46,7 +46,7 @@ public class RequestLogLine
   private final QueryStats queryStats;
 
   private RequestLogLine(
-      @Nullable Query query,
+      @Nullable Query<?> query,
       @Nullable String sql,
       @Nullable Map<String, Object> sqlQueryContext,
       DateTime timestamp,
@@ -62,7 +62,7 @@ public class RequestLogLine
     this.queryStats = Preconditions.checkNotNull(queryStats, "queryStats");
   }
 
-  public static RequestLogLine forNative(Query query, DateTime timestamp, String remoteAddr, QueryStats queryStats)
+  public static RequestLogLine forNative(Query<?> query, DateTime timestamp, String remoteAddr, QueryStats queryStats)
   {
     return new RequestLogLine(query, null, null, timestamp, remoteAddr, queryStats);
   }
@@ -98,14 +98,17 @@ public class RequestLogLine
             remoteAddr,
             "",
             objectMapper.writeValueAsString(queryStats),
-            objectMapper.writeValueAsString(ImmutableMap.of("query", sql, "context", sqlQueryContext))
+            objectMapper.writeValueAsString(ImmutableMap.of(
+                "query", sql == null ? "<unavailable>" : sql,
+                "context", sqlQueryContext
+            ))
         )
     );
   }
 
   @Nullable
   @JsonProperty("query")
-  public Query getQuery()
+  public Query<?> getQuery()
   {
     return query;
   }

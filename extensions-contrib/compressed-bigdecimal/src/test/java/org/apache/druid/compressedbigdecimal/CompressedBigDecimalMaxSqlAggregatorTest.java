@@ -19,23 +19,19 @@
 
 package org.apache.druid.compressedbigdecimal;
 
-import com.google.common.collect.ImmutableSet;
-import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 
 public class CompressedBigDecimalMaxSqlAggregatorTest extends CompressedBigDecimalSqlAggregatorTestBase
 {
   private static final String FUNCTION_NAME = CompressedBigDecimalMaxSqlAggregator.NAME;
 
   @Override
-  public DruidOperatorTable createOperatorTable()
-  {
-    return new DruidOperatorTable(ImmutableSet.of(new CompressedBigDecimalMaxSqlAggregator()), ImmutableSet.of());
-  }
-
-  @Override
+  @Test
   public void testCompressedBigDecimalAggWithNumberParse()
   {
-
     testCompressedBigDecimalAggWithNumberParseHelper(
         FUNCTION_NAME,
         new Object[]{"6.000000000", "6.000000000", "10.100000000"},
@@ -44,15 +40,19 @@ public class CompressedBigDecimalMaxSqlAggregatorTest extends CompressedBigDecim
   }
 
   @Override
+  @Test
   public void testCompressedBigDecimalAggWithStrictNumberParse()
   {
-    testCompressedBigDecimalAggWithStrictNumberParseHelper(
-        FUNCTION_NAME,
-        CompressedBigDecimalMaxAggregatorFactory::new
-    );
+    assertThrows(NumberFormatException.class, () -> {
+      testCompressedBigDecimalAggWithStrictNumberParseHelper(
+          FUNCTION_NAME,
+          CompressedBigDecimalMaxAggregatorFactory::new
+      );
+    });
   }
 
   @Override
+  @Test
   public void testCompressedBigDecimalAggDefaultNumberParseAndCustomSizeAndScale()
   {
     testCompressedBigDecimalAggDefaultNumberParseAndCustomSizeAndScaleHelper(
@@ -63,6 +63,7 @@ public class CompressedBigDecimalMaxSqlAggregatorTest extends CompressedBigDecim
   }
 
   @Override
+  @Test
   public void testCompressedBigDecimalAggDefaultScale()
   {
     testCompressedBigDecimalAggDefaultScaleHelper(
@@ -73,6 +74,7 @@ public class CompressedBigDecimalMaxSqlAggregatorTest extends CompressedBigDecim
   }
 
   @Override
+  @Test
   public void testCompressedBigDecimalAggDefaultSizeAndScale()
   {
     testCompressedBigDecimalAggDefaultSizeAndScaleHelper(

@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.overlord;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.inject.Inject;
 import org.apache.druid.client.indexing.IndexingService;
@@ -26,14 +27,16 @@ import org.apache.druid.curator.discovery.ServiceAnnouncer;
 import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.discovery.DruidLeaderSelector.Listener;
 import org.apache.druid.guice.annotations.Self;
+import org.apache.druid.indexing.common.actions.SegmentAllocationQueue;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.common.task.TaskContextEnricher;
 import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
 import org.apache.druid.indexing.overlord.config.DefaultTaskConfig;
 import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
-import org.apache.druid.indexing.overlord.helpers.OverlordHelperManager;
+import org.apache.druid.indexing.overlord.duty.OverlordDutyExecutor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
@@ -42,6 +45,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.CoordinatorOverlordServiceConfig;
+import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.metrics.TaskCountStatsProvider;
 import org.apache.druid.server.metrics.TaskSlotCountStatsProvider;
 
@@ -90,8 +94,11 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
       final CoordinatorOverlordServiceConfig coordinatorOverlordServiceConfig,
       final ServiceEmitter emitter,
       final SupervisorManager supervisorManager,
-      final OverlordHelperManager overlordHelperManager,
-      @IndexingService final DruidLeaderSelector overlordLeaderSelector
+      final OverlordDutyExecutor overlordDutyExecutor,
+      @IndexingService final DruidLeaderSelector overlordLeaderSelector,
+      final SegmentAllocationQueue segmentAllocationQueue,
+      final ObjectMapper mapper,
+      final TaskContextEnricher taskContextEnricher
   )
   {
     this.supervisorManager = supervisorManager;
@@ -122,7 +129,9 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
               taskRunner,
               taskActionClientFactory,
               taskLockbox,
-              emitter
+              emitter,
+              mapper,
+              taskContextEnricher
           );
 
           // Sensible order to start stuff:
@@ -135,7 +144,23 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
           leaderLifecycle.addManagedInstance(taskRunner);
           leaderLifecycle.addManagedInstance(taskQueue);
           leaderLifecycle.addManagedInstance(supervisorManager);
-          leaderLifecycle.addManagedInstance(overlordHelperManager);
+          leaderLifecycle.addManagedInstance(overlordDutyExecutor);
+          leaderLifecycle.addHandler(
+              new Lifecycle.Handler()
+              {
+                @Override
+                public void start()
+                {
+                  segmentAllocationQueue.becomeLeader();
+                }
+
+                @Override
+                public void stop()
+                {
+                  segmentAllocationQueue.stopBeingLeader();
+                }
+              }
+          );
 
           leaderLifecycle.addHandler(
               new Lifecycle.Handler()
@@ -219,7 +244,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
   }
 
   /**
-   * Returns true if it's the leader and its all services have been properly initialized.
+   * Returns true if it's the leader and all its services have been initialized.
    */
   public boolean isLeader()
   {
@@ -341,6 +366,17 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
       return taskQueue.get().getWaitingTaskCount();
     } else {
       return null;
+    }
+  }
+
+  @Override
+  public CoordinatorRunStats getStats()
+  {
+    Optional<TaskQueue> taskQueue = getTaskQueue();
+    if (taskQueue.isPresent()) {
+      return taskQueue.get().getQueueStats();
+    } else {
+      return CoordinatorRunStats.empty();
     }
   }
 

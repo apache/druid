@@ -75,22 +75,22 @@ public class ArithmeticPostAggregatorTest extends InitializedNullHandlingTest
     }
 
     arithmeticPostAggregator = new ArithmeticPostAggregator("add", "+", postAggregatorList);
-    expressionPostAggregator = new ExpressionPostAggregator("add", "roku + rows", null, TestExprMacroTable.INSTANCE);
+    expressionPostAggregator = new ExpressionPostAggregator("add", "roku + rows", null, null, TestExprMacroTable.INSTANCE);
     Assert.assertEquals(9.0, arithmeticPostAggregator.compute(metricValues));
     Assert.assertEquals(9.0, expressionPostAggregator.compute(metricValues));
 
     arithmeticPostAggregator = new ArithmeticPostAggregator("subtract", "-", postAggregatorList);
-    expressionPostAggregator = new ExpressionPostAggregator("add", "roku - rows", null, TestExprMacroTable.INSTANCE);
+    expressionPostAggregator = new ExpressionPostAggregator("add", "roku - rows", null, null, TestExprMacroTable.INSTANCE);
     Assert.assertEquals(3.0, arithmeticPostAggregator.compute(metricValues));
     Assert.assertEquals(3.0, expressionPostAggregator.compute(metricValues));
 
     arithmeticPostAggregator = new ArithmeticPostAggregator("multiply", "*", postAggregatorList);
-    expressionPostAggregator = new ExpressionPostAggregator("add", "roku * rows", null, TestExprMacroTable.INSTANCE);
+    expressionPostAggregator = new ExpressionPostAggregator("add", "roku * rows", null, null, TestExprMacroTable.INSTANCE);
     Assert.assertEquals(18.0, arithmeticPostAggregator.compute(metricValues));
     Assert.assertEquals(18.0, expressionPostAggregator.compute(metricValues));
 
     arithmeticPostAggregator = new ArithmeticPostAggregator("divide", "/", postAggregatorList);
-    expressionPostAggregator = new ExpressionPostAggregator("add", "roku / rows", null, TestExprMacroTable.INSTANCE);
+    expressionPostAggregator = new ExpressionPostAggregator("add", "roku / rows", null, null, TestExprMacroTable.INSTANCE);
     Assert.assertEquals(2.0, arithmeticPostAggregator.compute(metricValues));
     Assert.assertEquals(2.0, expressionPostAggregator.compute(metricValues));
   }
@@ -183,7 +183,36 @@ public class ArithmeticPostAggregatorTest extends InitializedNullHandlingTest
     Assert.assertEquals(Double.POSITIVE_INFINITY, agg.compute(ImmutableMap.of("value", 1)));
     Assert.assertEquals(Double.NEGATIVE_INFINITY, agg.compute(ImmutableMap.of("value", -1)));
   }
+  @Test
+  public void testPow()
+  {
+    ArithmeticPostAggregator agg = new ArithmeticPostAggregator(
+            null,
+            "pow",
+            ImmutableList.of(
+                    new ConstantPostAggregator("value", 4),
+                    new ConstantPostAggregator("power", .5)
+            ),
+            "numericFirst"
+    );
+    Assert.assertEquals(2.0, agg.compute(ImmutableMap.of("value", 0)));
 
+    agg = new ArithmeticPostAggregator(
+            null,
+            "pow",
+            ImmutableList.of(
+                    new FieldAccessPostAggregator("base", "value"),
+                    new ConstantPostAggregator("zero", 0)
+            ),
+            "numericFirst"
+    );
+
+    Assert.assertEquals(1.0, agg.compute(ImmutableMap.of("value", 0)));
+    Assert.assertEquals(1.0, agg.compute(ImmutableMap.of("value", Double.NaN)));
+    Assert.assertEquals(1.0, agg.compute(ImmutableMap.of("value", 1)));
+    Assert.assertEquals(1.0, agg.compute(ImmutableMap.of("value", -1)));
+    Assert.assertEquals(1.0, agg.compute(ImmutableMap.of("value", .5)));
+  }
   @Test
   public void testDiv()
   {

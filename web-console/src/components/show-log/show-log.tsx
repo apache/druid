@@ -39,7 +39,7 @@ export interface ShowLogProps {
   endpoint: string;
   downloadFilename?: string;
   tailOffset?: number;
-  status?: string;
+  tail?: boolean;
 }
 
 export interface ShowLogState {
@@ -54,8 +54,8 @@ export class ShowLog extends React.PureComponent<ShowLogProps, ShowLogState> {
   private readonly log = React.createRef<HTMLTextAreaElement>();
   private interval: number | undefined;
 
-  constructor(props: ShowLogProps, context: any) {
-    super(props, context);
+  constructor(props: ShowLogProps) {
+    super(props);
     this.state = {
       logState: QueryState.INIT,
       tail: true,
@@ -85,9 +85,9 @@ export class ShowLog extends React.PureComponent<ShowLogProps, ShowLogState> {
   }
 
   componentDidMount(): void {
-    const { status } = this.props;
+    const { tail } = this.props;
 
-    if (status === 'RUNNING') {
+    if (tail) {
       this.addTailer();
     }
 
@@ -137,14 +137,14 @@ export class ShowLog extends React.PureComponent<ShowLogProps, ShowLogState> {
     }
   };
 
-  render(): JSX.Element {
-    const { endpoint, downloadFilename, status } = this.props;
+  render() {
+    const { endpoint, downloadFilename, tail } = this.props;
     const { logState } = this.state;
 
     return (
       <div className="show-log">
         <div className="top-actions">
-          {status === 'RUNNING' && (
+          {tail && (
             <Switch
               className="tail-log"
               label="Tail log"
@@ -155,7 +155,7 @@ export class ShowLog extends React.PureComponent<ShowLogProps, ShowLogState> {
           <ButtonGroup className="right-buttons">
             {downloadFilename && (
               <AnchorButton
-                text="Save"
+                text="Download"
                 minimal
                 download={downloadFilename}
                 href={UrlBaser.base(endpoint)}

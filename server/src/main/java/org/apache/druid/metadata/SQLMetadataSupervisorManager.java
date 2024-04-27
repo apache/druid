@@ -47,6 +47,7 @@ import org.skife.jdbi.v2.StatementContext;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 import org.skife.jdbi.v2.tweak.ResultSetMapper;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -244,6 +245,7 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
                 ).map(
                     new ResultSetMapper<Pair<String, SupervisorSpec>>()
                     {
+                      @Nullable
                       @Override
                       public Pair<String, SupervisorSpec> map(int index, ResultSet r, StatementContext ctx)
                           throws SQLException
@@ -259,7 +261,13 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
                           );
                         }
                         catch (IOException e) {
-                          throw new RuntimeException(e);
+                          String exceptionMessage = StringUtils.format(
+                              "Could not map json payload to a SupervisorSpec for spec_id: [%s]."
+                              + " Delete the supervisor from the database and re-submit it to the overlord.",
+                              r.getString("spec_id")
+                          );
+                          log.error(e, exceptionMessage);
+                          return null;
                         }
                       }
                     }
@@ -276,7 +284,9 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
                       )
                       {
                         try {
-                          retVal.put(stringObjectMap.lhs, stringObjectMap.rhs);
+                          if (null != stringObjectMap) {
+                            retVal.put(stringObjectMap.lhs, stringObjectMap.rhs);
+                          }
                           return retVal;
                         }
                         catch (Exception e) {

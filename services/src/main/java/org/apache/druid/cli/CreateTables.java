@@ -123,7 +123,9 @@ public class CreateTables extends GuiceRunnable
     MetadataStorageConnector dbConnector = injector.getInstance(MetadataStorageConnector.class);
     dbConnector.createDataSourceTable();
     dbConnector.createPendingSegmentsTable();
+    dbConnector.createSegmentSchemasTable();
     dbConnector.createSegmentTable();
+    dbConnector.createUpgradeSegmentsTable();
     dbConnector.createRulesTable();
     dbConnector.createConfigTable();
     dbConnector.createTaskTables();

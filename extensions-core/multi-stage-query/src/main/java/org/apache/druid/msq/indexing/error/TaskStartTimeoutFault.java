@@ -25,31 +25,56 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 
 @JsonTypeName(TaskStartTimeoutFault.CODE)
 public class TaskStartTimeoutFault extends BaseMSQFault
 {
   static final String CODE = "TaskStartTimeout";
 
-  private final int numTasks;
+  private final int pendingTasks;
+  private final int totalTasks;
+  private final long timeout;
 
   @JsonCreator
-  public TaskStartTimeoutFault(@JsonProperty("numTasks") int numTasks)
+  public TaskStartTimeoutFault(
+      @JsonProperty("pendingTasks") int pendingTasks,
+      @JsonProperty("totalTasks") int totalTasks,
+      @JsonProperty("timeout") long timeout
+  )
   {
     super(
         CODE,
-        "Unable to launch all the worker tasks in time. There might be insufficient available slots to start all the worker tasks simultaneously."
-        + " Try lowering '%s' in your query context to lower than [%d] tasks, or increasing capacity.",
-        MultiStageQueryContext.CTX_MAX_NUM_TASKS,
-        numTasks
+        "Unable to launch [%d] workers out of the total [%d] worker tasks within [%,d] seconds of the last successful worker launch."
+        + "There might be insufficient available slots to start all worker tasks simultaneously. "
+        + "Try lowering '%s' in your query context to a number that fits within your available task capacity, "
+        + "or try increasing capacity.",
+        pendingTasks,
+        totalTasks,
+        TimeUnit.MILLISECONDS.toSeconds(timeout),
+        MultiStageQueryContext.CTX_MAX_NUM_TASKS
     );
-    this.numTasks = numTasks;
+    this.pendingTasks = pendingTasks;
+    this.totalTasks = totalTasks;
+    this.timeout = timeout;
   }
 
   @JsonProperty
-  public int getNumTasks()
+  public int getPendingTasks()
   {
-    return numTasks;
+    return pendingTasks;
+  }
+
+  @JsonProperty
+  public int getTotalTasks()
+  {
+    return totalTasks;
+  }
+
+  @JsonProperty
+  public long getTimeout()
+  {
+    return timeout;
   }
 
   @Override
@@ -65,12 +90,14 @@ public class TaskStartTimeoutFault extends BaseMSQFault
       return false;
     }
     TaskStartTimeoutFault that = (TaskStartTimeoutFault) o;
-    return numTasks == that.numTasks;
+    return pendingTasks == that.pendingTasks && totalTasks == that.totalTasks && timeout == that.timeout;
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(super.hashCode(), numTasks);
+    return Objects.hash(super.hashCode(), pendingTasks, totalTasks, timeout);
   }
+
+
 }

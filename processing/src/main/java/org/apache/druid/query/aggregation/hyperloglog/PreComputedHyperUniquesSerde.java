@@ -29,6 +29,8 @@ import java.nio.ByteBuffer;
 
 public class PreComputedHyperUniquesSerde extends HyperUniquesSerde
 {
+  public static final String TYPE_NAME = "preComputedHyperUnique";
+
   public PreComputedHyperUniquesSerde()
   {
     super();

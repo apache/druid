@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.security.basic.BasicAuthUtils;
+import org.apache.druid.security.basic.authentication.validator.PasswordHashGenerator;
 
 import java.util.Arrays;
 
@@ -50,7 +51,7 @@ public class BasicAuthenticatorCredentials
   {
     this.iterations = update.getIterations();
     this.salt = BasicAuthUtils.generateSalt();
-    this.hash = BasicAuthUtils.hashPassword(update.getPassword().toCharArray(), salt, iterations);
+    this.hash = PasswordHashGenerator.computePasswordHash(update.getPassword().toCharArray(), salt, iterations);
   }
 
   @JsonProperty

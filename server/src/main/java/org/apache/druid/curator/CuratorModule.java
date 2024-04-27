@@ -30,16 +30,21 @@ import org.apache.curator.framework.api.ACLProvider;
 import org.apache.curator.framework.imps.DefaultACLProvider;
 import org.apache.curator.retry.BoundedExponentialBackoffRetry;
 import org.apache.curator.shaded.com.google.common.base.Strings;
+import org.apache.druid.concurrent.Threads;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.service.AlertBuilder;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.server.metrics.MetricsModule;
 import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.data.ACL;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 public class CuratorModule implements Module
 {
@@ -47,13 +52,29 @@ public class CuratorModule implements Module
 
   static final int BASE_SLEEP_TIME_MS = 1000;
   static final int MAX_SLEEP_TIME_MS = 45000;
-  private static final int MAX_RETRIES = 29;
+
+  private final boolean haltOnFailedStart;
+
+  public CuratorModule()
+  {
+    this(true);
+  }
+
+  /**
+   * @param haltOnFailedStart set to true if the JVM needs to be halted within 30 seconds of failed initialization
+   *                          due to unhandled curator exceptions.
+   */
+  public CuratorModule(boolean haltOnFailedStart)
+  {
+    this.haltOnFailedStart = haltOnFailedStart;
+  }
 
   @Override
   public void configure(Binder binder)
   {
     JsonConfigProvider.bind(binder, CuratorConfig.CONFIG_PREFIX, ZkEnablementConfig.class);
     JsonConfigProvider.bind(binder, CuratorConfig.CONFIG_PREFIX, CuratorConfig.class);
+    MetricsModule.register(binder, DruidConnectionStateListener.class);
   }
 
   /**
@@ -70,7 +91,8 @@ public class CuratorModule implements Module
       );
     }
 
-    RetryPolicy retryPolicy = new BoundedExponentialBackoffRetry(BASE_SLEEP_TIME_MS, MAX_SLEEP_TIME_MS, MAX_RETRIES);
+    final RetryPolicy retryPolicy =
+        new BoundedExponentialBackoffRetry(BASE_SLEEP_TIME_MS, MAX_SLEEP_TIME_MS, config.getMaxZkRetries());
 
     return builder
         .ensembleProvider(new FixedEnsembleProvider(config.getZkHosts()))
@@ -87,7 +109,13 @@ public class CuratorModule implements Module
    */
   @Provides
   @LazySingleton
-  public CuratorFramework makeCurator(ZkEnablementConfig zkEnablementConfig, CuratorConfig config, Lifecycle lifecycle)
+  public CuratorFramework makeCurator(
+      final ZkEnablementConfig zkEnablementConfig,
+      final CuratorConfig config,
+      final DruidConnectionStateListener connectionStateListener,
+      final ServiceEmitter emitter,
+      final Lifecycle lifecycle
+  )
   {
     if (!zkEnablementConfig.isEnabled()) {
       throw new RuntimeException("Zookeeper is disabled, cannot create CuratorFramework.");
@@ -95,11 +123,67 @@ public class CuratorModule implements Module
 
     final CuratorFramework framework = createCurator(config);
 
+    framework.getConnectionStateListenable().addListener(connectionStateListener);
+    addUnhandledErrorListener(framework, emitter, lifecycle);
+    addLifecycleHandler(framework, lifecycle);
+
+    return framework;
+  }
+
+  /**
+   * Provide an instance of {@link DruidConnectionStateListener} for monitoring connection state.
+   */
+  @Provides
+  @LazySingleton
+  public DruidConnectionStateListener makeConnectionStateListener(final ServiceEmitter emitter)
+  {
+    return new DruidConnectionStateListener(emitter);
+  }
+
+  /**
+   * Add unhandled error listener that shuts down the JVM.
+   */
+  private void addUnhandledErrorListener(
+      final CuratorFramework framework,
+      final ServiceEmitter emitter,
+      final Lifecycle lifecycle
+  )
+  {
     framework.getUnhandledErrorListenable().addListener((message, e) -> {
+      emitter.emit(AlertBuilder.create("Unhandled Curator error").addThrowable(e));
       log.error(e, "Unhandled error in Curator, stopping server.");
+
+      if (haltOnFailedStart) {
+        final long startTime = System.currentTimeMillis();
+        final Thread halter = new Thread(
+            () -> {
+              try {
+                Threads.sleepFor(30, TimeUnit.SECONDS);
+              }
+              catch (InterruptedException ignored) {
+
+              }
+              log.warn(
+                  "Could not stop server within %,d millis after unhandled Curator error. Halting immediately.",
+                  System.currentTimeMillis() - startTime
+              );
+              Runtime.getRuntime().halt(1);
+            },
+            "exiter-thread"
+        );
+        halter.setDaemon(true);
+        halter.start();
+      }
+
       shutdown(lifecycle);
     });
+  }
 
+  /**
+   * Add unhandled error listener that shuts down the JVM.
+   */
+  private void addLifecycleHandler(final CuratorFramework framework, final Lifecycle lifecycle)
+  {
     lifecycle.addHandler(
         new Lifecycle.Handler()
         {
@@ -118,23 +202,6 @@ public class CuratorModule implements Module
           }
         }
     );
-
-    return framework;
-  }
-
-  static class SecuredACLProvider implements ACLProvider
-  {
-    @Override
-    public List<ACL> getDefaultAcl()
-    {
-      return ZooDefs.Ids.CREATOR_ALL_ACL;
-    }
-
-    @Override
-    public List<ACL> getAclForPath(String path)
-    {
-      return ZooDefs.Ids.CREATOR_ALL_ACL;
-    }
   }
 
   private void shutdown(Lifecycle lifecycle)
@@ -148,6 +215,21 @@ public class CuratorModule implements Module
     }
     finally {
       System.exit(1);
+    }
+  }
+
+  private static class SecuredACLProvider implements ACLProvider
+  {
+    @Override
+    public List<ACL> getDefaultAcl()
+    {
+      return ZooDefs.Ids.CREATOR_ALL_ACL;
+    }
+
+    @Override
+    public List<ACL> getAclForPath(String path)
+    {
+      return ZooDefs.Ids.CREATOR_ALL_ACL;
     }
   }
 }

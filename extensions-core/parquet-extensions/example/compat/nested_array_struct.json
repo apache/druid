@@ -45,7 +45,8 @@
           },
           "dimensionsSpec": {
             "dimensions": [
-              "i32_dec"
+              "i32_dec",
+              "primitive"
             ],
             "dimensionExclusions": [],
             "spatialDimensions": []

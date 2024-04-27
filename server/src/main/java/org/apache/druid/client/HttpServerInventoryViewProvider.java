@@ -25,6 +25,8 @@ import com.google.common.base.Predicates;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.guice.annotations.EscalatedClient;
 import org.apache.druid.guice.annotations.Smile;
+import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.http.client.HttpClient;
 
 import javax.validation.constraints.NotNull;
@@ -51,6 +53,14 @@ public class HttpServerInventoryViewProvider implements ServerInventoryViewProvi
   @NotNull
   private DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = null;
 
+  @JacksonInject
+  @NotNull
+  private ScheduledExecutorFactory executorFactory;
+
+  @JacksonInject
+  @NotNull
+  private ServiceEmitter serviceEmitter = null;
+
   @Override
   public HttpServerInventoryView get()
   {
@@ -60,6 +70,8 @@ public class HttpServerInventoryViewProvider implements ServerInventoryViewProvi
         druidNodeDiscoveryProvider,
         Predicates.alwaysTrue(),
         config,
+        serviceEmitter,
+        executorFactory,
         "HttpServerInventoryView"
     );
   }

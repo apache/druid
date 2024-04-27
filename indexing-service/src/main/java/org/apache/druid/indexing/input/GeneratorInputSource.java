@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.input;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.AbstractInputSource;
@@ -30,9 +31,12 @@ import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.data.input.InputStats;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.SplitHintSpec;
+import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.SplittableInputSource;
+import org.apache.druid.guice.IndexingServiceInputSourceModule;
 import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
@@ -40,12 +44,15 @@ import org.apache.druid.segment.generator.DataGenerator;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorColumnSchema;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.File;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Random;
+import java.util.Set;
 import java.util.stream.LongStream;
 import java.util.stream.Stream;
 
@@ -105,6 +112,14 @@ public class GeneratorInputSource extends AbstractInputSource implements Splitta
     this.timestampIncrement = timestampIncrement != null ? timestampIncrement : DEFAULT_TIMESTAMP_INCREMENT;
   }
 
+  @JsonIgnore
+  @Nonnull
+  @Override
+  public Set<String> getTypes()
+  {
+    return Collections.singleton(IndexingServiceInputSourceModule.GENERATOR_SCHEME);
+  }
+
   @Override
   public Stream<InputSplit<Long>> createSplits(
       InputFormat inputFormat,
@@ -148,7 +163,7 @@ public class GeneratorInputSource extends AbstractInputSource implements Splitta
     return new InputSourceReader()
     {
       @Override
-      public CloseableIterator<InputRow> read()
+      public CloseableIterator<InputRow> read(InputStats inputStats)
       {
         return CloseableIterators.withEmptyBaggage(new Iterator<InputRow>()
         {
@@ -165,7 +180,10 @@ public class GeneratorInputSource extends AbstractInputSource implements Splitta
           public InputRow next()
           {
             rowCount++;
-            return generator.nextRow();
+            return MapInputRowParser.parse(
+                inputRowSchema,
+                generator.nextRaw(inputRowSchema.getTimestampSpec().getTimestampColumn())
+            );
           }
         });
       }

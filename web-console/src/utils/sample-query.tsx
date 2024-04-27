@@ -16,25 +16,22 @@
  * limitations under the License.
  */
 
+import type { Column, LiteralValue, QueryResult, SqlExpression } from '@druid-toolkit/query';
 import {
-  Column,
-  LiteralValue,
-  QueryResult,
+  C,
+  F,
+  L,
   RefName,
   SqlAlias,
   SqlColumnList,
-  SqlExpression,
-  SqlFunction,
-  SqlLiteral,
   SqlQuery,
   SqlRecord,
-  SqlRef,
   SqlValues,
-} from 'druid-query-toolkit';
+} from '@druid-toolkit/query';
 
 import { oneOf } from './general';
 
-const SAMPLE_ARRAY_SEPARATOR = '-3432-d401-';
+const SAMPLE_ARRAY_SEPARATOR = '<#>'; // Note that this is a regexp so don't add anything that is a special regexp thing
 
 function nullForColumn(column: Column): LiteralValue {
   return oneOf(column.sqlType, 'BIGINT', 'DOUBLE', 'FLOAT') ? 0 : '';
@@ -42,7 +39,6 @@ function nullForColumn(column: Column): LiteralValue {
 
 export function sampleDataToQuery(sample: QueryResult): SqlQuery {
   const { header, rows } = sample;
-  const arrayIndexes: Record<number, boolean> = {};
   return SqlQuery.create(
     new SqlAlias({
       expression: SqlValues.create(
@@ -50,13 +46,15 @@ export function sampleDataToQuery(sample: QueryResult): SqlQuery {
           SqlRecord.create(
             row.map((r, i) => {
               if (header[i].nativeType === 'COMPLEX<json>') {
-                return SqlLiteral.create(JSON.stringify(r));
-              } else if (Array.isArray(r)) {
-                arrayIndexes[i] = true;
-                return SqlLiteral.create(r.join(SAMPLE_ARRAY_SEPARATOR));
+                return L(JSON.stringify(r));
+              } else if (String(header[i].sqlType).endsWith(' ARRAY')) {
+                return L(r.join(SAMPLE_ARRAY_SEPARATOR));
+              } else if (r == null || typeof r === 'object') {
+                // Avoid actually using NULL literals as they create havoc in the VALUES type system and throw errors.
+                // Also, cleanup array if it happens to get here, it shouldn't.
+                return L(nullForColumn(header[i]));
               } else {
-                // Avoid actually using NULL literals as they create havc in the VALUES type system and throw errors.
-                return SqlLiteral.create(r == null ? nullForColumn(header[i]) : r);
+                return L(r);
               }
             }),
           ),
@@ -66,16 +64,19 @@ export function sampleDataToQuery(sample: QueryResult): SqlQuery {
       columns: SqlColumnList.create(header.map((_, i) => RefName.create(`c${i}`, true))),
     }),
   ).changeSelectExpressions(
-    header.map((h, i) => {
-      let ex: SqlExpression = SqlRef.column(`c${i}`);
-      if (h.nativeType === 'COMPLEX<json>') {
-        ex = SqlFunction.simple('PARSE_JSON', [ex]);
-      } else if (arrayIndexes[i]) {
-        ex = SqlFunction.simple('STRING_TO_MV', [ex, SqlLiteral.create(SAMPLE_ARRAY_SEPARATOR)]);
-      } else if (h.sqlType) {
-        ex = ex.cast(h.sqlType);
+    header.map(({ name, nativeType, sqlType }, i) => {
+      let ex: SqlExpression = C(`c${i}`);
+      if (nativeType === 'COMPLEX<json>') {
+        ex = F('PARSE_JSON', ex);
+      } else if (sqlType && sqlType.endsWith(' ARRAY')) {
+        ex = F('STRING_TO_ARRAY', ex, SAMPLE_ARRAY_SEPARATOR);
+        if (sqlType !== 'VARCHAR ARRAY') {
+          ex = ex.cast(sqlType);
+        }
+      } else if (sqlType) {
+        ex = ex.cast(sqlType);
       }
-      return ex.as(h.name, true);
+      return ex.as(name, true);
     }),
   );
 }

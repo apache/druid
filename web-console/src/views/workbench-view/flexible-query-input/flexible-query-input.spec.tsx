@@ -24,11 +24,7 @@ import { FlexibleQueryInput } from './flexible-query-input';
 describe('FlexibleQueryInput', () => {
   it('matches snapshot', () => {
     const sqlControl = (
-      <FlexibleQueryInput
-        queryString="hello world"
-        autoHeight={false}
-        onQueryStringChange={() => {}}
-      />
+      <FlexibleQueryInput queryString="hello world" onQueryStringChange={() => {}} />
     );
 
     const { container } = render(sqlControl);

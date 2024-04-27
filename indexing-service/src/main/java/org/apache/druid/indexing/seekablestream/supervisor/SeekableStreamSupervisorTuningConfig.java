@@ -41,9 +41,6 @@ public interface SeekableStreamSupervisorTuningConfig
   Integer getWorkerThreads();
 
   @JsonProperty
-  Integer getChatThreads();
-
-  @JsonProperty
   Long getChatRetries();
 
   @JsonProperty

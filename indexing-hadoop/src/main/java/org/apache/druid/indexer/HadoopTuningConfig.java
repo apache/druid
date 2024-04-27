@@ -23,8 +23,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.indexer.partitions.DimensionBasedPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.java.util.common.DateTimes;
@@ -33,6 +33,7 @@ import org.apache.druid.segment.incremental.AppendableIndexSpec;
 import org.apache.druid.segment.indexing.TuningConfig;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -41,9 +42,11 @@ import java.util.Map;
 @JsonTypeName("hadoop")
 public class HadoopTuningConfig implements TuningConfig
 {
+  public static final int DEFAULT_DETERMINE_PARTITIONS_SAMPLING_FACTOR = 1;
+
   private static final DimensionBasedPartitionsSpec DEFAULT_PARTITIONS_SPEC = HashedPartitionsSpec.defaultSpec();
   private static final Map<Long, List<HadoopyShardSpec>> DEFAULT_SHARD_SPECS = ImmutableMap.of();
-  private static final IndexSpec DEFAULT_INDEX_SPEC = new IndexSpec();
+  private static final IndexSpec DEFAULT_INDEX_SPEC = IndexSpec.DEFAULT;
   private static final boolean DEFAULT_USE_COMBINER = false;
   private static final int DEFAULT_NUM_BACKGROUND_PERSIST_THREADS = 0;
 
@@ -57,8 +60,9 @@ public class HadoopTuningConfig implements TuningConfig
         DEFAULT_INDEX_SPEC,
         DEFAULT_INDEX_SPEC,
         DEFAULT_APPENDABLE_INDEX,
-        DEFAULT_MAX_ROWS_IN_MEMORY,
+        DEFAULT_MAX_ROWS_IN_MEMORY_BATCH,
         0L,
+        false,
         false,
         true,
         false,
@@ -74,7 +78,8 @@ public class HadoopTuningConfig implements TuningConfig
         null,
         null,
         null,
-        null
+        null,
+        DEFAULT_DETERMINE_PARTITIONS_SAMPLING_FACTOR
     );
   }
   @Nullable
@@ -87,6 +92,7 @@ public class HadoopTuningConfig implements TuningConfig
   private final AppendableIndexSpec appendableIndexSpec;
   private final int maxRowsInMemory;
   private final long maxBytesInMemory;
+  private final boolean useMaxMemoryEstimates;
   private final boolean leaveIntermediate;
   private final boolean cleanupOnFailure;
   private final boolean overwriteFiles;
@@ -102,6 +108,15 @@ public class HadoopTuningConfig implements TuningConfig
   private final int maxParseExceptions;
   private final boolean useYarnRMJobStatusFallback;
   private final long awaitSegmentAvailabilityTimeoutMillis;
+  // The sample parameter is only used for range partition spec now. When using range
+  // partition spec, we need launch many mapper and one reducer to do global sorting and
+  // find the upper and lower bound for every segment. This mr job may cost a lot of time
+  // if the input data is large. So we can sample the input data and make the mr job run
+  // faster. After all, we don't need a segment size which exactly equals targetRowsPerSegment.
+  // For example, if we ingest 10,000,000,000 rows and the targetRowsPerSegment is 5,000,000,
+  // we can sample by 500, so the mr job need only process 20,000,000 rows, this helps save
+  // a lot of time.
+  private final int determinePartitionsSamplingFactor;
 
   @JsonCreator
   public HadoopTuningConfig(
@@ -114,6 +129,7 @@ public class HadoopTuningConfig implements TuningConfig
       final @JsonProperty("appendableIndexSpec") @Nullable AppendableIndexSpec appendableIndexSpec,
       final @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
       final @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
+      final @JsonProperty("useMaxMemoryEstimates") @Nullable Boolean useMaxMemoryEstimates,
       final @JsonProperty("leaveIntermediate") boolean leaveIntermediate,
       final @JsonProperty("cleanupOnFailure") @Nullable Boolean cleanupOnFailure,
       final @JsonProperty("overwriteFiles") boolean overwriteFiles,
@@ -130,57 +146,62 @@ public class HadoopTuningConfig implements TuningConfig
       final @JsonProperty("logParseExceptions") @Nullable Boolean logParseExceptions,
       final @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions,
       final @JsonProperty("useYarnRMJobStatusFallback") @Nullable Boolean useYarnRMJobStatusFallback,
-      final @JsonProperty("awaitSegmentAvailabilityTimeoutMillis") @Nullable Long awaitSegmentAvailabilityTimeoutMillis
+      final @JsonProperty("awaitSegmentAvailabilityTimeoutMillis") @Nullable Long awaitSegmentAvailabilityTimeoutMillis,
+      final @JsonProperty("determinePartitionsSamplingFactor") @Nullable Integer determinePartitionsSamplingFactor
   )
   {
     this.workingPath = workingPath;
-    this.version = version == null ? DateTimes.nowUtc().toString() : version;
-    this.partitionsSpec = partitionsSpec == null ? DEFAULT_PARTITIONS_SPEC : partitionsSpec;
-    this.shardSpecs = shardSpecs == null ? DEFAULT_SHARD_SPECS : shardSpecs;
-    this.indexSpec = indexSpec == null ? DEFAULT_INDEX_SPEC : indexSpec;
-    this.indexSpecForIntermediatePersists = indexSpecForIntermediatePersists == null ?
-                                            this.indexSpec : indexSpecForIntermediatePersists;
-    this.maxRowsInMemory = maxRowsInMemory == null ? maxRowsInMemoryCOMPAT == null
-                                                      ? DEFAULT_MAX_ROWS_IN_MEMORY
-                                                      : maxRowsInMemoryCOMPAT : maxRowsInMemory;
-    this.appendableIndexSpec = appendableIndexSpec == null ? DEFAULT_APPENDABLE_INDEX : appendableIndexSpec;
+    this.version = Configs.valueOrDefault(version, DateTimes.nowUtc().toString());
+    this.partitionsSpec = Configs.valueOrDefault(partitionsSpec, DEFAULT_PARTITIONS_SPEC);
+    this.shardSpecs = Configs.valueOrDefault(shardSpecs, DEFAULT_SHARD_SPECS);
+    this.indexSpec = Configs.valueOrDefault(indexSpec, DEFAULT_INDEX_SPEC);
+    this.indexSpecForIntermediatePersists = Configs.valueOrDefault(
+        indexSpecForIntermediatePersists,
+        this.indexSpec
+    );
+    this.maxRowsInMemory = Configs.valueOrDefault(
+        maxRowsInMemory,
+        Configs.valueOrDefault(maxRowsInMemoryCOMPAT, DEFAULT_MAX_ROWS_IN_MEMORY_BATCH)
+    );
+    this.useMaxMemoryEstimates = Configs.valueOrDefault(useMaxMemoryEstimates, false);
+    this.appendableIndexSpec = Configs.valueOrDefault(appendableIndexSpec, DEFAULT_APPENDABLE_INDEX);
     // initializing this to 0, it will be lazily initialized to a value
     // @see #getMaxBytesInMemoryOrDefault()
-    this.maxBytesInMemory = maxBytesInMemory == null ? 0 : maxBytesInMemory;
+    this.maxBytesInMemory = Configs.valueOrDefault(maxBytesInMemory, 0);
     this.leaveIntermediate = leaveIntermediate;
-    this.cleanupOnFailure = cleanupOnFailure == null ? true : cleanupOnFailure;
+    this.cleanupOnFailure = Configs.valueOrDefault(cleanupOnFailure, true);
     this.overwriteFiles = overwriteFiles;
     this.jobProperties = (jobProperties == null
                           ? ImmutableMap.of()
                           : ImmutableMap.copyOf(jobProperties));
     this.combineText = combineText;
-    this.useCombiner = useCombiner == null ? DEFAULT_USE_COMBINER : useCombiner;
-    this.numBackgroundPersistThreads = numBackgroundPersistThreads == null
-                                       ? DEFAULT_NUM_BACKGROUND_PERSIST_THREADS
-                                       : numBackgroundPersistThreads;
+    this.useCombiner = Configs.valueOrDefault(useCombiner, DEFAULT_USE_COMBINER);
+    this.numBackgroundPersistThreads = Configs.valueOrDefault(
+        numBackgroundPersistThreads,
+        DEFAULT_NUM_BACKGROUND_PERSIST_THREADS
+    );
     this.forceExtendableShardSpecs = forceExtendableShardSpecs;
     Preconditions.checkArgument(this.numBackgroundPersistThreads >= 0, "Not support persistBackgroundCount < 0");
     this.useExplicitVersion = useExplicitVersion;
-    this.allowedHadoopPrefix = allowedHadoopPrefix == null ? ImmutableList.of() : allowedHadoopPrefix;
+    this.allowedHadoopPrefix = Configs.valueOrDefault(allowedHadoopPrefix, Collections.emptyList());
 
-    this.ignoreInvalidRows = ignoreInvalidRows == null ? false : ignoreInvalidRows;
-    if (maxParseExceptions != null) {
-      this.maxParseExceptions = maxParseExceptions;
-    } else {
-      if (!this.ignoreInvalidRows) {
-        this.maxParseExceptions = 0;
-      } else {
-        this.maxParseExceptions = TuningConfig.DEFAULT_MAX_PARSE_EXCEPTIONS;
-      }
-    }
-    this.logParseExceptions = logParseExceptions == null ? TuningConfig.DEFAULT_LOG_PARSE_EXCEPTIONS : logParseExceptions;
-
-    this.useYarnRMJobStatusFallback = useYarnRMJobStatusFallback == null ? true : useYarnRMJobStatusFallback;
+    this.ignoreInvalidRows = Configs.valueOrDefault(ignoreInvalidRows, false);
+    this.maxParseExceptions = Configs.valueOrDefault(
+        maxParseExceptions,
+        this.ignoreInvalidRows ? TuningConfig.DEFAULT_MAX_PARSE_EXCEPTIONS : 0
+    );
+    this.logParseExceptions = Configs.valueOrDefault(logParseExceptions, TuningConfig.DEFAULT_LOG_PARSE_EXCEPTIONS);
+    this.useYarnRMJobStatusFallback = Configs.valueOrDefault(useYarnRMJobStatusFallback, true);
 
     if (awaitSegmentAvailabilityTimeoutMillis == null || awaitSegmentAvailabilityTimeoutMillis < 0) {
       this.awaitSegmentAvailabilityTimeoutMillis = DEFAULT_AWAIT_SEGMENT_AVAILABILITY_TIMEOUT_MILLIS;
     } else {
       this.awaitSegmentAvailabilityTimeoutMillis = awaitSegmentAvailabilityTimeoutMillis;
+    }
+    if (determinePartitionsSamplingFactor == null || determinePartitionsSamplingFactor < 1) {
+      this.determinePartitionsSamplingFactor = 1;
+    } else {
+      this.determinePartitionsSamplingFactor = determinePartitionsSamplingFactor;
     }
   }
 
@@ -243,6 +264,12 @@ public class HadoopTuningConfig implements TuningConfig
   public long getMaxBytesInMemory()
   {
     return maxBytesInMemory;
+  }
+
+  @JsonProperty
+  public boolean isUseMaxMemoryEstimates()
+  {
+    return useMaxMemoryEstimates;
   }
 
   @JsonProperty
@@ -336,6 +363,12 @@ public class HadoopTuningConfig implements TuningConfig
     return awaitSegmentAvailabilityTimeoutMillis;
   }
 
+  @JsonProperty
+  public int getDeterminePartitionsSamplingFactor()
+  {
+    return determinePartitionsSamplingFactor;
+  }
+
   public HadoopTuningConfig withWorkingPath(String path)
   {
     return new HadoopTuningConfig(
@@ -348,6 +381,7 @@ public class HadoopTuningConfig implements TuningConfig
         appendableIndexSpec,
         maxRowsInMemory,
         maxBytesInMemory,
+        useMaxMemoryEstimates,
         leaveIntermediate,
         cleanupOnFailure,
         overwriteFiles,
@@ -363,7 +397,8 @@ public class HadoopTuningConfig implements TuningConfig
         logParseExceptions,
         maxParseExceptions,
         useYarnRMJobStatusFallback,
-        awaitSegmentAvailabilityTimeoutMillis
+        awaitSegmentAvailabilityTimeoutMillis,
+        determinePartitionsSamplingFactor
     );
   }
 
@@ -379,6 +414,7 @@ public class HadoopTuningConfig implements TuningConfig
         appendableIndexSpec,
         maxRowsInMemory,
         maxBytesInMemory,
+        useMaxMemoryEstimates,
         leaveIntermediate,
         cleanupOnFailure,
         overwriteFiles,
@@ -394,7 +430,8 @@ public class HadoopTuningConfig implements TuningConfig
         logParseExceptions,
         maxParseExceptions,
         useYarnRMJobStatusFallback,
-        awaitSegmentAvailabilityTimeoutMillis
+        awaitSegmentAvailabilityTimeoutMillis,
+        determinePartitionsSamplingFactor
     );
   }
 
@@ -410,6 +447,7 @@ public class HadoopTuningConfig implements TuningConfig
         appendableIndexSpec,
         maxRowsInMemory,
         maxBytesInMemory,
+        useMaxMemoryEstimates,
         leaveIntermediate,
         cleanupOnFailure,
         overwriteFiles,
@@ -425,7 +463,8 @@ public class HadoopTuningConfig implements TuningConfig
         logParseExceptions,
         maxParseExceptions,
         useYarnRMJobStatusFallback,
-        awaitSegmentAvailabilityTimeoutMillis
+        awaitSegmentAvailabilityTimeoutMillis,
+        determinePartitionsSamplingFactor
     );
   }
 }

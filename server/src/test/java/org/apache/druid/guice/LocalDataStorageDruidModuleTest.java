@@ -54,7 +54,7 @@ public class LocalDataStorageDruidModuleTest
             new LocalDataStorageDruidModule(),
             (Module) binder -> {
               binder.bind(new TypeLiteral<List<StorageLocation>>(){}).toInstance(ImmutableList.of());
-              binder.bind(ColumnConfig.class).toInstance(() -> 0);
+              binder.bind(ColumnConfig.class).toInstance(ColumnConfig.DEFAULT);
               binder.bind(StorageLocationSelectorStrategy.class)
                     .toInstance(new RandomStorageLocationSelectorStrategy(ImmutableList.of()));
             }

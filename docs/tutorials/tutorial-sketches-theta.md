@@ -243,7 +243,9 @@ That is, `APPROX_COUNT_DISTINCT_DS_THETA` applies the following:
 ### Filtered metrics
 
 Druid has the capability to use [filtered metrics](../querying/sql-aggregations.md). This means you can include a WHERE clause in the SELECT part of the query.
-> In the case of Theta sketches, the filter clause has to be inserted between the aggregator and the estimator.
+:::info
+ In the case of Theta sketches, the filter clause has to be inserted between the aggregator and the estimator.
+:::
 
 As an example, query the total unique users that watched _Bridgerton:_
 

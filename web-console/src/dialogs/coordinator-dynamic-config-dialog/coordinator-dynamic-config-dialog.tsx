@@ -20,15 +20,10 @@ import { Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import React, { useState } from 'react';
 
-import {
-  AutoForm,
-  ExternalLink,
-  FormJsonSelector,
-  FormJsonTabs,
-  JsonInput,
-  Loader,
-} from '../../components';
-import { COORDINATOR_DYNAMIC_CONFIG_FIELDS, CoordinatorDynamicConfig } from '../../druid-models';
+import type { FormJsonTabs } from '../../components';
+import { AutoForm, ExternalLink, FormJsonSelector, JsonInput, Loader } from '../../components';
+import type { CoordinatorDynamicConfig } from '../../druid-models';
+import { COORDINATOR_DYNAMIC_CONFIG_FIELDS } from '../../druid-models';
 import { useQueryManager } from '../../hooks';
 import { getLink } from '../../links';
 import { Api, AppToaster } from '../../singletons';
@@ -102,7 +97,7 @@ export const CoordinatorDynamicConfigDialog = React.memo(function CoordinatorDyn
     <SnitchDialog
       className="coordinator-dynamic-config-dialog"
       saveDisabled={Boolean(jsonError)}
-      onSave={saveConfig}
+      onSave={comment => void saveConfig(comment)}
       onClose={onClose}
       title="Coordinator dynamic config"
       historyRecords={historyRecordsState.data}
@@ -119,7 +114,13 @@ export const CoordinatorDynamicConfigDialog = React.memo(function CoordinatorDyn
             </ExternalLink>
             .
           </p>
-          <FormJsonSelector tab={currentTab} onChange={setCurrentTab} />
+          <FormJsonSelector
+            tab={currentTab}
+            onChange={t => {
+              setJsonError(undefined);
+              setCurrentTab(t);
+            }}
+          />
           {currentTab === 'form' ? (
             <AutoForm
               fields={COORDINATOR_DYNAMIC_CONFIG_FIELDS}
@@ -130,11 +131,8 @@ export const CoordinatorDynamicConfigDialog = React.memo(function CoordinatorDyn
             <JsonInput
               value={dynamicConfig}
               height="50vh"
-              onChange={v => {
-                setDynamicConfig(v);
-                setJsonError(undefined);
-              }}
-              onError={setJsonError}
+              onChange={setDynamicConfig}
+              setError={setJsonError}
             />
           )}
         </>

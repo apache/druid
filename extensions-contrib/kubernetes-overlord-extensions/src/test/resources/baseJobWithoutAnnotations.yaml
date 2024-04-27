@@ -1,0 +1,24 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: "id-3e70afe5cd823dfc7dd308eea616426b"
+spec:
+  template:
+    metadata:
+      labels:
+        job-name: id-3e70afe5cd823dfc7dd308eea616426b
+      name: id-kmwkw
+    spec:
+      containers:
+        - command:
+            - sleep
+            - "3600"
+          env:
+            - name: "TASK_DIR"
+              value: "/tmp/id"
+            - name: "TASK_JSON"
+              valueFrom:
+                fieldRef:
+                  fieldPath: "metadata.annotations['task']"
+          image: one
+          name: primary

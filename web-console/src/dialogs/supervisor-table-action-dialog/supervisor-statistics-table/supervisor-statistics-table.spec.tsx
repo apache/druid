@@ -16,15 +16,15 @@
  * limitations under the License.
  */
 
-import { shallow } from 'enzyme';
 import React from 'react';
 
 import { QueryState } from '../../../utils';
+import { shallow } from '../../../utils/shallow-renderer';
 
+import type { SupervisorStatisticsTableRow } from './supervisor-statistics-table';
 import {
   normalizeSupervisorStatisticsResults,
   SupervisorStatisticsTable,
-  SupervisorStatisticsTableRow,
 } from './supervisor-statistics-table';
 
 let supervisorStatisticsState: QueryState<SupervisorStatisticsTableRow[]> = QueryState.INIT;

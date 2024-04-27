@@ -20,6 +20,7 @@
 package org.apache.druid.frame.read.columnar;
 
 import org.apache.druid.frame.Frame;
+import org.apache.druid.query.rowsandcols.column.Column;
 import org.apache.druid.segment.column.RowSignature;
 
 /**
@@ -28,6 +29,11 @@ import org.apache.druid.segment.column.RowSignature;
  */
 public interface FrameColumnReader
 {
+  /**
+   * Returns a {@link Column} from the frame.
+   */
+  Column readRACColumn(Frame frame);
+
   /**
    * Returns a column reference for the provided frame.
    */

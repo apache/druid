@@ -27,17 +27,10 @@
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>25.0.0-SNAPSHOT</version>
+        <version>31.0.0-SNAPSHOT</version>
     </parent>
 
     <dependencies>
-        <!-- include druid-core to prevent older versions of dependencies
-        from being pulled in by dependencies of druid-server -->
-        <dependency>
-            <groupId>org.apache.druid</groupId>
-            <artifactId>druid-core</artifactId>
-            <version>${project.parent.version}</version>
-        </dependency>
         <dependency>
             <groupId>org.apache.druid</groupId>
             <artifactId>druid-processing</artifactId>
@@ -135,8 +128,8 @@
             <artifactId>opencsv</artifactId>
         </dependency>
         <dependency>
-            <groupId>javax.validation</groupId>
-            <artifactId>validation-api</artifactId>
+            <groupId>jakarta.validation</groupId>
+            <artifactId>jakarta.validation-api</artifactId>
         </dependency>
         <dependency>
             <groupId>com.google.errorprone</groupId>
@@ -214,14 +207,11 @@
             <groupId>javax.xml.bind</groupId>
             <artifactId>jaxb-api</artifactId>
         </dependency>
-        <!-- Test Dependencies -->
         <dependency>
-            <groupId>org.apache.druid</groupId>
-            <artifactId>druid-core</artifactId>
-            <version>${project.parent.version}</version>
-            <type>test-jar</type>
-            <scope>test</scope>
+            <groupId>org.jdbi</groupId>
+            <artifactId>jdbi</artifactId>
         </dependency>
+        <!-- Test Dependencies -->
         <dependency>
             <groupId>org.apache.druid</groupId>
             <artifactId>druid-server</artifactId>
@@ -291,6 +281,12 @@
                             <goal>shade</goal>
                         </goals>
                         <configuration>
+                            <!-- when specifying outputFile the shade plugin should not replace the main artifact.
+                                 Starting with maven-shade-plugin 3.3.0 shaded dependencies are removed in the main pom.
+                                 Setting this flag preserves the behavior of previous versions to list all
+                                 dependencies in the final pom to ensure our distribution step has the correct
+                                 classpath with all dependencies when running pull-deps -->
+                            <createDependencyReducedPom>false</createDependencyReducedPom>
                             <outputFile>
                                 ${project.build.directory}/${project.artifactId}-${project.version}-selfcontained.jar
                             </outputFile>

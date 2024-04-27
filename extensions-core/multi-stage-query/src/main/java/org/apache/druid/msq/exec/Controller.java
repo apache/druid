@@ -22,16 +22,16 @@ package org.apache.druid.msq.exec;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexing.common.TaskReport;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.msq.counters.CounterSnapshots;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
 import org.apache.druid.msq.indexing.MSQControllerTask;
+import org.apache.druid.msq.indexing.client.ControllerChatHandler;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
-import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
+import org.apache.druid.msq.statistics.PartialKeyStatisticsInformation;
 
 import javax.annotation.Nullable;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Interface for the controller of a multi-stage query.
@@ -81,9 +81,11 @@ public interface Controller
   // Worker-to-controller messages
 
   /**
-   * Provide a {@link ClusterByStatisticsSnapshot} for shuffling stages.
+   * Accepts a {@link PartialKeyStatisticsInformation} and updates the controller key statistics information. If all key
+   * statistics have been gathered, enqueues the task with the {@link WorkerSketchFetcher} to generate partiton boundaries.
+   * This is intended to be called by the {@link ControllerChatHandler}.
    */
-  void updateStatus(int stageNumber, int workerNumber, Object keyStatisticsObject);
+  void updatePartialKeyStatisticsInformation(int stageNumber, int workerNumber, Object partialKeyStatisticsInformationObject);
 
   /**
    * System error reported by a subtask. Note that the errors are organized by
@@ -102,7 +104,7 @@ public interface Controller
   /**
    * Periodic update of {@link CounterSnapshots} from subtasks.
    */
-  void updateCounters(CounterSnapshotsTree snapshotsTree);
+  void updateCounters(String taskId, CounterSnapshotsTree snapshotsTree);
 
   /**
    * Reports that results are ready for a subtask.
@@ -120,6 +122,6 @@ public interface Controller
   List<String> getTaskIds();
 
   @Nullable
-  Map<String, TaskReport> liveReports();
+  TaskReport.ReportMap liveReports();
 
 }

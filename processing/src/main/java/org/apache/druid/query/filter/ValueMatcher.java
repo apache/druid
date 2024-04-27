@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.filter;
 
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.monomorphicprocessing.CalledFromHotLoop;
 import org.apache.druid.query.monomorphicprocessing.HotLoopCallee;
 
@@ -31,6 +32,15 @@ import org.apache.druid.query.monomorphicprocessing.HotLoopCallee;
  */
 public interface ValueMatcher extends HotLoopCallee
 {
+  /**
+   * Returns true if the current row matches the condition.
+   *
+   * @param includeUnknown mapping for Druid native two state logic system into SQL three-state logic system. If set
+   *                       to true, this method should also return true if the matching result is 'unknown', such
+   *                       as from the input being null valued. See {@link NullHandling#useThreeValueLogic()}.
+   *
+   * @return true if the current row matches the condition, or is unknown and {@code includeUnknown} is set to true
+   */
   @CalledFromHotLoop
-  boolean matches();
+  boolean matches(boolean includeUnknown);
 }

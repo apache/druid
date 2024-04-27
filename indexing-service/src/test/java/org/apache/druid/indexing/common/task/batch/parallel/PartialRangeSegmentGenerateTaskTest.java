@@ -30,6 +30,10 @@ import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.timeline.partition.PartitionBoundaries;
 import org.hamcrest.Matchers;
 import org.junit.Assert;
@@ -99,6 +103,20 @@ public class PartialRangeSegmentGenerateTaskTest extends AbstractParallelIndexSu
   {
     PartialRangeSegmentGenerateTask task = new PartialRangeSegmentGenerateTaskBuilder().build();
     TestHelper.testSerializesDeserializes(getObjectMapper(), task);
+  }
+
+  @Test
+  public void hasCorrectInputSourceResources()
+  {
+    PartialRangeSegmentGenerateTask task = new PartialRangeSegmentGenerateTaskBuilder().build();
+    Assert.assertEquals(
+        Collections.singleton(
+            new ResourceAction(new Resource(
+                InlineInputSource.TYPE_KEY,
+                ResourceType.EXTERNAL
+            ), Action.READ)),
+        task.getInputSourceResources()
+    );
   }
 
   @Test

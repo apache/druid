@@ -36,6 +36,8 @@ import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.segment.loading.SegmentLoaderConfig;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorConfig;
@@ -50,6 +52,7 @@ public class TestAppenderatorsManager implements AppenderatorsManager
 
   @Override
   public Appenderator createRealtimeAppenderatorForTask(
+      SegmentLoaderConfig segmentLoaderConfig,
       String taskId,
       DataSchema schema,
       AppenderatorConfig config,
@@ -68,10 +71,12 @@ public class TestAppenderatorsManager implements AppenderatorsManager
       CachePopulatorStats cachePopulatorStats,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates
+      boolean useMaxMemoryEstimates,
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
     realtimeAppenderator = Appenderators.createRealtime(
+        segmentLoaderConfig,
         taskId,
         schema,
         config,
@@ -84,13 +89,13 @@ public class TestAppenderatorsManager implements AppenderatorsManager
         segmentAnnouncer,
         emitter,
         queryProcessingPool,
-        joinableFactory,
         cache,
         cacheConfig,
         cachePopulatorStats,
         rowIngestionMeters,
         parseExceptionHandler,
-        useMaxMemoryEstimates
+        useMaxMemoryEstimates,
+        centralizedDatasourceSchemaConfig
     );
     return realtimeAppenderator;
   }
@@ -107,7 +112,8 @@ public class TestAppenderatorsManager implements AppenderatorsManager
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates
+      boolean useMaxMemoryEstimates,
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
     return Appenderators.createOpenSegmentsOffline(
@@ -121,7 +127,8 @@ public class TestAppenderatorsManager implements AppenderatorsManager
         indexMerger,
         rowIngestionMeters,
         parseExceptionHandler,
-        useMaxMemoryEstimates
+        useMaxMemoryEstimates,
+        centralizedDatasourceSchemaConfig
     );
   }
 
@@ -137,7 +144,8 @@ public class TestAppenderatorsManager implements AppenderatorsManager
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates
+      boolean useMaxMemoryEstimates,
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
     return Appenderators.createClosedSegmentsOffline(
@@ -151,7 +159,8 @@ public class TestAppenderatorsManager implements AppenderatorsManager
         indexMerger,
         rowIngestionMeters,
         parseExceptionHandler,
-        useMaxMemoryEstimates
+        useMaxMemoryEstimates,
+        centralizedDatasourceSchemaConfig
     );
   }
 
@@ -167,7 +176,8 @@ public class TestAppenderatorsManager implements AppenderatorsManager
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates
+      boolean useMaxMemoryEstimates,
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
     return Appenderators.createOffline(
@@ -181,7 +191,8 @@ public class TestAppenderatorsManager implements AppenderatorsManager
         indexMerger,
         rowIngestionMeters,
         parseExceptionHandler,
-        useMaxMemoryEstimates
+        useMaxMemoryEstimates,
+        centralizedDatasourceSchemaConfig
     );
   }
 

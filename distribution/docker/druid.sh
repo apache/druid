@@ -40,6 +40,10 @@
 # - DRUID_CONFIG_COMMON -- full path to a file for druid 'common' properties
 # - DRUID_CONFIG_${service} -- full path to a file for druid 'service' properties
 # - DRUID_SINGLE_NODE_CONF -- config to use at runtime. Choose from: {large, medium, micro-quickstart, nano-quickstart, small, xlarge}
+# - DRUID_ADDITIONAL_CLASSPATH -- a list of colon-separated paths that will be added to the classpath of druid processes. 
+#                                 These paths can include jars, additional configuration folders (such as HDFS config), etc.
+#                                 It is important to ensure that these paths must exist in the environment druid runs in if they are not part of the distribution.
+
 
 set -e
 SERVICE="$1"
@@ -144,7 +148,7 @@ env | grep ^druid_ | while read evar;
 do
     # Can't use IFS='=' to parse since var might have = in it (e.g. password)
     val=$(echo "$evar" | sed -e 's?[^=]*=??')
-    var=$(echo "$evar" | sed -e 's?^\([^=]*\)=.*?\1?g' -e 's?_?.?g')
+    var=$(echo "$evar" | sed -e 's?^\([^=]*\)=.*?\1?g' -e 's?__?%UNDERSCORE%?g' -e 's?_?.?g' -e 's?%UNDERSCORE%?_?g')
     setKey $SERVICE "$var" "$val"
 done
 
@@ -196,4 +200,4 @@ then
     mkdir -p ${DRUID_DIRS_TO_CREATE}
 fi
 
-exec bin/run-java ${JAVA_OPTS} -cp $COMMON_CONF_DIR:$SERVICE_CONF_DIR:lib/*: org.apache.druid.cli.Main server $@
+exec bin/run-java ${JAVA_OPTS} -cp $COMMON_CONF_DIR:$SERVICE_CONF_DIR:lib/*:$DRUID_ADDITIONAL_CLASSPATH org.apache.druid.cli.Main server $@

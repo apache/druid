@@ -101,7 +101,6 @@ public class SimpleTestIndex
           },
           0,
           Granularities.NONE,
-          false,
           100,
           false
       );

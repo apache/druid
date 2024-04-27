@@ -22,9 +22,10 @@ package org.apache.druid.msq.statistics;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.frame.key.ClusterBy;
+import org.apache.druid.frame.key.KeyColumn;
+import org.apache.druid.frame.key.KeyOrder;
 import org.apache.druid.frame.key.KeyTestUtils;
 import org.apache.druid.frame.key.RowKey;
-import org.apache.druid.frame.key.SortColumn;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -38,7 +39,7 @@ import java.util.NoSuchElementException;
 
 public class DelegateOrMinKeyCollectorTest
 {
-  private final ClusterBy clusterBy = new ClusterBy(ImmutableList.of(new SortColumn("x", false)), 0);
+  private final ClusterBy clusterBy = new ClusterBy(ImmutableList.of(new KeyColumn("x", KeyOrder.ASCENDING)), 0);
   private final RowSignature signature = RowSignature.builder().add("x", ColumnType.LONG).build();
   private final Comparator<RowKey> comparator = clusterBy.keyComparator();
 
@@ -89,7 +90,7 @@ public class DelegateOrMinKeyCollectorTest
     Assert.assertTrue(collector.getDelegate().isPresent());
     Assert.assertFalse(collector.isEmpty());
     Assert.assertEquals(key, collector.minKey());
-    Assert.assertEquals(key.getNumberOfBytes(), collector.estimatedRetainedBytes(), 0);
+    Assert.assertEquals(key.estimatedObjectSizeBytes(), collector.estimatedRetainedBytes(), 0);
     Assert.assertEquals(1, collector.estimatedTotalWeight());
   }
 
@@ -110,7 +111,7 @@ public class DelegateOrMinKeyCollectorTest
     Assert.assertTrue(collector.getDelegate().isPresent());
     Assert.assertFalse(collector.isEmpty());
     Assert.assertEquals(key, collector.minKey());
-    Assert.assertEquals(key.getNumberOfBytes(), collector.estimatedRetainedBytes(), 0);
+    Assert.assertEquals(key.estimatedObjectSizeBytes(), collector.estimatedRetainedBytes(), 0);
     Assert.assertEquals(1, collector.estimatedTotalWeight());
 
     // Should not have actually downsampled, because the quantiles-based collector does nothing when
@@ -133,7 +134,7 @@ public class DelegateOrMinKeyCollectorTest
     RowKey key = createKey(1L);
     collector.add(key, 1);
     collector.add(key, 1);
-    int expectedRetainedBytes = 2 * key.getNumberOfBytes();
+    int expectedRetainedBytes = 2 * key.estimatedObjectSizeBytes();
 
     Assert.assertTrue(collector.getDelegate().isPresent());
     Assert.assertFalse(collector.isEmpty());
@@ -144,7 +145,7 @@ public class DelegateOrMinKeyCollectorTest
     while (collector.getDelegate().isPresent()) {
       Assert.assertTrue(collector.downSample());
     }
-    expectedRetainedBytes = key.getNumberOfBytes();
+    expectedRetainedBytes = key.estimatedObjectSizeBytes();
 
     Assert.assertFalse(collector.getDelegate().isPresent());
     Assert.assertFalse(collector.isEmpty());

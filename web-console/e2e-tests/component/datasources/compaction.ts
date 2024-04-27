@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { PartitionsSpec } from '../load-data/config/partition';
+import type { PartitionsSpec } from '../load-data/config/partition';
 
 /**
  * Datasource compaction configuration

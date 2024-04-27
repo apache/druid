@@ -22,17 +22,20 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.lang3.mutable.MutableObject;
 import org.apache.druid.data.input.FirehoseFactory;
-import org.apache.druid.data.input.FirehoseFactoryToInputSourceAdaptor;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.indexing.common.Counters;
+import org.apache.druid.indexing.common.LockGranularity;
+import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
+import org.apache.druid.indexing.common.actions.TaskLocks;
 import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.batch.parallel.TaskMonitor.SubTaskCompleteEvent;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.NonnullPair;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.BuildingNumberedShardSpec;
@@ -99,6 +102,7 @@ public class SinglePhaseParallelIndexTaskRunner extends ParallelIndexPhaseRunner
 
   private final ParallelIndexIngestionSpec ingestionSchema;
   private final SplittableInputSource<?> baseInputSource;
+  private CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
 
   SinglePhaseParallelIndexTaskRunner(
       TaskToolbox toolbox,
@@ -106,7 +110,8 @@ public class SinglePhaseParallelIndexTaskRunner extends ParallelIndexPhaseRunner
       String groupId,
       String baseSubtaskSpecName,
       ParallelIndexIngestionSpec ingestionSchema,
-      Map<String, Object> context
+      Map<String, Object> context,
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
     super(
@@ -118,9 +123,8 @@ public class SinglePhaseParallelIndexTaskRunner extends ParallelIndexPhaseRunner
         context
     );
     this.ingestionSchema = ingestionSchema;
-    this.baseInputSource = (SplittableInputSource) ingestionSchema.getIOConfig().getNonNullInputSource(
-        ingestionSchema.getDataSchema().getParser()
-    );
+    this.baseInputSource = (SplittableInputSource) ingestionSchema.getIOConfig().getNonNullInputSource(toolbox);
+    this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
   }
 
   @VisibleForTesting
@@ -129,10 +133,11 @@ public class SinglePhaseParallelIndexTaskRunner extends ParallelIndexPhaseRunner
       String taskId,
       String groupId,
       ParallelIndexIngestionSpec ingestionSchema,
-      Map<String, Object> context
+      Map<String, Object> context,
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
-    this(toolbox, taskId, groupId, taskId, ingestionSchema, context);
+    this(toolbox, taskId, groupId, taskId, ingestionSchema, context, centralizedDatasourceSchemaConfig);
   }
 
   @Override
@@ -171,13 +176,9 @@ public class SinglePhaseParallelIndexTaskRunner extends ParallelIndexPhaseRunner
   {
     final FirehoseFactory firehoseFactory;
     final InputSource inputSource;
-    if (baseInputSource instanceof FirehoseFactoryToInputSourceAdaptor) {
-      firehoseFactory = ((FirehoseFactoryToInputSourceAdaptor) baseInputSource).getFirehoseFactory().withSplit(split);
-      inputSource = null;
-    } else {
-      firehoseFactory = null;
-      inputSource = baseInputSource.withSplit(split);
-    }
+    firehoseFactory = null;
+    inputSource = baseInputSource.withSplit(split);
+
     final Map<String, Object> subtaskContext = new HashMap<>(getContext());
     return new SinglePhaseSubTaskSpec(
         getBaseSubtaskSpecName() + "_" + getAndIncrementNextSpecId(),
@@ -223,7 +224,7 @@ public class SinglePhaseParallelIndexTaskRunner extends ParallelIndexPhaseRunner
 
   /**
    * Allocate a new segment for the given timestamp locally. This method is called when dynamic partitioning is used
-   * and {@link org.apache.druid.indexing.common.LockGranularity} is {@code TIME_CHUNK}.
+   * and {@link LockGranularity} is {@code TIME_CHUNK}.
    *
    * The allocation algorithm is similar to the Overlord-based segment allocation. It keeps the segment allocation
    * history per sequenceName. If the prevSegmentId is found in the segment allocation history, this method
@@ -290,7 +291,8 @@ public class SinglePhaseParallelIndexTaskRunner extends ParallelIndexPhaseRunner
 
   NonnullPair<Interval, String> findIntervalAndVersion(DateTime timestamp) throws IOException
   {
-    return AbstractBatchIndexTask.findIntervalAndVersion(getToolbox(), ingestionSchema, timestamp);
+    TaskLockType taskLockType = TaskLocks.determineLockTypeForAppend(getContext());
+    return AbstractBatchIndexTask.findIntervalAndVersion(getToolbox(), ingestionSchema, timestamp, taskLockType);
   }
 
   @Override

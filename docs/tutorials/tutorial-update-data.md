@@ -1,7 +1,8 @@
 ---
 id: tutorial-update-data
-title: "Tutorial: Updating existing data"
-sidebar_label: "Updating existing data"
+title: Update data
+sidebar_label: Update data
+description: Learn how to update data in Apache Druid.
 ---
 
 <!--
@@ -23,147 +24,225 @@ sidebar_label: "Updating existing data"
   ~ under the License.
   -->
 
+Apache Druid stores data and indexes in [segment files](../design/segments.md) partitioned by time.
+After Druid creates a segment, its contents can't be modified.
+You can either replace data for the whole segment, or, in some cases, overshadow a portion of the segment data.
 
-This tutorial demonstrates how to update existing data, showing both overwrites and appends.
+In Druid, use time ranges to specify the data you want to update, as opposed to a primary key or dimensions often used in transactional databases. Data outside the specified replacement time range remains unaffected.
+You can use this Druid functionality to perform data updates, inserts, and deletes, similar to UPSERT functionality for transactional databases.
 
-For this tutorial, we'll assume you've already downloaded Apache Druid as described in
-the [single-machine quickstart](index.md) and have it running on your local machine.
+This tutorial shows you how to use the Druid SQL [REPLACE](../multi-stage-query/reference.md#replace) function with the OVERWRITE clause to update existing data.
 
-It will also be helpful to have finished [Tutorial: Loading a file](../tutorials/tutorial-batch.md), [Tutorial: Querying data](../tutorials/tutorial-query.md), and [Tutorial: Rollup](../tutorials/tutorial-rollup.md).
+The tutorial walks you through the following use cases:
 
-## Overwrite
+* [Overwrite all data](#overwrite-all-data)
+* [Overwrite records for a specific time range](#overwrite-records-for-a-specific-time-range)
+* [Update a row using partial segment overshadowing](#update-a-row-using-partial-segment-overshadowing)
 
-This section of the tutorial will cover how to overwrite an existing interval of data.
+All examples use the [multi-stage query (MSQ)](../multi-stage-query/index.md) task engine to executes SQL statements.
 
-### Load initial data
+## Prerequisites
 
-Let's load an initial data set which we will overwrite and append to.
+Before you follow the steps in this tutorial, download Druid as described in [Quickstart (local)](index.md) and have it running on your local machine. You don't need to load any data into the Druid cluster.
 
-The spec we'll use for this tutorial is located at `quickstart/tutorial/updates-init-index.json`. This spec creates a datasource called `updates-tutorial` from the `quickstart/tutorial/updates-data.json` input file.
+You should be familiar with data querying in Druid. If you haven't already, go through the [Query data](../tutorials/tutorial-query.md) tutorial first.
 
-Let's submit that task:
+## Load sample data
 
-```bash
-bin/post-index-task --file quickstart/tutorial/updates-init-index.json --url http://localhost:8081
-```
+Load a sample dataset using [REPLACE](../multi-stage-query/reference.md#replace) and [EXTERN](../multi-stage-query/reference.md#extern-function) functions.
+In Druid SQL, the REPLACE function can create a new [datasource](../design/storage.md) or update an existing datasource.
 
-We have three initial rows containing an "animal" dimension and "number" metric:
+In the Druid [web console](../operations/web-console.md), go to the **Query** view and run the following query:
 
-```bash
-dsql> select * from "updates-tutorial";
-┌──────────────────────────┬──────────┬───────┬────────┐
-│ __time                   │ animal   │ count │ number │
-├──────────────────────────┼──────────┼───────┼────────┤
-│ 2018-01-01T01:01:00.000Z │ tiger    │     1 │    100 │
-│ 2018-01-01T03:01:00.000Z │ aardvark │     1 │     42 │
-│ 2018-01-01T03:01:00.000Z │ giraffe  │     1 │  14124 │
-└──────────────────────────┴──────────┴───────┴────────┘
-Retrieved 3 rows in 1.42s.
-```
-
-### Overwrite the initial data
-
-To overwrite this data, we can submit another task for the same interval, but with different input data.
-
-The `quickstart/tutorial/updates-overwrite-index.json` spec will perform an overwrite on the `updates-tutorial` datasource.
-
-Note that this task reads input from `quickstart/tutorial/updates-data2.json`, and `appendToExisting` is set to `false` (indicating this is an overwrite).
-
-Let's submit that task:
-
-```bash
-bin/post-index-task --file quickstart/tutorial/updates-overwrite-index.json --url http://localhost:8081
-```
-
-When Druid finishes loading the new segment from this overwrite task, the "tiger" row now has the value "lion", the "aardvark" row has a different number, and the "giraffe" row has been replaced. It may take a couple of minutes for the changes to take effect:
-
-```bash
-dsql> select * from "updates-tutorial";
-┌──────────────────────────┬──────────┬───────┬────────┐
-│ __time                   │ animal   │ count │ number │
-├──────────────────────────┼──────────┼───────┼────────┤
-│ 2018-01-01T01:01:00.000Z │ lion     │     1 │    100 │
-│ 2018-01-01T03:01:00.000Z │ aardvark │     1 │   9999 │
-│ 2018-01-01T04:01:00.000Z │ bear     │     1 │    111 │
-└──────────────────────────┴──────────┴───────┴────────┘
-Retrieved 3 rows in 0.02s.
-```
-
-## Combine old data with new data and overwrite
-
-Let's try appending some new data to the `updates-tutorial` datasource now. We will add the data from `quickstart/tutorial/updates-data3.json`.
-
-The `quickstart/tutorial/updates-append-index.json` task spec has been configured to read from the existing `updates-tutorial` datasource and the `quickstart/tutorial/updates-data3.json` file. The task will combine data from the two input sources, and then overwrite the original data with the new combined data.
-
-Let's submit that task:
-
-```bash
-bin/post-index-task --file quickstart/tutorial/updates-append-index.json --url http://localhost:8081
-```
-
-When Druid finishes loading the new segment from this overwrite task, the new rows will have been added to the datasource. Note that roll-up occurred for the "lion" row:
-
-```bash
-dsql> select * from "updates-tutorial";
-┌──────────────────────────┬──────────┬───────┬────────┐
-│ __time                   │ animal   │ count │ number │
-├──────────────────────────┼──────────┼───────┼────────┤
-│ 2018-01-01T01:01:00.000Z │ lion     │     2 │    400 │
-│ 2018-01-01T03:01:00.000Z │ aardvark │     1 │   9999 │
-│ 2018-01-01T04:01:00.000Z │ bear     │     1 │    111 │
-│ 2018-01-01T05:01:00.000Z │ mongoose │     1 │    737 │
-│ 2018-01-01T06:01:00.000Z │ snake    │     1 │   1234 │
-│ 2018-01-01T07:01:00.000Z │ octopus  │     1 │    115 │
-└──────────────────────────┴──────────┴───────┴────────┘
-Retrieved 6 rows in 0.02s.
-```
-
-## Append to the data
-
-Let's try another way of appending data.
-
-The `quickstart/tutorial/updates-append-index2.json` task spec reads input from `quickstart/tutorial/updates-data4.json` and will append its data to the `updates-tutorial` datasource. Note that `appendToExisting` is set to `true` in this spec.
-
-Let's submit that task:
-
-```bash
-bin/post-index-task --file quickstart/tutorial/updates-append-index2.json --url http://localhost:8081
-```
-
-When the new data is loaded, we can see two additional rows after "octopus". Note that the new "bear" row with number 222 has not been rolled up with the existing bear-111 row, because the new data is held in a separate segment.
-
-```bash
-dsql> select * from "updates-tutorial";
-┌──────────────────────────┬──────────┬───────┬────────┐
-│ __time                   │ animal   │ count │ number │
-├──────────────────────────┼──────────┼───────┼────────┤
-│ 2018-01-01T01:01:00.000Z │ lion     │     2 │    400 │
-│ 2018-01-01T03:01:00.000Z │ aardvark │     1 │   9999 │
-│ 2018-01-01T04:01:00.000Z │ bear     │     1 │    111 │
-│ 2018-01-01T05:01:00.000Z │ mongoose │     1 │    737 │
-│ 2018-01-01T06:01:00.000Z │ snake    │     1 │   1234 │
-│ 2018-01-01T07:01:00.000Z │ octopus  │     1 │    115 │
-│ 2018-01-01T04:01:00.000Z │ bear     │     1 │    222 │
-│ 2018-01-01T09:01:00.000Z │ falcon   │     1 │   1241 │
-└──────────────────────────┴──────────┴───────┴────────┘
-Retrieved 8 rows in 0.02s.
+```sql
+REPLACE INTO "update_tutorial" OVERWRITE ALL
+WITH "ext" AS (
+  SELECT *
+  FROM TABLE(
+    EXTERN(
+     '{"type":"inline","data":"{\"timestamp\":\"2024-01-01T07:01:35Z\",\"animal\":\"octopus\", \"number\":115}\n{\"timestamp\":\"2024-01-01T05:01:35Z\",\"animal\":\"mongoose\", \"number\":737}\n{\"timestamp\":\"2024-01-01T06:01:35Z\",\"animal\":\"snake\", \"number\":1234}\n{\"timestamp\":\"2024-01-01T01:01:35Z\",\"animal\":\"lion\", \"number\":300}\n{\"timestamp\":\"2024-01-02T07:01:35Z\",\"animal\":\"seahorse\", \"number\":115}\n{\"timestamp\":\"2024-01-02T05:01:35Z\",\"animal\":\"skunk\", \"number\":737}\n{\"timestamp\":\"2024-01-02T06:01:35Z\",\"animal\":\"iguana\", \"number\":1234}\n{\"timestamp\":\"2024-01-02T01:01:35Z\",\"animal\":\"opossum\", \"number\":300}"}',
+     '{"type":"json"}'
+    )
+  ) EXTEND ("timestamp" VARCHAR, "animal" VARCHAR, "number" BIGINT)
+)
+SELECT
+  TIME_PARSE("timestamp") AS "__time",
+  "animal",
+  "number"
+FROM "ext"
+PARTITIONED BY DAY
 
 ```
 
-If we run a GroupBy query instead of a `select *`, we can see that the "bear" rows will group together at query time:
+In the resulting `update_tutorial` datasource, individual rows are uniquely identified by `__time`, `animal`, and `number`.
+To view the results, open a new tab and run the following query:
 
-```bash
-dsql> select __time, animal, SUM("count"), SUM("number") from "updates-tutorial" group by __time, animal;
-┌──────────────────────────┬──────────┬────────┬────────┐
-│ __time                   │ animal   │ EXPR$2 │ EXPR$3 │
-├──────────────────────────┼──────────┼────────┼────────┤
-│ 2018-01-01T01:01:00.000Z │ lion     │      2 │    400 │
-│ 2018-01-01T03:01:00.000Z │ aardvark │      1 │   9999 │
-│ 2018-01-01T04:01:00.000Z │ bear     │      2 │    333 │
-│ 2018-01-01T05:01:00.000Z │ mongoose │      1 │    737 │
-│ 2018-01-01T06:01:00.000Z │ snake    │      1 │   1234 │
-│ 2018-01-01T07:01:00.000Z │ octopus  │      1 │    115 │
-│ 2018-01-01T09:01:00.000Z │ falcon   │      1 │   1241 │
-└──────────────────────────┴──────────┴────────┴────────┘
-Retrieved 7 rows in 0.23s.
+```sql
+SELECT * FROM "update_tutorial"
 ```
+
+<details>
+<summary> View the results</summary>
+
+| `__time` | `animal` | `number`|
+| -- | -- | -- |
+| `2024-01-01T01:01:35.000Z`| `lion`| 300 |
+| `2024-01-01T05:01:35.000Z`| `mongoose`| 737 |
+| `2024-01-01T06:01:35.000Z`| `snake`| 1234 |
+| `2024-01-01T07:01:35.000Z`| `octopus`| 115 |
+| `2024-01-02T01:01:35.000Z`| `opossum`| 300 |
+| `2024-01-02T05:01:35.000Z`| `skunk`| 737 |
+| `2024-01-02T06:01:35.000Z`| `iguana`| 1234 |
+| `2024-01-02T07:01:35.000Z`| `seahorse`| 115 |
+
+</details>
+
+The results contain records for eight animals over two days.
+
+## Overwrite all data
+
+You can use the REPLACE function with OVERWRITE ALL to replace the entire datasource with new data while dropping the old data.
+
+In the web console, open a new tab and run the following query to overwrite timestamp data for the entire `update_tutorial` datasource:
+
+```sql
+REPLACE INTO "update_tutorial" OVERWRITE ALL
+WITH "ext" AS (SELECT *
+FROM TABLE(
+  EXTERN(
+    '{"type":"inline","data":"{\"timestamp\":\"2024-01-02T07:01:35Z\",\"animal\":\"octopus\", \"number\":115}\n{\"timestamp\":\"2024-01-02T05:01:35Z\",\"animal\":\"mongoose\", \"number\":737}\n{\"timestamp\":\"2024-01-02T06:01:35Z\",\"animal\":\"snake\", \"number\":1234}\n{\"timestamp\":\"2024-01-02T01:01:35Z\",\"animal\":\"lion\", \"number\":300}\n{\"timestamp\":\"2024-01-03T07:01:35Z\",\"animal\":\"seahorse\", \"number\":115}\n{\"timestamp\":\"2024-01-03T05:01:35Z\",\"animal\":\"skunk\", \"number\":737}\n{\"timestamp\":\"2024-01-03T06:01:35Z\",\"animal\":\"iguana\", \"number\":1234}\n{\"timestamp\":\"2024-01-03T01:01:35Z\",\"animal\":\"opossum\", \"number\":300}"}',
+    '{"type":"json"}'
+  )
+) EXTEND ("timestamp" VARCHAR, "animal" VARCHAR, "number" BIGINT))
+SELECT
+  TIME_PARSE("timestamp") AS "__time",
+  "animal",
+  "number"
+FROM "ext"
+PARTITIONED BY DAY
+```
+
+<details>
+<summary> View the results</summary>
+
+| `__time` | `animal` | `number`|
+| -- | -- | -- |
+| `2024-01-02T01:01:35.000Z`| `lion`| 300 |
+| `2024-01-02T05:01:35.000Z`| `mongoose`| 737 |
+| `2024-01-02T06:01:35.000Z`| `snake`| 1234 |
+| `2024-01-02T07:01:35.000Z`| `octopus`| 115 |
+| `2024-01-03T01:01:35.000Z`| `opossum`| 300 |
+| `2024-01-03T05:01:35.000Z`| `skunk`| 737 |
+| `2024-01-03T06:01:35.000Z`| `iguana`| 1234 |
+| `2024-01-03T07:01:35.000Z`| `seahorse`| 115 |
+
+</details>
+
+Note that the values in the `__time` column have changed to one day later.
+
+## Overwrite records for a specific time range
+
+You can use the REPLACE function to overwrite a specific time range of a datasource. When you overwrite a specific time range, that time range must align with the granularity specified in the PARTITIONED BY clause.
+
+In the web console, open a new tab and run the following query to insert a new row and update specific rows. Note that the OVERWRITE WHERE clause tells the query to only update records for the date 2024-01-03.
+
+```sql
+REPLACE INTO "update_tutorial" 
+  OVERWRITE WHERE "__time" >= TIMESTAMP'2024-01-03 00:00:00' AND "__time" < TIMESTAMP'2024-01-04 00:00:00'
+WITH "ext" AS (SELECT *
+FROM TABLE(
+  EXTERN(
+    '{"type":"inline","data":"{\"timestamp\":\"2024-01-03T01:01:35Z\",\"animal\":\"tiger\", \"number\":300}\n{\"timestamp\":\"2024-01-03T07:01:35Z\",\"animal\":\"seahorse\", \"number\":500}\n{\"timestamp\":\"2024-01-03T05:01:35Z\",\"animal\":\"polecat\", \"number\":626}\n{\"timestamp\":\"2024-01-03T06:01:35Z\",\"animal\":\"iguana\", \"number\":300}\n{\"timestamp\":\"2024-01-03T01:01:35Z\",\"animal\":\"flamingo\", \"number\":999}"}',
+    '{"type":"json"}'
+  )
+) EXTEND ("timestamp" VARCHAR, "animal" VARCHAR, "number" BIGINT))
+SELECT
+  TIME_PARSE("timestamp") AS "__time",
+  "animal",
+  "number"
+FROM "ext"
+PARTITIONED BY DAY
+```
+
+<details>
+<summary> View the results</summary>
+
+| `__time` | `animal` | `number`|
+| -- | -- | -- |
+| `2024-01-02T01:01:35.000Z`| `lion`| 300 |
+| `2024-01-02T05:01:35.000Z`| `mongoose`| 737 |
+| `2024-01-02T06:01:35.000Z`| `snake`| 1234 |
+| `2024-01-02T07:01:35.000Z`| `octopus`| 115 |
+| `2024-01-03T01:01:35.000Z`| `flamingo`| 999 |
+| `2024-01-03T01:01:35.000Z`| `tiger`| 300 |
+| `2024-01-03T05:01:35.000Z`| `polecat`| 626 |
+| `2024-01-03T06:01:35.000Z`| `iguana`| 300 |
+| `2024-01-03T07:01:35.000Z`| `seahorse`| 500 |
+
+</details>
+
+Note the changes in the resulting datasource:
+
+* There is now a new row called `flamingo`.
+* The `opossum` row has the value `tiger`.
+* The `skunk` row has the value `polecat`.
+* The `iguana` and `seahorse` rows have different numbers.
+
+## Update a row using partial segment overshadowing
+
+In Druid, you can overlay older data with newer data for the entire segment or portions of the segment within a particular partition.
+This capability is called [overshadowing](../ingestion/tasks.md#overshadowing-between-segments).
+
+You can use partial overshadowing to update a single row by adding a smaller time granularity segment on top of the existing data.
+It's a less common variation on a more common approach where you replace the entire time chunk.
+
+The following example demonstrates how update data using partial overshadowing with mixed segment granularity.  
+Note the following important points about the example:
+
+* The query updates a single record for a specific `number` row.
+* The original datasource uses DAY segment granularity.
+* The new data segment is at HOUR granularity and represents a time range that's smaller than the existing data.
+* The OVERWRITE WHERE and WHERE TIME_IN_INTERVAL clauses specify the destination where the update occurs and the source of the update, respectively.
+* The query replaces everything within the specified interval. To update only a subset of data in that interval, you have to carry forward all records, changing only what you want to change. You can accomplish that by using the [CASE](../querying/sql-functions.md#case) function in the SELECT list.
+
+```sql
+REPLACE INTO "update_tutorial"
+   OVERWRITE
+       WHERE "__time" >= TIMESTAMP'2024-01-03 05:00:00' AND "__time" < TIMESTAMP'2024-01-03 06:00:00'
+SELECT 
+   "__time", 
+   "animal", 
+   CAST(486 AS BIGINT) AS "number"
+FROM "update_tutorial" 
+WHERE TIME_IN_INTERVAL("__time", '2024-01-03T05:01:35Z/PT1S')
+PARTITIONED BY FLOOR(__time TO HOUR)
+```
+
+<details>
+<summary> View the results</summary>
+
+| `__time` | `animal` | `number`|
+| -- | -- | -- |
+| `2024-01-02T01:01:35.000Z`| `lion`| 300 |
+| `2024-01-02T05:01:35.000Z`| `mongoose`| 737 |
+| `2024-01-02T06:01:35.000Z`| `snake`| 1234 |
+| `2024-01-02T07:01:35.000Z`| `octopus`| 115 |
+| `2024-01-03T01:01:35.000Z`| `flamingo`| 999 |
+| `2024-01-03T01:01:35.000Z`| `tiger`| 300 |
+| `2024-01-03T05:01:35.000Z`| `polecat`| 486 |
+| `2024-01-03T06:01:35.000Z`| `iguana`| 300 |
+| `2024-01-03T07:01:35.000Z`| `seahorse`| 500 |
+
+</details>
+
+Note that the `number` for `polecat` has changed from 626 to 486.
+
+When you perform partial segment overshadowing multiple times, you can create segment fragmentation that could affect query performance. Use [compaction](../data-management/compaction.md) to correct any fragmentation.
+
+## Learn more
+
+See the following topics for more information:
+
+* [Data updates](../data-management/update.md) for an overview of updating data in Druid.
+* [Load files with SQL-based ingestion](../tutorials/tutorial-msq-extern.md) for generating a query that references externally hosted data.
+* [Overwrite data with REPLACE](../multi-stage-query/concepts.md#overwrite-data-with-replace) for details on how the MSQ task engine executes SQL REPLACE queries.

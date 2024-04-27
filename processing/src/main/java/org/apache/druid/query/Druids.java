@@ -36,6 +36,7 @@ import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.query.metadata.metadata.AggregatorMergeStrategy;
 import org.apache.druid.query.metadata.metadata.ColumnIncluderator;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.query.scan.ScanQuery;
@@ -52,6 +53,7 @@ import org.apache.druid.query.timeboundary.TimeBoundaryQuery;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnType;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -659,6 +661,7 @@ public class Druids
     private EnumSet<SegmentMetadataQuery.AnalysisType> analysisTypes;
     private Boolean merge;
     private Boolean lenientAggregatorMerge;
+    private AggregatorMergeStrategy aggregatorMergeStrategy;
     private Boolean usingDefaultInterval;
     private Map<String, Object> context;
 
@@ -670,6 +673,7 @@ public class Druids
       analysisTypes = null;
       merge = null;
       lenientAggregatorMerge = null;
+      aggregatorMergeStrategy = null;
       usingDefaultInterval = null;
       context = null;
     }
@@ -684,7 +688,8 @@ public class Druids
           context,
           analysisTypes,
           usingDefaultInterval,
-          lenientAggregatorMerge
+          lenientAggregatorMerge,
+          aggregatorMergeStrategy
       );
     }
 
@@ -696,7 +701,7 @@ public class Druids
           .toInclude(query.getToInclude())
           .analysisTypes(query.getAnalysisTypes())
           .merge(query.isMerge())
-          .lenientAggregatorMerge(query.isLenientAggregatorMerge())
+          .aggregatorMergeStrategy(query.getAggregatorMergeStrategy())
           .usingDefaultInterval(query.isUsingDefaultInterval())
           .context(query.getContext());
     }
@@ -761,9 +766,16 @@ public class Druids
       return this;
     }
 
+    @Deprecated
     public SegmentMetadataQueryBuilder lenientAggregatorMerge(boolean lenientAggregatorMerge)
     {
       this.lenientAggregatorMerge = lenientAggregatorMerge;
+      return this;
+    }
+
+    public SegmentMetadataQueryBuilder aggregatorMergeStrategy(AggregatorMergeStrategy aggregatorMergeStrategy)
+    {
+      this.aggregatorMergeStrategy = aggregatorMergeStrategy;
       return this;
     }
 
@@ -815,6 +827,7 @@ public class Druids
     private Boolean legacy;
     private ScanQuery.Order order;
     private List<ScanQuery.OrderBy> orderBy;
+    private List<ColumnType> columnTypes = null;
 
     public ScanQuery build()
     {
@@ -831,7 +844,8 @@ public class Druids
           dimFilter,
           columns,
           legacy,
-          context
+          context,
+          columnTypes
       );
     }
 
@@ -849,12 +863,18 @@ public class Druids
           .columns(query.getColumns())
           .legacy(query.isLegacy())
           .context(query.getContext())
-          .orderBy(query.getOrderBys());
+          .orderBy(query.getOrderBys())
+          .columnTypes(query.getColumnTypes());
     }
 
     public ScanQueryBuilder dataSource(String ds)
     {
       dataSource = new TableDataSource(ds);
+      return this;
+    }
+    public ScanQueryBuilder dataSource(Query<?> q)
+    {
+      dataSource = new QueryDataSource(q);
       return this;
     }
 
@@ -954,6 +974,18 @@ public class Druids
     public ScanQueryBuilder orderBy(List<ScanQuery.OrderBy> orderBys)
     {
       this.orderBy = orderBys;
+      return this;
+    }
+
+    public ScanQueryBuilder columnTypes(List<ColumnType> columnTypes)
+    {
+      this.columnTypes = columnTypes;
+      return this;
+    }
+
+    public ScanQueryBuilder columnTypes(ColumnType... columnType)
+    {
+      this.columnTypes = Arrays.asList(columnType);
       return this;
     }
   }

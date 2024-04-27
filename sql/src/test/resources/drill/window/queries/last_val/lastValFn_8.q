@@ -1,0 +1,1 @@
+SELECT * FROM (SELECT col7 , LAST_VALUE(col1) OVER(PARTITION BY col7 ORDER BY col1) LAST_VALUE_col1 FROM "allTypsUniq.parquet") sub_query WHERE LAST_VALUE_col1 is NOT null

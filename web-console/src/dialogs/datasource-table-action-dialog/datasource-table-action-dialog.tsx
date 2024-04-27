@@ -19,8 +19,9 @@
 import { IconNames } from '@blueprintjs/icons';
 import React, { useState } from 'react';
 
-import { BasicAction } from '../../utils/basic-action';
-import { SideButtonMetaData, TableActionDialog } from '../table-action-dialog/table-action-dialog';
+import type { BasicAction } from '../../utils/basic-action';
+import type { SideButtonMetaData } from '../table-action-dialog/table-action-dialog';
+import { TableActionDialog } from '../table-action-dialog/table-action-dialog';
 
 import { DatasourceColumnsTable } from './datasource-columns-table/datasource-columns-table';
 import { DatasourcePreviewPane } from './datasource-preview-pane/datasource-preview-pane';

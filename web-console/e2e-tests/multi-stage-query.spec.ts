@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import * as playwright from 'playwright-chromium';
+import type * as playwright from 'playwright-chromium';
 
 import { WorkbenchOverview } from './component/workbench/overview';
 import { saveScreenshotIfError } from './util/debug';
@@ -44,18 +44,18 @@ describe('Multi-stage query', () => {
   });
 
   it('runs a query that reads external data', async () => {
+    const workbench = new WorkbenchOverview(page, UNIFIED_CONSOLE_URL);
+
     await saveScreenshotIfError('multi-stage-query', page, async () => {
-      const workbench = new WorkbenchOverview(page, UNIFIED_CONSOLE_URL);
       const results = await workbench.runQuery(`WITH ext AS (SELECT *
 FROM TABLE(
   EXTERN(
     '{"type":"local","filter":"wikiticker-2015-09-12-sampled.json.gz","baseDir":${JSON.stringify(
       DRUID_EXAMPLES_QUICKSTART_TUTORIAL_DIR,
     )}}',
-    '{"type":"json"}',
-    '[{"name":"channel","type":"string"}]'
+    '{"type":"json"}'
   )
-))
+) EXTEND (channel VARCHAR))
 SELECT
   channel,
   CAST(COUNT(*) AS VARCHAR) AS "CountString"

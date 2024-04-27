@@ -1,0 +1,6 @@
+-65535	NJ	NJ	false
+5	TX	TX	false
+23	SC	SC	true
+10000000	OR	OR	true
+1073741823	MA	MA	false
+2147483647	IN	IN	false

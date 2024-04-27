@@ -24,11 +24,8 @@ import org.apache.druid.query.aggregation.SerializablePairLongString;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.DimensionHandlerUtils;
-import org.apache.druid.segment.NilColumnValueSelector;
-import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.segment.vector.BaseLongVectorValueSelector;
 import org.apache.druid.segment.vector.VectorObjectSelector;
+import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -38,48 +35,11 @@ public class StringFirstLastUtils
   private static final int NULL_VALUE = -1;
 
   /**
-   * Returns whether a given value selector *might* contain SerializablePairLongString objects.
-   */
-  public static boolean selectorNeedsFoldCheck(
-      final BaseObjectColumnValueSelector<?> valueSelector,
-      @Nullable final ColumnCapabilities valueSelectorCapabilities
-  )
-  {
-    if (valueSelectorCapabilities != null && !valueSelectorCapabilities.is(ValueType.COMPLEX)) {
-      // Known, non-complex type.
-      return false;
-    }
-
-    if (valueSelector instanceof NilColumnValueSelector) {
-      // Nil column, definitely no SerializablePairLongStrings.
-      return false;
-    }
-
-    // Check if the selector class could possibly be a SerializablePairLongString (either a superclass or subclass).
-    final Class<?> clazz = valueSelector.classOfObject();
-    return clazz.isAssignableFrom(SerializablePairLongString.class)
-           || SerializablePairLongString.class.isAssignableFrom(clazz);
-  }
-
-  /**
-   * Returns whether an object *might* contain SerializablePairLongString objects.
-   */
-  public static boolean objectNeedsFoldCheck(Object obj)
-  {
-    if (obj == null) {
-      return false;
-    }
-    final Class<?> clazz = obj.getClass();
-    return clazz.isAssignableFrom(SerializablePairLongString.class)
-           || SerializablePairLongString.class.isAssignableFrom(clazz);
-  }
-
-  /**
    * Return the object at a particular index from the vector selectors.
    * index of bounds issues is the responsibility of the caller
    */
   public static SerializablePairLongString readPairFromVectorSelectorsAtIndex(
-      BaseLongVectorValueSelector timeSelector,
+      VectorValueSelector timeSelector,
       VectorObjectSelector valueSelector,
       int index
   )
@@ -120,6 +80,9 @@ public class StringFirstLastUtils
       time = pair.lhs;
       string = pair.rhs;
     } else if (object != null) {
+      if (timeSelector.isNull()) {
+        return null;
+      }
       time = timeSelector.getLong();
       string = DimensionHandlerUtils.convertObjectToString(object);
     } else {
@@ -158,6 +121,7 @@ public class StringFirstLastUtils
 
     Long timeValue = copyBuffer.getLong();
     int stringSizeBytes = copyBuffer.getInt();
+
 
     if (stringSizeBytes >= 0) {
       byte[] valueBytes = new byte[stringSizeBytes];

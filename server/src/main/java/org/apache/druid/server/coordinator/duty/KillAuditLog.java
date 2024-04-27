@@ -19,69 +19,32 @@
 
 package org.apache.druid.server.coordinator.duty;
 
-import com.google.common.base.Preconditions;
-import com.google.inject.Inject;
 import org.apache.druid.audit.AuditManager;
-import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
-import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
+import org.apache.druid.server.coordinator.stats.Stats;
+import org.joda.time.DateTime;
 
-public class KillAuditLog implements CoordinatorDuty
+public class KillAuditLog extends MetadataCleanupDuty
 {
-  private static final Logger log = new Logger(KillAuditLog.class);
-
-  private final long period;
-  private final long retainDuration;
-  private long lastKillTime = 0;
-
   private final AuditManager auditManager;
 
-  @Inject
-  public KillAuditLog(
-      AuditManager auditManager,
-      DruidCoordinatorConfig config
-  )
+  public KillAuditLog(DruidCoordinatorConfig config, AuditManager auditManager)
   {
-    this.period = config.getCoordinatorAuditKillPeriod().getMillis();
-    Preconditions.checkArgument(
-        this.period >= config.getCoordinatorMetadataStoreManagementPeriod().getMillis(),
-        "coordinator audit kill period must be >= druid.coordinator.period.metadataStoreManagementPeriod"
-    );
-    this.retainDuration = config.getCoordinatorAuditKillDurationToRetain().getMillis();
-    Preconditions.checkArgument(this.retainDuration >= 0, "coordinator audit kill retainDuration must be >= 0");
-    Preconditions.checkArgument(this.retainDuration < System.currentTimeMillis(), "Coordinator audit kill retainDuration cannot be greater than current time in ms");
-    log.debug(
-        "Audit Kill Task scheduling enabled with period [%s], retainDuration [%s]",
-        this.period,
-        this.retainDuration
+    super(
+        "audit logs",
+        "druid.coordinator.kill.audit",
+        config.isAuditKillEnabled(),
+        config.getCoordinatorAuditKillPeriod(),
+        config.getCoordinatorAuditKillDurationToRetain(),
+        Stats.Kill.AUDIT_LOGS,
+        config
     );
     this.auditManager = auditManager;
   }
 
   @Override
-  public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
+  protected int cleanupEntriesCreatedBefore(DateTime minCreatedTime)
   {
-    long currentTimeMillis = System.currentTimeMillis();
-    if ((lastKillTime + period) < currentTimeMillis) {
-      lastKillTime = currentTimeMillis;
-      long timestamp = currentTimeMillis - retainDuration;
-      try {
-        int auditRemoved = auditManager.removeAuditLogsOlderThan(timestamp);
-        ServiceEmitter emitter = params.getEmitter();
-        emitter.emit(
-            new ServiceMetricEvent.Builder().build(
-                "metadata/kill/audit/count",
-                auditRemoved
-            )
-        );
-        log.info("Finished running KillAuditLog duty. Removed %,d audit logs", auditRemoved);
-      }
-      catch (Exception e) {
-        log.error(e, "Failed to kill audit log");
-      }
-    }
-    return params;
+    return auditManager.removeAuditLogsOlderThan(minCreatedTime.getMillis());
   }
 }

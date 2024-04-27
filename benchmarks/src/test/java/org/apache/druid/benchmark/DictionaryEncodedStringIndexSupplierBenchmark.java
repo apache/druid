@@ -25,13 +25,14 @@ import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.java.util.common.ByteBufferUtils;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.segment.column.BitmapColumnIndex;
-import org.apache.druid.segment.column.StringValueSetIndex;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
-import org.apache.druid.segment.serde.DictionaryEncodedStringIndexSupplier;
+import org.apache.druid.segment.index.IndexedUtf8ValueIndexes;
+import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
+import org.apache.druid.segment.serde.StringUtf8ColumnIndexSupplier;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -71,8 +72,8 @@ public class DictionaryEncodedStringIndexSupplierBenchmark
   public static class BenchmarkState
   {
     @Nullable
-    private DictionaryEncodedStringIndexSupplier.GenericIndexedDictionaryEncodedStringValueSetIndex stringValueSetIndex;
-    private final TreeSet<ByteBuffer> values = new TreeSet<>();
+    private IndexedUtf8ValueIndexes<?> stringValueSetIndex;
+    private final List<ByteBuffer> values = new ArrayList<>();
     private static final int START_INT = 10_000_000;
 
     // cardinality of the dictionary. it will contain this many ints (as strings, of course), starting at START_INT,
@@ -90,17 +91,12 @@ public class DictionaryEncodedStringIndexSupplierBenchmark
     public void setup()
     {
       final BitmapFactory bitmapFactory = new RoaringBitmapFactory();
-      final BitmapSerdeFactory serdeFactory = new RoaringBitmapSerdeFactory(null);
+      final BitmapSerdeFactory serdeFactory = RoaringBitmapSerdeFactory.getInstance();
       final Iterable<Integer> ints = intGenerator();
-      final GenericIndexed<String> dictionary = GenericIndexed.fromIterable(
-          FluentIterable.from(ints)
-                        .transform(Object::toString),
-          GenericIndexed.STRING_STRATEGY
-      );
       final GenericIndexed<ByteBuffer> dictionaryUtf8 = GenericIndexed.fromIterable(
           FluentIterable.from(ints)
                         .transform(i -> ByteBuffer.wrap(StringUtils.toUtf8(String.valueOf(i)))),
-          GenericIndexed.BYTE_BUFFER_STRATEGY
+          GenericIndexed.UTF8_STRATEGY
       );
       final GenericIndexed<ImmutableBitmap> bitmaps = GenericIndexed.fromIterable(
           () -> IntStream.range(0, dictionarySize)
@@ -114,11 +110,9 @@ public class DictionaryEncodedStringIndexSupplierBenchmark
                          .iterator(),
           serdeFactory.getObjectStrategy()
       );
-      DictionaryEncodedStringIndexSupplier dictionaryEncodedStringIndexSupplier =
-          new DictionaryEncodedStringIndexSupplier(bitmapFactory, dictionary, dictionaryUtf8, bitmaps, null);
-      stringValueSetIndex =
-          (DictionaryEncodedStringIndexSupplier.GenericIndexedDictionaryEncodedStringValueSetIndex)
-              dictionaryEncodedStringIndexSupplier.as(StringValueSetIndex.class);
+      StringUtf8ColumnIndexSupplier<?> indexSupplier =
+          new StringUtf8ColumnIndexSupplier<>(bitmapFactory, dictionaryUtf8::singleThreaded, bitmaps, null);
+      stringValueSetIndex = (IndexedUtf8ValueIndexes<?>) indexSupplier.as(StringValueSetIndexes.class);
       List<Integer> filterValues = new ArrayList<>();
       List<Integer> nonFilterValues = new ArrayList<>();
       for (int i = 0; i < dictionarySize; i++) {
@@ -128,14 +122,16 @@ public class DictionaryEncodedStringIndexSupplierBenchmark
       Random r = new Random(9001);
       Collections.shuffle(filterValues);
       Collections.shuffle(nonFilterValues);
-      values.clear();
+      TreeSet<ByteBuffer> sortedValues = new TreeSet<>(ByteBufferUtils.utf8Comparator());
       for (int i = 0; i < filterToDictionaryPercentage * dictionarySize / 100; i++) {
         if (r.nextInt(100) < selectivityPercentage) {
-          values.add(ByteBuffer.wrap((filterValues.get(i).toString()).getBytes(StandardCharsets.UTF_8)));
+          sortedValues.add(ByteBuffer.wrap((filterValues.get(i).toString()).getBytes(StandardCharsets.UTF_8)));
         } else {
-          values.add(ByteBuffer.wrap((nonFilterValues.get(i).toString()).getBytes(StandardCharsets.UTF_8)));
+          sortedValues.add(ByteBuffer.wrap((nonFilterValues.get(i).toString()).getBytes(StandardCharsets.UTF_8)));
         }
       }
+      values.clear();
+      values.addAll(sortedValues);
     }
 
     private Iterable<Integer> intGenerator()
@@ -150,7 +146,6 @@ public class DictionaryEncodedStringIndexSupplierBenchmark
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void doValueSetCheck(Blackhole blackhole, BenchmarkState state)
   {
-    BitmapColumnIndex bitmapIndex = state.stringValueSetIndex.forSortedValuesUtf8(state.values);
-    bitmapIndex.estimateSelectivity(10_000_000);
+    blackhole.consume(state.stringValueSetIndex.forSortedValuesUtf8(state.values));
   }
 }

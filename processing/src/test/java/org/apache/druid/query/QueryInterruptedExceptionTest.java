@@ -170,6 +170,24 @@ public class QueryInterruptedExceptionTest
     );
   }
 
+  @Test
+  public void testToStringShouldReturnUsefulInformation()
+  {
+    QueryInterruptedException exception = new QueryInterruptedException(
+        "error",
+        "error messagez",
+        "error class",
+        "host"
+    );
+    String exceptionString = exception.toString();
+    Assert.assertTrue(exceptionString.startsWith(QueryInterruptedException.class.getSimpleName()));
+    Assert.assertTrue(exceptionString.contains("code=" + "error"));
+    Assert.assertTrue(exceptionString.contains("msg=" + "error messagez"));
+    Assert.assertTrue(exceptionString.contains("class=" + "error class"));
+    Assert.assertTrue(exceptionString.contains("host=" + "host"));
+
+  }
+
   private static QueryInterruptedException roundTrip(final QueryInterruptedException e)
   {
     try {

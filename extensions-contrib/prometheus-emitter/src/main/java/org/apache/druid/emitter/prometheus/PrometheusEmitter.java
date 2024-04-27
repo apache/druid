@@ -57,7 +57,7 @@ public class PrometheusEmitter implements Emitter
 
   private HTTPServer server;
   private PushGateway pushGateway;
-  private String identifier;
+  private volatile String identifier;
   private ScheduledExecutorService exec;
 
   static PrometheusEmitter of(PrometheusEmitterConfig config)
@@ -69,7 +69,13 @@ public class PrometheusEmitter implements Emitter
   {
     this.config = config;
     this.strategy = config.getStrategy();
-    metrics = new Metrics(config.getNamespace(), config.getDimensionMapPath(), config.isAddHostAsLabel(), config.isAddServiceAsLabel());
+    metrics = new Metrics(
+        config.getNamespace(),
+        config.getDimensionMapPath(),
+        config.isAddHostAsLabel(),
+        config.isAddServiceAsLabel(),
+        config.getExtraLabels()
+    );
   }
 
 
@@ -136,6 +142,9 @@ public class PrometheusEmitter implements Emitter
     if (metric != null) {
       String[] labelValues = new String[metric.getDimensions().length];
       String[] labelNames = metric.getDimensions();
+
+      Map<String, String> extraLabels = config.getExtraLabels();
+
       for (int i = 0; i < labelValues.length; i++) {
         String labelName = labelNames[i];
         //labelName is controlled by the user. Instead of potential NPE on invalid labelName we use "unknown" as the dimension value
@@ -148,6 +157,8 @@ public class PrometheusEmitter implements Emitter
             labelValues[i] = host;
           } else if (config.isAddServiceAsLabel() && TAG_SERVICE.equals(labelName)) {
             labelValues[i] = service;
+          } else if (extraLabels.containsKey(labelName)) {
+            labelValues[i] = config.getExtraLabels().get(labelName);
           } else {
             labelValues[i] = "unknown";
           }
@@ -159,7 +170,8 @@ public class PrometheusEmitter implements Emitter
       } else if (metric.getCollector() instanceof Gauge) {
         ((Gauge) metric.getCollector()).labels(labelValues).set(value.doubleValue());
       } else if (metric.getCollector() instanceof Histogram) {
-        ((Histogram) metric.getCollector()).labels(labelValues).observe(value.doubleValue() / metric.getConversionFactor());
+        ((Histogram) metric.getCollector()).labels(labelValues)
+                                           .observe(value.doubleValue() / metric.getConversionFactor());
       } else {
         log.error("Unrecognized metric type [%s]", metric.getCollector().getClass());
       }
@@ -170,27 +182,26 @@ public class PrometheusEmitter implements Emitter
 
   private void pushMetric()
   {
+    if (pushGateway == null || identifier == null) {
+      return;
+    }
     Map<String, DimensionsAndCollector> map = metrics.getRegisteredMetrics();
     CollectorRegistry metrics = new CollectorRegistry();
-    if (config.getNamespace() != null) {
-      try {
-        for (DimensionsAndCollector collector : map.values()) {
-          metrics.register(collector.getCollector());
-        }
-        pushGateway.push(metrics, config.getNamespace(), ImmutableMap.of(config.getNamespace(), identifier));
+    try {
+      for (DimensionsAndCollector collector : map.values()) {
+        metrics.register(collector.getCollector());
       }
-      catch (IOException e) {
-        log.error(e, "Unable to push prometheus metrics to pushGateway");
-      }
+      pushGateway.push(metrics, config.getNamespace(), ImmutableMap.of(config.getNamespace(), identifier));
+    }
+    catch (IOException e) {
+      log.error(e, "Unable to push prometheus metrics to pushGateway");
     }
   }
 
   @Override
   public void flush()
   {
-    if (pushGateway != null) {
-      pushMetric();
-    }
+    pushMetric();
   }
 
   @Override
@@ -198,11 +209,36 @@ public class PrometheusEmitter implements Emitter
   {
     if (strategy.equals(PrometheusEmitterConfig.Strategy.exporter)) {
       if (server != null) {
-        server.stop();
+        server.close();
       }
     } else {
       exec.shutdownNow();
       flush();
+
+      try {
+        if (config.getWaitForShutdownDelay().getMillis() > 0) {
+          log.info("Waiting [%s]ms before deleting metrics from the push gateway.", config.getWaitForShutdownDelay().getMillis());
+          Thread.sleep(config.getWaitForShutdownDelay().getMillis());
+        }
+      }
+      catch (InterruptedException e) {
+        log.error(e, "Interrupted while waiting for shutdown delay. Deleting metrics from the push gateway now.");
+      }
+      finally {
+        deletePushGatewayMetrics();
+      }
+    }
+  }
+
+  private void deletePushGatewayMetrics()
+  {
+    if (pushGateway != null && config.isDeletePushGatewayMetricsOnShutdown()) {
+      try {
+        pushGateway.delete(config.getNamespace(), ImmutableMap.of(config.getNamespace(), identifier));
+      }
+      catch (IOException e) {
+        log.error(e, "Unable to delete prometheus metrics from push gateway");
+      }
     }
   }
 

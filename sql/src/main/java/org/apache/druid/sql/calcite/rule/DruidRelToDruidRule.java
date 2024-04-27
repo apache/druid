@@ -26,6 +26,8 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.sql.calcite.rel.DruidConvention;
 import org.apache.druid.sql.calcite.rel.DruidRel;
 
+import javax.annotation.Nullable;
+
 public class DruidRelToDruidRule extends ConverterRule
 {
   private static final Logger log = new Logger(DruidRelToDruidRule.class);
@@ -46,6 +48,7 @@ public class DruidRelToDruidRule extends ConverterRule
     return INSTANCE;
   }
 
+  @Nullable
   @Override
   public RelNode convert(RelNode rel)
   {

@@ -29,8 +29,6 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 
 import javax.annotation.Nonnull;
-import java.util.Collections;
-import java.util.List;
 
 
 /**
@@ -116,18 +114,6 @@ public class CompressedBigDecimalMinAggregatorFactory extends CompressedBigDecim
   public AggregateCombiner<CompressedBigDecimal> makeAggregateCombiner()
   {
     return new CompressedBigDecimalMinAggregateCombiner();
-  }
-
-  @Override
-  public List<AggregatorFactory> getRequiredColumns()
-  {
-    return Collections.singletonList(new CompressedBigDecimalMinAggregatorFactory(
-        name,
-        fieldName,
-        size,
-        scale,
-        strictNumberParsing
-    ));
   }
 
   @Override

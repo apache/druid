@@ -36,6 +36,7 @@ public class PlannerConfig
   public static final String CTX_KEY_USE_NATIVE_QUERY_EXPLAIN = "useNativeQueryExplain";
   public static final String CTX_KEY_FORCE_EXPRESSION_VIRTUAL_COLUMNS = "forceExpressionVirtualColumns";
   public static final String CTX_MAX_NUMERIC_IN_FILTERS = "maxNumericInFilters";
+  public static final String CTX_NATIVE_QUERY_SQL_PLANNING_MODE = "plannerStrategy";
   public static final int NUM_FILTER_NOT_USED = -1;
 
   @JsonProperty
@@ -70,6 +71,11 @@ public class PlannerConfig
 
   @JsonProperty
   private int maxNumericInFilters = NUM_FILTER_NOT_USED;
+
+  @JsonProperty
+  private String nativeQuerySqlPlanningMode = NATIVE_QUERY_SQL_PLANNING_MODE_COUPLED; // can be COUPLED or DECOUPLED
+  public static final String NATIVE_QUERY_SQL_PLANNING_MODE_COUPLED = "COUPLED";
+  public static final String NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED = "DECOUPLED";
 
   private boolean serializeComplexValues = true;
 
@@ -137,6 +143,11 @@ public class PlannerConfig
     return forceExpressionVirtualColumns;
   }
 
+  public String getNativeQuerySqlPlanningMode()
+  {
+    return nativeQuerySqlPlanningMode;
+  }
+
   public PlannerConfig withOverrides(final Map<String, Object> queryContext)
   {
     if (queryContext.isEmpty()) {
@@ -168,7 +179,8 @@ public class PlannerConfig
            useGroupingSetForExactDistinct == that.useGroupingSetForExactDistinct &&
            computeInnerJoinCostAsFilter == that.computeInnerJoinCostAsFilter &&
            authorizeSystemTablesDirectly == that.authorizeSystemTablesDirectly &&
-           maxNumericInFilters == that.maxNumericInFilters;
+           maxNumericInFilters == that.maxNumericInFilters &&
+           nativeQuerySqlPlanningMode.equals(that.nativeQuerySqlPlanningMode);
   }
 
   @Override
@@ -183,7 +195,8 @@ public class PlannerConfig
         sqlTimeZone,
         serializeComplexValues,
         useNativeQueryExplain,
-        forceExpressionVirtualColumns
+        forceExpressionVirtualColumns,
+        nativeQuerySqlPlanningMode
     );
   }
 
@@ -198,6 +211,7 @@ public class PlannerConfig
            ", sqlTimeZone=" + sqlTimeZone +
            ", serializeComplexValues=" + serializeComplexValues +
            ", useNativeQueryExplain=" + useNativeQueryExplain +
+           ", nativeQuerySqlPlanningMode=" + nativeQuerySqlPlanningMode +
            '}';
   }
 
@@ -231,6 +245,7 @@ public class PlannerConfig
     private boolean forceExpressionVirtualColumns;
     private int maxNumericInFilters;
     private boolean serializeComplexValues;
+    private String nativeQuerySqlPlanningMode;
 
     public Builder(PlannerConfig base)
     {
@@ -249,6 +264,7 @@ public class PlannerConfig
       forceExpressionVirtualColumns = base.isForceExpressionVirtualColumns();
       maxNumericInFilters = base.getMaxNumericInFilters();
       serializeComplexValues = base.shouldSerializeComplexValues();
+      nativeQuerySqlPlanningMode = base.getNativeQuerySqlPlanningMode();
     }
 
     public Builder requireTimeCondition(boolean option)
@@ -317,6 +333,12 @@ public class PlannerConfig
       return this;
     }
 
+    public Builder nativeQuerySqlPlanningMode(String mode)
+    {
+      this.nativeQuerySqlPlanningMode = mode;
+      return this;
+    }
+
     public Builder withOverrides(final Map<String, Object> queryContext)
     {
       useApproximateCountDistinct = QueryContexts.parseBoolean(
@@ -357,6 +379,11 @@ public class PlannerConfig
       maxNumericInFilters = validateMaxNumericInFilters(
           queryContextMaxNumericInFilters,
           maxNumericInFilters);
+      nativeQuerySqlPlanningMode = QueryContexts.parseString(
+          queryContext,
+          CTX_NATIVE_QUERY_SQL_PLANNING_MODE,
+          nativeQuerySqlPlanningMode
+      );
       return this;
     }
 
@@ -397,6 +424,7 @@ public class PlannerConfig
       config.maxNumericInFilters = maxNumericInFilters;
       config.forceExpressionVirtualColumns = forceExpressionVirtualColumns;
       config.serializeComplexValues = serializeComplexValues;
+      config.nativeQuerySqlPlanningMode = nativeQuerySqlPlanningMode;
       return config;
     }
   }

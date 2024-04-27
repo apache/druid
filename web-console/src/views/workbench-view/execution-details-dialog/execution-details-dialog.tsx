@@ -19,8 +19,8 @@
 import { Button, Classes, Dialog } from '@blueprintjs/core';
 import React from 'react';
 
-import { Execution } from '../../../druid-models';
-import { ExecutionDetailsTab } from '../execution-details-pane/execution-details-pane';
+import type { Execution } from '../../../druid-models';
+import type { ExecutionDetailsTab } from '../execution-details-pane/execution-details-pane';
 import { ExecutionDetailsPaneLoader } from '../execution-details-pane-loader/execution-details-pane-loader';
 
 import './execution-details-dialog.scss';
@@ -29,14 +29,14 @@ export interface ExecutionDetailsDialogProps {
   id: string;
   initTab?: ExecutionDetailsTab;
   initExecution?: Execution;
-  goToIngestion(taskId: string): void;
+  goToTask(taskId: string): void;
   onClose(): void;
 }
 
 export const ExecutionDetailsDialog = React.memo(function ExecutionDetailsDialog(
   props: ExecutionDetailsDialogProps,
 ) {
-  const { id, initTab, initExecution, goToIngestion, onClose } = props;
+  const { id, initTab, initExecution, goToTask, onClose } = props;
 
   return (
     <Dialog className="execution-details-dialog" isOpen onClose={onClose} title="Execution details">
@@ -45,7 +45,7 @@ export const ExecutionDetailsDialog = React.memo(function ExecutionDetailsDialog
           id={id}
           initTab={initTab}
           initExecution={initExecution}
-          goToIngestion={goToIngestion}
+          goToTask={goToTask}
         />
       </div>
       <div className={Classes.DIALOG_FOOTER}>

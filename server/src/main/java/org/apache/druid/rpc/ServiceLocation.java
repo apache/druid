@@ -20,8 +20,14 @@
 package org.apache.druid.rpc;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Splitter;
+import com.google.common.collect.ImmutableList;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.coordination.DruidServerMetadata;
 
+import javax.validation.constraints.NotNull;
+import java.util.Iterator;
 import java.util.Objects;
 
 /**
@@ -45,6 +51,44 @@ public class ServiceLocation
   public static ServiceLocation fromDruidNode(final DruidNode druidNode)
   {
     return new ServiceLocation(druidNode.getHost(), druidNode.getPlaintextPort(), druidNode.getTlsPort(), "");
+  }
+
+  private static final Splitter SPLITTER = Splitter.on(":").limit(2);
+
+  public static ServiceLocation fromDruidServerMetadata(final DruidServerMetadata druidServerMetadata)
+  {
+    final String host = getHostFromString(
+        Preconditions.checkNotNull(
+            druidServerMetadata.getHost(),
+            "Host was null for druid server metadata[%s]",
+            druidServerMetadata
+        )
+    );
+    int plaintextPort = getPortFromString(druidServerMetadata.getHostAndPort());
+    int tlsPort = getPortFromString(druidServerMetadata.getHostAndTlsPort());
+    return new ServiceLocation(host, plaintextPort, tlsPort, "");
+  }
+
+  private static String getHostFromString(@NotNull String s)
+  {
+    Iterator<String> iterator = SPLITTER.split(s).iterator();
+    ImmutableList<String> strings = ImmutableList.copyOf(iterator);
+    return strings.get(0);
+  }
+
+  private static int getPortFromString(String s)
+  {
+    if (s == null) {
+      return -1;
+    }
+    Iterator<String> iterator = SPLITTER.split(s).iterator();
+    ImmutableList<String> strings = ImmutableList.copyOf(iterator);
+    try {
+      return Integer.parseInt(strings.get(1));
+    }
+    catch (NumberFormatException e) {
+      throw new ISE(e, "Unable to parse port out of %s", strings.get(1));
+    }
   }
 
   public String getHost()

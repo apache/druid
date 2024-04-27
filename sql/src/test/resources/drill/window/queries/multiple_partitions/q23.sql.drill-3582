@@ -1,0 +1,12 @@
+-- window function with ORDER BY an expression involving aggregates
+select 
+	c_date,
+	sum(c_integer) + sum(c_integer) as res,
+	rank() over (order by sum(c_integer) + sum(c_integer)) as rrr
+from 
+	j6
+group by 
+	c_date 
+order by 
+	c_date;
+

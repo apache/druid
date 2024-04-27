@@ -47,12 +47,13 @@ import java.util.function.Function;
 @RunWith(Parameterized.class)
 public class IncrementalIndexAdapterTest extends InitializedNullHandlingTest
 {
-  private static final IndexSpec INDEX_SPEC = new IndexSpec(
-      new ConciseBitmapSerdeFactory(),
-      CompressionStrategy.LZ4,
-      CompressionStrategy.LZ4,
-      CompressionFactory.LongEncodingStrategy.LONGS
-  );
+  private static final IndexSpec INDEX_SPEC =
+      IndexSpec.builder()
+               .withBitmapSerdeFactory(new ConciseBitmapSerdeFactory())
+               .withDimensionCompression(CompressionStrategy.LZ4)
+               .withMetricCompression(CompressionStrategy.LZ4)
+               .withLongEncoding(CompressionFactory.LongEncodingStrategy.LONGS)
+               .build();
 
   public final IncrementalIndexCreator indexCreator;
 

@@ -19,40 +19,39 @@
 
 package org.apache.druid.compressedbigdecimal;
 
-import com.google.common.collect.ImmutableSet;
-import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.Assert.assertThrows;
 
 public class CompressedBigDecimalSumSqlAggregatorTest extends CompressedBigDecimalSqlAggregatorTestBase
 {
   private static final String FUNCTION_NAME = CompressedBigDecimalSumSqlAggregator.NAME;
 
   @Override
-  public DruidOperatorTable createOperatorTable()
-  {
-    return new DruidOperatorTable(ImmutableSet.of(new CompressedBigDecimalSumSqlAggregator()), ImmutableSet.of());
-  }
-
-  @Override
+  @Test
   public void testCompressedBigDecimalAggWithNumberParse()
   {
     testCompressedBigDecimalAggWithNumberParseHelper(
         FUNCTION_NAME,
         new Object[]{"21.000000000", "21.000000000", "13.100000000"},
         CompressedBigDecimalSumAggregatorFactory::new
-
     );
   }
 
   @Override
+  @Test
   public void testCompressedBigDecimalAggWithStrictNumberParse()
   {
-    testCompressedBigDecimalAggWithStrictNumberParseHelper(
-        FUNCTION_NAME,
-        CompressedBigDecimalSumAggregatorFactory::new
-    );
+    assertThrows(NumberFormatException.class, () -> {
+      testCompressedBigDecimalAggWithStrictNumberParseHelper(
+          FUNCTION_NAME,
+          CompressedBigDecimalSumAggregatorFactory::new
+      );
+    });
   }
 
   @Override
+  @Test
   public void testCompressedBigDecimalAggDefaultNumberParseAndCustomSizeAndScale()
   {
     testCompressedBigDecimalAggDefaultNumberParseAndCustomSizeAndScaleHelper(
@@ -63,6 +62,7 @@ public class CompressedBigDecimalSumSqlAggregatorTest extends CompressedBigDecim
   }
 
   @Override
+  @Test
   public void testCompressedBigDecimalAggDefaultScale()
   {
     testCompressedBigDecimalAggDefaultScaleHelper(
@@ -73,6 +73,7 @@ public class CompressedBigDecimalSumSqlAggregatorTest extends CompressedBigDecim
   }
 
   @Override
+  @Test
   public void testCompressedBigDecimalAggDefaultSizeAndScale()
   {
     testCompressedBigDecimalAggDefaultSizeAndScaleHelper(

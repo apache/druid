@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite.planner;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -34,23 +35,27 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.jackson.JacksonModule;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.QueryLifecycleFactory;
+import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.rule.ExtensionCalciteRuleProvider;
+import org.apache.druid.sql.calcite.run.NativeSqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.schema.DruidSchemaName;
 import org.apache.druid.sql.calcite.schema.NamedSchema;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
+import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.easymock.EasyMock;
-import org.easymock.EasyMockRunner;
+import org.easymock.EasyMockExtension;
 import org.easymock.Mock;
 import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import javax.validation.Validation;
 import javax.validation.Validator;
@@ -61,7 +66,7 @@ import java.util.Set;
 import static org.apache.calcite.plan.RelOptRule.any;
 import static org.apache.calcite.plan.RelOptRule.operand;
 
-@RunWith(EasyMockRunner.class)
+@ExtendWith(EasyMockExtension.class)
 public class CalcitePlannerModuleTest extends CalciteTestBase
 {
   private static final String SCHEMA_1 = "SCHEMA_1";
@@ -81,6 +86,8 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
   @Mock
   private ExprMacroTable macroTable;
   @Mock
+  private JoinableFactoryWrapper joinableFactoryWrapper;
+  @Mock
   private AuthorizerMapper authorizerMapper;
   @Mock
   private DruidSchemaCatalog rootSchema;
@@ -92,9 +99,10 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
   private Injector injector;
   private RelOptRule customRule;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
+
     EasyMock.expect(druidSchema1.getSchema()).andStubReturn(schema1);
     EasyMock.expect(druidSchema2.getSchema()).andStubReturn(schema2);
     EasyMock.expect(druidSchema1.getSchemaName()).andStubReturn(SCHEMA_1);
@@ -110,7 +118,6 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
       @Override
       public void onMatch(RelOptRuleCall call)
       {
-
       }
     };
     injector = Guice.createInjector(
@@ -125,6 +132,8 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
           binder.bind(Key.get(new TypeLiteral<Set<SqlAggregator>>() {})).toInstance(aggregators);
           binder.bind(Key.get(new TypeLiteral<Set<SqlOperatorConversion>>() {})).toInstance(operatorConversions);
           binder.bind(DruidSchemaCatalog.class).toInstance(rootSchema);
+          binder.bind(JoinableFactoryWrapper.class).toInstance(joinableFactoryWrapper);
+          binder.bind(CatalogResolver.class).toInstance(CatalogResolver.NULL_RESOLVER);
         },
         target,
         binder -> {
@@ -167,17 +176,29 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
   @Test
   public void testExtensionCalciteRule()
   {
-    PlannerContext context = PlannerContext.create(
-        "SELECT 1",
+    ObjectMapper mapper = new DefaultObjectMapper();
+    PlannerToolbox toolbox = new PlannerToolbox(
         injector.getInstance(DruidOperatorTable.class),
         macroTable,
-        new DefaultObjectMapper(),
+        mapper,
         injector.getInstance(PlannerConfig.class),
         rootSchema,
-        null,
-        Collections.emptyMap(),
-        Collections.emptySet()
+        joinableFactoryWrapper,
+        CatalogResolver.NULL_RESOLVER,
+        "druid",
+        new CalciteRulesManager(ImmutableSet.of()),
+        CalciteTests.TEST_AUTHORIZER_MAPPER,
+        AuthConfig.newBuilder().build()
     );
+
+    PlannerContext context = PlannerContext.create(
+        toolbox,
+        "SELECT 1",
+        new NativeSqlEngine(queryLifecycleFactory, mapper),
+        Collections.emptyMap(),
+        null
+    );
+
     boolean containsCustomRule = injector.getInstance(CalciteRulesManager.class)
                                          .druidConventionRuleSet(context)
                                          .contains(customRule);

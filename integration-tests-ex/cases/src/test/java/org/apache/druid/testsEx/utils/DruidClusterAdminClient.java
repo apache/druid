@@ -124,7 +124,7 @@ public class DruidClusterAdminClient
   {
     waitUntilInstanceReady(config.getCoordinatorUrl());
     postDynamicConfig(CoordinatorDynamicConfig.builder()
-                                              .withLeadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments(1)
+                                              .withMarkSegmentAsUnusedDelayMillis(1)
                                               .build());
   }
 
@@ -132,7 +132,7 @@ public class DruidClusterAdminClient
   {
     waitUntilInstanceReady(config.getCoordinatorTwoUrl());
     postDynamicConfig(CoordinatorDynamicConfig.builder()
-                                              .withLeadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments(1)
+                                              .withMarkSegmentAsUnusedDelayMillis(1)
                                               .build());
   }
 

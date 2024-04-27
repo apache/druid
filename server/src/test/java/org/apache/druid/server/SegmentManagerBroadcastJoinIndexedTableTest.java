@@ -42,6 +42,7 @@ import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.TestIndex;
+import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.join.BroadcastTableJoinableFactory;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
@@ -116,7 +117,7 @@ public class SegmentManagerBroadcastJoinIndexedTableTest extends InitializedNull
             new SimpleModule().registerSubtypes(new NamedType(LocalLoadSpec.class, "local"))
         );
 
-    indexIO = new IndexIO(objectMapper, () -> 0);
+    indexIO = new IndexIO(objectMapper, ColumnConfig.DEFAULT);
     objectMapper.setInjectableValues(
         new InjectableValues.Std().addValue(LocalDataSegmentPuller.class, segmentPuller)
                                   .addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)
@@ -348,13 +349,7 @@ public class SegmentManagerBroadcastJoinIndexedTableTest extends InitializedNull
         data,
         Intervals.of(interval),
         segmentDir,
-        new IndexSpec(
-            null,
-            null,
-            null,
-            null,
-            factory
-        ),
+        IndexSpec.builder().withSegmentLoader(factory).build(),
         null
     );
     final File factoryJson = new File(segmentDir, "factory.json");

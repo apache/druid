@@ -20,7 +20,6 @@
 package org.apache.druid.indexing.common.actions;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Predicate;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -51,27 +50,27 @@ import org.apache.druid.timeline.partition.ShardSpec;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.joda.time.Period;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.IOException;
+import java.time.Duration;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @RunWith(Parameterized.class)
 public class SegmentAllocateActionTest
 {
-  @Rule
-  public ExpectedException thrown = ExpectedException.none();
-
   @Rule
   public TaskActionTestKit taskActionTestKit = new TaskActionTestKit();
 
@@ -79,20 +78,26 @@ public class SegmentAllocateActionTest
   private static final DateTime PARTY_TIME = DateTimes.of("1999");
   private static final DateTime THE_DISTANT_FUTURE = DateTimes.of("3000");
 
+  private final boolean useBatch;
   private final LockGranularity lockGranularity;
 
-  @Parameterized.Parameters(name = "{0}")
+  private SegmentAllocationQueue allocationQueue;
+
+  @Parameterized.Parameters(name = "granularity = {0}, useBatch = {1}")
   public static Iterable<Object[]> constructorFeeder()
   {
     return ImmutableList.of(
-        new Object[]{LockGranularity.SEGMENT},
-        new Object[]{LockGranularity.TIME_CHUNK}
+        new Object[]{LockGranularity.SEGMENT, true},
+        new Object[]{LockGranularity.SEGMENT, false},
+        new Object[]{LockGranularity.TIME_CHUNK, true},
+        new Object[]{LockGranularity.TIME_CHUNK, false}
     );
   }
 
-  public SegmentAllocateActionTest(LockGranularity lockGranularity)
+  public SegmentAllocateActionTest(LockGranularity lockGranularity, boolean useBatch)
   {
     this.lockGranularity = lockGranularity;
+    this.useBatch = useBatch;
   }
 
   @Before
@@ -101,6 +106,19 @@ public class SegmentAllocateActionTest
     ServiceEmitter emitter = EasyMock.createMock(ServiceEmitter.class);
     EmittingLogger.registerEmitter(emitter);
     EasyMock.replay(emitter);
+    allocationQueue = taskActionTestKit.getTaskActionToolbox().getSegmentAllocationQueue();
+    if (allocationQueue != null) {
+      allocationQueue.start();
+      allocationQueue.becomeLeader();
+    }
+  }
+
+  @After
+  public void tearDown()
+  {
+    if (allocationQueue != null) {
+      allocationQueue.stop();
+    }
   }
 
   @Test
@@ -288,29 +306,11 @@ public class SegmentAllocateActionTest
     if (lockGranularity == LockGranularity.TIME_CHUNK) {
       final TaskLock partyLock = Iterables.getOnlyElement(
           FluentIterable.from(taskActionTestKit.getTaskLockbox().findLocksForTask(task))
-                        .filter(
-                            new Predicate<TaskLock>()
-                            {
-                              @Override
-                              public boolean apply(TaskLock input)
-                              {
-                                return input.getInterval().contains(PARTY_TIME);
-                              }
-                            }
-                        )
+                        .filter(input -> input.getInterval().contains(PARTY_TIME))
       );
       final TaskLock futureLock = Iterables.getOnlyElement(
           FluentIterable.from(taskActionTestKit.getTaskLockbox().findLocksForTask(task))
-                        .filter(
-                            new Predicate<TaskLock>()
-                            {
-                              @Override
-                              public boolean apply(TaskLock input)
-                              {
-                                return input.getInterval().contains(THE_DISTANT_FUTURE);
-                              }
-                            }
-                        )
+                        .filter(input -> input.getInterval().contains(THE_DISTANT_FUTURE))
       );
 
       assertSameIdentifier(
@@ -402,6 +402,72 @@ public class SegmentAllocateActionTest
   }
 
   @Test
+  public void testSegmentIsAllocatedForLatestUsedSegmentVersion() throws IOException
+  {
+    final Task task = NoopTask.create();
+    taskActionTestKit.getTaskLockbox().add(task);
+
+    final String sequenceName = "sequence_1";
+
+    // Allocate segments when there are no committed segments
+    final SegmentIdWithShardSpec pendingSegmentV01 =
+        allocate(task, PARTY_TIME, Granularities.NONE, Granularities.HOUR, sequenceName, null);
+    final SegmentIdWithShardSpec pendingSegmentV02 =
+        allocate(task, PARTY_TIME, Granularities.NONE, Granularities.HOUR, sequenceName, null);
+
+    assertSameIdentifier(pendingSegmentV01, pendingSegmentV02);
+
+    // Commit a segment for version V1
+    final DataSegment segmentV1
+        = DataSegment.builder()
+                     .dataSource(DATA_SOURCE)
+                     .interval(Granularities.HOUR.bucket(PARTY_TIME))
+                     .version(PARTY_TIME.plusDays(1).toString())
+                     .shardSpec(new LinearShardSpec(0))
+                     .size(100)
+                     .build();
+    taskActionTestKit.getMetadataStorageCoordinator().commitSegments(
+        Collections.singleton(segmentV1), null
+    );
+
+    // Verify that new allocations use version V1
+    final SegmentIdWithShardSpec pendingSegmentV11 =
+        allocate(task, PARTY_TIME, Granularities.NONE, Granularities.HOUR, sequenceName, null);
+    final SegmentIdWithShardSpec pendingSegmentV12 =
+        allocate(task, PARTY_TIME, Granularities.NONE, Granularities.HOUR, sequenceName, null);
+
+    assertSameIdentifier(pendingSegmentV11, pendingSegmentV12);
+    Assert.assertEquals(segmentV1.getVersion(), pendingSegmentV11.getVersion());
+
+    Assert.assertNotEquals(pendingSegmentV01, pendingSegmentV11);
+
+    // Commit a segment for version V2 to overshadow V1
+    final DataSegment segmentV2
+        = DataSegment.builder()
+                     .dataSource(DATA_SOURCE)
+                     .interval(Granularities.HOUR.bucket(PARTY_TIME))
+                     .version(PARTY_TIME.plusDays(2).toString())
+                     .shardSpec(new LinearShardSpec(0))
+                     .size(100)
+                     .build();
+    taskActionTestKit.getMetadataStorageCoordinator().commitSegments(
+        Collections.singleton(segmentV2), null
+    );
+    Assert.assertTrue(segmentV2.getVersion().compareTo(segmentV1.getVersion()) > 0);
+
+    // Verify that new segment allocations use version V2
+    final SegmentIdWithShardSpec pendingSegmentV21 =
+        allocate(task, PARTY_TIME, Granularities.NONE, Granularities.HOUR, sequenceName, null);
+    final SegmentIdWithShardSpec pendingSegmentV22 =
+        allocate(task, PARTY_TIME, Granularities.NONE, Granularities.HOUR, sequenceName, null);
+    assertSameIdentifier(pendingSegmentV21, pendingSegmentV22);
+    Assert.assertEquals(segmentV2.getVersion(), pendingSegmentV21.getVersion());
+
+    Assert.assertNotEquals(pendingSegmentV21, pendingSegmentV01);
+    Assert.assertNotEquals(pendingSegmentV21, pendingSegmentV11);
+  }
+
+  @Test
   public void testMultipleSequences()
   {
     final Task task = NoopTask.create();
@@ -446,29 +512,11 @@ public class SegmentAllocateActionTest
     if (lockGranularity == LockGranularity.TIME_CHUNK) {
       final TaskLock partyLock = Iterables.getOnlyElement(
           FluentIterable.from(taskActionTestKit.getTaskLockbox().findLocksForTask(task))
-                        .filter(
-                            new Predicate<TaskLock>()
-                            {
-                              @Override
-                              public boolean apply(TaskLock input)
-                              {
-                                return input.getInterval().contains(PARTY_TIME);
-                              }
-                            }
-                        )
+                        .filter(input -> input.getInterval().contains(PARTY_TIME))
       );
       final TaskLock futureLock = Iterables.getOnlyElement(
           FluentIterable.from(taskActionTestKit.getTaskLockbox().findLocksForTask(task))
-                        .filter(
-                            new Predicate<TaskLock>()
-                            {
-                              @Override
-                              public boolean apply(TaskLock input)
-                              {
-                                return input.getInterval().contains(THE_DISTANT_FUTURE);
-                              }
-                            }
-                        )
+                        .filter(input -> input.getInterval().contains(THE_DISTANT_FUTURE))
       );
 
       assertSameIdentifier(
@@ -590,7 +638,7 @@ public class SegmentAllocateActionTest
   {
     final Task task = NoopTask.create();
 
-    taskActionTestKit.getMetadataStorageCoordinator().announceHistoricalSegments(
+    taskActionTestKit.getMetadataStorageCoordinator().commitSegments(
         ImmutableSet.of(
             DataSegment.builder()
                        .dataSource(DATA_SOURCE)
@@ -606,7 +654,8 @@ public class SegmentAllocateActionTest
                        .shardSpec(new LinearShardSpec(1))
                        .size(0)
                        .build()
-        )
+        ),
+        null
     );
 
     taskActionTestKit.getTaskLockbox().add(task);
@@ -655,7 +704,7 @@ public class SegmentAllocateActionTest
   {
     final Task task = NoopTask.create();
 
-    taskActionTestKit.getMetadataStorageCoordinator().announceHistoricalSegments(
+    taskActionTestKit.getMetadataStorageCoordinator().commitSegments(
         ImmutableSet.of(
             DataSegment.builder()
                        .dataSource(DATA_SOURCE)
@@ -671,7 +720,8 @@ public class SegmentAllocateActionTest
                        .shardSpec(new NumberedShardSpec(1, 2))
                        .size(0)
                        .build()
-        )
+        ),
+        null
     );
 
     taskActionTestKit.getTaskLockbox().add(task);
@@ -718,7 +768,7 @@ public class SegmentAllocateActionTest
   {
     final Task task = NoopTask.create();
 
-    taskActionTestKit.getMetadataStorageCoordinator().announceHistoricalSegments(
+    taskActionTestKit.getMetadataStorageCoordinator().commitSegments(
         ImmutableSet.of(
             DataSegment.builder()
                        .dataSource(DATA_SOURCE)
@@ -734,7 +784,8 @@ public class SegmentAllocateActionTest
                        .shardSpec(new NumberedShardSpec(1, 2))
                        .size(0)
                        .build()
-        )
+        ),
+        null
     );
 
     taskActionTestKit.getTaskLockbox().add(task);
@@ -757,7 +808,7 @@ public class SegmentAllocateActionTest
   {
     final Task task = NoopTask.create();
 
-    taskActionTestKit.getMetadataStorageCoordinator().announceHistoricalSegments(
+    taskActionTestKit.getMetadataStorageCoordinator().commitSegments(
         ImmutableSet.of(
             DataSegment.builder()
                        .dataSource(DATA_SOURCE)
@@ -773,7 +824,8 @@ public class SegmentAllocateActionTest
                        .shardSpec(new NumberedShardSpec(1, 2))
                        .size(0)
                        .build()
-        )
+        ),
+        null
     );
 
     taskActionTestKit.getTaskLockbox().add(task);
@@ -796,7 +848,7 @@ public class SegmentAllocateActionTest
   {
     final Task task = NoopTask.create();
 
-    taskActionTestKit.getMetadataStorageCoordinator().announceHistoricalSegments(
+    taskActionTestKit.getMetadataStorageCoordinator().commitSegments(
         ImmutableSet.of(
             DataSegment.builder()
                        .dataSource(DATA_SOURCE)
@@ -812,7 +864,8 @@ public class SegmentAllocateActionTest
                        .shardSpec(new NumberedShardSpec(1, 2))
                        .size(0)
                        .build()
-        )
+        ),
+        null
     );
 
     taskActionTestKit.getTaskLockbox().add(task);
@@ -841,7 +894,7 @@ public class SegmentAllocateActionTest
 
     final ObjectMapper objectMapper = new DefaultObjectMapper();
 
-    taskActionTestKit.getMetadataStorageCoordinator().announceHistoricalSegments(
+    taskActionTestKit.getMetadataStorageCoordinator().commitSegments(
         ImmutableSet.of(
             DataSegment.builder()
                        .dataSource(DATA_SOURCE)
@@ -861,7 +914,8 @@ public class SegmentAllocateActionTest
                        )
                        .size(0)
                        .build()
-        )
+        ),
+        null
     );
 
     final SegmentAllocateAction action = new SegmentAllocateAction(
@@ -948,6 +1002,66 @@ public class SegmentAllocateActionTest
     Assert.assertEquals(Intervals.ETERNITY, id2.getInterval());
   }
 
+  @Test
+  public void testAllocateWeekOnlyWhenWeekIsPreferred()
+  {
+    final Task task = NoopTask.create();
+    taskActionTestKit.getTaskLockbox().add(task);
+
+    final SegmentIdWithShardSpec id1 = allocate(
+        task,
+        DateTimes.of("2023-12-16"),
+        Granularities.MINUTE,
+        Granularities.HOUR,
+        "s1",
+        null
+    );
+
+    final SegmentIdWithShardSpec id2 = allocate(
+        task,
+        DateTimes.of("2023-12-18"),
+        Granularities.MINUTE,
+        Granularities.WEEK,
+        "s2",
+        null
+    );
+
+    Assert.assertNotNull(id1);
+    Assert.assertNotNull(id2);
+    Assert.assertEquals(Duration.ofHours(1).toMillis(), id1.getInterval().toDurationMillis());
+    Assert.assertEquals(Duration.ofDays(7).toMillis(), id2.getInterval().toDurationMillis());
+  }
+
+  @Test
+  public void testAllocateDayWhenMonthNotPossible()
+  {
+    final Task task = NoopTask.create();
+    taskActionTestKit.getTaskLockbox().add(task);
+
+    final SegmentIdWithShardSpec id1 = allocate(
+        task,
+        DateTimes.of("2023-12-16"),
+        Granularities.MINUTE,
+        Granularities.HOUR,
+        "s1",
+        null
+    );
+
+    final SegmentIdWithShardSpec id2 = allocate(
+        task,
+        DateTimes.of("2023-12-18"),
+        Granularities.MINUTE,
+        Granularities.MONTH,
+        "s2",
+        null
+    );
+
+    Assert.assertNotNull(id1);
+    Assert.assertNotNull(id2);
+    Assert.assertEquals(Duration.ofHours(1).toMillis(), id1.getInterval().toDurationMillis());
+    Assert.assertEquals(Duration.ofDays(1).toMillis(), id2.getInterval().toDurationMillis());
+  }
+
   private SegmentIdWithShardSpec allocate(
       final Task task,
       final DateTime timestamp,
@@ -990,21 +1104,23 @@ public class SegmentAllocateActionTest
         lockGranularity,
         null
     );
-    return action.perform(task, taskActionTestKit.getTaskActionToolbox());
+
+    try {
+      if (useBatch) {
+        return action.performAsync(task, taskActionTestKit.getTaskActionToolbox())
+                     .get(5, TimeUnit.SECONDS);
+      } else {
+        return action.perform(task, taskActionTestKit.getTaskActionToolbox());
+      }
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
   }
 
   private void assertSameIdentifier(final SegmentIdWithShardSpec expected, final SegmentIdWithShardSpec actual)
   {
     Assert.assertEquals(expected, actual);
-    Assert.assertEquals(expected.getShardSpec().getPartitionNum(), actual.getShardSpec().getPartitionNum());
-    Assert.assertEquals(expected.getShardSpec().getClass(), actual.getShardSpec().getClass());
-
-    if (expected.getShardSpec().getClass() == NumberedShardSpec.class
-        && actual.getShardSpec().getClass() == NumberedShardSpec.class) {
-      Assert.assertEquals(expected.getShardSpec().getNumCorePartitions(), actual.getShardSpec().getNumCorePartitions());
-    } else if (expected.getShardSpec().getClass() == LinearShardSpec.class
-               && actual.getShardSpec().getClass() == LinearShardSpec.class) {
-      // do nothing
-    }
+    Assert.assertEquals(expected.getShardSpec(), actual.getShardSpec());
   }
 }

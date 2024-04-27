@@ -37,6 +37,7 @@ import org.apache.druid.java.util.http.client.CredentialedHttpClient;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.auth.BasicCredentials;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
+import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
@@ -275,7 +276,7 @@ public abstract class AbstractAuthConfigurationTest
     verifySystemSchemaServerQuery(
         adminClient,
         SYS_SCHEMA_SERVERS_QUERY,
-        getServersWithoutCurrentSize(adminServers)
+        getServersWithoutCurrentSizeAndStartTime(adminServers)
     );
 
     LOG.info("Checking sys.server_segments query as admin...");
@@ -307,11 +308,12 @@ public abstract class AbstractAuthConfigurationTest
 
     // as user that can only read auth_test
     LOG.info("Checking sys.segments query as datasourceOnlyUser...");
+    final String expectedMsg = "{\"Access-Check-Result\":\"" + Access.DEFAULT_ERROR_MESSAGE + "\"}";
     verifySystemSchemaQueryFailure(
         datasourceOnlyUserClient,
         SYS_SCHEMA_SEGMENTS_QUERY,
         HttpResponseStatus.FORBIDDEN,
-        "{\"Access-Check-Result\":\"Unauthorized\"}"
+        expectedMsg
     );
 
     LOG.info("Checking sys.servers query as datasourceOnlyUser...");
@@ -319,7 +321,7 @@ public abstract class AbstractAuthConfigurationTest
         datasourceOnlyUserClient,
         SYS_SCHEMA_SERVERS_QUERY,
         HttpResponseStatus.FORBIDDEN,
-        "{\"Access-Check-Result\":\"Unauthorized\"}"
+        expectedMsg
     );
 
     LOG.info("Checking sys.server_segments query as datasourceOnlyUser...");
@@ -327,7 +329,7 @@ public abstract class AbstractAuthConfigurationTest
         datasourceOnlyUserClient,
         SYS_SCHEMA_SERVER_SEGMENTS_QUERY,
         HttpResponseStatus.FORBIDDEN,
-        "{\"Access-Check-Result\":\"Unauthorized\"}"
+        expectedMsg
     );
 
     LOG.info("Checking sys.tasks query as datasourceOnlyUser...");
@@ -335,7 +337,7 @@ public abstract class AbstractAuthConfigurationTest
         datasourceOnlyUserClient,
         SYS_SCHEMA_TASKS_QUERY,
         HttpResponseStatus.FORBIDDEN,
-        "{\"Access-Check-Result\":\"Unauthorized\"}"
+        expectedMsg
     );
   }
 
@@ -765,7 +767,7 @@ public abstract class AbstractAuthConfigurationTest
     String content = responseHolder.getContent();
     List<Map<String, Object>> responseMap = jsonMapper.readValue(content, SYS_SCHEMA_RESULTS_TYPE_REFERENCE);
     if (isServerQuery) {
-      responseMap = getServersWithoutCurrentSize(responseMap);
+      responseMap = getServersWithoutCurrentSizeAndStartTime(responseMap);
     }
     Assert.assertEquals(responseMap, expectedResults);
   }
@@ -912,7 +914,7 @@ public abstract class AbstractAuthConfigurationTest
         SYS_SCHEMA_RESULTS_TYPE_REFERENCE
     );
 
-    adminServers = getServersWithoutCurrentSize(
+    adminServers = getServersWithoutCurrentSizeAndStartTime(
         jsonMapper.readValue(
             fillServersTemplate(
                 config,
@@ -935,13 +937,14 @@ public abstract class AbstractAuthConfigurationTest
    * curr_size on historicals changes because cluster state is not isolated across different
    * integration tests, zero it out for consistent test results
    */
-  protected static List<Map<String, Object>> getServersWithoutCurrentSize(List<Map<String, Object>> servers)
+  protected static List<Map<String, Object>> getServersWithoutCurrentSizeAndStartTime(List<Map<String, Object>> servers)
   {
     return Lists.transform(
         servers,
         (server) -> {
           Map<String, Object> newServer = new HashMap<>(server);
           newServer.put("curr_size", 0);
+          newServer.put("start_time", "0");
           return newServer;
         }
     );

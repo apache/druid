@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.seekablestream;
 
+import com.google.common.base.Throwables;
 import org.apache.druid.data.input.AbstractInputSource;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputFormat;
@@ -27,10 +28,12 @@ import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.InputEntityIteratingReader;
 import org.apache.druid.data.input.impl.JsonInputFormat;
+import org.apache.druid.data.input.impl.systemfield.SystemFieldDecoratorFactory;
 import org.apache.druid.indexing.overlord.sampler.SamplerException;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 
 import javax.annotation.Nullable;
@@ -45,42 +48,57 @@ import java.util.stream.Collectors;
  */
 public class RecordSupplierInputSource<PartitionIdType, SequenceOffsetType, RecordType extends ByteEntity> extends AbstractInputSource
 {
+  private static final Logger LOG = new Logger(RecordSupplierInputSource.class);
+
   private final String topic;
   private final RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType> recordSupplier;
   private final boolean useEarliestOffset;
 
+  /**
+   * Maximum amount of time in which the entity iterator will return results. If null, no timeout is applied.
+   */
+  private final Integer iteratorTimeoutMs;
+
   public RecordSupplierInputSource(
       String topic,
       RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType> recordSupplier,
-      boolean useEarliestOffset
+      boolean useEarliestOffset,
+      Integer iteratorTimeoutMs
   )
   {
     this.topic = topic;
     this.recordSupplier = recordSupplier;
     this.useEarliestOffset = useEarliestOffset;
-    try {
-      assignAndSeek(recordSupplier);
-    }
-    catch (InterruptedException e) {
-      throw new SamplerException(e, "Exception while seeking to partitions");
-    }
+    this.iteratorTimeoutMs = iteratorTimeoutMs;
+
+    assignAndSeek(recordSupplier);
   }
 
   private void assignAndSeek(RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType> recordSupplier)
-      throws InterruptedException
   {
-    final Set<StreamPartition<PartitionIdType>> partitions = recordSupplier
-        .getPartitionIds(topic)
-        .stream()
-        .map(partitionId -> StreamPartition.of(topic, partitionId))
-        .collect(Collectors.toSet());
+    try {
+      final Set<StreamPartition<PartitionIdType>> partitions = recordSupplier
+          .getPartitionIds(topic)
+          .stream()
+          .map(partitionId -> StreamPartition.of(topic, partitionId))
+          .collect(Collectors.toSet());
 
-    recordSupplier.assign(partitions);
+      recordSupplier.assign(partitions);
 
-    if (useEarliestOffset) {
-      recordSupplier.seekToEarliest(partitions);
-    } else {
-      recordSupplier.seekToLatest(partitions);
+      if (useEarliestOffset) {
+        recordSupplier.seekToEarliest(partitions);
+      } else {
+        recordSupplier.seekToLatest(partitions);
+      }
+    }
+    catch (Exception e) {
+      throw new SamplerException(
+          e,
+          "Exception while seeking to the [%s] offset of partitions in topic [%s]: %s",
+          useEarliestOffset ? "earliest" : "latest",
+          topic,
+          Throwables.getRootCause(e).getMessage()
+      );
     }
   }
 
@@ -103,11 +121,12 @@ public class RecordSupplierInputSource<PartitionIdType, SequenceOffsetType, Reco
       @Nullable File temporaryDirectory
   )
   {
-    InputFormat format = inputFormat instanceof JsonInputFormat ? ((JsonInputFormat) inputFormat).withLineSplittable(false) : inputFormat;
+    InputFormat format = JsonInputFormat.withLineSplittable(inputFormat, false);
     return new InputEntityIteratingReader(
         inputRowSchema,
         format,
         createEntityIterator(),
+        SystemFieldDecoratorFactory.NONE,
         temporaryDirectory
     );
   }
@@ -123,13 +142,24 @@ public class RecordSupplierInputSource<PartitionIdType, SequenceOffsetType, Reco
       private Iterator<OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType, RecordType>> recordIterator;
       private Iterator<? extends ByteEntity> bytesIterator;
       private volatile boolean closed;
+      private final long createTime = System.currentTimeMillis();
+      private final Long terminationTime = iteratorTimeoutMs != null ? createTime + iteratorTimeoutMs : null;
 
       private void waitNextIteratorIfNecessary()
       {
         while (!closed && (bytesIterator == null || !bytesIterator.hasNext())) {
           while (!closed && (recordIterator == null || !recordIterator.hasNext())) {
+            if (terminationTime != null && System.currentTimeMillis() > terminationTime) {
+              LOG.info(
+                  "Configured sampler timeout [%s] has been exceeded, returning without a bytesIterator.",
+                  iteratorTimeoutMs
+              );
+              bytesIterator = null;
+              return;
+            }
             recordIterator = recordSupplier.poll(SeekableStreamSamplerSpec.POLL_TIMEOUT_MS).iterator();
           }
+
           if (!closed) {
             bytesIterator = recordIterator.next().getData().iterator();
           }
@@ -152,6 +182,7 @@ public class RecordSupplierInputSource<PartitionIdType, SequenceOffsetType, Reco
       @Override
       public void close()
       {
+        LOG.info("Closing entity iterator.");
         closed = true;
         recordSupplier.close();
       }

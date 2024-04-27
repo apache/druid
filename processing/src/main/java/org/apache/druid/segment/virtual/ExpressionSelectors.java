@@ -25,7 +25,6 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.NonnullPair;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
@@ -110,7 +109,7 @@ public class ExpressionSelectors
       {
         // No need for null check on getObject() since baseSelector impls will never return null.
         ExprEval eval = baseSelector.getObject();
-        return eval.value();
+        return eval.valueOrDefault();
       }
 
       @Override
@@ -196,14 +195,10 @@ public class ExpressionSelectors
       Expr expression
   )
   {
-    return makeExprEvalSelector(columnSelectorFactory, ExpressionPlanner.plan(columnSelectorFactory, expression));
-  }
-
-  public static ColumnValueSelector<ExprEval> makeExprEvalSelector(
-      ColumnSelectorFactory columnSelectorFactory,
-      ExpressionPlan plan
-  )
-  {
+    ExpressionPlan plan = ExpressionPlanner.plan(
+        columnSelectorFactory,
+        Expr.singleThreaded(expression, columnSelectorFactory)
+    );
     final RowIdSupplier rowIdSupplier = columnSelectorFactory.getRowIdSupplier();
 
     if (plan.is(ExpressionPlan.Trait.SINGLE_INPUT_SCALAR)) {
@@ -251,7 +246,10 @@ public class ExpressionSelectors
       @Nullable final ExtractionFn extractionFn
   )
   {
-    final ExpressionPlan plan = ExpressionPlanner.plan(columnSelectorFactory, expression);
+    final ExpressionPlan plan = ExpressionPlanner.plan(
+        columnSelectorFactory,
+        Expr.singleThreaded(expression, columnSelectorFactory)
+    );
 
     if (plan.any(ExpressionPlan.Trait.SINGLE_INPUT_SCALAR, ExpressionPlan.Trait.SINGLE_INPUT_MAPPABLE)) {
       final String column = plan.getSingleInputName();
@@ -308,7 +306,7 @@ public class ExpressionSelectors
    */
   public static boolean canMapOverDictionary(
       final Expr.BindingAnalysis bindingAnalysis,
-      final ColumnCapabilities columnCapabilities
+      @Nullable final ColumnCapabilities columnCapabilities
   )
   {
     Preconditions.checkState(bindingAnalysis.getRequiredBindings().size() == 1, "requiredBindings.size == 1");
@@ -329,7 +327,7 @@ public class ExpressionSelectors
   )
   {
     final List<String> columns = plan.getAnalysis().getRequiredBindingsList();
-    final Map<String, Pair<ExpressionType, Supplier<Object>>> suppliers = new HashMap<>();
+    final Map<String, InputBindings.InputSupplier<?>> suppliers = new HashMap<>();
     for (String columnName : columns) {
       final ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(columnName);
       final boolean multiVal = capabilities != null && capabilities.hasMultipleValues().isTrue();
@@ -352,11 +350,16 @@ public class ExpressionSelectors
       final boolean homogenizeNullMultiValueStringArrays =
           plan.is(ExpressionPlan.Trait.NEEDS_APPLIED) || ExpressionProcessing.isHomogenizeNullMultiValueStringArrays();
 
-      if (capabilities == null || capabilities.isArray() || useObjectSupplierForMultiValueStringArray) {
-        // Unknown type, array type, or output array uses an Object selector and see if that gives anything useful
+      if (capabilities == null || useObjectSupplierForMultiValueStringArray) {
+        // Unknown type, or implicitly mapped mvd, use Object selector and see if that gives anything useful
         supplier = supplierFromObjectSelector(
             columnSelectorFactory.makeColumnValueSelector(columnName),
             homogenizeNullMultiValueStringArrays
+        );
+      } else if (capabilities.isArray()) {
+        supplier = supplierFromObjectSelector(
+            columnSelectorFactory.makeColumnValueSelector(columnName),
+            false
         );
       } else if (capabilities.is(ValueType.FLOAT)) {
         ColumnValueSelector<?> selector = columnSelectorFactory.makeColumnValueSelector(columnName);
@@ -384,7 +387,7 @@ public class ExpressionSelectors
       }
 
       if (supplier != null) {
-        suppliers.put(columnName, new Pair<>(expressionType, supplier));
+        suppliers.put(columnName, InputBindings.inputSupplier(expressionType, supplier));
       }
     }
 
@@ -393,29 +396,11 @@ public class ExpressionSelectors
     } else if (suppliers.size() == 1 && columns.size() == 1) {
       // If there's only one column (and it has a supplier), we can skip the Map and just use that supplier when
       // asked for something.
-      final String column = Iterables.getOnlyElement(suppliers.keySet());
-      final Pair<ExpressionType, Supplier<Object>> supplier = Iterables.getOnlyElement(suppliers.values());
+      final InputBindings.InputSupplier<?> supplier = Iterables.getOnlyElement(suppliers.values());
 
-      return new Expr.ObjectBinding()
-      {
-        @Nullable
-        @Override
-        public Object get(String name)
-        {
-          // There's only one binding, and it must be the single column, so it can safely be ignored in production.
-          assert column.equals(name);
-          return supplier.rhs.get();
-        }
-
-        @Nullable
-        @Override
-        public ExpressionType getType(String name)
-        {
-          return supplier.lhs;
-        }
-      };
+      return InputBindings.forInputSupplier(supplier.getType(), supplier);
     } else {
-      return InputBindings.withTypedSuppliers(suppliers);
+      return InputBindings.forInputSuppliers(suppliers);
     }
   }
 
@@ -456,17 +441,17 @@ public class ExpressionSelectors
       if (row.size() == 1 && !coerceArray) {
         return selector.lookupName(row.get(0));
       } else {
+        final int size = row.size();
         // column selector factories hate you and use [] and [null] interchangeably for nullish data
-        if (row.size() == 0 || (row.size() == 1 && selector.getObject() == null)) {
+        if (size == 0 || (size == 1 && selector.getObject() == null)) {
           if (homogenize) {
             return new Object[]{null};
           } else {
             return null;
           }
         }
-        final Object[] strings = new Object[row.size()];
-        // noinspection SSBasedInspection
-        for (int i = 0; i < row.size(); i++) {
+        final Object[] strings = new Object[size];
+        for (int i = 0; i < size; i++) {
           strings[i] = selector.lookupName(row.get(i));
         }
         return strings;
@@ -548,6 +533,6 @@ public class ExpressionSelectors
       }
       return Arrays.stream(asArray).collect(Collectors.toList());
     }
-    return eval.value();
+    return eval.valueOrDefault();
   }
 }

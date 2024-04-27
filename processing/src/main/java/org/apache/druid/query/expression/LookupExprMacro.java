@@ -21,12 +21,11 @@ package org.apache.druid.query.expression;
 
 import com.google.inject.Inject;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.ExpressionType;
-import org.apache.druid.math.expr.Exprs;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.lookup.RegisteredLookupExtractionFn;
@@ -55,10 +54,11 @@ public class LookupExprMacro implements ExprMacroTable.ExprMacro
   @Override
   public Expr apply(final List<Expr> args)
   {
-    validationHelperCheckArgumentCount(args, 2);
+    validationHelperCheckArgumentRange(args, 2, 3);
 
     final Expr arg = args.get(0);
     final Expr lookupExpr = args.get(1);
+    final Expr replaceMissingValueWith = getReplaceMissingValueWith(args);
 
     validationHelperCheckArgIsLiteral(lookupExpr, "second argument");
     if (lookupExpr.getLiteralValue() == null) {
@@ -70,16 +70,18 @@ public class LookupExprMacro implements ExprMacroTable.ExprMacro
         lookupExtractorFactoryContainerProvider,
         lookupName,
         false,
+        replaceMissingValueWith != null && replaceMissingValueWith.isLiteral()
+        ? Evals.asString(replaceMissingValueWith.getLiteralValue())
+        : null,
         null,
-        false,
         null
     );
 
-    class LookupExpr extends ExprMacroTable.BaseScalarUnivariateMacroFunctionExpr
+    class LookupExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
     {
-      private LookupExpr(Expr arg)
+      private LookupExpr(final List<Expr> args)
       {
-        super(FN_NAME, arg);
+        super(LookupExprMacro.this, args);
       }
 
       @Nonnull
@@ -87,12 +89,6 @@ public class LookupExprMacro implements ExprMacroTable.ExprMacro
       public ExprEval eval(final ObjectBinding bindings)
       {
         return ExprEval.of(extractionFn.apply(NullHandling.emptyToNullIfNeeded(arg.eval(bindings).asString())));
-      }
-
-      @Override
-      public Expr visit(Shuttle shuttle)
-      {
-        return shuttle.visit(apply(shuttle.visitAll(args)));
       }
 
       @Nullable
@@ -103,20 +99,22 @@ public class LookupExprMacro implements ExprMacroTable.ExprMacro
       }
 
       @Override
-      public String stringify()
+      public void decorateCacheKeyBuilder(CacheKeyBuilder builder)
       {
-        return StringUtils.format("%s(%s, %s)", FN_NAME, arg.stringify(), lookupExpr.stringify());
-      }
-
-      @Override
-      public byte[] getCacheKey()
-      {
-        return new CacheKeyBuilder(Exprs.LOOKUP_EXPR_CACHE_KEY).appendString(stringify())
-                                                               .appendCacheable(extractionFn)
-                                                               .build();
+        builder.appendCacheable(extractionFn);
       }
     }
 
-    return new LookupExpr(arg);
+    return new LookupExpr(args);
+  }
+
+  private Expr getReplaceMissingValueWith(final List<Expr> args)
+  {
+    if (args.size() > 2) {
+      final Expr missingValExpr = args.get(2);
+      validationHelperCheckArgIsLiteral(missingValExpr, "third argument");
+      return missingValExpr;
+    }
+    return null;
   }
 }

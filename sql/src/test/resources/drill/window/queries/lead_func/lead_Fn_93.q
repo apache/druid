@@ -1,0 +1,1 @@
+select col5 , lead(col5) over(partition by col7 order by col5) lead_col5 from "allTypsUniq.parquet"

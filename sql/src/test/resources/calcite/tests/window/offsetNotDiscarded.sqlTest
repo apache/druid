@@ -1,0 +1,31 @@
+type: "operatorValidation"
+
+sql: |
+  SELECT
+    RANK() OVER (PARTITION BY m1 ORDER BY m2 ASC) AS ranking,
+    m1,m2,dim1,dim2
+  FROM foo
+     
+
+expectedOperators:
+  - type: "naiveSort"
+    columns:
+      - column: "m1"
+        direction: "ASC"
+      - column: "m2"
+        direction: "ASC"
+  - { type: "naivePartition", partitionColumns: [ m1 ] }
+  - type: "window"
+    processor:
+      type: "rank"
+      group: [ m2 ]
+      outputColumn: w0
+      asPercent: false
+
+expectedResults:
+  - [1,1.0,1.0,"","a"]
+  - [1,2.0,2.0,"10.1",null]
+  - [1,3.0,3.0,"2",""]
+  - [1,4.0,4.0,"1","a"]
+  - [1,5.0,5.0,"def","abc"]
+  - [1,6.0,6.0,"abc",null]

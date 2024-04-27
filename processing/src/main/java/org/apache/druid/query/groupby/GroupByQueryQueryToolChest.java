@@ -32,40 +32,51 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Supplier;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import org.apache.druid.data.input.Row;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.frame.Frame;
+import org.apache.druid.frame.FrameType;
+import org.apache.druid.frame.allocation.MemoryAllocatorFactory;
+import org.apache.druid.frame.segment.FrameCursorUtils;
+import org.apache.druid.frame.write.FrameWriterFactory;
+import org.apache.druid.frame.write.FrameWriterUtils;
+import org.apache.druid.frame.write.FrameWriters;
+import org.apache.druid.guice.annotations.Merging;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.MappedSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.query.CacheStrategy;
 import org.apache.druid.query.DataSource;
+import org.apache.druid.query.FrameSignaturePair;
+import org.apache.druid.query.IterableRowsCursorHelper;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryPlus;
+import org.apache.druid.query.QueryResourceId;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.SubqueryQueryRunner;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.query.aggregation.MetricManipulatorFns;
-import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.extraction.ExtractionFn;
-import org.apache.druid.query.groupby.resource.GroupByQueryResource;
-import org.apache.druid.query.groupby.strategy.GroupByStrategy;
-import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
+import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.column.RowSignature;
 import org.joda.time.DateTime;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.BitSet;
@@ -73,11 +84,12 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.TreeMap;
 import java.util.function.BinaryOperator;
 
 /**
- *
+ * Toolchest for GroupBy queries
  */
 public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupByQuery>
 {
@@ -89,32 +101,49 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
   private static final TypeReference<ResultRow> TYPE_REFERENCE = new TypeReference<ResultRow>()
   {
   };
-  public static final String GROUP_BY_MERGE_KEY = "groupByMerge";
 
-  private final GroupByStrategySelector strategySelector;
+  private final GroupingEngine groupingEngine;
   private final GroupByQueryConfig queryConfig;
   private final GroupByQueryMetricsFactory queryMetricsFactory;
+  private final GroupByResourcesReservationPool groupByResourcesReservationPool;
 
   @VisibleForTesting
-  public GroupByQueryQueryToolChest(GroupByStrategySelector strategySelector)
+  public GroupByQueryQueryToolChest(
+      GroupingEngine groupingEngine,
+      GroupByResourcesReservationPool groupByResourcesReservationPool
+  )
   {
-    this(strategySelector, GroupByQueryConfig::new, DefaultGroupByQueryMetricsFactory.instance());
+    this(
+        groupingEngine,
+        GroupByQueryConfig::new,
+        DefaultGroupByQueryMetricsFactory.instance(),
+        groupByResourcesReservationPool
+    );
   }
 
   @Inject
   public GroupByQueryQueryToolChest(
-      GroupByStrategySelector strategySelector,
+      GroupingEngine groupingEngine,
       Supplier<GroupByQueryConfig> queryConfigSupplier,
-      GroupByQueryMetricsFactory queryMetricsFactory
+      GroupByQueryMetricsFactory queryMetricsFactory,
+      @Merging GroupByResourcesReservationPool groupByResourcesReservationPool
   )
   {
-    this.strategySelector = strategySelector;
+    this.groupingEngine = groupingEngine;
     this.queryConfig = queryConfigSupplier.get();
     this.queryMetricsFactory = queryMetricsFactory;
+    this.groupByResourcesReservationPool = groupByResourcesReservationPool;
   }
 
   @Override
   public QueryRunner<ResultRow> mergeResults(final QueryRunner<ResultRow> runner)
+  {
+    return mergeResults(runner, true);
+  }
+
+
+  @Override
+  public QueryRunner<ResultRow> mergeResults(final QueryRunner<ResultRow> runner, boolean willMergeRunner)
   {
     return (queryPlus, responseContext) -> {
       if (queryPlus.getQuery().context().isBySegment()) {
@@ -122,43 +151,52 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
       }
 
       final GroupByQuery groupByQuery = (GroupByQuery) queryPlus.getQuery();
-      if (strategySelector.strategize(groupByQuery).doMergeResults(groupByQuery)) {
-        return initAndMergeGroupByResults(groupByQuery, runner, responseContext);
-      }
-      return runner.run(queryPlus, responseContext);
+      return initAndMergeGroupByResults(groupByQuery, runner, responseContext, willMergeRunner);
     };
   }
 
   @Override
   public BinaryOperator<ResultRow> createMergeFn(Query<ResultRow> query)
   {
-    return strategySelector.strategize((GroupByQuery) query).createMergeFn(query);
+    return groupingEngine.createMergeFn(query);
   }
 
   @Override
   public Comparator<ResultRow> createResultComparator(Query<ResultRow> query)
   {
-    return strategySelector.strategize((GroupByQuery) query).createResultComparator(query);
+    return groupingEngine.createResultComparator(query);
   }
 
   private Sequence<ResultRow> initAndMergeGroupByResults(
       final GroupByQuery query,
       QueryRunner<ResultRow> runner,
-      ResponseContext context
+      ResponseContext context,
+      boolean willMergeRunner
   )
   {
-    final GroupByStrategy groupByStrategy = strategySelector.strategize(query);
-    final GroupByQueryResource resource = groupByStrategy.prepareResource(query);
+    // Reserve the group by resources (merge buffers) required for executing the query
+    final QueryResourceId queryResourceId = query.context().getQueryResourceId();
+    groupByResourcesReservationPool.reserve(queryResourceId, query, willMergeRunner);
+
+    final GroupByQueryResources resource = groupByResourcesReservationPool.fetch(queryResourceId);
+    if (resource == null) {
+      throw DruidException.defensive(
+          "Did not associate any resources with the given query resource id [%s]",
+          queryResourceId
+      );
+    }
     try {
       final Sequence<ResultRow> mergedSequence = mergeGroupByResults(
-          groupByStrategy,
           query,
           resource,
           runner,
           context
       );
+      Closer closer = Closer.create();
 
-      return Sequences.withBaggage(mergedSequence, resource);
+      // Clean up the resources reserved during the execution of the query
+      closer.register(() -> groupByResourcesReservationPool.clean(queryResourceId));
+      return Sequences.withBaggage(mergedSequence, closer);
     }
     catch (Exception e) {
       // Error creating the Sequence; release resources.
@@ -168,23 +206,21 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
   }
 
   private Sequence<ResultRow> mergeGroupByResults(
-      GroupByStrategy groupByStrategy,
       final GroupByQuery query,
-      GroupByQueryResource resource,
+      GroupByQueryResources resource,
       QueryRunner<ResultRow> runner,
       ResponseContext context
   )
   {
-    if (isNestedQueryPushDown(query, groupByStrategy)) {
-      return mergeResultsWithNestedQueryPushDown(groupByStrategy, query, resource, runner, context);
+    if (isNestedQueryPushDown(query)) {
+      return mergeResultsWithNestedQueryPushDown(query, resource, runner, context);
     }
-    return mergeGroupByResultsWithoutPushDown(groupByStrategy, query, resource, runner, context);
+    return mergeGroupByResultsWithoutPushDown(query, resource, runner, context);
   }
 
   private Sequence<ResultRow> mergeGroupByResultsWithoutPushDown(
-      GroupByStrategy groupByStrategy,
       GroupByQuery query,
-      GroupByQueryResource resource,
+      GroupByQueryResources resource,
       QueryRunner<ResultRow> runner,
       ResponseContext context
   )
@@ -217,15 +253,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
       }
 
       final Sequence<ResultRow> subqueryResult = mergeGroupByResults(
-          groupByStrategy,
-          subquery.withOverriddenContext(
-              ImmutableMap.of(
-                  //setting sort to false avoids unnecessary sorting while merging results. we only need to sort
-                  //in the end when returning results to user. (note this is only respected by groupBy v1)
-                  GroupByQueryHelper.CTX_KEY_SORT_RESULTS,
-                  false
-              )
-          ),
+          subquery,
           resource,
           runner,
           context
@@ -234,52 +262,57 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
       final Sequence<ResultRow> finalizingResults = finalizeSubqueryResults(subqueryResult, subquery);
 
       if (query.getSubtotalsSpec() != null) {
-        return groupByStrategy.processSubtotalsSpec(
+        return groupingEngine.processSubtotalsSpec(
             query,
             resource,
-            groupByStrategy.processSubqueryResult(subquery, query, resource, finalizingResults, false)
+            groupingEngine.processSubqueryResult(subquery, query, resource, finalizingResults, false)
         );
       } else {
-        return groupByStrategy.applyPostProcessing(groupByStrategy.processSubqueryResult(
-            subquery,
-            query,
-            resource,
-            finalizingResults,
-            false
-        ), query);
+        return groupingEngine.applyPostProcessing(
+            groupingEngine.processSubqueryResult(
+                subquery,
+                query,
+                resource,
+                finalizingResults,
+                false
+            ),
+            query
+        );
       }
 
     } else {
       if (query.getSubtotalsSpec() != null) {
-        return groupByStrategy.processSubtotalsSpec(
+        return groupingEngine.processSubtotalsSpec(
             query,
             resource,
-            groupByStrategy.mergeResults(runner, query.withSubtotalsSpec(null), context)
+            groupingEngine.mergeResults(runner, query.withSubtotalsSpec(null), context)
         );
       } else {
-        return groupByStrategy.applyPostProcessing(groupByStrategy.mergeResults(runner, query, context), query);
+        return groupingEngine.applyPostProcessing(groupingEngine.mergeResults(runner, query, context), query);
       }
     }
   }
 
   private Sequence<ResultRow> mergeResultsWithNestedQueryPushDown(
-      GroupByStrategy groupByStrategy,
       GroupByQuery query,
-      GroupByQueryResource resource,
+      GroupByQueryResources resource,
       QueryRunner<ResultRow> runner,
       ResponseContext context
   )
   {
-    Sequence<ResultRow> pushDownQueryResults = groupByStrategy.mergeResults(runner, query, context);
+    Sequence<ResultRow> pushDownQueryResults = groupingEngine.mergeResults(runner, query, context);
     final Sequence<ResultRow> finalizedResults = finalizeSubqueryResults(pushDownQueryResults, query);
     GroupByQuery rewrittenQuery = rewriteNestedQueryForPushDown(query);
-    return groupByStrategy.applyPostProcessing(groupByStrategy.processSubqueryResult(
-        query,
-        rewrittenQuery,
-        resource,
-        finalizedResults,
-        true
-    ), query);
+    return groupingEngine.applyPostProcessing(
+        groupingEngine.processSubqueryResult(
+            query,
+            rewrittenQuery,
+            resource,
+            finalizedResults,
+            true
+        ),
+        query
+    );
   }
 
   /**
@@ -317,12 +350,11 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
     return finalizingResults;
   }
 
-  public static boolean isNestedQueryPushDown(GroupByQuery q, GroupByStrategy strategy)
+  public static boolean isNestedQueryPushDown(GroupByQuery q)
   {
     return q.getDataSource() instanceof QueryDataSource
            && q.context().getBoolean(GroupByQueryConfig.CTX_KEY_FORCE_PUSH_DOWN_NESTED_QUERY, false)
-           && q.getSubtotalsSpec() == null
-           && strategy.supportsNestedQueryPushDown();
+           && q.getSubtotalsSpec() == null;
   }
 
   @Override
@@ -515,9 +547,11 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
       private final List<DimensionSpec> dims = query.getDimensions();
 
       @Override
-      public boolean isCacheable(GroupByQuery query, boolean willMergeRunners)
+      public boolean isCacheable(GroupByQuery query, boolean willMergeRunners, boolean bySegment)
       {
-        return strategySelector.strategize(query).isCacheable(willMergeRunners);
+        //disable segment-level cache on borker,
+        //see PR https://github.com/apache/druid/issues/3820
+        return willMergeRunners || !bySegment;
       }
 
       @Override
@@ -652,9 +686,10 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
             );
 
             if (isResultLevelCache) {
-              Iterator<PostAggregator> postItr = query.getPostAggregatorSpecs().iterator();
-              int postPos = 0;
-              while (postItr.hasNext() && results.hasNext()) {
+              for (int postPos = 0; postPos < query.getPostAggregatorSpecs().size(); postPos++) {
+                if (!results.hasNext()) {
+                  throw DruidException.defensive("Ran out of objects while reading postaggs from cache!");
+                }
                 resultRow.set(postAggregatorStart + postPos, results.next());
               }
             }
@@ -703,6 +738,42 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
   public Sequence<Object[]> resultsAsArrays(final GroupByQuery query, final Sequence<ResultRow> resultSequence)
   {
     return resultSequence.map(ResultRow::getArray);
+  }
+
+  /**
+   * This returns a single frame containing the results of the group by query.
+   */
+  @Override
+  public Optional<Sequence<FrameSignaturePair>> resultsAsFrames(
+      GroupByQuery query,
+      Sequence<ResultRow> resultSequence,
+      MemoryAllocatorFactory memoryAllocatorFactory,
+      boolean useNestedForUnknownTypes
+  )
+  {
+    RowSignature rowSignature = resultArraySignature(query);
+    RowSignature modifiedRowSignature = useNestedForUnknownTypes
+                                        ? FrameWriterUtils.replaceUnknownTypesWithNestedColumns(rowSignature)
+                                        : rowSignature;
+
+    FrameWriterFactory frameWriterFactory = FrameWriters.makeFrameWriterFactory(
+        FrameType.COLUMNAR,
+        memoryAllocatorFactory,
+        modifiedRowSignature,
+        new ArrayList<>()
+    );
+
+
+    Pair<Cursor, Closeable> cursorAndCloseable = IterableRowsCursorHelper.getCursorFromSequence(
+        resultsAsArrays(query, resultSequence),
+        rowSignature
+    );
+    Cursor cursor = cursorAndCloseable.lhs;
+    Closeable closeble = cursorAndCloseable.rhs;
+
+    Sequence<Frame> frames = FrameCursorUtils.cursorToFramesSequence(cursor, frameWriterFactory).withBaggage(closeble);
+
+    return Optional.of(frames.map(frame -> new FrameSignaturePair(frame, modifiedRowSignature)));
   }
 
   /**

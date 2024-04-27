@@ -26,7 +26,6 @@ import org.apache.druid.msq.indexing.error.MSQWarnings;
 import org.apache.druid.query.QueryContexts;
 
 import javax.annotation.Nullable;
-
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;

@@ -235,12 +235,14 @@ public class TieredBrokerHostSelector
     }
 
     if (brokerServiceName == null) {
-      log.error(
-          "No brokerServiceName found for datasource[%s], intervals[%s]. Using default[%s].",
-          query.getDataSource(),
-          query.getIntervals(),
-          tierConfig.getDefaultBrokerServiceName()
-      );
+      if (query.context().isDebug()) {
+        log.info(
+            "Using default broker service[%s] for query with datasource [%s] and intervals[%s].",
+            tierConfig.getDefaultBrokerServiceName(),
+            query.getDataSource(),
+            query.getIntervals()
+        );
+      }
       brokerServiceName = tierConfig.getDefaultBrokerServiceName();
     }
 

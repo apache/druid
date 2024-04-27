@@ -1,0 +1,9 @@
+false	-1	-1
+false	1	-1
+false	17	-1
+false	4611686018427387903	-1
+false	9223372036854775807	-1
+true	0	0
+true	13	0
+true	197	0
+true	10000000	0

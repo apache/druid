@@ -20,10 +20,9 @@ if ($BUILD_DRUID_CLSUTER); then
 
   DRUID_HOME=$(dirname `pwd`)
   echo "SET DRUID_HOME: $DRUID_HOME"
-  minikubeFile="/usr/local/bin/minikube*"
-  minikubeFile2="/usr/local/bin/minikube"
+  k3sFile="/usr/local/bin/k3s*"
 
-  if [ -f "$minikubeFile" ] || [ -f "$minikubeFile2" ]; then
+  if [ -f "$k3sFile" ]; then
     bash $DRUID_HOME/integration-tests/script/stop_k8s_cluster.sh
   fi
 

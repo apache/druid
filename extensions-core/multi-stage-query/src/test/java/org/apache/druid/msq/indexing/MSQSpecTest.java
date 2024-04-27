@@ -20,6 +20,8 @@
 package org.apache.druid.msq.indexing;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.data.CompressionStrategy;
 import org.junit.Test;
 
 public class MSQSpecTest
@@ -30,6 +32,11 @@ public class MSQSpecTest
   {
     EqualsVerifier.forClass(MSQSpec.class)
                   .withNonnullFields("query", "destination", "tuningConfig")
+                  .withPrefabValues(
+                      IndexSpec.class,
+                      IndexSpec.DEFAULT,
+                      IndexSpec.builder().withDimensionCompression(CompressionStrategy.ZSTD).build()
+                  )
                   .usingGetClass()
                   .verify();
   }

@@ -71,7 +71,7 @@ public interface FrameProcessor<T>
    *
    * Implementations typically call {@link ReadableFrameChannel#close()} and
    * {@link WritableFrameChannel#close()} on all input and output channels, as well as releasing any additional
-   * resources that may be held.
+   * resources that may be held, such as {@link org.apache.druid.frame.write.FrameWriter}.
    *
    * In cases of cancellation, this method may be called even if {@link #runIncrementally} has not yet returned a
    * result via {@link ReturnOrAwait#returnObject}.

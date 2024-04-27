@@ -27,6 +27,7 @@ import java.util.Objects;
 public class RowIngestionMetersTotals
 {
   private final long processed;
+  private final long processedBytes;
   private final long processedWithError;
   private final long thrownAway;
   private final long unparseable;
@@ -34,12 +35,14 @@ public class RowIngestionMetersTotals
   @JsonCreator
   public RowIngestionMetersTotals(
       @JsonProperty("processed") long processed,
+      @JsonProperty("processedBytes") long processedBytes,
       @JsonProperty("processedWithError") long processedWithError,
       @JsonProperty("thrownAway") long thrownAway,
       @JsonProperty("unparseable") long unparseable
   )
   {
     this.processed = processed;
+    this.processedBytes = processedBytes;
     this.processedWithError = processedWithError;
     this.thrownAway = thrownAway;
     this.unparseable = unparseable;
@@ -49,6 +52,12 @@ public class RowIngestionMetersTotals
   public long getProcessed()
   {
     return processed;
+  }
+
+  @JsonProperty
+  public long getProcessedBytes()
+  {
+    return processedBytes;
   }
 
   @JsonProperty
@@ -80,6 +89,7 @@ public class RowIngestionMetersTotals
     }
     RowIngestionMetersTotals that = (RowIngestionMetersTotals) o;
     return processed == that.processed
+           && processedBytes == that.processedBytes
            && processedWithError == that.processedWithError
            && thrownAway == that.thrownAway
            && unparseable == that.unparseable;
@@ -88,7 +98,7 @@ public class RowIngestionMetersTotals
   @Override
   public int hashCode()
   {
-    return Objects.hash(processed, processedWithError, thrownAway, unparseable);
+    return Objects.hash(processed, processedBytes, processedWithError, thrownAway, unparseable);
   }
 
   @Override
@@ -96,6 +106,7 @@ public class RowIngestionMetersTotals
   {
     return "RowIngestionMetersTotals{" +
            "processed=" + processed +
+           ", processedBytes=" + processedBytes +
            ", processedWithError=" + processedWithError +
            ", thrownAway=" + thrownAway +
            ", unparseable=" + unparseable +

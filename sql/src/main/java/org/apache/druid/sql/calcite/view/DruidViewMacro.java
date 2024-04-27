@@ -54,7 +54,7 @@ public class DruidViewMacro implements TableMacro
   }
 
   @Override
-  public TranslatableTable apply(final List<Object> arguments)
+  public TranslatableTable apply(final List<?> arguments)
   {
     final RelDataType rowType;
     try (final DruidPlanner planner =
@@ -62,7 +62,9 @@ public class DruidViewMacro implements TableMacro
                  ViewSqlEngine.INSTANCE,
                  viewSql,
                  Collections.emptyMap(),
-                 Collections.emptySet())) {
+                 null
+             )
+    ) {
       planner.validate();
       rowType = planner.prepare().getValidatedRowType();
     }

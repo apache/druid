@@ -1,0 +1,16 @@
+null	c	c	null	1	c	c
+-1	e	e	null	1	e	e
+0	a	a	null	1	a	a
+1	a	a	a	1	a	a
+4	c	c	c	1	c	c
+5	a	a	a	1	a	a
+6	c	c	c	1	c	c
+8	c	c	c	2	c	c
+10	a	a	a	2	a	a
+11	a	a	a	2	a	a
+12	c	c	c	2	c	c
+15	e	null	e	2	e	e
+13	c	c	c	3	c	c
+13	c	null	c	3	c	c
+14	a	a	a	3	a	a
+11111	a	null	a	3	a	a

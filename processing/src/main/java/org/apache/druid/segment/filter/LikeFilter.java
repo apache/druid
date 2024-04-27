@@ -24,6 +24,8 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.ColumnIndexSelector;
+import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.filter.DruidPredicateMatch;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.filter.LikeDimFilter;
@@ -32,14 +34,11 @@ import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.query.filter.vector.VectorValueMatcherColumnProcessorFactory;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnProcessors;
-import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
-import org.apache.druid.segment.column.AllFalseBitmapColumnIndex;
-import org.apache.druid.segment.column.AllTrueBitmapColumnIndex;
-import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
-import org.apache.druid.segment.column.LexicographicalRangeIndex;
-import org.apache.druid.segment.column.StringValueSetIndex;
+import org.apache.druid.segment.index.BitmapColumnIndex;
+import org.apache.druid.segment.index.semantic.LexicographicalRangeIndexes;
+import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
@@ -76,29 +75,28 @@ public class LikeFilter implements Filter
     }
     final ColumnIndexSupplier indexSupplier = selector.getIndexSupplier(dimension);
     if (indexSupplier == null) {
-      // Treat this as a column full of nulls
-      return likeMatcher.matches(null)
-             ? new AllTrueBitmapColumnIndex(selector)
-             : new AllFalseBitmapColumnIndex(selector);
+      final String nullValue = extractionFn == null ? null : extractionFn.apply(null);
+      final DruidPredicateMatch match = likeMatcher.matches(nullValue);
+      return Filters.makeMissingColumnNullIndex(match, selector);
     }
     if (isSimpleEquals()) {
-      StringValueSetIndex valueIndex = indexSupplier.as(StringValueSetIndex.class);
-      if (valueIndex != null) {
-        return valueIndex.forValue(
+      StringValueSetIndexes valueIndexes = indexSupplier.as(StringValueSetIndexes.class);
+      if (valueIndexes != null) {
+        return valueIndexes.forValue(
             NullHandling.emptyToNullIfNeeded(likeMatcher.getPrefix())
         );
       }
     }
     if (isSimplePrefix()) {
-      final LexicographicalRangeIndex rangeIndex = indexSupplier.as(LexicographicalRangeIndex.class);
-      if (rangeIndex != null) {
+      final LexicographicalRangeIndexes rangeIndexes = indexSupplier.as(LexicographicalRangeIndexes.class);
+      if (rangeIndexes != null) {
         final String lower = NullHandling.nullToEmptyIfNeeded(likeMatcher.getPrefix());
         final String upper = NullHandling.nullToEmptyIfNeeded(likeMatcher.getPrefix()) + Character.MAX_VALUE;
 
         if (likeMatcher.getSuffixMatch() == LikeDimFilter.LikeMatcher.SuffixMatch.MATCH_ANY) {
-          return rangeIndex.forRange(lower, false, upper, false);
+          return rangeIndexes.forRange(lower, false, upper, false);
         } else {
-          return rangeIndex.forRange(lower, false, upper, false, likeMatcher::matchesSuffixOnly);
+          return rangeIndexes.forRange(lower, false, upper, false, likeMatcher::matchesSuffixOnly);
         }
       }
     }
@@ -166,12 +164,6 @@ public class LikeFilter implements Filter
     );
   }
 
-  @Override
-  public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, ColumnIndexSelector indexSelector)
-  {
-    return Filters.supportsSelectivityEstimation(this, dimension, columnSelector, indexSelector);
-  }
-
   /**
    * Returns true if this filter is a simple equals filter: dimension = 'value' with no extractionFn.
    */
@@ -208,5 +200,16 @@ public class LikeFilter implements Filter
   public int hashCode()
   {
     return Objects.hash(dimension, extractionFn, likeMatcher, filterTuning);
+  }
+
+  @Override
+  public String toString()
+  {
+    return new DimFilter.DimFilterToStringBuilder().appendDimension(dimension, extractionFn)
+                                                   .append(" LIKE '")
+                                                   .append(likeMatcher)
+                                                   .append("'")
+                                                   .appendFilterTuning(filterTuning)
+                                                   .build();
   }
 }

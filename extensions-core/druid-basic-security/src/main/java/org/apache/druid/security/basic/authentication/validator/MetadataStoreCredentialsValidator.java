@@ -25,11 +25,11 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.inject.Provider;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.security.basic.BasicAuthUtils;
 import org.apache.druid.security.basic.BasicSecurityAuthenticationException;
 import org.apache.druid.security.basic.authentication.db.cache.BasicAuthenticatorCacheManager;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorCredentials;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorUser;
+import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthenticationResult;
 
 import javax.annotation.Nullable;
@@ -41,6 +41,7 @@ public class MetadataStoreCredentialsValidator implements CredentialsValidator
 {
   private static final Logger LOG = new Logger(MetadataStoreCredentialsValidator.class);
   private final Provider<BasicAuthenticatorCacheManager> cacheManager;
+  private final PasswordHashGenerator hashGenerator = new PasswordHashGenerator();
 
   @JsonCreator
   public MetadataStoreCredentialsValidator(
@@ -73,7 +74,7 @@ public class MetadataStoreCredentialsValidator implements CredentialsValidator
       return null;
     }
 
-    byte[] recalculatedHash = BasicAuthUtils.hashPassword(
+    byte[] recalculatedHash = hashGenerator.getOrComputePasswordHash(
         password,
         credentials.getSalt(),
         credentials.getIterations()
@@ -83,7 +84,7 @@ public class MetadataStoreCredentialsValidator implements CredentialsValidator
       return new AuthenticationResult(username, authorizerName, authenticatorName, null);
     } else {
       LOG.debug("Password incorrect for metadata store user %s", username);
-      throw new BasicSecurityAuthenticationException("User metadata store authentication failed.");
+      throw new BasicSecurityAuthenticationException(Access.DEFAULT_ERROR_MESSAGE);
     }
   }
 }

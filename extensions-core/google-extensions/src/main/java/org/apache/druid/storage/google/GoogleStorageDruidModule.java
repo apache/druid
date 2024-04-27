@@ -23,18 +23,15 @@ import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.google.api.client.http.HttpRequestInitializer;
-import com.google.api.client.http.HttpTransport;
-import com.google.api.client.json.JsonFactory;
-import com.google.api.services.storage.Storage;
-import com.google.common.base.Suppliers;
+import com.google.cloud.storage.Storage;
+import com.google.cloud.storage.StorageOptions;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
+import com.google.inject.Provider;
 import com.google.inject.Provides;
 import com.google.inject.multibindings.MapBinder;
 import org.apache.druid.data.SearchableVersionedDataFinder;
 import org.apache.druid.data.input.google.GoogleCloudStorageInputSource;
-import org.apache.druid.firehose.google.StaticGoogleBlobStoreFirehoseFactory;
 import org.apache.druid.guice.Binders;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
@@ -77,7 +74,6 @@ public class GoogleStorageDruidModule implements DruidModule
           }
         },
         new SimpleModule().registerSubtypes(
-            new NamedType(StaticGoogleBlobStoreFirehoseFactory.class, "static-google-blobstore"),
             new NamedType(GoogleCloudStorageInputSource.class, SCHEME)
         )
     );
@@ -88,6 +84,7 @@ public class GoogleStorageDruidModule implements DruidModule
   {
     LOG.info("Configuring GoogleStorageDruidModule...");
 
+    JsonConfigProvider.bind(binder, "druid.google", GoogleInputDataConfig.class);
     JsonConfigProvider.bind(binder, "druid.google", GoogleAccountConfig.class);
 
     Binders.dataSegmentPusherBinder(binder).addBinding(SCHEME).to(GoogleDataSegmentPusher.class)
@@ -99,9 +96,16 @@ public class GoogleStorageDruidModule implements DruidModule
     JsonConfigProvider.bind(binder, "druid.indexer.logs", GoogleTaskLogsConfig.class);
     binder.bind(GoogleTaskLogs.class).in(LazySingleton.class);
     MapBinder.newMapBinder(binder, String.class, SearchableVersionedDataFinder.class)
-        .addBinding(SCHEME_GS)
-        .to(GoogleTimestampVersionedDataFinder.class)
-        .in(LazySingleton.class);
+             .addBinding(SCHEME_GS)
+             .to(GoogleTimestampVersionedDataFinder.class)
+             .in(LazySingleton.class);
+  }
+
+  @Provides
+  @LazySingleton
+  public Storage getGcpStorage()
+  {
+    return StorageOptions.getDefaultInstance().getService();
   }
 
   /**
@@ -111,20 +115,10 @@ public class GoogleStorageDruidModule implements DruidModule
   @Provides
   @LazySingleton
   public GoogleStorage getGoogleStorage(
-      HttpTransport httpTransport,
-      JsonFactory jsonFactory,
-      HttpRequestInitializer requestInitializer
+      Provider<Storage> baseStorageProvider
   )
   {
     LOG.info("Building Cloud Storage Client...");
-
-    return new GoogleStorage(
-        Suppliers.memoize(
-            () -> new Storage
-                .Builder(httpTransport, jsonFactory, requestInitializer)
-                .setApplicationName(APPLICATION_NAME)
-                .build()
-        )
-    );
+    return new GoogleStorage(baseStorageProvider::get);
   }
 }

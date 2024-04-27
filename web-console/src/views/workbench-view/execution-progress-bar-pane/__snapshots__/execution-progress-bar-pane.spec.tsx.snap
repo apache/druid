@@ -4,20 +4,24 @@ exports[`ExecutionProgressBarPane matches snapshot 1`] = `
 <div
   className="execution-progress-bar-pane"
 >
-  <Component>
+  <Unknown>
     Query complete, waiting for segments to be loaded...
-     
-    <span
-      className="cancel"
-      onClick={[Function]}
-    >
-      (stop waiting)
-    </span>
-  </Component>
+    <React.Fragment>
+       
+      <span
+        className="cancel"
+        onClick={[Function]}
+      >
+        (skip waiting)
+      </span>
+    </React.Fragment>
+  </Unknown>
   <Blueprint4.ProgressBar
     className="overall"
     intent="primary"
-    key="actual"
   />
+  <Unknown>
+    Segments loaded successfully in 0:00:05
+  </Unknown>
 </div>
 `;

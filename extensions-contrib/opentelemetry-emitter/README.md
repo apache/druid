@@ -39,7 +39,7 @@ To enable the OpenTelemetry emitter, add the extension and enable the emitter in
 
 Load the plugin:
 
-```
+```properties
 druid.extensions.loadList=[..., "opentelemetry-emitter"]
 ```
 
@@ -47,13 +47,13 @@ Then there are 2 options:
 
 * You want to use only `opentelemetry-emitter`
 
-```
+```properties
 druid.emitter=opentelemetry
 ```
 
 * You want to use `opentelemetry-emitter` with other emitters
 
-```
+```properties
 druid.emitter=composing
 druid.emitter.composing.emitters=[..., "opentelemetry"]
 ```
@@ -66,7 +66,7 @@ _*More about Druid configuration [here](https://druid.apache.org/docs/latest/con
 
 Create `docker-compose.yaml` in your working dir:
 
-```
+```yaml
 version: "2"
 services:
 
@@ -86,7 +86,7 @@ services:
 
 Create `config.yaml` file with configuration for otel-collector:
 
-```
+```yaml
 version: "2"
 receivers:
 receivers:
@@ -116,15 +116,15 @@ service:
 
 Run otel-collector and zipkin.
 
-```
-docker-compose up
+```bash
+docker compose up
 ```
 
 ### Part 2: Run Druid
 
 Build Druid:
 
-```
+```bash
 mvn clean install -Pdist
 tar -C /tmp -xf distribution/target/apache-druid-0.21.0-bin.tar.gz
 cd /tmp/apache-druid-0.21.0
@@ -148,7 +148,7 @@ Load sample data - [example](https://druid.apache.org/docs/latest/tutorials/inde
 
 Create `query.json`:
 
-```
+```json
 {
    "query":"SELECT COUNT(*) as total FROM wiki WHERE countryName IS NOT NULL",
    "context":{
@@ -159,7 +159,7 @@ Create `query.json`:
 
 Send query:
 
-```
+```bash
 curl -XPOST -H'Content-Type: application/json' http://localhost:8888/druid/v2/sql/ -d @query.json
 ```
 

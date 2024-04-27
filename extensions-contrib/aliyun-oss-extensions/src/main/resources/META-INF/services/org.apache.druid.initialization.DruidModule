@@ -14,5 +14,4 @@
 # limitations under the License.
 
 org.apache.druid.storage.aliyun.OssStorageDruidModule
-org.apache.druid.firehose.aliyun.OssFirehoseDruidModule
 org.apache.druid.data.input.aliyun.OssInputSourceDruidModule

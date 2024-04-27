@@ -30,9 +30,11 @@ import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DruidNodeAnnouncer;
 import org.apache.druid.discovery.LookupNodeService;
+import org.apache.druid.guice.annotations.AttemptId;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Parent;
 import org.apache.druid.guice.annotations.RemoteChatHandler;
+import org.apache.druid.indexer.report.TaskReportFileWriter;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.Task;
@@ -44,6 +46,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.MonitorScheduler;
 import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
+import org.apache.druid.rpc.StandardRetryPolicy;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9Factory;
@@ -54,20 +57,25 @@ import org.apache.druid.segment.loading.DataSegmentArchiver;
 import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.loading.DataSegmentMover;
 import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.segment.loading.SegmentLoaderConfig;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.server.coordination.DataSegmentServerAnnouncer;
 import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.tasklogs.TaskLogPusher;
 
 import java.io.File;
+import java.util.function.Function;
 
 /**
  * Stuff that may be needed by a Task in order to conduct its business.
  */
 public class TaskToolboxFactory
 {
+  private final SegmentLoaderConfig segmentLoaderConfig;
   private final TaskConfig config;
   private final DruidNode taskExecutorNode;
   private final TaskActionClientFactory taskActionClientFactory;
@@ -106,9 +114,13 @@ public class TaskToolboxFactory
   private final IntermediaryDataManager intermediaryDataManager;
   private final ParallelIndexSupervisorTaskClientProvider supervisorTaskClientProvider;
   private final ShuffleClient shuffleClient;
+  private final TaskLogPusher taskLogPusher;
+  private final String attemptId;
+  private final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
 
   @Inject
   public TaskToolboxFactory(
+      SegmentLoaderConfig segmentLoadConfig,
       TaskConfig config,
       @Parent DruidNode taskExecutorNode,
       TaskActionClientFactory taskActionClientFactory,
@@ -144,9 +156,13 @@ public class TaskToolboxFactory
       OverlordClient overlordClient,
       CoordinatorClient coordinatorClient,
       ParallelIndexSupervisorTaskClientProvider supervisorTaskClientProvider,
-      ShuffleClient shuffleClient
+      ShuffleClient shuffleClient,
+      TaskLogPusher taskLogPusher,
+      @AttemptId String attemptId,
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
+    this.segmentLoaderConfig = segmentLoadConfig;
     this.config = config;
     this.taskExecutorNode = taskExecutorNode;
     this.taskActionClientFactory = taskActionClientFactory;
@@ -183,13 +199,27 @@ public class TaskToolboxFactory
     this.coordinatorClient = coordinatorClient;
     this.supervisorTaskClientProvider = supervisorTaskClientProvider;
     this.shuffleClient = shuffleClient;
+    this.taskLogPusher = taskLogPusher;
+    this.attemptId = attemptId;
+    this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
   }
 
   public TaskToolbox build(Task task)
   {
+    return build(config, task);
+  }
+
+  public TaskToolbox build(Function<TaskConfig, TaskConfig> decoratorFn, Task task)
+  {
+    return build(decoratorFn.apply(config), task);
+  }
+
+  public TaskToolbox build(TaskConfig config, Task task)
+  {
     final File taskWorkDir = config.getTaskWorkDir(task.getId());
     return new TaskToolbox.Builder()
         .config(config)
+        .config(segmentLoaderConfig)
         .taskExecutorNode(taskExecutorNode)
         .taskActionClient(taskActionClientFactory.create(task))
         .emitter(emitter)
@@ -226,10 +256,16 @@ public class TaskToolboxFactory
         .chatHandlerProvider(chatHandlerProvider)
         .rowIngestionMetersFactory(rowIngestionMetersFactory)
         .appenderatorsManager(appenderatorsManager)
-        .overlordClient(overlordClient)
-        .coordinatorClient(coordinatorClient)
+        // Most tasks are written in such a way that if an Overlord or Coordinator RPC fails, the task fails.
+        // Set the retry policy to "about an hour", so tasks are resilient to brief Coordinator/Overlord problems.
+        // Calls will still eventually fail if problems persist.
+        .overlordClient(overlordClient.withRetryPolicy(StandardRetryPolicy.aboutAnHour()))
+        .coordinatorClient(coordinatorClient.withRetryPolicy(StandardRetryPolicy.aboutAnHour()))
         .supervisorTaskClientProvider(supervisorTaskClientProvider)
         .shuffleClient(shuffleClient)
+        .taskLogPusher(taskLogPusher)
+        .attemptId(attemptId)
+        .centralizedTableSchemaConfig(centralizedDatasourceSchemaConfig)
         .build();
   }
 }

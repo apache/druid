@@ -66,7 +66,7 @@ public class SqlQuery
   )
   {
     this.query = Preconditions.checkNotNull(query, "query");
-    this.resultFormat = resultFormat == null ? ResultFormat.OBJECT : resultFormat;
+    this.resultFormat = resultFormat == null ? ResultFormat.DEFAULT_RESULT_FORMAT : resultFormat;
     this.header = header;
     this.typesHeader = typesHeader;
     this.sqlTypesHeader = sqlTypesHeader;

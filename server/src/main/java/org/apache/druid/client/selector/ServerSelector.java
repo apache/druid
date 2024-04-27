@@ -215,5 +215,4 @@ public class ServerSelector implements Overshadowable<ServerSelector>
   {
     return segment.get().hasData();
   }
-
 }

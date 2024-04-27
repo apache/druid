@@ -16,16 +16,14 @@
  * limitations under the License.
  */
 
-import { JSON_SAMPLE } from '../../utils/sampler.mock';
+import { EMPTY_SAMPLE, JSON_SAMPLE } from '../../utils/sampler.mock';
 
 import { getMetricSpecs } from './metric-spec';
 
 describe('metric-spec', () => {
   describe('getMetricSecs', () => {
     it('works for empty', () => {
-      expect(getMetricSpecs({ header: ['header'], rows: [] }, {}, false)).toEqual([
-        { name: 'count', type: 'count' },
-      ]);
+      expect(getMetricSpecs(EMPTY_SAMPLE, {}, false)).toEqual([{ name: 'count', type: 'count' }]);
     });
 
     it('works with json', () => {

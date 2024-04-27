@@ -1,0 +1,1 @@
+SELECT col8, COUNT(COUNT(col8)) OVER ( PARTITION BY col7 ORDER BY col0 ) count_col8, col7 FROM "allTypsUniq.parquet" GROUP BY col0,col7,col8

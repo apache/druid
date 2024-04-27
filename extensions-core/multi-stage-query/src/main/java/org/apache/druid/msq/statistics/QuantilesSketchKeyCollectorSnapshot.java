@@ -21,11 +21,14 @@ package org.apache.druid.msq.statistics;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeName;
 
 import java.util.Objects;
 
+@JsonTypeName(QuantilesSketchKeyCollectorSnapshot.TYPE)
 public class QuantilesSketchKeyCollectorSnapshot implements KeyCollectorSnapshot
 {
+  static final String TYPE = "quantile";
   private final String encodedSketch;
 
   private final double averageKeyLength;

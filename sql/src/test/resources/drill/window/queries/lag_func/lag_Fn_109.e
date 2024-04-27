@@ -1,0 +1,15 @@
+false	TX	null
+false	RI	TX
+false	NY	RI
+false	NJ	NY
+false	NC	NJ
+false	MA	NC
+false	KS	MA
+false	IN	KS
+false	IA	IN
+false	GA	IA
+true	SD	null
+true	SC	SD
+true	OR	SC
+true	NE	OR
+true	MN	NE

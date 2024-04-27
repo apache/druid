@@ -16,9 +16,11 @@
  * limitations under the License.
  */
 
-import { Icon, IconName } from '@blueprintjs/core';
+import type { IconName } from '@blueprintjs/core';
+import { Icon } from '@blueprintjs/core';
 import classNames from 'classnames';
-import React, { MouseEventHandler, ReactNode } from 'react';
+import type { MouseEventHandler, ReactNode } from 'react';
+import React from 'react';
 
 import './table-clickable-cell.scss';
 
@@ -27,18 +29,23 @@ export interface TableClickableCellProps {
   onClick: MouseEventHandler<any>;
   hoverIcon?: IconName;
   title?: string;
+  disabled?: boolean;
   children?: ReactNode;
 }
 
 export const TableClickableCell = React.memo(function TableClickableCell(
   props: TableClickableCellProps,
 ) {
-  const { className, onClick, hoverIcon, title, children } = props;
+  const { className, onClick, hoverIcon, title, disabled, children } = props;
 
   return (
-    <div className={classNames('table-clickable-cell', className)} title={title} onClick={onClick}>
+    <div
+      className={classNames('table-clickable-cell', className, { disabled })}
+      title={title}
+      onClick={disabled ? undefined : onClick}
+    >
       {children}
-      {hoverIcon && <Icon className="hover-icon" icon={hoverIcon} />}
+      {hoverIcon && !disabled && <Icon className="hover-icon" icon={hoverIcon} />}
     </div>
   );
 });

@@ -22,10 +22,11 @@ package org.apache.druid.query.metadata.metadata;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class ColumnAnalysisTest
+public class ColumnAnalysisTest extends InitializedNullHandlingTest
 {
   private final ObjectMapper MAPPER = TestHelper.makeJsonMapper();
 

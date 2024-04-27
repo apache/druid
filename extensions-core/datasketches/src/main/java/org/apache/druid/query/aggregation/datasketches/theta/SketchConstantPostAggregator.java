@@ -51,7 +51,7 @@ public class SketchConstantPostAggregator implements PostAggregator
     Preconditions.checkArgument(value != null && !value.isEmpty(),
         "Constant value cannot be null or empty, expecting base64 encoded sketch string");
     this.value = value;
-    this.sketchValue = SketchHolder.deserialize(value);
+    this.sketchValue = SketchHolder.deserializeSafe(value);
   }
 
   @Override

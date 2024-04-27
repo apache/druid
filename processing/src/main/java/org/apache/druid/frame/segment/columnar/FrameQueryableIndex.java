@@ -52,7 +52,7 @@ public class FrameQueryableIndex implements QueryableIndex
   private final RowSignature signature;
   private final List<FrameColumnReader> columnReaders;
 
-  FrameQueryableIndex(
+  public FrameQueryableIndex(
       final Frame frame,
       final RowSignature signature,
       final List<FrameColumnReader> columnReaders

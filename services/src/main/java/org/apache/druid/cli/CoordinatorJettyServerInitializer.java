@@ -35,6 +35,7 @@ import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationUtils;
 import org.apache.druid.server.security.Authenticator;
 import org.apache.druid.server.security.AuthenticatorMapper;
+import org.eclipse.jetty.rewrite.handler.RewriteHandler;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.HandlerList;
@@ -131,10 +132,13 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
       root.addServlet(new ServletHolder(injector.getInstance(OverlordProxyServlet.class)), "/druid/indexer/*");
     }
 
+    RewriteHandler rewriteHandler = WebConsoleJettyServerInitializer.createWebConsoleRewriteHandler();
+    JettyServerInitUtils.maybeAddHSTSPatternRule(serverConfig, rewriteHandler);
+
     HandlerList handlerList = new HandlerList();
     handlerList.setHandlers(
         new Handler[]{
-            WebConsoleJettyServerInitializer.createWebConsoleRewriteHandler(),
+            rewriteHandler,
             JettyServerInitUtils.getJettyRequestLogHandler(),
             JettyServerInitUtils.wrapWithDefaultGzipHandler(
                 root,

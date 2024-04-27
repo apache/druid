@@ -1,6 +1,7 @@
 ---
 id: cluster
-title: "Clustered deployment"
+title: Clustered deployment
+sidebar_label: Clustered deployment
 ---
 
 <!--
@@ -130,10 +131,15 @@ The [basic cluster tuning guide](../operations/basic-cluster-tuning.md) has info
 
 ## Select OS
 
-We recommend running your favorite Linux distribution. You will also need [Java 8 or 11](../operations/java.md).
+We recommend running your favorite Linux distribution. You will also need 
 
-> If needed, you can specify where to find Java using the environment variables
-> `DRUID_JAVA_HOME` or `JAVA_HOME`. For more details run the `bin/verify-java` script.
+* [Java 8u92+, 11, or 17](../operations/java.md)
+* Python 2 or Python 3
+
+:::info
+ If needed, you can specify where to find Java using the environment variables
+ `DRUID_JAVA_HOME` or `JAVA_HOME`. For more details run the `bin/verify-java` script.
+:::
 
 For information about installing Java, see the documentation for your OS package manager. If your Ubuntu-based OS does not have a recent enough version of Java, WebUpd8 offers [packages for those
 OSes](http://www.webupd8.org/2012/09/install-oracle-java-8-in-ubuntu-via-ppa.html).
@@ -358,8 +364,8 @@ New Historical (on 2 Data servers)
 
 ```
 druid.processing.buffer.sizeBytes=500MiB
-druid.processing.numMergeBuffers=8
-druid.processing.numThreads=31
+druid.processing.numMergeBuffers=4
+druid.processing.numThreads=15
 ```
 
 New MiddleManager (on 2 Data servers)
@@ -405,8 +411,10 @@ inbound connections on the following:
 - 8082 (Broker)
 - 8088 (Router, if used)
 
-> In production, we recommend deploying ZooKeeper and your metadata store on their own dedicated hardware,
-> rather than on the Master server.
+:::info
+ In production, we recommend deploying ZooKeeper and your metadata store on their own dedicated hardware,
+ rather than on the Master server.
+:::
 
 ## Start Master Server
 
@@ -435,7 +443,9 @@ can start the Master server processes together with ZK using:
 bin/start-cluster-master-with-zk-server
 ```
 
-> In production, we also recommend running a ZooKeeper cluster on its own dedicated hardware.
+:::info
+ In production, we also recommend running a ZooKeeper cluster on its own dedicated hardware.
+:::
 
 ## Start Data Server
 
@@ -449,8 +459,10 @@ bin/start-cluster-data-server
 
 You can add more Data servers as needed.
 
-> For clusters with complex resource allocation needs, you can break apart Historicals and MiddleManagers and scale the components individually.
-> This also allows you take advantage of Druid's built-in MiddleManager autoscaling facility.
+:::info
+ For clusters with complex resource allocation needs, you can break apart Historicals and MiddleManagers and scale the components individually.
+ This also allows you take advantage of Druid's built-in MiddleManager autoscaling facility.
+:::
 
 ## Start Query Server
 

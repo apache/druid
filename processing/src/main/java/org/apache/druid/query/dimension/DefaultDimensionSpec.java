@@ -41,6 +41,11 @@ public class DefaultDimensionSpec implements DimensionSpec
     return new DefaultDimensionSpec(dimensionName, dimensionName);
   }
 
+  public static DefaultDimensionSpec of(String dimensionName, ColumnType columnType)
+  {
+    return new DefaultDimensionSpec(dimensionName, dimensionName, columnType);
+  }
+
   private static final byte CACHE_TYPE_ID = 0x0;
   private final String dimension;
   private final String outputName;

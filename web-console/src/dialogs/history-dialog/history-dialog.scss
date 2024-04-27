@@ -22,13 +22,17 @@
   &.#{$bp-ns}-dialog {
     width: 75%;
     top: 5%;
-    height: 75vh;
   }
 
   .#{$bp-ns}-tabs {
     position: relative;
-    height: 100%;
     width: 100%;
+    height: 75vh;
+
+    .#{$bp-ns}-tab-list {
+      max-width: 300px;
+      overflow: auto;
+    }
 
     .#{$bp-ns}-tab-panel {
       flex: 1;

@@ -63,7 +63,10 @@ public class SqlResourceCollectorShuttle extends SqlShuttle
   public SqlNode visit(SqlCall call)
   {
     if (call.getOperator() instanceof AuthorizableOperator) {
-      resourceActions.addAll(((AuthorizableOperator) call.getOperator()).computeResources(call));
+      resourceActions.addAll(((AuthorizableOperator) call.getOperator()).computeResources(
+          call,
+          plannerContext.getPlannerToolbox().getAuthConfig().isEnableInputSourceSecurity()
+      ));
     }
 
     return super.visit(call);

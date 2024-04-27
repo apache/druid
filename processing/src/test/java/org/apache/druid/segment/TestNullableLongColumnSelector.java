@@ -25,10 +25,6 @@ public class TestNullableLongColumnSelector extends TestLongColumnSelector
 {
   private final Long[] longs;
 
-  static {
-    NullHandling.initializeForTests();
-  }
-
   private int index = 0;
 
   public TestNullableLongColumnSelector(Long[] longs)

@@ -158,6 +158,36 @@ public class KllDoublesSketchToHistogramPostAggregatorTest
   }
 
   @Test
+  public void splitPointsEqualValues()
+  {
+    final double[] values = new double[] {6, 6, 6, 6, 6, 6};
+    final TestDoubleColumnSelectorImpl selector = new TestDoubleColumnSelectorImpl(values);
+
+    final Aggregator agg = new KllDoublesSketchBuildAggregator(selector, 8);
+    //noinspection ForLoopReplaceableByForEach
+    for (int i = 0; i < values.length; i++) {
+      agg.aggregate();
+      selector.increment();
+    }
+
+    final Map<String, Object> fields = new HashMap<>();
+    fields.put("sketch", agg.get());
+
+    final PostAggregator postAgg = new KllDoublesSketchToHistogramPostAggregator(
+        "histogram",
+        new FieldAccessPostAggregator("field", "sketch"),
+        new double[] {3.5}, // all values are in the second bin
+        null
+    );
+
+    final double[] histogram = (double[]) postAgg.compute(fields);
+    Assert.assertNotNull(histogram);
+    Assert.assertEquals(2, histogram.length);
+    Assert.assertEquals(0.0, histogram[0], 0);
+    Assert.assertEquals(6.0, histogram[1], 0);
+  }
+
+  @Test
   public void numBins()
   {
     final double[] values = new double[] {1, 2, 3, 4, 5, 6};
@@ -185,6 +215,128 @@ public class KllDoublesSketchToHistogramPostAggregatorTest
     Assert.assertEquals(2, histogram.length);
     Assert.assertEquals(3.0, histogram[0], 0);
     Assert.assertEquals(3.0, histogram[1], 0);
+  }
+
+  @Test
+  public void oneValueTwoBins()
+  {
+    final double[] values = new double[] {1};
+    final TestDoubleColumnSelectorImpl selector = new TestDoubleColumnSelectorImpl(values);
+
+    final Aggregator agg = new KllDoublesSketchBuildAggregator(selector, 8);
+    //noinspection ForLoopReplaceableByForEach
+    for (int i = 0; i < values.length; i++) {
+      agg.aggregate();
+      selector.increment();
+    }
+
+    final Map<String, Object> fields = new HashMap<>();
+    fields.put("sketch", agg.get());
+
+    final PostAggregator postAgg = new KllDoublesSketchToHistogramPostAggregator(
+        "histogram",
+        new FieldAccessPostAggregator("field", "sketch"),
+        null,
+        2 // two bins, the second is empty
+    );
+
+    final double[] histogram = (double[]) postAgg.compute(fields);
+    Assert.assertNotNull(histogram);
+    Assert.assertEquals(2, histogram.length);
+    Assert.assertEquals(1.0, histogram[0], 0);
+    Assert.assertEquals(0.0, histogram[1], 0);
+  }
+
+  @Test
+  public void oneValueThreeBins()
+  {
+    final double[] values = new double[] {1};
+    final TestDoubleColumnSelectorImpl selector = new TestDoubleColumnSelectorImpl(values);
+
+    final Aggregator agg = new KllDoublesSketchBuildAggregator(selector, 8);
+    //noinspection ForLoopReplaceableByForEach
+    for (int i = 0; i < values.length; i++) {
+      agg.aggregate();
+      selector.increment();
+    }
+
+    final Map<String, Object> fields = new HashMap<>();
+    fields.put("sketch", agg.get());
+
+    final PostAggregator postAgg = new KllDoublesSketchToHistogramPostAggregator(
+        "histogram",
+        new FieldAccessPostAggregator("field", "sketch"),
+        null,
+        3 // three bins, the second and third are empty
+    );
+
+    final double[] histogram = (double[]) postAgg.compute(fields);
+    Assert.assertNotNull(histogram);
+    Assert.assertEquals(3, histogram.length);
+    Assert.assertEquals(1.0, histogram[0], 0);
+    Assert.assertEquals(0.0, histogram[1], 0);
+    Assert.assertEquals(0.0, histogram[2], 0);
+  }
+
+  @Test
+  public void equalValuesTwoBins()
+  {
+    final double[] values = new double[] {1, 1, 1};
+    final TestDoubleColumnSelectorImpl selector = new TestDoubleColumnSelectorImpl(values);
+
+    final Aggregator agg = new KllDoublesSketchBuildAggregator(selector, 8);
+    //noinspection ForLoopReplaceableByForEach
+    for (int i = 0; i < values.length; i++) {
+      agg.aggregate();
+      selector.increment();
+    }
+
+    final Map<String, Object> fields = new HashMap<>();
+    fields.put("sketch", agg.get());
+
+    final PostAggregator postAgg = new KllDoublesSketchToHistogramPostAggregator(
+        "histogram",
+        new FieldAccessPostAggregator("field", "sketch"),
+        null,
+        2 // two bins, the second is empty
+    );
+
+    final double[] histogram = (double[]) postAgg.compute(fields);
+    Assert.assertNotNull(histogram);
+    Assert.assertEquals(2, histogram.length);
+    Assert.assertEquals(3.0, histogram[0], 0);
+    Assert.assertEquals(0.0, histogram[1], 0);
+  }
+
+  @Test
+  public void equalValuesThreeBins()
+  {
+    final double[] values = new double[] {1, 1, 1};
+    final TestDoubleColumnSelectorImpl selector = new TestDoubleColumnSelectorImpl(values);
+
+    final Aggregator agg = new KllDoublesSketchBuildAggregator(selector, 8);
+    //noinspection ForLoopReplaceableByForEach
+    for (int i = 0; i < values.length; i++) {
+      agg.aggregate();
+      selector.increment();
+    }
+
+    final Map<String, Object> fields = new HashMap<>();
+    fields.put("sketch", agg.get());
+
+    final PostAggregator postAgg = new KllDoublesSketchToHistogramPostAggregator(
+        "histogram",
+        new FieldAccessPostAggregator("field", "sketch"),
+        null,
+        3 // three bins, the second and third are empty
+    );
+
+    final double[] histogram = (double[]) postAgg.compute(fields);
+    Assert.assertNotNull(histogram);
+    Assert.assertEquals(3, histogram.length);
+    Assert.assertEquals(3.0, histogram[0], 0);
+    Assert.assertEquals(0.0, histogram[1], 0);
+    Assert.assertEquals(0.0, histogram[2], 0);
   }
 
   @Test

@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.security;
 
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -40,41 +41,41 @@ public class AuthValidatorTest
   @Test
   public void testAuthorizerNameWithEmptyIsInvalid()
   {
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("authorizerName cannot be null or empty.");
-    target.validateAuthorizerName("");
+    DruidExceptionMatcher.invalidInput().expectMessageIs(
+        "Invalid value for field [authorizerName]: must not be null"
+    ).assertThrowsAndMatches(() -> target.validateAuthorizerName(""));
   }
 
   @Test
   public void testAuthorizerNameWithNullIsInvalid()
   {
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("authorizerName cannot be null or empty.");
-    target.validateAuthorizerName(null);
+    DruidExceptionMatcher.invalidInput().expectMessageIs(
+        "Invalid value for field [authorizerName]: must not be null"
+    ).assertThrowsAndMatches(() -> target.validateAuthorizerName(null));
   }
 
   @Test
   public void testAuthorizerNameStartsWithDotIsInValid()
   {
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("authorizerName cannot start with the '.' character.");
-    target.validateAuthorizerName(".test");
+    DruidExceptionMatcher.invalidInput().expectMessageIs(
+        "Invalid value for field [authorizerName]: Value [.test] cannot start with '.'."
+    ).assertThrowsAndMatches(() -> target.validateAuthorizerName(".test"));
   }
 
   @Test
   public void testAuthorizerNameWithSlashIsInvalid()
   {
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("authorizerName cannot contain the '/' character.");
-    target.validateAuthorizerName("tes/t");
+    DruidExceptionMatcher.invalidInput().expectMessageIs(
+        "Invalid value for field [authorizerName]: Value [tes/t] cannot contain '/'."
+    ).assertThrowsAndMatches(() -> target.validateAuthorizerName("tes/t"));
   }
 
   @Test
   public void testAuthorizerNameWithWhitespaceIsInvalid()
   {
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("authorizerName cannot contain whitespace character except space.");
-    target.validateAuthorizerName("tes\tt");
+    DruidExceptionMatcher.invalidInput().expectMessageIs(
+        "Invalid value for field [authorizerName]: Value [tes\tt] contains illegal whitespace characters.  Only space is allowed."
+    ).assertThrowsAndMatches(() -> target.validateAuthorizerName("tes\tt"));
   }
 
   @Test
@@ -92,8 +93,8 @@ public class AuthValidatorTest
   @Test
   public void testAuthenticatorNameWithWhitespaceIsInvalid()
   {
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("authenticatorName cannot contain whitespace character except space.");
-    target.validateAuthenticatorName("tes\tt");
+    DruidExceptionMatcher.invalidInput().expectMessageIs(
+        "Invalid value for field [authenticatorName]: Value [tes\tt] contains illegal whitespace characters.  Only space is allowed."
+    ).assertThrowsAndMatches(() -> target.validateAuthenticatorName("tes\tt"));
   }
 }

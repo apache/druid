@@ -1,0 +1,1 @@
+select col_int, count(*) OVER (PARTITION BY col_bln ORDER BY col_int,col_bln NULLS first) FROM (select * from `typeall_l` ORDER BY col_int LIMIT 64 OFFSET 64) subqry;

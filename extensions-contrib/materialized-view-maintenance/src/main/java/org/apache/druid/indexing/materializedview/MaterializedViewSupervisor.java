@@ -27,6 +27,8 @@ import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.EntryAlreadyExists;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.task.HadoopIndexTask;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
@@ -40,13 +42,13 @@ import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.metadata.MetadataSupervisorManager;
 import org.apache.druid.metadata.SqlSegmentsMetadataManager;
 import org.apache.druid.timeline.DataSegment;
@@ -56,6 +58,7 @@ import org.joda.time.Interval;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -278,6 +281,12 @@ public class MaterializedViewSupervisor implements Supervisor
   }
 
   @Override
+  public void resetOffsets(DataSourceMetadata resetDataSourceMetadata)
+  {
+    throw new UnsupportedOperationException("Reset offsets not supported in MaterializedViewSupervisor");
+  }
+
+  @Override
   public void checkpoint(int taskGroupId, DataSourceMetadata checkpointMetadata)
   {
     // do nothing
@@ -358,7 +367,8 @@ public class MaterializedViewSupervisor implements Supervisor
     // Pair<interval -> max(created_date), interval -> list<DataSegment>>
     Pair<Map<Interval, String>, Map<Interval, List<DataSegment>>> baseSegmentsSnapshot =
         getMaxCreateDateAndBaseSegments(
-            metadataStorageCoordinator.retrieveUsedSegmentsAndCreatedDates(spec.getBaseDataSource())
+            metadataStorageCoordinator.retrieveUsedSegmentsAndCreatedDates(spec.getBaseDataSource(),
+                                                                           Collections.singletonList(Intervals.ETERNITY))
         );
     // baseSegments are used to create HadoopIndexTask
     Map<Interval, List<DataSegment>> baseSegments = baseSegmentsSnapshot.rhs;
@@ -428,8 +438,15 @@ public class MaterializedViewSupervisor implements Supervisor
             runningTasks.put(entry.getKey(), task);
           }
         }
-        catch (EntryExistsException e) {
-          log.error("task %s already exsits", task);
+        catch (DruidException e) {
+          if (EntryAlreadyExists.ERROR_CODE.equals(e.getErrorCode())) {
+            log.error("Task[%s] already exists", task.getId());
+          } else {
+            throw e;
+          }
+        }
+        catch (RuntimeException e) {
+          throw e;
         }
         catch (Exception e) {
           throw new RuntimeException(e);

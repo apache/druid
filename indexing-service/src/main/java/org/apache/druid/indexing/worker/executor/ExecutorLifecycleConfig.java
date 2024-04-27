@@ -75,6 +75,12 @@ public class ExecutorLifecycleConfig
     return this;
   }
 
+  public ExecutorLifecycleConfig setParentStreamDefined(boolean parentStreamDefined)
+  {
+    this.parentStreamDefined = parentStreamDefined;
+    return this;
+  }
+
   public InputStream getParentStream()
   {
     if ("stdin".equals(parentStreamName)) {

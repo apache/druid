@@ -29,10 +29,12 @@ import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.metadata.DerbyMetadataStorageActionHandlerFactory;
-import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.metadata.TestDerbyConnector;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
@@ -41,11 +43,11 @@ import org.junit.Rule;
 import org.junit.Test;
 
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 public class TaskLockBoxConcurrencyTest
@@ -57,6 +59,7 @@ public class TaskLockBoxConcurrencyTest
   private ExecutorService service;
   private TaskStorage taskStorage;
   private TaskLockbox lockbox;
+  private SegmentSchemaManager segmentSchemaManager;
 
   @Before
   public void setup()
@@ -73,11 +76,18 @@ public class TaskLockBoxConcurrencyTest
         )
     );
 
+    segmentSchemaManager = new SegmentSchemaManager(derby.metadataTablesConfigSupplier().get(), objectMapper, derbyConnector);
     lockbox = new TaskLockbox(
         taskStorage,
-        new IndexerSQLMetadataStorageCoordinator(objectMapper, derby.metadataTablesConfigSupplier().get(), derbyConnector)
+        new IndexerSQLMetadataStorageCoordinator(
+            objectMapper,
+            derby.metadataTablesConfigSupplier().get(),
+            derbyConnector,
+            segmentSchemaManager,
+            CentralizedDatasourceSchemaConfig.create()
+        )
     );
-    service = Executors.newFixedThreadPool(2);
+    service = Execs.multiThreaded(2, "TaskLockBoxConcurrencyTest-%d");
   }
 
   @After
@@ -99,11 +109,11 @@ public class TaskLockBoxConcurrencyTest
 
   @Test(timeout = 60_000L)
   public void testDoInCriticalSectionWithDifferentTasks()
-      throws ExecutionException, InterruptedException, EntryExistsException
+      throws ExecutionException, InterruptedException
   {
     final Interval interval = Intervals.of("2017-01-01/2017-01-02");
-    final Task lowPriorityTask = NoopTask.create(10);
-    final Task highPriorityTask = NoopTask.create(100);
+    final Task lowPriorityTask = NoopTask.ofPriority(10);
+    final Task highPriorityTask = NoopTask.ofPriority(100);
     lockbox.add(lowPriorityTask);
     lockbox.add(highPriorityTask);
     taskStorage.insert(lowPriorityTask, TaskStatus.running(lowPriorityTask.getId()));
@@ -120,7 +130,7 @@ public class TaskLockBoxConcurrencyTest
 
       return lockbox.doInCriticalSection(
           lowPriorityTask,
-          Collections.singletonList(interval),
+          Collections.singleton(interval),
           CriticalAction.<Integer>builder()
               .onValidLocks(
                   () -> {
@@ -150,7 +160,7 @@ public class TaskLockBoxConcurrencyTest
 
       return lockbox.doInCriticalSection(
           highPriorityTask,
-          Collections.singletonList(interval),
+          Collections.singleton(interval),
           CriticalAction.<Integer>builder()
               .onValidLocks(
                   () -> {
@@ -200,7 +210,7 @@ public class TaskLockBoxConcurrencyTest
 
     final Future<Integer> future1 = service.submit(() -> lockbox.doInCriticalSection(
         task,
-        intervals.subList(0, 2),
+        new HashSet<>(intervals.subList(0, 2)),
         CriticalAction.<Integer>builder()
             .onValidLocks(
                 () -> {
@@ -223,7 +233,7 @@ public class TaskLockBoxConcurrencyTest
       latch.await();
       return lockbox.doInCriticalSection(
           task,
-          intervals.subList(1, 3),
+          new HashSet<>(intervals.subList(1, 3)),
           CriticalAction.<Integer>builder()
               .onValidLocks(
                   () -> {

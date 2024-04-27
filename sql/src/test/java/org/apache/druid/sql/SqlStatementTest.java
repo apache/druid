@@ -25,6 +25,8 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeField;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.LazySequence;
@@ -35,8 +37,10 @@ import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QueryStackTests;
+import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.log.TestRequestLogger;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -46,24 +50,23 @@ import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.DirectStatement.ResultSet;
-import org.apache.druid.sql.SqlPlanningException.PlanningError;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
+import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.planner.PrepareResult;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.apache.druid.sql.calcite.util.QueryLogHook;
-import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.http.SqlQuery;
 import org.easymock.EasyMock;
+import org.hamcrest.MatcherAssert;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Rule;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
@@ -83,12 +86,10 @@ import static org.junit.Assert.fail;
 public class SqlStatementTest
 {
   private static QueryRunnerFactoryConglomerate conglomerate;
+  private static SpecificSegmentsQuerySegmentWalker walker;
   private static Closer resourceCloser;
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
-  @Rule
-  public QueryLogHook queryLogHook = QueryLogHook.create();
-  private SpecificSegmentsQuerySegmentWalker walker = null;
+  @ClassRule
+  public static TemporaryFolder temporaryFolder = new TemporaryFolder();
   private TestRequestLogger testRequestLogger;
   private ListeningExecutorService executorService;
   private SqlStatementFactory sqlStatementFactory;
@@ -96,21 +97,11 @@ public class SqlStatementTest
       ImmutableMap.of("DEFAULT_KEY", "DEFAULT_VALUE"));
 
   @BeforeClass
-  public static void setUpClass()
+  public static void setUpClass() throws Exception
   {
     resourceCloser = Closer.create();
     conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(resourceCloser);
-  }
 
-  @AfterClass
-  public static void tearDownClass() throws IOException
-  {
-    resourceCloser.close();
-  }
-
-  @Before
-  public void setUp() throws Exception
-  {
     final QueryScheduler scheduler = new QueryScheduler(
         5,
         ManualQueryPrioritizationStrategy.INSTANCE,
@@ -123,15 +114,25 @@ public class SqlStatementTest
       {
         return super.run(
             query,
-            new LazySequence<T>(() -> {
-              return resultSequence;
-            })
+            new LazySequence<T>(() -> resultSequence)
         );
       }
     };
 
-    executorService = MoreExecutors.listeningDecorator(Execs.multiThreaded(8, "test_sql_resource_%s"));
     walker = CalciteTests.createMockWalker(conglomerate, temporaryFolder.newFolder(), scheduler);
+    resourceCloser.register(walker);
+  }
+
+  @AfterClass
+  public static void tearDownClass() throws IOException
+  {
+    resourceCloser.close();
+  }
+
+  @Before
+  public void setUp()
+  {
+    executorService = MoreExecutors.listeningDecorator(Execs.multiThreaded(8, "test_sql_resource_%s"));
 
     final PlannerConfig plannerConfig = PlannerConfig.builder().serializeComplexValues(false).build();
     final DruidSchemaCatalog rootSchema = CalciteTests.createMockRootSchema(
@@ -144,6 +145,7 @@ public class SqlStatementTest
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
 
     testRequestLogger = new TestRequestLogger();
+    final JoinableFactoryWrapper joinableFactoryWrapper = CalciteTests.createJoinableFactoryWrapper();
 
     final PlannerFactory plannerFactory = new PlannerFactory(
         rootSchema,
@@ -153,7 +155,10 @@ public class SqlStatementTest
         CalciteTests.TEST_AUTHORIZER_MAPPER,
         CalciteTests.getJsonMapper(),
         CalciteTests.DRUID_SCHEMA_NAME,
-        new CalciteRulesManager(ImmutableSet.of())
+        new CalciteRulesManager(ImmutableSet.of()),
+        joinableFactoryWrapper,
+        CatalogResolver.NULL_RESOLVER,
+        new AuthConfig()
     );
 
     this.sqlStatementFactory = new SqlStatementFactory(
@@ -163,7 +168,6 @@ public class SqlStatementTest
             new NoopServiceEmitter(),
             testRequestLogger,
             QueryStackTests.DEFAULT_NOOP_SCHEDULER,
-            new AuthConfig(),
             defaultQueryConfig,
             new SqlLifecycleManager()
         )
@@ -173,8 +177,6 @@ public class SqlStatementTest
   @After
   public void tearDown() throws Exception
   {
-    walker.close();
-    walker = null;
     executorService.shutdownNow();
     executorService.awaitTermination(2, TimeUnit.SECONDS);
   }
@@ -217,7 +219,8 @@ public class SqlStatementTest
   {
     SqlQueryPlus sqlReq = queryPlus(
         "SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.foo",
-        CalciteTests.REGULAR_USER_AUTH_RESULT);
+        CalciteTests.REGULAR_USER_AUTH_RESULT
+    );
     DirectStatement stmt = sqlStatementFactory.directStatement(sqlReq);
     ResultSet resultSet = stmt.plan();
     assertTrue(resultSet.runnable());
@@ -238,7 +241,8 @@ public class SqlStatementTest
   {
     SqlQueryPlus sqlReq = queryPlus(
         "SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.foo",
-        CalciteTests.REGULAR_USER_AUTH_RESULT);
+        CalciteTests.REGULAR_USER_AUTH_RESULT
+    );
     DirectStatement stmt = sqlStatementFactory.directStatement(sqlReq);
     stmt.plan();
     try {
@@ -255,7 +259,8 @@ public class SqlStatementTest
   {
     SqlQueryPlus sqlReq = queryPlus(
         "SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.foo",
-        CalciteTests.REGULAR_USER_AUTH_RESULT);
+        CalciteTests.REGULAR_USER_AUTH_RESULT
+    );
     DirectStatement stmt = sqlStatementFactory.directStatement(sqlReq);
     ResultSet resultSet = stmt.plan();
     resultSet.run();
@@ -273,15 +278,20 @@ public class SqlStatementTest
   {
     SqlQueryPlus sqlReq = queryPlus(
         "SELECT COUNT(*) AS cnt, 'foo' AS",
-        CalciteTests.REGULAR_USER_AUTH_RESULT);
+        CalciteTests.REGULAR_USER_AUTH_RESULT
+    );
     DirectStatement stmt = sqlStatementFactory.directStatement(sqlReq);
     try {
       stmt.execute();
       fail();
     }
-    catch (SqlPlanningException e) {
-      // Expected
-      assertEquals(PlanningError.SQL_PARSE_ERROR.getErrorCode(), e.getErrorCode());
+    catch (DruidException e) {
+      MatcherAssert.assertThat(
+          e,
+          DruidExceptionMatcher
+              .invalidSqlInput()
+              .expectMessageContains("Incorrect syntax near the keyword 'AS' at line 1, column 31")
+      );
     }
   }
 
@@ -290,15 +300,20 @@ public class SqlStatementTest
   {
     SqlQueryPlus sqlReq = queryPlus(
         "SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.bogus",
-        CalciteTests.REGULAR_USER_AUTH_RESULT);
+        CalciteTests.REGULAR_USER_AUTH_RESULT
+    );
     DirectStatement stmt = sqlStatementFactory.directStatement(sqlReq);
     try {
       stmt.execute();
       fail();
     }
-    catch (SqlPlanningException e) {
-      // Expected
-      assertEquals(PlanningError.VALIDATION_ERROR.getErrorCode(), e.getErrorCode());
+    catch (DruidException e) {
+      MatcherAssert.assertThat(
+          e,
+          DruidExceptionMatcher
+              .invalidSqlInput()
+              .expectMessageContains("Object 'bogus' not found within 'druid'")
+      );
     }
   }
 
@@ -307,7 +322,8 @@ public class SqlStatementTest
   {
     SqlQueryPlus sqlReq = queryPlus(
         "select count(*) from forbiddenDatasource",
-        CalciteTests.REGULAR_USER_AUTH_RESULT);
+        CalciteTests.REGULAR_USER_AUTH_RESULT
+    );
     DirectStatement stmt = sqlStatementFactory.directStatement(sqlReq);
     try {
       stmt.execute();
@@ -331,7 +347,7 @@ public class SqlStatementTest
         false,
         null,
         null
-        );
+    );
   }
 
   @Test
@@ -340,7 +356,7 @@ public class SqlStatementTest
     HttpStatement stmt = sqlStatementFactory.httpStatement(
         makeQuery("SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.foo"),
         request(true)
-        );
+    );
     List<Object[]> results = stmt.execute().getResults().toList();
     assertEquals(1, results.size());
     assertEquals(6L, results.get(0)[0]);
@@ -353,14 +369,18 @@ public class SqlStatementTest
     HttpStatement stmt = sqlStatementFactory.httpStatement(
         makeQuery("SELECT COUNT(*) AS cnt, 'foo' AS"),
         request(true)
-        );
+    );
     try {
       stmt.execute();
       fail();
     }
-    catch (SqlPlanningException e) {
-      // Expected
-      assertEquals(PlanningError.SQL_PARSE_ERROR.getErrorCode(), e.getErrorCode());
+    catch (DruidException e) {
+      MatcherAssert.assertThat(
+          e,
+          DruidExceptionMatcher
+              .invalidSqlInput()
+              .expectMessageContains("Incorrect syntax near the keyword 'AS' at line 1, column 31")
+      );
     }
   }
 
@@ -370,14 +390,18 @@ public class SqlStatementTest
     HttpStatement stmt = sqlStatementFactory.httpStatement(
         makeQuery("SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.bogus"),
         request(true)
-        );
+    );
     try {
       stmt.execute();
       fail();
     }
-    catch (SqlPlanningException e) {
-      // Expected
-      assertEquals(PlanningError.VALIDATION_ERROR.getErrorCode(), e.getErrorCode());
+    catch (DruidException e) {
+      MatcherAssert.assertThat(
+          e,
+          DruidExceptionMatcher
+              .invalidSqlInput()
+              .expectMessageContains("Object 'bogus' not found within 'druid'")
+      );
     }
   }
 
@@ -387,7 +411,7 @@ public class SqlStatementTest
     HttpStatement stmt = sqlStatementFactory.httpStatement(
         makeQuery("select count(*) from forbiddenDatasource"),
         request(false)
-        );
+    );
     try {
       stmt.execute();
       fail();
@@ -405,7 +429,8 @@ public class SqlStatementTest
   {
     SqlQueryPlus sqlReq = queryPlus(
         "SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.foo",
-        CalciteTests.REGULAR_USER_AUTH_RESULT);
+        CalciteTests.REGULAR_USER_AUTH_RESULT
+    );
     PreparedStatement stmt = sqlStatementFactory.preparedStatement(sqlReq);
 
     PrepareResult prepareResult = stmt.prepare();
@@ -435,15 +460,20 @@ public class SqlStatementTest
   {
     SqlQueryPlus sqlReq = queryPlus(
         "SELECT COUNT(*) AS cnt, 'foo' AS",
-        CalciteTests.REGULAR_USER_AUTH_RESULT);
+        CalciteTests.REGULAR_USER_AUTH_RESULT
+    );
     PreparedStatement stmt = sqlStatementFactory.preparedStatement(sqlReq);
     try {
       stmt.prepare();
       fail();
     }
-    catch (SqlPlanningException e) {
-      // Expected
-      assertEquals(PlanningError.SQL_PARSE_ERROR.getErrorCode(), e.getErrorCode());
+    catch (DruidException e) {
+      MatcherAssert.assertThat(
+          e,
+          DruidExceptionMatcher
+              .invalidSqlInput()
+              .expectMessageContains("Incorrect syntax near the keyword 'AS' at line 1, column 31")
+      );
     }
   }
 
@@ -452,15 +482,20 @@ public class SqlStatementTest
   {
     SqlQueryPlus sqlReq = queryPlus(
         "SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.bogus",
-        CalciteTests.REGULAR_USER_AUTH_RESULT);
+        CalciteTests.REGULAR_USER_AUTH_RESULT
+    );
     PreparedStatement stmt = sqlStatementFactory.preparedStatement(sqlReq);
     try {
       stmt.prepare();
       fail();
     }
-    catch (SqlPlanningException e) {
-      // Expected
-      assertEquals(PlanningError.VALIDATION_ERROR.getErrorCode(), e.getErrorCode());
+    catch (DruidException e) {
+      MatcherAssert.assertThat(
+          e,
+          DruidExceptionMatcher
+              .invalidSqlInput()
+              .expectMessageContains("Object 'bogus' not found within 'druid'")
+      );
     }
   }
 
@@ -469,7 +504,8 @@ public class SqlStatementTest
   {
     SqlQueryPlus sqlReq = queryPlus(
         "select count(*) from forbiddenDatasource",
-        CalciteTests.REGULAR_USER_AUTH_RESULT);
+        CalciteTests.REGULAR_USER_AUTH_RESULT
+    );
     PreparedStatement stmt = sqlStatementFactory.preparedStatement(sqlReq);
     try {
       stmt.prepare();

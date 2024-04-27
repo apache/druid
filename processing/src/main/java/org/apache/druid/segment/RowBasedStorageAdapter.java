@@ -55,11 +55,10 @@ public class RowBasedStorageAdapter<RowType> implements StorageAdapter
   private final RowAdapter<RowType> rowAdapter;
   private final RowSignature rowSignature;
 
-  RowBasedStorageAdapter(
+  public RowBasedStorageAdapter(
       final Sequence<RowType> rowSequence,
       final RowAdapter<RowType> rowAdapter,
-      final RowSignature rowSignature
-  )
+      final RowSignature rowSignature)
   {
     this.rowSequence = Preconditions.checkNotNull(rowSequence, "rowSequence");
     this.rowAdapter = Preconditions.checkNotNull(rowAdapter, "rowAdapter");

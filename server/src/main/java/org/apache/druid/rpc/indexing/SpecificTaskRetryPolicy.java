@@ -77,6 +77,18 @@ public class SpecificTaskRetryPolicy implements ServiceRetryPolicy
     return StandardRetryPolicy.unlimited().retryThrowable(t);
   }
 
+  @Override
+  public boolean retryLoggable()
+  {
+    return baseRetryPolicy.retryLoggable();
+  }
+
+  @Override
+  public boolean retryNotAvailable()
+  {
+    return baseRetryPolicy.retryNotAvailable();
+  }
+
   private boolean isTaskMismatch(final HttpResponse response)
   {
     // See class-level javadocs for details on why we do this.

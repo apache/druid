@@ -20,15 +20,20 @@
 package org.apache.druid.indexing.overlord.supervisor;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
+import org.apache.druid.server.security.ResourceAction;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * Used as a tombstone marker in the supervisors metadata table to indicate that the supervisor has been removed.
@@ -111,6 +116,14 @@ public class NoopSupervisorSpec implements SupervisorSpec
     return type;
   }
 
+  @Nonnull
+  @JsonIgnore
+  @Override
+  public Set<ResourceAction> getInputSourceResources()
+  {
+    return ImmutableSet.of();
+  }
+
   @Override
   @JsonProperty("source")
   public String getSource()
@@ -147,6 +160,11 @@ public class NoopSupervisorSpec implements SupervisorSpec
 
       @Override
       public void reset(DataSourceMetadata dataSourceMetadata)
+      {
+      }
+
+      @Override
+      public void resetOffsets(DataSourceMetadata resetDataSourceMetadata)
       {
       }
 

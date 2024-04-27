@@ -19,26 +19,24 @@
 import React from 'react';
 
 import { Loader } from '../../../components';
-import { Execution } from '../../../druid-models';
+import type { Execution } from '../../../druid-models';
 import { getTaskExecution } from '../../../helpers';
 import { useInterval, useQueryManager } from '../../../hooks';
 import { QueryState } from '../../../utils';
-import {
-  ExecutionDetailsPane,
-  ExecutionDetailsTab,
-} from '../execution-details-pane/execution-details-pane';
+import type { ExecutionDetailsTab } from '../execution-details-pane/execution-details-pane';
+import { ExecutionDetailsPane } from '../execution-details-pane/execution-details-pane';
 
 export interface ExecutionDetailsPaneLoaderProps {
   id: string;
   initTab?: ExecutionDetailsTab;
   initExecution?: Execution;
-  goToIngestion(taskId: string): void;
+  goToTask(taskId: string): void;
 }
 
 export const ExecutionDetailsPaneLoader = React.memo(function ExecutionDetailsPaneLoader(
   props: ExecutionDetailsPaneLoaderProps,
 ) {
-  const { id, initTab, initExecution, goToIngestion } = props;
+  const { id, initTab, initExecution, goToTask } = props;
 
   const [executionState, queryManager] = useQueryManager<string, Execution>({
     processQuery: (id: string) => {
@@ -58,9 +56,7 @@ export const ExecutionDetailsPaneLoader = React.memo(function ExecutionDetailsPa
 
   const execution = executionState.getSomeData();
   if (execution) {
-    return (
-      <ExecutionDetailsPane execution={execution} initTab={initTab} goToIngestion={goToIngestion} />
-    );
+    return <ExecutionDetailsPane execution={execution} initTab={initTab} goToTask={goToTask} />;
   } else if (executionState.isLoading()) {
     return <Loader className="execution-stages-pane" />;
   } else if (executionState.isError()) {

@@ -23,8 +23,10 @@ import classNames from 'classnames';
 import React, { useRef } from 'react';
 
 import { JSON_STRING_FORMATTER } from '../../utils';
-import { FormattedInput, FormattedInputProps } from '../formatted-input/formatted-input';
-import { Suggestion, SuggestionMenu } from '../suggestion-menu/suggestion-menu';
+import type { FormattedInputProps } from '../formatted-input/formatted-input';
+import { FormattedInput } from '../formatted-input/formatted-input';
+import type { Suggestion } from '../suggestion-menu/suggestion-menu';
+import { SuggestionMenu } from '../suggestion-menu/suggestion-menu';
 
 export interface SuggestibleInputProps extends Omit<FormattedInputProps, 'formatter'> {
   onFinalize?: () => void;

@@ -28,7 +28,7 @@ import java.util.Objects;
 @JsonTypeName(WorkerRpcFailedFault.CODE)
 public class WorkerRpcFailedFault extends BaseMSQFault
 {
-  static final String CODE = "WorkerRpcFailed";
+  public static final String CODE = "WorkerRpcFailed";
 
   private final String workerTaskId;
 

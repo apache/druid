@@ -22,8 +22,8 @@ package org.apache.druid.frame.allocation;
 import org.apache.datasketches.memory.Memory;
 
 /**
- * Reference to a particular region of some {@link Memory}. This is used because it is cheaper to create than
- * calling {@link Memory#region}.
+ * Reference to a particular region of some {@link Memory}. This is used because it is cheaper to reuse this object
+ * rather than calling {@link Memory#region} for each row.
  *
  * Not immutable. The pointed-to range may change as this object gets reused.
  */
@@ -39,8 +39,8 @@ public class MemoryRange<T extends Memory>
   }
 
   /**
-   * Returns the underlying memory *without* clipping it to this particular range. Callers must remember to continue
-   * applying the offset given by {@link #start} and capacity given by {@link #length}.
+   * Returns the underlying memory *without* clipping it to this particular range. Callers must apply the offset
+   * given by {@link #start} and capacity given by {@link #length}.
    */
   public T memory()
   {

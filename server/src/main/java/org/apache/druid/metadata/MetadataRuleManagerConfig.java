@@ -35,6 +35,10 @@ public class MetadataRuleManagerConfig
   @JsonProperty
   private Period alertThreshold = new Period("PT10M");
 
+  /**
+   * Datasource name against which the cluster-level default rules are stored
+   * in the metadata store.
+   */
   public String getDefaultRule()
   {
     return defaultRule;

@@ -59,6 +59,21 @@ public class JoinPrefixUtils
   }
 
   /**
+   * Removes the prefix on {@code columnName}. Must only be called if the column name is actually prefixed; i.e.,
+   * if {@link #isPrefixedBy(String, String)} would return true on the same arguments.
+   *
+   * @throws IllegalArgumentException if columnName does not start with prefix
+   */
+  public static String unprefix(final String columnName, final String prefix)
+  {
+    if (isPrefixedBy(columnName, prefix)) {
+      return columnName.substring(prefix.length());
+    } else {
+      throw new IAE("Column[%s] does not start with prefix[%s]", columnName, prefix);
+    }
+  }
+
+  /**
    * Check if any prefixes in the provided list duplicate or shadow each other.
    *
    * @param prefixes A mutable list containing the prefixes to check. This list will be sorted by descending

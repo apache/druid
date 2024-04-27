@@ -52,6 +52,7 @@ public class TestModifiedKinesisIndexTaskTuningConfig extends KinesisIndexTaskTu
       @JsonProperty("resetOffsetAutomatically") Boolean resetOffsetAutomatically,
       @JsonProperty("skipSequenceNumberAvailabilityCheck") Boolean skipSequenceNumberAvailabilityCheck,
       @JsonProperty("recordBufferSize") Integer recordBufferSize,
+      @JsonProperty("recordBufferSizeBytes") Integer recordBufferSizeBytes,
       @JsonProperty("recordBufferOfferTimeout") Integer recordBufferOfferTimeout,
       @JsonProperty("recordBufferFullWait") Integer recordBufferFullWait,
       @JsonProperty("fetchThreads") Integer fetchThreads,
@@ -60,6 +61,7 @@ public class TestModifiedKinesisIndexTaskTuningConfig extends KinesisIndexTaskTu
       @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions,
       @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions,
       @JsonProperty("maxRecordsPerPoll") @Nullable Integer maxRecordsPerPoll,
+      @JsonProperty("maxBytesPerPoll") @Nullable Integer maxBytesPerPoll,
       @JsonProperty("intermediateHandoffPeriod") @Nullable Period intermediateHandoffPeriod,
       @JsonProperty("extra") String extra
   )
@@ -81,6 +83,7 @@ public class TestModifiedKinesisIndexTaskTuningConfig extends KinesisIndexTaskTu
         resetOffsetAutomatically,
         skipSequenceNumberAvailabilityCheck,
         recordBufferSize,
+        recordBufferSizeBytes,
         recordBufferOfferTimeout,
         recordBufferFullWait,
         fetchThreads,
@@ -89,6 +92,7 @@ public class TestModifiedKinesisIndexTaskTuningConfig extends KinesisIndexTaskTu
         maxParseExceptions,
         maxSavedParseExceptions,
         maxRecordsPerPoll,
+        maxBytesPerPoll,
         intermediateHandoffPeriod
     );
     this.extra = extra;
@@ -112,7 +116,8 @@ public class TestModifiedKinesisIndexTaskTuningConfig extends KinesisIndexTaskTu
         base.getHandoffConditionTimeout(),
         base.isResetOffsetAutomatically(),
         base.isSkipSequenceNumberAvailabilityCheck(),
-        base.getRecordBufferSize(),
+        base.getRecordBufferSizeConfigured(),
+        base.getRecordBufferSizeBytesConfigured(),
         base.getRecordBufferOfferTimeout(),
         base.getRecordBufferFullWait(),
         base.getFetchThreads(),
@@ -120,7 +125,8 @@ public class TestModifiedKinesisIndexTaskTuningConfig extends KinesisIndexTaskTu
         base.isLogParseExceptions(),
         base.getMaxParseExceptions(),
         base.getMaxSavedParseExceptions(),
-        base.getMaxRecordsPerPoll(),
+        base.getMaxRecordsPerPollConfigured(),
+        base.getMaxBytesPerPollConfigured(),
         base.getIntermediateHandoffPeriod()
     );
     this.extra = extra;

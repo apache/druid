@@ -25,13 +25,10 @@ import org.apache.druid.server.initialization.JdbcAccessSecurityConfig;
 import org.joda.time.Period;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.experimental.runners.Enclosed;
 import org.junit.rules.ExpectedException;
-import org.junit.runner.RunWith;
 
 import java.util.Set;
 
-@RunWith(Enclosed.class)
 public class JdbcExtractionNamespaceUrlCheckTest
 {
   private static final String TABLE_NAME = "abstractDbRenameTest";
@@ -63,6 +60,8 @@ public class JdbcExtractionNamespaceUrlCheckTest
           "some filter",
           new Period(10),
           null,
+          0,
+          1000L,
           new JdbcAccessSecurityConfig()
           {
             @Override
@@ -101,6 +100,8 @@ public class JdbcExtractionNamespaceUrlCheckTest
           "some filter",
           new Period(10),
           null,
+          0,
+          null,
           new JdbcAccessSecurityConfig()
           {
             @Override
@@ -136,6 +137,8 @@ public class JdbcExtractionNamespaceUrlCheckTest
           TS_COLUMN,
           "some filter",
           new Period(10),
+          null,
+          0,
           null,
           new JdbcAccessSecurityConfig()
           {
@@ -174,6 +177,8 @@ public class JdbcExtractionNamespaceUrlCheckTest
           TS_COLUMN,
           "some filter",
           new Period(10),
+          null,
+          0,
           null,
           new JdbcAccessSecurityConfig()
           {
@@ -217,6 +222,8 @@ public class JdbcExtractionNamespaceUrlCheckTest
           "some filter",
           new Period(10),
           null,
+          0,
+          null,
           new JdbcAccessSecurityConfig()
           {
             @Override
@@ -255,6 +262,8 @@ public class JdbcExtractionNamespaceUrlCheckTest
           "some filter",
           new Period(10),
           10L,
+          0,
+          null,
           new JdbcAccessSecurityConfig()
           {
             @Override
@@ -290,6 +299,8 @@ public class JdbcExtractionNamespaceUrlCheckTest
           TS_COLUMN,
           "some filter",
           new Period(10),
+          null,
+          0,
           null,
           new JdbcAccessSecurityConfig()
           {
@@ -328,6 +339,8 @@ public class JdbcExtractionNamespaceUrlCheckTest
           TS_COLUMN,
           "some filter",
           new Period(10),
+          null,
+          0,
           null,
           new JdbcAccessSecurityConfig()
           {
@@ -373,6 +386,8 @@ public class JdbcExtractionNamespaceUrlCheckTest
           "some filter",
           new Period(10),
           null,
+          0,
+          null,
           new JdbcAccessSecurityConfig()
           {
             @Override
@@ -414,6 +429,8 @@ public class JdbcExtractionNamespaceUrlCheckTest
           TS_COLUMN,
           "some filter",
           new Period(10),
+          null,
+          0,
           null,
           new JdbcAccessSecurityConfig()
           {

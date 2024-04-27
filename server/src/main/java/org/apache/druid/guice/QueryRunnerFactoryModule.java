@@ -31,10 +31,11 @@ import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.datasourcemetadata.DataSourceMetadataQuery;
 import org.apache.druid.query.datasourcemetadata.DataSourceMetadataQueryRunnerFactory;
 import org.apache.druid.query.groupby.GroupByQuery;
-import org.apache.druid.query.groupby.GroupByQueryEngine;
 import org.apache.druid.query.groupby.GroupByQueryRunnerFactory;
 import org.apache.druid.query.metadata.SegmentMetadataQueryRunnerFactory;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
+import org.apache.druid.query.operator.WindowOperatorQuery;
+import org.apache.druid.query.operator.WindowOperatorQueryQueryRunnerFactory;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.scan.ScanQueryRunnerFactory;
 import org.apache.druid.query.search.SearchQuery;
@@ -56,14 +57,15 @@ public class QueryRunnerFactoryModule extends QueryToolChestModule
 {
   private static final Map<Class<? extends Query<?>>, Class<? extends QueryRunnerFactory<?, ?>>> MAPPINGS =
       ImmutableMap.<Class<? extends Query<?>>, Class<? extends QueryRunnerFactory<?, ?>>>builder()
-                  .put(TimeseriesQuery.class, TimeseriesQueryRunnerFactory.class)
-                  .put(SearchQuery.class, SearchQueryRunnerFactory.class)
-                  .put(TimeBoundaryQuery.class, TimeBoundaryQueryRunnerFactory.class)
-                  .put(SegmentMetadataQuery.class, SegmentMetadataQueryRunnerFactory.class)
+                  .put(DataSourceMetadataQuery.class, DataSourceMetadataQueryRunnerFactory.class)
                   .put(GroupByQuery.class, GroupByQueryRunnerFactory.class)
                   .put(ScanQuery.class, ScanQueryRunnerFactory.class)
+                  .put(SearchQuery.class, SearchQueryRunnerFactory.class)
+                  .put(SegmentMetadataQuery.class, SegmentMetadataQueryRunnerFactory.class)
+                  .put(TimeBoundaryQuery.class, TimeBoundaryQueryRunnerFactory.class)
+                  .put(TimeseriesQuery.class, TimeseriesQueryRunnerFactory.class)
                   .put(TopNQuery.class, TopNQueryRunnerFactory.class)
-                  .put(DataSourceMetadataQuery.class, DataSourceMetadataQueryRunnerFactory.class)
+                  .put(WindowOperatorQuery.class, WindowOperatorQueryQueryRunnerFactory.class)
                   .build();
 
   @Override
@@ -85,8 +87,6 @@ public class QueryRunnerFactoryModule extends QueryToolChestModule
       queryFactoryBinder.addBinding(entry.getKey()).to(entry.getValue());
       binder.bind(entry.getValue()).in(LazySingleton.class);
     }
-
-    binder.bind(GroupByQueryEngine.class).in(LazySingleton.class);
   }
 
   @LazySingleton

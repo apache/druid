@@ -17,11 +17,12 @@
  */
 
 import { Intent } from '@blueprintjs/core';
-import { IconName, IconNames } from '@blueprintjs/icons';
+import type { IconName } from '@blueprintjs/icons';
+import { IconNames } from '@blueprintjs/icons';
 import copy from 'copy-to-clipboard';
-import hasOwnProp from 'has-own-prop';
 import * as JSONBig from 'json-bigint-native';
 import numeral from 'numeral';
+import type { JSX } from 'react';
 import React from 'react';
 
 import { AppToaster } from '../singletons';
@@ -30,13 +31,22 @@ import { AppToaster } from '../singletons';
 export const EMPTY_OBJECT: any = {};
 export const EMPTY_ARRAY: any[] = [];
 
-export type NumberLike = number | BigInt;
+export type NumberLike = number | bigint;
+
+export function isNumberLike(x: unknown): x is NumberLike {
+  const t = typeof x;
+  return t === 'number' || t === 'bigint';
+}
 
 export function isNumberLikeNaN(x: NumberLike): boolean {
   return isNaN(Number(x));
 }
 
-export function nonEmptyArray(a: any): a is unknown[] {
+export function nonEmptyString(s: unknown): s is string {
+  return typeof s === 'string' && s !== '';
+}
+
+export function nonEmptyArray(a: unknown): a is unknown[] {
   return Array.isArray(a) && Boolean(a.length);
 }
 
@@ -56,7 +66,7 @@ export function wait(ms: number): Promise<void> {
   });
 }
 
-export function clamp(n: number, min: number, max: number): number {
+export function clamp(n: number, min = -Infinity, max = Infinity): number {
   return Math.min(Math.max(n, min), max);
 }
 
@@ -84,14 +94,41 @@ export function caseInsensitiveContains(testString: string, searchString: string
   return testString.toLowerCase().includes(searchString.toLowerCase());
 }
 
-export function oneOf<T>(thing: T, ...options: T[]): boolean {
-  return options.includes(thing);
+function validateKnown<T>(allKnownValues: T[], options: T[]): void {
+  options.forEach(o => {
+    if (!allKnownValues.includes(o)) {
+      throw new Error(`allKnownValues (${allKnownValues.join(', ')}) must include '${o}'`);
+    }
+  });
+}
+
+export function oneOf<T>(value: T, ...options: T[]): boolean {
+  return options.includes(value);
+}
+
+export function oneOfKnown<T>(value: T, allKnownValues: T[], ...options: T[]): boolean | undefined {
+  validateKnown(allKnownValues, options);
+  if (options.includes(value)) return true;
+  return allKnownValues.includes(value) ? false : undefined;
 }
 
 export function typeIs<T extends { type?: S }, S = string>(...options: S[]): (x: T) => boolean {
   return x => {
     if (x.type == null) return false;
     return options.includes(x.type);
+  };
+}
+
+export function typeIsKnown<T extends { type?: S }, S = string>(
+  allKnownValues: S[],
+  ...options: S[]
+): (x: T) => boolean | undefined {
+  validateKnown(allKnownValues, options);
+  return x => {
+    const value = x.type;
+    if (value == null) return;
+    if (options.includes(value)) return true;
+    return allKnownValues.includes(value) ? false : undefined;
   };
 }
 
@@ -123,7 +160,7 @@ function identity<T>(x: T): T {
 
 export function lookupBy<T, Q = T>(
   array: readonly T[],
-  keyFn: (x: T, index: number) => string = String,
+  keyFn: (x: T, index: number) => string | number = String,
   valueFn?: (x: T, index: number) => Q,
 ): Record<string, Q> {
   if (!valueFn) valueFn = identity as any;
@@ -161,13 +198,29 @@ export function groupBy<T, Q>(
     buckets[key] = buckets[key] || [];
     buckets[key].push(value);
   }
-  return Object.keys(buckets).map(key => aggregateFn(buckets[key], key));
+  return Object.entries(buckets).map(([key, xs]) => aggregateFn(xs, key));
+}
+
+export function groupByAsMap<T, Q>(
+  array: readonly T[],
+  keyFn: (x: T, index: number) => string,
+  aggregateFn: (xs: readonly T[], key: string) => Q,
+): Record<string, Q> {
+  const buckets: Record<string, T[]> = {};
+  const n = array.length;
+  for (let i = 0; i < n; i++) {
+    const value = array[i];
+    const key = keyFn(value, i);
+    buckets[key] = buckets[key] || [];
+    buckets[key].push(value);
+  }
+  return mapRecord(buckets, aggregateFn);
 }
 
 export function uniq(array: readonly string[]): string[] {
   const seen: Record<string, boolean> = {};
   return array.filter(s => {
-    if (hasOwnProp(seen, s)) {
+    if (Object.hasOwn(seen, s)) {
       return false;
     } else {
       seen[s] = true;
@@ -213,11 +266,11 @@ export function formatMillions(n: NumberLike): string {
 }
 
 function pad2(str: string | number): string {
-  return ('00' + str).substr(-2);
+  return ('00' + str).slice(-2);
 }
 
 function pad3(str: string | number): string {
-  return ('000' + str).substr(-3);
+  return ('000' + str).slice(-3);
 }
 
 export function formatDuration(ms: NumberLike): string {
@@ -247,30 +300,41 @@ export function formatDurationHybrid(ms: NumberLike): string {
     const timeInMs = Math.floor(n) % 1000;
     return `${timeInMin ? `${timeInMin}:` : ''}${timeInMin ? pad2(timeInSec) : timeInSec}.${pad3(
       timeInMs,
-    ).substring(0, 2)}s`;
+    ).slice(0, 2)}s`;
   } else {
     return formatDuration(n);
   }
 }
 
+function pluralize(word: string): string {
+  // Ignoring irregular plurals.
+  if (/(s|x|z|ch|sh)$/.test(word)) {
+    return word + 'es';
+  } else if (/([^aeiou])y$/.test(word)) {
+    return word.slice(0, -1) + 'ies';
+  } else if (/(f|fe)$/.test(word)) {
+    return word.replace(/fe?$/, 'ves');
+  } else {
+    return word + 's';
+  }
+}
+
 export function pluralIfNeeded(n: NumberLike, singular: string, plural?: string): string {
-  if (!plural) plural = singular + 's';
+  if (!plural) plural = pluralize(singular);
   return `${formatInteger(n)} ${n === 1 ? singular : plural}`;
 }
 
 // ----------------------------
 
-export function validJson(json: string): boolean {
-  try {
-    JSONBig.parse(json);
-    return true;
-  } catch (e) {
-    return false;
-  }
-}
-
 export function filterMap<T, Q>(xs: readonly T[], f: (x: T, i: number) => Q | undefined): Q[] {
   return xs.map(f).filter((x: Q | undefined) => typeof x !== 'undefined') as Q[];
+}
+
+export function findMap<T, Q>(
+  xs: readonly T[],
+  f: (x: T, i: number) => Q | undefined,
+): Q | undefined {
+  return filterMap(xs, f)[0];
 }
 
 export function compact<T>(xs: (T | undefined | false | null | '')[]): T[] {
@@ -278,7 +342,14 @@ export function compact<T>(xs: (T | undefined | false | null | '')[]): T[] {
 }
 
 export function assemble<T>(...xs: (T | undefined | false | null | '')[]): T[] {
-  return xs.filter(Boolean) as T[];
+  return compact(xs);
+}
+
+export function moveToEnd<T>(
+  xs: T[],
+  predicate: (value: T, index: number, array: T[]) => unknown,
+): T[] {
+  return xs.filter((x, i, a) => !predicate(x, i, a)).concat(xs.filter(predicate));
 }
 
 export function alphanumericCompare(a: string, b: string): number {
@@ -408,7 +479,7 @@ export function parseCsvLine(line: string): string[] {
   let m: RegExpExecArray | null;
   while ((m = /^,(?:"([^"]*(?:""[^"]*)*)"|([^,\r\n]*))/m.exec(line))) {
     parts.push(typeof m[1] === 'string' ? m[1].replace(/""/g, '"') : m[2]);
-    line = line.substr(m[0].length);
+    line = line.slice(m[0].length);
   }
   return parts;
 }
@@ -451,5 +522,30 @@ export function tickIcon(checked: boolean): IconName {
 }
 
 export function generate8HexId(): string {
-  return (Math.random() * 1e10).toString(16).replace('.', '').substr(0, 8);
+  return (Math.random() * 1e10).toString(16).replace('.', '').slice(0, 8);
+}
+
+export interface RowColumn {
+  row: number;
+  column: number;
+}
+
+export function offsetToRowColumn(str: string, offset: number): RowColumn | undefined {
+  // Ensure offset is within the string length
+  if (offset < 0 || offset > str.length) return;
+
+  const lines = str.split('\n');
+  for (let row = 0; row < lines.length; row++) {
+    const line = lines[row];
+    if (offset <= line.length) {
+      return {
+        row,
+        column: offset,
+      };
+    }
+
+    offset -= line.length + 1;
+  }
+
+  return;
 }

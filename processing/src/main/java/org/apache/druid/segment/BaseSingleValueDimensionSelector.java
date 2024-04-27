@@ -19,7 +19,8 @@
 
 package org.apache.druid.segment;
 
-import com.google.common.base.Predicate;
+import org.apache.druid.query.filter.DruidObjectPredicate;
+import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.CalledFromHotLoop;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
@@ -50,7 +51,6 @@ public abstract class BaseSingleValueDimensionSelector implements DimensionSelec
   @Override
   public String lookupName(int id)
   {
-    assert id == 0;
     return getValue();
   }
 
@@ -60,9 +60,10 @@ public abstract class BaseSingleValueDimensionSelector implements DimensionSelec
     return new ValueMatcher()
     {
       @Override
-      public boolean matches()
+      public boolean matches(boolean includeUnknown)
       {
-        return Objects.equals(getValue(), value);
+        final String rowValue = getValue();
+        return (includeUnknown && rowValue == null) || Objects.equals(rowValue, value);
       }
 
       @Override
@@ -74,21 +75,23 @@ public abstract class BaseSingleValueDimensionSelector implements DimensionSelec
   }
 
   @Override
-  public ValueMatcher makeValueMatcher(final Predicate<String> predicate)
+  public ValueMatcher makeValueMatcher(final DruidPredicateFactory predicateFactory)
   {
+    final DruidObjectPredicate<String> predicate = predicateFactory.makeStringPredicate();
     return new ValueMatcher()
     {
       @Override
-      public boolean matches()
+      public boolean matches(boolean includeUnknown)
       {
-        return predicate.apply(getValue());
+        final String rowValue = getValue();
+        return predicate.apply(rowValue).matches(includeUnknown);
       }
 
       @Override
       public void inspectRuntimeShape(RuntimeShapeInspector inspector)
       {
         inspector.visit("selector", BaseSingleValueDimensionSelector.this);
-        inspector.visit("predicate", predicate);
+        inspector.visit("predicate", predicateFactory);
       }
     };
   }

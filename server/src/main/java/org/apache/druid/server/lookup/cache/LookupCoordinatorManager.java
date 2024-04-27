@@ -435,7 +435,8 @@ public class LookupCoordinatorManager
                   LOG.makeAlert(t, "Background lookup manager exited with error!").emit();
                 }
               }
-            }
+            },
+            MoreExecutors.directExecutor()
         );
 
         LOG.debug("Started");
@@ -518,7 +519,7 @@ public class LookupCoordinatorManager
         configManager.set(
             LOOKUP_CONFIG_KEY,
             converted,
-            new AuditInfo("autoConversion", "autoConversion", "127.0.0.1")
+            new AuditInfo("autoConversion", "autoConversion", "autoConversion", "127.0.0.1")
         );
       }
     }

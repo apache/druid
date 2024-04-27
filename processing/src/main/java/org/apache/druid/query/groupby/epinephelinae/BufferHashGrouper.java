@@ -158,6 +158,7 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
     offsetList.reset();
     hashTable.reset();
     keySerde.reset();
+    aggregators.reset();
   }
 
   @Override

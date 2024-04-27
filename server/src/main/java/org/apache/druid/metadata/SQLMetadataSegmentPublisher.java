@@ -20,7 +20,6 @@
 package org.apache.druid.metadata;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
@@ -28,8 +27,6 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.skife.jdbi.v2.DBI;
-import org.skife.jdbi.v2.Handle;
-import org.skife.jdbi.v2.tweak.HandleCallback;
 
 import java.io.IOException;
 import java.util.List;
@@ -55,8 +52,8 @@ public class SQLMetadataSegmentPublisher implements MetadataSegmentPublisher
     this.config = config;
     this.connector = connector;
     this.statement = StringUtils.format(
-        "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, payload) "
-        + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
+        "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, payload, used_status_last_updated) "
+        + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload, :used_status_last_updated)",
         config.getSegmentsTable(), connector.getQuoteString()
     );
   }
@@ -64,20 +61,21 @@ public class SQLMetadataSegmentPublisher implements MetadataSegmentPublisher
   @Override
   public void publishSegment(final DataSegment segment) throws IOException
   {
+    String now = DateTimes.nowUtc().toString();
     publishSegment(
         segment.getId().toString(),
         segment.getDataSource(),
-        DateTimes.nowUtc().toString(),
+        now,
         segment.getInterval().getStart().toString(),
         segment.getInterval().getEnd().toString(),
         (segment.getShardSpec() instanceof NoneShardSpec) ? false : true,
         segment.getVersion(),
         true,
-        jsonMapper.writeValueAsBytes(segment)
+        jsonMapper.writeValueAsBytes(segment),
+        now
     );
   }
 
-  @VisibleForTesting
   void publishSegment(
       final String segmentId,
       final String dataSource,
@@ -87,37 +85,25 @@ public class SQLMetadataSegmentPublisher implements MetadataSegmentPublisher
       final boolean partitioned,
       final String version,
       final boolean used,
-      final byte[] payload
+      final byte[] payload,
+      final String usedFlagLastUpdated
   )
   {
     try {
       final DBI dbi = connector.getDBI();
       List<Map<String, Object>> exists = dbi.withHandle(
-          new HandleCallback<List<Map<String, Object>>>()
-          {
-            @Override
-            public List<Map<String, Object>> withHandle(Handle handle)
-            {
-              return handle.createQuery(
-                  StringUtils.format("SELECT id FROM %s WHERE id=:id", config.getSegmentsTable())
-              )
-                           .bind("id", segmentId)
-                           .list();
-            }
-          }
+          handle -> handle.createQuery(
+              StringUtils.format("SELECT id FROM %s WHERE id=:id", config.getSegmentsTable())
+          ).bind("id", segmentId).list()
       );
 
       if (!exists.isEmpty()) {
-        log.info("Found [%s] in DB, not updating DB", segmentId);
+        log.info("Skipping publish of segment[%s] as it already exists in the metadata store.", segmentId);
         return;
       }
 
       dbi.withHandle(
-          new HandleCallback<Void>()
-          {
-            @Override
-            public Void withHandle(Handle handle)
-            {
+          handle ->
               handle.createStatement(statement)
                     .bind("id", segmentId)
                     .bind("dataSource", dataSource)
@@ -128,11 +114,8 @@ public class SQLMetadataSegmentPublisher implements MetadataSegmentPublisher
                     .bind("version", version)
                     .bind("used", used)
                     .bind("payload", payload)
-                    .execute();
-
-              return null;
-            }
-          }
+                    .bind("used_status_last_updated", usedFlagLastUpdated)
+                    .execute()
       );
     }
     catch (Exception e) {

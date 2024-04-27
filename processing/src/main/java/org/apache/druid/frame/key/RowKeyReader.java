@@ -125,9 +125,31 @@ public class RowKeyReader
             rowReader.fieldReader(fieldNumber)
                      .makeColumnValueSelector(keyMemory, fieldPointer);
 
-        return selector.getObject() instanceof List;
+        return selector.getObject() instanceof List || selector.getObject() instanceof Object[];
       }
     }
+  }
+
+  /**
+   * Trims the key reader to a particular fieldCount. Used to read keys trimmed by {@link #trim(RowKey, int)}.
+   */
+  public RowKeyReader trimmedKeyReader(int trimmedFieldCount)
+  {
+    final RowSignature.Builder newSignature = RowSignature.builder();
+
+    if (trimmedFieldCount > signature.size()) {
+      throw new IAE("Cannot trim to [%,d] fields, only have [%,d] fields", trimmedFieldCount, signature);
+    }
+
+    for (int i = 0; i < trimmedFieldCount; i++) {
+      final String columnName = signature.getColumnName(i);
+      final ColumnType columnType =
+          Preconditions.checkNotNull(signature.getColumnType(i).orElse(null), "Type for column [%s]", columnName);
+
+      newSignature.add(columnName, columnType);
+    }
+
+    return RowKeyReader.create(newSignature.build());
   }
 
   /**

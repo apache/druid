@@ -100,7 +100,7 @@ public class TopNBinaryFnBenchmark extends SimpleBenchmark
     }
     result1 = new Result<>(
         currTime,
-        new TopNResultValue(list)
+        TopNResultValue.create(list)
     );
 
     List<Map<String, Object>> list2 = new ArrayList<>();
@@ -116,7 +116,7 @@ public class TopNBinaryFnBenchmark extends SimpleBenchmark
     }
     result2 = new Result<>(
         currTime,
-        new TopNResultValue(list2)
+        TopNResultValue.create(list2)
     );
     fn = new TopNBinaryFn(
         Granularities.ALL,

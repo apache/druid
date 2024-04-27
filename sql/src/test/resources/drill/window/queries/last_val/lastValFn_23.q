@@ -1,0 +1,1 @@
+SELECT col7 , col6 , LAST_VALUE(col6) OVER(PARTITION BY col7 ORDER BY col6) LAST_VALUE_col6 FROM "allTypsUniq.parquet"

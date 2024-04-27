@@ -21,11 +21,10 @@ package org.apache.druid.testing.guice;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
-import com.google.common.collect.ImmutableSet;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
-import com.google.inject.TypeLiteral;
+import com.google.inject.multibindings.Multibinder;
 import org.apache.druid.curator.CuratorConfig;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.JsonConfigProvider;
@@ -43,8 +42,6 @@ import org.apache.druid.server.DruidNode;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.IntegrationTestingConfigProvider;
 import org.apache.druid.testing.IntegrationTestingCuratorConfig;
-
-import java.util.Set;
 
 /**
  */
@@ -66,9 +63,7 @@ public class DruidTestModule implements Module
     );
 
     // Required for MSQIndexingModule
-    binder.bind(new TypeLiteral<Set<NodeRole>>()
-    {
-    }).annotatedWith(Self.class).toInstance(ImmutableSet.of(NodeRole.PEON));
+    Multibinder.newSetBinder(binder, NodeRole.class, Self.class).addBinding().toInstance(NodeRole.PEON);
   }
 
   @Provides

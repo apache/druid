@@ -22,6 +22,7 @@ package org.apache.druid.segment.serde;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Supplier;
 import com.google.common.primitives.Ints;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.spatial.ImmutableRTree;
@@ -30,6 +31,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnConfig;
+import org.apache.druid.segment.column.StringEncodingStrategies;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.BitmapSerde;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
@@ -39,9 +41,11 @@ import org.apache.druid.segment.data.ColumnarIntsSerializer;
 import org.apache.druid.segment.data.ColumnarMultiInts;
 import org.apache.druid.segment.data.CompressedVSizeColumnarIntsSupplier;
 import org.apache.druid.segment.data.CompressedVSizeColumnarMultiIntsSupplier;
+import org.apache.druid.segment.data.DictionaryWriter;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.GenericIndexedWriter;
 import org.apache.druid.segment.data.ImmutableRTreeObjectStrategy;
+import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.V3CompressedVSizeColumnarMultiIntsSupplier;
 import org.apache.druid.segment.data.VSizeColumnarInts;
 import org.apache.druid.segment.data.VSizeColumnarMultiInts;
@@ -148,7 +152,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
     @Nullable
     private VERSION version = null;
     @Nullable
-    private GenericIndexedWriter<String> dictionaryWriter = null;
+    private DictionaryWriter<String> dictionaryWriter = null;
     @Nullable
     private ColumnarIntsSerializer valueWriter = null;
     @Nullable
@@ -160,7 +164,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
     @Nullable
     private ByteOrder byteOrder = null;
 
-    public SerializerBuilder withDictionary(GenericIndexedWriter<String> dictionaryWriter)
+    public SerializerBuilder withDictionary(DictionaryWriter<String> dictionaryWriter)
     {
       this.dictionaryWriter = dictionaryWriter;
       return this;
@@ -305,18 +309,12 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
 
         builder.setType(ValueType.STRING);
 
-        // Duplicate the first buffer since we are reading the dictionary twice.
-        final GenericIndexed<String> rDictionary = GenericIndexed.read(
-            buffer.duplicate(),
-            GenericIndexed.STRING_STRATEGY,
-            builder.getFileMapper()
-        );
-
-        final GenericIndexed<ByteBuffer> rDictionaryUtf8 = GenericIndexed.read(
-            buffer,
-            GenericIndexed.BYTE_BUFFER_STRATEGY,
-            builder.getFileMapper()
-        );
+        final Supplier<? extends Indexed<ByteBuffer>> dictionarySupplier =
+            StringEncodingStrategies.getStringDictionarySupplier(
+                builder.getFileMapper(),
+                buffer,
+                byteOrder
+            );
 
         final WritableSupplier<ColumnarInts> rSingleValuedColumn;
         final WritableSupplier<ColumnarMultiInts> rMultiValuedColumn;
@@ -329,20 +327,16 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
           rMultiValuedColumn = null;
         }
 
-        final String firstDictionaryEntry = rDictionary.get(0);
+        final boolean hasNulls = dictionarySupplier.get().get(0) == null;
 
-        DictionaryEncodedColumnSupplier dictionaryEncodedColumnSupplier = new DictionaryEncodedColumnSupplier(
-            rDictionary,
-            rDictionaryUtf8,
+        final StringUtf8DictionaryEncodedColumnSupplier<?> supplier = new StringUtf8DictionaryEncodedColumnSupplier<>(
+            dictionarySupplier,
             rSingleValuedColumn,
-            rMultiValuedColumn,
-            columnConfig.columnCacheSizeBytes()
+            rMultiValuedColumn
         );
-
-        builder
-            .setHasMultipleValues(hasMultipleValues)
-            .setHasNulls(firstDictionaryEntry == null)
-            .setDictionaryEncodedColumnSupplier(dictionaryEncodedColumnSupplier);
+        builder.setHasMultipleValues(hasMultipleValues)
+               .setHasNulls(hasNulls)
+               .setDictionaryEncodedColumnSupplier(supplier);
 
         GenericIndexed<ImmutableBitmap> rBitmaps = null;
         ImmutableRTree rSpatialIndex = null;
@@ -362,10 +356,9 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
 
         if (rBitmaps != null || rSpatialIndex != null) {
           builder.setIndexSupplier(
-              new DictionaryEncodedStringIndexSupplier(
+              new StringUtf8ColumnIndexSupplier(
                   bitmapSerdeFactory.getBitmapFactory(),
-                  rDictionary,
-                  rDictionaryUtf8,
+                  dictionarySupplier,
                   rBitmaps,
                   rSpatialIndex
               ),
@@ -374,7 +367,6 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
           );
         }
       }
-
 
       private WritableSupplier<ColumnarInts> readSingleValuedColumn(VERSION version, ByteBuffer buffer)
       {

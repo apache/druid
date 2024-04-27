@@ -21,10 +21,9 @@ package org.apache.druid.storage.aliyun;
 
 import com.aliyun.oss.OSS;
 import com.aliyun.oss.OSSException;
-import com.aliyun.oss.model.ListObjectsRequest;
 import com.aliyun.oss.model.OSSObject;
 import com.aliyun.oss.model.OSSObjectSummary;
-import com.aliyun.oss.model.ObjectListing;
+import com.aliyun.oss.model.ObjectMetadata;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
@@ -58,24 +57,28 @@ public class OssDataSegmentPullerTest
   {
     String bucket = "bucket";
     String keyPrefix = "prefix/dir/0";
+    String expectedKey = keyPrefix + "/renames-0.gz";
     OSS ossClient = EasyMock.createStrictMock(OSS.class);
 
-    final OSSObjectSummary objectSummary = new OSSObjectSummary();
-    objectSummary.setBucketName(bucket);
-    objectSummary.setKey(keyPrefix + "/renames-0.gz");
-    objectSummary.setLastModified(new Date(0));
+    final ObjectMetadata objectMetadata = new ObjectMetadata();
+    objectMetadata.setLastModified(new Date(0));
 
-    final ObjectListing result = new ObjectListing();
-    result.getObjectSummaries().add(objectSummary);
-
-    EasyMock.expect(ossClient.listObjects(EasyMock.anyObject(ListObjectsRequest.class)))
-            .andReturn(result)
+    EasyMock.expect(ossClient.getObjectMetadata(bucket, expectedKey))
+            .andReturn(objectMetadata)
             .once();
     OssDataSegmentPuller puller = new OssDataSegmentPuller(ossClient);
 
     EasyMock.replay(ossClient);
 
-    String version = puller.getVersion(URI.create(StringUtils.format(OssStorageDruidModule.SCHEME + "://%s/%s", bucket, objectSummary.getKey())));
+    String version = puller.getVersion(
+        URI.create(
+            StringUtils.format(
+                OssStorageDruidModule.SCHEME + "://%s/%s",
+                bucket,
+                expectedKey
+            )
+        )
+    );
 
     EasyMock.verify(ossClient);
 
@@ -107,16 +110,16 @@ public class OssDataSegmentPullerTest
     objectSummary.setKey(keyPrefix + "/renames-0.gz");
     objectSummary.setLastModified(new Date(0));
 
-    final ObjectListing listObjectsResult = new ObjectListing();
-    listObjectsResult.getObjectSummaries().add(objectSummary);
+    final ObjectMetadata objectMetadata = new ObjectMetadata();
+    objectMetadata.setLastModified(new Date(1));
 
     final File tmpDir = temporaryFolder.newFolder("gzTestDir");
 
     EasyMock.expect(ossClient.doesObjectExist(EasyMock.eq(object0.getBucketName()), EasyMock.eq(object0.getKey())))
             .andReturn(true)
             .once();
-    EasyMock.expect(ossClient.listObjects(EasyMock.anyObject(ListObjectsRequest.class)))
-            .andReturn(listObjectsResult)
+    EasyMock.expect(ossClient.getObjectMetadata(object0.getBucketName(), object0.getKey()))
+            .andReturn(objectMetadata)
             .once();
     EasyMock.expect(ossClient.getObject(EasyMock.eq(object0.getBucketName()), EasyMock.eq(object0.getKey())))
             .andReturn(object0)
@@ -159,13 +162,8 @@ public class OssDataSegmentPullerTest
     object0.getObjectMetadata().setLastModified(new Date(0));
     object0.setObjectContent(new FileInputStream(tmpFile));
 
-    final OSSObjectSummary objectSummary = new OSSObjectSummary();
-    objectSummary.setBucketName(bucket);
-    objectSummary.setKey(keyPrefix + "/renames-0.gz");
-    objectSummary.setLastModified(new Date(0));
-
-    final ObjectListing listObjectsResult = new ObjectListing();
-    listObjectsResult.getObjectSummaries().add(objectSummary);
+    final ObjectMetadata objectMetadata = new ObjectMetadata();
+    objectMetadata.setLastModified(new Date(0));
 
     File tmpDir = temporaryFolder.newFolder("gzTestDir");
 
@@ -173,14 +171,14 @@ public class OssDataSegmentPullerTest
     EasyMock.expect(ossClient.doesObjectExist(EasyMock.eq(object0.getBucketName()), EasyMock.eq(object0.getKey())))
             .andReturn(true)
             .once();
-    EasyMock.expect(ossClient.listObjects(EasyMock.anyObject(ListObjectsRequest.class)))
-            .andReturn(listObjectsResult)
+    EasyMock.expect(ossClient.getObjectMetadata(bucket, object0.getKey()))
+            .andReturn(objectMetadata)
             .once();
     EasyMock.expect(ossClient.getObject(EasyMock.eq(bucket), EasyMock.eq(object0.getKey())))
             .andThrow(exception)
             .once();
-    EasyMock.expect(ossClient.listObjects(EasyMock.anyObject(ListObjectsRequest.class)))
-            .andReturn(listObjectsResult)
+    EasyMock.expect(ossClient.getObjectMetadata(bucket, object0.getKey()))
+            .andReturn(objectMetadata)
             .once();
     EasyMock.expect(ossClient.getObject(EasyMock.eq(bucket), EasyMock.eq(object0.getKey())))
             .andReturn(object0)

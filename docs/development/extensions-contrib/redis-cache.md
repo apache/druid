@@ -28,7 +28,7 @@ Below are guidance and configuration options known to this module.
 
 ## Installation
 
-Use [pull-deps](../../operations/pull-deps.md) tool shipped with Druid to install this [extension](../../development/extensions.md#community-extensions) on broker, historical and middle manager nodes.
+Use [pull-deps](../../operations/pull-deps.md) tool shipped with Druid to install this [extension](../../configuration/extensions.md#community-extensions) on broker, historical and middle manager nodes.
 
 ```bash
 java -classpath "druid_dir/lib/*" org.apache.druid.cli.Main tools pull-deps -c org.apache.druid.extensions.contrib:druid-redis-cache:{VERSION}
@@ -38,7 +38,7 @@ java -classpath "druid_dir/lib/*" org.apache.druid.cli.Main tools pull-deps -c o
 
 To enable this extension after installation,
 
-1. [include](../../development/extensions.md#loading-extensions) this `druid-redis-cache` extension
+1. [include](../../configuration/extensions.md#loading-extensions) this `druid-redis-cache` extension
 2. to enable cache on broker nodes, follow [broker caching docs](../../configuration/index.md#broker-caching) to set related properties
 3. to enable cache on historical nodes, follow [historical caching docs](../../configuration/index.md#historical-caching) to set related properties
 4. to enable cache on middle manager nodes, follow [peon caching docs](../../configuration/index.md#peon-caching) to set related properties

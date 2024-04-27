@@ -25,6 +25,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.LongsColumn;
 import org.apache.druid.segment.column.ValueType;
@@ -118,10 +119,7 @@ public class ColumnarLongsEncodeDataFromSegmentBenchmark extends BaseColumnarLon
     File dataFile = new File(dir, getColumnDataFileName(segmentName, columnName));
 
     if (!dataFile.exists()) {
-      final IndexIO indexIO = new IndexIO(
-          new DefaultObjectMapper(),
-          () -> 0
-      );
+      final IndexIO indexIO = new IndexIO(new DefaultObjectMapper(), ColumnConfig.DEFAULT);
       try (final QueryableIndex index = indexIO.loadIndex(new File(segmentPath))) {
         final Set<String> columnNames = new LinkedHashSet<>();
         columnNames.add(ColumnHolder.TIME_COLUMN_NAME);

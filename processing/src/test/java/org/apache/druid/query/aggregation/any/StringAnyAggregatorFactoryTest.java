@@ -19,63 +19,75 @@
 
 package org.apache.druid.query.aggregation.any;
 
-import org.apache.druid.segment.ColumnInspector;
+import com.google.common.collect.Lists;
+import org.apache.druid.query.aggregation.Aggregator;
+import org.apache.druid.query.aggregation.TestObjectColumnSelector;
+import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
-import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
-import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
+import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.vector.TestVectorColumnSelectorFactory;
+import org.apache.druid.segment.virtual.FallbackVirtualColumnTest;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.Mock;
-import org.mockito.Mockito;
-import org.mockito.junit.MockitoJUnitRunner;
 
-import static org.mockito.ArgumentMatchers.any;
+import java.util.List;
 
-@RunWith(MockitoJUnitRunner.class)
 public class StringAnyAggregatorFactoryTest extends InitializedNullHandlingTest
 {
   private static final String NAME = "NAME";
   private static final String FIELD_NAME = "FIELD_NAME";
   private static final int MAX_STRING_BYTES = 10;
 
-  @Mock
-  private ColumnInspector columnInspector;
-  @Mock
-  private ColumnCapabilities capabilities;
-  @Mock
-  private VectorColumnSelectorFactory vectorSelectorFactory;
-  @Mock
-  private SingleValueDimensionVectorSelector singleValueDimensionVectorSelector;
-  @Mock
-  private MultiValueDimensionVectorSelector multiValueDimensionVectorSelector;
-
+  private ColumnCapabilities capabilitiesMvString;
+  private TestVectorColumnSelectorFactory vectorSelectorFactory;
   private StringAnyAggregatorFactory target;
 
   @Before
   public void setUp()
   {
-    Mockito.doReturn(capabilities).when(vectorSelectorFactory).getColumnCapabilities(FIELD_NAME);
-    Mockito.doReturn(ColumnCapabilities.Capable.UNKNOWN).when(capabilities).hasMultipleValues();
-    target = new StringAnyAggregatorFactory(NAME, FIELD_NAME, MAX_STRING_BYTES);
+    target = new StringAnyAggregatorFactory(NAME, FIELD_NAME, MAX_STRING_BYTES, true);
+    capabilitiesMvString = ColumnCapabilitiesImpl.createDefault()
+                                                 .setType(ColumnType.STRING)
+                                                 .setDictionaryEncoded(true)
+                                                 .setHasMultipleValues(true);
+    vectorSelectorFactory = new TestVectorColumnSelectorFactory();
+    vectorSelectorFactory.addCapabilities(FIELD_NAME, capabilitiesMvString);
+    vectorSelectorFactory.addMVDVS(FIELD_NAME, new FallbackVirtualColumnTest.SameMultiVectorSelector());
   }
 
   @Test
   public void canVectorizeWithoutCapabilitiesShouldReturnTrue()
   {
-    Assert.assertTrue(target.canVectorize(columnInspector));
+    Assert.assertTrue(target.canVectorize(new TestColumnSelectorFactory(null)));
+  }
+
+  @Test
+  public void canVectorizeWithDictionaryEncodedMvStringShouldReturnTrue()
+  {
+    Assert.assertTrue(target.canVectorize(new TestColumnSelectorFactory(capabilitiesMvString)));
+  }
+
+  @Test
+  public void canVectorizeWithNonDictionaryEncodedStringShouldReturnFalse()
+  {
+    Assert.assertFalse(
+        target.canVectorize(
+            new TestColumnSelectorFactory(
+                ColumnCapabilitiesImpl.createDefault().setType(ColumnType.STRING)
+            )
+        )
+    );
   }
 
   @Test
   public void factorizeVectorWithoutCapabilitiesShouldReturnAggregatorWithMultiDimensionSelector()
   {
-    Mockito.doReturn(null).when(vectorSelectorFactory).getColumnCapabilities(FIELD_NAME);
-    Mockito.doReturn(singleValueDimensionVectorSelector)
-           .when(vectorSelectorFactory)
-           .makeSingleValueDimensionSelector(any());
     StringAnyVectorAggregator aggregator = target.factorizeVector(vectorSelectorFactory);
     Assert.assertNotNull(aggregator);
   }
@@ -83,9 +95,6 @@ public class StringAnyAggregatorFactoryTest extends InitializedNullHandlingTest
   @Test
   public void factorizeVectorWithUnknownCapabilitiesShouldReturnAggregatorWithMultiDimensionSelector()
   {
-    Mockito.doReturn(multiValueDimensionVectorSelector)
-           .when(vectorSelectorFactory)
-           .makeMultiValueDimensionSelector(any());
     StringAnyVectorAggregator aggregator = target.factorizeVector(vectorSelectorFactory);
     Assert.assertNotNull(aggregator);
   }
@@ -93,10 +102,6 @@ public class StringAnyAggregatorFactoryTest extends InitializedNullHandlingTest
   @Test
   public void factorizeVectorWithMultipleValuesCapabilitiesShouldReturnAggregatorWithMultiDimensionSelector()
   {
-    Mockito.doReturn(ColumnCapabilities.Capable.TRUE).when(capabilities).hasMultipleValues();
-    Mockito.doReturn(multiValueDimensionVectorSelector)
-           .when(vectorSelectorFactory)
-           .makeMultiValueDimensionSelector(any());
     StringAnyVectorAggregator aggregator = target.factorizeVector(vectorSelectorFactory);
     Assert.assertNotNull(aggregator);
   }
@@ -104,11 +109,92 @@ public class StringAnyAggregatorFactoryTest extends InitializedNullHandlingTest
   @Test
   public void factorizeVectorWithoutMultipleValuesCapabilitiesShouldReturnAggregatorWithSingleDimensionSelector()
   {
-    Mockito.doReturn(ColumnCapabilities.Capable.FALSE).when(capabilities).hasMultipleValues();
-    Mockito.doReturn(singleValueDimensionVectorSelector)
-           .when(vectorSelectorFactory)
-           .makeSingleValueDimensionSelector(any());
     StringAnyVectorAggregator aggregator = target.factorizeVector(vectorSelectorFactory);
     Assert.assertNotNull(aggregator);
+  }
+
+  @Test
+  public void testFactorize()
+  {
+    Aggregator res = target.factorize(new TestColumnSelectorFactory(capabilitiesMvString));
+    Assert.assertTrue(res instanceof StringAnyAggregator);
+    res.aggregate();
+    Assert.assertEquals(null, res.get());
+    StringAnyVectorAggregator vectorAggregator = target.factorizeVector(vectorSelectorFactory);
+    Assert.assertTrue(vectorAggregator.isAggregateMultipleValues());
+  }
+
+  @Test
+  public void testSvdStringAnyAggregator()
+  {
+    TestColumnSelectorFactory columnSelectorFactory = new TestColumnSelectorFactory(capabilitiesMvString);
+    Aggregator res = target.factorize(columnSelectorFactory);
+    Assert.assertTrue(res instanceof StringAnyAggregator);
+    columnSelectorFactory.moveSelectorCursorToNext();
+    res.aggregate();
+    Assert.assertEquals("CCCC", res.get());
+  }
+
+  @Test
+  public void testMvdStringAnyAggregator()
+  {
+    TestColumnSelectorFactory columnSelectorFactory = new TestColumnSelectorFactory(capabilitiesMvString);
+    Aggregator res = target.factorize(columnSelectorFactory);
+    Assert.assertTrue(res instanceof StringAnyAggregator);
+    columnSelectorFactory.moveSelectorCursorToNext();
+    columnSelectorFactory.moveSelectorCursorToNext();
+    res.aggregate();
+    Assert.assertEquals("[AAAA, AAA", res.get());
+  }
+
+  @Test
+  public void testMvdStringAnyAggregatorWithAggregateMultipleToFalse()
+  {
+    StringAnyAggregatorFactory target = new StringAnyAggregatorFactory(NAME, FIELD_NAME, MAX_STRING_BYTES, false);
+    TestColumnSelectorFactory columnSelectorFactory = new TestColumnSelectorFactory(capabilitiesMvString);
+    Aggregator res = target.factorize(columnSelectorFactory);
+    Assert.assertTrue(res instanceof StringAnyAggregator);
+    columnSelectorFactory.moveSelectorCursorToNext();
+    columnSelectorFactory.moveSelectorCursorToNext();
+    res.aggregate();
+    // picks up first value in mvd list
+    Assert.assertEquals("AAAA", res.get());
+  }
+
+  static class TestColumnSelectorFactory implements ColumnSelectorFactory
+  {
+    List<String> mvd = Lists.newArrayList("AAAA", "AAAAB", "AAAC");
+    final Object[] mvds = {null, "CCCC", mvd, "BBBB", "EEEE"};
+    TestObjectColumnSelector<Object> objectColumnSelector = new TestObjectColumnSelector<>(mvds);
+
+    private final ColumnCapabilities capabilities;
+
+    public TestColumnSelectorFactory(ColumnCapabilities capabilities)
+    {
+      this.capabilities = capabilities;
+    }
+
+    @Override
+    public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec)
+    {
+      return null;
+    }
+
+    @Override
+    public ColumnValueSelector<?> makeColumnValueSelector(String columnName)
+    {
+      return objectColumnSelector;
+    }
+
+    @Override
+    public ColumnCapabilities getColumnCapabilities(String columnName)
+    {
+      return capabilities;
+    }
+
+    public void moveSelectorCursorToNext()
+    {
+      objectColumnSelector.increment();
+    }
   }
 }

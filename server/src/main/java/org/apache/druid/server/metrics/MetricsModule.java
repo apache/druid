@@ -22,11 +22,11 @@ package org.apache.druid.server.metrics;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.inject.Binder;
+import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
-import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
 import io.timeandspace.cronscheduler.CronScheduler;
 import org.apache.druid.discovery.NodeRole;
@@ -41,16 +41,18 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.BasicMonitorScheduler;
 import org.apache.druid.java.util.metrics.ClockDriftSafeMonitorScheduler;
+import org.apache.druid.java.util.metrics.DruidMonitorSchedulerConfig;
 import org.apache.druid.java.util.metrics.JvmCpuMonitor;
 import org.apache.druid.java.util.metrics.JvmMonitor;
 import org.apache.druid.java.util.metrics.JvmThreadsMonitor;
 import org.apache.druid.java.util.metrics.Monitor;
 import org.apache.druid.java.util.metrics.MonitorScheduler;
+import org.apache.druid.java.util.metrics.NoopOshiSysMonitor;
 import org.apache.druid.java.util.metrics.NoopSysMonitor;
+import org.apache.druid.java.util.metrics.OshiSysMonitor;
 import org.apache.druid.java.util.metrics.SysMonitor;
 import org.apache.druid.query.ExecutorServiceMonitor;
 
-import javax.annotation.Nullable;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -66,6 +68,13 @@ public class MetricsModule implements Module
 {
   static final String MONITORING_PROPERTY_PREFIX = "druid.monitoring";
   private static final Logger log = new Logger(MetricsModule.class);
+  private Set<NodeRole> nodeRoles;
+
+  @Inject
+  public void setNodeRoles(@Self Set<NodeRole> nodeRoles)
+  {
+    this.nodeRoles = nodeRoles;
+  }
 
   public static void register(Binder binder, Class<? extends Monitor> monitorClazz)
   {
@@ -102,7 +111,10 @@ public class MetricsModule implements Module
   )
   {
     List<Monitor> monitors = new ArrayList<>();
-
+    // HACK: when ServiceStatusMonitor is the first to be loaded, it introduces a circular dependency between
+    // CliPeon.runTask and CliPeon.getDataSourceFromTask/CliPeon.getTaskIDFromTask. The reason for this is unclear
+    // but by injecting DataSourceTaskIdHolder early this cycle is avoided.
+    injector.getInstance(DataSourceTaskIdHolder.class);
     for (Class<? extends Monitor> monitorClass : Iterables.concat(monitorsConfig.getMonitors(), monitorSet)) {
       monitors.add(injector.getInstance(monitorClass));
     }
@@ -174,14 +186,9 @@ public class MetricsModule implements Module
 
   @Provides
   @ManageLifecycle
-  public SysMonitor getSysMonitor(
-      DataSourceTaskIdHolder dataSourceTaskIdHolder,
-      Injector injector
-  )
+  public SysMonitor getSysMonitor(DataSourceTaskIdHolder dataSourceTaskIdHolder, @Self Set<NodeRole> nodeRoles)
   {
-    final Set<NodeRole> nodeRoles = getNodeRoles(injector);
-
-    if (isPeonRole(nodeRoles)) {
+    if (nodeRoles.contains(NodeRole.PEON)) {
       return new NoopSysMonitor();
     } else {
       Map<String, String[]> dimensions = MonitorsConfig.mapOfDatasourceAndTaskID(
@@ -192,29 +199,18 @@ public class MetricsModule implements Module
     }
   }
 
-  @Nullable
-  private static Set<NodeRole> getNodeRoles(Injector injector)
+  @Provides
+  @ManageLifecycle
+  public OshiSysMonitor getOshiSysMonitor(DataSourceTaskIdHolder dataSourceTaskIdHolder, @Self Set<NodeRole> nodeRoles)
   {
-    try {
-      return injector.getInstance(
-          Key.get(
-              new TypeLiteral<Set<NodeRole>>()
-              {
-              },
-              Self.class
-          )
+    if (nodeRoles.contains(NodeRole.PEON)) {
+      return new NoopOshiSysMonitor();
+    } else {
+      Map<String, String[]> dimensions = MonitorsConfig.mapOfDatasourceAndTaskID(
+          dataSourceTaskIdHolder.getDataSource(),
+          dataSourceTaskIdHolder.getTaskId()
       );
+      return new OshiSysMonitor(dimensions);
     }
-    catch (Exception e) {
-      return null;
-    }
-  }
-
-  private static boolean isPeonRole(Set<NodeRole> nodeRoles)
-  {
-    if (nodeRoles == null) {
-      return false;
-    }
-    return nodeRoles.contains(NodeRole.PEON);
   }
 }

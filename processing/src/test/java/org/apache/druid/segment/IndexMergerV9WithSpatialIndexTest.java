@@ -89,7 +89,7 @@ public class IndexMergerV9WithSpatialIndexTest extends InitializedNullHandlingTe
       IndexMergerV9 indexMergerV9 = TestHelper.getTestIndexMergerV9(segmentWriteOutMediumFactory);
       IndexIO indexIO = TestHelper.getTestIndexIO();
 
-      final IndexSpec indexSpec = new IndexSpec();
+      final IndexSpec indexSpec = IndexSpec.DEFAULT;
       final IncrementalIndex rtIndex = makeIncrementalIndex();
       final QueryableIndex mMappedTestIndex = makeQueryableIndex(indexSpec, indexMergerV9, indexIO);
       final QueryableIndex mergedRealtimeIndex = makeMergedQueryableIndex(indexSpec, indexMergerV9, indexIO);

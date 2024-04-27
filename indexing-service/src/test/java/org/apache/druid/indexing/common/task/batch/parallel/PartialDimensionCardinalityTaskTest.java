@@ -44,6 +44,10 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.testing.junit.LoggerCaptureRule;
 import org.apache.logging.log4j.core.LogEvent;
 import org.easymock.Capture;
@@ -54,17 +58,14 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.experimental.runners.Enclosed;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
-import org.junit.runner.RunWith;
 
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-@RunWith(Enclosed.class)
 public class PartialDimensionCardinalityTaskTest
 {
   private static final ObjectMapper OBJECT_MAPPER = ParallelIndexTestingFactory.createObjectMapper();
@@ -112,6 +113,21 @@ public class PartialDimensionCardinalityTaskTest
       PartialDimensionCardinalityTask task = new PartialDimensionCardinalityTaskBuilder()
           .build();
       TestHelper.testSerializesDeserializes(OBJECT_MAPPER, task);
+    }
+
+    @Test
+    public void hasCorrectInputSourceResources()
+    {
+      PartialDimensionCardinalityTask task = new PartialDimensionCardinalityTaskBuilder()
+          .build();
+      Assert.assertEquals(
+          Collections.singleton(
+              new ResourceAction(new Resource(
+                  InlineInputSource.TYPE_KEY,
+                  ResourceType.EXTERNAL
+              ), Action.READ)),
+          task.getInputSourceResources()
+      );
     }
 
     @Test

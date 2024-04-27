@@ -35,6 +35,7 @@ public class CompressedBigDecimalColumnTest
     ColumnarInts columnarInts = EasyMock.createMock(ColumnarInts.class);
     ReadableOffset readableOffset = EasyMock.createMock(ReadableOffset.class);
     CompressedBigDecimalColumn compressedBigDecimalColumn = new CompressedBigDecimalColumn(
+        12345,
         columnarInts,
         columnarMultiInts
     );
@@ -42,7 +43,7 @@ public class CompressedBigDecimalColumnTest
         CompressedBigDecimalModule.COMPRESSED_BIG_DECIMAL,
         compressedBigDecimalColumn.getTypeName()
     );
-    Assert.assertEquals(0, compressedBigDecimalColumn.getLength());
+    Assert.assertEquals(12345, compressedBigDecimalColumn.getLength());
     Assert.assertEquals(CompressedBigDecimalColumn.class, compressedBigDecimalColumn.getClazz());
     Assert.assertNotNull(compressedBigDecimalColumn.makeColumnValueSelector(readableOffset));
   }

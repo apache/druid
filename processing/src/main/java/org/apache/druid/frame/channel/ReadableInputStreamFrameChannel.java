@@ -33,7 +33,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Channel backed by an {@link InputStream}.
- *
+ * <p>
  * Frame channels are expected to be nonblocking, but InputStreams cannot be read in nonblocking fashion.
  * This implementation deals with that by using an {@link ExecutorService} to read from the stream in a
  * separate thread.
@@ -56,7 +56,11 @@ public class ReadableInputStreamFrameChannel implements ReadableFrameChannel
   @GuardedBy("lock")
   private boolean inputStreamError = false;
 
+  private boolean isStarted = false;
+
   private volatile boolean keepReading = true;
+
+  private final Object readMonitor = new Object();
 
   private final ExecutorService executorService;
 
@@ -90,23 +94,22 @@ public class ReadableInputStreamFrameChannel implements ReadableFrameChannel
   public static ReadableInputStreamFrameChannel open(
       InputStream inputStream,
       String id,
-      ExecutorService executorService
+      ExecutorService executorService,
+      boolean framesOnly
   )
   {
-    final ReadableInputStreamFrameChannel channel = new ReadableInputStreamFrameChannel(
+    return new ReadableInputStreamFrameChannel(
         inputStream,
-        ReadableByteChunksFrameChannel.create(id),
+        ReadableByteChunksFrameChannel.create(id, framesOnly),
         executorService
     );
-
-    channel.startReading();
-    return channel;
   }
 
   @Override
   public boolean isFinished()
   {
     synchronized (lock) {
+      startReading();
       return delegate.isFinished();
     }
   }
@@ -115,6 +118,7 @@ public class ReadableInputStreamFrameChannel implements ReadableFrameChannel
   public boolean canRead()
   {
     synchronized (lock) {
+      startReading();
       return delegate.canRead();
     }
   }
@@ -123,6 +127,7 @@ public class ReadableInputStreamFrameChannel implements ReadableFrameChannel
   public Frame read()
   {
     synchronized (lock) {
+      startReading();
       return delegate.read();
     }
   }
@@ -131,6 +136,7 @@ public class ReadableInputStreamFrameChannel implements ReadableFrameChannel
   public ListenableFuture<?> readabilityFuture()
   {
     synchronized (lock) {
+      startReading();
       return delegate.readabilityFuture();
     }
   }
@@ -147,12 +153,22 @@ public class ReadableInputStreamFrameChannel implements ReadableFrameChannel
 
   private void startReading()
   {
+
+    // the task to the executor service is submitted only once.
+    if (isStarted) {
+      return;
+    }
+    isStarted = true;
     executorService.submit(() -> {
       int nTry = 1;
       while (true) {
         if (!keepReading) {
           try {
-            Thread.sleep(nextRetrySleepMillis(nTry));
+            synchronized (readMonitor) {
+              if (!keepReading) {
+                readMonitor.wait(nextRetrySleepMillis(nTry));
+              }
+            }
             synchronized (lock) {
               if (inputStreamFinished || inputStreamError || delegate.isErrorOrFinished()) {
                 return;
@@ -161,7 +177,7 @@ public class ReadableInputStreamFrameChannel implements ReadableFrameChannel
             ++nTry;
           }
           catch (InterruptedException e) {
-            // close inputstream anyway if the thread interrups
+            // close input stream anyway if the thread interrupts
             IOUtils.closeQuietly(inputStream);
             throw new ISE(e, Thread.currentThread().getName() + "interrupted");
           }
@@ -180,13 +196,23 @@ public class ReadableInputStreamFrameChannel implements ReadableFrameChannel
               if (bytesRead == -1) {
                 inputStreamFinished = true;
                 delegate.doneWriting();
+                // eagerly release input stream resources since everything is read.
+                IOUtils.closeQuietly(inputStream);
                 break;
               } else {
                 ListenableFuture<?> backpressureFuture = delegate.addChunk(Arrays.copyOfRange(buffer, 0, bytesRead));
                 totalInputStreamBytesRead += bytesRead;
                 if (backpressureFuture != null) {
                   keepReading = false;
-                  backpressureFuture.addListener(() -> keepReading = true, Execs.directExecutor());
+                  backpressureFuture.addListener(
+                      () -> {
+                        synchronized (readMonitor) {
+                          keepReading = true;
+                          readMonitor.notify();
+                        }
+                      },
+                      Execs.directExecutor()
+                  );
                 } else {
                   keepReading = true;
                   // continue adding data to delegate
@@ -218,8 +244,7 @@ public class ReadableInputStreamFrameChannel implements ReadableFrameChannel
   private static long nextRetrySleepMillis(final int nTry)
   {
     final double fuzzyMultiplier = Math.min(Math.max(1 + 0.2 * ThreadLocalRandom.current().nextGaussian(), 0), 2);
-    final long sleepMillis = (long) (Math.min(MAX_SLEEP_MILLIS, BASE_SLEEP_MILLIS * Math.pow(2, nTry - 1))
-                                     * fuzzyMultiplier);
-    return sleepMillis;
+    return (long) (Math.min(MAX_SLEEP_MILLIS, BASE_SLEEP_MILLIS * Math.pow(2, nTry - 1))
+                   * fuzzyMultiplier);
   }
 }

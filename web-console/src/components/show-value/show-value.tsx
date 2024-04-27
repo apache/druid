@@ -32,7 +32,7 @@ export interface ShowValueProps {
 export const ShowValue = React.memo(function ShowValue(props: ShowValueProps) {
   const { jsonValue, onDiffWithPrevious, downloadFilename } = props;
   return (
-    <div className="show-json">
+    <div className="show-value">
       {(onDiffWithPrevious || downloadFilename) && (
         <div className="top-actions">
           <ButtonGroup className="right-buttons">
@@ -41,7 +41,7 @@ export const ShowValue = React.memo(function ShowValue(props: ShowValueProps) {
             )}
             {downloadFilename && (
               <Button
-                text="Save"
+                text="Download"
                 minimal
                 onClick={() => downloadFile(jsonValue, 'json', downloadFilename)}
               />

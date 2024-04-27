@@ -24,7 +24,7 @@ title: "Dropwizard metrics emitter"
 
 # Dropwizard Emitter
 
-To use this extension, make sure to [include](../../development/extensions.md#loading-extensions) `dropwizard-emitter` in the extensions load list.
+To use this extension, make sure to [include](../../configuration/extensions.md#loading-extensions) `dropwizard-emitter` in the extensions load list.
 
 ## Introduction
 
@@ -134,6 +134,10 @@ Latest default metrics mapping can be found [here] (https://github.com/apache/dr
     "timeUnit": "MILLISECONDS"
   },
   "segment/scan/pending": {
+    "dimensions": [],
+    "type": "gauge"
+  },
+  "segment/scan/active": {
     "dimensions": [],
     "type": "gauge"
   },

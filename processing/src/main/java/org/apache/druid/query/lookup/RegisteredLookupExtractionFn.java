@@ -21,6 +21,7 @@ package org.apache.druid.query.lookup;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.ISE;
@@ -63,12 +64,13 @@ public class RegisteredLookupExtractionFn implements ExtractionFn
   }
 
   @JsonProperty("lookup")
-  public String getLookup()
+  public String getLookupName()
   {
     return lookup;
   }
 
   @JsonProperty("retainMissingValue")
+  @JsonInclude(JsonInclude.Include.NON_DEFAULT)
   public boolean isRetainMissingValue()
   {
     return retainMissingValue;
@@ -76,6 +78,7 @@ public class RegisteredLookupExtractionFn implements ExtractionFn
 
   @Nullable
   @JsonProperty("replaceMissingValueWith")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public String getReplaceMissingValueWith()
   {
     return replaceMissingValueWith;
@@ -83,6 +86,7 @@ public class RegisteredLookupExtractionFn implements ExtractionFn
 
   @Nullable
   @JsonProperty("injective")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public Boolean isInjective()
   {
     return injective;
@@ -98,7 +102,7 @@ public class RegisteredLookupExtractionFn implements ExtractionFn
   public byte[] getCacheKey()
   {
     final byte[] keyPrefix = StringUtils.toUtf8(getClass().getName());
-    final byte[] lookupName = StringUtils.toUtf8(getLookup());
+    final byte[] lookupName = StringUtils.toUtf8(getLookupName());
     final byte[] delegateKey = ensureDelegate().getCacheKey();
     return ByteBuffer
         .allocate(keyPrefix.length + 1 + lookupName.length + 1 + delegateKey.length)
@@ -140,20 +144,28 @@ public class RegisteredLookupExtractionFn implements ExtractionFn
     return ensureDelegate().getExtractionType();
   }
 
+  /**
+   * Return the equivalent {@link LookupExtractionFn}, with {@link LookupExtractor} resolved.
+   */
+  public LookupExtractionFn getDelegate()
+  {
+    return ensureDelegate();
+  }
+
   private LookupExtractionFn ensureDelegate()
   {
     if (null == delegate) {
       // http://www.javamex.com/tutorials/double_checked_locking.shtml
       synchronized (delegateLock) {
         if (null == delegate) {
-          final LookupExtractor factory =
-              manager.get(getLookup())
-                     .orElseThrow(() -> new ISE("Lookup [%s] not found", getLookup()))
+          final LookupExtractor lookupExtractor =
+              manager.get(getLookupName())
+                     .orElseThrow(() -> new ISE("Lookup [%s] not found", getLookupName()))
                      .getLookupExtractorFactory()
                      .get();
 
           delegate = new LookupExtractionFn(
-              factory,
+              lookupExtractor,
               retainMissingValue,
               replaceMissingValueWith,
               injective,

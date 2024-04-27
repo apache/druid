@@ -53,6 +53,7 @@ public class ComplexMetrics
   {
     COMPLEX_SERIALIZERS.compute(type, (key, value) -> {
       if (value == null) {
+        TypeStrategies.registerComplex(type, serde.getTypeStrategy());
         return serde;
       } else {
         if (!value.getClass().getName().equals(serde.getClass().getName())) {
@@ -63,7 +64,6 @@ public class ComplexMetrics
               value.getClass().getName()
           );
         } else {
-          TypeStrategies.registerComplex(type, serde.getTypeStrategy());
           return value;
         }
       }

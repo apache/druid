@@ -70,7 +70,7 @@ public class CaffeineCache implements org.apache.druid.client.cache.Cache
     if (config.getSizeInBytes() >= 0) {
       builder.maximumWeight(config.getSizeInBytes());
     } else {
-      builder.maximumWeight(Math.min(MAX_DEFAULT_BYTES, JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes() / 10));
+      builder.maximumWeight(Math.min(MAX_DEFAULT_BYTES, JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes() / 20));
     }
     builder
         .weigher((NamedKey key, byte[] value) -> value.length
@@ -156,12 +156,12 @@ public class CaffeineCache implements org.apache.druid.client.cache.Cache
     final CacheStats deltaStats = newStats.minus(oldStats);
 
     final ServiceMetricEvent.Builder builder = ServiceMetricEvent.builder();
-    emitter.emit(builder.build("query/cache/caffeine/delta/requests", deltaStats.requestCount()));
-    emitter.emit(builder.build("query/cache/caffeine/total/requests", newStats.requestCount()));
-    emitter.emit(builder.build("query/cache/caffeine/delta/loadTime", deltaStats.totalLoadTime()));
-    emitter.emit(builder.build("query/cache/caffeine/total/loadTime", newStats.totalLoadTime()));
-    emitter.emit(builder.build("query/cache/caffeine/delta/evictionBytes", deltaStats.evictionWeight()));
-    emitter.emit(builder.build("query/cache/caffeine/total/evictionBytes", newStats.evictionWeight()));
+    emitter.emit(builder.setMetric("query/cache/caffeine/delta/requests", deltaStats.requestCount()));
+    emitter.emit(builder.setMetric("query/cache/caffeine/total/requests", newStats.requestCount()));
+    emitter.emit(builder.setMetric("query/cache/caffeine/delta/loadTime", deltaStats.totalLoadTime()));
+    emitter.emit(builder.setMetric("query/cache/caffeine/total/loadTime", newStats.totalLoadTime()));
+    emitter.emit(builder.setMetric("query/cache/caffeine/delta/evictionBytes", deltaStats.evictionWeight()));
+    emitter.emit(builder.setMetric("query/cache/caffeine/total/evictionBytes", newStats.evictionWeight()));
     if (!priorStats.compareAndSet(oldStats, newStats)) {
       // ISE for stack trace
       log.warn(

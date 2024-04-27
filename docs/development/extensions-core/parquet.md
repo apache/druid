@@ -27,7 +27,7 @@ This Apache Druid module extends [Druid Hadoop based indexing](../../ingestion/h
 Apache Parquet files.
 
 Note: If using the `parquet-avro` parser for Apache Hadoop based indexing, `druid-parquet-extensions` depends on the `druid-avro-extensions` module, so be sure to
- [include  both](../../development/extensions.md#loading-extensions).
+ [include  both](../../configuration/extensions.md#loading-extensions).
 
 The `druid-parquet-extensions` provides the [Parquet input format](../../ingestion/data-formats.md#parquet), the [Parquet Hadoop parser](../../ingestion/data-formats.md#parquet-hadoop-parser),
 and the [Parquet Avro Hadoop Parser](../../ingestion/data-formats.md#parquet-avro-hadoop-parser) with `druid-avro-extensions`.

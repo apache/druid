@@ -19,15 +19,15 @@
 
 package org.apache.druid.server.coordinator.duty;
 
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
 import org.apache.druid.metadata.MetadataSupervisorManager;
+import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
+import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
+import org.apache.druid.server.coordinator.stats.Stats;
 import org.joda.time.Duration;
 import org.junit.Assert;
-import org.junit.Rule;
+import org.junit.Before;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
@@ -44,43 +44,70 @@ public class KillSupervisorsCustomDutyTest
   private DruidCoordinatorRuntimeParams mockDruidCoordinatorRuntimeParams;
 
   @Mock
-  private ServiceEmitter mockServiceEmitter;
-
-  @Rule
-  public ExpectedException exception = ExpectedException.none();
+  private DruidCoordinatorConfig coordinatorConfig;
 
   private KillSupervisorsCustomDuty killSupervisors;
+
+  @Before
+  public void setup()
+  {
+    Mockito.when(coordinatorConfig.getCoordinatorMetadataStoreManagementPeriod())
+           .thenReturn(new Duration(3600 * 1000));
+  }
 
   @Test
   public void testConstructorFailIfRetainDurationNull()
   {
-    exception.expect(IllegalArgumentException.class);
-    exception.expectMessage("(Custom Duty) Coordinator supervisor kill retainDuration must be >= 0");
-    killSupervisors = new KillSupervisorsCustomDuty(null, mockMetadataSupervisorManager);
+    final IllegalArgumentException exception = Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> killSupervisors = new KillSupervisorsCustomDuty(null, mockMetadataSupervisorManager, coordinatorConfig)
+    );
+    Assert.assertEquals(
+        "[KillSupervisorsCustomDuty.durationToRetain] must be 0 milliseconds or higher",
+        exception.getMessage()
+    );
   }
 
   @Test
   public void testConstructorFailIfRetainDurationInvalid()
   {
-    exception.expect(IllegalArgumentException.class);
-    exception.expectMessage("(Custom Duty) Coordinator supervisor kill retainDuration must be >= 0");
-    killSupervisors = new KillSupervisorsCustomDuty(new Duration("PT-1s"), mockMetadataSupervisorManager);
+    final IllegalArgumentException exception = Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> killSupervisors = new KillSupervisorsCustomDuty(
+            new Duration("PT-1S"),
+            mockMetadataSupervisorManager,
+            coordinatorConfig
+        )
+    );
+    Assert.assertEquals(
+        "[KillSupervisorsCustomDuty.durationToRetain] must be 0 milliseconds or higher",
+        exception.getMessage()
+    );
   }
 
   @Test
   public void testConstructorSuccess()
   {
-    killSupervisors = new KillSupervisorsCustomDuty(new Duration("PT1S"), mockMetadataSupervisorManager);
+    killSupervisors = new KillSupervisorsCustomDuty(
+        new Duration("PT1S"),
+        mockMetadataSupervisorManager,
+        coordinatorConfig
+    );
     Assert.assertNotNull(killSupervisors);
   }
 
   @Test
   public void testRun()
   {
-    Mockito.when(mockDruidCoordinatorRuntimeParams.getEmitter()).thenReturn(mockServiceEmitter);
-    killSupervisors = new KillSupervisorsCustomDuty(new Duration("PT1S"), mockMetadataSupervisorManager);
+    final CoordinatorRunStats runStats = new CoordinatorRunStats();
+    Mockito.when(mockDruidCoordinatorRuntimeParams.getCoordinatorStats()).thenReturn(runStats);
+    killSupervisors = new KillSupervisorsCustomDuty(
+        new Duration("PT1S"),
+        mockMetadataSupervisorManager,
+        coordinatorConfig
+    );
     killSupervisors.run(mockDruidCoordinatorRuntimeParams);
     Mockito.verify(mockMetadataSupervisorManager).removeTerminatedSupervisorsOlderThan(ArgumentMatchers.anyLong());
-    Mockito.verify(mockServiceEmitter).emit(ArgumentMatchers.any(ServiceEventBuilder.class));
+    Assert.assertTrue(runStats.hasStat(Stats.Kill.SUPERVISOR_SPECS));
   }
 }

@@ -20,6 +20,7 @@
 package org.apache.druid.inputsource.hdfs;
 
 import com.google.common.base.Predicate;
+import com.google.common.base.Suppliers;
 import org.apache.druid.data.input.RetryingInputEntity;
 import org.apache.druid.storage.hdfs.HdfsDataSegmentPuller;
 import org.apache.hadoop.conf.Configuration;
@@ -30,22 +31,37 @@ import org.apache.hadoop.fs.Path;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.util.function.Supplier;
 
 public class HdfsInputEntity extends RetryingInputEntity
 {
   private final Configuration conf;
   private final Path path;
+  private final Supplier<URI> uri;
 
   HdfsInputEntity(Configuration conf, Path path)
   {
     this.conf = conf;
     this.path = path;
+    this.uri = Suppliers.memoize(() -> {
+      final URI uri0 = path.toUri();
+      if (uri0.getScheme() == null || uri0.getAuthority() == null) {
+        try {
+          return path.getFileSystem(conf).makeQualified(path).toUri();
+        }
+        catch (IOException e) {
+          throw new RuntimeException(e);
+        }
+      } else {
+        return uri0;
+      }
+    });
   }
 
   @Override
   public URI getUri()
   {
-    return path.toUri();
+    return uri.get();
   }
 
   @Override
@@ -60,7 +76,7 @@ public class HdfsInputEntity extends RetryingInputEntity
   @Override
   protected String getPath()
   {
-    return path.getName();
+    return getUri().getPath();
   }
 
   @Override

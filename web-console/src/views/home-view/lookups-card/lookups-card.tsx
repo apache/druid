@@ -20,9 +20,10 @@ import { IconNames } from '@blueprintjs/icons';
 import { sum } from 'd3-array';
 import React from 'react';
 
+import type { Capabilities } from '../../../helpers';
 import { useQueryManager } from '../../../hooks';
 import { Api } from '../../../singletons';
-import { Capabilities, isLookupsUninitialized, pluralIfNeeded } from '../../../utils';
+import { isLookupsUninitialized, pluralIfNeeded } from '../../../utils';
 import { HomeViewCard } from '../home-view-card/home-view-card';
 
 export interface LookupsCardProps {

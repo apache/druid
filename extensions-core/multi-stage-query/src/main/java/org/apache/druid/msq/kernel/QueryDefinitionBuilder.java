@@ -20,6 +20,7 @@
 package org.apache.druid.msq.kernel;
 
 import com.google.common.base.Preconditions;
+import org.apache.druid.java.util.common.ISE;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -75,6 +76,17 @@ public class QueryDefinitionBuilder
   public int getNextStageNumber()
   {
     return stageBuilders.stream().mapToInt(StageDefinitionBuilder::getStageNumber).max().orElse(-1) + 1;
+  }
+
+  public StageDefinitionBuilder getStageBuilder(final int stageNumber)
+  {
+    for (final StageDefinitionBuilder stageBuilder : stageBuilders) {
+      if (stageBuilder.getStageNumber() == stageNumber) {
+        return stageBuilder;
+      }
+    }
+
+    throw new ISE("No such stage [%s]", stageNumber);
   }
 
   public QueryDefinition build()

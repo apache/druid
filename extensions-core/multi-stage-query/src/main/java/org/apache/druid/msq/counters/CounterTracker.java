@@ -47,6 +47,11 @@ public class CounterTracker
     return counter(CounterNames.sortProgress(), SuperSorterProgressTrackerCounter::new).tracker();
   }
 
+  public SegmentGenerationProgressCounter segmentGenerationProgress()
+  {
+    return counter(CounterNames.getSegmentGenerationProgress(), SegmentGenerationProgressCounter::new);
+  }
+
   public WarningCounters warnings()
   {
     return counter(CounterNames.warnings(), WarningCounters::new);

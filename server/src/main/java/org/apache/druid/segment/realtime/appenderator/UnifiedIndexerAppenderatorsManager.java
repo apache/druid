@@ -62,6 +62,8 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.segment.loading.SegmentLoaderConfig;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.plumber.Sink;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
@@ -149,6 +151,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
 
   @Override
   public Appenderator createRealtimeAppenderatorForTask(
+      SegmentLoaderConfig segmentLoaderConfig,
       String taskId,
       DataSchema schema,
       AppenderatorConfig config,
@@ -167,7 +170,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
       CachePopulatorStats cachePopulatorStats,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates
+      boolean useMaxMemoryEstimates,
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
     synchronized (this) {
@@ -177,6 +181,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
       );
 
       Appenderator appenderator = new StreamAppenderator(
+          null,
           taskId,
           schema,
           rewriteAppenderatorConfigMemoryLimits(config),
@@ -190,7 +195,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
           cache,
           rowIngestionMeters,
           parseExceptionHandler,
-          useMaxMemoryEstimates
+          useMaxMemoryEstimates,
+          centralizedDatasourceSchemaConfig
       );
 
       datasourceBundle.addAppenderator(taskId, appenderator);
@@ -210,7 +216,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates
+      boolean useMaxMemoryEstimates,
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
     synchronized (this) {
@@ -230,7 +237,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
           wrapIndexMerger(indexMerger),
           rowIngestionMeters,
           parseExceptionHandler,
-          useMaxMemoryEstimates
+          useMaxMemoryEstimates,
+          centralizedDatasourceSchemaConfig
       );
       datasourceBundle.addAppenderator(taskId, appenderator);
       return appenderator;
@@ -249,7 +257,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates
+      boolean useMaxMemoryEstimates,
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
     synchronized (this) {
@@ -269,7 +278,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
           wrapIndexMerger(indexMerger),
           rowIngestionMeters,
           parseExceptionHandler,
-          useMaxMemoryEstimates
+          useMaxMemoryEstimates,
+          centralizedDatasourceSchemaConfig
       );
       datasourceBundle.addAppenderator(taskId, appenderator);
       return appenderator;
@@ -288,7 +298,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates
+      boolean useMaxMemoryEstimates,
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
     synchronized (this) {
@@ -308,7 +319,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
           wrapIndexMerger(indexMerger),
           rowIngestionMeters,
           parseExceptionHandler,
-          useMaxMemoryEstimates
+          useMaxMemoryEstimates,
+          centralizedDatasourceSchemaConfig
       );
       datasourceBundle.addAppenderator(taskId, appenderator);
       return appenderator;
@@ -360,11 +372,11 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
   @VisibleForTesting
   <T> DatasourceBundle getBundle(final Query<T> query)
   {
-    final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(query.getDataSource());
+    final DataSourceAnalysis analysis = query.getDataSource().getAnalysis();
 
     final TableDataSource table =
         analysis.getBaseTableDataSource()
-                .orElseThrow(() -> new ISE("Cannot handle datasource: %s", analysis.getDataSource()));
+                .orElseThrow(() -> new ISE("Cannot handle datasource: %s", query.getDataSource()));
 
     final DatasourceBundle bundle;
 
@@ -400,6 +412,11 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
     return datasourceBundles;
   }
 
+  public WorkerConfig getWorkerConfig()
+  {
+    return workerConfig;
+  }
+
   private AppenderatorConfig rewriteAppenderatorConfigMemoryLimits(AppenderatorConfig baseConfig)
   {
     long perWorkerLimit = workerConfig.getGlobalIngestionHeapLimitBytes() / workerConfig.getCapacity();
@@ -428,7 +445,6 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
           serviceEmitter,
           queryRunnerFactoryConglomerateProvider.get(),
           queryProcessingPool,
-          joinableFactoryWrapper,
           Preconditions.checkNotNull(cache, "cache"),
           cacheConfig,
           cachePopulatorStats
@@ -561,6 +577,12 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
     public SegmentWriteOutMediumFactory getSegmentWriteOutMediumFactory()
     {
       return baseConfig.getSegmentWriteOutMediumFactory();
+    }
+
+    @Override
+    public int getNumPersistThreads()
+    {
+      return baseConfig.getNumPersistThreads();
     }
   }
 

@@ -21,12 +21,13 @@ package org.apache.druid.indexing.overlord;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.segment.SegmentSchemaMapping;
 
 import java.util.Set;
 
 /**
  * Commit metadata for a dataSource. Used by
- * {@link IndexerMetadataStorageCoordinator#announceHistoricalSegments(Set, Set, DataSourceMetadata, DataSourceMetadata)}
+ * {@link IndexerMetadataStorageCoordinator#commitSegmentsAndMetadata(Set, DataSourceMetadata, DataSourceMetadata, SegmentSchemaMapping)}
  * to provide metadata transactions for segment inserts.
  *
  * Two metadata instances can be added together, and any conflicts are resolved in favor of the right-hand side.
@@ -45,7 +46,7 @@ public interface DataSourceMetadata
   boolean isValidStart();
 
   /**
-   * As in {@link IndexerMetadataStorageCoordinator#announceHistoricalSegments}, this class can represent start and
+   * As in {@link IndexerMetadataStorageCoordinator#commitSegments}, this class can represent start and
    * end of a sequence.
    *
    * This method converts itself into the one for start of a sequence. Most implementations can simply return

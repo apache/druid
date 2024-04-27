@@ -59,7 +59,7 @@ public class ExpressionLambdaAggregator implements Aggregator
       }
     }
     final ExprEval<?> eval = lambda.eval(bindings);
-    final int estimatedSize = eval.type().getNullableStrategy().estimateSizeBytes(eval.value());
+    final int estimatedSize = eval.type().getNullableStrategy().estimateSizeBytes(eval.valueOrDefault());
     if (estimatedSize > maxSizeBytes) {
       throw new ISE(
           "Exceeded memory usage when aggregating type [%s], size [%s] is larger than max [%s]",
@@ -76,7 +76,7 @@ public class ExpressionLambdaAggregator implements Aggregator
   @Override
   public Object get()
   {
-    return hasValue ? bindings.getAccumulator().value() : null;
+    return hasValue ? bindings.getAccumulator().valueOrDefault() : null;
   }
 
   @Override

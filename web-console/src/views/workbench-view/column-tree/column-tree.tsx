@@ -16,40 +16,63 @@
  * limitations under the License.
  */
 
-import { HTMLSelect, Menu, MenuItem, Position, Tree, TreeNodeInfo } from '@blueprintjs/core';
+import type { TreeNodeInfo } from '@blueprintjs/core';
+import {
+  Button,
+  ButtonGroup,
+  Classes,
+  HTMLSelect,
+  Icon,
+  InputGroup,
+  Menu,
+  MenuDivider,
+  MenuItem,
+  Position,
+  Tree,
+} from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
+import type { SqlExpression } from '@druid-toolkit/query';
 import {
+  C,
+  F,
+  N,
+  SqlColumn,
   SqlComparison,
-  SqlExpression,
-  SqlFunction,
   SqlJoinPart,
   SqlQuery,
-  SqlRef,
-  SqlTableRef,
-} from 'druid-query-toolkit';
-import React, { ChangeEvent } from 'react';
+  SqlTable,
+  T,
+} from '@druid-toolkit/query';
+import type { ChangeEvent } from 'react';
+import React from 'react';
 
 import { Deferred, Loader } from '../../../components';
+import type { ColumnMetadata } from '../../../utils';
 import {
-  ColumnMetadata,
   copyAndAlert,
   dataTypeToIcon,
   groupBy,
   oneOf,
   prettyPrintSql,
+  tickIcon,
 } from '../../../utils';
 
-import { NumberMenuItems, StringMenuItems, TimeMenuItems } from './column-tree-menu';
+import {
+  ComplexMenuItems,
+  NumberMenuItems,
+  StringMenuItems,
+  TimeMenuItems,
+} from './column-tree-menu';
 
 import './column-tree.scss';
 
-const COUNT_STAR = SqlFunction.COUNT_STAR.as('Count');
+const COUNT_STAR = F.count().as('Count');
 
 function getCountExpression(columnNames: string[]): SqlExpression {
   for (const columnName of columnNames) {
     if (columnName === 'count' || columnName === '__count') {
-      return SqlFunction.simple('SUM', [SqlRef.column(columnName)]).as('Count');
+      return F.sum(C(columnName)).as('Count');
     }
   }
   return COUNT_STAR;
@@ -77,6 +100,16 @@ interface HandleColumnClickOptions {
   onQueryChange: (query: SqlQuery, run: boolean) => void;
 }
 
+type SearchMode = 'tables-and-columns' | 'tables-only' | 'columns-only';
+
+const SEARCH_MODES: SearchMode[] = ['tables-and-columns', 'tables-only', 'columns-only'];
+
+const SEARCH_MDOE_TITLE: Record<SearchMode, string> = {
+  'tables-and-columns': 'Tables and columns',
+  'tables-only': 'Tables only',
+  'columns-only': 'Columns only',
+};
+
 function handleColumnShow(options: HandleColumnClickOptions): void {
   const {
     columnSchema,
@@ -96,22 +129,22 @@ function handleColumnShow(options: HandleColumnClickOptions): void {
     where = parsedQuery.getWhereExpression();
     aggregates = parsedQuery.getAggregateSelectExpressions();
   } else if (columnSchema === 'druid') {
-    from = SqlTableRef.create(columnTable);
+    from = T(columnTable);
     where = defaultWhere;
   } else {
-    from = SqlTableRef.create(columnTable, columnSchema);
+    from = N(columnSchema).table(columnTable);
   }
 
   if (!aggregates.length) {
     aggregates.push(COUNT_STAR);
   }
 
-  const columnRef = SqlRef.column(columnName);
+  const column = C(columnName);
   let query: SqlQuery;
   if (columnSchema === 'druid' && columnType === 'TIMESTAMP') {
-    query = TIME_QUERY.fillPlaceholders([columnRef, from]) as SqlQuery;
+    query = TIME_QUERY.fillPlaceholders([column, from]) as SqlQuery;
   } else {
-    query = STRING_QUERY.fillPlaceholders([columnRef, from]) as SqlQuery;
+    query = STRING_QUERY.fillPlaceholders([column, from]) as SqlQuery;
   }
 
   let newSelectExpressions = query.selectExpressions;
@@ -143,6 +176,14 @@ export interface ColumnTreeState {
   columnTree?: TreeNodeInfo[];
   currentSchemaSubtree?: TreeNodeInfo[];
   selectedTreeIndex: number;
+  searchString: string;
+  searchMode: SearchMode;
+  prevSearchHash?: string;
+}
+
+function computeSearchHash(searchString: string, searchMode: SearchMode): string {
+  if (!searchString) return '';
+  return `${searchString.toLowerCase()}_${searchMode}`;
 }
 
 export function getJoinColumns(parsedQuery: SqlQuery, _table: string) {
@@ -152,11 +193,11 @@ export function getJoinColumns(parsedQuery: SqlQuery, _table: string) {
     const firstOnExpression = parsedQuery.fromClause.joinParts.first().onExpression;
     if (firstOnExpression instanceof SqlComparison && firstOnExpression.op === '=') {
       const { lhs, rhs } = firstOnExpression;
-      if (lhs instanceof SqlRef && lhs.getNamespace() === 'lookup') {
-        lookupColumn = lhs.getColumn();
+      if (lhs instanceof SqlColumn && lhs.getNamespaceName() === 'lookup') {
+        lookupColumn = lhs.getName();
       }
-      if (rhs instanceof SqlRef) {
-        originalTableColumn = rhs.getColumn();
+      if (rhs instanceof SqlColumn) {
+        originalTableColumn = rhs.getName();
       }
     }
   }
@@ -177,8 +218,15 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
       onQueryChange,
       highlightTable,
     } = props;
+    const { searchString, searchMode } = state;
+    const searchHash = computeSearchHash(searchString, searchMode);
 
-    if (columnMetadata && columnMetadata !== state.prevColumnMetadata) {
+    if (
+      columnMetadata &&
+      (columnMetadata !== state.prevColumnMetadata || searchHash !== state.prevSearchHash)
+    ) {
+      const lowerSearchString = searchString.toLowerCase();
+      const isSearching = Boolean(lowerSearchString);
       const columnTree = groupBy(
         columnMetadata,
         r => r.TABLE_SCHEMA,
@@ -186,12 +234,27 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
           id: schemaName,
           label: schemaName,
           childNodes: groupBy(
-            metadata,
+            isSearching
+              ? metadata.filter(
+                  r =>
+                    (searchMode === 'tables-and-columns' &&
+                      (r.TABLE_NAME.toLowerCase().includes(lowerSearchString) ||
+                        r.COLUMN_NAME.toLowerCase().includes(lowerSearchString))) ||
+                    (searchMode === 'tables-only' &&
+                      r.TABLE_NAME.toLowerCase().includes(lowerSearchString)) ||
+                    (searchMode === 'columns-only' &&
+                      r.COLUMN_NAME.toLowerCase().includes(lowerSearchString)),
+                )
+              : metadata,
             r => r.TABLE_NAME,
             (metadata, tableName): TreeNodeInfo => ({
               id: tableName,
               icon: IconNames.TH,
               className: tableName === highlightTable ? 'highlight' : undefined,
+              isExpanded:
+                isSearching &&
+                (searchMode === 'columns-only' ||
+                  !tableName.toLowerCase().includes(lowerSearchString)),
               label: (
                 <Popover2
                   position={Position.RIGHT}
@@ -199,7 +262,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                     <Deferred
                       content={() => {
                         const parsedQuery = props.getParsedQuery();
-                        const tableRef = SqlTableRef.create(tableName);
+                        const tableRef = T(tableName);
                         const prettyTableRef = prettyPrintSql(tableRef);
                         const countExpression = getCountExpression(
                           metadata.map(child => child.COLUMN_NAME),
@@ -207,7 +270,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
 
                         const getQueryOnTable = () => {
                           return SqlQuery.create(
-                            SqlTableRef.create(
+                            SqlTable.create(
                               tableName,
                               schemaName === 'druid' ? undefined : schemaName,
                             ),
@@ -235,7 +298,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                                     .changeSelectExpressions(
                                       metadata
                                         .map(child => child.COLUMN_NAME)
-                                        .map(columnName => SqlRef.column(columnName)),
+                                        .map(columnName => C(columnName)),
                                     )
                                     .changeWhereExpression(getWhere()),
                                   true,
@@ -259,6 +322,22 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                                 onQueryChange(
                                   getQueryOnTable()
                                     .changeSelect(0, countExpression)
+                                    .changeGroupByExpressions([])
+                                    .changeWhereExpression(getWhere(true)),
+                                  true,
+                                );
+                              }}
+                            />
+                            <MenuItem
+                              icon={IconNames.FULLSCREEN}
+                              text={`SELECT MIN(__time), MAX(__time) FROM ${tableName}`}
+                              onClick={() => {
+                                onQueryChange(
+                                  getQueryOnTable()
+                                    .changeSelectExpressions([
+                                      F.min(C('__time')).as('min_time'),
+                                      F.max(C('__time')).as('max_time'),
+                                    ])
                                     .changeGroupByExpressions([])
                                     .changeWhereExpression(getWhere(true)),
                                   true,
@@ -297,13 +376,16 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                                         .addJoin(
                                           SqlJoinPart.create(
                                             'LEFT',
-                                            SqlTableRef.create(tableName, schemaName),
-                                            SqlRef.column(lookupColumn, tableName, 'lookup').equal(
-                                              SqlRef.column(
-                                                originalTableColumn,
-                                                parsedQuery.getFirstTableName(),
+                                            N(schemaName).table(tableName),
+                                            N('lookup')
+                                              .table(tableName)
+                                              .column(lookupColumn)
+                                              .equal(
+                                                SqlColumn.create(
+                                                  originalTableColumn,
+                                                  parsedQuery.getFirstTableName(),
+                                                ),
                                               ),
-                                            ),
                                           ),
                                         ),
                                       false,
@@ -322,13 +404,16 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                                       parsedQuery.addJoin(
                                         SqlJoinPart.create(
                                           'INNER',
-                                          SqlTableRef.create(tableName, schemaName),
-                                          SqlRef.column(lookupColumn, tableName, 'lookup').equal(
-                                            SqlRef.column(
-                                              originalTableColumn,
-                                              parsedQuery.getFirstTableName(),
+                                          N(schemaName).table(tableName),
+                                          N('lookup')
+                                            .table(tableName)
+                                            .column(lookupColumn)
+                                            .equal(
+                                              SqlColumn.create(
+                                                originalTableColumn,
+                                                parsedQuery.getFirstTableName(),
+                                              ),
                                             ),
-                                          ),
                                         ),
                                       ),
                                       false,
@@ -379,7 +464,15 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
               childNodes: metadata.map(
                 (columnData): TreeNodeInfo => ({
                   id: columnData.COLUMN_NAME,
-                  icon: dataTypeToIcon(columnData.DATA_TYPE),
+                  icon: (
+                    <Icon
+                      className={Classes.TREE_NODE_ICON}
+                      icon={dataTypeToIcon(columnData.DATA_TYPE)}
+                      aria-hidden
+                      tabIndex={-1}
+                      title={columnData.DATA_TYPE}
+                    />
+                  ),
                   label: (
                     <Popover2
                       position={Position.RIGHT}
@@ -433,6 +526,16 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                                     onQueryChange={onQueryChange}
                                   />
                                 )}
+                                {parsedQuery && columnData.DATA_TYPE.startsWith('COMPLEX<') && (
+                                  <ComplexMenuItems
+                                    table={tableName}
+                                    schema={schemaName}
+                                    columnName={columnData.COLUMN_NAME}
+                                    columnType={columnData.DATA_TYPE}
+                                    parsedQuery={parsedQuery}
+                                    onQueryChange={onQueryChange}
+                                  />
+                                )}
                                 <MenuItem
                                   icon={IconNames.CLIPBOARD}
                                   text={`Copy: ${columnData.COLUMN_NAME}`}
@@ -469,12 +572,10 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
 
       if (selectedTreeIndex > -1) {
         const treeNodes = columnTree[selectedTreeIndex].childNodes;
-        if (treeNodes) {
-          if (defaultTable) {
-            expandedNode = treeNodes.findIndex(node => {
-              return node.id === defaultTable;
-            });
-          }
+        if (treeNodes && defaultTable) {
+          expandedNode = treeNodes.findIndex(node => {
+            return node.id === defaultTable;
+          });
         }
       }
 
@@ -492,21 +593,23 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
         columnTree,
         selectedTreeIndex,
         currentSchemaSubtree,
+        prevSearchHash: searchHash,
       };
     }
     return null;
   }
 
-  constructor(props: ColumnTreeProps, context: any) {
-    super(props, context);
+  constructor(props: ColumnTreeProps) {
+    super(props);
     this.state = {
       selectedTreeIndex: -1,
+      searchString: '',
+      searchMode: 'tables-and-columns',
     };
   }
 
   private renderSchemaSelector() {
     const { columnTree, selectedTreeIndex } = this.state;
-    if (!columnTree) return null;
 
     return (
       <HTMLSelect
@@ -517,12 +620,52 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
         minimal
         large
       >
-        {columnTree.map((treeNode, i) => (
+        {columnTree?.map((treeNode, i) => (
           <option key={i} value={i}>
             {treeNode.label}
           </option>
         ))}
       </HTMLSelect>
+    );
+  }
+
+  private renderSearch() {
+    const { searchString, searchMode } = this.state;
+
+    return (
+      <InputGroup
+        className="search-box"
+        placeholder="Search"
+        value={searchString}
+        onChange={e => {
+          this.setState({ searchString: e.target.value.substring(0, 100) });
+        }}
+        rightElement={
+          <ButtonGroup minimal>
+            {searchString !== '' && (
+              <Button icon={IconNames.CROSS} onClick={() => this.setState({ searchString: '' })} />
+            )}
+            <Popover2
+              position="bottom-left"
+              content={
+                <Menu>
+                  <MenuDivider title="Search in" />
+                  {SEARCH_MODES.map(mode => (
+                    <MenuItem
+                      key={mode}
+                      icon={tickIcon(mode === searchMode)}
+                      text={SEARCH_MDOE_TITLE[mode]}
+                      onClick={() => this.setState({ searchMode: mode })}
+                    />
+                  ))}
+                </Menu>
+              }
+            >
+              <Button icon={IconNames.SETTINGS} />
+            </Popover2>
+          </ButtonGroup>
+        }
+      />
     );
   }
 
@@ -551,9 +694,9 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
     this.forceUpdate();
   };
 
-  render(): JSX.Element | null {
+  render() {
     const { columnMetadataLoading } = this.props;
-    const { currentSchemaSubtree } = this.state;
+    const { currentSchemaSubtree, searchString } = this.state;
 
     if (columnMetadataLoading) {
       return (
@@ -568,12 +711,19 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
     return (
       <div className="column-tree">
         {this.renderSchemaSelector()}
+        {this.renderSearch()}
         <div className="tree-container">
-          <Tree
-            contents={currentSchemaSubtree}
-            onNodeCollapse={this.handleNodeCollapse}
-            onNodeExpand={this.handleNodeExpand}
-          />
+          {currentSchemaSubtree.length ? (
+            <Tree
+              contents={currentSchemaSubtree}
+              onNodeCollapse={this.handleNodeCollapse}
+              onNodeExpand={this.handleNodeExpand}
+            />
+          ) : (
+            <div className="message-box">
+              {searchString ? 'The search returned no results' : 'No tables'}
+            </div>
+          )}
         </div>
       </div>
     );

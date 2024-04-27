@@ -1,0 +1,1 @@
+SELECT * FROM (SELECT c1, c2, lead(c1) OVER ( PARTITION BY c2 ORDER BY c1) lead_c1, ntile(3) OVER( PARTITION BY c2 ORDER BY c1) tile  FROM "tblWnulls.parquet") sub_query WHERE lead_c1 is NOT null and tile = 2 ORDER BY tile, c1

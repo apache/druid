@@ -20,10 +20,10 @@
 package org.apache.druid.segment.serde;
 
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
-import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
-import org.apache.druid.segment.column.NullValueIndex;
-import org.apache.druid.segment.column.SimpleImmutableBitmapIndex;
+import org.apache.druid.segment.index.BitmapColumnIndex;
+import org.apache.druid.segment.index.SimpleImmutableBitmapIndex;
+import org.apache.druid.segment.index.semantic.NullValueIndex;
 
 import javax.annotation.Nullable;
 
@@ -55,7 +55,7 @@ public class NullValueIndexSupplier implements ColumnIndexSupplier
   private final class NullableNumericNullValueIndex implements NullValueIndex
   {
     @Override
-    public BitmapColumnIndex forNull()
+    public BitmapColumnIndex get()
     {
       return nullValueIndex;
     }

@@ -22,14 +22,16 @@ package org.apache.druid.frame.read.columnar;
 import org.apache.datasketches.memory.Memory;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.frame.Frame;
-import org.apache.druid.frame.write.columnar.DoubleFrameColumnWriter;
+import org.apache.druid.frame.write.columnar.DoubleFrameMaker;
 import org.apache.druid.frame.write.columnar.FrameColumnWriters;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.query.rowsandcols.column.Column;
+import org.apache.druid.query.rowsandcols.column.ColumnAccessorBasedColumn;
+import org.apache.druid.query.rowsandcols.column.accessor.DoubleColumnAccessorBase;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DoubleColumnSelector;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
-import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.NumericColumn;
 import org.apache.druid.segment.data.ReadableOffset;
 import org.apache.druid.segment.vector.BaseDoubleVectorValueSelector;
@@ -37,6 +39,7 @@ import org.apache.druid.segment.vector.ReadableVectorInspector;
 import org.apache.druid.segment.vector.ReadableVectorOffset;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class DoubleFrameColumnReader implements FrameColumnReader
@@ -49,19 +52,34 @@ public class DoubleFrameColumnReader implements FrameColumnReader
   }
 
   @Override
+  public Column readRACColumn(Frame frame)
+  {
+    final DoubleFrameColumn frameCol = makeDoubleFrameColumn(frame);
+
+    return new ColumnAccessorBasedColumn(frameCol);
+  }
+
+  @Override
   public ColumnPlus readColumn(final Frame frame)
+  {
+    final DoubleFrameColumn frameCol = makeDoubleFrameColumn(frame);
+
+    return new ColumnPlus(
+        frameCol,
+        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(frameCol.getType())
+                              .setHasNulls(NullHandling.sqlCompatible() && frameCol.hasNulls),
+        frame.numRows()
+    );
+  }
+
+  @Nonnull
+  private DoubleFrameColumn makeDoubleFrameColumn(Frame frame)
   {
     final Memory memory = frame.region(columnNumber);
     validate(memory, frame.numRows());
 
     final boolean hasNulls = getHasNulls(memory);
-
-    return new ColumnPlus(
-        new DoubleFrameColumn(frame, hasNulls, memory),
-        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.DOUBLE)
-                              .setHasNulls(NullHandling.sqlCompatible() && hasNulls),
-        frame.numRows()
-    );
+    return new DoubleFrameColumn(frame, hasNulls, memory);
   }
 
   private void validate(final Memory region, final int numRows)
@@ -69,7 +87,7 @@ public class DoubleFrameColumnReader implements FrameColumnReader
     final long memorySize = region.getCapacity();
 
     // Check if column is big enough for a header
-    if (memorySize < DoubleFrameColumnWriter.DATA_OFFSET) {
+    if (memorySize < DoubleFrameMaker.DATA_OFFSET) {
       throw new ISE("Column is not big enough for a header");
     }
 
@@ -79,10 +97,10 @@ public class DoubleFrameColumnReader implements FrameColumnReader
     }
 
     final boolean hasNulls = getHasNulls(region);
-    final int sz = DoubleFrameColumnWriter.valueSize(hasNulls);
+    final int sz = DoubleFrameMaker.valueSize(hasNulls);
 
     // Check column length again, now that we know exactly how long it should be.
-    if (memorySize != DoubleFrameColumnWriter.DATA_OFFSET + (long) sz * numRows) {
+    if (memorySize != DoubleFrameMaker.DATA_OFFSET + (long) sz * numRows) {
       throw new ISE("Column does not have the correct length");
     }
   }
@@ -92,7 +110,7 @@ public class DoubleFrameColumnReader implements FrameColumnReader
     return memory.getByte(Byte.BYTES) != 0;
   }
 
-  private static class DoubleFrameColumn implements NumericColumn
+  private static class DoubleFrameColumn extends DoubleColumnAccessorBase implements NumericColumn
   {
     private final Frame frame;
     private final boolean hasNulls;
@@ -108,9 +126,9 @@ public class DoubleFrameColumnReader implements FrameColumnReader
     {
       this.frame = frame;
       this.hasNulls = hasNulls;
-      this.sz = DoubleFrameColumnWriter.valueSize(hasNulls);
+      this.sz = DoubleFrameMaker.valueSize(hasNulls);
       this.memory = memory;
-      this.memoryPosition = DoubleFrameColumnWriter.DATA_OFFSET;
+      this.memoryPosition = DoubleFrameMaker.DATA_OFFSET;
     }
 
     @Override
@@ -122,13 +140,13 @@ public class DoubleFrameColumnReader implements FrameColumnReader
         public double getDouble()
         {
           assert NullHandling.replaceWithDefault() || !isNull();
-          return DoubleFrameColumn.this.getDouble(frame.physicalRow(offset.getOffset()));
+          return DoubleFrameColumn.this.getDoublePhysical(frame.physicalRow(offset.getOffset()));
         }
 
         @Override
         public boolean isNull()
         {
-          return DoubleFrameColumn.this.isNull(frame.physicalRow(offset.getOffset()));
+          return DoubleFrameColumn.this.isNullPhysical(frame.physicalRow(offset.getOffset()));
         }
 
         @Override
@@ -182,10 +200,10 @@ public class DoubleFrameColumnReader implements FrameColumnReader
 
             for (int i = 0; i < offset.getCurrentVectorSize(); i++) {
               final int physicalRow = frame.physicalRow(i + start);
-              doubleVector[i] = getDouble(physicalRow);
+              doubleVector[i] = getDoublePhysical(physicalRow);
 
               if (hasNulls) {
-                nullVector[i] = isNull(physicalRow);
+                nullVector[i] = isNullPhysical(physicalRow);
               }
             }
           } else {
@@ -193,10 +211,10 @@ public class DoubleFrameColumnReader implements FrameColumnReader
 
             for (int i = 0; i < offset.getCurrentVectorSize(); i++) {
               final int physicalRow = frame.physicalRow(offsets[i]);
-              doubleVector[i] = getDouble(physicalRow);
+              doubleVector[i] = getDoublePhysical(physicalRow);
 
               if (hasNulls) {
-                nullVector[i] = isNull(physicalRow);
+                nullVector[i] = isNullPhysical(physicalRow);
               }
             }
           }
@@ -222,7 +240,7 @@ public class DoubleFrameColumnReader implements FrameColumnReader
         throw new ISE("Row [%d] out of bounds", rowNum);
       }
 
-      return (long) getDouble(frame.physicalRow(rowNum));
+      return (long) getDoublePhysical(frame.physicalRow(rowNum));
     }
 
     @Override
@@ -237,7 +255,25 @@ public class DoubleFrameColumnReader implements FrameColumnReader
       // Do nothing.
     }
 
-    private boolean isNull(final int physicalRow)
+    @Override
+    public int numRows()
+    {
+      return length();
+    }
+
+    @Override
+    public boolean isNull(int rowNum)
+    {
+      return isNullPhysical(frame.physicalRow(rowNum));
+    }
+
+    @Override
+    public double getDouble(int rowNum)
+    {
+      return getDoublePhysical(frame.physicalRow(rowNum));
+    }
+
+    private boolean isNullPhysical(final int physicalRow)
     {
       if (hasNulls) {
         final long rowPosition = memoryPosition + (long) sz * physicalRow;
@@ -247,7 +283,7 @@ public class DoubleFrameColumnReader implements FrameColumnReader
       }
     }
 
-    private double getDouble(final int physicalRow)
+    private double getDoublePhysical(final int physicalRow)
     {
       final long rowPosition = memoryPosition + (long) sz * physicalRow;
 

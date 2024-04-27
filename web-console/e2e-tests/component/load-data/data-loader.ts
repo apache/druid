@@ -16,15 +16,15 @@
  * limitations under the License.
  */
 
-import * as playwright from 'playwright-chromium';
+import type * as playwright from 'playwright-chromium';
 
 import { clickButton, setLabeledInput, setLabeledTextarea } from '../../util/playwright';
 
-import { ConfigureSchemaConfig } from './config/configure-schema';
-import { ConfigureTimestampConfig } from './config/configure-timestamp';
-import { PartitionConfig } from './config/partition';
-import { PublishConfig } from './config/publish';
-import { DataConnector } from './data-connector/data-connector';
+import type { ConfigureSchemaConfig } from './config/configure-schema';
+import type { ConfigureTimestampConfig } from './config/configure-timestamp';
+import type { PartitionConfig } from './config/partition';
+import type { PublishConfig } from './config/publish';
+import type { DataConnector } from './data-connector/data-connector';
 
 /**
  * Represents load data tab.
@@ -42,6 +42,7 @@ export class DataLoader {
    */
   async load() {
     await this.page.goto(this.baseUrl);
+    await this.startNewSpecIfNeeded();
     await this.start();
     await this.connect(this.connector, this.connectValidator);
     if (this.connector.needParse) {
@@ -55,6 +56,13 @@ export class DataLoader {
     await this.tune();
     await this.publish(this.publishConfig);
     await this.editSpec();
+  }
+
+  private async startNewSpecIfNeeded() {
+    const startNewSpecLocator = this.page.locator(`//*[contains(text(),"Start a new")]`);
+    if (await startNewSpecLocator.count()) {
+      await startNewSpecLocator.click();
+    }
   }
 
   private async start() {

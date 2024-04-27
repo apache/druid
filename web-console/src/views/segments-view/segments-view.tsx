@@ -16,13 +16,14 @@
  * limitations under the License.
  */
 
-import { Button, ButtonGroup, Intent, Label, MenuItem, Switch } from '@blueprintjs/core';
+import { Button, ButtonGroup, Code, Intent, Label, MenuItem, Switch } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
+import { C, L, SqlComparison, SqlExpression } from '@druid-toolkit/query';
 import classNames from 'classnames';
-import { SqlComparison, SqlExpression, SqlLiteral, SqlRef } from 'druid-query-toolkit';
 import * as JSONBig from 'json-bigint-native';
 import React from 'react';
-import ReactTable, { Filter } from 'react-table';
+import type { Filter } from 'react-table';
+import ReactTable from 'react-table';
 
 import {
   ACTION_COLUMN_ID,
@@ -41,7 +42,8 @@ import {
 import { AsyncActionDialog } from '../../dialogs';
 import { SegmentTableActionDialog } from '../../dialogs/segments-table-action-dialog/segment-table-action-dialog';
 import { ShowValueDialog } from '../../dialogs/show-value-dialog/show-value-dialog';
-import { QueryWithContext } from '../../druid-models';
+import type { QueryWithContext } from '../../druid-models';
+import type { Capabilities, CapabilitiesMode } from '../../helpers';
 import {
   booleanCustomTableFilter,
   BooleanFilterInput,
@@ -51,10 +53,10 @@ import {
   STANDARD_TABLE_PAGE_SIZE_OPTIONS,
 } from '../../react-table';
 import { Api } from '../../singletons';
+import type { NumberLike } from '../../utils';
 import {
-  Capabilities,
-  CapabilitiesMode,
   compact,
+  countBy,
   deepGet,
   filterMap,
   formatBytes,
@@ -63,13 +65,13 @@ import {
   isNumberLikeNaN,
   LocalStorageBackedVisibility,
   LocalStorageKeys,
-  NumberLike,
+  oneOf,
   queryDruidSql,
   QueryManager,
   QueryState,
   twoLines,
 } from '../../utils';
-import { BasicAction } from '../../utils/basic-action';
+import type { BasicAction } from '../../utils/basic-action';
 
 import './segments-view.scss';
 
@@ -88,9 +90,11 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
     'Num rows',
     'Avg. row size',
     'Replicas',
-    'Is published',
-    'Is realtime',
+    'Replication factor',
     'Is available',
+    'Is active',
+    'Is realtime',
+    'Is published',
     'Is overshadowed',
     ACTION_COLUMN_LABEL,
   ],
@@ -117,27 +121,27 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
     'Num rows',
     'Avg. row size',
     'Replicas',
-    'Is published',
-    'Is realtime',
+    'Replication factor',
     'Is available',
+    'Is active',
+    'Is realtime',
+    'Is published',
     'Is overshadowed',
   ],
 };
 
 function formatRangeDimensionValue(dimension: any, value: any): string {
-  return `${SqlRef.column(String(dimension))}=${SqlLiteral.create(String(value))}`;
-}
-
-export interface SegmentsViewProps {
-  goToQuery(queryWithContext: QueryWithContext): void;
-  datasource: string | undefined;
-  onlyUnavailable: boolean | undefined;
-  capabilities: Capabilities;
+  return `${C(String(dimension))}=${L(String(value))}`;
 }
 
 interface Sorted {
   id: string;
   desc: boolean;
+}
+
+function sortedToOrderByClause(sorted: Sorted[]): string | undefined {
+  if (!sorted.length) return;
+  return 'ORDER BY ' + sorted.map(sort => `${C(sort.id)} ${sort.desc ? 'DESC' : 'ASC'}`).join(', ');
 }
 
 interface TableState {
@@ -167,15 +171,23 @@ interface SegmentQueryResultRow {
   num_rows: NumberLike;
   avg_row_size: NumberLike;
   num_replicas: number;
+  replication_factor: number;
   is_available: number;
-  is_published: number;
+  is_active: number;
   is_realtime: number;
+  is_published: number;
   is_overshadowed: number;
+}
+
+export interface SegmentsViewProps {
+  filters: Filter[];
+  onFiltersChange(filters: Filter[]): void;
+  goToQuery(queryWithContext: QueryWithContext): void;
+  capabilities: Capabilities;
 }
 
 export interface SegmentsViewState {
   segmentsState: QueryState<SegmentQueryResultRow[]>;
-  segmentFilter: Filter[];
   segmentTableActionDialogId?: string;
   datasourceTableActionDialogId?: string;
   actions: BasicAction[];
@@ -194,7 +206,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
       visibleColumns.shown('Datasource') && `"datasource"`,
       `"start"`,
       `"end"`,
-      visibleColumns.shown('Version') && `"version"`,
+      `"version"`,
       visibleColumns.shown('Time span') &&
         `CASE
   WHEN "start" = '-146136543-09-08T08:23:32.096Z' AND "end" = '146140482-04-24T15:36:27.903Z' THEN 'All'
@@ -212,9 +224,11 @@ END AS "time_span"`,
       visibleColumns.shown('Avg. row size') &&
         `CASE WHEN "num_rows" <> 0 THEN ("size" / "num_rows") ELSE 0 END AS "avg_row_size"`,
       visibleColumns.shown('Replicas') && `"num_replicas"`,
-      visibleColumns.shown('Is published') && `"is_published"`,
+      visibleColumns.shown('Replication factor') && `"replication_factor"`,
       visibleColumns.shown('Is available') && `"is_available"`,
+      visibleColumns.shown('Is active') && `"is_active"`,
       visibleColumns.shown('Is realtime') && `"is_realtime"`,
+      visibleColumns.shown('Is published') && `"is_published"`,
       visibleColumns.shown('Is overshadowed') && `"is_overshadowed"`,
     ]);
 
@@ -249,20 +263,15 @@ END AS "time_span"`,
 
   private lastTableState: TableState | undefined;
 
-  constructor(props: SegmentsViewProps, context: any) {
-    super(props, context);
-
-    const segmentFilter: Filter[] = [];
-    if (props.datasource) segmentFilter.push({ id: 'datasource', value: `=${props.datasource}` });
-    if (props.onlyUnavailable) segmentFilter.push({ id: 'is_available', value: 'false' });
+  constructor(props: SegmentsViewProps) {
+    super(props);
 
     this.state = {
       actions: [],
       segmentsState: QueryState.INIT,
-      segmentFilter,
       visibleColumns: new LocalStorageBackedVisibility(
         LocalStorageKeys.SEGMENT_TABLE_COLUMN_SELECTION,
-        ['Time span'],
+        ['Time span', 'Is published', 'Is overshadowed'],
       ),
       groupByInterval: false,
       showSegmentTimeline: false,
@@ -281,20 +290,31 @@ END AS "time_span"`,
               // Creates filters like `shard_spec LIKE '%"type":"numbered"%'`
               const modeAndNeedle = parseFilterModeAndNeedle(f);
               if (!modeAndNeedle) return;
-              const shardSpecRef = SqlRef.column('shard_spec');
+              const shardSpecColumn = C('shard_spec');
               switch (modeAndNeedle.mode) {
                 case '=':
-                  return SqlComparison.like(shardSpecRef, `%"type":"${modeAndNeedle.needle}"%`);
+                  return SqlComparison.like(shardSpecColumn, `%"type":"${modeAndNeedle.needle}"%`);
 
                 case '!=':
-                  return SqlComparison.notLike(shardSpecRef, `%"type":"${modeAndNeedle.needle}"%`);
+                  return SqlComparison.notLike(
+                    shardSpecColumn,
+                    `%"type":"${modeAndNeedle.needle}"%`,
+                  );
 
                 default:
-                  return SqlComparison.like(shardSpecRef, `%"type":"${modeAndNeedle.needle}%`);
+                  return SqlComparison.like(shardSpecColumn, `%"type":"${modeAndNeedle.needle}%`);
               }
             } else if (f.id.startsWith('is_')) {
-              if (f.value === 'all') return;
-              return SqlRef.columnWithQuotes(f.id).equal(f.value === 'true' ? 1 : 0);
+              switch (f.value) {
+                case '=false':
+                  return C(f.id).equal(0);
+
+                case '=true':
+                  return C(f.id).equal(1);
+
+                default:
+                  return;
+              }
             } else {
               return sqlQueryCustomTableFilter(f);
             }
@@ -302,66 +322,61 @@ END AS "time_span"`,
 
           let queryParts: string[];
 
-          let whereClause = '';
+          let filterClause = '';
           if (whereParts.length) {
-            whereClause = SqlExpression.and(...whereParts).toString();
+            filterClause = SqlExpression.and(...whereParts).toString();
           }
+
+          let effectiveSorted = sorted;
+          if (!effectiveSorted.find(sort => sort.id === 'version') && effectiveSorted.length) {
+            // Ensure there is a sort on version as a tiebreaker
+            effectiveSorted = effectiveSorted.concat([
+              {
+                id: 'version',
+                desc: effectiveSorted[0].desc, // Take the first direction if it exists
+              },
+            ]);
+          }
+
+          const base = SegmentsView.baseQuery(visibleColumns);
+          const orderByClause = sortedToOrderByClause(effectiveSorted);
 
           if (groupByInterval) {
             const innerQuery = compact([
-              `SELECT "start" || '/' || "end" AS "interval"`,
+              `SELECT "start", "end"`,
               `FROM sys.segments`,
-              whereClause ? `WHERE ${whereClause}` : undefined,
-              `GROUP BY 1`,
-              `ORDER BY 1 DESC`,
+              filterClause ? `WHERE ${filterClause}` : undefined,
+              `GROUP BY 1, 2`,
+              sortedToOrderByClause(sorted.filter(sort => oneOf(sort.id, 'start', 'end'))) ||
+                `ORDER BY 1 DESC`,
               `LIMIT ${pageSize}`,
               page ? `OFFSET ${page * pageSize}` : undefined,
             ]).join('\n');
 
             const intervals: string = (await queryDruidSql({ query: innerQuery }))
-              .map(row => `'${row.interval}'`)
+              .map(({ start, end }) => `'${start}/${end}'`)
               .join(', ');
 
             queryParts = compact([
-              SegmentsView.baseQuery(visibleColumns),
+              base,
               `SELECT "start" || '/' || "end" AS "interval", *`,
               `FROM s`,
               `WHERE`,
               intervals ? `  ("start" || '/' || "end") IN (${intervals})` : 'FALSE',
-              whereClause ? `  AND ${whereClause}` : '',
+              filterClause ? `  AND ${filterClause}` : '',
+              orderByClause,
+              `LIMIT ${pageSize * 1000}`,
             ]);
-
-            if (sorted.length) {
-              queryParts.push(
-                'ORDER BY ' +
-                  sorted
-                    .map((sort: any) => `${SqlRef.column(sort.id)} ${sort.desc ? 'DESC' : 'ASC'}`)
-                    .join(', '),
-              );
-            }
-
-            queryParts.push(`LIMIT ${pageSize * 1000}`);
           } else {
-            queryParts = [SegmentsView.baseQuery(visibleColumns), `SELECT *`, `FROM s`];
-
-            if (whereClause) {
-              queryParts.push(`WHERE ${whereClause}`);
-            }
-
-            if (sorted.length) {
-              queryParts.push(
-                'ORDER BY ' +
-                  sorted
-                    .map((sort: any) => `${SqlRef.column(sort.id)} ${sort.desc ? 'DESC' : 'ASC'}`)
-                    .join(', '),
-              );
-            }
-
-            queryParts.push(`LIMIT ${pageSize}`);
-
-            if (page) {
-              queryParts.push(`OFFSET ${page * pageSize}`);
-            }
+            queryParts = compact([
+              base,
+              `SELECT *`,
+              `FROM s`,
+              filterClause ? `WHERE ${filterClause}` : undefined,
+              orderByClause,
+              `LIMIT ${pageSize}`,
+              page ? `OFFSET ${page * pageSize}` : undefined,
+            ]);
           }
           const sqlQuery = queryParts.join('\n');
           setIntermediateQuery(sqlQuery);
@@ -412,9 +427,11 @@ END AS "time_span"`,
                 num_rows: -1,
                 avg_row_size: -1,
                 num_replicas: -1,
+                replication_factor: -1,
                 is_available: -1,
-                is_published: -1,
+                is_active: -1,
                 is_realtime: -1,
+                is_published: -1,
                 is_overshadowed: -1,
               };
             });
@@ -486,14 +503,14 @@ END AS "time_span"`,
   }
 
   private renderFilterableCell(field: string, enableComparisons = false) {
-    const { segmentFilter } = this.state;
+    const { filters, onFiltersChange } = this.props;
 
     return (row: { value: any }) => (
       <TableFilterableCell
         field={field}
         value={row.value}
-        filters={segmentFilter}
-        onFiltersChange={filters => this.setState({ segmentFilter: filters })}
+        filters={filters}
+        onFiltersChange={onFiltersChange}
         enableComparisons={enableComparisons}
       >
         {row.value}
@@ -502,8 +519,8 @@ END AS "time_span"`,
   }
 
   renderSegmentsTable() {
-    const { segmentsState, segmentFilter, visibleColumns, groupByInterval } = this.state;
-    const { capabilities } = this.props;
+    const { capabilities, filters, onFiltersChange } = this.props;
+    const { segmentsState, visibleColumns, groupByInterval } = this.state;
 
     const segments = segmentsState.data || [];
 
@@ -518,7 +535,7 @@ END AS "time_span"`,
     // Only allow filtering of columns other than datasource if in SQL mode, or if we are filtering on an exact datasource
     const allowGeneralFilter =
       hasSql ||
-      segmentFilter.some(
+      filters.some(
         filter => filter.id === 'datasource' && parseFilterModeAndNeedle(filter)?.mode === '=',
       );
 
@@ -527,13 +544,15 @@ END AS "time_span"`,
         data={segments}
         pages={10000000} // Dummy, we are hiding the page selector
         loading={segmentsState.loading}
-        noDataText={segmentsState.isEmpty() ? 'No segments' : segmentsState.getErrorMessage() || ''}
+        noDataText={
+          segmentsState.isEmpty()
+            ? `No segments${filters.length ? ' matching filter' : ''}`
+            : segmentsState.getErrorMessage() || ''
+        }
         manual
         filterable
-        filtered={segmentFilter}
-        onFilteredChange={filtered => {
-          this.setState({ segmentFilter: filtered });
-        }}
+        filtered={filters}
+        onFilteredChange={onFiltersChange}
         defaultSorted={[hasSql ? { id: 'start', desc: true } : { id: 'datasource', desc: false }]}
         onFetchData={tableState => {
           this.fetchData(groupByInterval, tableState);
@@ -659,11 +678,9 @@ END AS "time_span"`,
 
               switch (v?.type) {
                 case 'range': {
-                  const dimensions = v.dimensions || [];
+                  const dimensions: string[] = v.dimensions || [];
                   const formatEdge = (values: string[]) =>
-                    values
-                      .map((x, i) => formatRangeDimensionValue(dimensions[i] || `d${i}`, x))
-                      .join('; ');
+                    dimensions.map((d, i) => formatRangeDimensionValue(d, values[i])).join('; ');
 
                   return (
                     <TableClickableCell
@@ -736,6 +753,19 @@ END AS "time_span"`,
                   );
               }
             },
+            Aggregated: opt => {
+              const { subRows } = opt;
+              const previewValues = filterMap(subRows, row => row['shard_spec'].type);
+              const previewCount = countBy(previewValues);
+              return (
+                <div className="default-aggregated">
+                  {Object.keys(previewCount)
+                    .sort()
+                    .map(v => `${v} (${previewCount[v]})`)
+                    .join(', ')}
+                </div>
+              );
+            },
           },
           {
             Header: 'Partition',
@@ -783,7 +813,7 @@ END AS "time_span"`,
             ),
           },
           {
-            Header: twoLines('Avg. row size', '(bytes)'),
+            Header: twoLines('Avg. row size', <i>(bytes)</i>),
             show: capabilities.hasSql() && visibleColumns.shown('Avg. row size'),
             accessor: 'avg_row_size',
             filterable: false,
@@ -801,19 +831,37 @@ END AS "time_span"`,
             },
           },
           {
-            Header: 'Replicas',
+            Header: twoLines('Replicas', <i>(actual)</i>),
             show: hasSql && visibleColumns.shown('Replicas'),
             accessor: 'num_replicas',
-            width: 60,
+            width: 80,
             filterable: false,
             defaultSortDesc: true,
             className: 'padded',
           },
           {
-            Header: 'Is published',
-            show: hasSql && visibleColumns.shown('Is published'),
-            id: 'is_published',
-            accessor: row => String(Boolean(row.is_published)),
+            Header: twoLines('Replication factor', <i>(desired)</i>),
+            show: hasSql && visibleColumns.shown('Replication factor'),
+            accessor: 'replication_factor',
+            width: 80,
+            filterable: false,
+            defaultSortDesc: true,
+            className: 'padded',
+          },
+          {
+            Header: 'Is available',
+            show: hasSql && visibleColumns.shown('Is available'),
+            id: 'is_available',
+            accessor: row => String(Boolean(row.is_available)),
+            Filter: BooleanFilterInput,
+            className: 'padded',
+            width: 100,
+          },
+          {
+            Header: 'Is active',
+            show: hasSql && visibleColumns.shown('Is active'),
+            id: 'is_active',
+            accessor: row => String(Boolean(row.is_active)),
             Filter: BooleanFilterInput,
             className: 'padded',
             width: 100,
@@ -828,10 +876,10 @@ END AS "time_span"`,
             width: 100,
           },
           {
-            Header: 'Is available',
-            show: hasSql && visibleColumns.shown('Is available'),
-            id: 'is_available',
-            accessor: row => String(Boolean(row.is_available)),
+            Header: 'Is published',
+            show: hasSql && visibleColumns.shown('Is published'),
+            id: 'is_published',
+            accessor: row => String(Boolean(row.is_published)),
             Filter: BooleanFilterInput,
             className: 'padded',
             width: 100,
@@ -898,7 +946,9 @@ END AS "time_span"`,
           this.segmentsQueryManager.rerunLastQuery();
         }}
       >
-        <p>{`Are you sure you want to drop segment '${terminateSegmentId}'?`}</p>
+        <p>
+          Are you sure you want to drop segment <Code>{terminateSegmentId}</Code>?
+        </p>
         <p>This action is not reversible.</p>
       </AsyncActionDialog>
     );
@@ -925,7 +975,7 @@ END AS "time_span"`,
     );
   }
 
-  render(): JSX.Element {
+  render() {
     const {
       segmentTableActionDialogId,
       datasourceTableActionDialogId,

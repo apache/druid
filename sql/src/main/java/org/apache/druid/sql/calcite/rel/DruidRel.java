@@ -22,6 +22,7 @@ package org.apache.druid.sql.calcite.rel;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.AbstractRelNode;
+import org.apache.calcite.rel.RelWriter;
 import org.apache.druid.server.QueryResponse;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
@@ -95,6 +96,26 @@ public abstract class DruidRel<T extends DruidRel<?>> extends AbstractRelNode
     return plannerContext;
   }
 
+  /**
+   * Overridden to ensure that subclasses provide a proper implementation. The default implementation from
+   * {@link AbstractRelNode} does nothing and is not appropriate.
+   */
+  @Override
+  public RelWriter explainTerms(RelWriter pw)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  protected Object clone() throws CloneNotSupportedException
+  {
+    // RelNode implements Cloneable, but our class of rels is not cloned, so does not need to implement clone().
+    throw new CloneNotSupportedException();
+  }
+
+  /**
+   * Returns a copy of this rel with the {@link DruidConvention} trait.
+   */
   public abstract T asDruidConvention();
 
   /**

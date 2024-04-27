@@ -79,4 +79,23 @@ public class WikiParquetReaderTest extends BaseParquetReaderTest
                                 + "}";
     Assert.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
   }
+
+  @Test
+  public void testUint32Datatype() throws IOException
+  {
+    InputRowSchema schema = new InputRowSchema(
+        new TimestampSpec("time", "millis", null),
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("foo", "bar"))),
+        ColumnsFilter.all()
+    );
+    InputEntityReader reader = createReader("example/datatypes/uint32_test.parquet", schema, JSONPathSpec.DEFAULT);
+    List<InputRowListPlusRawValues> sampled = sampleAllRows(reader);
+
+    final String expectedJson = "{\n"
+                                + "  \"bar\" : 2147483649,\n"
+                                + "  \"foo\" : \"baz\",\n"
+                                + "  \"time\" : 1678853101621\n"
+                                + "}";
+    Assert.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
+  }
 }

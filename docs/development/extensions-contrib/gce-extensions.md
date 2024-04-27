@@ -23,7 +23,7 @@ title: "GCE Extensions"
   -->
 
 
-To use this Apache Druid extension, [include](../../development/extensions.md#loading-extensions) `gce-extensions` in the extensions load list.
+To use this Apache Druid extension, [include](../../configuration/extensions.md#loading-extensions) `gce-extensions` in the extensions load list.
 
 At the moment, this extension enables only Druid to autoscale instances in GCE.
 

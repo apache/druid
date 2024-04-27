@@ -60,13 +60,15 @@ import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.CompressedColumnarLongsSupplier;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.ImmutableRTreeObjectStrategy;
+import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.IndexedIterable;
+import org.apache.druid.segment.data.ListIndexed;
 import org.apache.druid.segment.data.VSizeColumnarMultiInts;
 import org.apache.druid.segment.serde.ComplexColumnPartSupplier;
-import org.apache.druid.segment.serde.DictionaryEncodedColumnSupplier;
-import org.apache.druid.segment.serde.DictionaryEncodedStringIndexSupplier;
 import org.apache.druid.segment.serde.FloatNumericColumnSupplier;
 import org.apache.druid.segment.serde.LongNumericColumnSupplier;
+import org.apache.druid.segment.serde.StringUtf8ColumnIndexSupplier;
+import org.apache.druid.segment.serde.StringUtf8DictionaryEncodedColumnSupplier;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -77,6 +79,7 @@ import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -107,7 +110,7 @@ public class IndexIO
     this.mapper = Preconditions.checkNotNull(mapper, "null ObjectMapper");
     Preconditions.checkNotNull(columnConfig, "null ColumnConfig");
     ImmutableMap.Builder<Integer, IndexLoader> indexLoadersBuilder = ImmutableMap.builder();
-    LegacyIndexLoader legacyIndexLoader = new LegacyIndexLoader(new DefaultIndexIOHandler(), columnConfig);
+    LegacyIndexLoader legacyIndexLoader = new LegacyIndexLoader(new DefaultIndexIOHandler());
     for (int i = 0; i <= V8_VERSION; i++) {
       indexLoadersBuilder.put(i, legacyIndexLoader);
     }
@@ -274,6 +277,10 @@ public class IndexIO
             throw notEqualValidationException(dim1Name, vals1, vals2);
           }
         }
+      } else if (vals1 instanceof Object[]) {
+        if (!Arrays.deepEquals((Object[]) vals1, (Object[]) vals2)) {
+          throw notEqualValidationException(dim1Name, vals1, vals2);
+        }
       } else {
         if (!Objects.equals(vals1, vals2)) {
           throw notEqualValidationException(dim1Name, vals1, vals2);
@@ -362,7 +369,6 @@ public class IndexIO
         metrics.put(metric, holder);
       }
 
-      Map<String, GenericIndexed<String>> dimValueLookups = new HashMap<>();
       Map<String, GenericIndexed<ByteBuffer>> dimValueUtf8Lookups = new HashMap<>();
       Map<String, VSizeColumnarMultiInts> dimColumns = new HashMap<>();
       Map<String, GenericIndexed<ImmutableBitmap>> bitmaps = new HashMap<>();
@@ -377,9 +383,7 @@ public class IndexIO
             fileDimensionName
         );
 
-        // Duplicate the first buffer since we are reading the dictionary twice.
-        dimValueLookups.put(dimension, GenericIndexed.read(dimBuffer.duplicate(), GenericIndexed.STRING_STRATEGY));
-        dimValueUtf8Lookups.put(dimension, GenericIndexed.read(dimBuffer, GenericIndexed.BYTE_BUFFER_STRATEGY));
+        dimValueUtf8Lookups.put(dimension, GenericIndexed.read(dimBuffer, GenericIndexed.UTF8_STRATEGY));
         dimColumns.put(dimension, VSizeColumnarMultiInts.readFromByteBuffer(dimBuffer));
       }
 
@@ -408,7 +412,6 @@ public class IndexIO
           dataInterval,
           timestamps,
           metrics,
-          dimValueLookups,
           dimValueUtf8Lookups,
           dimColumns,
           bitmaps,
@@ -430,12 +433,10 @@ public class IndexIO
   static class LegacyIndexLoader implements IndexLoader
   {
     private final IndexIOHandler legacyHandler;
-    private final ColumnConfig columnConfig;
 
-    LegacyIndexLoader(IndexIOHandler legacyHandler, ColumnConfig columnConfig)
+    LegacyIndexLoader(IndexIOHandler legacyHandler)
     {
       this.legacyHandler = legacyHandler;
-      this.columnConfig = columnConfig;
     }
 
     @Override
@@ -450,21 +451,18 @@ public class IndexIO
             .setType(ValueType.STRING)
             .setHasMultipleValues(true)
             .setDictionaryEncodedColumnSupplier(
-                new DictionaryEncodedColumnSupplier(
-                    index.getDimValueLookup(dimension),
-                    index.getDimValueUtf8Lookup(dimension),
+                new StringUtf8DictionaryEncodedColumnSupplier<>(
+                    index.getDimValueUtf8Lookup(dimension)::singleThreaded,
                     null,
-                    Suppliers.ofInstance(index.getDimColumn(dimension)),
-                    columnConfig.columnCacheSizeBytes()
+                    Suppliers.ofInstance(index.getDimColumn(dimension))
                 )
             );
         GenericIndexed<ImmutableBitmap> bitmaps = index.getBitmapIndexes().get(dimension);
         ImmutableRTree spatialIndex = index.getSpatialIndexes().get(dimension);
         builder.setIndexSupplier(
-            new DictionaryEncodedStringIndexSupplier(
+            new StringUtf8ColumnIndexSupplier<>(
                 new ConciseBitmapFactory(),
-                index.getDimValueLookup(dimension),
-                index.getDimValueUtf8Lookup(dimension),
+                index.getDimValueUtf8Lookup(dimension)::singleThreaded,
                 bitmaps,
                 spatialIndex
             ),
@@ -639,14 +637,12 @@ public class IndexIO
           loadFailed
       );
 
-      final GenericIndexed<String> finalCols, finalDims;
+      final Indexed<String> finalCols, finalDims;
 
       if (allCols != null) {
         // To restore original column order, we merge allCols/allDims and nonNullCols/nonNullDims, respectively.
-        final List<String> mergedCols = restoreColumns(nonNullCols, allCols);
-        final List<String> mergedDims = restoreColumns(nonNullDims, allDims);
-        finalCols = GenericIndexed.fromIterable(mergedCols, GenericIndexed.STRING_STRATEGY);
-        finalDims = GenericIndexed.fromIterable(mergedDims, GenericIndexed.STRING_STRATEGY);
+        finalCols = new ListIndexed<>(restoreColumns(nonNullCols, allCols));
+        finalDims = new ListIndexed<>(restoreColumns(nonNullDims, allDims));
       } else {
         finalCols = nonNullCols;
         finalDims = nonNullDims;
@@ -701,9 +697,9 @@ public class IndexIO
               + "while allColsIterator expects one. This is likely a potential bug in creating this segment. "
               + "Try reingesting your data with storeEmptyColumns setting to false in task context."
           );
-          mergedCols.add(nonNullColsIterator.next());
+          mergedCols.add(SmooshedFileMapper.STRING_INTERNER.intern(nonNullColsIterator.next()));
         } else {
-          mergedCols.add(next);
+          mergedCols.add(SmooshedFileMapper.STRING_INTERNER.intern(next));
         }
       }
 
@@ -712,7 +708,7 @@ public class IndexIO
 
     private void registerColumnHolders(
         File inDir,
-        GenericIndexed<String> cols,
+        Indexed<String> cols,
         boolean lazy,
         Map<String, Supplier<ColumnHolder>> columns,
         ObjectMapper mapper,
@@ -726,7 +722,7 @@ public class IndexIO
           continue;
         }
 
-        ByteBuffer colBuffer = smooshedFiles.mapFile(columnName);
+        final ByteBuffer colBuffer = smooshedFiles.mapFile(columnName);
         registerColumnHolder(
             lazy,
             columns,
@@ -749,12 +745,16 @@ public class IndexIO
         SegmentLazyLoadFailCallback loadFailed
     ) throws IOException
     {
+
+      // we use the interner here too even though it might have already been added by restoreColumns(..) because that
+      // only happens if there are some null columns
+      final String internedColumnName = SmooshedFileMapper.STRING_INTERNER.intern(columnName);
       if (lazy) {
-        columns.put(columnName, Suppliers.memoize(
+        columns.put(internedColumnName, Suppliers.memoize(
             () -> {
               try {
                 return deserializeColumn(
-                    columnName,
+                    internedColumnName,
                     mapper,
                     colBuffer,
                     smooshedFiles
@@ -768,13 +768,13 @@ public class IndexIO
             }
         ));
       } else {
-        ColumnHolder columnHolder = deserializeColumn(
-            columnName,
+        final ColumnHolder columnHolder = deserializeColumn(
+            internedColumnName,
             mapper,
             colBuffer,
             smooshedFiles
         );
-        columns.put(columnName, () -> columnHolder);
+        columns.put(internedColumnName, () -> columnHolder);
       }
     }
 
@@ -790,9 +790,7 @@ public class IndexIO
         SmooshedFileMapper smooshedFiles
     ) throws IOException
     {
-      ColumnDescriptor serde = mapper.readValue(
-          SERIALIZER_UTILS.readString(byteBuffer), ColumnDescriptor.class
-      );
+      ColumnDescriptor serde = mapper.readValue(SERIALIZER_UTILS.readString(byteBuffer), ColumnDescriptor.class);
       return serde.read(byteBuffer, columnConfig, smooshedFiles);
     }
   }

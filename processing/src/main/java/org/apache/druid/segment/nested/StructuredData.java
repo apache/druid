@@ -21,12 +21,14 @@ package org.apache.druid.segment.nested;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.google.common.primitives.Longs;
 import net.jpountz.xxhash.XXHash64;
 import net.jpountz.xxhash.XXHashFactory;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.segment.column.TypeStrategies;
 
 import javax.annotation.Nullable;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Objects;
 import java.util.function.LongSupplier;
@@ -172,6 +174,9 @@ public class StructuredData implements Comparable<StructuredData>
       return false;
     }
     StructuredData that = (StructuredData) o;
+    if (value instanceof Object[] && that.value instanceof Object[]) {
+      return Arrays.deepEquals((Object[]) value, (Object[]) that.value);
+    }
     return Objects.equals(value, that.value);
   }
 
@@ -179,6 +184,12 @@ public class StructuredData implements Comparable<StructuredData>
   public int hashCode()
   {
     return Objects.hash(value);
+  }
+
+  // hashCode that relies on the object equality. Translates the hashcode to an integer as well
+  public int equalityHash()
+  {
+    return Longs.hashCode(hash.getAsLong());
   }
 
   @Override

@@ -3,9 +3,11 @@
 exports[`MenuCheckbox matches snapshot checked 1`] = `
 <li
   class=""
+  role="none"
 >
   <a
     class="bp4-menu-item menu-checkbox"
+    role="menuitem"
     tabindex="0"
   >
     <span
@@ -20,6 +22,7 @@ exports[`MenuCheckbox matches snapshot checked 1`] = `
         <svg
           data-icon="tick-circle"
           height="16"
+          role="img"
           viewBox="0 0 16 16"
           width="16"
         >
@@ -42,9 +45,11 @@ exports[`MenuCheckbox matches snapshot checked 1`] = `
 exports[`MenuCheckbox matches snapshot unchecked 1`] = `
 <li
   class=""
+  role="none"
 >
   <a
     class="bp4-menu-item menu-checkbox"
+    role="menuitem"
     tabindex="0"
   >
     <span
@@ -59,6 +64,7 @@ exports[`MenuCheckbox matches snapshot unchecked 1`] = `
         <svg
           data-icon="circle"
           height="16"
+          role="img"
           viewBox="0 0 16 16"
           width="16"
         >

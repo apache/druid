@@ -20,12 +20,13 @@
 package org.apache.druid.segment.join.table;
 
 import com.google.common.base.Preconditions;
-import it.unimi.dsi.fastutil.ints.IntList;
-import it.unimi.dsi.fastutil.ints.IntLists;
+import it.unimi.dsi.fastutil.ints.IntSortedSet;
+import it.unimi.dsi.fastutil.ints.IntSortedSets;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.column.ColumnType;
 
+import javax.annotation.Nullable;
 import java.util.Map;
 
 /**
@@ -33,25 +34,53 @@ import java.util.Map;
  */
 public class MapIndex implements IndexedTable.Index
 {
+  /**
+   * Type of keys in {@link #index}.
+   */
   private final ColumnType keyType;
-  private final Map<Object, IntList> index;
-  private final boolean keysUnique;
+
+  /**
+   * Index of all nonnull keys -> rows with those keys.
+   */
+  private final Map<Object, IntSortedSet> index;
+
+  /**
+   * Rows containing a null key.
+   */
+  @Nullable
+  private final IntSortedSet nullIndex;
+
+  /**
+   * Whether nonnull keys are unique, i.e. everything in {@link #index} has exactly 1 element.
+   */
+  private final boolean nonNullKeysUnique;
+
+  /**
+   * Whether {@link #index} is a {@link Long2ObjectMap}.
+   */
   private final boolean isLong2ObjectMap;
 
   /**
    * Creates a new instance based on a particular map.
    *
-   * @param keyType    type of keys in "index"
-   * @param index      a map of keys to matching row numbers
-   * @param keysUnique whether the keys are unique (if true: all IntLists in the index must be exactly 1 element)
+   * @param keyType           type of keys in "index"
+   * @param index             a map of keys to matching row numbers
+   * @param nonNullKeysUnique whether nonnull keys are unique (if true: all IntLists in the index must be exactly 1
+   *                          element, except possibly the one corresponding to null)
    *
    * @see RowBasedIndexBuilder#build() the main caller
    */
-  MapIndex(final ColumnType keyType, final Map<Object, IntList> index, final boolean keysUnique)
+  MapIndex(
+      final ColumnType keyType,
+      final Map<Object, IntSortedSet> index,
+      final IntSortedSet nullIndex,
+      final boolean nonNullKeysUnique
+  )
   {
     this.keyType = Preconditions.checkNotNull(keyType, "keyType");
     this.index = Preconditions.checkNotNull(index, "index");
-    this.keysUnique = keysUnique;
+    this.nullIndex = nullIndex;
+    this.nonNullKeysUnique = nonNullKeysUnique;
     this.isLong2ObjectMap = index instanceof Long2ObjectMap;
   }
 
@@ -62,35 +91,47 @@ public class MapIndex implements IndexedTable.Index
   }
 
   @Override
-  public boolean areKeysUnique()
+  public boolean areKeysUnique(final boolean includeNull)
   {
-    return keysUnique;
+    if (includeNull) {
+      return nonNullKeysUnique && find(null).size() < 2;
+    } else {
+      return nonNullKeysUnique;
+    }
   }
 
   @Override
-  public IntList find(Object key)
+  public IntSortedSet find(@Nullable Object key)
   {
-    final Object convertedKey = DimensionHandlerUtils.convertObjectToType(key, keyType, false);
+    final IntSortedSet found;
 
-    if (convertedKey != null) {
-      final IntList found = index.get(convertedKey);
-      if (found != null) {
-        return found;
-      } else {
-        return IntLists.EMPTY_LIST;
-      }
+    if (key == null) {
+      found = nullIndex;
     } else {
-      return IntLists.EMPTY_LIST;
+      final Object convertedKey = DimensionHandlerUtils.convertObjectToType(key, keyType, false);
+
+      if (convertedKey != null) {
+        found = index.get(convertedKey);
+      } else {
+        // Don't look up null in the index, since this convertedKey is null because it's a failed cast, not a true null.
+        found = null;
+      }
+    }
+
+    if (found != null) {
+      return found;
+    } else {
+      return IntSortedSets.EMPTY_SET;
     }
   }
 
   @Override
   public int findUniqueLong(long key)
   {
-    if (isLong2ObjectMap && keysUnique) {
-      final IntList rows = ((Long2ObjectMap<IntList>) (Map) index).get(key);
+    if (isLong2ObjectMap && nonNullKeysUnique) {
+      final IntSortedSet rows = ((Long2ObjectMap<IntSortedSet>) (Map) index).get(key);
       assert rows == null || rows.size() == 1;
-      return rows != null ? rows.getInt(0) : NOT_FOUND;
+      return rows != null ? rows.firstInt() : NOT_FOUND;
     } else {
       throw new UnsupportedOperationException();
     }

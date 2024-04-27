@@ -3,6 +3,17 @@
   "spec": {
     "dataSchema": {
       "dataSource": "%%DATASOURCE%%",
+      "dimensionsSpec": {
+        "dimensions": [
+          "channel",
+          "page",
+          "user"
+        ]
+      },
+      "timestampSpec": {
+        "format": "auto",
+        "column": "time"
+      },
       "granularitySpec": {
         "type": "uniform",
         "segmentGranularity": "day",
@@ -10,23 +21,6 @@
         "intervals": [
           "2015-09-12/2015-09-13"
         ]
-      },
-      "parser": {
-        "type": "hadoopyString",
-        "parseSpec": {
-          "format": "json",
-          "dimensionsSpec": {
-            "dimensions": [
-              "channel",
-              "page",
-              "user"
-            ]
-          },
-          "timestampSpec": {
-            "format": "auto",
-            "column": "time"
-          }
-        }
       },
       "metricsSpec": [
         {
@@ -52,10 +46,13 @@
     },
     "ioConfig": {
       "type": "index",
-      "firehose": {
+      "inputSource": {
         "type": "local",
         "baseDir": "/shared/wikiticker-it",
         "filter": "wikiticker-2015-09-12-sampled.json.gz"
+      },
+      "inputFormat": {
+        "type": "json"
       }
     },
     "tuningConfig": {

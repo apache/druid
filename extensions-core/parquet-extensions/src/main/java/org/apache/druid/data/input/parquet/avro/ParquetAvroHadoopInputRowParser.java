@@ -32,6 +32,7 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.avro.AvroFlattenerMaker;
 import org.apache.druid.data.input.avro.AvroParseSpec;
+import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
@@ -76,9 +77,16 @@ public class ParquetAvroHadoopInputRowParser implements InputRowParser<GenericRe
       flattenSpec = JSONPathSpec.DEFAULT;
     }
 
+    final DimensionsSpec dimensionsSpec = parseSpec.getDimensionsSpec();
+
     this.recordFlattener = ObjectFlatteners.create(
         flattenSpec,
-        new AvroFlattenerMaker(false, this.binaryAsString, this.extractUnionsByType)
+        new AvroFlattenerMaker(
+            false,
+            this.binaryAsString,
+            this.extractUnionsByType,
+            dimensionsSpec != null && dimensionsSpec.useSchemaDiscovery()
+        )
     );
   }
 

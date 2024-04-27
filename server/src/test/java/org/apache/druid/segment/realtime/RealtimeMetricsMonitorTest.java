@@ -19,57 +19,89 @@
 
 package org.apache.druid.segment.realtime;
 
-import com.google.common.collect.ImmutableList;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.easymock.EasyMock;
-import org.junit.Assert;
+import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
+
+import java.util.Collections;
+import java.util.Random;
 
 public class RealtimeMetricsMonitorTest
 {
-  private ServiceEmitter emitter;
-  private FireDepartment fireDepartment;
 
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
+  private StubServiceEmitter emitter;
+  private Random random;
 
   @Before
   public void setup()
   {
-    emitter = EasyMock.mock(ServiceEmitter.class);
-    fireDepartment = EasyMock.mock(FireDepartment.class);
+    random = new Random(100);
+    emitter = new StubServiceEmitter("test", "localhost");
   }
 
   @Test
-  public void testLastRoundMetricsEmission()
+  public void testDoMonitor()
   {
-    FireDepartmentMetrics metrics = new FireDepartmentMetrics();
-    DataSchema schema = new DataSchema("dataSource", null, null, null, null, null, null, null);
-    EasyMock.expect(fireDepartment.getMetrics()).andReturn(metrics);
-    EasyMock.expectLastCall().times(2);
-    EasyMock.expect(fireDepartment.getDataSchema()).andReturn(schema);
-    EasyMock.expectLastCall().times(2);
-    EasyMock.replay(fireDepartment);
+    FireDepartment fireDepartment = new FireDepartment(
+        new DataSchema("wiki", null, null, null, null, null, null, new DefaultObjectMapper()),
+        new RealtimeIOConfig(null, null),
+        null
+    );
 
-    RealtimeMetricsMonitor monitor = new RealtimeMetricsMonitor(ImmutableList.of(fireDepartment));
-    Assert.assertFalse(monitor.isStarted());
-    boolean zerothRound = monitor.monitor(emitter);
-    monitor.start();
-    Assert.assertTrue(monitor.isStarted());
-    boolean firstRound = monitor.monitor(emitter);
-    monitor.stop();
-    Assert.assertFalse(monitor.isStarted());
-    boolean secondRound = monitor.monitor(emitter);
-    boolean thirdRound = monitor.monitor(emitter);
+    // Add some metrics and invoke monitoring
+    final FireDepartmentMetrics metrics = fireDepartment.getMetrics();
+    invokeRandomTimes(metrics::incrementThrownAway);
+    invokeRandomTimes(metrics::incrementUnparseable);
+    invokeRandomTimes(metrics::incrementProcessed);
+    invokeRandomTimes(metrics::incrementDedup);
+    invokeRandomTimes(metrics::incrementFailedHandoffs);
+    invokeRandomTimes(metrics::incrementFailedPersists);
+    invokeRandomTimes(metrics::incrementHandOffCount);
+    invokeRandomTimes(metrics::incrementNumPersists);
 
-    Assert.assertFalse(zerothRound);
-    Assert.assertTrue(firstRound && secondRound);
-    Assert.assertFalse(thirdRound);
-    EasyMock.verify(fireDepartment);
+    metrics.incrementPushedRows(random.nextInt());
+    metrics.incrementRowOutputCount(random.nextInt());
+    metrics.incrementMergedRows(random.nextInt());
+    metrics.incrementMergeCpuTime(random.nextInt());
+    metrics.setSinkCount(random.nextInt());
+
+    RealtimeMetricsMonitor monitor = new RealtimeMetricsMonitor(Collections.singletonList(fireDepartment));
+    monitor.doMonitor(emitter);
+
+    // Verify the metrics
+    emitter.verifyValue("ingest/events/thrownAway", metrics.thrownAway());
+    emitter.verifyValue("ingest/events/unparseable", metrics.unparseable());
+
+    emitter.verifyValue("ingest/events/duplicate", metrics.dedup());
+    emitter.verifyValue("ingest/events/processed", metrics.processed());
+    emitter.verifyValue("ingest/rows/output", metrics.rowOutput());
+    emitter.verifyValue("ingest/persists/count", metrics.numPersists());
+    emitter.verifyValue("ingest/persists/time", metrics.persistTimeMillis());
+    emitter.verifyValue("ingest/persists/cpu", metrics.persistCpuTime());
+    emitter.verifyValue("ingest/persists/backPressure", metrics.persistBackPressureMillis());
+    emitter.verifyValue("ingest/persists/failed", metrics.failedPersists());
+    emitter.verifyValue("ingest/handoff/failed", metrics.failedHandoffs());
+    emitter.verifyValue("ingest/merge/time", metrics.mergeTimeMillis());
+    emitter.verifyValue("ingest/merge/cpu", metrics.mergeCpuTime());
+    emitter.verifyValue("ingest/handoff/count", metrics.handOffCount());
+    emitter.verifyValue("ingest/sink/count", metrics.sinkCount());
+  }
+
+  private void invokeRandomTimes(Action action)
+  {
+    int limit = random.nextInt(20);
+    for (int i = 0; i < limit; ++i) {
+      action.perform();
+    }
+  }
+
+  @FunctionalInterface
+  private interface Action
+  {
+    void perform();
   }
 
 }

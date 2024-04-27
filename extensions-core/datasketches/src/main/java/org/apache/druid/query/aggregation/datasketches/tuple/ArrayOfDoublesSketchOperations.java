@@ -30,6 +30,7 @@ import org.apache.datasketches.tuple.arrayofdoubles.ArrayOfDoublesUnion;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.data.SafeWritableMemory;
 
 import java.nio.charset.StandardCharsets;
 
@@ -115,6 +116,17 @@ public class ArrayOfDoublesSketchOperations
     throw new ISE("Object is not of a type that can deserialize to sketch: %s", serializedSketch.getClass());
   }
 
+  public static ArrayOfDoublesSketch deserializeSafe(final Object serializedSketch)
+  {
+    if (serializedSketch instanceof String) {
+      return deserializeFromBase64EncodedStringSafe((String) serializedSketch);
+    } else if (serializedSketch instanceof byte[]) {
+      return deserializeFromByteArraySafe((byte[]) serializedSketch);
+    }
+
+    return deserialize(serializedSketch);
+  }
+
   public static ArrayOfDoublesSketch deserializeFromBase64EncodedString(final String str)
   {
     return deserializeFromByteArray(StringUtils.decodeBase64(str.getBytes(StandardCharsets.UTF_8)));
@@ -122,8 +134,16 @@ public class ArrayOfDoublesSketchOperations
 
   public static ArrayOfDoublesSketch deserializeFromByteArray(final byte[] data)
   {
-    final Memory mem = Memory.wrap(data);
-    return ArrayOfDoublesSketches.wrapSketch(mem);
+    return ArrayOfDoublesSketches.wrapSketch(Memory.wrap(data));
   }
 
+  public static ArrayOfDoublesSketch deserializeFromBase64EncodedStringSafe(final String str)
+  {
+    return deserializeFromByteArraySafe(StringUtils.decodeBase64(str.getBytes(StandardCharsets.UTF_8)));
+  }
+
+  public static ArrayOfDoublesSketch deserializeFromByteArraySafe(final byte[] data)
+  {
+    return ArrayOfDoublesSketches.wrapSketch(SafeWritableMemory.wrap(data));
+  }
 }

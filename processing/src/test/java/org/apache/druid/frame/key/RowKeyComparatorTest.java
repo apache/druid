@@ -63,85 +63,88 @@ public class RowKeyComparatorTest extends InitializedNullHandlingTest
   @Test
   public void test_compare_AAAA() // AAAA = all ascending
   {
-    final List<SortColumn> sortColumns = ImmutableList.of(
-        new SortColumn("1", true),
-        new SortColumn("2", true),
-        new SortColumn("3", true),
-        new SortColumn("4", true)
+    final List<KeyColumn> keyColumns = ImmutableList.of(
+        new KeyColumn("1", KeyOrder.DESCENDING),
+        new KeyColumn("2", KeyOrder.DESCENDING),
+        new KeyColumn("3", KeyOrder.DESCENDING),
+        new KeyColumn("4", KeyOrder.DESCENDING)
     );
     Assert.assertEquals(
-        sortUsingObjectComparator(sortColumns, ALL_KEY_OBJECTS),
-        sortUsingKeyComparator(sortColumns, ALL_KEY_OBJECTS)
+        sortUsingObjectComparator(keyColumns, ALL_KEY_OBJECTS),
+        sortUsingKeyComparator(keyColumns, ALL_KEY_OBJECTS)
     );
   }
 
   @Test
   public void test_compare_DDDD() // DDDD = all descending
   {
-    final List<SortColumn> sortColumns = ImmutableList.of(
-        new SortColumn("1", false),
-        new SortColumn("2", false),
-        new SortColumn("3", false),
-        new SortColumn("4", false)
+    final List<KeyColumn> keyColumns = ImmutableList.of(
+        new KeyColumn("1", KeyOrder.ASCENDING),
+        new KeyColumn("2", KeyOrder.ASCENDING),
+        new KeyColumn("3", KeyOrder.ASCENDING),
+        new KeyColumn("4", KeyOrder.ASCENDING)
     );
     Assert.assertEquals(
-        sortUsingObjectComparator(sortColumns, ALL_KEY_OBJECTS),
-        sortUsingKeyComparator(sortColumns, ALL_KEY_OBJECTS)
+        sortUsingObjectComparator(keyColumns, ALL_KEY_OBJECTS),
+        sortUsingKeyComparator(keyColumns, ALL_KEY_OBJECTS)
     );
   }
 
   @Test
   public void test_compare_DAAD()
   {
-    final List<SortColumn> sortColumns = ImmutableList.of(
-        new SortColumn("1", false),
-        new SortColumn("2", true),
-        new SortColumn("3", true),
-        new SortColumn("4", false)
+    final List<KeyColumn> keyColumns = ImmutableList.of(
+        new KeyColumn("1", KeyOrder.ASCENDING),
+        new KeyColumn("2", KeyOrder.DESCENDING),
+        new KeyColumn("3", KeyOrder.DESCENDING),
+        new KeyColumn("4", KeyOrder.ASCENDING)
     );
     Assert.assertEquals(
-        sortUsingObjectComparator(sortColumns, ALL_KEY_OBJECTS),
-        sortUsingKeyComparator(sortColumns, ALL_KEY_OBJECTS)
+        sortUsingObjectComparator(keyColumns, ALL_KEY_OBJECTS),
+        sortUsingKeyComparator(keyColumns, ALL_KEY_OBJECTS)
     );
   }
 
   @Test
   public void test_compare_ADDA()
   {
-    final List<SortColumn> sortColumns = ImmutableList.of(
-        new SortColumn("1", true),
-        new SortColumn("2", false),
-        new SortColumn("3", false),
-        new SortColumn("4", true)
+    final List<KeyColumn> keyColumns = ImmutableList.of(
+        new KeyColumn("1", KeyOrder.DESCENDING),
+        new KeyColumn("2", KeyOrder.ASCENDING),
+        new KeyColumn("3", KeyOrder.ASCENDING),
+        new KeyColumn("4", KeyOrder.DESCENDING)
     );
     Assert.assertEquals(
-        sortUsingObjectComparator(sortColumns, ALL_KEY_OBJECTS),
-        sortUsingKeyComparator(sortColumns, ALL_KEY_OBJECTS)
+        sortUsingObjectComparator(keyColumns, ALL_KEY_OBJECTS),
+        sortUsingKeyComparator(keyColumns, ALL_KEY_OBJECTS)
     );
   }
 
   @Test
   public void test_compare_DADA()
   {
-    final List<SortColumn> sortColumns = ImmutableList.of(
-        new SortColumn("1", true),
-        new SortColumn("2", false),
-        new SortColumn("3", true),
-        new SortColumn("4", false)
+    final List<KeyColumn> keyColumns = ImmutableList.of(
+        new KeyColumn("1", KeyOrder.DESCENDING),
+        new KeyColumn("2", KeyOrder.ASCENDING),
+        new KeyColumn("3", KeyOrder.DESCENDING),
+        new KeyColumn("4", KeyOrder.ASCENDING)
     );
     Assert.assertEquals(
-        sortUsingObjectComparator(sortColumns, ALL_KEY_OBJECTS),
-        sortUsingKeyComparator(sortColumns, ALL_KEY_OBJECTS)
+        sortUsingObjectComparator(keyColumns, ALL_KEY_OBJECTS),
+        sortUsingKeyComparator(keyColumns, ALL_KEY_OBJECTS)
     );
   }
 
   @Test
   public void test_equals()
   {
-    EqualsVerifier.forClass(RowKeyComparator.class).usingGetClass().verify();
+    EqualsVerifier.forClass(RowKeyComparator.class)
+                  .withNonnullFields("byteRowKeyComparatorDelegate")
+                  .usingGetClass()
+                  .verify();
   }
 
-  private List<RowKey> sortUsingKeyComparator(final List<SortColumn> sortColumns, final List<Object[]> objectss)
+  private List<RowKey> sortUsingKeyComparator(final List<KeyColumn> keyColumns, final List<Object[]> objectss)
   {
     final List<RowKey> sortedKeys = new ArrayList<>();
 
@@ -149,22 +152,22 @@ public class RowKeyComparatorTest extends InitializedNullHandlingTest
       sortedKeys.add(KeyTestUtils.createKey(SIGNATURE, objects));
     }
 
-    sortedKeys.sort(RowKeyComparator.create(sortColumns));
+    sortedKeys.sort(RowKeyComparator.create(keyColumns));
     return sortedKeys;
   }
 
-  private List<RowKey> sortUsingObjectComparator(final List<SortColumn> sortColumns, final List<Object[]> objectss)
+  private List<RowKey> sortUsingObjectComparator(final List<KeyColumn> keyColumns, final List<Object[]> objectss)
   {
     final List<Object[]> sortedObjectssCopy = objectss.stream().sorted(
         (o1, o2) -> {
-          for (int i = 0; i < sortColumns.size(); i++) {
-            final SortColumn sortColumn = sortColumns.get(i);
+          for (int i = 0; i < keyColumns.size(); i++) {
+            final KeyColumn keyColumn = keyColumns.get(i);
 
             //noinspection unchecked, rawtypes
             final int cmp = Comparators.<Comparable>naturalNullsFirst()
                                        .compare((Comparable) o1[i], (Comparable) o2[i]);
             if (cmp != 0) {
-              return sortColumn.descending() ? -cmp : cmp;
+              return keyColumn.order() == KeyOrder.DESCENDING ? -cmp : cmp;
             }
           }
 

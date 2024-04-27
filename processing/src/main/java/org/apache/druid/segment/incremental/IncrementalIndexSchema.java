@@ -33,6 +33,11 @@ import javax.annotation.Nullable;
  */
 public class IncrementalIndexSchema
 {
+  public static IncrementalIndexSchema.Builder builder()
+  {
+    return new Builder();
+  }
+
   private final long minTimestamp;
   private final TimestampSpec timestampSpec;
   private final Granularity gran;

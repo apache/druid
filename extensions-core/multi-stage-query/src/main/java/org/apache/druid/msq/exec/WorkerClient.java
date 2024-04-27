@@ -25,6 +25,7 @@ import org.apache.druid.frame.key.ClusterByPartitions;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
 import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.kernel.WorkOrder;
+import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
 
 import java.io.IOException;
 
@@ -36,7 +37,28 @@ public interface WorkerClient extends AutoCloseable
   /**
    * Worker's client method to add a {@link WorkOrder} to the worker to work on
    */
-  ListenableFuture<Void> postWorkOrder(String workerId, WorkOrder workOrder);
+  ListenableFuture<Void> postWorkOrder(String workerTaskId, WorkOrder workOrder);
+
+  /**
+   * Fetches the {@link ClusterByStatisticsSnapshot} from a worker. This is intended to be used by the
+   * {@link WorkerSketchFetcher} under PARALLEL or AUTO modes.
+   */
+  ListenableFuture<ClusterByStatisticsSnapshot> fetchClusterByStatisticsSnapshot(
+      String workerTaskId,
+      String queryId,
+      int stageNumber
+  );
+
+  /**
+   * Fetches a {@link ClusterByStatisticsSnapshot} which contains only the sketch of the specified timeChunk.
+   * This is intended to be used by the {@link WorkerSketchFetcher} under SEQUENTIAL or AUTO modes.
+   */
+  ListenableFuture<ClusterByStatisticsSnapshot> fetchClusterByStatisticsSnapshotForTimeChunk(
+      String workerTaskId,
+      String queryId,
+      int stageNumber,
+      long timeChunk
+  );
 
   /**
    * Worker's client method to inform it of the partition boundaries for the given stage. This is usually invoked by the
@@ -50,13 +72,15 @@ public interface WorkerClient extends AutoCloseable
 
   /**
    * Worker's client method to inform that the work has been done, and it can initiate cleanup and shutdown
+   * @param workerTaskId
    */
-  ListenableFuture<Void> postFinish(String workerId);
+  ListenableFuture<Void> postFinish(String workerTaskId);
 
   /**
    * Fetches all the counters gathered by that worker
+   * @param workerTaskId
    */
-  ListenableFuture<CounterSnapshotsTree> getCounters(String workerId);
+  ListenableFuture<CounterSnapshotsTree> getCounters(String workerTaskId);
 
   /**
    * Worker's client method that informs it that the results and resources for the given stage are no longer required

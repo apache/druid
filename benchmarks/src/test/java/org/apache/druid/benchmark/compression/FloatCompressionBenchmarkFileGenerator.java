@@ -29,6 +29,7 @@ import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.generator.ColumnValueGenerator;
 import org.apache.druid.segment.generator.GeneratorColumnSchema;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMedium;
+import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -155,12 +156,14 @@ public class FloatCompressionBenchmarkFileGenerator
         compFile.delete();
         File dataFile = new File(dir, entry.getKey());
 
+        SegmentWriteOutMedium segmentWriteOutMedium = new OffHeapMemorySegmentWriteOutMedium();
         ColumnarFloatsSerializer writer = CompressionFactory.getFloatSerializer(
             "float-benchmark",
-            new OffHeapMemorySegmentWriteOutMedium(),
+            segmentWriteOutMedium,
             "float",
             ByteOrder.nativeOrder(),
-            compression
+            compression,
+            segmentWriteOutMedium.getCloser()
         );
         try (
             BufferedReader br = Files.newBufferedReader(dataFile.toPath(), StandardCharsets.UTF_8);

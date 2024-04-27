@@ -56,9 +56,16 @@ class ReductionOperatorConversionHelper
         boolean hasDouble = false;
         boolean isString = false;
         for (int i = 0; i < n; i++) {
-          RelDataType type = opBinding.getOperandType(i);
-          SqlTypeName sqlTypeName = type.getSqlTypeName();
-          ColumnType valueType = Calcites.getColumnTypeForRelDataType(type);
+          final RelDataType type = opBinding.getOperandType(i);
+          final SqlTypeName sqlTypeName = type.getSqlTypeName();
+          final ColumnType valueType;
+
+          if (SqlTypeName.INTERVAL_TYPES.contains(type.getSqlTypeName())) {
+            // handle intervals as a LONG type even though it is a string
+            valueType = ColumnType.LONG;
+          } else {
+            valueType = Calcites.getColumnTypeForRelDataType(type);
+          }
 
           // Return types are listed in order of preference:
           if (valueType != null) {

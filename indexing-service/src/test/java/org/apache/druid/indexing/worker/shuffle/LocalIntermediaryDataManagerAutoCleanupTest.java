@@ -28,6 +28,7 @@ import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.rpc.indexing.OverlordClient;
@@ -64,21 +65,10 @@ public class LocalIntermediaryDataManagerAutoCleanupTest
   @Before
   public void setup() throws IOException
   {
-    this.taskConfig = new TaskConfig(
-        null,
-        null,
-        null,
-        null,
-        null,
-        false,
-        null,
-        null,
-        ImmutableList.of(new StorageLocationConfig(tempDir.newFolder(), null, null)),
-        false,
-        false,
-        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-        null
-    );
+    this.taskConfig = new TaskConfigBuilder()
+        .setShuffleDataLocations(ImmutableList.of(new StorageLocationConfig(tempDir.newFolder(), null, null)))
+        .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
+        .build();
     this.overlordClient = new NoopOverlordClient()
     {
       @Override

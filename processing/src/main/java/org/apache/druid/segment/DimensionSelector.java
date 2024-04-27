@@ -19,17 +19,19 @@
 
 package org.apache.druid.segment;
 
-import com.google.common.base.Predicate;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.query.extraction.ExtractionFn;
+import org.apache.druid.query.filter.DruidObjectPredicate;
+import org.apache.druid.query.filter.DruidPredicateFactory;
+import org.apache.druid.query.filter.DruidPredicateMatch;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.CalledFromHotLoop;
 import org.apache.druid.query.monomorphicprocessing.HotLoopCallee;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.ZeroIndexedInts;
-import org.apache.druid.segment.filter.BooleanValueMatcher;
+import org.apache.druid.segment.filter.ValueMatchers;
 import org.apache.druid.segment.historical.SingleValueHistoricalDimensionSelector;
 
 import javax.annotation.Nullable;
@@ -66,7 +68,7 @@ public interface DimensionSelector extends ColumnValueSelector<Object>, Dimensio
    */
   ValueMatcher makeValueMatcher(@Nullable String value);
 
-  ValueMatcher makeValueMatcher(Predicate<String> predicate);
+  ValueMatcher makeValueMatcher(DruidPredicateFactory predicateFactory);
 
   /**
    * @deprecated This method is marked as deprecated in DimensionSelector to minimize the probability of accidental
@@ -116,7 +118,7 @@ public interface DimensionSelector extends ColumnValueSelector<Object>, Dimensio
 
   /**
    * Converts the current result of {@link #getRow()} into null, if the row is empty, a String, if the row has size 1,
-   * or a String[] array, if the row has size > 1, using {@link #lookupName(int)}.
+   * or a {@code List<String>}, if the row has size > 1, using {@link #lookupName(int)}.
    *
    * This method is not the default implementation of {@link #getObject()} to minimize the chance that implementations
    * "forget" to override it with more optimized version.
@@ -130,6 +132,11 @@ public interface DimensionSelector extends ColumnValueSelector<Object>, Dimensio
   /**
    * Converts a particular {@link IndexedInts} to an Object in a standard way, assuming each element in the IndexedInts
    * is a dictionary ID that can be resolved with the provided selector.
+   *
+   * Specification:
+   * 1) Empty row ({@link IndexedInts#size()} zero) returns null.
+   * 2) Single-value row returns a single {@link String}.
+   * 3) Two+ value rows return {@link List} of {@link String}.
    */
   @Nullable
   static Object rowToObject(IndexedInts row, DimensionDictionarySelector selector)
@@ -148,10 +155,15 @@ public interface DimensionSelector extends ColumnValueSelector<Object>, Dimensio
     }
   }
 
+  static DimensionSelector nilSelector()
+  {
+    return NullDimensionSelectorHolder.NULL_DIMENSION_SELECTOR;
+  }
+
   static DimensionSelector constant(@Nullable final String value)
   {
     if (NullHandling.isNullOrEquivalent(value)) {
-      return NullDimensionSelectorHolder.NULL_DIMENSION_SELECTOR;
+      return nilSelector();
     } else {
       return new ConstantDimensionSelector(value);
     }
@@ -251,13 +263,25 @@ public interface DimensionSelector extends ColumnValueSelector<Object>, Dimensio
       @Override
       public ValueMatcher makeValueMatcher(@Nullable String value)
       {
-        return BooleanValueMatcher.of(value == null);
+        if (NullHandling.isNullOrEquivalent(value)) {
+          return ValueMatchers.allTrue();
+        }
+        return ValueMatchers.allUnknown();
       }
 
       @Override
-      public ValueMatcher makeValueMatcher(Predicate<String> predicate)
+      public ValueMatcher makeValueMatcher(DruidPredicateFactory predicateFactory)
       {
-        return BooleanValueMatcher.of(predicate.apply(null));
+        final DruidObjectPredicate<String> predicate = predicateFactory.makeStringPredicate();
+        final DruidPredicateMatch match = predicate.apply(null);
+
+        if (match == DruidPredicateMatch.TRUE) {
+          return ValueMatchers.allTrue();
+        }
+        if (match == DruidPredicateMatch.UNKNOWN) {
+          return ValueMatchers.allUnknown();
+        }
+        return ValueMatchers.allFalse();
       }
 
       @Override

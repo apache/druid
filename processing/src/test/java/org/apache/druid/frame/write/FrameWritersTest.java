@@ -20,8 +20,9 @@
 package org.apache.druid.frame.write;
 
 import org.apache.druid.frame.FrameType;
-import org.apache.druid.frame.allocation.ArenaMemoryAllocator;
-import org.apache.druid.frame.key.SortColumn;
+import org.apache.druid.frame.allocation.ArenaMemoryAllocatorFactory;
+import org.apache.druid.frame.key.KeyColumn;
+import org.apache.druid.frame.key.KeyOrder;
 import org.apache.druid.frame.write.columnar.ColumnarFrameWriterFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
@@ -51,9 +52,9 @@ public class FrameWritersTest extends InitializedNullHandlingTest
   {
     final FrameWriterFactory factory = FrameWriters.makeFrameWriterFactory(
         FrameType.ROW_BASED,
-        ArenaMemoryAllocator.createOnHeap(ALLOCATOR_CAPACITY),
+        new ArenaMemoryAllocatorFactory(ALLOCATOR_CAPACITY),
         RowSignature.builder().add("x", ColumnType.LONG).build(),
-        Collections.singletonList(new SortColumn("x", false))
+        Collections.singletonList(new KeyColumn("x", KeyOrder.ASCENDING))
     );
 
     MatcherAssert.assertThat(factory, CoreMatchers.instanceOf(RowBasedFrameWriterFactory.class));
@@ -65,8 +66,17 @@ public class FrameWritersTest extends InitializedNullHandlingTest
   {
     final FrameWriterFactory factory = FrameWriters.makeFrameWriterFactory(
         FrameType.COLUMNAR,
-        ArenaMemoryAllocator.createOnHeap(ALLOCATOR_CAPACITY),
-        RowSignature.builder().add("x", ColumnType.LONG).build(),
+        new ArenaMemoryAllocatorFactory(ALLOCATOR_CAPACITY),
+        RowSignature.builder()
+                    .add("a", ColumnType.LONG)
+                    .add("b", ColumnType.FLOAT)
+                    .add("c", ColumnType.DOUBLE)
+                    .add("d", ColumnType.STRING)
+                    .add("e", ColumnType.LONG_ARRAY)
+                    .add("f", ColumnType.FLOAT_ARRAY)
+                    .add("g", ColumnType.DOUBLE_ARRAY)
+                    .add("h", ColumnType.STRING_ARRAY)
+                    .build(),
         Collections.emptyList()
     );
 
@@ -75,48 +85,12 @@ public class FrameWritersTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void test_rowBased_unsupportedSortingColumnType()
-  {
-    final UnsupportedColumnTypeException e = Assert.assertThrows(
-        UnsupportedColumnTypeException.class,
-        () -> FrameWriters.makeFrameWriterFactory(
-            FrameType.ROW_BASED,
-            ArenaMemoryAllocator.createOnHeap(ALLOCATOR_CAPACITY),
-            RowSignature.builder().add("x", ColumnType.LONG_ARRAY).build(),
-            Collections.singletonList(new SortColumn("x", false))
-        )
-    );
-
-    Assert.assertEquals("x", e.getColumnName());
-    Assert.assertEquals(ColumnType.LONG_ARRAY, e.getColumnType());
-  }
-
-  @Test
-  public void test_rowBased_unsupportedNonSortingColumnType()
-  {
-    final FrameWriterFactory factory = FrameWriters.makeFrameWriterFactory(
-        FrameType.ROW_BASED,
-        ArenaMemoryAllocator.createOnHeap(ALLOCATOR_CAPACITY),
-        RowSignature.builder().add("x", ColumnType.LONG_ARRAY).build(),
-        Collections.emptyList()
-    );
-
-    final UnsupportedColumnTypeException e = Assert.assertThrows(
-        UnsupportedColumnTypeException.class,
-        () -> factory.newFrameWriter(new AllNullColumnSelectorFactory())
-    );
-
-    Assert.assertEquals("x", e.getColumnName());
-    Assert.assertEquals(ColumnType.LONG_ARRAY, e.getColumnType());
-  }
-
-  @Test
   public void test_columnar_unsupportedColumnType()
   {
     final FrameWriterFactory factory = FrameWriters.makeFrameWriterFactory(
         FrameType.COLUMNAR,
-        ArenaMemoryAllocator.createOnHeap(ALLOCATOR_CAPACITY),
-        RowSignature.builder().add("x", ColumnType.LONG_ARRAY).build(),
+        new ArenaMemoryAllocatorFactory(ALLOCATOR_CAPACITY),
+        RowSignature.builder().add("x", ColumnType.ofArray(ColumnType.LONG_ARRAY)).build(),
         Collections.emptyList()
     );
 
@@ -126,7 +100,7 @@ public class FrameWritersTest extends InitializedNullHandlingTest
     );
 
     Assert.assertEquals("x", e.getColumnName());
-    Assert.assertEquals(ColumnType.LONG_ARRAY, e.getColumnType());
+    Assert.assertEquals(ColumnType.ofArray(ColumnType.LONG_ARRAY), e.getColumnType());
   }
 
   @Test
@@ -134,16 +108,16 @@ public class FrameWritersTest extends InitializedNullHandlingTest
   {
     // Register, but don't unregister at the end of this test, because many other tests out there expect this to exist
     // even though they don't explicitly register it.
-    ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
+    ComplexMetrics.registerSerde(HyperUniquesSerde.TYPE_NAME, new HyperUniquesSerde());
 
     final IllegalArgumentException e = Assert.assertThrows(
         IllegalArgumentException.class,
         () ->
             FrameWriters.makeFrameWriterFactory(
                 FrameType.ROW_BASED,
-                ArenaMemoryAllocator.createOnHeap(ALLOCATOR_CAPACITY),
+                new ArenaMemoryAllocatorFactory(ALLOCATOR_CAPACITY),
                 RowSignature.builder().add("x", HyperUniquesAggregatorFactory.TYPE).build(),
-                Collections.singletonList(new SortColumn("x", false))
+                Collections.singletonList(new KeyColumn("x", KeyOrder.ASCENDING))
             )
     );
 
@@ -163,9 +137,9 @@ public class FrameWritersTest extends InitializedNullHandlingTest
         () ->
             FrameWriters.makeFrameWriterFactory(
                 FrameType.ROW_BASED,
-                ArenaMemoryAllocator.createOnHeap(ALLOCATOR_CAPACITY),
+                new ArenaMemoryAllocatorFactory(ALLOCATOR_CAPACITY),
                 RowSignature.builder().add("x", ColumnType.LONG).add("y", ColumnType.LONG).build(),
-                Collections.singletonList(new SortColumn("y", false))
+                Collections.singletonList(new KeyColumn("y", KeyOrder.ASCENDING))
             )
     );
 
@@ -185,9 +159,9 @@ public class FrameWritersTest extends InitializedNullHandlingTest
         () ->
             FrameWriters.makeFrameWriterFactory(
                 FrameType.COLUMNAR,
-                ArenaMemoryAllocator.createOnHeap(ALLOCATOR_CAPACITY),
+                new ArenaMemoryAllocatorFactory(ALLOCATOR_CAPACITY),
                 RowSignature.builder().add("x", ColumnType.LONG).build(),
-                Collections.singletonList(new SortColumn("x", false))
+                Collections.singletonList(new KeyColumn("x", KeyOrder.ASCENDING))
             )
     );
 

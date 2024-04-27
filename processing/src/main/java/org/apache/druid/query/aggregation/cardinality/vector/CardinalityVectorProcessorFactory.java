@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.aggregation.cardinality.vector;
 
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.segment.VectorColumnProcessorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
@@ -64,6 +65,15 @@ public class CardinalityVectorProcessorFactory implements VectorColumnProcessorF
   public CardinalityVectorProcessor makeLongProcessor(ColumnCapabilities capabilities, VectorValueSelector selector)
   {
     return new LongCardinalityVectorProcessor(selector);
+  }
+
+  @Override
+  public CardinalityVectorProcessor makeArrayProcessor(ColumnCapabilities capabilities, VectorObjectSelector selector)
+  {
+    throw new UOE(
+        "Cardinality aggregator does not support[%s] inputs",
+        capabilities.toColumnType()
+    );
   }
 
   @Override

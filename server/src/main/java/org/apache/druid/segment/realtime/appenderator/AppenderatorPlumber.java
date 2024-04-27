@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.common.guava.ThreadRenamingCallable;
 import org.apache.druid.data.input.Committer;
 import org.apache.druid.data.input.InputRow;
@@ -330,7 +331,8 @@ public class AppenderatorPlumber implements Plumber
             // TODO: Retry?
             log.warn(e, "Failed to drop segment: %s", identifier);
           }
-        }
+        },
+        MoreExecutors.directExecutor()
     );
   }
 
@@ -483,7 +485,8 @@ public class AppenderatorPlumber implements Plumber
             log.warn(e, "Failed to push [%,d] segments.", segmentsToPush.size());
             errorHandler.apply(e);
           }
-        }
+        },
+        MoreExecutors.directExecutor()
     );
   }
 }

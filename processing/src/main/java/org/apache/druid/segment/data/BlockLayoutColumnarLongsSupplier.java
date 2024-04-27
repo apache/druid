@@ -22,6 +22,7 @@ package org.apache.druid.segment.data;
 import com.google.common.base.Supplier;
 import org.apache.druid.collections.ResourceHolder;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.LongBuffer;
@@ -46,7 +47,7 @@ public class BlockLayoutColumnarLongsSupplier implements Supplier<ColumnarLongs>
       CompressionStrategy strategy
   )
   {
-    baseLongBuffers = GenericIndexed.read(fromBuffer, new DecompressingByteBufferObjectStrategy(order, strategy));
+    baseLongBuffers = GenericIndexed.read(fromBuffer, DecompressingByteBufferObjectStrategy.of(order, strategy));
     this.totalSize = totalSize;
     this.sizePer = sizePer;
     this.baseReader = reader;
@@ -123,11 +124,14 @@ public class BlockLayoutColumnarLongsSupplier implements Supplier<ColumnarLongs>
     final Indexed<ResourceHolder<ByteBuffer>> singleThreadedLongBuffers = baseLongBuffers.singleThreaded();
 
     int currBufferNum = -1;
+    @Nullable
     ResourceHolder<ByteBuffer> holder;
+    @Nullable
     ByteBuffer buffer;
     /**
      * longBuffer's position must be 0
      */
+    @Nullable
     LongBuffer longBuffer;
 
     @Override
@@ -204,7 +208,11 @@ public class BlockLayoutColumnarLongsSupplier implements Supplier<ColumnarLongs>
     public void close()
     {
       if (holder != null) {
+        currBufferNum = -1;
         holder.close();
+        holder = null;
+        buffer = null;
+        longBuffer = null;
       }
     }
 

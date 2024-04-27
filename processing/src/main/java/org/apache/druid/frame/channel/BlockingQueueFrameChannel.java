@@ -172,8 +172,6 @@ public class BlockingQueueFrameChannel
           // If this happens, it's a bug, potentially due to incorrectly using this class with multiple writers.
           throw new ISE("Could not write error to channel");
         }
-
-        close();
       }
     }
 
@@ -181,8 +179,8 @@ public class BlockingQueueFrameChannel
     public void close()
     {
       synchronized (lock) {
-        if (isFinished()) {
-          throw new ISE("Already done");
+        if (isClosed()) {
+          throw new ISE("Already closed");
         }
 
         if (!queue.offer(END_MARKER)) {
@@ -191,6 +189,15 @@ public class BlockingQueueFrameChannel
         }
 
         notifyReader();
+      }
+    }
+
+    @Override
+    public boolean isClosed()
+    {
+      synchronized (lock) {
+        final Optional<Either<Throwable, FrameWithPartition>> lastElement = queue.peekLast();
+        return lastElement != null && END_MARKER.equals(lastElement);
       }
     }
   }

@@ -17,8 +17,9 @@
  */
 
 import { Icon } from '@blueprintjs/core';
+import type { Column, QueryResult } from '@druid-toolkit/query';
+import { SqlColumn } from '@druid-toolkit/query';
 import classNames from 'classnames';
-import { Column, QueryResult, SqlRef } from 'druid-query-toolkit';
 import React from 'react';
 
 import { columnToIcon } from '../../../../../utils';
@@ -60,7 +61,7 @@ export const ExpressionEntry = function ExpressionEntry(props: ExpressionEntryPr
         {expression.getOutputName() || 'EXPR?'}
         <span className="type-name">{` :: ${column.nativeType}`}</span>
       </div>
-      {!(expression instanceof SqlRef) && (
+      {!(expression instanceof SqlColumn) && (
         <div className="expression">
           {expression.getUnderlyingExpression().prettify({ keywordCasing: 'preserve' }).toString()}
         </div>

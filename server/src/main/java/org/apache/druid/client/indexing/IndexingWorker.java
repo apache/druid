@@ -22,6 +22,8 @@ package org.apache.druid.client.indexing;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.Objects;
+
 /**
  * Should be synchronized with org.apache.druid.indexing.worker.Worker
  */
@@ -77,5 +79,39 @@ public class IndexingWorker
   public String getVersion()
   {
     return version;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    IndexingWorker that = (IndexingWorker) o;
+    return capacity == that.capacity && Objects.equals(scheme, that.scheme) && Objects.equals(
+        host,
+        that.host
+    ) && Objects.equals(ip, that.ip) && Objects.equals(version, that.version);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(scheme, host, ip, capacity, version);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "IndexingWorker{" +
+           "scheme='" + scheme + '\'' +
+           ", host='" + host + '\'' +
+           ", ip='" + ip + '\'' +
+           ", capacity=" + capacity +
+           ", version='" + version + '\'' +
+           '}';
   }
 }

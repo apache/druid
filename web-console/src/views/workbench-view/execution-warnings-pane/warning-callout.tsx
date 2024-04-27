@@ -20,7 +20,7 @@ import { Button, Callout, Collapse } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import React, { useState } from 'react';
 
-import { ExecutionError } from '../../../druid-models';
+import type { ExecutionError } from '../../../druid-models';
 
 import './warning-callout.scss';
 

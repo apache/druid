@@ -62,6 +62,8 @@ public class ReadableInputs implements Iterable<ReadableInput>
 
   /**
    * Returns the {@link ReadableInput} as an Iterator.
+   *
+   * When this instance is channel-based ({@link #isChannelBased()}), inputs are returned in order of partition number.
    */
   @Override
   public Iterator<ReadableInput> iterator()

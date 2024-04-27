@@ -26,7 +26,7 @@ public interface KeyCollector<CollectorType extends KeyCollector<CollectorType>>
 {
   /**
    * Add a key with a certain weight to this collector.
-   *
+   * <br>
    * See {@link ClusterByStatisticsCollector#add} for the meaning of "weight".
    */
   void add(RowKey key, long weight);
@@ -57,7 +57,7 @@ public interface KeyCollector<CollectorType extends KeyCollector<CollectorType>>
    * Returns an estimate of the number of bytes currently retained by this collector. This may change over time as
    * more keys are added.
    */
-  double estimatedRetainedBytes();
+  long estimatedRetainedBytes();
 
   /**
    * Downsample this collector, dropping about half of the keys that are currently retained. Returns true if
@@ -80,4 +80,12 @@ public interface KeyCollector<CollectorType extends KeyCollector<CollectorType>>
    *                     or lower than the provided target.
    */
   ClusterByPartitions generatePartitionsWithTargetWeight(long targetWeight);
+
+  /**
+   * Returns an integer which indicates the accuracy of the sketch used. The higher the value, the more accurate it is.
+   * This can be compared to check which sketches have been downsampled the most and are thus the least accurate. The
+   * exact value returned is decided by the implementation, and it is only meaningful to compare sketches of the same
+   * implementation in this way.
+   */
+  int sketchAccuracyFactor();
 }

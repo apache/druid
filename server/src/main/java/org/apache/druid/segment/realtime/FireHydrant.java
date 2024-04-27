@@ -175,6 +175,12 @@ public class FireHydrant
   )
   {
     ReferenceCountingSegment sinkSegment = adapter.get();
+
+    if (sinkSegment == null) {
+      // adapter can be null if this segment is removed (swapped to null) while being queried.
+      return Optional.empty();
+    }
+
     SegmentReference segment = segmentMapFn.apply(sinkSegment);
     while (true) {
       Optional<Closeable> reference = segment.acquireReferences();
@@ -186,7 +192,8 @@ public class FireHydrant
       // segment swap, the new segment should already be visible.
       ReferenceCountingSegment newSinkSegment = adapter.get();
       if (newSinkSegment == null) {
-        throw new ISE("FireHydrant was 'closed' by swapping segment to null while acquiring a segment");
+        // adapter can be null if this segment is removed (swapped to null) while being queried.
+        return Optional.empty();
       }
       if (sinkSegment == newSinkSegment) {
         if (newSinkSegment.isClosed()) {

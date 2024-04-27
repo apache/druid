@@ -478,6 +478,7 @@ public class BatchDeltaIngestionTest
                 false,
                 false,
                 false,
+                false,
                 null,
                 false,
                 false,
@@ -489,7 +490,8 @@ public class BatchDeltaIngestionTest
                 null,
                 null,
                 null,
-                null
+                null,
+                1
             )
         )
     );

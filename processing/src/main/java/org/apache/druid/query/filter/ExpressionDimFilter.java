@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.RangeSet;
@@ -45,6 +44,9 @@ public class ExpressionDimFilter extends AbstractOptimizableDimFilter implements
   @Nullable
   private final FilterTuning filterTuning;
 
+  /**
+   * Constructor for deserialization.
+   */
   @JsonCreator
   public ExpressionDimFilter(
       @JsonProperty("expression") final String expression,
@@ -52,20 +54,40 @@ public class ExpressionDimFilter extends AbstractOptimizableDimFilter implements
       @JacksonInject ExprMacroTable macroTable
   )
   {
-    this.expression = expression;
-    this.filterTuning = filterTuning;
-    this.parsed = Parser.lazyParse(expression, macroTable);
-    this.cacheKey = Suppliers.memoize(() -> {
-      return new CacheKeyBuilder(DimFilterUtils.EXPRESSION_CACHE_ID)
-          .appendCacheable(parsed.get())
-          .build();
-    });
+    this(expression, Parser.lazyParse(expression, macroTable), filterTuning);
   }
 
-  @VisibleForTesting
+  /**
+   * Constructor used in various tests that don't need to provide {@link FilterTuning}.
+   */
   public ExpressionDimFilter(final String expression, ExprMacroTable macroTable)
   {
-    this(expression, null, macroTable);
+    this(expression, Parser.lazyParse(expression, macroTable), null);
+  }
+
+  /**
+   * Constructor for already-parsed-and-analyzed expressions.
+   */
+  public ExpressionDimFilter(final String expression, final Expr parsed, @Nullable final FilterTuning filterTuning)
+  {
+    this(expression, () -> parsed, filterTuning);
+  }
+
+  private ExpressionDimFilter(
+      String expression,
+      Supplier<Expr> parsed,
+      @Nullable FilterTuning filterTuning
+  )
+  {
+    this.expression = expression;
+    this.parsed = parsed;
+    this.filterTuning = filterTuning;
+    this.cacheKey = Suppliers.memoize(
+        () ->
+            new CacheKeyBuilder(DimFilterUtils.EXPRESSION_CACHE_ID)
+                .appendCacheable(parsed.get())
+                .build()
+    );
   }
 
   @JsonProperty
@@ -80,12 +102,6 @@ public class ExpressionDimFilter extends AbstractOptimizableDimFilter implements
   public FilterTuning getFilterTuning()
   {
     return filterTuning;
-  }
-
-  @Override
-  public DimFilter optimize()
-  {
-    return this;
   }
 
   @Override

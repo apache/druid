@@ -90,7 +90,7 @@ public class DefaultRequestLogEventTest
     final DateTime timestamp = DateTimes.of(2019, 12, 12, 3, 1);
     final String service = "druid-service";
     final String host = "127.0.0.1";
-    final Query query = new TimeseriesQuery(
+    final Query<?> query = new TimeseriesQuery(
         new TableDataSource("dummy"),
         new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2015-01-01/2015-01-02"))),
         true,

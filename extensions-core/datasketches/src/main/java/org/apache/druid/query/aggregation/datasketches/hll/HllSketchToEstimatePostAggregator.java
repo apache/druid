@@ -97,8 +97,15 @@ public class HllSketchToEstimatePostAggregator implements PostAggregator
   @Override
   public Object compute(final Map<String, Object> combinedAggregators)
   {
-    final HllSketch sketch = (HllSketch) field.compute(combinedAggregators);
-    return round ? Math.round(sketch.getEstimate()) : sketch.getEstimate();
+    Object hllSketchHolderObject = field.compute(combinedAggregators);
+    if (hllSketchHolderObject == null) {
+      return 0.0D;
+    }
+    final HllSketchHolder holder = HllSketchHolder.fromObj(hllSketchHolderObject);
+    // The union object always uses an HLL_8 sketch, so we always get that.  The target type doesn't actually impact
+    // the estimate anyway, so whatever gives us the "cheapest" operation should be good.
+    double estimate = holder.getEstimate();
+    return round ? Math.round(estimate) : estimate;
   }
 
   @Override

@@ -68,12 +68,16 @@ public class FixedIndexedTest extends InitializedNullHandlingTest
   {
     ByteBuffer buffer = ByteBuffer.allocate(1 << 14);
     fillBuffer(buffer, order, false);
-    FixedIndexed<Long> fixedIndexed = FixedIndexed.read(buffer, ColumnType.LONG.getStrategy(), order, Long.BYTES);
+    FixedIndexed<Long> fixedIndexed =
+        FixedIndexed.<Long>read(buffer, ColumnType.LONG.getStrategy(), order, Long.BYTES).get();
     Assert.assertEquals(64, fixedIndexed.size());
     for (int i = 0; i < LONGS.length; i++) {
       Assert.assertEquals(LONGS[i], fixedIndexed.get(i));
       Assert.assertEquals(i, fixedIndexed.indexOf(LONGS[i]));
     }
+
+    Assert.assertThrows(IllegalArgumentException.class, () -> fixedIndexed.get(-1));
+    Assert.assertThrows(IllegalArgumentException.class, () -> fixedIndexed.get(LONGS.length));
   }
 
   @Test
@@ -81,7 +85,8 @@ public class FixedIndexedTest extends InitializedNullHandlingTest
   {
     ByteBuffer buffer = ByteBuffer.allocate(1 << 14);
     fillBuffer(buffer, order, false);
-    FixedIndexed<Long> fixedIndexed = FixedIndexed.read(buffer, ColumnType.LONG.getStrategy(), order, Long.BYTES);
+    FixedIndexed<Long> fixedIndexed =
+        FixedIndexed.<Long>read(buffer, ColumnType.LONG.getStrategy(), order, Long.BYTES).get();
     Iterator<Long> iterator = fixedIndexed.iterator();
     int i = 0;
     while (iterator.hasNext()) {
@@ -94,7 +99,8 @@ public class FixedIndexedTest extends InitializedNullHandlingTest
   {
     ByteBuffer buffer = ByteBuffer.allocate(1 << 14);
     fillBuffer(buffer, order, true);
-    FixedIndexed<Long> fixedIndexed = FixedIndexed.read(buffer, ColumnType.LONG.getStrategy(), order, Long.BYTES);
+    FixedIndexed<Long> fixedIndexed =
+        FixedIndexed.<Long>read(buffer, ColumnType.LONG.getStrategy(), order, Long.BYTES).get();
     Assert.assertEquals(65, fixedIndexed.size());
     Assert.assertNull(fixedIndexed.get(0));
     for (int i = 0; i < LONGS.length; i++) {
@@ -108,7 +114,8 @@ public class FixedIndexedTest extends InitializedNullHandlingTest
   {
     ByteBuffer buffer = ByteBuffer.allocate(1 << 14);
     fillBuffer(buffer, order, true);
-    FixedIndexed<Long> fixedIndexed = FixedIndexed.read(buffer, ColumnType.LONG.getStrategy(), order, Long.BYTES);
+    FixedIndexed<Long> fixedIndexed =
+        FixedIndexed.<Long>read(buffer, ColumnType.LONG.getStrategy(), order, Long.BYTES).get();
     Iterator<Long> iterator = fixedIndexed.iterator();
     Assert.assertNull(iterator.next());
     int i = 0;
@@ -133,6 +140,35 @@ public class FixedIndexedTest extends InitializedNullHandlingTest
     }
     for (Long aLong : LONGS) {
       writer.write(aLong);
+    }
+    Iterator<Long> longIterator = writer.getIterator();
+    int ctr = 0;
+    int totalCount = withNull ? 1 + LONGS.length : LONGS.length;
+    for (int i = 0; i < totalCount; i++) {
+      if (withNull) {
+        if (i == 0) {
+          Assert.assertNull(writer.get(i));
+        } else {
+          Assert.assertEquals(" index: " + i, LONGS[i - 1], writer.get(i));
+        }
+      } else {
+        Assert.assertEquals(" index: " + i, LONGS[i], writer.get(i));
+      }
+    }
+    while (longIterator.hasNext()) {
+      if (withNull) {
+        if (ctr == 0) {
+          Assert.assertNull(longIterator.next());
+          Assert.assertNull(writer.get(ctr));
+        } else {
+          Assert.assertEquals(LONGS[ctr - 1], longIterator.next());
+          Assert.assertEquals(LONGS[ctr - 1], writer.get(ctr));
+        }
+      } else {
+        Assert.assertEquals(LONGS[ctr], longIterator.next());
+        Assert.assertEquals(LONGS[ctr], writer.get(ctr));
+      }
+      ctr++;
     }
     WritableByteChannel channel = new WritableByteChannel()
     {

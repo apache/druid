@@ -40,7 +40,7 @@ public class RPadOperatorConversion implements SqlOperatorConversion
       .operandTypes(SqlTypeFamily.CHARACTER, SqlTypeFamily.INTEGER, SqlTypeFamily.CHARACTER)
       .returnTypeCascadeNullable(SqlTypeName.VARCHAR)
       .functionCategory(SqlFunctionCategory.STRING)
-      .requiredOperands(2)
+      .requiredOperandCount(2)
       .build();
 
   @Override

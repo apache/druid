@@ -129,9 +129,7 @@ public class ZkWorkerTest
   @Test
   public void testCanReadIdFromAJacksonSerializedTaskAnnouncement() throws JsonProcessingException
   {
-    final String expectedTaskId = "task01234";
-
-    Task task0 = NoopTask.create(expectedTaskId, 0);
+    Task task0 = NoopTask.create();
     TaskAnnouncement taskAnnouncement = TaskAnnouncement.create(
             task0,
             TaskStatus.running(task0.getId()),
@@ -145,6 +143,6 @@ public class ZkWorkerTest
     ChildData zkNode = new ChildData("/a/b/c", new Stat(), serialized);
 
     String actualExtractedTaskId = extract.apply(zkNode);
-    Assert.assertEquals(expectedTaskId, actualExtractedTaskId);
+    Assert.assertEquals(task0.getId(), actualExtractedTaskId);
   }
 }

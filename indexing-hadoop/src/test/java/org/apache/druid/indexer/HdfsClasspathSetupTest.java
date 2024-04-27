@@ -28,6 +28,7 @@ import org.apache.druid.common.utils.UUIDUtils;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
@@ -53,7 +54,6 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -158,7 +158,7 @@ public class HdfsClasspathSetupTest
   public void testConcurrentUpload() throws InterruptedException, ExecutionException, TimeoutException
   {
     final int concurrency = 10;
-    ListeningExecutorService pool = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(concurrency));
+    ListeningExecutorService pool = MoreExecutors.listeningDecorator(Execs.multiThreaded(concurrency, "HdfsClasspathSetupTest-%d"));
     // barrier ensures that all jobs try to add files to classpath at same time.
     final CyclicBarrier barrier = new CyclicBarrier(concurrency);
     final Path expectedJarPath = new Path(finalClasspath, dummyJarFile.getName());

@@ -19,7 +19,9 @@
 
 package org.apache.druid.frame.write;
 
+import org.apache.druid.frame.FrameType;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.column.RowSignature;
 
 /**
  * Interface for creating {@link FrameWriter}.
@@ -32,4 +34,8 @@ public interface FrameWriterFactory
   FrameWriter newFrameWriter(ColumnSelectorFactory columnSelectorFactory);
 
   long allocatorCapacity();
+
+  RowSignature signature();
+
+  FrameType frameType();
 }

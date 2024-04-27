@@ -22,20 +22,19 @@ package org.apache.druid.server.coordinator.duty;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.server.coordinator.CoordinatorStats;
-import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
-import org.apache.druid.server.coordinator.LoadQueuePeon;
 import org.apache.druid.server.coordinator.ServerHolder;
+import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.rules.BroadcastDistributionRule;
-import org.apache.druid.server.coordinator.rules.Rule;
+import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
+import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.SortedSet;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Unloads segments that are no longer marked as used from servers.
@@ -44,109 +43,125 @@ public class UnloadUnusedSegments implements CoordinatorDuty
 {
   private static final Logger log = new Logger(UnloadUnusedSegments.class);
 
+  private final SegmentLoadQueueManager loadQueueManager;
+
+  public UnloadUnusedSegments(SegmentLoadQueueManager loadQueueManager)
+  {
+    this.loadQueueManager = loadQueueManager;
+  }
+
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
-    CoordinatorStats stats = new CoordinatorStats();
-    Set<DataSegment> usedSegments = params.getUsedSegments();
-    DruidCluster cluster = params.getDruidCluster();
-
-    Map<String, Boolean> broadcastStatusByDatasource = new HashMap<>();
+    final Map<String, Boolean> broadcastStatusByDatasource = new HashMap<>();
     for (String broadcastDatasource : params.getBroadcastDatasources()) {
       broadcastStatusByDatasource.put(broadcastDatasource, true);
     }
 
-    for (SortedSet<ServerHolder> serverHolders : cluster.getSortedHistoricalsByTier()) {
-      for (ServerHolder serverHolder : serverHolders) {
-        handleUnusedSegmentsForServer(
-            serverHolder,
-            usedSegments,
-            params,
-            stats,
-            false,
-            broadcastStatusByDatasource
-        );
-      }
+    final List<ServerHolder> allServers = params.getDruidCluster().getAllServers();
+    int numCancelledLoads = allServers.stream().mapToInt(
+        server -> cancelLoadOfUnusedSegments(server, broadcastStatusByDatasource, params)
+    ).sum();
+
+    final CoordinatorRunStats stats = params.getCoordinatorStats();
+    int numQueuedDrops = allServers.stream().mapToInt(
+        server -> dropUnusedSegments(server, params, stats, broadcastStatusByDatasource)
+    ).sum();
+
+    if (numCancelledLoads > 0 || numQueuedDrops > 0) {
+      log.info("Cancelled [%d] loads and started [%d] drops of unused segments.", numCancelledLoads, numQueuedDrops);
     }
 
-    for (ServerHolder serverHolder : cluster.getBrokers()) {
-      handleUnusedSegmentsForServer(
-          serverHolder,
-          usedSegments,
-          params,
-          stats,
-          false,
-          broadcastStatusByDatasource
-      );
-    }
-
-    for (ServerHolder serverHolder : cluster.getRealtimes()) {
-      handleUnusedSegmentsForServer(
-          serverHolder,
-          usedSegments,
-          params,
-          stats,
-          true,
-          broadcastStatusByDatasource
-      );
-    }
-
-    return params.buildFromExisting().withCoordinatorStats(stats).build();
+    return params;
   }
 
-  private void handleUnusedSegmentsForServer(
+  private int dropUnusedSegments(
       ServerHolder serverHolder,
-      Set<DataSegment> usedSegments,
       DruidCoordinatorRuntimeParams params,
-      CoordinatorStats stats,
-      boolean dropBroadcastOnly,
+      CoordinatorRunStats stats,
       Map<String, Boolean> broadcastStatusByDatasource
   )
   {
-    ImmutableDruidServer server = serverHolder.getServer();
-    for (ImmutableDruidDataSource dataSource : server.getDataSources()) {
-      boolean isBroadcastDatasource = broadcastStatusByDatasource.computeIfAbsent(
-          dataSource.getName(),
-          (dataSourceName) -> {
-            List<Rule> rules = params.getDatabaseRuleManager().getRulesWithDefault(dataSource.getName());
-            for (Rule rule : rules) {
-              // A datasource is considered a broadcast datasource if it has any broadcast rules.
-              if (rule instanceof BroadcastDistributionRule) {
-                return true;
-              }
-            }
-            return false;
-          }
-      );
+    final Set<DataSegment> usedSegments = params.getUsedSegments();
 
-      // The coordinator tracks used segments by examining the metadata store.
-      // For tasks, the segments they create are unpublished, so those segments will get dropped
-      // unless we exclude them here. We currently drop only broadcast segments in that case.
-      // This check relies on the assumption that queryable stream tasks will never
-      // ingest data to a broadcast datasource. If a broadcast datasource is switched to become a non-broadcast
-      // datasource, this will result in the those segments not being dropped from tasks.
-      // A more robust solution which requires a larger rework could be to expose
-      // the set of segments that were created by a task/indexer here, and exclude them.
-      if (dropBroadcastOnly && !isBroadcastDatasource) {
+    final AtomicInteger numQueuedDrops = new AtomicInteger(0);
+    final ImmutableDruidServer server = serverHolder.getServer();
+    for (ImmutableDruidDataSource dataSource : server.getDataSources()) {
+      if (shouldSkipUnload(serverHolder, dataSource.getName(), broadcastStatusByDatasource, params)) {
         continue;
       }
 
+      int totalUnneededCount = 0;
       for (DataSegment segment : dataSource.getSegments()) {
-        if (!usedSegments.contains(segment)) {
-          LoadQueuePeon queuePeon = params.getLoadManagementPeons().get(server.getName());
-
-          if (!queuePeon.getSegmentsToDrop().contains(segment)) {
-            queuePeon.dropSegment(segment, success -> {});
-            stats.addToTieredStat("unneededCount", server.getTier(), 1);
-            log.info(
-                "Dropping uneeded segment [%s] from server [%s] in tier [%s]",
-                segment.getId(),
-                server.getName(),
-                server.getTier()
-            );
-          }
+        if (!usedSegments.contains(segment)
+            && loadQueueManager.dropSegment(segment, serverHolder)) {
+          totalUnneededCount++;
+          log.debug(
+              "Dropping uneeded segment[%s] from server[%s] in tier[%s].",
+              segment.getId(), server.getName(), server.getTier()
+          );
         }
       }
+
+      if (totalUnneededCount > 0) {
+        stats.addToSegmentStat(Stats.Segments.UNNEEDED, server.getTier(), dataSource.getName(), totalUnneededCount);
+        numQueuedDrops.addAndGet(totalUnneededCount);
+      }
     }
+
+    return numQueuedDrops.get();
+  }
+
+  private int cancelLoadOfUnusedSegments(
+      ServerHolder server,
+      Map<String, Boolean> broadcastStatusByDatasource,
+      DruidCoordinatorRuntimeParams params
+  )
+  {
+    final Set<DataSegment> usedSegments = params.getUsedSegments();
+
+    final AtomicInteger cancelledOperations = new AtomicInteger(0);
+    server.getQueuedSegments().forEach((segment, action) -> {
+      if (shouldSkipUnload(server, segment.getDataSource(), broadcastStatusByDatasource, params)) {
+        // do nothing
+      } else if (usedSegments.contains(segment)) {
+        // do nothing
+      } else if (action.isLoad() && server.cancelOperation(action, segment)) {
+        cancelledOperations.incrementAndGet();
+      }
+    });
+
+    return cancelledOperations.get();
+  }
+
+  /**
+   * Returns true if the given server is a realtime server AND the datasource is
+   * NOT a broadcast datasource.
+   * <p>
+   * Realtime tasks work with unpublished segments and the tasks themselves are
+   * responsible for dropping those segments. However, segments belonging to a
+   * broadcast datasource should still be dropped by the Coordinator as realtime
+   * tasks do not ingest data to a broadcast datasource and are thus not
+   * responsible for the load/unload of those segments.
+   */
+  private boolean shouldSkipUnload(
+      ServerHolder server,
+      String dataSource,
+      Map<String, Boolean> broadcastStatusByDatasource,
+      DruidCoordinatorRuntimeParams params
+  )
+  {
+    boolean isBroadcastDatasource = broadcastStatusByDatasource
+        .computeIfAbsent(dataSource, ds -> isBroadcastDatasource(ds, params));
+    return server.isRealtimeServer() && !isBroadcastDatasource;
+  }
+
+  /**
+   * A datasource is considered a broadcast datasource if it has even one broadcast rule.
+   */
+  private boolean isBroadcastDatasource(String datasource, DruidCoordinatorRuntimeParams params)
+  {
+    return params.getDatabaseRuleManager().getRulesWithDefault(datasource).stream()
+                 .anyMatch(rule -> rule instanceof BroadcastDistributionRule);
   }
 }

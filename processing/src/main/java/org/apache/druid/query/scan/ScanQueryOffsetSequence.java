@@ -117,7 +117,7 @@ public class ScanQueryOffsetSequence extends YieldingSequenceBase<ScanResultValu
           skipped += toSkip;
           return super.accumulate(
               accumulated,
-              new ScanResultValue(result.getSegmentId(), result.getColumns(), newEvents)
+              new ScanResultValue(result.getSegmentId(), result.getColumns(), newEvents, result.getRowSignature())
           );
         }
       } else {

@@ -84,8 +84,9 @@ public class ArrayOfStringsNullSafeSerdeTest
   private void testSerde(String... inputArray)
   {
     byte[] bytes = serde.serializeToByteArray(inputArray);
+    Assert.assertEquals(serde.sizeOf(inputArray), bytes.length);
     String[] deserialized = serde.deserializeFromMemory(Memory.wrap(bytes), inputArray.length);
-    Assert.assertEquals(inputArray, deserialized);
+    Assert.assertArrayEquals(inputArray, deserialized);
   }
 
 }

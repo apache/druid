@@ -452,7 +452,7 @@ public class JoinFilterAnalyzer
 
     for (JoinFilterColumnCorrelationAnalysis correlationAnalysis : correlationAnalyses) {
       if (correlationAnalysis.supportsPushDown()) {
-        Optional<Set<String>> correlatedValues = correlationAnalysis.getCorrelatedValuesMap().get(
+        Optional<InDimFilter.ValuesSet> correlatedValues = correlationAnalysis.getCorrelatedValuesMap().get(
             Pair.of(filteringColumn, filteringValue)
         );
 
@@ -460,7 +460,7 @@ public class JoinFilterAnalyzer
           return JoinFilterAnalysis.createNoPushdownFilterAnalysis(selectorFilter);
         }
 
-        Set<String> newFilterValues = correlatedValues.get();
+        InDimFilter.ValuesSet newFilterValues = correlatedValues.get();
         // in nothing => match nothing
         if (newFilterValues.isEmpty()) {
           return new JoinFilterAnalysis(

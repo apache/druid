@@ -286,6 +286,11 @@ public class ColumnProcessors
         return processorFactory.makeFloatProcessor(valueSelectorFunction.apply(selectorFactory));
       case DOUBLE:
         return processorFactory.makeDoubleProcessor(valueSelectorFunction.apply(selectorFactory));
+      case ARRAY:
+        return processorFactory.makeArrayProcessor(
+            valueSelectorFunction.apply(selectorFactory),
+            capabilities
+        );
       case COMPLEX:
         return processorFactory.makeComplexProcessor(valueSelectorFunction.apply(selectorFactory));
       default:
@@ -359,6 +364,8 @@ public class ColumnProcessors
         return processorFactory.makeFloatProcessor(capabilities, valueSelectorFn.apply(selectorFactory));
       case DOUBLE:
         return processorFactory.makeDoubleProcessor(capabilities, valueSelectorFn.apply(selectorFactory));
+      case ARRAY:
+        return processorFactory.makeArrayProcessor(capabilities, objectSelectorFn.apply(selectorFactory));
       case COMPLEX:
         return processorFactory.makeObjectProcessor(capabilities, objectSelectorFn.apply(selectorFactory));
       default:

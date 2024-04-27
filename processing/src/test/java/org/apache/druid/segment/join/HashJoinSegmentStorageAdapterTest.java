@@ -1270,6 +1270,69 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   }
 
   @Test
+  public void test_makeCursors_factToRegionToCountryInnerIncludeNull()
+  {
+    List<JoinableClause> joinableClauses = ImmutableList.of(
+        factToRegionIncludeNull(JoinType.INNER),
+        regionToCountry(JoinType.LEFT)
+    );
+    JoinFilterPreAnalysis joinFilterPreAnalysis = makeDefaultConfigPreAnalysis(
+        null,
+        joinableClauses,
+        VirtualColumns.EMPTY
+    );
+    JoinTestHelper.verifyCursors(
+        new HashJoinSegmentStorageAdapter(
+            factSegment.asStorageAdapter(),
+            joinableClauses,
+            joinFilterPreAnalysis
+        ).makeCursors(
+            null,
+            Intervals.ETERNITY,
+            VirtualColumns.EMPTY,
+            Granularities.ALL,
+            false,
+            null
+        ),
+        ImmutableList.of(
+            "page",
+            FACT_TO_REGION_PREFIX + "regionName",
+            REGION_TO_COUNTRY_PREFIX + "countryName"
+        ),
+        ImmutableList.of(
+            new Object[]{"Talk:Oswald Tilghman", "Nulland", null},
+            new Object[]{"Rallicula", "Nulland", null},
+            new Object[]{"Peremptory norm", "New South Wales", "Australia"},
+            new Object[]{"Apamea abruzzorum", "Nulland", null},
+            new Object[]{"Atractus flammigerus", "Nulland", null},
+            new Object[]{"Agama mossambica", "Nulland", null},
+            new Object[]{"Mathis Bolly", "Mexico City", "Mexico"},
+            new Object[]{"유희왕 GX", "Seoul", "Republic of Korea"},
+            new Object[]{"青野武", "Tōkyō", "Japan"},
+            new Object[]{"Golpe de Estado en Chile de 1973", "Santiago Metropolitan", "Chile"},
+            new Object[]{"President of India", "California", "United States"},
+            new Object[]{"Diskussion:Sebastian Schulz", "Hesse", "Germany"},
+            new Object[]{"Saison 9 de Secret Story", "Val d'Oise", "France"},
+            new Object[]{"Glasgow", "Kingston upon Hull", "United Kingdom"},
+            new Object[]{"Didier Leclair", "Ontario", "Canada"},
+            new Object[]{"Les Argonautes", "Quebec", "Canada"},
+            new Object[]{"Otjiwarongo Airport", "California", "United States"},
+            new Object[]{"Sarah Michelle Gellar", "Ontario", "Canada"},
+            new Object[]{"DirecTV", "North Carolina", "United States"},
+            new Object[]{"Carlo Curti", "California", "United States"},
+            new Object[]{"Giusy Ferreri discography", "Provincia di Varese", "Italy"},
+            new Object[]{"Roma-Bangkok", "Provincia di Varese", "Italy"},
+            new Object[]{"Wendigo", "Departamento de San Salvador", "El Salvador"},
+            new Object[]{"Алиса в Зазеркалье", "Finnmark Fylke", "Norway"},
+            new Object[]{"Gabinete Ministerial de Rafael Correa", "Provincia del Guayas", "Ecuador"},
+            new Object[]{"Old Anatolian Turkish", "Virginia", "United States"},
+            new Object[]{"Cream Soda", "Ainigriv", "States United"},
+            new Object[]{"History of Fourems", "Fourems Province", "Fourems"}
+        )
+    );
+  }
+
+  @Test
   public void test_makeCursors_factToCountryAlwaysTrue()
   {
     List<JoinableClause> joinableClauses = ImmutableList.of(
@@ -1850,7 +1913,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   {
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("Cannot build hash-join matcher on non-key-based condition: "
-                                    + "Equality{leftExpr=x, rightColumn='countryName'}");
+                                    + "Equality{leftExpr=x, rightColumn='countryName', includeNull=false}");
     List<JoinableClause> joinableClauses = ImmutableList.of(
         new JoinableClause(
             FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX,

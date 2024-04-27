@@ -22,16 +22,19 @@ package org.apache.druid.msq.statistics;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.druid.frame.key.RowKey;
 import org.apache.druid.java.util.common.ISE;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
 
+@JsonTypeName(DelegateOrMinKeyCollectorSnapshot.TYPE)
 public class DelegateOrMinKeyCollectorSnapshot<T extends KeyCollectorSnapshot> implements KeyCollectorSnapshot
 {
   static final String FIELD_SNAPSHOT = "snapshot";
   static final String FIELD_MIN_KEY = "minKey";
+  static final String TYPE = "delegate";
 
   private final T snapshot;
   private final RowKey minKey;

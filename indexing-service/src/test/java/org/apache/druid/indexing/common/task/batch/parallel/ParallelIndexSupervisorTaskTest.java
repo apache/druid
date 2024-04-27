@@ -27,11 +27,18 @@ import org.apache.commons.codec.Charsets;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InlineInputSource;
+import org.apache.druid.data.input.impl.JSONParseSpec;
 import org.apache.druid.data.input.impl.JsonInputFormat;
+import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
+import org.apache.druid.indexer.report.KillTaskReport;
+import org.apache.druid.indexer.report.TaskReport;
+import org.apache.druid.indexing.common.TaskToolbox;
+import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.apache.druid.rpc.HttpResponseException;
@@ -57,7 +64,6 @@ import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.experimental.runners.Enclosed;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
@@ -78,7 +84,6 @@ import java.util.stream.IntStream;
 import static org.easymock.EasyMock.expect;
 import static org.easymock.EasyMock.mock;
 
-@RunWith(Enclosed.class)
 public class ParallelIndexSupervisorTaskTest
 {
   @RunWith(Parameterized.class)
@@ -242,13 +247,13 @@ public class ParallelIndexSupervisorTaskTest
           null,
           null,
           new HashedPartitionsSpec(null, 10, null),
-          new IndexSpec(
-              new RoaringBitmapSerdeFactory(true),
-              CompressionStrategy.UNCOMPRESSED,
-              CompressionStrategy.LZF,
-              LongEncodingStrategy.LONGS
-          ),
-          new IndexSpec(),
+          IndexSpec.builder()
+                   .withBitmapSerdeFactory(RoaringBitmapSerdeFactory.getInstance())
+                   .withDimensionCompression(CompressionStrategy.UNCOMPRESSED)
+                   .withMetricCompression(CompressionStrategy.LZF)
+                   .withLongEncoding(LongEncodingStrategy.LONGS)
+                   .build(),
+          IndexSpec.DEFAULT,
           1,
           forceGuaranteedRollup,
           true,
@@ -263,6 +268,7 @@ public class ParallelIndexSupervisorTaskTest
           null,
           null,
           false,
+          null,
           null,
           null,
           null,
@@ -289,6 +295,84 @@ public class ParallelIndexSupervisorTaskTest
           null,
           indexIngestionSpec,
           null
+      );
+    }
+
+    @Test
+    public void testFailToConstructWhenBothInputSourceAndParserAreSet()
+    {
+      final ObjectMapper mapper = new DefaultObjectMapper();
+      final ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
+          null,
+          new InlineInputSource("test"),
+          null,
+          false,
+          null
+      );
+      final ParallelIndexTuningConfig tuningConfig = new ParallelIndexTuningConfig(
+          null,
+          null,
+          null,
+          10,
+          1000L,
+          null,
+          null,
+          null,
+          null,
+          new HashedPartitionsSpec(null, 10, null),
+          IndexSpec.builder()
+                   .withBitmapSerdeFactory(RoaringBitmapSerdeFactory.getInstance())
+                   .withDimensionCompression(CompressionStrategy.UNCOMPRESSED)
+                   .withMetricCompression(CompressionStrategy.LZF)
+                   .withLongEncoding(LongEncodingStrategy.LONGS)
+                   .build(),
+          IndexSpec.DEFAULT,
+          1,
+          true,
+          true,
+          10000L,
+          OffHeapMemorySegmentWriteOutMediumFactory.instance(),
+          null,
+          10,
+          100,
+          20L,
+          new Duration(3600),
+          128,
+          null,
+          null,
+          false,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+      );
+
+      expectedException.expect(IAE.class);
+      expectedException.expectMessage("Cannot use parser and inputSource together. Try using inputFormat instead of parser.");
+      new ParallelIndexIngestionSpec(
+          new DataSchema(
+              "datasource",
+              mapper.convertValue(
+                  new StringInputRowParser(
+                      new JSONParseSpec(
+                          new TimestampSpec(null, null, null),
+                          DimensionsSpec.EMPTY,
+                          null,
+                          null,
+                          null
+                      )
+                  ),
+                  Map.class
+              ),
+              null,
+              null,
+              null,
+              mapper
+          ),
+          ioConfig,
+          tuningConfig
       );
     }
   }
@@ -399,7 +483,7 @@ public class ParallelIndexSupervisorTaskTest
     public void testGetTaskReportOk() throws Exception
     {
       final String taskId = "task";
-      final Map<String, Object> report = ImmutableMap.of("foo", "bar");
+      final TaskReport.ReportMap report = TaskReport.buildTaskReports(new KillTaskReport("taskId", null));
 
       final OverlordClient client = mock(OverlordClient.class);
       expect(client.taskReportAsMap(taskId)).andReturn(Futures.immediateFuture(report));
@@ -461,6 +545,85 @@ public class ParallelIndexSupervisorTaskTest
       );
 
       EasyMock.verify(client, response);
+    }
+
+    @Test
+    public void testCompactionTaskDoesntCleanup() throws Exception
+    {
+      final boolean appendToExisting = false;
+      final boolean forceGuaranteedRollup = true;
+      final ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
+              null,
+              new InlineInputSource("test"),
+              new JsonInputFormat(null, null, null, null, null),
+              appendToExisting,
+              null
+      );
+      final ParallelIndexTuningConfig tuningConfig = new ParallelIndexTuningConfig(
+              null,
+              null,
+              null,
+              10,
+              1000L,
+              null,
+              null,
+              null,
+              null,
+              new HashedPartitionsSpec(null, 10, null),
+              IndexSpec.builder()
+                      .withBitmapSerdeFactory(RoaringBitmapSerdeFactory.getInstance())
+                      .withDimensionCompression(CompressionStrategy.UNCOMPRESSED)
+                      .withMetricCompression(CompressionStrategy.LZF)
+                      .withLongEncoding(LongEncodingStrategy.LONGS)
+                      .build(),
+              IndexSpec.DEFAULT,
+              1,
+              forceGuaranteedRollup,
+              true,
+              10000L,
+              OffHeapMemorySegmentWriteOutMediumFactory.instance(),
+              null,
+              10,
+              100,
+              20L,
+              new Duration(3600),
+              128,
+              null,
+              null,
+              false,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null
+      );
+      final ParallelIndexIngestionSpec indexIngestionSpec = new ParallelIndexIngestionSpec(
+              new DataSchema(
+                      "datasource",
+                      new TimestampSpec(null, null, null),
+                      DimensionsSpec.EMPTY,
+                      null,
+                      null,
+                      null
+              ),
+              ioConfig,
+              tuningConfig
+      );
+
+      // If shouldCleanup is false, cleanup should be a no-o, throw a exception if toolbox is used
+      TaskToolbox toolbox = EasyMock.createMock(TaskToolbox.class);
+
+      new ParallelIndexSupervisorTask(
+              null,
+              null,
+              null,
+              indexIngestionSpec,
+              null,
+              null,
+              true
+      ).cleanUp(toolbox, null);
+
     }
 
     private PartitionStat createRangePartitionStat(Interval interval, int bucketId)

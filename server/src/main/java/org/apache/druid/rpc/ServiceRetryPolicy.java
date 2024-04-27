@@ -53,4 +53,14 @@ public interface ServiceRetryPolicy
    * Returns whether the given exception can be retried.
    */
   boolean retryThrowable(Throwable t);
+
+  /**
+   * Returns whether to log the cause of failure before retrying
+   */
+  boolean retryLoggable();
+
+  /**
+   * Returns whether service-not-available, i.e. empty {@link ServiceLocations#getLocations()}, can be retried.
+   */
+  boolean retryNotAvailable();
 }

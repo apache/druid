@@ -36,6 +36,8 @@ public class PollingLookupFactoryTest
     EasyMock.expect(pollingLookup.isOpen()).andReturn(true).once();
     EasyMock.replay(pollingLookup);
     Assert.assertTrue(pollingLookupFactory.start());
+    pollingLookupFactory.awaitInitialization();
+    Assert.assertTrue(pollingLookupFactory.isInitialized());
     EasyMock.verify(pollingLookup);
   }
 

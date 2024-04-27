@@ -81,7 +81,7 @@ public class QueryHostFinder
     );
 
     log.debug(
-        "Balancer class [%s] sending request with connectionId[%s] to server: %s",
+        "Balancer class[%s] sending request with connectionId[%s] to server[%s]",
         avaticaConnectionBalancer.getClass(),
         connectionId,
         chosenServer.getHost()
@@ -92,21 +92,36 @@ public class QueryHostFinder
   public Server findServerSql(SqlQuery sqlQuery)
   {
     Server server = findServerInner(hostSelector.selectForSql(sqlQuery));
-    assertServerFound(server, "No server found for SQL Query [%s]", "SELECT IT");
+    assertServerFound(
+        server,
+        "There are no available brokers for SQL query[%s]."
+        + "Please check that your brokers are "
+        + "running and healthy.",
+        sqlQuery
+    );
     return server;
   }
 
   public <T> Server pickServer(Query<T> query)
   {
     Server server = findServer(query);
-    assertServerFound(server, "No server found for query[%s]", query);
+    assertServerFound(
+        server,
+        "There are no available brokers for query[%s]."
+        + "Please check that your brokers are "
+        + "running and healthy.",
+        query
+    );
     return server;
   }
 
   public Server pickDefaultServer()
   {
     Server server = findDefaultServer();
-    assertServerFound(server, "No default server found!");
+    assertServerFound(
+        server,
+        "There are no available brokers. Please check that your brokers are running and healthy."
+    );
     return server;
   }
 
@@ -147,12 +162,12 @@ public class QueryHostFinder
   private void assertServerFound(Server server, String messageFormat, Object... args)
   {
     if (server != null) {
-      log.debug("Selected [%s]", server.getHost());
+      log.debug("Selected server[%s]", server.getHost());
       return;
     }
 
     log.makeAlert(
-        "Catastrophic failure! No servers found at all! Failing request!"
+        "Catastrophic failure! No brokers found at all! Failing request!"
     ).emit();
 
     throw new ISE(messageFormat, args);

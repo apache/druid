@@ -29,6 +29,7 @@ import java.io.File;
 import java.io.IOException;
 
 /**
+ *
  */
 public class LocalDataSegmentKiller implements DataSegmentKiller
 {
@@ -51,9 +52,12 @@ public class LocalDataSegmentKiller implements DataSegmentKiller
     log.info("Deleting segment[%s] from directory[%s].", segment.getId(), path);
 
     try {
-      if (path.getName().endsWith(".zip")) {
+      if ((path.getName().endsWith(".zip") && path.isFile()) ||
+          (path.getName().equals(LocalDataSegmentPusher.INDEX_DIR) && path.isDirectory())) {
         // path format -- > .../dataSource/interval/version/partitionNum/xxx.zip
         // or .../dataSource/interval/version/partitionNum/UUID/xxx.zip
+        // or -- > .../dataSource/interval/version/partitionNum/index/
+        // or .../dataSource/interval/version/partitionNum/UUID/index/
 
         File parentDir = path.getParentFile();
         FileUtils.deleteDirectory(parentDir);
@@ -62,13 +66,18 @@ public class LocalDataSegmentKiller implements DataSegmentKiller
         parentDir = parentDir.getParentFile();
         int maxDepth = 4; // if for some reason there's no datasSource directory, stop recursing somewhere reasonable
         while (parentDir != null && --maxDepth >= 0) {
-          if (!parentDir.delete() || segment.getDataSource().equals(parentDir.getName())) {
+          // parentDir.listFiles().length > 0 check not strictly necessary, because parentDir.delete() fails on
+          // nonempty directories. However, including it here is nice since it makes our intent very clear (only
+          // remove nonempty directories) and it prevents making delete syscalls that are doomed to failure.
+          if (parentDir.listFiles().length > 0
+              || !parentDir.delete()
+              || segment.getDataSource().equals(parentDir.getName())) {
             break;
           }
 
           parentDir = parentDir.getParentFile();
         }
-      } else {
+      } else if (path.exists()) {
         throw new SegmentLoadingException("Unknown file type[%s]", path);
       }
     }

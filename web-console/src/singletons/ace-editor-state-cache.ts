@@ -16,33 +16,31 @@
  * limitations under the License.
  */
 
-import { Ace } from 'ace-builds';
+import type { Ace } from 'ace-builds';
 
 interface EditorState {
   undoManager: Ace.UndoManager;
 }
 
 export class AceEditorStateCache {
-  static states: Record<string, EditorState> = {};
+  static states = new Map<string, EditorState>();
 
   static saveState(id: string, editor: Ace.Editor): void {
     const session = editor.getSession();
     const undoManager: any = session.getUndoManager();
-    AceEditorStateCache.states[id] = {
+    AceEditorStateCache.states.set(id, {
       undoManager,
-    };
+    });
   }
 
   static applyState(id: string, editor: Ace.Editor): void {
-    const state = AceEditorStateCache.states[id];
+    const state = AceEditorStateCache.states.get(id);
     if (!state) return;
     const session = editor.getSession();
     session.setUndoManager(state.undoManager);
   }
 
-  static deleteStates(ids: string[]): void {
-    for (const id of ids) {
-      delete AceEditorStateCache.states[id];
-    }
+  static deleteState(id: string): void {
+    AceEditorStateCache.states.delete(id);
   }
 }

@@ -22,6 +22,7 @@ package org.apache.druid.frame.processor;
 import it.unimi.dsi.fastutil.ints.Int2ObjectRBTreeMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectSortedMap;
 import it.unimi.dsi.fastutil.ints.IntSortedSet;
+import org.apache.druid.frame.channel.ReadableFrameChannel;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -90,6 +91,14 @@ public class OutputChannels
   }
 
   /**
+   * Returns all channels, as readable channels.
+   */
+  public List<ReadableFrameChannel> getAllReadableChannels()
+  {
+    return outputChannels.stream().map(OutputChannel::getReadableChannel).collect(Collectors.toList());
+  }
+
+  /**
    * Returns channels for which {@link OutputChannel#getPartitionNumber()} returns {@code partitionNumber}.
    */
   public List<OutputChannel> getChannelsForPartition(final int partitionNumber)
@@ -110,5 +119,16 @@ public class OutputChannels
   public OutputChannels readOnly()
   {
     return wrapReadOnly(outputChannels);
+  }
+
+  public boolean areReadableChannelsReady()
+  {
+    for (final OutputChannel outputChannel : outputChannels) {
+      if (!outputChannel.isReadableChannelReady()) {
+        return false;
+      }
+    }
+
+    return true;
   }
 }

@@ -24,12 +24,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
-import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectAVLTreeMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectSortedMap;
 import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.processor.OutputChannel;
 import org.apache.druid.frame.processor.OutputChannelFactory;
 import org.apache.druid.frame.processor.OutputChannels;
+import org.apache.druid.frame.processor.manager.ProcessorManagers;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.msq.counters.CounterTracker;
@@ -43,7 +44,7 @@ import org.apache.druid.msq.kernel.ProcessorsAndChannels;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.querykit.BaseFrameProcessorFactory;
 import org.apache.druid.query.groupby.GroupByQuery;
-import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
+import org.apache.druid.query.groupby.GroupingEngine;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -70,7 +71,7 @@ public class GroupByPostShuffleFrameProcessorFactory extends BaseFrameProcessorF
   }
 
   @Override
-  public ProcessorsAndChannels<FrameProcessor<Long>, Long> makeProcessors(
+  public ProcessorsAndChannels<Object, Long> makeProcessors(
       StageDefinition stageDefinition,
       int workerNumber,
       List<InputSlice> inputSlices,
@@ -85,9 +86,9 @@ public class GroupByPostShuffleFrameProcessorFactory extends BaseFrameProcessorF
   {
     // Expecting a single input slice from some prior stage.
     final StageInputSlice slice = (StageInputSlice) Iterables.getOnlyElement(inputSlices);
-    final GroupByStrategySelector strategySelector = frameContext.groupByStrategySelector();
+    final GroupingEngine engine = frameContext.groupingEngine();
+    final Int2ObjectSortedMap<OutputChannel> outputChannels = new Int2ObjectAVLTreeMap<>();
 
-    final Int2ObjectMap<OutputChannel> outputChannels = new Int2ObjectOpenHashMap<>();
     for (final ReadablePartition partition : slice.getPartitions()) {
       outputChannels.computeIfAbsent(
           partition.getPartitionNumber(),
@@ -105,26 +106,25 @@ public class GroupByPostShuffleFrameProcessorFactory extends BaseFrameProcessorF
     final Sequence<ReadableInput> readableInputs =
         Sequences.simple(inputSliceReader.attach(0, slice, counters, warningPublisher));
 
-    final Sequence<FrameProcessor<Long>> processors = readableInputs.map(
+    final Sequence<FrameProcessor<Object>> processors = readableInputs.map(
         readableInput -> {
           final OutputChannel outputChannel =
               outputChannels.get(readableInput.getStagePartition().getPartitionNumber());
 
           return new GroupByPostShuffleFrameProcessor(
               query,
-              strategySelector,
+              engine,
               readableInput.getChannel(),
               outputChannel.getWritableChannel(),
+              stageDefinition.createFrameWriterFactory(outputChannel.getFrameMemoryAllocator()),
               readableInput.getChannelFrameReader(),
-              stageDefinition.getSignature(),
-              stageDefinition.getClusterBy(),
-              outputChannel.getFrameMemoryAllocator()
+              frameContext.jsonMapper()
           );
         }
     );
 
     return new ProcessorsAndChannels<>(
-        processors,
+        ProcessorManagers.of(processors),
         OutputChannels.wrapReadOnly(ImmutableList.copyOf(outputChannels.values()))
     );
   }

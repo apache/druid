@@ -16,9 +16,11 @@
  * limitations under the License.
  */
 
-import { Card, H5, Icon, IconName } from '@blueprintjs/core';
+import type { IconName } from '@blueprintjs/core';
+import { Card, H5, Icon } from '@blueprintjs/core';
 import classNames from 'classnames';
-import React, { ReactNode } from 'react';
+import type { ReactNode } from 'react';
+import React from 'react';
 
 import './home-view-card.scss';
 

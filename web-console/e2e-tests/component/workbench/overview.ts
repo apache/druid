@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import * as playwright from 'playwright-chromium';
+import type * as playwright from 'playwright-chromium';
 
 import { clickButton } from '../../util/playwright';
 import { extractTable } from '../../util/table';
@@ -40,7 +40,7 @@ export class WorkbenchOverview {
     const input = await this.page.waitForSelector('div.flexible-query-input textarea');
     await input.fill(query);
     await clickButton(this.page, 'Run');
-    await this.page.waitForSelector('div.result-table-pane', { timeout: 5 * 60 * 1000 });
+    await this.page.waitForSelector('div.result-table-pane', { timeout: 4 * 60 * 1000 });
 
     return await extractTable(this.page, 'div.result-table-pane div.rt-tr-group', 'div.rt-td');
   }

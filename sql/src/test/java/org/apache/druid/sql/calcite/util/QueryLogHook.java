@@ -23,44 +23,23 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import org.apache.calcite.runtime.Hook;
-import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.Query;
-import org.junit.rules.TestRule;
-import org.junit.runner.Description;
-import org.junit.runners.model.Statement;
-
 import java.util.List;
-import java.util.function.Consumer;
 
 /**
- * JUnit Rule that adds a Calcite hook to log and remember Druid queries.
+ * Class to log Druid queries.
  */
-public class QueryLogHook implements TestRule
+public class QueryLogHook
 {
   private static final Logger log = new Logger(QueryLogHook.class);
 
   private final ObjectMapper objectMapper;
   private final List<Query<?>> recordedQueries = Lists.newCopyOnWriteArrayList();
 
-  public QueryLogHook(final ObjectMapper objectMapper)
+  public QueryLogHook(ObjectMapper objectMapper)
   {
     this.objectMapper = objectMapper;
-  }
-
-  public static QueryLogHook create()
-  {
-    return new QueryLogHook(new DefaultObjectMapper());
-  }
-
-  public static QueryLogHook create(final ObjectMapper objectMapper)
-  {
-    return new QueryLogHook(objectMapper);
-  }
-
-  public void clearRecordedQueries()
-  {
-    recordedQueries.clear();
   }
 
   public List<Query<?>> getRecordedQueries()
@@ -68,33 +47,24 @@ public class QueryLogHook implements TestRule
     return ImmutableList.copyOf(recordedQueries);
   }
 
-  @Override
-  public Statement apply(final Statement base, final Description description)
+  protected void accept(Object query)
   {
-    return new Statement()
-    {
-      @Override
-      public void evaluate() throws Throwable
-      {
-        clearRecordedQueries();
+    try {
+      recordedQueries.add((Query<?>) query);
+      log.info(
+          "Issued query: %s",
+          objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(query)
+      );
+    }
+    catch (Exception e) {
+      log.warn(e, "Failed to serialize query: %s", query);
+    }
+  }
 
-        final Consumer<Object> function = query -> {
-          try {
-            recordedQueries.add((Query<?>) query);
-            log.info(
-                "Issued query: %s",
-                objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(query)
-            );
-          }
-          catch (Exception e) {
-            log.warn(e, "Failed to serialize query: %s", query);
-          }
-        };
-
-        try (final Hook.Closeable unhook = Hook.QUERY_PLAN.add(function)) {
-          base.evaluate();
-        }
-      }
-    };
+  public void logQueriesFor(Runnable r)
+  {
+    try (final Hook.Closeable unhook = Hook.QUERY_PLAN.addThread(this::accept)) {
+      r.run();
+    }
   }
 }

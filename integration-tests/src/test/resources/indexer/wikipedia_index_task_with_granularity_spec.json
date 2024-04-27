@@ -3,6 +3,14 @@
   "spec": {
     "dataSchema": {
       "dataSource": "%%DATASOURCE%%",
+      "timestampSpec": {
+        "column": "timestamp"
+      },
+      "dimensionsSpec": {
+        "dimensions": [
+          {"type": "string", "name": "language", "createBitmapIndex": false}
+        ]
+      },
       "metricsSpec": [
         {
           "type": "count",
@@ -39,27 +47,17 @@
           "fieldName": "user"
         }
       ],
-      "granularitySpec": %%GRANULARITYSPEC%%,
-      "parser": {
-        "parseSpec": {
-          "format" : "json",
-          "timestampSpec": {
-            "column": "timestamp"
-          },
-          "dimensionsSpec": {
-            "dimensions": [
-              {"type": "string", "name": "language", "createBitmapIndex": false}
-            ]
-          }
-        }
-      }
+      "granularitySpec": %%GRANULARITYSPEC%%
     },
     "ioConfig": {
       "type": "index",
-      "firehose": {
+      "inputSource": {
         "type": "local",
         "baseDir": "/resources/data/batch_index/json",
         "filter": "wikipedia_index_data*"
+      },
+      "inputFormat": {
+        "type" : "json"
       }
     },
     "tuningConfig": {

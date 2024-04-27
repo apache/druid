@@ -82,7 +82,7 @@ public class HllSketchBuildBufferAggregatorHelper
    * Helper for implementing {@link org.apache.druid.query.aggregation.BufferAggregator#get} and
    * {@link org.apache.druid.query.aggregation.VectorAggregator#get}.
    */
-  public Object get(ByteBuffer buf, int position)
+  public HllSketch get(ByteBuffer buf, int position)
   {
     return sketchCache.get(buf).get(position).copy();
   }

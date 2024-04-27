@@ -25,7 +25,7 @@ import java.util.Set;
 
 /**
  * Phases that a stage can be in, as far as the controller is concerned.
- *
+ * <p>
  * Used by {@link ControllerStageTracker}.
  */
 public enum ControllerStagePhase
@@ -44,18 +44,32 @@ public enum ControllerStagePhase
     @Override
     public boolean canTransitionFrom(final ControllerStagePhase priorPhase)
     {
-      return priorPhase == NEW;
+      return priorPhase == RETRYING || priorPhase == NEW;
     }
   },
 
-  // Post the inputs have been read and mapped to frames, in the `POST_READING` stage, we pre-shuffle and determing the partition boundaries.
+  // Waiting to fetch key statistics in the background from the workers and incrementally generate partitions.
+  // This phase is only transitioned to once all partialKeyInformation are received from workers.
+  // Transitioning to this phase should also enqueue the task to fetch key statistics if `SEQUENTIAL` strategy is used.
+  // In `PARALLEL` strategy, we start fetching the key statistics as soon as they are available on the worker.
+  // This stage is not required in non-pre shuffle contexts
+
+  MERGING_STATISTICS {
+    @Override
+    public boolean canTransitionFrom(final ControllerStagePhase priorPhase)
+    {
+      return priorPhase == READING_INPUT;
+    }
+  },
+
+  // Post the inputs have been read and mapped to frames, in the `POST_READING` stage, we pre-shuffle and determining the partition boundaries.
   // This step for a stage spits out the statistics of the data as a whole (and not just the individual records). This
   // phase is not required in non-pre shuffle contexts.
   POST_READING {
     @Override
     public boolean canTransitionFrom(final ControllerStagePhase priorPhase)
     {
-      return priorPhase == READING_INPUT;
+      return priorPhase == MERGING_STATISTICS;
     }
   },
 
@@ -84,6 +98,20 @@ public enum ControllerStagePhase
     public boolean canTransitionFrom(final ControllerStagePhase priorPhase)
     {
       return true;
+    }
+  },
+
+  // Stages whose workers are currently under relaunch. We can transition out of Retrying state only when all the work orders
+  // of this stage have been sent.
+  // We can transition into Retrying phase when the prior phase did not publish its final results yet.
+  RETRYING {
+    @Override
+    public boolean canTransitionFrom(final ControllerStagePhase priorPhase)
+    {
+      return priorPhase == READING_INPUT
+             || priorPhase == POST_READING
+             || priorPhase == MERGING_STATISTICS
+             || priorPhase == RETRYING;
     }
   };
 

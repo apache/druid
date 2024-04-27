@@ -375,7 +375,7 @@ public class SchemaEvolutionTest
 
     // Only nonexistent(4)
     Assert.assertEquals(
-        timeseriesResult(TestHelper.createExpectedMap(
+        timeseriesResult(TestHelper.makeMap(
             "a",
             NullHandling.defaultLongValue(),
             "b",

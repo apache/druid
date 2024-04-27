@@ -21,24 +21,18 @@ package org.apache.druid.server.coordinator;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.common.config.JacksonConfigManager;
-import org.apache.druid.metadata.MetadataStorageConnector;
-import org.apache.druid.metadata.MetadataStorageTablesConfig;
 
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicReference;
 
 public class CoordinatorCompactionConfig
 {
   public static final String CONFIG_KEY = "coordinator.compaction.config";
 
   private static final double DEFAULT_COMPACTION_TASK_RATIO = 0.1;
-  private static final int DEFAILT_MAX_COMPACTION_TASK_SLOTS = Integer.MAX_VALUE;
+  private static final int DEFAULT_MAX_COMPACTION_TASK_SLOTS = Integer.MAX_VALUE;
   private static final boolean DEFAULT_USE_AUTO_SCALE_SLOTS = false;
 
   private final List<DataSourceCompactionConfig> compactionConfigs;
@@ -84,36 +78,6 @@ public class CoordinatorCompactionConfig
     return new CoordinatorCompactionConfig(ImmutableList.of(), null, null, null);
   }
 
-  public static AtomicReference<CoordinatorCompactionConfig> watch(final JacksonConfigManager configManager)
-  {
-    return configManager.watch(
-        CoordinatorCompactionConfig.CONFIG_KEY,
-        CoordinatorCompactionConfig.class,
-        CoordinatorCompactionConfig.empty()
-    );
-  }
-
-  public static byte[] getConfigInByteFromDb(final MetadataStorageConnector connector, MetadataStorageTablesConfig config)
-  {
-    return connector.lookup(
-        config.getConfigTable(),
-        "name",
-        "payload",
-        CoordinatorCompactionConfig.CONFIG_KEY
-    );
-  }
-
-  public static CoordinatorCompactionConfig convertByteToConfig(final JacksonConfigManager configManager, byte[] configInByte)
-  {
-    return configManager.convertByteToConfig(configInByte, CoordinatorCompactionConfig.class, CoordinatorCompactionConfig.empty());
-  }
-
-  @Nonnull
-  public static CoordinatorCompactionConfig current(final JacksonConfigManager configManager)
-  {
-    return Preconditions.checkNotNull(watch(configManager).get(), "Got null config from watcher?!");
-  }
-
   @JsonCreator
   public CoordinatorCompactionConfig(
       @JsonProperty("compactionConfigs") List<DataSourceCompactionConfig> compactionConfigs,
@@ -127,7 +91,7 @@ public class CoordinatorCompactionConfig
                                    DEFAULT_COMPACTION_TASK_RATIO :
                                    compactionTaskSlotRatio;
     this.maxCompactionTaskSlots = maxCompactionTaskSlots == null ?
-                                  DEFAILT_MAX_COMPACTION_TASK_SLOTS :
+                                  DEFAULT_MAX_COMPACTION_TASK_SLOTS :
                                   maxCompactionTaskSlots;
     this.useAutoScaleSlots = useAutoScaleSlots == null ?
                              DEFAULT_USE_AUTO_SCALE_SLOTS :

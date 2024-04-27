@@ -23,54 +23,65 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.aggregation.SerializablePairLongString;
 import org.apache.druid.query.aggregation.VectorAggregator;
+import org.apache.druid.query.dimension.DefaultDimensionSpec;
+import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.segment.IdLookup;
+import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.vector.BaseLongVectorValueSelector;
+import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
+import org.apache.druid.segment.vector.NoFilterVectorOffset;
+import org.apache.druid.segment.vector.ReadableVectorInspector;
+import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorObjectSelector;
+import org.apache.druid.segment.vector.VectorValueSelector;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.Answers;
-import org.mockito.Mock;
-import org.mockito.Mockito;
-import org.mockito.junit.MockitoJUnitRunner;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.concurrent.ThreadLocalRandom;
 
 
-@RunWith(MockitoJUnitRunner.class)
 public class StringLastVectorAggregatorTest extends InitializedNullHandlingTest
 {
   private static final double EPSILON = 1e-5;
   private static final String[] VALUES = new String[]{"a", "b", null, "c"};
+  private static final int[] DICT_VALUES = new int[]{1, 2, 0, 3};
+  private static final long[] LONG_VALUES = new long[]{1L, 2L, 3L, 4L};
+  private static final String[] STRING_VALUES = new String[]{"1", "2", "3", "4"};
+  private static final float[] FLOAT_VALUES = new float[]{1.0f, 2.0f, 3.0f, 4.0f};
+  private static final double[] DOUBLE_VALUES = new double[]{1.0, 2.0, 3.0, 4.0};
   private static final boolean[] NULLS = new boolean[]{false, false, true, false};
+  private static final boolean[] NULLS1 = new boolean[]{false, false};
   private static final String NAME = "NAME";
   private static final String FIELD_NAME = "FIELD_NAME";
+  private static final String FIELD_NAME_LONG = "LONG_NAME";
   private static final String TIME_COL = "__time";
-  private long[] times = {2436, 6879, 7888, 8224};
-  private long[] timesSame = {2436, 2436};
-  private SerializablePairLongString[] pairs = {
+  private final long[] times = {2436, 6879, 7888, 8224};
+  private final long[] timesSame = {2436, 2436};
+  private final SerializablePairLongString[] pairs = {
       new SerializablePairLongString(2345100L, "last"),
       new SerializablePairLongString(2345001L, "notLast")
   };
 
-  @Mock
   private VectorObjectSelector selector;
-  @Mock
-  private VectorObjectSelector selectorForPairs;
-  @Mock
   private BaseLongVectorValueSelector timeSelector;
-  @Mock
-  private BaseLongVectorValueSelector timeSelectorForPairs;
+  private VectorValueSelector nonStringValueSelector;
   private ByteBuffer buf;
   private StringLastVectorAggregator target;
   private StringLastVectorAggregator targetWithPairs;
 
   private StringLastAggregatorFactory stringLastAggregatorFactory;
-  @Mock(answer = Answers.RETURNS_DEEP_STUBS)
+  private StringLastAggregatorFactory stringLastAggregatorFactory1;
+  private SingleStringLastDimensionVectorAggregator targetSingleDim;
+
   private VectorColumnSelectorFactory selectorFactory;
+
 
   @Before
   public void setup()
@@ -78,19 +89,240 @@ public class StringLastVectorAggregatorTest extends InitializedNullHandlingTest
     byte[] randomBytes = new byte[1024];
     ThreadLocalRandom.current().nextBytes(randomBytes);
     buf = ByteBuffer.wrap(randomBytes);
-    Mockito.doReturn(VALUES).when(selector).getObjectVector();
-    Mockito.doReturn(times).when(timeSelector).getLongVector();
-    Mockito.doReturn(timesSame).when(timeSelectorForPairs).getLongVector();
-    Mockito.doReturn(pairs).when(selectorForPairs).getObjectVector();
+    timeSelector = new BaseLongVectorValueSelector(new NoFilterVectorOffset(times.length, 0, times.length))
+    {
+      @Override
+      public long[] getLongVector()
+      {
+        return times;
+      }
+
+      @Nullable
+      @Override
+      public boolean[] getNullVector()
+      {
+        return null;
+      }
+    };
+    nonStringValueSelector = new BaseLongVectorValueSelector(new NoFilterVectorOffset(
+        LONG_VALUES.length,
+        0,
+        LONG_VALUES.length
+    ))
+    {
+      @Override
+      public long[] getLongVector()
+      {
+        return LONG_VALUES;
+      }
+
+      @Override
+      public float[] getFloatVector()
+      {
+        return FLOAT_VALUES;
+      }
+
+      @Override
+      public double[] getDoubleVector()
+      {
+        return DOUBLE_VALUES;
+      }
+
+      @Nullable
+      @Override
+      public boolean[] getNullVector()
+      {
+        return NULLS;
+      }
+
+      @Override
+      public int getMaxVectorSize()
+      {
+        return 4;
+      }
+
+      @Override
+      public int getCurrentVectorSize()
+      {
+        return 4;
+      }
+    };
+    selector = new VectorObjectSelector()
+    {
+      @Override
+      public Object[] getObjectVector()
+      {
+        return VALUES;
+      }
+
+      @Override
+      public int getMaxVectorSize()
+      {
+        return 0;
+      }
+
+      @Override
+      public int getCurrentVectorSize()
+      {
+        return 0;
+      }
+    };
+    BaseLongVectorValueSelector timeSelectorForPairs = new BaseLongVectorValueSelector(new NoFilterVectorOffset(
+        timesSame.length,
+        0,
+        timesSame.length
+    ))
+    {
+      @Override
+      public long[] getLongVector()
+      {
+        return timesSame;
+      }
+
+      @Nullable
+      @Override
+      public boolean[] getNullVector()
+      {
+        return NULLS1;
+      }
+    };
+    VectorObjectSelector selectorForPairs = new VectorObjectSelector()
+    {
+      @Override
+      public Object[] getObjectVector()
+      {
+        return pairs;
+      }
+
+      @Override
+      public int getMaxVectorSize()
+      {
+        return 2;
+      }
+
+      @Override
+      public int getCurrentVectorSize()
+      {
+        return 2;
+      }
+    };
+    selectorFactory = new VectorColumnSelectorFactory()
+    {
+      @Override
+      public ReadableVectorInspector getReadableVectorInspector()
+      {
+        return new NoFilterVectorOffset(LONG_VALUES.length, 0, LONG_VALUES.length);
+      }
+
+      @Override
+      public SingleValueDimensionVectorSelector makeSingleValueDimensionSelector(DimensionSpec dimensionSpec)
+      {
+        return new SingleValueDimensionVectorSelector()
+        {
+          @Override
+          public int[] getRowVector()
+          {
+            return DICT_VALUES;
+          }
+
+          @Override
+          public int getValueCardinality()
+          {
+            return DICT_VALUES.length;
+          }
+
+          @Nullable
+          @Override
+          public String lookupName(int id)
+          {
+            switch (id) {
+              case 1:
+                return "a";
+              case 2:
+                return "b";
+              case 3:
+                return "c";
+              default:
+                return null;
+            }
+          }
+
+          @Override
+          public boolean nameLookupPossibleInAdvance()
+          {
+            return false;
+          }
+
+          @Nullable
+          @Override
+          public IdLookup idLookup()
+          {
+            return null;
+          }
+
+          @Override
+          public int getMaxVectorSize()
+          {
+            return DICT_VALUES.length;
+          }
+
+          @Override
+          public int getCurrentVectorSize()
+          {
+            return DICT_VALUES.length;
+          }
+        };
+      }
+
+      @Override
+      public MultiValueDimensionVectorSelector makeMultiValueDimensionSelector(DimensionSpec dimensionSpec)
+      {
+        return null;
+      }
+
+      @Override
+      public VectorValueSelector makeValueSelector(String column)
+      {
+        if (TIME_COL.equals(column)) {
+          return timeSelector;
+        } else if (FIELD_NAME_LONG.equals(column)) {
+          return nonStringValueSelector;
+        }
+        return null;
+      }
+
+      @Override
+      public VectorObjectSelector makeObjectSelector(String column)
+      {
+        if (FIELD_NAME.equals(column)) {
+          return selector;
+        } else {
+          return null;
+        }
+      }
+
+      @Nullable
+      @Override
+      public ColumnCapabilities getColumnCapabilities(String column)
+      {
+        if (FIELD_NAME.equals(column)) {
+          return ColumnCapabilitiesImpl.createSimpleSingleValueStringColumnCapabilities();
+        } else if (FIELD_NAME_LONG.equals(column)) {
+          return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.LONG);
+        }
+        return null;
+      }
+    };
+
     target = new StringLastVectorAggregator(timeSelector, selector, 10);
     targetWithPairs = new StringLastVectorAggregator(timeSelectorForPairs, selectorForPairs, 10);
+    targetSingleDim = new SingleStringLastDimensionVectorAggregator(timeSelector, selectorFactory.makeSingleValueDimensionSelector(
+        DefaultDimensionSpec.of(FIELD_NAME)), 10);
     clearBufferForPositions(0, 0);
 
 
-    Mockito.doReturn(selector).when(selectorFactory).makeObjectSelector(FIELD_NAME);
-    Mockito.doReturn(timeSelector).when(selectorFactory).makeValueSelector(TIME_COL);
     stringLastAggregatorFactory = new StringLastAggregatorFactory(NAME, FIELD_NAME, TIME_COL, 10);
-
+    stringLastAggregatorFactory1 = new StringLastAggregatorFactory(NAME, FIELD_NAME_LONG, TIME_COL, 10);
   }
 
   @Test
@@ -113,6 +345,19 @@ public class StringLastVectorAggregatorTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testStringLastOnNonStringColumns()
+  {
+    Assert.assertTrue(stringLastAggregatorFactory1.canVectorize(selectorFactory));
+    VectorAggregator vectorAggregator = stringLastAggregatorFactory1.factorizeVector(selectorFactory);
+    Assert.assertNotNull(vectorAggregator);
+    Assert.assertEquals(StringLastVectorAggregator.class, vectorAggregator.getClass());
+    vectorAggregator.aggregate(buf, 0, 0, LONG_VALUES.length);
+    Pair<Long, String> result = (Pair<Long, String>) vectorAggregator.get(buf, 0);
+    Assert.assertEquals(times[3], result.lhs.longValue());
+    Assert.assertEquals(STRING_VALUES[3], result.rhs);
+  }
+
+  @Test
   public void initValueShouldBeMinDate()
   {
     target.init(buf, 0);
@@ -127,6 +372,25 @@ public class StringLastVectorAggregatorTest extends InitializedNullHandlingTest
     Pair<Long, String> result = (Pair<Long, String>) target.get(buf, 0);
     Assert.assertEquals(times[3], result.lhs.longValue());
     Assert.assertEquals(VALUES[3], result.rhs);
+  }
+
+  @Test
+  public void aggregateNoOp()
+  {
+    // Test that aggregates run just fine when the input field does not exist
+    StringLastVectorAggregator aggregator = new StringLastVectorAggregator(null, selector, 10);
+    aggregator.aggregate(buf, 0, 0, VALUES.length);
+  }
+
+  @Test
+  public void aggregateBatchNoOp()
+  {
+    // Test that aggregates run just fine when the input field does not exist
+    StringLastVectorAggregator aggregator = new StringLastVectorAggregator(null, selector, 10);
+    int[] positions = new int[]{0, 43, 70};
+    int positionOffset = 2;
+    clearBufferForPositions(positionOffset, positions);
+    aggregator.aggregate(buf, 3, positions, null, positionOffset);
   }
 
   @Test
@@ -153,6 +417,44 @@ public class StringLastVectorAggregatorTest extends InitializedNullHandlingTest
     target.aggregate(buf, 3, positions, rows, positionOffset);
     for (int i = 0; i < positions.length; i++) {
       Pair<Long, String> result = (Pair<Long, String>) target.get(buf, positions[i] + positionOffset);
+      Assert.assertEquals(times[rows[i]], result.lhs.longValue());
+      Assert.assertEquals(VALUES[rows[i]], result.rhs);
+    }
+  }
+
+  @Test
+  public void aggregateSingleDim()
+  {
+    targetSingleDim.aggregate(buf, 0, 0, VALUES.length);
+    Pair<Long, String> result = (Pair<Long, String>) targetSingleDim.get(buf, 0);
+    Assert.assertEquals(times[3], result.lhs.longValue());
+    Assert.assertEquals(VALUES[3], result.rhs);
+  }
+
+  @Test
+  public void aggregateBatchWithoutRowsSingleDim()
+  {
+    int[] positions = new int[]{0, 43, 70};
+    int positionOffset = 2;
+    clearBufferForPositions(positionOffset, positions);
+    targetSingleDim.aggregate(buf, 3, positions, null, positionOffset);
+    for (int i = 0; i < positions.length; i++) {
+      Pair<Long, String> result = (Pair<Long, String>) targetSingleDim.get(buf, positions[i] + positionOffset);
+      Assert.assertEquals(times[i], result.lhs.longValue());
+      Assert.assertEquals(VALUES[i], result.rhs);
+    }
+  }
+
+  @Test
+  public void aggregateBatchWithRowsSingleDim()
+  {
+    int[] positions = new int[]{0, 43, 70};
+    int[] rows = new int[]{3, 2, 0};
+    int positionOffset = 2;
+    clearBufferForPositions(positionOffset, positions);
+    targetSingleDim.aggregate(buf, 3, positions, rows, positionOffset);
+    for (int i = 0; i < positions.length; i++) {
+      Pair<Long, String> result = (Pair<Long, String>) targetSingleDim.get(buf, positions[i] + positionOffset);
       Assert.assertEquals(times[rows[i]], result.lhs.longValue());
       Assert.assertEquals(VALUES[rows[i]], result.rhs);
     }

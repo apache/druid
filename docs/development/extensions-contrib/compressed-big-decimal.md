@@ -34,7 +34,7 @@ Compressed big decimal is an absolute number based complex type based on big dec
 2. Accuracy: Provides greater level of accuracy in decimal arithmetic
 
 ## Operations
-To use this extension, make sure to [load](../../development/extensions.md#loading-extensions) `compressed-big-decimal` to your config file.
+To use this extension, make sure to [load](../../configuration/extensions.md#loading-extensions) `compressed-big-decimal` to your config file.
 
 ## Configuration
 There are currently no configuration properties specific to Compressed Big Decimal
@@ -61,7 +61,7 @@ There are currently no configuration properties specific to Compressed Big Decim
 |dimensions|A JSON list of [DimensionSpec](../../querying/dimensionspecs.md) (Notice that property is optional)|no|
 |limitSpec|See [LimitSpec](../../querying/limitspec.md)|no|
 |having|See [Having](../../querying/having.md)|no|
-|granularity|A period granularity; See [Period Granularities](../../querying/granularities.html#period-granularities)|yes|
+|granularity|A period granularity; See [Period Granularities](../../querying/granularities.md#period-granularities)|yes|
 |filter|See [Filters](../../querying/filters.md)|no|
 |aggregations|Aggregations forms the input to Averagers; See [Aggregations](../../querying/aggregations.md). The Aggregations must specify type, scale and size as follows for compressedBigDecimal Type ```"aggregations": [{"type": "compressedBigDecimal","name": "..","fieldName": "..","scale": [Numeric],"size": [Numeric]}```.  Please refer query example in Examples section.  |Yes|
 |postAggregations|Supports only aggregations as input; See [Post Aggregations](../../querying/post-aggregations.md)|no|

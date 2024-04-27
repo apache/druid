@@ -16,9 +16,9 @@
  * limitations under the License.
  */
 
-import { IngestionSpec } from '../druid-models';
+import type { IngestionSpec } from '../druid-models';
 
-import { applyCache, headerFromSampleResponse } from './sampler';
+import { applyCache } from './sampler';
 
 describe('utils', () => {
   const ingestionSpec: IngestionSpec = {
@@ -52,20 +52,6 @@ describe('utils', () => {
     },
   };
 
-  // const cacheRows: CacheRows = [{ make: 'Honda', model: 'Civic' }, { make: 'BMW', model: 'M3' }];
-
-  it('spec-utils headerFromSampleResponse', () => {
-    expect(
-      headerFromSampleResponse({
-        sampleResponse: { data: [{ input: { a: 1 }, parsed: { a: 1 } }] },
-      }),
-    ).toMatchInlineSnapshot(`
-      Array [
-        "a",
-      ]
-    `);
-  });
-
   it('spec-utils applyCache', () => {
     expect(
       applyCache(
@@ -82,37 +68,37 @@ describe('utils', () => {
         ],
       ),
     ).toMatchInlineSnapshot(`
-      Object {
-        "samplerConfig": Object {
+      {
+        "samplerConfig": {
           "numRows": 500,
           "timeoutMs": 15000,
         },
-        "spec": Object {
-          "dataSchema": Object {
+        "spec": {
+          "dataSchema": {
             "dataSource": "wikipedia",
-            "dimensionsSpec": Object {},
-            "granularitySpec": Object {
+            "dimensionsSpec": {},
+            "granularitySpec": {
               "queryGranularity": "hour",
               "segmentGranularity": "day",
             },
-            "timestampSpec": Object {
+            "timestampSpec": {
               "column": "timestamp",
               "format": "iso",
             },
           },
-          "ioConfig": Object {
-            "inputFormat": Object {
+          "ioConfig": {
+            "inputFormat": {
               "keepNullColumns": true,
               "type": "json",
             },
-            "inputSource": Object {
-              "data": "{\\"make\\":\\"Honda\\",\\"model\\":\\"Accord\\"}
-      {\\"make\\":\\"Toyota\\",\\"model\\":\\"Prius\\"}",
+            "inputSource": {
+              "data": "{"make":"Honda","model":"Accord"}
+      {"make":"Toyota","model":"Prius"}",
               "type": "inline",
             },
             "type": "index",
           },
-          "tuningConfig": Object {
+          "tuningConfig": {
             "type": "index_parallel",
           },
           "type": "index",

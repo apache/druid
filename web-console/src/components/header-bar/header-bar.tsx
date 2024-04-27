@@ -36,21 +36,23 @@ import React, { useState } from 'react';
 
 import {
   AboutDialog,
+  CompactionDynamicConfigDialog,
   CoordinatorDynamicConfigDialog,
   DoctorDialog,
   OverlordDynamicConfigDialog,
 } from '../../dialogs';
+import { Capabilities } from '../../helpers';
 import { getLink } from '../../links';
 import {
-  Capabilities,
   localStorageGetJson,
   LocalStorageKeys,
   localStorageRemove,
   localStorageSetJson,
   oneOf,
 } from '../../utils';
-import { ExternalLink } from '../external-link/external-link';
 import { PopoverText } from '../popover-text/popover-text';
+
+import { RestrictedMode } from './restricted-mode/restricted-mode';
 
 import './header-bar.scss';
 
@@ -61,12 +63,14 @@ export type HeaderActiveTab =
   | 'data-loader'
   | 'streaming-data-loader'
   | 'classic-batch-data-loader'
-  | 'ingestion'
+  | 'supervisors'
+  | 'tasks'
   | 'datasources'
   | 'segments'
   | 'services'
   | 'workbench'
   | 'sql-data-loader'
+  | 'explore'
   | 'lookups';
 
 const DruidLogo = React.memo(function DruidLogo() {
@@ -88,143 +92,6 @@ const DruidLogo = React.memo(function DruidLogo() {
   );
 });
 
-interface RestrictedModeProps {
-  capabilities: Capabilities;
-  onUnrestrict(capabilities: Capabilities): void;
-}
-
-const RestrictedMode = React.memo(function RestrictedMode(props: RestrictedModeProps) {
-  const { capabilities, onUnrestrict } = props;
-  const mode = capabilities.getModeExtended();
-
-  let label: string;
-  let message: JSX.Element;
-  switch (mode) {
-    case 'full':
-      return null; // Do not show anything
-
-    case 'no-sql':
-      label = 'No SQL mode';
-      message = (
-        <p>
-          It appears that the SQL endpoint is disabled. The console will fall back to{' '}
-          <ExternalLink href={getLink('DOCS_API')}>native Druid APIs</ExternalLink> and will be
-          limited in functionality. Look at{' '}
-          <ExternalLink href={getLink('DOCS_SQL')}>the SQL docs</ExternalLink> to enable the SQL
-          endpoint.
-        </p>
-      );
-      break;
-
-    case 'no-proxy':
-      label = 'No management proxy mode';
-      message = (
-        <p>
-          It appears that the management proxy is not enabled, the console will operate with limited
-          functionality.
-        </p>
-      );
-      break;
-
-    case 'no-sql-no-proxy':
-      label = 'No SQL mode';
-      message = (
-        <p>
-          It appears that the SQL endpoint and management proxy are disabled. The console can only
-          be used to make queries.
-        </p>
-      );
-      break;
-
-    case 'coordinator-overlord':
-      label = 'Coordinator/Overlord mode';
-      message = (
-        <p>
-          It appears that you are accessing the console on the Coordinator/Overlord shared service.
-          Due to the lack of access to some APIs on this service the console will operate in a
-          limited mode. The unrestricted version of the console can be accessed on the Router
-          service.
-        </p>
-      );
-      break;
-
-    case 'coordinator':
-      label = 'Coordinator mode';
-      message = (
-        <p>
-          It appears that you are accessing the console on the Coordinator service. Due to the lack
-          of access to some APIs on this service the console will operate in a limited mode. The
-          full version of the console can be accessed on the Router service.
-        </p>
-      );
-      break;
-
-    case 'overlord':
-      label = 'Overlord mode';
-      message = (
-        <p>
-          It appears that you are accessing the console on the Overlord service. Due to the lack of
-          access to some APIs on this service the console will operate in a limited mode. The
-          unrestricted version of the console can be accessed on the Router service.
-        </p>
-      );
-      break;
-
-    default:
-      label = 'Restricted mode';
-      message = (
-        <p>
-          Due to the lack of access to some APIs on this service the console will operate in a
-          limited mode. The unrestricted version of the console can be accessed on the Router
-          service.
-        </p>
-      );
-      break;
-  }
-
-  return (
-    <Popover2
-      content={
-        <PopoverText>
-          <p>The console is running in restricted mode.</p>
-          {message}
-          <p>
-            For more info check out the{' '}
-            <ExternalLink href={`${getLink('DOCS')}/operations/web-console.html`}>
-              web console documentation
-            </ExternalLink>
-            .
-          </p>
-          <p>
-            It is possible that there is an issue with the capability detection. You can enable the
-            unrestricted console but certain features might not work if the underlying APIs are not
-            available.
-          </p>
-          <p>
-            <Button
-              icon={IconNames.WARNING_SIGN}
-              text={`Temporarily unrestrict console${capabilities.hasSql() ? '' : ' (with SQL)'}`}
-              onClick={() => onUnrestrict(Capabilities.FULL)}
-            />
-          </p>
-          {!capabilities.hasSql() && (
-            <p>
-              <Button
-                icon={IconNames.WARNING_SIGN}
-                text="Temporarily unrestrict console (without SQL)"
-                onClick={() => onUnrestrict(Capabilities.NO_SQL)}
-              />
-            </p>
-          )}
-        </PopoverText>
-      }
-      position={Position.BOTTOM_RIGHT}
-    >
-      <Button icon={IconNames.WARNING_SIGN} text={label} intent={Intent.WARNING} minimal />
-    </Popover2>
-  );
-});
-
 export interface HeaderBarProps {
   active: HeaderActiveTab;
   capabilities: Capabilities;
@@ -238,6 +105,7 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
   const [coordinatorDynamicConfigDialogOpen, setCoordinatorDynamicConfigDialogOpen] =
     useState(false);
   const [overlordDynamicConfigDialogOpen, setOverlordDynamicConfigDialogOpen] = useState(false);
+  const [compactionDynamicConfigDialogOpen, setCompactionDynamicConfigDialogOpen] = useState(false);
 
   const showSplitDataLoaderMenu = capabilities.hasMultiStageQuery();
 
@@ -282,6 +150,15 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
         disabled={!capabilities.hasCoordinatorAccess()}
         selected={active === 'lookups'}
       />
+      <MenuDivider />
+      <MenuItem
+        icon={IconNames.COMPASS}
+        text="Explore"
+        label="(experimental)"
+        href="#explore"
+        disabled={!capabilities.hasSql()}
+        selected={active === 'explore'}
+      />
     </Menu>
   );
 
@@ -310,7 +187,7 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
     </Menu>
   );
 
-  function setForcedMode(capabilities: Capabilities | undefined): void {
+  function setCapabilitiesOverride(capabilities: Capabilities | undefined): void {
     if (capabilities) {
       localStorageSetJson(LocalStorageKeys.CAPABILITIES_OVERRIDE, capabilities);
     } else {
@@ -340,38 +217,51 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
         onClick={() => setOverlordDynamicConfigDialogOpen(true)}
         disabled={!capabilities.hasOverlordAccess()}
       />
-
+      <MenuItem
+        icon={IconNames.COMPRESSED}
+        text="Compaction dynamic config"
+        onClick={() => setCompactionDynamicConfigDialogOpen(true)}
+        disabled={!capabilities.hasCoordinatorAccess()}
+      />
       <MenuDivider />
-      <MenuItem icon={IconNames.COG} text="Console options">
-        {capabilitiesOverride ? (
-          <MenuItem text="Clear forced mode" onClick={() => setForcedMode(undefined)} />
-        ) : (
+      <MenuItem
+        icon={IconNames.HIGH_PRIORITY}
+        text="Capabilty detection"
+        intent={capabilitiesOverride ? Intent.DANGER : undefined}
+      >
+        {capabilitiesOverride && (
           <>
-            {capabilitiesMode !== 'coordinator-overlord' && (
-              <MenuItem
-                text="Force Coordinator/Overlord mode"
-                onClick={() => setForcedMode(Capabilities.COORDINATOR_OVERLORD)}
-              />
-            )}
-            {capabilitiesMode !== 'coordinator' && (
-              <MenuItem
-                text="Force Coordinator mode"
-                onClick={() => setForcedMode(Capabilities.COORDINATOR)}
-              />
-            )}
-            {capabilitiesMode !== 'overlord' && (
-              <MenuItem
-                text="Force Overlord mode"
-                onClick={() => setForcedMode(Capabilities.OVERLORD)}
-              />
-            )}
-            {capabilitiesMode !== 'no-proxy' && (
-              <MenuItem
-                text="Force no management proxy mode"
-                onClick={() => setForcedMode(Capabilities.NO_PROXY)}
-              />
-            )}
+            <MenuItem
+              text="Use automatic capabilty detection"
+              onClick={() => setCapabilitiesOverride(undefined)}
+              intent={Intent.PRIMARY}
+            />
+            <MenuDivider />
           </>
+        )}
+        {capabilitiesMode !== 'coordinator-overlord' && (
+          <MenuItem
+            text="Manually set Coordinator/Overlord mode"
+            onClick={() => setCapabilitiesOverride(Capabilities.COORDINATOR_OVERLORD)}
+          />
+        )}
+        {capabilitiesMode !== 'coordinator' && (
+          <MenuItem
+            text="Manually set Coordinator mode"
+            onClick={() => setCapabilitiesOverride(Capabilities.COORDINATOR)}
+          />
+        )}
+        {capabilitiesMode !== 'overlord' && (
+          <MenuItem
+            text="Manually set Overlord mode"
+            onClick={() => setCapabilitiesOverride(Capabilities.OVERLORD)}
+          />
+        )}
+        {capabilitiesMode !== 'no-proxy' && (
+          <MenuItem
+            text="Manually set Router with no management proxy mode"
+            onClick={() => setCapabilitiesOverride(Capabilities.NO_PROXY)}
+          />
         )}
       </MenuItem>
     </Menu>
@@ -432,10 +322,19 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
         <AnchorButton
           className="header-entry"
           minimal
-          active={active === 'ingestion'}
+          active={active === 'supervisors'}
+          icon={IconNames.EYE_OPEN}
+          text="Supervisors"
+          href="#supervisors"
+          disabled={!capabilities.hasSqlOrOverlordAccess()}
+        />
+        <AnchorButton
+          className="header-entry"
+          minimal
+          active={active === 'tasks'}
           icon={IconNames.GANTT_CHART}
-          text="Ingestion"
-          href="#ingestion"
+          text="Tasks"
+          href="#tasks"
           disabled={!capabilities.hasSqlOrOverlordAccess()}
         />
         <AnchorButton
@@ -466,7 +365,48 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
         </Popover2>
       </NavbarGroup>
       <NavbarGroup align={Alignment.RIGHT}>
-        <RestrictedMode capabilities={capabilities} onUnrestrict={onUnrestrict} />
+        <RestrictedMode
+          capabilities={capabilities}
+          onUnrestrict={onUnrestrict}
+          onUseAutomaticCapabilityDetection={
+            capabilitiesOverride ? () => setCapabilitiesOverride(undefined) : undefined
+          }
+        />
+        {capabilitiesOverride && (
+          <Popover2
+            content={
+              <PopoverText>
+                <p>
+                  The console is running in a manual capability setting mode that assumes a limited
+                  set of capabilities rather than detecting all capabilities for the cluster.
+                </p>
+                <p>
+                  Manual capability setting mode is an advanced feature used for testing and for
+                  working around issues with the automatic capability detecting logic.
+                </p>
+                <p>
+                  If you are unsure why the console is in this mode, revert to using automatic
+                  capability detection.
+                </p>
+                <p>
+                  <Button
+                    text="Use automatic capability detection"
+                    onClick={() => setCapabilitiesOverride(undefined)}
+                    intent={Intent.PRIMARY}
+                  />
+                </p>
+              </PopoverText>
+            }
+            position={Position.BOTTOM_RIGHT}
+          >
+            <Button
+              icon={IconNames.HIGH_PRIORITY}
+              text="Manual capabilty detection"
+              intent={Intent.DANGER}
+              minimal
+            />
+          </Popover2>
+        )}
         <Popover2 content={configMenu} position={Position.BOTTOM_RIGHT}>
           <Button className="header-entry" minimal icon={IconNames.COG} />
         </Popover2>
@@ -483,6 +423,11 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
       )}
       {overlordDynamicConfigDialogOpen && (
         <OverlordDynamicConfigDialog onClose={() => setOverlordDynamicConfigDialogOpen(false)} />
+      )}
+      {compactionDynamicConfigDialogOpen && (
+        <CompactionDynamicConfigDialog
+          onClose={() => setCompactionDynamicConfigDialogOpen(false)}
+        />
       )}
     </Navbar>
   );

@@ -24,6 +24,7 @@ import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.HeapMemoryAllocator;
+import org.apache.druid.frame.allocation.SingleMemoryAllocatorFactory;
 import org.apache.druid.frame.write.FrameWriter;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.frame.write.FrameWriters;
@@ -49,17 +50,17 @@ public class KeyTestUtils
    * Create a signature matching {@code sortColumns}, using types from {@code inspector}.
    */
   public static RowSignature createKeySignature(
-      final List<SortColumn> sortColumns,
+      final List<KeyColumn> keyColumns,
       final ColumnInspector inspector
   )
   {
     final RowSignature.Builder builder = RowSignature.builder();
 
-    for (final SortColumn sortColumn : sortColumns) {
-      final ColumnCapabilities capabilities = inspector.getColumnCapabilities(sortColumn.columnName());
+    for (final KeyColumn keyColumn : keyColumns) {
+      final ColumnCapabilities capabilities = inspector.getColumnCapabilities(keyColumn.columnName());
       final ColumnType columnType =
           Optional.ofNullable(capabilities).map(ColumnCapabilities::toColumnType).orElse(null);
-      builder.add(sortColumn.columnName(), columnType);
+      builder.add(keyColumn.columnName(), columnType);
     }
 
     return builder.build();
@@ -94,7 +95,7 @@ public class KeyTestUtils
 
     final FrameWriterFactory writerFactory = FrameWriters.makeFrameWriterFactory(
         FrameType.ROW_BASED,
-        HeapMemoryAllocator.unlimited(),
+        new SingleMemoryAllocatorFactory(HeapMemoryAllocator.unlimited()),
         keySignature,
         Collections.emptyList()
     );

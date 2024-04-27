@@ -21,13 +21,11 @@ import check_test_suite
 class CheckTestSuite(unittest.TestCase):
     def test_always_run(self):
         for job in check_test_suite.always_run_jobs:
-            self.assertEqual(True, check_test_suite.check_should_run_suite(job, ['.travis.yml']))
             self.assertEqual(True, check_test_suite.check_should_run_suite(job, ['docs/ingestion/index.md']))
             self.assertEqual(True, check_test_suite.check_should_run_suite(job, ['web-console/src/views/index.ts']))
             self.assertEqual(True, check_test_suite.check_should_run_suite(job, ['core/src/main/java/org/apache/druid/math/expr/Expr.java']))
 
     def test_docs(self):
-        self.assertEqual(False, check_test_suite.check_docs('.travis.yml'))
         self.assertEqual(False, check_test_suite.check_docs('check_test_suite_test.py'))
         self.assertEqual(True, check_test_suite.check_docs('website/core/Footer.js'))
         self.assertEqual(True, check_test_suite.check_docs('docs/ingestion/index.md'))
@@ -48,7 +46,6 @@ class CheckTestSuite(unittest.TestCase):
     def test_web_console(self):
         web_console_job = 'web console'
         e2e_job = 'web console end-to-end test'
-        self.assertEqual(False, check_test_suite.check_console('.travis.yml'))
         self.assertEqual(False, check_test_suite.check_console('check_test_suite_test.py'))
         self.assertEqual(False, check_test_suite.check_console('website/core/Footer.js'))
         self.assertEqual(True, check_test_suite.check_console('web-console/assets/azure.png'))
@@ -85,7 +82,6 @@ class CheckTestSuite(unittest.TestCase):
         )
 
     def test_testable_script(self):
-        self.assertEqual(False, check_test_suite.check_testable_script('.travis.yml'))
         self.assertEqual(True, check_test_suite.check_testable_script('check_test_suite.py'))
         self.assertEqual(True, check_test_suite.check_testable_script('check_test_suite_test.py'))
 
@@ -124,7 +120,6 @@ class CheckTestSuite(unittest.TestCase):
 
         some_java_job = 'spotbugs checks'
         some_non_java_diffs = [
-            ['.travis.yml'],
             ['check_test_suite_test.py'],
             ['website/core/Footer.js'],
             ['web-console/src/views/index.ts'],

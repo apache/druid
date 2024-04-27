@@ -19,22 +19,25 @@
 
 package org.apache.druid.data.input.parquet.simple;
 
-import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.indexer.HadoopDruidIndexerConfig;
-import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.common.parsers.JSONPathSpec;
+import org.apache.druid.segment.indexing.ReaderUtils;
 import org.apache.parquet.hadoop.api.InitContext;
 import org.apache.parquet.hadoop.example.GroupReadSupport;
 import org.apache.parquet.schema.MessageType;
 import org.apache.parquet.schema.Type;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class DruidParquetReadSupport extends GroupReadSupport
 {
+  private static final Logger LOG = new Logger(DruidParquetReadSupport.class);
+
   /**
    * Select the columns from the parquet schema that are used in the schema of the ingestion job
    *
@@ -44,44 +47,35 @@ public class DruidParquetReadSupport extends GroupReadSupport
    */
   private MessageType getPartialReadSchema(InitContext context)
   {
-    MessageType fullSchema = context.getFileSchema();
+    List<Type> partialFields = new ArrayList<>();
 
+    MessageType fullSchema = context.getFileSchema();
     String name = fullSchema.getName();
 
     HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromConfiguration(context.getConfiguration());
     ParseSpec parseSpec = config.getParser().getParseSpec();
-
-    // this is kind of lame, maybe we can still trim what we read if we
-    // parse the flatten spec and determine it isn't auto discovering props?
-    if (parseSpec instanceof ParquetParseSpec) {
-      if (((ParquetParseSpec) parseSpec).getFlattenSpec() != null) {
-        return fullSchema;
-      }
+    JSONPathSpec flattenSpec = null;
+    if (parseSpec instanceof ParquetParseSpec && ((ParquetParseSpec) parseSpec).getFlattenSpec() != null) {
+      flattenSpec = ((ParquetParseSpec) parseSpec).getFlattenSpec();
     }
+    Set<String> fullSchemaFields = fullSchema.getFields().stream().map(Type::getName).collect(Collectors.toSet());
 
-    String tsField = parseSpec.getTimestampSpec().getTimestampColumn();
-
-    List<DimensionSchema> dimensionSchema = parseSpec.getDimensionsSpec().getDimensions();
-    Set<String> dimensions = new HashSet<>();
-    for (DimensionSchema dim : dimensionSchema) {
-      dimensions.add(dim.getName());
-    }
-
-    Set<String> metricsFields = new HashSet<>();
-    for (AggregatorFactory agg : config.getSchema().getDataSchema().getAggregators()) {
-      metricsFields.addAll(agg.requiredFields());
-    }
-
-    List<Type> partialFields = new ArrayList<>();
+    Set<String> requiredFields = ReaderUtils.getColumnsRequiredForIngestion(
+        fullSchemaFields,
+        parseSpec.getTimestampSpec(),
+        parseSpec.getDimensionsSpec(),
+        config.getSchema().getDataSchema().getTransformSpec(),
+        config.getSchema().getDataSchema().getAggregators(),
+        flattenSpec
+    );
 
     for (Type type : fullSchema.getFields()) {
-      if (tsField.equals(type.getName())
-          || metricsFields.contains(type.getName())
-          || dimensions.size() > 0 && dimensions.contains(type.getName())
-          || dimensions.size() == 0) {
+      if (requiredFields.contains(type.getName())) {
         partialFields.add(type);
       }
     }
+
+    LOG.info("Parquet schema name[%s] with full schema[%s] requires fields[%s]", name, fullSchemaFields, requiredFields);
 
     return new MessageType(name, partialFields);
   }

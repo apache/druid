@@ -36,7 +36,7 @@ public class ResolvedService
 
   public ResolvedService(ResolvedConfig root, ServiceConfig config, String name)
   {
-    this.service = config.service() == null ? name : config.service();
+    this.service = name;
     for (ServiceInstance instanceConfig : config.instances()) {
       this.instances.add(new ResolvedInstance(root, instanceConfig, this));
     }

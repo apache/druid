@@ -62,7 +62,7 @@ public class SingleStringInputDeferredEvaluationExpressionDimensionVectorSelecto
     }
     this.selector = selector;
     this.inputBinding = new StringLookupVectorInputBindings();
-    this.stringProcessor = expression.buildVectorized(inputBinding);
+    this.stringProcessor = expression.asVectorProcessor(inputBinding);
   }
 
   @Override

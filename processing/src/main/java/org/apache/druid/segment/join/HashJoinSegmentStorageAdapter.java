@@ -292,10 +292,18 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
         );
 
     final JoinFilterPreAnalysisKey keyCached = joinFilterPreAnalysis.getKey();
+    final JoinFilterSplit joinFilterSplit;
 
-    if (!keyIn.equals(keyCached)) {
-      // It is a bug if this happens. The implied key and the cached key should always match.
-      throw new ISE("Pre-analysis mismatch, cannot execute query");
+    if (keyIn.equals(keyCached)) {
+      // Common case: key used during filter pre-analysis (keyCached) matches key implied by makeCursors call (keyIn).
+      joinFilterSplit = JoinFilterAnalyzer.splitFilter(joinFilterPreAnalysis, baseFilter);
+    } else {
+      // Less common case: key differs. Re-analyze the filter. This case can happen when an unnest datasource is
+      // layered on top of a join datasource.
+      joinFilterSplit = JoinFilterAnalyzer.splitFilter(
+          JoinFilterAnalyzer.computeJoinFilterPreAnalysis(keyIn),
+          baseFilter
+      );
     }
 
     final List<VirtualColumn> preJoinVirtualColumns = new ArrayList<>();
@@ -309,9 +317,7 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
 
     // We merge the filter on base table specified by the user and filter on the base table that is pushed from
     // the join
-    JoinFilterSplit joinFilterSplit = JoinFilterAnalyzer.splitFilter(joinFilterPreAnalysis, baseFilter);
     preJoinVirtualColumns.addAll(joinFilterSplit.getPushDownVirtualColumns());
-
 
     final Sequence<Cursor> baseCursorSequence = baseAdapter.makeCursors(
         joinFilterSplit.getBaseTableFilter().isPresent() ? joinFilterSplit.getBaseTableFilter().get() : null,

@@ -29,9 +29,6 @@ import org.junit.runners.Parameterized;
 
 import java.util.Properties;
 
-/**
- * This test verifies injection for {@link ServerRunnable}s which are discoverable Druid servers.
- */
 @RunWith(Parameterized.class)
 public class MainTest
 {

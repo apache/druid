@@ -26,7 +26,7 @@ import './execution-progress-bar-pane.scss';
 
 export interface ExecutionProgressBarPaneProps {
   execution: Execution | undefined;
-  onCancel?(): void;
+  onCancel?(message?: string): void;
   onToggleLiveReports?(): void;
   showLiveReports?: boolean;
 }
@@ -35,33 +35,42 @@ export const ExecutionProgressBarPane = React.memo(function ExecutionProgressBar
   props: ExecutionProgressBarPaneProps,
 ) {
   const { execution, onCancel, onToggleLiveReports, showLiveReports } = props;
-  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState<string | undefined>();
 
   const stages = execution?.stages;
 
-  function cancelMaybeConfirm() {
+  function cancelMaybeConfirm(message: string) {
     if (!onCancel) return;
     if (execution?.isProcessingData()) {
-      setShowCancelConfirm(true);
+      setShowCancelConfirm(message);
     } else {
-      onCancel();
+      onCancel(message);
     }
   }
 
   const idx = stages ? stages.currentStageIndex() : -1;
+  const waitingForSegments = stages && !execution.isWaitingForQuery();
+
+  const segmentStatusDescription = execution?.getSegmentStatusDescription();
+
   return (
     <div className="execution-progress-bar-pane">
       <Label>
-        {stages
-          ? execution.isWaitingForQuery()
-            ? 'Running query...'
-            : 'Query complete, waiting for segments to be loaded...'
-          : 'Loading...'}
+        {Execution.getProgressDescription(execution)}
         {onCancel && (
           <>
             {' '}
-            <span className="cancel" onClick={cancelMaybeConfirm}>
-              {stages && !execution.isWaitingForQuery() ? '(stop waiting)' : '(cancel)'}
+            <span
+              className="cancel"
+              onClick={() =>
+                cancelMaybeConfirm(
+                  waitingForSegments
+                    ? 'Task completed. Skipped waiting for segments to be loaded.'
+                    : 'Task has been canceled.',
+                )
+              }
+            >
+              {waitingForSegments ? '(skip waiting)' : '(cancel)'}
             </span>
           </>
         )}
@@ -72,6 +81,7 @@ export const ExecutionProgressBarPane = React.memo(function ExecutionProgressBar
         intent={stages ? Intent.PRIMARY : undefined}
         value={stages && execution.isWaitingForQuery() ? stages.overallProgress() : undefined}
       />
+      {segmentStatusDescription && <Label>{segmentStatusDescription.label}</Label>}
       {stages && idx >= 0 && (
         <>
           <Label>{`Current stage (${idx + 1} of ${stages.stageCount()})`}</Label>
@@ -88,7 +98,10 @@ export const ExecutionProgressBarPane = React.memo(function ExecutionProgressBar
         </>
       )}
       {showCancelConfirm && onCancel && (
-        <CancelQueryDialog onCancel={onCancel} onDismiss={() => setShowCancelConfirm(false)} />
+        <CancelQueryDialog
+          onCancel={() => onCancel(showCancelConfirm)}
+          onDismiss={() => setShowCancelConfirm(undefined)}
+        />
       )}
     </div>
   );

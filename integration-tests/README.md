@@ -80,10 +80,10 @@ Parameters:
 the test group for a given test as an annotation in the respective test class. A list of test groups can be found at
 `integration-tests/src/test/java/org/apache/druid/tests/TestNGGroup.java`. The annotation uses a string
 constant defined in `TestNGGroup.java`, be sure to use the constant value, not name. For example,
-if your test has the the annotation: `@Test(groups = TestNGGroup.BATCH_INDEX)` then use the argument
+if your test has the annotation: `@Test(groups = TestNGGroup.BATCH_INDEX)` then use the argument
 `-Dgroups=batch-index`.
 
-* Test Name: Use the fully-qualified class name. For example, `org.apache.druid.tests.BATCH_INDEX`.
+* Test Name: Use the fully-qualified class name. For example, `org.apache.druid.tests.indexer.ITOverwriteBatchIndexTest`.
 
 * Add `-pl :druid-integration-tests` when running integration tests for the second time or later without changing
 the code of core modules in between to skip up-to-date checks for the whole module dependency tree.
@@ -108,7 +108,7 @@ In such cases, a workaround is to build the code first, then use the next sectio
 individual tests. To build:
 
 ```bash
-mvn clean package  -P integration-tests -Pskip-static-checks -Pskip-tests -Dmaven.javadoc.skip=true -T1.0C -nsu
+mvn clean package  -P integration-tests -Pskip-static-checks -Pskip-tests -T1.0C -nsu
 ```
 
 #### Keep the local Maven cache fresh
@@ -118,39 +118,42 @@ after which Maven will helpfully start downloading snapshot jars from an upstrea
 This is, unfortunately, a feature of the build scripts. The `-nsu` option above tries to force
 Maven to only look locally for snapshot jars.
 
-## Running tests against mannually brought up Docker containers
+## Running tests against manually brought up Docker containers
 
 1. Build docker images.
 
-   From root module run maven command, run the following command:
+   From the source root, run the following command:
    ```bash
-   mvn clean install -pl integration-tests -P integration-tests -Ddocker.run.skip=true -Dmaven.test.skip=true -Ddocker.build.hadoop=true
+   mvn clean install \
+     -Pintegration-tests,skip-static-checks,skip-tests \
+     -Ddocker.run.skip=true \
+     -Ddocker.build.hadoop=true
    ```
 
    > **NOTE**: `-Ddocker.build.hadoop=true` is optional if you don't run tests against Hadoop.
 
-2. Choose a docker-compose file to start containers.
+2. Choose a docker compose file to start containers.
 
    There are a few different Docker compose yamls located in "docker" folder that could be used to start containers for different tests.
 
    - To start basic Druid cluster (skip this if running Druid cluster with override configs):
      ```bash
-     docker-compose -f integration-tests/docker/docker-compose.yml up
+     docker compose -f integration-tests/docker/docker-compose.yml up
      ```
 
    - To start Druid cluster with override configs
      ```bash
-     OVERRIDE_ENV=<PATH_TO_ENV> docker-compose -f docker-compose.yml up
+     OVERRIDE_ENV=<PATH_TO_ENV> docker compose -f docker-compose.yml up
      ```
 
    - To start tests against Hadoop
      ```bash
-     docker-compose -f docker-compose.druid-hadoop.yml up
+     docker compose -f docker-compose.druid-hadoop.yml up
      ```
 
    - To start tests againt security group
      ```bash
-     docker-compose -f docker-compose.yml -f docker-compose.security.yml up
+     docker compose -f docker-compose.yml -f docker-compose.security.yml up
      ```
 
 3. Run tests.
@@ -192,9 +195,9 @@ The values shown above are for the default docker compose cluster. For other clu
   Defines a Druid cluster with default configuration that is used for running integration tests.
 
   ```bash
-  docker-compose -f docker-compose.yml up
+  docker compose -f docker-compose.yml up
   # DRUID_INTEGRATION_TEST_GROUP - an environment variable that specifies the integration test group to run.
-  DRUID_INTEGRATION_TEST_GROUP=batch-index docker-compose -f docker-compose.yml up
+  DRUID_INTEGRATION_TEST_GROUP=batch-index docker compose -f docker-compose.yml up
   ```
 
   You can change the default configuration using a custom configuration file. The settings in the file will override
@@ -202,7 +205,7 @@ The values shown above are for the default docker compose cluster. For other clu
 
   ```bash
   # OVERRIDE_ENV - an environment variable that specifies the custom configuration file path.
-  OVERRIDE_ENV=./environment-configs/test-groups/prepopulated-data DRUID_INTEGRATION_TEST_GROUP=query docker-compose -f docker-compose.yml up
+  OVERRIDE_ENV=./environment-configs/test-groups/prepopulated-data DRUID_INTEGRATION_TEST_GROUP=query docker compose -f docker-compose.yml up
   ```
 
 - docker-compose.security.yml
@@ -211,15 +214,15 @@ The values shown above are for the default docker compose cluster. For other clu
   This is meant to be used together with docker-compose.yml and is only needed for the "security" group integration test.
 
   ```bash
-  docker-compose -f docker-compose.yml -f docker-compose.security.yml up
+  docker compose -f docker-compose.yml -f docker-compose.security.yml up
   ```
 
 - docker-compose.druid-hadoop.yml
 
-  For starting Apache Hadoop 2.8.5 cluster with the same setup as the Druid tutorial.
+  For starting Apache Hadoop 3.3.6 cluster with the same setup as the Druid tutorial.
 
   ```bash
-  docker-compose -f docker-compose.druid-hadoop.yml up
+  docker compose -f docker-compose.druid-hadoop.yml up
   ```
 
 ## Tips & tricks for debugging and developing integration tests
@@ -315,7 +318,7 @@ To run tests on any druid cluster that is already running, create a configuratio
     }
 
 Set the environment variable `CONFIG_FILE` to the name of the configuration file:
-```
+```bash
 export CONFIG_FILE=<config file name>
 ```
 

@@ -19,20 +19,23 @@
 import { Icon } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
+import type { Column, QueryResult, SqlExpression, SqlQuery } from '@druid-toolkit/query';
+import { SqlAlias, SqlFunction, SqlStar } from '@druid-toolkit/query';
 import classNames from 'classnames';
-import { Column, QueryResult, SqlAlias, SqlQuery, SqlStar } from 'druid-query-toolkit';
 import React, { useState } from 'react';
+import type { RowRenderProps } from 'react-table';
 import ReactTable from 'react-table';
 
 import { BracedText, Deferred, TableCell } from '../../../../components';
 import { CellFilterMenu } from '../../../../components/cell-filter-menu/cell-filter-menu';
 import { ShowValueDialog } from '../../../../dialogs/show-value-dialog/show-value-dialog';
+import type { QueryAction } from '../../../../utils';
 import {
   columnToIcon,
+  columnToSummary,
   columnToWidth,
   filterMap,
   getNumericColumnBraces,
-  QueryAction,
 } from '../../../../utils';
 
 import './preview-table.scss';
@@ -41,7 +44,13 @@ function isDate(v: any): v is Date {
   return Boolean(v && typeof v.toISOString === 'function');
 }
 
-function getExpressionIfAlias(query: SqlQuery, selectIndex: number): string {
+function isWrappedInArrayToMv(ex: SqlExpression | undefined) {
+  if (!ex) return false;
+  ex = ex.getUnderlyingExpression();
+  return ex instanceof SqlFunction && ex.getEffectiveFunctionName() === 'ARRAY_TO_MV';
+}
+
+function formatFormulaAtIndex(query: SqlQuery, selectIndex: number): string {
   const ex = query.getSelectExpressionForIndex(selectIndex);
 
   if (query.isRealOutputColumnAtSelectIndex(selectIndex)) {
@@ -76,8 +85,8 @@ export const PreviewTable = React.memo(function PreviewTable(props: PreviewTable
     if (!parsedQuery || !parsedQuery.isRealOutputColumnAtSelectIndex(headerIndex)) return false;
 
     return (
-      parsedQuery.getEffectiveWhereExpression().containsColumn(header) ||
-      parsedQuery.getEffectiveHavingExpression().containsColumn(header)
+      parsedQuery.getEffectiveWhereExpression().containsColumnName(header) ||
+      parsedQuery.getEffectiveHavingExpression().containsColumnName(header)
     );
   }
 
@@ -120,21 +129,24 @@ export const PreviewTable = React.memo(function PreviewTable(props: PreviewTable
                 column.isTimeColumn() ? 'timestamp' : 'dimension',
                 `column${i}`,
                 column.sqlType?.toLowerCase(),
-                { selected },
+                {
+                  selected,
+                  'multi-value': isWrappedInArrayToMv(parsedQuery.getSelectExpressionForIndex(i)),
+                },
               );
 
           return {
             Header() {
               return (
                 <div className="header-wrapper" onClick={() => onEditColumn(i)}>
-                  <div className="output-name">
+                  <div className="output-name" title={columnToSummary(column)}>
                     {icon && <Icon className="type-icon" icon={icon} size={12} />}
                     {h}
                     {hasFilterOnHeader(h, i) && (
                       <Icon className="filter-icon" icon={IconNames.FILTER} size={14} />
                     )}
                   </div>
-                  <div className="formula">{getExpressionIfAlias(parsedQuery, i)}</div>
+                  <div className="formula">{formatFormulaAtIndex(parsedQuery, i)}</div>
                 </div>
               );
             },
@@ -142,7 +154,7 @@ export const PreviewTable = React.memo(function PreviewTable(props: PreviewTable
             className: columnClassName,
             width: columnToWidth(column),
             accessor: String(i),
-            Cell(row) {
+            Cell(row: RowRenderProps) {
               const value = row.value;
               return (
                 <div>

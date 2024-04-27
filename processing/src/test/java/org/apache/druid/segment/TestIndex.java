@@ -24,6 +24,7 @@ import com.google.common.base.Suppliers;
 import com.google.common.io.CharSource;
 import com.google.common.io.LineProcessor;
 import com.google.common.io.Resources;
+import org.apache.druid.data.input.ResourceInputSource;
 import org.apache.druid.data.input.impl.DelimitedParseSpec;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -37,6 +38,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.NestedDataTestUtils;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMinAggregatorFactory;
@@ -48,6 +50,8 @@ import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFact
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.StringEncodingStrategy;
+import org.apache.druid.segment.data.FrontCodedIndexed;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
@@ -66,6 +70,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
+ *
  */
 public class TestIndex
 {
@@ -144,14 +149,14 @@ public class TestIndex
       new DoubleMaxAggregatorFactory(DOUBLE_METRICS[2], VIRTUAL_COLUMNS.getVirtualColumns()[0].getOutputName()),
       new HyperUniquesAggregatorFactory("quality_uniques", "quality")
   };
-  public static final IndexSpec INDEX_SPEC = new IndexSpec();
+  public static final IndexSpec INDEX_SPEC = IndexSpec.DEFAULT;
 
   public static final IndexMerger INDEX_MERGER =
       TestHelper.getTestIndexMergerV9(OffHeapMemorySegmentWriteOutMediumFactory.instance());
   public static final IndexIO INDEX_IO = TestHelper.getTestIndexIO();
 
   static {
-    ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
+    ComplexMetrics.registerSerde(HyperUniquesSerde.TYPE_NAME, new HyperUniquesSerde());
   }
 
   private static Supplier<IncrementalIndex> realtimeIndex = Suppliers.memoize(
@@ -210,6 +215,19 @@ public class TestIndex
       throw new RuntimeException(e);
     }
   });
+  private static Supplier<QueryableIndex> frontCodedMmappedIndex = Suppliers.memoize(
+      () -> persistRealtimeAndLoadMMapped(
+          realtimeIndex.get(),
+          IndexSpec.builder()
+                   .withStringDictionaryEncoding(
+                       new StringEncodingStrategy.FrontCoded(4, FrontCodedIndexed.V1)
+                   )
+                   .build()
+      )
+  );
+  private static Supplier<QueryableIndex> wikipediaMMappedIndex = Suppliers.memoize(
+      () -> persistRealtimeAndLoadMMapped(makeWikipediaIncrementalIndex())
+  );
 
   public static IncrementalIndex getIncrementalTestIndex()
   {
@@ -231,6 +249,11 @@ public class TestIndex
     return mmappedIndex.get();
   }
 
+  public static QueryableIndex getMMappedWikipediaIndex()
+  {
+    return wikipediaMMappedIndex.get();
+  }
+
   public static QueryableIndex getNoRollupMMappedTestIndex()
   {
     return noRollupMmappedIndex.get();
@@ -244,6 +267,11 @@ public class TestIndex
   public static QueryableIndex mergedRealtimeIndex()
   {
     return mergedRealtime.get();
+  }
+
+  public static QueryableIndex getFrontCodedMMappedTestIndex()
+  {
+    return frontCodedMmappedIndex.get();
   }
 
   public static IncrementalIndex makeRealtimeIndex(final String resourceFilename)
@@ -301,6 +329,62 @@ public class TestIndex
       } else {
         noRollupRealtimeIndex = null;
       }
+      throw new RuntimeException(e);
+    }
+  }
+
+  public static IncrementalIndex makeWikipediaIncrementalIndex()
+  {
+    final List<DimensionSchema> dimensions = Arrays.asList(
+        new StringDimensionSchema("channel"),
+        new StringDimensionSchema("cityName"),
+        new StringDimensionSchema("comment"),
+        new StringDimensionSchema("countryIsoCode"),
+        new StringDimensionSchema("countryName"),
+        new StringDimensionSchema("isAnonymous"),
+        new StringDimensionSchema("isMinor"),
+        new StringDimensionSchema("isNew"),
+        new StringDimensionSchema("isRobot"),
+        new StringDimensionSchema("isUnpatrolled"),
+        new StringDimensionSchema("metroCode"),
+        new StringDimensionSchema("namespace"),
+        new StringDimensionSchema("page"),
+        new StringDimensionSchema("regionIsoCode"),
+        new StringDimensionSchema("regionName"),
+        new StringDimensionSchema("user"),
+        new LongDimensionSchema("delta"),
+        new LongDimensionSchema("added"),
+        new LongDimensionSchema("deleted")
+    );
+
+    final File tmpDir;
+    try {
+      tmpDir = FileUtils.createTempDir("test-index-input-source");
+      try {
+        return IndexBuilder
+            .create()
+            .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+            .schema(new IncrementalIndexSchema.Builder()
+                        .withRollup(false)
+                        .withTimestampSpec(new TimestampSpec("time", null, null))
+                        .withDimensionsSpec(new DimensionsSpec(dimensions))
+                        .build()
+            )
+            .inputSource(
+                ResourceInputSource.of(
+                    TestIndex.class.getClassLoader(),
+                    "wikipedia/wikiticker-2015-09-12-sampled.json.gz"
+                )
+            )
+            .inputFormat(NestedDataTestUtils.DEFAULT_JSON_INPUT_FORMAT)
+            .inputTmpDir(new File(tmpDir, "tmpWikipedia1"))
+            .buildIncrementalIndex();
+      }
+      finally {
+        FileUtils.deleteDirectory(tmpDir);
+      }
+    }
+    catch (IOException e) {
       throw new RuntimeException(e);
     }
   }
@@ -367,13 +451,18 @@ public class TestIndex
 
   public static QueryableIndex persistRealtimeAndLoadMMapped(IncrementalIndex index)
   {
+    return persistRealtimeAndLoadMMapped(index, INDEX_SPEC);
+  }
+
+  public static QueryableIndex persistRealtimeAndLoadMMapped(IncrementalIndex index, IndexSpec indexSpec)
+  {
     try {
       File someTmpFile = File.createTempFile("billy", "yay");
       someTmpFile.delete();
       FileUtils.mkdirp(someTmpFile);
       someTmpFile.deleteOnExit();
 
-      INDEX_MERGER.persist(index, someTmpFile, INDEX_SPEC, null);
+      INDEX_MERGER.persist(index, someTmpFile, indexSpec, null);
       return INDEX_IO.loadIndex(someTmpFile);
     }
     catch (IOException e) {

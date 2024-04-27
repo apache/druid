@@ -1,0 +1,1 @@
+SELECT col7 , col6 , LAG(col6) OVER(PARTITION BY col7 ORDER BY col6) LAG_col6 FROM "allTypsUniq.parquet"

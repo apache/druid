@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 
-export * from './capabilities';
 export * from './column-metadata';
 export * from './date';
 export * from './download';
@@ -28,9 +27,9 @@ export * from './general';
 export * from './intermediate-query-state';
 export * from './local-storage-backed-visibility';
 export * from './local-storage-keys';
+export * from './null-mode-detection';
 export * from './object-change';
 export * from './query-action';
-export * from './query-cursor';
 export * from './query-manager';
 export * from './query-state';
 export * from './sample-query';

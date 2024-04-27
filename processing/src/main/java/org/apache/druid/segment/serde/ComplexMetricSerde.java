@@ -60,6 +60,7 @@ public abstract class ComplexMetricSerde
     deserializeColumn(buffer, builder);
   }
 
+
   /**
    * {@link ComplexMetricSerde#deserializeColumn(ByteBuffer, ColumnBuilder, ColumnConfig)} should be used instead of this.
    * This method is left for backward compatibility.

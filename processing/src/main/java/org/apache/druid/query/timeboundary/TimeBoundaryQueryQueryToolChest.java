@@ -167,7 +167,7 @@ public class TimeBoundaryQueryQueryToolChest
     return new CacheStrategy<Result<TimeBoundaryResultValue>, Object, TimeBoundaryQuery>()
     {
       @Override
-      public boolean isCacheable(TimeBoundaryQuery query, boolean willMergeRunners)
+      public boolean isCacheable(TimeBoundaryQuery query, boolean willMergeRunners, boolean bySegment)
       {
         return true;
       }

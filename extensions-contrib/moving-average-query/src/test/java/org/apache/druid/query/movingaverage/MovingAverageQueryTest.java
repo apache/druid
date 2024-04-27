@@ -52,9 +52,7 @@ import org.apache.druid.initialization.Initialization;
 import org.apache.druid.java.util.common.guava.Accumulators;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.java.util.emitter.core.Event;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.query.DruidProcessingConfig;
+import org.apache.druid.query.BrokerParallelMergeConfig;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -69,14 +67,16 @@ import org.apache.druid.query.movingaverage.test.TestConfig;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
-import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.join.MapJoinableFactory;
 import org.apache.druid.server.ClientQuerySegmentWalker;
 import org.apache.druid.server.QueryStackTests;
+import org.apache.druid.server.SubqueryGuardrailHelper;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
+import org.apache.druid.server.metrics.SubqueryCountStatsProvider;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.TimelineLookup;
+import org.apache.druid.utils.JvmUtils;
 import org.hamcrest.core.IsInstanceOf;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -311,6 +311,15 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
     Assert.assertNotNull(expectedResults);
     Assert.assertThat(expectedResults, IsInstanceOf.instanceOf(List.class));
 
+    DruidHttpClientConfig httpClientConfig = new DruidHttpClientConfig()
+    {
+      @Override
+      public long getMaxQueuedBytes()
+      {
+        return 0L;
+      }
+    };
+
     CachingClusteredClient baseClient = new CachingClusteredClient(
         warehouse,
         new TimelineServerView()
@@ -355,36 +364,15 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
         jsonMapper,
         new ForegroundCachePopulator(jsonMapper, new CachePopulatorStats(), -1),
         new CacheConfig(),
-        new DruidHttpClientConfig()
-        {
-          @Override
-          public long getMaxQueuedBytes()
-          {
-            return 0L;
-          }
-        },
-        new DruidProcessingConfig()
-        {
-          @Override
-          public String getFormatString()
-          {
-            return null;
-          }
-        },
+        httpClientConfig,
+        new BrokerParallelMergeConfig(),
         ForkJoinPool.commonPool(),
         QueryStackTests.DEFAULT_NOOP_SCHEDULER,
-        new JoinableFactoryWrapper(new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of())),
         new NoopServiceEmitter()
     );
 
     ClientQuerySegmentWalker walker = new ClientQuerySegmentWalker(
-        new ServiceEmitter("", "", null)
-        {
-          @Override
-          public void emit(Event event)
-          {
-          }
-        },
+        new NoopServiceEmitter(),
         baseClient,
         null /* local client; unused in this test, so pass in null */,
         warehouse,
@@ -393,7 +381,9 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
         jsonMapper,
         serverConfig,
         null,
-        new CacheConfig()
+        new CacheConfig(),
+        new SubqueryGuardrailHelper(null, JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes(), 1),
+        new SubqueryCountStatsProvider()
     );
 
     defineMocks();

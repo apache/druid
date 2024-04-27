@@ -17,27 +17,33 @@
  */
 
 import { Button, Icon, Intent, Menu, MenuDivider, MenuItem } from '@blueprintjs/core';
-import { IconName, IconNames } from '@blueprintjs/icons';
+import type { IconName } from '@blueprintjs/icons';
+import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
+import { T } from '@druid-toolkit/query';
 import classNames from 'classnames';
 import copy from 'copy-to-clipboard';
-import { SqlTableRef } from 'druid-query-toolkit';
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
+import { useStore } from 'zustand';
 
 import { Loader } from '../../../components';
-import { Execution, WorkbenchQuery } from '../../../druid-models';
+import type { TaskStatusWithCanceled } from '../../../druid-models';
+import { Execution, TASK_CANCELED_PREDICATE, WorkbenchQuery } from '../../../druid-models';
 import { cancelTaskExecution, getTaskExecution } from '../../../helpers';
-import { useInterval, useQueryManager } from '../../../hooks';
+import { useClock, useInterval, useQueryManager } from '../../../hooks';
 import { AppToaster } from '../../../singletons';
-import { downloadQueryDetailArchive, formatDuration, queryDruidSql } from '../../../utils';
+import {
+  downloadQueryDetailArchive,
+  formatDuration,
+  prettyFormatIsoDate,
+  queryDruidSql,
+} from '../../../utils';
 import { CancelQueryDialog } from '../cancel-query-dialog/cancel-query-dialog';
-import { useWorkStateStore } from '../work-state-store';
+import { workStateStore } from '../work-state-store';
 
 import './recent-query-task-panel.scss';
 
-type TaskStatus = 'RUNNING' | 'WAITING' | 'PENDING' | 'SUCCESS' | 'FAILED' | 'CANCELED';
-
-function statusToIconAndColor(status: TaskStatus): [IconName, string] {
+function statusToIconAndColor(status: TaskStatusWithCanceled): [IconName, string] {
   switch (status) {
     case 'RUNNING':
       return [IconNames.REFRESH, '#2167d5'];
@@ -56,7 +62,7 @@ function statusToIconAndColor(status: TaskStatus): [IconName, string] {
 }
 
 interface RecentQueryEntry {
-  taskStatus: TaskStatus;
+  taskStatus: TaskStatusWithCanceled;
   taskId: string;
   datasource: string;
   createdTime: string;
@@ -66,7 +72,7 @@ interface RecentQueryEntry {
 
 function formatDetail(entry: RecentQueryEntry): string | undefined {
   const lines: string[] = [];
-  if (entry.datasource !== WorkbenchQuery.INLINE_DATASOURCE_MARKER) {
+  if (entry.datasource !== Execution.INLINE_DATASOURCE_MARKER) {
     lines.push(`Datasource: ${entry.datasource}`);
   }
   if (entry.errorMessage) {
@@ -89,14 +95,17 @@ export const RecentQueryTaskPanel = React.memo(function RecentQueryTaskPanel(
 
   const [confirmCancelId, setConfirmCancelId] = useState<string | undefined>();
 
-  const workStateVersion = useWorkStateStore(state => state.version);
+  const workStateVersion = useStore(
+    workStateStore,
+    useCallback(state => state.version, []),
+  );
 
   const [queryTaskHistoryState, queryManager] = useQueryManager<number, RecentQueryEntry[]>({
     query: workStateVersion,
     processQuery: async _ => {
       return await queryDruidSql<RecentQueryEntry>({
         query: `SELECT
-  CASE WHEN "error_msg" = 'Shutdown request from user' THEN 'CANCELED' ELSE "status" END AS "taskStatus",
+  CASE WHEN ${TASK_CANCELED_PREDICATE} THEN 'CANCELED' ELSE "status" END AS "taskStatus",
   "task_id" AS "taskId",
   "datasource",
   "created_time" AS "createdTime",
@@ -114,7 +123,12 @@ LIMIT 100`,
     queryManager.rerunLastQuery(true);
   }, 30000);
 
-  const incrementWorkVersion = useWorkStateStore(state => state.increment);
+  const now = useClock();
+
+  const incrementWorkVersion = useStore(
+    workStateStore,
+    useCallback(state => state.increment, []),
+  );
 
   const queryTaskHistory = queryTaskHistoryState.getSomeData();
   return (
@@ -138,6 +152,7 @@ LIMIT 100`,
                 <MenuItem
                   icon={IconNames.DOCUMENT_OPEN}
                   text="Attach in new tab"
+                  // eslint-disable-next-line @typescript-eslint/no-misused-promises
                   onClick={async () => {
                     let execution: Execution;
                     try {
@@ -179,19 +194,17 @@ LIMIT 100`,
                   }}
                 />
                 {w.taskStatus === 'SUCCESS' &&
-                  w.datasource !== WorkbenchQuery.INLINE_DATASOURCE_MARKER && (
+                  w.datasource !== Execution.INLINE_DATASOURCE_MARKER && (
                     <MenuItem
                       icon={IconNames.APPLICATION}
-                      text={`SELECT * FROM ${SqlTableRef.create(w.datasource)}`}
-                      onClick={() =>
-                        onChangeQuery(`SELECT * FROM ${SqlTableRef.create(w.datasource)}`)
-                      }
+                      text={`SELECT * FROM ${T(w.datasource)}`}
+                      onClick={() => onChangeQuery(`SELECT * FROM ${T(w.datasource)}`)}
                     />
                   )}
                 <MenuItem
                   icon={IconNames.ARCHIVE}
                   text="Get query detail archive"
-                  onClick={() => downloadQueryDetailArchive(w.taskId)}
+                  onClick={() => void downloadQueryDetailArchive(w.taskId)}
                 />
                 {w.taskStatus === 'RUNNING' && (
                   <>
@@ -207,6 +220,11 @@ LIMIT 100`,
               </Menu>
             );
 
+            const duration =
+              w.taskStatus === 'RUNNING'
+                ? now.valueOf() - new Date(w.createdTime).valueOf()
+                : w.duration;
+
             const [icon, color] = statusToIconAndColor(w.taskStatus);
             return (
               <Popover2 className="work-entry" key={w.taskId} position="left" content={menu}>
@@ -218,26 +236,26 @@ LIMIT 100`,
                       style={{ color }}
                     />
                     <div className="timing">
-                      {w.createdTime.replace('T', ' ').replace(/\.\d\d\dZ$/, '') +
-                        (w.duration > 0 ? ` (${formatDuration(w.duration)})` : '')}
+                      {prettyFormatIsoDate(w.createdTime) +
+                        (duration > 0 ? ` (${formatDuration(duration)})` : '')}
                     </div>
                   </div>
                   <div className="line2">
                     <Icon
                       className="output-icon"
                       icon={
-                        w.datasource === WorkbenchQuery.INLINE_DATASOURCE_MARKER
+                        w.datasource === Execution.INLINE_DATASOURCE_MARKER
                           ? IconNames.APPLICATION
                           : IconNames.CLOUD_UPLOAD
                       }
                     />
                     <div
                       className={classNames('output-datasource', {
-                        query: w.datasource === WorkbenchQuery.INLINE_DATASOURCE_MARKER,
+                        query: w.datasource === Execution.INLINE_DATASOURCE_MARKER,
                       })}
                     >
-                      {w.datasource === WorkbenchQuery.INLINE_DATASOURCE_MARKER
-                        ? 'data in report'
+                      {w.datasource === Execution.INLINE_DATASOURCE_MARKER
+                        ? 'select query'
                         : w.datasource}
                     </div>
                   </div>
@@ -251,6 +269,7 @@ LIMIT 100`,
       ) : undefined}
       {confirmCancelId && (
         <CancelQueryDialog
+          // eslint-disable-next-line @typescript-eslint/no-misused-promises
           onCancel={async () => {
             if (!confirmCancelId) return;
             try {

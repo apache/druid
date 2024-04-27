@@ -48,6 +48,7 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.join.JoinableFactoryWrapperTest;
 import org.apache.druid.segment.loading.NoopDataSegmentPusher;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.writeout.OnHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
@@ -72,10 +73,11 @@ public class UnifiedIndexerAppenderatorsManagerTest extends InitializedNullHandl
   @Rule
   public final ExpectedException expectedException = ExpectedException.none();
 
+  private final WorkerConfig workerConfig = new WorkerConfig();
   private final UnifiedIndexerAppenderatorsManager manager = new UnifiedIndexerAppenderatorsManager(
       DirectQueryProcessingPool.INSTANCE,
       JoinableFactoryWrapperTest.NOOP_JOINABLE_FACTORY_WRAPPER,
-      new WorkerConfig(),
+      workerConfig,
       MapCache.create(10),
       new CacheConfig(),
       new CachePopulatorStats(),
@@ -112,7 +114,8 @@ public class UnifiedIndexerAppenderatorsManagerTest extends InitializedNullHandl
         TestHelper.getTestIndexMergerV9(OnHeapMemorySegmentWriteOutMediumFactory.instance()),
         new NoopRowIngestionMeters(),
         new ParseExceptionHandler(new NoopRowIngestionMeters(), false, 0, 0),
-        true
+        true,
+        CentralizedDatasourceSchemaConfig.create()
     );
   }
 
@@ -277,6 +280,12 @@ public class UnifiedIndexerAppenderatorsManagerTest extends InitializedNullHandl
     // "merge" is neither necessary nor implemented
     expectedException.expect(UnsupportedOperationException.class);
     Assert.assertEquals(file, limitedPoolIndexMerger.merge(null, false, null, file, null, null, -1));
+  }
+
+  @Test
+  public void test_getWorkerConfig()
+  {
+    Assert.assertSame(workerConfig, manager.getWorkerConfig());
   }
 
   /**

@@ -32,6 +32,8 @@ import org.apache.druid.client.SegmentServerSelector;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.LazySequence;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.guava.SequenceWrapper;
+import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.core.NoopEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -104,9 +106,12 @@ public class QueryScheduler implements QueryWatcher
     this.laningStrategy = laningStrategy;
     this.queryFutures = Multimaps.synchronizedSetMultimap(HashMultimap.create());
     this.queryDatasources = Multimaps.synchronizedSetMultimap(HashMultimap.create());
-    // if totalNumThreads is above 0 and less than druid.server.http.numThreads, enforce total limit
+    // if totalNumThreads is above 0 and less than druid.server.http.numThreads and
+    // requests are not being queued by Jetty, enforce total limit
     final boolean limitTotal;
-    if (totalNumThreads > 0 && totalNumThreads < serverConfig.getNumThreads()) {
+    if (totalNumThreads > 0
+        && totalNumThreads < serverConfig.getNumThreads()
+        && !serverConfig.isEnableQueryRequestsQueuing()) {
       limitTotal = true;
       this.totalCapacity = totalNumThreads;
     } else {
@@ -168,7 +173,7 @@ public class QueryScheduler implements QueryWatcher
                                                                     .setDimension("lane", lane.orElse("default"))
                                                                     .setDimension("dataSource", query.getDataSource().getTableNames())
                                                                     .setDimension("type", query.getType());
-    emitter.emit(builderUsr.build("query/priority", priority.orElse(Integer.valueOf(0))));
+    emitter.emit(builderUsr.setMetric("query/priority", priority.orElse(Integer.valueOf(0))));
     return lane.map(query::withLane).orElse(query);
   }
 
@@ -185,8 +190,23 @@ public class QueryScheduler implements QueryWatcher
    */
   public <T> Sequence<T> run(Query<?> query, Sequence<T> resultSequence)
   {
-    List<Bulkhead> bulkheads = acquireLanes(query);
-    return resultSequence.withBaggage(() -> finishLanes(bulkheads));
+    return Sequences.wrap(resultSequence, new SequenceWrapper()
+    {
+      private List<Bulkhead> bulkheads = null;
+      @Override
+      public void before()
+      {
+        bulkheads = acquireLanes(query);
+      }
+
+      @Override
+      public void after(boolean isDone, Throwable thrown)
+      {
+        if (bulkheads != null) {
+          finishLanes(bulkheads);
+        }
+      }
+    });
   }
 
   /**

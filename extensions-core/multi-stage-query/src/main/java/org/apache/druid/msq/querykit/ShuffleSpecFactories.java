@@ -19,7 +19,9 @@
 
 package org.apache.druid.msq.querykit;
 
-import org.apache.druid.msq.kernel.MaxCountShuffleSpec;
+import org.apache.druid.msq.kernel.GlobalSortMaxCountShuffleSpec;
+import org.apache.druid.msq.kernel.GlobalSortTargetSizeShuffleSpec;
+import org.apache.druid.msq.kernel.MixShuffleSpec;
 
 /**
  * Static factory methods for common implementations of {@link ShuffleSpecFactory}.
@@ -32,20 +34,37 @@ public class ShuffleSpecFactories
   }
 
   /**
-   * Factory that produces a single output partition.
+   * Factory that produces a single output partition, which may or may not be sorted.
    */
   public static ShuffleSpecFactory singlePartition()
   {
-    return (clusterBy, aggregate) ->
-        new MaxCountShuffleSpec(clusterBy, 1, aggregate);
+    return (clusterBy, aggregate) -> {
+      if (clusterBy.sortable() && !clusterBy.isEmpty()) {
+        return new GlobalSortMaxCountShuffleSpec(clusterBy, 1, aggregate);
+      } else {
+        return MixShuffleSpec.instance();
+      }
+    };
   }
 
   /**
    * Factory that produces a particular number of output partitions.
    */
-  public static ShuffleSpecFactory subQueryWithMaxWorkerCount(final int maxWorkerCount)
+  public static ShuffleSpecFactory globalSortWithMaxPartitionCount(final int partitions)
+  {
+    return (clusterBy, aggregate) -> new GlobalSortMaxCountShuffleSpec(clusterBy, partitions, aggregate);
+  }
+
+  /**
+   * Factory that produces globally sorted partitions of a target size.
+   */
+  public static ShuffleSpecFactory getGlobalSortWithTargetSize(int targetSize)
   {
     return (clusterBy, aggregate) ->
-        new MaxCountShuffleSpec(clusterBy, maxWorkerCount, aggregate);
+        new GlobalSortTargetSizeShuffleSpec(
+            clusterBy,
+            targetSize,
+            aggregate
+        );
   }
 }

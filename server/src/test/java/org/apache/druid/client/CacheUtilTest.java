@@ -54,7 +54,8 @@ public class CacheUtilTest
             timeseriesQuery,
             new DummyCacheStrategy<>(true, true),
             makeCacheConfig(ImmutableMap.of()),
-            CacheUtil.ServerType.BROKER
+            CacheUtil.ServerType.BROKER,
+            false
         )
     );
   }
@@ -67,7 +68,8 @@ public class CacheUtilTest
             timeseriesQuery,
             new DummyCacheStrategy<>(true, true),
             makeCacheConfig(ImmutableMap.of()),
-            CacheUtil.ServerType.DATA
+            CacheUtil.ServerType.DATA,
+            true
         )
     );
   }
@@ -80,7 +82,8 @@ public class CacheUtilTest
             timeseriesQuery,
             new DummyCacheStrategy<>(false, true),
             makeCacheConfig(ImmutableMap.of()),
-            CacheUtil.ServerType.BROKER
+            CacheUtil.ServerType.BROKER,
+            false
         )
     );
   }
@@ -93,7 +96,8 @@ public class CacheUtilTest
             timeseriesQuery,
             new DummyCacheStrategy<>(true, false),
             makeCacheConfig(ImmutableMap.of()),
-            CacheUtil.ServerType.DATA
+            CacheUtil.ServerType.DATA,
+            true
         )
     );
   }
@@ -106,7 +110,8 @@ public class CacheUtilTest
             timeseriesQuery,
             new DummyCacheStrategy<>(true, false),
             makeCacheConfig(ImmutableMap.of("unCacheable", ImmutableList.of("timeseries"))),
-            CacheUtil.ServerType.BROKER
+            CacheUtil.ServerType.BROKER,
+            false
         )
     );
   }
@@ -119,7 +124,8 @@ public class CacheUtilTest
             timeseriesQuery.withDataSource(new GlobalTableDataSource("global")),
             new DummyCacheStrategy<>(true, true),
             makeCacheConfig(ImmutableMap.of()),
-            CacheUtil.ServerType.BROKER
+            CacheUtil.ServerType.BROKER,
+            false
         )
     );
   }
@@ -132,7 +138,8 @@ public class CacheUtilTest
             timeseriesQuery.withDataSource(new LookupDataSource("lookyloo")),
             new DummyCacheStrategy<>(true, true),
             makeCacheConfig(ImmutableMap.of()),
-            CacheUtil.ServerType.DATA
+            CacheUtil.ServerType.DATA,
+            true
         )
     );
   }
@@ -145,7 +152,8 @@ public class CacheUtilTest
             timeseriesQuery,
             null,
             makeCacheConfig(ImmutableMap.of()),
-            CacheUtil.ServerType.BROKER
+            CacheUtil.ServerType.BROKER,
+            false
         )
     );
   }
@@ -168,7 +176,7 @@ public class CacheUtilTest
     }
 
     @Override
-    public boolean isCacheable(QueryType query, boolean willMergeRunners)
+    public boolean isCacheable(QueryType query, boolean willMergeRunners, boolean bySegment)
     {
       return willMergeRunners ? cacheableOnDataServers : cacheableOnBrokers;
     }

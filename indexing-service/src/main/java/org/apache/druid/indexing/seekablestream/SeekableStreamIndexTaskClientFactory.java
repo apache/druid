@@ -20,46 +20,65 @@
 package org.apache.druid.indexing.seekablestream;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.inject.Inject;
-import org.apache.druid.guice.annotations.EscalatedGlobal;
-import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.indexing.common.TaskInfoProvider;
-import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
-import org.apache.druid.java.util.http.client.HttpClient;
-import org.joda.time.Duration;
+import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorTuningConfig;
+import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.rpc.ServiceClientFactory;
 
-public abstract class SeekableStreamIndexTaskClientFactory<T extends SeekableStreamIndexTaskClient>
-    implements IndexTaskClientFactory<T>
+public abstract class SeekableStreamIndexTaskClientFactory<PartitionIdType, SequenceOffsetType>
 {
-  private HttpClient httpClient;
-  private ObjectMapper mapper;
+  private static final Logger log = new Logger(SeekableStreamIndexTaskClientFactory.class);
 
-  @Inject
-  public SeekableStreamIndexTaskClientFactory(
-      @EscalatedGlobal HttpClient httpClient,
-      @Json ObjectMapper mapper
+  private final ServiceClientFactory serviceClientFactory;
+  private final ObjectMapper jsonMapper;
+
+  protected SeekableStreamIndexTaskClientFactory(
+      final ServiceClientFactory serviceClientFactory,
+      final ObjectMapper jsonMapper
   )
   {
-    this.httpClient = httpClient;
-    this.mapper = mapper;
+    this.serviceClientFactory = serviceClientFactory;
+    this.jsonMapper = jsonMapper;
   }
 
-  @Override
-  public abstract T build(
-      TaskInfoProvider taskInfoProvider,
-      String dataSource,
-      int numThreads,
-      Duration httpTimeout,
-      long numRetries
-  );
-
-  protected HttpClient getHttpClient()
+  public SeekableStreamIndexTaskClient<PartitionIdType, SequenceOffsetType> build(
+      final String dataSource,
+      final TaskInfoProvider taskInfoProvider,
+      final int maxNumTasks,
+      final SeekableStreamSupervisorTuningConfig tuningConfig
+  )
   {
-    return httpClient;
+    log.info(
+        "Created async task client for dataSource[%s] httpTimeout[%s] chatRetries[%d]",
+        dataSource,
+        tuningConfig.getHttpTimeout(),
+        tuningConfig.getChatRetries()
+    );
+
+    return new SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, SequenceOffsetType>(
+        dataSource,
+        serviceClientFactory,
+        taskInfoProvider,
+        jsonMapper,
+        tuningConfig.getHttpTimeout(),
+        tuningConfig.getChatRetries()
+    )
+    {
+      @Override
+      public Class<PartitionIdType> getPartitionType()
+      {
+        return SeekableStreamIndexTaskClientFactory.this.getPartitionType();
+      }
+
+      @Override
+      public Class<SequenceOffsetType> getSequenceType()
+      {
+        return SeekableStreamIndexTaskClientFactory.this.getSequenceType();
+      }
+    };
   }
 
-  protected ObjectMapper getMapper()
-  {
-    return mapper;
-  }
+  protected abstract Class<PartitionIdType> getPartitionType();
+
+  protected abstract Class<SequenceOffsetType> getSequenceType();
 }

@@ -23,8 +23,10 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Preconditions;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLockType;
+import org.apache.druid.indexing.common.task.PendingSegmentAllocatingTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.LockRequestForNewSegment;
@@ -47,13 +49,18 @@ import javax.annotation.Nullable;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.Future;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 /**
- * Allocates a pending segment for a given timestamp. The preferredSegmentGranularity is used if there are no prior
- * segments for the given timestamp, or if the prior segments for the given timestamp are already at the
- * preferredSegmentGranularity. Otherwise, the prior segments will take precedence.
+ * Allocates a pending segment for a given timestamp.
+ * If a visible chunk of used segments contains the interval with the query granularity containing the timestamp,
+ * the pending segment is allocated with its interval.
+ * Else, if the interval with the preferred segment granularity containing the timestamp has no overlap
+ * with the existing used segments, the preferred segment granularity is used.
+ * Else, find the coarsest segment granularity, containing the interval with the query granularity for the timestamp,
+ * that does not overlap with the existing used segments. This granularity is used for allocation if it exists.
  * <p/>
  * This action implicitly acquires some task locks when it allocates segments. You do not have to acquire them
  * beforehand, although you *do* have to release them yourself. (Note that task locks are automatically released when
@@ -61,6 +68,8 @@ import java.util.stream.Collectors;
  * <p/>
  * If this action cannot acquire an appropriate task lock, or if it cannot expand an existing segment set, it returns
  * null.
+ * </p>
+ * Do NOT allocate WEEK granularity segments unless the preferred segment granularity is WEEK.
  */
 public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
 {
@@ -181,11 +190,34 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
   }
 
   @Override
+  public boolean canPerformAsync(Task task, TaskActionToolbox toolbox)
+  {
+    return toolbox.canBatchSegmentAllocation();
+  }
+
+  @Override
+  public Future<SegmentIdWithShardSpec> performAsync(Task task, TaskActionToolbox toolbox)
+  {
+    if (!toolbox.canBatchSegmentAllocation()) {
+      throw new ISE("Batched segment allocation is disabled");
+    }
+    return toolbox.getSegmentAllocationQueue().add(
+        new SegmentAllocateRequest(task, this, MAX_ATTEMPTS)
+    );
+  }
+
+  @Override
   public SegmentIdWithShardSpec perform(
       final Task task,
       final TaskActionToolbox toolbox
   )
   {
+    if (!(task instanceof PendingSegmentAllocatingTask)) {
+      throw DruidException.defensive(
+          "Task[%s] of type[%s] cannot allocate segments as it does not implement PendingSegmentAllocatingTask.",
+          task.getId(), task.getType()
+      );
+    }
     int attempt = 0;
     while (true) {
       attempt++;

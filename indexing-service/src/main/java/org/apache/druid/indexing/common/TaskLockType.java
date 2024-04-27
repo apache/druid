@@ -19,8 +19,35 @@
 
 package org.apache.druid.indexing.common;
 
+/**
+ * 1) A revoked lock is compatible with every lock.
+ * 2) An appending task may use only EXCLUSIVE, SHARED or APPEND locks
+ * 3) A replacing task may use only EXCLUSIVE or REPLACE locks
+ * 4) REPLACE and APPEND locks can only be used with timechunk locking
+ */
 public enum TaskLockType
 {
+  /**
+   * There can be at most one active EXCLUSIVE lock for a given interval.
+   * It cannot co-exist with any other active locks with overlapping intervals.
+   */
+  EXCLUSIVE,
+  /**
+   * There can be any number of active SHARED locks for a given interval.
+   * They can coexist only with other SHARED locks, but not with active locks of other types.
+   */
   SHARED,
-  EXCLUSIVE // taskLocks of this type can be shared by tasks of the same groupId.
+  /**
+   * There can be at most one active REPLACE lock for a given interval.
+   * It can co-exist only with APPEND locks whose intervals are enclosed within its interval,
+   * and is incompatible with all other active locks with overlapping intervals.
+   */
+  REPLACE,
+  /**
+   * There can be any number of active APPEND locks for a given interval.
+   * They can coexist with other APPEND locks,
+   * and with at most one REPLACE lock whose interval encloses that of the APPEND lock.
+   * They are incompatible with all other active locks.
+   */
+  APPEND
 }

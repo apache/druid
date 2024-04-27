@@ -22,13 +22,14 @@ package org.apache.druid.msq.test;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Injector;
 import org.apache.druid.frame.processor.Bouncer;
-import org.apache.druid.indexing.common.TaskReport;
-import org.apache.druid.indexing.common.TaskReportFileWriter;
+import org.apache.druid.indexer.report.TaskReport;
+import org.apache.druid.indexer.report.TaskReportFileWriter;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerClient;
+import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
 import org.apache.druid.msq.exec.Worker;
 import org.apache.druid.msq.exec.WorkerClient;
 import org.apache.druid.msq.exec.WorkerContext;
@@ -40,6 +41,7 @@ import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.querykit.DataSegmentProvider;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
+import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.incremental.NoopRowIngestionMeters;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
@@ -114,19 +116,17 @@ public class MSQTestWorkerContext implements WorkerContext
   @Override
   public FrameContext frameContext(QueryDefinition queryDef, int stageNumber)
   {
-    IndexIO indexIO = new IndexIO(
-        mapper,
-        () -> 0
-    );
+    IndexIO indexIO = new IndexIO(mapper, ColumnConfig.DEFAULT);
     IndexMergerV9 indexMerger = new IndexMergerV9(
         mapper,
         indexIO,
-        OffHeapMemorySegmentWriteOutMediumFactory.instance()
+        OffHeapMemorySegmentWriteOutMediumFactory.instance(),
+        true
     );
     final TaskReportFileWriter reportFileWriter = new TaskReportFileWriter()
     {
       @Override
-      public void write(String taskId, Map<String, TaskReport> reports)
+      public void write(String taskId, TaskReport.ReportMap reports)
       {
 
       }
@@ -155,10 +155,12 @@ public class MSQTestWorkerContext implements WorkerContext
             injector,
             indexIO,
             null,
+            null,
             null
         ),
         indexIO,
         injector.getInstance(DataSegmentProvider.class),
+        injector.getInstance(DataServerQueryHandlerFactory.class),
         workerMemoryParameters
     );
   }
@@ -179,5 +181,11 @@ public class MSQTestWorkerContext implements WorkerContext
   public Bouncer processorBouncer()
   {
     return injector.getInstance(Bouncer.class);
+  }
+
+  @Override
+  public DataServerQueryHandlerFactory dataServerQueryHandlerFactory()
+  {
+    return injector.getInstance(DataServerQueryHandlerFactory.class);
   }
 }

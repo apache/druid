@@ -16,19 +16,27 @@
  * limitations under the License.
  */
 
-import { Button, ButtonGroup, FormGroup, Intent, NumericInput } from '@blueprintjs/core';
+import {
+  Button,
+  ButtonGroup,
+  FormGroup,
+  InputGroup,
+  Intent,
+  NumericInput,
+} from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
+import type { JSX } from 'react';
 import React from 'react';
 
 import { deepDelete, deepGet, deepSet, durationSanitizer } from '../../utils';
 import { ArrayInput } from '../array-input/array-input';
+import { FancyNumericInput } from '../fancy-numeric-input/fancy-numeric-input';
 import { FormGroupWithInfo } from '../form-group-with-info/form-group-with-info';
 import { IntervalInput } from '../interval-input/interval-input';
 import { JsonInput } from '../json-input/json-input';
-import { NumericInputWithDefault } from '../numeric-input-with-default/numeric-input-with-default';
 import { PopoverText } from '../popover-text/popover-text';
 import { SuggestibleInput } from '../suggestible-input/suggestible-input';
-import { Suggestion } from '../suggestion-menu/suggestion-menu';
+import type { Suggestion } from '../suggestion-menu/suggestion-menu';
 
 import './auto-form.scss';
 
@@ -40,29 +48,45 @@ export interface Field<M> {
   info?: React.ReactNode;
   type:
     | 'number'
+    | 'ratio'
     | 'size-bytes'
     | 'string'
     | 'duration'
     | 'boolean'
     | 'string-array'
     | 'json'
-    | 'interval';
+    | 'interval'
+    | 'custom';
   defaultValue?: any;
   emptyValue?: any;
   suggestions?: Functor<M, Suggestion[]>;
   placeholder?: Functor<M, string>;
   min?: number;
+  max?: number;
   zeroMeansUndefined?: boolean;
   height?: string;
   disabled?: Functor<M, boolean>;
-  defined?: Functor<M, boolean>;
+  defined?: Functor<M, boolean | undefined>;
   required?: Functor<M, boolean>;
   multiline?: Functor<M, boolean>;
   hide?: Functor<M, boolean>;
   hideInMore?: Functor<M, boolean>;
   valueAdjustment?: (value: any) => any;
-  adjustment?: (model: Partial<M>) => Partial<M>;
+  adjustment?: (model: Partial<M>, oldModel: Partial<M>) => Partial<M>;
   issueWithValue?: (value: any) => string | undefined;
+
+  customSummary?: (v: any) => string;
+  customDialog?: (o: {
+    value: any;
+    onValueChange: (v: any) => void;
+    onClose: () => void;
+  }) => JSX.Element;
+}
+
+function toNumberOrUndefined(n: unknown): number | undefined {
+  if (n == null) return;
+  const r = Number(n);
+  return isNaN(r) ? undefined : r;
 }
 
 interface ComputedFieldValues {
@@ -83,6 +107,7 @@ export interface AutoFormProps<M> {
 
 export interface AutoFormState {
   showMore: boolean;
+  customDialog?: JSX.Element;
 }
 
 export class AutoForm<T extends Record<string, any>> extends React.PureComponent<
@@ -138,10 +163,13 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
 
     // Precompute which fields are defined because fields could be defined twice and only one should do the checking
     const definedFields: Record<string, Field<M>> = {};
+    const notDefinedFields: Record<string, Field<M>> = {};
     for (const field of fields) {
       const fieldDefined = AutoForm.evaluateFunctor(field.defined, model, true);
       if (fieldDefined) {
         definedFields[field.name] = field;
+      } else if (fieldDefined === false) {
+        notDefinedFields[field.name] = field;
       }
     }
 
@@ -163,7 +191,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
             if (valueIssue) return `field ${field.name} has issue ${valueIssue}`;
           }
         }
-      } else {
+      } else if (notDefinedFields[field.name]) {
         // The field is undefined
         if (fieldValueDefined) {
           return `field ${field.name} is defined but it should not be`;
@@ -200,7 +228,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
     }
 
     if (field.adjustment) {
-      newModel = field.adjustment(newModel);
+      newModel = field.adjustment(newModel, model);
     }
 
     this.modelChange(newModel);
@@ -232,15 +260,14 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
     const { required, defaultValue, modelValue } = AutoForm.computeFieldValues(model, field);
 
     return (
-      <NumericInputWithDefault
-        value={modelValue}
-        defaultValue={defaultValue}
-        onValueChange={(valueAsNumber: number, valueAsString: string) => {
-          let newValue: number | undefined;
-          if (valueAsString !== '' && !isNaN(valueAsNumber)) {
-            newValue = valueAsNumber === 0 && field.zeroMeansUndefined ? undefined : valueAsNumber;
-          }
-          this.fieldChange(field, newValue);
+      <FancyNumericInput
+        value={toNumberOrUndefined(modelValue)}
+        defaultValue={toNumberOrUndefined(defaultValue)}
+        onValueChange={valueAsNumber => {
+          this.fieldChange(
+            field,
+            valueAsNumber === 0 && field.zeroMeansUndefined ? undefined : valueAsNumber,
+          );
         }}
         onBlur={e => {
           if (e.target.value === '') {
@@ -248,7 +275,42 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
           }
           if (onFinalize) onFinalize();
         }}
-        min={field.min || 0}
+        min={field.min ?? 0}
+        max={field.max}
+        fill
+        large={large}
+        disabled={AutoForm.evaluateFunctor(field.disabled, model, false)}
+        placeholder={AutoForm.evaluateFunctor(field.placeholder, model, '')}
+        intent={required && modelValue == null ? AutoForm.REQUIRED_INTENT : undefined}
+      />
+    );
+  }
+
+  private renderRatioInput(field: Field<T>): JSX.Element {
+    const { model, large, onFinalize } = this.props;
+    const { required, defaultValue, modelValue } = AutoForm.computeFieldValues(model, field);
+
+    return (
+      <FancyNumericInput
+        value={toNumberOrUndefined(modelValue)}
+        defaultValue={toNumberOrUndefined(defaultValue)}
+        onValueChange={valueAsNumber => {
+          this.fieldChange(
+            field,
+            valueAsNumber === 0 && field.zeroMeansUndefined ? undefined : valueAsNumber,
+          );
+        }}
+        onBlur={e => {
+          if (e.target.value === '') {
+            this.fieldChange(field, undefined);
+          }
+          if (onFinalize) onFinalize();
+        }}
+        min={field.min ?? 0}
+        max={field.max ?? 1}
+        minorStepSize={0.001}
+        stepSize={0.01}
+        majorStepSize={0.05}
         fill
         large={large}
         disabled={AutoForm.evaluateFunctor(field.disabled, model, false)}
@@ -305,6 +367,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
         disabled={AutoForm.evaluateFunctor(field.disabled, model, false)}
         intent={required && modelValue == null ? AutoForm.REQUIRED_INTENT : undefined}
         multiline={AutoForm.evaluateFunctor(field.multiline, model, false)}
+        height={field.height}
       />
     );
   }
@@ -393,10 +456,42 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
     );
   }
 
+  private renderCustomInput(field: Field<T>): JSX.Element {
+    const { model } = this.props;
+    const { required, defaultValue, modelValue } = AutoForm.computeFieldValues(model, field);
+    const effectiveValue = modelValue || defaultValue;
+
+    const onEdit = () => {
+      this.setState({
+        customDialog: field.customDialog?.({
+          value: effectiveValue,
+          onValueChange: v => this.fieldChange(field, v),
+          onClose: () => {
+            this.setState({ customDialog: undefined });
+          },
+        }),
+      });
+    };
+
+    return (
+      <InputGroup
+        className="custom-input"
+        value={(field.customSummary || String)(effectiveValue)}
+        intent={required && modelValue == null ? AutoForm.REQUIRED_INTENT : undefined}
+        readOnly
+        placeholder={AutoForm.evaluateFunctor(field.placeholder, model, '')}
+        rightElement={<Button icon={IconNames.EDIT} minimal onClick={onEdit} />}
+        onClick={onEdit}
+      />
+    );
+  }
+
   renderFieldInput(field: Field<T>) {
     switch (field.type) {
       case 'number':
         return this.renderNumberInput(field);
+      case 'ratio':
+        return this.renderRatioInput(field);
       case 'size-bytes':
         return this.renderSizeBytesInput(field);
       case 'string':
@@ -411,6 +506,8 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
         return this.renderJsonInput(field);
       case 'interval':
         return this.renderIntervalInput(field);
+      case 'custom':
+        return this.renderCustomInput(field);
       default:
         throw new Error(`unknown field type '${field.type}'`);
     }
@@ -460,9 +557,9 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
     );
   }
 
-  render(): JSX.Element {
+  render() {
     const { fields, model, showCustom } = this.props;
-    const { showMore } = this.state;
+    const { showMore, customDialog } = this.state;
 
     let shouldShowMore = false;
     const shownFields = fields.filter(field => {
@@ -487,6 +584,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
         {model && shownFields.map(this.renderField)}
         {model && showCustom && showCustom(model) && this.renderCustom()}
         {shouldShowMore && this.renderMoreOrLess()}
+        {customDialog}
       </div>
     );
   }

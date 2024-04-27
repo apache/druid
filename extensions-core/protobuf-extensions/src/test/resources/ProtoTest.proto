@@ -44,7 +44,8 @@ message ProtoTestEvent {
     optional float someFloatColumn = 7;
     optional uint32 someIntColumn = 8;
     optional uint64 someLongColumn = 9;
-    optional Foo foo = 10;
-    repeated Foo bar = 11;
-    optional google.protobuf.Timestamp otherTimestamp = 12;
+    required bytes someBytesColumn = 10;
+    optional Foo foo = 11;
+    repeated Foo bar = 12;
+    optional google.protobuf.Timestamp otherTimestamp = 13;
 }

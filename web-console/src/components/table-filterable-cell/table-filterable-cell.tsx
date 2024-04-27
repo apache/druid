@@ -18,10 +18,12 @@
 
 import { Menu, MenuDivider, MenuItem } from '@blueprintjs/core';
 import { Popover2 } from '@blueprintjs/popover2';
-import React, { ReactNode } from 'react';
-import { Filter } from 'react-table';
+import type { ReactNode } from 'react';
+import React from 'react';
+import type { Filter } from 'react-table';
 
-import { addFilter, FilterMode, filterModeToIcon } from '../../react-table';
+import type { FilterMode } from '../../react-table';
+import { addFilter, filterModeToIcon } from '../../react-table';
 import { Deferred } from '../deferred/deferred';
 
 import './table-filterable-cell.scss';

@@ -31,6 +31,7 @@ import org.apache.druid.query.datasourcemetadata.DataSourceMetadataQuery;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
+import org.apache.druid.query.operator.WindowOperatorQuery;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.search.SearchQuery;
 import org.apache.druid.query.select.SelectQuery;
@@ -45,7 +46,6 @@ import org.joda.time.Duration;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -54,27 +54,29 @@ import java.util.UUID;
 @ExtensionPoint
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "queryType")
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = Query.TIMESERIES, value = TimeseriesQuery.class),
-    @JsonSubTypes.Type(name = Query.SEARCH, value = SearchQuery.class),
-    @JsonSubTypes.Type(name = Query.TIME_BOUNDARY, value = TimeBoundaryQuery.class),
+    @JsonSubTypes.Type(name = Query.DATASOURCE_METADATA, value = DataSourceMetadataQuery.class),
     @JsonSubTypes.Type(name = Query.GROUP_BY, value = GroupByQuery.class),
     @JsonSubTypes.Type(name = Query.SCAN, value = ScanQuery.class),
+    @JsonSubTypes.Type(name = Query.SEARCH, value = SearchQuery.class),
     @JsonSubTypes.Type(name = Query.SEGMENT_METADATA, value = SegmentMetadataQuery.class),
     @JsonSubTypes.Type(name = Query.SELECT, value = SelectQuery.class),
+    @JsonSubTypes.Type(name = Query.TIME_BOUNDARY, value = TimeBoundaryQuery.class),
+    @JsonSubTypes.Type(name = Query.TIMESERIES, value = TimeseriesQuery.class),
     @JsonSubTypes.Type(name = Query.TOPN, value = TopNQuery.class),
-    @JsonSubTypes.Type(name = Query.DATASOURCE_METADATA, value = DataSourceMetadataQuery.class)
+    @JsonSubTypes.Type(name = Query.WINDOW_OPERATOR, value = WindowOperatorQuery.class),
 })
 public interface Query<T>
 {
-  String TIMESERIES = "timeseries";
-  String SEARCH = "search";
-  String TIME_BOUNDARY = "timeBoundary";
+  String DATASOURCE_METADATA = "dataSourceMetadata";
   String GROUP_BY = "groupBy";
   String SCAN = "scan";
+  String SEARCH = "search";
   String SEGMENT_METADATA = "segmentMetadata";
   String SELECT = "select";
+  String TIME_BOUNDARY = "timeBoundary";
+  String TIMESERIES = "timeseries";
   String TOPN = "topN";
-  String DATASOURCE_METADATA = "dataSourceMetadata";
+  String WINDOW_OPERATOR = "windowOperator";
 
   DataSource getDataSource();
 

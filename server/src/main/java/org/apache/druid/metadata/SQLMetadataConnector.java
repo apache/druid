@@ -19,16 +19,19 @@
 
 package org.apache.druid.metadata;
 
+import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.apache.commons.dbcp2.BasicDataSourceFactory;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.skife.jdbi.v2.Batch;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
@@ -51,8 +54,12 @@ import java.sql.SQLRecoverableException;
 import java.sql.SQLTransientException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
 public abstract class SQLMetadataConnector implements MetadataStorageConnector
 {
@@ -65,15 +72,18 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   private final Supplier<MetadataStorageConnectorConfig> config;
   private final Supplier<MetadataStorageTablesConfig> tablesConfigSupplier;
   private final Predicate<Throwable> shouldRetry;
+  private final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
 
   public SQLMetadataConnector(
       Supplier<MetadataStorageConnectorConfig> config,
-      Supplier<MetadataStorageTablesConfig> tablesConfigSupplier
+      Supplier<MetadataStorageTablesConfig> tablesConfigSupplier,
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
     this.config = config;
     this.tablesConfigSupplier = tablesConfigSupplier;
     this.shouldRetry = this::isTransientException;
+    this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
   }
 
   /**
@@ -101,13 +111,18 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   }
 
   /**
-   * Auto-incrementing SQL type to use for IDs
-   * Must be an integer type, which values will be automatically set by the database
-   * <p/>
-   * The resulting string will be interpolated into the table creation statement, e.g.
-   * <code>CREATE TABLE druid_table ( id <type> NOT NULL, ... )</code>
+   * Auto-incrementing integer SQL type to use for IDs.
+   * The returned string is interpolated into the table creation statement as follows:
+   * <pre>
+   * CREATE TABLE druid_table (
+   *   id &lt;serial-type&gt; NOT NULL,
+   *   col_2 VARCHAR(255) NOT NULL,
+   *   col_3 VARCHAR(255) NOT NULL
+   *   ...
+   * )
+   * </pre>
    *
-   * @return String representing the SQL type and auto-increment statement
+   * @return String representing auto-incrementing SQL integer type to use for IDs.
    */
   public abstract String getSerialType();
 
@@ -169,7 +184,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                          || e instanceof SQLTransientException
                          || e instanceof SQLRecoverableException
                          || e instanceof UnableToObtainConnectionException
-                         || e instanceof UnableToExecuteStatementException
+                         || (e instanceof UnableToExecuteStatementException && isTransientException(e.getCause()))
                          || connectorIsTransientException(e)
                          || (e instanceof SQLException && isTransientException(e.getCause()))
                          || (e instanceof DBIException && isTransientException(e.getCause())));
@@ -183,32 +198,67 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     return false;
   }
 
+  /**
+   * Checks if the root cause of the given exception is a PacketTooBigException.
+   *
+   * @return false by default. Specific implementations should override this method
+   * to correctly classify their packet exceptions.
+   */
+  protected boolean isRootCausePacketTooBigException(Throwable t)
+  {
+    return false;
+  }
+
+  /**
+   * Creates the given table and indexes if the table doesn't already exist.
+   */
   public void createTable(final String tableName, final Iterable<String> sql)
   {
     try {
-      retryWithHandle(
-          new HandleCallback<Void>()
-          {
-            @Override
-            public Void withHandle(Handle handle)
-            {
-              if (!tableExists(handle, tableName)) {
-                log.info("Creating table [%s]", tableName);
-                final Batch batch = handle.createBatch();
-                for (String s : sql) {
-                  batch.add(s);
-                }
-                batch.execute();
-              } else {
-                log.info("Table [%s] already exists", tableName);
-              }
-              return null;
-            }
+      retryWithHandle(handle -> {
+        if (tableExists(handle, tableName)) {
+          log.info("Table[%s] already exists", tableName);
+        } else {
+          log.info("Creating table[%s]", tableName);
+          final Batch batch = handle.createBatch();
+          for (String s : sql) {
+            batch.add(s);
           }
-      );
+          batch.execute();
+        }
+        return null;
+      });
     }
     catch (Exception e) {
       log.warn(e, "Exception creating table");
+    }
+  }
+
+  /**
+   * Execute the desired ALTER statement on the desired table
+   *
+   * @param tableName The name of the table being altered
+   * @param sql ALTER statment to be executed
+   */
+  private void alterTable(final String tableName, final Iterable<String> sql)
+  {
+    try {
+      retryWithHandle(handle -> {
+        if (tableExists(handle, tableName)) {
+          final Batch batch = handle.createBatch();
+          for (String s : sql) {
+            log.info("Altering table[%s], with command: %s", tableName, s);
+            batch.add(s);
+          }
+          batch.execute();
+        } else {
+          log.info("Table[%s] doesn't exist.", tableName);
+        }
+        return null;
+      });
+    }
+    catch (Exception e) {
+      log.warn(e, "Exception Altering table[%s]", tableName);
     }
   }
 
@@ -244,6 +294,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
             )
         )
     );
+    alterPendingSegmentsTableAddParentIdAndTaskGroup(tableName);
   }
 
   public void createDataSourceTable(final String tableName)
@@ -267,22 +318,37 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
 
   public void createSegmentTable(final String tableName)
   {
+    List<String> columns = new ArrayList<>();
+    columns.add("id VARCHAR(255) NOT NULL");
+    columns.add("dataSource VARCHAR(255) %4$s NOT NULL");
+    columns.add("created_date VARCHAR(255) NOT NULL");
+    columns.add("start VARCHAR(255) NOT NULL");
+    columns.add("%3$send%3$s VARCHAR(255) NOT NULL");
+    columns.add("partitioned BOOLEAN NOT NULL");
+    columns.add("version VARCHAR(255) NOT NULL");
+    columns.add("used BOOLEAN NOT NULL");
+    columns.add("payload %2$s NOT NULL");
+    columns.add("used_status_last_updated VARCHAR(255) NOT NULL");
+
+    if (centralizedDatasourceSchemaConfig.isEnabled()) {
+      columns.add("schema_fingerprint VARCHAR(255)");
+      columns.add("num_rows BIGINT");
+    }
+
+    StringBuilder createStatementBuilder = new StringBuilder("CREATE TABLE %1$s (");
+
+    for (String column : columns) {
+      createStatementBuilder.append(column);
+      createStatementBuilder.append(",");
+    }
+
+    createStatementBuilder.append("PRIMARY KEY (id))");
+
     createTable(
         tableName,
         ImmutableList.of(
             StringUtils.format(
-                "CREATE TABLE %1$s (\n"
-                + "  id VARCHAR(255) NOT NULL,\n"
-                + "  dataSource VARCHAR(255) %4$s NOT NULL,\n"
-                + "  created_date VARCHAR(255) NOT NULL,\n"
-                + "  start VARCHAR(255) NOT NULL,\n"
-                + "  %3$send%3$s VARCHAR(255) NOT NULL,\n"
-                + "  partitioned BOOLEAN NOT NULL,\n"
-                + "  version VARCHAR(255) NOT NULL,\n"
-                + "  used BOOLEAN NOT NULL,\n"
-                + "  payload %2$s NOT NULL,\n"
-                + "  PRIMARY KEY (id)\n"
-                + ")",
+                createStatementBuilder.toString(),
                 tableName, getPayloadType(), getQuoteString(), getCollation()
             ),
             StringUtils.format("CREATE INDEX idx_%1$s_used ON %1$s(used)", tableName),
@@ -290,6 +356,29 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                 "CREATE INDEX idx_%1$s_datasource_used_end_start ON %1$s(dataSource, used, %2$send%2$s, start)",
                 tableName,
                 getQuoteString()
+            )
+        )
+    );
+  }
+
+  private void createUpgradeSegmentsTable(final String tableName)
+  {
+    createTable(
+        tableName,
+        ImmutableList.of(
+            StringUtils.format(
+                "CREATE TABLE %1$s (\n"
+                + "  id %2$s NOT NULL,\n"
+                + "  task_id VARCHAR(255) NOT NULL,\n"
+                + "  segment_id VARCHAR(255) NOT NULL,\n"
+                + "  lock_version VARCHAR(255) NOT NULL,\n"
+                + "  PRIMARY KEY (id)\n"
+                + ")",
+                tableName, getSerialType()
+            ),
+            StringUtils.format(
+                "CREATE INDEX idx_%1$s_task ON %1$s(task_id)",
+                tableName
             )
         )
     );
@@ -331,28 +420,11 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
         )
     );
   }
-  
-  public boolean tableContainsColumn(Handle handle, String table, String column)
-  {
-    try {
-      DatabaseMetaData databaseMetaData = handle.getConnection().getMetaData();
-      ResultSet columns = databaseMetaData.getColumns(
-          null,
-          null,
-          table,
-          column
-      );
-      return columns.next();
-    }
-    catch (SQLException e) {
-      return false;
-    }
-  }
-  
+
   public void prepareTaskEntryTable(final String tableName)
   {
     createEntryTable(tableName);
-    alterEntryTable(tableName);
+    alterEntryTableAddTypeAndGroupId(tableName);
   }
 
   public void createEntryTable(final String tableName)
@@ -371,38 +443,61 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                 + "  PRIMARY KEY (id)\n"
                 + ")",
                 tableName, getPayloadType(), getCollation()
-            ),
-            StringUtils.format("CREATE INDEX idx_%1$s_active_created_date ON %1$s(active, created_date)", tableName)
+            )
         )
+    );
+    final Set<String> createdIndexSet = getIndexOnTable(tableName);
+    createIndex(
+        tableName,
+        StringUtils.format("idx_%1$s_active_created_date", tableName),
+        ImmutableList.of("active", "created_date"),
+        createdIndexSet
+    );
+    createIndex(
+        tableName,
+        StringUtils.format("idx_%1$s_datasource_active", tableName),
+        ImmutableList.of("datasource", "active"),
+        createdIndexSet
     );
   }
 
-  private void alterEntryTable(final String tableName)
+  private void alterEntryTableAddTypeAndGroupId(final String tableName)
   {
-    try {
-      retryWithHandle(
-          new HandleCallback<Void>()
-          {
-            @Override
-            public Void withHandle(Handle handle)
-            {
-              final Batch batch = handle.createBatch();
-              if (!tableContainsColumn(handle, tableName, "type")) {
-                log.info("Adding column: type to table[%s]", tableName);
-                batch.add(StringUtils.format("ALTER TABLE %1$s ADD COLUMN type VARCHAR(255)", tableName));
-              }
-              if (!tableContainsColumn(handle, tableName, "group_id")) {
-                log.info("Adding column: group_id to table[%s]", tableName);
-                batch.add(StringUtils.format("ALTER TABLE %1$s ADD COLUMN group_id VARCHAR(255)", tableName));
-              }
-              batch.execute();
-              return null;
-            }
-          }
-      );
+    List<String> statements = new ArrayList<>();
+    if (tableHasColumn(tableName, "type")) {
+      log.info("Table[%s] already has column[type].", tableName);
+    } else {
+      log.info("Adding column[type] to table[%s].", tableName);
+      statements.add(StringUtils.format("ALTER TABLE %1$s ADD COLUMN type VARCHAR(255)", tableName));
     }
-    catch (Exception e) {
-      log.warn(e, "Exception altering table");
+    if (tableHasColumn(tableName, "group_id")) {
+      log.info("Table[%s] already has column[group_id].", tableName);
+    } else {
+      log.info("Adding column[group_id] to table[%s].", tableName);
+      statements.add(StringUtils.format("ALTER TABLE %1$s ADD COLUMN group_id VARCHAR(255)", tableName));
+    }
+    if (!statements.isEmpty()) {
+      alterTable(tableName, statements);
+    }
+  }
+
+  private void alterPendingSegmentsTableAddParentIdAndTaskGroup(final String tableName)
+  {
+    List<String> statements = new ArrayList<>();
+    if (tableHasColumn(tableName, "upgraded_from_segment_id")) {
+      log.info("Table[%s] already has column[upgraded_from_segment_id].", tableName);
+    } else {
+      log.info("Adding column[upgraded_from_segment_id] to table[%s].", tableName);
+      statements.add(StringUtils.format("ALTER TABLE %1$s ADD COLUMN upgraded_from_segment_id VARCHAR(255)", tableName));
+    }
+    if (tableHasColumn(tableName, "task_allocator_id")) {
+      log.info("Table[%s] already has column[task_allocator_id].", tableName);
+    } else {
+      log.info("Adding column[task_allocator_id] to table[%s].", tableName);
+      statements.add(StringUtils.format("ALTER TABLE %1$s ADD COLUMN task_allocator_id VARCHAR(255)", tableName));
+    }
+    if (!statements.isEmpty()) {
+      alterTable(tableName, statements);
     }
   }
 
@@ -461,6 +556,54 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
             ),
             StringUtils.format("CREATE INDEX idx_%1$s_spec_id ON %1$s(spec_id)", tableName)
         )
+    );
+  }
+
+  /**
+   * Adds new columns (used_status_last_updated) to the "segments" table.
+   * Conditionally, add schema_fingerprint, num_rows columns.
+   */
+  protected void alterSegmentTable()
+  {
+    final String tableName = tablesConfigSupplier.get().getSegmentsTable();
+
+    Map<String, String> columnNameTypes = new HashMap<>();
+    columnNameTypes.put("used_status_last_updated", "VARCHAR(255)");
+
+    if (centralizedDatasourceSchemaConfig.isEnabled()) {
+      columnNameTypes.put("schema_fingerprint", "VARCHAR(255)");
+      columnNameTypes.put("num_rows", "BIGINT");
+    }
+
+    Set<String> columnsToAdd = new HashSet<>();
+
+    for (String columnName : columnNameTypes.keySet()) {
+      if (tableHasColumn(tableName, columnName)) {
+        log.info("Table[%s] already has column[%s].", tableName, columnName);
+      } else {
+        columnsToAdd.add(columnName);
+      }
+    }
+
+    List<String> alterCommands = new ArrayList<>();
+    if (!columnsToAdd.isEmpty()) {
+      for (String columnName : columnsToAdd) {
+        alterCommands.add(
+            StringUtils.format(
+                "ALTER TABLE %1$s ADD %2$s %3$s",
+                tableName,
+                columnName,
+                columnNameTypes.get(columnName)
+            )
+        );
+      }
+
+      log.info("Adding columns %s to table[%s].", columnsToAdd, tableName);
+    }
+
+    alterTable(
+        tableName,
+        alterCommands
     );
   }
 
@@ -609,6 +752,18 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   {
     if (config.get().isCreateTables()) {
       createSegmentTable(tablesConfigSupplier.get().getSegmentsTable());
+      alterSegmentTable();
+    }
+    // Called outside of the above conditional because we want to validate the table
+    // regardless of cluster configuration for creating tables.
+    validateSegmentsTable();
+  }
+
+  @Override
+  public void createUpgradeSegmentsTable()
+  {
+    if (config.get().isCreateTables()) {
+      createUpgradeSegmentsTable(tablesConfigSupplier.get().getUpgradeSegmentsTable());
     }
   }
 
@@ -657,14 +812,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   )
   {
     return getDBI().withHandle(
-        new HandleCallback<byte[]>()
-        {
-          @Override
-          public byte[] withHandle(Handle handle)
-          {
-            return lookupWithHandle(handle, tableName, keyColumn, valueColumn, key);
-          }
-        }
+        handle -> lookupWithHandle(handle, tableName, keyColumn, valueColumn, key)
     );
   }
 
@@ -734,7 +882,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     return makeDatasource(getConfig(), getValidationQuery());
   }
 
-  protected final <T> T inReadOnlyTransaction(
+  public final <T> T inReadOnlyTransaction(
       final TransactionCallback<T> callback
   )
   {
@@ -822,6 +970,188 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     }
     catch (Exception e) {
       log.warn(e, "Exception while deleting records from table");
+    }
+  }
+
+  public void createSegmentSchemaTable(final String tableName)
+  {
+    createTable(
+        tableName,
+        ImmutableList.of(
+            StringUtils.format(
+                "CREATE TABLE %1$s (\n"
+                + "  id %2$s NOT NULL,\n"
+                + "  created_date VARCHAR(255) NOT NULL,\n"
+                + "  datasource VARCHAR(255) NOT NULL,\n"
+                + "  fingerprint VARCHAR(255) NOT NULL,\n"
+                + "  payload %3$s NOT NULL,\n"
+                + "  used BOOLEAN NOT NULL,\n"
+                + "  used_status_last_updated VARCHAR(255) NOT NULL,\n"
+                + "  version INTEGER NOT NULL,\n"
+                + "  PRIMARY KEY (id),\n"
+                + "  UNIQUE (fingerprint) \n"
+                + ")",
+                tableName, getSerialType(), getPayloadType()
+            ),
+            StringUtils.format("CREATE INDEX idx_%1$s_fingerprint ON %1$s(fingerprint)", tableName),
+            StringUtils.format("CREATE INDEX idx_%1$s_used ON %1$s(used)", tableName)
+        )
+    );
+  }
+
+  @Override
+  public void createSegmentSchemasTable()
+  {
+    if (config.get().isCreateTables() && centralizedDatasourceSchemaConfig.isEnabled()) {
+      createSegmentSchemaTable(tablesConfigSupplier.get().getSegmentSchemasTable());
+    }
+  }
+
+  /**
+   * Get the Set of the index on given table
+   *
+   * @param tableName name of the table to fetch the index map
+   * @return Set of the uppercase index names, returns empty set if table does not exist
+   */
+  public Set<String> getIndexOnTable(String tableName)
+  {
+    Set<String> res = new HashSet<>();
+    try {
+      retryWithHandle(new HandleCallback<Void>()
+      {
+        @Override
+        public Void withHandle(Handle handle) throws Exception
+        {
+          DatabaseMetaData databaseMetaData = handle.getConnection().getMetaData();
+          // Fetch the index for given table
+          ResultSet resultSet = getIndexInfo(databaseMetaData, tableName);
+          while (resultSet.next()) {
+            String indexName = resultSet.getString("INDEX_NAME");
+            if (org.apache.commons.lang.StringUtils.isNotBlank(indexName)) {
+              res.add(StringUtils.toUpperCase(indexName));
+            }
+          }
+          return null;
+        }
+      });
+    }
+    catch (Exception e) {
+      log.error(e, "Exception while listing the index on table %s ", tableName);
+    }
+    return ImmutableSet.copyOf(res);
+  }
+
+  /**
+   * Get the ResultSet for indexInfo for given table
+   *
+   * @param databaseMetaData DatabaseMetaData
+   * @param tableName        Name of table
+   * @return ResultSet with index info
+   */
+  public ResultSet getIndexInfo(DatabaseMetaData databaseMetaData, String tableName) throws SQLException
+  {
+    return databaseMetaData.getIndexInfo(
+        null,
+        null,
+        tableName,  // tableName is case-sensitive in mysql default setting
+        false,
+        false
+    );
+  }
+
+  /**
+   * create index on the table with retry if not already exist, to be called after createTable
+   *
+   * @param tableName       Name of the table to create index on
+   * @param indexName       case-insensitive string index name, it helps to check the existing index on table
+   * @param indexCols       List of columns to be indexed on
+   * @param createdIndexSet
+   */
+  public void createIndex(
+      final String tableName,
+      final String indexName,
+      final List<String> indexCols,
+      final Set<String> createdIndexSet
+  )
+  {
+    try {
+      retryWithHandle(
+          new HandleCallback<Void>()
+          {
+            @Override
+            public Void withHandle(Handle handle)
+            {
+              if (!createdIndexSet.contains(StringUtils.toUpperCase(indexName))) {
+                String indexSQL = StringUtils.format(
+                    "CREATE INDEX %1$s ON %2$s(%3$s)",
+                    indexName,
+                    tableName,
+                    Joiner.on(",").join(indexCols)
+                );
+                log.info("Creating Index on Table [%s], sql: [%s] ", tableName, indexSQL);
+                handle.execute(indexSQL);
+              } else {
+                log.info("Index [%s] on Table [%s] already exists", indexName, tableName);
+              }
+              return null;
+            }
+          }
+      );
+    }
+    catch (Exception e) {
+      log.error(e, StringUtils.format("Exception while creating index on table [%s]", tableName));
+    }
+  }
+
+  /**
+   * Checks table metadata to determine if the given column exists in the table.
+   *
+   * @return true if the column exists in the table, false otherwise
+   */
+  protected boolean tableHasColumn(String tableName, String columnName)
+  {
+    return getDBI().withHandle(handle -> {
+      try {
+        if (tableExists(handle, tableName)) {
+          DatabaseMetaData dbMetaData = handle.getConnection().getMetaData();
+          ResultSet columns = dbMetaData.getColumns(null, null, tableName, columnName);
+          return columns.next();
+        } else {
+          return false;
+        }
+      }
+      catch (SQLException e) {
+        return false;
+      }
+    });
+  }
+
+  /**
+   * Ensures that the "segments" table has a schema compatible with the current version of Druid.
+   *
+   * @throws RuntimeException if the "segments" table has an incompatible schema.
+   *                          There is no recovering from an invalid schema, the program should crash.
+   * @see <a href="https://druid.apache.org/docs/latest/operations/metadata-migration/">Metadata migration</a> for info
+   * on manually preparing the "segments" table.
+   */
+  private void validateSegmentsTable()
+  {
+    String segmentsTables = tablesConfigSupplier.get().getSegmentsTable();
+
+    boolean schemaPersistenceRequirementMet =
+        !centralizedDatasourceSchemaConfig.isEnabled() ||
+        (tableHasColumn(segmentsTables, "schema_fingerprint")
+         && tableHasColumn(segmentsTables, "num_rows"));
+
+    if (tableHasColumn(segmentsTables, "used_status_last_updated") && schemaPersistenceRequirementMet) {
+      // do nothing
+    } else {
+      throw new ISE(
+          "Cannot start Druid as table[%s] has an incompatible schema."
+          + " Reason: One or all of these columns [used_status_last_updated, schema_fingerprint, num_rows] does not exist in table."
+          + " See https://druid.apache.org/docs/latest/operations/upgrade-prep.html for more info on remediation.",
+          tablesConfigSupplier.get().getSegmentsTable()
+      );
     }
   }
 }

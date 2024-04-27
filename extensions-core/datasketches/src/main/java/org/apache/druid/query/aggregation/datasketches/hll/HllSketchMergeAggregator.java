@@ -32,12 +32,12 @@ import org.apache.druid.segment.ColumnValueSelector;
 public class HllSketchMergeAggregator implements Aggregator
 {
 
-  private final ColumnValueSelector<HllSketch> selector;
+  private final ColumnValueSelector<HllSketchHolder> selector;
   private final TgtHllType tgtHllType;
   private Union union;
 
   public HllSketchMergeAggregator(
-      final ColumnValueSelector<HllSketch> selector,
+      final ColumnValueSelector<HllSketchHolder> selector,
       final int lgK,
       final TgtHllType tgtHllType
   )
@@ -55,12 +55,12 @@ public class HllSketchMergeAggregator implements Aggregator
   @Override
   public void aggregate()
   {
-    final HllSketch sketch = selector.getObject();
+    final HllSketchHolder sketch = selector.getObject();
     if (sketch == null) {
       return;
     }
     synchronized (this) {
-      union.update(sketch);
+      union.update(sketch.getSketch());
     }
   }
 
@@ -72,7 +72,7 @@ public class HllSketchMergeAggregator implements Aggregator
   @Override
   public synchronized Object get()
   {
-    return union.getResult(tgtHllType);
+    return HllSketchHolder.of(union.getResult(tgtHllType));
   }
 
   @Override

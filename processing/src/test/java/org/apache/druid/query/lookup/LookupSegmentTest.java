@@ -83,6 +83,17 @@ public class LookupSegmentTest
         }
 
         @Override
+        public void awaitInitialization()
+        {
+        }
+
+        @Override
+        public boolean isInitialized()
+        {
+          return true;
+        }
+
+        @Override
         public LookupExtractor get()
         {
           return new MapLookupExtractor(LOOKUP_MAP, false);

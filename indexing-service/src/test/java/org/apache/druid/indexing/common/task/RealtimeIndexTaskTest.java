@@ -30,6 +30,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.MapCache;
+import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.FirehoseFactory;
@@ -40,6 +41,7 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DruidNodeAnnouncer;
 import org.apache.druid.discovery.LookupNodeService;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
@@ -52,6 +54,7 @@ import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.actions.TaskActionToolbox;
 import org.apache.druid.indexing.common.actions.TaskAuditLogConfig;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.overlord.HeapMemoryTaskStorage;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
@@ -67,6 +70,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
@@ -77,7 +81,6 @@ import org.apache.druid.java.util.emitter.core.NoopEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.MonitorScheduler;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import org.apache.druid.query.DirectQueryProcessingPool;
 import org.apache.druid.query.Druids;
@@ -105,6 +108,7 @@ import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.join.NoopJoinableFactory;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.FireDepartment;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.segment.realtime.plumber.ServerTimeRejectionPolicyFactory;
@@ -196,6 +200,16 @@ public class RealtimeIndexTaskTest extends InitializedNullHandlingTest
   {
     final RealtimeIndexTask task = makeRealtimeTask(null);
     Assert.assertTrue(task.supportsQueries());
+  }
+
+  @Test(timeout = 60_000L)
+  public void testInputSourceResources()
+  {
+    final RealtimeIndexTask task = makeRealtimeTask(null);
+    Assert.assertThrows(
+        UOE.class,
+        task::getInputSourceResources
+    );
   }
 
   @Test(timeout = 60_000L, expected = ExecutionException.class)
@@ -848,6 +862,7 @@ public class RealtimeIndexTaskTest extends InitializedNullHandlingTest
         handoffTimeout,
         null,
         null,
+        null,
         null
     );
     return new RealtimeIndexTask(
@@ -886,27 +901,18 @@ public class RealtimeIndexTaskTest extends InitializedNullHandlingTest
       final File directory
   )
   {
-    final TaskConfig taskConfig = new TaskConfig(
-        directory.getPath(),
-        null,
-        null,
-        50000,
-        null,
-        true,
-        null,
-        null,
-        null,
-        false,
-        false,
-        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-        null
-    );
+    final TaskConfig taskConfig = new TaskConfigBuilder()
+        .setBaseDir(directory.getPath())
+        .setDefaultRowFlushBoundary(50000)
+        .setRestoreTasksOnRestart(true)
+        .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
+        .build();
     final TaskLockbox taskLockbox = new TaskLockbox(taskStorage, mdc);
     try {
       taskStorage.insert(task, TaskStatus.running(task.getId()));
     }
-    catch (EntryExistsException e) {
-      // suppress
+    catch (DruidException e) {
+      log.noStackTrace().info(e, "Suppressing exception while inserting task [%s]", task.getId());
     }
     taskLockbox.syncFromStorage();
     final TaskActionToolbox taskActionToolbox = new TaskActionToolbox(
@@ -914,7 +920,8 @@ public class RealtimeIndexTaskTest extends InitializedNullHandlingTest
         taskStorage,
         mdc,
         EMITTER,
-        EasyMock.createMock(SupervisorManager.class)
+        EasyMock.createMock(SupervisorManager.class),
+        new DefaultObjectMapper()
     );
     final TaskActionClientFactory taskActionClientFactory = new LocalTaskActionClientFactory(
         taskStorage,
@@ -974,6 +981,7 @@ public class RealtimeIndexTaskTest extends InitializedNullHandlingTest
     };
     final TestUtils testUtils = new TestUtils();
     final TaskToolboxFactory toolboxFactory = new TaskToolboxFactory(
+        null,
         taskConfig,
         null, // taskExecutorNode
         taskActionClientFactory,
@@ -1007,9 +1015,12 @@ public class RealtimeIndexTaskTest extends InitializedNullHandlingTest
         testUtils.getRowIngestionMetersFactory(),
         new TestAppenderatorsManager(),
         new NoopOverlordClient(),
+        new NoopCoordinatorClient(),
         null,
         null,
-        null
+        null,
+        "1",
+        CentralizedDatasourceSchemaConfig.create()
     );
 
     return toolboxFactory.build(task);

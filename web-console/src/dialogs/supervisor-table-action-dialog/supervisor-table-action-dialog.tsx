@@ -18,13 +18,13 @@
 
 import React, { useState } from 'react';
 
-import { ShowJson } from '../../components';
-import { ShowHistory } from '../../components/show-history/show-history';
+import { ShowJson, SupervisorHistoryPanel } from '../../components';
 import { cleanSpec } from '../../druid-models';
 import { Api } from '../../singletons';
 import { deepGet } from '../../utils';
-import { BasicAction } from '../../utils/basic-action';
-import { SideButtonMetaData, TableActionDialog } from '../table-action-dialog/table-action-dialog';
+import type { BasicAction } from '../../utils/basic-action';
+import type { SideButtonMetaData } from '../table-action-dialog/table-action-dialog';
+import { TableActionDialog } from '../table-action-dialog/table-action-dialog';
 
 import { SupervisorStatisticsTable } from './supervisor-statistics-table/supervisor-statistics-table';
 
@@ -95,12 +95,7 @@ export const SupervisorTableActionDialog = React.memo(function SupervisorTableAc
           downloadFilename={`supervisor-payload-${supervisorId}.json`}
         />
       )}
-      {activeTab === 'history' && (
-        <ShowHistory
-          endpoint={`${supervisorEndpointBase}/history`}
-          downloadFilenamePrefix={`supervisor-${supervisorId}`}
-        />
-      )}
+      {activeTab === 'history' && <SupervisorHistoryPanel supervisorId={supervisorId} />}
     </TableActionDialog>
   );
 });

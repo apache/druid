@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.seekablestream;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
@@ -107,12 +108,14 @@ public abstract class SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceO
   }
 
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_ABSENT)
   public Optional<DateTime> getMaximumMessageTime()
   {
     return maximumMessageTime;
   }
 
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_ABSENT)
   public Optional<DateTime> getMinimumMessageTime()
   {
     return minimumMessageTime;
@@ -120,6 +123,7 @@ public abstract class SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceO
 
   @Nullable
   @JsonProperty("inputFormat")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   private InputFormat getGivenInputFormat()
   {
     return inputFormat;

@@ -21,6 +21,7 @@ package org.apache.druid.server.lookup;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Lists;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.server.lookup.cache.loading.LoadingCache;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -87,7 +88,10 @@ public class LoadingLookupTest extends InitializedNullHandlingTest
             .andReturn(Collections.singletonList("key"))
             .once();
     EasyMock.replay(reverseLookupCache);
-    Assert.assertEquals(ImmutableMap.of("value", Collections.singletonList("key")), loadingLookup.unapplyAll(ImmutableSet.of("value")));
+    Assert.assertEquals(
+        Collections.singletonList("key"),
+        Lists.newArrayList(loadingLookup.unapplyAll(ImmutableSet.of("value")))
+    );
     EasyMock.verify(reverseLookupCache);
   }
 
@@ -130,15 +134,15 @@ public class LoadingLookupTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testCanGetKeySet()
+  public void testSupportsAsMap()
   {
-    Assert.assertFalse(loadingLookup.canGetKeySet());
+    Assert.assertFalse(loadingLookup.supportsAsMap());
   }
 
   @Test
-  public void testKeySet()
+  public void testAsMap()
   {
     expectedException.expect(UnsupportedOperationException.class);
-    loadingLookup.keySet();
+    loadingLookup.asMap();
   }
 }

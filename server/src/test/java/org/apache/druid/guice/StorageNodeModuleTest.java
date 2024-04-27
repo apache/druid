@@ -112,7 +112,7 @@ public class StorageNodeModuleTest
   public void getDataNodeServiceWithNoSegmentCacheConfiguredThrowProvisionException()
   {
     exceptionRule.expect(ProvisionException.class);
-    exceptionRule.expectMessage("Segment cache locations must be set on historicals.");
+    exceptionRule.expectMessage("druid.segmentCache.locations must be set on historicals.");
     Mockito.doReturn(ServerType.HISTORICAL).when(serverTypeConfig).getServerType();
     mockSegmentCacheNotConfigured();
     injector.getInstance(DataNodeService.class);

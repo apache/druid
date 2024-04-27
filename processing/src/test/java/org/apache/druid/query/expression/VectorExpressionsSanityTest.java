@@ -22,17 +22,13 @@ package org.apache.druid.query.expression;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
-import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.VectorExprSanityTest;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.DateTime;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.util.Map;
@@ -62,28 +58,11 @@ public class VectorExpressionsSanityTest extends InitializedNullHandlingTest
                                                         .put("boolString2", ExpressionType.STRING)
                                                         .build();
 
-  @BeforeClass
-  public static void setupTests()
-  {
-    ExpressionProcessing.initializeForStrictBooleansTests(true);
-  }
-
-  @AfterClass
-  public static void teardownTests()
-  {
-    ExpressionProcessing.initializeForTests(null);
-  }
-
   static void testExpression(String expr, Expr parsed, Map<String, ExpressionType> types)
   {
     log.debug("[%s]", expr);
-    NonnullPair<Expr.ObjectBinding[], Expr.VectorInputBinding> bindings;
-    for (int iterations = 0; iterations < NUM_ITERATIONS; iterations++) {
-      bindings = VectorExprSanityTest.makeRandomizedBindings(VECTOR_SIZE, types);
-      VectorExprSanityTest.testExpressionWithBindings(expr, parsed, bindings);
-    }
-    bindings = VectorExprSanityTest.makeSequentialBinding(VECTOR_SIZE, types);
-    VectorExprSanityTest.testExpressionWithBindings(expr, parsed, bindings);
+    VectorExprSanityTest.testExpression(expr, parsed, types, NUM_ITERATIONS);
+    VectorExprSanityTest.testSequentialBinding(expr, parsed, types);
   }
 
   @Test

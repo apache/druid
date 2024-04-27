@@ -49,6 +49,7 @@ import org.joda.time.Duration;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -494,9 +495,7 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
         ),
         Sets.union(
             immutableWorker.getRunningTasks(),
-            Sets.newHashSet(
-                task.getId()
-            )
+            Collections.singleton(task.getId())
         ),
         DateTimes.nowUtc()
     );

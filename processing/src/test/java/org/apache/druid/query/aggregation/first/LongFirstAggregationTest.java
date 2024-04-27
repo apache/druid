@@ -19,16 +19,19 @@
 
 package org.apache.druid.query.aggregation.first;
 
-import org.apache.druid.collections.SerializablePair;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.BufferAggregator;
+import org.apache.druid.query.aggregation.SerializablePairLongLong;
 import org.apache.druid.query.aggregation.TestLongColumnSelector;
 import org.apache.druid.query.aggregation.TestObjectColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.easymock.EasyMock;
 import org.junit.Assert;
@@ -51,11 +54,11 @@ public class LongFirstAggregationTest extends InitializedNullHandlingTest
   private long[] longValues = {185, -216, -128751132, Long.MIN_VALUE};
   private long[] times = {1123126751, 1784247991, 1854329816, 1000000000};
   private long[] customTimes = {2, 1, 3, 4};
-  private SerializablePair[] pairs = {
-      new SerializablePair<>(1L, 113267L),
-      new SerializablePair<>(1L, 5437384L),
-      new SerializablePair<>(6L, 34583458L),
-      new SerializablePair<>(88L, 34583452L)
+  private SerializablePairLongLong[] pairs = {
+      new SerializablePairLongLong(1L, 113267L),
+      new SerializablePairLongLong(1L, 5437384L),
+      new SerializablePairLongLong(6L, 34583458L),
+      new SerializablePairLongLong(88L, 34583452L)
   };
 
   @Before
@@ -72,6 +75,9 @@ public class LongFirstAggregationTest extends InitializedNullHandlingTest
     EasyMock.expect(colSelectorFactory.makeColumnValueSelector("customTime")).andReturn(customTimeSelector);
     EasyMock.expect(colSelectorFactory.makeColumnValueSelector("nilly")).andReturn(valueSelector);
     EasyMock.expect(colSelectorFactory.makeColumnValueSelector("billy")).andReturn(objectSelector);
+    EasyMock.expect(colSelectorFactory.getColumnCapabilities("nilly"))
+            .andReturn(new ColumnCapabilitiesImpl().setType(ColumnType.LONG));
+    EasyMock.expect(colSelectorFactory.getColumnCapabilities("billy")).andReturn(null);
     EasyMock.replay(colSelectorFactory);
   }
 
@@ -157,16 +163,16 @@ public class LongFirstAggregationTest extends InitializedNullHandlingTest
   @Test
   public void testCombine()
   {
-    SerializablePair pair1 = new SerializablePair<>(1467225000L, 1263L);
-    SerializablePair pair2 = new SerializablePair<>(1467240000L, 752713L);
+    SerializablePairLongLong pair1 = new SerializablePairLongLong(1467225000L, 1263L);
+    SerializablePairLongLong pair2 = new SerializablePairLongLong(1467240000L, 752713L);
     Assert.assertEquals(pair1, longFirstAggFactory.combine(pair1, pair2));
   }
 
   @Test
   public void testComparatorWithNulls()
   {
-    SerializablePair pair1 = new SerializablePair<>(1467225000L, 1263L);
-    SerializablePair pair2 = new SerializablePair<>(1467240000L, null);
+    SerializablePairLongLong pair1 = new SerializablePairLongLong(1467225000L, 1263L);
+    SerializablePairLongLong pair2 = new SerializablePairLongLong(1467240000L, null);
     Comparator comparator = longFirstAggFactory.getComparator();
     Assert.assertEquals(1, comparator.compare(pair1, pair2));
     Assert.assertEquals(0, comparator.compare(pair1, pair1));
@@ -225,6 +231,27 @@ public class LongFirstAggregationTest extends InitializedNullHandlingTest
     AggregatorFactory deserialized = mapper.readValue(longSpecJson, AggregatorFactory.class);
     Assert.assertEquals(longFirstAggFactory, deserialized);
     Assert.assertArrayEquals(longFirstAggFactory.getCacheKey(), deserialized.getCacheKey());
+  }
+
+  @Test
+  public void testLongFirstAggregeCombiner()
+  {
+    TestObjectColumnSelector columnSelector = new TestObjectColumnSelector<>(pairs);
+    AggregateCombiner longFirstAggregateCombiner = combiningAggFactory.makeAggregateCombiner();
+    longFirstAggregateCombiner.reset(columnSelector);
+
+    Assert.assertEquals(pairs[0], longFirstAggregateCombiner.getObject());
+
+    columnSelector.increment();
+    longFirstAggregateCombiner.fold(columnSelector);
+    Assert.assertEquals(pairs[0], longFirstAggregateCombiner.getObject());
+
+    columnSelector.increment();
+    longFirstAggregateCombiner.fold(columnSelector);
+    Assert.assertEquals(pairs[0], longFirstAggregateCombiner.getObject());
+
+    longFirstAggregateCombiner.reset(columnSelector);
+    Assert.assertEquals(pairs[2], longFirstAggregateCombiner.getObject());
   }
 
   private void aggregate(

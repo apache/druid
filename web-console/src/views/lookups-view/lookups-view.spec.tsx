@@ -16,14 +16,15 @@
  * limitations under the License.
  */
 
-import { shallow } from 'enzyme';
 import React from 'react';
+
+import { shallow } from '../../utils/shallow-renderer';
 
 import { LookupsView } from './lookups-view';
 
 describe('LookupsView', () => {
   it('matches snapshot', () => {
-    const lookupsView = shallow(<LookupsView />);
+    const lookupsView = shallow(<LookupsView filters={[]} onFiltersChange={() => {}} />);
     expect(lookupsView).toMatchSnapshot();
   });
 });

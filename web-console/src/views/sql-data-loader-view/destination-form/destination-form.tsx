@@ -30,7 +30,7 @@ import { Tooltip2 } from '@blueprintjs/popover2';
 import classNames from 'classnames';
 import React, { useState } from 'react';
 
-import { DestinationInfo, DestinationMode } from '../../../druid-models';
+import type { DestinationInfo, DestinationMode } from '../../../druid-models';
 
 import './destination-form.scss';
 

@@ -53,7 +53,6 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -148,8 +147,6 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
       throw new RuntimeException(e);
     }
   }
-
-  private static int recordsPerFetch;
   private static AmazonKinesis kinesis;
   private static ListShardsResult listShardsResult0;
   private static ListShardsResult listShardsResult1;
@@ -181,7 +178,6 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
     getRecordsResult1 = createMock(GetRecordsResult.class);
     shard0 = createMock(Shard.class);
     shard1 = createMock(Shard.class);
-    recordsPerFetch = 1;
   }
 
   @After
@@ -220,14 +216,12 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
 
     recordSupplier = new KinesisRecordSupplier(
         kinesis,
-        recordsPerFetch,
         0,
         2,
-        false,
         100,
         5000,
         5000,
-        5,
+        1_000_000,
         true,
         false
     );
@@ -279,14 +273,12 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
 
     recordSupplier = new KinesisRecordSupplier(
         kinesis,
-        recordsPerFetch,
         0,
         2,
-        false,
         100,
         5000,
         5000,
-        5,
+        1_000_000,
         true,
         true
     );
@@ -313,7 +305,12 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
     Assert.assertEquals(expectedRequest1, capturedRequest1.getValue());
   }
 
-  private static GetRecordsRequest generateGetRecordsReq(String shardIterator, int limit)
+  private static GetRecordsRequest generateGetRecordsReq(String shardIterator)
+  {
+    return new GetRecordsRequest().withShardIterator(shardIterator);
+  }
+
+  private static GetRecordsRequest generateGetRecordsWithLimitReq(String shardIterator, int limit)
   {
     return new GetRecordsRequest().withShardIterator(shardIterator).withLimit(limit);
   }
@@ -328,86 +325,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
   }
 
   @Test
-  public void testPoll() throws InterruptedException
-  {
-    recordsPerFetch = 100;
-
-    EasyMock.expect(kinesis.getShardIterator(
-        EasyMock.anyObject(),
-        EasyMock.eq(SHARD_ID0),
-        EasyMock.anyString(),
-        EasyMock.anyString()
-    )).andReturn(
-        getShardIteratorResult0).anyTimes();
-
-    EasyMock.expect(kinesis.getShardIterator(
-        EasyMock.anyObject(),
-        EasyMock.eq(SHARD_ID1),
-        EasyMock.anyString(),
-        EasyMock.anyString()
-    )).andReturn(
-        getShardIteratorResult1).anyTimes();
-
-    EasyMock.expect(getShardIteratorResult0.getShardIterator()).andReturn(SHARD0_ITERATOR).anyTimes();
-    EasyMock.expect(getShardIteratorResult1.getShardIterator()).andReturn(SHARD1_ITERATOR).anyTimes();
-    EasyMock.expect(kinesis.getRecords(generateGetRecordsReq(SHARD0_ITERATOR, recordsPerFetch)))
-            .andReturn(getRecordsResult0)
-            .anyTimes();
-    EasyMock.expect(kinesis.getRecords(generateGetRecordsReq(SHARD1_ITERATOR, recordsPerFetch)))
-            .andReturn(getRecordsResult1)
-            .anyTimes();
-    EasyMock.expect(getRecordsResult0.getRecords()).andReturn(SHARD0_RECORDS).once();
-    EasyMock.expect(getRecordsResult1.getRecords()).andReturn(SHARD1_RECORDS).once();
-    EasyMock.expect(getRecordsResult0.getNextShardIterator()).andReturn(null).anyTimes();
-    EasyMock.expect(getRecordsResult1.getNextShardIterator()).andReturn(null).anyTimes();
-    EasyMock.expect(getRecordsResult0.getMillisBehindLatest()).andReturn(SHARD0_LAG_MILLIS).once();
-    EasyMock.expect(getRecordsResult1.getMillisBehindLatest()).andReturn(SHARD1_LAG_MILLIS).once();
-
-    replayAll();
-
-    Set<StreamPartition<String>> partitions = ImmutableSet.of(
-        StreamPartition.of(STREAM, SHARD_ID0),
-        StreamPartition.of(STREAM, SHARD_ID1)
-    );
-
-
-    recordSupplier = new KinesisRecordSupplier(
-        kinesis,
-        recordsPerFetch,
-        0,
-        2,
-        false,
-        100,
-        5000,
-        5000,
-        100,
-        true,
-        false
-    );
-
-    recordSupplier.assign(partitions);
-    recordSupplier.seekToEarliest(partitions);
-    recordSupplier.start();
-
-    while (recordSupplier.bufferSize() < 12) {
-      Thread.sleep(100);
-    }
-
-    List<OrderedPartitionableRecord<String, String, ByteEntity>> polledRecords = cleanRecords(recordSupplier.poll(
-        POLL_TIMEOUT_MILLIS));
-
-    verifyAll();
-
-    Assert.assertEquals(partitions, recordSupplier.getAssignment());
-    Assert.assertTrue(polledRecords.containsAll(ALL_RECORDS));
-    Assert.assertEquals(SHARDS_LAG_MILLIS, recordSupplier.getPartitionResourcesTimeLag());
-  }
-
-  @Test
   public void testPollWithKinesisInternalFailure() throws InterruptedException
   {
-    recordsPerFetch = 100;
-
     EasyMock.expect(kinesis.getShardIterator(
             EasyMock.anyObject(),
             EasyMock.eq(SHARD_ID0),
@@ -426,10 +345,10 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
 
     EasyMock.expect(getShardIteratorResult0.getShardIterator()).andReturn(SHARD0_ITERATOR).anyTimes();
     EasyMock.expect(getShardIteratorResult1.getShardIterator()).andReturn(SHARD1_ITERATOR).anyTimes();
-    EasyMock.expect(kinesis.getRecords(generateGetRecordsReq(SHARD0_ITERATOR, recordsPerFetch)))
+    EasyMock.expect(kinesis.getRecords(generateGetRecordsReq(SHARD0_ITERATOR)))
             .andReturn(getRecordsResult0)
             .anyTimes();
-    EasyMock.expect(kinesis.getRecords(generateGetRecordsReq(SHARD1_ITERATOR, recordsPerFetch)))
+    EasyMock.expect(kinesis.getRecords(generateGetRecordsReq(SHARD1_ITERATOR)))
             .andReturn(getRecordsResult1)
             .anyTimes();
     AmazonServiceException getException = new AmazonServiceException("InternalFailure");
@@ -461,14 +380,12 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
 
     recordSupplier = new KinesisRecordSupplier(
             kinesis,
-            recordsPerFetch,
             0,
             2,
-            false,
-            100,
+            10_000,
             5000,
             5000,
-            100,
+        1_000_000,
             true,
             false
     );
@@ -494,8 +411,6 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
   @Test
   public void testPollWithKinesisNonRetryableFailure() throws InterruptedException
   {
-    recordsPerFetch = 100;
-
     EasyMock.expect(kinesis.getShardIterator(
         EasyMock.anyObject(),
         EasyMock.eq(SHARD_ID0),
@@ -509,7 +424,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
     getException.setStatusCode(400);
     getException.setServiceName("AmazonKinesis");
     EasyMock.expect(getShardIteratorResult0.getShardIterator()).andReturn(SHARD0_ITERATOR).anyTimes();
-    EasyMock.expect(kinesis.getRecords(generateGetRecordsReq(SHARD0_ITERATOR, recordsPerFetch)))
+    EasyMock.expect(kinesis.getRecords(generateGetRecordsReq(SHARD0_ITERATOR)))
             .andThrow(getException)
             .once();
 
@@ -522,14 +437,12 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
 
     recordSupplier = new KinesisRecordSupplier(
         kinesis,
-        recordsPerFetch,
         0,
         1,
-        false,
         100,
         5000,
         5000,
-        100,
+        1_000_000,
         true,
         false
     );
@@ -557,8 +470,6 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
   public void testSeek()
       throws InterruptedException
   {
-    recordsPerFetch = 100;
-
     EasyMock.expect(kinesis.getShardIterator(
         EasyMock.anyObject(),
         EasyMock.eq(SHARD_ID0),
@@ -577,10 +488,10 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
 
     EasyMock.expect(getShardIteratorResult0.getShardIterator()).andReturn(SHARD0_ITERATOR).anyTimes();
     EasyMock.expect(getShardIteratorResult1.getShardIterator()).andReturn(SHARD1_ITERATOR).anyTimes();
-    EasyMock.expect(kinesis.getRecords(generateGetRecordsReq(SHARD0_ITERATOR, recordsPerFetch)))
+    EasyMock.expect(kinesis.getRecords(generateGetRecordsReq(SHARD0_ITERATOR)))
             .andReturn(getRecordsResult0)
             .anyTimes();
-    EasyMock.expect(kinesis.getRecords(generateGetRecordsReq(SHARD1_ITERATOR, recordsPerFetch)))
+    EasyMock.expect(kinesis.getRecords(generateGetRecordsReq(SHARD1_ITERATOR)))
             .andReturn(getRecordsResult1)
             .anyTimes();
     EasyMock.expect(getRecordsResult0.getRecords()).andReturn(SHARD0_RECORDS.subList(1, SHARD0_RECORDS.size())).once();
@@ -601,14 +512,12 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
 
     recordSupplier = new KinesisRecordSupplier(
         kinesis,
-        recordsPerFetch,
         0,
         2,
-        false,
-        100,
+        10_000,
         5000,
         5000,
-        100,
+        1_000_000,
         true,
         false
     );
@@ -637,8 +546,6 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
   public void testSeekToLatest()
       throws InterruptedException
   {
-    recordsPerFetch = 100;
-
     EasyMock.expect(kinesis.getShardIterator(
         EasyMock.anyObject(),
         EasyMock.eq(SHARD_ID0),
@@ -669,14 +576,12 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
 
     recordSupplier = new KinesisRecordSupplier(
         kinesis,
-        recordsPerFetch,
         0,
         2,
-        false,
         100,
         5000,
         5000,
-        100,
+        1_000_000,
         true,
         false
     );
@@ -704,14 +609,12 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
 
     recordSupplier = new KinesisRecordSupplier(
         kinesis,
-        1,
         0,
         2,
-        false,
         100,
         5000,
         5000,
-        5,
+        1_000_000,
         true,
         false
     );
@@ -726,7 +629,6 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
       throws InterruptedException
   {
     // tests that after doing a seek, the now invalid records in buffer is cleaned up properly
-    recordsPerFetch = 100;
 
     EasyMock.expect(kinesis.getShardIterator(
         EasyMock.anyObject(),
@@ -746,10 +648,10 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
 
     EasyMock.expect(getShardIteratorResult1.getShardIterator()).andReturn(SHARD1_ITERATOR).once();
     EasyMock.expect(getShardIteratorResult0.getShardIterator()).andReturn(SHARD0_ITERATOR).once();
-    EasyMock.expect(kinesis.getRecords(generateGetRecordsReq(SHARD1_ITERATOR, recordsPerFetch)))
+    EasyMock.expect(kinesis.getRecords(generateGetRecordsReq(SHARD1_ITERATOR)))
             .andReturn(getRecordsResult1)
             .once();
-    EasyMock.expect(kinesis.getRecords(generateGetRecordsReq(SHARD0_ITERATOR, recordsPerFetch)))
+    EasyMock.expect(kinesis.getRecords(generateGetRecordsReq(SHARD0_ITERATOR)))
             .andReturn(getRecordsResult0)
             .once();
     EasyMock.expect(getRecordsResult1.getRecords()).andReturn(SHARD1_RECORDS.subList(5, SHARD1_RECORDS.size())).once();
@@ -767,14 +669,12 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
 
     recordSupplier = new KinesisRecordSupplier(
         kinesis,
-        recordsPerFetch,
         0,
         2,
-        false,
-        100,
+        10_000,
         5000,
         5000,
-        1,
+        1_000_000,
         true,
         false
     );
@@ -817,8 +717,6 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
   @Test
   public void testPollDeaggregate() throws InterruptedException
   {
-    recordsPerFetch = 100;
-
     EasyMock.expect(kinesis.getShardIterator(
         EasyMock.anyObject(),
         EasyMock.eq(SHARD_ID0),
@@ -837,10 +735,10 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
 
     EasyMock.expect(getShardIteratorResult0.getShardIterator()).andReturn(SHARD0_ITERATOR).anyTimes();
     EasyMock.expect(getShardIteratorResult1.getShardIterator()).andReturn(SHARD1_ITERATOR).anyTimes();
-    EasyMock.expect(kinesis.getRecords(generateGetRecordsReq(SHARD0_ITERATOR, recordsPerFetch)))
+    EasyMock.expect(kinesis.getRecords(generateGetRecordsReq(SHARD0_ITERATOR)))
             .andReturn(getRecordsResult0)
             .anyTimes();
-    EasyMock.expect(kinesis.getRecords(generateGetRecordsReq(SHARD1_ITERATOR, recordsPerFetch)))
+    EasyMock.expect(kinesis.getRecords(generateGetRecordsReq(SHARD1_ITERATOR)))
             .andReturn(getRecordsResult1)
             .anyTimes();
     EasyMock.expect(getRecordsResult0.getRecords()).andReturn(SHARD0_RECORDS).once();
@@ -860,14 +758,12 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
 
     recordSupplier = new KinesisRecordSupplier(
         kinesis,
-        recordsPerFetch,
         0,
         2,
-        true,
-        100,
+        10_000,
         5000,
         5000,
-        100,
+        1_000_000,
         true,
         false
     );
@@ -923,7 +819,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
     EasyMock.expect(getShardIteratorResult0.getShardIterator()).andReturn(SHARD0_ITERATOR).once();
 
     AmazonClientException ex = new AmazonClientException(new IOException());
-    EasyMock.expect(kinesis.getRecords(generateGetRecordsReq(SHARD0_ITERATOR, 1000)))
+    EasyMock.expect(kinesis.getRecords(generateGetRecordsWithLimitReq(SHARD0_ITERATOR, 1000)))
             .andThrow(ex)
             .andReturn(getRecordsResult0)
             .once();
@@ -936,14 +832,12 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
 
     recordSupplier = new KinesisRecordSupplier(
         kinesis,
-        recordsPerFetch,
         0,
         2,
-        true,
-        100,
+        10_000,
         5000,
         5000,
-        100,
+        1_000_000,
         true,
         false
     );
@@ -962,7 +856,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
 
     EasyMock.expect(getShardIteratorResult0.getShardIterator()).andReturn(SHARD0_ITERATOR).times(1);
 
-    EasyMock.expect(kinesis.getRecords(generateGetRecordsReq(SHARD0_ITERATOR, 1000)))
+    EasyMock.expect(kinesis.getRecords(generateGetRecordsWithLimitReq(SHARD0_ITERATOR, 1000)))
             .andReturn(getRecordsResult0)
             .times(1);
 
@@ -973,14 +867,12 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
 
     recordSupplier = new KinesisRecordSupplier(
         kinesis,
-        recordsPerFetch,
         0,
         2,
-        true,
-        100,
+        10_000,
         5000,
         5000,
-        100,
+        1_000_000,
         true,
         false
     );
@@ -1034,12 +926,18 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
 
     EasyMock.expect(getShardIteratorResult0.getShardIterator()).andReturn(SHARD0_ITERATOR).anyTimes();
     EasyMock.expect(getShardIteratorResult1.getShardIterator()).andReturn(SHARD1_ITERATOR).anyTimes();
-    EasyMock.expect(kinesis.getRecords(generateGetRecordsReq(SHARD0_ITERATOR, recordsPerFetch)))
+    EasyMock.expect(kinesis.getRecords(generateGetRecordsReq(SHARD0_ITERATOR)))
             .andReturn(getRecordsResult0)
             .anyTimes();
-    EasyMock.expect(kinesis.getRecords(generateGetRecordsReq(SHARD1_ITERATOR, recordsPerFetch)))
+    EasyMock.expect(kinesis.getRecords(generateGetRecordsReq(SHARD1_ITERATOR)))
             .andReturn(getRecordsResult1)
             .anyTimes();
+    EasyMock.expect(kinesis.getRecords(generateGetRecordsWithLimitReq(SHARD0_ITERATOR, 1)))
+        .andReturn(getRecordsResult0)
+        .anyTimes();
+    EasyMock.expect(kinesis.getRecords(generateGetRecordsWithLimitReq(SHARD1_ITERATOR, 1)))
+        .andReturn(getRecordsResult1)
+        .anyTimes();
     EasyMock.expect(getRecordsResult0.getRecords()).andReturn(SHARD0_RECORDS).times(2);
     EasyMock.expect(getRecordsResult1.getRecords()).andReturn(SHARD1_RECORDS_EMPTY).times(2);
     EasyMock.expect(getRecordsResult0.getNextShardIterator()).andReturn(null).anyTimes();
@@ -1056,14 +954,12 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
 
     recordSupplier = new KinesisRecordSupplier(
         kinesis,
-        recordsPerFetch,
         0,
         2,
-        true,
-        100,
+        10_000,
         5000,
         5000,
-        100,
+        1_000_000,
         true,
         false
     );
@@ -1108,59 +1004,19 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
   }
 
   @Test
-  public void testIsClosedShardEmpty()
-  {
-    AmazonKinesis mockKinesis = EasyMock.mock(AmazonKinesis.class);
-    KinesisRecordSupplier target = new KinesisRecordSupplier(mockKinesis,
-                                                             recordsPerFetch,
-                                                             0,
-                                                             2,
-                                                             false,
-                                                             100,
-                                                             5000,
-                                                             5000,
-                                                             5,
-                                                             true,
-                                                             false
-    );
-    Record record = new Record();
-
-    final String shardWithoutRecordsAndNullNextIterator = "0";
-    setupMockKinesisForShardId(mockKinesis, shardWithoutRecordsAndNullNextIterator, new ArrayList<>(), null);
-
-    final String shardWithRecordsAndNullNextIterator = "1";
-    setupMockKinesisForShardId(mockKinesis, shardWithRecordsAndNullNextIterator, Collections.singletonList(record), null);
-
-    final String shardWithoutRecordsAndNonNullNextIterator = "2";
-    setupMockKinesisForShardId(mockKinesis, shardWithoutRecordsAndNonNullNextIterator, new ArrayList<>(), "nextIterator");
-
-    final String shardWithRecordsAndNonNullNextIterator = "3";
-    setupMockKinesisForShardId(mockKinesis, shardWithRecordsAndNonNullNextIterator, Collections.singletonList(record), "nextIterator");
-
-    EasyMock.replay(mockKinesis);
-
-    // A closed shard is empty only when the records are empty and the next iterator is null
-    Assert.assertTrue(target.isClosedShardEmpty(STREAM, shardWithoutRecordsAndNullNextIterator));
-    Assert.assertFalse(target.isClosedShardEmpty(STREAM, shardWithRecordsAndNullNextIterator));
-    Assert.assertFalse(target.isClosedShardEmpty(STREAM, shardWithoutRecordsAndNonNullNextIterator));
-    Assert.assertFalse(target.isClosedShardEmpty(STREAM, shardWithRecordsAndNonNullNextIterator));
-  }
-
-  @Test
   public void testIsOffsetAvailable()
   {
     AmazonKinesis mockKinesis = EasyMock.mock(AmazonKinesis.class);
-    KinesisRecordSupplier target = new KinesisRecordSupplier(mockKinesis,
-                                                             recordsPerFetch,
-                                                             0,
-                                                             2,
-                                                             false,
-                                                             100,
-                                                             5000,
-                                                             5000,
-                                                             5,
-                                                             true,
-                                                             false
+    KinesisRecordSupplier target = new KinesisRecordSupplier(
+        mockKinesis,
+        0,
+        2,
+        100,
+        5000,
+        5000,
+        1_000_000,
+        true,
+        false
     );
     StreamPartition<String> partition = new StreamPartition<>(STREAM, SHARD_ID0);
 

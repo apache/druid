@@ -21,41 +21,34 @@ package org.apache.druid.indexing.kafka;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
+import org.apache.druid.data.input.kafka.KafkaTopicPartition;
+import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Json;
-import org.apache.druid.indexing.common.TaskInfoProvider;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClientFactory;
-import org.apache.druid.java.util.http.client.HttpClient;
-import org.joda.time.Duration;
+import org.apache.druid.rpc.ServiceClientFactory;
 
-public class KafkaIndexTaskClientFactory extends SeekableStreamIndexTaskClientFactory<KafkaIndexTaskClient>
+@LazySingleton
+public class KafkaIndexTaskClientFactory extends SeekableStreamIndexTaskClientFactory<KafkaTopicPartition, Long>
 {
   @Inject
   public KafkaIndexTaskClientFactory(
-      @EscalatedGlobal HttpClient httpClient,
+      @EscalatedGlobal ServiceClientFactory serviceClientFactory,
       @Json ObjectMapper mapper
   )
   {
-    super(httpClient, mapper);
+    super(serviceClientFactory, mapper);
   }
 
   @Override
-  public KafkaIndexTaskClient build(
-      TaskInfoProvider taskInfoProvider,
-      String dataSource,
-      int numThreads,
-      Duration httpTimeout,
-      long numRetries
-  )
+  public Class<KafkaTopicPartition> getPartitionType()
   {
-    return new KafkaIndexTaskClient(
-        getHttpClient(),
-        getMapper(),
-        taskInfoProvider,
-        dataSource,
-        numThreads,
-        httpTimeout,
-        numRetries
-    );
+    return KafkaTopicPartition.class;
+  }
+
+  @Override
+  public Class<Long> getSequenceType()
+  {
+    return Long.class;
   }
 }

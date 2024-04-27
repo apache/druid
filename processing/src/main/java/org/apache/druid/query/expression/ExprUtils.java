@@ -66,7 +66,7 @@ public class ExprUtils
       origin = null;
     } else {
       Chronology chronology = timeZone == null ? ISOChronology.getInstanceUTC() : ISOChronology.getInstance(timeZone);
-      final Object value = originArg.eval(bindings).value();
+      final Object value = originArg.eval(bindings).valueOrDefault();
       if (value instanceof String && NullHandling.isNullOrEquivalent((String) value)) {
         // We get a blank string here, when sql compatible null handling is enabled
         // and expression contains empty string for for origin

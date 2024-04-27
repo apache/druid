@@ -20,7 +20,6 @@
 package org.apache.druid.segment.join;
 
 import com.google.common.base.Preconditions;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.segment.ReferenceCountedObject;
 
 import java.io.Closeable;
@@ -34,7 +33,7 @@ import java.util.stream.Collectors;
  * clause is "t1 JOIN t2 ON t1.x = t2.x" then this class represents "JOIN t2 ON x = t2.x" -- it does not include
  * references to the left-hand "t1".
  * <p>
- * Created from {@link org.apache.druid.query.planning.PreJoinableClause} by {@link JoinableFactoryWrapper#createSegmentMapFn}.
+ * Created from {@link org.apache.druid.query.planning.PreJoinableClause}.
  */
 public class JoinableClause implements ReferenceCountedObject
 {
@@ -115,11 +114,7 @@ public class JoinableClause implements ReferenceCountedObject
    */
   public String unprefix(final String columnName)
   {
-    if (includesColumn(columnName)) {
-      return columnName.substring(prefix.length());
-    } else {
-      throw new IAE("Column[%s] does not start with prefix[%s]", columnName, prefix);
-    }
+    return JoinPrefixUtils.unprefix(columnName, prefix);
   }
 
   @Override

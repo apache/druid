@@ -41,6 +41,8 @@ import org.apache.druid.query.groupby.GroupByQueryQueryToolChest;
 import org.apache.druid.query.metadata.SegmentMetadataQueryConfig;
 import org.apache.druid.query.metadata.SegmentMetadataQueryQueryToolChest;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
+import org.apache.druid.query.operator.WindowOperatorQuery;
+import org.apache.druid.query.operator.WindowOperatorQueryQueryToolChest;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.scan.ScanQueryConfig;
 import org.apache.druid.query.scan.ScanQueryQueryToolChest;
@@ -75,14 +77,15 @@ public class QueryToolChestModule implements Module
 
   public final Map<Class<? extends Query>, Class<? extends QueryToolChest>> mappings =
       ImmutableMap.<Class<? extends Query>, Class<? extends QueryToolChest>>builder()
-                  .put(TimeseriesQuery.class, TimeseriesQueryQueryToolChest.class)
-                  .put(SearchQuery.class, SearchQueryQueryToolChest.class)
-                  .put(TimeBoundaryQuery.class, TimeBoundaryQueryQueryToolChest.class)
-                  .put(SegmentMetadataQuery.class, SegmentMetadataQueryQueryToolChest.class)
+                  .put(DataSourceMetadataQuery.class, DataSourceQueryQueryToolChest.class)
                   .put(GroupByQuery.class, GroupByQueryQueryToolChest.class)
                   .put(ScanQuery.class, ScanQueryQueryToolChest.class)
+                  .put(SearchQuery.class, SearchQueryQueryToolChest.class)
+                  .put(SegmentMetadataQuery.class, SegmentMetadataQueryQueryToolChest.class)
+                  .put(TimeBoundaryQuery.class, TimeBoundaryQueryQueryToolChest.class)
+                  .put(TimeseriesQuery.class, TimeseriesQueryQueryToolChest.class)
                   .put(TopNQuery.class, TopNQueryQueryToolChest.class)
-                  .put(DataSourceMetadataQuery.class, DataSourceQueryQueryToolChest.class)
+                  .put(WindowOperatorQuery.class, WindowOperatorQueryQueryToolChest.class)
                   .build();
 
   @Override

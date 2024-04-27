@@ -25,7 +25,9 @@ import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
 import org.apache.datasketches.memory.Memory;
 import org.apache.datasketches.memory.WritableMemory;
-import org.apache.druid.frame.key.SortColumn;
+import org.apache.druid.frame.channel.ByteTracker;
+import org.apache.druid.frame.key.KeyColumn;
+import org.apache.druid.frame.key.KeyOrder;
 import org.apache.druid.frame.testutil.FrameSequenceBuilder;
 import org.apache.druid.java.util.common.ByteBufferUtils;
 import org.apache.druid.java.util.common.io.Closer;
@@ -43,7 +45,6 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.experimental.runners.Enclosed;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
@@ -59,7 +60,6 @@ import java.nio.channels.Channels;
 import java.util.ArrayList;
 import java.util.List;
 
-@RunWith(Enclosed.class)
 public class FrameTest
 {
   // Tests that use good frames built from a standard test file.
@@ -76,9 +76,9 @@ public class FrameTest
     {
       final StorageAdapter adapter = new QueryableIndexStorageAdapter(TestIndex.getNoRollupMMappedTestIndex());
 
-      final List<SortColumn> sortBy = ImmutableList.of(
-          new SortColumn("quality", true),
-          new SortColumn("__time", false)
+      final List<KeyColumn> sortBy = ImmutableList.of(
+          new KeyColumn("quality", KeyOrder.DESCENDING),
+          new KeyColumn("__time", KeyOrder.ASCENDING)
       );
 
       columnarFrame = Iterables.getOnlyElement(
@@ -351,7 +351,8 @@ public class FrameTest
       frame.writeTo(
           Channels.newChannel(baos),
           compressed,
-          ByteBuffer.allocate(Frame.compressionBufferSize((int) frame.numBytes()))
+          ByteBuffer.allocate(Frame.compressionBufferSize((int) frame.numBytes())),
+          ByteTracker.unboundedTracker()
       );
 
       if (!compressed) {
@@ -414,7 +415,8 @@ public class FrameTest
     frame.writeTo(
         Channels.newChannel(baos),
         compressed,
-        ByteBuffer.allocate(Frame.compressionBufferSize((int) frame.numBytes()))
+        ByteBuffer.allocate(Frame.compressionBufferSize((int) frame.numBytes())),
+        ByteTracker.unboundedTracker()
     );
     return baos.toByteArray();
   }

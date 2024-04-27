@@ -21,22 +21,38 @@ package org.apache.druid.query.aggregation.datasketches.hll.sql;
 
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
-import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.type.InferTypes;
-import org.apache.calcite.sql.type.OperandTypes;
-import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeFamily;
-import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.datasketches.hll.HllSketchAggregatorFactory;
+import org.apache.druid.query.aggregation.datasketches.hll.HllSketchModule;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
+import org.apache.druid.sql.calcite.expression.OperatorConversions;
+import org.apache.druid.sql.calcite.planner.Calcites;
 
 import java.util.Collections;
 
 public class HllSketchObjectSqlAggregator extends HllSketchBaseSqlAggregator implements SqlAggregator
 {
-  private static final SqlAggFunction FUNCTION_INSTANCE = new HllSketchSqlAggFunction();
   private static final String NAME = "DS_HLL";
+  private static final SqlAggFunction FUNCTION_INSTANCE =
+      OperatorConversions.aggregatorBuilder(NAME)
+                         .operandNames("column", "lgK", "tgtHllType")
+                         .operandTypes(SqlTypeFamily.ANY, SqlTypeFamily.NUMERIC, SqlTypeFamily.STRING)
+                         .operandTypeInference(InferTypes.VARCHAR_1024)
+                         .requiredOperandCount(1)
+                         .literalOperands(1, 2)
+                         .returnTypeInference(
+                             Calcites.complexReturnTypeWithNullability(HllSketchModule.TYPE, false)
+                         )
+                         .functionCategory(SqlFunctionCategory.USER_DEFINED_FUNCTION)
+                         .build();
+
+  public HllSketchObjectSqlAggregator()
+  {
+    super(false, HllSketchAggregatorFactory.DEFAULT_STRING_ENCODING);
+  }
 
   @Override
   public SqlAggFunction calciteFunction()
@@ -55,31 +71,5 @@ public class HllSketchObjectSqlAggregator extends HllSketchBaseSqlAggregator imp
         Collections.singletonList(aggregatorFactory),
         null
     );
-  }
-
-  private static class HllSketchSqlAggFunction extends SqlAggFunction
-  {
-    private static final String SIGNATURE = "'" + NAME + "(column, lgK, tgtHllType)'\n";
-
-    HllSketchSqlAggFunction()
-    {
-      super(
-          NAME,
-          null,
-          SqlKind.OTHER_FUNCTION,
-          ReturnTypes.explicit(SqlTypeName.OTHER),
-          InferTypes.VARCHAR_1024,
-          OperandTypes.or(
-              OperandTypes.ANY,
-              OperandTypes.and(
-                  OperandTypes.sequence(SIGNATURE, OperandTypes.ANY, OperandTypes.LITERAL, OperandTypes.LITERAL),
-                  OperandTypes.family(SqlTypeFamily.ANY, SqlTypeFamily.NUMERIC, SqlTypeFamily.STRING)
-              )
-          ),
-          SqlFunctionCategory.USER_DEFINED_FUNCTION,
-          false,
-          false
-      );
-    }
   }
 }

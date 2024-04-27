@@ -33,6 +33,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.datasketches.memory.Memory;
 import org.apache.datasketches.quantiles.ItemsSketch;
+import org.apache.datasketches.quantilescommon.QuantileSearchCriteria;
 import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.timeline.partition.PartitionBoundaries;
 
@@ -56,7 +57,7 @@ public class StringSketch implements StringDistribution
 
   public StringSketch()
   {
-    this(ItemsSketch.getInstance(SKETCH_K, STRING_TUPLE_COMPARATOR));
+    this(ItemsSketch.getInstance(StringTuple.class, SKETCH_K, STRING_TUPLE_COMPARATOR));
   }
 
   StringSketch(ItemsSketch<StringTuple> sketch)
@@ -73,8 +74,7 @@ public class StringSketch implements StringDistribution
   @Override
   public void putIfNewMin(StringTuple value)
   {
-    StringTuple min = delegate.getMinValue();
-    if (min == null || min.compareTo(value) > 0) {
+    if (delegate.isEmpty() || delegate.getMinItem().compareTo(value) > 0) {
       delegate.update(value);
     }
   }
@@ -82,8 +82,7 @@ public class StringSketch implements StringDistribution
   @Override
   public void putIfNewMax(StringTuple value)
   {
-    StringTuple max = delegate.getMaxValue();
-    if (max == null || max.compareTo(value) < 0) {
+    if (delegate.isEmpty() || delegate.getMaxItem().compareTo(value) < 0) {
       delegate.update(value);
     }
   }
@@ -111,13 +110,13 @@ public class StringSketch implements StringDistribution
   @VisibleForTesting
   public StringTuple getMin()
   {
-    return delegate.getMinValue();
+    return delegate.getMinItem();
   }
 
   @VisibleForTesting
   public StringTuple getMax()
   {
-    return delegate.getMaxValue();
+    return delegate.getMaxItem();
   }
 
   private PartitionBoundaries getEvenPartitionsByCount(int evenPartitionCount)
@@ -127,8 +126,10 @@ public class StringSketch implements StringDistribution
         "evenPartitionCount must be positive but is %s",
         evenPartitionCount
     );
-    StringTuple[] partitions = delegate.getQuantiles(evenPartitionCount + 1); // add 1 since this returns endpoints
-    return new PartitionBoundaries((partitions == null) ? new StringTuple[0] : partitions);
+    if (delegate.isEmpty()) {
+      return new PartitionBoundaries(new StringTuple[0]);
+    }
+    return new PartitionBoundaries((delegate.getPartitionBoundaries(evenPartitionCount, QuantileSearchCriteria.EXCLUSIVE)).boundaries);
   }
 
   @Override
@@ -157,8 +158,8 @@ public class StringSketch implements StringDistribution
     // check is best-effort as it is possible for it to return true for sketches that contain different values.
     return delegate.getK() == that.delegate.getK() &&
            delegate.getN() == that.delegate.getN() &&
-           Objects.equals(delegate.getMaxValue(), that.delegate.getMaxValue()) &&
-           Objects.equals(delegate.getMinValue(), that.delegate.getMinValue());
+           Objects.equals(delegate.getMaxItem(), that.delegate.getMaxItem()) &&
+           Objects.equals(delegate.getMinItem(), that.delegate.getMinItem());
   }
 
   @Override
@@ -168,8 +169,8 @@ public class StringSketch implements StringDistribution
     return Objects.hash(
         delegate.getK(),
         delegate.getN(),
-        delegate.getMaxValue(),
-        delegate.getMinValue()
+        delegate.getMaxItem(),
+        delegate.getMinItem()
     );
   }
 
@@ -232,6 +233,7 @@ public class StringSketch implements StringDistribution
         JsonNode jsonNode = jsonParser.getCodec().readTree(jsonParser);
         byte[] sketchBytes = jsonNode.get(FIELD_SKETCH).binaryValue();
         ItemsSketch<StringTuple> sketch = ItemsSketch.getInstance(
+            StringTuple.class,
             Memory.wrap(sketchBytes),
             STRING_TUPLE_COMPARATOR,
             ARRAY_OF_STRINGS_SERDE

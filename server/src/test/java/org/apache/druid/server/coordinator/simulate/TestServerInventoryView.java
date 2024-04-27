@@ -158,19 +158,21 @@ public class TestServerInventoryView implements ServerInventoryView
     {
       log.debug("Adding segment [%s] to server [%s]", segment.getId(), server.getName());
 
-      if (server.getMaxSize() - server.getCurrSize() >= segment.getSize()) {
-        server.addDataSegment(segment);
-        segmentCallbacks.forEach(
-            (segmentCallback, executor) -> executor.execute(
-                () -> segmentCallback.segmentAdded(server.getMetadata(), segment)
-            )
-        );
-      } else {
+      if (server.getSegment(segment.getId()) != null) {
+        log.debug("Server [%s] already serving segment [%s]", server.getName(), segment);
+      } else if (server.getMaxSize() - server.getCurrSize() < segment.getSize()) {
         throw new ISE(
             "Not enough free space on server %s. Segment size [%d]. Current free space [%d]",
             server.getName(),
             segment.getSize(),
             server.getMaxSize() - server.getCurrSize()
+        );
+      } else {
+        server.addDataSegment(segment);
+        segmentCallbacks.forEach(
+            (segmentCallback, executor) -> executor.execute(
+                () -> segmentCallback.segmentAdded(server.getMetadata(), segment)
+            )
         );
       }
     }
@@ -185,7 +187,7 @@ public class TestServerInventoryView implements ServerInventoryView
       server.removeDataSegment(segment.getId());
       segmentCallbacks.forEach(
           (segmentCallback, executor) -> executor.execute(
-              () -> segmentCallback.segmentAdded(server.getMetadata(), segment)
+              () -> segmentCallback.segmentRemoved(server.getMetadata(), segment)
           )
       );
     }

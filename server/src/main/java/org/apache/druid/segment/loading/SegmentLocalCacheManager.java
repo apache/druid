@@ -519,13 +519,13 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       catch (Exception e) {
         log.error(e, "Unable to remove directory[%s]", cacheFile);
       }
-    }
 
-    File parent = cacheFile.getParentFile();
-    if (parent != null) {
-      File[] children = parent.listFiles();
-      if (children == null || children.length == 0) {
-        cleanupCacheFiles(baseFile, parent);
+      File parent = cacheFile.getParentFile();
+      if (parent != null) {
+        File[] children = parent.listFiles();
+        if (children == null || children.length == 0) {
+          cleanupCacheFiles(baseFile, parent);
+        }
       }
     }
   }

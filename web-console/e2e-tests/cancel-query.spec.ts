@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import * as playwright from 'playwright-chromium';
+import type * as playwright from 'playwright-chromium';
 
 import { QueryOverview } from './component/query/overview';
 import { saveScreenshotIfError } from './util/debug';

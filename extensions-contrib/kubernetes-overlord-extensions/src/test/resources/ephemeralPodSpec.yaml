@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test
+spec:
+  containers:
+    - command:
+        - sleep
+        - "3600"
+      image: one
+      name: primary
+      resources:
+        limits:
+          cpu: "1m"
+          memory: "1"
+          ephemeral-storage: "10Gi"
+        requests:
+          cpu: "1m"
+          memory: "1"
+          ephemeral-storage: "1Gi"
+      env:
+        - name: "druid_monitoring_monitors"
+          value: '["org.apache.druid.java.util.metrics.JvmMonitor", "org.apache.druid.server.metrics.TaskCountStatsMonitor"]'
+    - command:
+        - "tail -f /dev/null"
+      image: two
+      name: sidecar

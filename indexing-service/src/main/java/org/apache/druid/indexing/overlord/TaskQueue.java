@@ -19,6 +19,8 @@
 
 package org.apache.druid.indexing.overlord;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
@@ -31,6 +33,9 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.annotations.SuppressFBWarnings;
 import org.apache.druid.common.utils.IdUtils;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.EntryAlreadyExists;
+import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.Counters;
@@ -38,6 +43,7 @@ import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.common.task.TaskContextEnricher;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.common.task.batch.MaxAllowedLocksExceededException;
 import org.apache.druid.indexing.common.task.batch.parallel.SinglePhaseParallelIndexTaskRunner;
@@ -46,13 +52,16 @@ import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
-import org.apache.druid.metadata.EntryExistsException;
+import org.apache.druid.metadata.PasswordProvider;
+import org.apache.druid.metadata.PasswordProviderRedactionMixIn;
+import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.utils.CollectionUtils;
 
 import java.util.ArrayList;
@@ -65,12 +74,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
@@ -97,7 +106,10 @@ public class TaskQueue
   @GuardedBy("giant")
   private final Map<String, ListenableFuture<TaskStatus>> taskFutures = new HashMap<>();
 
-  // Tasks that are in the process of being cleaned up by notifyStatus. Prevents manageInternal from re-launching them.
+  /**
+   * Tasks that have recently completed and are being cleaned up. These tasks
+   * should not be relaunched by task management.
+   */
   @GuardedBy("giant")
   private final Set<String> recentlyCompletedTasks = new HashSet<>();
 
@@ -109,6 +121,8 @@ public class TaskQueue
   private final TaskActionClientFactory taskActionClientFactory;
   private final TaskLockbox taskLockbox;
   private final ServiceEmitter emitter;
+  private final ObjectMapper passwordRedactingMapper;
+  private final TaskContextEnricher taskContextEnricher;
 
   private final ReentrantLock giant = new ReentrantLock(true);
   @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
@@ -124,6 +138,12 @@ public class TaskQueue
           .setNameFormat("TaskQueue-StorageSync").build()
   );
 
+  /**
+   * Dedicated executor for task completion callbacks, to ensure that task runner
+   * and worker sync operations are not blocked.
+   */
+  private final ExecutorService taskCompleteCallbackExecutor;
+
   private volatile boolean active = false;
 
   private static final EmittingLogger log = new EmittingLogger(TaskQueue.class);
@@ -135,6 +155,9 @@ public class TaskQueue
   @GuardedBy("totalFailedTaskCount")
   private Map<String, Long> prevTotalFailedTaskCount = new HashMap<>();
 
+  private final AtomicInteger statusUpdatesInQueue = new AtomicInteger();
+  private final AtomicInteger handledStatusUpdates = new AtomicInteger();
+
   public TaskQueue(
       TaskLockConfig lockConfig,
       TaskQueueConfig config,
@@ -143,7 +166,9 @@ public class TaskQueue
       TaskRunner taskRunner,
       TaskActionClientFactory taskActionClientFactory,
       TaskLockbox taskLockbox,
-      ServiceEmitter emitter
+      ServiceEmitter emitter,
+      ObjectMapper mapper,
+      TaskContextEnricher taskContextEnricher
   )
   {
     this.lockConfig = Preconditions.checkNotNull(lockConfig, "lockConfig");
@@ -154,12 +179,19 @@ public class TaskQueue
     this.taskActionClientFactory = Preconditions.checkNotNull(taskActionClientFactory, "taskActionClientFactory");
     this.taskLockbox = Preconditions.checkNotNull(taskLockbox, "taskLockbox");
     this.emitter = Preconditions.checkNotNull(emitter, "emitter");
+    this.taskCompleteCallbackExecutor = Execs.multiThreaded(
+        config.getTaskCompleteHandlerNumThreads(),
+        "TaskQueue-OnComplete-%d"
+    );
+    this.passwordRedactingMapper = mapper.copy()
+                                         .addMixIn(PasswordProvider.class, PasswordProviderRedactionMixIn.class);
+    this.taskContextEnricher = Preconditions.checkNotNull(taskContextEnricher, "taskContextEnricher");
   }
 
   @VisibleForTesting
-  void setActive(boolean active)
+  void setActive()
   {
-    this.active = active;
+    this.active = true;
   }
 
   /**
@@ -182,30 +214,25 @@ public class TaskQueue
                  "Shutting down forcefully as task failed to reacquire lock while becoming leader");
       }
       managerExec.submit(
-          new Runnable()
-          {
-            @Override
-            public void run()
-            {
-              while (true) {
+          () -> {
+            while (true) {
+              try {
+                manage();
+                break;
+              }
+              catch (InterruptedException e) {
+                log.info("Interrupted, exiting!");
+                break;
+              }
+              catch (Exception e) {
+                final long restartDelay = config.getRestartDelay().getMillis();
+                log.makeAlert(e, "Failed to manage").addData("restartDelay", restartDelay).emit();
                 try {
-                  manage();
-                  break;
+                  Thread.sleep(restartDelay);
                 }
-                catch (InterruptedException e) {
+                catch (InterruptedException e2) {
                   log.info("Interrupted, exiting!");
                   break;
-                }
-                catch (Exception e) {
-                  final long restartDelay = config.getRestartDelay().getMillis();
-                  log.makeAlert(e, "Failed to manage").addData("restartDelay", restartDelay).emit();
-                  try {
-                    Thread.sleep(restartDelay);
-                  }
-                  catch (InterruptedException e2) {
-                    log.info("Interrupted, exiting!");
-                    break;
-                  }
                 }
               }
             }
@@ -214,24 +241,19 @@ public class TaskQueue
       ScheduledExecutors.scheduleAtFixedRate(
           storageSyncExec,
           config.getStorageSyncRate(),
-          new Callable<ScheduledExecutors.Signal>()
-          {
-            @Override
-            public ScheduledExecutors.Signal call()
-            {
-              try {
-                syncFromStorage();
-              }
-              catch (Exception e) {
-                if (active) {
-                  log.makeAlert(e, "Failed to sync with storage").emit();
-                }
-              }
+          () -> {
+            try {
+              syncFromStorage();
+            }
+            catch (Exception e) {
               if (active) {
-                return ScheduledExecutors.Signal.REPEAT;
-              } else {
-                return ScheduledExecutors.Signal.STOP;
+                log.makeAlert(e, "Failed to sync with storage").emit();
               }
+            }
+            if (active) {
+              return ScheduledExecutors.Signal.REPEAT;
+            } else {
+              return ScheduledExecutors.Signal.STOP;
             }
           }
       );
@@ -402,13 +424,16 @@ public class TaskQueue
           catch (Exception e) {
             log.warn(e, "Exception thrown during isReady for task: %s", task.getId());
             final String errorMessage;
-            if (e instanceof MaxAllowedLocksExceededException) {
+            if (e instanceof MaxAllowedLocksExceededException || e instanceof DruidException) {
               errorMessage = e.getMessage();
             } else {
-              errorMessage = "Failed while waiting for the task to be ready to run. "
-                                          + "See overlord logs for more details.";
+              errorMessage = StringUtils.format(
+                  "Encountered error[%s] while waiting for task to be ready. See Overlord logs for more details.",
+                  e.getMessage()
+              );
             }
-            notifyStatus(task, TaskStatus.failure(task.getId(), errorMessage), errorMessage);
+            TaskStatus taskStatus = TaskStatus.failure(task.getId(), errorMessage);
+            notifyStatus(task, taskStatus, taskStatus.getErrorMsg());
             continue;
           }
           if (taskIsReady) {
@@ -421,7 +446,8 @@ public class TaskQueue
             continue;
           }
         }
-        taskFutures.put(task.getId(), attachCallbacks(task, runnerTaskFuture));
+        attachCallbacks(task, runnerTaskFuture);
+        taskFutures.put(task.getId(), runnerTaskFuture);
       } else if (isTaskPending(task)) {
         // if the taskFutures contain this task and this task is pending, also let the taskRunner
         // to run it to guarantee it will be assigned to run
@@ -473,16 +499,14 @@ public class TaskQueue
    * @param task task to add
    *
    * @return true
-   *
-   * @throws EntryExistsException if the task already exists
    */
-  public boolean add(final Task task) throws EntryExistsException
+  public boolean add(final Task task)
   {
     // Before adding the task, validate the ID, so it can be safely used in file paths, znodes, etc.
     IdUtils.validateId("Task ID", task.getId());
 
     if (taskStorage.getTask(task.getId()).isPresent()) {
-      throw new EntryExistsException(StringUtils.format("Task %s already exists", task.getId()));
+      throw EntryAlreadyExists.exception("Task[%s] already exists", task.getId());
     }
 
     // Set forceTimeChunkLock before adding task spec to taskStorage, so that we can see always consistent task spec.
@@ -495,12 +519,22 @@ public class TaskQueue
         SinglePhaseParallelIndexTaskRunner.DEFAULT_USE_LINEAGE_BASED_SEGMENT_ALLOCATION
     );
 
+    taskContextEnricher.enrichContext(task);
+
     giant.lock();
 
     try {
       Preconditions.checkState(active, "Queue is not active!");
       Preconditions.checkNotNull(task, "task");
-      Preconditions.checkState(tasks.size() < config.getMaxSize(), "Too many tasks (max = %,d)", config.getMaxSize());
+      if (tasks.size() >= config.getMaxSize()) {
+        throw DruidException.forPersona(DruidException.Persona.ADMIN)
+                            .ofCategory(DruidException.Category.CAPACITY_EXCEEDED)
+                            .build(
+                                "Task queue already contains [%d] tasks."
+                                + " Retry later or increase 'druid.indexer.queue.maxSize'[%d].",
+                                tasks.size(), config.getMaxSize()
+                            );
+      }
 
       // If this throws with any sort of exception, including TaskExistsException, we don't want to
       // insert the task into our queue. So don't catch it.
@@ -587,12 +621,22 @@ public class TaskQueue
   }
 
   /**
-   * Notify this queue that some task has an updated status. If this update is valid, the status will be persisted in
-   * the task storage facility. If the status is a completed status, the task will be unlocked and no further
-   * updates will be accepted.
-   *
-   * @param task       task to update
-   * @param taskStatus new task status
+   * Notifies this queue that the given task has an updated status. If this update
+   * is valid and task is now complete, the following operations are performed:
+   * <ul>
+   * <li>Add task to {@link #recentlyCompletedTasks} to prevent re-launching them</li>
+   * <li>Persist new status in the metadata storage to safeguard against crashes
+   * and leader re-elections</li>
+   * <li>Request {@link #taskRunner} to shutdown task (synchronously)</li>
+   * <li>Remove all locks for task from metadata storage</li>
+   * <li>Remove task entry from {@link #tasks} and {@link #taskFutures}</li>
+   * <li>Remove task from {@link #recentlyCompletedTasks}</li>
+   * <li>Request task management</li>
+   * </ul>
+   * <p>
+   * Since this operation involves DB updates and synchronous remote calls, it
+   * must be invoked on a dedicated executor so that task runner and worker sync
+   * is not blocked.
    *
    * @throws NullPointerException     if task or status is null
    * @throws IllegalArgumentException if the task ID does not match the status ID
@@ -629,6 +673,8 @@ public class TaskQueue
     // Save status to metadata store first, so if we crash while doing the rest of the shutdown, our successor
     // remembers that this task has completed.
     try {
+      //The code block is only called when a task completes,
+      //and we need to check to make sure the metadata store has the correct status stored.
       final Optional<TaskStatus> previousStatus = taskStorage.getStatus(task.getId());
       if (!previousStatus.isPresent() || !previousStatus.get().isRunnable()) {
         log.makeAlert("Ignoring notification for already-complete task").addData("task", task.getId()).emit();
@@ -661,7 +707,7 @@ public class TaskQueue
       if (removeTaskInternal(task.getId())) {
         taskFutures.remove(task.getId());
       } else {
-        log.warn("Unknown task completed: %s", task.getId());
+        log.warn("Unknown task[%s] completed", task.getId());
       }
 
       recentlyCompletedTasks.remove(task.getId());
@@ -673,14 +719,17 @@ public class TaskQueue
   }
 
   /**
-   * Attach success and failure handlers to a task status future, such that when it completes, we perform the
-   * appropriate updates.
-   *
-   * @param statusFuture a task status future
-   *
-   * @return the same future, for convenience
+   * Attaches callbacks to the task status future to update application state when
+   * the task completes. Submits a job to handle the status on the dedicated
+   * {@link #taskCompleteCallbackExecutor}.
+   * <p>
+   * The {@code onSuccess} and {@code onFailure} methods will however run on the
+   * executor providing the {@code statusFuture} itself (typically the worker sync executor).
+   * This has been done in order to track metrics for in-flight status updates
+   * immediately. Thus, care must be taken to ensure that the success/failure
+   * methods remain lightweight enough to keep the sync executor unblocked.
    */
-  private ListenableFuture<TaskStatus> attachCallbacks(final Task task, final ListenableFuture<TaskStatus> statusFuture)
+  private void attachCallbacks(final Task task, final ListenableFuture<TaskStatus> statusFuture)
   {
     final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
     IndexTaskUtils.setTaskDimensions(metricBuilder, task);
@@ -692,8 +741,9 @@ public class TaskQueue
           @Override
           public void onSuccess(final TaskStatus status)
           {
-            log.info("Received %s status for task: %s", status.getStatusCode(), status.getId());
-            handleStatus(status);
+            log.info("Received status[%s] for task[%s].", status.getStatusCode(), status.getId());
+            statusUpdatesInQueue.incrementAndGet();
+            taskCompleteCallbackExecutor.execute(() -> handleStatus(status));
           }
 
           @Override
@@ -704,9 +754,12 @@ public class TaskQueue
                .addData("type", task.getType())
                .addData("dataSource", task.getDataSource())
                .emit();
-            handleStatus(
-                TaskStatus.failure(task.getId(), "Failed to run this task. See overlord logs for more details.")
+            statusUpdatesInQueue.incrementAndGet();
+            TaskStatus status = TaskStatus.failure(
+                task.getId(),
+                "Failed to run task. See overlord logs for more details."
             );
+            taskCompleteCallbackExecutor.execute(() -> handleStatus(status));
           }
 
           private void handleStatus(final TaskStatus status)
@@ -715,7 +768,7 @@ public class TaskQueue
               // If we're not supposed to be running anymore, don't do anything. Somewhat racey if the flag gets set
               // after we check and before we commit the database transaction, but better than nothing.
               if (!active) {
-                log.info("Abandoning task due to shutdown: %s", task.getId());
+                log.info("Abandoning task [%s] due to shutdown.", task.getId());
                 return;
               }
 
@@ -724,13 +777,11 @@ public class TaskQueue
               // Emit event and log, if the task is done
               if (status.isComplete()) {
                 IndexTaskUtils.setTaskStatusDimensions(metricBuilder, status);
-                emitter.emit(metricBuilder.build("task/run/time", status.getDuration()));
+                emitter.emit(metricBuilder.setMetric("task/run/time", status.getDuration()));
 
                 log.info(
-                    "Task %s: %s (%d run duration)",
-                    status.getStatusCode(),
-                    task.getId(),
-                    status.getDuration()
+                    "Completed task[%s] with status[%s] in [%d]ms.",
+                    task.getId(), status.getStatusCode(), status.getDuration()
                 );
 
                 if (status.isSuccess()) {
@@ -746,10 +797,15 @@ public class TaskQueue
                  .addData("statusCode", status.getStatusCode())
                  .emit();
             }
+            finally {
+              statusUpdatesInQueue.decrementAndGet();
+              handledStatusUpdates.incrementAndGet();
+            }
           }
-        }
+        },
+        // Use direct executor to track metrics for in-flight updates immediately
+        Execs.directExecutor()
     );
-    return statusFuture;
   }
 
   /**
@@ -891,6 +947,64 @@ public class TaskQueue
     finally {
       giant.unlock();
     }
+  }
+
+  /**
+   * Gets the current status of this task either from the {@link TaskRunner}
+   * or from the {@link TaskStorage} (if not available with the TaskRunner).
+   */
+  public Optional<TaskStatus> getTaskStatus(final String taskId)
+  {
+    RunnerTaskState runnerTaskState = taskRunner.getRunnerTaskState(taskId);
+    if (runnerTaskState != null && runnerTaskState != RunnerTaskState.NONE) {
+      return Optional.of(TaskStatus.running(taskId).withLocation(taskRunner.getTaskLocation(taskId)));
+    } else {
+      return taskStorage.getStatus(taskId);
+    }
+  }
+
+  public CoordinatorRunStats getQueueStats()
+  {
+    final int queuedUpdates = statusUpdatesInQueue.get();
+    final int handledUpdates = handledStatusUpdates.getAndSet(0);
+    if (queuedUpdates > 0) {
+      log.info("There are [%d] task status updates in queue, handled [%d]", queuedUpdates, handledUpdates);
+    }
+
+    final CoordinatorRunStats stats = new CoordinatorRunStats();
+    stats.add(Stats.TaskQueue.STATUS_UPDATES_IN_QUEUE, queuedUpdates);
+    stats.add(Stats.TaskQueue.HANDLED_STATUS_UPDATES, handledUpdates);
+    return stats;
+  }
+
+  /**
+   * Returns an optional containing the task payload after successfully redacting credentials.
+   * Returns an absent optional if there is no task payload corresponding to the taskId in memory.
+   * Throws DruidException if password could not be redacted due to serialization / deserialization failure
+   */
+  public Optional<Task> getActiveTask(String id)
+  {
+    Task task;
+    giant.lock();
+    try {
+      task = tasks.get(id);
+    }
+    finally {
+      giant.unlock();
+    }
+    if (task != null) {
+      try {
+        // Write and read the value using a mapper with password redaction mixin.
+        task = passwordRedactingMapper.readValue(passwordRedactingMapper.writeValueAsString(task), Task.class);
+      }
+      catch (JsonProcessingException e) {
+        log.error(e, "Failed to serialize or deserialize task with id [%s].", task.getId());
+        throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                            .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                            .build(e, "Failed to serialize or deserialize task[%s].", task.getId());
+      }
+    }
+    return Optional.fromNullable(task);
   }
 
   @VisibleForTesting

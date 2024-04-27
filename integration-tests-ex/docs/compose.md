@@ -37,9 +37,37 @@ See also:
 
 ## File Structure
 
-Docker Compose files live in the `druid-it-cases` module (`test-cases` folder)
+Docker Compose files live in the `druid-it-cases` module (`cases` folder)
 in the `cluster` directory. There is a separate subdirectory for each cluster type
 (subset of test categories), plus a `Common` folder for shared files.
+
+### Cluster Directory
+
+Each test category uses an associated cluster. In some cases, multiple tests use
+the same cluster definition. Each cluster is defined by a directory in
+`$MODULE/cluster/$CLUSTER_NAME`. The directory contains a variety of files, most
+of which are optional:
+
+* `docker-compose.yaml` - Docker composes file, if created explicitly.
+* `docker-compose.py` - Docker compose "template" if generated. The Python template
+  format is preferred. (One of the `docker-compose.*` files is required)
+* `verify.sh` - Verify the environment for the cluster. Cloud tests require that a
+  number of environment variables be set to pass keys and other setup to tests.
+  (Optional)
+* `setup.sh` - Additional cluster setup, such as populating the "shared" directory
+  with test-specific items. (Optional)
+
+The `verify.sh` and `setup.sh` scripts are sourced into one of the "master"
+scripts and can thus make use of environment variables already set:
+
+* `BASE_MODULE_DIR` points to `integration-tests-ex/cases` where the "base" set
+  of scripts and cluster definitions reside.
+* `MODULE_DIR` points to the Maven module folder that contains the test.
+* `CATEGORY` gives the name of the test category.
+* `DRUID_INTEGRATION_TEST_GROUP` is the cluster name. Often the same as `CATEGORY`,
+  but not always.
+
+The `set -e` option is in effect so that an any errors fail the test.
 
 ## Shared Directory
 
@@ -81,6 +109,13 @@ files that define properties as environment variables. All are located in
   the `common.runtime.properties` file.
 * `<service>.env` - Properties unique to one service. This is the test equivalent to
   the `service/runtime.properties` files.
+
+### MySQL Driver
+
+Unit tests can use any MySQL driver, typically MySQL or MariaDB. The tests use MySQL
+by default. Choose a different driver by setting the `MYSQL_DRIVER_CLASSNAME` environment
+variable when running tests. The variable chooses the selected driver both in the Druid
+server running in a container, and in the test "clients".
 
 ### Special Environment Variables
 
@@ -236,3 +271,54 @@ To define a test cluster, do the following:
 * If you need multiple instances of the same service, extend that service
   twice, and define distinct names and port numbers.
 * Add any test-specific environment configuration required.
+
+## Generating `docker-compose.yaml` Files
+
+Each test has somewhat different needs for its test cluster. Yet, there is a
+great amount of consistency across test clusters and across services. The result,
+if we create files by hand, is a great amount of copy/paste redundancy, with all
+the problems that copy/paste implies.
+
+As an alternative, the framework provides a simple-minded way to generate the
+`docker-compose.yaml` file using a simple Python-based template mechanism. To use
+this:
+
+* Omit the test cluster directory: `cluster/<category>`.
+* Instead, create a template file: `templates/<category>.py`.
+* The minimal file appears below:
+
+```python
+from template import BaseTemplate, generate
+
+generate(__file__, BaseTemplate())
+```
+
+The above will generate a "generic" cluster: one of each kind of service, with
+either a Middle Manager or Indexer depending on the `USE_INDEXER`
+env var.
+
+You customize your specific cluster by creating a test-specific template class
+which overrides the various methods that build up the cluster. By using Python,
+we first build the cluster as a set of Python dictionaries and arrays, then
+we let [PyYAML](https://pyyaml.org/wiki/PyYAMLDocumentation) convert the objects
+to a YAML file. Many methods exist to help you populate the configuration tree.
+See any of the existing files for examples.
+
+For example, you can:
+
+* Add test-specific environment config to one, some or all services.
+* Add or remove services.
+* Create multiples of selected services.
+
+The advantage is that, as Druid evolves and we change the basics, those changes
+are automatically propagated to all test clusters.
+
+Once you've created your file, the test framework will re-generate the
+`docker-compose.yaml` file on each run to reflect any per-run customization.
+The generated file is found in `target/cluster/<category>/docker-compose.yaml`.
+As with all generated files: resist the temptation to change the generated file:
+change the template instead.
+
+The generated `docker-compose.yaml` file goes into a temporary folder:
+`target/cluster/<category>`. The script copies over the `Common` directory
+as well.

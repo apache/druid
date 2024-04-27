@@ -40,7 +40,7 @@ public class TestMetadataRuleManager implements MetadataRuleManager
   {
     rules.put(
         DEFAULT_DATASOURCE,
-        Collections.singletonList(new ForeverLoadRule(null))
+        Collections.singletonList(new ForeverLoadRule(null, null))
     );
   }
 

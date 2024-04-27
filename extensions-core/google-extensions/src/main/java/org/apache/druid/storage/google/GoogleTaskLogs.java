@@ -39,6 +39,12 @@ public class GoogleTaskLogs implements TaskLogs
 {
   private static final Logger LOG = new Logger(GoogleTaskLogs.class);
 
+  /**
+   * Use 1MB upload buffer, rather than the default of 15 MB in the API client. Mainly because MMs may upload logs
+   * in parallel, and typically have small heaps. The default-sized 15 MB buffers add up quickly.
+   */
+  static final int UPLOAD_BUFFER_SIZE = 1024 * 1024;
+
   private final GoogleTaskLogsConfig config;
   private final GoogleStorage storage;
   private final GoogleInputDataConfig inputDataConfig;
@@ -74,6 +80,14 @@ public class GoogleTaskLogs implements TaskLogs
     pushTaskFile(reportFile, taskKey);
   }
 
+  @Override
+  public void pushTaskStatus(String taskid, File statusFile) throws IOException
+  {
+    final String taskKey = getTaskStatusKey(taskid);
+    LOG.info("Pushing task status %s to: %s", statusFile, taskKey);
+    pushTaskFile(statusFile, taskKey);
+  }
+
   private void pushTaskFile(final File logFile, final String taskKey) throws IOException
   {
     try (final InputStream fileStream = Files.newInputStream(logFile.toPath())) {
@@ -84,7 +98,7 @@ public class GoogleTaskLogs implements TaskLogs
       try {
         RetryUtils.retry(
             (RetryUtils.Task<Void>) () -> {
-              storage.insert(config.getBucket(), taskKey, mediaContent);
+              storage.insert(config.getBucket(), taskKey, mediaContent, UPLOAD_BUFFER_SIZE);
               return null;
             },
             GoogleUtils::isRetryable,
@@ -112,6 +126,13 @@ public class GoogleTaskLogs implements TaskLogs
   public Optional<InputStream> streamTaskReports(String taskid) throws IOException
   {
     final String taskKey = getTaskReportKey(taskid);
+    return streamTaskFile(taskid, 0, taskKey);
+  }
+
+  @Override
+  public Optional<InputStream> streamTaskStatus(String taskid) throws IOException
+  {
+    final String taskKey = getTaskStatusKey(taskid);
     return streamTaskFile(taskid, 0, taskKey);
   }
 
@@ -156,6 +177,11 @@ public class GoogleTaskLogs implements TaskLogs
     return config.getPrefix() + "/" + taskid.replace(':', '_') + ".report.json";
   }
 
+  private String getTaskStatusKey(String taskid)
+  {
+    return config.getPrefix() + "/" + taskid.replace(':', '_') + ".status.json";
+  }
+
   @Override
   public void killAll() throws IOException
   {
@@ -170,13 +196,13 @@ public class GoogleTaskLogs implements TaskLogs
   }
 
   @Override
-  public void killOlderThan(long timestamp) throws IOException
+  public void killOlderThan(long timestampMs) throws IOException
   {
     LOG.info(
         "Deleting all task logs from gs location [bucket: '%s' prefix: '%s'] older than %s.",
         config.getBucket(),
         config.getPrefix(),
-        new Date(timestamp)
+        new Date(timestampMs)
     );
     try {
       GoogleUtils.deleteObjectsInPath(
@@ -184,7 +210,7 @@ public class GoogleTaskLogs implements TaskLogs
           inputDataConfig,
           config.getBucket(),
           config.getPrefix(),
-          (object) -> object.getUpdated().getValue() < timestamp
+          (object) -> object.getLastUpdateTimeMillis() < timestampMs
       );
     }
     catch (Exception e) {

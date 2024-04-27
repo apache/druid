@@ -20,7 +20,7 @@ import { Button, ButtonGroup } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import React, { useState } from 'react';
 
-import { Execution } from '../../../druid-models';
+import type { Execution } from '../../../druid-models';
 import { useInterval } from '../../../hooks';
 import { formatDurationHybrid } from '../../../utils';
 import { CancelQueryDialog } from '../cancel-query-dialog/cancel-query-dialog';
@@ -29,15 +29,16 @@ import './execution-timer-panel.scss';
 
 export interface ExecutionTimerPanelProps {
   execution: Execution | undefined;
+  startTime: Date | undefined;
   onCancel(): void;
 }
 
 export const ExecutionTimerPanel = React.memo(function ExecutionTimerPanel(
   props: ExecutionTimerPanelProps,
 ) {
-  const { execution, onCancel } = props;
+  const { execution, startTime, onCancel } = props;
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
-  const [mountTime] = useState(Date.now());
+  const [mountTime] = useState(startTime?.valueOf() ?? Date.now());
   const [currentTime, setCurrentTime] = useState(Date.now());
 
   useInterval(() => {

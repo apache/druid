@@ -22,7 +22,6 @@ package org.apache.druid.sql.calcite;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -30,16 +29,19 @@ import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.generator.SegmentGenerator;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.QueryStackTests;
+import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
+import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
+import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
@@ -47,7 +49,6 @@ import org.apache.druid.sql.calcite.planner.PlannerResult;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
@@ -59,7 +60,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
-
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -112,7 +112,6 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
   @BeforeClass
   public static void setupClass()
   {
-    ExpressionProcessing.initializeForStrictBooleansTests(true);
     CLOSER = Closer.create();
 
     final GeneratorSchemaInfo schemaInfo = GeneratorBasicSchemas.SCHEMA_MAP.get("expression-testbench");
@@ -131,7 +130,7 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
     );
     CONGLOMERATE = QueryStackTests.createQueryRunnerFactoryConglomerate(CLOSER);
 
-    WALKER = new SpecificSegmentsQuerySegmentWalker(CONGLOMERATE).add(
+    WALKER = SpecificSegmentsQuerySegmentWalker.createWalker(CONGLOMERATE).add(
         dataSegment,
         INDEX
     );
@@ -140,6 +139,7 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
     final PlannerConfig plannerConfig = new PlannerConfig();
     final DruidSchemaCatalog rootSchema =
         CalciteTests.createMockRootSchema(CONGLOMERATE, WALKER, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
+    final JoinableFactoryWrapper joinableFactoryWrapper = CalciteTests.createJoinableFactoryWrapper();
     ENGINE = CalciteTests.createMockSqlEngine(WALKER, CONGLOMERATE);
     PLANNER_FACTORY = new PlannerFactory(
         rootSchema,
@@ -149,7 +149,10 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         CalciteTests.getJsonMapper(),
         CalciteTests.DRUID_SCHEMA_NAME,
-        new CalciteRulesManager(ImmutableSet.of())
+        new CalciteRulesManager(ImmutableSet.of()),
+        joinableFactoryWrapper,
+        CatalogResolver.NULL_RESOLVER,
+        new AuthConfig()
     );
   }
 
@@ -157,7 +160,6 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
   public static void teardownClass() throws IOException
   {
     CLOSER.close();
-    ExpressionProcessing.initializeForTests(null);
   }
 
   @Parameterized.Parameters(name = "query = {0}")
@@ -174,13 +176,12 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
   }
 
   @Test
-  public void testQuery() throws ValidationException
+  public void testQuery()
   {
     sanityTestVectorizedSqlQueries(PLANNER_FACTORY, query);
   }
 
   public static void sanityTestVectorizedSqlQueries(PlannerFactory plannerFactory, String query)
-      throws ValidationException
   {
     final Map<String, Object> vector = ImmutableMap.of(
             QueryContexts.VECTORIZE_KEY, "force",

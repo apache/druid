@@ -20,23 +20,27 @@
 package org.apache.druid.sql.calcite.schema;
 
 import org.apache.calcite.schema.Table;
+import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.table.DatasourceTable;
 
 import javax.inject.Inject;
-
 import java.util.Set;
 
 public class DruidSchema extends AbstractTableSchema
 {
-  private final SegmentMetadataCache segmentCache;
+  private final BrokerSegmentMetadataCache segmentMetadataCache;
   private final DruidSchemaManager druidSchemaManager;
+  private final CatalogResolver catalogResolver;
 
   @Inject
   public DruidSchema(
-      SegmentMetadataCache segmentCache,
-      final DruidSchemaManager druidSchemaManager)
+      final BrokerSegmentMetadataCache segmentMetadataCache,
+      final DruidSchemaManager druidSchemaManager,
+      final CatalogResolver catalogResolver
+  )
   {
-    this.segmentCache = segmentCache;
+    this.segmentMetadataCache = segmentMetadataCache;
+    this.catalogResolver = catalogResolver;
     if (druidSchemaManager != null && !(druidSchemaManager instanceof NoopDruidSchemaManager)) {
       this.druidSchemaManager = druidSchemaManager;
     } else {
@@ -44,9 +48,9 @@ public class DruidSchema extends AbstractTableSchema
     }
   }
 
-  protected SegmentMetadataCache cache()
+  protected BrokerSegmentMetadataCache cache()
   {
-    return segmentCache;
+    return segmentMetadataCache;
   }
 
   @Override
@@ -55,8 +59,8 @@ public class DruidSchema extends AbstractTableSchema
     if (druidSchemaManager != null) {
       return druidSchemaManager.getTable(name);
     } else {
-      DatasourceTable.PhysicalDatasourceMetadata dsMetadata = segmentCache.getDatasource(name);
-      return dsMetadata == null ? null : new DatasourceTable(dsMetadata);
+      DatasourceTable.PhysicalDatasourceMetadata dsMetadata = segmentMetadataCache.getDatasource(name);
+      return catalogResolver.resolveDatasource(name, dsMetadata);
     }
   }
 
@@ -66,7 +70,7 @@ public class DruidSchema extends AbstractTableSchema
     if (druidSchemaManager != null) {
       return druidSchemaManager.getTableNames();
     } else {
-      return segmentCache.getDatasourceNames();
+      return catalogResolver.getTableNames(segmentMetadataCache.getDatasourceNames());
     }
   }
 }

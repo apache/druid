@@ -23,8 +23,9 @@ import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.HeapMemoryAllocator;
 import org.apache.druid.frame.allocation.MemoryAllocator;
-import org.apache.druid.frame.key.SortColumn;
-import org.apache.druid.frame.write.FrameRowTooLargeException;
+import org.apache.druid.frame.allocation.SingleMemoryAllocatorFactory;
+import org.apache.druid.frame.key.KeyColumn;
+import org.apache.druid.frame.processor.FrameRowTooLargeException;
 import org.apache.druid.frame.write.FrameWriter;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.frame.write.FrameWriters;
@@ -50,7 +51,7 @@ public class FrameSequenceBuilder
 
   private FrameType frameType = null;
   private MemoryAllocator allocator = HeapMemoryAllocator.unlimited();
-  private List<SortColumn> sortColumns = new ArrayList<>();
+  private List<KeyColumn> keyColumns = new ArrayList<>();
   private int maxRowsPerFrame = Integer.MAX_VALUE;
   private boolean populateRowNumber = false;
 
@@ -79,9 +80,9 @@ public class FrameSequenceBuilder
   /**
    * Sorts each frame by the given columns. Does not do any sorting between frames.
    */
-  public FrameSequenceBuilder sortBy(final List<SortColumn> sortBy)
+  public FrameSequenceBuilder sortBy(final List<KeyColumn> sortBy)
   {
-    this.sortColumns = sortBy;
+    this.keyColumns = sortBy;
     return this;
   }
 
@@ -113,13 +114,18 @@ public class FrameSequenceBuilder
       baseSignature = adapter.getRowSignature();
     }
 
-    return FrameWriters.sortableSignature(baseSignature, sortColumns);
+    return FrameWriters.sortableSignature(baseSignature, keyColumns);
   }
 
   public Sequence<Frame> frames()
   {
     final FrameWriterFactory frameWriterFactory =
-        FrameWriters.makeFrameWriterFactory(frameType, allocator, signature(), sortColumns);
+        FrameWriters.makeFrameWriterFactory(
+            frameType,
+            new SingleMemoryAllocatorFactory(allocator),
+            signature(),
+            keyColumns
+        );
 
     final Sequence<Cursor> cursors = FrameTestUtil.makeCursorsForAdapter(adapter, populateRowNumber);
 

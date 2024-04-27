@@ -20,29 +20,30 @@
 package org.apache.druid.server.lookup.namespace.cache;
 
 import com.google.inject.Inject;
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.query.extraction.MapLookupExtractor;
+import org.apache.druid.query.lookup.ImmutableLookupMap;
+import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.server.lookup.namespace.NamespaceExtractionConfig;
 
 import java.lang.ref.WeakReference;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.function.Supplier;
 
 /**
  *
  */
 public class OnHeapNamespaceExtractionCacheManager extends NamespaceExtractionCacheManager
 {
-  private static final Logger LOG = new Logger(OnHeapNamespaceExtractionCacheManager.class);
-
   /**
    * Weak collection of caches is "the second level of defence". Normally all users of {@link #createCache()} must call
    * {@link CacheHandler#close()} on the returned CacheHandler instance manually. But if they don't do this for
@@ -93,7 +94,8 @@ public class OnHeapNamespaceExtractionCacheManager extends NamespaceExtractionCa
   @Override
   public CacheHandler allocateCache()
   {
-    Map<String, String> cache = new HashMap<>();
+    // Object2ObjectOpenHashMap has a bit smaller footprint than HashMap
+    Map<String, String> cache = new Object2ObjectOpenHashMap<>();
     // untracked, but disposing will explode if we don't create a weak reference here
     return new CacheHandler(this, cache, new WeakReference<>(cache));
   }
@@ -104,12 +106,32 @@ public class OnHeapNamespaceExtractionCacheManager extends NamespaceExtractionCa
     if (caches.contains((WeakReference<Map<String, String>>) cache.id)) {
       throw new ISE("cache [%s] is already attached", cache.id);
     }
-    // this cache is not thread-safe, make sure nothing ever writes to it
-    Map<String, String> immutable = Collections.unmodifiableMap(cache.getCache());
+    // replace Object2ObjectOpenHashMap with ImmutableLookupMap
+    final ImmutableLookupMap immutable = ImmutableLookupMap.fromMap(cache.getCache());
     WeakReference<Map<String, String>> cacheRef = new WeakReference<>(immutable);
     expungeCollectedCaches();
     caches.add(cacheRef);
     return new CacheHandler(this, immutable, cacheRef);
+  }
+
+  @Override
+  public LookupExtractor asLookupExtractor(
+      final CacheHandler cache,
+      final boolean isOneToOne,
+      final Supplier<byte[]> cacheKeySupplier
+  )
+  {
+    if (cache.getCache() instanceof ImmutableLookupMap) {
+      return ((ImmutableLookupMap) cache.getCache()).asLookupExtractor(isOneToOne, cacheKeySupplier);
+    } else {
+      return new MapLookupExtractor(cache.getCache(), isOneToOne) {
+        @Override
+        public byte[] getCacheKey()
+        {
+          return cacheKeySupplier.get();
+        }
+      };
+    }
   }
 
   @Override
@@ -132,27 +154,18 @@ public class OnHeapNamespaceExtractionCacheManager extends NamespaceExtractionCa
   void monitor(ServiceEmitter serviceEmitter)
   {
     long numEntries = 0;
-    long size = 0;
+    long heapSizeInBytes = 0;
     expungeCollectedCaches();
     for (WeakReference<Map<String, String>> cacheRef : caches) {
       final Map<String, String> cache = cacheRef.get();
-      if (cache == null) {
-        continue;
-      }
-      numEntries += cache.size();
-      for (Map.Entry<String, String> sEntry : cache.entrySet()) {
-        final String key = sEntry.getKey();
-        final String value = sEntry.getValue();
-        if (key == null || value == null) {
-          LOG.debug("Missing entries for cache key");
-          continue;
-        }
-        size += key.length() + value.length();
+
+      if (cache != null) {
+        numEntries += cache.size();
+        heapSizeInBytes += MapLookupExtractor.estimateHeapFootprint(cache.entrySet());
       }
     }
-    // Each String object has ~40 bytes of overhead, and x 2 for key and value strings
-    long heapSizeInBytes = (80 * numEntries) + size * Character.BYTES;
-    serviceEmitter.emit(ServiceMetricEvent.builder().build("namespace/cache/numEntries", numEntries));
-    serviceEmitter.emit(ServiceMetricEvent.builder().build("namespace/cache/heapSizeInBytes", heapSizeInBytes));
+
+    serviceEmitter.emit(ServiceMetricEvent.builder().setMetric("namespace/cache/numEntries", numEntries));
+    serviceEmitter.emit(ServiceMetricEvent.builder().setMetric("namespace/cache/heapSizeInBytes", heapSizeInBytes));
   }
 }

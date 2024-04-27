@@ -126,7 +126,7 @@ public class RemoteTaskRunnerRunPendingTasksConcurrencyTest
     tasks[5] = TestTasks.unending("task5");
     results[5] = remoteTaskRunner.run(tasks[5]);
     waitForOneWorkerToHaveUnackedTasks();
-    if (rtrTestUtils.taskAnnounced("worker0", tasks[5].getId())) {
+    if (rtrTestUtils.taskAssigned("worker0", tasks[5].getId())) {
       rtrTestUtils.mockWorkerRunningTask("worker0", tasks[5]);
       rtrTestUtils.mockWorkerCompleteSuccessfulTask("worker0", tasks[5]);
     } else {
@@ -138,7 +138,7 @@ public class RemoteTaskRunnerRunPendingTasksConcurrencyTest
 
   private void mockWorkerRunningAndCompletionSuccessfulTasks(Task t1, Task t2) throws Exception
   {
-    if (rtrTestUtils.taskAnnounced("worker0", t1.getId())) {
+    if (rtrTestUtils.taskAssigned("worker0", t1.getId())) {
       rtrTestUtils.mockWorkerRunningTask("worker0", t1);
       rtrTestUtils.mockWorkerCompleteSuccessfulTask("worker0", t1);
       rtrTestUtils.mockWorkerRunningTask("worker1", t2);

@@ -64,7 +64,7 @@ public class EventReceiverFirehoseMonitor extends AbstractMonitor
               "bufferCapacity",
               String.valueOf(metric.getCapacity())
           );
-      emitter.emit(builder.build("ingest/events/buffered", metric.getCurrentBufferSize()));
+      emitter.emit(builder.setMetric("ingest/events/buffered", metric.getCurrentBufferSize()));
       Map<String, Long> diff = keyedDiff.to(
           serviceName,
           ImmutableMap.of("ingest/bytes/received", metric.getBytesReceived())
@@ -72,7 +72,7 @@ public class EventReceiverFirehoseMonitor extends AbstractMonitor
       if (diff != null) {
         final ServiceMetricEvent.Builder eventBuilder = createEventBuilder(serviceName);
         for (Map.Entry<String, Long> diffEntry : diff.entrySet()) {
-          emitter.emit(eventBuilder.build(diffEntry.getKey(), diffEntry.getValue()));
+          emitter.emit(eventBuilder.setMetric(diffEntry.getKey(), diffEntry.getValue()));
         }
       }
     }

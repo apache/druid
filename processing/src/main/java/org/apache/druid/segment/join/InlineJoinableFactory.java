@@ -30,7 +30,8 @@ import java.util.Optional;
 import java.util.Set;
 
 /**
- * A {@link JoinableFactory} for {@link InlineDataSource}. It works by building an {@link IndexedTable}.
+ * A {@link JoinableFactory} for {@link InlineDataSource}.
+ * It works by building an {@link IndexedTable}.
  *
  * It is not valid to pass any other DataSource type to the "build" method.
  */
@@ -48,7 +49,7 @@ public class InlineJoinableFactory implements JoinableFactory
   @Override
   public Optional<Joinable> build(final DataSource dataSource, final JoinConditionAnalysis condition)
   {
-    final InlineDataSource inlineDataSource = (InlineDataSource) dataSource;
+    InlineDataSource inlineDataSource = (InlineDataSource) dataSource;
 
     if (condition.canHashJoin()) {
       final Set<String> rightKeyColumns = condition.getRightEquiConditionKeys();

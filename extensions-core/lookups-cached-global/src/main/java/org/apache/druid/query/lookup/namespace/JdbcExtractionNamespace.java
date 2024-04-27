@@ -34,6 +34,7 @@ import javax.annotation.Nullable;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
 import java.util.Objects;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  *
@@ -44,6 +45,7 @@ public class JdbcExtractionNamespace implements ExtractionNamespace
   private static final Logger LOG = new Logger(JdbcExtractionNamespace.class);
 
   long DEFAULT_MAX_HEAP_PERCENTAGE = 10L;
+  long DEFAULT_LOOKUP_LOAD_TIME_SECONDS = 120;
 
   @JsonProperty
   private final MetadataStorageConnectorConfig connectorConfig;
@@ -61,6 +63,10 @@ public class JdbcExtractionNamespace implements ExtractionNamespace
   private final Period pollPeriod;
   @JsonProperty
   private final long maxHeapPercentage;
+  @JsonProperty
+  private final long loadTimeoutSeconds;
+  @JsonProperty
+  private final int jitterSeconds;
 
   @JsonCreator
   public JdbcExtractionNamespace(
@@ -73,6 +79,8 @@ public class JdbcExtractionNamespace implements ExtractionNamespace
       @JsonProperty(value = "filter") @Nullable final String filter,
       @Min(0) @JsonProperty(value = "pollPeriod") @Nullable final Period pollPeriod,
       @JsonProperty(value = "maxHeapPercentage") @Nullable final Long maxHeapPercentage,
+      @JsonProperty(value = "jitterSeconds") @Nullable Integer jitterSeconds,
+      @JsonProperty(value = "loadTimeoutSeconds") @Nullable final Long loadTimeoutSeconds,
       @JacksonInject JdbcAccessSecurityConfig securityConfig
   )
   {
@@ -88,14 +96,16 @@ public class JdbcExtractionNamespace implements ExtractionNamespace
     this.filter = filter;
     if (pollPeriod == null) {
       // Warning because if JdbcExtractionNamespace is being used for lookups, any updates to the database will not
-      // be picked up after the node starts. So for use casses where nodes start at different times (like streaming
+      // be picked up after the node starts. So for use cases where nodes start at different times (like streaming
       // ingestion with peons) there can be data inconsistencies across the cluster.
       LOG.warn("No pollPeriod configured for JdbcExtractionNamespace - entries will be loaded only once at startup");
       this.pollPeriod = new Period(0L);
     } else {
       this.pollPeriod = pollPeriod;
     }
+    this.jitterSeconds = jitterSeconds == null ? 0 : jitterSeconds;
     this.maxHeapPercentage = maxHeapPercentage == null ? DEFAULT_MAX_HEAP_PERCENTAGE : maxHeapPercentage;
+    this.loadTimeoutSeconds = loadTimeoutSeconds == null ? DEFAULT_LOOKUP_LOAD_TIME_SECONDS : loadTimeoutSeconds;
   }
 
   /**
@@ -163,6 +173,21 @@ public class JdbcExtractionNamespace implements ExtractionNamespace
   }
 
   @Override
+  public long getJitterMills()
+  {
+    if (jitterSeconds == 0) {
+      return jitterSeconds;
+    }
+    return 1000L * ThreadLocalRandom.current().nextInt(jitterSeconds + 1);
+  }
+
+  @Override
+  public long getLoadTimeoutMills()
+  {
+    return 1000L * loadTimeoutSeconds;
+  }
+
+  @Override
   public String toString()
   {
     return "JdbcExtractionNamespace{" +
@@ -173,6 +198,8 @@ public class JdbcExtractionNamespace implements ExtractionNamespace
            ", tsColumn='" + tsColumn + '\'' +
            ", filter='" + filter + '\'' +
            ", pollPeriod=" + pollPeriod +
+           ", jitterSeconds=" + jitterSeconds +
+           ", loadTimeoutSeconds=" + loadTimeoutSeconds +
            ", maxHeapPercentage=" + maxHeapPercentage +
            '}';
   }

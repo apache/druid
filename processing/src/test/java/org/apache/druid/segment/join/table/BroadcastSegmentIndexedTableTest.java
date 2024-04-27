@@ -24,7 +24,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import it.unimi.dsi.fastutil.ints.IntList;
+import it.unimi.dsi.fastutil.ints.IntBidirectionalIterator;
+import it.unimi.dsi.fastutil.ints.IntSortedSet;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.jackson.SegmentizerModule;
@@ -46,6 +47,7 @@ import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.BaseColumn;
+import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.loading.MMappedQueryableSegmentizerFactory;
@@ -101,7 +103,7 @@ public class BroadcastSegmentIndexedTableTest extends InitializedNullHandlingTes
   {
     final ObjectMapper mapper = new DefaultObjectMapper();
     mapper.registerModule(new SegmentizerModule());
-    final IndexIO indexIO = new IndexIO(mapper, () -> 0);
+    final IndexIO indexIO = new IndexIO(mapper, ColumnConfig.DEFAULT);
     mapper.setInjectableValues(
         new InjectableValues.Std()
             .addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)
@@ -119,7 +121,7 @@ public class BroadcastSegmentIndexedTableTest extends InitializedNullHandlingTes
         data,
         testInterval,
         segment,
-        new IndexSpec(),
+        IndexSpec.DEFAULT,
         null
     );
     File factoryJson = new File(persisted, "factory.json");
@@ -263,18 +265,15 @@ public class BroadcastSegmentIndexedTableTest extends InitializedNullHandlingTes
 
       // lets try a few values out
       for (Object val : vals) {
-        final IntList valIndex = valueIndex.find(val);
-        if (val == null) {
-          Assert.assertEquals(0, valIndex.size());
-        } else {
-          Assert.assertTrue(valIndex.size() > 0);
-          for (int i = 0; i < valIndex.size(); i++) {
-            Assert.assertEquals(val, reader.read(valIndex.getInt(i)));
-          }
+        final IntSortedSet valIndex = valueIndex.find(val);
+        Assert.assertTrue(valIndex.size() > 0);
+        final IntBidirectionalIterator rowIterator = valIndex.iterator();
+        while (rowIterator.hasNext()) {
+          Assert.assertEquals(val, reader.read(rowIterator.nextInt()));
         }
       }
       for (Object val : nonmatchingVals) {
-        final IntList valIndex = valueIndex.find(val);
+        final IntSortedSet valIndex = valueIndex.find(val);
         Assert.assertEquals(0, valIndex.size());
       }
     }

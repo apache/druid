@@ -60,7 +60,7 @@ public class SortCollapseRule extends RelOptRule
       );
 
       call.transformTo(combined);
-      call.getPlanner().setImportance(outerSort, 0.0);
+      call.getPlanner().prune(outerSort);
     }
   }
 }

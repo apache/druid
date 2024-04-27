@@ -22,6 +22,7 @@ package org.apache.druid.msq.statistics;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import org.apache.druid.collections.SerializablePair;
 import org.apache.druid.frame.key.RowKey;
@@ -31,8 +32,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+@JsonTypeName(DistinctKeySnapshot.TYPE)
 public class DistinctKeySnapshot implements KeyCollectorSnapshot
 {
+  static final String TYPE = "distinct";
   private final List<SerializablePair<RowKey, Long>> keys;
   private final int spaceReductionFactor;
 

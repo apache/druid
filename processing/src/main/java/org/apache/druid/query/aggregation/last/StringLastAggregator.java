@@ -57,9 +57,6 @@ public class StringLastAggregator implements Aggregator
   @Override
   public void aggregate()
   {
-    if (timeSelector.isNull()) {
-      return;
-    }
     if (needsFoldCheck) {
       // Less efficient code path when folding is a possibility (we must read the value selector first just in case
       // it's a foldable object).
@@ -73,6 +70,9 @@ public class StringLastAggregator implements Aggregator
         lastValue = StringUtils.fastLooseChop(inPair.rhs, maxStringBytes);
       }
     } else {
+      if (timeSelector.isNull()) {
+        return;
+      }
       final long time = timeSelector.getLong();
 
       if (time >= lastTime) {

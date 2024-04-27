@@ -28,7 +28,6 @@ import org.apache.druid.segment.selector.settable.SettableColumnValueSelector;
 
 import javax.annotation.Nullable;
 import java.util.HashMap;
-import java.util.List;
 
 public class ColumnCache implements ColumnSelector
 {
@@ -44,12 +43,6 @@ public class ColumnCache implements ColumnSelector
     this.holderCache = new HashMap<>();
   }
 
-
-  @Override
-  public List<String> getColumnNames()
-  {
-    return index.getColumnNames();
-  }
 
   @Nullable
   @Override

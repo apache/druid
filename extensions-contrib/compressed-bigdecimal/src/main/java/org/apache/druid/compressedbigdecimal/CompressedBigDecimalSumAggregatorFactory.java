@@ -30,8 +30,6 @@ import org.apache.druid.segment.ColumnValueSelector;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.Collections;
-import java.util.List;
 
 public class CompressedBigDecimalSumAggregatorFactory extends CompressedBigDecimalAggregatorFactoryBase
 {
@@ -116,18 +114,6 @@ public class CompressedBigDecimalSumAggregatorFactory extends CompressedBigDecim
   public AggregateCombiner<CompressedBigDecimal> makeAggregateCombiner()
   {
     return new CompressedBigDecimalSumAggregateCombiner();
-  }
-
-  @Override
-  public List<AggregatorFactory> getRequiredColumns()
-  {
-    return Collections.singletonList(new CompressedBigDecimalSumAggregatorFactory(
-        name,
-        fieldName,
-        size,
-        scale,
-        strictNumberParsing
-    ));
   }
 
   @Override

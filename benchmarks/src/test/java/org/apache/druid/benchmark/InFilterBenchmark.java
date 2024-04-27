@@ -28,11 +28,13 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.InDimFilter;
+import org.apache.druid.query.filter.TypedInFilter;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.segment.filter.Filters;
-import org.apache.druid.segment.serde.DictionaryEncodedStringIndexSupplier;
+import org.apache.druid.segment.serde.StringUtf8ColumnIndexSupplier;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -53,8 +55,8 @@ import java.util.stream.IntStream;
 
 @State(Scope.Benchmark)
 @Fork(value = 1)
-@Warmup(iterations = 10)
-@Measurement(iterations = 10)
+@Warmup(iterations = 2)
+@Measurement(iterations = 3)
 public class InFilterBenchmark
 {
   static {
@@ -65,6 +67,8 @@ public class InFilterBenchmark
 
   private InDimFilter inFilter;
   private InDimFilter endInDimFilter;
+  private TypedInFilter newInFilter;
+  private TypedInFilter newEndInFilter;
 
   // cardinality of the dictionary. it will contain this many ints (as strings, of course), starting at START_INT,
   // even numbers only.
@@ -83,17 +87,12 @@ public class InFilterBenchmark
   public void setup()
   {
     final BitmapFactory bitmapFactory = new RoaringBitmapFactory();
-    final BitmapSerdeFactory serdeFactory = new RoaringBitmapSerdeFactory(null);
+    final BitmapSerdeFactory serdeFactory = RoaringBitmapSerdeFactory.getInstance();
     final Iterable<Integer> ints = intGenerator();
-    final GenericIndexed<String> dictionary = GenericIndexed.fromIterable(
-        FluentIterable.from(ints)
-                      .transform(Object::toString),
-        GenericIndexed.STRING_STRATEGY
-    );
     final GenericIndexed<ByteBuffer> dictionaryUtf8 = GenericIndexed.fromIterable(
         FluentIterable.from(ints)
                       .transform(i -> ByteBuffer.wrap(StringUtils.toUtf8(String.valueOf(i)))),
-        GenericIndexed.BYTE_BUFFER_STRATEGY
+        GenericIndexed.UTF8_STRATEGY
     );
     final GenericIndexed<ImmutableBitmap> bitmaps = GenericIndexed.fromIterable(
         () -> IntStream.range(0, dictionarySize)
@@ -109,18 +108,35 @@ public class InFilterBenchmark
     );
     selector = new MockColumnIndexSelector(
         bitmapFactory,
-        new DictionaryEncodedStringIndexSupplier(bitmapFactory, dictionary, dictionaryUtf8, bitmaps, null)
+        new StringUtf8ColumnIndexSupplier<>(bitmapFactory, dictionaryUtf8::singleThreaded, bitmaps, null)
     );
     inFilter = new InDimFilter(
         "dummy",
         IntStream.range(START_INT, START_INT + filterSize).mapToObj(String::valueOf).collect(Collectors.toSet())
     );
+    newInFilter = (TypedInFilter) new TypedInFilter(
+        "dummy",
+        ColumnType.STRING,
+        IntStream.range(START_INT, START_INT + filterSize).mapToObj(String::valueOf).collect(Collectors.toList()),
+        null,
+        null
+    ).toFilter();
     endInDimFilter = new InDimFilter(
         "dummy",
         IntStream.range(START_INT + dictionarySize * 2, START_INT + dictionarySize * 2 + 1)
                  .mapToObj(String::valueOf)
                  .collect(Collectors.toSet())
     );
+
+    newEndInFilter = (TypedInFilter) new TypedInFilter(
+        "dummy",
+        ColumnType.STRING,
+        IntStream.range(START_INT + dictionarySize * 2, START_INT + dictionarySize * 2 + 1)
+                 .mapToObj(String::valueOf)
+                 .collect(Collectors.toList()),
+        null,
+        null
+    ).toFilter();
   }
 
   @Benchmark
@@ -138,6 +154,24 @@ public class InFilterBenchmark
   public void doFilterAtEnd(Blackhole blackhole)
   {
     final ImmutableBitmap bitmapIndex = Filters.computeDefaultBitmapResults(endInDimFilter, selector);
+    blackhole.consume(bitmapIndex);
+  }
+
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @OutputTimeUnit(TimeUnit.MICROSECONDS)
+  public void doFilter2(Blackhole blackhole)
+  {
+    final ImmutableBitmap bitmapIndex = Filters.computeDefaultBitmapResults(newInFilter, selector);
+    blackhole.consume(bitmapIndex);
+  }
+
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @OutputTimeUnit(TimeUnit.MICROSECONDS)
+  public void doFilterAtEnd2(Blackhole blackhole)
+  {
+    final ImmutableBitmap bitmapIndex = Filters.computeDefaultBitmapResults(newEndInFilter, selector);
     blackhole.consume(bitmapIndex);
   }
 

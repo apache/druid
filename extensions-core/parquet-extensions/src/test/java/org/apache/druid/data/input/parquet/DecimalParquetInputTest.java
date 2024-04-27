@@ -62,6 +62,35 @@ public class DecimalParquetInputTest extends BaseParquetInputTest
         parserType,
         true
     );
+    /*
+    The raw data in the parquet file has the following columns:
+    ############ Column(fixed_len_dec) ############
+    name: fixed_len_dec
+    path: fixed_len_dec
+    max_definition_level: 1
+    max_repetition_level: 0
+    physical_type: FIXED_LEN_BYTE_ARRAY
+    logical_type: Decimal(precision=10, scale=2)
+    converted_type (legacy): DECIMAL
+
+    The raw data in the parquet file has the following rows:
+    0.0
+    1.0
+    2.0
+    3.0
+    4.0
+    5.0
+    6.0
+    7.0
+    8.0
+    9.0
+    0.0
+    1.0
+    2.0
+    3.0
+    4.0
+    5.0
+     */
     List<InputRow> rows = getAllRows(parserType, config);
     Assert.assertEquals("2018-09-01T00:00:00.000Z", rows.get(0).getTimestamp().toString());
     Assert.assertEquals("1.0", rows.get(0).getDimension("fixed_len_dec").get(0));
@@ -80,10 +109,39 @@ public class DecimalParquetInputTest extends BaseParquetInputTest
         parserType,
         true
     );
+    /*
+    The raw data in the parquet file has the following columns:
+    ############ Column(i32_dec) ############
+    name: i32_dec
+    path: i32_dec
+    max_definition_level: 1
+    max_repetition_level: 0
+    physical_type: INT32
+    logical_type: Decimal(precision=5, scale=2)
+    converted_type (legacy): DECIMAL
+
+    The raw data in the parquet file has the following rows:
+    0
+    1.00
+    2.00
+    3.00
+    4.00
+    5.00
+    6.00
+    7.00
+    8.00
+    9.00
+    0
+    1.00
+    2.00
+    3.00
+    4.00
+    5.00
+     */
     List<InputRow> rows = getAllRows(parserType, config);
     Assert.assertEquals("2018-09-01T00:00:00.000Z", rows.get(0).getTimestamp().toString());
-    Assert.assertEquals("100", rows.get(0).getDimension("i32_dec").get(0));
-    Assert.assertEquals(new BigDecimal(100), rows.get(0).getMetric("metric1"));
+    Assert.assertEquals("1.00", rows.get(0).getDimension("i32_dec").get(0));
+    Assert.assertEquals(BigDecimal.valueOf(100L, 2), rows.get(0).getMetric("metric1"));
   }
 
   @Test
@@ -98,9 +156,38 @@ public class DecimalParquetInputTest extends BaseParquetInputTest
         parserType,
         true
     );
+    /*
+    The raw data in the parquet file has the following columns:
+    ############ Column(i64_dec) ############
+    name: i64_dec
+    path: i64_dec
+    max_definition_level: 1
+    max_repetition_level: 0
+    physical_type: INT64
+    logical_type: Decimal(precision=10, scale=2)
+    converted_type (legacy): DECIMAL
+
+    The raw data in the parquet file has the following rows:
+    0
+    1.00
+    2.00
+    3.00
+    4.00
+    5.00
+    6.00
+    7.00
+    8.00
+    9.00
+    0
+    1.00
+    2.00
+    3.00
+    4.00
+    5.00
+     */
     List<InputRow> rows = getAllRows(parserType, config);
     Assert.assertEquals("2018-09-01T00:00:00.000Z", rows.get(0).getTimestamp().toString());
-    Assert.assertEquals("100", rows.get(0).getDimension("i64_dec").get(0));
-    Assert.assertEquals(new BigDecimal(100), rows.get(0).getMetric("metric1"));
+    Assert.assertEquals("1.00", rows.get(0).getDimension("i64_dec").get(0));
+    Assert.assertEquals(BigDecimal.valueOf(100L, 2), rows.get(0).getMetric("metric1"));
   }
 }

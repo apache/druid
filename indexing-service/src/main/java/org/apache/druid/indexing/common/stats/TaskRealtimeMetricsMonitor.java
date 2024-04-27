@@ -31,6 +31,7 @@ import org.apache.druid.segment.incremental.RowIngestionMetersTotals;
 import org.apache.druid.segment.realtime.FireDepartment;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 
+import javax.annotation.Nullable;
 import java.util.Map;
 
 /**
@@ -46,44 +47,25 @@ public class TaskRealtimeMetricsMonitor extends AbstractMonitor
   private final FireDepartment fireDepartment;
   private final RowIngestionMeters rowIngestionMeters;
   private final Map<String, String[]> dimensions;
+  @Nullable
+  private final Map<String, Object> metricTags;
 
   private FireDepartmentMetrics previousFireDepartmentMetrics;
   private RowIngestionMetersTotals previousRowIngestionMetersTotals;
 
-  private volatile boolean lastRoundMetricsToBePushed = false;
-
   public TaskRealtimeMetricsMonitor(
       FireDepartment fireDepartment,
       RowIngestionMeters rowIngestionMeters,
-      Map<String, String[]> dimensions
+      Map<String, String[]> dimensions,
+      @Nullable Map<String, Object> metricTags
   )
   {
     this.fireDepartment = fireDepartment;
     this.rowIngestionMeters = rowIngestionMeters;
     this.dimensions = ImmutableMap.copyOf(dimensions);
+    this.metricTags = metricTags;
     previousFireDepartmentMetrics = new FireDepartmentMetrics();
-    previousRowIngestionMetersTotals = new RowIngestionMetersTotals(0, 0, 0, 0);
-  }
-
-  @Override
-  public void start()
-  {
-    super.start();
-    lastRoundMetricsToBePushed = true;
-  }
-
-  @Override
-  public boolean monitor(ServiceEmitter emitter)
-  {
-    if (isStarted()) {
-      return doMonitor(emitter);
-    } else if (lastRoundMetricsToBePushed) {
-      // Run one more time even if the monitor was removed, in case there's some extra data to flush
-      lastRoundMetricsToBePushed = false;
-      return doMonitor(emitter);
-    }
-
-    return false;
+    previousRowIngestionMetersTotals = new RowIngestionMetersTotals(0, 0, 0, 0, 0);
   }
 
   @Override
@@ -103,46 +85,62 @@ public class TaskRealtimeMetricsMonitor extends AbstractMonitor
           thrownAway
       );
     }
-    emitter.emit(builder.build("ingest/events/thrownAway", thrownAway));
+    builder.setDimensionIfNotNull(DruidMetrics.TAGS, metricTags);
+    emitter.emit(builder.setMetric("ingest/events/thrownAway", thrownAway));
 
     final long unparseable = rowIngestionMetersTotals.getUnparseable()
                              - previousRowIngestionMetersTotals.getUnparseable();
     if (unparseable > 0) {
       log.error("[%,d] unparseable events discarded. Turn on debug logging to see exception stack trace.", unparseable);
     }
-    emitter.emit(builder.build("ingest/events/unparseable", unparseable));
+    emitter.emit(builder.setMetric("ingest/events/unparseable", unparseable));
 
     final long processedWithError = rowIngestionMetersTotals.getProcessedWithError() - previousRowIngestionMetersTotals.getProcessedWithError();
     if (processedWithError > 0) {
       log.error("[%,d] events processed with errors! Set logParseExceptions to true in the ingestion spec to log these errors.", processedWithError);
     }
-    emitter.emit(builder.build("ingest/events/processedWithError", processedWithError));
+    emitter.emit(builder.setMetric("ingest/events/processedWithError", processedWithError));
 
-    emitter.emit(builder.build("ingest/events/processed", rowIngestionMetersTotals.getProcessed() - previousRowIngestionMetersTotals.getProcessed()));
+    emitter.emit(builder.setMetric("ingest/events/processed", rowIngestionMetersTotals.getProcessed() - previousRowIngestionMetersTotals.getProcessed()));
 
     final long dedup = metrics.dedup() - previousFireDepartmentMetrics.dedup();
     if (dedup > 0) {
       log.warn("[%,d] duplicate events!", dedup);
     }
-    emitter.emit(builder.build("ingest/events/duplicate", dedup));
-
-    emitter.emit(builder.build("ingest/rows/output", metrics.rowOutput() - previousFireDepartmentMetrics.rowOutput()));
-    emitter.emit(builder.build("ingest/persists/count", metrics.numPersists() - previousFireDepartmentMetrics.numPersists()));
-    emitter.emit(builder.build("ingest/persists/time", metrics.persistTimeMillis() - previousFireDepartmentMetrics.persistTimeMillis()));
-    emitter.emit(builder.build("ingest/persists/cpu", metrics.persistCpuTime() - previousFireDepartmentMetrics.persistCpuTime()));
+    emitter.emit(builder.setMetric("ingest/events/duplicate", dedup));
     emitter.emit(
-        builder.build(
+        builder.setMetric(
+            "ingest/input/bytes",
+            rowIngestionMetersTotals.getProcessedBytes() - previousRowIngestionMetersTotals.getProcessedBytes()
+        )
+    );
+
+    emitter.emit(builder.setMetric("ingest/rows/output", metrics.rowOutput() - previousFireDepartmentMetrics.rowOutput()));
+    emitter.emit(builder.setMetric("ingest/persists/count", metrics.numPersists() - previousFireDepartmentMetrics.numPersists()));
+    emitter.emit(builder.setMetric("ingest/persists/time", metrics.persistTimeMillis() - previousFireDepartmentMetrics.persistTimeMillis()));
+    emitter.emit(builder.setMetric("ingest/persists/cpu", metrics.persistCpuTime() - previousFireDepartmentMetrics.persistCpuTime()));
+    emitter.emit(
+        builder.setMetric(
             "ingest/persists/backPressure",
             metrics.persistBackPressureMillis() - previousFireDepartmentMetrics.persistBackPressureMillis()
         )
     );
-    emitter.emit(builder.build("ingest/persists/failed", metrics.failedPersists() - previousFireDepartmentMetrics.failedPersists()));
-    emitter.emit(builder.build("ingest/handoff/failed", metrics.failedHandoffs() - previousFireDepartmentMetrics.failedHandoffs()));
-    emitter.emit(builder.build("ingest/merge/time", metrics.mergeTimeMillis() - previousFireDepartmentMetrics.mergeTimeMillis()));
-    emitter.emit(builder.build("ingest/merge/cpu", metrics.mergeCpuTime() - previousFireDepartmentMetrics.mergeCpuTime()));
-    emitter.emit(builder.build("ingest/handoff/count", metrics.handOffCount() - previousFireDepartmentMetrics.handOffCount()));
-    emitter.emit(builder.build("ingest/sink/count", metrics.sinkCount()));
-    emitter.emit(builder.build("ingest/events/messageGap", metrics.messageGap()));
+    emitter.emit(builder.setMetric("ingest/persists/failed", metrics.failedPersists() - previousFireDepartmentMetrics.failedPersists()));
+    emitter.emit(builder.setMetric("ingest/handoff/failed", metrics.failedHandoffs() - previousFireDepartmentMetrics.failedHandoffs()));
+    emitter.emit(builder.setMetric("ingest/merge/time", metrics.mergeTimeMillis() - previousFireDepartmentMetrics.mergeTimeMillis()));
+    emitter.emit(builder.setMetric("ingest/merge/cpu", metrics.mergeCpuTime() - previousFireDepartmentMetrics.mergeCpuTime()));
+    emitter.emit(builder.setMetric("ingest/handoff/count", metrics.handOffCount() - previousFireDepartmentMetrics.handOffCount()));
+    emitter.emit(builder.setMetric("ingest/sink/count", metrics.sinkCount()));
+
+    long messageGap = metrics.messageGap();
+    if (messageGap >= 0) {
+      emitter.emit(builder.setMetric("ingest/events/messageGap", messageGap));
+    }
+
+    long maxSegmentHandoffTime = metrics.maxSegmentHandoffTime();
+    if (maxSegmentHandoffTime >= 0) {
+      emitter.emit(builder.setMetric("ingest/handoff/time", maxSegmentHandoffTime));
+    }
 
     previousRowIngestionMetersTotals = rowIngestionMetersTotals;
     previousFireDepartmentMetrics = metrics;

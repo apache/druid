@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment;
 
-import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 import com.google.common.collect.PeekingIterator;
 import it.unimi.dsi.fastutil.ints.IntIterable;
@@ -32,6 +31,7 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -42,6 +42,7 @@ import org.apache.druid.segment.data.ColumnarIntsSerializer;
 import org.apache.druid.segment.data.ColumnarMultiIntsSerializer;
 import org.apache.druid.segment.data.CompressedVSizeColumnarIntsSerializer;
 import org.apache.druid.segment.data.CompressionStrategy;
+import org.apache.druid.segment.data.DictionaryWriter;
 import org.apache.druid.segment.data.GenericIndexedWriter;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.IndexedInts;
@@ -91,8 +92,10 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
   protected DictionaryMergingIterator<T> dictionaryMergeIterator;
   @Nullable
   protected ColumnarIntsSerializer encodedValueSerializer;
+
   @Nullable
-  protected GenericIndexedWriter<T> dictionaryWriter;
+  protected DictionaryWriter<T> dictionaryWriter;
+
   @Nullable
   protected T firstDictionaryValue;
 
@@ -145,7 +148,7 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
       Indexed<T> dimValues = closer.register(adapters.get(i).getDimValueLookup(dimensionName));
       if (dimValues != null && !allNull(dimValues)) {
         dimHasValues = true;
-        hasNull |= dimValues.indexOf(null) >= 0;
+        hasNull = hasNull || dimValues.indexOf(null) >= 0;
         dimValueLookups[i] = dimValueLookup = dimValues;
         numMergeIndex++;
       } else {
@@ -169,7 +172,7 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
     }
 
     String dictFilename = StringUtils.format("%s.dim_values", dimensionName);
-    dictionaryWriter = new GenericIndexedWriter<>(segmentWriteOutMedium, dictFilename, getObjectStrategy());
+    dictionaryWriter = makeDictionaryWriter(dictFilename);
     firstDictionaryValue = null;
     dictionarySize = 0;
     dictionaryWriter.open();
@@ -258,7 +261,7 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
       }
 
       @Override
-      public ValueMatcher makeValueMatcher(Predicate<String> predicate)
+      public ValueMatcher makeValueMatcher(DruidPredicateFactory predicateFactory)
       {
         throw new UnsupportedOperationException();
       }
@@ -384,7 +387,10 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
     }
   }
 
-
+  protected DictionaryWriter<T> makeDictionaryWriter(String fileName)
+  {
+    return new GenericIndexedWriter<>(segmentWriteOutMedium, fileName, getObjectStrategy());
+  }
 
   @Nullable
   protected ExtendedIndexesMerger getExtendedIndexesMerger()
@@ -417,7 +423,8 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
             segmentWriteOutMedium,
             filenameBase,
             cardinality,
-            compressionStrategy
+            compressionStrategy,
+            segmentWriteOutMedium.getCloser()
         );
       } else {
         encodedValueSerializer = new VSizeColumnarIntsSerializer(segmentWriteOutMedium, cardinality);
@@ -678,7 +685,7 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
    * {@link DictionaryEncodedColumnMerger#writeIndexes(List)} is called, on top of the standard bitmap index created
    * with {@link DictionaryEncodedColumnMerger#mergeBitmaps}
    */
-  interface ExtendedIndexesMerger
+  protected interface ExtendedIndexesMerger
   {
     void initialize() throws IOException;
 

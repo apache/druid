@@ -20,15 +20,15 @@
 package org.apache.druid.query.aggregation.datasketches.theta;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.jackson.DefaultTrueJsonIncludeFilter;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorFactoryNotMergeableException;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nullable;
-import java.util.Collections;
-import java.util.List;
 
 public class SketchMergeAggregatorFactory extends SketchAggregatorFactory
 {
@@ -51,21 +51,6 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory
     this.shouldFinalize = (shouldFinalize == null) ? true : shouldFinalize;
     this.isInputThetaSketch = (isInputThetaSketch == null) ? false : isInputThetaSketch;
     this.errorBoundsStdDev = errorBoundsStdDev;
-  }
-
-  @Override
-  public List<AggregatorFactory> getRequiredColumns()
-  {
-    return Collections.singletonList(
-        new SketchMergeAggregatorFactory(
-            fieldName,
-            fieldName,
-            size,
-            shouldFinalize,
-            isInputThetaSketch,
-            errorBoundsStdDev
-        )
-    );
   }
 
   @Override
@@ -94,12 +79,14 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory
   }
 
   @JsonProperty
+  @JsonInclude(value = JsonInclude.Include.CUSTOM, valueFilter = DefaultTrueJsonIncludeFilter.class)
   public boolean getShouldFinalize()
   {
     return shouldFinalize;
   }
 
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_DEFAULT)
   public boolean getIsInputThetaSketch()
   {
     return isInputThetaSketch;
@@ -107,6 +94,7 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory
 
   @Nullable
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public Integer getErrorBoundsStdDev()
   {
     return errorBoundsStdDev;

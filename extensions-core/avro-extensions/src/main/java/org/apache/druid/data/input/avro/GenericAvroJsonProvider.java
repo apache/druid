@@ -20,22 +20,17 @@
 package org.apache.druid.data.input.avro;
 
 import com.google.common.collect.ImmutableMap;
-import com.jayway.jsonpath.InvalidJsonException;
-import com.jayway.jsonpath.spi.json.JsonProvider;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericEnumSymbol;
 import org.apache.avro.generic.GenericFixed;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.util.Utf8;
+import org.apache.druid.java.util.common.parsers.FlattenerJsonProvider;
 
 import javax.annotation.Nullable;
-
-import java.io.InputStream;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -43,43 +38,13 @@ import java.util.stream.Collectors;
 /**
  * JsonProvider for JsonPath + Avro.
  */
-public class GenericAvroJsonProvider implements JsonProvider
+public class GenericAvroJsonProvider extends FlattenerJsonProvider
 {
   private final boolean extractUnionsByType;
 
   GenericAvroJsonProvider(final boolean extractUnionsByType)
   {
     this.extractUnionsByType = extractUnionsByType;
-  }
-
-  @Override
-  public Object parse(final String s) throws InvalidJsonException
-  {
-    throw new UnsupportedOperationException("Unused");
-  }
-
-  @Override
-  public Object parse(final InputStream inputStream, final String s) throws InvalidJsonException
-  {
-    throw new UnsupportedOperationException("Unused");
-  }
-
-  @Override
-  public String toJson(final Object o)
-  {
-    throw new UnsupportedOperationException("Unused");
-  }
-
-  @Override
-  public Object createArray()
-  {
-    return new ArrayList<>();
-  }
-
-  @Override
-  public Object createMap()
-  {
-    return new HashMap<>();
   }
 
   @Override
@@ -101,16 +66,6 @@ public class GenericAvroJsonProvider implements JsonProvider
   }
 
   @Override
-  public Iterable<?> toIterable(final Object o)
-  {
-    if (o instanceof List) {
-      return (List) o;
-    } else {
-      throw new UnsupportedOperationException();
-    }
-  }
-
-  @Override
   public Collection<String> getPropertyKeys(final Object o)
   {
     if (o == null) {
@@ -121,34 +76,6 @@ public class GenericAvroJsonProvider implements JsonProvider
       return ((GenericRecord) o).getSchema().getFields().stream().map(Schema.Field::name).collect(Collectors.toSet());
     } else {
       throw new UnsupportedOperationException("Unused");
-    }
-  }
-
-  @Override
-  public Object getArrayIndex(final Object o, final int i)
-  {
-    return ((List) o).get(i);
-  }
-
-  @Override
-  @Deprecated
-  public Object getArrayIndex(final Object o, final int i, final boolean b)
-  {
-    throw new UnsupportedOperationException("Deprecated");
-  }
-
-  @Override
-  public void setArrayIndex(final Object o, final int i, final Object o1)
-  {
-    if (o instanceof List) {
-      final List list = (List) o;
-      if (list.size() == i) {
-        list.add(o1);
-      } else {
-        list.set(i, o1);
-      }
-    } else {
-      throw new UnsupportedOperationException();
     }
   }
 
@@ -190,25 +117,9 @@ public class GenericAvroJsonProvider implements JsonProvider
   }
 
   @Override
-  public void removeProperty(final Object o, final Object o1)
-  {
-    if (o instanceof Map) {
-      ((Map) o).remove(o1);
-    } else {
-      throw new UnsupportedOperationException();
-    }
-  }
-
-  @Override
   public boolean isMap(final Object o)
   {
     return o == null || o instanceof Map || o instanceof GenericRecord;
-  }
-
-  @Override
-  public Object unwrap(final Object o)
-  {
-    return o;
   }
 
   private boolean isExtractableUnion(final Schema.Field field)
@@ -251,5 +162,15 @@ public class GenericAvroJsonProvider implements JsonProvider
       return ImmutableMap.of(((GenericEnumSymbol<?>) o).getSchema().getName(), o);
     }
     return ImmutableMap.of();
+  }
+
+  @Override
+  public Object unwrap(final Object o)
+  {
+    if (o instanceof Utf8) {
+      return o.toString();
+    }
+
+    return o;
   }
 }

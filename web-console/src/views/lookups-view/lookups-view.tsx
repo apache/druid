@@ -19,7 +19,8 @@
 import { Button, Icon, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
-import ReactTable, { Filter } from 'react-table';
+import type { Filter } from 'react-table';
+import ReactTable from 'react-table';
 
 import {
   ACTION_COLUMN_ID,
@@ -34,7 +35,8 @@ import {
 } from '../../components';
 import { AsyncActionDialog, LookupEditDialog } from '../../dialogs/';
 import { LookupTableActionDialog } from '../../dialogs/lookup-table-action-dialog/lookup-table-action-dialog';
-import { LookupSpec, lookupSpecSummary } from '../../druid-models';
+import type { LookupSpec } from '../../druid-models';
+import { lookupSpecSummary } from '../../druid-models';
 import { STANDARD_TABLE_PAGE_SIZE, STANDARD_TABLE_PAGE_SIZE_OPTIONS } from '../../react-table';
 import { Api, AppToaster } from '../../singletons';
 import {
@@ -47,7 +49,7 @@ import {
   QueryManager,
   QueryState,
 } from '../../utils';
-import { BasicAction } from '../../utils/basic-action';
+import type { BasicAction } from '../../utils/basic-action';
 
 import './lookups-view.scss';
 
@@ -86,11 +88,13 @@ export interface LookupEditInfo {
   spec: Partial<LookupSpec>;
 }
 
-export interface LookupsViewProps {}
+export interface LookupsViewProps {
+  filters: Filter[];
+  onFiltersChange(filters: Filter[]): void;
+}
 
 export interface LookupsViewState {
   lookupEntriesAndTiersState: QueryState<LookupEntriesAndTiers>;
-  lookupFilter: Filter[];
 
   lookupEdit?: LookupEditInfo;
   isEdit: boolean;
@@ -111,7 +115,6 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
     super(props);
     this.state = {
       lookupEntriesAndTiersState: QueryState.INIT,
-      lookupFilter: [],
       isEdit: false,
       actions: [],
 
@@ -318,14 +321,14 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
   }
 
   private renderFilterableCell(field: string) {
-    const { lookupFilter } = this.state;
+    const { filters, onFiltersChange } = this.props;
 
     return (row: { value: any }) => (
       <TableFilterableCell
         field={field}
         value={row.value}
-        filters={lookupFilter}
-        onFiltersChange={filters => this.setState({ lookupFilter: filters })}
+        filters={filters}
+        onFiltersChange={onFiltersChange}
       >
         {row.value}
       </TableFilterableCell>
@@ -333,7 +336,8 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
   }
 
   private renderLookupsTable() {
-    const { lookupEntriesAndTiersState, lookupFilter, visibleColumns } = this.state;
+    const { filters, onFiltersChange } = this.props;
+    const { lookupEntriesAndTiersState, visibleColumns } = this.state;
     const lookupEntriesAndTiers = lookupEntriesAndTiersState.data;
     const lookups = lookupEntriesAndTiers ? lookupEntriesAndTiers.lookupEntries : [];
 
@@ -343,7 +347,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
           <Button
             icon={IconNames.BUILD}
             text="Initialize lookups"
-            onClick={() => this.initializeLookup()}
+            onClick={() => void this.initializeLookup()}
           />
         </div>
       );
@@ -353,16 +357,10 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
       <ReactTable
         data={lookups}
         loading={lookupEntriesAndTiersState.loading}
-        noDataText={
-          !lookupEntriesAndTiersState.loading && !lookups.length
-            ? 'No lookups'
-            : lookupEntriesAndTiersState.getErrorMessage() || ''
-        }
+        noDataText={lookupEntriesAndTiersState.getErrorMessage() || 'No lookups'}
         filterable
-        filtered={lookupFilter}
-        onFilteredChange={filtered => {
-          this.setState({ lookupFilter: filtered });
-        }}
+        filtered={filters}
+        onFilteredChange={onFiltersChange}
         defaultSorted={[{ id: 'lookup_name', desc: false }]}
         defaultPageSize={STANDARD_TABLE_PAGE_SIZE}
         pageSizeOptions={STANDARD_TABLE_PAGE_SIZE_OPTIONS}
@@ -478,7 +476,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
     return (
       <LookupEditDialog
         onClose={() => this.setState({ lookupEdit: undefined })}
-        onSubmit={updateLookupVersion => this.submitLookupEdit(updateLookupVersion)}
+        onSubmit={updateLookupVersion => void this.submitLookupEdit(updateLookupVersion)}
         onChange={this.handleChangeLookup}
         lookupId={lookupEdit.id}
         lookupTier={lookupEdit.tier}
@@ -490,7 +488,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
     );
   }
 
-  render(): JSX.Element {
+  render() {
     const { lookupEntriesAndTiersState, visibleColumns, lookupTableActionDialogId, actions } =
       this.state;
 

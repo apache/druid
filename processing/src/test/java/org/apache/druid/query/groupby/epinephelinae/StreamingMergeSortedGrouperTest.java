@@ -53,7 +53,7 @@ public class StreamingMergeSortedGrouperTest extends InitializedNullHandlingTest
   @Test
   public void testAggregate()
   {
-    final TestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
+    final GroupByTestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
     final StreamingMergeSortedGrouper<IntKey> grouper = newGrouper(columnSelectorFactory, 1024);
 
     columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("value", 10L)));
@@ -81,7 +81,7 @@ public class StreamingMergeSortedGrouperTest extends InitializedNullHandlingTest
   @Test(timeout = 60_000L)
   public void testEmptyIterator()
   {
-    final TestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
+    final GroupByTestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
     final StreamingMergeSortedGrouper<IntKey> grouper = newGrouper(columnSelectorFactory, 1024);
 
     grouper.finish();
@@ -104,7 +104,7 @@ public class StreamingMergeSortedGrouperTest extends InitializedNullHandlingTest
   private void testStreamingAggregate(int bufferSize) throws ExecutionException, InterruptedException
   {
     final ExecutorService exec = Execs.multiThreaded(2, "merge-sorted-grouper-test-%d");
-    final TestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
+    final GroupByTestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
     final StreamingMergeSortedGrouper<IntKey> grouper = newGrouper(columnSelectorFactory, bufferSize);
 
     final List<Entry<IntKey>> expected = new ArrayList<>(1024);
@@ -162,7 +162,7 @@ public class StreamingMergeSortedGrouperTest extends InitializedNullHandlingTest
   {
     expectedException.expect(QueryTimeoutException.class);
 
-    final TestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
+    final GroupByTestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
     final StreamingMergeSortedGrouper<IntKey> grouper = newGrouper(columnSelectorFactory, 100);
 
     columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("value", 10L)));
@@ -172,7 +172,7 @@ public class StreamingMergeSortedGrouperTest extends InitializedNullHandlingTest
   }
 
   private StreamingMergeSortedGrouper<IntKey> newGrouper(
-      TestColumnSelectorFactory columnSelectorFactory,
+      GroupByTestColumnSelectorFactory columnSelectorFactory,
       int bufferSize
   )
   {

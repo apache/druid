@@ -47,8 +47,8 @@ public class DruidSchemaCatalog
   private final Map<String, NamedSchema> namedSchemas;
 
   public DruidSchemaCatalog(
-      SchemaPlus rootSchema,
-      Map<String, NamedSchema> schemas
+      final SchemaPlus rootSchema,
+      final Map<String, NamedSchema> schemas
   )
   {
     this.rootSchema = rootSchema;
@@ -102,12 +102,9 @@ public class DruidSchemaCatalog
   @Nullable
   public String getResourceType(String schema, String resourceName)
   {
-    if (namedSchemas.containsKey(schema)) {
-      return namedSchemas.get(schema).getSchemaResourceType(resourceName);
-    }
-    return null;
+    final NamedSchema namedSchema = namedSchemas.get(schema);
+    return namedSchema == null ? null : namedSchema.getSchemaResourceType(resourceName);
   }
-
 
   @Override
   public boolean equals(Object o)
@@ -118,7 +115,7 @@ public class DruidSchemaCatalog
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    DruidSchemaCatalog that = (DruidSchemaCatalog) o;
+    final DruidSchemaCatalog that = (DruidSchemaCatalog) o;
     return rootSchema.equals(that.rootSchema) && namedSchemas.equals(that.namedSchemas);
   }
 

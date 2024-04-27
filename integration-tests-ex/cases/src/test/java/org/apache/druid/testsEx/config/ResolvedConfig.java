@@ -39,6 +39,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 public class ResolvedConfig
 {
@@ -67,7 +68,7 @@ public class ResolvedConfig
   private final ResolvedMetastore metastore;
   private final Map<String, ResolvedDruidService> druidServices = new HashMap<>();
 
-  public ResolvedConfig(String category, ClusterConfig config)
+  public ResolvedConfig(String category, ClusterConfig config, Set<String> configTags)
   {
     this.category = category;
     type = config.type() == null ? ClusterType.docker : config.type();
@@ -115,8 +116,14 @@ public class ResolvedConfig
 
     if (config.druid() != null) {
       for (Entry<String, DruidConfig> entry : config.druid().entrySet()) {
+        DruidConfig service = entry.getValue();
+        if (service.ifTag() != null) {
+          if (!configTags.contains(service.ifTag())) {
+            continue;
+          }
+        }
         druidServices.put(entry.getKey(),
-            new ResolvedDruidService(this, entry.getValue(), entry.getKey()));
+            new ResolvedDruidService(this, service, entry.getKey()));
       }
     }
   }

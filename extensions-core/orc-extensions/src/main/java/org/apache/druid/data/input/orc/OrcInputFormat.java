@@ -39,6 +39,7 @@ import java.util.Objects;
 
 public class OrcInputFormat extends NestedInputFormat
 {
+  static final long SCALE_FACTOR = 8L;
   private final boolean binaryAsString;
   private final Configuration conf;
 
@@ -92,6 +93,12 @@ public class OrcInputFormat extends NestedInputFormat
   {
     initialize(conf);
     return new OrcReader(conf, inputRowSchema, source, temporaryDirectory, getFlattenSpec(), binaryAsString);
+  }
+
+  @Override
+  public long getWeightedSize(String path, long size)
+  {
+    return size * SCALE_FACTOR;
   }
 
   @Override

@@ -1,0 +1,1 @@
+SELECT LEAD(col2) OVER ( PARTITION BY col3 ORDER BY col1 ) LEAD_col2 FROM "fewRowsAllData.parquet"

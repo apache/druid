@@ -26,6 +26,10 @@
     .rt-td.padded,
     .rt-expandable {
       padding: $table-cell-v-padding $table-cell-h-padding;
+
+      .default-aggregated {
+        padding: 0;
+      }
     }
   }
 
@@ -44,5 +48,9 @@
         visibility: hidden;
       }
     }
+  }
+
+  .default-aggregated {
+    padding: 10px 5px;
   }
 }

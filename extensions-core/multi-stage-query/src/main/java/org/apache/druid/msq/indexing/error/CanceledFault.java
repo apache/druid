@@ -26,7 +26,7 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 public class CanceledFault extends BaseMSQFault
 {
   public static final CanceledFault INSTANCE = new CanceledFault();
-  static final String CODE = "Canceled";
+  public static final String CODE = "Canceled";
 
   CanceledFault()
   {

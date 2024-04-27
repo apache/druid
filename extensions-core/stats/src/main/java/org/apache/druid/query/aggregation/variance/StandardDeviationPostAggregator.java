@@ -79,7 +79,11 @@ public class StandardDeviationPostAggregator implements PostAggregator
   @Nullable
   public Double compute(Map<String, Object> combinedAggregators)
   {
-    Double variance = ((VarianceAggregatorCollector) combinedAggregators.get(fieldName)).getVariance(isVariancePop);
+    Object varianceAggregatorCollector = combinedAggregators.get(fieldName);
+    if (!(varianceAggregatorCollector instanceof VarianceAggregatorCollector)) {
+      return NullHandling.defaultDoubleValue();
+    }
+    Double variance = ((VarianceAggregatorCollector) varianceAggregatorCollector).getVariance(isVariancePop);
     return variance == null ? NullHandling.defaultDoubleValue() : (Double) Math.sqrt(variance);
   }
 

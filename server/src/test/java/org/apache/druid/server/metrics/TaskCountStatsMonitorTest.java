@@ -21,6 +21,8 @@ package org.apache.druid.server.metrics;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
+import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
+import org.apache.druid.server.coordinator.stats.CoordinatorStat;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -65,6 +67,15 @@ public class TaskCountStatsMonitorTest
       {
         return ImmutableMap.of("d1", 1L);
       }
+
+      @Override
+      public CoordinatorRunStats getStats()
+      {
+        final CoordinatorRunStats stats = new CoordinatorRunStats();
+        stats.add(Stat.INFO_1, 10);
+        stats.addToSegmentStat(Stat.DEBUG_1, "hot", "wiki", 20);
+        return stats;
+      }
     };
   }
 
@@ -74,16 +85,19 @@ public class TaskCountStatsMonitorTest
     final TaskCountStatsMonitor monitor = new TaskCountStatsMonitor(statsProvider);
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     monitor.doMonitor(emitter);
-    Assert.assertEquals(5, emitter.getEvents().size());
-    Assert.assertEquals("task/success/count", emitter.getEvents().get(0).toMap().get("metric"));
-    Assert.assertEquals(1L, emitter.getEvents().get(0).toMap().get("value"));
-    Assert.assertEquals("task/failed/count", emitter.getEvents().get(1).toMap().get("metric"));
-    Assert.assertEquals(1L, emitter.getEvents().get(1).toMap().get("value"));
-    Assert.assertEquals("task/running/count", emitter.getEvents().get(2).toMap().get("metric"));
-    Assert.assertEquals(1L, emitter.getEvents().get(2).toMap().get("value"));
-    Assert.assertEquals("task/pending/count", emitter.getEvents().get(3).toMap().get("metric"));
-    Assert.assertEquals(1L, emitter.getEvents().get(3).toMap().get("value"));
-    Assert.assertEquals("task/waiting/count", emitter.getEvents().get(4).toMap().get("metric"));
-    Assert.assertEquals(1L, emitter.getEvents().get(4).toMap().get("value"));
+    Assert.assertEquals(7, emitter.getEvents().size());
+    emitter.verifyValue("task/success/count", 1L);
+    emitter.verifyValue("task/failed/count", 1L);
+    emitter.verifyValue("task/running/count", 1L);
+    emitter.verifyValue("task/pending/count", 1L);
+    emitter.verifyValue("task/waiting/count", 1L);
+    emitter.verifyValue(Stat.INFO_1.getMetricName(), 10L);
+    emitter.verifyValue(Stat.DEBUG_1.getMetricName(), ImmutableMap.of("tier", "hot", "dataSource", "wiki"), 20L);
+  }
+
+  private static class Stat
+  {
+    static final CoordinatorStat INFO_1 = CoordinatorStat.toLogAndEmit("i1", "info/1", CoordinatorStat.Level.INFO);
+    static final CoordinatorStat DEBUG_1 = CoordinatorStat.toDebugAndEmit("d1", "debug/1");
   }
 }

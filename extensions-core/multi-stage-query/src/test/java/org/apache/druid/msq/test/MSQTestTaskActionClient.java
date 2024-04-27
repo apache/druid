@@ -21,35 +21,50 @@ package org.apache.druid.msq.test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
+import com.google.inject.Injector;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TimeChunkLock;
 import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
+import org.apache.druid.indexing.common.actions.SegmentTransactionalAppendAction;
+import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
+import org.apache.druid.indexing.common.actions.SegmentTransactionalReplaceAction;
 import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.msq.indexing.error.InsertLockPreemptedFaultTest;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
+import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
+import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 public class MSQTestTaskActionClient implements TaskActionClient
 {
 
-  private static final String VERSION = "test";
+  public static final String VERSION = "test";
   private final ObjectMapper mapper;
   private final ConcurrentHashMap<SegmentId, AtomicInteger> segmentIdPartitionIdMap = new ConcurrentHashMap<>();
+  private final Set<DataSegment> publishedSegments = new HashSet<>();
+  private final Injector injector;
 
-  public MSQTestTaskActionClient(ObjectMapper mapper)
+  public MSQTestTaskActionClient(
+      ObjectMapper mapper,
+      Injector injector
+  )
   {
     this.mapper = mapper;
+    this.injector = injector;
   }
 
   @Override
@@ -90,9 +105,32 @@ public class MSQTestTaskActionClient implements TaskActionClient
           0
       ));
     } else if (taskAction instanceof RetrieveUsedSegmentsAction) {
-      return (RetType) ImmutableSet.of();
+      String dataSource = ((RetrieveUsedSegmentsAction) taskAction).getDataSource();
+      return (RetType) injector.getInstance(SpecificSegmentsQuerySegmentWalker.class)
+                               .getSegments()
+                               .stream()
+                               .filter(dataSegment -> dataSegment.getDataSource()
+                                                                 .equals(dataSource))
+                               .collect(Collectors.toSet());
+    } else if (taskAction instanceof SegmentTransactionalInsertAction) {
+      final Set<DataSegment> segments = ((SegmentTransactionalInsertAction) taskAction).getSegments();
+      publishedSegments.addAll(segments);
+      return (RetType) SegmentPublishResult.ok(segments);
+    } else if (taskAction instanceof SegmentTransactionalReplaceAction) {
+      final Set<DataSegment> segments = ((SegmentTransactionalReplaceAction) taskAction).getSegments();
+      publishedSegments.addAll(segments);
+      return (RetType) SegmentPublishResult.ok(segments);
+    } else if (taskAction instanceof SegmentTransactionalAppendAction) {
+      final Set<DataSegment> segments = ((SegmentTransactionalAppendAction) taskAction).getSegments();
+      publishedSegments.addAll(segments);
+      return (RetType) SegmentPublishResult.ok(segments);
     } else {
       return null;
     }
+  }
+
+  public Set<DataSegment> getPublishedSegments()
+  {
+    return publishedSegments;
   }
 }

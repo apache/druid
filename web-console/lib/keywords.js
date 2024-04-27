@@ -61,6 +61,15 @@ exports.SQL_KEYWORDS = [
   'REPLACE INTO',
   'OVERWRITE',
   'RETURNING',
+  'OVER',
+  'PARTITION BY',
+  'WINDOW',
+  'RANGE',
+  'PRECEDING',
+  'FOLLOWING',
+  'EXTEND',
+  'PIVOT',
+  'UNPIVOT',
 ];
 
 exports.SQL_EXPRESSION_PARTS = [
@@ -99,6 +108,7 @@ exports.SQL_EXPRESSION_PARTS = [
   'YEAR',
   'TIMESTAMP',
   'INTERVAL',
+  'CSV',
 ];
 
 exports.SQL_CONSTANTS = ['NULL', 'FALSE', 'TRUE'];

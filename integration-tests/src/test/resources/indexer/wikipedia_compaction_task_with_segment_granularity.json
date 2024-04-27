@@ -6,7 +6,8 @@
     "inputSpec": {
       "type": "interval",
       "interval": "2013-08-31/2013-09-02"
-    }
+    },
+    "allowNonAlignedInterval": true
   },
   "segmentGranularity": "%%SEGMENT_GRANULARITY%%",
   "context" : {

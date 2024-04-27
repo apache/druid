@@ -19,22 +19,13 @@
 
 package org.apache.druid.query.aggregation.bloom.sql;
 
-import com.fasterxml.jackson.databind.Module;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
+import com.google.inject.Injector;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.impl.DimensionSchema;
-import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.DoubleDimensionSchema;
-import org.apache.druid.data.input.impl.FloatDimensionSchema;
-import org.apache.druid.data.input.impl.InputRowParser;
-import org.apache.druid.data.input.impl.LongDimensionSchema;
-import org.apache.druid.data.input.impl.MapInputRowParser;
-import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
-import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.guice.BloomFilterExtensionModule;
+import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
@@ -42,101 +33,91 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.bloom.BloomFilterAggregatorFactory;
+import org.apache.druid.query.aggregation.bloom.sql.BloomFilterSqlAggregatorTest.BloomFilterSqlAggComponentSupplier;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
 import org.apache.druid.query.filter.BloomKFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
-import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
+import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.filtration.Filtration;
-import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
+import org.apache.druid.sql.calcite.util.SqlTestFramework;
+import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
 import java.util.List;
 
+@SqlTestFramework.SqlTestFrameWorkModule(BloomFilterSqlAggComponentSupplier.class)
 public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
 {
   private static final int TEST_NUM_ENTRIES = 1000;
 
   private static final String DATA_SOURCE = "numfoo";
 
-  private static final DruidOperatorTable OPERATOR_TABLE = new DruidOperatorTable(
-      ImmutableSet.of(new BloomFilterSqlAggregator()),
-      ImmutableSet.of()
-  );
-
-  @Override
-  public Iterable<? extends Module> getJacksonModules()
+  public static class BloomFilterSqlAggComponentSupplier extends StandardComponentSupplier
   {
-    return Iterables.concat(super.getJacksonModules(), new BloomFilterExtensionModule().getJacksonModules());
-  }
+    public BloomFilterSqlAggComponentSupplier(TempDirProducer tempFolderProducer)
+    {
+      super(tempFolderProducer);
+    }
 
-  @Override
-  public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
-      QueryRunnerFactoryConglomerate conglomerate
-  ) throws IOException
-  {
-    InputRowParser parser = new MapInputRowParser(
-        new TimeAndDimsParseSpec(
-            new TimestampSpec("t", "iso", null),
-            new DimensionsSpec(
-                ImmutableList.<DimensionSchema>builder()
-                             .addAll(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2", "dim3")))
-                             .add(new DoubleDimensionSchema("d1"))
-                             .add(new FloatDimensionSchema("f1"))
-                             .add(new LongDimensionSchema("l1"))
-                             .build()
-            )
-        ));
+    @Override
+    public void configureGuice(DruidInjectorBuilder builder)
+    {
+      super.configureGuice(builder);
+      builder.addModule(new BloomFilterExtensionModule());
+    }
 
-    final QueryableIndex index =
-        IndexBuilder.create()
-                    .tmpDir(temporaryFolder.newFolder())
-                    .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
-                    .schema(
-                        new IncrementalIndexSchema.Builder()
-                            .withMetrics(
-                                new CountAggregatorFactory("cnt"),
-                                new DoubleSumAggregatorFactory("m1", "m1")
-                            )
-                            .withDimensionsSpec(parser)
-                            .withRollup(false)
-                            .build()
-                    )
-                    .rows(TestDataBuilder.ROWS1_WITH_NUMERIC_DIMS)
-                    .buildMMappedIndex();
+    @Override
+    public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
+        final QueryRunnerFactoryConglomerate conglomerate,
+        final JoinableFactoryWrapper joinableFactory,
+        final Injector injector
+    )
+    {
+      final QueryableIndex index =
+          IndexBuilder.create()
+                      .tmpDir(tempDirProducer.newTempFolder())
+                      .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+                      .schema(
+                          new IncrementalIndexSchema.Builder()
+                              .withMetrics(
+                                  new CountAggregatorFactory("cnt"),
+                                  new DoubleSumAggregatorFactory("m1", "m1")
+                              )
+                              .withDimensionsSpec(TestDataBuilder.INDEX_SCHEMA_NUMERIC_DIMS.getDimensionsSpec())
+                              .withRollup(false)
+                              .build()
+                      )
+                      .rows(TestDataBuilder.ROWS1_WITH_NUMERIC_DIMS)
+                      .buildMMappedIndex();
 
-    return new SpecificSegmentsQuerySegmentWalker(conglomerate).add(
-        DataSegment.builder()
-                   .dataSource(DATA_SOURCE)
-                   .interval(index.getDataInterval())
-                   .version("1")
-                   .shardSpec(new LinearShardSpec(0))
-                   .size(0)
-                   .build(),
-        index
-    );
-  }
-
-  @Override
-  public DruidOperatorTable createOperatorTable()
-  {
-    return OPERATOR_TABLE;
+      return SpecificSegmentsQuerySegmentWalker.createWalker(injector, conglomerate).add(
+          DataSegment.builder()
+                     .dataSource(DATA_SOURCE)
+                     .interval(index.getDataInterval())
+                     .version("1")
+                     .shardSpec(new LinearShardSpec(0))
+                     .size(0)
+                     .build(),
+          index
+      );
+    }
   }
 
   @Test
@@ -156,7 +137,8 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
 
     testQuery(
         "SELECT\n"
-        + "BLOOM_FILTER(dim1, 1000)\n"
+        + "BLOOM_FILTER(dim1, 1000),\n"
+        + "BLOOM_FILTER(dim1, CAST(1000 AS INTEGER))\n"
         + "FROM numfoo",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
@@ -176,7 +158,10 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{CalciteTests.getJsonMapper().writeValueAsString(expected1)}
+            new Object[]{
+                queryFramework().queryJsonMapper().writeValueAsString(expected1),
+                queryFramework().queryJsonMapper().writeValueAsString(expected1)
+            }
         )
     );
   }
@@ -209,6 +194,7 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
       }
     }
 
+    ObjectMapper jsonMapper = queryFramework().queryJsonMapper();
     testQuery(
         "SELECT\n"
         + "BLOOM_FILTER(dim1, 1000),\n"
@@ -237,8 +223,8 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[] {
-                CalciteTests.getJsonMapper().writeValueAsString(expected1),
-                CalciteTests.getJsonMapper().writeValueAsString(expected2)
+                jsonMapper.writeValueAsString(expected1),
+                jsonMapper.writeValueAsString(expected2)
             }
         )
     );
@@ -286,10 +272,9 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{CalciteTests.getJsonMapper().writeValueAsString(expected1)}
+            new Object[]{queryFramework().queryJsonMapper().writeValueAsString(expected1)}
         )
     );
-
   }
 
   @Test
@@ -333,7 +318,7 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{CalciteTests.getJsonMapper().writeValueAsString(expected3)}
+            new Object[]{queryFramework().queryJsonMapper().writeValueAsString(expected3)}
         )
     );
   }
@@ -386,7 +371,7 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{CalciteTests.getJsonMapper().writeValueAsString(expected1)}
+            new Object[]{queryFramework().queryJsonMapper().writeValueAsString(expected1)}
         )
     );
   }
@@ -440,7 +425,7 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{CalciteTests.getJsonMapper().writeValueAsString(expected1)}
+            new Object[]{queryFramework().queryJsonMapper().writeValueAsString(expected1)}
         )
     );
   }
@@ -494,7 +479,7 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{CalciteTests.getJsonMapper().writeValueAsString(expected1)}
+            new Object[]{queryFramework().queryJsonMapper().writeValueAsString(expected1)}
         )
     );
   }
@@ -508,6 +493,7 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
     BloomKFilter expected1 = new BloomKFilter(TEST_NUM_ENTRIES);
     BloomKFilter expected2 = new BloomKFilter(TEST_NUM_ENTRIES);
 
+    ObjectMapper jsonMapper = queryFramework().queryJsonMapper();
     testQuery(
         "SELECT\n"
         + "BLOOM_FILTER(dim1, 1000),\n"
@@ -518,7 +504,7 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
                   .dataSource(CalciteTests.DATASOURCE3)
                   .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
                   .granularity(Granularities.ALL)
-                  .filters(BaseCalciteQueryTest.bound("dim2", "0", "0", false, false, null, StringComparators.NUMERIC))
+                  .filters(numericEquality("dim2", 0L, ColumnType.LONG))
                   .aggregators(
                       ImmutableList.of(
                           new BloomFilterAggregatorFactory(
@@ -538,8 +524,8 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[] {
-                CalciteTests.getJsonMapper().writeValueAsString(expected1),
-                CalciteTests.getJsonMapper().writeValueAsString(expected2)
+                jsonMapper.writeValueAsString(expected1),
+                jsonMapper.writeValueAsString(expected2)
             }
         )
     );
@@ -554,6 +540,7 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
     BloomKFilter expected1 = new BloomKFilter(TEST_NUM_ENTRIES);
     BloomKFilter expected2 = new BloomKFilter(TEST_NUM_ENTRIES);
 
+    ObjectMapper jsonMapper = queryFramework().queryJsonMapper();
     testQuery(
         "SELECT\n"
         + "dim2,\n"
@@ -564,7 +551,7 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE3)
                         .setInterval(querySegmentSpec(Filtration.eternity()))
-                        .setDimFilter(selector("dim2", "a", null))
+                        .setDimFilter(equality("dim2", "a", ColumnType.STRING))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(expressionVirtualColumn("v0", "'a'", ColumnType.STRING))
                         .setDimensions(new DefaultDimensionSpec("v0", "_d0", ColumnType.STRING))
@@ -576,7 +563,7 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
                                         new DefaultDimensionSpec("dim1", "a0:dim1"),
                                         TEST_NUM_ENTRIES
                                     ),
-                                    selector("dim1", "nonexistent", null)
+                                    equality("dim1", "nonexistent", ColumnType.STRING)
                                 ),
                                 new FilteredAggregatorFactory(
                                     new BloomFilterAggregatorFactory(
@@ -584,7 +571,7 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
                                         new DefaultDimensionSpec("l1", "a1:l1", ColumnType.LONG),
                                         TEST_NUM_ENTRIES
                                     ),
-                                    selector("dim1", "nonexistent", null)
+                                    equality("dim1", "nonexistent", ColumnType.STRING)
                                 )
                             )
                         )
@@ -594,8 +581,8 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[] {
                 "a",
-                CalciteTests.getJsonMapper().writeValueAsString(expected1),
-                CalciteTests.getJsonMapper().writeValueAsString(expected2)
+                jsonMapper.writeValueAsString(expected1),
+                jsonMapper.writeValueAsString(expected2)
             }
         )
     );

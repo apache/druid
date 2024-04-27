@@ -20,10 +20,13 @@
 package org.apache.druid.sql;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.calcite.tools.ValidationException;
+import org.apache.calcite.plan.RelOptPlanner;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.security.ResourceAction;
@@ -207,10 +210,8 @@ public class DirectStatement extends AbstractStatement implements Cancelable
         sqlToolbox.engine,
         queryPlus.sql(),
         queryContext,
-        // Context keys for authorization. Use the user-provided keys,
-        // NOT the keys from the query context which, by this point,
-        // will have been extended with internally-defined values.
-        queryPlus.context().keySet())) {
+        hook
+    )) {
       validate(planner);
       authorize(planner, authorizer());
 
@@ -226,10 +227,21 @@ public class DirectStatement extends AbstractStatement implements Cancelable
       reporter.planningTimeNanos(System.nanoTime() - planningStartNanos);
       return resultSet;
     }
+    catch (RelOptPlanner.CannotPlanException e) {
+      // Not sure if this is even thrown here.
+      throw DruidException.forPersona(DruidException.Persona.DEVELOPER)
+                          .ofCategory(DruidException.Category.UNCATEGORIZED)
+                          .build(e, "Problem planning SQL query");
+    }
     catch (RuntimeException e) {
       state = State.FAILED;
       reporter.failed(e);
       throw e;
+    }
+    catch (AssertionError e) {
+      state = State.FAILED;
+      reporter.failed(e);
+      throw InvalidSqlInput.exception(e, "Calcite assertion violated: [%s]", e.getMessage());
     }
   }
 
@@ -240,12 +252,7 @@ public class DirectStatement extends AbstractStatement implements Cancelable
   @VisibleForTesting
   protected PlannerResult createPlan(DruidPlanner planner)
   {
-    try {
-      return planner.plan();
-    }
-    catch (ValidationException e) {
-      throw new SqlPlanningException(e);
-    }
+    return planner.plan();
   }
 
   /**
@@ -273,7 +280,7 @@ public class DirectStatement extends AbstractStatement implements Cancelable
   {
     if (state == State.CANCELLED) {
       throw new QueryInterruptedException(
-          QueryInterruptedException.QUERY_CANCELED,
+          QueryException.QUERY_CANCELED_ERROR_CODE,
           StringUtils.format("Query is canceled [%s]", sqlQueryId()),
           null,
           null
@@ -313,5 +320,12 @@ public class DirectStatement extends AbstractStatement implements Cancelable
       super.closeWithError(e);
       state = State.CLOSED;
     }
+  }
+
+  @Override
+  public void closeQuietly()
+  {
+    sqlToolbox.sqlLifecycleManager.remove(sqlQueryId(), this);
+    super.closeQuietly();
   }
 }

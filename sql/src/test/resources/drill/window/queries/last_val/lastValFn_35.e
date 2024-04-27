@@ -1,0 +1,11 @@
+true	AZ	AZ
+true	CO	CO
+true	FL	FL
+true	MN	MN
+true	NE	NE
+true	OR	OR
+true	SC	SC
+true	SD	SD
+true	VT	VT
+true	WI	WI
+true	WY	WY

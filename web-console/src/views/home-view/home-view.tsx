@@ -18,7 +18,7 @@
 
 import React from 'react';
 
-import { Capabilities } from '../../utils';
+import type { Capabilities } from '../../helpers';
 
 import { DatasourcesCard } from './datasources-card/datasources-card';
 import { LookupsCard } from './lookups-card/lookups-card';
@@ -39,7 +39,7 @@ export const HomeView = React.memo(function HomeView(props: HomeViewProps) {
 
   return (
     <div className="home-view app-view">
-      <StatusCard />
+      <StatusCard capabilities={capabilities} />
       {capabilities.hasSqlOrCoordinatorAccess() && (
         <>
           <DatasourcesCard capabilities={capabilities} />

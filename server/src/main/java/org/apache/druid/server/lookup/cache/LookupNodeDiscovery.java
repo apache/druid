@@ -19,17 +19,13 @@
 
 package org.apache.druid.server.lookup.cache;
 
-import com.google.common.base.Function;
-import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableSet;
-import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.LookupNodeService;
 import org.apache.druid.server.http.HostAndPortWithScheme;
 
-import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.Set;
 
@@ -50,27 +46,21 @@ public class LookupNodeDiscovery
     return Collections2.transform(
         Collections2.filter(
             druidNodeDiscovery.getAllNodes(),
-            new Predicate<DiscoveryDruidNode>()
-            {
-              @Override
-              public boolean apply(@Nullable DiscoveryDruidNode node)
-              {
-                return tier.equals(((LookupNodeService) node.getServices()
-                                                            .get(LookupNodeService.DISCOVERY_SERVICE_KEY)).getLookupTier());
+            node -> {
+              if (node == null) {
+                return false;
               }
+              final LookupNodeService lookupNodeService = node.getService(
+                  LookupNodeService.DISCOVERY_SERVICE_KEY,
+                  LookupNodeService.class
+              );
+              return lookupNodeService != null && tier.equals(lookupNodeService.getLookupTier());
             }
         ),
-        new Function<DiscoveryDruidNode, HostAndPortWithScheme>()
-        {
-          @Override
-          public HostAndPortWithScheme apply(@Nullable DiscoveryDruidNode input)
-          {
-            return HostAndPortWithScheme.fromString(
-                input.getDruidNode().getServiceScheme(),
-                input.getDruidNode().getHostAndPortToUse()
-            );
-          }
-        }
+        input -> HostAndPortWithScheme.fromString(
+            input.getDruidNode().getServiceScheme(),
+            input.getDruidNode().getHostAndPortToUse()
+        )
     );
   }
 
@@ -79,8 +69,15 @@ public class LookupNodeDiscovery
     ImmutableSet.Builder<String> builder = new ImmutableSet.Builder<>();
 
     druidNodeDiscovery.getAllNodes().forEach(
-        node -> builder.add(((LookupNodeService) node.getServices()
-                                                     .get(LookupNodeService.DISCOVERY_SERVICE_KEY)).getLookupTier())
+        node -> {
+          final LookupNodeService lookupService = node.getService(
+              LookupNodeService.DISCOVERY_SERVICE_KEY,
+              LookupNodeService.class
+          );
+          if (lookupService != null) {
+            builder.add(lookupService.getLookupTier());
+          }
+        }
     );
 
     return builder.build();

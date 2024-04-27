@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.AggregationTestHelper;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.junit.BeforeClass;
@@ -46,7 +47,7 @@ import static org.hamcrest.collection.IsMapWithSize.aMapWithSize;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 
-public abstract class CompressedBigDecimalAggregatorTimeseriesTestBase
+public abstract class CompressedBigDecimalAggregatorTimeseriesTestBase extends InitializedNullHandlingTest
 {
   private final AggregationTestHelper helper;
 

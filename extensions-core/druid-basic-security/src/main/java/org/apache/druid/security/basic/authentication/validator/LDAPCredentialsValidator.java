@@ -32,11 +32,13 @@ import org.apache.druid.security.basic.BasicSecurityAuthenticationException;
 import org.apache.druid.security.basic.BasicSecuritySSLSocketFactory;
 import org.apache.druid.security.basic.authentication.LdapUserPrincipal;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorCredentials;
+import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthenticationResult;
 
 import javax.annotation.Nullable;
 import javax.naming.AuthenticationException;
 import javax.naming.Context;
+import javax.naming.Name;
 import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
 import javax.naming.directory.DirContext;
@@ -44,7 +46,6 @@ import javax.naming.directory.InitialDirContext;
 import javax.naming.directory.SearchControls;
 import javax.naming.directory.SearchResult;
 import javax.naming.ldap.LdapName;
-
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -58,6 +59,7 @@ public class LDAPCredentialsValidator implements CredentialsValidator
   private static final ReentrantLock LOCK = new ReentrantLock();
 
   private final LruBlockCache cache;
+  private final PasswordHashGenerator hashGenerator = new PasswordHashGenerator();
 
   private final BasicAuthLDAPConfig ldapConfig;
   // Custom overrides that can be passed via tests
@@ -151,14 +153,13 @@ public class LDAPCredentialsValidator implements CredentialsValidator
       char[] password
   )
   {
-    SearchResult userResult;
-    LdapName userDn;
-    Map<String, Object> contextMap = new HashMap<>();
+    final SearchResult userResult;
+    final LdapName userDn;
+    final Map<String, Object> contextMap = new HashMap<>();
+    final LdapUserPrincipal principal = this.cache.getOrExpire(username);
 
-    LdapUserPrincipal principal = this.cache.getOrExpire(username);
-    if (principal != null && principal.hasSameCredentials(password)) {
+    if (principal != null && principal.hasSameCredentials(password, hashGenerator)) {
       contextMap.put(BasicAuthUtils.SEARCH_RESULT_CONTEXT_KEY, principal.getSearchResult());
-      return new AuthenticationResult(username, authorizerName, authenticatorName, contextMap);
     } else {
       ClassLoader currentClassLoader = Thread.currentThread().getContextClassLoader();
       try {
@@ -193,11 +194,11 @@ public class LDAPCredentialsValidator implements CredentialsValidator
 
       if (!validatePassword(this.ldapConfig, userDn, password)) {
         LOG.debug("Password incorrect for LDAP user %s", username);
-        throw new BasicSecurityAuthenticationException("User LDAP authentication failed.");
+        throw new BasicSecurityAuthenticationException(Access.DEFAULT_ERROR_MESSAGE);
       }
 
       byte[] salt = BasicAuthUtils.generateSalt();
-      byte[] hash = BasicAuthUtils.hashPassword(password, salt, this.ldapConfig.getCredentialIterations());
+      byte[] hash = hashGenerator.getOrComputePasswordHash(password, salt, this.ldapConfig.getCredentialIterations());
       LdapUserPrincipal newPrincipal = new LdapUserPrincipal(
           username,
           new BasicAuthenticatorCredentials(salt, hash, this.ldapConfig.getCredentialIterations()),
@@ -206,10 +207,21 @@ public class LDAPCredentialsValidator implements CredentialsValidator
 
       this.cache.put(username, newPrincipal);
       contextMap.put(BasicAuthUtils.SEARCH_RESULT_CONTEXT_KEY, userResult);
-      return new AuthenticationResult(username, authorizerName, authenticatorName, contextMap);
     }
+    return new AuthenticationResult(username, authorizerName, authenticatorName, contextMap);
   }
 
+  /**
+   * Retrieves an LDAP user object by using {@link javax.naming.ldap.LdapContext#search(Name, String, SearchControls)}.
+   *
+   * Regarding the "BanJNDI" suppression: Errorprone flags all usage of APIs that may do JNDI lookups because of the
+   * potential for RCE. The risk is that an attacker with ability to set user-level properties on the LDAP server could
+   * cause us to read a serialized Java object (a well-known security risk). We mitigate the risk by avoiding the
+   * "lookup" API, and using the "search" API *without* setting the returningObjFlag.
+   *
+   * See https://errorprone.info/bugpattern/BanJNDI for more details.
+   */
+  @SuppressWarnings("BanJNDI")
   @Nullable
   SearchResult getLdapUserObject(BasicAuthLDAPConfig ldapConfig, DirContext context, String username)
   {

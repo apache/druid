@@ -20,6 +20,7 @@ import { Button, Classes, Dialog, Tab, Tabs } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
 import * as JSONBig from 'json-bigint-native';
+import type { JSX } from 'react';
 import React, { useState } from 'react';
 
 import { ShowValue } from '../../components';

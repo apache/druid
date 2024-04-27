@@ -23,9 +23,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.ClusterByPartitions;
+import org.apache.druid.frame.key.KeyColumn;
+import org.apache.druid.frame.key.KeyOrder;
 import org.apache.druid.frame.key.KeyTestUtils;
 import org.apache.druid.frame.key.RowKey;
-import org.apache.druid.frame.key.SortColumn;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.column.ColumnType;
@@ -289,8 +290,8 @@ public class KeyCollectorTestUtils
   private static RowKey createSingleLongKey(final long n)
   {
     final RowSignature signature = RowSignature.builder().add("x", ColumnType.LONG).build();
-    final List<SortColumn> sortColumns = ImmutableList.of(new SortColumn("x", false));
-    final RowSignature keySignature = KeyTestUtils.createKeySignature(sortColumns, signature);
+    final List<KeyColumn> keyColumns = ImmutableList.of(new KeyColumn("x", KeyOrder.ASCENDING));
+    final RowSignature keySignature = KeyTestUtils.createKeySignature(keyColumns, signature);
     return KeyTestUtils.createKey(keySignature, n);
   }
 }

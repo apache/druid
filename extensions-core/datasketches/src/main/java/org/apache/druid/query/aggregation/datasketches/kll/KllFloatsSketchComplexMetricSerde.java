@@ -91,7 +91,7 @@ public class KllFloatsSketchComplexMetricSerde extends ComplexMetricSerde
         if (object == null || object instanceof KllFloatsSketch || object instanceof Memory) {
           return object;
         }
-        return KllFloatsSketchOperations.deserialize(object);
+        return KllFloatsSketchOperations.deserializeSafe(object);
       }
     };
   }

@@ -20,8 +20,10 @@
 package org.apache.druid.tests.hadoop;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import org.apache.druid.indexer.partitions.DimensionBasedPartitionsSpec;
+import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.java.util.common.Pair;
@@ -65,6 +67,9 @@ public class ITHadoopIndexTest extends AbstractITBatchIndexTest
   private static final String BATCH_QUERIES_RESOURCE = "/hadoop/batch_hadoop_queries.json";
   private static final String BATCH_DATASOURCE = "batchLegacyHadoop";
 
+  private static final String BATCH_TASK_WITH_PARQUET_PARSER_RENAME = "/hadoop/wikipedia_hadoop_paquet_parser_index_data.json";
+  private static final String BATCH_QUERIES_RESOURCE_FOR_PARQUET_PARSER_RENAME = "/hadoop/wikipedia_hadoop_paquet_parser_query_data.json";
+
   private static final String INDEX_TASK = "/hadoop/wikipedia_hadoop_index_task.json";
   private static final String INDEX_QUERIES_RESOURCE = "/indexer/wikipedia_index_queries.json";
   private static final String INDEX_DATASOURCE = "wikipedia_hadoop_index_test";
@@ -92,6 +97,8 @@ public class ITHadoopIndexTest extends AbstractITBatchIndexTest
         {new SingleDimensionPartitionsSpec(1000, null, null, false)},
         {new SingleDimensionPartitionsSpec(1000, null, "page", false)},
         {new SingleDimensionPartitionsSpec(1000, null, null, true)},
+        {new DimensionRangePartitionsSpec(1000, null, ImmutableList.of("page"), true)},
+        {new DimensionRangePartitionsSpec(1000, null, ImmutableList.of("page", "user"), false)},
 
         //{new HashedPartitionsSpec(null, 3, null)} // this results in a bug where the segments have 0 rows
     };
@@ -125,6 +132,144 @@ public class ITHadoopIndexTest extends AbstractITBatchIndexTest
           BATCH_TASK,
           specPathsTransform,
           BATCH_QUERIES_RESOURCE,
+          false,
+          true,
+          true,
+          new Pair<>(false, false)
+      );
+    }
+  }
+
+  @Test
+  public void testHadoopParquetParserWithRenameIndexTest() throws Exception
+  {
+    String indexDatasource = BATCH_DATASOURCE + "_" + UUID.randomUUID();
+    try (
+        final Closeable ignored0 = unloader(indexDatasource + config.getExtraDatasourceNameSuffix());
+    ) {
+      final Function<String, String> specPathsTransform = spec -> {
+        try {
+          String path = "/batch_index/parquet";
+          spec = StringUtils.replace(
+              spec,
+              "%%INPUT_PATHS%%",
+              path
+          );
+          spec = StringUtils.replace(
+              spec,
+              "%%TRANSFORMS%%",
+              jsonMapper.writeValueAsString(
+                  ImmutableList.of(
+                      ImmutableMap.of("type", "expression", "name", "userTransformed", "expression", "user"),
+                      ImmutableMap.of("type", "expression", "name", "regionAndCity", "expression", "concat(region,city)")
+                  )
+              )
+          );
+
+          return spec;
+        }
+        catch (Exception e) {
+          throw new RuntimeException(e);
+        }
+      };
+
+      final Function<String, String> queryTransform = query -> {
+        try {
+          query = StringUtils.replace(
+              query,
+              "%%EXPECTED_NUMBER_SUM_RESULT%%",
+              jsonMapper.writeValueAsString(
+                  ImmutableMap.of("sum_added", 3090, "sum_deleted", 712, "sum_delta", 2378)
+              )
+          );
+          return query;
+        }
+        catch (Exception e) {
+          throw new RuntimeException(e);
+        }
+      };
+
+      doIndexTest(
+          indexDatasource,
+          BATCH_TASK_WITH_PARQUET_PARSER_RENAME,
+          specPathsTransform,
+          BATCH_QUERIES_RESOURCE_FOR_PARQUET_PARSER_RENAME,
+          queryTransform,
+          false,
+          true,
+          true,
+          new Pair<>(false, false)
+      );
+    }
+  }
+
+  @Test
+  public void testHadoopParquetParserWithDifferentSchemaTest() throws Exception
+  {
+    /*
+    This test reads from three parquet files, each with a different schema.
+    The difference in the schema is shown below:
+    File 1's columns: userRenamed, continent, country, added, deleted, deltaRenamed
+    File 2's columns: user, continentRenamed, country, added, delta
+    File 3's columns: user, continent, countryRenamed, deleted, delta
+
+    Note that `deleted` was dropped from File 2 and `added` was dropped from File 3
+     */
+    String indexDatasource = BATCH_DATASOURCE + "_" + UUID.randomUUID();
+    try (
+        final Closeable ignored0 = unloader(indexDatasource + config.getExtraDatasourceNameSuffix());
+    ) {
+      final Function<String, String> specPathsTransform = spec -> {
+        try {
+          String path = "/batch_index/multiple_schema_parquet";
+          spec = StringUtils.replace(
+              spec,
+              "%%INPUT_PATHS%%",
+              path
+          );
+          spec = StringUtils.replace(
+              spec,
+              "%%TRANSFORMS%%",
+              jsonMapper.writeValueAsString(
+                  ImmutableList.of(
+                      ImmutableMap.of("type", "expression", "name", "userTransformed", "expression", "nvl(user,userRenamed)"),
+                      ImmutableMap.of("type", "expression", "name", "countryFlat", "expression", "nvl(countryFlat,countryRenamed)"),
+                      ImmutableMap.of("type", "expression", "name", "continentFlat", "expression", "nvl(continentFlat,continentRenamed)"),
+                      ImmutableMap.of("type", "expression", "name", "delta", "expression", "nvl(delta,deltaRenamed)"),
+                      ImmutableMap.of("type", "expression", "name", "regionAndCity", "expression", "concat(region,city)")
+                  )
+              )
+          );
+
+          return spec;
+        }
+        catch (Exception e) {
+          throw new RuntimeException(e);
+        }
+      };
+
+      final Function<String, String> queryTransform = query -> {
+        try {
+          query = StringUtils.replace(
+              query,
+              "%%EXPECTED_NUMBER_SUM_RESULT%%",
+              jsonMapper.writeValueAsString(
+                  ImmutableMap.of("sum_added", 1602, "sum_deleted", 497, "sum_delta", 2378)
+              )
+          );
+          return query;
+        }
+        catch (Exception e) {
+          throw new RuntimeException(e);
+        }
+      };
+
+      doIndexTest(
+          indexDatasource,
+          BATCH_TASK_WITH_PARQUET_PARSER_RENAME,
+          specPathsTransform,
+          BATCH_QUERIES_RESOURCE_FOR_PARQUET_PARSER_RENAME,
+          queryTransform,
           false,
           true,
           true,

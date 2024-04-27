@@ -320,4 +320,17 @@ public class DruidServer implements Comparable<DruidServer>
         immutableDataSources.values().stream().mapToInt(dataSource -> dataSource.getSegments().size()).sum();
     return new ImmutableDruidServer(metadata, size, immutableDataSources, totalSegments);
   }
+
+  public DruidServer copyWithoutSegments()
+  {
+    return new DruidServer(
+        getName(),
+        getHostAndPort(),
+        getHostAndTlsPort(),
+        getMaxSize(),
+        getType(),
+        getTier(),
+        getPriority()
+    );
+  }
 }

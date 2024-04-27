@@ -20,6 +20,7 @@
 package org.apache.druid.segment;
 
 import org.apache.druid.data.input.impl.DimensionSchema;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
@@ -202,6 +203,23 @@ public class StringDimensionIndexerTest extends InitializedNullHandlingTest
     // estimates with useMaxMemoryEstimates = false tend to be much lower
     Assert.assertEquals(6820L, totalSizeWithMaxEstimates);
     Assert.assertEquals(2940L, totalSizeWithAvgEstimates);
+  }
+
+  @Test
+  public void testBinaryInputs()
+  {
+    final StringDimensionIndexer indexer = new StringDimensionIndexer(
+        DimensionSchema.MultiValueHandling.SORTED_ARRAY,
+        true,
+        false,
+        false
+    );
+    final byte[] byteVal = new byte[]{0x01, 0x02, 0x03, 0x04};
+    EncodedKeyComponent<int[]> keyComponent = indexer.processRowValsToUnsortedEncodedKeyComponent(byteVal, false);
+    Assert.assertEquals(
+        StringUtils.encodeBase64String(byteVal),
+        indexer.convertUnsortedEncodedKeyComponentToActualList(keyComponent.getComponent())
+    );
   }
 
   private long verifyEncodedValues(

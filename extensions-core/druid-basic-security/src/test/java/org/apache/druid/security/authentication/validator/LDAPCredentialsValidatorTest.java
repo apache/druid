@@ -36,7 +36,6 @@ import javax.naming.directory.SearchControls;
 import javax.naming.directory.SearchResult;
 import javax.naming.ldap.LdapContext;
 import javax.naming.spi.InitialContextFactory;
-
 import java.util.Collections;
 import java.util.Hashtable;
 import java.util.Iterator;
@@ -94,10 +93,12 @@ public class LDAPCredentialsValidatorTest
         properties
     );
     validator.validateCredentials("ldap", "ldap", "validUser", "password".toCharArray());
+    validator.validateCredentials("ldap", "ldap", "validUser", "password".toCharArray());
   }
 
   public static class MockContextFactory implements InitialContextFactory
   {
+    @SuppressWarnings("BanJNDI") // False positive: usage here is a mock in tests.
     @Override
     public Context getInitialContext(Hashtable<?, ?> environment) throws NamingException
     {

@@ -21,9 +21,8 @@ package org.apache.druid.client.cache;
 
 import org.apache.druid.java.util.common.Pair;
 import redis.clients.jedis.JedisCluster;
-import redis.clients.util.JedisClusterCRC16;
+import redis.clients.jedis.util.JedisClusterCRC16;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -110,10 +109,6 @@ public class RedisClusterCache extends AbstractRedisCache
   @Override
   protected void cleanup()
   {
-    try {
-      cluster.close();
-    }
-    catch (IOException ignored) {
-    }
+    cluster.close();
   }
 }

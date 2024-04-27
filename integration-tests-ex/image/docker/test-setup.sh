@@ -43,7 +43,7 @@ chown druid:druid launch.sh druid.sh
 cat > /run-druid.sh << EOF
 #! /bin/bash
 
-java -cp "${DRUID_HOME}/lib/*" \\
+"${DRUID_HOME}/bin/run-java" -cp "${DRUID_HOME}/lib/*" \\
 	-Ddruid.extensions.directory=${DRUID_HOME}/extensions \\
 	-Ddruid.extensions.loadList='["mysql-metadata-storage"]' \\
 	-Ddruid.metadata.storage.type=mysql \\

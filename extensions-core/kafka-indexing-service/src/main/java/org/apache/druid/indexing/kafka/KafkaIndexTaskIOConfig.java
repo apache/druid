@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.InputFormat;
+import org.apache.druid.data.input.kafka.KafkaTopicPartition;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskIOConfig;
@@ -33,11 +34,13 @@ import org.joda.time.DateTime;
 import javax.annotation.Nullable;
 import java.util.Map;
 
-public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Integer, Long>
+public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<KafkaTopicPartition, Long>
 {
   private final Map<String, Object> consumerProperties;
   private final long pollTimeout;
   private final KafkaConfigOverrides configOverrides;
+
+  private final boolean multiTopic;
 
   @JsonCreator
   public KafkaIndexTaskIOConfig(
@@ -45,21 +48,22 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Inte
       @JsonProperty("baseSequenceName") String baseSequenceName,
       // startPartitions and endPartitions exist to be able to read old ioConfigs in metadata store
       @JsonProperty("startPartitions") @Nullable
-      @Deprecated SeekableStreamEndSequenceNumbers<Integer, Long> startPartitions,
+      @Deprecated SeekableStreamEndSequenceNumbers<KafkaTopicPartition, Long> startPartitions,
       @JsonProperty("endPartitions") @Nullable
-      @Deprecated SeekableStreamEndSequenceNumbers<Integer, Long> endPartitions,
+      @Deprecated SeekableStreamEndSequenceNumbers<KafkaTopicPartition, Long> endPartitions,
       // startSequenceNumbers and endSequenceNumbers must be set for new versions
       @JsonProperty("startSequenceNumbers")
-      @Nullable SeekableStreamStartSequenceNumbers<Integer, Long> startSequenceNumbers,
+      @Nullable SeekableStreamStartSequenceNumbers<KafkaTopicPartition, Long> startSequenceNumbers,
       @JsonProperty("endSequenceNumbers")
-      @Nullable SeekableStreamEndSequenceNumbers<Integer, Long> endSequenceNumbers,
+      @Nullable SeekableStreamEndSequenceNumbers<KafkaTopicPartition, Long> endSequenceNumbers,
       @JsonProperty("consumerProperties") Map<String, Object> consumerProperties,
       @JsonProperty("pollTimeout") Long pollTimeout,
       @JsonProperty("useTransaction") Boolean useTransaction,
       @JsonProperty("minimumMessageTime") DateTime minimumMessageTime,
       @JsonProperty("maximumMessageTime") DateTime maximumMessageTime,
       @JsonProperty("inputFormat") @Nullable InputFormat inputFormat,
-      @JsonProperty("configOverrides") @Nullable KafkaConfigOverrides configOverrides
+      @JsonProperty("configOverrides") @Nullable KafkaConfigOverrides configOverrides,
+      @JsonProperty("multiTopic") @Nullable Boolean multiTopic
   )
   {
     super(
@@ -78,9 +82,10 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Inte
     this.consumerProperties = Preconditions.checkNotNull(consumerProperties, "consumerProperties");
     this.pollTimeout = pollTimeout != null ? pollTimeout : KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS;
     this.configOverrides = configOverrides;
+    this.multiTopic = multiTopic != null ? multiTopic : KafkaSupervisorIOConfig.DEFAULT_IS_MULTI_TOPIC;
 
-    final SeekableStreamEndSequenceNumbers<Integer, Long> myEndSequenceNumbers = getEndSequenceNumbers();
-    for (int partition : myEndSequenceNumbers.getPartitionSequenceNumberMap().keySet()) {
+    final SeekableStreamEndSequenceNumbers<KafkaTopicPartition, Long> myEndSequenceNumbers = getEndSequenceNumbers();
+    for (KafkaTopicPartition partition : myEndSequenceNumbers.getPartitionSequenceNumberMap().keySet()) {
       Preconditions.checkArgument(
           myEndSequenceNumbers.getPartitionSequenceNumberMap()
                               .get(partition)
@@ -94,8 +99,8 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Inte
   public KafkaIndexTaskIOConfig(
       int taskGroupId,
       String baseSequenceName,
-      SeekableStreamStartSequenceNumbers<Integer, Long> startSequenceNumbers,
-      SeekableStreamEndSequenceNumbers<Integer, Long> endSequenceNumbers,
+      SeekableStreamStartSequenceNumbers<KafkaTopicPartition, Long> startSequenceNumbers,
+      SeekableStreamEndSequenceNumbers<KafkaTopicPartition, Long> endSequenceNumbers,
       Map<String, Object> consumerProperties,
       Long pollTimeout,
       Boolean useTransaction,
@@ -118,7 +123,8 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Inte
         minimumMessageTime,
         maximumMessageTime,
         inputFormat,
-        configOverrides
+        configOverrides,
+        KafkaSupervisorIOConfig.DEFAULT_IS_MULTI_TOPIC
     );
   }
 
@@ -129,10 +135,10 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Inte
    */
   @JsonProperty
   @Deprecated
-  public SeekableStreamEndSequenceNumbers<Integer, Long> getStartPartitions()
+  public SeekableStreamEndSequenceNumbers<KafkaTopicPartition, Long> getStartPartitions()
   {
     // Converting to start sequence numbers. This is allowed for Kafka because the start offset is always inclusive.
-    final SeekableStreamStartSequenceNumbers<Integer, Long> startSequenceNumbers = getStartSequenceNumbers();
+    final SeekableStreamStartSequenceNumbers<KafkaTopicPartition, Long> startSequenceNumbers = getStartSequenceNumbers();
     return new SeekableStreamEndSequenceNumbers<>(
         startSequenceNumbers.getStream(),
         startSequenceNumbers.getPartitionSequenceNumberMap()
@@ -145,7 +151,7 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Inte
    */
   @JsonProperty
   @Deprecated
-  public SeekableStreamEndSequenceNumbers<Integer, Long> getEndPartitions()
+  public SeekableStreamEndSequenceNumbers<KafkaTopicPartition, Long> getEndPartitions()
   {
     return getEndSequenceNumbers();
   }
@@ -166,6 +172,12 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Inte
   public KafkaConfigOverrides getConfigOverrides()
   {
     return configOverrides;
+  }
+
+  @JsonProperty
+  public boolean isMultiTopic()
+  {
+    return multiTopic;
   }
 
   @Override

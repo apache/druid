@@ -32,7 +32,7 @@ import java.io.Closeable;
 import java.util.Map;
 import java.util.function.Function;
 
-@Test(groups = {TestNGGroup.BATCH_INDEX, TestNGGroup.QUICKSTART_COMPATIBLE})
+@Test(groups = {TestNGGroup.BATCH_INDEX, TestNGGroup.QUICKSTART_COMPATIBLE, TestNGGroup.CDS_TASK_SCHEMA_PUBLISH_DISABLED, TestNGGroup.CDS_COORDINATOR_SMQ_DISABLED})
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITCombiningInputSourceParallelIndexTest extends AbstractITBatchIndexTest
 {
@@ -41,7 +41,7 @@ public class ITCombiningInputSourceParallelIndexTest extends AbstractITBatchInde
   private static final String INDEX_DATASOURCE = "wikipedia_index_test";
 
   private static final String COMBINING_INDEX_TASK = "/indexer/wikipedia_combining_input_source_index_parallel_task.json";
-  private static final String COMBINING_QUERIES_RESOURCE = "/indexer/wikipedia_combining_firehose_index_queries.json";
+  private static final String COMBINING_QUERIES_RESOURCE = "/indexer/wikipedia_combining_input_source_index_queries.json";
   private static final String COMBINING_INDEX_DATASOURCE = "wikipedia_comb_index_test";
 
   @Test

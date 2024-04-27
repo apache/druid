@@ -532,6 +532,7 @@ public class IndexGeneratorJobTest
                 null,
                 maxRowsInMemory,
                 maxBytesInMemory,
+                false,
                 true,
                 false,
                 false,
@@ -547,7 +548,8 @@ public class IndexGeneratorJobTest
                 null,
                 null,
                 null,
-                null
+                null,
+                1
             )
         )
     );

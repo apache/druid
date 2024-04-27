@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.filter.vector;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.segment.IdLookup;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
@@ -63,13 +62,8 @@ public class VectorValueMatcherColumnProcessorFactoryTest extends InitializedNul
     Assert.assertEquals(VECTOR_SIZE, matcher.getMaxVectorSize());
     Assert.assertEquals(CURRENT_SIZE, matcher.getCurrentVectorSize());
 
-    // in default mode, matching null produces a boolean matcher
     VectorValueMatcher booleanMatcher = matcherFactory.makeMatcher((String) null);
-    if (NullHandling.replaceWithDefault()) {
-      Assert.assertTrue(booleanMatcher instanceof BooleanVectorValueMatcher);
-    } else {
-      Assert.assertFalse(booleanMatcher instanceof BooleanVectorValueMatcher);
-    }
+    Assert.assertFalse(booleanMatcher instanceof BooleanVectorValueMatcher);
     Assert.assertEquals(VECTOR_SIZE, booleanMatcher.getMaxVectorSize());
     Assert.assertEquals(CURRENT_SIZE, booleanMatcher.getCurrentVectorSize());
     EasyMock.verify(vectorValueSelector);
@@ -92,13 +86,9 @@ public class VectorValueMatcherColumnProcessorFactoryTest extends InitializedNul
     Assert.assertEquals(VECTOR_SIZE, matcher.getMaxVectorSize());
     Assert.assertEquals(CURRENT_SIZE, matcher.getCurrentVectorSize());
 
-    // in default mode, matching null produces a boolean matcher
+
     VectorValueMatcher booleanMatcher = matcherFactory.makeMatcher((String) null);
-    if (NullHandling.replaceWithDefault()) {
-      Assert.assertTrue(booleanMatcher instanceof BooleanVectorValueMatcher);
-    } else {
-      Assert.assertFalse(booleanMatcher instanceof BooleanVectorValueMatcher);
-    }
+    Assert.assertFalse(booleanMatcher instanceof BooleanVectorValueMatcher);
     Assert.assertEquals(VECTOR_SIZE, booleanMatcher.getMaxVectorSize());
     Assert.assertEquals(CURRENT_SIZE, booleanMatcher.getCurrentVectorSize());
     EasyMock.verify(vectorValueSelector);
@@ -120,13 +110,8 @@ public class VectorValueMatcherColumnProcessorFactoryTest extends InitializedNul
     Assert.assertEquals(VECTOR_SIZE, matcher.getMaxVectorSize());
     Assert.assertEquals(CURRENT_SIZE, matcher.getCurrentVectorSize());
 
-    // in default mode, matching null produces a boolean matcher
     VectorValueMatcher booleanMatcher = matcherFactory.makeMatcher((String) null);
-    if (NullHandling.replaceWithDefault()) {
-      Assert.assertTrue(booleanMatcher instanceof BooleanVectorValueMatcher);
-    } else {
-      Assert.assertFalse(booleanMatcher instanceof BooleanVectorValueMatcher);
-    }
+    Assert.assertFalse(booleanMatcher instanceof BooleanVectorValueMatcher);
     Assert.assertEquals(VECTOR_SIZE, booleanMatcher.getMaxVectorSize());
     Assert.assertEquals(CURRENT_SIZE, booleanMatcher.getCurrentVectorSize());
     EasyMock.verify(vectorValueSelector);
@@ -143,6 +128,7 @@ public class VectorValueMatcherColumnProcessorFactoryTest extends InitializedNul
     EasyMock.expect(selector.getValueCardinality()).andReturn(1024).anyTimes();
     EasyMock.expect(selector.nameLookupPossibleInAdvance()).andReturn(false).anyTimes();
     EasyMock.expect(selector.idLookup()).andReturn(lookup).anyTimes();
+    EasyMock.expect(selector.lookupName(0)).andReturn(null).anyTimes();
     EasyMock.expect(lookup.lookupId("any value")).andReturn(1).anyTimes();
     EasyMock.expect(lookup.lookupId("another value")).andReturn(-1).anyTimes();
     EasyMock.replay(selector, lookup);
@@ -166,9 +152,7 @@ public class VectorValueMatcherColumnProcessorFactoryTest extends InitializedNul
     Assert.assertEquals(VECTOR_SIZE, matcher.getMaxVectorSize());
     Assert.assertEquals(CURRENT_SIZE, matcher.getCurrentVectorSize());
 
-    // value not exist in dictionary uses boolean matcher
     VectorValueMatcher booleanMatcher = matcherFactory.makeMatcher("another value");
-    Assert.assertTrue(booleanMatcher instanceof BooleanVectorValueMatcher);
     Assert.assertEquals(VECTOR_SIZE, booleanMatcher.getMaxVectorSize());
     Assert.assertEquals(CURRENT_SIZE, booleanMatcher.getCurrentVectorSize());
     EasyMock.verify(selector, lookup);
@@ -180,10 +164,14 @@ public class VectorValueMatcherColumnProcessorFactoryTest extends InitializedNul
     // cardinality 0 has special path to always use boolean matcher
     SingleValueDimensionVectorSelector selector =
         EasyMock.createMock(SingleValueDimensionVectorSelector.class);
+    IdLookup lookup = EasyMock.createMock(IdLookup.class);
     EasyMock.expect(selector.getCurrentVectorSize()).andReturn(CURRENT_SIZE).anyTimes();
     EasyMock.expect(selector.getMaxVectorSize()).andReturn(VECTOR_SIZE).anyTimes();
     EasyMock.expect(selector.getValueCardinality()).andReturn(0).anyTimes();
-    EasyMock.replay(selector);
+    EasyMock.expect(selector.idLookup()).andReturn(lookup).anyTimes();
+    EasyMock.expect(lookup.lookupId("any value")).andReturn(0).anyTimes();
+    EasyMock.expect(selector.lookupName(0)).andReturn("any value").anyTimes();
+    EasyMock.replay(selector, lookup);
 
     VectorValueMatcherFactory matcherFactory =
         VectorValueMatcherColumnProcessorFactory.instance().makeSingleValueDimensionProcessor(
@@ -208,7 +196,7 @@ public class VectorValueMatcherColumnProcessorFactoryTest extends InitializedNul
     Assert.assertTrue(anotherMatcher instanceof BooleanVectorValueMatcher);
     Assert.assertEquals(VECTOR_SIZE, anotherMatcher.getMaxVectorSize());
     Assert.assertEquals(CURRENT_SIZE, anotherMatcher.getCurrentVectorSize());
-    EasyMock.verify(selector);
+    EasyMock.verify(selector, lookup);
   }
 
   @Test
@@ -264,6 +252,7 @@ public class VectorValueMatcherColumnProcessorFactoryTest extends InitializedNul
     EasyMock.expect(selector.getValueCardinality()).andReturn(1).anyTimes();
     EasyMock.expect(selector.nameLookupPossibleInAdvance()).andReturn(false).anyTimes();
     EasyMock.expect(selector.idLookup()).andReturn(lookup).anyTimes();
+    EasyMock.expect(selector.lookupName(0)).andReturn(null).anyTimes();
     EasyMock.expect(lookup.lookupId("any value")).andReturn(1).anyTimes();
     EasyMock.expect(lookup.lookupId(null)).andReturn(0).anyTimes();
     EasyMock.replay(selector, lookup);
@@ -298,6 +287,7 @@ public class VectorValueMatcherColumnProcessorFactoryTest extends InitializedNul
     EasyMock.expect(selector.getValueCardinality()).andReturn(11).anyTimes();
     EasyMock.expect(selector.nameLookupPossibleInAdvance()).andReturn(false).anyTimes();
     EasyMock.expect(selector.idLookup()).andReturn(lookup).anyTimes();
+    EasyMock.expect(selector.lookupName(0)).andReturn(null).anyTimes();
     EasyMock.expect(lookup.lookupId("any value")).andReturn(-1).anyTimes();
     EasyMock.expect(lookup.lookupId(null)).andReturn(0).anyTimes();
     EasyMock.replay(selector, lookup);
@@ -315,12 +305,10 @@ public class VectorValueMatcherColumnProcessorFactoryTest extends InitializedNul
     Assert.assertTrue(matcherFactory instanceof MultiValueStringVectorValueMatcher);
 
     VectorValueMatcher valueNotExistMatcher = matcherFactory.makeMatcher("any value");
-    Assert.assertTrue(valueNotExistMatcher instanceof BooleanVectorValueMatcher);
     Assert.assertEquals(VECTOR_SIZE, valueNotExistMatcher.getMaxVectorSize());
     Assert.assertEquals(CURRENT_SIZE, valueNotExistMatcher.getCurrentVectorSize());
 
     VectorValueMatcher valueExistMatcher = matcherFactory.makeMatcher((String) null);
-    Assert.assertFalse(valueExistMatcher instanceof BooleanVectorValueMatcher);
     Assert.assertEquals(VECTOR_SIZE, valueExistMatcher.getMaxVectorSize());
     Assert.assertEquals(CURRENT_SIZE, valueExistMatcher.getCurrentVectorSize());
     EasyMock.verify(selector, lookup);

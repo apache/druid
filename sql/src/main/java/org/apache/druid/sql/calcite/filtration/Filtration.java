@@ -114,6 +114,7 @@ public class Filtration
             MoveTimeFiltersToIntervals.instance(),
             ConvertBoundsToSelectors.create(rowSignature),
             ConvertSelectorsToIns.create(rowSignature),
+            RemoveRedundantIsTrue.instance(),
             MoveMarkerFiltersToIntervals.instance(),
             ValidateNoMarkerFiltersRemain.instance()
         )
@@ -136,7 +137,8 @@ public class Filtration
         ImmutableList.of(
             CombineAndSimplifyBounds.instance(),
             ConvertBoundsToSelectors.create(rowSignature),
-            ConvertSelectorsToIns.create(rowSignature)
+            ConvertSelectorsToIns.create(rowSignature),
+            RemoveRedundantIsTrue.instance()
         )
     );
 

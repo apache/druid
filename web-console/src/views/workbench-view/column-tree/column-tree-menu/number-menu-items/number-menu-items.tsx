@@ -18,12 +18,14 @@
 
 import { MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { SqlExpression, SqlFunction, SqlLiteral, SqlQuery, SqlRef } from 'druid-query-toolkit';
+import type { SqlExpression, SqlQuery } from '@druid-toolkit/query';
+import { C, F, L } from '@druid-toolkit/query';
+import type { JSX } from 'react';
 import React from 'react';
 
 import { prettyPrintSql } from '../../../../../utils';
 
-const NINE_THOUSAND = SqlLiteral.create(9000);
+const NINE_THOUSAND = L(9000);
 
 export interface NumberMenuItemsProps {
   table: string;
@@ -34,10 +36,10 @@ export interface NumberMenuItemsProps {
 }
 
 export const NumberMenuItems = React.memo(function NumberMenuItems(props: NumberMenuItemsProps) {
-  function renderFilterMenu(): JSX.Element {
-    const { columnName, parsedQuery, onQueryChange } = props;
-    const ref = SqlRef.column(columnName);
+  const { columnName, parsedQuery, onQueryChange } = props;
+  const column = C(columnName);
 
+  function renderFilterMenu(): JSX.Element {
     function filterMenuItem(clause: SqlExpression) {
       return (
         <MenuItem
@@ -51,15 +53,14 @@ export const NumberMenuItems = React.memo(function NumberMenuItems(props: Number
 
     return (
       <MenuItem icon={IconNames.FILTER} text="Filter">
-        {filterMenuItem(ref.greaterThan(NINE_THOUSAND))}
-        {filterMenuItem(ref.lessThanOrEqual(NINE_THOUSAND))}
+        {filterMenuItem(column.greaterThan(NINE_THOUSAND))}
+        {filterMenuItem(column.lessThanOrEqual(NINE_THOUSAND))}
       </MenuItem>
     );
   }
 
   function renderRemoveFilter(): JSX.Element | undefined {
-    const { columnName, parsedQuery, onQueryChange } = props;
-    if (!parsedQuery.getEffectiveWhereExpression().containsColumn(columnName)) return;
+    if (!parsedQuery.getEffectiveWhereExpression().containsColumnName(columnName)) return;
 
     return (
       <MenuItem
@@ -73,9 +74,7 @@ export const NumberMenuItems = React.memo(function NumberMenuItems(props: Number
   }
 
   function renderGroupByMenu(): JSX.Element | undefined {
-    const { columnName, parsedQuery, onQueryChange } = props;
     if (!parsedQuery.hasGroupBy()) return;
-    const ref = SqlRef.column(columnName);
 
     function groupByMenuItem(ex: SqlExpression, alias?: string) {
       return (
@@ -96,17 +95,13 @@ export const NumberMenuItems = React.memo(function NumberMenuItems(props: Number
 
     return (
       <MenuItem icon={IconNames.GROUP_OBJECTS} text="Group by">
-        {groupByMenuItem(ref)}
-        {groupByMenuItem(
-          SqlFunction.simple('TRUNC', [ref, SqlLiteral.create(-1)]),
-          `${columnName}_truncated`,
-        )}
+        {groupByMenuItem(column)}
+        {groupByMenuItem(F('TRUNC', column, -1), `${columnName}_truncated`)}
       </MenuItem>
     );
   }
 
   function renderRemoveGroupBy(): JSX.Element | undefined {
-    const { columnName, parsedQuery, onQueryChange } = props;
     const groupedSelectIndexes = parsedQuery.getGroupedSelectIndexesForColumn(columnName);
     if (!groupedSelectIndexes.length) return;
 
@@ -122,9 +117,7 @@ export const NumberMenuItems = React.memo(function NumberMenuItems(props: Number
   }
 
   function renderAggregateMenu(): JSX.Element | undefined {
-    const { columnName, parsedQuery, onQueryChange } = props;
     if (!parsedQuery.hasGroupBy()) return;
-    const ref = SqlRef.column(columnName);
 
     function aggregateMenuItem(ex: SqlExpression, alias: string) {
       return (
@@ -139,15 +132,12 @@ export const NumberMenuItems = React.memo(function NumberMenuItems(props: Number
 
     return (
       <MenuItem icon={IconNames.FUNCTION} text="Aggregate">
-        {aggregateMenuItem(SqlFunction.simple('SUM', [ref]), `sum_${columnName}`)}
-        {aggregateMenuItem(SqlFunction.simple('MIN', [ref]), `min_${columnName}`)}
-        {aggregateMenuItem(SqlFunction.simple('MAX', [ref]), `max_${columnName}`)}
-        {aggregateMenuItem(SqlFunction.simple('AVG', [ref]), `avg_${columnName}`)}
-        {aggregateMenuItem(
-          SqlFunction.simple('APPROX_QUANTILE', [ref, SqlLiteral.create(0.98)]),
-          `p98_${columnName}`,
-        )}
-        {aggregateMenuItem(SqlFunction.simple('LATEST', [ref]), `latest_${columnName}`)}
+        {aggregateMenuItem(F('SUM', column), `sum_${columnName}`)}
+        {aggregateMenuItem(F('MIN', column), `min_${columnName}`)}
+        {aggregateMenuItem(F('MAX', column), `max_${columnName}`)}
+        {aggregateMenuItem(F('AVG', column), `avg_${columnName}`)}
+        {aggregateMenuItem(F('APPROX_QUANTILE', column, 0.98), `p98_${columnName}`)}
+        {aggregateMenuItem(F('LATEST', column), `latest_${columnName}`)}
       </MenuItem>
     );
   }

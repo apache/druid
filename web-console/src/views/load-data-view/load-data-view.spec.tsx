@@ -16,19 +16,36 @@
  * limitations under the License.
  */
 
-import { shallow } from 'enzyme';
 import React from 'react';
+
+import { shallow } from '../../utils/shallow-renderer';
 
 import { LoadDataView } from './load-data-view';
 
 describe('LoadDataView', () => {
   it('matches snapshot streaming', () => {
-    const loadDataView = shallow(<LoadDataView mode="streaming" goToIngestion={() => {}} />);
+    const loadDataView = shallow(
+      <LoadDataView
+        mode="streaming"
+        goToSupervisor={() => {}}
+        goToTasks={() => {}}
+        openSupervisorSubmit={() => {}}
+        openTaskSubmit={() => {}}
+      />,
+    );
     expect(loadDataView).toMatchSnapshot();
   });
 
   it('matches snapshot batch', () => {
-    const loadDataView = shallow(<LoadDataView mode="batch" goToIngestion={() => {}} />);
+    const loadDataView = shallow(
+      <LoadDataView
+        mode="batch"
+        goToSupervisor={() => {}}
+        goToTasks={() => {}}
+        openSupervisorSubmit={() => {}}
+        openTaskSubmit={() => {}}
+      />,
+    );
     expect(loadDataView).toMatchSnapshot();
   });
 });

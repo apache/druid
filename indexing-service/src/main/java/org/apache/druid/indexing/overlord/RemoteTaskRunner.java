@@ -31,7 +31,6 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.FutureCallback;
@@ -100,6 +99,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -266,7 +266,8 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
                           waitingForMonitor.notifyAll();
                         }
                       }
-                    }
+                    },
+                    MoreExecutors.directExecutor()
                 );
                 break;
               case CHILD_UPDATED:
@@ -464,8 +465,24 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   @Override
   public Collection<RemoteTaskRunnerWorkItem> getKnownTasks()
   {
-    // Racey, since there is a period of time during assignment when a task is neither pending nor running
-    return ImmutableList.copyOf(Iterables.concat(pendingTasks.values(), runningTasks.values(), completeTasks.values()));
+    // Use a map to dedupe tasks, since they may transition from one state to another while this method is iterating
+    // through the various collections.
+    final Map<String, RemoteTaskRunnerWorkItem> items = new LinkedHashMap<>();
+
+    // Racey, since there is a period of time during assignment when a task is neither pending nor running.
+    for (RemoteTaskRunnerWorkItem item : pendingTasks.values()) {
+      items.put(item.getTaskId(), item);
+    }
+
+    for (RemoteTaskRunnerWorkItem item : runningTasks.values()) {
+      items.put(item.getTaskId(), item);
+    }
+
+    for (RemoteTaskRunnerWorkItem item : completeTasks.values()) {
+      items.put(item.getTaskId(), item);
+    }
+
+    return ImmutableList.copyOf(items.values());
   }
 
   @Nullable
@@ -507,6 +524,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     return Optional.fromNullable(provisioningService.getStats());
   }
 
+  @Nullable
   public ZkWorker findWorkerRunningTask(String taskId)
   {
     for (ZkWorker zkWorker : zkWorkers.values()) {
@@ -515,6 +533,15 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       }
     }
     return null;
+  }
+
+  /**
+   * Retrieve {@link ZkWorker} based on an ID (host), or null if the ID doesn't exist.
+   */
+  @Nullable
+  ZkWorker findWorkerId(String workerId)
+  {
+    return zkWorkers.get(workerId);
   }
 
   public boolean isWorkerRunningTask(ZkWorker worker, String taskId)
@@ -939,7 +966,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
 
       final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
       IndexTaskUtils.setTaskDimensions(metricBuilder, task);
-      emitter.emit(metricBuilder.build(
+      emitter.emit(metricBuilder.setMetric(
           "task/pending/time",
           new Duration(workItem.getQueueInsertionTime(), DateTimes.nowUtc()).getMillis())
       );
@@ -1282,7 +1309,8 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
           {
             removedWorkerCleanups.remove(worker, cleanupTask);
           }
-        }
+        },
+        MoreExecutors.directExecutor()
     );
   }
 
@@ -1381,33 +1409,35 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   }
 
   @Override
-  public Collection<Worker> markWorkersLazy(Predicate<ImmutableWorkerInfo> isLazyWorker, int maxWorkers)
+  public Collection<Worker> markWorkersLazy(Predicate<ImmutableWorkerInfo> isLazyWorker, int maxLazyWorkers)
   {
     // skip the lock and bail early if we should not mark any workers lazy (e.g. number
     // of current workers is at or below the minNumWorkers of autoscaler config)
-    if (maxWorkers < 1) {
-      return Collections.emptyList();
+    if (lazyWorkers.size() >= maxLazyWorkers) {
+      return getLazyWorkers();
     }
-    // status lock is used to prevent any tasks being assigned to the worker while we mark it lazy
+
+    // Search for new workers to mark lazy.
+    // Status lock is used to prevent any tasks being assigned to workers while we mark them lazy
     synchronized (statusLock) {
       for (Map.Entry<String, ZkWorker> worker : zkWorkers.entrySet()) {
+        if (lazyWorkers.size() >= maxLazyWorkers) {
+          break;
+        }
         final ZkWorker zkWorker = worker.getValue();
         try {
           if (getAssignedTasks(zkWorker.getWorker()).isEmpty() && isLazyWorker.apply(zkWorker.toImmutable())) {
             log.info("Adding Worker[%s] to lazySet!", zkWorker.getWorker().getHost());
             lazyWorkers.put(worker.getKey(), zkWorker);
-            if (lazyWorkers.size() == maxWorkers) {
-              // only mark excess workers as lazy and allow their cleanup
-              break;
-            }
           }
         }
         catch (Exception e) {
           throw new RuntimeException(e);
         }
       }
-      return getWorkerFromZK(lazyWorkers.values());
     }
+
+    return getLazyWorkers();
   }
 
   protected List<String> getAssignedTasks(Worker worker) throws Exception
@@ -1610,5 +1640,17 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     }
 
     return totalBlacklistedPeons;
+  }
+
+  @Override
+  public int getTotalCapacity()
+  {
+    return getWorkers().stream().mapToInt(workerInfo -> workerInfo.getWorker().getCapacity()).sum();
+  }
+
+  @Override
+  public int getUsedCapacity()
+  {
+    return getWorkers().stream().mapToInt(ImmutableWorkerInfo::getCurrCapacityUsed).sum();
   }
 }

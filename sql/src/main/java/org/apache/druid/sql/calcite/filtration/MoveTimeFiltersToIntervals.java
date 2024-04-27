@@ -23,14 +23,17 @@ import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
+import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.filter.AndDimFilter;
 import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.query.filter.OrDimFilter;
+import org.apache.druid.query.filter.RangeFilter;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -42,6 +45,11 @@ public class MoveTimeFiltersToIntervals implements Function<Filtration, Filtrati
       ColumnHolder.TIME_COLUMN_NAME,
       null,
       StringComparators.NUMERIC
+  );
+
+  private static final RangeRefKey TIME_RANGE_REF_KEY = new RangeRefKey(
+      ColumnHolder.TIME_COLUMN_NAME,
+      ColumnType.LONG
   );
 
   private MoveTimeFiltersToIntervals()
@@ -149,6 +157,13 @@ public class MoveTimeFiltersToIntervals implements Function<Filtration, Filtrati
       } else {
         return Pair.of(filter, null);
       }
+    } else if (filter instanceof RangeFilter) {
+      final RangeFilter bound = (RangeFilter) filter;
+      if (RangeRefKey.from(bound).equals(TIME_RANGE_REF_KEY)) {
+        return Pair.of(null, RangeSets.of(toLongRangeFromRange(Ranges.toRange(bound))));
+      } else {
+        return Pair.of(filter, null);
+      }
     } else {
       return Pair.of(filter, null);
     }
@@ -166,6 +181,22 @@ public class MoveTimeFiltersToIntervals implements Function<Filtration, Filtrati
       return Range.range(
           Long.parseLong(range.lowerEndpoint().getValue()), range.lowerBoundType(),
           Long.parseLong(range.upperEndpoint().getValue()), range.upperBoundType()
+      );
+    }
+  }
+
+  private static Range<Long> toLongRangeFromRange(final Range<RangeValue> range)
+  {
+    if (!range.hasUpperBound() && !range.hasLowerBound()) {
+      return Range.all();
+    } else if (range.hasUpperBound() && !range.hasLowerBound()) {
+      return Range.upTo(Numbers.parseLong(range.upperEndpoint().getValue()), range.upperBoundType());
+    } else if (!range.hasUpperBound() && range.hasLowerBound()) {
+      return Range.downTo(Numbers.parseLong(range.lowerEndpoint().getValue()), range.lowerBoundType());
+    } else {
+      return Range.range(
+          Numbers.parseLong(range.lowerEndpoint().getValue()), range.lowerBoundType(),
+          Numbers.parseLong(range.upperEndpoint().getValue()), range.upperBoundType()
       );
     }
   }

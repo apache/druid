@@ -17,6 +17,7 @@
  */
 
 import { Button, Classes, Dialog, Intent, NumericInput } from '@blueprintjs/core';
+import type { JSX } from 'react';
 import React, { useState } from 'react';
 
 const DEFAULT_MIN_VALUE = 1;

@@ -32,6 +32,9 @@ public class RowKey
 {
   private static final RowKey EMPTY_KEY = new RowKey(new byte[0]);
 
+  // Constant to account for byte array overhead.
+  static final int OBJECT_OVERHEAD_SIZE_BYTES = 24;
+
   private final byte[] key;
 
   // Cached hashcode. Computed on demand, not in the constructor, to avoid unnecessary computation.
@@ -109,8 +112,12 @@ public class RowKey
     return Arrays.toString(key);
   }
 
-  public int getNumberOfBytes()
+  /**
+   * Estimate number of bytes taken by the key array. Only returns an estimate and does not account for
+   * platform or JVM specific implementation.
+   */
+  public int estimatedObjectSizeBytes()
   {
-    return array().length;
+    return OBJECT_OVERHEAD_SIZE_BYTES + array().length;
   }
 }

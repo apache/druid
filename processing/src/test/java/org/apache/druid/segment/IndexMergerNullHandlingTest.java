@@ -32,11 +32,11 @@ import org.apache.druid.query.DefaultBitmapResultFactory;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
-import org.apache.druid.segment.column.DictionaryEncodedStringValueIndex;
-import org.apache.druid.segment.column.StringValueSetIndex;
 import org.apache.druid.segment.data.IncrementalIndexTest;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.incremental.IncrementalIndex;
+import org.apache.druid.segment.index.semantic.DictionaryEncodedStringValueIndex;
+import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.junit.Assert;
 import org.junit.Before;
@@ -74,7 +74,7 @@ public class IndexMergerNullHandlingTest
   {
     indexMerger = TestHelper.getTestIndexMergerV9(OffHeapMemorySegmentWriteOutMediumFactory.instance());
     indexIO = TestHelper.getTestIndexIO();
-    indexSpec = new IndexSpec();
+    indexSpec = IndexSpec.DEFAULT;
   }
 
   @Test
@@ -140,7 +140,7 @@ public class IndexMergerNullHandlingTest
           // Compute all unique values, the same way that IndexMerger is expected to do it.
           final Set<String> uniqueValues = new HashSet<>();
           for (Map<String, Object> m : subsetList) {
-            final List<String> dValues = normalize(m.get("d"), hasMultipleValues);
+            final List<String> dValues = normalize(m.get("d"));
             uniqueValues.addAll(dValues);
 
             if (nullFlavors.contains(m)) {
@@ -167,7 +167,7 @@ public class IndexMergerNullHandlingTest
                 subsetList.toString(),
                 ImmutableMultiset.copyOf(
                     subsetList.stream()
-                              .map(m -> normalize(m.get("d"), hasMultipleValues))
+                              .map(m -> normalize(m.get("d")))
                               .distinct() // Distinct values only, because we expect rollup.
                               .collect(Collectors.toList())
                 ),
@@ -185,8 +185,8 @@ public class IndexMergerNullHandlingTest
             final DictionaryEncodedStringValueIndex valueIndex = columnHolder.getIndexSupplier().as(
                 DictionaryEncodedStringValueIndex.class
             );
-            final StringValueSetIndex valueSetIndex = columnHolder.getIndexSupplier().as(
-                StringValueSetIndex.class
+            final StringValueSetIndexes valueSetIndex = columnHolder.getIndexSupplier().as(
+                StringValueSetIndexes.class
             );
 
             // Read through the column to find all the rows that should match null.
@@ -205,7 +205,8 @@ public class IndexMergerNullHandlingTest
                                                                   new DefaultBitmapResultFactory(
                                                                       indexSpec.getBitmapSerdeFactory()
                                                                                .getBitmapFactory()
-                                                                  )
+                                                                  ),
+                                                                  false
                                                               );
               final List<Integer> actualNullRows = new ArrayList<>();
               final IntIterator iterator = nullBitmap.iterator();
@@ -224,7 +225,7 @@ public class IndexMergerNullHandlingTest
   /**
    * Normalize an input value the same way that IndexMerger is expected to do it.
    */
-  private static List<String> normalize(final Object value, final boolean hasMultipleValues)
+  private static List<String> normalize(final Object value)
   {
     final List<String> retVal = new ArrayList<>();
 
@@ -237,7 +238,7 @@ public class IndexMergerNullHandlingTest
       if (list.isEmpty()) {
         // empty lists become nulls in single valued columns
         // they sometimes also become nulls in multi-valued columns (see comments in getRow())
-        retVal.add(NullHandling.emptyToNullIfNeeded(null));
+        retVal.add(null);
       } else {
         retVal.addAll(list.stream().map(NullHandling::emptyToNullIfNeeded).collect(Collectors.toList()));
       }

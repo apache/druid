@@ -26,6 +26,7 @@ import org.apache.druid.indexing.overlord.config.WorkerTaskRunnerConfig;
 import org.apache.druid.indexing.worker.Worker;
 
 import java.util.Collection;
+import java.util.List;
 
 @PublicApi
 public interface WorkerTaskRunner extends TaskRunner
@@ -47,9 +48,18 @@ public interface WorkerTaskRunner extends TaskRunner
   Collection<Worker> getLazyWorkers();
 
   /**
-   * Check which workers can be marked as lazy
+   * Mark workers matching a predicate as lazy, up to a maximum. If the number of workers previously marked lazy is
+   * equal to or higher than the provided maximum, this method will return those previously marked workers and will
+   * not mark any additional workers. Workers are never un-marked lazy once they are marked lazy.
+   *
+   * This method is called by {@link org.apache.druid.indexing.overlord.autoscaling.ProvisioningStrategy}
+   * implementations. It is expected that the lazy workers returned by this method will be terminated using
+   * {@link org.apache.druid.indexing.overlord.autoscaling.AutoScaler#terminate(List)}.
+   *
+   * @param isLazyWorker   predicate that checks if a worker is lazy
+   * @param maxLazyWorkers desired maximum number of lazy workers (actual number may be higher)
    */
-  Collection<Worker> markWorkersLazy(Predicate<ImmutableWorkerInfo> isLazyWorker, int maxWorkers);
+  Collection<Worker> markWorkersLazy(Predicate<ImmutableWorkerInfo> isLazyWorker, int maxLazyWorkers);
 
   WorkerTaskRunnerConfig getConfig();
 

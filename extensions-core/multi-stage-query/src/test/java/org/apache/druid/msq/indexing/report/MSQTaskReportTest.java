@@ -19,23 +19,26 @@
 
 package org.apache.druid.msq.indexing.report;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.frame.key.ClusterBy;
-import org.apache.druid.frame.key.SortColumn;
+import org.apache.druid.frame.key.KeyColumn;
+import org.apache.druid.frame.key.KeyOrder;
 import org.apache.druid.indexer.TaskState;
-import org.apache.druid.indexing.common.SingleFileTaskReportFileWriter;
-import org.apache.druid.indexing.common.TaskReport;
+import org.apache.druid.indexer.report.SingleFileTaskReportFileWriter;
+import org.apache.druid.indexer.report.TaskReport;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
+import org.apache.druid.msq.exec.SegmentLoadStatusFetcher;
 import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.indexing.error.TooManyColumnsFault;
-import org.apache.druid.msq.kernel.MaxCountShuffleSpec;
+import org.apache.druid.msq.kernel.GlobalSortMaxCountShuffleSpec;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.querykit.common.OffsetLimitFrameProcessorFactory;
@@ -43,7 +46,6 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -51,14 +53,15 @@ import org.junit.rules.TemporaryFolder;
 import java.io.File;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 public class MSQTaskReportTest
 {
   private static final String TASK_ID = "mytask";
   private static final String HOST = "example.com:1234";
-  private static final QueryDefinition QUERY_DEFINITION =
+  public static final QueryDefinition QUERY_DEFINITION =
       QueryDefinition
           .builder()
           .add(
@@ -66,8 +69,8 @@ public class MSQTaskReportTest
                   .builder(0)
                   .processorFactory(new OffsetLimitFrameProcessorFactory(0, 1L))
                   .shuffleSpec(
-                      new MaxCountShuffleSpec(
-                          new ClusterBy(ImmutableList.of(new SortColumn("s", false)), 0),
+                      new GlobalSortMaxCountShuffleSpec(
+                          new ClusterBy(ImmutableList.of(new KeyColumn("s", KeyOrder.ASCENDING)), 0),
                           2,
                           false
                       )
@@ -88,10 +91,22 @@ public class MSQTaskReportTest
         new Object[]{"bar"}
     );
 
+    SegmentLoadStatusFetcher.SegmentLoadWaiterStatus status = new SegmentLoadStatusFetcher.SegmentLoadWaiterStatus(
+        SegmentLoadStatusFetcher.State.WAITING,
+        DateTimes.nowUtc(),
+        200L,
+        100,
+        80,
+        30,
+        50,
+        10,
+        0
+    );
+
     final MSQTaskReport report = new MSQTaskReport(
         TASK_ID,
         new MSQTaskReportPayload(
-            new MSQStatusReport(TaskState.SUCCESS, null, new ArrayDeque<>(), null, 0),
+            new MSQStatusReport(TaskState.SUCCESS, null, new ArrayDeque<>(), null, 0, new HashMap<>(), 1, 2, status, null),
             MSQStagesReport.create(
                 QUERY_DEFINITION,
                 ImmutableMap.of(),
@@ -101,9 +116,10 @@ public class MSQTaskReportTest
             ),
             new CounterSnapshotsTree(),
             new MSQResultsReport(
-                RowSignature.builder().add("s", ColumnType.STRING).build(),
-                ImmutableList.of("VARCHAR"),
-                Yielders.each(Sequences.simple(results))
+                Collections.singletonList(new MSQResultsReport.ColumnAndType("s", ColumnType.STRING)),
+                ImmutableList.of(SqlTypeName.VARCHAR),
+                Yielders.each(Sequences.simple(results)),
+                null
             )
         )
     );
@@ -119,6 +135,8 @@ public class MSQTaskReportTest
     Assert.assertEquals(TASK_ID, report2.getTaskId());
     Assert.assertEquals(report.getPayload().getStatus().getStatus(), report2.getPayload().getStatus().getStatus());
     Assert.assertNull(report2.getPayload().getStatus().getErrorReport());
+    Assert.assertEquals(report.getPayload().getStatus().getRunningTasks(), report2.getPayload().getStatus().getRunningTasks());
+    Assert.assertEquals(report.getPayload().getStatus().getPendingTasks(), report2.getPayload().getStatus().getPendingTasks());
     Assert.assertEquals(report.getPayload().getStages(), report2.getPayload().getStages());
 
     Yielder<Object[]> yielder = report2.getPayload().getResults().getResultYielder();
@@ -128,7 +146,6 @@ public class MSQTaskReportTest
       results2.add(yielder.get());
       yielder = yielder.next(null);
     }
-
     Assert.assertEquals(results.size(), results2.size());
     for (int i = 0; i < results.size(); i++) {
       Assert.assertArrayEquals(results.get(i), results2.get(i));
@@ -138,11 +155,23 @@ public class MSQTaskReportTest
   @Test
   public void testSerdeErrorReport() throws Exception
   {
+    SegmentLoadStatusFetcher.SegmentLoadWaiterStatus status = new SegmentLoadStatusFetcher.SegmentLoadWaiterStatus(
+        SegmentLoadStatusFetcher.State.FAILED,
+        DateTimes.nowUtc(),
+        200L,
+        100,
+        80,
+        30,
+        50,
+        10,
+        0
+    );
+
     final MSQErrorReport errorReport = MSQErrorReport.fromFault(TASK_ID, HOST, 0, new TooManyColumnsFault(10, 5));
     final MSQTaskReport report = new MSQTaskReport(
         TASK_ID,
         new MSQTaskReportPayload(
-            new MSQStatusReport(TaskState.FAILED, errorReport, new ArrayDeque<>(), null, 0),
+            new MSQStatusReport(TaskState.FAILED, errorReport, new ArrayDeque<>(), null, 0, new HashMap<>(), 1, 2, status, null),
             MSQStagesReport.create(
                 QUERY_DEFINITION,
                 ImmutableMap.of(),
@@ -173,13 +202,24 @@ public class MSQTaskReportTest
   }
 
   @Test
-  @Ignore("requires https://github.com/apache/druid/pull/12938")
   public void testWriteTaskReport() throws Exception
   {
+    SegmentLoadStatusFetcher.SegmentLoadWaiterStatus status = new SegmentLoadStatusFetcher.SegmentLoadWaiterStatus(
+        SegmentLoadStatusFetcher.State.SUCCESS,
+        DateTimes.nowUtc(),
+        200L,
+        100,
+        80,
+        30,
+        50,
+        10,
+        0
+    );
+
     final MSQTaskReport report = new MSQTaskReport(
         TASK_ID,
         new MSQTaskReportPayload(
-            new MSQStatusReport(TaskState.SUCCESS, null, new ArrayDeque<>(), null, 0),
+            new MSQStatusReport(TaskState.SUCCESS, null, new ArrayDeque<>(), null, 0, new HashMap<>(), 1, 2, status, null),
             MSQStagesReport.create(
                 QUERY_DEFINITION,
                 ImmutableMap.of(),
@@ -200,9 +240,9 @@ public class MSQTaskReportTest
     writer.setObjectMapper(mapper);
     writer.write(TASK_ID, TaskReport.buildTaskReports(report));
 
-    final Map<String, TaskReport> reportMap = mapper.readValue(
+    final TaskReport.ReportMap reportMap = mapper.readValue(
         reportFile,
-        new TypeReference<Map<String, TaskReport>>() {}
+        TaskReport.ReportMap.class
     );
 
     final MSQTaskReport report2 = (MSQTaskReport) reportMap.get(MSQTaskReport.REPORT_KEY);

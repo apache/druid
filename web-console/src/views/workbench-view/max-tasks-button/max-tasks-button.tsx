@@ -16,41 +16,47 @@
  * limitations under the License.
  */
 
-import { Button, ButtonProps, Menu, MenuDivider, MenuItem, Position } from '@blueprintjs/core';
+import type { ButtonProps } from '@blueprintjs/core';
+import { Button, Menu, MenuDivider, MenuItem, Position } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
 import React, { useState } from 'react';
 
 import { NumericInputDialog } from '../../../dialogs';
+import type { QueryContext } from '../../../druid-models';
 import {
   changeMaxNumTasks,
   changeTaskAssigment,
   getMaxNumTasks,
   getTaskAssigment,
-  QueryContext,
 } from '../../../druid-models';
 import { formatInteger, tickIcon } from '../../../utils';
 
-const MAX_NUM_TASK_OPTIONS = [2, 3, 4, 5, 7, 9, 11, 17, 33, 65];
+const MAX_NUM_TASK_OPTIONS = [2, 3, 4, 5, 7, 9, 11, 17, 33, 65, 129];
 const TASK_ASSIGNMENT_OPTIONS = ['max', 'auto'];
 
 const TASK_ASSIGNMENT_DESCRIPTION: Record<string, string> = {
   max: 'Use as many tasks as possible, up to the maximum.',
-  auto: 'Use as few tasks as possible without exceeding 10 GiB or 10,000 files per task.',
+  auto: `Use as few tasks as possible without exceeding 512 MiB or 10,000 files per task, unless exceeding these limits is necessary to stay within 'maxNumTasks'. When calculating the size of files, the weighted size is used, which considers the file format and compression format used if any. When file sizes cannot be determined through directory listing (for example: http), behaves the same as 'max'.`,
 };
 
 export interface MaxTasksButtonProps extends Omit<ButtonProps, 'text' | 'rightIcon'> {
+  clusterCapacity: number | undefined;
   queryContext: QueryContext;
   changeQueryContext(queryContext: QueryContext): void;
 }
 
 export const MaxTasksButton = function MaxTasksButton(props: MaxTasksButtonProps) {
-  const { queryContext, changeQueryContext, ...rest } = props;
+  const { clusterCapacity, queryContext, changeQueryContext, ...rest } = props;
   const [customMaxNumTasksDialogOpen, setCustomMaxNumTasksDialogOpen] = useState(false);
 
   const maxNumTasks = getMaxNumTasks(queryContext);
   const taskAssigment = getTaskAssigment(queryContext);
 
+  const fullClusterCapacity = `${clusterCapacity} (full cluster capacity)`;
+  const shownMaxNumTaskOptions = clusterCapacity
+    ? MAX_NUM_TASK_OPTIONS.filter(_ => _ <= clusterCapacity)
+    : MAX_NUM_TASK_OPTIONS;
   return (
     <>
       <Popover2
@@ -58,8 +64,15 @@ export const MaxTasksButton = function MaxTasksButton(props: MaxTasksButtonProps
         position={Position.BOTTOM_LEFT}
         content={
           <Menu>
-            <MenuDivider title="Number of tasks to launch" />
-            {MAX_NUM_TASK_OPTIONS.map(m => (
+            <MenuDivider title="Maximum number of tasks to launch" />
+            {Boolean(clusterCapacity) && (
+              <MenuItem
+                icon={tickIcon(typeof maxNumTasks === 'undefined')}
+                text={fullClusterCapacity}
+                onClick={() => changeQueryContext(changeMaxNumTasks(queryContext, undefined))}
+              />
+            )}
+            {shownMaxNumTaskOptions.map(m => (
               <MenuItem
                 key={String(m)}
                 icon={tickIcon(m === maxNumTasks)}
@@ -69,7 +82,9 @@ export const MaxTasksButton = function MaxTasksButton(props: MaxTasksButtonProps
               />
             ))}
             <MenuItem
-              icon={tickIcon(!MAX_NUM_TASK_OPTIONS.includes(maxNumTasks))}
+              icon={tickIcon(
+                typeof maxNumTasks === 'number' && !shownMaxNumTaskOptions.includes(maxNumTasks),
+              )}
               text="Custom"
               onClick={() => setCustomMaxNumTasksDialogOpen(true)}
             />
@@ -79,8 +94,13 @@ export const MaxTasksButton = function MaxTasksButton(props: MaxTasksButtonProps
                 <MenuItem
                   key={String(t)}
                   icon={tickIcon(t === taskAssigment)}
-                  text={`${t} - ${TASK_ASSIGNMENT_DESCRIPTION[t]}`}
+                  text={
+                    <>
+                      <strong>{t}</strong>: {TASK_ASSIGNMENT_DESCRIPTION[t]}
+                    </>
+                  }
                   shouldDismissPopover={false}
+                  multiline
                   onClick={() => changeQueryContext(changeTaskAssigment(queryContext, t))}
                 />
               ))}
@@ -88,7 +108,17 @@ export const MaxTasksButton = function MaxTasksButton(props: MaxTasksButtonProps
           </Menu>
         }
       >
-        <Button {...rest} text={`Max tasks: ${maxNumTasks}`} rightIcon={IconNames.CARET_DOWN} />
+        <Button
+          {...rest}
+          text={`Max tasks: ${
+            typeof maxNumTasks === 'undefined'
+              ? clusterCapacity
+                ? fullClusterCapacity
+                : 2
+              : maxNumTasks
+          }`}
+          rightIcon={IconNames.CARET_DOWN}
+        />
       </Popover2>
       {customMaxNumTasksDialogOpen && (
         <NumericInputDialog
@@ -104,7 +134,7 @@ export const MaxTasksButton = function MaxTasksButton(props: MaxTasksButtonProps
           }
           minValue={2}
           integer
-          initValue={maxNumTasks}
+          initValue={maxNumTasks || 2}
           onSubmit={p => {
             changeQueryContext(changeMaxNumTasks(queryContext, p));
           }}

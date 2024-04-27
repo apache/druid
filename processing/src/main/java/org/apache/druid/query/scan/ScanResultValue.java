@@ -25,12 +25,14 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 public class ScanResultValue implements Comparable<ScanResultValue>
 {
@@ -45,17 +47,25 @@ public class ScanResultValue implements Comparable<ScanResultValue>
   private final String segmentId;
   private final List<String> columns;
   private final Object events;
+  private final RowSignature rowSignature;
 
   @JsonCreator
   public ScanResultValue(
       @JsonProperty("segmentId") @Nullable String segmentId,
       @JsonProperty("columns") List<String> columns,
-      @JsonProperty("events") Object events
+      @JsonProperty("events") Object events,
+      @Nullable @JsonProperty("rowSignature") RowSignature rowSignature
   )
   {
     this.segmentId = segmentId;
     this.columns = columns;
     this.events = events;
+    this.rowSignature = rowSignature;
+  }
+
+  public ScanResultValue(String segmentId, List<String> columns, Object events)
+  {
+    this(segmentId, columns, events, null);
   }
 
   @Nullable
@@ -76,6 +86,14 @@ public class ScanResultValue implements Comparable<ScanResultValue>
   {
     return events;
   }
+
+  @Nullable
+  @JsonProperty
+  public RowSignature getRowSignature()
+  {
+    return rowSignature;
+  }
+
 
   public long getFirstEventTimestamp(ScanQuery.ResultFormat resultFormat)
   {
@@ -101,7 +119,7 @@ public class ScanResultValue implements Comparable<ScanResultValue>
     List<ScanResultValue> singleEventScanResultValues = new ArrayList<>();
     List<Object> events = (List<Object>) this.getEvents();
     for (Object event : events) {
-      singleEventScanResultValues.add(new ScanResultValue(segmentId, columns, Collections.singletonList(event)));
+      singleEventScanResultValues.add(new ScanResultValue(segmentId, columns, Collections.singletonList(event), rowSignature));
     }
     return singleEventScanResultValues;
   }
@@ -118,13 +136,16 @@ public class ScanResultValue implements Comparable<ScanResultValue>
 
     ScanResultValue that = (ScanResultValue) o;
 
-    if (segmentId != null ? !segmentId.equals(that.segmentId) : that.segmentId != null) {
+    if (!Objects.equals(segmentId, that.segmentId)) {
       return false;
     }
-    if (columns != null ? !columns.equals(that.columns) : that.columns != null) {
+    if (!Objects.equals(columns, that.columns)) {
       return false;
     }
-    return events != null ? events.equals(that.events) : that.events == null;
+    if (!Objects.equals(rowSignature, that.rowSignature)) {
+      return false;
+    }
+    return Objects.equals(events, that.events);
   }
 
   @Override
@@ -133,6 +154,7 @@ public class ScanResultValue implements Comparable<ScanResultValue>
     int result = segmentId != null ? segmentId.hashCode() : 0;
     result = 31 * result + (columns != null ? columns.hashCode() : 0);
     result = 31 * result + (events != null ? events.hashCode() : 0);
+    result = 31 * result + (rowSignature != null ? rowSignature.hashCode() : 0);
     return result;
   }
 
@@ -143,6 +165,7 @@ public class ScanResultValue implements Comparable<ScanResultValue>
            "segmentId='" + segmentId + '\'' +
            ", columns=" + columns +
            ", events=" + events +
+           ", rowSignature=" + rowSignature +
            '}';
   }
 

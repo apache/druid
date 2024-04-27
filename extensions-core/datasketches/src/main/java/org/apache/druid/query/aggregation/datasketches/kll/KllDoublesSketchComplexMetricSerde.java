@@ -91,7 +91,7 @@ public class KllDoublesSketchComplexMetricSerde extends ComplexMetricSerde
         if (object == null || object instanceof KllDoublesSketch || object instanceof Memory) {
           return object;
         }
-        return KllDoublesSketchOperations.deserialize(object);
+        return KllDoublesSketchOperations.deserializeSafe(object);
       }
     };
   }

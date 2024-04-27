@@ -50,7 +50,6 @@ import org.apache.druid.segment.virtual.ExpressionSelectors;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
@@ -346,7 +345,7 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
     // arbitrarily assign lhs and rhs to accumulator and aggregator name inputs to re-use combine function
     return combineExpression.get().eval(
         combineBindings.get().withBinding(accumulatorId, lhs).withBinding(name, rhs)
-    ).value();
+    ).valueOrDefault();
   }
 
   @Override
@@ -362,7 +361,7 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
     Expr finalizeExpr;
     finalizeExpr = finalizeExpression.get();
     if (finalizeExpr != null) {
-      return finalizeExpr.eval(finalizeBindings.get().withBinding(FINALIZE_IDENTIFIER, object)).value();
+      return finalizeExpr.eval(finalizeBindings.get().withBinding(FINALIZE_IDENTIFIER, object)).valueOrDefault();
     }
     return object;
   }
@@ -394,29 +393,6 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
         finalizeExpressionString,
         maxSizeBytes,
         macroTable
-    );
-  }
-
-  @Override
-  public List<AggregatorFactory> getRequiredColumns()
-  {
-    return Collections.singletonList(
-        new ExpressionLambdaAggregatorFactory(
-            name,
-            fields,
-            accumulatorId,
-            initialValueExpressionString,
-            initialCombineValueExpressionString,
-            isNullUnlessAggregated,
-            shouldAggregateNullInputs,
-            shouldCombineAggregateNullInputs,
-            foldExpressionString,
-            combineExpressionString,
-            compareExpressionString,
-            finalizeExpressionString,
-            maxSizeBytes,
-            macroTable
-        )
     );
   }
 

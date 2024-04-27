@@ -23,11 +23,21 @@ public class Limits
 {
   /**
    * Maximum number of columns that can appear in a frame signature.
-   *
+   * <p>
    * Somewhat less than {@link WorkerMemoryParameters#STANDARD_FRAME_SIZE} divided by typical minimum column size:
    * {@link org.apache.druid.frame.allocation.AppendableMemory#DEFAULT_INITIAL_ALLOCATION_SIZE}.
    */
   public static final int MAX_FRAME_COLUMNS = 2000;
+
+  /**
+   * Maximum number of columns that can appear in the clustered by clause
+   *
+   * There is some arbitrariness in the limit, but it is chosen such that the datasketches sketches do not blow up in
+   * memory while computing the partitions for the clustered by keys.
+   * This limit along sequential merge of the sketches will help prevent OOMs in both the workers and the controller
+   * tasks
+   */
+  public static final int MAX_CLUSTERED_BY_COLUMNS = (int) (MAX_FRAME_COLUMNS * 0.75);
 
   /**
    * Maximum number of workers that can be used in a stage, regardless of available memory.
@@ -52,10 +62,45 @@ public class Limits
   /**
    * Maximum number of input bytes per worker in case number of tasks is determined automatically.
    */
-  public static final long MAX_INPUT_BYTES_PER_WORKER = 10 * 1024 * 1024 * 1024L;
+  public static final long DEFAULT_MAX_INPUT_BYTES_PER_WORKER = 1024 * 1024 * 512L;
 
   /**
    * Maximum size of the kernel manipulation queue in {@link org.apache.druid.msq.indexing.MSQControllerTask}.
    */
   public static final int MAX_KERNEL_MANIPULATION_QUEUE_SIZE = 100_000;
+
+  /**
+   * Maximum relaunches across all workers.
+   */
+  public static final int TOTAL_RELAUNCH_LIMIT = 100;
+
+  /**
+   * Maximum relaunches per worker. Initial run is not a relaunch. The worker will be spawned 1 + workerRelaunchLimit times before erroring out.
+   */
+  public static final int PER_WORKER_RELAUNCH_LIMIT = 2;
+
+  /**
+   * Max number of workers for {@link ClusterStatisticsMergeMode#PARALLEL}. If the number of workers is more than this,
+   * {@link ClusterStatisticsMergeMode#SEQUENTIAL} mode is chosen.
+   */
+  public static final long MAX_WORKERS_FOR_PARALLEL_MERGE = 100;
+
+  /**
+   * Max number of rows in the query reports of the SELECT queries run by MSQ. This ensures that the reports donot blow
+   * up for queries operating on larger datasets. The full result of the select query should be available once the
+   * MSQ is able to run async queries
+   */
+  public static final long MAX_SELECT_RESULT_ROWS = 3_000;
+
+  /**
+   * Max number of partition buckets for ingestion queries.
+   */
+  public static final int MAX_PARTITION_BUCKETS = 5_000;
+
+  /**
+   * Max number of rows with the same key in a window. This acts as a guardrail for
+   * data distribution with high cardinality
+   */
+  public static final int MAX_ROWS_MATERIALIZED_IN_WINDOW = 100_000;
+
 }

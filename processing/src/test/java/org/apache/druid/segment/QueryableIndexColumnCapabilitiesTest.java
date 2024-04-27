@@ -21,16 +21,15 @@ package org.apache.druid.segment;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterables;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.DoubleDimensionSchema;
 import org.apache.druid.data.input.impl.FloatDimensionSchema;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.MapInputRowParser;
-import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -39,6 +38,7 @@ import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
+import org.apache.druid.segment.column.CapabilitiesBasedFormat;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -73,18 +73,17 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
   @BeforeClass
   public static void setup() throws IOException
   {
-    MapInputRowParser parser = new MapInputRowParser(
-        new TimeAndDimsParseSpec(
-            new TimestampSpec("time", "auto", null),
-            new DimensionsSpec(
-                ImmutableList.<DimensionSchema>builder()
-                    .addAll(DimensionsSpec.getDefaultSchemas(ImmutableList.of("d1", "d2")))
-                    .add(new DoubleDimensionSchema("d3"))
-                    .add(new FloatDimensionSchema("d4"))
-                    .add(new LongDimensionSchema("d5"))
-                    .build()
-            )
-        )
+    InputRowSchema rowSchema = new InputRowSchema(
+        new TimestampSpec("time", "auto", null),
+        new DimensionsSpec(
+            ImmutableList.<DimensionSchema>builder()
+                         .addAll(DimensionsSpec.getDefaultSchemas(ImmutableList.of("d1", "d2")))
+                         .add(new DoubleDimensionSchema("d3"))
+                         .add(new FloatDimensionSchema("d4"))
+                         .add(new LongDimensionSchema("d5"))
+                         .build()
+        ),
+        null
     );
     AggregatorFactory[] metricsSpecs = new AggregatorFactory[] {
         new CountAggregatorFactory("cnt"),
@@ -102,14 +101,14 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
                                               .put("d4", 1.234f)
                                               .put("d5", 10L)
                                               .build();
-    rows.add(Iterables.getOnlyElement(parser.parseBatch(event)));
+    rows.add(MapInputRowParser.parse(rowSchema, event));
 
     IndexBuilder builder = IndexBuilder.create()
                                        .rows(rows)
                                        .schema(
                                            new IncrementalIndexSchema.Builder()
                                                .withMetrics(metricsSpecs)
-                                               .withDimensionsSpec(parser)
+                                               .withDimensionsSpec(rowSchema.getDimensionsSpec())
                                                .withRollup(false)
                                                .build()
                                        )
@@ -118,7 +117,7 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
     MMAP_INDEX = builder.buildMMappedIndex();
 
     List<InputRow> rowsWithNulls = new ArrayList<>();
-    rowsWithNulls.add(Iterables.getOnlyElement(parser.parseBatch(event)));
+    rowsWithNulls.add(MapInputRowParser.parse(rowSchema, event));
 
     Map<String, Object> eventWithNulls = new HashMap<>();
     eventWithNulls.put("time", DateTimes.nowUtc().getMillis());
@@ -128,14 +127,14 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
     eventWithNulls.put("d4", null);
     eventWithNulls.put("d5", null);
 
-    rowsWithNulls.add(Iterables.getOnlyElement(parser.parseBatch(eventWithNulls)));
+    rowsWithNulls.add(MapInputRowParser.parse(rowSchema, eventWithNulls));
 
     IndexBuilder builderWithNulls = IndexBuilder.create()
                                                 .rows(rowsWithNulls)
                                                 .schema(
                                                     new IncrementalIndexSchema.Builder()
                                                         .withMetrics(metricsSpecs)
-                                                        .withDimensionsSpec(parser)
+                                                        .withDimensionsSpec(rowSchema.getDimensionsSpec())
                                                         .withRollup(false)
                                                         .build()
                                                 )
@@ -242,7 +241,7 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
     Assert.assertFalse(
         ColumnCapabilitiesImpl.snapshot(
             caps,
-            IndexMergerV9.DIMENSION_CAPABILITY_MERGE_LOGIC
+            CapabilitiesBasedFormat.DIMENSION_CAPABILITY_MERGE_LOGIC
         ).hasMultipleValues().isMaybeTrue()
     );
     Assert.assertFalse(caps.hasSpatialIndexes());
@@ -276,7 +275,7 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
     Assert.assertFalse(
         ColumnCapabilitiesImpl.snapshot(
             caps,
-            IndexMergerV9.DIMENSION_CAPABILITY_MERGE_LOGIC
+            CapabilitiesBasedFormat.DIMENSION_CAPABILITY_MERGE_LOGIC
         ).hasMultipleValues().isMaybeTrue()
     );
     Assert.assertFalse(caps.hasSpatialIndexes());

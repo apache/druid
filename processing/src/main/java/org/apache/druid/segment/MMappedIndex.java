@@ -42,7 +42,6 @@ public class MMappedIndex
   final Interval dataInterval;
   final CompressedColumnarLongsSupplier timestamps;
   final Map<String, MetricHolder> metrics;
-  final Map<String, GenericIndexed<String>> dimValueLookups;
   final Map<String, GenericIndexed<ByteBuffer>> dimValueUtf8Lookups;
   final Map<String, VSizeColumnarMultiInts> dimColumns;
   final Map<String, GenericIndexed<ImmutableBitmap>> invertedIndexes;
@@ -55,7 +54,6 @@ public class MMappedIndex
       Interval dataInterval,
       CompressedColumnarLongsSupplier timestamps,
       Map<String, MetricHolder> metrics,
-      Map<String, GenericIndexed<String>> dimValueLookups,
       Map<String, GenericIndexed<ByteBuffer>> dimValueUtf8Lookups,
       Map<String, VSizeColumnarMultiInts> dimColumns,
       Map<String, GenericIndexed<ImmutableBitmap>> invertedIndexes,
@@ -68,7 +66,6 @@ public class MMappedIndex
     this.dataInterval = dataInterval;
     this.timestamps = timestamps;
     this.metrics = metrics;
-    this.dimValueLookups = dimValueLookups;
     this.dimValueUtf8Lookups = dimValueUtf8Lookups;
     this.dimColumns = dimColumns;
     this.invertedIndexes = invertedIndexes;
@@ -95,11 +92,6 @@ public class MMappedIndex
   public MetricHolder getMetricHolder(String metric)
   {
     return metrics.get(metric);
-  }
-
-  public GenericIndexed<String> getDimValueLookup(String dimension)
-  {
-    return dimValueLookups.get(dimension);
   }
 
   public GenericIndexed<ByteBuffer> getDimValueUtf8Lookup(String dimension)

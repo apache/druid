@@ -22,9 +22,9 @@ package org.apache.druid.server;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import com.google.inject.Guice;
 import com.google.inject.Injector;
 import org.apache.druid.guice.PropertiesModule;
+import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.initialization.ServerInjectorBuilderTest;
 import org.apache.druid.java.util.common.StringUtils;
@@ -78,8 +78,9 @@ public class StatusResourceTest
 
   private void testHiddenPropertiesWithPropertyFileName(String fileName) throws Exception
   {
-    Injector injector = Guice.createInjector(Collections.singletonList(new PropertiesModule(Collections.singletonList(
-        fileName))));
+    Injector injector = new StartupInjectorBuilder()
+        .add(new PropertiesModule(Collections.singletonList(fileName)))
+        .build();
     Map<String, String> returnedProperties = injector.getInstance(StatusResource.class).getProperties();
     Set<String> lowerCasePropertyNames = returnedProperties.keySet()
                                                            .stream()

@@ -72,7 +72,7 @@ public class TopNLexicographicResultBuilder implements TopNResultBuilder
 
   @Override
   public TopNResultBuilder addEntry(
-      Comparable dimValueObj,
+      Object dimValueObj,
       Object dimValIndex,
       Object[] metricVals
   )
@@ -163,7 +163,7 @@ public class TopNLexicographicResultBuilder implements TopNResultBuilder
     );
     return new Result<>(
         timestamp,
-        new TopNResultValue(Lists.transform(Arrays.asList(holderValueArray), DimValHolder::getMetricValues))
+        TopNResultValue.create(Lists.transform(Arrays.asList(holderValueArray), DimValHolder::getMetricValues))
     );
   }
 

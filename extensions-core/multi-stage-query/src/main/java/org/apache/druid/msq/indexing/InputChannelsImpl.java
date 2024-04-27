@@ -22,11 +22,12 @@ package org.apache.druid.msq.indexing;
 import com.google.common.collect.Iterables;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.MemoryAllocator;
+import org.apache.druid.frame.allocation.SingleMemoryAllocatorFactory;
 import org.apache.druid.frame.channel.BlockingQueueFrameChannel;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.processor.FrameChannelMerger;
-import org.apache.druid.frame.processor.FrameChannelMuxer;
+import org.apache.druid.frame.processor.FrameChannelMixer;
 import org.apache.druid.frame.processor.FrameProcessorExecutor;
 import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.write.FrameWriters;
@@ -90,8 +91,8 @@ public class InputChannelsImpl implements InputChannels
   {
     final StageDefinition stageDef = queryDefinition.getStageDefinition(stagePartition.getStageId());
     final ReadablePartition readablePartition = readablePartitionMap.get(stagePartition);
-    final ClusterBy inputClusterBy = stageDef.getClusterBy();
-    final boolean isSorted = inputClusterBy.getBucketByCount() != inputClusterBy.getColumns().size();
+    final ClusterBy clusterBy = stageDef.getClusterBy();
+    final boolean isSorted = clusterBy.sortable() && (clusterBy.getColumns().size() - clusterBy.getBucketByCount() > 0);
 
     if (isSorted) {
       return openSorted(stageDef, readablePartition);
@@ -129,13 +130,13 @@ public class InputChannelsImpl implements InputChannels
           queueChannel.writable(),
           FrameWriters.makeFrameWriterFactory(
               FrameType.ROW_BASED,
-              allocatorMaker.get(),
+              new SingleMemoryAllocatorFactory(allocatorMaker.get()),
               stageDefinition.getFrameReader().signature(),
 
               // No sortColumns, because FrameChannelMerger generates frames that are sorted all on its own
               Collections.emptyList()
           ),
-          stageDefinition.getClusterBy(),
+          stageDefinition.getSortKey(),
           null,
           -1
       );
@@ -163,7 +164,7 @@ public class InputChannelsImpl implements InputChannels
       return Iterables.getOnlyElement(channels);
     } else {
       final BlockingQueueFrameChannel queueChannel = BlockingQueueFrameChannel.minimal();
-      final FrameChannelMuxer muxer = new FrameChannelMuxer(channels, queueChannel.writable());
+      final FrameChannelMixer muxer = new FrameChannelMixer(channels, queueChannel.writable());
 
       // Discard future, since there is no need to keep it. We aren't interested in its return value. If it fails,
       // downstream processors are notified through fail(e) on in-memory channels. If we need to cancel it, we use

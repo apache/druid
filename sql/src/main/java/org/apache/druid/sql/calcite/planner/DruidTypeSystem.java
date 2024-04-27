@@ -22,11 +22,13 @@ package org.apache.druid.sql.calcite.planner;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeSystem;
+import org.apache.calcite.sql.type.SqlTypeFactoryImpl;
 import org.apache.calcite.sql.type.SqlTypeName;
 
 public class DruidTypeSystem implements RelDataTypeSystem
 {
   public static final DruidTypeSystem INSTANCE = new DruidTypeSystem();
+  public static final RelDataTypeFactory TYPE_FACTORY = new SqlTypeFactoryImpl(DruidTypeSystem.INSTANCE);
 
   /**
    * Druid uses millisecond precision for timestamps internally. This is also the default at the SQL layer.
@@ -59,7 +61,11 @@ public class DruidTypeSystem implements RelDataTypeSystem
   @Override
   public int getMaxPrecision(final SqlTypeName typeName)
   {
-    return RelDataTypeSystem.DEFAULT.getMaxPrecision(typeName);
+    if (typeName == SqlTypeName.TIME || typeName == SqlTypeName.TIMESTAMP) {
+      return DEFAULT_TIMESTAMP_PRECISION;
+    } else {
+      return RelDataTypeSystem.DEFAULT.getMaxPrecision(typeName);
+    }
   }
 
   @Override
@@ -104,9 +110,9 @@ public class DruidTypeSystem implements RelDataTypeSystem
     // Widen all sums to 64-bits regardless of the size of the inputs.
 
     if (SqlTypeName.INT_TYPES.contains(argumentType.getSqlTypeName())) {
-      return Calcites.createSqlType(typeFactory, SqlTypeName.BIGINT);
+      return Calcites.createSqlTypeWithNullability(typeFactory, SqlTypeName.BIGINT, argumentType.isNullable());
     } else {
-      return Calcites.createSqlType(typeFactory, SqlTypeName.DOUBLE);
+      return Calcites.createSqlTypeWithNullability(typeFactory, SqlTypeName.DOUBLE, argumentType.isNullable());
     }
   }
 
@@ -116,7 +122,7 @@ public class DruidTypeSystem implements RelDataTypeSystem
       final RelDataType argumentType
   )
   {
-    return RelDataTypeSystem.DEFAULT.deriveAvgAggType(typeFactory, argumentType);
+    return Calcites.createSqlTypeWithNullability(typeFactory, SqlTypeName.DOUBLE, argumentType.isNullable());
   }
 
   @Override

@@ -26,8 +26,9 @@ sidebar_label: "Deleting data"
 
 This tutorial demonstrates how to delete existing data.
 
-For this tutorial, we'll assume you've already downloaded Apache Druid as described in
-the [single-machine quickstart](index.md) and have it running on your local machine.
+This tutorial requires the following:
+* A running Apache Druid instance. If you don't have Druid, see the [single-machine quickstart](index.md) to get started.
+* The command-line JSON processor, [jq](https://stedolan.github.io/jq/download/).
 
 ## Load initial data
 
@@ -59,9 +60,8 @@ Let's disable segments in interval `2015-09-12T18:00:00.000Z/2015-09-12T20:00:00
 curl -X 'POST' -H 'Content-Type:application/json' -d '{ "interval" : "2015-09-12T18:00:00.000Z/2015-09-12T20:00:00.000Z" }' http://localhost:8081/druid/coordinator/v1/datasources/deletion-tutorial/markUnused
 ```
 
-After that command completes, you should see that the segment for hour 18 and 19 have been disabled:
-
-![Segments 2](../assets/tutorial-deletion-02.png "Segments 2")
+When the request completes, the Segments view of the web console no longer displays the segments for hours 18 and 19.
+![Segments 1](../assets/tutorial-deletion-01.png "Segments 1")
 
 Note that the hour 18 and 19 segments are still present in deep storage:
 
@@ -95,37 +95,31 @@ $ ls -l1 var/druid/segments/deletion-tutorial/
 
 ## Disable segments by segment IDs
 
-Let's disable some segments by their segmentID. This will again mark the segments as "unused", but not remove them from deep storage. You can see the full segmentID for a segment from UI as explained below.
+Let's disable some segments by their segmentID. This will again mark the segments as "unused", but not remove them from deep storage. You can see the full segmentID for a segment using the web console.
 
-In the [segments view](http://localhost:8888/unified-console.html#segments), click the arrow on the left side of one of the remaining segments to expand the segment entry:
+In the [segments view](http://localhost:8888/unified-console.html#segments), click one of the segment rows to open the segment metadata dialog:
 
-![Segments](../assets/tutorial-deletion-01.png "Segments")
+![Segments_2](../assets/tutorial-deletion-02.png "Segments 2")
 
-The top of the info box shows the full segment ID, e.g. `deletion-tutorial_2015-09-12T14:00:00.000Z_2015-09-12T15:00:00.000Z_2019-02-28T01:11:51.606Z` for the segment of hour 14.
+The `identifier` field in the metadata dialog shows the full segment ID. For example, the hour 23 segment has segment ID `deletion-tutorial_2015-09-12T23:00:00.000Z_2015-09-13T00:00:00.000Z_2023-05-16T00:04:12.091Z`.
 
-Let's disable the hour 13 and 14 segments by sending a POST request to the Coordinator with this payload
-
-```json
-{
-  "segmentIds":
-  [
-    "deletion-tutorial_2015-09-12T13:00:00.000Z_2015-09-12T14:00:00.000Z_2019-05-01T17:38:46.961Z",
-    "deletion-tutorial_2015-09-12T14:00:00.000Z_2015-09-12T15:00:00.000Z_2019-05-01T17:38:46.961Z"
-  ]
-}
-```
-
-This payload json has been provided at `quickstart/tutorial/deletion-disable-segments.json`. Submit the POST request to Coordinator like this:
-
+Disable the last two segments, hour 22 and 23 segments, by sending a POST request to the Coordinator with the corresponding segment IDs.
+The following command queries the Coordinator for segment IDs and uses `jq` to parse and extract the IDs of the last two segments.
+The segment IDs are stored in an environment variable named `unusedSegmentIds`.
 ```bash
-curl -X 'POST' -H 'Content-Type:application/json' -d @quickstart/tutorial/deletion-disable-segments.json http://localhost:8081/druid/coordinator/v1/datasources/deletion-tutorial/markUnused
+unusedSegmentIds=$(curl -X 'GET' -H 'Content-Type:application/json' http://localhost:8081/druid/coordinator/v1/datasources/deletion-tutorial/segments | jq '.[-2:]')
 ```
 
-After that command completes, you should see that the segments for hour 13 and 14 have been disabled:
+The following request marks the segments unused:
+```bash
+curl -X 'POST' -H 'Content-Type:application/json' -d "{\"segmentIds\": $unusedSegmentIds}" http://localhost:8081/druid/coordinator/v1/datasources/deletion-tutorial/markUnused
+```
+
+When the request completes, the Segments view of the web console no longer displays the segments for hours 22 and 23.
 
 ![Segments 3](../assets/tutorial-deletion-03.png "Segments 3")
 
-Note that the hour 13 and 14 segments are still in deep storage:
+Note that the hour 22 and 23 segments are still in deep storage:
 
 ```bash
 $ ls -l1 var/druid/segments/deletion-tutorial/
@@ -165,16 +159,29 @@ A Kill Task spec has been provided at `quickstart/tutorial/deletion-kill.json`. 
 curl -X 'POST' -H 'Content-Type:application/json' -d @quickstart/tutorial/deletion-kill.json http://localhost:8081/druid/indexer/v1/task
 ```
 
-After this task completes, you can see that the disabled segments have now been removed from deep storage:
+When the task finishes, note that Druid deleted the disabled segments from deep storage.
+
 
 ```bash
 $ ls -l1 var/druid/segments/deletion-tutorial/
+2015-09-12T00:00:00.000Z_2015-09-12T01:00:00.000Z
+2015-09-12T01:00:00.000Z_2015-09-12T02:00:00.000Z
+2015-09-12T02:00:00.000Z_2015-09-12T03:00:00.000Z
+2015-09-12T03:00:00.000Z_2015-09-12T04:00:00.000Z
+2015-09-12T04:00:00.000Z_2015-09-12T05:00:00.000Z
+2015-09-12T05:00:00.000Z_2015-09-12T06:00:00.000Z
+2015-09-12T06:00:00.000Z_2015-09-12T07:00:00.000Z
+2015-09-12T07:00:00.000Z_2015-09-12T08:00:00.000Z
+2015-09-12T08:00:00.000Z_2015-09-12T09:00:00.000Z
+2015-09-12T09:00:00.000Z_2015-09-12T10:00:00.000Z
+2015-09-12T10:00:00.000Z_2015-09-12T11:00:00.000Z
+2015-09-12T11:00:00.000Z_2015-09-12T12:00:00.000Z
 2015-09-12T12:00:00.000Z_2015-09-12T13:00:00.000Z
+2015-09-12T13:00:00.000Z_2015-09-12T14:00:00.000Z
+2015-09-12T14:00:00.000Z_2015-09-12T15:00:00.000Z
 2015-09-12T15:00:00.000Z_2015-09-12T16:00:00.000Z
 2015-09-12T16:00:00.000Z_2015-09-12T17:00:00.000Z
 2015-09-12T17:00:00.000Z_2015-09-12T18:00:00.000Z
 2015-09-12T20:00:00.000Z_2015-09-12T21:00:00.000Z
 2015-09-12T21:00:00.000Z_2015-09-12T22:00:00.000Z
-2015-09-12T22:00:00.000Z_2015-09-12T23:00:00.000Z
-2015-09-12T23:00:00.000Z_2015-09-13T00:00:00.000Z
 ```

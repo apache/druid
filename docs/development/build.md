@@ -38,7 +38,8 @@ make sure it has `/master/` in the URL.
 
 ##### Other dependencies
 
-- Distribution builds require Python 3.x and the `pyyaml` module
+- Distribution builds require Python 3.x and the `pyyaml` module.
+- Integration tests require `pyyaml` version 5.1 or later.
 
 ##### Downloading the source
 
@@ -69,24 +70,6 @@ Putting these together, if you wish to build the source and binary distributions
 
 ```bash
 mvn clean install -Papache-release,dist,rat -DskipTests
-```
-
-### Building hadoop 3 distribution
-
-By default, druid ships hadoop 2.x.x jars along with the distribution. Exact version can be found in the
-main [pom](https://github.com/apache/druid/blob/master/pom.xml). To build druid with hadoop 3.x.x jars, hadoop3 profile
-needs to be activated.
-
-To generate build with hadoop 3 dependencies, run:
-
-```bash
-mvn clean install -Phadoop3
-```
-
-To generate distribution with hadoop3 dependencies, run :
-
-```bash
-mvn clean install -Papache-release,dist-hadoop3,rat,hadoop3 -DskipTests 
 ```
 
 #### Potential issues

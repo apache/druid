@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.worker;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
@@ -28,17 +27,18 @@ import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.inject.Inject;
-import org.apache.druid.client.indexing.IndexingService;
+import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.concurrent.LifecycleLock;
-import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerListener;
+import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
@@ -47,26 +47,31 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
+import org.apache.druid.rpc.HttpResponseException;
+import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.coordination.ChangeRequestHistory;
 import org.apache.druid.server.coordination.ChangeRequestsSnapshot;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
-import org.jboss.netty.handler.codec.http.HttpMethod;
+import org.apache.druid.server.metrics.IndexerTaskCountStatsProvider;
+import org.apache.druid.utils.CollectionUtils;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
-import javax.ws.rs.core.MediaType;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -76,7 +81,7 @@ import java.util.stream.Collectors;
  * starts running and completed task on disk is deleted based on a periodic schedule where overlord is asked for
  * active tasks to see which completed tasks are safe to delete.
  */
-public class WorkerTaskManager
+public class WorkerTaskManager implements IndexerTaskCountStatsProvider
 {
   private static final EmittingLogger log = new EmittingLogger(WorkerTaskManager.class);
 
@@ -98,28 +103,28 @@ public class WorkerTaskManager
   //synchronizes access to "running", "completed" and "changeHistory"
   protected final Object lock = new Object();
 
-  private final TaskConfig taskConfig;
-
   private final ScheduledExecutorService completedTasksCleanupExecutor;
 
   private final AtomicBoolean disabled = new AtomicBoolean(false);
 
-  private final DruidLeaderClient overlordClient;
+  private final OverlordClient overlordClient;
+  private final File storageDir;
 
   @Inject
   public WorkerTaskManager(
       ObjectMapper jsonMapper,
       TaskRunner taskRunner,
       TaskConfig taskConfig,
-      @IndexingService DruidLeaderClient overlordClient
+      OverlordClient overlordClient
   )
   {
     this.jsonMapper = jsonMapper;
     this.taskRunner = taskRunner;
-    this.taskConfig = taskConfig;
     this.exec = Execs.singleThreaded("WorkerTaskManager-NoticeHandler");
     this.completedTasksCleanupExecutor = Execs.scheduledSingleThreaded("WorkerTaskManager-CompletedTasksCleaner");
     this.overlordClient = overlordClient;
+
+    storageDir = taskConfig.getBaseTaskDir();
   }
 
   @LifecycleStart
@@ -261,7 +266,8 @@ public class WorkerTaskManager
                 )
             );
           }
-        }
+        },
+        MoreExecutors.directExecutor()
     );
   }
 
@@ -309,7 +315,7 @@ public class WorkerTaskManager
 
   private File getTmpTaskDir()
   {
-    return new File(taskConfig.getBaseTaskDir(), "workerTaskManagerTmp");
+    return new File(storageDir, "workerTaskManagerTmp");
   }
 
   private void cleanupAndMakeTmpTaskDir() throws IOException
@@ -331,7 +337,7 @@ public class WorkerTaskManager
 
   public File getAssignedTaskDir()
   {
-    return new File(taskConfig.getBaseTaskDir(), "assignedTasks");
+    return new File(storageDir, "assignedTasks");
   }
 
   private void initAssignedTasks() throws IOException
@@ -432,14 +438,14 @@ public class WorkerTaskManager
 
   public File getCompletedTaskDir()
   {
-    return new File(taskConfig.getBaseTaskDir(), "completedTasks");
+    return new File(storageDir, "completedTasks");
   }
 
   private void moveFromRunningToCompleted(String taskId, TaskAnnouncement taskAnnouncement)
   {
     synchronized (lock) {
       runningTasks.remove(taskId);
-      completedTasks.put(taskId, taskAnnouncement);
+      addCompletedTask(taskId, taskAnnouncement);
 
       try {
         FileUtils.writeAtomically(
@@ -469,7 +475,7 @@ public class WorkerTaskManager
         String taskId = taskFile.getName();
         TaskAnnouncement taskAnnouncement = jsonMapper.readValue(taskFile, TaskAnnouncement.class);
         if (taskId.equals(taskAnnouncement.getTaskId())) {
-          completedTasks.put(taskId, taskAnnouncement);
+          addCompletedTask(taskId, taskAnnouncement);
         } else {
           throw new ISE("Corrupted completed task on disk[%s].", taskFile.getAbsoluteFile());
         }
@@ -496,77 +502,7 @@ public class WorkerTaskManager
     completedTasksCleanupExecutor.scheduleAtFixedRate(
         () -> {
           try {
-            if (completedTasks.isEmpty()) {
-              log.debug("Skipping completed tasks cleanup. Its empty.");
-              return;
-            }
-
-            ImmutableSet<String> taskIds = ImmutableSet.copyOf(completedTasks.keySet());
-            Map<String, TaskStatus> taskStatusesFromOverlord = null;
-
-            try {
-              StringFullResponseHolder fullResponseHolder = overlordClient.go(
-                  overlordClient.makeRequest(HttpMethod.POST, "/druid/indexer/v1/taskStatus")
-                                .setContent(jsonMapper.writeValueAsBytes(taskIds))
-                                .addHeader(HttpHeaders.Names.ACCEPT, MediaType.APPLICATION_JSON)
-                                .addHeader(HttpHeaders.Names.CONTENT_TYPE, MediaType.APPLICATION_JSON)
-
-              );
-              if (fullResponseHolder.getStatus().getCode() == 200) {
-                String responseContent = fullResponseHolder.getContent();
-                taskStatusesFromOverlord = jsonMapper.readValue(
-                    responseContent,
-                    new TypeReference<Map<String, TaskStatus>>()
-                    {
-                    }
-                );
-                log.debug("Received completed task status response [%s].", responseContent);
-              } else if (fullResponseHolder.getStatus().getCode() == 404) {
-                // NOTE: this is to support backward compatibility, when overlord doesn't have "activeTasks" endpoint.
-                // this if clause should be removed in a future release.
-                log.debug("Deleting all completed tasks. Overlord appears to be running on older version.");
-                taskStatusesFromOverlord = ImmutableMap.of();
-              } else {
-                log.info(
-                    "Got non-success code[%s] from overlord while getting active tasks. will retry on next scheduled run.",
-                    fullResponseHolder.getStatus().getCode()
-                );
-              }
-            }
-            catch (Exception ex) {
-              log.warn(ex, "Exception while getting active tasks from overlord. will retry on next scheduled run.");
-
-              if (ex instanceof InterruptedException) {
-                Thread.currentThread().interrupt();
-              }
-            }
-
-            if (taskStatusesFromOverlord == null) {
-              return;
-            }
-
-            for (String taskId : taskIds) {
-              TaskStatus status = taskStatusesFromOverlord.get(taskId);
-              if (status == null || status.isComplete()) {
-
-                log.debug(
-                    "Deleting completed task[%s] information, overlord task status[%s].",
-                    taskId,
-                    status == null ? "unknown" : status.getStatusCode()
-                );
-
-                completedTasks.remove(taskId);
-                File taskFile = new File(getCompletedTaskDir(), taskId);
-                try {
-                  Files.deleteIfExists(taskFile.toPath());
-                  changeHistory.addChangeRequest(new WorkerHistoryItem.TaskRemoval(taskId));
-                }
-                catch (IOException ex) {
-                  log.error(ex, "Failed to delete completed task from disk [%s].", taskFile);
-                }
-
-              }
-            }
+            this.doCompletedTasksCleanup();
           }
           catch (Throwable th) {
             log.error(th, "Got unknown exception while running the scheduled cleanup.");
@@ -600,6 +536,108 @@ public class WorkerTaskManager
   {
     Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.SECONDS), "not started");
     return !disabled.get();
+  }
+
+  /**
+   * Remove items from {@link #completedTasks} that the Overlord believes has completed. Scheduled by
+   * {@link #scheduleCompletedTasksCleanup()}.
+   */
+  void doCompletedTasksCleanup() throws InterruptedException
+  {
+    if (completedTasks.isEmpty()) {
+      log.debug("Skipping completed tasks cleanup, because there are no completed tasks.");
+      return;
+    }
+
+    ImmutableSet<String> taskIds = ImmutableSet.copyOf(completedTasks.keySet());
+    Either<Throwable, Map<String, TaskStatus>> apiCallResult;
+
+    try {
+      apiCallResult = Either.value(FutureUtils.get(overlordClient.taskStatuses(taskIds), true));
+      log.debug("Received completed task status response [%s].", apiCallResult);
+    }
+    catch (ExecutionException e) {
+      if (e.getCause() instanceof HttpResponseException) {
+        final HttpResponseStatus status = ((HttpResponseException) e.getCause()).getResponse().getStatus();
+        if (status.getCode() == 404) {
+          // NOTE: this is to support backward compatibility, when overlord doesn't have "activeTasks" endpoint.
+          // this if clause should be removed in a future release.
+          log.debug("Deleting all completed tasks. Overlord appears to be running on older version.");
+          apiCallResult = Either.value(ImmutableMap.of());
+        } else {
+          apiCallResult = Either.error(e.getCause());
+        }
+      } else {
+        apiCallResult = Either.error(e.getCause());
+      }
+    }
+
+    if (apiCallResult.isError()) {
+      log.warn(
+          apiCallResult.error(),
+          "Exception while getting active tasks from Overlord. Will retry on next scheduled run."
+      );
+
+      return;
+    }
+
+    for (String taskId : taskIds) {
+      TaskStatus status = apiCallResult.valueOrThrow().get(taskId);
+      if (status == null || status.isComplete()) {
+        log.debug(
+            "Deleting completed task[%s] information, Overlord task status[%s].",
+            taskId,
+            status == null ? "unknown" : status.getStatusCode()
+        );
+
+        completedTasks.remove(taskId);
+        File taskFile = new File(getCompletedTaskDir(), taskId);
+        try {
+          Files.deleteIfExists(taskFile.toPath());
+          changeHistory.addChangeRequest(new WorkerHistoryItem.TaskRemoval(taskId));
+        }
+        catch (IOException ex) {
+          log.error(ex, "Failed to delete completed task from disk [%s].", taskFile);
+        }
+      }
+    }
+  }
+
+  /**
+   * Add a completed task to {@link #completedTasks}. It will eventually be removed by
+   * {@link #doCompletedTasksCleanup()}.
+   */
+  void addCompletedTask(final String taskId, final TaskAnnouncement taskAnnouncement)
+  {
+    completedTasks.put(taskId, taskAnnouncement);
+  }
+
+  private <T> Map<String, Long> getNumTasksPerDatasource(Collection<T> taskList, Function<T, String> getDataSourceFunc)
+  {
+    final Map<String, Long> dataSourceToTaskCount = new HashMap<>();
+
+    for (T task : taskList) {
+      dataSourceToTaskCount.merge(getDataSourceFunc.apply(task), 1L, Long::sum);
+    }
+    return dataSourceToTaskCount;
+  }
+
+  @Override
+  public Map<String, Long> getWorkerRunningTasks()
+  {
+    return getNumTasksPerDatasource(CollectionUtils.mapValues(runningTasks, detail -> detail.task).values(), Task::getDataSource);
+  }
+
+  @Override
+  public Map<String, Long> getWorkerAssignedTasks()
+  {
+    return getNumTasksPerDatasource(assignedTasks.values(), Task::getDataSource);
+  }
+
+  @Override
+  public Map<String, Long> getWorkerCompletedTasks()
+  {
+    return getNumTasksPerDatasource(this.getCompletedTasks().values(), TaskAnnouncement::getTaskDataSource);
   }
 
   private static class TaskDetails

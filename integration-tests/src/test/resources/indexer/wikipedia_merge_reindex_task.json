@@ -3,6 +3,15 @@
     "spec": {
         "dataSchema": {
             "dataSource": "%%REINDEX_DATASOURCE%%",
+            "timestampSpec": {
+                "column": "timestamp",
+                "format": "iso"
+            },
+            "dimensionsSpec": {
+                "dimensions": [
+                    "continent"
+                ]
+            },
             "metricsSpec": [
                 {
                     "type": "doubleSum",
@@ -28,34 +37,53 @@
                     "type": "stringLast",
                     "name": "last_user",
                     "fieldName": "last_user"
+                },
+                {
+                    "type": "doubleFirst",
+                    "name": "double_first_delta",
+                    "fieldName": "double_first_delta"
+                },
+                {
+                    "type": "doubleLast",
+                    "name": "double_last_delta",
+                    "fieldName": "double_last_delta"
+                },
+                {
+                    "type": "longFirst",
+                    "name": "long_first_delta",
+                    "fieldName": "long_first_delta"
+                },
+                {
+                    "type": "longLast",
+                    "name": "long_last_delta",
+                    "fieldName": "long_last_delta"
+                },
+                {
+                    "type": "floatFirst",
+                    "name": "float_first_delta",
+                    "fieldName": "float_first_delta"
+                },
+                {
+                    "type": "floatLast",
+                    "name": "float_last_delta",
+                    "fieldName": "float_last_delta"
                 }
             ],
             "granularitySpec": {
                 "segmentGranularity": "DAY",
                 "queryGranularity": "DAY",
                 "intervals" : [ "2013-08-31/2013-09-01" ]
-            },
-            "parser": {
-                "parseSpec": {
-                    "format" : "json",
-                    "timestampSpec": {
-                        "column": "timestamp",
-                        "format": "iso"
-                    },
-                    "dimensionsSpec": {
-                        "dimensions": [
-                            "continent"
-                        ]
-                    }
-                }
             }
         },
         "ioConfig": {
             "type": "index",
-            "firehose": {
-                "type": "ingestSegment",
+            "inputSource": {
+                "type": "druid",
                 "dataSource": "%%DATASOURCE%%",
                 "interval": "2013-08-31/2013-09-01"
+            },
+            "inputFormat": {
+                "type" : "json"
             }
         },
         "tuningConfig": {

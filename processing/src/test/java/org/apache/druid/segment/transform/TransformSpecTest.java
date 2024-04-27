@@ -237,7 +237,7 @@ public class TransformSpecTest extends InitializedNullHandlingTest
       Assert.assertEquals(0L, row2.getRaw("truthy2"));
     }
     finally {
-      ExpressionProcessing.initializeForTests(null);
+      ExpressionProcessing.initializeForTests();
     }
     try {
       ExpressionProcessing.initializeForStrictBooleansTests(false);
@@ -268,7 +268,7 @@ public class TransformSpecTest extends InitializedNullHandlingTest
       Assert.assertEquals(0L, row2.getRaw("truthy2"));
     }
     finally {
-      ExpressionProcessing.initializeForTests(null);
+      ExpressionProcessing.initializeForTests();
     }
   }
 

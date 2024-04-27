@@ -1,0 +1,1 @@
+SELECT c2, COUNT(COUNT(c2)) OVER ( PARTITION BY c2 ) FROM "tblWnulls.parquet" GROUP BY c2

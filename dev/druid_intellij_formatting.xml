@@ -74,6 +74,10 @@
   <option name="PARAMETER_ANNOTATION_WRAP" value="5" />
   <option name="VARIABLE_ANNOTATION_WRAP" value="2" />
   <option name="ENUM_CONSTANTS_WRAP" value="2" />
+  <Markdown>
+    <option name="FORMAT_TABLES" value="false" />
+    <option name="WRAP_TEXT_IF_LONG" value="false" />
+  </Markdown>
   <ScalaCodeStyleSettings>
     <option name="classCountToUseImportOnDemand" value="99" />
     <option name="collectImports" value="false" />

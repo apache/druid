@@ -27,6 +27,7 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -40,6 +41,7 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.incremental.AppendableIndexSpec;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
@@ -49,6 +51,7 @@ import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorConfig;
@@ -173,20 +176,18 @@ public class BatchAppenderatorsTest
           maxRowsInMemory,
           maxSizeInBytes == 0L ? getDefaultMaxBytesInMemory() : maxSizeInBytes,
           skipBytesInMemoryOverheadCheck,
-          new IndexSpec(),
+          IndexSpec.DEFAULT,
           0,
           false,
           0L,
           OffHeapMemorySegmentWriteOutMediumFactory.instance(),
           IndexMerger.UNLIMITED_MAX_COLUMNS_TO_MERGE,
-          basePersistDirectory == null ? createNewBasePersistDirectory() : basePersistDirectory
+          basePersistDirectory == null ? createNewBasePersistDirectory() : basePersistDirectory,
+          null
       );
       metrics = new FireDepartmentMetrics();
 
-      IndexIO indexIO = new IndexIO(
-          objectMapper,
-          () -> 0
-      );
+      IndexIO indexIO = new IndexIO(objectMapper, ColumnConfig.DEFAULT);
       IndexMergerV9 indexMerger = new IndexMergerV9(
           objectMapper,
           indexIO,
@@ -378,6 +379,7 @@ public class BatchAppenderatorsTest
       private final IndexSpec indexSpecForIntermediatePersists;
       @Nullable
       private final SegmentWriteOutMediumFactory segmentWriteOutMediumFactory;
+      private final int numPersistThreads;
 
       public TestIndexTuningConfig(
           AppendableIndexSpec appendableIndexSpec,
@@ -390,7 +392,8 @@ public class BatchAppenderatorsTest
           Long pushTimeout,
           @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
           Integer maxColumnsToMerge,
-          File basePersistDirectory
+          File basePersistDirectory,
+          Integer numPersistThreads
       )
       {
         this.appendableIndexSpec = appendableIndexSpec;
@@ -407,6 +410,8 @@ public class BatchAppenderatorsTest
 
         this.partitionsSpec = null;
         this.indexSpecForIntermediatePersists = this.indexSpec;
+
+        this.numPersistThreads = numPersistThreads == null ? DEFAULT_NUM_PERSIST_THREADS : numPersistThreads;
       }
 
       @Override
@@ -496,6 +501,12 @@ public class BatchAppenderatorsTest
       }
 
       @Override
+      public int getNumPersistThreads()
+      {
+        return numPersistThreads;
+      }
+
+      @Override
       public boolean equals(Object o)
       {
         if (this == o) {
@@ -513,6 +524,7 @@ public class BatchAppenderatorsTest
                maxPendingPersists == that.maxPendingPersists &&
                reportParseExceptions == that.reportParseExceptions &&
                pushTimeout == that.pushTimeout &&
+               numPersistThreads == that.numPersistThreads &&
                Objects.equals(partitionsSpec, that.partitionsSpec) &&
                Objects.equals(indexSpec, that.indexSpec) &&
                Objects.equals(indexSpecForIntermediatePersists, that.indexSpecForIntermediatePersists) &&
@@ -536,7 +548,8 @@ public class BatchAppenderatorsTest
             maxPendingPersists,
             reportParseExceptions,
             pushTimeout,
-            segmentWriteOutMediumFactory
+            segmentWriteOutMediumFactory,
+            numPersistThreads
         );
       }
 
@@ -556,6 +569,7 @@ public class BatchAppenderatorsTest
                ", reportParseExceptions=" + reportParseExceptions +
                ", pushTimeout=" + pushTimeout +
                ", segmentWriteOutMediumFactory=" + segmentWriteOutMediumFactory +
+               ", numPersistThreads=" + numPersistThreads +
                '}';
       }
     }
@@ -566,33 +580,24 @@ public class BatchAppenderatorsTest
         TaskConfig.BatchProcessingMode mode
     )
     {
+      TaskConfig config = new TaskConfigBuilder()
+          .setBatchProcessingMode(mode.name())
+          .build();
       return new TaskToolbox.Builder()
-          .config(
-              new TaskConfig(
-                  null,
-                  null,
-                  null,
-                  null,
-                  null,
-                  false,
-                  null,
-                  null,
-                  null,
-                  false,
-                  false,
-                  mode.name(),
-                  null
-              )
-          )
+          .config(config)
           .joinableFactory(NoopJoinableFactory.INSTANCE)
           .jsonMapper(mapper)
-          .indexIO(new IndexIO(new ObjectMapper(), () -> 0))
+          .indexIO(new IndexIO(new ObjectMapper(), ColumnConfig.DEFAULT))
           .indexMergerV9(indexMergerV9)
           .taskReportFileWriter(new NoopTestTaskReportFileWriter())
           .authorizerMapper(AuthTestUtils.TEST_AUTHORIZER_MAPPER)
           .chatHandlerProvider(new NoopChatHandlerProvider())
           .appenderatorsManager(new TestAppenderatorsManager())
+          .taskLogPusher(null)
+          .attemptId("1")
+          .centralizedTableSchemaConfig(CentralizedDatasourceSchemaConfig.create())
           .build();
+
     }
   }
 }

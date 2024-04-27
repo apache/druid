@@ -111,6 +111,9 @@ public class JavaScriptFilterTest extends BaseFilterTest
   @Test
   public void testMultiValueStringColumn()
   {
+    if (isAutoSchema()) {
+      return;
+    }
     // multi-val null......
     if (NullHandling.replaceWithDefault()) {
       assertFilterMatchesSkipVectorize(
@@ -184,14 +187,16 @@ public class JavaScriptFilterTest extends BaseFilterTest
         ImmutableList.of("0", "1", "2", "5")
     );
 
-    assertFilterMatchesSkipVectorize(
-        newJavaScriptDimFilter("dim2", jsValueFilter("HELLO"), lookupFn),
-        ImmutableList.of("0", "3")
-    );
-    assertFilterMatchesSkipVectorize(
-        newJavaScriptDimFilter("dim2", jsValueFilter("UNKNOWN"), lookupFn),
-        ImmutableList.of("0", "1", "2", "4", "5")
-    );
+    if (!isAutoSchema()) {
+      assertFilterMatchesSkipVectorize(
+          newJavaScriptDimFilter("dim2", jsValueFilter("HELLO"), lookupFn),
+          ImmutableList.of("0", "3")
+      );
+      assertFilterMatchesSkipVectorize(
+          newJavaScriptDimFilter("dim2", jsValueFilter("UNKNOWN"), lookupFn),
+          ImmutableList.of("0", "1", "2", "4", "5")
+      );
+    }
 
     assertFilterMatchesSkipVectorize(
         newJavaScriptDimFilter("dim3", jsValueFilter("HELLO"), lookupFn),

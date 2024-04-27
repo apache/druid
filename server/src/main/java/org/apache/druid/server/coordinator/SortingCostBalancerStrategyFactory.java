@@ -20,8 +20,9 @@
 package org.apache.druid.server.coordinator;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
-import com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.druid.client.ServerInventoryView;
+import org.apache.druid.server.coordinator.balancer.CostBalancerStrategy;
+import org.apache.druid.server.coordinator.balancer.CostBalancerStrategyFactory;
 
 public class SortingCostBalancerStrategyFactory extends CostBalancerStrategyFactory
 {
@@ -36,8 +37,8 @@ public class SortingCostBalancerStrategyFactory extends CostBalancerStrategyFact
   }
 
   @Override
-  public CostBalancerStrategy createBalancerStrategy(final ListeningExecutorService exec)
+  public CostBalancerStrategy createBalancerStrategy(final int numBalancerThreads)
   {
-    return new SortingCostBalancerStrategy(serverInventoryView, exec);
+    return new SortingCostBalancerStrategy(serverInventoryView, getOrCreateBalancerExecutor(1));
   }
 }

@@ -24,24 +24,25 @@ import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
+import org.apache.druid.frame.allocation.MemoryAllocatorFactory;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.query.FrameSignaturePair;
 import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
-import org.apache.druid.segment.VirtualColumn;
-import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.utils.CloseableUtils;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, ScanQuery>
 {
@@ -153,45 +154,57 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
   @Override
   public RowSignature resultArraySignature(final ScanQuery query)
   {
-    if (query.getColumns() == null || query.getColumns().isEmpty()) {
-      // Note: if no specific list of columns is provided, then since we can't predict what columns will come back, we
-      // unfortunately can't do array-based results. In this case, there is a major difference between standard and
-      // array-based results: the standard results will detect and return _all_ columns, whereas the array-based results
-      // will include none of them.
-      return RowSignature.empty();
-    } else {
-      final RowSignature.Builder builder = RowSignature.builder();
+    boolean defaultIsLegacy = scanQueryConfig.isLegacy();
+    return query.getRowSignature(defaultIsLegacy);
+  }
 
-      if (query.withNonNullLegacy(scanQueryConfig).isLegacy()) {
-        builder.add(ScanQueryEngine.LEGACY_TIMESTAMP_KEY, null);
-      }
-
-      for (String columnName : query.getColumns()) {
-        // With the Scan query we only know the columnType for virtual columns. Let's report those, at least.
-        final ColumnType columnType;
-
-        final VirtualColumn virtualColumn = query.getVirtualColumns().getVirtualColumn(columnName);
-        if (virtualColumn != null) {
-          columnType = virtualColumn.capabilities(columnName).toColumnType();
-        } else {
-          // Unknown type. In the future, it would be nice to have a way to fill these in.
-          columnType = null;
-        }
-
-        builder.add(columnName, columnType);
-      }
-
-      return builder.build();
-    }
+  /**
+   * This batches the fetched {@link ScanResultValue}s which have similar signatures and are consecutives. In best case
+   * it would return a single frame, and in the worst case, it would return as many frames as the number of {@link ScanResultValue}
+   * passed.
+   */
+  @Override
+  public Optional<Sequence<FrameSignaturePair>> resultsAsFrames(
+      final ScanQuery query,
+      final Sequence<ScanResultValue> resultSequence,
+      MemoryAllocatorFactory memoryAllocatorFactory,
+      boolean useNestedForUnknownTypes
+  )
+  {
+    final RowSignature defaultRowSignature = resultArraySignature(query);
+    return Optional.of(
+        Sequences.simple(
+            new ScanResultValueFramesIterable(
+                resultSequence,
+                memoryAllocatorFactory,
+                useNestedForUnknownTypes,
+                defaultRowSignature,
+                rowSignature -> getResultFormatMapper(query.getResultFormat(), rowSignature.getColumnNames())
+            )
+        )
+    );
   }
 
   @Override
   public Sequence<Object[]> resultsAsArrays(final ScanQuery query, final Sequence<ScanResultValue> resultSequence)
   {
-    final List<String> fields = resultArraySignature(query).getColumnNames();
-    final Function<?, Object[]> mapper;
+    final Function<?, Object[]> mapper = getResultFormatMapper(query.getResultFormat(), resultArraySignature(query).getColumnNames());
 
-    switch (query.getResultFormat()) {
+    return resultSequence.flatMap(
+        result -> {
+          // Generics? Where we're going, we don't need generics.
+          final List rows = (List) result.getEvents();
+          final Iterable arrays = Iterables.transform(rows, (Function) mapper);
+          return Sequences.simple(arrays);
+        }
+    );
+  }
+
+  private static Function<?, Object[]> getResultFormatMapper(ScanQuery.ResultFormat resultFormat, List<String> fields)
+  {
+    Function<?, Object[]> mapper;
+
+    switch (resultFormat) {
       case RESULT_FORMAT_LIST:
         mapper = (Map<String, Object> row) -> {
           final Object[] rowArray = new Object[fields.size()];
@@ -218,16 +231,8 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
         };
         break;
       default:
-        throw new UOE("Unsupported resultFormat for array-based results: %s", query.getResultFormat());
+        throw new UOE("Unsupported resultFormat for array-based results: %s", resultFormat);
     }
-
-    return resultSequence.flatMap(
-        result -> {
-          // Generics? Where we're going, we don't need generics.
-          final List rows = (List) result.getEvents();
-          final Iterable arrays = Iterables.transform(rows, (Function) mapper);
-          return Sequences.simple(arrays);
-        }
-    );
+    return mapper;
   }
 }

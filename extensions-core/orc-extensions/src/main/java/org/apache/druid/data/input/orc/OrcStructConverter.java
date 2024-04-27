@@ -64,7 +64,7 @@ class OrcStructConverter
     return new ArrayList<Object>(orcList);
   }
 
-  private static Map<Object, Object> convertMap(
+  private Map<Object, Object> convertMap(
       TypeDescription fieldDescription,
       OrcMap<? extends WritableComparable, ? extends WritableComparable> map,
       boolean binaryAsString
@@ -75,11 +75,7 @@ class OrcStructConverter
     TypeDescription valueDescription = fieldDescription.getChildren().get(1);
     for (WritableComparable key : map.navigableKeySet()) {
       Object newKey = convertPrimitive(keyDescription, key, binaryAsString);
-      if (valueDescription.getCategory().isPrimitive()) {
-        converted.put(newKey, convertPrimitive(valueDescription, map.get(key), binaryAsString));
-      } else {
-        converted.put(newKey, map.get(key));
-      }
+      converted.put(newKey, convertField(valueDescription, map.get(key)));
     }
     return converted;
   }
@@ -148,6 +144,63 @@ class OrcStructConverter
     }
   }
 
+  @Nullable
+  public Object tryConvertPrimitive(@Nullable WritableComparable field)
+  {
+    if (field == null) {
+      return null;
+    }
+    /*
+        ORC TYPE    WRITABLE TYPE
+        binary      org.apache.hadoop.io.BytesWritable
+        bigint      org.apache.hadoop.io.LongWritable
+        boolean     org.apache.hadoop.io.BooleanWritable
+        char        org.apache.hadoop.io.Text
+        date        org.apache.hadoop.hive.serde2.io.DateWritable
+        decimal     org.apache.hadoop.hive.serde2.io.HiveDecimalWritable
+        double      org.apache.hadoop.io.DoubleWritable
+        float       org.apache.hadoop.io.FloatWritable
+        int         org.apache.hadoop.io.IntWritable
+        smallint    org.apache.hadoop.io.ShortWritable
+        string      org.apache.hadoop.io.Text
+        timestamp   org.apache.orc.mapred.OrcTimestamp
+        tinyint     org.apache.hadoop.io.ByteWritable
+        varchar     org.apache.hadoop.io.Text
+     */
+    if (field instanceof Text) {
+      return ((Text) field).toString();
+    } else if (field instanceof BooleanWritable) {
+      return ((BooleanWritable) field).get();
+    } else if (field instanceof ByteWritable) {
+      return ((ByteWritable) field).get();
+    } else if (field instanceof ShortWritable) {
+      return ((ShortWritable) field).get();
+    } else if (field instanceof IntWritable) {
+      return ((IntWritable) field).get();
+    } else if (field instanceof LongWritable) {
+      return ((LongWritable) field).get();
+    } else if (field instanceof FloatWritable) {
+      return ((FloatWritable) field).get();
+    } else if (field instanceof DoubleWritable) {
+      return ((DoubleWritable) field).get();
+    } else if (field instanceof HiveDecimalWritable) {
+      return ((HiveDecimalWritable) field).getHiveDecimal().doubleValue();
+    } else if (field instanceof OrcTimestamp) {
+      return ((OrcTimestamp) field).getTime();
+    } else if (field instanceof DateWritable) {
+      return DateTimes.utc(((DateWritable) field).get().getTime());
+    } else if (field instanceof BytesWritable) {
+      byte[] bytes = ((BytesWritable) field).getBytes();
+      if (binaryAsString) {
+        return StringUtils.fromUtf8(bytes);
+      } else {
+        return bytes;
+      }
+    }
+    // unknown conversion, return null
+    return null;
+  }
+
   private final boolean binaryAsString;
   private Object2IntMap<String> fieldIndexCache;
 
@@ -204,6 +257,12 @@ class OrcStructConverter
       return null;
     }
 
+    return convertField(fieldDescription, fieldValue);
+  }
+
+  @Nullable
+  Object convertField(TypeDescription fieldDescription, WritableComparable fieldValue)
+  {
     if (fieldDescription.getCategory().isPrimitive()) {
       return convertPrimitive(fieldDescription, fieldValue, binaryAsString);
     } else {

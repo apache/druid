@@ -46,13 +46,17 @@ import org.junit.runners.Parameterized;
 import java.io.Closeable;
 import java.util.List;
 
+/**
+ * Classic {@link BoundFilter} test. Consider adding tests to {@link RangeFilterTests} in addition to, or instead of
+ * here.
+ */
 @RunWith(Parameterized.class)
 public class BoundFilterTest extends BaseFilterTest
 {
   private static final List<InputRow> ROWS = ImmutableList.<InputRow>builder()
       .addAll(DEFAULT_ROWS)
-      .add(makeDefaultSchemaRow("6", "-1000", ImmutableList.of("a"), null, 6.6, null, 10L))
-      .add(makeDefaultSchemaRow("7", "-10.012", ImmutableList.of("d"), null, null, 3.0f, null))
+      .add(makeDefaultSchemaRow("6", "-1000", ImmutableList.of("a"), null, null, 6.6, null, 10L))
+      .add(makeDefaultSchemaRow("7", "-10.012", ImmutableList.of("d"), null, "e", null, 3.0f, null))
       .build();
 
   public BoundFilterTest(
@@ -90,7 +94,11 @@ public class BoundFilterTest extends BaseFilterTest
     );
 
     for (BoundDimFilter filter : filters) {
-      assertFilterMatches(filter, ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7"));
+      if (filter.getDimension().equals("dim2")) {
+        assertFilterMatchesSkipArrays(filter, ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7"));
+      } else {
+        assertFilterMatches(filter, ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7"));
+      }
     }
   }
 
@@ -105,12 +113,16 @@ public class BoundFilterTest extends BaseFilterTest
     );
     if (NullHandling.replaceWithDefault()) {
       for (BoundDimFilter filter : filters) {
-        assertFilterMatches(filter, ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7"));
+        if (filter.getDimension().equals("dim2")) {
+          assertFilterMatchesSkipArrays(filter, ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7"));
+        } else {
+          assertFilterMatches(filter, ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7"));
+        }
       }
     } else {
       assertFilterMatches(filters.get(0), ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7"));
       assertFilterMatches(filters.get(1), ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7"));
-      assertFilterMatches(filters.get(2), ImmutableList.of("0", "2", "3", "4", "6", "7"));
+      assertFilterMatchesSkipArrays(filters.get(2), ImmutableList.of("0", "2", "3", "4", "6", "7"));
       assertFilterMatches(filters.get(3), ImmutableList.of());
     }
   }
@@ -127,12 +139,12 @@ public class BoundFilterTest extends BaseFilterTest
         ImmutableList.of("0")
     );
     if (NullHandling.replaceWithDefault()) {
-      assertFilterMatches(
+      assertFilterMatchesSkipArrays(
           new BoundDimFilter("dim2", "", "", false, false, false, null, StringComparators.LEXICOGRAPHIC),
           ImmutableList.of("1", "2", "5")
       );
     } else {
-      assertFilterMatches(
+      assertFilterMatchesSkipArrays(
           new BoundDimFilter("dim2", "", "", false, false, false, null, StringComparators.LEXICOGRAPHIC),
           ImmutableList.of("2")
       );
@@ -278,7 +290,7 @@ public class BoundFilterTest extends BaseFilterTest
         ImmutableList.of("0")
     );
     if (NullHandling.replaceWithDefault()) {
-      assertFilterMatches(
+      assertFilterMatchesSkipArrays(
           new BoundDimFilter("dim2", "", "", false, false, true, null, StringComparators.ALPHANUMERIC),
           ImmutableList.of("1", "2", "5")
       );
@@ -287,7 +299,7 @@ public class BoundFilterTest extends BaseFilterTest
           ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7")
       );
     } else {
-      assertFilterMatches(
+      assertFilterMatchesSkipArrays(
           new BoundDimFilter("dim2", "", "", false, false, true, null, StringComparators.ALPHANUMERIC),
           ImmutableList.of("2")
       );
@@ -387,7 +399,7 @@ public class BoundFilterTest extends BaseFilterTest
         ImmutableList.of("0")
     );
     if (NullHandling.replaceWithDefault()) {
-      assertFilterMatches(
+      assertFilterMatchesSkipArrays(
           new BoundDimFilter("dim2", "", "", false, false, false, null, StringComparators.NUMERIC),
           ImmutableList.of("1", "2", "5")
       );
@@ -396,7 +408,7 @@ public class BoundFilterTest extends BaseFilterTest
           ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7")
       );
     } else {
-      assertFilterMatches(
+      assertFilterMatchesSkipArrays(
           new BoundDimFilter("dim2", "", "", false, false, false, null, StringComparators.NUMERIC),
           ImmutableList.of("2")
       );
@@ -470,6 +482,10 @@ public class BoundFilterTest extends BaseFilterTest
         ImmutableList.of("0", "1", "2", "3", "4", "5", "6")
     );
 
+    if (isAutoSchema()) {
+      // bail out, auto ingests arrays instead of mvds and this virtual column is for mvd stuff
+      return;
+    }
     assertFilterMatchesSkipVectorize(
         new BoundDimFilter("allow-dim2", "a", "c", false, false, false, null, StringComparators.LEXICOGRAPHIC),
         ImmutableList.of("0", "3", "6")
@@ -594,7 +610,7 @@ public class BoundFilterTest extends BaseFilterTest
         ImmutableList.of("1", "2", "3")
     );
 
-    assertFilterMatches(
+    assertFilterMatchesSkipArrays(
         new BoundDimFilter(
             "dim2",
             "super-",
@@ -609,7 +625,7 @@ public class BoundFilterTest extends BaseFilterTest
     );
 
     if (NullHandling.replaceWithDefault()) {
-      assertFilterMatches(
+      assertFilterMatchesSkipArrays(
           new BoundDimFilter(
               "dim2",
               "super-null",
@@ -622,7 +638,7 @@ public class BoundFilterTest extends BaseFilterTest
           ),
           ImmutableList.of("1", "2", "5")
       );
-      assertFilterMatches(
+      assertFilterMatchesSkipArrays(
           new BoundDimFilter(
               "dim2",
               "super-null",
@@ -636,7 +652,7 @@ public class BoundFilterTest extends BaseFilterTest
           ImmutableList.of("1", "2", "5")
       );
     } else {
-      assertFilterMatches(
+      assertFilterMatchesSkipArrays(
           new BoundDimFilter(
               "dim2",
               "super-null",
@@ -649,11 +665,11 @@ public class BoundFilterTest extends BaseFilterTest
           ),
           ImmutableList.of("1", "5")
       );
-      assertFilterMatches(
+      assertFilterMatchesSkipArrays(
           new BoundDimFilter("dim2", "super-", "super-", false, false, false, superFn, StringComparators.NUMERIC),
           ImmutableList.of("2")
       );
-      assertFilterMatches(
+      assertFilterMatchesSkipArrays(
           new BoundDimFilter(
               "dim2",
               "super-null",
@@ -666,7 +682,7 @@ public class BoundFilterTest extends BaseFilterTest
           ),
           ImmutableList.of("1", "5")
       );
-      assertFilterMatches(
+      assertFilterMatchesSkipArrays(
           new BoundDimFilter("dim2", "super-", "super-", false, false, false, superFn, StringComparators.NUMERIC),
           ImmutableList.of("2")
       );
@@ -880,7 +896,11 @@ public class BoundFilterTest extends BaseFilterTest
   {
     EqualsVerifier.forClass(BoundFilter.BoundDimFilterDruidPredicateFactory.class)
                   .usingGetClass()
-                  .withIgnoredFields("longPredicateSupplier", "floatPredicateSupplier", "doublePredicateSupplier")
+                  .withIgnoredFields(
+                      "longPredicateSupplier",
+                      "floatPredicateSupplier",
+                      "doublePredicateSupplier"
+                  )
                   .verify();
   }
 }

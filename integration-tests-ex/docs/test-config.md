@@ -414,14 +414,27 @@ changes itself somehow.
 
 Generic object to describe Docker Compose services.
 
-#### `service`
+#### `if`
+
+Conditionally defines a service. The system defines a set of configutation tags.
+At present there are only two:
+
+* `middleManager`: the cluster runs a MiddleManager
+* `indexer`: the cluster runs an Indexer
+
+The `if` tag conditionally enables a service only if the corresponding tag is set.
+Thus, for a cluster that can use either a middle manager or an indexer:
 
 ```yaml
-service: <service name>
+  middlemanager:
+    if: middleManager
+    instances:
+      - port: 8091
+  indexer:
+    if: indexer
+    instances:
+      - port: 8091
 ```
-
-Name of the service as known to Docker Compose. Defaults to be
-the same as the service name used in this configuration file.
 
 #### `instances`
 

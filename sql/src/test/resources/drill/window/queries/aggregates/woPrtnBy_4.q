@@ -1,0 +1,1 @@
+SELECT col_int, AVG(col_int) OVER (ORDER by col_int) avg_int FROM "smlTbl.parquet"

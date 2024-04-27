@@ -34,6 +34,7 @@ import java.io.IOException;
 /**
  * Creates firehoses clipped to a particular time interval. Useful for enforcing min time, max time, and time windows.
  */
+@Deprecated
 public class ClippedFirehoseFactory implements FirehoseFactory
 {
   private final FirehoseFactory delegate;

@@ -24,32 +24,47 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Injector;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.MapBasedInputRow;
+import org.apache.druid.data.input.ResourceInputSource;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.DoubleDimensionSchema;
 import org.apache.druid.data.input.impl.FloatDimensionSchema;
-import org.apache.druid.data.input.impl.InputRowParser;
+import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
-import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.InlineDataSource;
+import org.apache.druid.query.NestedDataTestUtils;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.aggregation.first.DoubleFirstAggregatorFactory;
+import org.apache.druid.query.aggregation.first.LongFirstAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
+import org.apache.druid.query.aggregation.last.DoubleLastAggregatorFactory;
+import org.apache.druid.query.aggregation.last.FloatLastAggregatorFactory;
+import org.apache.druid.query.aggregation.last.LongLastAggregatorFactory;
+import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.segment.IndexBuilder;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.SegmentWrangler;
+import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.Joinable;
@@ -60,17 +75,21 @@ import org.apache.druid.segment.join.table.RowBasedIndexedTable;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QueryStackTests;
+import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.chrono.ISOChronology;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -105,56 +124,69 @@ public class TestDataBuilder
     }
   };
 
-  private static final InputRowParser<Map<String, Object>> PARSER = new MapInputRowParser(
-      new TimeAndDimsParseSpec(
-          new TimestampSpec(TIMESTAMP_COLUMN, "iso", null),
-          new DimensionsSpec(
-              DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2", "dim3"))
-          )
-      )
+  public static final JsonInputFormat DEFAULT_JSON_INPUT_FORMAT = new JsonInputFormat(
+      JSONPathSpec.DEFAULT,
+      null,
+      null,
+      null,
+      null
   );
 
-  private static final InputRowParser<Map<String, Object>> PARSER_NUMERIC_DIMS = new MapInputRowParser(
-      new TimeAndDimsParseSpec(
-          new TimestampSpec(TIMESTAMP_COLUMN, "iso", null),
-          new DimensionsSpec(
-              ImmutableList.<DimensionSchema>builder()
-                  .addAll(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2", "dim3", "dim4", "dim5", "dim6")))
-                  .add(new DoubleDimensionSchema("d1"))
-                  .add(new DoubleDimensionSchema("d2"))
-                  .add(new FloatDimensionSchema("f1"))
-                  .add(new FloatDimensionSchema("f2"))
-                  .add(new LongDimensionSchema("l1"))
-                  .add(new LongDimensionSchema("l2"))
-                  .build()
-          )
-      )
+  private static final InputRowSchema FOO_SCHEMA = new InputRowSchema(
+      new TimestampSpec(TIMESTAMP_COLUMN, "iso", null),
+      new DimensionsSpec(
+          DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2", "dim3"))
+      ),
+      null
   );
 
-  private static final InputRowParser<Map<String, Object>> PARSER_LOTS_OF_COLUMNS = new MapInputRowParser(
-      new TimeAndDimsParseSpec(
-          new TimestampSpec("timestamp", "millis", null),
-          new DimensionsSpec(
-              DimensionsSpec.getDefaultSchemas(
-                  ImmutableList.<String>builder().add("dimHyperUnique")
-                                                 .add("dimMultivalEnumerated")
-                                                 .add("dimMultivalEnumerated2")
-                                                 .add("dimMultivalSequentialWithNulls")
-                                                 .add("dimSequential")
-                                                 .add("dimSequentialHalfNull")
-                                                 .add("dimUniform")
-                                                 .add("dimZipf")
-                                                 .add("metFloatNormal")
-                                                 .add("metFloatZipf")
-                                                 .add("metLongSequential")
-                                                 .add("metLongUniform")
-                                                 .build()
-              )
-          )
-      )
+  private static final InputRowSchema NUMFOO_SCHEMA = new InputRowSchema(
+      new TimestampSpec(TIMESTAMP_COLUMN, "iso", null),
+      new DimensionsSpec(
+          ImmutableList.<DimensionSchema>builder()
+                       .addAll(DimensionsSpec.getDefaultSchemas(ImmutableList.of(
+                           "dim1",
+                           "dim2",
+                           "dim3",
+                           "dim4",
+                           "dim5",
+                           "dim6"
+                       )))
+                       .add(new DoubleDimensionSchema("d1"))
+                       .add(new DoubleDimensionSchema("d2"))
+                       .add(new FloatDimensionSchema("f1"))
+                       .add(new FloatDimensionSchema("f2"))
+                       .add(new LongDimensionSchema("l1"))
+                       .add(new LongDimensionSchema("l2"))
+                       .build()
+      ),
+      null
   );
 
-  private static final IncrementalIndexSchema INDEX_SCHEMA = new IncrementalIndexSchema.Builder()
+  private static final InputRowSchema LOTS_OF_COLUMNS_SCHEMA = new InputRowSchema(
+      new TimestampSpec("timestamp", "millis", null),
+      new DimensionsSpec(
+          DimensionsSpec.getDefaultSchemas(
+              ImmutableList.<String>builder().add("dimHyperUnique")
+                           .add("dimMultivalEnumerated")
+                           .add("dimMultivalEnumerated2")
+                           .add("dimMultivalSequentialWithNulls")
+                           .add("dimSequential")
+                           .add("dimSequentialHalfNull")
+                           .add("dimUniform")
+                           .add("dimZipf")
+                           .add("metFloatNormal")
+                           .add("metFloatZipf")
+                           .add("metLongSequential")
+                           .add("metLongUniform")
+                           .build()
+          )
+      ),
+      null
+  );
+
+
+  public static final IncrementalIndexSchema INDEX_SCHEMA = new IncrementalIndexSchema.Builder()
       .withMetrics(
           new CountAggregatorFactory("cnt"),
           new FloatSumAggregatorFactory("m1", "m1"),
@@ -193,22 +225,22 @@ public class TestDataBuilder
       .withRollup(false)
       .build();
 
-  private static final IncrementalIndexSchema INDEX_SCHEMA_NUMERIC_DIMS = new IncrementalIndexSchema.Builder()
+  public static final IncrementalIndexSchema INDEX_SCHEMA_NUMERIC_DIMS = new IncrementalIndexSchema.Builder()
       .withMetrics(
           new CountAggregatorFactory("cnt"),
           new FloatSumAggregatorFactory("m1", "m1"),
           new DoubleSumAggregatorFactory("m2", "m2"),
           new HyperUniquesAggregatorFactory("unique_dim1", "dim1")
       )
-      .withDimensionsSpec(PARSER_NUMERIC_DIMS)
+      .withDimensionsSpec(NUMFOO_SCHEMA.getDimensionsSpec())
       .withRollup(false)
       .build();
 
-  private static final IncrementalIndexSchema INDEX_SCHEMA_LOTS_O_COLUMNS = new IncrementalIndexSchema.Builder()
+  public static final IncrementalIndexSchema INDEX_SCHEMA_LOTS_O_COLUMNS = new IncrementalIndexSchema.Builder()
       .withMetrics(
           new CountAggregatorFactory("count")
       )
-      .withDimensionsSpec(PARSER_LOTS_OF_COLUMNS)
+      .withDimensionsSpec(LOTS_OF_COLUMNS_SCHEMA.getDimensionsSpec())
       .withRollup(false)
       .build();
 
@@ -223,111 +255,111 @@ public class TestDataBuilder
 
   public static final List<ImmutableMap<String, Object>> RAW_ROWS1 = ImmutableList.of(
       ImmutableMap.<String, Object>builder()
-          .put("t", "2000-01-01")
-          .put("m1", "1.0")
-          .put("m2", "1.0")
-          .put("dim1", "")
-          .put("dim2", ImmutableList.of("a"))
-          .put("dim3", ImmutableList.of("a", "b"))
-          .build(),
+                  .put("t", "2000-01-01")
+                  .put("m1", "1.0")
+                  .put("m2", "1.0")
+                  .put("dim1", "")
+                  .put("dim2", ImmutableList.of("a"))
+                  .put("dim3", ImmutableList.of("a", "b"))
+                  .build(),
       ImmutableMap.<String, Object>builder()
-          .put("t", "2000-01-02")
-          .put("m1", "2.0")
-          .put("m2", "2.0")
-          .put("dim1", "10.1")
-          .put("dim2", ImmutableList.of())
-          .put("dim3", ImmutableList.of("b", "c"))
-          .build(),
+                  .put("t", "2000-01-02")
+                  .put("m1", "2.0")
+                  .put("m2", "2.0")
+                  .put("dim1", "10.1")
+                  .put("dim2", ImmutableList.of())
+                  .put("dim3", ImmutableList.of("b", "c"))
+                  .build(),
       ImmutableMap.<String, Object>builder()
-          .put("t", "2000-01-03")
-          .put("m1", "3.0")
-          .put("m2", "3.0")
-          .put("dim1", "2")
-          .put("dim2", ImmutableList.of(""))
-          .put("dim3", ImmutableList.of("d"))
-          .build(),
+                  .put("t", "2000-01-03")
+                  .put("m1", "3.0")
+                  .put("m2", "3.0")
+                  .put("dim1", "2")
+                  .put("dim2", ImmutableList.of(""))
+                  .put("dim3", ImmutableList.of("d"))
+                  .build(),
       ImmutableMap.<String, Object>builder()
-          .put("t", "2001-01-01")
-          .put("m1", "4.0")
-          .put("m2", "4.0")
-          .put("dim1", "1")
-          .put("dim2", ImmutableList.of("a"))
-          .put("dim3", ImmutableList.of(""))
-          .build(),
+                  .put("t", "2001-01-01")
+                  .put("m1", "4.0")
+                  .put("m2", "4.0")
+                  .put("dim1", "1")
+                  .put("dim2", ImmutableList.of("a"))
+                  .put("dim3", ImmutableList.of(""))
+                  .build(),
       ImmutableMap.<String, Object>builder()
-          .put("t", "2001-01-02")
-          .put("m1", "5.0")
-          .put("m2", "5.0")
-          .put("dim1", "def")
-          .put("dim2", ImmutableList.of("abc"))
-          .put("dim3", ImmutableList.of())
-          .build(),
+                  .put("t", "2001-01-02")
+                  .put("m1", "5.0")
+                  .put("m2", "5.0")
+                  .put("dim1", "def")
+                  .put("dim2", ImmutableList.of("abc"))
+                  .put("dim3", ImmutableList.of())
+                  .build(),
       ImmutableMap.<String, Object>builder()
-          .put("t", "2001-01-03")
-          .put("m1", "6.0")
-          .put("m2", "6.0")
-          .put("dim1", "abc")
-          .build()
+                  .put("t", "2001-01-03")
+                  .put("m1", "6.0")
+                  .put("m2", "6.0")
+                  .put("dim1", "abc")
+                  .build()
   );
 
   public static final List<InputRow> RAW_ROWS1_X = ImmutableList.of(
       createRow(
           ImmutableMap.<String, Object>builder()
-              .put("t", "2000-01-01")
-              .put("m1_x", "1.0")
-              .put("m2_x", "1.0")
-              .put("dim1_x", "")
-              .put("dim2_x", ImmutableList.of("a"))
-              .put("dim3_x", ImmutableList.of("a", "b"))
-              .build()
+                      .put("t", "2000-01-01")
+                      .put("m1_x", "1.0")
+                      .put("m2_x", "1.0")
+                      .put("dim1_x", "")
+                      .put("dim2_x", ImmutableList.of("a"))
+                      .put("dim3_x", ImmutableList.of("a", "b"))
+                      .build()
       ),
       createRow(
           ImmutableMap.<String, Object>builder()
-              .put("t", "2000-01-02")
-              .put("m1_x", "2.0")
-              .put("m2_x", "2.0")
-              .put("dim1_x", "10.1")
-              .put("dim2_x", ImmutableList.of())
-              .put("dim3_x", ImmutableList.of("b", "c"))
-              .build()
+                      .put("t", "2000-01-02")
+                      .put("m1_x", "2.0")
+                      .put("m2_x", "2.0")
+                      .put("dim1_x", "10.1")
+                      .put("dim2_x", ImmutableList.of())
+                      .put("dim3_x", ImmutableList.of("b", "c"))
+                      .build()
       ),
       createRow(
           ImmutableMap.<String, Object>builder()
-              .put("t", "2000-01-03")
-              .put("m1_x", "3.0")
-              .put("m2_x", "3.0")
-              .put("dim1_x", "2")
-              .put("dim2_x", ImmutableList.of(""))
-              .put("dim3_x", ImmutableList.of("d"))
-              .build()
+                      .put("t", "2000-01-03")
+                      .put("m1_x", "3.0")
+                      .put("m2_x", "3.0")
+                      .put("dim1_x", "2")
+                      .put("dim2_x", ImmutableList.of(""))
+                      .put("dim3_x", ImmutableList.of("d"))
+                      .build()
       ),
       createRow(
           ImmutableMap.<String, Object>builder()
-              .put("t", "2001-01-01")
-              .put("m1_x", "4.0")
-              .put("m2_x", "4.0")
-              .put("dim1_x", "1")
-              .put("dim2_x", ImmutableList.of("a"))
-              .put("dim3_x", ImmutableList.of(""))
-              .build()
+                      .put("t", "2001-01-01")
+                      .put("m1_x", "4.0")
+                      .put("m2_x", "4.0")
+                      .put("dim1_x", "1")
+                      .put("dim2_x", ImmutableList.of("a"))
+                      .put("dim3_x", ImmutableList.of(""))
+                      .build()
       ),
       createRow(
           ImmutableMap.<String, Object>builder()
-              .put("t", "2001-01-02")
-              .put("m1_x", "5.0")
-              .put("m2_x", "5.0")
-              .put("dim1_x", "def")
-              .put("dim2_x", ImmutableList.of("abc"))
-              .put("dim3_x", ImmutableList.of())
-              .build()
+                      .put("t", "2001-01-02")
+                      .put("m1_x", "5.0")
+                      .put("m2_x", "5.0")
+                      .put("dim1_x", "def")
+                      .put("dim2_x", ImmutableList.of("abc"))
+                      .put("dim3_x", ImmutableList.of())
+                      .build()
       ),
       createRow(
           ImmutableMap.<String, Object>builder()
-              .put("t", "2001-01-03")
-              .put("m1_x", "6.0")
-              .put("m2_x", "6.0")
-              .put("dim1_x", "abc")
-              .build()
+                      .put("t", "2001-01-03")
+                      .put("m1_x", "6.0")
+                      .put("m2_x", "6.0")
+                      .put("dim1_x", "abc")
+                      .build()
       )
   );
 
@@ -336,131 +368,131 @@ public class TestDataBuilder
 
   public static final List<ImmutableMap<String, Object>> RAW_ROWS1_WITH_NUMERIC_DIMS = ImmutableList.of(
       ImmutableMap.<String, Object>builder()
-          .put("t", "2000-01-01")
-          .put("m1", "1.0")
-          .put("m2", "1.0")
-          .put("d1", 1.0)
-          .put("f1", 1.0f)
-          .put("l1", 7L)
-          .put("dim1", "")
-          .put("dim2", ImmutableList.of("a"))
-          .put("dim3", ImmutableList.of("a", "b"))
-          .put("dim4", "a")
-          .put("dim5", "aa")
-          .put("dim6", "1")
-          .build(),
+                  .put("t", "2000-01-01")
+                  .put("m1", "1.0")
+                  .put("m2", "1.0")
+                  .put("d1", 1.0)
+                  .put("f1", 1.0f)
+                  .put("l1", 7L)
+                  .put("dim1", "")
+                  .put("dim2", ImmutableList.of("a"))
+                  .put("dim3", ImmutableList.of("a", "b"))
+                  .put("dim4", "a")
+                  .put("dim5", "aa")
+                  .put("dim6", "1")
+                  .build(),
       ImmutableMap.<String, Object>builder()
-          .put("t", "2000-01-02")
-          .put("m1", "2.0")
-          .put("m2", "2.0")
-          .put("d1", 1.7)
-          .put("d2", 1.7)
-          .put("f1", 0.1f)
-          .put("f2", 0.1f)
-          .put("l1", 325323L)
-          .put("l2", 325323L)
-          .put("dim1", "10.1")
-          .put("dim2", ImmutableList.of())
-          .put("dim3", ImmutableList.of("b", "c"))
-          .put("dim4", "a")
-          .put("dim5", "ab")
-          .put("dim6", "2")
-          .build(),
+                  .put("t", "2000-01-02")
+                  .put("m1", "2.0")
+                  .put("m2", "2.0")
+                  .put("d1", 1.7)
+                  .put("d2", 1.7)
+                  .put("f1", 0.1f)
+                  .put("f2", 0.1f)
+                  .put("l1", 325323L)
+                  .put("l2", 325323L)
+                  .put("dim1", "10.1")
+                  .put("dim2", ImmutableList.of())
+                  .put("dim3", ImmutableList.of("b", "c"))
+                  .put("dim4", "a")
+                  .put("dim5", "ab")
+                  .put("dim6", "2")
+                  .build(),
       ImmutableMap.<String, Object>builder()
-          .put("t", "2000-01-03")
-          .put("m1", "3.0")
-          .put("m2", "3.0")
-          .put("d1", 0.0)
-          .put("d2", 0.0)
-          .put("f1", 0.0)
-          .put("f2", 0.0)
-          .put("l1", 0)
-          .put("l2", 0)
-          .put("dim1", "2")
-          .put("dim2", ImmutableList.of(""))
-          .put("dim3", ImmutableList.of("d"))
-          .put("dim4", "a")
-          .put("dim5", "ba")
-          .put("dim6", "3")
-          .build(),
+                  .put("t", "2000-01-03")
+                  .put("m1", "3.0")
+                  .put("m2", "3.0")
+                  .put("d1", 0.0)
+                  .put("d2", 0.0)
+                  .put("f1", 0.0)
+                  .put("f2", 0.0)
+                  .put("l1", 0)
+                  .put("l2", 0)
+                  .put("dim1", "2")
+                  .put("dim2", ImmutableList.of(""))
+                  .put("dim3", ImmutableList.of("d"))
+                  .put("dim4", "a")
+                  .put("dim5", "ba")
+                  .put("dim6", "3")
+                  .build(),
       ImmutableMap.<String, Object>builder()
-          .put("t", "2001-01-01")
-          .put("m1", "4.0")
-          .put("m2", "4.0")
-          .put("dim1", "1")
-          .put("dim2", ImmutableList.of("a"))
-          .put("dim3", ImmutableList.of(""))
-          .put("dim4", "b")
-          .put("dim5", "ad")
-          .put("dim6", "4")
-          .build(),
+                  .put("t", "2001-01-01")
+                  .put("m1", "4.0")
+                  .put("m2", "4.0")
+                  .put("dim1", "1")
+                  .put("dim2", ImmutableList.of("a"))
+                  .put("dim3", ImmutableList.of(""))
+                  .put("dim4", "b")
+                  .put("dim5", "ad")
+                  .put("dim6", "4")
+                  .build(),
       ImmutableMap.<String, Object>builder()
-          .put("t", "2001-01-02")
-          .put("m1", "5.0")
-          .put("m2", "5.0")
-          .put("dim1", "def")
-          .put("dim2", ImmutableList.of("abc"))
-          .put("dim3", ImmutableList.of())
-          .put("dim4", "b")
-          .put("dim5", "aa")
-          .put("dim6", "5")
-          .build(),
+                  .put("t", "2001-01-02")
+                  .put("m1", "5.0")
+                  .put("m2", "5.0")
+                  .put("dim1", "def")
+                  .put("dim2", ImmutableList.of("abc"))
+                  .put("dim3", ImmutableList.of())
+                  .put("dim4", "b")
+                  .put("dim5", "aa")
+                  .put("dim6", "5")
+                  .build(),
       ImmutableMap.<String, Object>builder()
-          .put("t", "2001-01-03")
-          .put("m1", "6.0")
-          .put("m2", "6.0")
-          .put("dim1", "abc")
-          .put("dim4", "b")
-          .put("dim5", "ab")
-          .put("dim6", "6")
-          .build()
+                  .put("t", "2001-01-03")
+                  .put("m1", "6.0")
+                  .put("m2", "6.0")
+                  .put("dim1", "abc")
+                  .put("dim4", "b")
+                  .put("dim5", "ab")
+                  .put("dim6", "6")
+                  .build()
   );
   public static final List<InputRow> ROWS1_WITH_NUMERIC_DIMS =
-      RAW_ROWS1_WITH_NUMERIC_DIMS.stream().map(raw -> createRow(raw, PARSER_NUMERIC_DIMS)).collect(Collectors.toList());
+      RAW_ROWS1_WITH_NUMERIC_DIMS.stream().map(raw -> createRow(raw, NUMFOO_SCHEMA)).collect(Collectors.toList());
 
   public static final List<ImmutableMap<String, Object>> RAW_ROWS2 = ImmutableList.of(
       ImmutableMap.<String, Object>builder()
-          .put("t", "2000-01-01")
-          .put("dim1", "דרואיד")
-          .put("dim2", "he")
-          .put("dim3", 10L)
-          .put("m1", 1.0)
-          .build(),
+                  .put("t", "2000-01-01")
+                  .put("dim1", "דרואיד")
+                  .put("dim2", "he")
+                  .put("dim3", 10L)
+                  .put("m1", 1.0)
+                  .build(),
       ImmutableMap.<String, Object>builder()
-          .put("t", "2000-01-01")
-          .put("dim1", "druid")
-          .put("dim2", "en")
-          .put("dim3", 11L)
-          .put("m1", 1.0)
-          .build(),
+                  .put("t", "2000-01-01")
+                  .put("dim1", "druid")
+                  .put("dim2", "en")
+                  .put("dim3", 11L)
+                  .put("m1", 1.0)
+                  .build(),
       ImmutableMap.<String, Object>builder()
-          .put("t", "2000-01-01")
-          .put("dim1", "друид")
-          .put("dim2", "ru")
-          .put("dim3", 12L)
-          .put("m1", 1.0)
-          .build()
+                  .put("t", "2000-01-01")
+                  .put("dim1", "друид")
+                  .put("dim2", "ru")
+                  .put("dim3", 12L)
+                  .put("m1", 1.0)
+                  .build()
   );
   public static final List<InputRow> ROWS2 =
       RAW_ROWS2.stream().map(TestDataBuilder::createRow).collect(Collectors.toList());
 
   public static final List<ImmutableMap<String, Object>> RAW_ROWS1_WITH_FULL_TIMESTAMP = ImmutableList.of(
       ImmutableMap.<String, Object>builder()
-          .put("t", "2000-01-01T10:51:45.695Z")
-          .put("m1", "1.0")
-          .put("m2", "1.0")
-          .put("dim1", "")
-          .put("dim2", ImmutableList.of("a"))
-          .put("dim3", ImmutableList.of("a", "b"))
-          .build(),
+                  .put("t", "2000-01-01T10:51:45.695Z")
+                  .put("m1", "1.0")
+                  .put("m2", "1.0")
+                  .put("dim1", "")
+                  .put("dim2", ImmutableList.of("a"))
+                  .put("dim3", ImmutableList.of("a", "b"))
+                  .build(),
       ImmutableMap.<String, Object>builder()
-          .put("t", "2000-01-18T10:51:45.695Z")
-          .put("m1", "2.0")
-          .put("m2", "2.0")
-          .put("dim1", "10.1")
-          .put("dim2", ImmutableList.of())
-          .put("dim3", ImmutableList.of("b", "c"))
-          .build()
+                  .put("t", "2000-01-18T10:51:45.695Z")
+                  .put("m1", "2.0")
+                  .put("m2", "2.0")
+                  .put("dim1", "10.1")
+                  .put("dim2", ImmutableList.of())
+                  .put("dim3", ImmutableList.of("b", "c"))
+                  .build()
   );
   public static final List<InputRow> ROWS1_WITH_FULL_TIMESTAMP =
       RAW_ROWS1_WITH_FULL_TIMESTAMP.stream().map(TestDataBuilder::createRow).collect(Collectors.toList());
@@ -475,37 +507,37 @@ public class TestDataBuilder
   public static final List<InputRow> ROWS_LOTS_OF_COLUMNS = ImmutableList.of(
       createRow(
           ImmutableMap.<String, Object>builder()
-              .put("timestamp", 1576306800000L)
-              .put("metFloatZipf", 147.0)
-              .put("dimMultivalSequentialWithNulls", Arrays.asList("1", "2", "3", "4", "5", "6", "7", "8"))
-              .put("dimMultivalEnumerated2", Arrays.asList(null, "Orange", "Apple"))
-              .put("metLongUniform", 372)
-              .put("metFloatNormal", 5000.0)
-              .put("dimZipf", "27")
-              .put("dimUniform", "74416")
-              .put("dimMultivalEnumerated", Arrays.asList("Baz", "World", "Hello", "Baz"))
-              .put("metLongSequential", 0)
-              .put("dimHyperUnique", "0")
-              .put("dimSequential", "0")
-              .put("dimSequentialHalfNull", "0")
-              .build(),
-          PARSER_LOTS_OF_COLUMNS
+                      .put("timestamp", 1576306800000L)
+                      .put("metFloatZipf", 147.0)
+                      .put("dimMultivalSequentialWithNulls", Arrays.asList("1", "2", "3", "4", "5", "6", "7", "8"))
+                      .put("dimMultivalEnumerated2", Arrays.asList(null, "Orange", "Apple"))
+                      .put("metLongUniform", 372)
+                      .put("metFloatNormal", 5000.0)
+                      .put("dimZipf", "27")
+                      .put("dimUniform", "74416")
+                      .put("dimMultivalEnumerated", Arrays.asList("Baz", "World", "Hello", "Baz"))
+                      .put("metLongSequential", 0)
+                      .put("dimHyperUnique", "0")
+                      .put("dimSequential", "0")
+                      .put("dimSequentialHalfNull", "0")
+                      .build(),
+          LOTS_OF_COLUMNS_SCHEMA
       ),
       createRow(
           ImmutableMap.<String, Object>builder()
-              .put("timestamp", 1576306800000L)
-              .put("metFloatZipf", 25.0)
-              .put("dimMultivalEnumerated2", Arrays.asList("Xylophone", null, "Corundum"))
-              .put("metLongUniform", 252)
-              .put("metFloatNormal", 4999.0)
-              .put("dimZipf", "9")
-              .put("dimUniform", "50515")
-              .put("dimMultivalEnumerated", Arrays.asList("Baz", "World", "ㅑ ㅓ ㅕ ㅗ ㅛ ㅜ ㅠ ㅡ ㅣ"))
-              .put("metLongSequential", 8)
-              .put("dimHyperUnique", "8")
-              .put("dimSequential", "8")
-              .build(),
-          PARSER_LOTS_OF_COLUMNS
+                      .put("timestamp", 1576306800000L)
+                      .put("metFloatZipf", 25.0)
+                      .put("dimMultivalEnumerated2", Arrays.asList("Xylophone", null, "Corundum"))
+                      .put("metLongUniform", 252)
+                      .put("metFloatNormal", 4999.0)
+                      .put("dimZipf", "9")
+                      .put("dimUniform", "50515")
+                      .put("dimMultivalEnumerated", Arrays.asList("Baz", "World", "ㅑ ㅓ ㅕ ㅗ ㅛ ㅜ ㅠ ㅡ ㅣ"))
+                      .put("metLongSequential", 8)
+                      .put("dimHyperUnique", "8")
+                      .put("dimSequential", "8")
+                      .build(),
+          LOTS_OF_COLUMNS_SCHEMA
       )
   );
 
@@ -574,6 +606,70 @@ public class TestDataBuilder
       KEY_COLUMNS,
       DateTimes.nowUtc().toString()
   );
+
+  public static QueryableIndex makeWikipediaIndex(File tmpDir)
+  {
+    try {
+      final File directory = new File(tmpDir, StringUtils.format("wikipedia-index-%s", UUID.randomUUID()));
+      final IncrementalIndex index = TestIndex.makeWikipediaIncrementalIndex();
+      TestIndex.INDEX_MERGER.persist(index, directory, IndexSpec.DEFAULT, null);
+      return TestIndex.INDEX_IO.loadIndex(directory);
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public static QueryableIndex makeWikipediaIndexWithAggregation(File tmpDir)
+  {
+    final List<DimensionSchema> dimensions = Arrays.asList(
+        new StringDimensionSchema("channel"),
+        new StringDimensionSchema("cityName"),
+        new StringDimensionSchema("comment"),
+        new StringDimensionSchema("countryIsoCode"),
+        new StringDimensionSchema("countryName"),
+        new StringDimensionSchema("isAnonymous"),
+        new StringDimensionSchema("isMinor"),
+        new StringDimensionSchema("isNew"),
+        new StringDimensionSchema("isRobot"),
+        new StringDimensionSchema("isUnpatrolled"),
+        new StringDimensionSchema("metroCode"),
+        new StringDimensionSchema("namespace"),
+        new StringDimensionSchema("page"),
+        new StringDimensionSchema("regionIsoCode"),
+        new StringDimensionSchema("regionName"),
+        new StringDimensionSchema("user")
+    );
+
+    return IndexBuilder
+        .create()
+        .tmpDir(new File(tmpDir, "wikipedia1"))
+        .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+        .schema(new IncrementalIndexSchema.Builder()
+                    .withRollup(true)
+                    .withTimestampSpec(new TimestampSpec("time", null, null))
+                    .withDimensionsSpec(new DimensionsSpec(dimensions))
+                    .withMetrics(
+                        new LongLastAggregatorFactory("long_last_added", "added", "__time"),
+                        new LongFirstAggregatorFactory("long_first_added", "added", "__time"),
+                        new FloatLastAggregatorFactory("float_last_added", "added", "__time"),
+                        new FloatLastAggregatorFactory("float_first_added", "added", "__time"),
+                        new DoubleLastAggregatorFactory("double_last_added", "added", "__time"),
+                        new DoubleFirstAggregatorFactory("double_first_added", "added", "__time")
+
+                    )
+                    .build()
+        )
+        .inputSource(
+            ResourceInputSource.of(
+                TestIndex.class.getClassLoader(),
+                "wikipedia/wikiticker-2015-09-12-sampled.json.gz"
+            )
+        )
+        .inputFormat(DEFAULT_JSON_INPUT_FORMAT)
+        .inputTmpDir(new File(tmpDir, "tmpWikipedia1"))
+        .buildMMappedIndex();
+  }
 
   public static SpecificSegmentsQuerySegmentWalker createMockWalker(
       final Injector injector,
@@ -712,12 +808,37 @@ public class TestDataBuilder
         .rows(USER_VISIT_ROWS)
         .buildMMappedIndex();
 
+    final QueryableIndex arraysIndex = IndexBuilder
+        .create()
+        .tmpDir(new File(tmpDir, "9"))
+        .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+        .schema(
+            new IncrementalIndexSchema.Builder()
+                .withTimestampSpec(NestedDataTestUtils.AUTO_SCHEMA.getTimestampSpec())
+                .withDimensionsSpec(NestedDataTestUtils.AUTO_SCHEMA.getDimensionsSpec())
+                .withMetrics(
+                    new CountAggregatorFactory("cnt")
+                )
+                .withRollup(false)
+                .build()
+        )
+        .inputSource(
+            ResourceInputSource.of(
+                NestedDataTestUtils.class.getClassLoader(),
+                NestedDataTestUtils.ARRAY_TYPES_DATA_FILE
+            )
+        )
+        .inputFormat(TestDataBuilder.DEFAULT_JSON_INPUT_FORMAT)
+        .inputTmpDir(new File(tmpDir, "9-input"))
+        .buildMMappedIndex();
 
-    return new SpecificSegmentsQuerySegmentWalker(
+    return SpecificSegmentsQuerySegmentWalker.createWalker(
+        injector,
         conglomerate,
-        injector.getInstance(LookupExtractorFactoryContainerProvider.class),
+        injector.getInstance(SegmentWrangler.class),
         joinableFactoryWrapper,
-        scheduler
+        scheduler,
+        injector.getInstance(GroupByQueryConfig.class)
     ).add(
         DataSegment.builder()
                    .dataSource(CalciteTests.DATASOURCE1)
@@ -808,6 +929,33 @@ public class TestDataBuilder
                    .size(0)
                    .build(),
         userVisitIndex
+    ).add(
+        DataSegment.builder()
+                   .dataSource(CalciteTests.WIKIPEDIA)
+                   .interval(Intervals.of("2015-09-12/2015-09-13"))
+                   .version("1")
+                   .shardSpec(new NumberedShardSpec(0, 0))
+                   .size(0)
+                   .build(),
+        makeWikipediaIndex(tmpDir)
+    ).add(
+      DataSegment.builder()
+                 .dataSource(CalciteTests.WIKIPEDIA_FIRST_LAST)
+                 .interval(Intervals.of("2015-09-12/2015-09-13"))
+                 .version("1")
+                 .shardSpec(new NumberedShardSpec(0, 0))
+                 .size(0)
+                 .build(),
+      makeWikipediaIndexWithAggregation(tmpDir)
+    ).add(
+        DataSegment.builder()
+                   .dataSource(CalciteTests.ARRAYS_DATASOURCE)
+                   .version("1")
+                   .interval(arraysIndex.getDataInterval())
+                   .shardSpec(new LinearShardSpec(1))
+                   .size(0)
+                   .build(),
+        arraysIndex
     );
   }
 
@@ -815,25 +963,27 @@ public class TestDataBuilder
   {
     return new MapBasedInputRow(DateTimes.ISO_DATE_OPTIONAL_TIME.parse(time), dimensions, event);
   }
+
   public static InputRow createRow(final ImmutableMap<String, ?> map)
   {
-    return PARSER.parseBatch((Map<String, Object>) map).get(0);
+    return MapInputRowParser.parse(FOO_SCHEMA, (Map<String, Object>) map);
   }
 
-  public static InputRow createRow(final ImmutableMap<String, ?> map, InputRowParser<Map<String, Object>> parser)
+  public static InputRow createRow(final ImmutableMap<String, ?> map, InputRowSchema inputRowSchema)
   {
-    return parser.parseBatch((Map<String, Object>) map).get(0);
+    return MapInputRowParser.parse(inputRowSchema, (Map<String, Object>) map);
   }
 
   public static InputRow createRow(final Object t, final String dim1, final String dim2, final double m1)
   {
-    return PARSER.parseBatch(
+    return MapInputRowParser.parse(
+        FOO_SCHEMA,
         ImmutableMap.of(
             "t", new DateTime(t, ISOChronology.getInstanceUTC()).getMillis(),
             "dim1", dim1,
             "dim2", dim2,
             "m1", m1
         )
-    ).get(0);
+    );
   }
 }

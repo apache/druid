@@ -1,0 +1,17 @@
+null	c	c	null	1	c	c
+null	d	d	null	1	d	d
+null	d	d	d	1	d	d
+2	b	b	null	1	b	b
+4	c	c	c	1	c	c
+6	c	c	c	1	c	c
+9	b	b	b	1	b	b
+8	c	c	c	2	c	c
+10	d	d	d	2	d	d
+11	d	d	d	2	d	d
+12	c	c	c	2	c	c
+13	b	b	b	2	b	b
+13	c	c	c	3	c	c
+13	c	null	c	3	c	c
+17	b	null	b	3	b	b
+2147483647	d	d	d	3	d	d
+2147483647	d	null	d	3	d	d

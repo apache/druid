@@ -21,12 +21,7 @@ package org.apache.druid.query.aggregation.datasketches.hll;
 
 import org.apache.datasketches.hll.HllSketch;
 import org.apache.datasketches.hll.TgtHllType;
-import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.aggregation.Aggregator;
-import org.apache.druid.segment.ColumnValueSelector;
-
-import java.util.List;
 
 /**
  * This aggregator builds sketches from raw data.
@@ -34,17 +29,16 @@ import java.util.List;
  */
 public class HllSketchBuildAggregator implements Aggregator
 {
-
-  private final ColumnValueSelector<Object> selector;
+  private final HllSketchUpdater updater;
   private HllSketch sketch;
 
   public HllSketchBuildAggregator(
-      final ColumnValueSelector<Object> selector,
+      final HllSketchUpdater updater,
       final int lgK,
       final TgtHllType tgtHllType
   )
   {
-    this.selector = selector;
+    this.updater = updater;
     this.sketch = new HllSketch(lgK, tgtHllType);
   }
 
@@ -54,15 +48,9 @@ public class HllSketchBuildAggregator implements Aggregator
    * See https://github.com/druid-io/druid/pull/3956
    */
   @Override
-  public void aggregate()
+  public synchronized void aggregate()
   {
-    final Object value = selector.getObject();
-    if (value == null) {
-      return;
-    }
-    synchronized (this) {
-      updateSketch(sketch, value);
-    }
+    updater.update(() -> sketch);
   }
 
   /*
@@ -73,7 +61,7 @@ public class HllSketchBuildAggregator implements Aggregator
   @Override
   public synchronized Object get()
   {
-    return sketch.copy();
+    return HllSketchHolder.of(sketch.copy());
   }
 
   @Override
@@ -93,36 +81,4 @@ public class HllSketchBuildAggregator implements Aggregator
   {
     throw new UnsupportedOperationException("Not implemented");
   }
-
-  static void updateSketch(final HllSketch sketch, final Object value)
-  {
-    if (value instanceof Integer || value instanceof Long) {
-      sketch.update(((Number) value).longValue());
-    } else if (value instanceof Float || value instanceof Double) {
-      sketch.update(((Number) value).doubleValue());
-    } else if (value instanceof String) {
-      sketch.update(((String) value).toCharArray());
-    } else if (value instanceof List) {
-      // noinspection rawtypes
-      for (Object entry : (List) value) {
-        if (entry != null) {
-          final String asString = entry.toString();
-          if (!NullHandling.isNullOrEquivalent(asString)) {
-            sketch.update(asString);
-          }
-        }
-      }
-    } else if (value instanceof char[]) {
-      sketch.update((char[]) value);
-    } else if (value instanceof byte[]) {
-      sketch.update((byte[]) value);
-    } else if (value instanceof int[]) {
-      sketch.update((int[]) value);
-    } else if (value instanceof long[]) {
-      sketch.update((long[]) value);
-    } else {
-      throw new IAE("Unsupported type " + value.getClass());
-    }
-  }
-
 }

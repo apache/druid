@@ -16,11 +16,11 @@
  * limitations under the License.
  */
 
-import { SqlQuery } from 'druid-query-toolkit';
-import { shallow } from 'enzyme';
+import { SqlQuery } from '@druid-toolkit/query';
 import React from 'react';
 
-import { ColumnMetadata } from '../../../utils';
+import type { ColumnMetadata } from '../../../utils';
+import { shallow } from '../../../utils/shallow-renderer';
 
 import { ColumnTree } from './column-tree';
 

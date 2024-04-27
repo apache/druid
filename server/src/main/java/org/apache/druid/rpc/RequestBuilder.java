@@ -183,4 +183,17 @@ public class RequestBuilder
     result = 31 * result + Arrays.hashCode(content);
     return result;
   }
+
+  @Override
+  public String toString()
+  {
+    return "RequestBuilder{" +
+           "method=" + method +
+           ", encodedPathAndQueryString='" + encodedPathAndQueryString + '\'' +
+           ", headers=" + headers +
+           ", contentType='" + contentType + '\'' +
+           ", content=" + Arrays.toString(content) +
+           ", timeout=" + timeout +
+           '}';
+  }
 }

@@ -20,6 +20,9 @@
 package org.apache.druid.segment.transform;
 
 import org.apache.druid.data.input.Row;
+import org.apache.druid.data.input.Rows;
+
+import java.util.List;
 
 /**
  * Interface for evaluating functions on rows. Used by {@link Transformer}.
@@ -27,4 +30,9 @@ import org.apache.druid.data.input.Row;
 public interface RowFunction
 {
   Object eval(Row row);
+
+  default List<String> evalDimension(Row row)
+  {
+    return Rows.objectToStrings(eval(row));
+  }
 }

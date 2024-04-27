@@ -16,8 +16,10 @@
  * limitations under the License.
  */
 
-import { Alert, Intent } from '@blueprintjs/core';
+import { Intent } from '@blueprintjs/core';
 import React from 'react';
+
+import { AlertDialog } from '../../../dialogs';
 
 export interface CancelQueryDialogProps {
   onDismiss(): void;
@@ -28,7 +30,7 @@ export const CancelQueryDialog = function CancelQueryDialog(props: CancelQueryDi
   const { onDismiss, onCancel } = props;
 
   return (
-    <Alert
+    <AlertDialog
       intent={Intent.DANGER}
       isOpen
       cancelButtonText="Continue running query"
@@ -43,6 +45,6 @@ export const CancelQueryDialog = function CancelQueryDialog(props: CancelQueryDi
     >
       <p>Are you sure you want to cancel this query?</p>
       <p>You can&apos;t undo this action.</p>
-    </Alert>
+    </AlertDialog>
   );
 };

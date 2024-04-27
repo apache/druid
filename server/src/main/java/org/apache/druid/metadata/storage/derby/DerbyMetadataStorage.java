@@ -42,7 +42,6 @@ public class DerbyMetadataStorage extends MetadataStorage
     catch (Exception e) {
       throw new RuntimeException(e);
     }
-
   }
 
   @Override
@@ -54,6 +53,26 @@ public class DerbyMetadataStorage extends MetadataStorage
     }
     catch (Exception e) {
       throw new RuntimeException(e);
+    }
+
+    // It takes a while for the Derby server to start in another
+    // thread. Ping to ensure it is ready. Saves ugly failure/retry
+    // loops elsewhere in startup. Those loops look alarming in the
+    // log file.
+    while (true) {
+      try {
+        server.ping();
+        break;
+      }
+      catch (Exception e) {
+        log.info("Derby server not yet ready, still trying...");
+        try {
+          Thread.sleep(100);
+        }
+        catch (InterruptedException e1) {
+          // Ignore
+        }
+      }
     }
   }
 

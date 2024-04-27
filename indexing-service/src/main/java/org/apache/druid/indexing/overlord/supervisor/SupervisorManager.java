@@ -22,13 +22,19 @@ package org.apache.druid.indexing.overlord.supervisor;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
+import org.apache.druid.indexing.common.TaskLockType;
+import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
+import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
+import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.MetadataSupervisorManager;
+import org.apache.druid.metadata.PendingSegmentRecord;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 
 import javax.annotation.Nullable;
@@ -67,6 +73,56 @@ public class SupervisorManager
   public Set<String> getSupervisorIds()
   {
     return supervisors.keySet();
+  }
+
+  /**
+   * @param datasource Datasource to find active supervisor id with append lock for.
+   * @return An optional with the active appending supervisor id if it exists.
+   */
+  public Optional<String> getActiveSupervisorIdForDatasourceWithAppendLock(String datasource)
+  {
+    for (Map.Entry<String, Pair<Supervisor, SupervisorSpec>> entry : supervisors.entrySet()) {
+      final String supervisorId = entry.getKey();
+      final Supervisor supervisor = entry.getValue().lhs;
+      final SupervisorSpec supervisorSpec = entry.getValue().rhs;
+
+      boolean hasAppendLock = Tasks.DEFAULT_USE_CONCURRENT_LOCKS;
+      if (supervisorSpec instanceof SeekableStreamSupervisorSpec) {
+        SeekableStreamSupervisorSpec seekableStreamSupervisorSpec = (SeekableStreamSupervisorSpec) supervisorSpec;
+        Map<String, Object> context = seekableStreamSupervisorSpec.getContext();
+        if (context != null) {
+          Boolean useConcurrentLocks = QueryContexts.getAsBoolean(
+              Tasks.USE_CONCURRENT_LOCKS,
+              context.get(Tasks.USE_CONCURRENT_LOCKS)
+          );
+          if (useConcurrentLocks == null) {
+            TaskLockType taskLockType = QueryContexts.getAsEnum(
+                Tasks.TASK_LOCK_TYPE,
+                context.get(Tasks.TASK_LOCK_TYPE),
+                TaskLockType.class
+            );
+            if (taskLockType == null) {
+              hasAppendLock = Tasks.DEFAULT_USE_CONCURRENT_LOCKS;
+            } else if (taskLockType == TaskLockType.APPEND) {
+              hasAppendLock = true;
+            } else {
+              hasAppendLock = false;
+            }
+          } else {
+            hasAppendLock = useConcurrentLocks;
+          }
+        }
+      }
+
+      if (supervisor instanceof SeekableStreamSupervisor
+          && !supervisorSpec.isSuspended()
+          && supervisorSpec.getDataSources().contains(datasource)
+          && (hasAppendLock)) {
+        return Optional.of(supervisorId);
+      }
+    }
+
+    return Optional.absent();
   }
 
   public Optional<SupervisorSpec> getSupervisorSpec(String id)
@@ -132,7 +188,7 @@ public class SupervisorManager
             createAndStartSupervisorInternal(spec, false);
           }
           catch (Exception ex) {
-            log.error(ex, "Failed to start supervisor: [%s]", spec.getId());
+            log.error(ex, "Failed to start supervisor: id [%s]", spec.getId());
           }
         }
       }
@@ -201,7 +257,7 @@ public class SupervisorManager
     return supervisor == null ? Optional.absent() : Optional.fromNullable(supervisor.lhs.isHealthy());
   }
 
-  public boolean resetSupervisor(String id, @Nullable DataSourceMetadata dataSourceMetadata)
+  public boolean resetSupervisor(String id, @Nullable DataSourceMetadata resetDataSourceMetadata)
   {
     Preconditions.checkState(started, "SupervisorManager not started");
     Preconditions.checkNotNull(id, "id");
@@ -212,7 +268,11 @@ public class SupervisorManager
       return false;
     }
 
-    supervisor.lhs.reset(dataSourceMetadata);
+    if (resetDataSourceMetadata == null) {
+      supervisor.lhs.reset(null);
+    } else {
+      supervisor.lhs.resetOffsets(resetDataSourceMetadata);
+    }
     SupervisorTaskAutoScaler autoscaler = autoscalers.get(id);
     if (autoscaler != null) {
       autoscaler.reset();
@@ -239,6 +299,42 @@ public class SupervisorManager
     }
     catch (Exception e) {
       log.error(e, "Checkpoint request failed");
+    }
+    return false;
+  }
+
+  /**
+   * Registers a new version of the given pending segment on a supervisor. This
+   * allows the supervisor to include the pending segment in queries fired against
+   * that segment version.
+   */
+  public boolean registerUpgradedPendingSegmentOnSupervisor(
+      String supervisorId,
+      PendingSegmentRecord upgradedPendingSegment
+  )
+  {
+    try {
+      Preconditions.checkNotNull(supervisorId, "supervisorId cannot be null");
+      Preconditions.checkNotNull(upgradedPendingSegment, "upgraded pending segment cannot be null");
+      Preconditions.checkNotNull(upgradedPendingSegment.getTaskAllocatorId(), "taskAllocatorId cannot be null");
+      Preconditions.checkNotNull(
+          upgradedPendingSegment.getUpgradedFromSegmentId(),
+          "upgradedFromSegmentId cannot be null"
+      );
+
+      Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(supervisorId);
+      Preconditions.checkNotNull(supervisor, "supervisor could not be found");
+      if (!(supervisor.lhs instanceof SeekableStreamSupervisor)) {
+        return false;
+      }
+
+      SeekableStreamSupervisor<?, ?, ?> seekableStreamSupervisor = (SeekableStreamSupervisor<?, ?, ?>) supervisor.lhs;
+      seekableStreamSupervisor.registerNewVersionOfPendingSegment(upgradedPendingSegment);
+      return true;
+    }
+    catch (Exception e) {
+      log.error(e, "Failed to upgrade pending segment[%s] to new pending segment[%s] on Supervisor[%s].",
+                upgradedPendingSegment.getUpgradedFromSegmentId(), upgradedPendingSegment.getId().getVersion(), supervisorId);
     }
     return false;
   }
@@ -313,10 +409,6 @@ public class SupervisorManager
       return false;
     }
 
-    if (persistSpec) {
-      metadataSupervisorManager.insert(id, spec);
-    }
-
     Supervisor supervisor;
     SupervisorTaskAutoScaler autoscaler;
     try {
@@ -326,18 +418,22 @@ public class SupervisorManager
       supervisor.start();
       if (autoscaler != null) {
         autoscaler.start();
-        autoscalers.put(id, autoscaler);
       }
     }
     catch (Exception e) {
-      // Supervisor creation or start failed write tombstone only when trying to start a new supervisor
-      if (persistSpec) {
-        metadataSupervisorManager.insert(id, new NoopSupervisorSpec(null, spec.getDataSources()));
-      }
+      log.error("Failed to create and start supervisor: [%s]", spec.getId());
       throw new RuntimeException(e);
     }
 
+    if (persistSpec) {
+      metadataSupervisorManager.insert(id, spec);
+    }
+
     supervisors.put(id, Pair.of(supervisor, spec));
+    if (autoscaler != null) {
+      autoscalers.put(id, autoscaler);
+    }
+
     return true;
   }
 }

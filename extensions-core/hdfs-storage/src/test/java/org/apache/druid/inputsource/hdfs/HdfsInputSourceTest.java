@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.InjectableValues.Std;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
@@ -31,10 +32,15 @@ import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.data.input.InputStats;
 import org.apache.druid.data.input.MaxSizeSplitHintSpec;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.InputStatsImpl;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.data.input.impl.systemfield.SystemField;
+import org.apache.druid.data.input.impl.systemfield.SystemFields;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.storage.hdfs.HdfsStorageDruidModule;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -47,10 +53,8 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.experimental.runners.Enclosed;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
-import org.junit.runner.RunWith;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -59,8 +63,10 @@ import java.io.OutputStreamWriter;
 import java.io.UncheckedIOException;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -68,7 +74,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-@RunWith(Enclosed.class)
 public class HdfsInputSourceTest extends InitializedNullHandlingTest
 {
   private static final String PATH = "hdfs://localhost:7020/foo/bar";
@@ -160,6 +165,21 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
                      .inputSourceConfig(DEFAULT_INPUT_SOURCE_CONFIG)
                      .build();
     }
+
+    @Test
+    public void testGetTypes()
+    {
+      final Configuration conf = new Configuration();
+      conf.set("fs.default.name", "hdfs://localhost:7020");
+      HdfsInputSource inputSource =
+          HdfsInputSource.builder()
+                         .paths("/foo/bar*")
+                         .configuration(conf)
+                         .inputSourceConfig(DEFAULT_INPUT_SOURCE_CONFIG)
+                         .build();
+
+      Assert.assertEquals(Collections.singleton(HdfsInputSource.TYPE_KEY), inputSource.getTypes());
+    }
   }
 
   public static class SerializeDeserializeTest
@@ -200,6 +220,13 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
     public void serializesDeserializesStringPaths()
     {
       Wrapper target = new Wrapper(hdfsInputSourceBuilder.paths(PATH));
+      testSerializesDeserializes(target);
+    }
+
+    @Test
+    public void serializesDeserializesStringPathsWithSystemFields()
+    {
+      Wrapper target = new Wrapper(hdfsInputSourceBuilder.paths(PATH).systemFields(SystemField.URI));
       testSerializesDeserializes(target);
     }
 
@@ -259,11 +286,13 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
     private HdfsInputSource target;
     private Set<Path> paths;
     private Map<Long, String> timestampToValue;
+    private List<String> fileContents;
 
     @Before
     public void setup() throws IOException
     {
       timestampToValue = new HashMap<>();
+      fileContents = new ArrayList<>();
 
       File dir = temporaryFolder.getRoot();
       Configuration configuration = new Configuration(true);
@@ -276,11 +305,10 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
                            i -> {
                              char value = ALPHABET.charAt(i % ALPHABET.length());
                              timestampToValue.put((long) i, Character.toString(value));
-                             return createFile(
-                                 fileSystem,
-                                 String.valueOf(i),
-                                 i + KEY_VALUE_SEPARATOR + value
-                             );
+
+                             final String contents = i + KEY_VALUE_SEPARATOR + value;
+                             fileContents.add(contents);
+                             return createFile(fileSystem, String.valueOf(i), contents);
                            }
                        )
                        .collect(Collectors.toSet());
@@ -319,9 +347,10 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
     public void readsSplitsCorrectly() throws IOException
     {
       InputSourceReader reader = target.formattableReader(INPUT_ROW_SCHEMA, INPUT_FORMAT, null);
+      final InputStats inputStats = new InputStatsImpl();
 
       Map<Long, String> actualTimestampToValue = new HashMap<>();
-      try (CloseableIterator<InputRow> iterator = reader.read()) {
+      try (CloseableIterator<InputRow> iterator = reader.read(inputStats)) {
         while (iterator.hasNext()) {
           InputRow row = iterator.next();
           actualTimestampToValue.put(row.getTimestampFromEpoch(), row.getDimension(COLUMN).get(0));
@@ -329,6 +358,9 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
       }
 
       Assert.assertEquals(timestampToValue, actualTimestampToValue);
+
+      long totalFileSize = fileContents.stream().mapToLong(String::length).sum();
+      Assert.assertEquals(totalFileSize, inputStats.getProcessedBytes());
     }
 
     @Test
@@ -395,10 +427,12 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
     public void readsSplitsCorrectly() throws IOException
     {
       InputSourceReader reader = target.formattableReader(INPUT_ROW_SCHEMA, INPUT_FORMAT, null);
+      final InputStats inputStats = new InputStatsImpl();
 
-      try (CloseableIterator<InputRow> iterator = reader.read()) {
+      try (CloseableIterator<InputRow> iterator = reader.read(inputStats)) {
         Assert.assertFalse(iterator.hasNext());
       }
+      Assert.assertEquals(0, inputStats.getProcessedBytes());
     }
 
     @Test
@@ -414,6 +448,57 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
     {
       int numSplits = target.estimateNumSplits(null, null);
       Assert.assertEquals(0, numSplits);
+    }
+  }
+
+  public static class SystemFieldsTest
+  {
+    @Test
+    public void testSystemFields()
+    {
+      final Configuration configuration = new Configuration();
+      final HdfsInputSource inputSource = new HdfsInputSource(
+          "hdfs://127.0.0.1/bar",
+          new SystemFields(EnumSet.of(SystemField.URI, SystemField.PATH)),
+          configuration,
+          new HdfsInputSourceConfig(null)
+      );
+
+      Assert.assertEquals(
+          EnumSet.of(SystemField.URI, SystemField.PATH),
+          inputSource.getConfiguredSystemFields()
+      );
+
+      final HdfsInputEntity entity = new HdfsInputEntity(configuration, new Path("hdfs://127.0.0.1/bar"));
+      Assert.assertEquals("hdfs://127.0.0.1/bar", inputSource.getSystemFieldValue(entity, SystemField.URI));
+      Assert.assertEquals("/bar", inputSource.getSystemFieldValue(entity, SystemField.PATH));
+
+      final HdfsInputEntity entity2 = new HdfsInputEntity(configuration, new Path("/127.0.0.1/bar"));
+      Assert.assertEquals("file:///127.0.0.1/bar", inputSource.getSystemFieldValue(entity2, SystemField.URI));
+      Assert.assertEquals("/127.0.0.1/bar", inputSource.getSystemFieldValue(entity2, SystemField.PATH));
+
+      final HdfsInputEntity entity3 = new HdfsInputEntity(configuration, new Path("bar"));
+      Assert.assertEquals(
+          StringUtils.format("file:%s/bar", System.getProperty("user.dir")),
+          inputSource.getSystemFieldValue(entity3, SystemField.URI)
+      );
+      Assert.assertEquals(
+          StringUtils.format("%s/bar", System.getProperty("user.dir")),
+          inputSource.getSystemFieldValue(entity3, SystemField.PATH)
+      );
+    }
+  }
+
+  public static class EqualsTest
+  {
+    @Test
+    public void testEquals()
+    {
+      EqualsVerifier.forClass(HdfsInputSource.class)
+                    .usingGetClass()
+                    .withIgnoredFields("cachedPaths")
+                    .withPrefabValues(Configuration.class, new Configuration(), new Configuration())
+                    .verify();
     }
   }
 }

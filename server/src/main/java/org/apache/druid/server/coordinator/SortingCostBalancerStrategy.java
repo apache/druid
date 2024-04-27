@@ -21,7 +21,8 @@ package org.apache.druid.server.coordinator;
 
 import com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.druid.client.ServerInventoryView;
-import org.apache.druid.server.coordinator.cost.ClusterCostComputer;
+import org.apache.druid.server.coordinator.balancer.ClusterCostComputer;
+import org.apache.druid.server.coordinator.balancer.CostBalancerStrategy;
 import org.apache.druid.timeline.DataSegment;
 
 /**
@@ -44,28 +45,13 @@ public class SortingCostBalancerStrategy extends CostBalancerStrategy
   }
 
   @Override
-  protected double computeCost(DataSegment proposalSegment, ServerHolder server, boolean includeCurrentServer)
+  protected double computePlacementCost(DataSegment segment, ServerHolder server)
   {
-    final long proposalSegmentSize = proposalSegment.getSize();
-
-    // (optional) Don't include server if it is already serving segment
-    if (!includeCurrentServer && server.isServingSegment(proposalSegment)) {
-      return Double.POSITIVE_INFINITY;
-    }
-
-    // Don't calculate cost if the server doesn't have enough space or is loading the segment
-    if (proposalSegmentSize > server.getAvailableSize() || server.isLoadingSegment(proposalSegment)) {
-      return Double.POSITIVE_INFINITY;
-    }
-
     final String serverName = server.getServer().getName();
-
-    double cost = costComputer.computeCost(serverName, proposalSegment);
-
-    if (server.getAvailableSize() <= 0) {
-      return Double.POSITIVE_INFINITY;
+    double cost = costComputer.computeCost(serverName, segment);
+    if (server.isProjectedSegment(segment)) {
+      cost -= intervalCost(segment.getInterval(), segment.getInterval());
     }
-
     return cost;
   }
 }

@@ -28,10 +28,9 @@ public class KafkaConfig extends ServiceConfig
 {
   @JsonCreator
   public KafkaConfig(
-      @JsonProperty("service") String service,
       @JsonProperty("instances") List<ServiceInstance> instances
   )
   {
-    super(service, instances);
+    super(instances);
   }
 }

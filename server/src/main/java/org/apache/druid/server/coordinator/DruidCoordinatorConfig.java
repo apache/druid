@@ -23,8 +23,6 @@ import org.joda.time.Duration;
 import org.skife.config.Config;
 import org.skife.config.Default;
 
-/**
- */
 public abstract class DruidCoordinatorConfig
 {
   @Config("druid.coordinator.startDelay")
@@ -43,9 +41,19 @@ public abstract class DruidCoordinatorConfig
   @Default("PT1H")
   public abstract Duration getCoordinatorMetadataStoreManagementPeriod();
 
+  @Config("druid.coordinator.kill.on")
+  @Default("false")
+  public abstract boolean isKillUnusedSegmentsEnabled();
+
+  /**
+   * @return The period at which the coordinator cleans up unused segments. If the config isn't explicitly set,
+   * it defaults to the coordinator's indexing period.
+   */
   @Config("druid.coordinator.kill.period")
-  @Default("P1D")
-  public abstract Duration getCoordinatorKillPeriod();
+  public Duration getCoordinatorKillPeriod()
+  {
+    return getCoordinatorIndexingPeriod();
+  }
 
   @Config("druid.coordinator.kill.durationToRetain")
   @Default("P90D")
@@ -55,9 +63,21 @@ public abstract class DruidCoordinatorConfig
   @Default("false")
   public abstract boolean getCoordinatorKillIgnoreDurationToRetain();
 
+  @Config("druid.coordinator.kill.bufferPeriod")
+  @Default("P30D")
+  public abstract Duration getCoordinatorKillBufferPeriod();
+
   @Config("druid.coordinator.kill.maxSegments")
   @Default("100")
   public abstract int getCoordinatorKillMaxSegments();
+
+  @Config("druid.coordinator.kill.pendingSegments.on")
+  @Default("true")
+  public abstract boolean isKillPendingSegmentsEnabled();
+
+  @Config("druid.coordinator.kill.supervisor.on")
+  @Default("true")
+  public abstract boolean isSupervisorKillEnabled();
 
   @Config("druid.coordinator.kill.supervisor.period")
   @Default("P1D")
@@ -67,6 +87,10 @@ public abstract class DruidCoordinatorConfig
   @Default("P90D")
   public abstract Duration getCoordinatorSupervisorKillDurationToRetain();
 
+  @Config("druid.coordinator.kill.audit.on")
+  @Default("true")
+  public abstract boolean isAuditKillEnabled();
+
   @Config("druid.coordinator.kill.audit.period")
   @Default("P1D")
   public abstract Duration getCoordinatorAuditKillPeriod();
@@ -75,9 +99,17 @@ public abstract class DruidCoordinatorConfig
   @Default("P90D")
   public abstract Duration getCoordinatorAuditKillDurationToRetain();
 
+  @Config("druid.coordinator.kill.compaction.on")
+  @Default("false")
+  public abstract boolean isCompactionKillEnabled();
+
   @Config("druid.coordinator.kill.compaction.period")
   @Default("P1D")
   public abstract Duration getCoordinatorCompactionKillPeriod();
+
+  @Config("druid.coordinator.kill.rule.on")
+  @Default("true")
+  public abstract boolean isRuleKillEnabled();
 
   @Config("druid.coordinator.kill.rule.period")
   @Default("P1D")
@@ -86,6 +118,10 @@ public abstract class DruidCoordinatorConfig
   @Config("druid.coordinator.kill.rule.durationToRetain")
   @Default("P90D")
   public abstract Duration getCoordinatorRuleKillDurationToRetain();
+
+  @Config("druid.coordinator.kill.datasource.on")
+  @Default("true")
+  public abstract boolean isDatasourceKillEnabled();
 
   @Config("druid.coordinator.kill.datasource.period")
   @Default("P1D")
@@ -99,12 +135,6 @@ public abstract class DruidCoordinatorConfig
   public Duration getLoadTimeoutDelay()
   {
     return new Duration(15 * 60 * 1000);
-  }
-
-  @Config("druid.coordinator.loadqueuepeon.repeatDelay")
-  public Duration getLoadQueuePeonRepeatDelay()
-  {
-    return Duration.millis(50);
   }
 
   @Config("druid.coordinator.loadqueuepeon.type")
@@ -137,10 +167,15 @@ public abstract class DruidCoordinatorConfig
     return 1;
   }
 
-  @Config("druid.coordinator.compaction.skipLockedIntervals")
-  public boolean getCompactionSkipLockedIntervals()
-  {
-    return true;
-  }
+  @Config("druid.coordinator.kill.segmentSchema.on")
+  @Default("true")
+  public abstract boolean isSegmentSchemaKillEnabled();
 
+  @Config("druid.coordinator.kill.segmentSchema.period")
+  @Default("PT1H")
+  public abstract Duration getSegmentSchemaKillPeriod();
+
+  @Config("druid.coordinator.kill.segmentSchema.durationToRetain")
+  @Default("PT6H")
+  public abstract Duration getSegmentSchemaKillDurationToRetain();
 }

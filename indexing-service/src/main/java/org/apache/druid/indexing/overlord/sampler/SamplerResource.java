@@ -20,26 +20,67 @@
 package org.apache.druid.indexing.overlord.sampler;
 
 import com.google.common.base.Preconditions;
-import com.sun.jersey.spi.container.ResourceFilters;
+import com.google.inject.Inject;
 import org.apache.druid.client.indexing.SamplerResponse;
 import org.apache.druid.client.indexing.SamplerSpec;
-import org.apache.druid.server.http.security.StateResourceFilter;
+import org.apache.druid.server.security.Access;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.AuthConfig;
+import org.apache.druid.server.security.AuthorizationUtils;
+import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.server.security.ForbiddenException;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
+import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
+import java.util.HashSet;
+import java.util.Set;
 
 @Path("/druid/indexer/v1/sampler")
 public class SamplerResource
 {
+  private final AuthorizerMapper authorizerMapper;
+  private final AuthConfig authConfig;
+  private static final ResourceAction STATE_RESOURCE_WRITE =
+      new ResourceAction(Resource.STATE_RESOURCE, Action.WRITE);
+
+  @Inject
+  public SamplerResource(
+      final AuthorizerMapper authorizerMapper,
+      final AuthConfig authConfig
+  )
+  {
+    this.authorizerMapper = authorizerMapper;
+    this.authConfig = authConfig;
+  }
+
   @POST
   @Consumes(MediaType.APPLICATION_JSON)
   @Produces(MediaType.APPLICATION_JSON)
-  @ResourceFilters(StateResourceFilter.class)
-  public SamplerResponse post(final SamplerSpec sampler)
+  public SamplerResponse post(final SamplerSpec sampler, @Context final HttpServletRequest req)
   {
-    return Preconditions.checkNotNull(sampler, "Request body cannot be empty").sample();
+    Preconditions.checkNotNull(sampler, "Request body cannot be empty");
+    Set<ResourceAction> resourceActions = new HashSet<>();
+    resourceActions.add(STATE_RESOURCE_WRITE);
+    if (authConfig.isEnableInputSourceSecurity()) {
+      resourceActions.addAll(sampler.getInputSourceResources());
+    }
+
+    Access authResult = AuthorizationUtils.authorizeAllResourceActions(
+        req,
+        resourceActions,
+        authorizerMapper
+    );
+
+    if (!authResult.isAllowed()) {
+      throw new ForbiddenException(authResult.getMessage());
+    }
+    return sampler.sample();
   }
 }

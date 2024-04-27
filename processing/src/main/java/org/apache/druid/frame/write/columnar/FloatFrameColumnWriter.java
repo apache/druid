@@ -20,19 +20,13 @@
 package org.apache.druid.frame.write.columnar;
 
 import org.apache.datasketches.memory.WritableMemory;
-import org.apache.druid.frame.allocation.AppendableMemory;
 import org.apache.druid.frame.allocation.MemoryAllocator;
-import org.apache.druid.frame.allocation.MemoryRange;
 import org.apache.druid.segment.BaseFloatColumnValueSelector;
 
 public class FloatFrameColumnWriter implements FrameColumnWriter
 {
-  public static final long DATA_OFFSET = 1 /* type code */ + 1 /* has nulls? */;
-
   private final BaseFloatColumnValueSelector selector;
-  private final AppendableMemory appendableMemory;
-  private final boolean hasNulls;
-  private final int sz;
+  private final FloatFrameMaker maker;
 
   FloatFrameColumnWriter(
       BaseFloatColumnValueSelector selector,
@@ -41,71 +35,40 @@ public class FloatFrameColumnWriter implements FrameColumnWriter
   )
   {
     this.selector = selector;
-    this.appendableMemory = AppendableMemory.create(allocator);
-    this.hasNulls = hasNulls;
-    this.sz = valueSize(hasNulls);
-  }
-
-  public static int valueSize(final boolean hasNulls)
-  {
-    return hasNulls ? Float.BYTES + 1 : Float.BYTES;
+    this.maker = new FloatFrameMaker(allocator, hasNulls);
   }
 
   @Override
   public boolean addSelection()
   {
-    if (!(appendableMemory.reserveAdditional(sz))) {
-      return false;
-    }
-
-    final MemoryRange<WritableMemory> cursor = appendableMemory.cursor();
-    final WritableMemory memory = cursor.memory();
-    final long position = cursor.start();
-
-    if (hasNulls) {
-      if (selector.isNull()) {
-        memory.putByte(position, (byte) 1);
-        memory.putFloat(position + 1, 0);
-      } else {
-        memory.putByte(position, (byte) 0);
-        memory.putFloat(position + 1, selector.getFloat());
-      }
+    if (selector.isNull()) {
+      return maker.addNull();
     } else {
-      memory.putFloat(position, selector.getFloat());
+      return maker.add(selector.getFloat());
     }
-
-    appendableMemory.advanceCursor(sz);
-    return true;
   }
 
   @Override
   public void undo()
   {
-    appendableMemory.rewindCursor(sz);
+    maker.undo();
   }
 
   @Override
   public long size()
   {
-    return DATA_OFFSET + appendableMemory.size();
+    return maker.size();
   }
 
   @Override
   public long writeTo(final WritableMemory memory, final long startPosition)
   {
-    long currentPosition = startPosition;
-
-    memory.putByte(currentPosition, FrameColumnWriters.TYPE_FLOAT);
-    memory.putByte(currentPosition + 1, hasNulls ? (byte) 1 : (byte) 0);
-    currentPosition += 2;
-
-    currentPosition += appendableMemory.writeTo(memory, currentPosition);
-    return currentPosition - startPosition;
+    return maker.writeTo(memory, startPosition);
   }
 
   @Override
   public void close()
   {
-    appendableMemory.close();
+    maker.close();
   }
 }

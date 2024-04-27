@@ -22,15 +22,31 @@ title: "Single server deployment"
   ~ under the License.
   -->
 
+Druid includes a launch script, `bin/start-druid` that automatically sets various memory-related parameters based on available processors and memory.
+It accepts optional arguments such as list of services, total memory, and a config directory to override default JVM arguments and service-specific runtime properties.
 
-Druid includes a set of reference configurations and launch scripts for single-machine deployments:
+By default, the services started by `bin/start-druid`:
 
-- `nano-quickstart`
-- `micro-quickstart`
-- `small`
-- `medium`
-- `large`
-- `xlarge`
+- use all processors
+- can use up to 80% memory on the system
+- apply the configuration files in `conf/druid/auto` for all other settings.
+
+For details about possible arguments, run `bin/start-druid --help`.
+
+## Single server reference configurations (deprecated)
+
+Druid includes a set of reference configurations and launch scripts for single-machine deployments.
+These start scripts are deprecated in favor of the `bin/start-druid` script documented above.
+These configuration bundles are located in `conf/druid/single-server/`.
+
+| Configuration      |Sizing|Launch command|Configuration directory|
+|--------------------|-----------|----------|------------|
+| `nano-quickstart`  |1 CPU, 4GiB RAM|`bin/start-nano-quickstart`|`conf/druid/single-server/nano-quickstart`|
+| `micro-quickstart` |4 CPU, 16GiB RAM|`bin/start-micro-quickstart`|`conf/druid/single-server/micro-quickstart`|
+| `small`            |8 CPU, 64GiB RAM (~i3.2xlarge)|`bin/start-small`|`conf/druid/single-server/small`|
+| `medium`           |16 CPU, 128GiB RAM (~i3.4xlarge)|`bin/start-medium`|`conf/druid/single-server/medium`|
+| `large`            |32 CPU, 256GiB RAM (~i3.8xlarge)|`bin/start-large`|`conf/druid/single-server/large`|
+| `xlarge`           |64 CPU, 512GiB RAM (~i3.16xlarge)|`bin/start-xlarge`|`conf/druid/single-server/xlarge`|
 
 The `micro-quickstart` is sized for small machines like laptops and is intended for quick evaluation use-cases.
 
@@ -39,40 +55,3 @@ The `nano-quickstart` is an even smaller configuration, targeting a machine with
 The other configurations are intended for general use single-machine deployments. They are sized for hardware roughly based on Amazon's i3 series of EC2 instances.
 
 The startup scripts for these example configurations run a single ZK instance along with the Druid services. You can choose to deploy ZK separately as well.
-
-The example configurations run the Druid Coordinator and Overlord together in a single process using the optional configuration `druid.coordinator.asOverlord.enabled=true`, described in the [Coordinator configuration documentation](../configuration/index.md#coordinator-operation).
-
-While example configurations are provided for very large single machines, at higher scales we recommend running Druid in a [clustered deployment](../tutorials/cluster.md), for fault-tolerance and reduced resource contention.
-
-## Single server reference configurations
-
-### Nano-Quickstart: 1 CPU, 4GiB RAM
-
-- Launch command: `bin/start-nano-quickstart`
-- Configuration directory: `conf/druid/single-server/nano-quickstart`
-
-### Micro-Quickstart: 4 CPU, 16GiB RAM
-
-- Launch command: `bin/start-micro-quickstart`
-- Configuration directory: `conf/druid/single-server/micro-quickstart`
-
-### Small: 8 CPU, 64GiB RAM (~i3.2xlarge)
-
-- Launch command: `bin/start-small`
-- Configuration directory: `conf/druid/single-server/small`
-
-### Medium: 16 CPU, 128GiB RAM (~i3.4xlarge)
-
-- Launch command: `bin/start-medium`
-- Configuration directory: `conf/druid/single-server/medium`
-
-### Large: 32 CPU, 256GiB RAM (~i3.8xlarge)
-
-- Launch command: `bin/start-large`
-- Configuration directory: `conf/druid/single-server/large`
-
-### X-Large: 64 CPU, 512GiB RAM (~i3.16xlarge)
-
-- Launch command: `bin/start-xlarge`
-- Configuration directory: `conf/druid/single-server/xlarge`
-

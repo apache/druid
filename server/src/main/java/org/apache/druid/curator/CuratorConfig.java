@@ -58,6 +58,11 @@ public class CuratorConfig
   @JsonProperty("authScheme")
   private String authScheme = "digest";
 
+  // Configures the maximum number of retries for attempting connection to Zookeeper.
+  // Smaller retry counts helps nodes to fail fast in case of ZK connection loss.
+  @JsonProperty("maxZkRetries")
+  private int maxZkRetries = 29;
+
   public static CuratorConfig create(String hosts)
   {
     CuratorConfig config = new CuratorConfig();
@@ -130,5 +135,10 @@ public class CuratorConfig
   public String getAuthScheme()
   {
     return authScheme;
+  }
+
+  public int getMaxZkRetries()
+  {
+    return maxZkRetries;
   }
 }

@@ -78,6 +78,7 @@ public class EmitterModule implements Module
     binder.install(new HttpEmitterModule());
     binder.install(new ParametrizedUriEmitterModule());
     binder.install(new ComposingEmitterModule());
+    binder.install(new SwitchingEmitterModule());
 
     binder.bind(Emitter.class).toProvider(new EmitterProvider(emitterType)).in(LazySingleton.class);
 

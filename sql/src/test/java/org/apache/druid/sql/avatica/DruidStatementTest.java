@@ -30,30 +30,32 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.QueryStackTests;
+import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.security.AllowAllAuthenticator;
+import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.sql.SqlQueryPlus;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.avatica.DruidJdbcResultSet.ResultFetcherFactory;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
+import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.apache.druid.sql.calcite.util.QueryLogHook;
-import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
-import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
@@ -69,40 +71,36 @@ public class DruidStatementTest extends CalciteTestBase
   private static String SELECT_STAR_FROM_FOO =
       "SELECT * FROM druid.foo";
 
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
-
-  @Rule
-  public QueryLogHook queryLogHook = QueryLogHook.create();
-
+  private static SpecificSegmentsQuerySegmentWalker walker;
   private static QueryRunnerFactoryConglomerate conglomerate;
   private static Closer resourceCloser;
 
-  @BeforeClass
-  public static void setUpClass()
+  @BeforeAll
+  public static void setUpClass(@TempDir File tempDir)
   {
     resourceCloser = Closer.create();
     conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(resourceCloser);
+    walker = CalciteTests.createMockWalker(conglomerate, tempDir);
+    resourceCloser.register(walker);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownClass() throws IOException
   {
     resourceCloser.close();
   }
 
-  private SpecificSegmentsQuerySegmentWalker walker;
   private SqlStatementFactory sqlStatementFactory;
 
-  @Before
-  public void setUp() throws Exception
+  @BeforeEach
+  public void setUp()
   {
-    walker = CalciteTests.createMockWalker(conglomerate, temporaryFolder.newFolder());
     final PlannerConfig plannerConfig = new PlannerConfig();
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
     DruidSchemaCatalog rootSchema =
         CalciteTests.createMockRootSchema(conglomerate, walker, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
+    final JoinableFactoryWrapper joinableFactoryWrapper = CalciteTests.createJoinableFactoryWrapper();
     final PlannerFactory plannerFactory = new PlannerFactory(
         rootSchema,
         operatorTable,
@@ -111,7 +109,10 @@ public class DruidStatementTest extends CalciteTestBase
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         CalciteTests.getJsonMapper(),
         CalciteTests.DRUID_SCHEMA_NAME,
-        new CalciteRulesManager(ImmutableSet.of())
+        new CalciteRulesManager(ImmutableSet.of()),
+        joinableFactoryWrapper,
+        CatalogResolver.NULL_RESOLVER,
+        new AuthConfig()
     );
     this.sqlStatementFactory = CalciteTests.createSqlStatementFactory(
         CalciteTests.createMockSqlEngine(walker, conglomerate),
@@ -119,11 +120,10 @@ public class DruidStatementTest extends CalciteTestBase
     );
   }
 
-  @After
-  public void tearDown() throws Exception
+  @AfterEach
+  public void tearDown()
   {
-    walker.close();
-    walker = null;
+
   }
 
   //-----------------------------------------------------------------
@@ -481,13 +481,13 @@ public class DruidStatementTest extends CalciteTestBase
     Assert.assertEquals(SELECT_STAR_FROM_FOO, signature.sql);
     Assert.assertEquals(
         Lists.newArrayList(
-            Lists.newArrayList("__time", "TIMESTAMP", "java.lang.Long"),
+            Lists.newArrayList("__time", "TIMESTAMP", "java.math.BigDecimal"),
             Lists.newArrayList("dim1", "VARCHAR", "java.lang.String"),
             Lists.newArrayList("dim2", "VARCHAR", "java.lang.String"),
             Lists.newArrayList("dim3", "VARCHAR", "java.lang.String"),
-            Lists.newArrayList("cnt", "BIGINT", "java.lang.Number"),
-            Lists.newArrayList("m1", "FLOAT", "java.lang.Float"),
-            Lists.newArrayList("m2", "DOUBLE", "java.lang.Double"),
+            Lists.newArrayList("cnt", "BIGINT", "java.math.BigDecimal"),
+            Lists.newArrayList("m1", "FLOAT", "java.math.BigDecimal"),
+            Lists.newArrayList("m2", "DOUBLE", "java.math.BigDecimal"),
             Lists.newArrayList("unique_dim1", "OTHER", "java.lang.Object")
         ),
         Lists.transform(

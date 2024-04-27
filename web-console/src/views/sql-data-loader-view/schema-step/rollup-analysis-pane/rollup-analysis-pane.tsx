@@ -18,11 +18,13 @@
 
 import { Button, Callout, Intent, Tag } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { CancelToken } from 'axios';
-import { QueryResult, SqlExpression, SqlFunction, SqlQuery } from 'druid-query-toolkit';
+import type { QueryResult, SqlQuery } from '@druid-toolkit/query';
+import { F, SqlExpression, SqlFunction } from '@druid-toolkit/query';
+import type { CancelToken } from 'axios';
+import type { JSX } from 'react';
 import React, { useEffect } from 'react';
 
-import { Execution } from '../../../../druid-models';
+import type { Execution } from '../../../../druid-models';
 import { executionBackgroundStatusCheck, submitTaskQuery } from '../../../../helpers';
 import { useQueryManager } from '../../../../hooks';
 import { filterMap, formatPercentClapped, IntermediateQueryState } from '../../../../utils';
@@ -47,8 +49,8 @@ function expressionCastToString(ex: SqlExpression): SqlExpression {
   return CAST_AS_VARCHAR_TEMPLATE.fillPlaceholders([ex]);
 }
 
-function countDistinct(ex: SqlExpression): SqlExpression {
-  return SqlFunction.simple('APPROX_COUNT_DISTINCT_DS_HLL', [ex]);
+function approxCountDistinct(ex: SqlExpression): SqlExpression {
+  return F('APPROX_COUNT_DISTINCT_DS_HLL', ex);
 }
 
 function within(a: number, b: number, percent: number): boolean {
@@ -159,13 +161,13 @@ export const RollupAnalysisPane = React.memo(function RollupAnalysisPane(
 
       const expressionPairs: SqlExpression[] = deep
         ? pairs(expressions.length).map(([i, j]) =>
-            countDistinct(SqlFunction.simple('CONCAT', [groupedAsStrings[i], groupedAsStrings[j]])),
+            approxCountDistinct(F('CONCAT', groupedAsStrings[i], groupedAsStrings[j])),
           )
         : [];
 
       const queryString = seedQuery
-        .changeSelectExpressions(groupedAsStrings.map(countDistinct).concat(expressionPairs))
-        .addSelect(countDistinct(SqlFunction.simple('CONCAT', groupedAsStrings)), {
+        .changeSelectExpressions(groupedAsStrings.map(approxCountDistinct).concat(expressionPairs))
+        .addSelect(approxCountDistinct(SqlFunction.simple('CONCAT', groupedAsStrings)), {
           insertIndex: 0,
         })
         .addSelect(SqlFunction.COUNT_STAR, { insertIndex: 0 })

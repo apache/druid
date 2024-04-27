@@ -18,11 +18,11 @@
 
 import { Button, Classes, Dialog, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
+import { T } from '@druid-toolkit/query';
 import classNames from 'classnames';
-import { SqlTableRef } from 'druid-query-toolkit';
 import React, { useState } from 'react';
 
-import { Execution, QueryWithContext } from '../../../druid-models';
+import type { Execution, QueryWithContext } from '../../../druid-models';
 import { executionBackgroundStatusCheck, reattachTaskExecution } from '../../../helpers';
 import { useQueryManager } from '../../../hooks';
 import { ExecutionProgressBarPane } from '../../workbench-view/execution-progress-bar-pane/execution-progress-bar-pane';
@@ -33,7 +33,7 @@ import './ingestion-progress-dialog.scss';
 interface IngestionProgressDialogProps {
   taskId: string;
   goToQuery(queryWithContext: QueryWithContext): void;
-  goToIngestion(taskId: string): void;
+  goToTask(taskId: string): void;
   onReset(): void;
   onClose(): void;
 }
@@ -41,7 +41,7 @@ interface IngestionProgressDialogProps {
 export const IngestionProgressDialog = React.memo(function IngestionProgressDialog(
   props: IngestionProgressDialogProps,
 ) {
-  const { taskId, goToQuery, goToIngestion, onReset, onClose } = props;
+  const { taskId, goToQuery, goToTask, onReset, onClose } = props;
   const [showLiveReports, setShowLiveReports] = useState(false);
 
   const [insertResultState, ingestQueryManager] = useQueryManager<string, Execution, Execution>({
@@ -78,10 +78,7 @@ export const IngestionProgressDialog = React.memo(function IngestionProgressDial
               showLiveReports={showLiveReports}
             />
             {insertResultState.intermediate?.stages && showLiveReports && (
-              <ExecutionStagesPane
-                execution={insertResultState.intermediate}
-                goToIngestion={goToIngestion}
-              />
+              <ExecutionStagesPane execution={insertResultState.intermediate} goToTask={goToTask} />
             )}
           </>
         )}
@@ -95,15 +92,22 @@ export const IngestionProgressDialog = React.memo(function IngestionProgressDial
       <div className={Classes.DIALOG_FOOTER}>
         <div className={Classes.DIALOG_FOOTER_ACTIONS}>
           {insertResultState.isLoading() && (
-            <Button
-              icon={IconNames.GANTT_CHART}
-              text="Go to Ingestion view"
-              rightIcon={IconNames.ARROW_TOP_RIGHT}
-              onClick={() => {
-                if (!insertResultState.intermediate) return;
-                goToIngestion(insertResultState.intermediate.id);
-              }}
-            />
+            <>
+              <Button
+                icon={IconNames.RESET}
+                text="Ingest in background (reset data loader)"
+                onClick={onReset}
+              />
+              <Button
+                icon={IconNames.GANTT_CHART}
+                text="Go to Ingestion view"
+                rightIcon={IconNames.ARROW_TOP_RIGHT}
+                onClick={() => {
+                  if (!insertResultState.intermediate) return;
+                  goToTask(insertResultState.intermediate.id);
+                }}
+              />
+            </>
           )}
           {insertResultState.isError() && <Button text="Close" onClick={onClose} />}
           {insertResultState.data && (
@@ -117,7 +121,7 @@ export const IngestionProgressDialog = React.memo(function IngestionProgressDial
                 onClick={() => {
                   if (!insertResultState.data) return;
                   goToQuery({
-                    queryString: `SELECT * FROM ${SqlTableRef.create(
+                    queryString: `SELECT * FROM ${T(
                       insertResultState.data.getIngestDatasource()!,
                     )}`,
                   });

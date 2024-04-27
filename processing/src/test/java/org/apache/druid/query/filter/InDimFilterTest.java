@@ -29,14 +29,17 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.extraction.RegexDimExtractionFn;
+import org.apache.druid.query.lookup.ImmutableLookupMap;
+import org.apache.druid.query.lookup.LookupExtractionFn;
+import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.segment.RowAdapters;
 import org.apache.druid.segment.RowBasedColumnSelectorFactory;
-import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.StringValueSetIndex;
-import org.apache.druid.segment.column.Utf8ValueSetIndex;
+import org.apache.druid.segment.index.BitmapColumnIndex;
+import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
+import org.apache.druid.segment.index.semantic.Utf8ValueSetIndexes;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -92,7 +95,7 @@ public class InDimFilterTest extends InitializedNullHandlingTest
   @Test
   public void testGetValuesWithValuesSetIncludingEmptyString()
   {
-    final InDimFilter.ValuesSet values = new InDimFilter.ValuesSet(ImmutableSet.of("v1", "", "v3"));
+    final InDimFilter.ValuesSet values = InDimFilter.ValuesSet.copyOf(ImmutableSet.of("v1", "", "v3"));
     final InDimFilter filter = new InDimFilter("dim", values);
     if (NullHandling.replaceWithDefault()) {
       Assert.assertSame(values, filter.getValues());
@@ -209,7 +212,510 @@ public class InDimFilterTest extends InitializedNullHandlingTest
   public void testOptimizeSingleValueInToSelector()
   {
     final InDimFilter filter = new InDimFilter("dim", Collections.singleton("v1"), null);
-    Assert.assertEquals(new SelectorDimFilter("dim", "v1", null), filter.optimize());
+    Assert.assertEquals(new SelectorDimFilter("dim", "v1", null), filter.optimize(false));
+    Assert.assertEquals(new SelectorDimFilter("dim", "v1", null), filter.optimize(true));
+  }
+
+  @Test
+  public void testOptimizeLookup_simple()
+  {
+    final Map<String, String> lookupMap = new HashMap<>();
+    lookupMap.put("abc", "def");
+    lookupMap.put("foo", "bar");
+    final LookupExtractor lookup = ImmutableLookupMap.fromMap(lookupMap).asLookupExtractor(false, () -> new byte[0]);
+    final LookupExtractionFn extractionFn = new LookupExtractionFn(lookup, false, null, null, true);
+
+    Assert.assertEquals(
+        "reverse lookup bar",
+        Sets.newHashSet("foo"),
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton("bar"), extractionFn), false)
+    );
+
+    Assert.assertNull(
+        "reverse lookup bar (includeUnknown)",
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton("bar"), extractionFn), true)
+    );
+
+    Assert.assertEquals(
+        "reverse lookup baz",
+        Collections.emptySet(),
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton("baz"), extractionFn), false)
+    );
+
+    Assert.assertNull(
+        "reverse lookup baz (includeUnknown)",
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton("baz"), extractionFn), true)
+    );
+
+    Assert.assertEquals(
+        "reverse lookup [def, bar, baz]",
+        Sets.newHashSet("abc", "foo"),
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Arrays.asList("def", "bar", "baz"), extractionFn), false)
+    );
+
+    Assert.assertNull(
+        "reverse lookup [def, bar, baz] (includeUnknown)",
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Arrays.asList("def", "bar", "baz"), extractionFn), true)
+    );
+
+    Assert.assertNull(
+        "reverse lookup null",
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton(null), extractionFn), false)
+    );
+
+    Assert.assertNull(
+        "reverse lookup null (includeUnknown)",
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton(null), extractionFn), true)
+    );
+
+    Assert.assertEquals(
+        "reverse lookup empty string",
+        NullHandling.sqlCompatible() ? Collections.emptySet() : null,
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton(""), extractionFn), false)
+    );
+
+    Assert.assertNull(
+        "reverse lookup empty string (includeUnknown)",
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton(""), extractionFn), true)
+    );
+  }
+
+  @Test
+  public void testOptimizeLookup_replaceMissingValueWith()
+  {
+    final Map<String, String> lookupMap = new HashMap<>();
+    lookupMap.put("abc", "def");
+    lookupMap.put("foo", "bar");
+    final LookupExtractor lookup = ImmutableLookupMap.fromMap(lookupMap).asLookupExtractor(false, () -> new byte[0]);
+    final LookupExtractionFn extractionFn = new LookupExtractionFn(lookup, false, "baz", null, true);
+
+    Assert.assertEquals(
+        "reverse lookup bar",
+        Sets.newHashSet("foo"),
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton("bar"), extractionFn), false)
+    );
+
+    Assert.assertEquals(
+        "reverse lookup bar (includeUnknown)",
+        Sets.newHashSet("foo"),
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton("bar"), extractionFn), true)
+    );
+
+    Assert.assertNull(
+        "reverse lookup baz",
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton("baz"), extractionFn), false)
+    );
+
+    Assert.assertNull(
+        "reverse lookup baz (includeUnknown)",
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton("baz"), extractionFn), true)
+    );
+
+    Assert.assertNull(
+        "reverse lookup [def, bar, baz]",
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Arrays.asList("def", "bar", "baz"), extractionFn), false)
+    );
+
+    Assert.assertNull(
+        "reverse lookup [def, bar, baz] (includeUnknown)",
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Arrays.asList("def", "bar", "baz"), extractionFn), true)
+    );
+
+    Assert.assertEquals(
+        "reverse lookup null",
+        Collections.emptySet(),
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton(null), extractionFn), false)
+    );
+
+    Assert.assertEquals(
+        "reverse lookup null (includeUnknown)",
+        Collections.emptySet(),
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton(null), extractionFn), true)
+    );
+
+    Assert.assertEquals(
+        "reverse lookup empty string",
+        Collections.emptySet(),
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton(""), extractionFn), false)
+    );
+
+    Assert.assertEquals(
+        "reverse lookup empty string (includeUnknown)",
+        Collections.emptySet(),
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton(""), extractionFn), true)
+    );
+  }
+
+  @Test
+  public void testOptimizeLookup_replaceMissingValue_containingNull()
+  {
+    final Map<String, String> lookupMap = new HashMap<>();
+    lookupMap.put("nv", null);
+    lookupMap.put("abc", "def");
+    lookupMap.put("foo", "bar");
+    final LookupExtractor lookup = ImmutableLookupMap.fromMap(lookupMap).asLookupExtractor(false, () -> new byte[0]);
+    final LookupExtractionFn extractionFn = new LookupExtractionFn(lookup, false, "bar", null, true);
+
+    Assert.assertNull(
+        "reverse lookup bar",
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton("bar"), extractionFn), false)
+    );
+
+    Assert.assertNull(
+        "reverse lookup bar (includeUnknown)",
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton("bar"), extractionFn), true)
+    );
+
+    Assert.assertEquals(
+        "reverse lookup baz",
+        Collections.emptySet(),
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton("baz"), extractionFn), false)
+    );
+
+    Assert.assertNull(
+        "reverse lookup baz (includeUnknown)",
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton("baz"), extractionFn), true)
+    );
+
+    Assert.assertNull(
+        "reverse lookup [def, bar, baz]",
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Arrays.asList("def", "bar", "baz"), extractionFn), false)
+    );
+
+    Assert.assertNull(
+        "reverse lookup [def, bar, baz] (includeUnknown)",
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Arrays.asList("def", "bar", "baz"), extractionFn), true)
+    );
+
+    Assert.assertEquals(
+        "reverse lookup null",
+        Collections.singleton("nv"),
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton(null), extractionFn), false)
+    );
+
+    Assert.assertEquals(
+        "reverse lookup null (includeUnknown)",
+        Collections.singleton("nv"),
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton(null), extractionFn), true)
+    );
+
+    Assert.assertEquals(
+        "reverse lookup empty string",
+        NullHandling.sqlCompatible() ? Collections.emptySet() : Collections.singleton("nv"),
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton(""), extractionFn), false)
+    );
+
+    Assert.assertEquals(
+        "reverse lookup empty string (includeUnknown)",
+        NullHandling.sqlCompatible() ? null : Collections.singleton("nv"),
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton(""), extractionFn), true)
+    );
+  }
+
+  @Test
+  public void testOptimizeLookup_replaceMissingValue_containingEmptyString()
+  {
+    final Map<String, String> lookupMap = new HashMap<>();
+    lookupMap.put("emptystring", "");
+    lookupMap.put("abc", "def");
+    lookupMap.put("foo", "bar");
+    final LookupExtractor lookup = ImmutableLookupMap.fromMap(lookupMap).asLookupExtractor(false, () -> new byte[0]);
+    final LookupExtractionFn extractionFn = new LookupExtractionFn(lookup, false, "bar", null, true);
+
+    Assert.assertNull(
+        "reverse lookup bar",
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton("bar"), extractionFn), false)
+    );
+
+    Assert.assertNull(
+        "reverse lookup bar (includeUnknown)",
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton("bar"), extractionFn), true)
+    );
+
+    Assert.assertEquals(
+        "reverse lookup baz",
+        Collections.emptySet(),
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton("baz"), extractionFn), false)
+    );
+
+    Assert.assertEquals(
+        "reverse lookup baz (includeUnknown)",
+        NullHandling.sqlCompatible() ? Collections.emptySet() : null,
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton("baz"), extractionFn), true)
+    );
+
+    Assert.assertNull(
+        "reverse lookup [def, bar, baz]",
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Arrays.asList("def", "bar", "baz"), extractionFn), false)
+    );
+
+    Assert.assertNull(
+        "reverse lookup [def, bar, baz] (includeUnknown)",
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Arrays.asList("def", "bar", "baz"), extractionFn), true)
+    );
+
+    Assert.assertEquals(
+        "reverse lookup null",
+        NullHandling.sqlCompatible() ? Collections.emptySet() : Collections.singleton("emptystring"),
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton(null), extractionFn), false)
+    );
+
+    Assert.assertEquals(
+        "reverse lookup null (includeUnknown)",
+        NullHandling.sqlCompatible() ? Collections.emptySet() : Collections.singleton("emptystring"),
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton(null), extractionFn), true)
+    );
+
+    Assert.assertEquals(
+        "reverse lookup empty string",
+        Collections.singleton("emptystring"),
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton(""), extractionFn), false)
+    );
+
+    Assert.assertEquals(
+        "reverse lookup empty string (includeUnknown)",
+        Collections.singleton("emptystring"),
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton(""), extractionFn), true)
+    );
+  }
+
+  @Test
+  public void testOptimizeLookup_containingEmptyString()
+  {
+    final Map<String, String> lookupMap = new HashMap<>();
+    lookupMap.put("emptystring", "");
+    final LookupExtractor lookup = ImmutableLookupMap.fromMap(lookupMap).asLookupExtractor(false, () -> new byte[0]);
+    final LookupExtractionFn extractionFn = new LookupExtractionFn(lookup, false, null, null, true);
+
+    Assert.assertEquals(
+        "reverse lookup empty string",
+        NullHandling.sqlCompatible() ? Collections.singleton("emptystring") : null,
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton(""), extractionFn), false)
+    );
+
+    Assert.assertNull(
+        "reverse lookup empty string (includeUnknown)",
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton(""), extractionFn), true)
+    );
+
+    Assert.assertNull(
+        "reverse lookup null",
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton(null), extractionFn), false)
+    );
+
+    Assert.assertNull(
+        "reverse lookup null (includeUnknown)",
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton(null), extractionFn), true)
+    );
+  }
+
+  @Test
+  public void testOptimizeLookup_emptyStringKey()
+  {
+    final Map<String, String> lookupMap = new HashMap<>();
+    lookupMap.put("", "bar");
+    final LookupExtractor lookup = ImmutableLookupMap.fromMap(lookupMap).asLookupExtractor(false, () -> new byte[0]);
+    final LookupExtractionFn extractionFn = new LookupExtractionFn(lookup, false, null, null, true);
+
+    Assert.assertEquals(
+        "reverse lookup bar",
+        NullHandling.sqlCompatible() ? Collections.singleton("") : Collections.singleton(null),
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton("bar"), extractionFn), false)
+    );
+
+    Assert.assertNull(
+        "reverse lookup bar (includeUnknown)",
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton("bar"), extractionFn), true)
+    );
+
+    Assert.assertNull(
+        "reverse lookup null",
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton(null), extractionFn), false)
+    );
+
+    Assert.assertNull(
+        "reverse lookup null (includeUnknown)",
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton(null), extractionFn), true)
+    );
+  }
+
+  @Test
+  public void testOptimizeLookup_retainMissingValue()
+  {
+    final Map<String, String> lookupMap = new HashMap<>();
+    lookupMap.put("abc", "def");
+    lookupMap.put("foo", "bar");
+    final LookupExtractor lookup = ImmutableLookupMap.fromMap(lookupMap).asLookupExtractor(false, () -> new byte[0]);
+    final LookupExtractionFn extractionFn = new LookupExtractionFn(lookup, true, null, null, true);
+
+    Assert.assertEquals(
+        "reverse lookup bar",
+        Sets.newHashSet("bar", "foo"),
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton("bar"), extractionFn), false)
+    );
+
+    Assert.assertNull(
+        "reverse lookup bar (includeUnknown)",
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton("bar"), extractionFn), true)
+    );
+
+    Assert.assertEquals(
+        "reverse lookup baz",
+        Collections.singleton("baz"),
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton("baz"), extractionFn), false)
+    );
+
+    Assert.assertNull(
+        "reverse lookup baz (includeUnknown)",
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton("baz"), extractionFn), true)
+    );
+
+    Assert.assertEquals(
+        "reverse lookup [def, bar, baz]",
+        Sets.newHashSet("abc", "bar", "baz", "def", "foo"),
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Arrays.asList("def", "bar", "baz"), extractionFn), false)
+    );
+
+    Assert.assertNull(
+        "reverse lookup [def, bar, baz] (includeUnknown)",
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Arrays.asList("def", "bar", "baz"), extractionFn), true)
+    );
+
+    Assert.assertEquals(
+        "reverse lookup null",
+        Collections.singleton(null),
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton(null), extractionFn), false)
+    );
+
+    Assert.assertEquals(
+        "reverse lookup null (includeUnknown)",
+        Collections.singleton(null),
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton(null), extractionFn), true)
+    );
+
+    Assert.assertEquals(
+        "reverse lookup empty string",
+        NullHandling.sqlCompatible() ? Collections.singleton("") : Collections.singleton(null),
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton(""), extractionFn), false)
+    );
+
+    Assert.assertEquals(
+        "reverse lookup empty string (includeUnknown)",
+        NullHandling.sqlCompatible() ? null : Collections.singleton(null),
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton(""), extractionFn), true)
+    );
+  }
+
+  @Test
+  public void testOptimizeLookup_injective()
+  {
+    final Map<String, String> lookupMap = new HashMap<>();
+    lookupMap.put("abc", "def");
+    lookupMap.put("foo", "bar");
+    final LookupExtractor lookup = ImmutableLookupMap.fromMap(lookupMap).asLookupExtractor(true, () -> new byte[0]);
+    final LookupExtractionFn extractionFn = new LookupExtractionFn(lookup, false, null, null, true);
+
+    Assert.assertEquals(
+        "reverse lookup bar",
+        Sets.newHashSet("foo"),
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton("bar"), extractionFn), false)
+    );
+
+    Assert.assertEquals(
+        "reverse lookup bar (includeUnknown)",
+        Sets.newHashSet("foo"),
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton("bar"), extractionFn), true)
+    );
+
+    Assert.assertEquals(
+        "reverse lookup baz",
+        Collections.emptySet(),
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton("baz"), extractionFn), false)
+    );
+
+    Assert.assertEquals(
+        "reverse lookup baz (includeUnknown)",
+        Collections.emptySet(),
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton("baz"), extractionFn), true)
+    );
+
+    Assert.assertEquals(
+        "reverse lookup [def, bar, baz]",
+        Sets.newHashSet("abc", "foo"),
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Arrays.asList("def", "bar", "baz"), extractionFn), false)
+    );
+
+    Assert.assertEquals(
+        "reverse lookup [def, bar, baz] (includeUnknown)",
+        Sets.newHashSet("abc", "foo"),
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Arrays.asList("def", "bar", "baz"), extractionFn), true)
+    );
+
+    Assert.assertEquals(
+        "reverse lookup null",
+        NullHandling.sqlCompatible() ? Collections.singleton(null) : Collections.emptySet(),
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton(null), extractionFn), false)
+    );
+
+    Assert.assertEquals(
+        "reverse lookup null (includeUnknown)",
+        NullHandling.sqlCompatible() ? Collections.singleton(null) : Collections.emptySet(),
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton(null), extractionFn), true)
+    );
+
+    Assert.assertEquals(
+        "reverse lookup empty string",
+        Collections.emptySet(),
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton(""), extractionFn), false)
+    );
+
+    Assert.assertEquals(
+        "reverse lookup empty string (includeUnknown)",
+        Collections.emptySet(),
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton(""), extractionFn), true)
+    );
+  }
+
+  @Test
+  public void testOptimizeLookup_nullKey()
+  {
+    final Map<String, String> lookupMap = new HashMap<>();
+    lookupMap.put(null, "nv");
+    final LookupExtractor lookup = ImmutableLookupMap.fromMap(lookupMap).asLookupExtractor(false, () -> new byte[0]);
+    final LookupExtractionFn extractionFn = new LookupExtractionFn(lookup, false, null, null, true);
+
+    Assert.assertEquals(
+        "reverse lookup nv",
+        // null keys are always mapped to null in SQL-compatible mode
+        NullHandling.sqlCompatible() ? Collections.emptySet() : Collections.singleton(null),
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton("nv"), extractionFn), false)
+    );
+
+    Assert.assertNull(
+        "reverse lookup nv (includeUnknown)",
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton("nv"), extractionFn), true)
+    );
+
+    Assert.assertNull(
+        "reverse lookup null",
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton(null), extractionFn), false)
+    );
+
+    Assert.assertNull(
+        "reverse lookup null (includeUnknown)",
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton(null), extractionFn), true)
+    );
+
+    Assert.assertEquals(
+        "reverse lookup empty string",
+        NullHandling.sqlCompatible() ? Collections.emptySet() : null,
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton(""), extractionFn), false)
+    );
+
+    Assert.assertNull(
+        "reverse lookup empty string (includeUnknown)",
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton(""), extractionFn), true)
+    );
   }
 
   @Test
@@ -239,15 +745,15 @@ public class InDimFilterTest extends InitializedNullHandlingTest
     final ValueMatcher matcher = filter.toFilter().makeMatcher(columnSelectorFactory);
 
     // This would throw an exception without InDimFilter's null-checking lambda wrapping.
-    Assert.assertFalse(matcher.matches());
+    Assert.assertFalse(matcher.matches(false));
 
     row.put("dim", "foo");
     // Now it should match.
-    Assert.assertTrue(matcher.matches());
+    Assert.assertTrue(matcher.matches(false));
 
     row.put("dim", "fox");
     // Now it *shouldn't* match.
-    Assert.assertFalse(matcher.matches());
+    Assert.assertFalse(matcher.matches(false));
   }
 
   @Test
@@ -260,15 +766,15 @@ public class InDimFilterTest extends InitializedNullHandlingTest
 
     final ColumnIndexSelector indexSelector = Mockito.mock(ColumnIndexSelector.class);
     final ColumnIndexSupplier indexSupplier = Mockito.mock(ColumnIndexSupplier.class);
-    final Utf8ValueSetIndex valueIndex = Mockito.mock(Utf8ValueSetIndex.class);
+    final Utf8ValueSetIndexes valueIndexes = Mockito.mock(Utf8ValueSetIndexes.class);
     final BitmapColumnIndex bitmapColumnIndex = Mockito.mock(BitmapColumnIndex.class);
 
     final InDimFilter.ValuesSet expectedValuesSet = new InDimFilter.ValuesSet();
     expectedValuesSet.addAll(Arrays.asList("v1", "v2"));
 
     Mockito.when(indexSelector.getIndexSupplier("dim0")).thenReturn(indexSupplier);
-    Mockito.when(indexSupplier.as(Utf8ValueSetIndex.class)).thenReturn(valueIndex);
-    Mockito.when(valueIndex.forSortedValuesUtf8(expectedValuesSet.toUtf8())).thenReturn(bitmapColumnIndex);
+    Mockito.when(indexSupplier.as(Utf8ValueSetIndexes.class)).thenReturn(valueIndexes);
+    Mockito.when(valueIndexes.forSortedValuesUtf8(expectedValuesSet.toUtf8())).thenReturn(bitmapColumnIndex);
 
     final BitmapColumnIndex retVal = inFilter.getBitmapColumnIndex(indexSelector);
     Assert.assertSame("inFilter returns the intended bitmapColumnIndex", bitmapColumnIndex, retVal);
@@ -284,15 +790,15 @@ public class InDimFilterTest extends InitializedNullHandlingTest
 
     final ColumnIndexSelector indexSelector = Mockito.mock(ColumnIndexSelector.class);
     final ColumnIndexSupplier indexSupplier = Mockito.mock(ColumnIndexSupplier.class);
-    final StringValueSetIndex valueIndex = Mockito.mock(StringValueSetIndex.class);
+    final StringValueSetIndexes valueIndex = Mockito.mock(StringValueSetIndexes.class);
     final BitmapColumnIndex bitmapColumnIndex = Mockito.mock(BitmapColumnIndex.class);
 
     final InDimFilter.ValuesSet expectedValuesSet = new InDimFilter.ValuesSet();
     expectedValuesSet.addAll(Arrays.asList("v1", "v2"));
 
     Mockito.when(indexSelector.getIndexSupplier("dim0")).thenReturn(indexSupplier);
-    Mockito.when(indexSupplier.as(Utf8ValueSetIndex.class)).thenReturn(null); // Will check for UTF-8 first.
-    Mockito.when(indexSupplier.as(StringValueSetIndex.class)).thenReturn(valueIndex);
+    Mockito.when(indexSupplier.as(Utf8ValueSetIndexes.class)).thenReturn(null); // Will check for UTF-8 first.
+    Mockito.when(indexSupplier.as(StringValueSetIndexes.class)).thenReturn(valueIndex);
     Mockito.when(valueIndex.forSortedValues(expectedValuesSet)).thenReturn(bitmapColumnIndex);
 
     final BitmapColumnIndex retVal = inFilter.getBitmapColumnIndex(indexSelector);

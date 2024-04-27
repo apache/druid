@@ -23,7 +23,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.frame.key.ClusterBy;
-import org.apache.druid.frame.key.SortColumn;
+import org.apache.druid.frame.key.KeyColumn;
+import org.apache.druid.frame.key.KeyOrder;
 import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.msq.querykit.common.OffsetLimitFrameProcessorFactory;
 import org.apache.druid.segment.TestHelper;
@@ -45,8 +46,8 @@ public class QueryDefinitionTest
                     .builder(0)
                     .processorFactory(new OffsetLimitFrameProcessorFactory(0, 1L))
                     .shuffleSpec(
-                        new MaxCountShuffleSpec(
-                            new ClusterBy(ImmutableList.of(new SortColumn("s", false)), 0),
+                        new GlobalSortMaxCountShuffleSpec(
+                            new ClusterBy(ImmutableList.of(new KeyColumn("s", KeyOrder.ASCENDING)), 0),
                             2,
                             false
                         )

@@ -57,7 +57,7 @@ public class MSQWarningReportSimplePublisher implements MSQWarningReportPublishe
     final MSQErrorReport warningReport = MSQErrorReport.fromException(taskId, host, stageNumber, e);
 
     try {
-      controllerClient.postWorkerWarning(workerId, ImmutableList.of(warningReport));
+      controllerClient.postWorkerWarning(ImmutableList.of(warningReport));
     }
     catch (IOException e2) {
       throw new RuntimeException(e2);

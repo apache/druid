@@ -211,16 +211,25 @@ public class PollingLookupTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testCanGetKeySet()
+  public void testSupportsAsMap()
   {
-    Assert.assertFalse(pollingLookup.canGetKeySet());
+    Assert.assertFalse(pollingLookup.supportsAsMap());
   }
 
   @Test
-  public void testKeySet()
+  public void testAsMap()
   {
     expectedException.expect(UnsupportedOperationException.class);
-    pollingLookup.keySet();
+    pollingLookup.asMap();
+  }
+
+  @Test
+  public void testEstimateHeapFootprint()
+  {
+    Assert.assertEquals(
+        pollingCacheFactory instanceof OffHeapPollingCache.OffHeapPollingCacheProvider ? 0L : 402L,
+        pollingLookup.estimateHeapFootprint()
+    );
   }
 
   private void assertMapLookup(Map<String, String> map, LookupExtractor lookup)

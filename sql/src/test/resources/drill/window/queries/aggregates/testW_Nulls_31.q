@@ -1,0 +1,1 @@
+SELECT c1, prct_rnk FROM ( SELECT c1, percent_rank() OVER ( PARTITION BY c2 ORDER BY c1 ASC nulls last ) prct_rnk FROM "tblWnulls.parquet") sub_query WHERE prct_rnk IS NOT null AND c1 IS NOT null

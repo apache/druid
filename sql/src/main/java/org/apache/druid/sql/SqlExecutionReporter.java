@@ -94,6 +94,9 @@ public class SqlExecutionReporter
         metricBuilder.setDimension("id", plannerContext.getSqlQueryId());
         metricBuilder.setDimension("nativeQueryIds", plannerContext.getNativeQueryIds().toString());
       }
+      if (stmt.sqlToolbox.engine != null) {
+        metricBuilder.setDimension("engine", stmt.sqlToolbox.engine.name());
+      }
       if (stmt.authResult != null) {
         // Note: the dimension is "dataSource" (sic), so we log only the SQL resource
         // actions. Even here, for external tables, those actions are not always
@@ -109,12 +112,12 @@ public class SqlExecutionReporter
       }
       metricBuilder.setDimension("remoteAddress", StringUtils.nullToEmptyNonDruidDataString(remoteAddress));
       metricBuilder.setDimension("success", String.valueOf(success));
-      emitter.emit(metricBuilder.build("sqlQuery/time", TimeUnit.NANOSECONDS.toMillis(queryTimeNs)));
+      emitter.emit(metricBuilder.setMetric("sqlQuery/time", TimeUnit.NANOSECONDS.toMillis(queryTimeNs)));
       if (bytesWritten >= 0) {
-        emitter.emit(metricBuilder.build("sqlQuery/bytes", bytesWritten));
+        emitter.emit(metricBuilder.setMetric("sqlQuery/bytes", bytesWritten));
       }
       if (planningTimeNanos >= 0) {
-        emitter.emit(metricBuilder.build(
+        emitter.emit(metricBuilder.setMetric(
             "sqlQuery/planningTimeMs",
             TimeUnit.NANOSECONDS.toMillis(planningTimeNanos)
         ));

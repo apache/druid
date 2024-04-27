@@ -1,7 +1,7 @@
 ---
 id: caching
 title: "Query caching"
-description: "Describes Apache Druid per-segment and whole-query cache types. Identifies services where you can enable caching and suggestions for caching strategy." 
+description: "Describes Apache Druid per-segment and whole-query cache types. Identifies services where you can enable caching and suggestions for caching strategy."
 ---
 
 <!--
@@ -32,7 +32,7 @@ If you're unfamiliar with Druid architecture, review the following topics before
 
 For instructions to configure query caching see [Using query caching](./using-caching.md).
 
-Cache monitoring, including the hit rate and number of evictions, is available in [Druid metrics](../operations/metrics.html#cache).
+Cache monitoring, including the hit rate and number of evictions, is available in [Druid metrics](../operations/metrics.md#cache).
 
 Query-level caching is in addition to [data-level caching](../design/historical.md) on Historicals.
 
@@ -45,27 +45,29 @@ Druid supports two types of query caching:
 
 Druid invalidates any cache the moment any underlying data change to avoid returning stale results. This is especially important for `table` datasources that have highly-variable underlying data segments, including real-time data segments.
 
-> **Druid can store cache data on the local JVM heap or in an external distributed key/value store (e.g. memcached)**
->
-> The default is a local cache based upon [Caffeine](https://github.com/ben-manes/caffeine). The default maximum cache storage size is the minimum of 1 GiB / ten percent of maximum runtime memory for the JVM, with no cache expiration. See [Cache configuration](../configuration/index.md#cache-configuration) for information on how to configure cache storage.  When using caffeine, the cache is inside the JVM heap and is directly measurable.  Heap usage will grow up to the maximum configured size, and then the least recently used segment results will be evicted and replaced with newer results.
+:::info
+ **Druid can store cache data on the local JVM heap or in an external distributed key/value store (e.g. memcached)**
+
+ The default is a local cache based upon [Caffeine](https://github.com/ben-manes/caffeine). The default maximum cache storage size is the minimum of 1 GiB / ten percent of maximum runtime memory for the JVM, with no cache expiration. See [Cache configuration](../configuration/index.md#cache-configuration) for information on how to configure cache storage.  When using caffeine, the cache is inside the JVM heap and is directly measurable.  Heap usage will grow up to the maximum configured size, and then the least recently used segment results will be evicted and replaced with newer results.
+:::
 
 ### Per-segment caching
 
 The primary form of caching in Druid is a *per-segment results cache*.  This cache stores partial query results on a per-segment basis and is enabled on Historical services by default.
 
-The per-segment results cache allows Druid to maintain a low-eviction-rate cache for segments that do not change, especially important for those segments that [historical](../design/historical.html) processes pull into their local _segment cache_ from [deep storage](../dependencies/deep-storage.html). Real-time segments, on the other hand, continue to have results computed at query time.
+The per-segment results cache allows Druid to maintain a low-eviction-rate cache for segments that do not change, especially important for those segments that [historical](../design/historical.md) processes pull into their local _segment cache_ from [deep storage](../design/deep-storage.md). Real-time segments, on the other hand, continue to have results computed at query time.
 
 Druid may potentially merge per-segment cached results with the results of later queries that use a similar basic shape with similar filters, aggregations, etc. For example, if the query is identical except that it covers a different time period.
 
 Per-segment caching is controlled by the parameters `useCache` and `populateCache`.
 
-Use per-segment caching with real-time data. For example, your queries request data actively arriving from Kafka alongside intervals in segments that are loaded on Historicals.  Druid can merge cached results from Historical segments with real-time results from the stream.  [Whole-query caching](#whole-query-caching), on the other hand, is not helpful in this scenario because new data from real-time ingestion will continually invalidate the entire cached result.
+Use per-segment caching with real-time data. For example, your queries request data actively arriving from Kafka alongside intervals in segments that are loaded on Historicals. Druid can merge cached results from Historical segments with real-time results from the stream. [Whole-query caching](#whole-query-caching), on the other hand, is not helpful in this scenario because new data from real-time ingestion will continually invalidate the entire cached result.
 
 ### Whole-query caching
 
 With *whole-query caching*, Druid caches the entire results of individual queries, meaning the Broker no longer needs to merge per-segment results from data processes.
 
-Use *whole-query caching* on the Broker to increase query efficiency when there is little risk of ingestion invalidating the cache at a segment level.  This applies particularly, for example, when _not_ using real-time ingestion.  Perhaps your queries tend to use batch-ingested data, in which case per-segment caching would be less efficient since the underlying segments hardly ever change, yet Druid would continue to acquire per-segment results for each query.
+Use *whole-query caching* on the Broker to increase query efficiency when there is little risk of ingestion invalidating the cache at a segment level. This applies particularly, for example, when _not_ using real-time ingestion. Perhaps your queries tend to use batch-ingested data, in which case per-segment caching would be less efficient since the underlying segments hardly ever change, yet Druid would continue to acquire per-segment results for each query.
 
 ## Where to enable caching
 
@@ -79,7 +81,7 @@ Use *whole-query caching* on the Broker to increase query efficiency when there 
 
 - On Brokers for small production clusters with less than five servers. 
 
-Avoid using per-segment cache at the Broker for large production clusters. When the Broker cache is enabled (`druid.broker.cache.populateCache` is `true`) and `populateCache` _is not_ `false` in the [query context](../querying/query-context.html), individual Historicals will _not_ merge individual segment-level results, and instead pass these back to the lead Broker.  The Broker must then carry out a large merge from _all_ segments on its own.
+Avoid using per-segment cache at the Broker for large production clusters. When the Broker cache is enabled (`druid.broker.cache.populateCache` is `true`) and `populateCache` _is not_ `false` in the [query context](../querying/query-context.md), individual Historicals will _not_ merge individual segment-level results, and instead pass these back to the lead Broker. The Broker must then carry out a large merge from _all_ segments on its own.
 
 **Whole-query cache** is available exclusively on Brokers.
 
@@ -99,12 +101,11 @@ Caching does not solve all types of query performance issues. For each cache typ
 **Per-segment caching** doesn't work for the following:
 - queries containing a sub-query in them. However the output of sub-queries may be cached. See [Query execution](./query-execution.md) for more details on sub-queries execution.
 - queries with joins do not support any caching on the broker.
-- GroupBy v2 queries do not support any caching on broker.
+- GroupBy queries do not support segment level caching on broker.
 - queries with `bySegment` set in the query context are not cached on the broker.
 
 **Whole-query caching** doesn't work for the following:
 - queries that involve an inline datasource or a lookup datasource.
-- GroupBy v2 queries.
 - queries with joins.
 - queries with a union datasource.
 

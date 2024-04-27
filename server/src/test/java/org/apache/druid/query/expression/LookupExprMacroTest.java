@@ -22,6 +22,7 @@ package org.apache.druid.query.expression;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -32,9 +33,9 @@ import org.junit.rules.ExpectedException;
 
 public class LookupExprMacroTest extends InitializedNullHandlingTest
 {
-  private static final Expr.ObjectBinding BINDINGS = InputBindings.withMap(
-      ImmutableMap.<String, Object>builder()
-          .put("x", "foo")
+  private static final Expr.ObjectBinding BINDINGS = InputBindings.forInputSuppliers(
+      ImmutableMap.<String, InputBindings.InputSupplier<?>>builder()
+          .put("x", InputBindings.inputSupplier(ExpressionType.STRING, () -> "foo"))
           .build()
   );
 
@@ -46,7 +47,12 @@ public class LookupExprMacroTest extends InitializedNullHandlingTest
   {
     assertExpr("lookup(x, 'lookyloo')", "xfoo");
   }
-
+  @Test
+  public void testLookupMissingValue()
+  {
+    assertExpr("lookup(y, 'lookyloo', 'N/A')", "N/A");
+    assertExpr("lookup(y, 'lookyloo', null)", null);
+  }
   @Test
   public void testLookupNotFound()
   {
@@ -80,6 +86,30 @@ public class LookupExprMacroTest extends InitializedNullHandlingTest
     }
   }
 
+  @Test
+  public void testCacheKeyChangesWhenLookupChangesSubExpr()
+  {
+    final String expression = "concat(lookup(x, 'lookyloo'))";
+    final Expr expr = Parser.parse(expression, LookupEnabledTestExprMacroTable.INSTANCE);
+    final Expr exprSameLookup = Parser.parse(expression, LookupEnabledTestExprMacroTable.INSTANCE);
+    final Expr exprChangedLookup = Parser.parse(
+        expression,
+        new ExprMacroTable(LookupEnabledTestExprMacroTable.makeTestMacros(ImmutableMap.of("x", "y", "a", "b")))
+    );
+    // same should have same cache key
+    Assert.assertArrayEquals(expr.getCacheKey(), exprSameLookup.getCacheKey());
+    // different should not have same key
+    final byte[] exprBytes = expr.getCacheKey();
+    final byte[] expr2Bytes = exprChangedLookup.getCacheKey();
+    if (exprBytes.length == expr2Bytes.length) {
+      // only check for equality if lengths are equal
+      boolean allEqual = true;
+      for (int i = 0; i < exprBytes.length; i++) {
+        allEqual = allEqual && (exprBytes[i] == expr2Bytes[i]);
+      }
+      Assert.assertFalse(allEqual);
+    }
+  }
 
   private void assertExpr(final String expression, final Object expectedResult)
   {

@@ -26,22 +26,27 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.RowAdapter;
+import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 /**
  * Represents an inline datasource, where the rows are embedded within the DataSource object itself.
- *
+ * <p>
  * The rows are backed by an Iterable, which can be lazy or not. Lazy datasources will only be iterated if someone calls
  * {@link #getRows()} and iterates the result, or until someone calls {@link #getRowsAsList()}.
  */
@@ -67,7 +72,7 @@ public class InlineDataSource implements DataSource
   private static InlineDataSource fromJson(
       @JsonProperty("columnNames") List<String> columnNames,
       @JsonProperty("columnTypes") List<ColumnType> columnTypes,
-      @JsonProperty("rows") List<Object[]> rows
+      @JsonProperty("rows") ArrayList<Object[]> rows
   )
   {
     Preconditions.checkNotNull(columnNames, "'columnNames' must be nonnull");
@@ -100,6 +105,55 @@ public class InlineDataSource implements DataSource
   )
   {
     return new InlineDataSource(rows, signature);
+  }
+
+  /**
+   * A very zealous equality checker for "rows" that respects deep equality of arrays, but nevertheless refrains
+   * from materializing things needlessly. Useful for unit tests that want to compare equality of different
+   * InlineDataSource instances.
+   */
+  private static boolean rowsEqual(final Iterable<Object[]> rowsA, final Iterable<Object[]> rowsB)
+  {
+    if (rowsA instanceof List && rowsB instanceof List) {
+      final List<Object[]> listA = (List<Object[]>) rowsA;
+      final List<Object[]> listB = (List<Object[]>) rowsB;
+
+      if (listA.size() != listB.size()) {
+        return false;
+      }
+
+      for (int i = 0; i < listA.size(); i++) {
+        final Object[] rowA = listA.get(i);
+        final Object[] rowB = listB.get(i);
+
+        if (!Arrays.equals(rowA, rowB)) {
+          return false;
+        }
+      }
+
+      return true;
+    } else {
+      return Objects.equals(rowsA, rowsB);
+    }
+  }
+
+  /**
+   * A very zealous hash code computer for "rows" that is compatible with {@link #rowsEqual}.
+   */
+  private static int rowsHashCode(final Iterable<Object[]> rows)
+  {
+    if (rows instanceof List) {
+      final List<Object[]> list = (List<Object[]>) rows;
+
+      int code = 1;
+      for (final Object[] row : list) {
+        code = 31 * code + Arrays.hashCode(row);
+      }
+
+      return code;
+    } else {
+      return Objects.hash(rows);
+    }
   }
 
   @Override
@@ -136,6 +190,7 @@ public class InlineDataSource implements DataSource
   @JsonProperty("rows")
   public List<Object[]> getRowsAsList()
   {
+    Iterable<Object[]> rows = getRows();
     return rows instanceof List ? ((List<Object[]>) rows) : Lists.newArrayList(rows);
   }
 
@@ -146,6 +201,11 @@ public class InlineDataSource implements DataSource
   public Iterable<Object[]> getRows()
   {
     return rows;
+  }
+
+  public boolean rowsAreArrayList()
+  {
+    return rows instanceof ArrayList;
   }
 
   @Override
@@ -180,6 +240,33 @@ public class InlineDataSource implements DataSource
   public boolean isConcrete()
   {
     return true;
+  }
+
+  @Override
+  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(
+      Query query,
+      AtomicLong cpuTimeAcc
+  )
+  {
+    return Function.identity();
+  }
+
+  @Override
+  public DataSource withUpdatedDataSource(DataSource newSource)
+  {
+    return newSource;
+  }
+
+  @Override
+  public byte[] getCacheKey()
+  {
+    return null;
+  }
+
+  @Override
+  public DataSourceAnalysis getAnalysis()
+  {
+    return new DataSourceAnalysis(this, null, null, Collections.emptyList());
   }
 
   /**
@@ -231,54 +318,5 @@ public class InlineDataSource implements DataSource
     return "InlineDataSource{" +
            "signature=" + signature +
            '}';
-  }
-
-  /**
-   * A very zealous equality checker for "rows" that respects deep equality of arrays, but nevertheless refrains
-   * from materializing things needlessly. Useful for unit tests that want to compare equality of different
-   * InlineDataSource instances.
-   */
-  private static boolean rowsEqual(final Iterable<Object[]> rowsA, final Iterable<Object[]> rowsB)
-  {
-    if (rowsA instanceof List && rowsB instanceof List) {
-      final List<Object[]> listA = (List<Object[]>) rowsA;
-      final List<Object[]> listB = (List<Object[]>) rowsB;
-
-      if (listA.size() != listB.size()) {
-        return false;
-      }
-
-      for (int i = 0; i < listA.size(); i++) {
-        final Object[] rowA = listA.get(i);
-        final Object[] rowB = listB.get(i);
-
-        if (!Arrays.equals(rowA, rowB)) {
-          return false;
-        }
-      }
-
-      return true;
-    } else {
-      return Objects.equals(rowsA, rowsB);
-    }
-  }
-
-  /**
-   * A very zealous hash code computer for "rows" that is compatible with {@link #rowsEqual}.
-   */
-  private static int rowsHashCode(final Iterable<Object[]> rows)
-  {
-    if (rows instanceof List) {
-      final List<Object[]> list = (List<Object[]>) rows;
-
-      int code = 1;
-      for (final Object[] row : list) {
-        code = 31 * code + Arrays.hashCode(row);
-      }
-
-      return code;
-    } else {
-      return Objects.hash(rows);
-    }
   }
 }

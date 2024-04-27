@@ -32,7 +32,7 @@ exports[`ShowLog describe show log 1`] = `
         <span
           class="bp4-button-text"
         >
-          Save
+          Download
         </span>
       </a>
       <button

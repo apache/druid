@@ -23,6 +23,9 @@ import com.google.inject.Inject;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.AbstractMonitor;
+import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
+import org.apache.druid.server.coordinator.stats.CoordinatorStat;
+import org.apache.druid.server.coordinator.stats.Dimension;
 
 import java.util.Map;
 
@@ -46,6 +49,15 @@ public class TaskCountStatsMonitor extends AbstractMonitor
     emit(emitter, "task/running/count", statsProvider.getRunningTaskCount());
     emit(emitter, "task/pending/count", statsProvider.getPendingTaskCount());
     emit(emitter, "task/waiting/count", statsProvider.getWaitingTaskCount());
+
+    CoordinatorRunStats stats = statsProvider.getStats();
+    if (stats != null) {
+      stats.forEachStat(
+          (stat, dimensions, statValue)
+              -> emit(emitter, stat, dimensions.getValues(), statValue)
+      );
+    }
+
     return true;
   }
 
@@ -55,9 +67,22 @@ public class TaskCountStatsMonitor extends AbstractMonitor
     if (counts != null) {
       counts.forEach((k, v) -> {
         builder.setDimension("dataSource", k);
-        emitter.emit(builder.build(key, v));
+        emitter.emit(builder.setMetric(key, v));
       });
     }
+  }
+
+  private void emit(ServiceEmitter emitter, CoordinatorStat stat, Map<Dimension, String> dimensionValues, long value)
+  {
+    if (!stat.shouldEmit()) {
+      return;
+    }
+
+    ServiceMetricEvent.Builder eventBuilder = new ServiceMetricEvent.Builder();
+    dimensionValues.forEach(
+        (dim, dimValue) -> eventBuilder.setDimension(dim.reportedName(), dimValue)
+    );
+    emitter.emit(eventBuilder.setMetric(stat.getMetricName(), value));
   }
 
 }

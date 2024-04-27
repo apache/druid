@@ -35,7 +35,7 @@ public class LongTopNColumnAggregatesProcessor
 {
   private Long2ObjectMap<Aggregator[]> aggregatesStore;
 
-  public LongTopNColumnAggregatesProcessor(Function<Object, Comparable<?>> converter)
+  public LongTopNColumnAggregatesProcessor(Function<Object, Object> converter)
   {
     super(converter);
   }
@@ -64,7 +64,7 @@ public class LongTopNColumnAggregatesProcessor
   }
 
   @Override
-  Comparable<?> convertAggregatorStoreKeyToColumnValue(Object aggregatorStoreKey)
+  Object convertAggregatorStoreKeyToColumnValue(Object aggregatorStoreKey)
   {
     return converter.apply(aggregatorStoreKey);
   }

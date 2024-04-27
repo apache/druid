@@ -19,16 +19,19 @@
 
 package org.apache.druid.msq.querykit.groupby;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import org.apache.druid.frame.key.ClusterBy;
-import org.apache.druid.frame.key.SortColumn;
+import org.apache.druid.frame.key.KeyColumn;
+import org.apache.druid.frame.key.KeyOrder;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.msq.input.stage.StageInputSpec;
-import org.apache.druid.msq.kernel.MaxCountShuffleSpec;
+import org.apache.druid.msq.kernel.HashShuffleSpec;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.QueryDefinitionBuilder;
+import org.apache.druid.msq.kernel.ShuffleSpec;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.querykit.DataSourcePlan;
 import org.apache.druid.msq.querykit.QueryKit;
@@ -36,6 +39,8 @@ import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.msq.querykit.ShuffleSpecFactories;
 import org.apache.druid.msq.querykit.ShuffleSpecFactory;
 import org.apache.druid.msq.querykit.common.OffsetLimitFrameProcessorFactory;
+import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.DimensionComparisonUtils;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -44,11 +49,8 @@ import org.apache.druid.query.groupby.having.DimFilterHavingSpec;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.NoopLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
-import org.apache.druid.query.ordering.StringComparator;
-import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -56,6 +58,14 @@ import java.util.Optional;
 
 public class GroupByQueryKit implements QueryKit<GroupByQuery>
 {
+  private final ObjectMapper jsonMapper;
+
+  public GroupByQueryKit(ObjectMapper jsonMapper)
+  {
+    this.jsonMapper = jsonMapper;
+  }
+
+
   @Override
   public QueryDefinition makeQueryDefinition(
       final String queryId,
@@ -72,9 +82,11 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
     final DataSourcePlan dataSourcePlan = DataSourcePlan.forDataSource(
         queryKit,
         queryId,
+        originalQuery.context(),
         originalQuery.getDataSource(),
         originalQuery.getQuerySegmentSpec(),
         originalQuery.getFilter(),
+        null,
         maxWorkerCount,
         minStageNumber,
         false
@@ -85,17 +97,14 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
     final GroupByQuery queryToRun = (GroupByQuery) originalQuery.withDataSource(dataSourcePlan.getNewDataSource());
     final int firstStageNumber = Math.max(minStageNumber, queryDefBuilder.getNextStageNumber());
 
-    final Granularity segmentGranularity = QueryKitUtils.getSegmentGranularityFromContext(queryToRun.getContext());
+    final Granularity segmentGranularity =
+        QueryKitUtils.getSegmentGranularityFromContext(jsonMapper, queryToRun.getContext());
     final RowSignature intermediateSignature = computeIntermediateSignature(queryToRun);
-    final ClusterBy resultClusterBy =
-        QueryKitUtils.clusterByWithSegmentGranularity(computeClusterByForResults(queryToRun), segmentGranularity);
-    final RowSignature resultSignature =
-        QueryKitUtils.sortableSignature(
-            QueryKitUtils.signatureWithSegmentGranularity(computeResultSignature(queryToRun), segmentGranularity),
-            resultClusterBy.getColumns()
-        );
+    final ClusterBy resultClusterByWithoutGranularity = computeClusterByForResults(queryToRun);
+    final ClusterBy resultClusterByWithoutPartitionBoost =
+        QueryKitUtils.clusterByWithSegmentGranularity(resultClusterByWithoutGranularity, segmentGranularity);
     final ClusterBy intermediateClusterBy = computeIntermediateClusterBy(queryToRun);
-    final boolean doOrderBy = !resultClusterBy.equals(intermediateClusterBy);
+    final boolean doOrderBy = !resultClusterByWithoutPartitionBoost.equals(intermediateClusterBy);
     final boolean doLimitOrOffset =
         queryToRun.getLimitSpec() instanceof DefaultLimitSpec
         && (((DefaultLimitSpec) queryToRun.getLimitSpec()).isLimited()
@@ -103,16 +112,30 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
 
     final ShuffleSpecFactory shuffleSpecFactoryPreAggregation;
     final ShuffleSpecFactory shuffleSpecFactoryPostAggregation;
+    boolean partitionBoost;
 
-    if (intermediateClusterBy.getColumns().isEmpty()) {
+    if (intermediateClusterBy.isEmpty() && resultClusterByWithoutPartitionBoost.isEmpty()) {
       // Ignore shuffleSpecFactory, since we know only a single partition will come out, and we can save some effort.
+      // This condition will be triggered when we don't have a grouping dimension, no partitioning granularity
+      // (PARTITIONED BY ALL) and no ordering/clustering dimensions
+      // For example: INSERT INTO foo SELECT COUNT(*) FROM bar PARTITIONED BY ALL
       shuffleSpecFactoryPreAggregation = ShuffleSpecFactories.singlePartition();
       shuffleSpecFactoryPostAggregation = ShuffleSpecFactories.singlePartition();
+      partitionBoost = false;
     } else if (doOrderBy) {
-      shuffleSpecFactoryPreAggregation = ShuffleSpecFactories.subQueryWithMaxWorkerCount(maxWorkerCount);
+      // There can be a situation where intermediateClusterBy is empty, while the resultClusterBy is non-empty
+      // if we have PARTITIONED BY on anything except ALL, however we don't have a grouping dimension
+      // (i.e. no GROUP BY clause)
+      // __time in such queries is generated using either an aggregator (e.g. sum(metric) as __time) or using a
+      // post-aggregator (e.g. TIMESTAMP '2000-01-01' as __time)
+      // For example: INSERT INTO foo SELECT COUNT(*), TIMESTAMP '2000-01-01' AS __time FROM bar PARTITIONED BY DAY
+      shuffleSpecFactoryPreAggregation = intermediateClusterBy.isEmpty()
+                                         ? ShuffleSpecFactories.singlePartition()
+                                         : ShuffleSpecFactories.globalSortWithMaxPartitionCount(maxWorkerCount);
       shuffleSpecFactoryPostAggregation = doLimitOrOffset
                                           ? ShuffleSpecFactories.singlePartition()
                                           : resultShuffleSpecFactory;
+      partitionBoost = true;
     } else {
       shuffleSpecFactoryPreAggregation = doLimitOrOffset
                                          ? ShuffleSpecFactories.singlePartition()
@@ -120,6 +143,7 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
 
       // null: retain partitions from input (i.e. from preAggregation).
       shuffleSpecFactoryPostAggregation = null;
+      partitionBoost = false;
     }
 
     queryDefBuilder.add(
@@ -132,45 +156,119 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
                        .processorFactory(new GroupByPreShuffleFrameProcessorFactory(queryToRun))
     );
 
-    queryDefBuilder.add(
-        StageDefinition.builder(firstStageNumber + 1)
-                       .inputs(new StageInputSpec(firstStageNumber))
-                       .signature(resultSignature)
-                       .maxWorkerCount(maxWorkerCount)
-                       .shuffleSpec(
-                           shuffleSpecFactoryPostAggregation != null
-                           ? shuffleSpecFactoryPostAggregation.build(resultClusterBy, false)
-                           : null
-                       )
-                       .processorFactory(new GroupByPostShuffleFrameProcessorFactory(queryToRun))
+    ClusterBy resultClusterBy = computeResultClusterBy(
+        queryToRun,
+        segmentGranularity,
+        partitionBoost
+    );
+    RowSignature resultSignature = computeResultSignature(
+        queryToRun,
+        segmentGranularity,
+        resultClusterBy,
+        partitionBoost
     );
 
-    if (doLimitOrOffset) {
-      final DefaultLimitSpec limitSpec = (DefaultLimitSpec) queryToRun.getLimitSpec();
+    final ShuffleSpec nextShuffleWindowSpec = getShuffleSpecForNextWindow(originalQuery, maxWorkerCount);
+
+    if (nextShuffleWindowSpec == null) {
+      queryDefBuilder.add(
+          StageDefinition.builder(firstStageNumber + 1)
+                         .inputs(new StageInputSpec(firstStageNumber))
+                         .signature(resultSignature)
+                         .maxWorkerCount(maxWorkerCount)
+                         .shuffleSpec(
+                             shuffleSpecFactoryPostAggregation != null
+                             ? shuffleSpecFactoryPostAggregation.build(resultClusterBy, false)
+                             : null
+                         )
+                         .processorFactory(new GroupByPostShuffleFrameProcessorFactory(queryToRun))
+      );
+
+      if (doLimitOrOffset) {
+        final DefaultLimitSpec limitSpec = (DefaultLimitSpec) queryToRun.getLimitSpec();
+        queryDefBuilder.add(
+            StageDefinition.builder(firstStageNumber + 2)
+                           .inputs(new StageInputSpec(firstStageNumber + 1))
+                           .signature(resultSignature)
+                           .maxWorkerCount(1)
+                           .shuffleSpec(null) // no shuffling should be required after a limit processor.
+                           .processorFactory(
+                               new OffsetLimitFrameProcessorFactory(
+                                   limitSpec.getOffset(),
+                                   limitSpec.isLimited() ? (long) limitSpec.getLimit() : null
+                               )
+                           )
+        );
+      }
+    } else {
+      final RowSignature stageSignature;
+      // sort the signature to make sure the prefix is aligned
+      stageSignature = QueryKitUtils.sortableSignature(
+          resultSignature,
+          nextShuffleWindowSpec.clusterBy().getColumns()
+      );
+
 
       queryDefBuilder.add(
-          StageDefinition.builder(firstStageNumber + 2)
-                         .inputs(new StageInputSpec(firstStageNumber + 1))
-                         .signature(resultSignature)
-                         .maxWorkerCount(1)
-                         .shuffleSpec(new MaxCountShuffleSpec(ClusterBy.none(), 1, false))
-                         .processorFactory(
-                             new OffsetLimitFrameProcessorFactory(
-                                 limitSpec.getOffset(),
-                                 limitSpec.isLimited() ? (long) limitSpec.getLimit() : null
-                             )
+          StageDefinition.builder(firstStageNumber + 1)
+                         .inputs(new StageInputSpec(firstStageNumber))
+                         .signature(stageSignature)
+                         .maxWorkerCount(maxWorkerCount)
+                         .shuffleSpec(doLimitOrOffset ? (shuffleSpecFactoryPostAggregation != null
+                                                         ? shuffleSpecFactoryPostAggregation.build(
+                             resultClusterBy,
+                             false
                          )
+                                                         : null) : nextShuffleWindowSpec)
+                         .processorFactory(new GroupByPostShuffleFrameProcessorFactory(queryToRun))
       );
+      if (doLimitOrOffset) {
+        final DefaultLimitSpec limitSpec = (DefaultLimitSpec) queryToRun.getLimitSpec();
+        queryDefBuilder.add(
+            StageDefinition.builder(firstStageNumber + 2)
+                           .inputs(new StageInputSpec(firstStageNumber + 1))
+                           .signature(resultSignature)
+                           .maxWorkerCount(1)
+                           .shuffleSpec(null)
+                           .processorFactory(
+                               new OffsetLimitFrameProcessorFactory(
+                                   limitSpec.getOffset(),
+                                   limitSpec.isLimited() ? (long) limitSpec.getLimit() : null
+                               )
+                           )
+        );
+      }
     }
 
     return queryDefBuilder.queryId(queryId).build();
   }
 
   /**
+   * @param originalQuery  which has the context for the next shuffle if that's present in the next window
+   * @param maxWorkerCount max worker count
+   * @return shuffle spec without partition boosting for next stage, null if there is no partition by for next window
+   */
+  private ShuffleSpec getShuffleSpecForNextWindow(GroupByQuery originalQuery, int maxWorkerCount)
+  {
+    final ShuffleSpec nextShuffleWindowSpec;
+    if (originalQuery.getContext().containsKey(MultiStageQueryContext.NEXT_WINDOW_SHUFFLE_COL)) {
+      final ClusterBy windowClusterBy = (ClusterBy) originalQuery.getContext()
+                                                                 .get(MultiStageQueryContext.NEXT_WINDOW_SHUFFLE_COL);
+      nextShuffleWindowSpec = new HashShuffleSpec(
+          windowClusterBy,
+          maxWorkerCount
+      );
+    } else {
+      nextShuffleWindowSpec = null;
+    }
+    return nextShuffleWindowSpec;
+  }
+
+  /**
    * Intermediate signature of a particular {@link GroupByQuery}. Does not include post-aggregators, and all
    * aggregations are nonfinalized.
    */
-  static RowSignature computeIntermediateSignature(final GroupByQuery query)
+  private static RowSignature computeIntermediateSignature(final GroupByQuery query)
   {
     final RowSignature postAggregationSignature = query.getResultRowSignature(RowSignature.Finalization.NO);
     final RowSignature.Builder builder = RowSignature.builder();
@@ -189,11 +287,65 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
    * Result signature of a particular {@link GroupByQuery}. Includes post-aggregators, and aggregations are
    * finalized by default. (But may be nonfinalized, depending on {@link #isFinalize}.
    */
-  static RowSignature computeResultSignature(final GroupByQuery query)
+  private static RowSignature computeResultSignature(final GroupByQuery query)
   {
     final RowSignature.Finalization finalization =
         isFinalize(query) ? RowSignature.Finalization.YES : RowSignature.Finalization.NO;
     return query.getResultRowSignature(finalization);
+  }
+
+  /**
+   * Computes the result clusterBy which may or may not have the partition boosted column, depending on the
+   * {@code partitionBoost} parameter passed
+   */
+  private static ClusterBy computeResultClusterBy(
+      final GroupByQuery query,
+      final Granularity segmentGranularity,
+      final boolean partitionBoost
+  )
+  {
+    final ClusterBy resultClusterByWithoutGranularity = computeClusterByForResults(query);
+    final ClusterBy resultClusterByWithoutPartitionBoost =
+        QueryKitUtils.clusterByWithSegmentGranularity(resultClusterByWithoutGranularity, segmentGranularity);
+    if (!partitionBoost) {
+      return resultClusterByWithoutPartitionBoost;
+    }
+    List<KeyColumn> resultClusterByWithPartitionBoostColumns = new ArrayList<>(resultClusterByWithoutPartitionBoost.getColumns());
+    resultClusterByWithPartitionBoostColumns.add(new KeyColumn(
+        QueryKitUtils.PARTITION_BOOST_COLUMN,
+        KeyOrder.ASCENDING
+    ));
+    return new ClusterBy(
+        resultClusterByWithPartitionBoostColumns,
+        resultClusterByWithoutPartitionBoost.getBucketByCount()
+    );
+  }
+
+  /**
+   * Computes the result signature which may or may not have the partition boosted column depending on the
+   * {@code partitionBoost} passed. It expects that the clusterBy already has the partition boost column
+   * if the parameter {@code partitionBoost} is set as true.
+   */
+  private static RowSignature computeResultSignature(
+      final GroupByQuery query,
+      final Granularity segmentGranularity,
+      final ClusterBy resultClusterBy,
+      final boolean partitionBoost
+  )
+  {
+    final RowSignature resultSignatureWithoutPartitionBoost =
+        QueryKitUtils.signatureWithSegmentGranularity(computeResultSignature(query), segmentGranularity);
+
+    if (!partitionBoost) {
+      return QueryKitUtils.sortableSignature(resultSignatureWithoutPartitionBoost, resultClusterBy.getColumns());
+    }
+
+    final RowSignature resultSignatureWithPartitionBoost =
+        RowSignature.builder().addAll(resultSignatureWithoutPartitionBoost)
+                    .add(QueryKitUtils.PARTITION_BOOST_COLUMN, ColumnType.LONG)
+                    .build();
+
+    return QueryKitUtils.sortableSignature(resultSignatureWithPartitionBoost, resultClusterBy.getColumns());
   }
 
   /**
@@ -212,10 +364,10 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
    */
   static ClusterBy computeIntermediateClusterBy(final GroupByQuery query)
   {
-    final List<SortColumn> columns = new ArrayList<>();
+    final List<KeyColumn> columns = new ArrayList<>();
 
     for (final DimensionSpec dimension : query.getDimensions()) {
-      columns.add(new SortColumn(dimension.getOutputName(), false));
+      columns.add(new KeyColumn(dimension.getOutputName(), KeyOrder.ASCENDING));
     }
 
     // Note: ignoring time because we assume granularity = all.
@@ -231,13 +383,15 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
       final DefaultLimitSpec defaultLimitSpec = (DefaultLimitSpec) query.getLimitSpec();
 
       if (!defaultLimitSpec.getColumns().isEmpty()) {
-        final List<SortColumn> clusterByColumns = new ArrayList<>();
+        final List<KeyColumn> clusterByColumns = new ArrayList<>();
 
         for (final OrderByColumnSpec orderBy : defaultLimitSpec.getColumns()) {
           clusterByColumns.add(
-              new SortColumn(
+              new KeyColumn(
                   orderBy.getDimension(),
                   orderBy.getDirection() == OrderByColumnSpec.Direction.DESCENDING
+                  ? KeyOrder.DESCENDING
+                  : KeyOrder.ASCENDING
               )
           );
         }
@@ -281,7 +435,7 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
       for (final OrderByColumnSpec column : defaultLimitSpec.getColumns()) {
         final Optional<ColumnType> type = resultSignature.getColumnType(column.getDimension());
 
-        if (!type.isPresent() || !isNaturalComparator(type.get().getType(), column.getDimensionComparator())) {
+        if (!type.isPresent() || !DimensionComparisonUtils.isNaturalComparator(type.get().getType(), column.getDimensionComparator())) {
           throw new ISE(
               "Must use natural comparator for column [%s] of type [%s]",
               column.getDimension(),
@@ -292,10 +446,4 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
     }
   }
 
-  private static boolean isNaturalComparator(final ValueType type, final StringComparator comparator)
-  {
-    return ((type == ValueType.STRING && StringComparators.LEXICOGRAPHIC.equals(comparator))
-            || (type.isNumeric() && StringComparators.NUMERIC.equals(comparator)))
-           && !type.isArray();
-  }
 }
