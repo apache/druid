@@ -22,7 +22,6 @@ package org.apache.druid.server.lookup.cache;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.error.InvalidInput;
 
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -49,7 +48,7 @@ public class LookupLoadingSpec
   private final ImmutableList<String> lookupsToLoad;
 
   public static final LookupLoadingSpec ALL = new LookupLoadingSpec(Mode.ALL, null);
-  public static final LookupLoadingSpec NONE = new LookupLoadingSpec(Mode.NONE, Collections.emptyList());
+  public static final LookupLoadingSpec NONE = new LookupLoadingSpec(Mode.NONE, null);
 
   private LookupLoadingSpec(Mode mode, List<String> lookupsToLoad)
   {
@@ -73,6 +72,9 @@ public class LookupLoadingSpec
     return mode;
   }
 
+  /**
+   * @return A non-null immutable list of lookup names when {@link LookupLoadingSpec#mode} is ONLY_REQUIRED, null otherwise.
+   */
   public ImmutableList<String> getLookupsToLoad()
   {
     return lookupsToLoad;

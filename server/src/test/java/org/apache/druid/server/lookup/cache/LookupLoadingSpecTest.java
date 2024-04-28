@@ -24,7 +24,6 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 public class LookupLoadingSpecTest
@@ -42,7 +41,7 @@ public class LookupLoadingSpecTest
   {
     LookupLoadingSpec spec = LookupLoadingSpec.NONE;
     Assert.assertEquals(LookupLoadingSpec.Mode.NONE, spec.getMode());
-    Assert.assertEquals(Collections.emptyList(), spec.getLookupsToLoad());
+    Assert.assertNull(spec.getLookupsToLoad());
   }
 
   @Test
