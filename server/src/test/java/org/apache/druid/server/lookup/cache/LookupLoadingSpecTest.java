@@ -46,7 +46,7 @@ public class LookupLoadingSpecTest
   }
 
   @Test
-  public void testLoadingPartialLookups()
+  public void testLoadingOnlyRequiredLookups()
   {
     List<String> lookupsToLoad = Arrays.asList("lookupName1", "lookupName2");
     LookupLoadingSpec spec = LookupLoadingSpec.loadOnly(lookupsToLoad);
@@ -55,7 +55,7 @@ public class LookupLoadingSpecTest
   }
 
   @Test
-  public void testLoadingPartialLookupsWithNullList()
+  public void testLoadingOnlyRequiredLookupsWithNullList()
   {
     DruidException exception = Assert.assertThrows(DruidException.class, () -> LookupLoadingSpec.loadOnly(null));
     Assert.assertEquals("Expected non-null list of lookups to load.", exception.getMessage());
