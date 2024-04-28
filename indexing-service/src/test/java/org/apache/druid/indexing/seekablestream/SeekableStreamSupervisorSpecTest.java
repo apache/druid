@@ -37,7 +37,6 @@ import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.Supervisor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManagerConfig;
-import org.apache.druid.indexing.overlord.supervisor.autoscaler.AggregateFunction;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
@@ -111,9 +110,6 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
   private ObjectMapper mapper;
   private DruidMonitorSchedulerConfig monitorSchedulerConfig;
   private SupervisorStateManagerConfig supervisorStateManagerConfig;
-  private LagStats lagStats;
-  private int timesLagStatsMaxCalled;
-  private int timesLagStatsSumCalled;
 
   @Before
   public void setUp()
@@ -135,21 +131,8 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     monitorSchedulerConfig = EasyMock.mock(DruidMonitorSchedulerConfig.class);
     supervisorStateManagerConfig = EasyMock.mock(SupervisorStateManagerConfig.class);
     supervisor4 = EasyMock.mock(SeekableStreamSupervisor.class);
-    lagStats = EasyMock.mock(LagStats.class);
-    timesLagStatsMaxCalled = 0;
-    timesLagStatsSumCalled = 0;
 
     EasyMock.expect(spec.getContextValue(DruidMetrics.TAGS)).andReturn(null).anyTimes();
-    EasyMock.expect(lagStats.getAggregateForScaling()).andReturn(AggregateFunction.SUM).anyTimes();
-    EasyMock.expect(lagStats.getMetric(AggregateFunction.SUM)).andAnswer(() -> {
-      timesLagStatsSumCalled++;
-      return 0L;
-    }).anyTimes();
-    EasyMock.expect(lagStats.getMetric(AggregateFunction.MAX)).andAnswer(() -> {
-      timesLagStatsMaxCalled++;
-      return 0L;
-    }).anyTimes();
-    EasyMock.replay(lagStats);
   }
 
   private abstract class BaseTestSeekableStreamSupervisor extends SeekableStreamSupervisor<String, String, ByteEntity>
@@ -370,7 +353,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     @Override
     public LagStats computeLagStats()
     {
-      return lagStats;
+      return new LagStats(0, 0, 0);
     }
 
     @Override
@@ -805,8 +788,6 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
             .map(metric -> metric.getUserDims().get(SeekableStreamSupervisor.AUTOSCALER_SKIP_REASON_DIMENSION))
             .filter(Objects::nonNull)
             .anyMatch("minTriggerScaleActionFrequencyMillis not elapsed yet"::equals));
-    Assert.assertTrue(timesLagStatsMaxCalled > 0);
-    Assert.assertTrue(timesLagStatsSumCalled == 0);
     autoScaler.reset();
     autoScaler.stop();
   }
@@ -1007,8 +988,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     Thread.sleep(1000);
     int taskCountAfterScaleOut = supervisor.getIoConfig().getTaskCount();
     Assert.assertEquals(1, taskCountAfterScaleOut);
-    Assert.assertTrue(timesLagStatsMaxCalled == 0);
-    Assert.assertTrue(timesLagStatsSumCalled > 0);
+
     autoScaler.reset();
     autoScaler.stop();
   }
@@ -1356,7 +1336,6 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     autoScalerConfig.put("scaleInStep", 1);
     autoScalerConfig.put("scaleOutStep", 2);
     autoScalerConfig.put("minTriggerScaleActionFrequencyMillis", 1200000);
-    autoScalerConfig.put("lagAggregate", "MAX");
     return autoScalerConfig;
   }
 

@@ -19,8 +19,6 @@
 
 package org.apache.druid.indexing.overlord.supervisor.autoscaler;
 
-import javax.annotation.Nullable;
-
 public class LagStats
 {
   private final long maxLag;
@@ -60,7 +58,6 @@ public class LagStats
    * The preferred scaling metric that supervisor may specify to be used.
    * This could be overrided by the autscaler.
    */
-  @Nullable
   public AggregateFunction getAggregateForScaling()
   {
     return aggregateForScaling;

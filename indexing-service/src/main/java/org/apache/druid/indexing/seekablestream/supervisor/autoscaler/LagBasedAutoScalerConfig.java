@@ -191,6 +191,7 @@ public class LagBasedAutoScalerConfig implements AutoScalerConfig
   }
 
   @JsonProperty
+  @Nullable
   public AggregateFunction getLagAggregate()
   {
     return lagAggregate;
