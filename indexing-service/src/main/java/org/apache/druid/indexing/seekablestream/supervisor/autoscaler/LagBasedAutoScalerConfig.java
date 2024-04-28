@@ -76,7 +76,7 @@ public class LagBasedAutoScalerConfig implements AutoScalerConfig
     this.scaleInThreshold = scaleInThreshold != null ? scaleInThreshold : 1000000;
     this.triggerScaleOutFractionThreshold = triggerScaleOutFractionThreshold != null ? triggerScaleOutFractionThreshold : 0.3;
     this.triggerScaleInFractionThreshold = triggerScaleInFractionThreshold != null ? triggerScaleInFractionThreshold : 0.9;
-    this.lagAggregate = lagAggregate != null ? lagAggregate : AggregateFunction.SUM;
+    this.lagAggregate = lagAggregate;
 
     // Only do taskCountMax and taskCountMin check when autoscaler is enabled. So that users left autoConfig empty{} will not throw any exception and autoscaler is disabled.
     // If autoscaler is disabled, no matter what configs are set, they are not used.
@@ -214,7 +214,7 @@ public class LagBasedAutoScalerConfig implements AutoScalerConfig
             ", scaleActionPeriodMillis=" + scaleActionPeriodMillis +
             ", scaleInStep=" + scaleInStep +
             ", scaleOutStep=" + scaleOutStep +
-           ", lagAggregate=" + lagAggregate +
+            ", lagAggregate=" + lagAggregate +
             '}';
   }
 }

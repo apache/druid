@@ -33,7 +33,7 @@ public class LagStatsTest
 
     Assert.assertEquals(1, lagStats.getMetric(AggregateFunction.MAX));
     Assert.assertEquals(2, lagStats.getMetric(AggregateFunction.SUM));
-    Assert.assertEquals(3, lagStats.getMetric(AggregateFunction.AVG));
+    Assert.assertEquals(3, lagStats.getMetric(AggregateFunction.AVERAGE));
     Assert.assertEquals(AggregateFunction.SUM, lagStats.getAggregateForScaling());
   }
 }

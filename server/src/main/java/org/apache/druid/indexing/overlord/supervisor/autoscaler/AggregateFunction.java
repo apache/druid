@@ -23,5 +23,5 @@ public enum AggregateFunction
 {
   MAX,
   SUM,
-  AVG
+  AVERAGE
 }
