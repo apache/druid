@@ -19,9 +19,9 @@
 
 package org.apache.druid.indexing.overlord.supervisor.autoscaler;
 
-public enum ScalingMetric
+public enum AggregateFunction
 {
   MAX,
-  TOTAL,
+  SUM,
   AVG
 }

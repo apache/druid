@@ -24,19 +24,19 @@ public class LagStats
   private final long maxLag;
   private final long totalLag;
   private final long avgLag;
-  private final ScalingMetric preferredScalingMetric;
+  private final AggregateFunction aggregateForScaling;
 
   public LagStats(long maxLag, long totalLag, long avgLag)
   {
-    this(maxLag, totalLag, avgLag, ScalingMetric.TOTAL);
+    this(maxLag, totalLag, avgLag, AggregateFunction.SUM);
   }
 
-  public LagStats(long maxLag, long totalLag, long avgLag, ScalingMetric preferredScalingMetric)
+  public LagStats(long maxLag, long totalLag, long avgLag, AggregateFunction aggregateForScaling)
   {
     this.maxLag = maxLag;
     this.totalLag = totalLag;
     this.avgLag = avgLag;
-    this.preferredScalingMetric = preferredScalingMetric;
+    this.aggregateForScaling = aggregateForScaling == null ? AggregateFunction.SUM : aggregateForScaling;
   }
 
   public long getMaxLag()
@@ -54,17 +54,21 @@ public class LagStats
     return avgLag;
   }
 
-  public long getPrefferedScalingMetric()
+  /**
+   * The preferred scaling metric that supervisor may specify to be used.
+   * This could be overrided by the autscaler.
+   */
+  public AggregateFunction getAggregateForScaling()
   {
-    return getMetric(preferredScalingMetric);
+    return aggregateForScaling;
   }
 
-  public long getMetric(ScalingMetric metric)
+  public long getMetric(AggregateFunction metric)
   {
     switch (metric) {
       case MAX:
         return getMaxLag();
-      case TOTAL:
+      case SUM:
         return getTotalLag();
       case AVG:
         return getAvgLag();
