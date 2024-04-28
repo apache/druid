@@ -19,10 +19,10 @@
 
 package org.apache.druid.server.lookup.cache;
 
-import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.error.InvalidInput;
 
-import java.util.List;
+import java.util.Set;
 
 /**
  * This class defines the spec for loading of lookups for a given task. It contains 2 fields:
@@ -45,24 +45,24 @@ public class LookupLoadingSpec
   }
 
   private final Mode mode;
-  private final ImmutableList<String> lookupsToLoad;
+  private final ImmutableSet<String> lookupsToLoad;
 
   public static final LookupLoadingSpec ALL = new LookupLoadingSpec(Mode.ALL, null);
   public static final LookupLoadingSpec NONE = new LookupLoadingSpec(Mode.NONE, null);
 
-  private LookupLoadingSpec(Mode mode, List<String> lookupsToLoad)
+  private LookupLoadingSpec(Mode mode, Set<String> lookupsToLoad)
   {
     this.mode = mode;
-    this.lookupsToLoad = lookupsToLoad == null ? null : ImmutableList.copyOf(lookupsToLoad);
+    this.lookupsToLoad = lookupsToLoad == null ? null : ImmutableSet.copyOf(lookupsToLoad);
   }
 
   /**
-   * Creates a LookupLoadingSpec which loads only the lookups present in the given list.
+   * Creates a LookupLoadingSpec which loads only the lookups present in the given set.
    */
-  public static LookupLoadingSpec loadOnly(List<String> lookupsToLoad)
+  public static LookupLoadingSpec loadOnly(Set<String> lookupsToLoad)
   {
     if (lookupsToLoad == null) {
-      throw InvalidInput.exception("Expected non-null list of lookups to load.");
+      throw InvalidInput.exception("Expected non-null set of lookups to load.");
     }
     return new LookupLoadingSpec(Mode.ONLY_REQUIRED, lookupsToLoad);
   }
@@ -73,9 +73,9 @@ public class LookupLoadingSpec
   }
 
   /**
-   * @return A non-null immutable list of lookup names when {@link LookupLoadingSpec#mode} is ONLY_REQUIRED, null otherwise.
+   * @return A non-null immutable set of lookup names when {@link LookupLoadingSpec#mode} is ONLY_REQUIRED, null otherwise.
    */
-  public ImmutableList<String> getLookupsToLoad()
+  public ImmutableSet<String> getLookupsToLoad()
   {
     return lookupsToLoad;
   }

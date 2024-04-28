@@ -19,12 +19,12 @@
 
 package org.apache.druid.server.lookup.cache;
 
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.error.DruidException;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.Arrays;
-import java.util.List;
+import java.util.Set;
 
 public class LookupLoadingSpecTest
 {
@@ -47,7 +47,7 @@ public class LookupLoadingSpecTest
   @Test
   public void testLoadingOnlyRequiredLookups()
   {
-    List<String> lookupsToLoad = Arrays.asList("lookupName1", "lookupName2");
+    Set<String> lookupsToLoad = ImmutableSet.of("lookupName1", "lookupName2");
     LookupLoadingSpec spec = LookupLoadingSpec.loadOnly(lookupsToLoad);
     Assert.assertEquals(LookupLoadingSpec.Mode.ONLY_REQUIRED, spec.getMode());
     Assert.assertEquals(lookupsToLoad, spec.getLookupsToLoad());
@@ -57,6 +57,6 @@ public class LookupLoadingSpecTest
   public void testLoadingOnlyRequiredLookupsWithNullList()
   {
     DruidException exception = Assert.assertThrows(DruidException.class, () -> LookupLoadingSpec.loadOnly(null));
-    Assert.assertEquals("Expected non-null list of lookups to load.", exception.getMessage());
+    Assert.assertEquals("Expected non-null set of lookups to load.", exception.getMessage());
   }
 }

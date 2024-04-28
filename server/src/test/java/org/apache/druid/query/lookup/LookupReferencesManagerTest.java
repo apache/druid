@@ -43,7 +43,6 @@ import org.junit.rules.TemporaryFolder;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -837,7 +836,7 @@ public class LookupReferencesManagerTest
   public void testCoordinatorLoadSubsetOfLookups() throws Exception
   {
     Map<String, LookupExtractorFactoryContainer> lookupMap =
-        getLookupMapForSelectiveLoadingOfLookups(LookupLoadingSpec.loadOnly(Arrays.asList("testLookup1", "testLookup2")));
+        getLookupMapForSelectiveLoadingOfLookups(LookupLoadingSpec.loadOnly(ImmutableSet.of("testLookup1", "testLookup2")));
     Assert.assertEquals(Optional.of(lookupMap.get("testLookup1")), lookupReferencesManager.get("testLookup1"));
     Assert.assertEquals(Optional.of(lookupMap.get("testLookup2")), lookupReferencesManager.get("testLookup2"));
     Assert.assertFalse(lookupReferencesManager.get("testLookup3").isPresent());
