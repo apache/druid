@@ -382,12 +382,13 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
   private void loadLookupsAndInitStateRef()
   {
     LookupLoadingSpec lookupLoadingSpec = lookupListeningAnnouncerConfig.getLookupLoadingSpec();
+    LOG.info("Using LookupLoadingSpec: %s for filtering the fetched lookups", lookupLoadingSpec);
     List<LookupBean> lookupBeanList;
     if (lookupLoadingSpec.getMode() == LookupLoadingSpec.Mode.NONE) {
       lookupBeanList = Collections.emptyList();
     } else {
       lookupBeanList = getLookupsList();
-      if (lookupLoadingSpec.getMode() == LookupLoadingSpec.Mode.PARTIAL && lookupBeanList != null) {
+      if (lookupLoadingSpec.getMode() == LookupLoadingSpec.Mode.ONLY_REQUIRED && lookupBeanList != null) {
         lookupBeanList = lookupBeanList.stream()
                                        .filter(lookupBean -> lookupLoadingSpec.getLookupsToLoad().contains(lookupBean.getName()))
                                        .collect(Collectors.toList());

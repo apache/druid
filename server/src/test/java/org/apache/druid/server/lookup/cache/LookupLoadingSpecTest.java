@@ -19,11 +19,9 @@
 
 package org.apache.druid.server.lookup.cache;
 
-import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.error.DruidException;
 import org.junit.Assert;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -31,10 +29,6 @@ import java.util.List;
 
 public class LookupLoadingSpecTest
 {
-
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
   @Test
   public void testLoadingAllLookups()
   {
@@ -55,16 +49,15 @@ public class LookupLoadingSpecTest
   public void testLoadingPartialLookups()
   {
     List<String> lookupsToLoad = Arrays.asList("lookupName1", "lookupName2");
-    LookupLoadingSpec spec = LookupLoadingSpec.partial(lookupsToLoad);
-    Assert.assertEquals(LookupLoadingSpec.Mode.PARTIAL, spec.getMode());
+    LookupLoadingSpec spec = LookupLoadingSpec.loadOnly(lookupsToLoad);
+    Assert.assertEquals(LookupLoadingSpec.Mode.ONLY_REQUIRED, spec.getMode());
     Assert.assertEquals(lookupsToLoad, spec.getLookupsToLoad());
   }
 
   @Test
   public void testLoadingPartialLookupsWithNullList()
   {
-    expectedException.expect(ISE.class);
-    expectedException.expectMessage("Expected non-null list of lookups to load.");
-    LookupLoadingSpec.partial(null);
+    DruidException exception = Assert.assertThrows(DruidException.class, () -> LookupLoadingSpec.loadOnly(null));
+    Assert.assertEquals("Expected non-null list of lookups to load.", exception.getMessage());
   }
 }

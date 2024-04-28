@@ -19,7 +19,8 @@
 
 package org.apache.druid.server.lookup.cache;
 
-import org.apache.druid.java.util.common.ISE;
+import com.google.common.collect.ImmutableList;
+import org.apache.druid.error.InvalidInput;
 
 import java.util.Collections;
 import java.util.List;
@@ -41,11 +42,11 @@ public class LookupLoadingSpec
 {
   public enum Mode
   {
-    ALL, NONE, PARTIAL
+    ALL, NONE, ONLY_REQUIRED
   }
 
   private final Mode mode;
-  private final List<String> lookupsToLoad;
+  private final ImmutableList<String> lookupsToLoad;
 
   public static final LookupLoadingSpec ALL = new LookupLoadingSpec(Mode.ALL, null);
   public static final LookupLoadingSpec NONE = new LookupLoadingSpec(Mode.NONE, Collections.emptyList());
@@ -53,15 +54,18 @@ public class LookupLoadingSpec
   private LookupLoadingSpec(Mode mode, List<String> lookupsToLoad)
   {
     this.mode = mode;
-    this.lookupsToLoad = lookupsToLoad;
+    this.lookupsToLoad = lookupsToLoad == null ? null : ImmutableList.copyOf(lookupsToLoad);
   }
 
-  public static LookupLoadingSpec partial(List<String> lookupsToLoad)
+  /**
+   * Creates a LookupLoadingSpec which loads only the lookups present in the given list.
+   */
+  public static LookupLoadingSpec loadOnly(List<String> lookupsToLoad)
   {
     if (lookupsToLoad == null) {
-      throw new ISE("Expected non-null list of lookups to load.");
+      throw InvalidInput.exception("Expected non-null list of lookups to load.");
     }
-    return new LookupLoadingSpec(Mode.PARTIAL, lookupsToLoad);
+    return new LookupLoadingSpec(Mode.ONLY_REQUIRED, lookupsToLoad);
   }
 
   public Mode getMode()
@@ -69,8 +73,17 @@ public class LookupLoadingSpec
     return mode;
   }
 
-  public List<String> getLookupsToLoad()
+  public ImmutableList<String> getLookupsToLoad()
   {
     return lookupsToLoad;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "LookupLoadingSpec{" +
+           "mode=" + mode +
+           ", lookupsToLoad=" + lookupsToLoad +
+           '}';
   }
 }

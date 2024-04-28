@@ -837,7 +837,7 @@ public class LookupReferencesManagerTest
   public void testCoordinatorLoadSubsetOfLookups() throws Exception
   {
     Map<String, LookupExtractorFactoryContainer> lookupMap =
-        getLookupMapForSelectiveLoadingOfLookups(LookupLoadingSpec.partial(Arrays.asList("testLookup1", "testLookup2")));
+        getLookupMapForSelectiveLoadingOfLookups(LookupLoadingSpec.loadOnly(Arrays.asList("testLookup1", "testLookup2")));
     Assert.assertEquals(Optional.of(lookupMap.get("testLookup1")), lookupReferencesManager.get("testLookup1"));
     Assert.assertEquals(Optional.of(lookupMap.get("testLookup2")), lookupReferencesManager.get("testLookup2"));
     Assert.assertFalse(lookupReferencesManager.get("testLookup3").isPresent());
