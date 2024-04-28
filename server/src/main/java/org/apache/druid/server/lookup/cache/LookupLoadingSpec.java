@@ -33,9 +33,9 @@ import java.util.List;
  *   <ul>
  *    <li> ALL: Load all the lookups.</li>
  *    <li> NONE: Load no lookups. </li>
- *    <li> PARTIAL: Load only the lookups defined in lookupsToLoad </li>
+ *    <li> ONLY_REQUIRED: Load only the lookups defined in lookupsToLoad </li>
  *   </ul>
- * <li>{@link LookupLoadingSpec#lookupsToLoad}: Defines the lookups to load when the lookupLoadingMode is set to PARTIAL.</li>
+ * <li>{@link LookupLoadingSpec#lookupsToLoad}: Defines the lookups to load when the lookupLoadingMode is set to ONLY_REQUIRED.</li>
  * </ol>
  */
 public class LookupLoadingSpec
