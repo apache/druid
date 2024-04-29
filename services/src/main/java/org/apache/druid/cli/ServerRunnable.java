@@ -30,12 +30,16 @@ import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeAnnouncer;
 import org.apache.druid.discovery.DruidService;
 import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
+import org.apache.druid.guice.ServerViewModule;
 import org.apache.druid.guice.annotations.Self;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.server.DruidNode;
 
 import java.lang.annotation.Annotation;
@@ -49,6 +53,9 @@ import java.util.Set;
  */
 public abstract class ServerRunnable extends GuiceRunnable
 {
+  public static final String CENTRALIZED_DATASOURCE_SCHEMA_ENABLED =
+      CentralizedDatasourceSchemaConfig.PROPERTY_PREFIX + ".enabled";
+
   private static final EmittingLogger log = new EmittingLogger(ServerRunnable.class);
 
   public ServerRunnable(Logger log)
@@ -196,5 +203,32 @@ public abstract class ServerRunnable extends GuiceRunnable
       }
       return new Child();
     }
+  }
+
+  protected static void validateCentralizedDatasourceSchemaConfig(Properties properties)
+  {
+    if (isSegmentMetadataCacheEnabled(properties)) {
+      String serverViewType = properties.getProperty(ServerViewModule.SERVERVIEW_TYPE_PROPERTY);
+      if (serverViewType != null && !serverViewType.equals(ServerViewModule.SERVERVIEW_TYPE_HTTP)) {
+        throw DruidException
+            .forPersona(DruidException.Persona.ADMIN)
+            .ofCategory(DruidException.Category.UNSUPPORTED)
+            .build(
+                StringUtils.format(
+                    "CentralizedDatasourceSchema feature is incompatible with config %1$s=%2$s. "
+                    + "Please consider switching to http based segment discovery (set %1$s=%3$s) "
+                    + "or disable the feature (set %4$s=false).",
+                    ServerViewModule.SERVERVIEW_TYPE_PROPERTY,
+                    serverViewType,
+                    ServerViewModule.SERVERVIEW_TYPE_HTTP,
+                    CENTRALIZED_DATASOURCE_SCHEMA_ENABLED
+                ));
+      }
+    }
+  }
+
+  protected static boolean isSegmentMetadataCacheEnabled(Properties properties)
+  {
+    return Boolean.parseBoolean(properties.getProperty(CENTRALIZED_DATASOURCE_SCHEMA_ENABLED));
   }
 }

@@ -184,7 +184,7 @@ See javadoc of java.lang.Math for detailed explanation for each function.
 | array_ordinal(arr,long) | returns the array element at the 1 based index supplied, or null for an out of range index |
 | array_contains(arr,expr) | returns 1 if the array contains the element specified by expr, or contains all elements specified by expr if expr is an array, else 0 |
 | array_overlap(arr1,arr2) | returns 1 if arr1 and arr2 have any elements in common, else 0 |
-| scalar_in_array(expr, arr) | returns 1 if the scalar is present in the array, else 0 |
+| scalar_in_array(expr, arr) | returns 1 if the scalar is present in the array, else 0 if the expr is non-null, or null if the expr is null |
 | array_offset_of(arr,expr) | returns the 0 based index of the first occurrence of expr in the array, or `null` or `-1` if `druid.generic.useDefaultValueForNull=true` (deprecated legacy mode) if no matching elements exist in the array. |
 | array_ordinal_of(arr,expr) | returns the 1 based index of the first occurrence of expr in the array, or `null` or `-1` if `druid.generic.useDefaultValueForNull=true` (deprecated legacy mode) if no matching elements exist in the array. |
 | array_prepend(expr,arr) | adds expr to arr at the beginning, the resulting array type determined by the type of the array |

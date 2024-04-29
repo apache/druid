@@ -36,7 +36,6 @@ import org.apache.druid.indexing.common.TaskToolboxFactory;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskConfigBuilder;
-import org.apache.druid.indexing.common.task.CompactionStrategy;
 import org.apache.druid.indexing.common.task.NoopTestTaskReportFileWriter;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTaskClientProvider;
 import org.apache.druid.indexing.common.task.batch.parallel.ShuffleClient;
@@ -163,7 +162,6 @@ public class TestTaskToolboxFactory extends TaskToolboxFactory
     private TaskLogPusher taskLogPusher;
     private String attemptId;
     private CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
-    private CompactionStrategy compactionStrategy;
 
     public Builder setConfig(TaskConfig config)
     {
@@ -396,12 +394,6 @@ public class TestTaskToolboxFactory extends TaskToolboxFactory
     public Builder setCentralizedTableSchemaConfig(CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig)
     {
       this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
-      return this;
-    }
-
-    public Builder setCompactionToMSQ(CompactionStrategy compactionStrategy)
-    {
-      this.compactionStrategy = compactionStrategy;
       return this;
     }
   }

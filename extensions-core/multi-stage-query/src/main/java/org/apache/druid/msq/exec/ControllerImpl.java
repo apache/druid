@@ -1585,9 +1585,9 @@ public class ControllerImpl implements Controller
   )
   {
     if (taskLockType.equals(TaskLockType.APPEND)) {
-      return SegmentTransactionalAppendAction.forSegments(segments);
+      return SegmentTransactionalAppendAction.forSegments(segments, null);
     } else if (taskLockType.equals(TaskLockType.SHARED)) {
-      return SegmentTransactionalInsertAction.appendAction(segments, null, null);
+      return SegmentTransactionalInsertAction.appendAction(segments, null, null, null);
     } else {
       throw DruidException.defensive("Invalid lock type [%s] received for append action", taskLockType);
     }
@@ -1599,9 +1599,9 @@ public class ControllerImpl implements Controller
   )
   {
     if (taskLockType.equals(TaskLockType.REPLACE)) {
-      return SegmentTransactionalReplaceAction.create(segmentsWithTombstones);
+      return SegmentTransactionalReplaceAction.create(segmentsWithTombstones, null);
     } else if (taskLockType.equals(TaskLockType.EXCLUSIVE)) {
-      return SegmentTransactionalInsertAction.overwriteAction(null, segmentsWithTombstones);
+      return SegmentTransactionalInsertAction.overwriteAction(null, segmentsWithTombstones, null);
     } else {
       throw DruidException.defensive("Invalid lock type [%s] received for overwrite action", taskLockType);
     }

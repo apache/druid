@@ -42,7 +42,7 @@ import java.util.Set;
  * Walks an {@link SqlNode} to collect a set of {@link Resource} for {@link ResourceType#DATASOURCE} and
  * {@link ResourceType#VIEW} to use for authorization during query planning.
  *
- * It works by looking for {@link SqlIdentifier} which corespond to a {@link IdentifierNamespace}, where
+ * It works by looking for {@link SqlIdentifier} which correspond to a {@link IdentifierNamespace}, where
  * {@link SqlValidatorNamespace} is calcite-speak for sources of data and {@link IdentifierNamespace} specifically are
  * namespaces which are identified by a single variable, e.g. table names.
  */

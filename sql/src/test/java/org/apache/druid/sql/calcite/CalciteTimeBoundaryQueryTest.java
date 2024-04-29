@@ -30,6 +30,7 @@ import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMinAggregatorFactory;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.timeboundary.TimeBoundaryQuery;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
@@ -83,7 +84,7 @@ public class CalciteTimeBoundaryQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testMinTimeQueryWithFilters()
+  public void testMinTimeQueryWithTimeFilters()
   {
     HashMap<String, Object> queryContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     queryContext.put(QueryContexts.TIME_BOUNDARY_PLANNING_KEY, true);
@@ -105,6 +106,66 @@ public class CalciteTimeBoundaryQueryTest extends BaseCalciteQueryTest
                   .build()
         ),
         ImmutableList.of(new Object[]{DateTimes.of("2001-01-01").getMillis()})
+    );
+  }
+
+  @Test
+  public void testMinTimeQueryWithTimeAndColumnFilters()
+  {
+    HashMap<String, Object> queryContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
+    queryContext.put(QueryContexts.TIME_BOUNDARY_PLANNING_KEY, true);
+    HashMap<String, Object> expectedContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
+    expectedContext.put(TimeBoundaryQuery.MIN_TIME_ARRAY_OUTPUT_NAME, "a0");
+    testQuery(
+        "SELECT MIN(__time) AS minTime FROM foo\n"
+        + "where __time >= '2001-01-01' and __time < '2003-01-01'\n"
+        + "and dim2 = 'abc'",
+        queryContext,
+        ImmutableList.of(
+            Druids.newTimeBoundaryQueryBuilder()
+                  .dataSource("foo")
+                  .intervals(
+                      new MultipleIntervalSegmentSpec(
+                          ImmutableList.of(Intervals.of("2001-01-01T00:00:00.000Z/2003-01-01T00:00:00.000Z"))
+                      )
+                  )
+                  .bound(TimeBoundaryQuery.MIN_TIME)
+                  .filters(equality("dim2", "abc", ColumnType.STRING))
+                  .context(expectedContext)
+                  .build()
+        ),
+        ImmutableList.of(new Object[]{DateTimes.of("2001-01-02").getMillis()})
+    );
+  }
+
+  @Test
+  public void testMinTimeQueryWithTimeAndExpressionFilters()
+  {
+    // Cannot vectorize due to UPPER expression.
+    cannotVectorize();
+
+    HashMap<String, Object> queryContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
+    queryContext.put(QueryContexts.TIME_BOUNDARY_PLANNING_KEY, true);
+    testQuery(
+        "SELECT MIN(__time) AS minTime FROM foo\n"
+        + "where __time >= '2001-01-01' and __time < '2003-01-01'\n"
+        + "and upper(dim2) = 'ABC'",
+        queryContext,
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource("foo")
+                  .intervals(
+                      new MultipleIntervalSegmentSpec(
+                          ImmutableList.of(Intervals.of("2001-01-01T00:00:00.000Z/2003-01-01T00:00:00.000Z"))
+                      )
+                  )
+                  .virtualColumns(expressionVirtualColumn("v0", "upper(\"dim2\")", ColumnType.STRING))
+                  .filters(equality("v0", "ABC", ColumnType.STRING))
+                  .aggregators(new LongMinAggregatorFactory("a0", "__time"))
+                  .context(queryContext)
+                  .build()
+        ),
+        ImmutableList.of(new Object[]{DateTimes.of("2001-01-02").getMillis()})
     );
   }
 

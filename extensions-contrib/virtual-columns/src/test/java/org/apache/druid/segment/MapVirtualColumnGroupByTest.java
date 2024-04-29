@@ -24,6 +24,7 @@ import org.apache.druid.collections.DefaultBlockingPool;
 import org.apache.druid.collections.StupidPool;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.MapBasedRow;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -138,10 +139,10 @@ public class MapVirtualColumnGroupByTest extends InitializedNullHandlingTest
     );
 
     Throwable t = Assert.assertThrows(
-        UnsupportedOperationException.class,
+        DruidException.class,
         () -> runner.run(QueryPlus.wrap(query)).toList()
     );
-    Assert.assertEquals("Map column doesn't support getRow()", t.getMessage());
+    Assert.assertEquals("Unable to group on the column[params]", t.getMessage());
   }
 
 

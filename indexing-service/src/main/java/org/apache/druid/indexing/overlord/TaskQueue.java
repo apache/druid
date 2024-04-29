@@ -424,15 +424,16 @@ public class TaskQueue
           catch (Exception e) {
             log.warn(e, "Exception thrown during isReady for task: %s", task.getId());
             final String errorMessage;
-            if (e instanceof MaxAllowedLocksExceededException) {
+            if (e instanceof MaxAllowedLocksExceededException || e instanceof DruidException) {
               errorMessage = e.getMessage();
             } else {
               errorMessage = StringUtils.format(
                   "Encountered error[%s] while waiting for task to be ready. See Overlord logs for more details.",
-                  StringUtils.chop(e.getMessage(), 100)
+                  e.getMessage()
               );
             }
-            notifyStatus(task, TaskStatus.failure(task.getId(), errorMessage), errorMessage);
+            TaskStatus taskStatus = TaskStatus.failure(task.getId(), errorMessage);
+            notifyStatus(task, taskStatus, taskStatus.getErrorMsg());
             continue;
           }
           if (taskIsReady) {

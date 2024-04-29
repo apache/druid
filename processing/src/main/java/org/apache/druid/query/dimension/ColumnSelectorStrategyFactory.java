@@ -24,5 +24,11 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 
 public interface ColumnSelectorStrategyFactory<ColumnSelectorStrategyClass extends ColumnSelectorStrategy>
 {
-  ColumnSelectorStrategyClass makeColumnSelectorStrategy(ColumnCapabilities capabilities, ColumnValueSelector selector);
+  ColumnSelectorStrategyClass makeColumnSelectorStrategy(ColumnCapabilities capabilities, ColumnValueSelector selector, String dimension);
+
+  /**
+   * Whether the strategy supports complex types. If a strategy doesn't support the complex types, they can either throw an
+   * unsupported exception or treat them like strings.
+   */
+  boolean supportsComplexTypes();
 }

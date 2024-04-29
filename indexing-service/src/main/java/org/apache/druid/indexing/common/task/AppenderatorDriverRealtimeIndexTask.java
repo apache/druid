@@ -337,9 +337,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask
                 if (lock == null) {
                   return false;
                 }
-                if (lock.isRevoked()) {
-                  throw new ISE(StringUtils.format("Lock for interval [%s] was revoked.", segmentId.getInterval()));
-                }
+                lock.assertNotRevoked();
                 return true;
               }
             }
@@ -359,7 +357,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask
       int sequenceNumber = 0;
       String sequenceName = makeSequenceName(getId(), sequenceNumber);
 
-      final TransactionalSegmentPublisher publisher = (mustBeNullOrEmptyOverwriteSegments, segments, commitMetadata) -> {
+      final TransactionalSegmentPublisher publisher = (mustBeNullOrEmptyOverwriteSegments, segments, commitMetadata, map) -> {
         if (mustBeNullOrEmptyOverwriteSegments != null && !mustBeNullOrEmptyOverwriteSegments.isEmpty()) {
           throw new ISE(
               "Stream ingestion task unexpectedly attempted to overwrite segments: %s",
@@ -368,6 +366,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask
         }
         final SegmentTransactionalInsertAction action = SegmentTransactionalInsertAction.appendAction(
             segments,
+            null,
             null,
             null
         );
