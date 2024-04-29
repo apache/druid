@@ -291,6 +291,7 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
       SqlSelect select,
       SqlNode enclosingNode)
   {
+    SqlNodeList catalogClustering = null;
     if (enclosingNode instanceof DruidSqlIngest) {
       // The target is a new or existing datasource.
       // The target namespace is both the target table ID and the row type for that table.
@@ -308,11 +309,10 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
         final DatasourceFacade tableMetadata = table == null
             ? null
             : table.effectiveMetadata().catalogMetadata();
-        // Convert CLUSTERED BY, or the catalog equivalent, to an ORDER BY clause
-        final SqlNodeList catalogClustering = convertCatalogClustering(tableMetadata);
-        rewriteClusteringToOrderBy(select, (DruidSqlIngest) enclosingNode, catalogClustering);
-        return new SelectNamespace(this, select, enclosingNode);
+        catalogClustering = convertCatalogClustering(tableMetadata);
       }
+      // Convert CLUSTERED BY, or the catalog equivalent, to an ORDER BY clause
+      rewriteClusteringToOrderBy(select, (DruidSqlIngest) enclosingNode, catalogClustering);
     }
     return super.createSelectNamespace(select, enclosingNode);
   }
