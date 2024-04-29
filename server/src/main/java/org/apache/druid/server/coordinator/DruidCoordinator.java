@@ -590,20 +590,20 @@ public class DruidCoordinator
     final CoordinatorKillConfigs killConfigs = config.getKillConfigs();
     final List<CoordinatorDuty> duties = new ArrayList<>();
     duties.add(new KillSupervisors(killConfigs.supervisors(), metadataManager.supervisors()));
-    duties.add(new KillAuditLog(killConfigs.audit(), metadataManager.audit()));
+    duties.add(new KillAuditLog(killConfigs.auditLogs(), metadataManager.audit()));
     duties.add(new KillRules(killConfigs.rules(), metadataManager.rules()));
     duties.add(
         new KillDatasourceMetadata(
-            killConfigs.datasource(),
+            killConfigs.datasources(),
             metadataManager.indexer(),
             metadataManager.supervisors()
         )
     );
     duties.add(
-        new KillCompactionConfig(killConfigs.compaction(), metadataManager.segments(), metadataManager.configs())
+        new KillCompactionConfig(killConfigs.compactionConfigs(), metadataManager.segments(), metadataManager.configs())
     );
     if (centralizedDatasourceSchemaConfig.isEnabled()) {
-      duties.add(new KillUnreferencedSegmentSchemaDuty(killConfigs.segmentSchema(), metadataManager.schemas()));
+      duties.add(new KillUnreferencedSegmentSchemaDuty(killConfigs.segmentSchemas(), metadataManager.schemas()));
     }
     return duties;
   }

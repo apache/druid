@@ -90,12 +90,12 @@ public class DruidCoordinatorConfig
 
   private void validateKillConfigs()
   {
-    validateKillConfig(killConfigs.audit(), "audit");
-    validateKillConfig(killConfigs.compaction(), "compaction");
-    validateKillConfig(killConfigs.datasource(), "datasource");
+    validateKillConfig(killConfigs.auditLogs(), "audit");
+    validateKillConfig(killConfigs.compactionConfigs(), "compaction");
+    validateKillConfig(killConfigs.datasources(), "datasource");
     validateKillConfig(killConfigs.rules(), "rule");
     validateKillConfig(killConfigs.supervisors(), "supervisor");
-    validateKillConfig(killConfigs.segmentSchema(), "segmentSchema");
+    validateKillConfig(killConfigs.segmentSchemas(), "segmentSchema");
 
     // Validate config for killing unused segments
     final KillUnusedSegmentsConfig killUnusedConfig

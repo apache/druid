@@ -216,13 +216,13 @@ public class DruidCoordinatorConfigTest
     final CoordinatorKillConfigs killConfigs
         = deserializeFrom(new Properties(), "druid.coordinator.kill", CoordinatorKillConfigs.class);
 
-    Assert.assertEquals(MetadataCleanupConfig.DEFAULT, killConfigs.audit());
+    Assert.assertEquals(MetadataCleanupConfig.DEFAULT, killConfigs.auditLogs());
     Assert.assertEquals(MetadataCleanupConfig.DEFAULT, killConfigs.supervisors());
-    Assert.assertEquals(MetadataCleanupConfig.DEFAULT, killConfigs.compaction());
-    Assert.assertEquals(MetadataCleanupConfig.DEFAULT, killConfigs.datasource());
+    Assert.assertEquals(MetadataCleanupConfig.DEFAULT, killConfigs.compactionConfigs());
+    Assert.assertEquals(MetadataCleanupConfig.DEFAULT, killConfigs.datasources());
     Assert.assertEquals(MetadataCleanupConfig.DEFAULT, killConfigs.rules());
     Assert.assertEquals(MetadataCleanupConfig.DEFAULT, killConfigs.pendingSegments());
-    Assert.assertEquals(MetadataCleanupConfig.DEFAULT, killConfigs.segmentSchema());
+    Assert.assertEquals(MetadataCleanupConfig.DEFAULT, killConfigs.segmentSchemas());
   }
 
   @Test
@@ -260,15 +260,15 @@ public class DruidCoordinatorConfigTest
 
     Assert.assertEquals(
         new MetadataCleanupConfig(false, Duration.standardHours(10), Duration.standardHours(20)),
-        killConfigs.audit()
+        killConfigs.auditLogs()
     );
     Assert.assertEquals(
         new MetadataCleanupConfig(false, Duration.standardHours(20), Duration.standardHours(30)),
-        killConfigs.compaction()
+        killConfigs.compactionConfigs()
     );
     Assert.assertEquals(
         new MetadataCleanupConfig(false, Duration.standardHours(5), Duration.standardHours(10)),
-        killConfigs.datasource()
+        killConfigs.datasources()
     );
     Assert.assertEquals(
         new MetadataCleanupConfig(false, Duration.standardHours(11), Duration.standardHours(12)),
@@ -280,7 +280,7 @@ public class DruidCoordinatorConfigTest
     );
     Assert.assertEquals(
         new MetadataCleanupConfig(false, Duration.standardHours(2), Duration.standardHours(8)),
-        killConfigs.segmentSchema()
+        killConfigs.segmentSchemas()
     );
     Assert.assertFalse(killConfigs.pendingSegments().isCleanupEnabled());
   }

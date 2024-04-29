@@ -444,7 +444,7 @@ public class CoordinatorSimulationBuilder
       this.coordinatorConfig = new DruidCoordinatorConfig(
           new CoordinatorRunConfig(new Duration(1L), Duration.standardMinutes(1)),
           new CoordinatorPeriodConfig(null, null),
-          CoordinatorKillConfigs.STANDARD,
+          CoordinatorKillConfigs.DEFAULT,
           createBalancerStrategy(balancerStrategy),
           new HttpLoadQueuePeonConfig(null, null, null)
       );

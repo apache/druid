@@ -150,7 +150,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
     druidCoordinatorConfig = new DruidCoordinatorConfig(
         new CoordinatorRunConfig(new Duration(COORDINATOR_START_DELAY), new Duration(COORDINATOR_PERIOD)),
         new CoordinatorPeriodConfig(null, null),
-        CoordinatorKillConfigs.STANDARD,
+        CoordinatorKillConfigs.DEFAULT,
         new CostBalancerStrategyFactory(),
         null
     );
