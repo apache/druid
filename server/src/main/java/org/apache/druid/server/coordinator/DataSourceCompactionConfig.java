@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.error.InvalidInput;
+import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
@@ -59,7 +60,7 @@ public class DataSourceCompactionConfig
   private final UserCompactionTaskTransformConfig transformSpec;
   private final UserCompactionTaskIOConfig ioConfig;
   private final Map<String, Object> taskContext;
-  private final UserCompactionStrategy.CompactionEngine compactionEngine;
+  private final CompactionEngine compactionEngine;
 
   @JsonCreator
   public DataSourceCompactionConfig(
@@ -74,7 +75,7 @@ public class DataSourceCompactionConfig
       @JsonProperty("metricsSpec") @Nullable AggregatorFactory[] metricsSpec,
       @JsonProperty("transformSpec") @Nullable UserCompactionTaskTransformConfig transformSpec,
       @JsonProperty("ioConfig") @Nullable UserCompactionTaskIOConfig ioConfig,
-      @JsonProperty("engine") @Nullable UserCompactionStrategy.CompactionEngine compactionEngine,
+      @JsonProperty("engine") @Nullable CompactionEngine compactionEngine,
       @JsonProperty("taskContext") @Nullable Map<String, Object> taskContext
   )
   {
@@ -180,7 +181,7 @@ public class DataSourceCompactionConfig
 
   @JsonProperty
   @Nullable
-  public UserCompactionStrategy.CompactionEngine getEngine()
+  public CompactionEngine getEngine()
   {
     return compactionEngine;
   }
@@ -232,17 +233,17 @@ public class DataSourceCompactionConfig
   }
 
   public static DataSourceCompactionConfig from(
-      UserCompactionStrategy.CompactionEngine defaultCompactionEngine,
-      DataSourceCompactionConfig newConfig
+      DataSourceCompactionConfig newConfig,
+      CompactionEngine defaultCompactionEngine
   )
   {
-    UserCompactionStrategy.CompactionEngine newCompactionEngine = newConfig.getEngine();
+    CompactionEngine newCompactionEngine = newConfig.getEngine();
     String engineSourceLog = "specified in spec";
     if (newCompactionEngine == null) {
       newCompactionEngine = defaultCompactionEngine;
       engineSourceLog = "set as default";
     }
-    if (newCompactionEngine == UserCompactionStrategy.CompactionEngine.MSQ) {
+    if (newCompactionEngine == CompactionEngine.MSQ) {
       if (newConfig.getTuningConfig() != null) {
         PartitionsSpec partitionsSpec = newConfig.getTuningConfig().getPartitionsSpec();
 

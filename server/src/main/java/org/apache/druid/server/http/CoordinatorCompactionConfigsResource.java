@@ -119,7 +119,7 @@ public class CoordinatorCompactionConfigsResource
           .getCompactionConfigs()
           .stream()
           .collect(Collectors.toMap(DataSourceCompactionConfig::getDataSource, Function.identity()));
-      DataSourceCompactionConfig updatedConfig = DataSourceCompactionConfig.from(current.getEngine(), newConfig);
+      DataSourceCompactionConfig updatedConfig = DataSourceCompactionConfig.from(newConfig, current.getEngine());
       newConfigs.put(updatedConfig.getDataSource(), updatedConfig);
       newCompactionConfig = CoordinatorCompactionConfig.from(current, ImmutableList.copyOf(newConfigs.values()));
 

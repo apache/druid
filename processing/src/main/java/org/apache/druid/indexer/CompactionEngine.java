@@ -17,24 +17,26 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.common.task;
+package org.apache.druid.indexer;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.server.coordinator.UserCompactionStrategy;
 
 /**
- * Engine to be used for a compaction task.
- * Should be synchronized with {@link UserCompactionStrategy.CompactionEngine}.
+ * Encapsulates the Engine to be used for a compaction task.
+ * Should be synchronized with the subtypes for {@link org.apache.druid.indexing.common.task.CompactionStrategy}.
  */
-public enum Engine
+public enum CompactionEngine
 {
   NATIVE,
   MSQ;
 
   @JsonCreator
-  public static Engine fromString(String name)
+  public static CompactionEngine fromString(String name)
   {
+    if (name == null) {
+      return null;
+    }
     return valueOf(StringUtils.toUpperCase(name));
   }
 }

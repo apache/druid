@@ -22,6 +22,7 @@ package org.apache.druid.server.coordinator;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.indexer.CompactionEngine;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -34,12 +35,13 @@ public class CoordinatorCompactionConfig
   private static final double DEFAULT_COMPACTION_TASK_RATIO = 0.1;
   private static final int DEFAULT_MAX_COMPACTION_TASK_SLOTS = Integer.MAX_VALUE;
   private static final boolean DEFAULT_USE_AUTO_SCALE_SLOTS = false;
-  private static final UserCompactionStrategy.CompactionEngine DEFAULT_COMPACTION_ENGINE = UserCompactionStrategy.CompactionEngine.NATIVE;
+  private static final CompactionEngine DEFAULT_COMPACTION_ENGINE = CompactionEngine.NATIVE;
+
   private final List<DataSourceCompactionConfig> compactionConfigs;
   private final double compactionTaskSlotRatio;
   private final int maxCompactionTaskSlots;
   private final boolean useAutoScaleSlots;
-  private final UserCompactionStrategy.CompactionEngine compactionEngine;
+  private final CompactionEngine compactionEngine;
 
   public static CoordinatorCompactionConfig from(
       CoordinatorCompactionConfig baseConfig,
@@ -123,7 +125,7 @@ public class CoordinatorCompactionConfig
   }
 
   @JsonProperty
-  public UserCompactionStrategy.CompactionEngine getEngine()
+  public CompactionEngine getEngine()
   {
     return compactionEngine;
   }

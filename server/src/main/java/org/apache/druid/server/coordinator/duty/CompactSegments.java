@@ -21,8 +21,6 @@ package org.apache.druid.server.coordinator.duty;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
@@ -38,6 +36,7 @@ import org.apache.druid.client.indexing.ClientTaskQuery;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.common.utils.IdUtils;
+import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.java.util.common.ISE;
@@ -468,12 +467,12 @@ public class CompactSegments implements CoordinatorCustomDuty
         }
       }
 
-      UserCompactionStrategy.CompactionEngine compactionEngine = config.getEngine();
+      CompactionEngine compactionEngine = config.getEngine();
       Map<String, Object> autoCompactionContext = newAutoCompactionContext(config.getTaskContext());
       int numCurrentCompactionTasksAndSubtasks;
       final String maxNumTasksContextParam = "maxNumTasks";
 
-      if (compactionEngine == UserCompactionStrategy.CompactionEngine.MSQ) {
+      if (compactionEngine == CompactionEngine.MSQ) {
         if (!autoCompactionContext.containsKey(maxNumTasksContextParam)) {
           // Since MSQ needs all task slots for the calculated #tasks to be available upfront, allot all available
           // compaction slots to current compaction task to avoid stalling.

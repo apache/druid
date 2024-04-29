@@ -22,6 +22,7 @@ package org.apache.druid.timeline;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 
 import java.util.List;
@@ -44,6 +45,8 @@ import java.util.stream.Collectors;
  */
 public class CompactionState
 {
+  private static final CompactionEngine DEFAULT_COMPACTION_ENGINE = CompactionEngine.NATIVE;
+
   private final PartitionsSpec partitionsSpec;
   private final DimensionsSpec dimensionsSpec;
   // org.apache.druid.segment.transform.TransformSpec cannot be used here because it's in the 'processing' module which
@@ -59,6 +62,8 @@ public class CompactionState
   // has a dependency on the 'core' module where this class is.
   private final List<Object> metricsSpec;
 
+  private final CompactionEngine compactionEngine;
+
   @JsonCreator
   public CompactionState(
       @JsonProperty("partitionsSpec") PartitionsSpec partitionsSpec,
@@ -66,7 +71,8 @@ public class CompactionState
       @JsonProperty("metricsSpec") List<Object> metricsSpec,
       @JsonProperty("transformSpec") Map<String, Object> transformSpec,
       @JsonProperty("indexSpec") Map<String, Object> indexSpec,
-      @JsonProperty("granularitySpec") Map<String, Object> granularitySpec
+      @JsonProperty("granularitySpec") Map<String, Object> granularitySpec,
+      @JsonProperty("compactionEngine") CompactionEngine compactionEngine
   )
   {
     this.partitionsSpec = partitionsSpec;
@@ -75,6 +81,7 @@ public class CompactionState
     this.transformSpec = transformSpec;
     this.indexSpec = indexSpec;
     this.granularitySpec = granularitySpec;
+    this.compactionEngine = compactionEngine == null ? DEFAULT_COMPACTION_ENGINE : compactionEngine;
   }
 
   @JsonProperty
@@ -113,6 +120,12 @@ public class CompactionState
     return granularitySpec;
   }
 
+  @JsonProperty
+  public CompactionEngine getCompactionEngine()
+  {
+    return compactionEngine;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -128,13 +141,22 @@ public class CompactionState
            Objects.equals(transformSpec, that.transformSpec) &&
            Objects.equals(indexSpec, that.indexSpec) &&
            Objects.equals(granularitySpec, that.granularitySpec) &&
-           Objects.equals(metricsSpec, that.metricsSpec);
+           Objects.equals(metricsSpec, that.metricsSpec) &&
+           Objects.equals(compactionEngine, that.compactionEngine);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(partitionsSpec, dimensionsSpec, transformSpec, indexSpec, granularitySpec, metricsSpec);
+    return Objects.hash(
+        partitionsSpec,
+        dimensionsSpec,
+        transformSpec,
+        indexSpec,
+        granularitySpec,
+        metricsSpec,
+        compactionEngine
+    );
   }
 
   @Override
@@ -147,6 +169,7 @@ public class CompactionState
            ", indexSpec=" + indexSpec +
            ", granularitySpec=" + granularitySpec +
            ", metricsSpec=" + metricsSpec +
+           ", compactionEngine=" + compactionEngine +
            '}';
   }
 
@@ -156,7 +179,8 @@ public class CompactionState
       List<Object> metricsSpec,
       Map<String, Object> transformSpec,
       Map<String, Object> indexSpec,
-      Map<String, Object> granularitySpec
+      Map<String, Object> granularitySpec,
+      CompactionEngine compactionEngine
   )
   {
     CompactionState compactionState = new CompactionState(
@@ -165,7 +189,8 @@ public class CompactionState
         metricsSpec,
         transformSpec,
         indexSpec,
-        granularitySpec
+        granularitySpec,
+        compactionEngine
     );
 
     return segments -> segments

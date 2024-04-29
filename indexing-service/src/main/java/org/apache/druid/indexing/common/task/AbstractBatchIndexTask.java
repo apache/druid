@@ -30,6 +30,7 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.IngestionState;
 import org.apache.druid.indexer.report.IngestionStatsAndErrors;
 import org.apache.druid.indexer.report.IngestionStatsAndErrorsTaskReport;
@@ -635,7 +636,8 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
           metricsSpec,
           transformSpec,
           tuningConfig.getIndexSpec().asMap(toolbox.getJsonMapper()),
-          granularitySpec.asMap(toolbox.getJsonMapper())
+          granularitySpec.asMap(toolbox.getJsonMapper()),
+          CompactionEngine.NATIVE
       );
     } else {
       return Function.identity();

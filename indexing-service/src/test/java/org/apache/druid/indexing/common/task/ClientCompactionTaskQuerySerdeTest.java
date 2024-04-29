@@ -40,6 +40,7 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.guice.GuiceAnnotationIntrospector;
 import org.apache.druid.guice.GuiceInjectableValues;
 import org.apache.druid.guice.GuiceInjectors;
+import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexing.common.RetryPolicyConfig;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
@@ -129,7 +130,7 @@ public class ClientCompactionTaskQuerySerdeTest
         new AggregatorFactory[] {new CountAggregatorFactory("cnt")},
         new ClientCompactionTaskTransformSpec(new SelectorDimFilter("dim1", "foo", null)),
         ImmutableMap.of("key", "value"),
-        new UserCompactionStrategy(UserCompactionStrategy.CompactionEngine.NATIVE)
+        new UserCompactionStrategy(CompactionEngine.NATIVE)
     );
 
     final byte[] json = mapper.writeValueAsBytes(query);

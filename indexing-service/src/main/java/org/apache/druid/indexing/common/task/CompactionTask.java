@@ -42,6 +42,7 @@ import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.Checks;
 import org.apache.druid.indexer.Property;
 import org.apache.druid.indexer.TaskStatus;
@@ -490,20 +491,15 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
         getMetricBuilder()
     );
 
-    /*if (engine == Engine.MSQ) {
-      if (toolbox.getCompactionToMSQ() == null) {
-        throw DruidException.forPersona(DruidException.Persona.ADMIN)
-                            .ofCategory(DruidException.Category.NOT_FOUND)
-                            .build(
-                                "Extension[druid-multi-stage-query] required for running compaction on MSQ "
-                                + "not found on the Indexer");
-      }
-      registerResourceCloserOnAbnormalExit(currentSubTaskHolder);
-      return toolbox.getCompactionToMSQ()
-                    .runCompactionTasks(this, toolbox, intervalDataSchemas);
-    } else {
-
-    }*/
+    if (compactionStrategy == null) {
+      // Can only happen for MSQ engine, when the json subtype reqd for deserialization isn't available due to
+      // missing extn.
+      throw DruidException.forPersona(DruidException.Persona.ADMIN)
+                          .ofCategory(DruidException.Category.NOT_FOUND)
+                          .build(
+                              "Extension[druid-multi-stage-query] required for running compaction on MSQ "
+                              + "not found on the Indexer.");
+    }
     registerResourceCloserOnAbnormalExit(currentSubTaskHolder);
     return compactionStrategy.runCompactionTasks(this, toolbox, intervalDataSchemas);
   }
