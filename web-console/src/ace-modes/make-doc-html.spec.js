@@ -16,18 +16,16 @@
  * limitations under the License.
  */
 
-import { render } from '@testing-library/react';
-import React from 'react';
+var makeDocHtml = require('./make-doc-html');
 
-import { FlexibleQueryInput } from './flexible-query-input';
-
-describe('FlexibleQueryInput', () => {
-  it('matches snapshot', () => {
-    const sqlControl = (
-      <FlexibleQueryInput queryString="hello world" onQueryStringChange={() => {}} />
-    );
-
-    const { container } = render(sqlControl);
-    expect(container.firstChild).toMatchSnapshot();
+describe('makeDocHtml', () => {
+  it('correctly formats helper HTML', () => {
+    expect(
+      makeDocHtml({
+        name: 'COUNT',
+        syntax: 'COUNT(*)',
+        description: 'Counts the number of things',
+      }),
+    ).toMatchSnapshot();
   });
 });

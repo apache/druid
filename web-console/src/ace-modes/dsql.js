@@ -24,10 +24,12 @@
 var druidKeywords = require('../../lib/keywords');
 var druidFunctions = require('../../lib/sql-docs');
 
+var makeDocHtml = require('./make-doc-html');
+
 ace.define(
   'ace/mode/dsql_highlight_rules',
   ['require', 'exports', 'module', 'ace/lib/oop', 'ace/mode/text_highlight_rules'],
-  function (acequire, exports, module) {
+  function (acequire, exports, _module) {
     'use strict';
 
     var oop = acequire('../lib/oop');
@@ -122,24 +124,67 @@ ace.define(
 ace.define(
   'ace/mode/dsql',
   ['require', 'exports', 'module', 'ace/lib/oop', 'ace/mode/text', 'ace/mode/dsql_highlight_rules'],
-  function (acequire, exports, module) {
+  function (acequire, exports, _module) {
     'use strict';
 
     var oop = acequire('../lib/oop');
     var TextMode = acequire('./text').Mode;
     var SqlHighlightRules = acequire('./dsql_highlight_rules').SqlHighlightRules;
 
-    var Mode = function () {
+    var completions = [].concat(
+      druidKeywords.SQL_KEYWORDS.map(v => ({ name: v, value: v, score: 0, meta: 'keyword' })),
+      druidKeywords.SQL_EXPRESSION_PARTS.map(v => ({
+        name: v,
+        value: v,
+        score: 0,
+        meta: 'keyword',
+      })),
+      druidKeywords.SQL_CONSTANTS.map(v => ({ name: v, value: v, score: 0, meta: 'constant' })),
+      druidKeywords.SQL_DYNAMICS.map(v => ({ name: v, value: v, score: 0, meta: 'dynamic' })),
+      Object.entries(druidFunctions.SQL_DATA_TYPES).map(([name, [runtime, description]]) => {
+        const item = {
+          name,
+          description,
+          syntax: `Druid runtime type: ${runtime}`,
+        };
+        return {
+          name,
+          value: name,
+          score: 0,
+          meta: 'type',
+          docHTML: makeDocHtml(item),
+          docText: description,
+        };
+      }),
+      Object.entries(druidFunctions.SQL_FUNCTIONS).flatMap(([name, versions]) => {
+        return versions.map(([args, description]) => {
+          const item = { name, description, syntax: `${name}(${args})` };
+          return {
+            name,
+            value: versions.length > 1 ? `${name}(${args})` : name,
+            score: 1100, // Use a high score to appear over the 'local' suggestions that have a score of 1000
+            meta: 'function',
+            docHTML: makeDocHtml(item),
+            docText: description,
+            completer: {
+              insertMatch: (editor, data) => {
+                editor.completer.insertMatch({ value: data.name });
+              },
+            },
+          };
+        });
+      }),
+    );
+
+    const Mode = function () {
       this.HighlightRules = SqlHighlightRules;
       this.$behaviour = this.$defaultBehaviour;
+      this.$id = 'ace/mode/dsql';
+
+      this.lineCommentStart = '--';
+      this.getCompletions = () => completions;
     };
     oop.inherits(Mode, TextMode);
-
-    (function () {
-      this.lineCommentStart = '--';
-
-      this.$id = 'ace/mode/dsql';
-    }).call(Mode.prototype);
 
     exports.Mode = Mode;
   },

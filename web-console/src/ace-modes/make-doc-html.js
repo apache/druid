@@ -16,18 +16,11 @@
  * limitations under the License.
  */
 
-import { render } from '@testing-library/react';
-import React from 'react';
+var escape = require('lodash.escape');
 
-import { FlexibleQueryInput } from './flexible-query-input';
-
-describe('FlexibleQueryInput', () => {
-  it('matches snapshot', () => {
-    const sqlControl = (
-      <FlexibleQueryInput queryString="hello world" onQueryStringChange={() => {}} />
-    );
-
-    const { container } = render(sqlControl);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
+module.exports = function makeDocHtml(item) {
+  return `
+<div class="doc-name">${item.name}</div>
+<div class="doc-syntax">${escape(item.syntax)}</div>
+<div class="doc-description">${item.description}</div>`;
+};
