@@ -452,24 +452,6 @@ public class ClusterByStatisticsCollectorImplTest extends InitializedNullHandlin
   }
 
   @Test
-  public void testDownsampleShouldDownsampleToRetainedBytesLimit()
-  {
-    ClusterByStatisticsCollectorImpl clusterByStatisticsCollector =
-        (ClusterByStatisticsCollectorImpl) ClusterByStatisticsCollectorImpl.create(
-            CLUSTER_BY_XYZ_BUCKET_BY_X,
-            SIGNATURE,
-            500,
-            500,
-            false,
-            false
-        );
-
-    clusterByStatisticsCollector.add(createKey(CLUSTER_BY_XYZ_BUCKET_BY_X, 1, 1, "Extremely long key string for unit test; Extremely long key string for unit test;"), 500);
-
-    Assert.assertTrue(clusterByStatisticsCollector.getTotalRetainedBytes() <= 500);
-  }
-
-  @Test
   public void testShouldDownsampleSingleBucket()
   {
     ClusterByStatisticsCollectorImpl clusterByStatisticsCollector =
@@ -482,6 +464,8 @@ public class ClusterByStatisticsCollectorImplTest extends InitializedNullHandlin
             false
         );
 
+    clusterByStatisticsCollector.add(createKey(CLUSTER_BY_XYZ_BUCKET_BY_X, 2, 1, "value1"), 1);
+    clusterByStatisticsCollector.add(createKey(CLUSTER_BY_XYZ_BUCKET_BY_X, 2, 3, "value2"), 1);
     clusterByStatisticsCollector.add(createKey(CLUSTER_BY_XYZ_BUCKET_BY_X, 1, 1, "Extremely long key string for unit test; Extremely long key string for unit test;"), 500);
 
     Assert.assertTrue(clusterByStatisticsCollector.getTotalRetainedBytes() <= 35000);

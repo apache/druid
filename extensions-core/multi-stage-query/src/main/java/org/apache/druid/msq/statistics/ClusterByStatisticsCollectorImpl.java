@@ -449,9 +449,7 @@ public class ClusterByStatisticsCollectorImpl implements ClusterByStatisticsColl
       bucketHolder.keyCollector.downSample();
       newTotalRetainedBytes += bucketHolder.updateRetainedBytes();
 
-      if ((bucketHolder.keyCollector.estimatedRetainedKeys() <= 1) ||
-          (i != sortedHolders.size() - 1 && sortedHolders.get(i + 1).rhs.retainedBytes > bucketHolder.retainedBytes)
-      ) {
+      if (i == sortedHolders.size() - 1 || sortedHolders.get(i + 1).rhs.retainedBytes > bucketHolder.retainedBytes || bucketHolder.keyCollector.estimatedRetainedKeys() <= 1) {
         i++;
       }
     }
