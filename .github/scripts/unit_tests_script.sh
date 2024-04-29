@@ -74,5 +74,7 @@ then
   { printf "\n\n****FAILED****\nDiff code coverage check failed. To view coverage report, run 'mvn clean test jacoco:report' and open 'target/site/jacoco/index.html'\nFor more details on how to run code coverage locally, follow instructions here - https://github.com/apache/druid/blob/master/dev/code-review/code-coverage.md#running-code-coverage-locally\n\n" && echo "coverage_failure=true" >> "$GITHUB_ENV" && false; }
 fi
 
-{ for i in 1 2 3; do curl -o codecov.sh -s https://codecov.io/bash && break || sleep 15; done }
-{ for i in 1 2 3; do bash codecov.sh -X gcov && break || sleep 15; done }
+# Commented out as codecov visualizations are currently not being used in the Druid community
+# and cause PR failures due to rate limiting (see https://github.com/apache/druid/pull/16347)
+# { for i in 1 2 3; do curl -o codecov.sh -s https://codecov.io/bash && break || sleep 15; done }
+# { for i in 1 2 3; do bash codecov.sh -X gcov && break || sleep 15; done }

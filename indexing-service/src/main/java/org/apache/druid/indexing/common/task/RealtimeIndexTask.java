@@ -42,7 +42,6 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TimeChunkLockAcquireAction;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -263,9 +262,7 @@ public class RealtimeIndexTask extends AbstractTask
             "Cannot acquire a lock for interval[%s]",
             segment.getInterval()
         );
-        if (lock.isRevoked()) {
-          throw new ISE(StringUtils.format("Lock for interval [%s] was revoked.", segment.getInterval()));
-        }
+        lock.assertNotRevoked();
         toolbox.getSegmentAnnouncer().announceSegment(segment);
       }
 
@@ -292,9 +289,7 @@ public class RealtimeIndexTask extends AbstractTask
               "Cannot acquire a lock for interval[%s]",
               segment.getInterval()
           );
-          if (lock.isRevoked()) {
-            throw new ISE(StringUtils.format("Lock for interval [%s] was revoked.", segment.getInterval()));
-          }
+          lock.assertNotRevoked();
         }
         toolbox.getSegmentAnnouncer().announceSegments(segments);
       }
@@ -346,9 +341,7 @@ public class RealtimeIndexTask extends AbstractTask
               "Cannot acquire a lock for interval[%s]",
               interval
           );
-          if (lock.isRevoked()) {
-            throw new ISE(StringUtils.format("Lock for interval [%s] was revoked.", interval));
-          }
+          lock.assertNotRevoked();
           return lock.getVersion();
         }
         catch (IOException e) {

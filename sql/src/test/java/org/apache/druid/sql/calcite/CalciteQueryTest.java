@@ -122,6 +122,8 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.CannotBuildQueryException;
 import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.calcite.util.SqlTestFramework;
+import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.hamcrest.CoreMatchers;
 import org.joda.time.DateTime;
@@ -148,6 +150,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
+@SqlTestFramework.SqlTestFrameWorkModule(value = StandardComponentSupplier.class)
 public class CalciteQueryTest extends BaseCalciteQueryTest
 {
   @Test
@@ -5847,8 +5850,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     // COUNT DISTINCT on a sketch cannot be exact.
     assertQueryIsUnplannable(
         PLANNER_CONFIG_NO_HLL,
-        "SELECT COUNT(distinct unique_dim1) FROM druid.foo",
-        "SQL requires a group-by on a column of type COMPLEX<hyperUnique> that is unsupported."
+        "SELECT unique_dim1, COUNT(*) FROM druid.foo GROUP BY 1",
+        "SQL requires a group-by on a column with type [COMPLEX<hyperUnique>] that is unsupported."
     );
   }
 
