@@ -22,7 +22,6 @@ package org.apache.druid.timeline;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 
 import java.util.List;
@@ -37,7 +36,7 @@ import java.util.stream.Collectors;
  * The compaction task is a task that reads Druid segments and overwrites them with new ones. Since this task always
  * reads segments in the same order, the same task spec will always create the same set of segments
  * (not same segment ID, but same content).
- *
+ * <p>
  * Note that this class doesn't include all fields in the compaction task spec. Only the configurations that can
  * affect the content of segment should be included.
  *
@@ -45,8 +44,6 @@ import java.util.stream.Collectors;
  */
 public class CompactionState
 {
-  private static final CompactionEngine DEFAULT_COMPACTION_ENGINE = CompactionEngine.NATIVE;
-
   private final PartitionsSpec partitionsSpec;
   private final DimensionsSpec dimensionsSpec;
   // org.apache.druid.segment.transform.TransformSpec cannot be used here because it's in the 'processing' module which
@@ -62,8 +59,6 @@ public class CompactionState
   // has a dependency on the 'core' module where this class is.
   private final List<Object> metricsSpec;
 
-  private final CompactionEngine compactionEngine;
-
   @JsonCreator
   public CompactionState(
       @JsonProperty("partitionsSpec") PartitionsSpec partitionsSpec,
@@ -71,8 +66,7 @@ public class CompactionState
       @JsonProperty("metricsSpec") List<Object> metricsSpec,
       @JsonProperty("transformSpec") Map<String, Object> transformSpec,
       @JsonProperty("indexSpec") Map<String, Object> indexSpec,
-      @JsonProperty("granularitySpec") Map<String, Object> granularitySpec,
-      @JsonProperty("compactionEngine") CompactionEngine compactionEngine
+      @JsonProperty("granularitySpec") Map<String, Object> granularitySpec
   )
   {
     this.partitionsSpec = partitionsSpec;
@@ -81,7 +75,6 @@ public class CompactionState
     this.transformSpec = transformSpec;
     this.indexSpec = indexSpec;
     this.granularitySpec = granularitySpec;
-    this.compactionEngine = compactionEngine == null ? DEFAULT_COMPACTION_ENGINE : compactionEngine;
   }
 
   @JsonProperty
@@ -120,12 +113,6 @@ public class CompactionState
     return granularitySpec;
   }
 
-  @JsonProperty
-  public CompactionEngine getCompactionEngine()
-  {
-    return compactionEngine;
-  }
-
   @Override
   public boolean equals(Object o)
   {
@@ -141,8 +128,7 @@ public class CompactionState
            Objects.equals(transformSpec, that.transformSpec) &&
            Objects.equals(indexSpec, that.indexSpec) &&
            Objects.equals(granularitySpec, that.granularitySpec) &&
-           Objects.equals(metricsSpec, that.metricsSpec) &&
-           Objects.equals(compactionEngine, that.compactionEngine);
+           Objects.equals(metricsSpec, that.metricsSpec);
   }
 
   @Override
@@ -154,8 +140,7 @@ public class CompactionState
         transformSpec,
         indexSpec,
         granularitySpec,
-        metricsSpec,
-        compactionEngine
+        metricsSpec
     );
   }
 
@@ -169,7 +154,6 @@ public class CompactionState
            ", indexSpec=" + indexSpec +
            ", granularitySpec=" + granularitySpec +
            ", metricsSpec=" + metricsSpec +
-           ", compactionEngine=" + compactionEngine +
            '}';
   }
 
@@ -179,8 +163,7 @@ public class CompactionState
       List<Object> metricsSpec,
       Map<String, Object> transformSpec,
       Map<String, Object> indexSpec,
-      Map<String, Object> granularitySpec,
-      CompactionEngine compactionEngine
+      Map<String, Object> granularitySpec
   )
   {
     CompactionState compactionState = new CompactionState(
@@ -189,8 +172,7 @@ public class CompactionState
         metricsSpec,
         transformSpec,
         indexSpec,
-        granularitySpec,
-        compactionEngine
+        granularitySpec
     );
 
     return segments -> segments
@@ -198,5 +180,4 @@ public class CompactionState
         .map(s -> s.withLastCompactionState(compactionState))
         .collect(Collectors.toSet());
   }
-
 }

@@ -26,7 +26,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.RangeSet;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -133,8 +132,7 @@ public class DataSegmentTest
             ImmutableList.of(ImmutableMap.of("type", "count", "name", "count")),
             ImmutableMap.of("filter", ImmutableMap.of("type", "selector", "dimension", "dim1", "value", "foo")),
             ImmutableMap.of(),
-            ImmutableMap.of(),
-            CompactionEngine.NATIVE
+            ImmutableMap.of()
         ),
         TEST_VERSION,
         1
@@ -199,8 +197,7 @@ public class DataSegmentTest
             null,
             null,
             ImmutableMap.of(),
-            ImmutableMap.of(),
-            CompactionEngine.NATIVE
+            ImmutableMap.of()
         ),
         TEST_VERSION,
         1
@@ -351,8 +348,7 @@ public class DataSegmentTest
         ImmutableList.of(ImmutableMap.of("type", "count", "name", "count")),
         ImmutableMap.of("filter", ImmutableMap.of("type", "selector", "dimension", "dim1", "value", "foo")),
         Collections.singletonMap("test", "map"),
-        Collections.singletonMap("test2", "map2"),
-        CompactionEngine.NATIVE
+        Collections.singletonMap("test2", "map2")
     );
     final DataSegment segment1 = DataSegment.builder()
                                             .dataSource("foo")
@@ -394,8 +390,7 @@ public class DataSegmentTest
         metricsSpec,
         transformSpec,
         indexSpec,
-        granularitySpec,
-        CompactionEngine.NATIVE
+        granularitySpec
     );
 
     final Function<Set<DataSegment>, Set<DataSegment>> addCompactionStateFunction =
@@ -405,8 +400,7 @@ public class DataSegmentTest
             metricsSpec,
             transformSpec,
             indexSpec,
-            granularitySpec,
-            CompactionEngine.NATIVE
+            granularitySpec
         );
 
     final DataSegment segment1 = DataSegment.builder()

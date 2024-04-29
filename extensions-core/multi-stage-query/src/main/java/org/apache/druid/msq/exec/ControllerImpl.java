@@ -63,7 +63,6 @@ import org.apache.druid.frame.processor.FrameProcessorExecutor;
 import org.apache.druid.frame.util.DurableStorageUtils;
 import org.apache.druid.frame.write.InvalidFieldException;
 import org.apache.druid.frame.write.InvalidNullByteException;
-import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
@@ -1894,8 +1893,7 @@ public class ControllerImpl implements Controller
         metricsSpec,
         transformSpec,
         indexSpec.asMap(jsonMapper),
-        granularitySpec.asMap(jsonMapper),
-        CompactionEngine.MSQ
+        granularitySpec.asMap(jsonMapper)
     );
   }
 
