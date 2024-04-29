@@ -517,8 +517,19 @@ public class IndexedTableJoinMatcher implements JoinMatcher
     @Override
     public ConditionMatcher makeComplexProcessor(BaseObjectColumnValueSelector<?> selector)
     {
-      return () -> {
-        throw new QueryUnsupportedException("Joining against COMPLEX columns is not supported.");
+      return new ConditionMatcher()
+      {
+        @Override
+        public int matchSingleRow()
+        {
+          return NO_CONDITION_MATCH;
+        }
+
+        @Override
+        public IntSortedSet match()
+        {
+          return IntSortedSets.EMPTY_SET;
+        }
       };
     }
 
