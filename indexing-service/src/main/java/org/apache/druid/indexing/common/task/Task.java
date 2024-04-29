@@ -67,10 +67,10 @@ import java.util.Set;
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
     @Type(name = KillUnusedSegmentsTask.TYPE, value = KillUnusedSegmentsTask.class),
-    @Type(name = "move", value = MoveTask.class),
-    @Type(name = "archive", value = ArchiveTask.class),
-    @Type(name = "restore", value = RestoreTask.class),
-    @Type(name = "index", value = IndexTask.class),
+    @Type(name = MoveTask.TYPE, value = MoveTask.class),
+    @Type(name = ArchiveTask.TYPE, value = ArchiveTask.class),
+    @Type(name = RestoreTask.TYPE, value = RestoreTask.class),
+    @Type(name = IndexTask.TYPE, value = IndexTask.class),
     @Type(name = ParallelIndexSupervisorTask.TYPE, value = ParallelIndexSupervisorTask.class),
     @Type(name = SinglePhaseSubTask.TYPE, value = SinglePhaseSubTask.class),
     // for backward compatibility
@@ -80,11 +80,11 @@ import java.util.Set;
     @Type(name = PartialRangeSegmentGenerateTask.TYPE, value = PartialRangeSegmentGenerateTask.class),
     @Type(name = PartialDimensionDistributionTask.TYPE, value = PartialDimensionDistributionTask.class),
     @Type(name = PartialGenericSegmentMergeTask.TYPE, value = PartialGenericSegmentMergeTask.class),
-    @Type(name = "index_hadoop", value = HadoopIndexTask.class),
-    @Type(name = "index_realtime", value = RealtimeIndexTask.class),
-    @Type(name = "index_realtime_appenderator", value = AppenderatorDriverRealtimeIndexTask.class),
-    @Type(name = "noop", value = NoopTask.class),
-    @Type(name = "compact", value = CompactionTask.class)
+    @Type(name = HadoopIndexTask.TYPE, value = HadoopIndexTask.class),
+    @Type(name = RealtimeIndexTask.TYPE, value = RealtimeIndexTask.class),
+    @Type(name = AppenderatorDriverRealtimeIndexTask.TYPE, value = AppenderatorDriverRealtimeIndexTask.class),
+    @Type(name = NoopTask.TYPE, value = NoopTask.class),
+    @Type(name = CompactionTask.TYPE, value = CompactionTask.class)
 })
 public interface Task
 {
