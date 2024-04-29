@@ -33,6 +33,7 @@ import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.metadata.SortOrder;
 import org.apache.druid.segment.metadata.AvailableSegmentMetadata;
@@ -77,6 +78,7 @@ import java.util.stream.Stream;
 @Path("/druid/coordinator/v1/metadata")
 public class MetadataResource
 {
+  private static final Logger log = new Logger(MetadataResource.class);
   private final SegmentsMetadataManager segmentsMetadataManager;
   private final IndexerMetadataStorageCoordinator metadataStorageCoordinator;
   private final AuthorizerMapper authorizerMapper;
@@ -156,37 +158,46 @@ public class MetadataResource
       @QueryParam("includeRealtimeSegments") final @Nullable String includeRealtimeSegments
   )
   {
-    // realtime segments can be requested only when {@code includeOverShadowedStatus} is set
-    if (includeOvershadowedStatus == null && includeRealtimeSegments != null) {
-      return Response.status(Response.Status.BAD_REQUEST).build();
-    }
+    try {
+      // realtime segments can be requested only when includeOverShadowedStatus is set
+      if (includeOvershadowedStatus == null && includeRealtimeSegments != null) {
+        return Response.status(Response.Status.BAD_REQUEST).build();
+      }
 
-    if (includeOvershadowedStatus != null) {
-      // note that realtime segments are returned only when druid.centralizedDatasourceSchema.enabled is set on the Coordinator
-      // when the feature is disabled we do not want to increase the payload size polled by the Brokers, since they already have this information
-      return getAllUsedSegmentsWithAdditionalDetails(req, dataSources, includeRealtimeSegments);
-    }
+      if (includeOvershadowedStatus != null) {
+        // note that realtime segments are returned only when druid.centralizedDatasourceSchema.enabled is set on the Coordinator
+        // when the feature is disabled we do not want to increase the payload size polled by the Brokers, since they already have this information
+        return getAllUsedSegmentsWithAdditionalDetails(req, dataSources, includeRealtimeSegments);
+      }
 
-    Collection<ImmutableDruidDataSource> dataSourcesWithUsedSegments =
-        segmentsMetadataManager.getImmutableDataSourcesWithAllUsedSegments();
-    if (dataSources != null && !dataSources.isEmpty()) {
-      dataSourcesWithUsedSegments = dataSourcesWithUsedSegments
+      Collection<ImmutableDruidDataSource> dataSourcesWithUsedSegments =
+          segmentsMetadataManager.getImmutableDataSourcesWithAllUsedSegments();
+      if (dataSources != null && !dataSources.isEmpty()) {
+        dataSourcesWithUsedSegments = dataSourcesWithUsedSegments
+            .stream()
+            .filter(dataSourceWithUsedSegments -> dataSources.contains(dataSourceWithUsedSegments.getName()))
+            .collect(Collectors.toList());
+      }
+      final Stream<DataSegment> usedSegments = dataSourcesWithUsedSegments
           .stream()
-          .filter(dataSourceWithUsedSegments -> dataSources.contains(dataSourceWithUsedSegments.getName()))
-          .collect(Collectors.toList());
+          .flatMap(t -> t.getSegments().stream());
+
+      final Function<DataSegment, Iterable<ResourceAction>> raGenerator = segment -> Collections.singletonList(
+          AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getDataSource()));
+
+      final Iterable<DataSegment> authorizedSegments =
+          AuthorizationUtils.filterAuthorizedResources(req, usedSegments::iterator, raGenerator, authorizerMapper);
+
+      Response.ResponseBuilder builder = Response.status(Response.Status.OK);
+      return builder.entity(authorizedSegments).build();
     }
-    final Stream<DataSegment> usedSegments = dataSourcesWithUsedSegments
-        .stream()
-        .flatMap(t -> t.getSegments().stream());
-
-    final Function<DataSegment, Iterable<ResourceAction>> raGenerator = segment -> Collections.singletonList(
-        AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getDataSource()));
-
-    final Iterable<DataSegment> authorizedSegments =
-        AuthorizationUtils.filterAuthorizedResources(req, usedSegments::iterator, raGenerator, authorizerMapper);
-
-    Response.ResponseBuilder builder = Response.status(Response.Status.OK);
-    return builder.entity(authorizedSegments).build();
+    catch (DruidException e) {
+      return ServletResourceUtils.buildErrorResponseFrom(e);
+    }
+    catch (Exception e) {
+      log.error(e, "Error while fetching used segment information.");
+      return Response.serverError().entity(ImmutableMap.of("error", e.toString())).build();
+    }
   }
 
   private Response getAllUsedSegmentsWithAdditionalDetails(

@@ -158,7 +158,11 @@ public interface BufferAggregator extends HotLoopCallee
   }
 
   /**
-   * Release any resources used by the aggregator
+   * Release any resources used by the aggregator. The aggregator may be reused after this call, by calling
+   * {@link #init(ByteBuffer, int)} followed by other methods as normal.
+   *
+   * This call would be more properly named "reset", but we use the name "close" to improve compatibility with
+   * existing aggregator implementations in extensions.
    */
   void close();
 

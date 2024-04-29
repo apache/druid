@@ -332,7 +332,8 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
         return Futures.immediateFuture(
             new SegmentsAndCommitMetadata(
                 segmentsAndCommitMetadata.getSegments(),
-                ((AppenderatorDriverMetadata) metadata).getCallerMetadata()
+                ((AppenderatorDriverMetadata) metadata).getCallerMetadata(),
+                segmentsAndCommitMetadata.getSegmentSchemaMapping()
             )
         );
       }
@@ -375,7 +376,8 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
                         resultFuture.set(
                             new SegmentsAndCommitMetadata(
                                 segments,
-                                ((AppenderatorDriverMetadata) metadata).getCallerMetadata()
+                                ((AppenderatorDriverMetadata) metadata).getCallerMetadata(),
+                                segmentsAndCommitMetadata.getSegmentSchemaMapping()
                             )
                         );
                       }

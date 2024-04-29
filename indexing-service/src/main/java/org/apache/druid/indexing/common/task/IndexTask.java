@@ -67,6 +67,7 @@ import org.apache.druid.indexing.overlord.sampler.InputSourceSampler;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -75,6 +76,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.incremental.AppendableIndexSpec;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
@@ -881,8 +883,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
 
     final TaskLockType taskLockType = getTaskLockHelper().getLockTypeToUse();
     final TransactionalSegmentPublisher publisher =
-        (segmentsToBeOverwritten, segmentsToPublish, commitMetadata) -> toolbox.getTaskActionClient().submit(
-            buildPublishAction(segmentsToBeOverwritten, segmentsToPublish, taskLockType)
+        (segmentsToBeOverwritten, segmentsToPublish, commitMetadata, map) -> toolbox.getTaskActionClient().submit(
+            buildPublishAction(segmentsToBeOverwritten, segmentsToPublish, map, taskLockType)
         );
 
     String effectiveId = getContextValue(CompactionTask.CTX_KEY_APPENDERATOR_TRACKING_TASK_ID, null);
@@ -905,7 +907,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
     try (final BatchAppenderatorDriver driver = BatchAppenderators.newDriver(appenderator, toolbox, segmentAllocator)) {
       driver.startJob();
 
-      SegmentsAndCommitMetadata pushed = InputSourceProcessor.process(
+      Pair<SegmentsAndCommitMetadata, SegmentSchemaMapping> commitMetadataAndSchema = InputSourceProcessor.process(
           dataSchema,
           driver,
           partitionsSpec,
@@ -919,6 +921,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
           pushTimeout
       );
 
+      SegmentsAndCommitMetadata pushed = commitMetadataAndSchema.lhs;
       // If we use timeChunk lock, then we don't have to specify what segments will be overwritten because
       // it will just overwrite all segments overlapped with the new segments.
       final Set<DataSegment> inputSegments = getTaskLockHelper().isUseSegmentLock()
@@ -956,7 +959,6 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
 
         tombStones = tombstoneHelper.computeTombstones(ingestionSchema.getDataSchema(), tombstonesAndVersions);
 
-
         log.debugSegments(tombStones, "To publish tombstones");
       }
 
@@ -966,7 +968,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
               inputSegments,
               tombStones,
               publisher,
-              annotateFunction
+              annotateFunction,
+              commitMetadataAndSchema.rhs
           ), pushTimeout);
       appenderator.close();
 
@@ -1776,5 +1779,4 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
              '}';
     }
   }
-
 }
