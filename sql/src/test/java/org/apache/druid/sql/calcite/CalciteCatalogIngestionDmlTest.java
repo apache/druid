@@ -267,6 +267,7 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
                     new TableSpec(
                         DatasourceDefn.TABLE_TYPE,
                         ImmutableMap.of(
+                            DatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "ALL",
                             DatasourceDefn.CLUSTER_KEYS_PROPERTY,
                             ImmutableList.of(
                                 new ClusterKeySpec("dim1", false),
@@ -618,7 +619,6 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
              "  data => ARRAY['2022-12-26T12:34:56,extra,10,\"20\",foo'],\n" +
              "  format => 'csv'))\n" +
              "  (a VARCHAR, b VARCHAR, c BIGINT, d VARCHAR, e VARCHAR)\n" +
-             "PARTITIONED BY ALL TIME\n" +
              "CLUSTERED BY dim1")
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
         .expectTarget("tableWithClustering", signature)

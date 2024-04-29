@@ -452,6 +452,17 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
     }
 
     if (effectiveGranularity == null) {
+      SqlNode source = ingestNode.getSource();
+      while (source instanceof SqlWith) {
+        source = ((SqlWith) source).getOperandList().get(1);
+      }
+      final SqlSelect select = (SqlSelect) source;
+
+      if (select.getOrderList() != null) {
+        throw DruidSqlParserUtils.problemParsing(
+            "CLUSTERED BY found before PARTITIONED BY, CLUSTERED BY must come after the PARTITIONED BY clause"
+        );
+      }
       throw InvalidSqlInput.exception(
           "Operation [%s] requires a PARTITIONED BY to be explicitly defined, but none was found.",
           operationName);
