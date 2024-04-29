@@ -32,6 +32,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
+import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.assertj.core.api.Assertions;
 import org.hamcrest.MatcherAssert;
@@ -421,6 +422,17 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         .markAsUnused(true)
         .build();
     Assert.assertTrue(task.getInputSourceResources().isEmpty());
+  }
+
+  @Test
+  public void testGetLookupsToLoad()
+  {
+    final KillUnusedSegmentsTask task = new KillUnusedSegmentsTaskBuilder()
+        .dataSource(DATA_SOURCE)
+        .interval(Intervals.of("2019-03-01/2019-04-01"))
+        .markAsUnused(true)
+        .build();
+    Assert.assertEquals(LookupLoadingSpec.Mode.NONE, task.getLookupLoadingSpec().getMode());
   }
 
   @Test
