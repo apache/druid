@@ -31,14 +31,14 @@ public class InternalServerErrorTest
   @Test
   public void testAsErrorResponse()
   {
-    ErrorResponse errorResponse = new ErrorResponse(InternalServerError.exception("runtimeFailure", "Internal Server Error"));
+    ErrorResponse errorResponse = new ErrorResponse(InternalServerError.exception("Internal Server Error"));
     final Map<String, Object> asMap = errorResponse.getAsMap();
 
     MatcherAssert.assertThat(
         asMap,
         DruidMatchers.mapMatcher(
             "error", "druidException",
-            "errorCode", "runtimeFailure",
+            "errorCode", "internalServerError",
             "persona", "OPERATOR",
             "category", "RUNTIME_FAILURE",
             "errorMessage", "Internal Server Error"
@@ -52,7 +52,7 @@ public class InternalServerErrorTest
         new DruidExceptionMatcher(
             DruidException.Persona.OPERATOR,
             DruidException.Category.RUNTIME_FAILURE,
-            "runtimeFailure"
+            "internalServerError"
         ).expectMessageContains("Internal Server Error")
     );
   }

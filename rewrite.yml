@@ -1,0 +1,157 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: org.apache.druid.RewriteRules
+recipeList:
+  - org.apache.druid.UpgradeCalciteTestsToJunit5
+  - org.openrewrite.java.testing.junit5.RemoveObsoleteRunners:
+      obsoleteRunners:
+        - org.junit.experimental.runners.Enclosed
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: org.apache.druid.UpgradeCalciteTestsToJunit5
+preconditions:
+  - org.openrewrite.java.search.FindImplementations:
+       typeName: org.apache.druid.sql.calcite.util.CalciteTestBase
+recipeList:
+  - org.apache.druid.JUnit4to5Migration
+  - org.openrewrite.staticanalysis.UnnecessaryThrows
+  #- org.openrewrite.java.testing.junit5.StaticImports
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: org.apache.druid.EasyMockRunnerToEasyMockExtension
+displayName: Replace EasyMock `@RunWith` with `@ExtendWith` usage
+recipeList:
+  - org.openrewrite.java.testing.junit5.RunnerToExtension:
+      runners:
+        - org.easymock.EasyMockRunner
+      extension: org.easymock.EasyMockExtension
+---
+# Customized version of org.openrewrite.java.testing.junit5.JUnit4to5Migration
+# commented lines are recipes which were disabled
+type: specs.openrewrite.org/v1beta/recipe
+name: org.apache.druid.JUnit4to5Migration
+displayName: Custom JUnit Jupiter migration from JUnit 4.x
+description: Migrates JUnit 4.x tests to JUnit Jupiter.
+tags:
+  - junit
+  - testing
+recipeList:
+  - org.openrewrite.java.testing.junit5.UseWiremockExtension
+  - org.openrewrite.java.testing.junit5.IgnoreToDisabled
+  - org.openrewrite.java.testing.junit5.ThrowingRunnableToExecutable
+  - org.openrewrite.java.testing.junit5.RemoveObsoleteRunners:
+      obsoleteRunners: [org.junit.runners.JUnit4, org.junit.runners.BlockJUnit4ClassRunner]
+  - org.openrewrite.maven.RemovePluginDependency:
+      pluginGroupId: org.apache.maven.plugins
+      pluginArtifactId: maven-surefire-plugin
+      groupId: org.apache.maven.surefire
+      artifactId: surefire-junit*
+  - org.openrewrite.java.testing.junit5.UseHamcrestAssertThat
+  - org.openrewrite.java.testing.junit5.MigrateAssumptions
+  - org.openrewrite.java.testing.junit5.UseMockitoExtension
+  - org.openrewrite.java.testing.junit5.UseTestMethodOrder
+  - org.openrewrite.java.testing.junit5.MigrateJUnitTestCase
+  - org.openrewrite.java.ChangeMethodName:
+      methodPattern: org.junit.Assert assertEquals(.., Object[], Object[])
+      newMethodName: assertArrayEquals
+  #- org.openrewrite.java.testing.junit5.AssertToAssertions
+  - org.openrewrite.java.testing.junit5.CategoryToTag
+  - org.openrewrite.java.testing.junit5.CleanupJUnitImports
+  - org.openrewrite.java.testing.junit5.TemporaryFolderToTempDir
+  - org.openrewrite.java.testing.junit5.TempDirNonFinal
+  - org.openrewrite.java.testing.junit5.TestRuleToTestInfo
+  - org.openrewrite.java.testing.junit5.UpdateBeforeAfterAnnotations
+  - org.openrewrite.java.testing.junit5.UpdateTestAnnotation
+  - org.openrewrite.java.testing.junit5.AddMissingTestBeforeAfterAnnotations
+  - org.openrewrite.java.testing.junit5.ParameterizedRunnerToParameterized
+  - org.openrewrite.java.testing.junit5.JUnitParamsRunnerToParameterized
+  - org.apache.druid.EasyMockRunnerToEasyMockExtension
+  - org.openrewrite.java.testing.junit5.ExpectedExceptionToAssertThrows
+  - org.openrewrite.java.testing.junit5.UpdateMockWebServer
+  - org.openrewrite.java.testing.junit5.VertxUnitToVertxJunit5
+  - org.openrewrite.java.testing.junit5.EnclosedToNested
+  - org.openrewrite.java.testing.junit5.AddMissingNested
+  - org.openrewrite.java.testing.hamcrest.AddHamcrestIfUsed
+  - org.openrewrite.java.testing.junit5.UseXMLUnitLegacy
+  - org.openrewrite.java.dependencies.RemoveDependency:
+      groupId: junit
+      artifactId: junit
+  - org.openrewrite.maven.ExcludeDependency:
+      groupId: junit
+      artifactId: junit
+  - org.openrewrite.maven.RemoveExclusion:
+      groupId: org.testcontainers
+      artifactId: testcontainers
+      exclusionGroupId: junit
+      exclusionArtifactId: junit
+  - org.openrewrite.maven.RemoveExclusion:
+      groupId: org.springframework.boot
+      artifactId: spring-boot-testcontainers
+      exclusionGroupId: junit
+      exclusionArtifactId: junit
+  - org.openrewrite.java.dependencies.RemoveDependency:
+      groupId: org.junit.vintage
+      artifactId: junit-vintage-engine
+  - org.openrewrite.maven.ExcludeDependency:
+      groupId: org.junit.vintage
+      artifactId: junit-vintage-engine
+  - org.openrewrite.java.dependencies.AddDependency:
+      groupId: org.junit.jupiter
+      artifactId: junit-jupiter
+      version: 5.x
+      onlyIfUsing: org.junit.Test
+      scope: test
+  - org.openrewrite.java.dependencies.AddDependency:
+      groupId: org.junit.jupiter
+      artifactId: junit-jupiter
+      version: 5.x
+      onlyIfUsing: org.junit.jupiter.api.Test
+      scope: test
+      acceptTransitive: true
+  - org.openrewrite.java.dependencies.AddDependency:
+      groupId: org.junit.jupiter
+      artifactId: junit-jupiter-api
+      version: 5.x
+      onlyIfUsing: org.junit.Test
+      scope: test
+  - org.openrewrite.java.dependencies.AddDependency:
+      groupId: org.junit.jupiter
+      artifactId: junit-jupiter-api
+      version: 5.x
+      onlyIfUsing: org.junit.jupiter.api.Test
+      scope: test
+      acceptTransitive: true
+  - org.openrewrite.java.dependencies.AddDependency:
+      groupId: org.junit.jupiter
+      artifactId: junit-jupiter-params
+      version: 5.x
+      onlyIfUsing: org.junit.jupiter.params.ParameterizedTest
+      scope: test
+      acceptTransitive: true
+  - org.openrewrite.java.dependencies.UpgradeDependencyVersion:
+      groupId: org.mockito
+      artifactId: "*"
+      newVersion: 3.x
+      overrideManagedVersion: false
+  - org.openrewrite.maven.UpgradePluginVersion:
+      groupId: org.apache.maven.plugins
+      artifactId: maven-surefire-plugin
+      newVersion: 2.22.x
+  - org.openrewrite.maven.UpgradePluginVersion:
+      groupId: org.apache.maven.plugins
+      artifactId: maven-failsafe-plugin
+      newVersion: 2.22.x

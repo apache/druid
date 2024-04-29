@@ -25,6 +25,7 @@ import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Floats;
 import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.data.input.impl.DimensionSchema.MultiValueHandling;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.parsers.ParseException;
@@ -201,7 +202,8 @@ public final class DimensionHandlerUtils
       final String dimName = dimSpec.getDimension();
       final ColumnValueSelector<?> selector = getColumnValueSelectorFromDimensionSpec(
           dimSpec,
-          columnSelectorFactory
+          columnSelectorFactory,
+          strategyFactory.supportsComplexTypes()
       );
       Strategy strategy = makeStrategy(
           strategyFactory,
@@ -222,12 +224,13 @@ public final class DimensionHandlerUtils
 
   private static ColumnValueSelector<?> getColumnValueSelectorFromDimensionSpec(
       DimensionSpec dimSpec,
-      ColumnSelectorFactory columnSelectorFactory
+      ColumnSelectorFactory columnSelectorFactory,
+      boolean supportsComplexTypes
   )
   {
     String dimName = dimSpec.getDimension();
     ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(dimName);
-    capabilities = getEffectiveCapabilities(dimSpec, capabilities);
+    capabilities = getEffectiveCapabilities(dimSpec, capabilities, supportsComplexTypes);
     if (capabilities.is(ValueType.STRING)) {
       return columnSelectorFactory.makeDimensionSelector(dimSpec);
     }
@@ -241,7 +244,8 @@ public final class DimensionHandlerUtils
    */
   private static ColumnCapabilities getEffectiveCapabilities(
       DimensionSpec dimSpec,
-      @Nullable ColumnCapabilities capabilities
+      @Nullable ColumnCapabilities capabilities,
+      boolean supportsComplexTypes
   )
   {
     if (capabilities == null) {
@@ -249,7 +253,7 @@ public final class DimensionHandlerUtils
     }
 
     // Complex dimension type is not supported
-    if (capabilities.is(ValueType.COMPLEX)) {
+    if (!supportsComplexTypes && capabilities.is(ValueType.COMPLEX)) {
       capabilities = DEFAULT_STRING_CAPABILITIES;
     }
 
@@ -289,8 +293,8 @@ public final class DimensionHandlerUtils
       ColumnValueSelector<?> selector
   )
   {
-    capabilities = getEffectiveCapabilities(dimSpec, capabilities);
-    return strategyFactory.makeColumnSelectorStrategy(capabilities, selector);
+    capabilities = getEffectiveCapabilities(dimSpec, capabilities, strategyFactory.supportsComplexTypes());
+    return strategyFactory.makeColumnSelectorStrategy(capabilities, selector, dimSpec.getDimension());
   }
 
   @Nullable
@@ -403,19 +407,16 @@ public final class DimensionHandlerUtils
       case STRING:
         return convertObjectToString(obj);
       case ARRAY:
-        switch (type.getElementType().getType()) {
-          case STRING:
-            return coerceToStringArray(obj);
-          case LONG:
-            return coerceToObjectArrayWithElementCoercionFunction(obj, DimensionHandlerUtils::convertObjectToLong);
-          case FLOAT:
-            return coerceToObjectArrayWithElementCoercionFunction(obj, DimensionHandlerUtils::convertObjectToFloat);
-          case DOUBLE:
-            return coerceToObjectArrayWithElementCoercionFunction(obj, DimensionHandlerUtils::convertObjectToDouble);
-        }
-
+        return coerceToObjectArrayWithElementCoercionFunction(
+            obj,
+            x -> DimensionHandlerUtils.convertObjectToType(x, type.getElementType())
+        );
+      case COMPLEX:
+        // Can't coerce complex objects, and we shouldn't need to. If in future selectors behave weirdly, or we need to
+        // cast them (for some unknown reason), we can have that casting knowledge in the type strategy
+        return obj;
       default:
-        throw new IAE("Type[%s] is not supported for dimensions!", type);
+        throw DruidException.defensive("Type[%s] is not supported for dimensions!", type);
     }
   }
 
@@ -426,8 +427,9 @@ public final class DimensionHandlerUtils
   }
 
 
+  @Nullable
   public static Object[] coerceToObjectArrayWithElementCoercionFunction(
-      Object obj,
+      @Nullable Object obj,
       Function<Object, Object> coercionFunction
   )
   {

@@ -143,6 +143,33 @@ public class NullHandling
   }
 
   @Nullable
+  public static Long nullToEmptyIfNeeded(@Nullable Long value)
+  {
+    if (replaceWithDefault() && value == null) {
+      return defaultLongValue();
+    }
+    return value;
+  }
+
+  @Nullable
+  public static Float nullToEmptyIfNeeded(@Nullable Float value)
+  {
+    if (replaceWithDefault() && value == null) {
+      return defaultFloatValue();
+    }
+    return value;
+  }
+
+  @Nullable
+  public static Double nullToEmptyIfNeeded(@Nullable Double value)
+  {
+    if (replaceWithDefault() && value == null) {
+      return defaultDoubleValue();
+    }
+    return value;
+  }
+
+  @Nullable
   public static String emptyToNullIfNeeded(@Nullable String value)
   {
     //CHECKSTYLE.OFF: Regexp

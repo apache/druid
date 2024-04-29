@@ -112,13 +112,7 @@ public class DatasourceTableTest
 
     {
       TableSpec spec = new TableSpec(DatasourceDefn.TABLE_TYPE, ImmutableMap.of(), null);
-      ResolvedTable table = registry.resolve(spec);
-      expectValidationFails(table);
-    }
-
-    {
-      TableSpec spec = new TableSpec(DatasourceDefn.TABLE_TYPE, ImmutableMap.of(), null);
-      expectValidationFails(spec);
+      expectValidationSucceeds(spec);
     }
   }
 

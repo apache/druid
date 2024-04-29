@@ -56,11 +56,15 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.BaseProgressIndicator;
+import org.apache.druid.segment.DataSegmentWithSchema;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.ReferenceCountingSegment;
+import org.apache.druid.segment.SchemaPayload;
+import org.apache.druid.segment.SchemaPayloadPlus;
+import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexAddResult;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
@@ -70,6 +74,7 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.metadata.FingerprintGenerator;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.FireHydrant;
 import org.apache.druid.segment.realtime.plumber.Sink;
@@ -181,6 +186,7 @@ public class StreamAppenderator implements Appenderator
 
   private final SegmentLoaderConfig segmentLoaderConfig;
   private ScheduledExecutorService exec;
+  private final FingerprintGenerator fingerprintGenerator;
 
   /**
    * This constructor allows the caller to provide its own SinkQuerySegmentWalker.
@@ -243,6 +249,7 @@ public class StreamAppenderator implements Appenderator
         1,
         Execs.makeThreadFactory("StreamAppenderSegmentRemoval-%s")
     );
+    this.fingerprintGenerator = new FingerprintGenerator(objectMapper);
   }
 
   @VisibleForTesting
@@ -768,6 +775,7 @@ public class StreamAppenderator implements Appenderator
         persistAll(committer),
         (Function<Object, SegmentsAndCommitMetadata>) commitMetadata -> {
           final List<DataSegment> dataSegments = new ArrayList<>();
+          final SegmentSchemaMapping segmentSchemaMapping = new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
 
           log.info("Preparing to push (stats): processed rows: [%d], sinks: [%d], fireHydrants (across sinks): [%d]",
                    rowIngestionMeters.getProcessed(), theSinks.size(), pushedHydrantsCount.get()
@@ -784,13 +792,27 @@ public class StreamAppenderator implements Appenderator
               continue;
             }
 
-            final DataSegment dataSegment = mergeAndPush(
+            final DataSegmentWithSchema dataSegmentWithSchema = mergeAndPush(
                 entry.getKey(),
                 entry.getValue(),
                 useUniquePath
             );
-            if (dataSegment != null) {
-              dataSegments.add(dataSegment);
+            if (dataSegmentWithSchema != null) {
+              DataSegment segment = dataSegmentWithSchema.getDataSegment();
+              dataSegments.add(segment);
+              SchemaPayloadPlus schemaPayloadPlus = dataSegmentWithSchema.getSegmentSchemaMetadata();
+              if (schemaPayloadPlus != null) {
+                SchemaPayload schemaPayload = schemaPayloadPlus.getSchemaPayload();
+                segmentSchemaMapping.addSchema(
+                    segment.getId(),
+                    schemaPayloadPlus,
+                    fingerprintGenerator.generateFingerprint(
+                        schemaPayload,
+                        segment.getDataSource(),
+                        CentralizedDatasourceSchemaConfig.SCHEMA_VERSION
+                    )
+                );
+              }
             } else {
               log.warn("mergeAndPush[%s] returned null, skipping.", entry.getKey());
             }
@@ -798,7 +820,7 @@ public class StreamAppenderator implements Appenderator
 
           log.info("Push complete...");
 
-          return new SegmentsAndCommitMetadata(dataSegments, commitMetadata);
+          return new SegmentsAndCommitMetadata(dataSegments, commitMetadata, segmentSchemaMapping);
         },
         pushExecutor
     );
@@ -827,7 +849,7 @@ public class StreamAppenderator implements Appenderator
    * @return segment descriptor, or null if the sink is no longer valid
    */
   @Nullable
-  private DataSegment mergeAndPush(
+  private DataSegmentWithSchema mergeAndPush(
       final SegmentIdWithShardSpec identifier,
       final Sink sink,
       final boolean useUniquePath
@@ -871,7 +893,13 @@ public class StreamAppenderator implements Appenderator
           );
         } else {
           log.info("Segment[%s] already pushed, skipping.", identifier);
-          return objectMapper.readValue(descriptorFile, DataSegment.class);
+          return new DataSegmentWithSchema(
+              objectMapper.readValue(descriptorFile, DataSegment.class),
+              centralizedDatasourceSchemaConfig.isEnabled() ? TaskSegmentSchemaUtil.getSegmentSchema(
+                  mergedTarget,
+                  indexIO
+              ) : null
+          );
         }
       }
 
@@ -943,7 +971,12 @@ public class StreamAppenderator implements Appenderator
           objectMapper.writeValueAsString(segment.getLoadSpec())
       );
 
-      return segment;
+      return new DataSegmentWithSchema(
+          segment,
+          centralizedDatasourceSchemaConfig.isEnabled()
+          ? TaskSegmentSchemaUtil.getSegmentSchema(mergedTarget, indexIO)
+          : null
+      );
     }
     catch (Exception e) {
       metrics.incrementFailedHandoffs();
@@ -1661,8 +1694,7 @@ public class StreamAppenderator implements Appenderator
     {
       this.announcer = StreamAppenderator.this.segmentAnnouncer;
       this.taskId = StreamAppenderator.this.myId;
-      boolean enabled = centralizedDatasourceSchemaConfig.isEnabled()
-                     && centralizedDatasourceSchemaConfig.announceRealtimeSegmentSchema();
+      boolean enabled = centralizedDatasourceSchemaConfig.isEnabled();
       this.scheduledExecutorService = enabled ? ScheduledExecutors.fixed(1, "Sink-Schema-Announcer-%d") : null;
     }
 

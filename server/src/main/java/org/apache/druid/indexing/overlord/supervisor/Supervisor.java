@@ -93,6 +93,15 @@ public interface Supervisor
    */
   LagStats computeLagStats();
 
+  /**
+   * Used by AutoScaler to make scaling decisions.
+   */
+  default long computeLagForAutoScaler()
+  {
+    LagStats lagStats = computeLagStats();
+    return lagStats == null ? 0L : lagStats.getTotalLag();
+  }
+
   int getActiveTaskGroupsCount();
 
   /**

@@ -40,7 +40,6 @@ import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.client.SegmentLoadInfo;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.error.ErrorResponse;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.DateTimes;
@@ -68,6 +67,7 @@ import org.apache.druid.timeline.TimelineLookup;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
+import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -205,22 +205,21 @@ public class DataSourcesResource
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(DatasourceResourceFilter.class)
   public Response markAsUsedNonOvershadowedSegments(
-      @PathParam("dataSourceName") String dataSourceName,
-      MarkDataSourceSegmentsPayload payload
+      @PathParam("dataSourceName") final String dataSourceName,
+      final SegmentsToUpdateFilter payload
   )
   {
     if (payload == null || !payload.isValid()) {
-      log.warn("Invalid request payload: [%s]", payload);
       return Response
           .status(Response.Status.BAD_REQUEST)
-          .entity("Invalid request payload, either interval or segmentIds array must be specified")
+          .entity(SegmentsToUpdateFilter.INVALID_PAYLOAD_ERROR_MESSAGE)
           .build();
     } else {
       SegmentUpdateOperation operation = () -> {
-
         final Interval interval = payload.getInterval();
+        final List<String> versions = payload.getVersions();
         if (interval != null) {
-          return segmentsMetadataManager.markAsUsedNonOvershadowedSegmentsInInterval(dataSourceName, interval);
+          return segmentsMetadataManager.markAsUsedNonOvershadowedSegmentsInInterval(dataSourceName, interval, versions);
         } else {
           final Set<String> segmentIds = payload.getSegmentIds();
           if (segmentIds == null || segmentIds.isEmpty()) {
@@ -253,22 +252,22 @@ public class DataSourcesResource
   @Consumes(MediaType.APPLICATION_JSON)
   public Response markSegmentsAsUnused(
       @PathParam("dataSourceName") final String dataSourceName,
-      final MarkDataSourceSegmentsPayload payload,
+      final SegmentsToUpdateFilter payload,
       @Context final HttpServletRequest req
   )
   {
     if (payload == null || !payload.isValid()) {
-      log.warn("Invalid request payload: [%s]", payload);
       return Response
           .status(Response.Status.BAD_REQUEST)
-          .entity("Invalid request payload, either interval or segmentIds array must be specified")
+          .entity(SegmentsToUpdateFilter.INVALID_PAYLOAD_ERROR_MESSAGE)
           .build();
     } else {
       SegmentUpdateOperation operation = () -> {
         final Interval interval = payload.getInterval();
+        final List<String> versions = payload.getVersions();
         final int numUpdatedSegments;
         if (interval != null) {
-          numUpdatedSegments = segmentsMetadataManager.markAsUnusedSegmentsInInterval(dataSourceName, interval);
+          numUpdatedSegments = segmentsMetadataManager.markAsUnusedSegmentsInInterval(dataSourceName, interval, versions);
         } else {
           final Set<SegmentId> segmentIds =
               payload.getSegmentIds()
@@ -301,7 +300,7 @@ public class DataSourcesResource
 
   private static Response logAndCreateDataSourceNotFoundResponse(String dataSourceName)
   {
-    log.warn("datasource not found [%s]", dataSourceName);
+    log.warn("datasource[%s] not found", dataSourceName);
     return Response.noContent().build();
   }
 
@@ -312,13 +311,10 @@ public class DataSourcesResource
       return Response.ok(ImmutableMap.of("numChangedSegments", numChangedSegments)).build();
     }
     catch (DruidException e) {
-      return Response
-          .status(e.getStatusCode())
-          .entity(new ErrorResponse(e))
-          .build();
+      return ServletResourceUtils.buildErrorResponseFrom(e);
     }
     catch (Exception e) {
-      log.error(e, "Error occurred while updating segments for data source[%s]", dataSourceName);
+      log.error(e, "Error occurred while updating segments for datasource[%s]", dataSourceName);
       return Response
           .serverError()
           .entity(ImmutableMap.of("error", "Exception occurred.", "message", Throwables.getRootCause(e).toString()))
@@ -566,9 +562,9 @@ public class DataSourcesResource
 
   private static class SegmentsLoadStatistics
   {
-    private int numPublishedSegments;
-    private int numUnavailableSegments;
-    private int numLoadedSegments;
+    private final int numPublishedSegments;
+    private final int numUnavailableSegments;
+    private final int numLoadedSegments;
 
     SegmentsLoadStatistics(
         int numPublishedSegments,
@@ -990,37 +986,61 @@ public class DataSourcesResource
     return false;
   }
 
+  /**
+   * Either {@code interval} or {@code segmentIds} array must be specified, but not both.
+   * {@code versions} may be optionally specified only when {@code interval} is provided.
+   */
   @VisibleForTesting
-  protected static class MarkDataSourceSegmentsPayload
+  static class SegmentsToUpdateFilter
   {
     private final Interval interval;
     private final Set<String> segmentIds;
+    private final List<String> versions;
+
+    private static final String INVALID_PAYLOAD_ERROR_MESSAGE = "Invalid request payload. Specify either 'interval' or 'segmentIds', but not both."
+                                                                + " Optionally, include 'versions' only when 'interval' is provided.";
 
     @JsonCreator
-    public MarkDataSourceSegmentsPayload(
-        @JsonProperty("interval") Interval interval,
-        @JsonProperty("segmentIds") Set<String> segmentIds
+    public SegmentsToUpdateFilter(
+        @JsonProperty("interval") @Nullable Interval interval,
+        @JsonProperty("segmentIds") @Nullable Set<String> segmentIds,
+        @JsonProperty("versions") @Nullable List<String> versions
     )
     {
       this.interval = interval;
       this.segmentIds = segmentIds;
+      this.versions = versions;
     }
 
+    @Nullable
     @JsonProperty
     public Interval getInterval()
     {
       return interval;
     }
 
+    @Nullable
     @JsonProperty
     public Set<String> getSegmentIds()
     {
       return segmentIds;
     }
 
-    public boolean isValid()
+    @Nullable
+    @JsonProperty
+    public List<String> getVersions()
     {
-      return (interval == null ^ segmentIds == null) && (segmentIds == null || !segmentIds.isEmpty());
+      return versions;
+    }
+
+    private boolean isValid()
+    {
+      final boolean hasSegmentIds = !CollectionUtils.isNullOrEmpty(segmentIds);
+      if (interval == null) {
+        return hasSegmentIds && CollectionUtils.isNullOrEmpty(versions);
+      } else {
+        return !hasSegmentIds;
+      }
     }
   }
 }

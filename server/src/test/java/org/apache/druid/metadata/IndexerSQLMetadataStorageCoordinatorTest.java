@@ -19,28 +19,26 @@
 
 package org.apache.druid.metadata;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import com.google.common.hash.Hashing;
-import com.google.common.io.BaseEncoding;
 import org.apache.druid.data.input.StringTuple;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.ObjectMetadata;
 import org.apache.druid.indexing.overlord.SegmentCreateRequest;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.jackson.JacksonUtils;
-import org.apache.druid.java.util.common.parsers.CloseableIterator;
-import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.SegmentSchemaMapping;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.metadata.FingerprintGenerator;
+import org.apache.druid.segment.metadata.SegmentSchemaManager;
+import org.apache.druid.segment.metadata.SegmentSchemaTestUtils;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.server.http.DataSegmentPlus;
 import org.apache.druid.timeline.DataSegment;
@@ -50,14 +48,12 @@ import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
 import org.apache.druid.timeline.partition.HashBasedNumberedPartialShardSpec;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.LinearShardSpec;
-import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.timeline.partition.NumberedOverwritePartialShardSpec;
 import org.apache.druid.timeline.partition.NumberedOverwriteShardSpec;
 import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartialShardSpec;
 import org.apache.druid.timeline.partition.PartitionIds;
-import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.assertj.core.api.Assertions;
@@ -69,14 +65,10 @@ import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.skife.jdbi.v2.Handle;
-import org.skife.jdbi.v2.PreparedBatch;
-import org.skife.jdbi.v2.ResultIterator;
-import org.skife.jdbi.v2.util.StringMapper;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -86,258 +78,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
-public class IndexerSQLMetadataStorageCoordinatorTest
+public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadataStorageCoordinatorTestBase
 {
-  private static final int MAX_SQL_MEATADATA_RETRY_FOR_TEST = 2;
-
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
-
-  private final ObjectMapper mapper = TestHelper.makeJsonMapper();
-
-  private final DataSegment defaultSegment = new DataSegment(
-      "fooDataSource",
-      Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
-      "version",
-      ImmutableMap.of(),
-      ImmutableList.of("dim1"),
-      ImmutableList.of("m1"),
-      new LinearShardSpec(0),
-      9,
-      100
-  );
-
-  private final DataSegment eternitySegment = new DataSegment(
-      "fooDataSource",
-      Intervals.ETERNITY,
-      "version",
-      ImmutableMap.of(),
-      ImmutableList.of("dim1"),
-      ImmutableList.of("m1"),
-      new LinearShardSpec(0),
-      9,
-      100
-  );
-
-
-  private final DataSegment firstHalfEternityRangeSegment = new DataSegment(
-      "fooDataSource",
-      new Interval(DateTimes.MIN, DateTimes.of("3000")),
-      "version",
-      ImmutableMap.of(),
-      ImmutableList.of("dim1"),
-      ImmutableList.of("m1"),
-      new LinearShardSpec(0),
-      9,
-      100
-  );
-
-  private final DataSegment secondHalfEternityRangeSegment = new DataSegment(
-      "fooDataSource",
-      new Interval(DateTimes.of("1970"), DateTimes.MAX),
-      "version",
-      ImmutableMap.of(),
-      ImmutableList.of("dim1"),
-      ImmutableList.of("m1"),
-      new LinearShardSpec(0),
-      9,
-      100
-  );
-  private final DataSegment defaultSegment2 = new DataSegment(
-      "fooDataSource",
-      Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
-      "version",
-      ImmutableMap.of(),
-      ImmutableList.of("dim1"),
-      ImmutableList.of("m1"),
-      new LinearShardSpec(1),
-      9,
-      100
-  );
-
-  private final DataSegment defaultSegment2WithBiggerSize = new DataSegment(
-          "fooDataSource",
-          Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
-          "version",
-          ImmutableMap.of(),
-          ImmutableList.of("dim1"),
-          ImmutableList.of("m1"),
-          new LinearShardSpec(1),
-          9,
-          200
-  );
-
-  private final DataSegment defaultSegment3 = new DataSegment(
-      "fooDataSource",
-      Intervals.of("2015-01-03T00Z/2015-01-04T00Z"),
-      "version",
-      ImmutableMap.of(),
-      ImmutableList.of("dim1"),
-      ImmutableList.of("m1"),
-      NoneShardSpec.instance(),
-      9,
-      100
-  );
-
-  // Overshadows defaultSegment, defaultSegment2
-  private final DataSegment defaultSegment4 = new DataSegment(
-      "fooDataSource",
-      Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
-      "zversion",
-      ImmutableMap.of(),
-      ImmutableList.of("dim1"),
-      ImmutableList.of("m1"),
-      new LinearShardSpec(0),
-      9,
-      100
-  );
-
-  private final DataSegment numberedSegment0of0 = new DataSegment(
-      "fooDataSource",
-      Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
-      "zversion",
-      ImmutableMap.of(),
-      ImmutableList.of("dim1"),
-      ImmutableList.of("m1"),
-      new NumberedShardSpec(0, 0),
-      9,
-      100
-  );
-
-  private final DataSegment numberedSegment1of0 = new DataSegment(
-      "fooDataSource",
-      Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
-      "zversion",
-      ImmutableMap.of(),
-      ImmutableList.of("dim1"),
-      ImmutableList.of("m1"),
-      new NumberedShardSpec(1, 0),
-      9,
-      100
-  );
-
-  private final DataSegment numberedSegment2of0 = new DataSegment(
-      "fooDataSource",
-      Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
-      "zversion",
-      ImmutableMap.of(),
-      ImmutableList.of("dim1"),
-      ImmutableList.of("m1"),
-      new NumberedShardSpec(2, 0),
-      9,
-      100
-  );
-
-  private final DataSegment numberedSegment2of1 = new DataSegment(
-      "fooDataSource",
-      Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
-      "zversion",
-      ImmutableMap.of(),
-      ImmutableList.of("dim1"),
-      ImmutableList.of("m1"),
-      new NumberedShardSpec(2, 1),
-      9,
-      100
-  );
-
-  private final DataSegment numberedSegment3of1 = new DataSegment(
-      "fooDataSource",
-      Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
-      "zversion",
-      ImmutableMap.of(),
-      ImmutableList.of("dim1"),
-      ImmutableList.of("m1"),
-      new NumberedShardSpec(3, 1),
-      9,
-      100
-  );
-
-  private final DataSegment existingSegment1 = new DataSegment(
-      "fooDataSource",
-      Intervals.of("1994-01-01T00Z/1994-01-02T00Z"),
-      "zversion",
-      ImmutableMap.of(),
-      ImmutableList.of("dim1"),
-      ImmutableList.of("m1"),
-      new NumberedShardSpec(1, 1),
-      9,
-      100
-  );
-
-  private final DataSegment existingSegment2 = new DataSegment(
-      "fooDataSource",
-      Intervals.of("1994-01-02T00Z/1994-01-03T00Z"),
-      "zversion",
-      ImmutableMap.of(),
-      ImmutableList.of("dim1"),
-      ImmutableList.of("m1"),
-      new NumberedShardSpec(1, 1),
-      9,
-      100
-  );
-
-  private final DataSegment hugeTimeRangeSegment1 = new DataSegment(
-      "hugeTimeRangeDataSource",
-      Intervals.of("-9994-01-02T00Z/1994-01-03T00Z"),
-      "zversion",
-      ImmutableMap.of(),
-      ImmutableList.of("dim1"),
-      ImmutableList.of("m1"),
-      new NumberedShardSpec(0, 1),
-      9,
-      100
-  );
-
-  private final DataSegment hugeTimeRangeSegment2 = new DataSegment(
-      "hugeTimeRangeDataSource",
-      Intervals.of("2994-01-02T00Z/2994-01-03T00Z"),
-      "zversion",
-      ImmutableMap.of(),
-      ImmutableList.of("dim1"),
-      ImmutableList.of("m1"),
-      new NumberedShardSpec(0, 1),
-      9,
-      100
-  );
-
-  private final DataSegment hugeTimeRangeSegment3 = new DataSegment(
-      "hugeTimeRangeDataSource",
-      Intervals.of("29940-01-02T00Z/29940-01-03T00Z"),
-      "zversion",
-      ImmutableMap.of(),
-      ImmutableList.of("dim1"),
-      ImmutableList.of("m1"),
-      new NumberedShardSpec(0, 1),
-      9,
-      100
-  );
-
-  private final DataSegment hugeTimeRangeSegment4 = new DataSegment(
-      "hugeTimeRangeDataSource",
-      Intervals.of("1990-01-01T00Z/19940-01-01T00Z"),
-      "zversion",
-      ImmutableMap.of(),
-      ImmutableList.of("dim1"),
-      ImmutableList.of("m1"),
-      new NumberedShardSpec(0, 1),
-      9,
-      100
-  );
-
-  private final Set<DataSegment> SEGMENTS = ImmutableSet.of(defaultSegment, defaultSegment2);
-  private final AtomicLong metadataUpdateCounter = new AtomicLong();
-  private final AtomicLong segmentTableDropUpdateCounter = new AtomicLong();
-
-  private IndexerSQLMetadataStorageCoordinator coordinator;
-  private TestDerbyConnector derbyConnector;
 
   @Before
   public void setUp()
   {
     derbyConnector = derbyConnectorRule.getConnector();
+    segmentsTable = derbyConnectorRule.segments();
     mapper.registerSubtypes(LinearShardSpec.class, NumberedShardSpec.class, HashBasedNumberedShardSpec.class);
     derbyConnector.createDataSourceTable();
     derbyConnector.createTaskTables();
@@ -346,10 +98,17 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     derbyConnector.createPendingSegmentsTable();
     metadataUpdateCounter.set(0);
     segmentTableDropUpdateCounter.set(0);
+
+    fingerprintGenerator = new FingerprintGenerator(mapper);
+    segmentSchemaManager = new SegmentSchemaManager(derbyConnectorRule.metadataTablesConfigSupplier().get(), mapper, derbyConnector);
+    segmentSchemaTestUtils = new SegmentSchemaTestUtils(derbyConnectorRule, derbyConnector, mapper);
+
     coordinator = new IndexerSQLMetadataStorageCoordinator(
         mapper,
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
-        derbyConnector
+        derbyConnector,
+        segmentSchemaManager,
+        CentralizedDatasourceSchemaConfig.create()
     )
     {
       @Override
@@ -371,200 +130,6 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         return MAX_SQL_MEATADATA_RETRY_FOR_TEST;
       }
     };
-  }
-
-  private void markAllSegmentsUnused()
-  {
-    markAllSegmentsUnused(SEGMENTS, DateTimes.nowUtc());
-  }
-
-  private void markAllSegmentsUnused(Set<DataSegment> segments, DateTime usedStatusLastUpdatedTime)
-  {
-    for (final DataSegment segment : segments) {
-      Assert.assertEquals(
-          1,
-          derbyConnectorRule.segments().update(
-              "UPDATE %s SET used = false, used_status_last_updated = ? WHERE id = ?",
-              usedStatusLastUpdatedTime.toString(),
-              segment.getId().toString()
-          )
-      );
-    }
-  }
-
-  private List<String> retrievePendingSegmentIds()
-  {
-    final String table = derbyConnectorRule.metadataTablesConfigSupplier().get().getPendingSegmentsTable();
-    return derbyConnector.retryWithHandle(
-        handle -> handle.createQuery("SELECT id FROM " + table + "  ORDER BY id")
-                        .map(StringMapper.FIRST)
-                        .list()
-    );
-  }
-
-  private List<String> retrieveUsedSegmentIds()
-  {
-    final String table = derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable();
-    return derbyConnector.retryWithHandle(
-        handle -> handle.createQuery("SELECT id FROM " + table + " WHERE used = true ORDER BY id")
-                        .map(StringMapper.FIRST)
-                        .list()
-    );
-  }
-
-  private List<DataSegment> retrieveUsedSegments()
-  {
-    final String table = derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable();
-    return derbyConnector.retryWithHandle(
-        handle -> handle.createQuery("SELECT payload FROM " + table + " WHERE used = true ORDER BY id")
-                        .map((index, result, context) -> JacksonUtils.readValue(mapper, result.getBytes(1), DataSegment.class))
-                        .list()
-    );
-  }
-
-  private List<String> retrieveUnusedSegmentIds()
-  {
-    final String table = derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable();
-    return derbyConnector.retryWithHandle(
-        handle -> handle.createQuery("SELECT id FROM " + table + " WHERE used = false ORDER BY id")
-                        .map(StringMapper.FIRST)
-                        .list()
-    );
-  }
-
-
-  private Boolean insertUsedSegments(Set<DataSegment> dataSegments)
-  {
-    final String table = derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable();
-    return derbyConnector.retryWithHandle(
-        handle -> {
-          PreparedBatch preparedBatch = handle.prepareBatch(
-              StringUtils.format(
-                  "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, payload, used_status_last_updated) "
-                  + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload, :used_status_last_updated)",
-                  table,
-                  derbyConnector.getQuoteString()
-              )
-          );
-          for (DataSegment segment : dataSegments) {
-            preparedBatch.add()
-                         .bind("id", segment.getId().toString())
-                         .bind("dataSource", segment.getDataSource())
-                         .bind("created_date", DateTimes.nowUtc().toString())
-                         .bind("start", segment.getInterval().getStart().toString())
-                         .bind("end", segment.getInterval().getEnd().toString())
-                         .bind("partitioned", !(segment.getShardSpec() instanceof NoneShardSpec))
-                         .bind("version", segment.getVersion())
-                         .bind("used", true)
-                         .bind("payload", mapper.writeValueAsBytes(segment))
-                         .bind("used_status_last_updated", DateTimes.nowUtc().toString());
-          }
-
-          final int[] affectedRows = preparedBatch.execute();
-          final boolean succeeded = Arrays.stream(affectedRows).allMatch(eachAffectedRows -> eachAffectedRows == 1);
-          if (!succeeded) {
-            throw new ISE("Failed to publish segments to DB");
-          }
-          return true;
-        }
-    );
-  }
-
-  private Boolean insertPendingSegmentAndSequenceName(Pair<SegmentIdWithShardSpec, String> pendingSegmentSequenceName)
-  {
-    final SegmentIdWithShardSpec pendingSegment = pendingSegmentSequenceName.lhs;
-    final String sequenceName = pendingSegmentSequenceName.rhs;
-    final String table = derbyConnectorRule.metadataTablesConfigSupplier().get().getPendingSegmentsTable();
-    return derbyConnector.retryWithHandle(
-        handle -> {
-          handle.createStatement(
-                    StringUtils.format(
-                        "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, sequence_name, sequence_prev_id, "
-                        + "sequence_name_prev_id_sha1, payload) "
-                        + "VALUES (:id, :dataSource, :created_date, :start, :end, :sequence_name, :sequence_prev_id, "
-                        + ":sequence_name_prev_id_sha1, :payload)",
-                        table,
-                        derbyConnector.getQuoteString()
-                    )
-                )
-                .bind("id", pendingSegment.toString())
-                .bind("dataSource", pendingSegment.getDataSource())
-                .bind("created_date", DateTimes.nowUtc().toString())
-                .bind("start", pendingSegment.getInterval().getStart().toString())
-                .bind("end", pendingSegment.getInterval().getEnd().toString())
-                .bind("sequence_name", sequenceName)
-                .bind("sequence_prev_id", pendingSegment.toString())
-                .bind("sequence_name_prev_id_sha1", BaseEncoding.base16().encode(
-                    Hashing.sha1()
-                           .newHasher()
-                           .putLong((long) pendingSegment.hashCode() * sequenceName.hashCode())
-                           .hash()
-                           .asBytes()
-                ))
-                .bind("payload", mapper.writeValueAsBytes(pendingSegment))
-                .execute();
-          return true;
-        }
-    );
-  }
-
-  private Map<String, String> getSegmentsCommittedDuringReplaceTask(String taskId)
-  {
-    final String table = derbyConnectorRule.metadataTablesConfigSupplier().get().getUpgradeSegmentsTable();
-    return derbyConnector.retryWithHandle(handle -> {
-      final String sql = StringUtils.format(
-          "SELECT segment_id, lock_version FROM %1$s WHERE task_id = :task_id",
-          table
-      );
-
-      ResultIterator<Pair<String, String>> resultIterator = handle
-          .createQuery(sql)
-          .bind("task_id", taskId)
-          .map(
-              (index, r, ctx) -> Pair.of(r.getString("segment_id"), r.getString("lock_version"))
-          )
-          .iterator();
-
-      final Map<String, String> segmentIdToLockVersion = new HashMap<>();
-      while (resultIterator.hasNext()) {
-        Pair<String, String> result = resultIterator.next();
-        segmentIdToLockVersion.put(result.lhs, result.rhs);
-      }
-      return segmentIdToLockVersion;
-    });
-  }
-
-  private void insertIntoUpgradeSegmentsTable(Map<DataSegment, ReplaceTaskLock> segmentToTaskLockMap)
-  {
-    final String table = derbyConnectorRule.metadataTablesConfigSupplier().get().getUpgradeSegmentsTable();
-    derbyConnector.retryWithHandle(
-        handle -> {
-          PreparedBatch preparedBatch = handle.prepareBatch(
-              StringUtils.format(
-                  StringUtils.format(
-                      "INSERT INTO %1$s (task_id, segment_id, lock_version) "
-                      + "VALUES (:task_id, :segment_id, :lock_version)",
-                      table
-                  )
-              )
-          );
-          for (Map.Entry<DataSegment, ReplaceTaskLock> entry : segmentToTaskLockMap.entrySet()) {
-            final DataSegment segment = entry.getKey();
-            final ReplaceTaskLock lock = entry.getValue();
-            preparedBatch.add()
-                         .bind("task_id", lock.getSupervisorTaskId())
-                         .bind("segment_id", segment.getId().toString())
-                         .bind("lock_version", lock.getVersion());
-          }
-
-          final int[] affectedRows = preparedBatch.execute();
-          final boolean succeeded = Arrays.stream(affectedRows).allMatch(eachAffectedRows -> eachAffectedRows == 1);
-          if (!succeeded) {
-            throw new ISE("Failed to insert upgrade segments in DB");
-          }
-          return true;
-        }
-    );
   }
 
   @Test
@@ -619,14 +184,14 @@ public class IndexerSQLMetadataStorageCoordinatorTest
 
     // Commit the segment and verify the results
     SegmentPublishResult commitResult
-        = coordinator.commitAppendSegments(appendSegments, segmentToReplaceLock);
+        = coordinator.commitAppendSegments(appendSegments, segmentToReplaceLock, "append", null);
     Assert.assertTrue(commitResult.isSuccess());
     Assert.assertEquals(appendSegments, commitResult.getSegments());
 
     // Verify the segments present in the metadata store
     Assert.assertEquals(
         appendSegments,
-        ImmutableSet.copyOf(retrieveUsedSegments())
+        ImmutableSet.copyOf(retrieveUsedSegments(derbyConnectorRule.metadataTablesConfigSupplier().get()))
     );
 
     // Verify entries in the segment task lock table
@@ -634,7 +199,10 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         = expectedSegmentsToUpgrade.stream()
                                    .map(s -> s.getId().toString())
                                    .collect(Collectors.toSet());
-    final Map<String, String> observedSegmentToLock = getSegmentsCommittedDuringReplaceTask(replaceTaskId);
+    final Map<String, String> observedSegmentToLock = getSegmentsCommittedDuringReplaceTask(
+        replaceTaskId,
+        derbyConnectorRule.metadataTablesConfigSupplier().get()
+    );
     Assert.assertEquals(expectedUpgradeSegmentIds, observedSegmentToLock.keySet());
 
     final Set<String> observedLockVersions = new HashSet<>(observedSegmentToLock.values());
@@ -648,6 +216,30 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     final ReplaceTaskLock replaceLock = new ReplaceTaskLock("g1", Intervals.of("2023-01-01/2023-02-01"), "2023-02-01");
     final Set<DataSegment> segmentsAppendedWithReplaceLock = new HashSet<>();
     final Map<DataSegment, ReplaceTaskLock> appendedSegmentToReplaceLockMap = new HashMap<>();
+    final PendingSegmentRecord pendingSegmentInInterval = new PendingSegmentRecord(
+        new SegmentIdWithShardSpec(
+            "foo",
+            Intervals.of("2023-01-01/2023-01-02"),
+            "2023-01-02",
+            new NumberedShardSpec(100, 0)
+        ),
+        "",
+        "",
+        null,
+        "append"
+    );
+    final PendingSegmentRecord pendingSegmentOutsideInterval = new PendingSegmentRecord(
+        new SegmentIdWithShardSpec(
+            "foo",
+            Intervals.of("2023-04-01/2023-04-02"),
+            "2023-01-02",
+            new NumberedShardSpec(100, 0)
+        ),
+        "",
+        "",
+        null,
+        "append"
+    );
     for (int i = 1; i < 9; i++) {
       final DataSegment segment = new DataSegment(
           "foo",
@@ -663,8 +255,17 @@ public class IndexerSQLMetadataStorageCoordinatorTest
       segmentsAppendedWithReplaceLock.add(segment);
       appendedSegmentToReplaceLockMap.put(segment, replaceLock);
     }
-    insertUsedSegments(segmentsAppendedWithReplaceLock);
-    insertIntoUpgradeSegmentsTable(appendedSegmentToReplaceLockMap);
+
+    segmentSchemaTestUtils.insertUsedSegments(segmentsAppendedWithReplaceLock, Collections.emptyMap());
+    derbyConnector.retryWithHandle(
+        handle -> coordinator.insertPendingSegmentsIntoMetastore(
+            handle,
+            ImmutableList.of(pendingSegmentInInterval, pendingSegmentOutsideInterval),
+            "foo",
+            true
+        )
+    );
+    insertIntoUpgradeSegmentsTable(appendedSegmentToReplaceLockMap, derbyConnectorRule.metadataTablesConfigSupplier().get());
 
     final Set<DataSegment> replacingSegments = new HashSet<>();
     for (int i = 1; i < 9; i++) {
@@ -682,14 +283,14 @@ public class IndexerSQLMetadataStorageCoordinatorTest
       replacingSegments.add(segment);
     }
 
-    coordinator.commitReplaceSegments(replacingSegments, ImmutableSet.of(replaceLock));
+    coordinator.commitReplaceSegments(replacingSegments, ImmutableSet.of(replaceLock), null);
 
     Assert.assertEquals(
         2L * segmentsAppendedWithReplaceLock.size() + replacingSegments.size(),
-        retrieveUsedSegmentIds().size()
+        retrieveUsedSegmentIds(derbyConnectorRule.metadataTablesConfigSupplier().get()).size()
     );
 
-    final Set<DataSegment> usedSegments = new HashSet<>(retrieveUsedSegments());
+    final Set<DataSegment> usedSegments = new HashSet<>(retrieveUsedSegments(derbyConnectorRule.metadataTablesConfigSupplier().get()));
 
     Assert.assertTrue(usedSegments.containsAll(segmentsAppendedWithReplaceLock));
     usedSegments.removeAll(segmentsAppendedWithReplaceLock);
@@ -708,12 +309,31 @@ public class IndexerSQLMetadataStorageCoordinatorTest
       }
       Assert.assertTrue(hasBeenCarriedForward);
     }
+
+    List<PendingSegmentRecord> pendingSegmentsInInterval =
+        coordinator.getPendingSegments("foo", Intervals.of("2023-01-01/2023-02-01"));
+    Assert.assertEquals(2, pendingSegmentsInInterval.size());
+    final SegmentId rootPendingSegmentId = pendingSegmentInInterval.getId().asSegmentId();
+    if (pendingSegmentsInInterval.get(0).getUpgradedFromSegmentId() == null) {
+      Assert.assertEquals(rootPendingSegmentId, pendingSegmentsInInterval.get(0).getId().asSegmentId());
+      Assert.assertEquals(rootPendingSegmentId.toString(), pendingSegmentsInInterval.get(1).getUpgradedFromSegmentId());
+    } else {
+      Assert.assertEquals(rootPendingSegmentId, pendingSegmentsInInterval.get(1).getId().asSegmentId());
+      Assert.assertEquals(rootPendingSegmentId.toString(), pendingSegmentsInInterval.get(0).getUpgradedFromSegmentId());
+    }
+
+    List<PendingSegmentRecord> pendingSegmentsOutsideInterval =
+        coordinator.getPendingSegments("foo", Intervals.of("2023-04-01/2023-05-01"));
+    Assert.assertEquals(1, pendingSegmentsOutsideInterval.size());
+    Assert.assertEquals(
+        pendingSegmentOutsideInterval.getId().asSegmentId(), pendingSegmentsOutsideInterval.get(0).getId().asSegmentId()
+    );
   }
 
   @Test
   public void testSimpleAnnounce() throws IOException
   {
-    coordinator.commitSegments(SEGMENTS);
+    coordinator.commitSegments(SEGMENTS, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
     for (DataSegment segment : SEGMENTS) {
       Assert.assertArrayEquals(
           mapper.writeValueAsString(segment).getBytes(StandardCharsets.UTF_8),
@@ -728,7 +348,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
 
     Assert.assertEquals(
         ImmutableList.of(defaultSegment.getId().toString(), defaultSegment2.getId().toString()),
-        retrieveUsedSegmentIds()
+        retrieveUsedSegmentIds(derbyConnectorRule.metadataTablesConfigSupplier().get())
     );
 
     // Should not update dataSource metadata.
@@ -739,23 +359,23 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   public void testAnnounceHistoricalSegments() throws IOException
   {
     Set<DataSegment> segments = new HashSet<>();
+
     for (int i = 0; i < 105; i++) {
-      segments.add(
-          new DataSegment(
-              "fooDataSource",
-              Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
-              "version",
-              ImmutableMap.of(),
-              ImmutableList.of("dim1"),
-              ImmutableList.of("m1"),
-              new LinearShardSpec(i),
-              9,
-              100
-          )
+      DataSegment segment = new DataSegment(
+          "fooDataSource",
+          Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
+          "version",
+          ImmutableMap.of(),
+          ImmutableList.of("dim1"),
+          ImmutableList.of("m1"),
+          new LinearShardSpec(i),
+          9,
+          100
       );
+      segments.add(segment);
     }
 
-    coordinator.commitSegments(segments);
+    coordinator.commitSegments(segments, null);
     for (DataSegment segment : segments) {
       Assert.assertArrayEquals(
           mapper.writeValueAsString(segment).getBytes(StandardCharsets.UTF_8),
@@ -773,7 +393,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
                                       .sorted(Comparator.naturalOrder())
                                       .collect(Collectors.toList());
 
-    Assert.assertEquals(segmentIds, retrieveUsedSegmentIds());
+    Assert.assertEquals(segmentIds, retrieveUsedSegmentIds(derbyConnectorRule.metadataTablesConfigSupplier().get()));
 
     // Should not update dataSource metadata.
     Assert.assertEquals(0, metadataUpdateCounter.get());
@@ -784,7 +404,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   {
     final ImmutableSet<DataSegment> segments = ImmutableSet.of(defaultSegment, defaultSegment2, defaultSegment4);
 
-    coordinator.commitSegments(segments);
+    coordinator.commitSegments(segments, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
 
     for (DataSegment segment : segments) {
       Assert.assertArrayEquals(
@@ -798,7 +418,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
       );
     }
 
-    Assert.assertEquals(ImmutableList.of(defaultSegment4.getId().toString()), retrieveUsedSegmentIds());
+    Assert.assertEquals(ImmutableList.of(defaultSegment4.getId().toString()), retrieveUsedSegmentIds(derbyConnectorRule.metadataTablesConfigSupplier().get()));
   }
 
   @Test
@@ -808,7 +428,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     final SegmentPublishResult result1 = coordinator.commitSegmentsAndMetadata(
         ImmutableSet.of(defaultSegment),
         new ObjectMetadata(null),
-        new ObjectMetadata(ImmutableMap.of("foo", "bar"))
+        new ObjectMetadata(ImmutableMap.of("foo", "bar")),
+        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
     Assert.assertEquals(SegmentPublishResult.ok(ImmutableSet.of(defaultSegment)), result1);
 
@@ -826,7 +447,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     final SegmentPublishResult result2 = coordinator.commitSegmentsAndMetadata(
         ImmutableSet.of(defaultSegment2),
         new ObjectMetadata(ImmutableMap.of("foo", "bar")),
-        new ObjectMetadata(ImmutableMap.of("foo", "baz"))
+        new ObjectMetadata(ImmutableMap.of("foo", "baz")),
+        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
     Assert.assertEquals(SegmentPublishResult.ok(ImmutableSet.of(defaultSegment2)), result2);
 
@@ -858,7 +480,9 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     final IndexerSQLMetadataStorageCoordinator failOnceCoordinator = new IndexerSQLMetadataStorageCoordinator(
         mapper,
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
-        derbyConnector
+        derbyConnector,
+        segmentSchemaManager,
+        CentralizedDatasourceSchemaConfig.create()
     )
     {
       @Override
@@ -882,7 +506,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     final SegmentPublishResult result1 = failOnceCoordinator.commitSegmentsAndMetadata(
         ImmutableSet.of(defaultSegment),
         new ObjectMetadata(null),
-        new ObjectMetadata(ImmutableMap.of("foo", "bar"))
+        new ObjectMetadata(ImmutableMap.of("foo", "bar")),
+        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
     Assert.assertEquals(SegmentPublishResult.ok(ImmutableSet.of(defaultSegment)), result1);
 
@@ -903,7 +528,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     final SegmentPublishResult result2 = failOnceCoordinator.commitSegmentsAndMetadata(
         ImmutableSet.of(defaultSegment2),
         new ObjectMetadata(ImmutableMap.of("foo", "bar")),
-        new ObjectMetadata(ImmutableMap.of("foo", "baz"))
+        new ObjectMetadata(ImmutableMap.of("foo", "baz")),
+        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
     Assert.assertEquals(SegmentPublishResult.ok(ImmutableSet.of(defaultSegment2)), result2);
 
@@ -933,9 +559,17 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     final SegmentPublishResult result1 = coordinator.commitSegmentsAndMetadata(
         ImmutableSet.of(defaultSegment),
         new ObjectMetadata(ImmutableMap.of("foo", "bar")),
-        new ObjectMetadata(ImmutableMap.of("foo", "baz"))
+        new ObjectMetadata(ImmutableMap.of("foo", "baz")),
+        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
-    Assert.assertEquals(SegmentPublishResult.fail("java.lang.RuntimeException: Failed to update the metadata Store. The new start metadata is ahead of last commited end state."), result1);
+    Assert.assertEquals(
+        SegmentPublishResult.fail(
+            InvalidInput.exception(
+                "The new start metadata state[ObjectMetadata{theObject={foo=bar}}] is ahead of the last commited"
+                + " end state[null]. Try resetting the supervisor."
+            ).toString()),
+        result1
+    );
 
     // Should only be tried once.
     Assert.assertEquals(1, metadataUpdateCounter.get());
@@ -947,19 +581,26 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     final SegmentPublishResult result1 = coordinator.commitSegmentsAndMetadata(
         ImmutableSet.of(defaultSegment),
         new ObjectMetadata(null),
-        new ObjectMetadata(ImmutableMap.of("foo", "baz"))
+        new ObjectMetadata(ImmutableMap.of("foo", "baz")),
+        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
     Assert.assertEquals(SegmentPublishResult.ok(ImmutableSet.of(defaultSegment)), result1);
 
     final SegmentPublishResult result2 = coordinator.commitSegmentsAndMetadata(
         ImmutableSet.of(defaultSegment2),
         new ObjectMetadata(null),
-        new ObjectMetadata(ImmutableMap.of("foo", "baz"))
+        new ObjectMetadata(ImmutableMap.of("foo", "baz")),
+        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
-    Assert.assertEquals(SegmentPublishResult.fail("java.lang.RuntimeException: Inconsistent metadata state. This can " +
-        "happen if you update input topic in a spec without changing the supervisor name. " +
-        "Stored state: [ObjectMetadata{theObject={foo=baz}}], " +
-        "Target state: [ObjectMetadata{theObject=null}]."), result2);
+    Assert.assertEquals(
+        SegmentPublishResult.fail(
+            InvalidInput.exception(
+                "Inconsistency between stored metadata state[ObjectMetadata{theObject={foo=baz}}]"
+                + " and target state[ObjectMetadata{theObject=null}]. Try resetting the supervisor."
+            ).toString()
+        ),
+        result2
+    );
 
     // Should only be tried once per call.
     Assert.assertEquals(2, metadataUpdateCounter.get());
@@ -968,14 +609,14 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testRetrieveUsedSegmentForId()
   {
-    insertUsedSegments(ImmutableSet.of(defaultSegment));
+    segmentSchemaTestUtils.insertUsedSegments(ImmutableSet.of(defaultSegment), Collections.emptyMap());
     Assert.assertEquals(defaultSegment, coordinator.retrieveSegmentForId(defaultSegment.getId().toString(), false));
   }
 
   @Test
   public void testRetrieveSegmentForId()
   {
-    insertUsedSegments(ImmutableSet.of(defaultSegment));
+    segmentSchemaTestUtils.insertUsedSegments(ImmutableSet.of(defaultSegment), Collections.emptyMap());
     markAllSegmentsUnused(ImmutableSet.of(defaultSegment), DateTimes.nowUtc());
     Assert.assertEquals(defaultSegment, coordinator.retrieveSegmentForId(defaultSegment.getId().toString(), true));
   }
@@ -1000,7 +641,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         new NumberedShardSpec(0, 0)
     );
     insertIntoUpgradeSegmentsTable(
-        ImmutableMap.of(segmentToClean0, replaceLockToClean, segmentToClean1, replaceLockToClean)
+        ImmutableMap.of(segmentToClean0, replaceLockToClean, segmentToClean1, replaceLockToClean),
+        derbyConnectorRule.metadataTablesConfigSupplier().get()
     );
 
     // Unrelated task should not result in clean up
@@ -1017,19 +659,25 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     final SegmentPublishResult result1 = coordinator.commitSegmentsAndMetadata(
         ImmutableSet.of(defaultSegment),
         new ObjectMetadata(null),
-        new ObjectMetadata(ImmutableMap.of("foo", "baz"))
+        new ObjectMetadata(ImmutableMap.of("foo", "baz")),
+        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
     Assert.assertEquals(SegmentPublishResult.ok(ImmutableSet.of(defaultSegment)), result1);
 
     final SegmentPublishResult result2 = coordinator.commitSegmentsAndMetadata(
         ImmutableSet.of(defaultSegment2),
         new ObjectMetadata(ImmutableMap.of("foo", "qux")),
-        new ObjectMetadata(ImmutableMap.of("foo", "baz"))
+        new ObjectMetadata(ImmutableMap.of("foo", "baz")),
+        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
-    Assert.assertEquals(SegmentPublishResult.fail("java.lang.RuntimeException: Inconsistent metadata state. This can " +
-        "happen if you update input topic in a spec without changing the supervisor name. " +
-        "Stored state: [ObjectMetadata{theObject={foo=baz}}], " +
-        "Target state: [ObjectMetadata{theObject={foo=qux}}]."), result2);
+    Assert.assertEquals(
+        SegmentPublishResult.fail(
+            InvalidInput.exception(
+                "Inconsistency between stored metadata state[ObjectMetadata{theObject={foo=baz}}] and "
+                + "target state[ObjectMetadata{theObject={foo=qux}}]. Try resetting the supervisor."
+            ).toString()),
+        result2
+    );
 
     // Should only be tried once per call.
     Assert.assertEquals(2, metadataUpdateCounter.get());
@@ -1038,7 +686,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testSimpleUsedList() throws IOException
   {
-    coordinator.commitSegments(SEGMENTS);
+    coordinator.commitSegments(SEGMENTS, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
     Assert.assertEquals(
         SEGMENTS,
         ImmutableSet.copyOf(
@@ -1054,8 +702,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testMultiIntervalUsedList() throws IOException
   {
-    coordinator.commitSegments(SEGMENTS);
-    coordinator.commitSegments(ImmutableSet.of(defaultSegment3));
+    coordinator.commitSegments(SEGMENTS, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
+    coordinator.commitSegments(ImmutableSet.of(defaultSegment3), new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
 
     Assertions.assertThat(
         coordinator.retrieveUsedSegmentsForIntervals(
@@ -1263,7 +911,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         null,
         null,
         null,
-        null
+        null,
+        derbyConnectorRule.metadataTablesConfigSupplier().get()
     );
     Assert.assertEquals(segments.size(), actualUnusedSegments.size());
     Assert.assertTrue(segments.containsAll(actualUnusedSegments));
@@ -1273,7 +922,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         null,
         null,
         null,
-        null
+        null,
+        derbyConnectorRule.metadataTablesConfigSupplier().get()
     );
     Assert.assertEquals(segments.size(), actualUnusedSegmentsPlus.size());
     verifyContainsAllSegmentsPlus(segments, actualUnusedSegmentsPlus, usedStatusLastUpdatedTime);
@@ -1291,7 +941,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         null,
         null,
         null,
-        null
+        null,
+        derbyConnectorRule.metadataTablesConfigSupplier().get()
     );
     Assert.assertEquals(segments.size(), actualUnusedSegments.size());
     Assert.assertTrue(segments.containsAll(actualUnusedSegments));
@@ -1301,7 +952,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         null,
         null,
         null,
-        null
+        null,
+        derbyConnectorRule.metadataTablesConfigSupplier().get()
     );
     Assert.assertEquals(segments.size(), actualUnusedSegmentsPlus.size());
     verifyContainsAllSegmentsPlus(segments, actualUnusedSegmentsPlus, usedStatusLastUpdatedTime);
@@ -1323,7 +975,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         null,
         lastSegmentId,
         null,
-        null
+        null,
+        derbyConnectorRule.metadataTablesConfigSupplier().get()
     );
     Assert.assertEquals(expectedSegmentsAscOrder.size(), actualUnusedSegments.size());
     Assert.assertTrue(expectedSegmentsAscOrder.containsAll(actualUnusedSegments));
@@ -1333,7 +986,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         null,
         lastSegmentId,
         null,
-        null
+        null,
+        derbyConnectorRule.metadataTablesConfigSupplier().get()
     );
     Assert.assertEquals(expectedSegmentsAscOrder.size(), actualUnusedSegmentsPlus.size());
     verifyContainsAllSegmentsPlus(expectedSegmentsAscOrder, actualUnusedSegmentsPlus, usedStatusLastUpdatedTime);
@@ -1343,7 +997,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         null,
         lastSegmentId,
         SortOrder.ASC,
-        null
+        null,
+        derbyConnectorRule.metadataTablesConfigSupplier().get()
     );
     Assert.assertEquals(expectedSegmentsAscOrder.size(), actualUnusedSegments.size());
     Assert.assertEquals(expectedSegmentsAscOrder, actualUnusedSegments);
@@ -1353,7 +1008,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         null,
         lastSegmentId,
         SortOrder.ASC,
-        null
+        null,
+        derbyConnectorRule.metadataTablesConfigSupplier().get()
     );
     Assert.assertEquals(expectedSegmentsAscOrder.size(), actualUnusedSegmentsPlus.size());
     verifyEqualsAllSegmentsPlus(expectedSegmentsAscOrder, actualUnusedSegmentsPlus, usedStatusLastUpdatedTime);
@@ -1368,7 +1024,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         null,
         lastSegmentId,
         SortOrder.DESC,
-        null
+        null,
+        derbyConnectorRule.metadataTablesConfigSupplier().get()
     );
     Assert.assertEquals(expectedSegmentsDescOrder.size(), actualUnusedSegments.size());
     Assert.assertEquals(expectedSegmentsDescOrder, actualUnusedSegments);
@@ -1378,7 +1035,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         null,
         lastSegmentId,
         SortOrder.DESC,
-        null
+        null,
+        derbyConnectorRule.metadataTablesConfigSupplier().get()
     );
     Assert.assertEquals(expectedSegmentsDescOrder.size(), actualUnusedSegmentsPlus.size());
     verifyEqualsAllSegmentsPlus(expectedSegmentsDescOrder, actualUnusedSegmentsPlus, usedStatusLastUpdatedTime);
@@ -1396,7 +1054,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         segments.size(),
         null,
         null,
-        null
+        null,
+        derbyConnectorRule.metadataTablesConfigSupplier().get()
     );
     Assert.assertEquals(segments.size(), actualUnusedSegments.size());
     Assert.assertTrue(segments.containsAll(actualUnusedSegments));
@@ -1406,7 +1065,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         segments.size(),
         null,
         null,
-        null
+        null,
+        derbyConnectorRule.metadataTablesConfigSupplier().get()
     );
     Assert.assertEquals(segments.size(), actualUnusedSegmentsPlus.size());
     verifyContainsAllSegmentsPlus(segments, actualUnusedSegmentsPlus, usedStatusLastUpdatedTime);
@@ -1425,7 +1085,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         requestedLimit,
         null,
         null,
-        null
+        null,
+        derbyConnectorRule.metadataTablesConfigSupplier().get()
     );
     final List<DataSegment> expectedSegments = segments.stream().limit(requestedLimit).collect(Collectors.toList());
     Assert.assertEquals(requestedLimit, actualUnusedSegments.size());
@@ -1436,7 +1097,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         requestedLimit,
         null,
         null,
-        null
+        null,
+        derbyConnectorRule.metadataTablesConfigSupplier().get()
     );
     Assert.assertEquals(requestedLimit, actualUnusedSegmentsPlus.size());
     verifyContainsAllSegmentsPlus(expectedSegments, actualUnusedSegmentsPlus, usedStatusLastUpdatedTime);
@@ -1460,7 +1122,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         requestedLimit,
         lastSegmentId,
         null,
-        null
+        null,
+        derbyConnectorRule.metadataTablesConfigSupplier().get()
     );
     Assert.assertEquals(segments.size() - 5, actualUnusedSegments.size());
     Assert.assertEquals(actualUnusedSegments, expectedSegments);
@@ -1470,7 +1133,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         requestedLimit,
         lastSegmentId,
         null,
-        null
+        null,
+        derbyConnectorRule.metadataTablesConfigSupplier().get()
     );
     Assert.assertEquals(segments.size() - 5, actualUnusedSegmentsPlus.size());
     verifyEqualsAllSegmentsPlus(expectedSegments, actualUnusedSegmentsPlus, usedStatusLastUpdatedTime);
@@ -1494,7 +1158,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         requestedLimit,
         lastSegmentId,
         null,
-        null
+        null,
+        derbyConnectorRule.metadataTablesConfigSupplier().get()
     );
     Assert.assertEquals(requestedLimit - 4, actualUnusedSegments.size());
     Assert.assertEquals(actualUnusedSegments, expectedSegments);
@@ -1504,7 +1169,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         requestedLimit,
         lastSegmentId,
         null,
-        null
+        null,
+        derbyConnectorRule.metadataTablesConfigSupplier().get()
     );
     Assert.assertEquals(requestedLimit - 4, actualUnusedSegmentsPlus.size());
     verifyEqualsAllSegmentsPlus(expectedSegments, actualUnusedSegmentsPlus, usedStatusLastUpdatedTime);
@@ -1522,7 +1188,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         segments.size() + 1,
         null,
         null,
-        null
+        null,
+        derbyConnectorRule.metadataTablesConfigSupplier().get()
     );
     Assert.assertEquals(segments.size(), actualUnusedSegments.size());
     Assert.assertTrue(actualUnusedSegments.containsAll(segments));
@@ -1532,7 +1199,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         segments.size() + 1,
         null,
         null,
-        null
+        null,
+        derbyConnectorRule.metadataTablesConfigSupplier().get()
     );
     Assert.assertEquals(segments.size(), actualUnusedSegmentsPlus.size());
     verifyContainsAllSegmentsPlus(segments, actualUnusedSegmentsPlus, usedStatusLastUpdatedTime);
@@ -1553,7 +1221,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         null,
         null,
         null,
-         null
+         null,
+        derbyConnectorRule.metadataTablesConfigSupplier().get()
     );
     Assert.assertEquals(0, actualUnusedSegments.size());
 
@@ -1562,7 +1231,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         null,
         null,
         null,
-        null
+        null,
+        derbyConnectorRule.metadataTablesConfigSupplier().get()
     );
     Assert.assertEquals(0, actualUnusedSegmentsPlus.size());
   }
@@ -1581,7 +1251,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         null,
         null,
         null,
-        DateTimes.nowUtc()
+        DateTimes.nowUtc(),
+        derbyConnectorRule.metadataTablesConfigSupplier().get()
     );
     Assert.assertEquals(5, actualUnusedSegments1.size());
 
@@ -1590,7 +1261,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         null,
         null,
         null,
-        DateTimes.nowUtc()
+        DateTimes.nowUtc(),
+        derbyConnectorRule.metadataTablesConfigSupplier().get()
     );
     Assert.assertEquals(5, actualUnusedSegmentsPlus.size());
 
@@ -1599,7 +1271,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         null,
         null,
         null,
-        DateTimes.nowUtc().minusHours(1)
+        DateTimes.nowUtc().minusHours(1),
+        derbyConnectorRule.metadataTablesConfigSupplier().get()
     );
     Assert.assertEquals(0, actualUnusedSegments2.size());
 
@@ -1608,7 +1281,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         null,
         null,
         null,
-        DateTimes.nowUtc().minusHours(1)
+        DateTimes.nowUtc().minusHours(1),
+        derbyConnectorRule.metadataTablesConfigSupplier().get()
     );
     Assert.assertEquals(0, actualUnusedSegmentsPlus.size());
   }
@@ -1642,7 +1316,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         null,
         null,
         null,
-        maxUsedStatusLastUpdatedTime1
+        maxUsedStatusLastUpdatedTime1,
+        derbyConnectorRule.metadataTablesConfigSupplier().get()
     );
     Assert.assertEquals(oddYearSegments.size(), actualUnusedSegments1.size());
 
@@ -1651,7 +1326,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         null,
         null,
         null,
-        maxUsedStatusLastUpdatedTime1
+        maxUsedStatusLastUpdatedTime1,
+        derbyConnectorRule.metadataTablesConfigSupplier().get()
     );
     Assert.assertEquals(oddYearSegments.size(), actualUnusedSegmentsPlus1.size());
 
@@ -1660,7 +1336,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         null,
         null,
         null,
-        maxUsedStatusLastUpdatedTime2
+        maxUsedStatusLastUpdatedTime2,
+        derbyConnectorRule.metadataTablesConfigSupplier().get()
     );
     Assert.assertEquals(segments.size(), actualUnusedSegments2.size());
 
@@ -1669,7 +1346,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         null,
         null,
         null,
-        maxUsedStatusLastUpdatedTime2
+        maxUsedStatusLastUpdatedTime2,
+        derbyConnectorRule.metadataTablesConfigSupplier().get()
     );
     Assert.assertEquals(segments.size(), actualUnusedSegmentsPlus2.size());
   }
@@ -1677,7 +1355,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testSimpleUnusedList() throws IOException
   {
-    coordinator.commitSegments(SEGMENTS);
+    coordinator.commitSegments(SEGMENTS, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
     markAllSegmentsUnused();
     Assert.assertEquals(
         SEGMENTS,
@@ -1723,7 +1401,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     );
 
     final ImmutableSet<DataSegment> unusedSegments = ImmutableSet.of(segment1, segment2, segment3, segment4);
-    Assert.assertEquals(unusedSegments, coordinator.commitSegments(unusedSegments));
+    Assert.assertEquals(unusedSegments, coordinator.commitSegments(unusedSegments, null));
     markAllSegmentsUnused(unusedSegments, DateTimes.nowUtc());
 
     for (DataSegment unusedSegment : unusedSegments) {
@@ -1772,7 +1450,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testSimpleUnusedListWithLimit() throws IOException
   {
-    coordinator.commitSegments(SEGMENTS);
+    coordinator.commitSegments(SEGMENTS, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
     markAllSegmentsUnused();
     int limit = SEGMENTS.size() - 1;
     Set<DataSegment> retreivedUnusedSegments = ImmutableSet.copyOf(
@@ -1791,7 +1469,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testUsedOverlapLow() throws IOException
   {
-    coordinator.commitSegments(SEGMENTS);
+    coordinator.commitSegments(SEGMENTS, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
     Set<DataSegment> actualSegments = ImmutableSet.copyOf(
         coordinator.retrieveUsedSegmentsForInterval(
             defaultSegment.getDataSource(),
@@ -1809,7 +1487,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testUsedOverlapHigh() throws IOException
   {
-    coordinator.commitSegments(SEGMENTS);
+    coordinator.commitSegments(SEGMENTS, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
     Assert.assertEquals(
         SEGMENTS,
         ImmutableSet.copyOf(
@@ -1825,7 +1503,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testUsedOutOfBoundsLow() throws IOException
   {
-    coordinator.commitSegments(SEGMENTS);
+    coordinator.commitSegments(SEGMENTS, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
     Assert.assertTrue(
         coordinator.retrieveUsedSegmentsForInterval(
             defaultSegment.getDataSource(),
@@ -1839,7 +1517,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testUsedOutOfBoundsHigh() throws IOException
   {
-    coordinator.commitSegments(SEGMENTS);
+    coordinator.commitSegments(SEGMENTS, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
     Assert.assertTrue(
         coordinator.retrieveUsedSegmentsForInterval(
             defaultSegment.getDataSource(),
@@ -1852,7 +1530,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testUsedWithinBoundsEnd() throws IOException
   {
-    coordinator.commitSegments(SEGMENTS);
+    coordinator.commitSegments(SEGMENTS, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
     Assert.assertEquals(
         SEGMENTS,
         ImmutableSet.copyOf(
@@ -1868,7 +1546,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testUsedOverlapEnd() throws IOException
   {
-    coordinator.commitSegments(SEGMENTS);
+    coordinator.commitSegments(SEGMENTS, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
     Assert.assertEquals(
         SEGMENTS,
         ImmutableSet.copyOf(
@@ -1881,11 +1559,10 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     );
   }
 
-
   @Test
   public void testUnusedOverlapLow() throws IOException
   {
-    coordinator.commitSegments(SEGMENTS);
+    coordinator.commitSegments(SEGMENTS, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
     markAllSegmentsUnused();
     Assert.assertTrue(
         coordinator.retrieveUnusedSegmentsForInterval(
@@ -1903,7 +1580,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testUnusedUnderlapLow() throws IOException
   {
-    coordinator.commitSegments(SEGMENTS);
+    coordinator.commitSegments(SEGMENTS, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
     markAllSegmentsUnused();
     Assert.assertTrue(
         coordinator.retrieveUnusedSegmentsForInterval(
@@ -1919,7 +1596,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testUnusedUnderlapHigh() throws IOException
   {
-    coordinator.commitSegments(SEGMENTS);
+    coordinator.commitSegments(SEGMENTS, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
     markAllSegmentsUnused();
     Assert.assertTrue(
         coordinator.retrieveUnusedSegmentsForInterval(
@@ -1934,7 +1611,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testUnusedOverlapHigh() throws IOException
   {
-    coordinator.commitSegments(SEGMENTS);
+    coordinator.commitSegments(SEGMENTS, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
     markAllSegmentsUnused();
     Assert.assertTrue(
         coordinator.retrieveUnusedSegmentsForInterval(
@@ -1949,7 +1626,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testUnusedBigOverlap() throws IOException
   {
-    coordinator.commitSegments(SEGMENTS);
+    coordinator.commitSegments(SEGMENTS, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
     markAllSegmentsUnused();
     Assert.assertEquals(
         SEGMENTS,
@@ -1967,7 +1644,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testUnusedLowRange() throws IOException
   {
-    coordinator.commitSegments(SEGMENTS);
+    coordinator.commitSegments(SEGMENTS, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
     markAllSegmentsUnused();
     Assert.assertEquals(
         SEGMENTS,
@@ -1996,7 +1673,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testUnusedHighRange() throws IOException
   {
-    coordinator.commitSegments(SEGMENTS);
+    coordinator.commitSegments(SEGMENTS, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
     markAllSegmentsUnused();
     Assert.assertEquals(
         SEGMENTS,
@@ -2030,7 +1707,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
             hugeTimeRangeSegment1,
             hugeTimeRangeSegment2,
             hugeTimeRangeSegment3
-        )
+        ),
+        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
 
     Assert.assertEquals(
@@ -2053,7 +1731,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
             hugeTimeRangeSegment1,
             hugeTimeRangeSegment2,
             hugeTimeRangeSegment3
-        )
+        ),
+        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
 
     Assert.assertEquals(
@@ -2076,7 +1755,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
             hugeTimeRangeSegment1,
             hugeTimeRangeSegment2,
             hugeTimeRangeSegment3
-        )
+        ),
+        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
 
     Assert.assertEquals(
@@ -2091,14 +1771,14 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     );
   }
 
-
   @Test
   public void testEternitySegmentWithStringComparison() throws IOException
   {
     coordinator.commitSegments(
         ImmutableSet.of(
             eternitySegment
-        )
+        ),
+        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
 
     Assert.assertEquals(
@@ -2120,7 +1800,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         ImmutableSet.of(
             numberedSegment0of0,
             eternitySegment
-        )
+        ),
+        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
 
     Assert.assertEquals(
@@ -2141,7 +1822,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     coordinator.commitSegments(
         ImmutableSet.of(
             firstHalfEternityRangeSegment
-        )
+        ),
+        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
 
     Assert.assertEquals(
@@ -2163,7 +1845,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         ImmutableSet.of(
             numberedSegment0of0,
             firstHalfEternityRangeSegment
-        )
+        ),
+        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
 
     Assert.assertEquals(
@@ -2184,7 +1867,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     coordinator.commitSegments(
         ImmutableSet.of(
             secondHalfEternityRangeSegment
-        )
+        ),
+        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
 
     Assert.assertEquals(
@@ -2207,7 +1891,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     coordinator.commitSegments(
         ImmutableSet.of(
             hugeTimeRangeSegment4
-        )
+        ),
+        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
 
     Assert.assertEquals(
@@ -2229,7 +1914,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         ImmutableSet.of(
             numberedSegment0of0,
             secondHalfEternityRangeSegment
-        )
+        ),
+        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
 
     Assert.assertEquals(
@@ -2250,7 +1936,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     coordinator.commitSegmentsAndMetadata(
         ImmutableSet.of(defaultSegment),
         new ObjectMetadata(null),
-        new ObjectMetadata(ImmutableMap.of("foo", "bar"))
+        new ObjectMetadata(ImmutableMap.of("foo", "bar")),
+        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
 
     Assert.assertEquals(
@@ -2268,7 +1955,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   public void testDeleteSegmentsInMetaDataStorage() throws IOException
   {
     // Published segments to MetaDataStorage
-    coordinator.commitSegments(SEGMENTS);
+    coordinator.commitSegments(SEGMENTS, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
 
     // check segments Published
     Assert.assertEquals(
@@ -2301,7 +1988,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   public void testUpdateSegmentsInMetaDataStorage() throws IOException
   {
     // Published segments to MetaDataStorage
-    coordinator.commitSegments(SEGMENTS);
+    coordinator.commitSegments(SEGMENTS, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
 
     // check segments Published
     Assert.assertEquals(
@@ -2363,7 +2050,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
 
   private void additionalNumberedShardTest(Set<DataSegment> segments) throws IOException
   {
-    coordinator.commitSegments(segments);
+    coordinator.commitSegments(segments, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
 
     for (DataSegment segment : segments) {
       Assert.assertArrayEquals(
@@ -2379,7 +2066,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
 
     Assert.assertEquals(
         segments.stream().map(segment -> segment.getId().toString()).collect(Collectors.toList()),
-        retrieveUsedSegmentIds()
+        retrieveUsedSegmentIds(derbyConnectorRule.metadataTablesConfigSupplier().get())
     );
 
     // Should not update dataSource metadata.
@@ -2399,7 +2086,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         interval,
         partialShardSpec,
         "version",
-        false
+        false,
+        null
     );
 
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_version", identifier.toString());
@@ -2411,7 +2099,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         interval,
         partialShardSpec,
         identifier.getVersion(),
-        false
+        false,
+        null
     );
 
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_version_1", identifier1.toString());
@@ -2423,7 +2112,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         interval,
         partialShardSpec,
         identifier1.getVersion(),
-        false
+        false,
+        null
     );
 
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_version_2", identifier2.toString());
@@ -2435,7 +2125,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         interval,
         partialShardSpec,
         identifier1.getVersion(),
-        false
+        false,
+        null
     );
 
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_version_2", identifier3.toString());
@@ -2448,7 +2139,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         interval,
         partialShardSpec,
         "version",
-        false
+        false,
+        null
     );
 
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_version_3", identifier4.toString());
@@ -2484,7 +2176,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         interval,
         partialShardSpec,
         "version",
-        true
+        true,
+        null
     );
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_version", identifier.toString());
     // Since there are no used core partitions yet
@@ -2498,7 +2191,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         interval,
         partialShardSpec,
         maxVersion,
-        true
+        true,
+        null
     );
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_version_1", identifier1.toString());
     // Since there are no used core partitions yet
@@ -2512,7 +2206,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         interval,
         partialShardSpec,
         maxVersion,
-        true
+        true,
+        null
     );
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_version_2", identifier2.toString());
     // Since there are no used core partitions yet
@@ -2530,8 +2225,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         9,
         100
     );
-    Assert.assertTrue(insertUsedSegments(ImmutableSet.of(segment)));
-    List<String> ids = retrieveUsedSegmentIds();
+    Assert.assertTrue(segmentSchemaTestUtils.insertUsedSegments(ImmutableSet.of(segment), Collections.emptyMap()));
+    List<String> ids = retrieveUsedSegmentIds(derbyConnectorRule.metadataTablesConfigSupplier().get());
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_version_new", ids.get(0));
 
     // one more load on same interval:
@@ -2542,7 +2237,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         interval,
         partialShardSpec,
         maxVersion,
-        true
+        true,
+        null
     );
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_version_new_1", identifier3.toString());
     // Used segment set has 1 core partition
@@ -2560,7 +2256,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         interval,
         partialShardSpec,
         maxVersion,
-        true
+        true,
+        null
     );
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_version_new_2", identifier4.toString());
     // Since all core partitions have been dropped
@@ -2593,7 +2290,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         interval,
         partialShardSpec,
         "A",
-        true
+        true,
+        null
     );
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_A", identifier.toString());
     // Assume it publishes; create its corresponding segment
@@ -2608,8 +2306,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         9,
         100
     );
-    Assert.assertTrue(insertUsedSegments(ImmutableSet.of(segment)));
-    List<String> ids = retrieveUsedSegmentIds();
+    Assert.assertTrue(segmentSchemaTestUtils.insertUsedSegments(ImmutableSet.of(segment), Collections.emptyMap()));
+    List<String> ids = retrieveUsedSegmentIds(derbyConnectorRule.metadataTablesConfigSupplier().get());
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_A", ids.get(0));
 
 
@@ -2621,7 +2319,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         interval,
         partialShardSpec,
         maxVersion,
-        true
+        true,
+        null
     );
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_A_1", identifier1.toString());
     // Assume it publishes; create its corresponding segment
@@ -2636,8 +2335,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         9,
         100
     );
-    Assert.assertTrue(insertUsedSegments(ImmutableSet.of(segment)));
-    ids = retrieveUsedSegmentIds();
+    Assert.assertTrue(segmentSchemaTestUtils.insertUsedSegments(ImmutableSet.of(segment), Collections.emptyMap()));
+    ids = retrieveUsedSegmentIds(derbyConnectorRule.metadataTablesConfigSupplier().get());
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_A_1", ids.get(1));
 
 
@@ -2649,7 +2348,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         interval,
         partialShardSpec,
         maxVersion,
-        true
+        true,
+        null
     );
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_A_2", identifier2.toString());
     // Assume it publishes; create its corresponding segment
@@ -2668,8 +2368,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     // pendings: A: 0,1,2
     // used segments A: 0,1,2
     // unused segments:
-    Assert.assertTrue(insertUsedSegments(ImmutableSet.of(segment)));
-    ids = retrieveUsedSegmentIds();
+    Assert.assertTrue(segmentSchemaTestUtils.insertUsedSegments(ImmutableSet.of(segment), Collections.emptyMap()));
+    ids = retrieveUsedSegmentIds(derbyConnectorRule.metadataTablesConfigSupplier().get());
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_A_2", ids.get(2));
 
 
@@ -2686,8 +2386,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         9,
         100
     );
-    Assert.assertTrue(insertUsedSegments(ImmutableSet.of(compactedSegment)));
-    ids = retrieveUsedSegmentIds();
+    Assert.assertTrue(segmentSchemaTestUtils.insertUsedSegments(ImmutableSet.of(compactedSegment), Collections.emptyMap()));
+    ids = retrieveUsedSegmentIds(derbyConnectorRule.metadataTablesConfigSupplier().get());
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_B", ids.get(3));
     // 3) When overshadowing, segments are still marked as "used" in the segments table
     // state so far:
@@ -2703,7 +2403,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         interval,
         partialShardSpec,
         maxVersion,
-        true
+        true,
+        null
     );
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_B_1", identifier3.toString());
     // no corresponding segment, pending aborted
@@ -2720,13 +2421,13 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     //
     //        used segment: version = A, id = 0,1,2
     //        unused segment: version = B, id = 0
-    List<String> pendings = retrievePendingSegmentIds();
+    List<String> pendings = retrievePendingSegmentIds(derbyConnectorRule.metadataTablesConfigSupplier().get());
     Assert.assertEquals(4, pendings.size());
 
-    List<String> used = retrieveUsedSegmentIds();
+    List<String> used = retrieveUsedSegmentIds(derbyConnectorRule.metadataTablesConfigSupplier().get());
     Assert.assertEquals(3, used.size());
 
-    List<String> unused = retrieveUnusedSegmentIds();
+    List<String> unused = retrieveUnusedSegmentIds(derbyConnectorRule.metadataTablesConfigSupplier().get());
     Assert.assertEquals(1, unused.size());
 
     // Simulate one more append load
@@ -2737,7 +2438,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         interval,
         partialShardSpec,
         maxVersion,
-        true
+        true,
+        null
     );
     // maxid = B_1 -> new partno = 2
     // versionofexistingchunk=A
@@ -2760,8 +2462,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     //
     //        used segment: version = A, id = 0,1,2,3
     //        unused segment: version = B, id = 0
-    Assert.assertTrue(insertUsedSegments(ImmutableSet.of(segment)));
-    ids = retrieveUsedSegmentIds();
+    Assert.assertTrue(segmentSchemaTestUtils.insertUsedSegments(ImmutableSet.of(segment), Collections.emptyMap()));
+    ids = retrieveUsedSegmentIds(derbyConnectorRule.metadataTablesConfigSupplier().get());
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_A_3", ids.get(3));
 
   }
@@ -2774,7 +2476,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     final Interval interval = Intervals.of("2017-01-01/2017-02-01");
     final String sequenceName = "seq";
 
-    final SegmentCreateRequest request = new SegmentCreateRequest(sequenceName, null, "v1", partialShardSpec);
+    final SegmentCreateRequest request = new SegmentCreateRequest(sequenceName, null, "v1", partialShardSpec, null, null);
     final SegmentIdWithShardSpec segmentId0 = coordinator.allocatePendingSegments(
         dataSource,
         interval,
@@ -2785,7 +2487,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_v1", segmentId0.toString());
 
     final SegmentCreateRequest request1 =
-        new SegmentCreateRequest(sequenceName, segmentId0.toString(), segmentId0.getVersion(), partialShardSpec);
+        new SegmentCreateRequest(sequenceName, segmentId0.toString(), segmentId0.getVersion(), partialShardSpec, null, null);
     final SegmentIdWithShardSpec segmentId1 = coordinator.allocatePendingSegments(
         dataSource,
         interval,
@@ -2796,7 +2498,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_v1_1", segmentId1.toString());
 
     final SegmentCreateRequest request2 =
-        new SegmentCreateRequest(sequenceName, segmentId1.toString(), segmentId1.getVersion(), partialShardSpec);
+        new SegmentCreateRequest(sequenceName, segmentId1.toString(), segmentId1.getVersion(), partialShardSpec, null, null);
     final SegmentIdWithShardSpec segmentId2 = coordinator.allocatePendingSegments(
         dataSource,
         interval,
@@ -2807,7 +2509,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_v1_2", segmentId2.toString());
 
     final SegmentCreateRequest request3 =
-        new SegmentCreateRequest(sequenceName, segmentId1.toString(), segmentId1.getVersion(), partialShardSpec);
+        new SegmentCreateRequest(sequenceName, segmentId1.toString(), segmentId1.getVersion(), partialShardSpec, null, null);
     final SegmentIdWithShardSpec segmentId3 = coordinator.allocatePendingSegments(
         dataSource,
         interval,
@@ -2819,7 +2521,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     Assert.assertEquals(segmentId2, segmentId3);
 
     final SegmentCreateRequest request4 =
-        new SegmentCreateRequest("seq1", null, "v1", partialShardSpec);
+        new SegmentCreateRequest("seq1", null, "v1", partialShardSpec, null, null);
     final SegmentIdWithShardSpec segmentId4 = coordinator.allocatePendingSegments(
         dataSource,
         interval,
@@ -2847,10 +2549,9 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         9,
         100
     );
-    Assert.assertTrue(insertUsedSegments(ImmutableSet.of(segment)));
-    List<String> ids = retrieveUsedSegmentIds();
+    Assert.assertTrue(segmentSchemaTestUtils.insertUsedSegments(ImmutableSet.of(segment), Collections.emptyMap()));
+    List<String> ids = retrieveUsedSegmentIds(derbyConnectorRule.metadataTablesConfigSupplier().get());
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_A", ids.get(0));
-
 
     // simulate one aborted append load
     final PartialShardSpec partialShardSpec = NumberedPartialShardSpec.instance();
@@ -2863,12 +2564,11 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         interval,
         partialShardSpec,
         maxVersion,
-        true
+        true,
+        null
     );
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_A_1", identifier.toString());
-
   }
-
 
   @Test
   public void testDeletePendingSegment() throws InterruptedException
@@ -2888,7 +2588,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
           interval,
           partialShardSpec,
           "version",
-          false
+          false,
+          null
       );
       prevSegmentId = identifier.toString();
     }
@@ -2903,7 +2604,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
           interval,
           partialShardSpec,
           "version",
-          false
+          false,
+          null
       );
       prevSegmentId = identifier.toString();
     }
@@ -2930,7 +2632,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
           interval,
           new NumberedOverwritePartialShardSpec(0, 1, (short) (i + 1)),
           "version",
-          false
+          false,
+          null
       );
       Assert.assertEquals(
           StringUtils.format(
@@ -2953,7 +2656,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
               10L
           )
       );
-      final Set<DataSegment> announced = coordinator.commitSegments(toBeAnnounced);
+      final Set<DataSegment> announced = coordinator.commitSegments(toBeAnnounced, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
 
       Assert.assertEquals(toBeAnnounced, announced);
     }
@@ -2998,7 +2701,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         interval,
         partialShardSpec,
         "version",
-        true
+        true,
+        null
     );
 
     HashBasedNumberedShardSpec shardSpec = (HashBasedNumberedShardSpec) id.getShardSpec();
@@ -3019,7 +2723,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
                 0,
                 10L
             )
-        )
+        ),
+        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
 
     id = coordinator.allocatePendingSegment(
@@ -3029,7 +2734,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         interval,
         partialShardSpec,
         "version",
-        true
+        true,
+        null
     );
 
     shardSpec = (HashBasedNumberedShardSpec) id.getShardSpec();
@@ -3050,7 +2756,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
                 0,
                 10L
             )
-        )
+        ),
+        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
 
     id = coordinator.allocatePendingSegment(
@@ -3060,7 +2767,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         interval,
         new HashBasedNumberedPartialShardSpec(null, 2, 3, null),
         "version",
-        true
+        true,
+        null
     );
 
     shardSpec = (HashBasedNumberedShardSpec) id.getShardSpec();
@@ -3099,7 +2807,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
           )
       );
     }
-    coordinator.commitSegments(originalSegments);
+    coordinator.commitSegments(originalSegments, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
     final SegmentIdWithShardSpec id = coordinator.allocatePendingSegment(
         datasource,
         "seq",
@@ -3107,7 +2815,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         interval,
         NumberedPartialShardSpec.instance(),
         version,
-        false
+        false,
+        null
     );
     Assert.assertNull(id);
   }
@@ -3144,7 +2853,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
           )
       );
     }
-    coordinator.commitSegments(originalSegments);
+    coordinator.commitSegments(originalSegments, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
     final SegmentIdWithShardSpec id = coordinator.allocatePendingSegment(
         datasource,
         "seq",
@@ -3152,7 +2861,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         interval,
         NumberedPartialShardSpec.instance(),
         version,
-        false
+        false,
+        null
     );
     Assert.assertNull(id);
   }
@@ -3163,7 +2873,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     coordinator.commitSegmentsAndMetadata(
         ImmutableSet.of(defaultSegment),
         new ObjectMetadata(null),
-        new ObjectMetadata(ImmutableMap.of("foo", "bar"))
+        new ObjectMetadata(ImmutableMap.of("foo", "bar")),
+        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
 
     Assert.assertEquals(
@@ -3191,7 +2902,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     coordinator.commitSegmentsAndMetadata(
         ImmutableSet.of(defaultSegment),
         new ObjectMetadata(null),
-        new ObjectMetadata(ImmutableMap.of("foo", "bar"))
+        new ObjectMetadata(ImmutableMap.of("foo", "bar")),
+        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
 
     Assert.assertEquals(
@@ -3216,7 +2928,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     coordinator.commitSegmentsAndMetadata(
         ImmutableSet.of(defaultSegment),
         new ObjectMetadata(null),
-        new ObjectMetadata(ImmutableMap.of("foo", "bar"))
+        new ObjectMetadata(ImmutableMap.of("foo", "bar")),
+        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
 
     Assert.assertEquals(
@@ -3242,7 +2955,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testMarkSegmentsAsUnusedWithinIntervalOneYear() throws IOException
   {
-    coordinator.commitSegments(ImmutableSet.of(existingSegment1, existingSegment2));
+    coordinator.commitSegments(ImmutableSet.of(existingSegment1, existingSegment2), new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
 
     // interval covers existingSegment1 and partially overlaps existingSegment2,
     // only existingSegment1 will be dropped
@@ -3279,7 +2992,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testMarkSegmentsAsUnusedWithinIntervalTwoYears() throws IOException
   {
-    coordinator.commitSegments(ImmutableSet.of(existingSegment1, existingSegment2));
+    coordinator.commitSegments(ImmutableSet.of(existingSegment1, existingSegment2), new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
 
     // interval covers existingSegment1 and partially overlaps existingSegment2,
     // only existingSegment1 will be dropped
@@ -3313,67 +3026,9 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   }
 
   @Test
-  public void testGetPendingSegmentsForIntervalWithSequencePrefixes()
-  {
-    Pair<SegmentIdWithShardSpec, String> validIntervalValidSequence = Pair.of(
-        SegmentIdWithShardSpec.fromDataSegment(defaultSegment),
-        "validLOL"
-    );
-    insertPendingSegmentAndSequenceName(validIntervalValidSequence);
-
-    Pair<SegmentIdWithShardSpec, String> validIntervalInvalidSequence = Pair.of(
-        SegmentIdWithShardSpec.fromDataSegment(defaultSegment2),
-        "invalidRandom"
-    );
-    insertPendingSegmentAndSequenceName(validIntervalInvalidSequence);
-
-    Pair<SegmentIdWithShardSpec, String> invalidIntervalvalidSequence = Pair.of(
-        SegmentIdWithShardSpec.fromDataSegment(existingSegment1),
-        "validStuff"
-    );
-    insertPendingSegmentAndSequenceName(invalidIntervalvalidSequence);
-
-    Pair<SegmentIdWithShardSpec, String> twentyFifteenWithAnotherValidSequence = Pair.of(
-        new SegmentIdWithShardSpec(
-            existingSegment1.getDataSource(),
-            Intervals.of("2015/2016"),
-            "1970-01-01",
-            new NumberedShardSpec(1, 0)
-        ),
-        "alsoValidAgain"
-    );
-    insertPendingSegmentAndSequenceName(twentyFifteenWithAnotherValidSequence);
-
-    Pair<SegmentIdWithShardSpec, String> twentyFifteenWithInvalidSequence = Pair.of(
-        new SegmentIdWithShardSpec(
-            existingSegment1.getDataSource(),
-            Intervals.of("2015/2016"),
-            "1970-01-01",
-            new NumberedShardSpec(2, 0)
-        ),
-        "definitelyInvalid"
-    );
-    insertPendingSegmentAndSequenceName(twentyFifteenWithInvalidSequence);
-
-
-    final Map<SegmentIdWithShardSpec, String> expected = new HashMap<>();
-    expected.put(validIntervalValidSequence.lhs, validIntervalValidSequence.rhs);
-    expected.put(twentyFifteenWithAnotherValidSequence.lhs, twentyFifteenWithAnotherValidSequence.rhs);
-
-    final Map<SegmentIdWithShardSpec, String> actual =
-        derbyConnector.retryWithHandle(handle -> coordinator.getPendingSegmentsForIntervalWithHandle(
-            handle,
-            defaultSegment.getDataSource(),
-            defaultSegment.getInterval(),
-            ImmutableSet.of("valid", "alsoValid")
-        ));
-    Assert.assertEquals(expected, actual);
-  }
-
-  @Test
   public void testRetrieveUsedSegmentsAndCreatedDates()
   {
-    insertUsedSegments(ImmutableSet.of(defaultSegment));
+    segmentSchemaTestUtils.insertUsedSegments(ImmutableSet.of(defaultSegment), Collections.emptyMap());
 
     List<Pair<DataSegment, String>> resultForIntervalOnTheLeft =
         coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), Collections.singletonList(Intervals.of("2000/2001")));
@@ -3413,7 +3068,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   public void testRetrieveUsedSegmentsAndCreatedDatesFetchesEternityForAnyInterval()
   {
 
-    insertUsedSegments(ImmutableSet.of(eternitySegment, firstHalfEternityRangeSegment, secondHalfEternityRangeSegment));
+    segmentSchemaTestUtils.insertUsedSegments(ImmutableSet.of(eternitySegment, firstHalfEternityRangeSegment, secondHalfEternityRangeSegment), Collections.emptyMap());
 
     List<Pair<DataSegment, String>> resultForRandomInterval =
         coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), Collections.singletonList(defaultSegment.getInterval()));
@@ -3444,7 +3099,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     );
 
     final Set<DataSegment> tombstones = new HashSet<>(Collections.singleton(tombstoneSegment));
-    Assert.assertTrue(coordinator.commitSegments(tombstones).containsAll(tombstones));
+    Assert.assertTrue(coordinator.commitSegments(tombstones, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)).containsAll(tombstones));
 
     // Allocate and commit a data segment by appending to the same interval
     final SegmentIdWithShardSpec identifier = coordinator.allocatePendingSegment(
@@ -3454,7 +3109,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         interval,
         NumberedPartialShardSpec.instance(),
         "version",
-        false
+        false,
+        null
     );
 
     Assert.assertEquals("wiki_2020-01-01T00:00:00.000Z_2021-01-01T00:00:00.000Z_version_1", identifier.toString());
@@ -3466,7 +3122,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         identifier.getShardSpec()
     );
     final Set<DataSegment> dataSegments = new HashSet<>(Collections.singleton(dataSegment));
-    Assert.assertTrue(coordinator.commitSegments(dataSegments).containsAll(dataSegments));
+    Assert.assertTrue(coordinator.commitSegments(dataSegments, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)).containsAll(dataSegments));
 
     // Mark the tombstone as unused
     markAllSegmentsUnused(tombstones, DateTimes.nowUtc());
@@ -3498,7 +3154,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     );
 
     final Set<DataSegment> tombstones = new HashSet<>(Collections.singleton(tombstoneSegment));
-    Assert.assertTrue(coordinator.commitSegments(tombstones).containsAll(tombstones));
+    Assert.assertTrue(coordinator.commitSegments(tombstones, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)).containsAll(tombstones));
 
     // Allocate and commit a data segment by appending to the same interval
     final SegmentIdWithShardSpec identifier = coordinator.allocatePendingSegment(
@@ -3508,7 +3164,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         interval,
         NumberedPartialShardSpec.instance(),
         "version",
-        false
+        false,
+        null
     );
 
     Assert.assertEquals("wiki_2020-01-01T00:00:00.000Z_2021-01-01T00:00:00.000Z_version_1", identifier.toString());
@@ -3520,7 +3177,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         identifier.getShardSpec()
     );
     final Set<DataSegment> dataSegments = new HashSet<>(Collections.singleton(dataSegment));
-    Assert.assertTrue(coordinator.commitSegments(dataSegments).containsAll(dataSegments));
+    Assert.assertTrue(coordinator.commitSegments(dataSegments, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)).containsAll(dataSegments));
 
     // Mark the tombstone as unused
     markAllSegmentsUnused(tombstones, DateTimes.nowUtc());
@@ -3534,134 +3191,5 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     // tombstone contains 1 core partition
     SegmentTimeline segmentTimeline = SegmentTimeline.forSegments(allUsedSegments);
     Assert.assertEquals(0, segmentTimeline.lookup(interval).size());
-  }
-
-  private static class DS
-  {
-    static final String WIKI = "wiki";
-  }
-
-  private DataSegment createSegment(Interval interval, String version, ShardSpec shardSpec)
-  {
-    return DataSegment.builder()
-                      .dataSource(DS.WIKI)
-                      .interval(interval)
-                      .version(version)
-                      .shardSpec(shardSpec)
-                      .size(100)
-                      .build();
-  }
-
-  private List<DataSegment> createAndGetUsedYearSegments(final int startYear, final int endYear) throws IOException
-  {
-    final List<DataSegment> segments = new ArrayList<>();
-
-    for (int year = startYear; year < endYear; year++) {
-      segments.add(createSegment(
-          Intervals.of("%d/%d", year, year + 1),
-          "version",
-          new LinearShardSpec(0))
-      );
-    }
-    final Set<DataSegment> segmentsSet = new HashSet<>(segments);
-    final Set<DataSegment> committedSegments = coordinator.commitSegments(segmentsSet);
-    Assert.assertTrue(committedSegments.containsAll(segmentsSet));
-
-    return segments;
-  }
-
-  private ImmutableList<DataSegment> retrieveUnusedSegments(
-      final List<Interval> intervals,
-      final Integer limit,
-      final String lastSegmentId,
-      final SortOrder sortOrder,
-      final DateTime maxUsedStatusLastUpdatedTime
-  )
-  {
-    return derbyConnector.inReadOnlyTransaction(
-        (handle, status) -> {
-          try (final CloseableIterator<DataSegment> iterator =
-                   SqlSegmentsMetadataQuery.forHandle(
-                           handle,
-                           derbyConnector,
-                           derbyConnectorRule.metadataTablesConfigSupplier().get(),
-                           mapper
-                       )
-                       .retrieveUnusedSegments(DS.WIKI, intervals, null, limit, lastSegmentId, sortOrder, maxUsedStatusLastUpdatedTime)) {
-            return ImmutableList.copyOf(iterator);
-          }
-        }
-    );
-  }
-
-  private ImmutableList<DataSegmentPlus> retrieveUnusedSegmentsPlus(
-      final List<Interval> intervals,
-      final Integer limit,
-      final String lastSegmentId,
-      final SortOrder sortOrder,
-      final DateTime maxUsedStatusLastUpdatedTime
-  )
-  {
-    return derbyConnector.inReadOnlyTransaction(
-        (handle, status) -> {
-          try (final CloseableIterator<DataSegmentPlus> iterator =
-                   SqlSegmentsMetadataQuery.forHandle(
-                           handle,
-                           derbyConnector,
-                           derbyConnectorRule.metadataTablesConfigSupplier().get(),
-                           mapper
-                       )
-                       .retrieveUnusedSegmentsPlus(DS.WIKI, intervals, null, limit, lastSegmentId, sortOrder, maxUsedStatusLastUpdatedTime)) {
-            return ImmutableList.copyOf(iterator);
-          }
-        }
-    );
-  }
-
-  private void verifyContainsAllSegmentsPlus(
-      List<DataSegment> expectedSegments,
-      List<DataSegmentPlus> actualUnusedSegmentsPlus,
-      DateTime usedStatusLastUpdatedTime)
-  {
-    Map<SegmentId, DataSegment> expectedIdToSegment = expectedSegments.stream().collect(Collectors.toMap(DataSegment::getId, Function.identity()));
-    Map<SegmentId, DataSegmentPlus> actualIdToSegmentPlus = actualUnusedSegmentsPlus.stream()
-        .collect(Collectors.toMap(d -> d.getDataSegment().getId(), Function.identity()));
-    Assert.assertTrue(expectedIdToSegment.entrySet().stream().allMatch(e -> {
-      DataSegmentPlus segmentPlus = actualIdToSegmentPlus.get(e.getKey());
-      return segmentPlus != null
-             && !segmentPlus.getCreatedDate().isAfter(usedStatusLastUpdatedTime)
-             && segmentPlus.getUsedStatusLastUpdatedDate() != null
-             && segmentPlus.getUsedStatusLastUpdatedDate().equals(usedStatusLastUpdatedTime);
-    }));
-  }
-
-  private void verifyEqualsAllSegmentsPlus(
-      List<DataSegment> expectedSegments,
-      List<DataSegmentPlus> actualUnusedSegmentsPlus,
-      DateTime usedStatusLastUpdatedTime
-  )
-  {
-    Assert.assertEquals(expectedSegments.size(), actualUnusedSegmentsPlus.size());
-    for (int i = 0; i < expectedSegments.size(); i++) {
-      DataSegment expectedSegment = expectedSegments.get(i);
-      DataSegmentPlus actualSegmentPlus = actualUnusedSegmentsPlus.get(i);
-      Assert.assertEquals(expectedSegment.getId(), actualSegmentPlus.getDataSegment().getId());
-      Assert.assertTrue(!actualSegmentPlus.getCreatedDate().isAfter(usedStatusLastUpdatedTime)
-                        && actualSegmentPlus.getUsedStatusLastUpdatedDate() != null
-                        && actualSegmentPlus.getUsedStatusLastUpdatedDate().equals(usedStatusLastUpdatedTime));
-    }
-  }
-
-  /**
-   * This test-only shard type is to test the behavior of "old generation" tombstones with 1 core partition.
-   */
-  private static class TombstoneShardSpecWith1CorePartition extends TombstoneShardSpec
-  {
-    @Override
-    @JsonProperty("partitions")
-    public int getNumCorePartitions()
-    {
-      return 1;
-    }
   }
 }

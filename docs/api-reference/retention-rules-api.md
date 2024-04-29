@@ -48,7 +48,7 @@ Note that this endpoint returns an HTTP `200 OK` even if the datasource does not
 
 ### URL
 
-<code class="postAPI">POST</code> <code>/druid/coordinator/v1/rules/:dataSource</code>
+`POST` `/druid/coordinator/v1/rules/{dataSource}`
 
 ### Header parameters
 
@@ -156,7 +156,7 @@ This request overwrites any existing rules for all datasources. To remove defaul
 
 ### URL
 
-<code class="postAPI">POST</code> <code>/druid/coordinator/v1/rules/_default</code>
+`POST` `/druid/coordinator/v1/rules/_default`
 
 ### Header parameters
 
@@ -244,7 +244,7 @@ Retrieves all current retention rules in the cluster including the default reten
 
 ### URL
 
-<code class="getAPI">GET</code> <code>/druid/coordinator/v1/rules</code>
+`GET` `/druid/coordinator/v1/rules`
 
 ### Responses
 
@@ -286,7 +286,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 ### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
 {
@@ -313,11 +313,11 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 Retrieves an array of rule objects for a single datasource. Returns an empty array if there are no retention rules.
 
-Note that this endpoint returns an HTTP `200 OK` message code even if the datasource does not exist.
+Note that this endpoint returns an HTTP `200 OK` message code even if the datasource doesn't exist.
 
 ### URL
 
-<code class="getAPI">GET</code> <code>/druid/coordinator/v1/rules/:dataSource</code>
+`GET` `/druid/coordinator/v1/rules/{dataSource}`
 
 ### Query parameters
 
@@ -366,7 +366,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 ### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
 [
@@ -398,7 +398,7 @@ Retrieves the audit history of rules for all datasources over an interval of tim
 
 ### URL
 
-<code class="getAPI">GET</code> <code>/druid/coordinator/v1/rules/history</code>
+`GET` `/druid/coordinator/v1/rules/history`
 
 ### Query parameters
 
@@ -465,7 +465,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 ### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
 [

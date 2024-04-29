@@ -112,7 +112,7 @@ public class HeapBasedTopNAlgorithm
   }
 
   @Override
-  protected void closeAggregators(TopNColumnAggregatesProcessor processor)
+  protected void resetAggregators(TopNColumnAggregatesProcessor processor)
   {
     processor.closeAggregators();
   }

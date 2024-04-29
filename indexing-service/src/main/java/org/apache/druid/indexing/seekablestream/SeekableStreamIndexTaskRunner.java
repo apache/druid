@@ -51,13 +51,14 @@ import org.apache.druid.error.ErrorResponse;
 import org.apache.druid.indexer.IngestionState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
-import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
-import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
+import org.apache.druid.indexer.report.IngestionStatsAndErrors;
+import org.apache.druid.indexer.report.IngestionStatsAndErrorsTaskReport;
+import org.apache.druid.indexer.report.TaskContextReport;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskRealtimeMetricsMonitorBuilder;
-import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.CheckPointDataSourceMetadataAction;
 import org.apache.druid.indexing.common.actions.ResetDataSourceMetadataAction;
@@ -1118,12 +1119,12 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
    * @param handoffWaitMs Milliseconds waited for segments to be handed off.
    * @return Map of reports for the task.
    */
-  private Map<String, TaskReport> getTaskCompletionReports(@Nullable String errorMsg, long handoffWaitMs)
+  private TaskReport.ReportMap getTaskCompletionReports(@Nullable String errorMsg, long handoffWaitMs)
   {
     return TaskReport.buildTaskReports(
         new IngestionStatsAndErrorsTaskReport(
             task.getId(),
-            new IngestionStatsAndErrorsTaskReportData(
+            new IngestionStatsAndErrors(
                 ingestionState,
                 getTaskCompletionUnparseableEvents(),
                 getTaskCompletionRowStats(),
@@ -1134,7 +1135,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                 null,
                 null
             )
-        )
+        ),
+        new TaskContextReport(task.getId(), task.getContext())
     );
   }
 

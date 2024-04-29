@@ -327,24 +327,21 @@ public class EditorTest
     // properties.
 
     // Remove a required property
-    Map<String, Object> updates1 = new HashMap<>();
-    updates1.put(DatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, null);
-    assertThrows(
-        CatalogException.class,
-        () -> new TableEditor(
-                  catalog,
-                  table.id(),
-                  new UpdateProperties(updates1)
-              )
-             .go()
+    Map<String, Object> updates = new HashMap<>();
+    updates.put(DatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, null);
+    cmd = new UpdateProperties(updates);
+    Map<String, Object> expected = ImmutableMap.of();
+    assertEquals(
+        expected,
+        doEdit(tableName, cmd).spec().properties()
     );
 
     // Add and update properties
-    Map<String, Object> updates = new HashMap<>();
+    updates = new HashMap<>();
     updates.put(DatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "PT1H");
     updates.put("foo", "bar");
     cmd = new UpdateProperties(updates);
-    Map<String, Object> expected = ImmutableMap.of(
+    expected = ImmutableMap.of(
         DatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "PT1H",
         "foo", "bar"
     );

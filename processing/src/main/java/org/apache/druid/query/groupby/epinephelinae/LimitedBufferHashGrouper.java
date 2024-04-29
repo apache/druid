@@ -185,6 +185,7 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
     hashTable.reset();
     keySerde.reset();
     offsetHeap.reset();
+    aggregators.reset();
     heapIndexUpdater.setHashTableBuffer(hashTable.getTableBuffer());
     hasIterated = false;
     offsetHeapIterableSize = 0;

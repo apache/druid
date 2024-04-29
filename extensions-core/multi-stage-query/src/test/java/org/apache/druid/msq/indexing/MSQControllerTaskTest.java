@@ -35,7 +35,7 @@ import java.util.Collections;
 
 public class MSQControllerTaskTest
 {
-  MSQSpec MSQ_SPEC = MSQSpec
+  private final MSQSpec MSQ_SPEC = MSQSpec
       .builder()
       .destination(new DataSourceMSQDestination(
           "target",
@@ -59,7 +59,7 @@ public class MSQControllerTaskTest
   @Test
   public void testGetInputSourceResources()
   {
-    MSQControllerTask msqWorkerTask = new MSQControllerTask(
+    MSQControllerTask controllerTask = new MSQControllerTask(
         null,
         MSQ_SPEC,
         null,
@@ -67,7 +67,25 @@ public class MSQControllerTaskTest
         null,
         null,
         null,
-        null);
-    Assert.assertTrue(msqWorkerTask.getInputSourceResources().isEmpty());
+        null
+    );
+    Assert.assertTrue(controllerTask.getInputSourceResources().isEmpty());
+  }
+
+  @Test
+  public void testGetTaskAllocatorId()
+  {
+    final String taskId = "taskId";
+    MSQControllerTask controllerTask = new MSQControllerTask(
+        taskId,
+        MSQ_SPEC,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+    );
+    Assert.assertEquals(taskId, controllerTask.getTaskAllocatorId());
   }
 }

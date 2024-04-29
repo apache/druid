@@ -40,15 +40,16 @@ import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.indexer.IngestionState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
+import org.apache.druid.indexer.report.IngestionStatsAndErrors;
+import org.apache.druid.indexer.report.IngestionStatsAndErrorsTaskReport;
+import org.apache.druid.indexer.report.TaskContextReport;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.appenderator.ActionBasedSegmentAllocator;
 import org.apache.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
-import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
-import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskRealtimeMetricsMonitorBuilder;
-import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
 import org.apache.druid.indexing.common.actions.SegmentLockAcquireAction;
@@ -118,7 +119,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 @Deprecated
-public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements ChatHandler
+public class AppenderatorDriverRealtimeIndexTask extends AbstractTask
+    implements ChatHandler, PendingSegmentAllocatingTask
 {
   private static final String CTX_KEY_LOOKUP_TIER = "lookupTier";
 
@@ -259,6 +261,12 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
   }
 
   @Override
+  public String getTaskAllocatorId()
+  {
+    return getGroupId();
+  }
+
+  @Override
   public TaskStatus runTask(final TaskToolbox toolbox)
   {
     runThread = Thread.currentThread();
@@ -351,7 +359,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
       int sequenceNumber = 0;
       String sequenceName = makeSequenceName(getId(), sequenceNumber);
 
-      final TransactionalSegmentPublisher publisher = (mustBeNullOrEmptyOverwriteSegments, segments, commitMetadata) -> {
+      final TransactionalSegmentPublisher publisher = (mustBeNullOrEmptyOverwriteSegments, segments, commitMetadata, map) -> {
         if (mustBeNullOrEmptyOverwriteSegments != null && !mustBeNullOrEmptyOverwriteSegments.isEmpty()) {
           throw new ISE(
               "Stream ingestion task unexpectedly attempted to overwrite segments: %s",
@@ -360,6 +368,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
         }
         final SegmentTransactionalInsertAction action = SegmentTransactionalInsertAction.appendAction(
             segments,
+            null,
             null,
             null
         );
@@ -609,12 +618,12 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
    *
    * @return Map of reports for the task.
    */
-  private Map<String, TaskReport> getTaskCompletionReports()
+  private TaskReport.ReportMap getTaskCompletionReports()
   {
     return TaskReport.buildTaskReports(
         new IngestionStatsAndErrorsTaskReport(
             getId(),
-            new IngestionStatsAndErrorsTaskReportData(
+            new IngestionStatsAndErrors(
                 ingestionState,
                 getTaskCompletionUnparseableEvents(),
                 getTaskCompletionRowStats(),
@@ -625,7 +634,8 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
                 null,
                 null
             )
-        )
+        ),
+        new TaskContextReport(getId(), getContext())
     );
   }
 

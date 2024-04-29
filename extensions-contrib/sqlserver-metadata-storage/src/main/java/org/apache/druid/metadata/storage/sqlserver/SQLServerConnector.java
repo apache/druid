@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.SQLMetadataConnector;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.skife.jdbi.v2.Binding;
 import org.skife.jdbi.v2.ColonPrefixNamedParamStatementRewriter;
 import org.skife.jdbi.v2.DBI;
@@ -133,9 +134,13 @@ public class SQLServerConnector extends SQLMetadataConnector
   ));
 
   @Inject
-  public SQLServerConnector(Supplier<MetadataStorageConnectorConfig> config, Supplier<MetadataStorageTablesConfig> dbTables)
+  public SQLServerConnector(
+      Supplier<MetadataStorageConnectorConfig> config,
+      Supplier<MetadataStorageTablesConfig> dbTables,
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
+  )
   {
-    super(config, dbTables);
+    super(config, dbTables, centralizedDatasourceSchemaConfig);
 
     final BasicDataSource datasource = getDatasource();
     datasource.setDriverClassLoader(getClass().getClassLoader());

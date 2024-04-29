@@ -30,7 +30,9 @@ import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.metadata.ReplaceTaskLock;
+import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.PartialShardSpec;
@@ -141,7 +143,10 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   }
 
   @Override
-  public Set<DataSegment> commitSegments(Set<DataSegment> segments)
+  public Set<DataSegment> commitSegments(
+      Set<DataSegment> segments,
+      final SegmentSchemaMapping segmentSchemaMapping
+  )
   {
     Set<DataSegment> added = new HashSet<>();
     for (final DataSegment segment : segments) {
@@ -166,19 +171,22 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   @Override
   public SegmentPublishResult commitReplaceSegments(
       Set<DataSegment> replaceSegments,
-      Set<ReplaceTaskLock> locksHeldByReplaceTask
+      Set<ReplaceTaskLock> locksHeldByReplaceTask,
+      SegmentSchemaMapping segmentSchemaMapping
   )
   {
-    return SegmentPublishResult.ok(commitSegments(replaceSegments));
+    return SegmentPublishResult.ok(commitSegments(replaceSegments, segmentSchemaMapping));
   }
 
   @Override
   public SegmentPublishResult commitAppendSegments(
       Set<DataSegment> appendSegments,
-      Map<DataSegment, ReplaceTaskLock> appendSegmentToReplaceLock
+      Map<DataSegment, ReplaceTaskLock> appendSegmentToReplaceLock,
+      String taskGroup,
+      SegmentSchemaMapping segmentSchemaMapping
   )
   {
-    return SegmentPublishResult.ok(commitSegments(appendSegments));
+    return SegmentPublishResult.ok(commitSegments(appendSegments, segmentSchemaMapping));
   }
 
   @Override
@@ -186,21 +194,24 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
       Set<DataSegment> appendSegments,
       Map<DataSegment, ReplaceTaskLock> appendSegmentToReplaceLock,
       DataSourceMetadata startMetadata,
-      DataSourceMetadata endMetadata
+      DataSourceMetadata endMetadata,
+      String taskGroup,
+      SegmentSchemaMapping segmentSchemaMapping
   )
   {
-    return SegmentPublishResult.ok(commitSegments(appendSegments));
+    return SegmentPublishResult.ok(commitSegments(appendSegments, segmentSchemaMapping));
   }
 
   @Override
   public SegmentPublishResult commitSegmentsAndMetadata(
       Set<DataSegment> segments,
       @Nullable DataSourceMetadata startMetadata,
-      @Nullable DataSourceMetadata endMetadata
+      @Nullable DataSourceMetadata endMetadata,
+      SegmentSchemaMapping segmentSchemaMapping
   )
   {
     // Don't actually compare metadata, just do it!
-    return SegmentPublishResult.ok(commitSegments(segments));
+    return SegmentPublishResult.ok(commitSegments(segments, segmentSchemaMapping));
   }
 
   @Override
@@ -228,7 +239,8 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
       Interval interval,
       PartialShardSpec partialShardSpec,
       String maxVersion,
-      boolean skipSegmentLineageCheck
+      boolean skipSegmentLineageCheck,
+      String taskAllocatorId
   )
   {
     return new SegmentIdWithShardSpec(
@@ -241,8 +253,7 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
 
   @Override
   public Map<SegmentIdWithShardSpec, SegmentIdWithShardSpec> upgradePendingSegmentsOverlappingWith(
-      Set<DataSegment> replaceSegments,
-      Set<String> activeBaseSequenceNames
+      Set<DataSegment> replaceSegments
   )
   {
     return Collections.emptyMap();
@@ -281,6 +292,18 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
 
   @Override
   public int deleteUpgradeSegmentsForTask(final String taskId)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public int deletePendingSegmentsForTaskGroup(final String taskGroup)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public List<PendingSegmentRecord> getPendingSegments(String datasource, Interval interval)
   {
     throw new UnsupportedOperationException();
   }

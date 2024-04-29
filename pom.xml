@@ -107,7 +107,7 @@
         <mysql.version>5.1.49</mysql.version>
         <mariadb.version>2.7.3</mariadb.version>
         <netty3.version>3.10.6.Final</netty3.version>
-        <netty4.version>4.1.107.Final</netty4.version>
+        <netty4.version>4.1.108.Final</netty4.version>
         <postgresql.version>42.7.2</postgresql.version>
         <protobuf.version>3.24.0</protobuf.version>
         <resilience4j.version>1.3.1</resilience4j.version>
@@ -126,7 +126,7 @@
         <hibernate-validator.version>6.2.5.Final</hibernate-validator.version>
         <httpclient.version>4.5.13</httpclient.version>
         <!-- When upgrading ZK, edit docs and integration tests as well (integration-tests/docker-base/setup.sh) -->
-        <zookeeper.version>3.8.3</zookeeper.version>
+        <zookeeper.version>3.8.4</zookeeper.version>
         <checkerframework.version>2.5.7</checkerframework.version>
         <com.google.apis.client.version>2.2.0</com.google.apis.client.version>
         <com.google.http.client.apis.version>1.42.3</com.google.http.client.apis.version>
@@ -1056,7 +1056,7 @@
             <dependency>
                 <groupId>org.junit</groupId>
                 <artifactId>junit-bom</artifactId>
-                <version>5.10.0</version>
+                <version>5.10.2</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -1348,6 +1348,32 @@
     <build>
         <plugins>
             <plugin>
+                <groupId>org.openrewrite.maven</groupId>
+                <artifactId>rewrite-maven-plugin</artifactId>
+                <version>5.27.0</version>
+                <configuration>
+                    <activeRecipes>
+                        <recipe>org.apache.druid.RewriteRules</recipe>
+                    </activeRecipes>
+                    <configLocation>${maven.multiModuleProjectDirectory}/rewrite.yml</configLocation>
+                    <checkstyleDetectionEnabled>false</checkstyleDetectionEnabled>
+                    <failOnDryRunResults>true</failOnDryRunResults>
+                    <pomCacheEnabled>false</pomCacheEnabled>
+                    <skipMavenParsing>true</skipMavenParsing>
+                    <exclusions>
+                        <exclude>**/*.json</exclude>
+                        <exclude>**/*.yaml</exclude>
+                    </exclusions>
+                </configuration>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.openrewrite.recipe</groupId>
+                        <artifactId>rewrite-testing-frameworks</artifactId>
+                        <version>2.6.0</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
+            <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
                 <version>${jacoco.version}</version>
@@ -1573,6 +1599,7 @@
                         </goals>
                         <configuration>
                             <rules>
+                                <banDuplicatePomDependencyVersions/>
                                 <requireMavenVersion>
                                     <version>3.0.0</version>
                                 </requireMavenVersion>
@@ -1709,7 +1736,7 @@
               <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-surefire-plugin</artifactId>
-                    <version>3.1.2</version>
+                    <version>3.2.5</version>
                     <configuration>
                         <!-- locale settings must be set on the command line before startup -->
                         <!-- set default options -->
@@ -1741,6 +1768,11 @@
                         <!-- our tests are very verbose, let's keep the volume down -->
                         <redirectTestOutputToFile>true</redirectTestOutputToFile>
                         <forkNode implementation="org.apache.maven.plugin.surefire.extensions.SurefireForkNodeFactory"/>
+                        <!-- Surefire default is to exclude static inner classes; which may lead to the ignore of static inner classes
+                             https://maven.apache.org/surefire/maven-surefire-plugin/test-mojo.html#excludes -->
+                        <excludes>
+                           <exclude/>
+                        </excludes>
                     </configuration>
                 </plugin>
                 <plugin>

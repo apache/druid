@@ -107,6 +107,6 @@ public class SketchVectorAggregator implements VectorAggregator
   @Override
   public void close()
   {
-    helper.close();
+    helper.clear();
   }
 }

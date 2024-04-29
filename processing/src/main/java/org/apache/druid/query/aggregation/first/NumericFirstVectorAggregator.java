@@ -95,7 +95,7 @@ public abstract class NumericFirstVectorAggregator implements VectorAggregator
 
       if (objectsWhichMightBeNumeric != null) {
         final SerializablePair<Long, Number> inPair = (SerializablePair<Long, Number>) objectsWhichMightBeNumeric[index];
-        if (inPair.lhs != null && inPair.lhs < firstTime) {
+        if (inPair != null && inPair.lhs != null && inPair.lhs < firstTime) {
           firstTime = inPair.lhs;
           if (useDefault || inPair.rhs != null) {
             updateTimeWithValue(buf, position, firstTime, index);
