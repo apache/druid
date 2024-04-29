@@ -48,9 +48,9 @@ import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexer.partitions.SecondaryPartitionType;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskRealtimeMetricsMonitorBuilder;
-import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.stats.TaskRealtimeMetricsMonitor;
@@ -67,6 +67,7 @@ import org.apache.druid.indexing.overlord.sampler.InputSourceSampler;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -75,6 +76,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.incremental.AppendableIndexSpec;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
@@ -137,7 +139,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
+public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, PendingSegmentAllocatingTask
 {
 
   public static final HashFunction HASH_FUNCTION = Hashing.murmur3_128();
@@ -300,6 +302,12 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     } else {
       return granularitySpec.getSegmentGranularity();
     }
+  }
+
+  @Override
+  public String getTaskAllocatorId()
+  {
+    return getGroupId();
   }
 
   @Nonnull
@@ -875,8 +883,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
     final TaskLockType taskLockType = getTaskLockHelper().getLockTypeToUse();
     final TransactionalSegmentPublisher publisher =
-        (segmentsToBeOverwritten, segmentsToPublish, commitMetadata) -> toolbox.getTaskActionClient().submit(
-            buildPublishAction(segmentsToBeOverwritten, segmentsToPublish, taskLockType)
+        (segmentsToBeOverwritten, segmentsToPublish, commitMetadata, map) -> toolbox.getTaskActionClient().submit(
+            buildPublishAction(segmentsToBeOverwritten, segmentsToPublish, map, taskLockType)
         );
 
     String effectiveId = getContextValue(CompactionTask.CTX_KEY_APPENDERATOR_TRACKING_TASK_ID, null);
@@ -899,7 +907,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     try (final BatchAppenderatorDriver driver = BatchAppenderators.newDriver(appenderator, toolbox, segmentAllocator)) {
       driver.startJob();
 
-      SegmentsAndCommitMetadata pushed = InputSourceProcessor.process(
+      Pair<SegmentsAndCommitMetadata, SegmentSchemaMapping> commitMetadataAndSchema = InputSourceProcessor.process(
           dataSchema,
           driver,
           partitionsSpec,
@@ -913,6 +921,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           pushTimeout
       );
 
+      SegmentsAndCommitMetadata pushed = commitMetadataAndSchema.lhs;
       // If we use timeChunk lock, then we don't have to specify what segments will be overwritten because
       // it will just overwrite all segments overlapped with the new segments.
       final Set<DataSegment> inputSegments = getTaskLockHelper().isUseSegmentLock()
@@ -923,7 +932,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           Tasks.DEFAULT_STORE_COMPACTION_STATE
       );
       final Function<Set<DataSegment>, Set<DataSegment>> annotateFunction =
-          compactionStateAnnotateFunction(
+          addCompactionStateToSegments(
               storeCompactionState,
               toolbox,
               ingestionSchema
@@ -950,7 +959,6 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
         tombStones = tombstoneHelper.computeTombstones(ingestionSchema.getDataSchema(), tombstonesAndVersions);
 
-
         log.debugSegments(tombStones, "To publish tombstones");
       }
 
@@ -960,7 +968,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
               inputSegments,
               tombStones,
               publisher,
-              annotateFunction
+              annotateFunction,
+              commitMetadataAndSchema.rhs
           ), pushTimeout);
       appenderator.close();
 
@@ -1770,5 +1779,4 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
              '}';
     }
   }
-
 }

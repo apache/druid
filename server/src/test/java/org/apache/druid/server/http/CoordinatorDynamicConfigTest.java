@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.http;
 
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.segment.TestHelper;
@@ -31,9 +30,6 @@ import org.junit.Test;
 import javax.annotation.Nullable;
 import java.util.Set;
 
-/**
- *
- */
 public class CoordinatorDynamicConfigTest
 {
   private static final int EXPECTED_DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE = 500;
@@ -190,7 +186,7 @@ public class CoordinatorDynamicConfigTest
         true
     );
 
-    actual = CoordinatorDynamicConfig.builder().withKillTaskSlotRatio(1.0).build(actual);
+    actual = CoordinatorDynamicConfig.builder().withKillTaskSlotRatio(0.1).build(actual);
     assertConfig(
         actual,
         1,
@@ -201,7 +197,7 @@ public class CoordinatorDynamicConfigTest
         1,
         2,
         whitelist,
-        1.0,
+        0.1,
         2,
         false,
         1,
@@ -221,7 +217,7 @@ public class CoordinatorDynamicConfigTest
         1,
         2,
         whitelist,
-        1.0,
+        0.1,
         5,
         false,
         1,
@@ -334,7 +330,7 @@ public class CoordinatorDynamicConfigTest
         1,
         2,
         whitelist,
-        1.0,
+        0.1,
         Integer.MAX_VALUE,
         false,
         1,
@@ -354,7 +350,7 @@ public class CoordinatorDynamicConfigTest
         1,
         2,
         whitelist,
-        1.0,
+        0.1,
         Integer.MAX_VALUE,
         false,
         1,
@@ -374,7 +370,7 @@ public class CoordinatorDynamicConfigTest
         1,
         2,
         whitelist,
-        1.0,
+        0.1,
         Integer.MAX_VALUE,
         false,
         1,
@@ -418,7 +414,7 @@ public class CoordinatorDynamicConfigTest
         1,
         2,
         ImmutableSet.of("test1", "test2"),
-        1.0,
+        0.1,
         Integer.MAX_VALUE,
         false,
         1,
@@ -462,7 +458,7 @@ public class CoordinatorDynamicConfigTest
         1,
         2,
         whitelist,
-        1.0,
+        0.1,
         Integer.MAX_VALUE,
         false,
         1,
@@ -504,7 +500,7 @@ public class CoordinatorDynamicConfigTest
         1,
         2,
         ImmutableSet.of(),
-        1.0,
+        0.1,
         Integer.MAX_VALUE,
         true,
         1,
@@ -557,7 +553,7 @@ public class CoordinatorDynamicConfigTest
         1,
         2,
         ImmutableSet.of(),
-        1.0,
+        0.1,
         Integer.MAX_VALUE,
         true,
         EXPECTED_DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE,
@@ -582,7 +578,7 @@ public class CoordinatorDynamicConfigTest
         500,
         getDefaultNumBalancerThreads(),
         emptyList,
-        1.0,
+        0.1,
         Integer.MAX_VALUE,
         true,
         EXPECTED_DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE,
@@ -610,7 +606,7 @@ public class CoordinatorDynamicConfigTest
         500,
         getDefaultNumBalancerThreads(),
         ImmutableSet.of("DATASOURCE"),
-        1.0,
+        0.1,
         Integer.MAX_VALUE,
         false,
         EXPECTED_DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE,
@@ -651,22 +647,6 @@ public class CoordinatorDynamicConfigTest
             null
         ).build(current)
     );
-  }
-
-  private void assertThatDeserializationFailsWithMessage(String json, String message)
-  {
-    JsonMappingException e = Assert.assertThrows(
-        JsonMappingException.class,
-        () -> mapper.readValue(
-            mapper.writeValueAsString(
-                mapper.readValue(json, CoordinatorDynamicConfig.class)
-            ),
-            CoordinatorDynamicConfig.class
-        )
-    );
-    Assert.assertTrue(e.getCause() instanceof IllegalArgumentException);
-    IllegalArgumentException cause = (IllegalArgumentException) e.getCause();
-    Assert.assertEquals(message, cause.getMessage());
   }
 
   @Test

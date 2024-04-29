@@ -43,6 +43,7 @@ import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.common.task.TaskContextEnricher;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.common.task.batch.MaxAllowedLocksExceededException;
 import org.apache.druid.indexing.common.task.batch.parallel.SinglePhaseParallelIndexTaskRunner;
@@ -121,6 +122,7 @@ public class TaskQueue
   private final TaskLockbox taskLockbox;
   private final ServiceEmitter emitter;
   private final ObjectMapper passwordRedactingMapper;
+  private final TaskContextEnricher taskContextEnricher;
 
   private final ReentrantLock giant = new ReentrantLock(true);
   @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
@@ -165,7 +167,8 @@ public class TaskQueue
       TaskActionClientFactory taskActionClientFactory,
       TaskLockbox taskLockbox,
       ServiceEmitter emitter,
-      ObjectMapper mapper
+      ObjectMapper mapper,
+      TaskContextEnricher taskContextEnricher
   )
   {
     this.lockConfig = Preconditions.checkNotNull(lockConfig, "lockConfig");
@@ -182,6 +185,7 @@ public class TaskQueue
     );
     this.passwordRedactingMapper = mapper.copy()
                                          .addMixIn(PasswordProvider.class, PasswordProviderRedactionMixIn.class);
+    this.taskContextEnricher = Preconditions.checkNotNull(taskContextEnricher, "taskContextEnricher");
   }
 
   @VisibleForTesting
@@ -420,13 +424,16 @@ public class TaskQueue
           catch (Exception e) {
             log.warn(e, "Exception thrown during isReady for task: %s", task.getId());
             final String errorMessage;
-            if (e instanceof MaxAllowedLocksExceededException) {
+            if (e instanceof MaxAllowedLocksExceededException || e instanceof DruidException) {
               errorMessage = e.getMessage();
             } else {
-              errorMessage = "Failed while waiting for the task to be ready to run. "
-                                          + "See overlord logs for more details.";
+              errorMessage = StringUtils.format(
+                  "Encountered error[%s] while waiting for task to be ready. See Overlord logs for more details.",
+                  e.getMessage()
+              );
             }
-            notifyStatus(task, TaskStatus.failure(task.getId(), errorMessage), errorMessage);
+            TaskStatus taskStatus = TaskStatus.failure(task.getId(), errorMessage);
+            notifyStatus(task, taskStatus, taskStatus.getErrorMsg());
             continue;
           }
           if (taskIsReady) {
@@ -511,6 +518,8 @@ public class TaskQueue
         SinglePhaseParallelIndexTaskRunner.CTX_USE_LINEAGE_BASED_SEGMENT_ALLOCATION_KEY,
         SinglePhaseParallelIndexTaskRunner.DEFAULT_USE_LINEAGE_BASED_SEGMENT_ALLOCATION
     );
+
+    taskContextEnricher.enrichContext(task);
 
     giant.lock();
 

@@ -156,7 +156,7 @@ Concatenates array inputs into a single array.
 
 **Function type:** [Array](./sql-array-functions.md)
 
-If `expr` is a scalar type, returns 1 if `arr` contains `expr`. If `expr` is an array, returns 1 if `arr` contains all elements of `expr`. Otherwise returns 0.
+If `expr` is a scalar type, returns true if `arr` contains `expr`. If `expr` is an array, returns 1 if `arr` contains all elements of `expr`. Otherwise returns false.
 
 
 ## ARRAY_LENGTH
@@ -204,7 +204,18 @@ Returns the 1-based index of the first occurrence of `expr` in the array. If no 
 
 **Function type:** [Array](./sql-array-functions.md)
 
-Returns 1 if `arr1` and `arr2` have any elements in common, else 0.|
+Returns true if `arr1` and `arr2` have any elements in common, else false.
+
+## SCALAR_IN_ARRAY
+
+`SCALAR_IN_ARRAY(expr, arr)`
+
+**Function type:** [Array](./sql-array-functions.md)
+
+Returns true if the scalar `expr` is present in `arr`. Otherwise, returns false if the scalar `expr` is non-null or
+`UNKNOWN` if the scalar `expr` is `NULL`.
+
+Returns `UNKNOWN` if `arr` is `NULL`.
 
 ## ARRAY_PREPEND
 

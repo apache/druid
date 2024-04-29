@@ -105,6 +105,7 @@ import org.apache.druid.msq.indexing.error.MSQFaultUtils;
 import org.apache.druid.msq.indexing.error.MSQWarnings;
 import org.apache.druid.msq.indexing.error.TooManyAttemptsForWorker;
 import org.apache.druid.msq.indexing.report.MSQResultsReport;
+import org.apache.druid.msq.indexing.report.MSQSegmentReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.msq.kernel.StageDefinition;
@@ -113,6 +114,7 @@ import org.apache.druid.msq.shuffle.input.DurableStorageInputChannelFactory;
 import org.apache.druid.msq.sql.MSQTaskQueryMaker;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
 import org.apache.druid.msq.sql.entity.PageInformation;
+import org.apache.druid.msq.test.MSQTestBase.MSQBaseComponentSupplier;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.msq.util.SqlStatementResourceHelper;
 import org.apache.druid.query.DruidProcessingConfig;
@@ -158,8 +160,7 @@ import org.apache.druid.sql.SqlQueryPlus;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.SqlToolbox;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
-import org.apache.druid.sql.calcite.export.TestExportStorageConnector;
-import org.apache.druid.sql.calcite.export.TestExportStorageConnectorProvider;
+import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.external.ExternalOperatorConversion;
 import org.apache.druid.sql.calcite.external.HttpOperatorConversion;
@@ -178,6 +179,7 @@ import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.LookylooModule;
 import org.apache.druid.sql.calcite.util.QueryFrameworkUtils;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
+import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.sql.calcite.view.InProcessViewManager;
 import org.apache.druid.sql.guice.SqlBindings;
@@ -186,6 +188,7 @@ import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.StorageConnectorModule;
 import org.apache.druid.storage.StorageConnectorProvider;
 import org.apache.druid.storage.local.LocalFileStorageConnector;
+import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.PruneLoadSpec;
 import org.apache.druid.timeline.SegmentId;
@@ -202,6 +205,7 @@ import org.mockito.Mockito;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -250,6 +254,7 @@ import static org.mockito.Mockito.mock;
  * <p>
  * Controller -> Overlord communication happens in {@link MSQTestTaskActionClient}
  */
+@SqlTestFramework.SqlTestFrameWorkModule(MSQBaseComponentSupplier.class)
 public class MSQTestBase extends BaseCalciteQueryTest
 {
   public static final Map<String, Object> DEFAULT_MSQ_CONTEXT =
@@ -316,7 +321,6 @@ public class MSQTestBase extends BaseCalciteQueryTest
   protected SqlStatementFactory sqlStatementFactory;
   protected AuthorizerMapper authorizerMapper;
   private IndexIO indexIO;
-  protected TestExportStorageConnectorProvider exportStorageConnectorProvider = new TestExportStorageConnectorProvider();
   // Contains the metadata of loaded segments
   protected List<ImmutableSegmentLoadInfo> loadedSegmentsMetadata = new ArrayList<>();
   // Mocks the return of data from data servers
@@ -337,36 +341,44 @@ public class MSQTestBase extends BaseCalciteQueryTest
       )
   );
 
-  @Override
-  public void configureGuice(DruidInjectorBuilder builder)
+  protected static class MSQBaseComponentSupplier extends StandardComponentSupplier
   {
-    super.configureGuice(builder);
+    public MSQBaseComponentSupplier(TempDirProducer tempFolderProducer)
+    {
+      super(tempFolderProducer);
+    }
 
-    builder
-        .addModule(new HllSketchModule())
-        .addModule(new DruidModule()
-        {
-          // Small subset of MsqSqlModule
-          @Override
-          public void configure(Binder binder)
-          {
-            // We want this module to bring InputSourceModule along for the ride.
-            binder.install(new InputSourceModule());
-            binder.install(new NestedDataModule());
-            NestedDataModule.registerHandlersAndSerde();
-            SqlBindings.addOperatorConversion(binder, ExternalOperatorConversion.class);
-            SqlBindings.addOperatorConversion(binder, HttpOperatorConversion.class);
-            SqlBindings.addOperatorConversion(binder, InlineOperatorConversion.class);
-            SqlBindings.addOperatorConversion(binder, LocalOperatorConversion.class);
-          }
+    @Override
+    public void configureGuice(DruidInjectorBuilder builder)
+    {
+      super.configureGuice(builder);
 
-          @Override
-          public List<? extends com.fasterxml.jackson.databind.Module> getJacksonModules()
+      builder
+          .addModule(new HllSketchModule())
+          .addModule(new DruidModule()
           {
-            // We want this module to bring input sources along for the ride.
-            return new InputSourceModule().getJacksonModules();
-          }
-        });
+            // Small subset of MsqSqlModule
+            @Override
+            public void configure(Binder binder)
+            {
+              // We want this module to bring InputSourceModule along for the ride.
+              binder.install(new InputSourceModule());
+              binder.install(new NestedDataModule());
+              NestedDataModule.registerHandlersAndSerde();
+              SqlBindings.addOperatorConversion(binder, ExternalOperatorConversion.class);
+              SqlBindings.addOperatorConversion(binder, HttpOperatorConversion.class);
+              SqlBindings.addOperatorConversion(binder, InlineOperatorConversion.class);
+              SqlBindings.addOperatorConversion(binder, LocalOperatorConversion.class);
+            }
+
+            @Override
+            public List<? extends com.fasterxml.jackson.databind.Module> getJacksonModules()
+            {
+              // We want this module to bring input sources along for the ride.
+              return new InputSourceModule().getJacksonModules();
+            }
+          });
+    }
   }
 
   @AfterEach
@@ -510,12 +522,6 @@ public class MSQTestBase extends BaseCalciteQueryTest
         .build();
 
     objectMapper = setupObjectMapper(injector);
-    objectMapper.registerModule(
-        new SimpleModule(StorageConnector.class.getSimpleName())
-            .registerSubtypes(
-                new NamedType(TestExportStorageConnectorProvider.class, TestExportStorageConnector.TYPE_NAME)
-            )
-    );
     objectMapper.registerModules(new StorageConnectorModule().getJacksonModules());
     objectMapper.registerModules(sqlModule.getJacksonModules());
 
@@ -854,6 +860,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
     protected MSQSpec expectedMSQSpec = null;
     protected MSQTuningConfig expectedTuningConfig = null;
     protected Set<SegmentId> expectedSegments = null;
+    protected CompactionState expectedLastCompactionState = null;
     protected Set<Interval> expectedTombstoneIntervals = null;
     protected List<Object[]> expectedResultRows = null;
     protected Matcher<Throwable> expectedValidationErrorMatcher = null;
@@ -861,6 +868,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
     protected Matcher<Throwable> expectedExecutionErrorMatcher = null;
     protected MSQFault expectedMSQFault = null;
     protected Class<? extends MSQFault> expectedMSQFaultClass = null;
+    protected MSQSegmentReport expectedSegmentReport = null;
     protected Map<Integer, Integer> expectedStageVsWorkerCount = new HashMap<>();
     protected final Map<Integer, Map<Integer, Map<String, CounterSnapshotMatcher>>>
         expectedStageWorkerChannelToCounters = new HashMap<>();
@@ -897,6 +905,12 @@ public class MSQTestBase extends BaseCalciteQueryTest
     {
       Preconditions.checkArgument(expectedSegments != null, "Segments cannot be null");
       this.expectedSegments = expectedSegments;
+      return asBuilder();
+    }
+
+    public Builder setExpectedLastCompactionState(CompactionState expectedLastCompactionState)
+    {
+      this.expectedLastCompactionState = expectedLastCompactionState;
       return asBuilder();
     }
 
@@ -946,6 +960,12 @@ public class MSQTestBase extends BaseCalciteQueryTest
     public Builder setExpectedMSQFaultClass(Class<? extends MSQFault> expectedMSQFaultClass)
     {
       this.expectedMSQFaultClass = expectedMSQFaultClass;
+      return asBuilder();
+    }
+
+    public Builder setExpectedMSQSegmentReport(MSQSegmentReport expectedSegmentReport)
+    {
+      this.expectedSegmentReport = expectedSegmentReport;
       return asBuilder();
     }
 
@@ -1240,6 +1260,9 @@ public class MSQTestBase extends BaseCalciteQueryTest
         if (expectedTuningConfig != null) {
           assertTuningConfig(expectedTuningConfig, foundSpec.getTuningConfig());
         }
+        if (expectedSegmentReport != null) {
+          Assert.assertEquals(expectedSegmentReport, reportPayload.getStatus().getSegmentReport());
+        }
         if (expectedDestinationIntervals != null) {
           Assert.assertNotNull(foundSpec);
           DataSourceMSQDestination destination = (DataSourceMSQDestination) foundSpec.getDestination();
@@ -1267,6 +1290,12 @@ public class MSQTestBase extends BaseCalciteQueryTest
         // SegmentGeneratorFrameProcessorFactory. We can get the tombstone segment ids published by taking a set
         // difference of all the segments published with the segments that are created by the SegmentGeneratorFrameProcessorFactory
         if (!testTaskActionClient.getPublishedSegments().isEmpty()) {
+          if (expectedLastCompactionState != null) {
+            CompactionState compactionState = testTaskActionClient.getPublishedSegments().stream().findFirst().get()
+                                                                  .getLastCompactionState();
+            Assert.assertEquals(expectedLastCompactionState, compactionState);
+
+          }
           Set<SegmentId> publishedSegmentIds = testTaskActionClient.getPublishedSegments()
                                                                    .stream()
                                                                    .map(DataSegment::getId)
@@ -1484,4 +1513,6 @@ public class MSQTestBase extends BaseCalciteQueryTest
     }
     return retVal;
   }
+
 }
+

@@ -44,7 +44,7 @@ Each query has an associated SQL query ID. You can set this ID manually using th
 
 #### URL
 
-<code class="postAPI">POST</code> <code>/druid/v2/sql</code>
+`POST` `/druid/v2/sql`
 
 #### Request body
 
@@ -198,7 +198,7 @@ Content-Length: 192
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
 ```json
 [
@@ -320,7 +320,7 @@ Cancellation requests require READ permission on all resources used in the SQL q
 
 #### URL
 
-<code class="deleteAPI">DELETE</code> <code>/druid/v2/sql/:sqlQueryId</code>
+`DELETE` `/druid/v2/sql/{sqlQueryId}`
 
 #### Responses
 
@@ -417,7 +417,7 @@ Note that at least part of a datasource must be available on a Historical proces
 
 #### URL
 
-<code class="postAPI">POST</code> <code>/druid/v2/sql/statements</code>
+`POST` `/druid/v2/sql/statements`
 
 #### Request body
 
@@ -505,7 +505,7 @@ Content-Length: 134
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
 {
@@ -631,7 +631,7 @@ Retrieves information about the query associated with the given query ID. The re
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/v2/sql/statements/:queryId</code>
+`GET` `/druid/v2/sql/statements/{queryId}`
 
 #### Responses
 
@@ -690,7 +690,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
 {
@@ -845,14 +845,13 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 Retrieves results for completed queries. Results are separated into pages, so you can use the optional `page` parameter to refine the results you get. Druid returns information about the composition of each page and its page number (`id`). For information about pages, see [Get query status](#get-query-status).
 
-
 If a page number isn't passed, all results are returned sequentially in the same response. If you have large result sets, you may encounter timeouts based on the value configured for `druid.router.http.readTimeout`.
 
 Getting the query results for an ingestion query returns an empty response.
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/v2/sql/statements/:queryId/results</code>
+`GET` `/druid/v2/sql/statements/{queryId}/results`
 
 #### Query parameters
 * `page` (optional)
@@ -944,7 +943,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
 [
@@ -1178,7 +1177,7 @@ Cancels a running or accepted query.
 
 #### URL
 
-<code class="deleteAPI">DELETE</code> <code>/druid/v2/sql/statements/:queryId</code>
+`DELETE` `/druid/v2/sql/statements/{queryId}`
 
 #### Responses
 

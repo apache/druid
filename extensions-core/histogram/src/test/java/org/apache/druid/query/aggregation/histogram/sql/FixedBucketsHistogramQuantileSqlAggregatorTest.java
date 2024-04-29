@@ -36,6 +36,7 @@ import org.apache.druid.query.aggregation.histogram.ApproximateHistogramDruidMod
 import org.apache.druid.query.aggregation.histogram.FixedBucketsHistogram;
 import org.apache.druid.query.aggregation.histogram.FixedBucketsHistogramAggregatorFactory;
 import org.apache.druid.query.aggregation.histogram.QuantilePostAggregator;
+import org.apache.druid.query.aggregation.histogram.sql.FixedBucketsHistogramQuantileSqlAggregatorTest.FixedBucketsHistogramComponentSupplier;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
@@ -51,8 +52,11 @@ import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
+import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.calcite.util.SqlTestFramework;
+import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
@@ -60,58 +64,67 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
+@SqlTestFramework.SqlTestFrameWorkModule(FixedBucketsHistogramComponentSupplier.class)
 public class FixedBucketsHistogramQuantileSqlAggregatorTest extends BaseCalciteQueryTest
 {
-  @Override
-  public void configureGuice(DruidInjectorBuilder builder)
+  protected static class FixedBucketsHistogramComponentSupplier extends StandardComponentSupplier
   {
-    super.configureGuice(builder);
-    builder.addModule(new ApproximateHistogramDruidModule());
-  }
+    public FixedBucketsHistogramComponentSupplier(TempDirProducer tempFolderProducer)
+    {
+      super(tempFolderProducer);
+    }
 
-  @Override
-  public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
-      final QueryRunnerFactoryConglomerate conglomerate,
-      final JoinableFactoryWrapper joinableFactory,
-      final Injector injector
-  )
-  {
-    ApproximateHistogramDruidModule.registerSerde();
+    @Override
+    public void configureGuice(DruidInjectorBuilder builder)
+    {
+      super.configureGuice(builder);
+      builder.addModule(new ApproximateHistogramDruidModule());
+    }
 
-    final QueryableIndex index = IndexBuilder.create(CalciteTests.getJsonMapper())
-                                             .tmpDir(newTempFolder())
-                                             .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
-                                             .schema(
-                                                 new IncrementalIndexSchema.Builder()
-                                                     .withMetrics(
-                                                         new CountAggregatorFactory("cnt"),
-                                                         new DoubleSumAggregatorFactory("m1", "m1"),
-                                                         new FixedBucketsHistogramAggregatorFactory(
-                                                             "fbhist_m1",
-                                                             "m1",
-                                                             20,
-                                                             0,
-                                                             10,
-                                                             FixedBucketsHistogram.OutlierHandlingMode.IGNORE,
-                                                             false
-                                                         )
-                                                     )
-                                                     .withRollup(false)
-                                                     .build()
-                                             )
-                                             .rows(TestDataBuilder.ROWS1)
-                                             .buildMMappedIndex();
+    @Override
+    public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
+        final QueryRunnerFactoryConglomerate conglomerate,
+        final JoinableFactoryWrapper joinableFactory,
+        final Injector injector
+    )
+    {
+      ApproximateHistogramDruidModule.registerSerde();
 
-    return SpecificSegmentsQuerySegmentWalker.createWalker(injector, conglomerate).add(
-        DataSegment.builder()
-                   .dataSource(CalciteTests.DATASOURCE1)
-                   .interval(index.getDataInterval())
-                   .version("1")
-                   .shardSpec(new LinearShardSpec(0))
-                   .size(0)
-                   .build(),
-        index
-    );
+      final QueryableIndex index = IndexBuilder.create(CalciteTests.getJsonMapper())
+                                               .tmpDir(tempDirProducer.newTempFolder())
+                                               .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+                                               .schema(
+                                                   new IncrementalIndexSchema.Builder()
+                                                       .withMetrics(
+                                                           new CountAggregatorFactory("cnt"),
+                                                           new DoubleSumAggregatorFactory("m1", "m1"),
+                                                           new FixedBucketsHistogramAggregatorFactory(
+                                                               "fbhist_m1",
+                                                               "m1",
+                                                               20,
+                                                               0,
+                                                               10,
+                                                               FixedBucketsHistogram.OutlierHandlingMode.IGNORE,
+                                                               false
+                                                           )
+                                                       )
+                                                       .withRollup(false)
+                                                       .build()
+                                               )
+                                               .rows(TestDataBuilder.ROWS1)
+                                               .buildMMappedIndex();
+
+      return SpecificSegmentsQuerySegmentWalker.createWalker(injector, conglomerate).add(
+          DataSegment.builder()
+                     .dataSource(CalciteTests.DATASOURCE1)
+                     .interval(index.getDataInterval())
+                     .version("1")
+                     .shardSpec(new LinearShardSpec(0))
+                     .size(0)
+                     .build(),
+          index
+      );
+    }
   }
 
   @Test

@@ -110,6 +110,12 @@ public class TypeStrategiesTest
       {
         return 0;
       }
+
+      @Override
+      public boolean groupable()
+      {
+        return false;
+      }
     });
   }
 
@@ -692,6 +698,12 @@ public class TypeStrategiesTest
     public NullableLongPair fromBytes(byte[] value)
     {
       return read(ByteBuffer.wrap(value));
+    }
+
+    @Override
+    public boolean groupable()
+    {
+      return false;
     }
   }
 
