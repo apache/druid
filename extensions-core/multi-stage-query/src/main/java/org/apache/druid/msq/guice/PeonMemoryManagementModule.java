@@ -62,7 +62,7 @@ public class PeonMemoryManagementModule implements DruidModule
 
   @Provides
   @LazySingleton
-  public Bouncer makeBouncer()
+  public Bouncer makeProcessorBouncer()
   {
     return new Bouncer(NUM_PROCESSING_THREADS);
   }

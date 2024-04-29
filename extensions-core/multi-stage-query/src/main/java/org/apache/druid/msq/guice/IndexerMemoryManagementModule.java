@@ -54,7 +54,7 @@ public class IndexerMemoryManagementModule implements DruidModule
 
   @Provides
   @LazySingleton
-  public Bouncer makeBouncer(final DruidProcessingConfig processingConfig)
+  public Bouncer makeProcessorBouncer(final DruidProcessingConfig processingConfig)
   {
     return new Bouncer(processingConfig.getNumThreads());
   }

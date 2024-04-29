@@ -50,7 +50,7 @@ public interface MemoryIntrospector
   /**
    * Maximum number of queries that run simultaneously in this JVM.
    *
-   * On workers, this is the maximum number of {@link Worker} that run simultaneously. See
+   * On workers, this is the maximum number of {@link Worker} that run simultaneously in this JVM. See
    * {@link WorkerMemoryParameters} for how memory is divided among and within {@link WorkOrder} run by a worker.
    *
    * On controllers, this is the maximum number of {@link Controller} that run simultaneously. See
