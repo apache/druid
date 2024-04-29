@@ -5418,7 +5418,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
           ImmutableList.of()
       );
     });
-    Assertions.assertEquals("Cannot join the columnType [COMPLEX<json>]", e.getMessage());
+    Assertions.assertEquals("Cannot join when the join condition has column of type [COMPLEX<json>]", e.getMessage());
   }
 
   @Test

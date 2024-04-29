@@ -66,7 +66,7 @@ public class RowBasedIndexBuilder
 
     // Cannot build index on complex types, and non-primitive arrays
     if (keyType.is(ValueType.COMPLEX) || keyType.isArray() && !keyType.isPrimitiveArray()) {
-      throw InvalidInput.exception("Cannot join on the columnType [%s]", keyType);
+      throw InvalidInput.exception("Cannot join when the join condition has column of type [%s]", keyType);
     }
 
     if (keyType.is(ValueType.LONG)) {
