@@ -30,6 +30,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Binder;
+import com.google.inject.Injector;
 import org.apache.druid.data.input.AbstractInputSource;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSplit;
@@ -48,10 +49,12 @@ import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.SqlQueryPlus;
+import org.apache.druid.sql.calcite.CalciteIngestionDmlTest.IngestionDmlComponentSupplier;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.external.ExternalOperatorConversion;
 import org.apache.druid.sql.calcite.external.HttpOperatorConversion;
@@ -60,7 +63,10 @@ import org.apache.druid.sql.calcite.external.LocalOperatorConversion;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
+import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.calcite.util.SqlTestFramework.SqlTestFrameWorkModule;
+import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.sql.guice.SqlBindings;
 import org.apache.druid.sql.http.SqlParameter;
 import org.hamcrest.CoreMatchers;
@@ -71,6 +77,7 @@ import org.junit.jupiter.api.AfterEach;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -83,6 +90,7 @@ import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 
+@SqlTestFrameWorkModule(IngestionDmlComponentSupplier.class)
 public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
 {
   protected static final Map<String, Object> DEFAULT_CONTEXT =
@@ -120,66 +128,75 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
 
   protected boolean didTest = false;
 
-  public CalciteIngestionDmlTest()
+  static class IngestionDmlComponentSupplier extends StandardComponentSupplier
   {
-    super(IngestionTestSqlEngine.INSTANCE);
-  }
+    public IngestionDmlComponentSupplier(TempDirProducer tempFolderProducer)
+    {
+      super(tempFolderProducer);
+    }
 
-  @Override
-  public void configureGuice(DruidInjectorBuilder builder)
-  {
-    super.configureGuice(builder);
+    @Override
+    public SqlEngine createEngine(QueryLifecycleFactory qlf, ObjectMapper queryJsonMapper, Injector injector)
+    {
+      return IngestionTestSqlEngine.INSTANCE;
+    }
 
-    builder.addModule(new DruidModule() {
+    @Override
+    public void configureGuice(DruidInjectorBuilder builder)
+    {
+      super.configureGuice(builder);
 
-      // Clone of MSQExternalDataSourceModule since it is not
-      // visible here.
-      @Override
-      public List<? extends Module> getJacksonModules()
-      {
-        return Collections.singletonList(
-            new SimpleModule(getClass().getSimpleName())
-                .registerSubtypes(ExternalDataSource.class)
-        );
-      }
+      builder.addModule(new DruidModule() {
 
-      @Override
-      public void configure(Binder binder)
-      {
-        // Nothing to do.
-      }
-    });
+        // Clone of MSQExternalDataSourceModule since it is not
+        // visible here.
+        @Override
+        public List<? extends Module> getJacksonModules()
+        {
+          return Collections.singletonList(
+              new SimpleModule(getClass().getSimpleName())
+                  .registerSubtypes(ExternalDataSource.class)
+          );
+        }
 
-    builder.addModule(new DruidModule() {
+        @Override
+        public void configure(Binder binder)
+        {
+          // Nothing to do.
+        }
+      });
 
-      // Partial clone of MsqSqlModule, since that module is not
-      // visible to this one.
+      builder.addModule(new DruidModule() {
 
-      @Override
-      public List<? extends Module> getJacksonModules()
-      {
-        // We want this module to bring input sources along for the ride.
-        List<Module> modules = new ArrayList<>(new InputSourceModule().getJacksonModules());
-        modules.add(new SimpleModule("test-module").registerSubtypes(TestFileInputSource.class));
-        return modules;
-      }
+        // Partial clone of MsqSqlModule, since that module is not
+        // visible to this one.
 
-      @Override
-      public void configure(Binder binder)
-      {
-        // We want this module to bring InputSourceModule along for the ride.
-        binder.install(new InputSourceModule());
+        @Override
+        public List<? extends Module> getJacksonModules()
+        {
+          // We want this module to bring input sources along for the ride.
+          List<Module> modules = new ArrayList<>(new InputSourceModule().getJacksonModules());
+          modules.add(new SimpleModule("test-module").registerSubtypes(TestFileInputSource.class));
+          return modules;
+        }
 
-        // Set up the EXTERN macro.
-        SqlBindings.addOperatorConversion(binder, ExternalOperatorConversion.class);
+        @Override
+        public void configure(Binder binder)
+        {
+          // We want this module to bring InputSourceModule along for the ride.
+          binder.install(new InputSourceModule());
 
-        // Enable the extended table functions for testing even though these
-        // are not enabled in production in Druid 26.
-        SqlBindings.addOperatorConversion(binder, HttpOperatorConversion.class);
-        SqlBindings.addOperatorConversion(binder, InlineOperatorConversion.class);
-        SqlBindings.addOperatorConversion(binder, LocalOperatorConversion.class);
-      }
-    });
+          // Set up the EXTERN macro.
+          SqlBindings.addOperatorConversion(binder, ExternalOperatorConversion.class);
+
+          // Enable the extended table functions for testing even though these
+          // are not enabled in production in Druid 26.
+          SqlBindings.addOperatorConversion(binder, HttpOperatorConversion.class);
+          SqlBindings.addOperatorConversion(binder, InlineOperatorConversion.class);
+          SqlBindings.addOperatorConversion(binder, LocalOperatorConversion.class);
+        }
+      });
+    }
   }
 
   @AfterEach

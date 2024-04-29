@@ -1078,6 +1078,12 @@ public class DruidQuery
           virtualColumnRegistry,
           plannerContext.getJoinableFactoryWrapper()
       );
+
+      if (!getVirtualColumns(true).isEmpty()) {
+        // timeBoundary query does not support virtual columns.
+        return null;
+      }
+
       final DataSource newDataSource = dataSourceFiltrationPair.lhs;
       final Filtration filtration = dataSourceFiltrationPair.rhs;
       String bound = minTime ? TimeBoundaryQuery.MIN_TIME : TimeBoundaryQuery.MAX_TIME;

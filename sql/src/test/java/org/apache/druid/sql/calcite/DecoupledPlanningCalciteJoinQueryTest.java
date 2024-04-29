@@ -26,7 +26,6 @@ import org.apache.druid.sql.calcite.DisableUnless.DisableUnlessRule;
 import org.apache.druid.sql.calcite.NotYetSupported.NotYetSupportedProcessor;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
-import org.apache.druid.sql.calcite.util.SqlTestFramework.PlannerComponentSupplier;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -50,14 +49,13 @@ public class DecoupledPlanningCalciteJoinQueryTest extends CalciteJoinQueryTest
   @Override
   protected QueryTestBuilder testBuilder()
   {
-    PlannerComponentSupplier componentSupplier = this;
     CalciteTestConfig testConfig = new CalciteTestConfig(CONTEXT_OVERRIDES)
     {
       @Override
       public SqlTestFramework.PlannerFixture plannerFixture(PlannerConfig plannerConfig, AuthConfig authConfig)
       {
         plannerConfig = plannerConfig.withOverrides(CONTEXT_OVERRIDES);
-        return queryFramework().plannerFixture(componentSupplier, plannerConfig, authConfig);
+        return queryFramework().plannerFixture(plannerConfig, authConfig);
       }
     };
 

@@ -41,11 +41,13 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
+import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -330,5 +332,11 @@ public interface Task
         taskInfo.getDataSource(),
         taskInfo.getTask().getMetadata()
     );
+  }
+
+  @Nullable
+  default LookupLoadingSpec getLookupLoadingSpec()
+  {
+    return LookupLoadingSpec.ALL;
   }
 }

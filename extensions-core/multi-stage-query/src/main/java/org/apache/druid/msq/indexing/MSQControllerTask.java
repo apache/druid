@@ -42,8 +42,6 @@ import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.PendingSegmentAllocatingTask;
 import org.apache.druid.indexing.common.task.Tasks;
-import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerContext;
@@ -232,9 +230,8 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery, 
 
         if (taskLock == null) {
           return false;
-        } else if (taskLock.isRevoked()) {
-          throw new ISE(StringUtils.format("Lock for interval [%s] was revoked", interval));
         }
+        taskLock.assertNotRevoked();
       }
     }
 

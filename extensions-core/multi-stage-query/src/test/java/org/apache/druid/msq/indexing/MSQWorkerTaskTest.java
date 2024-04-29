@@ -108,12 +108,4 @@ public class MSQWorkerTaskTest
     MSQWorkerTask msqWorkerTask = new MSQWorkerTask(controllerTaskId, dataSource, workerNumber, context, retryCount);
     Assert.assertTrue(msqWorkerTask.getInputSourceResources().isEmpty());
   }
-
-  @Test
-  public void testGetTaskAllocatorId()
-  {
-    MSQWorkerTask msqWorkerTask = new MSQWorkerTask(controllerTaskId, dataSource, workerNumber, context, retryCount);
-    Assert.assertEquals(controllerTaskId, msqWorkerTask.getTaskAllocatorId());
-  }
-
 }

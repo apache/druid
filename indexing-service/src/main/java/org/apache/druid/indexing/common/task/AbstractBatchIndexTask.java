@@ -59,7 +59,6 @@ import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.Stopwatch;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
@@ -486,9 +485,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       if (lock == null) {
         return false;
       }
-      if (lock.isRevoked()) {
-        throw new ISE(StringUtils.format("Lock for interval [%s] was revoked.", cur));
-      }
+      lock.assertNotRevoked();
       locksAcquired++;
       intervalToLockVersion.put(cur, lock.getVersion());
     }
@@ -829,9 +826,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
             "Cannot acquire a lock for interval[%s]",
             interval
         );
-        if (lock.isRevoked()) {
-          throw new ISE(StringUtils.format("Lock for interval [%s] was revoked.", interval));
-        }
+        lock.assertNotRevoked();
         version = lock.getVersion();
       } else {
         version = existingLockVersion;
