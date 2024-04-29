@@ -23,29 +23,53 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
-import org.apache.druid.collections.spatial.ImmutablePoint;
+import org.apache.druid.collections.spatial.ImmutableFloatPoint;
+import org.apache.druid.collections.spatial.RTreeUtils;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
 /**
+ *
  */
 public class RadiusBound extends RectangularBound
 {
   private static final byte CACHE_TYPE_ID = 0x01;
   private final float[] coords;
   private final float radius;
+  private final RadiusUnit radiusUnit;
 
   @JsonCreator
   public RadiusBound(
       @JsonProperty("coords") float[] coords,
       @JsonProperty("radius") float radius,
-      @JsonProperty("limit") int limit
+      @JsonProperty("limit") int limit,
+      @JsonProperty("radiusUnit") @Nullable RadiusUnit radiusUnit
   )
   {
     super(getMinCoords(coords, radius), getMaxCoords(coords, radius), limit);
 
     this.coords = coords;
     this.radius = radius;
+    this.radiusUnit = radiusUnit == null ? RadiusUnit.euclidean : radiusUnit;
+  }
+
+  public RadiusBound(
+      float[] coords,
+      float radius,
+      int limit
+  )
+  {
+    this(coords, radius, limit, null);
+  }
+
+  public RadiusBound(
+      float[] coords,
+      float radius,
+      RadiusUnit radiusUnit
+  )
+  {
+    this(coords, radius, 0, radiusUnit);
   }
 
   public RadiusBound(
@@ -53,7 +77,7 @@ public class RadiusBound extends RectangularBound
       float radius
   )
   {
-    this(coords, radius, 0);
+    this(coords, radius, 0, null);
   }
 
   private static float[] getMinCoords(float[] coords, float radius)
@@ -86,26 +110,40 @@ public class RadiusBound extends RectangularBound
     return radius;
   }
 
-  @Override
-  public boolean contains(float[] otherCoords)
+  @JsonProperty
+  public RadiusUnit getRadiusUnit()
   {
-    double total = 0.0;
-    for (int i = 0; i < coords.length; i++) {
-      total += Math.pow(otherCoords[i] - coords[i], 2);
-    }
-
-    return (total <= Math.pow(radius, 2));
+    return radiusUnit;
   }
 
   @Override
-  public Iterable<ImmutablePoint> filter(Iterable<ImmutablePoint> points)
+  public boolean contains(float[] otherCoords)
+  {
+    if (otherCoords.length < 2 || coords.length < 2) {
+      return false;
+    }
+    if (radiusUnit == RadiusUnit.euclidean) {
+      double total = 0.0;
+      for (int i = 0; i < coords.length; i++) {
+        total += Math.pow(otherCoords[i] - coords[i], 2);
+      }
+      return (total <= Math.pow(radius, 2));
+    } else {
+      double radiusInMeters = getRadius() * radiusUnit.getMetersMultiFactor();
+      double distance = RTreeUtils.calculateHaversineDistance(coords[0], coords[1], otherCoords[0], otherCoords[1]);
+      return distance <= radiusInMeters;
+    }
+  }
+
+  @Override
+  public Iterable<ImmutableFloatPoint> filter(Iterable<ImmutableFloatPoint> points)
   {
     return Iterables.filter(
         points,
-        new Predicate<ImmutablePoint>()
+        new Predicate<ImmutableFloatPoint>()
         {
           @Override
-          public boolean apply(ImmutablePoint point)
+          public boolean apply(ImmutableFloatPoint point)
           {
             return contains(point.getCoords());
           }
@@ -126,5 +164,27 @@ public class RadiusBound extends RectangularBound
         .putInt(getLimit())
         .put(CACHE_TYPE_ID);
     return cacheKey.array();
+  }
+
+  public enum RadiusUnit
+  {
+    meters(1),
+    euclidean(1),
+    @SuppressWarnings("unused") // will be used in high precision filtering
+    miles(1609.344f),
+    @SuppressWarnings("unused")
+    kilometers(1000);
+
+    float metersMultiFactor;
+
+    RadiusUnit(float mmf)
+    {
+      this.metersMultiFactor = mmf;
+    }
+
+    public float getMetersMultiFactor()
+    {
+      return metersMultiFactor;
+    }
   }
 }

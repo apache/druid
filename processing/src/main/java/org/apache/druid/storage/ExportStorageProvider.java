@@ -31,4 +31,6 @@ public interface ExportStorageProvider extends Provider<StorageConnector>
    * Return a URI representation of the base path. This is used to be used for logging and error messages.
    */
   String getBasePath();
+
+  String getFilePathForManifest(String fileName);
 }

@@ -32,7 +32,7 @@ public class CoordinatorCompactionConfig
   public static final String CONFIG_KEY = "coordinator.compaction.config";
 
   private static final double DEFAULT_COMPACTION_TASK_RATIO = 0.1;
-  private static final int DEFAILT_MAX_COMPACTION_TASK_SLOTS = Integer.MAX_VALUE;
+  private static final int DEFAULT_MAX_COMPACTION_TASK_SLOTS = Integer.MAX_VALUE;
   private static final boolean DEFAULT_USE_AUTO_SCALE_SLOTS = false;
 
   private final List<DataSourceCompactionConfig> compactionConfigs;
@@ -91,7 +91,7 @@ public class CoordinatorCompactionConfig
                                    DEFAULT_COMPACTION_TASK_RATIO :
                                    compactionTaskSlotRatio;
     this.maxCompactionTaskSlots = maxCompactionTaskSlots == null ?
-                                  DEFAILT_MAX_COMPACTION_TASK_SLOTS :
+                                  DEFAULT_MAX_COMPACTION_TASK_SLOTS :
                                   maxCompactionTaskSlots;
     this.useAutoScaleSlots = useAutoScaleSlots == null ?
                              DEFAULT_USE_AUTO_SCALE_SLOTS :

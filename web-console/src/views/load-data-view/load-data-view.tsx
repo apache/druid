@@ -3246,6 +3246,26 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                   </>
                 ),
               },
+              {
+                name: 'suspended',
+                type: 'boolean',
+                defined: isStreamingSpec,
+                defaultValue: false,
+                info: (
+                  <>
+                    <p>Create a supervisor in a suspended state.</p>
+                    <p>
+                      Creating a supervisor in a suspended state can be helpful if you are not yet
+                      ready to begin ingesting data or if you prefer to configure the
+                      supervisor&apos;s metadata before starting it.
+                    </p>
+                    <p>
+                      You can configure the exact offsets that the supervisor will read from using
+                      the <Code>Actions</Code> menu on the <Code>Supervisors</Code> tab.
+                    </p>
+                  </>
+                ),
+              },
             ]}
             model={spec}
             onChange={this.updateSpec}

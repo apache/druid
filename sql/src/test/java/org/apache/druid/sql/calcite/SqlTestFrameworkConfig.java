@@ -19,22 +19,26 @@
 
 package org.apache.druid.sql.calcite;
 
+import org.apache.druid.java.util.common.RE;
 import org.apache.druid.query.topn.TopNQueryConfig;
-import org.apache.druid.sql.calcite.NotYetSupported.NotYetSupportedProcessor;
 import org.apache.druid.sql.calcite.util.CacheTestHelperModule.ResultCacheMode;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.QueryComponentSupplier;
-import org.junit.rules.ExternalResource;
-import org.junit.runner.Description;
-import org.junit.runners.model.Statement;
+import org.junit.jupiter.api.extension.AfterAllCallback;
+import org.junit.jupiter.api.extension.BeforeAllCallback;
+import org.junit.jupiter.api.extension.BeforeEachCallback;
+import org.junit.jupiter.api.extension.ExtensionContext;
 
 import java.lang.annotation.Annotation;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Function;
 
 /**
  * Annotation to specify desired framework settings.
@@ -52,50 +56,67 @@ public @interface SqlTestFrameworkConfig
 
   ResultCacheMode resultCache() default ResultCacheMode.DISABLED;
 
+
+
   /**
    * @see {@link SqlTestFrameworkConfig}
    */
-  class ClassRule extends ExternalResource
+  class Rule implements AfterAllCallback, BeforeEachCallback, BeforeAllCallback
   {
-
     Map<SqlTestFrameworkConfig, ConfigurationInstance> configMap = new HashMap<>();
+    private SqlTestFrameworkConfig config;
+    private Function<TempDirProducer, QueryComponentSupplier> testHostSupplier;
+    private Method method;
 
-    public MethodRule methodRule(BaseCalciteQueryTest testHost)
+    @Override
+    public void beforeAll(ExtensionContext context) throws Exception
     {
-      return new MethodRule(this, testHost);
+      Class<?> testClass = context.getTestClass().get();
+      SqlTestFramework.SqlTestFrameWorkModule moduleAnnotation = getModuleAnnotationFor(testClass);
+      Constructor<? extends QueryComponentSupplier> constructor = moduleAnnotation.value().getConstructor(TempDirProducer.class);
+      testHostSupplier = f -> {
+        try {
+          return constructor.newInstance(f);
+        }
+        catch (Exception e) {
+          throw new RE(e, "Unable to create QueryComponentSupplier");
+        }
+      };
+    }
+
+    private SqlTestFramework.SqlTestFrameWorkModule getModuleAnnotationFor(Class<?> testClass)
+    {
+      SqlTestFramework.SqlTestFrameWorkModule annotation = testClass.getAnnotation(SqlTestFramework.SqlTestFrameWorkModule.class);
+      if (annotation == null) {
+        if (testClass.getSuperclass() == null) {
+          throw new RE("Can't get QueryComponentSupplier for testclass!");
+        }
+        return getModuleAnnotationFor(testClass.getSuperclass());
+      }
+      return annotation;
     }
 
     @Override
-    protected void after()
+    public void afterAll(ExtensionContext context)
     {
       for (ConfigurationInstance f : configMap.values()) {
         f.close();
       }
       configMap.clear();
     }
-  }
 
-  /**
-   * @see {@link SqlTestFrameworkConfig}
-   */
-  class MethodRule extends ExternalResource
-  {
-    private SqlTestFrameworkConfig config;
-    private ClassRule classRule;
-    private QueryComponentSupplier testHost;
-    private Description description;
-
-    public MethodRule(ClassRule classRule, QueryComponentSupplier testHost)
+    @Override
+    public void beforeEach(ExtensionContext context)
     {
-      this.classRule = classRule;
-      this.testHost = testHost;
+      method = context.getTestMethod().get();
+      setConfig(method.getAnnotation(SqlTestFrameworkConfig.class));
     }
 
     @SqlTestFrameworkConfig
     public SqlTestFrameworkConfig defaultConfig()
     {
       try {
-        SqlTestFrameworkConfig annotation = MethodRule.class
+        SqlTestFrameworkConfig annotation = getClass()
             .getMethod("defaultConfig")
             .getAnnotation(SqlTestFrameworkConfig.class);
         return annotation;
@@ -105,15 +126,12 @@ public @interface SqlTestFrameworkConfig
       }
     }
 
-    @Override
-    public Statement apply(Statement base, Description description)
+    public void setConfig(SqlTestFrameworkConfig annotation)
     {
-      this.description = description;
-      config = description.getAnnotation(SqlTestFrameworkConfig.class);
+      config = annotation;
       if (config == null) {
         config = defaultConfig();
       }
-      return base;
     }
 
     public SqlTestFramework get()
@@ -123,17 +141,17 @@ public @interface SqlTestFrameworkConfig
 
     public <T extends Annotation> T getAnnotation(Class<T> annotationType)
     {
-      return NotYetSupportedProcessor.getAnnotation(description, annotationType);
+      return method.getAnnotation(annotationType);
     }
 
     private ConfigurationInstance getConfigurationInstance()
     {
-      return classRule.configMap.computeIfAbsent(config, this::buildConfiguration);
+      return configMap.computeIfAbsent(config, this::buildConfiguration);
     }
 
     ConfigurationInstance buildConfiguration(SqlTestFrameworkConfig config)
     {
-      return new ConfigurationInstance(config, testHost);
+      return new ConfigurationInstance(config, testHostSupplier.apply(new TempDirProducer("druid-test")));
     }
   }
 

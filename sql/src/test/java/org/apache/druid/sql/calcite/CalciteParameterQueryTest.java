@@ -42,7 +42,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.http.SqlParameter;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -526,11 +526,8 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
                   .granularity(Granularities.ALL)
                   .filters(
                       NullHandling.replaceWithDefault()
-                      ? in("cnt", ImmutableList.of("1.0", "100000001"), null)
-                      : or(
-                          equality("cnt", 1.0, ColumnType.DOUBLE),
-                          equality("cnt", 100000001.0, ColumnType.DOUBLE)
-                      )
+                      ? in("cnt", ImmutableList.of("1.0", "100000001"))
+                      : in("cnt", ColumnType.DOUBLE, ImmutableList.of(1.0, 1.00000001E8))
                   )
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
                   .context(QUERY_CONTEXT_DEFAULT)

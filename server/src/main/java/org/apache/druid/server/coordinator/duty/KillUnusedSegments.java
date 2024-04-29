@@ -239,23 +239,12 @@ public class KillUnusedSegments implements CoordinatorDuty
 
     log.info(
         "Submitted [%d] kill tasks for [%d] datasources. Remaining datasources to kill: %s",
-        submittedTasks, dataSourcesToKill.size(), remainingDatasourcesToKill
+        submittedTasks, dataSourcesToKill.size() - remainingDatasourcesToKill.size(), remainingDatasourcesToKill
     );
 
     stats.add(Stats.Kill.SUBMITTED_TASKS, submittedTasks);
   }
 
-  /**
-   * <p>
-   * Calculates the interval for which segments are to be killed in a datasource.
-   * Since this method compares datetime as strings, it cannot find unused segments that are outside
-   * the range [{@link DateTimes#COMPARE_DATE_AS_STRING_MIN}, {@link DateTimes#COMPARE_DATE_AS_STRING_MAX}),
-   * such as {@link org.apache.druid.java.util.common.granularity.Granularities#ALL} partitioned segments
-   * and segments that end in {@link DateTimes#MAX}.
-   *</p><p>
-   * For more information, see <a href="https://github.com/apache/druid/issues/15951"> Issue#15951</a>.
-   * </p>
-   */
   @Nullable
   private Interval findIntervalForKill(
       final String dataSource,

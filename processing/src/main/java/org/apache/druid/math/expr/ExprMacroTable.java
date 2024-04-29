@@ -172,7 +172,7 @@ public class ExprMacroTable
       if (o == null || getClass() != o.getClass()) {
         return false;
       }
-      BaseScalarMacroFunctionExpr that = (BaseScalarMacroFunctionExpr) o;
+      BaseMacroFunctionExpr that = (BaseMacroFunctionExpr) o;
       return Objects.equals(macro, that.macro) &&
              Objects.equals(args, that.args);
     }

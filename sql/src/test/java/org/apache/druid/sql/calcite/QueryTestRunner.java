@@ -28,6 +28,7 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.sql.SqlExplainFormat;
 import org.apache.calcite.sql.SqlExplainLevel;
 import org.apache.calcite.sql.SqlInsert;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -49,12 +50,14 @@ import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 /**
@@ -248,10 +251,7 @@ public class QueryTestRunner
         vectorizeValues.add("force");
       }
 
-      final QueryLogHook queryLogHook = builder.config.queryLogHook();
       for (final String vectorize : vectorizeValues) {
-        queryLogHook.clearRecordedQueries();
-
         final Map<String, Object> theQueryContext = new HashMap<>(builder.queryContext);
         theQueryContext.put(QueryContexts.VECTORIZE_KEY, vectorize);
         theQueryContext.put(QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, vectorize);
@@ -278,13 +278,19 @@ public class QueryTestRunner
         final PlannerCaptureHook capture = getCaptureHook();
         final DirectStatement stmt = sqlStatementFactory.directStatement(query);
         stmt.setHook(capture);
-        final Sequence<Object[]> results = stmt.execute().getResults();
+        AtomicReference<List<Object[]>> resultListRef = new AtomicReference<>();
+        QueryLogHook queryLogHook = new QueryLogHook(builder().config.jsonMapper());
+        queryLogHook.logQueriesFor(
+            () -> {
+              resultListRef.set(stmt.execute().getResults().toList());
+            }
+        );
         return new QueryResults(
             query.context(),
             vectorize,
             stmt.prepareResult().getReturnedRowType(),
-            results.toList(),
-            builder().config.queryLogHook().getRecordedQueries(),
+            resultListRef.get(),
+            queryLogHook.getRecordedQueries(),
             capture
         );
       }
@@ -299,7 +305,8 @@ public class QueryTestRunner
 
     private PlannerCaptureHook getCaptureHook()
     {
-      if (builder.getQueryContext().containsKey(PlannerCaptureHook.NEED_CAPTURE_HOOK) || builder.expectedLogicalPlan != null) {
+      if (builder.getQueryContext().containsKey(PlannerCaptureHook.NEED_CAPTURE_HOOK)
+          || builder.expectedLogicalPlan != null) {
         return new PlannerCaptureHook();
       }
       return null;
@@ -544,7 +551,8 @@ public class QueryTestRunner
           "",
           hook.relRoot().rel,
           SqlExplainFormat.TEXT,
-          SqlExplainLevel.DIGEST_ATTRIBUTES);
+          SqlExplainLevel.DIGEST_ATTRIBUTES
+      );
       String plan;
       SqlInsert insertNode = hook.insertNode();
       if (insertNode == null) {
@@ -634,6 +642,16 @@ public class QueryTestRunner
           builder.expectedResults,
           builder.expectedResultMatchMode,
           builder.expectedResultSignature
+      );
+    }
+
+    // Validate: don't set both skipVectorize and cannotVectorize.
+    if (builder.skipVectorize && builder.queryCannotVectorize) {
+      throw new IAE(
+          "Do not set both skipVectorize and cannotVectorize. Use cannotVectorize if a query is not currently "
+          + "able to vectorize, but may be able to in the future. Use skipVectorize if a query *can* vectorize, but "
+          + "for some reason we need to skip the test on the vectorized code path. In most situations, cannotVectorize "
+          + "is the one you want."
       );
     }
 

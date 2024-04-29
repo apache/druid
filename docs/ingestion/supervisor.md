@@ -26,6 +26,8 @@ sidebar_label: Supervisor
 A supervisor manages streaming ingestion from external streaming sources into Apache Druid.
 Supervisors oversee the state of indexing tasks to coordinate handoffs, manage failures, and ensure that the scalability and replication requirements are maintained.
 
+This topic uses the Apache Kafka term offset to refer to the identifier for records in a partition. If you are using Amazon Kinesis, the equivalent is sequence number.
+
 ## Supervisor spec
 
 Druid uses a JSON specification, often referred to as the supervisor spec, to define streaming ingestion tasks.
@@ -44,7 +46,7 @@ The following table outlines the high-level configuration options for a supervis
 ### I/O configuration
 
 The following table outlines the `ioConfig` configuration properties that apply to both Apache Kafka and Amazon Kinesis ingestion methods.
-For configuration properties specific to Apache Kafka and Amazon Kinesis, see [Kafka I/O configuration](kafka-ingestion.md#io-configuration) and [Kinesis I/O configuration](kinesis-ingestion.md#io-configuration) respectively.
+For configuration properties specific to Kafka and Kinesis, see [Kafka I/O configuration](kafka-ingestion.md#io-configuration) and [Kinesis I/O configuration](kinesis-ingestion.md#io-configuration) respectively.
 
 |Property|Type|Description|Required|Default|
 |--------|----|-----------|--------|-------|
@@ -69,7 +71,7 @@ The following table outlines the configuration properties for `autoScalerConfig`
 |Property|Description|Required|Default|
 |--------|-----------|--------|-------|
 |`enableTaskAutoScaler`|Enables the autoscaler. If not specified, Druid disables the autoscaler even when `autoScalerConfig` is not null.|No|`false`|
-|`taskCountMax`|The maximum number of ingestion tasks. Must be greater than or equal to `taskCountMin`. If `taskCountMax` is greater than the number of Kafka partitions or Kinesis shards, Druid set the maximum number of reading tasks to the number of Kafka partitions or Kinesis shards and ignores `taskCountMax`.|Yes||
+|`taskCountMax`|The maximum number of ingestion tasks. Must be greater than or equal to `taskCountMin`. If `taskCountMax` is greater than the number of Kafka partitions or Kinesis shards, Druid sets the maximum number of reading tasks to the number of Kafka partitions or Kinesis shards and ignores `taskCountMax`.|Yes||
 |`taskCountMin`|The minimum number of ingestion tasks. When you enable the autoscaler, Druid ignores the value of `taskCount` in `ioConfig` and starts with the `taskCountMin` number of tasks to launch.|Yes||
 |`minTriggerScaleActionFrequencyMillis`|The minimum time interval between two scale actions.| No|600000|
 |`autoScalerStrategy`|The algorithm of autoscaler. Druid only supports the `lagBased` strategy. See [Autoscaler strategy](#autoscaler-strategy) for more information.|No|`lagBased`|
@@ -77,7 +79,7 @@ The following table outlines the configuration properties for `autoScalerConfig`
 ##### Autoscaler strategy
 
 :::info
-Unlike the Kafka indexing service, Kinesis reports lag metrics measured in time difference in milliseconds between the current sequence number and latest sequence number, rather than message count.
+Unlike the Kafka indexing service, Kinesis reports lag metrics as the time difference in milliseconds between the current sequence number and the latest sequence number, rather than message count.
 :::
 
 The following table outlines the configuration properties related to the `lagBased` autoscaler strategy:
@@ -182,14 +184,14 @@ The following example shows a supervisor spec with `lagBased` autoscaler:
 
 The `tuningConfig` object is optional. If you don't specify the `tuningConfig` object, Druid uses the default configuration settings.
 
-The following table outlines the `tuningConfig` configuration properties that apply to both Apache Kafka and Amazon Kinesis ingestion methods.
-For configuration properties specific to Apache Kafka and Amazon Kinesis, see [Kafka tuning configuration](kafka-ingestion.md#tuning-configuration) and [Kinesis tuning configuration](kinesis-ingestion.md#tuning-configuration) respectively.
+The following table outlines the `tuningConfig` configuration properties that apply to both Kafka and Kinesis ingestion methods.
+For configuration properties specific to Kafka and Kinesis, see [Kafka tuning configuration](kafka-ingestion.md#tuning-configuration) and [Kinesis tuning configuration](kinesis-ingestion.md#tuning-configuration) respectively.
 
 |Property|Type|Description|Required|Default|
 |--------|----|-----------|--------|-------|
 |`type`|String|The tuning type code for the ingestion method. One of `kafka` or `kinesis`.|Yes||
 |`maxRowsInMemory`|Integer|The number of rows to accumulate before persisting. This number represents the post-aggregation rows. It is not equivalent to the number of input events, but the resulting number of aggregated rows. Druid uses `maxRowsInMemory` to manage the required JVM heap size. The maximum heap memory usage for indexing scales is `maxRowsInMemory * (2 + maxPendingPersists)`. Normally, you don't need to set this, but depending on the nature of data, if rows are short in terms of bytes, you may not want to store a million rows in memory and this value should be set.|No|150000|
-|`maxBytesInMemory`|Long|The number of bytes to accumulate in heap memory before persisting. This is based on a rough estimate of memory usage and not actual usage. Normally, this is computed internally. The maximum heap memory usage for indexing is `maxBytesInMemory * (2 + maxPendingPersists)`.|No|One-sixth of max JVM memory|
+|`maxBytesInMemory`|Long|The number of bytes to accumulate in heap memory before persisting. The value is based on a rough estimate of memory usage and not actual usage. Normally, Druid computes the value internally. The maximum heap memory usage for indexing is `maxBytesInMemory * (2 + maxPendingPersists)`.|No|One-sixth of max JVM memory|
 |`skipBytesInMemoryOverheadCheck`|Boolean|The calculation of `maxBytesInMemory` takes into account overhead objects created during ingestion and each intermediate persist. To exclude the bytes of these overhead objects from the `maxBytesInMemory` check, set `skipBytesInMemoryOverheadCheck` to `true`.|No|`false`|
 |`maxRowsPerSegment`|Integer|The number of rows to store in a segment. This number is post-aggregation rows. Handoff occurs when `maxRowsPerSegment` or `maxTotalRows` is reached or every `intermediateHandoffPeriod`, whichever happens first.|No|5000000|
 |`maxTotalRows`|Long|The number of rows to aggregate across all segments; this number is post-aggregation rows. Handoff happens either if `maxRowsPerSegment` or `maxTotalRows` is reached or every `intermediateHandoffPeriod`, whichever happens earlier.|No|20000000|
@@ -200,7 +202,7 @@ For configuration properties specific to Apache Kafka and Amazon Kinesis, see [K
 |`indexSpecForIntermediatePersists`|Object|Defines segment storage format options to use at indexing time for intermediate persisted temporary segments. You can use `indexSpecForIntermediatePersists` to disable dimension/metric compression on intermediate segments to reduce memory required for final merging. However, disabling compression on intermediate segments might increase page cache use while they are used before getting merged into final segment published.|No||
 |`reportParseExceptions`|Boolean|DEPRECATED. If `true`, Druid throws exceptions encountered during parsing causing ingestion to halt. If `false`, Druid skips unparseable rows and fields. Setting `reportParseExceptions` to `true` overrides existing configurations for `maxParseExceptions` and `maxSavedParseExceptions`, setting `maxParseExceptions` to 0 and limiting `maxSavedParseExceptions` to not more than 1.|No|`false`|
 |`handoffConditionTimeout`|Long|Number of milliseconds to wait for segment handoff. Set to a value >= 0, where 0 means to wait indefinitely.|No|900000 (15 minutes) for Kafka. 0 for Kinesis.|
-|`resetOffsetAutomatically`|Boolean|Resets partitions when the sequence number is unavailable. If set to `true`, Druid resets partitions to the earliest or latest Kafka sequence number or Kinesis offset, based on the value of `useEarliestSequenceNumber` or `useEarliestOffset` (earliest if `true`, latest if `false`). If set to `false`, the exception bubbles up causing tasks to fail and ingestion to halt. If this occurs, manual intervention is required to correct the situation, potentially through [resetting the supervisor](../api-reference/supervisor-api.md#reset-a-supervisor).|No|`false`|
+|`resetOffsetAutomatically`|Boolean|Resets partitions when the sequence number is unavailable. If set to `true`, Druid resets partitions to the earliest or latest offset, based on the value of `useEarliestSequenceNumber` or `useEarliestOffset` (earliest if `true`, latest if `false`). If set to `false`, Druid surfaces the exception causing tasks to fail and ingestion to halt. If this occurs, manual intervention is required to correct the situation, potentially through [resetting the supervisor](../api-reference/supervisor-api.md#reset-a-supervisor).|No|`false`|
 |`workerThreads`|Integer|The number of threads that the supervisor uses to handle requests/responses for worker tasks, along with any other internal asynchronous operation.|No|`min(10, taskCount)`|
 |`chatRetries`|Integer|The number of times Druid retries HTTP requests to indexing tasks before considering tasks unresponsive.|No|8|
 |`httpTimeout`|ISO 8601 period|The period of time to wait for a HTTP response from an indexing task.|No|`PT10S`|
@@ -208,15 +210,15 @@ For configuration properties specific to Apache Kafka and Amazon Kinesis, see [K
 |`offsetFetchPeriod`|ISO 8601 period|Determines how often the supervisor queries the streaming source and the indexing tasks to fetch current offsets and calculate lag. If the user-specified value is below the minimum value of `PT5S`, the supervisor ignores the value and uses the minimum value instead.|No|`PT30S`|
 |`segmentWriteOutMediumFactory`|Object|The segment write-out medium to use when creating segments. See [Additional Peon configuration: SegmentWriteOutMediumFactory](../configuration/index.md#segmentwriteoutmediumfactory) for explanation and available options.|No|If not specified, Druid uses the value from `druid.peon.defaultSegmentWriteOutMediumFactory.type`.|
 |`logParseExceptions`|Boolean|If `true`, Druid logs an error message when a parsing exception occurs, containing information about the row where the error occurred.|No|`false`|
-|`maxParseExceptions`|Integer|The maximum number of parse exceptions that can occur before the task halts ingestion and fails. Overridden if `reportParseExceptions` is set.|No|unlimited|
-|`maxSavedParseExceptions`|Integer|When a parse exception occurs, Druid keeps track of the most recent parse exceptions. `maxSavedParseExceptions` limits the number of saved exception instances. These saved exceptions are available after the task finishes in the [task completion report](../ingestion/tasks.md#task-reports). Overridden if `reportParseExceptions` is set.|No|0|
+|`maxParseExceptions`|Integer|The maximum number of parse exceptions that can occur before the task halts ingestion and fails. Setting `reportParseExceptions` overrides this limit.|No|unlimited|
+|`maxSavedParseExceptions`|Integer|When a parse exception occurs, Druid keeps track of the most recent parse exceptions. `maxSavedParseExceptions` limits the number of saved exception instances. These saved exceptions are available after the task finishes in the [task completion report](../ingestion/tasks.md#task-reports). Setting `reportParseExceptions` overrides this limit.|No|0|
 
 ## Start a supervisor
 
 Druid starts a new supervisor when you submit a supervisor spec.
-You can submit the supervisor spec using the Druid console [data loader](../operations/web-console.md#data-loader) or by calling the [Supervisor API](../api-reference/supervisor-api.md).
+You can submit the supervisor spec in the Druid web console [data loader](../operations/web-console.md#data-loader) or with the [Supervisor API](../api-reference/supervisor-api.md).
 
-The following screenshot shows the [Supervisors](../operations/web-console.md#supervisors) view of the Druid web console for a cluster with two supervisors:
+The following screenshot shows the [Supervisors](../operations/web-console.md#supervisors) view of the web console for a cluster with two supervisors:
 
 ![Supervisors view](../assets/supervisor-view.png)
 
@@ -226,7 +228,7 @@ When an Overlord gains leadership, either by being started or as a result of ano
 
 ### Schema and configuration changes
 
-Schema and configuration changes are handled by submitting the new supervisor spec. The Overlord initiates a graceful shutdown of the existing supervisor. The running supervisor signals its tasks to stop reading and begin publishing, exiting itself. Druid then uses the provided configuration to create a new supervisor. Druid submits a new schema while retaining existing publishing tasks and starts new tasks at the previous task offsets.
+To make schema or configuration changes, you must submit a new supervisor spec. The Overlord initiates a graceful shutdown of the existing supervisor. The running supervisor signals its tasks to stop reading and begin publishing, exiting itself. Druid then uses the new configuration to create a new supervisor. Druid submits the updated schema while retaining existing publishing tasks. It also starts new tasks at the previous task offsets.
 This way, configuration changes can be applied without requiring any pause in ingestion.
 
 ## Status report
@@ -309,23 +311,23 @@ The following table lists `detailedState` values and their corresponding `state`
 
 On each iteration of the supervisor's run loop, the supervisor completes the following tasks in sequence:
 
-1. Fetch the list of units of parallelism, such as Kinesis shards or Kafka partitions, and determine the starting sequence number or offset for each unit (either based on the last processed sequence number or offset if continuing, or starting from the beginning or ending of the stream if this is a new stream).
+1. Retrieve the list of partitions and determine the starting offset for each partition. If continuing, Druid uses the last processed offset. For new streams, Druid starts from either the beginning or end of the stream, depending on the `useEarliestOffset` property.
 2. Discover any running indexing tasks that are writing to the supervisor's datasource and adopt them if they match the supervisor's configuration, else signal them to stop.
 3. Send a status request to each supervised task to update the view of the state of the tasks under supervision.
-4. Handle tasks that have exceeded `taskDuration` and should transition from the reading to publishing state.
+4. Handle tasks that have exceeded `taskDuration` and should transition from reading to publishing.
 5. Handle tasks that have finished publishing and signal redundant replica tasks to stop.
 6. Handle tasks that have failed and clean up the supervisor's internal state.
 7. Compare the list of healthy tasks to the requested `taskCount` and `replicas` configurations and create additional tasks if required.
 
 The `detailedState` property shows additional values (marked with "first iteration only" in the preceding table) the first time the
 supervisor executes this run loop after startup or after resuming from a suspension. This is intended to surface
-initialization-type issues, where the supervisor is unable to reach a stable state. For example, if the supervisor cannot connect to
-the stream, if it's unable to read from the stream, or cannot communicate with existing tasks. Once the supervisor is stable;
+initialization-type issues, where the supervisor is unable to reach a stable state. For example, if the supervisor can't connect to
+the stream, if it's unable to read from the stream, or if it can't communicate with existing tasks. Once the supervisor is stable;
 that is, once it has completed a full execution without encountering any issues, `detailedState` will show a `RUNNING`
 state until it is stopped, suspended, or hits a failure threshold and transitions to an unhealthy state.
 
 :::info
-For the Kafka indexing service, the consumer lag per partition may be reported as negative values if the supervisor hasn't received the latest offset response from Kafka. The aggregate lag value will always be >= 0.
+For the Kafka indexing service, Druid may report the consumer lag per partition as a negative value if the supervisor hasn't received the latest offset response from Kafka. The aggregate lag value is always >= 0.
 :::
 
 ## SUPERVISORS system table
@@ -338,6 +340,54 @@ SELECT * FROM sys.supervisors WHERE healthy=0;
 ```
 
 For more information on the supervisors system table, see [SUPERVISORS table](../querying/sql-metadata-tables.md#supervisors-table).
+
+## Manage a supervisor
+
+You can manage a supervisor from the web console or with the [Supervisor API](../api-reference/supervisor-api.md).
+In the web console, navigate to the **Supervisors** view and click the ellipsis in the **Actions** column. Select the desired action from the menu that appears.
+
+![Actions menu](../assets/supervisor-actions.png)
+
+The supervisor must be running for some of these actions to be available.
+
+### Suspend
+
+**Suspend** pauses a running supervisor.
+The suspended supervisor continues to emit logs and metrics.
+Indexing tasks remain suspended until you resume the supervisor.
+For information on how to suspend a supervisor by API, see [Supervisors: Suspend a running supervisor](../api-reference/supervisor-api.md#suspend-a-running-supervisor).
+
+### Set offsets
+
+:::info
+Perform this action with caution as it may result in skipped messages and lead to data loss or duplicate data.
+:::
+
+**Set offsets** resets the offsets for supervisor partitions.
+This action clears the stored offsets and instructs the supervisor to resume reading data from the specified offsets. If there are no stored offsets, Druid saves the specified offsets in the metadata store.
+**Set offsets** terminates and recreates active tasks for the specified partitions to begin reading from the reset offsets.
+For partitions not specified in this operation, the supervisor resumes from the last stored offset.
+
+For information on how to reset offsets by API, see [Supervisors: Reset offsets for a supervisor](../api-reference/supervisor-api.md#reset-offsets-for-a-supervisor).
+
+### Hard reset
+
+:::info
+Perform this action with caution as it may result in skipped messages and lead to data loss or duplicate data.
+:::
+
+**Hard reset** clears supervisor metadata, causing the supervisor to resume data reading from either the earliest or latest available position, depending on the `useEarliestOffset` setting. **Hard reset** terminates and recreates active tasks, so that tasks begin reading from valid positions.
+
+Use this action to recover from a stopped state due to missing offsets.
+
+For information on how to reset a supervisor by API, see [Supervisors: Reset a supervisor](../api-reference/supervisor-api.md#reset-a-supervisor).
+
+### Terminate
+
+**Terminate** stops a supervisor and its indexing tasks, triggering the publishing of their segments. When you terminate a supervisor, Druid places a tombstone marker in the metadata store to prevent reloading on restart.
+The terminated supervisor still exists in the metadata store and its history can be retrieved.
+
+For information on how to terminate a supervisor by API, see [Supervisors: Terminate a supervisor](../api-reference/supervisor-api.md#terminate-a-supervisor).
 
 ## Capacity planning
 
