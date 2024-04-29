@@ -26,6 +26,8 @@ import it.unimi.dsi.fastutil.ints.IntSortedSet;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.column.ColumnType;
@@ -61,6 +63,11 @@ public class RowBasedIndexBuilder
   public RowBasedIndexBuilder(ColumnType keyType)
   {
     this.keyType = keyType;
+
+    // Cannot build index on complex types, and non-primitive arrays
+    if (keyType.is(ValueType.COMPLEX) || keyType.isArray() && !keyType.isPrimitiveArray()) {
+      throw InvalidInput.exception("Cannot join on the columnType [%s]", keyType);
+    }
 
     if (keyType.is(ValueType.LONG)) {
       // We're specializing the type even though we don't specialize usage in this class, for two reasons:
