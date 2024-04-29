@@ -306,6 +306,7 @@ public class ClientCompactionTaskQuerySerdeTest
         )
         .metricsSpec(new AggregatorFactory[] {new CountAggregatorFactory("cnt")})
         .transformSpec(new ClientCompactionTaskTransformSpec(new SelectorDimFilter("dim1", "foo", null)))
+        .compactionStrategy(new NativeCompactionStrategy())
         .build();
 
     final ClientCompactionTaskQuery expected = new ClientCompactionTaskQuery(
@@ -353,7 +354,7 @@ public class ClientCompactionTaskQuerySerdeTest
         new AggregatorFactory[] {new CountAggregatorFactory("cnt")},
         new ClientCompactionTaskTransformSpec(new SelectorDimFilter("dim1", "foo", null)),
         new HashMap<>(),
-        null
+        new UserCompactionStrategy(CompactionEngine.NATIVE)
     );
 
     final byte[] json = mapper.writeValueAsBytes(task);

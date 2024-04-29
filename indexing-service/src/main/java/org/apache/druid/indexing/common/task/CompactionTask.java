@@ -1178,13 +1178,11 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       return this;
     }
 
-    public Builder engine(CompactionStrategy engine)
+    public Builder compactionStrategy(CompactionStrategy compactionStrategy)
     {
-      this.compactionStrategy = engine;
+      this.compactionStrategy = compactionStrategy;
       return this;
     }
-
-
 
     public CompactionTask build()
     {

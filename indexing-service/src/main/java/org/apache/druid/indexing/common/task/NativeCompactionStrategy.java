@@ -1,5 +1,6 @@
 package org.apache.druid.indexing.common.task;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.client.coordinator.CoordinatorClient;
@@ -255,6 +256,7 @@ public class NativeCompactionStrategy implements CompactionStrategy
   }
 
   @Override
+  @JsonProperty
   public String getType()
   {
     return type;

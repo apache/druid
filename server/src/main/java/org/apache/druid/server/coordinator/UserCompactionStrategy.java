@@ -19,15 +19,19 @@
 
 package org.apache.druid.server.coordinator;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.indexer.CompactionEngine;
+
+import java.util.Objects;
 
 
 public class UserCompactionStrategy
 {
   private final CompactionEngine type;
 
-  public UserCompactionStrategy(CompactionEngine type)
+  @JsonCreator
+  public UserCompactionStrategy(@JsonProperty("type") CompactionEngine type)
   {
     this.type = type;
   }
@@ -44,5 +48,24 @@ public class UserCompactionStrategy
     return "UserCompactionStrategy{" +
            "type=" + type +
            '}';
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    UserCompactionStrategy that = (UserCompactionStrategy) o;
+    return type == that.type;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(type);
   }
 }
