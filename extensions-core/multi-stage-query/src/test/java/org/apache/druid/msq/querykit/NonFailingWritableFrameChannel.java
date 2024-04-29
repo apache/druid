@@ -42,7 +42,7 @@ public class NonFailingWritableFrameChannel implements WritableFrameChannel
   }
 
   @Override
-  public void fail(@Nullable Throwable cause) throws IOException
+  public void fail(@Nullable Throwable cause)
   {
   }
 
