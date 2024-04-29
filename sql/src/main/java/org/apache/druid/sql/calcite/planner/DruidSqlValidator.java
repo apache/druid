@@ -408,6 +408,7 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
     }
     final SqlSelect select = (SqlSelect) source;
 
+    DruidSqlParserUtils.validateClusteredByColumns(clusteredBy);
     select.setOrderBy(clusteredBy);
   }
 
