@@ -108,7 +108,7 @@ public class ExpressionDeferredGroupByVectorColumnSelector implements GroupByVec
       keyOffset += subSelector.getGroupingKeySize();
     }
 
-    resultRow.getArray()[resultRowPosition] = expr.eval(tmpResultRowBindings).value();
+    resultRow.getArray()[resultRowPosition] = expr.eval(tmpResultRowBindings).valueOrDefault();
   }
 
   @Override
