@@ -25,7 +25,6 @@ import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest.CalciteTestConfig;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
-import org.apache.druid.sql.calcite.util.SqlTestFramework.PlannerComponentSupplier;
 import org.junit.jupiter.api.extension.Extension;
 
 public class DecoupledExtension implements Extension
@@ -48,8 +47,6 @@ public class DecoupledExtension implements Extension
     DecoupledTestConfig decTestConfig = BaseCalciteQueryTest.queryFrameworkRule
         .getAnnotation(DecoupledTestConfig.class);
 
-    PlannerComponentSupplier componentSupplier = baseTest;
-
     CalciteTestConfig testConfig = baseTest.new CalciteTestConfig(CONTEXT_OVERRIDES)
     {
       @Override
@@ -57,7 +54,7 @@ public class DecoupledExtension implements Extension
       {
         plannerConfig = plannerConfig.withOverrides(CONTEXT_OVERRIDES);
 
-        return baseTest.queryFramework().plannerFixture(componentSupplier, plannerConfig, authConfig);
+        return baseTest.queryFramework().plannerFixture(plannerConfig, authConfig);
       }
     };
 

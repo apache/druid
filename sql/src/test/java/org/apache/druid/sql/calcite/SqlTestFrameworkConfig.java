@@ -102,11 +102,11 @@ public @interface SqlTestFrameworkConfig
 
     public ConfigurationInstance getConfigurationInstance(
         SqlTestFrameworkConfigInstance config,
-        QueryComponentSupplier testHost)
+        Function<TempDirProducer, QueryComponentSupplier> testHostSupplier)
     {
       ConfigurationInstance ret = configMap.get(config);
       if (!configMap.containsKey(config)) {
-        ret = new ConfigurationInstance(config, testHost);
+        ret = new ConfigurationInstance(config, testHostSupplier.apply(new TempDirProducer("druid-test")));
         configMap.put(config, ret);
       }
       return ret;
@@ -202,7 +202,7 @@ public @interface SqlTestFrameworkConfig
 
     public SqlTestFramework get()
     {
-      return configStore.getConfigurationInstance(config, testHost).framework;
+      return configStore.getConfigurationInstance(config, testHostSupplier).framework;
     }
 
     public <T extends Annotation> T getAnnotation(Class<T> annotationType)
