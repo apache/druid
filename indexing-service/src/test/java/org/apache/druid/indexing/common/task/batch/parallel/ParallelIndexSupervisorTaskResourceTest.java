@@ -48,6 +48,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.appenderator.SegmentAllocator;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.server.security.AuthConfig;
@@ -543,7 +544,8 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
           supervisorTask.getId(),
           supervisorTask.getGroupId(),
           supervisorTask.getIngestionSchema(),
-          supervisorTask.getContext()
+          supervisorTask.getContext(),
+          CentralizedDatasourceSchemaConfig.create(true)
       );
       this.supervisorTask = supervisorTask;
     }
@@ -717,7 +719,8 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
               getId(),
               Collections.emptySet(),
               Collections.singleton(segment),
-              new TaskReport.ReportMap()
+              new TaskReport.ReportMap(),
+              null
           )
       );
       return TaskStatus.fromCode(getId(), state);

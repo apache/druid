@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.indexer.report.TaskReport;
+import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.timeline.DataSegment;
 
 import java.util.Objects;
@@ -40,6 +41,7 @@ public class PushedSegmentsReport implements SubTaskReport
   private final String taskId;
   private final Set<DataSegment> oldSegments;
   private final Set<DataSegment> newSegments;
+  private final SegmentSchemaMapping segmentSchemaMapping;
   private final TaskReport.ReportMap taskReport;
 
   @JsonCreator
@@ -47,13 +49,15 @@ public class PushedSegmentsReport implements SubTaskReport
       @JsonProperty("taskId") String taskId,
       @JsonProperty("oldSegments") Set<DataSegment> oldSegments,
       @JsonProperty("segments") Set<DataSegment> newSegments,
-      @JsonProperty("taskReport") TaskReport.ReportMap taskReport
+      @JsonProperty("taskReport") TaskReport.ReportMap taskReport,
+      @JsonProperty("segmentSchemaMapping") SegmentSchemaMapping segmentSchemaMapping
   )
   {
     this.taskId = Preconditions.checkNotNull(taskId, "taskId");
     this.oldSegments = Preconditions.checkNotNull(oldSegments, "oldSegments");
     this.newSegments = Preconditions.checkNotNull(newSegments, "newSegments");
     this.taskReport = taskReport;
+    this.segmentSchemaMapping = segmentSchemaMapping;
   }
 
   @Override
@@ -81,6 +85,12 @@ public class PushedSegmentsReport implements SubTaskReport
     return taskReport;
   }
 
+  @JsonProperty("segmentSchemaMapping")
+  public SegmentSchemaMapping getSegmentSchemaMapping()
+  {
+    return segmentSchemaMapping;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -94,12 +104,13 @@ public class PushedSegmentsReport implements SubTaskReport
     return Objects.equals(taskId, that.taskId)
            && Objects.equals(oldSegments, that.oldSegments)
            && Objects.equals(newSegments, that.newSegments)
-           && Objects.equals(taskReport, that.taskReport);
+           && Objects.equals(taskReport, that.taskReport)
+           && Objects.equals(segmentSchemaMapping, that.segmentSchemaMapping);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(taskId, oldSegments, newSegments, taskReport);
+    return Objects.hash(taskId, oldSegments, newSegments, taskReport, segmentSchemaMapping);
   }
 }

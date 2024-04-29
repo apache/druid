@@ -57,6 +57,8 @@ import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.partition.HashBasedNumberedPartialShardSpec;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
@@ -96,6 +98,7 @@ public class TaskLockboxTest
   private IndexerMetadataStorageCoordinator metadataStorageCoordinator;
   private TaskLockbox lockbox;
   private TaskLockboxValidator validator;
+  private SegmentSchemaManager segmentSchemaManager;
 
   private final int HIGH_PRIORITY = 15;
   private final int MEDIUM_PRIORITY = 10;
@@ -109,12 +112,15 @@ public class TaskLockboxTest
   {
     objectMapper = TestHelper.makeJsonMapper();
     objectMapper.registerSubtypes(NumberedShardSpec.class, HashBasedNumberedShardSpec.class);
-
     final TestDerbyConnector derbyConnector = derby.getConnector();
     derbyConnector.createTaskTables();
     derbyConnector.createPendingSegmentsTable();
+    derbyConnector.createSegmentSchemasTable();
     derbyConnector.createSegmentTable();
     final MetadataStorageTablesConfig tablesConfig = derby.metadataTablesConfigSupplier().get();
+
+    segmentSchemaManager = new SegmentSchemaManager(tablesConfig, objectMapper, derbyConnector);
+
     taskStorage = new MetadataTaskStorage(
         derbyConnector,
         new TaskStorageConfig(null),
@@ -128,7 +134,13 @@ public class TaskLockboxTest
     EmittingLogger.registerEmitter(emitter);
     EasyMock.replay(emitter);
 
-    metadataStorageCoordinator = new IndexerSQLMetadataStorageCoordinator(objectMapper, tablesConfig, derbyConnector);
+    metadataStorageCoordinator = new IndexerSQLMetadataStorageCoordinator(
+        objectMapper,
+        tablesConfig,
+        derbyConnector,
+        segmentSchemaManager,
+        CentralizedDatasourceSchemaConfig.create()
+    );
 
     lockbox = new TaskLockbox(taskStorage, metadataStorageCoordinator);
     validator = new TaskLockboxValidator(lockbox, taskStorage);
@@ -450,10 +462,13 @@ public class TaskLockboxTest
             loadedMapper
         )
     );
+
     IndexerMetadataStorageCoordinator loadedMetadataStorageCoordinator = new IndexerSQLMetadataStorageCoordinator(
         loadedMapper,
         derby.metadataTablesConfigSupplier().get(),
-        derbyConnector
+        derbyConnector,
+        segmentSchemaManager,
+        CentralizedDatasourceSchemaConfig.create()
     );
 
     TaskLockbox theBox = new TaskLockbox(taskStorage, metadataStorageCoordinator);
@@ -1325,6 +1340,34 @@ public class TaskLockboxTest
     Assert.assertTrue(conflictingIntervals.isEmpty());
   }
 
+  @Test
+  public void testGetLockedIntervalsForLowerPriorityUseConcurrentLocks()
+  {
+    final Task task = NoopTask.ofPriority(50);
+    lockbox.add(task);
+    taskStorage.insert(task, TaskStatus.running(task.getId()));
+    tryTimeChunkLock(
+        TaskLockType.APPEND,
+        task,
+        Intervals.of("2017/2018")
+    );
+
+    LockFilterPolicy requestForReplaceLowerPriorityLock = new LockFilterPolicy(
+        task.getDataSource(),
+        25,
+        ImmutableMap.of(
+            Tasks.TASK_LOCK_TYPE,
+            TaskLockType.EXCLUSIVE.name(),
+            Tasks.USE_CONCURRENT_LOCKS,
+            true
+        )
+    );
+
+    Map<String, List<Interval>> conflictingIntervals =
+        lockbox.getLockedIntervals(ImmutableList.of(requestForReplaceLowerPriorityLock));
+    Assert.assertTrue(conflictingIntervals.isEmpty());
+  }
+
 
   @Test
   public void testExclusiveLockCompatibility()
@@ -1905,8 +1948,8 @@ public class TaskLockboxTest
     // Only the replaceTask should attempt a delete on the upgradeSegments table
     EasyMock.expect(coordinator.deleteUpgradeSegmentsForTask(replaceTask.getId())).andReturn(0).once();
     // Any task may attempt pending segment clean up
-    EasyMock.expect(coordinator.deletePendingSegmentsForTaskGroup(replaceTask.getId())).andReturn(0).once();
-    EasyMock.expect(coordinator.deletePendingSegmentsForTaskGroup(appendTask.getId())).andReturn(0).once();
+    EasyMock.expect(coordinator.deletePendingSegmentsForTaskAllocatorId(replaceTask.getId())).andReturn(0).once();
+    EasyMock.expect(coordinator.deletePendingSegmentsForTaskAllocatorId(appendTask.getId())).andReturn(0).once();
     EasyMock.replay(coordinator);
 
     final TaskLockbox taskLockbox = new TaskLockbox(taskStorage, coordinator);

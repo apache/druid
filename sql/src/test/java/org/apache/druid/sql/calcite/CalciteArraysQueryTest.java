@@ -69,8 +69,11 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
+import org.apache.druid.sql.calcite.CalciteArraysQueryTest.ArraysComponentSupplier;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.calcite.util.SqlTestFramework;
+import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.sql.http.SqlParameter;
 import org.junit.Assert;
 import org.junit.jupiter.api.Test;
@@ -83,6 +86,7 @@ import java.util.Map;
 /**
  * Tests for array functions and array types
  */
+@SqlTestFramework.SqlTestFrameWorkModule(ArraysComponentSupplier.class)
 public class CalciteArraysQueryTest extends BaseCalciteQueryTest
 {
   private static final Map<String, Object> QUERY_CONTEXT_UNNEST =
@@ -115,11 +119,19 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     }
   }
 
-  @Override
-  public void configureGuice(DruidInjectorBuilder builder)
+  protected static class ArraysComponentSupplier extends StandardComponentSupplier
   {
-    super.configureGuice(builder);
-    builder.addModule(new NestedDataModule());
+    public ArraysComponentSupplier(TempDirProducer tempFolderProducer)
+    {
+      super(tempFolderProducer);
+    }
+
+    @Override
+    public void configureGuice(DruidInjectorBuilder builder)
+    {
+      super.configureGuice(builder);
+      builder.addModule(new NestedDataModule());
+    }
   }
 
   // test some query stuffs, sort of limited since no native array column types so either need to use constructor or
