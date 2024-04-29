@@ -71,7 +71,7 @@ public class NoopTask extends AbstractTask implements PendingSegmentAllocatingTa
   @Override
   public String getType()
   {
-    return "noop";
+    return TYPE;
   }
 
   @Nonnull

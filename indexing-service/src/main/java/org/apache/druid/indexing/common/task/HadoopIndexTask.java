@@ -192,7 +192,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
   @Override
   public String getType()
   {
-    return "index_hadoop";
+    return TYPE;
   }
 
   @Nonnull
