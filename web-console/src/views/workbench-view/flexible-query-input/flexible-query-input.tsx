@@ -259,7 +259,7 @@ export class FlexibleQueryInput extends React.PureComponent<
         name="ace-editor"
         onChange={this.handleChange}
         focus
-        fontSize={13}
+        fontSize={12}
         width="100%"
         height={editorHeight + 'px'}
         showGutter={showGutter}
