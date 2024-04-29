@@ -53,6 +53,7 @@ CORS
 CNF
 CPUs
 CSVs
+CentralizedDatasourceSchema
 Ceph
 CloudWatch
 ColumnDescriptor

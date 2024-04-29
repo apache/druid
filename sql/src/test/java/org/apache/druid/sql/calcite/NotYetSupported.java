@@ -83,7 +83,6 @@ public @interface NotYetSupported
     COLUMN_NOT_FOUND(DruidException.class, "CalciteContextException.*Column.*not found in any table"),
     NULLS_FIRST_LAST(DruidException.class, "NULLS (FIRST|LAST)"),
     BIGINT_TO_DATE(DruidException.class, "BIGINT to type (DATE|TIME)"),
-    NPE(DruidException.class, "java.lang.NullPointerException"),
     AGGREGATION_NOT_SUPPORT_TYPE(DruidException.class, "Aggregation \\[(MIN|MAX)\\] does not support type \\[STRING\\]"),
     ALLDATA_CSV(DruidException.class, "allData.csv"),
     BIGINT_TIME_COMPARE(DruidException.class, "Cannot apply '.' to arguments of type"),

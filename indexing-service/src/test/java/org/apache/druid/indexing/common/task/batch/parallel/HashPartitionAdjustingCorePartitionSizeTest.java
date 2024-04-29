@@ -110,7 +110,7 @@ public class HashPartitionAdjustingCorePartitionSizeTest extends AbstractMultiPh
             partitionsSpec,
             maxNumConcurrentSubTasks,
             TaskState.SUCCESS
-        )
+        ).getSegments()
     );
     Assert.assertEquals(3, segments.size());
     segments.sort(Comparator.comparing(segment -> segment.getShardSpec().getPartitionNum()));
@@ -152,7 +152,7 @@ public class HashPartitionAdjustingCorePartitionSizeTest extends AbstractMultiPh
         partitionsSpec,
         maxNumConcurrentSubTasks,
         TaskState.SUCCESS
-    );
+    ).getSegments();
     Assert.assertEquals(5, segments.size());
     segments.forEach(segment -> {
       Assert.assertSame(HashBasedNumberedShardSpec.class, segment.getShardSpec().getClass());

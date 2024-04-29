@@ -65,7 +65,7 @@ public class RetrieveSegmentsActionsTest
     expectedUnusedSegments.add(createSegment(Intervals.of("2017-10-07/2017-10-08"), UNUSED_V1));
 
     actionTestKit.getMetadataStorageCoordinator()
-                 .commitSegments(expectedUnusedSegments);
+                 .commitSegments(expectedUnusedSegments, null);
 
     expectedUnusedSegments.forEach(s -> actionTestKit.getTaskLockbox().unlock(task, s.getInterval()));
 
@@ -75,7 +75,7 @@ public class RetrieveSegmentsActionsTest
     expectedUsedSegments.add(createSegment(Intervals.of("2017-10-07/2017-10-08"), "2"));
 
     actionTestKit.getMetadataStorageCoordinator()
-                 .commitSegments(expectedUsedSegments);
+                 .commitSegments(expectedUsedSegments, null);
 
     expectedUsedSegments.forEach(s -> actionTestKit.getTaskLockbox().unlock(task, s.getInterval()));
 

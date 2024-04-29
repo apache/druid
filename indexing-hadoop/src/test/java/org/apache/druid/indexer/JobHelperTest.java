@@ -168,6 +168,7 @@ public class JobHelperTest
                 false,
                 false,
                 false,
+                false,
                 //Map of job properties
                 ImmutableMap.of(
                     "fs.s3.impl",

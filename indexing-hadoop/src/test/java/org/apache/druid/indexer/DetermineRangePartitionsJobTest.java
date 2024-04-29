@@ -382,7 +382,7 @@ public class DetermineRangePartitionsJobTest
                 null,
                 null,
                 null,
-                false,
+                false, false,
                 false,
                 false,
                 false,

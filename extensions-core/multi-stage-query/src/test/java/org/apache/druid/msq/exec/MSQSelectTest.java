@@ -2028,7 +2028,7 @@ public class MSQSelectTest extends MSQTestBase
         .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
             CoreMatchers.instanceOf(DruidException.class),
             ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                "SQL requires a group-by on a column of type COMPLEX<hyperUnique> that is unsupported"))
+                "SQL requires a group-by on a column with type [COMPLEX<hyperUnique>] that is unsupported."))
         ))
         .verifyExecutionError();
   }
