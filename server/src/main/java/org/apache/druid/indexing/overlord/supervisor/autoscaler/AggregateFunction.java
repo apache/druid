@@ -17,24 +17,11 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.overlord.supervisor;
+package org.apache.druid.indexing.overlord.supervisor.autoscaler;
 
-import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
-import org.junit.Assert;
-import org.junit.Test;
-import org.mockito.Mockito;
-
-public class SupervisorTest
+public enum AggregateFunction
 {
-  @Test
-  public void testAutoScalerLagComputation()
-  {
-    Supervisor supervisor = Mockito.spy(Supervisor.class);
-
-    Mockito.when(supervisor.computeLagStats()).thenReturn(new LagStats(1, 2, 3));
-    Assert.assertEquals(2, supervisor.computeLagForAutoScaler());
-
-    Mockito.when(supervisor.computeLagStats()).thenReturn(null);
-    Assert.assertEquals(0, supervisor.computeLagForAutoScaler());
-  }
+  MAX,
+  SUM,
+  AVERAGE
 }
