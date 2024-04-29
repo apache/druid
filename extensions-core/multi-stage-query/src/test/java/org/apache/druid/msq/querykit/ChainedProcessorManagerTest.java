@@ -70,7 +70,7 @@ import java.util.stream.LongStream;
 @RunWith(Parameterized.class)
 public class ChainedProcessorManagerTest extends FrameProcessorExecutorTest.BaseFrameProcessorExecutorTestSuite
 {
-  private final int bouncerPoolSize;
+  private final Bouncer bouncer;
   private final int maxOutstandingProcessors;
 
   private static final RowSignature ROW_SIGNATURE = RowSignature.builder()
@@ -81,7 +81,7 @@ public class ChainedProcessorManagerTest extends FrameProcessorExecutorTest.Base
   public ChainedProcessorManagerTest(int numThreads, int bouncerPoolSize, int maxOutstandingProcessors)
   {
     super(numThreads);
-    this.bouncerPoolSize = bouncerPoolSize;
+    this.bouncer = bouncerPoolSize == Integer.MAX_VALUE ? Bouncer.unlimited() : new Bouncer(bouncerPoolSize);
     this.maxOutstandingProcessors = maxOutstandingProcessors;
   }
 
@@ -122,7 +122,7 @@ public class ChainedProcessorManagerTest extends FrameProcessorExecutorTest.Base
     exec.runAllFully(
         chainedProcessorManager,
         maxOutstandingProcessors,
-        new Bouncer(bouncerPoolSize),
+        bouncer,
         null
     ).get();
 
@@ -158,7 +158,7 @@ public class ChainedProcessorManagerTest extends FrameProcessorExecutorTest.Base
     exec.runAllFully(
         chainedProcessorManager,
         maxOutstandingProcessors,
-        new Bouncer(bouncerPoolSize),
+        bouncer,
         null
     ).get();
 
@@ -196,7 +196,7 @@ public class ChainedProcessorManagerTest extends FrameProcessorExecutorTest.Base
     final ListenableFuture<Long> future = exec.runAllFully(
         chainedProcessorManager,
         maxOutstandingProcessors,
-        new Bouncer(bouncerPoolSize),
+        bouncer,
         null
     );
 
@@ -239,7 +239,7 @@ public class ChainedProcessorManagerTest extends FrameProcessorExecutorTest.Base
     final ListenableFuture<Long> future = exec.runAllFully(
         chainedProcessorManager,
         maxOutstandingProcessors,
-        new Bouncer(bouncerPoolSize),
+        bouncer,
         null
     );
 
