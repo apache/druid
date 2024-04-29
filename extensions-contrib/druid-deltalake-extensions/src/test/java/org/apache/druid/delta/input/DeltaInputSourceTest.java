@@ -24,8 +24,11 @@ import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.delta.filter.DeltaAndFilter;
-import org.apache.druid.delta.filter.DeltaBinaryOperatorFilter;
+import org.apache.druid.delta.filter.DeltaEqualsFilter;
 import org.apache.druid.delta.filter.DeltaFilter;
+import org.apache.druid.delta.filter.DeltaGreaterThanFilter;
+import org.apache.druid.delta.filter.DeltaGreaterThanOrEqualsFilter;
+import org.apache.druid.delta.filter.DeltaLessThanOrEqualsFilter;
 import org.apache.druid.delta.filter.DeltaNotFilter;
 import org.apache.druid.delta.filter.DeltaOrFilter;
 import org.apache.druid.error.DruidException;
@@ -145,7 +148,7 @@ public class DeltaInputSourceTest
       return new Object[][]{
           {
               PartitionedDeltaTable.DELTA_TABLE_PATH,
-              new DeltaBinaryOperatorFilter.DeltaEqualsFilter("name", "Employee2"),
+              new DeltaEqualsFilter("name", "Employee2"),
               PartitionedDeltaTable.FULL_SCHEMA,
               filterExpectedRows(
                   PartitionedDeltaTable.EXPECTED_ROWS,
@@ -154,7 +157,7 @@ public class DeltaInputSourceTest
           },
           {
               PartitionedDeltaTable.DELTA_TABLE_PATH,
-              new DeltaBinaryOperatorFilter.DeltaGreaterThanFilter("name", "Employee3"),
+              new DeltaGreaterThanFilter("name", "Employee3"),
               PartitionedDeltaTable.FULL_SCHEMA,
               filterExpectedRows(
                   PartitionedDeltaTable.EXPECTED_ROWS,
@@ -163,7 +166,7 @@ public class DeltaInputSourceTest
           },
           {
               PartitionedDeltaTable.DELTA_TABLE_PATH,
-              new DeltaBinaryOperatorFilter.DeltaLessThanOrEqualsFilter("name", "Employee4"),
+              new DeltaLessThanOrEqualsFilter("name", "Employee4"),
               PartitionedDeltaTable.FULL_SCHEMA,
               filterExpectedRows(
                   PartitionedDeltaTable.EXPECTED_ROWS,
@@ -174,8 +177,8 @@ public class DeltaInputSourceTest
               PartitionedDeltaTable.DELTA_TABLE_PATH,
               new DeltaAndFilter(
                   Arrays.asList(
-                      new DeltaBinaryOperatorFilter.DeltaEqualsFilter("name", "Employee1"),
-                      new DeltaBinaryOperatorFilter.DeltaEqualsFilter("name", "Employee4")
+                      new DeltaEqualsFilter("name", "Employee1"),
+                      new DeltaEqualsFilter("name", "Employee4")
                   )
               ),
               PartitionedDeltaTable.FULL_SCHEMA,
@@ -188,8 +191,8 @@ public class DeltaInputSourceTest
               PartitionedDeltaTable.DELTA_TABLE_PATH,
               new DeltaOrFilter(
                   Arrays.asList(
-                      new DeltaBinaryOperatorFilter.DeltaEqualsFilter("name", "Employee5"),
-                      new DeltaBinaryOperatorFilter.DeltaEqualsFilter("name", "Employee1")
+                      new DeltaEqualsFilter("name", "Employee5"),
+                      new DeltaEqualsFilter("name", "Employee1")
                   )
               ),
               PartitionedDeltaTable.FULL_SCHEMA,
@@ -203,8 +206,8 @@ public class DeltaInputSourceTest
               new DeltaNotFilter(
                   new DeltaOrFilter(
                       Arrays.asList(
-                          new DeltaBinaryOperatorFilter.DeltaEqualsFilter("name", "Employee5"),
-                          new DeltaBinaryOperatorFilter.DeltaEqualsFilter("name", "Employee1")
+                          new DeltaEqualsFilter("name", "Employee5"),
+                          new DeltaEqualsFilter("name", "Employee1")
                       )
                   )
               ),
@@ -219,8 +222,8 @@ public class DeltaInputSourceTest
               new DeltaNotFilter(
                   new DeltaAndFilter(
                       Arrays.asList(
-                          new DeltaBinaryOperatorFilter.DeltaEqualsFilter("name", "Employee1"),
-                          new DeltaBinaryOperatorFilter.DeltaEqualsFilter("name", "Employee4")
+                          new DeltaEqualsFilter("name", "Employee1"),
+                          new DeltaEqualsFilter("name", "Employee4")
                       )
                   )
               ),
@@ -235,8 +238,8 @@ public class DeltaInputSourceTest
               new DeltaNotFilter(
                   new DeltaOrFilter(
                       Arrays.asList(
-                          new DeltaBinaryOperatorFilter.DeltaEqualsFilter("name", "Employee1"),
-                          new DeltaBinaryOperatorFilter.DeltaGreaterThanOrEqualsFilter("name", "Employee4")
+                          new DeltaEqualsFilter("name", "Employee1"),
+                          new DeltaGreaterThanOrEqualsFilter("name", "Employee4")
                       )
                   )
               ),

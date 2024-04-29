@@ -35,7 +35,7 @@ import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class DeltaBinaryOperatorFilterTest
+public class DeltaEqualsFilterTest
 {
   private static final StructType SCHEMA = new StructType()
       .add(new StructField("str_col", StringType.STRING, true))
@@ -49,10 +49,7 @@ public class DeltaBinaryOperatorFilterTest
   @Test
   public void testEqualsFilter()
   {
-    DeltaBinaryOperatorFilter.DeltaEqualsFilter eqFilter = new DeltaBinaryOperatorFilter.DeltaEqualsFilter(
-        "str_col",
-        "Employee1"
-    );
+    DeltaEqualsFilter eqFilter = new DeltaEqualsFilter("str_col", "Employee1");
 
     Predicate predicate = eqFilter.getFilterPredicate(SCHEMA);
 
@@ -61,90 +58,15 @@ public class DeltaBinaryOperatorFilterTest
   }
 
   @Test
-  public void testGreaterThanFilter()
-  {
-    DeltaBinaryOperatorFilter.DeltaGreaterThanFilter gtFilter = new DeltaBinaryOperatorFilter.DeltaGreaterThanFilter(
-        "int_col",
-        "123"
-    );
-
-    Predicate predicate = gtFilter.getFilterPredicate(SCHEMA);
-
-    Assert.assertEquals(">", predicate.getName());
-    Assert.assertEquals(2, predicate.getChildren().size());
-  }
-
-  @Test
-  public void testGreaterThanOrEqualsFilter()
-  {
-    DeltaBinaryOperatorFilter.DeltaGreaterThanOrEqualsFilter gteFilter = new DeltaBinaryOperatorFilter.DeltaGreaterThanOrEqualsFilter(
-        "long_col",
-        "1234343232323"
-    );
-
-    Predicate predicate = gteFilter.getFilterPredicate(SCHEMA);
-
-    Assert.assertEquals(">=", predicate.getName());
-    Assert.assertEquals(2, predicate.getChildren().size());
-  }
-
-  @Test
-  public void testLessThanFilter()
-  {
-    DeltaBinaryOperatorFilter.DeltaLessThanFilter ltFilter = new DeltaBinaryOperatorFilter.DeltaLessThanFilter(
-        "double_col",
-        "123.2323"
-    );
-
-    Predicate predicate = ltFilter.getFilterPredicate(SCHEMA);
-
-    Assert.assertEquals("<", predicate.getName());
-    Assert.assertEquals(2, predicate.getChildren().size());
-  }
-
-  @Test
-  public void testLessThanOrEqualsFilter()
-  {
-    DeltaBinaryOperatorFilter.DeltaLessThanOrEqualsFilter lteFilter = new DeltaBinaryOperatorFilter.DeltaLessThanOrEqualsFilter(
-        "date_col",
-        "2024-01-01"
-    );
-
-    Predicate predicate = lteFilter.getFilterPredicate(SCHEMA);
-
-    Assert.assertEquals("<=", predicate.getName());
-    Assert.assertEquals(2, predicate.getChildren().size());
-  }
-
-  @Test
-  public void testFilterWithInvalidNumericValue()
-  {
-    DeltaBinaryOperatorFilter.DeltaLessThanOrEqualsFilter gtFilter = new DeltaBinaryOperatorFilter.DeltaLessThanOrEqualsFilter(
-        "long_col",
-        "twentyOne"
-    );
-
-    MatcherAssert.assertThat(
-        Assert.assertThrows(
-            DruidException.class,
-            () -> gtFilter.getFilterPredicate(SCHEMA)
-        ),
-        DruidExceptionMatcher.invalidInput().expectMessageIs(
-            "column[long_col] has an invalid value[twentyOne]. The value must be a number, as the column's data type is [long]."
-        )
-    );
-  }
-
-  @Test
   public void testFilterWithNullColumn()
   {
     MatcherAssert.assertThat(
         Assert.assertThrows(
             DruidException.class,
-            () -> new DeltaBinaryOperatorFilter.DeltaEqualsFilter(null, "Employee1")
+            () -> new DeltaEqualsFilter(null, "Employee1")
         ),
         DruidExceptionMatcher.invalidInput().expectMessageIs(
-            "column is a required field. None provided for Delta filter type[=]."
+            "column is a required field for = filter."
         )
     );
   }
@@ -155,10 +77,26 @@ public class DeltaBinaryOperatorFilterTest
     MatcherAssert.assertThat(
         Assert.assertThrows(
             DruidException.class,
-            () -> new DeltaBinaryOperatorFilter.DeltaEqualsFilter("str_col", null)
+            () -> new DeltaEqualsFilter("str_col", null)
         ),
         DruidExceptionMatcher.invalidInput().expectMessageIs(
-            "value is a required field. None provided for Delta filter type[=] and column[str_col]."
+            "value is a required field for = filter. None provided for column[str_col]."
+        )
+    );
+  }
+
+  @Test
+  public void testFilterWithInvalidNumericValue()
+  {
+    DeltaEqualsFilter eqFilter = new DeltaEqualsFilter("long_col", "twentyOne");
+
+    MatcherAssert.assertThat(
+        Assert.assertThrows(
+            DruidException.class,
+            () -> eqFilter.getFilterPredicate(SCHEMA)
+        ),
+        DruidExceptionMatcher.invalidInput().expectMessageIs(
+            "column[long_col] has an invalid value[twentyOne]. The value must be a number, as the column's data type is [long]."
         )
     );
   }

@@ -43,7 +43,7 @@ public class DeltaNotFilterTest
   @Test
   public void testNotFilterWithEqualsExpression()
   {
-    DeltaBinaryOperatorFilter.DeltaEqualsFilter equalsFilter = new DeltaBinaryOperatorFilter.DeltaEqualsFilter(
+    DeltaEqualsFilter equalsFilter = new DeltaEqualsFilter(
         "name",
         "Employee1"
     );
@@ -60,11 +60,11 @@ public class DeltaNotFilterTest
   {
     DeltaAndFilter andFilter = new DeltaAndFilter(
         Arrays.asList(
-          new DeltaBinaryOperatorFilter.DeltaEqualsFilter(
+          new DeltaEqualsFilter(
               "name",
               "Employee1"
           ),
-          new DeltaBinaryOperatorFilter.DeltaEqualsFilter(
+          new DeltaEqualsFilter(
               "name",
               "Employee2"
           )
@@ -81,7 +81,7 @@ public class DeltaNotFilterTest
   @Test
   public void testNotFilterWithInvalidColumn()
   {
-    DeltaBinaryOperatorFilter.DeltaEqualsFilter equalsFilter = new DeltaBinaryOperatorFilter.DeltaEqualsFilter(
+    DeltaEqualsFilter equalsFilter = new DeltaEqualsFilter(
         "name2",
         "Employee1"
     );

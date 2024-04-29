@@ -24,7 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.exc.ValueInstantiationException;
 import org.apache.druid.delta.common.DeltaLakeDruidModule;
 import org.apache.druid.delta.filter.DeltaAndFilter;
-import org.apache.druid.delta.filter.DeltaBinaryOperatorFilter;
+import org.apache.druid.delta.filter.DeltaLessThanFilter;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.junit.Assert;
 import org.junit.Test;
@@ -62,7 +62,7 @@ public class DeltaInputSourceSerdeTest
 
     final DeltaInputSource deltaInputSource = OBJECT_MAPPER.readValue(payload, DeltaInputSource.class);
     Assert.assertEquals("foo/bar", deltaInputSource.getTablePath());
-    Assert.assertTrue(deltaInputSource.getFilter() instanceof DeltaBinaryOperatorFilter.DeltaLessThanFilter);
+    Assert.assertTrue(deltaInputSource.getFilter() instanceof DeltaLessThanFilter);
   }
 
   @Test
@@ -135,7 +135,7 @@ public class DeltaInputSourceSerdeTest
     );
 
     Assert.assertEquals(
-        "column is a required field. None provided for Delta filter type[>=].",
+        "column is a required field for >= filter.",
         exception.getCause().getMessage()
     );
   }

@@ -47,8 +47,8 @@ public class DeltaOrFilterTest
   {
     DeltaOrFilter orFilter = new DeltaOrFilter(
         Arrays.asList(
-            new DeltaBinaryOperatorFilter.DeltaEqualsFilter("name", "Employee1"),
-            new DeltaBinaryOperatorFilter.DeltaLessThanOrEqualsFilter("age", "8")
+            new DeltaEqualsFilter("name", "Employee1"),
+            new DeltaLessThanOrEqualsFilter("age", "8")
         )
     );
 
@@ -63,8 +63,8 @@ public class DeltaOrFilterTest
   {
     DeltaOrFilter orFilter = new DeltaOrFilter(
         Arrays.asList(
-            new DeltaBinaryOperatorFilter.DeltaEqualsFilter("name2", "Employee1"),
-            new DeltaBinaryOperatorFilter.DeltaLessThanOrEqualsFilter("age", "8")
+            new DeltaEqualsFilter("name2", "Employee1"),
+            new DeltaLessThanOrEqualsFilter("age", "8")
         )
     );
 
@@ -98,7 +98,7 @@ public class DeltaOrFilterTest
             DruidException.class,
             () -> new DeltaOrFilter(
                 Collections.singletonList(
-                    new DeltaBinaryOperatorFilter.DeltaEqualsFilter("name", "Employee1")
+                    new DeltaEqualsFilter("name", "Employee1")
                 )
             )
         ),
