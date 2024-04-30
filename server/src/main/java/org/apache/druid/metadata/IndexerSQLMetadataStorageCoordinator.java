@@ -2813,17 +2813,18 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   @Override
-  public int deletePendingSegmentsForTaskAllocatorId(final String pendingSegmentsGroup)
+  public int deletePendingSegmentsForTaskAllocatorId(final String datasource, final String taskAllocatorId)
   {
     return connector.getDBI().inTransaction(
         (handle, status) -> handle
             .createStatement(
                 StringUtils.format(
-                    "DELETE FROM %s WHERE task_allocator_id = :task_allocator_id",
+                    "DELETE FROM %s WHERE dataSource = :dataSource AND task_allocator_id = :task_allocator_id",
                     dbTables.getPendingSegmentsTable()
                 )
             )
-            .bind("task_allocator_id", pendingSegmentsGroup)
+            .bind("dataSource", datasource)
+            .bind("task_allocator_id", taskAllocatorId)
             .execute()
     );
   }
