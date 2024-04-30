@@ -39,11 +39,13 @@ public class DruidCoordinatorConfigTest
     Assert.assertEquals(new Duration("PT60s"), config.getCoordinatorPeriod());
     Assert.assertEquals(new Duration("PT1800s"), config.getCoordinatorIndexingPeriod());
     Assert.assertEquals(new Duration("PT1800s"), config.getCoordinatorKillPeriod());
-    Assert.assertEquals(new Duration("PT7776000s"), config.getCoordinatorKillDurationToRetain());
+    Assert.assertEquals(Duration.standardDays(90), config.getCoordinatorKillDurationToRetain());
     Assert.assertEquals(100, config.getCoordinatorKillMaxSegments());
     Assert.assertEquals(new Duration(15 * 60 * 1000), config.getLoadTimeoutDelay());
     Assert.assertFalse(config.getCoordinatorKillIgnoreDurationToRetain());
     Assert.assertEquals("http", config.getLoadQueuePeonType());
+    Assert.assertEquals(Duration.standardDays(1), config.getSegmentSchemaKillPeriod());
+    Assert.assertEquals(Duration.standardDays(90), config.getSegmentSchemaKillDurationToRetain());
   }
 
   @Test
