@@ -373,12 +373,15 @@ public class FunctionTest extends InitializedNullHandlingTest
   public void testScalarInArray()
   {
     assertExpr("scalar_in_array(2, [1, 2, 3])", 1L);
+    assertExpr("scalar_in_array(2.1, [1, 2, 3])", 0L);
+    assertExpr("scalar_in_array(2, [1.1, 2.1, 3.1])", 0L);
+    assertExpr("scalar_in_array(2, [1.1, 2.0, 3.1])", 1L);
     assertExpr("scalar_in_array(4, [1, 2, 3])", 0L);
     assertExpr("scalar_in_array(b, [3, 4])", 0L);
     assertExpr("scalar_in_array(1, null)", null);
     assertExpr("scalar_in_array(null, null)", null);
     assertExpr("scalar_in_array(null, [1, null, 2])", 1L);
-    assertExpr("scalar_in_array(null, [1, 2])", 0L);
+    assertExpr("scalar_in_array(null, [1, 2])", null);
   }
 
   @Test
@@ -1289,6 +1292,13 @@ public class FunctionTest extends InitializedNullHandlingTest
 
     final Expr singleThreaded = Expr.singleThreaded(expr, bindings);
     Assert.assertEquals(singleThreaded.stringify(), expectedResult, singleThreaded.eval(bindings).value());
+
+    final Expr singleThreadedNoFlatten = Expr.singleThreaded(exprNoFlatten, bindings);
+    Assert.assertEquals(
+        singleThreadedNoFlatten.stringify(),
+        expectedResult,
+        singleThreadedNoFlatten.eval(bindings).value()
+    );
 
     Assert.assertEquals(expr.stringify(), roundTrip.stringify());
     Assert.assertEquals(expr.stringify(), roundTripFlatten.stringify());
