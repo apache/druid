@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-var makeDocHtml = require('./make-doc-html');
+import { makeDocHtml } from './make-doc-html';
 
 describe('makeDocHtml', () => {
   it('correctly formats helper HTML', () => {

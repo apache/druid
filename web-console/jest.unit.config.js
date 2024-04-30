@@ -23,5 +23,5 @@ module.exports = Object.assign(common, {
     '\\.s?css$': 'identity-obj-proxy',
   },
   setupFilesAfterEnv: ['<rootDir>src/setup-tests.ts'],
-  testMatch: ['**/src/**/?(*.)+(spec).(ts|tsx)', '**/src/ace-modes/?(*.)+(spec).js'],
+  testMatch: ['**/src/**/?(*.)+(spec).(ts|tsx)'],
 });

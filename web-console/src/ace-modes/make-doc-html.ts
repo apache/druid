@@ -16,11 +16,17 @@
  * limitations under the License.
  */
 
-var escape = require('lodash.escape');
+import escape from 'lodash.escape';
 
-module.exports = function makeDocHtml(item) {
+export interface ItemDescription {
+  name: string;
+  syntax: string;
+  description: string;
+}
+
+export function makeDocHtml(item: ItemDescription) {
   return `
 <div class="doc-name">${item.name}</div>
 <div class="doc-syntax">${escape(item.syntax)}</div>
 <div class="doc-description">${item.description}</div>`;
-};
+}
