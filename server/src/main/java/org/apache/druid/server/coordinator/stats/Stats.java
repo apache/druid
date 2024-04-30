@@ -155,6 +155,9 @@ public class Stats
         = CoordinatorStat.toDebugAndEmit("killEligibleUnusedSegs", "kill/eligibleUnusedSegments/count");
     public static final CoordinatorStat PENDING_SEGMENTS
         = CoordinatorStat.toDebugAndEmit("killPendingSegs", "kill/pendingSegments/count");
+
+    public static final CoordinatorStat SEGMENT_SCHEMAS
+        = CoordinatorStat.toDebugAndEmit("killedSegmentSchemas", "kill/segmentSchemas/count");
   }
 
   public static class Balancer

@@ -49,23 +49,23 @@ import java.util.List;
  *    </ol>
  * </p>
  */
-public class KillUnreferencedSegmentSchemaDuty extends MetadataCleanupDuty
+public class KillUnreferencedSegmentSchema extends MetadataCleanupDuty
 {
-  private static final Logger log = new Logger(KillUnreferencedSegmentSchemaDuty.class);
+  private static final Logger log = new Logger(KillUnreferencedSegmentSchema.class);
   private final SegmentSchemaManager segmentSchemaManager;
 
-  public KillUnreferencedSegmentSchemaDuty(
+  public KillUnreferencedSegmentSchema(
       DruidCoordinatorConfig config,
       SegmentSchemaManager segmentSchemaManager
   )
   {
     super(
-        "segmentSchema",
+        "segment schemas",
         "druid.coordinator.kill.segmentSchema",
         config.isSegmentSchemaKillEnabled(),
         config.getSegmentSchemaKillPeriod(),
         config.getSegmentSchemaKillDurationToRetain(),
-        Stats.Kill.RULES,
+        Stats.Kill.SEGMENT_SCHEMAS,
         config
     );
     this.segmentSchemaManager = segmentSchemaManager;
@@ -78,9 +78,9 @@ public class KillUnreferencedSegmentSchemaDuty extends MetadataCleanupDuty
     int unused = segmentSchemaManager.markUnreferencedSchemasAsUnused();
     log.info("Marked [%s] unreferenced schemas as unused.", unused);
 
-    // 2 (repair step): Identify unused schema which are still referenced by segments, make them used.
-    // This case would arise when segment is associated with a schema which turned unused by the previous statement
-    // or the previous run of this duty.
+    // 2 (repair step): Find unused schema which are still referenced by segments, make them used.
+    // This case would arise when segment is associated with a schema which was marked unused in the previous step
+    // or in the previous run.
     List<String> schemaFingerprintsToUpdate = segmentSchemaManager.findReferencedSchemaMarkedAsUnused();
     if (schemaFingerprintsToUpdate.size() > 0) {
       segmentSchemaManager.markSchemaAsUsed(schemaFingerprintsToUpdate);
