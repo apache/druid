@@ -24,8 +24,8 @@
 import type { Ace } from 'ace-builds';
 import ace from 'ace-builds/src-noconflict/ace';
 
-import druidKeywords from '../../lib/keywords';
-import druidFunctions from '../../lib/sql-docs';
+import * as druidKeywords from '../../lib/keywords';
+import * as druidFunctions from '../../lib/sql-docs';
 
 import type { ItemDescription } from './make-doc-html';
 import { makeDocHtml } from './make-doc-html';
