@@ -33,6 +33,7 @@ import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.calcite.expression.AuthorizableOperator;
+import org.apache.druid.sql.calcite.schema.NamedLookupSchema;
 
 import java.util.HashSet;
 import java.util.List;
@@ -87,13 +88,21 @@ public class SqlResourceCollectorShuttle extends SqlShuttle
         if (qualifiedNameParts.size() == 2) {
           final String schema = qualifiedNameParts.get(0);
           final String resourceName = qualifiedNameParts.get(1);
+
+          // Put the lookup names in the query context to facilitate selective loading of lookups.
+          if (schema.equals(NamedLookupSchema.NAME)) {
+            plannerContext.queryContextMap().putIfAbsent(PlannerContext.CTX_LOOKUPS_TO_LOAD, new HashSet<>());
+            Set<String> lookupsToLoad = (Set<String>) plannerContext.queryContextMap().get(PlannerContext.CTX_LOOKUPS_TO_LOAD);
+            lookupsToLoad.add(resourceName);
+          }
+
           final String resourceType = plannerContext.getSchemaResourceType(schema, resourceName);
           if (resourceType != null) {
             resourceActions.add(new ResourceAction(new Resource(resourceName, resourceType), Action.READ));
           }
         } else if (qualifiedNameParts.size() > 2) {
           // Don't expect to see more than 2 names (catalog?).
-          throw new ISE("Cannot analyze table idetifier %s", qualifiedNameParts);
+          throw new ISE("Cannot analyze table identifier %s", qualifiedNameParts);
         }
       }
     }

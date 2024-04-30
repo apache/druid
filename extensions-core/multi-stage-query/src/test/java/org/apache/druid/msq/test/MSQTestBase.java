@@ -119,6 +119,7 @@ import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.msq.util.SqlStatementResourceHelper;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.ForwardingQueryProcessingPool;
+import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -807,10 +808,32 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
   private void assertMSQSpec(MSQSpec expectedMSQSpec, MSQSpec querySpecForTask)
   {
-    Assert.assertEquals(expectedMSQSpec.getQuery(), querySpecForTask.getQuery());
+    assertMSQSpecQuery(expectedMSQSpec.getQuery(), querySpecForTask.getQuery());
     Assert.assertEquals(expectedMSQSpec.getAssignmentStrategy(), querySpecForTask.getAssignmentStrategy());
     Assert.assertEquals(expectedMSQSpec.getColumnMappings(), querySpecForTask.getColumnMappings());
     Assert.assertEquals(expectedMSQSpec.getDestination(), querySpecForTask.getDestination());
+  }
+
+  private void assertMSQSpecQuery(Query msqSpecQuery, Query taskSpecQuery)
+  {
+    Assert.assertEquals(msqSpecQuery.getId(), taskSpecQuery.getId());
+    Assert.assertEquals(msqSpecQuery.getType(), taskSpecQuery.getType());
+    Assert.assertEquals(msqSpecQuery.getSubQueryId(), taskSpecQuery.getSubQueryId());
+    Assert.assertEquals(msqSpecQuery.getSqlQueryId(), taskSpecQuery.getSqlQueryId());
+    Assert.assertEquals(msqSpecQuery.getIntervals(), taskSpecQuery.getIntervals());
+    Assert.assertEquals(msqSpecQuery.getDataSource(), taskSpecQuery.getDataSource());
+    Assert.assertEquals(msqSpecQuery.getFilter(), taskSpecQuery.getFilter());
+    Assert.assertEquals(msqSpecQuery.getDuration(), taskSpecQuery.getDuration());
+    Assert.assertEquals(msqSpecQuery.getGranularity(), taskSpecQuery.getGranularity());
+    Assert.assertEquals(msqSpecQuery.getTimezone(), taskSpecQuery.getTimezone());
+    Assert.assertEquals(msqSpecQuery.getRequiredColumns(), taskSpecQuery.getRequiredColumns());
+    Assert.assertEquals(msqSpecQuery.getVirtualColumns(), taskSpecQuery.getVirtualColumns());
+
+    // taskSpecQuery's context should have all key-value pairs from msqSpecQuery's context.
+    Map<String, Object> msqSpecQueryContext = msqSpecQuery.getContext();
+    for (Map.Entry<String, Object> entry : msqSpecQueryContext.entrySet()) {
+      Assert.assertEquals(msqSpecQueryContext.get(entry.getKey()), taskSpecQuery.getContext().get(entry.getKey()));
+    }
   }
 
   private void assertTuningConfig(

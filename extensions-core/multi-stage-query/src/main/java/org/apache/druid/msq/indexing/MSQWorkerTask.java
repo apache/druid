@@ -37,9 +37,13 @@ import org.apache.druid.msq.exec.MSQTasks;
 import org.apache.druid.msq.exec.Worker;
 import org.apache.druid.msq.exec.WorkerContext;
 import org.apache.druid.msq.exec.WorkerImpl;
+import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 import javax.annotation.Nonnull;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -184,5 +188,16 @@ public class MSQWorkerTask extends AbstractTask
   public int hashCode()
   {
     return Objects.hash(super.hashCode(), controllerTaskId, workerNumber, retryCount, worker);
+  }
+
+  @Override
+  public LookupLoadingSpec getLookupLoadingSpec()
+  {
+    if (getContext().containsKey(PlannerContext.CTX_LOOKUPS_TO_LOAD)) {
+      List<String> lookupsToLoad = (List<String>) getContext().get(PlannerContext.CTX_LOOKUPS_TO_LOAD);
+      return LookupLoadingSpec.loadOnly(new HashSet<>(lookupsToLoad));
+    } else {
+      return LookupLoadingSpec.NONE;
+    }
   }
 }

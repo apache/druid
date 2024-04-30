@@ -20,9 +20,13 @@
 package org.apache.druid.msq.indexing;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -107,5 +111,21 @@ public class MSQWorkerTaskTest
   {
     MSQWorkerTask msqWorkerTask = new MSQWorkerTask(controllerTaskId, dataSource, workerNumber, context, retryCount);
     Assert.assertTrue(msqWorkerTask.getInputSourceResources().isEmpty());
+  }
+
+  @Test
+  public void testGetDefaultLookupLoadingSpec()
+  {
+    MSQWorkerTask msqWorkerTask = new MSQWorkerTask(controllerTaskId, dataSource, workerNumber, context, retryCount);
+    Assert.assertEquals(LookupLoadingSpec.NONE, msqWorkerTask.getLookupLoadingSpec());
+  }
+
+  @Test
+  public void testGetLookupLoadingSpecUsingContext()
+  {
+    final ImmutableMap<String, Object> context = ImmutableMap.of(PlannerContext.CTX_LOOKUPS_TO_LOAD, Arrays.asList("lookupName1", "lookupName2"));
+    MSQWorkerTask msqWorkerTask = new MSQWorkerTask(controllerTaskId, dataSource, workerNumber, context, retryCount);
+    Assert.assertEquals(LookupLoadingSpec.Mode.ONLY_REQUIRED, msqWorkerTask.getLookupLoadingSpec().getMode());
+    Assert.assertEquals(ImmutableSet.of("lookupName1", "lookupName2"), msqWorkerTask.getLookupLoadingSpec().getLookupsToLoad());
   }
 }
