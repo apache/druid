@@ -85,6 +85,7 @@ import java.util.concurrent.ThreadLocalRandom;
 @Deprecated
 public class RealtimeIndexTask extends AbstractTask
 {
+  public static final String TYPE = "index_realtime";
   public static final String CTX_KEY_LOOKUP_TIER = "lookupTier";
 
   private static final EmittingLogger log = new EmittingLogger(RealtimeIndexTask.class);
@@ -180,7 +181,7 @@ public class RealtimeIndexTask extends AbstractTask
   @Override
   public String getType()
   {
-    return "index_realtime";
+    return TYPE;
   }
 
   @Override

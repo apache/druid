@@ -32,6 +32,7 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.guice.NestedDataModule;
@@ -80,6 +81,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.hamcrest.CoreMatchers;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -5402,6 +5404,19 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                     .add("EXPR$1", ColumnType.LONG)
                     .build()
     );
+  }
+
+  @Test
+  public void testJoinOnNestedColumnThrows()
+  {
+    DruidException e = Assertions.assertThrows(DruidException.class, () -> {
+      testQuery(
+          "SELECT * FROM druid.nested a INNER JOIN druid.nested b ON a.nester = b.nester",
+          ImmutableList.of(),
+          ImmutableList.of()
+      );
+    });
+    Assertions.assertEquals("Cannot join when the join condition has column of type [COMPLEX<json>]", e.getMessage());
   }
 
   @Test
