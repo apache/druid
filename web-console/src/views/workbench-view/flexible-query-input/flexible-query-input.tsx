@@ -73,6 +73,24 @@ export class FlexibleQueryInput extends React.PureComponent<
   private lastFoundQueries: QuerySlice[] = [];
   private highlightFoundQuery: { row: number; marker: number } | undefined;
 
+  private readonly aceCompleters: Ace.Completer[] = [
+    // Prepend with default completers to ensure completion data from
+    // editing mode (e.g. 'dsql') is included in addition to local completions
+    langTools.snippetCompleter,
+    langTools.keyWordCompleter,
+    langTools.textCompleter,
+    // Local completions
+    {
+      getCompletions: (_state, session, pos, prefix, callback) => {
+        const charBeforePrefix = session.getLine(pos.row)[pos.column - prefix.length - 1];
+        callback(
+          null,
+          charBeforePrefix === '"' ? this.state.unquotedCompletions : this.state.quotedCompletions,
+        );
+      },
+    },
+  ];
+
   static getCompletions(
     columnMetadata: readonly ColumnMetadata[],
     currentSchema: string | undefined,
@@ -167,25 +185,6 @@ export class FlexibleQueryInput extends React.PureComponent<
     delete this.aceEditor;
   }
 
-  private getAceCompleters(): Ace.Completer[] {
-    return [
-      langTools.snippetCompleter,
-      langTools.keyWordCompleter,
-      langTools.textCompleter,
-      {
-        getCompletions: (_state, session, pos, prefix, callback) => {
-          const charBeforePrefix = session.getLine(pos.row)[pos.column - prefix.length - 1];
-          callback(
-            null,
-            charBeforePrefix === '"'
-              ? this.state.unquotedCompletions
-              : this.state.quotedCompletions,
-          );
-        },
-      },
-    ];
-  }
-
   private findAllQueriesByLine() {
     const { queryString } = this.props;
     const found = dedupe(findAllSqlQueriesInText(queryString), ({ startRowColumn }) =>
@@ -254,8 +253,8 @@ export class FlexibleQueryInput extends React.PureComponent<
           this.props.leaveBackground ? undefined : 'no-background',
         )}
         // 'react-ace' types are incomplete. Completion options can accept completers array.
-        enableBasicAutocompletion={jsonMode ? true : (this.getAceCompleters() as any)}
-        enableLiveAutocompletion={jsonMode ? true : (this.getAceCompleters() as any)}
+        enableBasicAutocompletion={jsonMode ? true : (this.aceCompleters as any)}
+        enableLiveAutocompletion={jsonMode ? true : (this.aceCompleters as any)}
         name="ace-editor"
         onChange={this.handleChange}
         focus
