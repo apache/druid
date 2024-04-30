@@ -52,7 +52,7 @@ public class ActionsTestTask extends CommandQueueTask
 {
   private final TaskActionClient client;
   private final AtomicInteger sequenceId = new AtomicInteger(0);
-  private final Map<SegmentId, SegmentId> announcedSegmentsToParentSegments = new HashMap<>();
+  private final Map<SegmentId, String> announcedSegmentsToParentSegments = new HashMap<>();
 
   public ActionsTestTask(String datasource, String groupId, TaskActionClientFactory factory)
   {
@@ -82,7 +82,7 @@ public class ActionsTestTask extends CommandQueueTask
     );
   }
 
-  public Map<SegmentId, SegmentId> getAnnouncedSegmentsToParentSegments()
+  public Map<SegmentId, String> getAnnouncedSegmentsToParentSegments()
   {
     return announcedSegmentsToParentSegments;
   }
@@ -114,7 +114,7 @@ public class ActionsTestTask extends CommandQueueTask
             TaskLockType.APPEND
         )
     );
-    announcedSegmentsToParentSegments.put(pendingSegment.asSegmentId(), pendingSegment.asSegmentId());
+    announcedSegmentsToParentSegments.put(pendingSegment.asSegmentId(), pendingSegment.asSegmentId().toString());
     return pendingSegment;
   }
 
