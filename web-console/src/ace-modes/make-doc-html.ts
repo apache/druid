@@ -16,18 +16,17 @@
  * limitations under the License.
  */
 
-import { render } from '@testing-library/react';
-import React from 'react';
+import escape from 'lodash.escape';
 
-import { FlexibleQueryInput } from './flexible-query-input';
+export interface ItemDescription {
+  name: string;
+  syntax: string;
+  description: string;
+}
 
-describe('FlexibleQueryInput', () => {
-  it('matches snapshot', () => {
-    const sqlControl = (
-      <FlexibleQueryInput queryString="hello world" onQueryStringChange={() => {}} />
-    );
-
-    const { container } = render(sqlControl);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
+export function makeDocHtml(item: ItemDescription) {
+  return `
+<div class="doc-name">${item.name}</div>
+<div class="doc-syntax">${escape(item.syntax)}</div>
+<div class="doc-description">${item.description}</div>`;
+}
