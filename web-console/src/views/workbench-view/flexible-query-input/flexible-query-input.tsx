@@ -24,17 +24,9 @@ import type { Ace } from 'ace-builds';
 import ace from 'ace-builds';
 import classNames from 'classnames';
 import debounce from 'lodash.debounce';
-import escape from 'lodash.escape';
 import React from 'react';
 import AceEditor from 'react-ace';
 
-import {
-  SQL_CONSTANTS,
-  SQL_DYNAMICS,
-  SQL_EXPRESSION_PARTS,
-  SQL_KEYWORDS,
-} from '../../../../lib/keywords';
-import { SQL_DATA_TYPES, SQL_FUNCTIONS } from '../../../../lib/sql-docs';
 import { AppToaster } from '../../../singletons';
 import { AceEditorStateCache } from '../../../singletons/ace-editor-state-cache';
 import type { ColumnMetadata, QuerySlice, RowColumn } from '../../../utils';
@@ -45,18 +37,6 @@ import './flexible-query-input.scss';
 const langTools = ace.require('ace/ext/language_tools');
 
 const V_PADDING = 10;
-
-const COMPLETER = {
-  insertMatch: (editor: any, data: Ace.Completion) => {
-    editor.completer.insertMatch({ value: data.name });
-  },
-};
-
-interface ItemDescription {
-  name: string;
-  syntax: string;
-  description: string;
-}
 
 export interface FlexibleQueryInputProps {
   queryString: string;
@@ -87,85 +67,29 @@ export class FlexibleQueryInput extends React.PureComponent<
   FlexibleQueryInputProps,
   FlexibleQueryInputState
 > {
+  static aceTheme = 'solarized_dark';
+
   private aceEditor: Ace.Editor | undefined;
   private lastFoundQueries: QuerySlice[] = [];
   private highlightFoundQuery: { row: number; marker: number } | undefined;
 
-  static replaceDefaultAutoCompleter(): void {
-    if (!langTools) return;
-
-    const keywordList = ([] as Ace.Completion[]).concat(
-      SQL_KEYWORDS.map(v => ({ name: v, value: v, score: 0, meta: 'keyword' })),
-      SQL_EXPRESSION_PARTS.map(v => ({ name: v, value: v, score: 0, meta: 'keyword' })),
-      SQL_CONSTANTS.map(v => ({ name: v, value: v, score: 0, meta: 'constant' })),
-      SQL_DYNAMICS.map(v => ({ name: v, value: v, score: 0, meta: 'dynamic' })),
-      Object.entries(SQL_DATA_TYPES).map(([name, [runtime, description]]) => ({
-        name,
-        value: name,
-        score: 0,
-        meta: 'type',
-        syntax: `Druid runtime type: ${runtime}`,
-        description,
-      })),
-    );
-
-    langTools.setCompleters([
-      langTools.snippetCompleter,
-      langTools.textCompleter,
-      {
-        getCompletions: (
-          _state: string,
-          _session: Ace.EditSession,
-          _pos: Ace.Point,
-          _prefix: string,
-          callback: any,
-        ) => {
-          return callback(null, keywordList);
-        },
-        getDocTooltip: (item: any) => {
-          if (item.meta === 'type') {
-            item.docHTML = FlexibleQueryInput.makeDocHtml(item);
-          }
-        },
+  private readonly aceCompleters: Ace.Completer[] = [
+    // Prepend with default completers to ensure completion data from
+    // editing mode (e.g. 'dsql') is included in addition to local completions
+    langTools.snippetCompleter,
+    langTools.keyWordCompleter,
+    langTools.textCompleter,
+    // Local completions
+    {
+      getCompletions: (_state, session, pos, prefix, callback) => {
+        const charBeforePrefix = session.getLine(pos.row)[pos.column - prefix.length - 1];
+        callback(
+          null,
+          charBeforePrefix === '"' ? this.state.unquotedCompletions : this.state.quotedCompletions,
+        );
       },
-    ]);
-  }
-
-  static addFunctionAutoCompleter(): void {
-    if (!langTools) return;
-
-    const functionList: Ace.Completion[] = Object.entries(SQL_FUNCTIONS).flatMap(
-      ([name, versions]) => {
-        return versions.map(([args, description]) => ({
-          name: name,
-          value: versions.length > 1 ? `${name}(${args})` : name,
-          score: 1100, // Use a high score to appear over the 'local' suggestions that have a score of 1000
-          meta: 'function',
-          syntax: `${name}(${args})`,
-          description,
-          completer: COMPLETER,
-        }));
-      },
-    );
-
-    langTools.addCompleter({
-      getCompletions: (_editor: any, _session: any, _pos: any, _prefix: any, callback: any) => {
-        callback(null, functionList);
-      },
-      getDocTooltip: (item: any) => {
-        if (item.meta === 'function') {
-          item.docHTML = FlexibleQueryInput.makeDocHtml(item);
-        }
-      },
-    });
-  }
-
-  static makeDocHtml(item: ItemDescription) {
-    return `
-<div class="doc-name">${item.name}</div>
-<div class="doc-syntax">${escape(item.syntax)}</div>
-<div class="doc-description">${item.description}</div>`;
-  }
+    },
+  ];
 
   static getCompletions(
     columnMetadata: readonly ColumnMetadata[],
@@ -186,7 +110,7 @@ export class FlexibleQueryInput extends React.PureComponent<
       ).map(v => ({
         value: quote ? String(T(v)) : v,
         score: 49,
-        meta: 'datasource',
+        meta: 'table',
       })),
       uniq(
         columnMetadata
@@ -244,28 +168,6 @@ export class FlexibleQueryInput extends React.PureComponent<
   }
 
   componentDidMount(): void {
-    FlexibleQueryInput.replaceDefaultAutoCompleter();
-    FlexibleQueryInput.addFunctionAutoCompleter();
-    if (langTools) {
-      langTools.addCompleter({
-        getCompletions: (
-          _state: string,
-          session: Ace.EditSession,
-          pos: Ace.Point,
-          prefix: string,
-          callback: any,
-        ) => {
-          const charBeforePrefix = session.getLine(pos.row)[pos.column - prefix.length - 1];
-          callback(
-            null,
-            charBeforePrefix === '"'
-              ? this.state.unquotedCompletions
-              : this.state.quotedCompletions,
-          );
-        },
-      });
-    }
-
     this.markQueries();
   }
 
@@ -345,32 +247,32 @@ export class FlexibleQueryInput extends React.PureComponent<
     return (
       <AceEditor
         mode={jsonMode ? 'hjson' : 'dsql'}
-        theme="solarized_dark"
+        theme={FlexibleQueryInput.aceTheme}
         className={classNames(
           'placeholder-padding',
           this.props.leaveBackground ? undefined : 'no-background',
         )}
+        // 'react-ace' types are incomplete. Completion options can accept completers array.
+        enableBasicAutocompletion={jsonMode ? true : (this.aceCompleters as any)}
+        enableLiveAutocompletion={jsonMode ? true : (this.aceCompleters as any)}
         name="ace-editor"
         onChange={this.handleChange}
         focus
-        fontSize={13}
+        fontSize={12}
         width="100%"
         height={editorHeight + 'px'}
         showGutter={showGutter}
         showPrintMargin={false}
+        tabSize={2}
         value={queryString}
         readOnly={!onQueryStringChange}
         editorProps={{
           $blockScrolling: Infinity,
         }}
         setOptions={{
-          enableBasicAutocompletion: !jsonMode,
-          enableLiveAutocompletion: !jsonMode,
           showLineNumbers: true,
-          tabSize: 2,
           newLineMode: 'unix' as any, // This type is specified incorrectly in AceEditor
         }}
-        style={{}}
         placeholder={placeholder || 'SELECT * FROM ...'}
         onLoad={(editor: Ace.Editor) => {
           editor.renderer.setPadding(V_PADDING);
