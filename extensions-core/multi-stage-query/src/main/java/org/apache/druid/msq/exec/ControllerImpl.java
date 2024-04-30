@@ -1805,7 +1805,7 @@ public class ControllerImpl implements Controller
       Object resultObjectForStage = queryKernel.getResultObjectForStage(finalStageId);
       if (!(resultObjectForStage instanceof List)) {
         // This might occur if all workers are running on an older version. We are not able to write a manifest file in this case.
-        log.warn("Was unable to create manifest file due to ");
+        log.warn("Was unable to create manifest file. Expected list of file names from worker, received [%s] instead.", resultObjectForStage);
         return;
       }
       @SuppressWarnings("unchecked")
