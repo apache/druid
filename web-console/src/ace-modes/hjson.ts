@@ -22,16 +22,18 @@
 // This file was modified to remove the folding functionality that did not play nice when loaded along side the
 // sql mode (which does not have any folding function)
 
+import ace from 'ace-builds/src-noconflict/ace';
+
 ace.define(
   'ace/mode/hjson_highlight_rules',
   ['require', 'exports', 'module', 'ace/lib/oop', 'ace/mode/text_highlight_rules'],
-  function (acequire, exports, module) {
+  function (acequire: any, exports: any) {
     'use strict';
 
-    var oop = acequire('../lib/oop');
-    var TextHighlightRules = acequire('./text_highlight_rules').TextHighlightRules;
+    const oop = acequire('../lib/oop');
+    const TextHighlightRules = acequire('./text_highlight_rules').TextHighlightRules;
 
-    var HjsonHighlightRules = function () {
+    const HjsonHighlightRules = function (this: any) {
       this.$rules = {
         'start': [
           {
@@ -107,7 +109,7 @@ ace.define(
         '#keyname': [
           {
             token: 'keyword',
-            regex: /(?:[^,\{\[\}\]\s]+|"(?:[^"\\]|\\.)*")\s*(?=:)/,
+            regex: /(?:[^,{[}\]\s]+|"(?:[^"\\]|\\.)*")\s*(?=:)/,
           },
         ],
         '#mstring': [
@@ -166,7 +168,7 @@ ace.define(
         '#rootObject': [
           {
             token: 'paren',
-            regex: /(?=\s*(?:[^,\{\[\}\]\s]+|"(?:[^"\\]|\\.)*")\s*:)/,
+            regex: /(?=\s*(?:[^,{[}\]\s]+|"(?:[^"\\]|\\.)*")\s*:)/,
             push: [
               {
                 token: 'paren.rparen',
@@ -205,7 +207,7 @@ ace.define(
               },
               {
                 token: 'constant.language.escape',
-                regex: /\\(?:["\\\/bfnrt]|u[0-9a-fA-F]{4})/,
+                regex: /\\(?:["\\/bfnrt]|u[0-9a-fA-F]{4})/,
               },
               {
                 token: 'invalid.illegal',
@@ -220,7 +222,7 @@ ace.define(
         '#ustring': [
           {
             token: 'string',
-            regex: /\b[^:,0-9\-\{\[\}\]\s].*$/,
+            regex: /\b[^:,0-9\-{[}\]\s].*$/,
           },
         ],
         '#value': [
@@ -277,19 +279,19 @@ ace.define(
     'ace/mode/text',
     'ace/mode/hjson_highlight_rules',
   ],
-  function (acequire, exports, module) {
+  function (acequire: any, exports: any) {
     'use strict';
 
-    var oop = acequire('../lib/oop');
-    var TextMode = acequire('./text').Mode;
-    var HjsonHighlightRules = acequire('./hjson_highlight_rules').HjsonHighlightRules;
+    const oop = acequire('../lib/oop');
+    const TextMode = acequire('./text').Mode;
+    const HjsonHighlightRules = acequire('./hjson_highlight_rules').HjsonHighlightRules;
 
-    var Mode = function () {
+    const Mode = function (this: any) {
       this.HighlightRules = HjsonHighlightRules;
     };
     oop.inherits(Mode, TextMode);
 
-    (function () {
+    (function (this: any) {
       this.lineCommentStart = '//';
       this.blockComment = { start: '/*', end: '*/' };
       this.$id = 'ace/mode/hjson';

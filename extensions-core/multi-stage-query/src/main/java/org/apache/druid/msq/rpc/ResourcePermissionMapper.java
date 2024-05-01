@@ -17,17 +17,17 @@
  * under the License.
  */
 
-package org.apache.druid.msq.indexing;
+package org.apache.druid.msq.rpc;
 
-import org.apache.druid.msq.indexing.error.MSQFault;
+import org.apache.druid.server.security.ResourceAction;
 
-public interface RetryTask
+import java.util.List;
+
+/**
+ * Provides HTTP resources such as {@link ControllerResource} with information about which permissions are needed
+ * for requests.
+ */
+public interface ResourcePermissionMapper
 {
-  /**
-   * Retry task when {@link MSQFault} is encountered.
-   *
-   * @param workerTask
-   * @param msqFault
-   */
-  void retry(MSQWorkerTask workerTask, MSQFault msqFault);
+  List<ResourceAction> getAdminPermissions();
 }
