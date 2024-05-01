@@ -394,11 +394,11 @@ public class EditorTest
 
     // Add a ASC cluster key - should succeed
     updates = new HashMap<>();
-    updates.put(DatasourceDefn.CLUSTER_KEYS_PROPERTY, ImmutableList.<ClusterKeySpec>of(new ClusterKeySpec("clusterKeyA", false)));
+    updates.put(DatasourceDefn.CLUSTER_KEYS_PROPERTY, ImmutableList.of(new ClusterKeySpec("clusterKeyA", false)));
     cmd = new UpdateProperties(updates);
     expected = ImmutableMap.of(
         DatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "PT1H",
-        DatasourceDefn.CLUSTER_KEYS_PROPERTY, ImmutableList.<ClusterKeySpec>of(new ClusterKeySpec("clusterKeyA", false))
+        DatasourceDefn.CLUSTER_KEYS_PROPERTY, ImmutableList.of(new ClusterKeySpec("clusterKeyA", false))
     );
     Map<String, Object> actual = doEdit(tableName, cmd).spec().properties();
     actual.put(
