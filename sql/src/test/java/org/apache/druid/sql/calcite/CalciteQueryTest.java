@@ -582,7 +582,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSafeDivide()
   {
-    cannotVectorize();
     final Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
 
     testQuery(
@@ -2604,11 +2603,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         )
     );
 
-    if (NullHandling.sqlCompatible()) {
-      // Cannot vectorize due to "istrue" operator.
-      cannotVectorize();
-    }
-
     testQuery(
         PLANNER_CONFIG_NO_HLL.withOverrides(
             ImmutableMap.of(
@@ -3096,9 +3090,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByCaseWhen()
   {
-    // Cannot vectorize due to virtual columns.
-    cannotVectorize();
-
     testQuery(
         "SELECT\n"
         + "  CASE EXTRACT(DAY FROM __time)\n"
@@ -3149,9 +3140,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testDecomposeCaseWhenThreeArg()
   {
-    // Cannot vectorize due to virtual columns.
-    cannotVectorize();
-
     testQuery(
         "SELECT\n"
         + "  dim1, dim2, CASE WHEN dim1 = 'abc' THEN dim1 ELSE dim2 END\n"
@@ -3193,9 +3181,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testDecomposeCaseWhenTwoArg()
   {
-    // Cannot vectorize due to virtual columns.
-    cannotVectorize();
-
     testQuery(
         "SELECT\n"
         + "  dim1, dim2, CASE WHEN dim1 = 'def' THEN dim2 END\n"
@@ -3228,9 +3213,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByCaseWhenOfTripleAnd()
   {
-    // Cannot vectorize due to virtual columns.
-    cannotVectorize();
-
     testQuery(
         "SELECT\n"
         + "  CASE WHEN m1 > 1 AND m1 < 5 AND cnt = 1 THEN 'x' ELSE NULL END,"
@@ -3827,10 +3809,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   {
     // Doesn't conform to the SQL standard, but it's how we do it.
     // This example is used in the sql.md doc.
-
-    // Cannot vectorize due to virtual columns.
-    cannotVectorize();
-
     testQuery(
         "SELECT COALESCE(dim2, dim1), COUNT(*) FROM druid.foo GROUP BY COALESCE(dim2, dim1)\n",
         ImmutableList.of(
@@ -3869,9 +3847,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testCoalesceColumnsFilter()
   {
-    // Cannot vectorize due to virtual columns.
-    cannotVectorize();
-
     testQuery(
         "SELECT COALESCE(dim2, dim1), COUNT(*) FROM druid.foo WHERE COALESCE(dim2, dim1) IN ('a', 'abc') GROUP BY COALESCE(dim2, dim1)\n",
         ImmutableList.of(
@@ -3905,9 +3880,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testCoalesceColumnsFilterWithEquality()
   {
-    // Cannot vectorize due to virtual columns.
-    cannotVectorize();
-
     // we can remove this test if PlannerContext.CTX_SQL_USE_BOUNDS_AND_SELECTORS ever defaults to false all the time
     // since it otherwise is a duplicate of testCoalesceColumnsFilter
 
@@ -4315,10 +4287,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testCountStarOnCommonTableExpression()
   {
-    if (NullHandling.sqlCompatible()) {
-      // cannot vectorize due to substring expression
-      cannotVectorize();
-    }
     Druids.TimeseriesQueryBuilder builder =
         Druids.newTimeseriesQueryBuilder()
               .dataSource(CalciteTests.DATASOURCE1)
@@ -4356,11 +4324,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testCountStarOnView()
   {
-    if (NullHandling.sqlCompatible()) {
-      // cannot vectorize due to substring expression
-      cannotVectorize();
-    }
-
     Druids.TimeseriesQueryBuilder builder =
         Druids.newTimeseriesQueryBuilder()
               .dataSource(CalciteTests.DATASOURCE1)
@@ -4397,10 +4360,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testConfusedView()
   {
-    if (NullHandling.sqlCompatible()) {
-      // cannot vectorize due to substring expression
-      cannotVectorize();
-    }
     Druids.TimeseriesQueryBuilder builder =
         Druids.newTimeseriesQueryBuilder()
               .dataSource(CalciteTests.DATASOURCE1)
@@ -4991,10 +4950,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilteredAggregations()
   {
-    if (NullHandling.sqlCompatible()) {
-      // cannot vectorize due to expression filter
-      cannotVectorize();
-    }
     Druids.TimeseriesQueryBuilder builder =
         Druids.newTimeseriesQueryBuilder()
               .dataSource(CalciteTests.DATASOURCE1)
@@ -5244,9 +5199,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testExpressionAggregations()
   {
-    // Cannot vectorize due to expressions.
-    cannotVectorize();
-
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
 
     testQuery(
@@ -5739,9 +5691,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testCountStarWithNotOfDegenerateFilter()
   {
     msqIncompatible();
-    // HashJoinSegmentStorageAdapter is not vectorizable
-    cannotVectorize();
-
     testQuery(
         "SELECT COUNT(*) FROM druid.foo WHERE dim2 = 'a' and not (dim1 > 'a' OR dim1 < 'b')",
         ImmutableList.of(
@@ -6689,9 +6638,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSumOfExtractionFn()
   {
-    // Cannot vectorize due to expressions in aggregators.
-    cannotVectorize();
-
     testQuery(
         "SELECT SUM(CAST(SUBSTRING(dim1, 1, 10) AS INTEGER)) FROM druid.foo",
         ImmutableList.of(
@@ -7211,7 +7157,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testApproxCountDistinct()
   {
     msqIncompatible();
-    // Cannot vectorize due to virtual columns.
+
+    // Cannot vectorize due to multi-valued dim2.
     cannotVectorize();
 
     testQuery(
@@ -7986,9 +7933,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testCountDistinctOfTrim()
   {
     // Test a couple different syntax variants of TRIM.
-    // Cannot vectorize due to virtual columns.
-    cannotVectorize();
-
     testQuery(
         "SELECT COUNT(DISTINCT TRIM(BOTH ' ' FROM dim1)) FROM druid.foo WHERE TRIM(dim1) <> ''",
         ImmutableList.of(
@@ -8022,10 +7966,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testSillyQuarters()
   {
     // Like FLOOR(__time TO QUARTER) but silly.
-
-    // Cannot vectorize due to virtual columns.
-    cannotVectorize();
-
     testQuery(
         "SELECT CAST((EXTRACT(MONTH FROM __time) - 1 ) / 3 + 1 AS INTEGER) AS quarter, COUNT(*)\n"
         + "FROM foo\n"
@@ -8135,8 +8075,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testRegexpExtractFilterViaNotNullCheck()
   {
-    // Cannot vectorize due to extractionFn in dimension spec.
-    cannotVectorize();
     Druids.TimeseriesQueryBuilder builder =
         Druids.newTimeseriesQueryBuilder()
               .dataSource(CalciteTests.DATASOURCE1)
@@ -8312,7 +8250,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByLimitPushdownExtraction()
   {
-    cannotVectorize();
+    // Skip vectorization because this can vectorize with decoupled planning, but cannot with regular planning.
+    skipVectorize();
 
     testQuery(
         "SELECT dim4, substring(dim5, 1, 1), count(*) FROM druid.numfoo WHERE dim4 = 'a' GROUP BY 1,2 LIMIT 2",
@@ -8570,9 +8509,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterOnTimeExtract()
   {
-    // Cannot vectorize due to expression filter.
-    cannotVectorize();
-
     testQuery(
         "SELECT COUNT(*) FROM druid.foo\n"
         + "WHERE EXTRACT(YEAR FROM __time) = 2000\n"
@@ -8605,9 +8541,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterOnTimeExtractWithMultipleDays()
   {
-    // Cannot vectorize due to expression filters.
-    cannotVectorize();
-
     testQuery(
         "SELECT COUNT(*) FROM druid.foo\n"
         + "WHERE EXTRACT(YEAR FROM __time) = 2000\n"
@@ -8649,9 +8582,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testFilterOnTimeExtractWithVariousTimeUnits()
   {
     msqIncompatible();
-    // Cannot vectorize due to virtual columns.
-    cannotVectorize();
-
     testQuery(
         "SELECT COUNT(*) FROM druid.foo4\n"
         + "WHERE EXTRACT(YEAR FROM __time) = 2000\n"
@@ -8761,7 +8691,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testQueryWithSelectProjectAndIdentityProjectDoesNotRename()
   {
     msqIncompatible();
-    cannotVectorize();
     testQuery(
         PLANNER_CONFIG_NO_HLL.withOverrides(
             ImmutableMap.of(
@@ -9043,9 +8972,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByStringLength()
   {
-    // Cannot vectorize due to virtual columns.
-    cannotVectorize();
-
     testQuery(
         "SELECT CHARACTER_LENGTH(dim1), COUNT(*) FROM druid.foo GROUP BY CHARACTER_LENGTH(dim1)",
         ImmutableList.of(
@@ -9287,9 +9213,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testTimeseriesUsingTimeFloorWithTimeShift()
   {
-    // Cannot vectorize due to virtual columns.
-    cannotVectorize();
-
     testQuery(
         "SELECT SUM(cnt), gran FROM (\n"
         + "  SELECT TIME_FLOOR(TIME_SHIFT(__time, 'P1D', -1), 'P1M') AS gran,\n"
@@ -10242,9 +10165,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByExtractYear()
   {
-    // Cannot vectorize due to virtual columns.
-    cannotVectorize();
-
     testQuery(
         "SELECT\n"
         + "  EXTRACT(YEAR FROM __time) AS \"year\",\n"
@@ -10293,9 +10213,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByFormatYearAndMonth()
   {
-    // Cannot vectorize due to virtual columns.
-    cannotVectorize();
-
     testQuery(
         "SELECT\n"
         + "  TIME_FORMAt(__time, 'yyyy MM') AS \"year\",\n"
@@ -10344,9 +10261,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByExtractFloorTime()
   {
-    // Cannot vectorize due to virtual columns.
-    cannotVectorize();
-
     testQuery(
         "SELECT\n"
         + "EXTRACT(YEAR FROM FLOOR(__time TO YEAR)) AS \"year\", SUM(cnt)\n"
@@ -10379,9 +10293,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByExtractFloorTimeLosAngeles()
   {
-    // Cannot vectorize due to virtual columns.
-    cannotVectorize();
-
     testQuery(
         PLANNER_CONFIG_DEFAULT,
         QUERY_CONTEXT_LOS_ANGELES,
@@ -10705,9 +10616,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testGroupingSets()
   {
     msqIncompatible();
-    // Cannot vectorize due to virtual columns.
-    cannotVectorize();
-
     testQuery(
         "SELECT dim2, gran, SUM(cnt), GROUPING(dim2, gran)\n"
         + "FROM (SELECT FLOOR(__time TO MONTH) AS gran, COALESCE(dim2, '') dim2, cnt FROM druid.foo) AS x\n"
@@ -10925,9 +10833,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testGroupByRollup()
   {
     msqIncompatible();
-    // Cannot vectorize due to virtual columns.
-    cannotVectorize();
-
     testQuery(
         "SELECT dim2, gran, SUM(cnt)\n"
         + "FROM (SELECT FLOOR(__time TO MONTH) AS gran, COALESCE(dim2, '') dim2, cnt FROM druid.foo) AS x\n"
@@ -11041,9 +10946,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testGroupByCube()
   {
     msqIncompatible();
-    // Cannot vectorize due to virtual columns.
-    cannotVectorize();
-
     testQuery(
         "SELECT dim2, gran, SUM(cnt)\n"
         + "FROM (SELECT FLOOR(__time TO MONTH) AS gran, COALESCE(dim2, '') dim2, cnt FROM druid.foo) AS x\n"
@@ -11104,9 +11006,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testGroupingSetsWithDummyDimension()
   {
     msqIncompatible();
-    // Cannot vectorize due to virtual columns.
-    cannotVectorize();
-
     testQuery(
         "SELECT dim2, gran, SUM(cnt)\n"
         + "FROM (SELECT FLOOR(__time TO MONTH) AS gran, COALESCE(dim2, '') dim2, cnt FROM druid.foo) AS x\n"
@@ -11167,9 +11066,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testGroupingSetsNoSuperset()
   {
     msqIncompatible();
-    // Cannot vectorize due to virtual columns.
-    cannotVectorize();
-
     // Note: the grouping sets are reordered in the output of this query, but this is allowed.
     testQuery(
         "SELECT dim2, gran, SUM(cnt)\n"
@@ -11297,9 +11193,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testGroupingSetsWithOrderByAggregator()
   {
     msqIncompatible();
-    // Cannot vectorize due to virtual columns.
-    cannotVectorize();
-
     testQuery(
         "SELECT dim2, gran, SUM(cnt)\n"
         + "FROM (SELECT FLOOR(__time TO MONTH) AS gran, COALESCE(dim2, '') dim2, cnt FROM druid.foo) AS x\n"
@@ -11367,9 +11260,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testGroupingSetsWithOrderByAggregatorWithLimit()
   {
     msqIncompatible();
-    // Cannot vectorize due to virtual columns.
-    cannotVectorize();
-
     testQuery(
         "SELECT dim2, gran, SUM(cnt)\n"
         + "FROM (SELECT FLOOR(__time TO MONTH) AS gran, COALESCE(dim2, '') dim2, cnt FROM druid.foo) AS x\n"
@@ -13038,8 +12928,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testTimeStampAddZeroYearPeriod()
   {
-    cannotVectorize();
-
     testQuery(
         "SELECT TIMESTAMPADD(YEAR, 0, \"__time\") FROM druid.foo",
 
@@ -13204,9 +13092,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testGroupingSetsWithLimitOrderByGran()
   {
     msqIncompatible();
-    // Cannot vectorize due to virtual columns.
-    cannotVectorize();
-
     testQuery(
         "SELECT dim2, gran, SUM(cnt)\n"
         + "FROM (SELECT FLOOR(__time TO MONTH) AS gran, COALESCE(dim2, '') dim2, cnt FROM druid.foo) AS x\n"
@@ -13390,7 +13275,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testExpressionCounts()
   {
-    cannotVectorize();
     testQuery(
         "SELECT\n"
         + " COUNT(reverse(dim2)),\n"
@@ -14250,7 +14134,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testReturnEmptyRowWhenGroupByIsConvertedToTimeseriesWithSingleConstantDimension()
   {
-    cannotVectorize();
     testQuery(
         "SELECT 'A' from foo WHERE m1 = 50 AND dim1 = 'wat' GROUP BY 'foobar'",
         ImmutableList.of(
@@ -14304,7 +14187,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testReturnEmptyRowWhenGroupByIsConvertedToTimeseriesWithMultipleConstantDimensions()
   {
-    cannotVectorize();
     testQuery(
         "SELECT 'A', dim1 from foo WHERE m1 = 50 AND dim1 = 'wat' GROUP BY dim1",
         ImmutableList.of(
@@ -14415,7 +14297,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                       .build()
       );
     } else {
-      cannotVectorize();
       expectedResult = ImmutableList.of(
           new Object[]{"", false},
           new Object[]{"1", true},
@@ -14456,7 +14337,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testGreatestFunctionForStringWithIsNull()
   {
     msqIncompatible();
-    cannotVectorize();
 
     String query = "SELECT l1, LATEST(GREATEST(dim1, dim2)) IS NULL FROM druid.numfoo GROUP BY l1";
 
@@ -14603,7 +14483,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testComplexDecode()
   {
-    cannotVectorize();
     for (String complexDecode : Arrays.asList("COMPLEX_DECODE_BASE64", "DECODE_BASE64_COMPLEX")) {
       testQuery(
           StringUtils.format(
@@ -14643,7 +14522,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testComplexDecodeAgg()
   {
     msqIncompatible();
-    cannotVectorize();
     testQuery(
         "SELECT APPROX_COUNT_DISTINCT_BUILTIN(COMPLEX_DECODE_BASE64('hyperUnique',PARSE_JSON(TO_JSON_STRING(unique_dim1)))) from druid.foo",
         ImmutableList.of(
@@ -14677,7 +14555,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testComplexDecodeAggWithCastedTypeName()
   {
     msqIncompatible();
-    cannotVectorize();
     testQuery(
         "SELECT "
         + "APPROX_COUNT_DISTINCT_BUILTIN(COMPLEX_DECODE_BASE64(CAST('hyperUnique' AS VARCHAR),PARSE_JSON(TO_JSON_STRING(unique_dim1)))) "
@@ -14925,7 +14802,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testLatestByOnStringColumnWithoutMaxBytesSpecified()
   {
     String defaultString = useDefault ? "" : null;
-    cannotVectorize();
     testQuery(
         "SELECT dim2,LATEST(dim3),LATEST_BY(dim1, __time),EARLIEST(dim3),EARLIEST_BY(dim1, __time),ANY_VALUE(dim3) FROM druid.foo where dim2='abc' group by 1",
         ImmutableList.of(
@@ -15048,8 +14924,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testInGroupByLimitOutGroupByOrderBy()
   {
-    cannotVectorize();
-
     testBuilder()
         .sql(
             "with t AS (SELECT m2, COUNT(m1) as trend_score\n"
@@ -15125,7 +14999,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testInGroupByOrderByLimitOutGroupByOrderByLimit()
   {
-    cannotVectorize();
     String sql = "with t AS (SELECT m2 as mo, COUNT(m1) as trend_score\n"
         + "FROM \"foo\"\n"
         + "GROUP BY 1\n"
@@ -15220,7 +15093,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testWindowingWithScanAndSort()
   {
-    cannotVectorize();
     msqIncompatible();
     String sql = "with t AS (\n"
         + "SELECT  \n"
@@ -15451,7 +15323,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testCastCharToVarcharInFlattenConcat()
   {
-    cannotVectorize();
     testQuery(
         "select 'A'||cast(col as char)||'B' from (values(1)) as t(col)",
         ImmutableList.of(

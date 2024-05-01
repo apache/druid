@@ -1203,7 +1203,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testArrayContainsArrayStringColumns()
   {
-    cannotVectorize();
     testQuery(
         "SELECT ARRAY_CONTAINS(arrayStringNulls, ARRAY['a', 'b']), ARRAY_CONTAINS(arrayStringNulls, arrayString) FROM druid.arrays LIMIT 5",
         ImmutableList.of(
@@ -1489,7 +1488,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testArrayLength()
   {
-    // Cannot vectorize due to usage of expressions.
+    // Cannot vectorize due to array expressions.
     cannotVectorize();
 
     testQuery(
@@ -1532,7 +1531,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testArrayLengthArrayColumn()
   {
-    // Cannot vectorize due to usage of expressions.
+    // Cannot vectorize due to array expressions.
     cannotVectorize();
 
     testQuery(
@@ -1590,7 +1589,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testArrayAppend()
   {
-    // Cannot vectorize due to usage of expressions.
+    // Cannot vectorize due to array expressions.
     cannotVectorize();
 
     ImmutableList<Object[]> results;
@@ -1647,7 +1646,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testArrayPrepend()
   {
-    // Cannot vectorize due to usage of expressions.
+    // Cannot vectorize due to array expressions.
     cannotVectorize();
 
     ImmutableList<Object[]> results;
@@ -1704,7 +1703,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testArrayPrependAppend()
   {
-    // Cannot vectorize due to usage of expressions.
+    // Cannot vectorize due to array expressions.
     cannotVectorize();
 
     ImmutableList<Object[]> results;
@@ -1768,7 +1767,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testArrayConcat()
   {
-    // Cannot vectorize due to usage of expressions.
+    // Cannot vectorize due to array expressions.
     cannotVectorize();
 
     ImmutableList<Object[]> results;
@@ -1825,7 +1824,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testArrayOffset()
   {
-    // Cannot vectorize due to usage of expressions.
+    // Cannot vectorize due to array expressions.
     cannotVectorize();
 
     testQuery(
@@ -2105,7 +2104,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testArrayGroupAsArrayWithFunction()
   {
-    // Cannot vectorize due to usage of expressions.
+    // Cannot vectorize due to array expressions.
     cannotVectorize();
     testQuery(
         "SELECT ARRAY[ARRAY_ORDINAL(dim3, 2)], SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
@@ -2149,7 +2148,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testArrayOrdinal()
   {
-    // Cannot vectorize due to usage of expressions.
+    // Cannot vectorize due to array expressions.
     cannotVectorize();
 
     testQuery(
@@ -2192,7 +2191,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testArrayOffsetOf()
   {
-    // Cannot vectorize due to usage of expressions.
+    // Cannot vectorize due to array expressions.
     cannotVectorize();
 
     testQuery(
@@ -2241,7 +2240,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testArrayOrdinalOf()
   {
-    // Cannot vectorize due to usage of expressions.
+    // Cannot vectorize due to array expressions.
     cannotVectorize();
 
     testQuery(
@@ -2291,7 +2290,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testArrayToString()
   {
-    // Cannot vectorize due to usage of expressions.
+    // Cannot vectorize due to array expressions.
     cannotVectorize();
 
     ImmutableList<Object[]> results;
@@ -2347,7 +2346,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testArrayToStringToMultiValueString()
   {
-    // Cannot vectorize due to usage of expressions.
+    // Cannot vectorize due to array expressions.
     cannotVectorize();
 
     ImmutableList<Object[]> results;
@@ -3446,8 +3445,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testArrayAggGroupByArrayAggFromSubquery()
   {
-    cannotVectorize();
-
     testQuery(
         "SELECT dim2, arr, COUNT(*) FROM (SELECT dim2, ARRAY_AGG(DISTINCT dim1) as arr FROM foo WHERE dim1 is not null GROUP BY 1 LIMIT 5) GROUP BY 1,2",
         QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
@@ -3877,7 +3874,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestInline()
   {
-    cannotVectorize();
     testQuery(
         "SELECT * FROM UNNEST(ARRAY[1,2,3])",
         QUERY_CONTEXT_UNNEST,
@@ -3943,7 +3939,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnest()
   {
-    cannotVectorize();
     testQuery(
         "SELECT d3 FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3)",
         QUERY_CONTEXT_UNNEST,
@@ -3988,7 +3983,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestArrayColumnsString()
   {
-    cannotVectorize();
     testQuery(
         "SELECT a FROM druid.arrays, UNNEST(arrayString) as unnested (a)",
         QUERY_CONTEXT_UNNEST,
@@ -4036,7 +4030,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestArrayColumnsStringNulls()
   {
-    cannotVectorize();
     testQuery(
         "SELECT a FROM druid.arrays, UNNEST(arrayStringNulls) as unnested (a)",
         QUERY_CONTEXT_UNNEST,
@@ -4083,7 +4076,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestArrayColumnsLong()
   {
-    cannotVectorize();
     testQuery(
         "SELECT a FROM druid.arrays, UNNEST(arrayLong) as unnested (a)",
         QUERY_CONTEXT_UNNEST,
@@ -4137,7 +4129,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestArrayColumnsLongNulls()
   {
-    cannotVectorize();
     testQuery(
         "SELECT a FROM druid.arrays, UNNEST(arrayLongNulls) as unnested (a)",
         QUERY_CONTEXT_UNNEST,
@@ -4187,7 +4178,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestArrayColumnsDouble()
   {
-    cannotVectorize();
     testQuery(
         "SELECT a FROM druid.arrays, UNNEST(arrayDouble) as unnested (a)",
         QUERY_CONTEXT_UNNEST,
@@ -4241,7 +4231,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestArrayColumnsDoubleNulls()
   {
-    cannotVectorize();
     testQuery(
         "SELECT a FROM druid.arrays, UNNEST(arrayDoubleNulls) as unnested (a)",
         QUERY_CONTEXT_UNNEST,
@@ -4294,7 +4283,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestTwice()
   {
-    cannotVectorize();
     testQuery(
         "SELECT dim1, MV_TO_ARRAY(dim3), STRING_TO_ARRAY(dim1, U&'\\005C.') AS dim1_split, dim1_split_unnest, dim3_unnest\n"
         + "FROM\n"
@@ -4371,7 +4359,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestTwiceArrayColumns()
   {
-    cannotVectorize();
     testQuery(
         "SELECT arrayStringNulls, arrayLongNulls, usn, uln"
         + "  FROM\n"
@@ -4454,7 +4441,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestTwiceWithFiltersAndExpressions()
   {
-    cannotVectorize();
     testQuery(
         "SELECT dim1, MV_TO_ARRAY(dim3), STRING_TO_ARRAY(dim1, U&'\\005C.') AS dim1_split, dim1_split_unnest, dim3_unnest || 'xx'\n"
         + "FROM\n"
@@ -4520,7 +4506,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestThriceWithFiltersOnDimAndUnnestCol()
   {
-    cannotVectorize();
     String sql = "    SELECT dimZipf, dim3_unnest1, dim3_unnest2, dim3_unnest3 FROM \n"
                  + "      ( SELECT * FROM \n"
                  + "           ( SELECT * FROM lotsocolumns, UNNEST(MV_TO_ARRAY(dimMultivalEnumerated)) as ut(dim3_unnest1) )"
@@ -4618,7 +4603,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestThriceWithFiltersOnDimAndAllUnnestColumns()
   {
-    cannotVectorize();
     String sql = "    SELECT dimZipf, dim3_unnest1, dim3_unnest2, dim3_unnest3 FROM \n"
                  + "      ( SELECT * FROM \n"
                  + "           ( SELECT * FROM lotsocolumns, UNNEST(MV_TO_ARRAY(dimMultivalEnumerated)) as ut(dim3_unnest1) )"
@@ -4687,7 +4671,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestThriceWithFiltersOnDimAndAllUnnestColumnsArrayColumns()
   {
-    cannotVectorize();
     String sql = "    SELECT arrayString, uln, udn, usn FROM \n"
                  + "      ( SELECT * FROM \n"
                  + "           ( SELECT * FROM arrays, UNNEST(arrayLongNulls) as ut(uln))"
@@ -4755,7 +4738,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestThriceWithFiltersOnDimAndUnnestColumnsORCombinations()
   {
-    cannotVectorize();
     String sql = "    SELECT dimZipf, dim3_unnest1, dim3_unnest2, dim3_unnest3 FROM \n"
                  + "      ( SELECT * FROM \n"
                  + "           ( SELECT * FROM lotsocolumns, UNNEST(MV_TO_ARRAY(dimMultivalEnumerated)) as ut(dim3_unnest1) )"
@@ -4835,7 +4817,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestThriceWithFiltersOnDimAndAllUnnestColumnsArrayColumnsOrFilters()
   {
-    cannotVectorize();
     String sql = "    SELECT arrayString, uln, udn, usn FROM \n"
                  + "      ( SELECT * FROM \n"
                  + "           ( SELECT * FROM arrays, UNNEST(arrayLongNulls) as ut(uln))"
@@ -5030,7 +5011,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestWithGroupByOrderByWithLimit()
   {
-    cannotVectorize();
     testQuery(
         "SELECT d3, COUNT(*) FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) AS unnested(d3) GROUP BY d3 ORDER BY d3 ASC LIMIT 4 ",
         QUERY_CONTEXT_UNNEST,
@@ -5106,7 +5086,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestWithLimit()
   {
-    cannotVectorize();
     testQuery(
         "SELECT d3 FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3) LIMIT 3",
         QUERY_CONTEXT_UNNEST,
@@ -5136,7 +5115,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestFirstQueryOnSelect()
   {
-    cannotVectorize();
     testQuery(
         "SELECT d3 FROM (select dim1, dim2, dim3 from druid.numfoo), UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3)",
         QUERY_CONTEXT_UNNEST,
@@ -5181,7 +5159,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestVirtualWithColumns1()
   {
-    cannotVectorize();
     testQuery(
         "SELECT strings, m1 FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) as unnested (strings) where (strings='a' and (m1<=10 or strings='b'))",
         QUERY_CONTEXT_UNNEST,
@@ -5222,7 +5199,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestVirtualWithColumns2()
   {
-    cannotVectorize();
     testQuery(
         "SELECT strings, m1 FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) as unnested (strings) where (strings='a' or (m1=2 and strings='b'))",
         QUERY_CONTEXT_UNNEST,
@@ -5260,7 +5236,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestWithFilters()
   {
-    cannotVectorize();
     testQuery(
         "SELECT d3 FROM (select * from druid.numfoo where dim2='a'), UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3)",
         QUERY_CONTEXT_UNNEST,
@@ -5292,7 +5267,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestWithFiltersWithExpressionInInnerQuery()
   {
-    cannotVectorize();
     testQuery(
         "SELECT t,d3 FROM (select FLOOR(__time to hour) t, dim3 from druid.numfoo where dim2='a'), UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3)",
         QUERY_CONTEXT_UNNEST,
@@ -5329,7 +5303,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestWithInFiltersWithExpressionInInnerQuery()
   {
-    cannotVectorize();
     testQuery(
         "SELECT t,d3 FROM (select FLOOR(__time to hour) t, dim3 from druid.numfoo where dim2 IN ('a','b')), UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3)",
         QUERY_CONTEXT_UNNEST,
@@ -5364,7 +5337,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestWithFiltersInnerLimit()
   {
-    cannotVectorize();
     testQuery(
         "SELECT d3 FROM (select dim2,dim3 from druid.numfoo where dim2='a' LIMIT 2), UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3)",
         QUERY_CONTEXT_UNNEST,
@@ -5411,7 +5383,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestWithFiltersInsideAndOutside()
   {
-    cannotVectorize();
     testQuery(
         "SELECT d3 FROM\n"
         + "  (select * from druid.numfoo where dim2='a') as t,\n"
@@ -5449,7 +5420,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestWithFiltersInsideAndOutside1()
   {
-    cannotVectorize();
     testQuery(
         "SELECT d3 FROM\n"
         + "  (select * from druid.numfoo where dim2='a'),\n"
@@ -5490,7 +5460,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestWithFiltersOutside()
   {
-    cannotVectorize();
     testQuery(
         "SELECT d3 FROM\n"
         + "  druid.numfoo t,\n"
@@ -5532,7 +5501,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestWithInFilters()
   {
-    cannotVectorize();
     testQuery(
         "SELECT d3 FROM (select * from druid.numfoo where dim2 IN ('a','b','ab','abc')), UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3)",
         QUERY_CONTEXT_UNNEST,
@@ -5566,7 +5534,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestVirtualWithColumns()
   {
-    cannotVectorize();
     testQuery(
         "SELECT strings FROM druid.numfoo, UNNEST(ARRAY[dim4, dim5]) as unnested (strings)",
         QUERY_CONTEXT_UNNEST,
@@ -5659,7 +5626,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestWithJoinOnTheLeft()
   {
-    cannotVectorize();
     testQuery(
         "SELECT d3 from (SELECT * from druid.numfoo JOIN (select dim2 as t from druid.numfoo where dim2 IN ('a','b','ab','abc')) ON dim2=t), UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3)",
         QUERY_CONTEXT_UNNEST,
@@ -5723,7 +5689,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     // Since there is a constant on the right,
     // Druid will plan this as a join query
     // as there is nothing to correlate between left and right
-    cannotVectorize();
     testQuery(
         "SELECT longs FROM druid.numfoo, UNNEST(ARRAY[1,2,3]) as unnested (longs)",
         QUERY_CONTEXT_UNNEST,
@@ -5778,7 +5743,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestWithSQLFunctionOnUnnestedColumn()
   {
-    cannotVectorize();
     testQuery(
         "SELECT strlen(d3) FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3)",
         QUERY_CONTEXT_UNNEST,
@@ -5824,7 +5788,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestWithINFiltersWithLeftRewrite()
   {
-    cannotVectorize();
     testQuery(
         "SELECT d3 FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3) where d3 IN ('a','b') and m1 < 10",
         QUERY_CONTEXT_UNNEST,
@@ -5856,7 +5819,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestWithINFiltersWithNoLeftRewrite()
   {
-    cannotVectorize();
     testQuery(
         "SELECT d45 FROM druid.numfoo, UNNEST(ARRAY[dim4,dim5]) as unnested (d45) where d45 IN ('a','b')",
         QUERY_CONTEXT_UNNEST,
@@ -5888,7 +5850,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestWithInvalidINFiltersOnUnnestedColumn()
   {
-    cannotVectorize();
     testQuery(
         "SELECT d3 FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3) where d3 IN ('foo','bar')",
         QUERY_CONTEXT_UNNEST,
@@ -5913,7 +5874,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestWithNotFiltersOnUnnestedColumn()
   {
-    cannotVectorize();
     testQuery(
         "SELECT d3 FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3) where d3!='d' ",
         QUERY_CONTEXT_UNNEST,
@@ -5954,7 +5914,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestWithSelectorFiltersOnSelectedColumn()
   {
-    cannotVectorize();
     testQuery(
         "SELECT d3 FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3) where d3='b'",
         QUERY_CONTEXT_UNNEST,
@@ -5982,7 +5941,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestWithSelectorFiltersOnVirtualColumn()
   {
-    cannotVectorize();
     testQuery(
         "SELECT d12 FROM druid.numfoo, UNNEST(ARRAY[m1,m2]) as unnested (d12) where d12=1",
         QUERY_CONTEXT_UNNEST,
@@ -6012,7 +5970,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestWithSelectorFiltersOnVirtualStringColumn()
   {
-    cannotVectorize();
     testQuery(
         "SELECT d45 FROM druid.numfoo, UNNEST(ARRAY[dim4,dim5]) as unnested (d45) where d45 IN ('a','ab')",
         QUERY_CONTEXT_UNNEST,
@@ -6043,7 +6000,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestWithMultipleAndFiltersOnSelectedColumns()
   {
-    cannotVectorize();
     testQuery(
         "SELECT d3 FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3) where d3='b' and m1 < 10 and m2 < 10",
         QUERY_CONTEXT_UNNEST,
@@ -6077,7 +6033,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestWithMultipleOrFiltersOnSelectedColumns()
   {
-    cannotVectorize();
     testQuery(
         "SELECT d3 FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3) where d3='b' or m1 < 2 ",
         QUERY_CONTEXT_UNNEST,
@@ -6112,7 +6067,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestWithMultipleAndFiltersOnSelectedUnnestedColumns()
   {
-    cannotVectorize();
     testQuery(
         "SELECT d3 FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3) where d3 IN ('a','b') and d3 < 'e' ",
         QUERY_CONTEXT_UNNEST,
@@ -6141,7 +6095,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestWithMultipleOrFiltersOnUnnestedColumns()
   {
-    cannotVectorize();
     testQuery(
         "SELECT d3 FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3) where d3='b' or d3='d' ",
         QUERY_CONTEXT_UNNEST,
@@ -6170,7 +6123,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestWithMultipleOrFiltersOnVariationsOfUnnestedColumns()
   {
-    cannotVectorize();
     testQuery(
         "SELECT d3 FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3) where strlen(d3) < 2 or d3='d' ",
         QUERY_CONTEXT_UNNEST,
@@ -6216,7 +6168,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestWithMultipleOrFiltersOnSelectedNonUnnestedColumns()
   {
-    cannotVectorize();
     testQuery(
         "SELECT d3 FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3) where m1 < 2 or m2 < 2 ",
         QUERY_CONTEXT_UNNEST,
@@ -6250,7 +6201,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestWithMultipleOrFiltersOnSelectedVirtualColumns()
   {
-    cannotVectorize();
     testQuery(
         "SELECT d45 FROM druid.numfoo, UNNEST(ARRAY[dim4,dim5]) as unnested (d45) where d45 IN ('a','aa') or m1 < 2 ",
         QUERY_CONTEXT_UNNEST,
@@ -6287,7 +6237,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestWithMultipleOrFiltersOnUnnestedColumnsAndOnOriginalColumn()
   {
-    cannotVectorize();
     testQuery(
         "SELECT d3 FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3) where d3='b' or dim3='d' ",
         QUERY_CONTEXT_UNNEST,
@@ -6322,7 +6271,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestWithMultipleOrFiltersOnUnnestedColumnsAndOnOriginalColumnDiffOrdering()
   {
-    cannotVectorize();
     testQuery(
         "SELECT dim3, d3 FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3) where dim3='b' or d3='a' ",
         QUERY_CONTEXT_UNNEST,
@@ -6610,7 +6558,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestVirtualWithColumnsAndNullIf()
   {
-    cannotVectorize();
     testQuery(
         "select c,m2 from druid.foo, unnest(ARRAY[\"m1\", \"m2\"]) as u(c) where NULLIF(c,m2) IS NULL",
         QUERY_CONTEXT_UNNEST,
@@ -7254,7 +7201,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestExtractionFn()
   {
-    cannotVectorize();
     testQuery(
         "SELECT substring(d3,1) FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3) WHERE substring(d3,1) <> 'b'",
         QUERY_CONTEXT_UNNEST,
@@ -7295,7 +7241,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestExtractionFnNull()
   {
-    cannotVectorize();
     testQuery(
         "SELECT substring(d3,1) FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3) WHERE substring(d3,1) is not null",
         QUERY_CONTEXT_UNNEST,
