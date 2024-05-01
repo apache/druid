@@ -308,9 +308,6 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
   @Test
   public void testApproxCountDistinctHllSketch()
   {
-    // Can't vectorize due to SUBSTRING expression.
-    cannotVectorize();
-
     final String sql = "SELECT\n"
                        + "  SUM(cnt),\n"
                        + "  APPROX_COUNT_DISTINCT_DS_HLL(dim2),\n" // uppercase
@@ -1100,7 +1097,6 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
   @Test
   public void testHllEstimateAsVirtualColumnWithGroupByOrderBy()
   {
-    cannotVectorize();
     testQuery(
         "SELECT"
         + " HLL_SKETCH_ESTIMATE(hllsketch_dim1), count(*)"
@@ -1198,7 +1194,6 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
   @Test
   public void testResultCacheWithWindowing()
   {
-    cannotVectorize();
     for (int i = 0; i < 2; i++) {
       testBuilder()
           .queryContext(ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, true))

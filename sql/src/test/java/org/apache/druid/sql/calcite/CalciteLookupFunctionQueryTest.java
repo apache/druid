@@ -474,7 +474,9 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterInOrIsNullInjective()
   {
-    cannotVectorize();
+    if (NullHandling.sqlCompatible()) {
+      cannotVectorize();
+    }
 
     testQuery(
         buildFilterTestSql(
@@ -747,7 +749,10 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterMvContainsNullInjective()
   {
-    cannotVectorize();
+    if (NullHandling.sqlCompatible()) {
+      // cannotVectorize doesn't trip in default-value mode, due to buildFilterTestExpectedQueryAlwaysFalse.
+      cannotVectorize();
+    }
 
     testQuery(
         buildFilterTestSql("MV_CONTAINS(LOOKUP(dim1, 'lookyloo121'), NULL)"),
@@ -967,7 +972,10 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterIsNullInjective()
   {
-    cannotVectorize();
+    if (NullHandling.sqlCompatible()) {
+      // cannotVectorize doesn't trip in default-value mode, due to buildFilterTestExpectedQueryAlwaysFalse.
+      cannotVectorize();
+    }
 
     testQuery(
         buildFilterTestSql("LOOKUP(dim1, 'lookyloo121') IS NULL"),
@@ -1236,7 +1244,10 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterCoalesceSameLiteralInjective()
   {
-    cannotVectorize();
+    if (NullHandling.sqlCompatible()) {
+      // cannotVectorize doesn't trip in default-value mode, due to buildFilterTestExpectedQueryAlwaysFalse.
+      cannotVectorize();
+    }
 
     testQuery(
         buildFilterTestSql("COALESCE(LOOKUP(dim1, 'lookyloo121'), 'x6') = 'x6'"),
