@@ -47,6 +47,7 @@ import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.exec.ControllerImpl;
 import org.apache.druid.msq.exec.MSQTasks;
+import org.apache.druid.msq.exec.ResultsContext;
 import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
 import org.apache.druid.msq.indexing.destination.DurableStorageMSQDestination;
 import org.apache.druid.msq.indexing.destination.ExportMSQDestination;
@@ -246,20 +247,37 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery, 
     final OverlordClient overlordClient = injector.getInstance(OverlordClient.class)
                                                   .withRetryPolicy(StandardRetryPolicy.unlimited());
     final ControllerContext context = new IndexerControllerContext(
+        this,
         toolbox,
         injector,
         clientFactory,
         overlordClient
     );
-    controller = new ControllerImpl(this, context);
-    return controller.run();
+
+    controller = new ControllerImpl(
+        this.getId(),
+        querySpec,
+        new ResultsContext(getSqlTypeNames(), getSqlResultsContext()),
+        context
+    );
+
+    final TaskReportQueryListener queryListener = new TaskReportQueryListener(
+        querySpec.getDestination(),
+        () -> toolbox.getTaskReportFileWriter().openReportOutputStream(getId()),
+        toolbox.getJsonMapper(),
+        getId(),
+        getContext()
+    );
+
+    controller.run(queryListener);
+    return queryListener.getStatusReport().toTaskStatus(getId());
   }
 
   @Override
   public void stopGracefully(final TaskConfig taskConfig)
   {
     if (controller != null) {
-      controller.stopGracefully();
+      controller.stop();
     }
   }
 
@@ -300,14 +318,15 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery, 
    * Returns true if the task reads from the same table as the destionation. In this case, we would prefer to fail
    * instead of reading any unused segments to ensure that old data is not read.
    */
-  public static boolean isReplaceInputDataSourceTask(MSQControllerTask task)
+  public static boolean isReplaceInputDataSourceTask(MSQSpec querySpec)
   {
-    return task.getQuerySpec()
-               .getQuery()
-               .getDataSource()
-               .getTableNames()
-               .stream()
-               .anyMatch(datasouce -> task.getDataSource().equals(datasouce));
+    if (isIngestion(querySpec)) {
+      final String targetDataSource = ((DataSourceMSQDestination) querySpec.getDestination()).getDataSource();
+      final Set<String> sourceTableNames = querySpec.getQuery().getDataSource().getTableNames();
+      return sourceTableNames.contains(targetDataSource);
+    } else {
+      return false;
+    }
   }
 
   public static boolean writeResultsToDurableStorage(final MSQSpec querySpec)

@@ -46,6 +46,7 @@ import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.discovery.BrokerClient;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.frame.channel.FrameChannelSequence;
+import org.apache.druid.frame.processor.Bouncer;
 import org.apache.druid.frame.testutil.FrameTestUtil;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.guice.DruidSecondaryModule;
@@ -58,7 +59,6 @@ import org.apache.druid.guice.NestedDataModule;
 import org.apache.druid.guice.SegmentWranglerModule;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
-import org.apache.druid.guice.annotations.MSQ;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
@@ -73,7 +73,6 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.Request;
@@ -86,6 +85,7 @@ import org.apache.druid.msq.exec.ClusterStatisticsMergeMode;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.DataServerQueryHandler;
 import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
+import org.apache.druid.msq.exec.ResultsContext;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.guice.MSQDurableStorageModule;
 import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
@@ -504,7 +504,9 @@ public class MSQTestBase extends BaseCalciteQueryTest
               // following bindings are overriding other bindings that end up needing a lot more dependencies.
               // We replace the bindings with something that returns null to make things more brittle in case they
               // actually are used somewhere in the test.
-              binder.bind(SqlStatementFactory.class).annotatedWith(MSQ.class).toProvider(Providers.of(null));
+              binder.bind(SqlStatementFactory.class)
+                    .annotatedWith(MultiStageQuery.class)
+                    .toProvider(Providers.of(null));
               binder.bind(SqlToolbox.class).toProvider(Providers.of(null));
               binder.bind(MSQTaskSqlEngine.class).toProvider(Providers.of(null));
             }
@@ -514,7 +516,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
         new LookylooModule(),
         new SegmentWranglerModule(),
         new HllSketchModule(),
-        binder -> binder.bind(BrokerClient.class).toInstance(brokerClient)
+        binder -> binder.bind(BrokerClient.class).toInstance(brokerClient),
+        binder -> binder.bind(Bouncer.class).toInstance(new Bouncer(1))
     );
     // adding node role injection to the modules, since CliPeon would also do that through run method
     Injector injector = new CoreInjectorBuilder(new StartupInjectorBuilder().build(), ImmutableSet.of(NodeRole.PEON))
@@ -835,20 +838,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
     if (resultsReport == null) {
       return null;
     } else {
-      Yielder<Object[]> yielder = resultsReport.getResultYielder();
-      List<Object[]> rows = new ArrayList<>();
-      while (!yielder.isDone()) {
-        rows.add(yielder.get());
-        yielder = yielder.next(null);
-      }
-      try {
-        yielder.close();
-      }
-      catch (IOException e) {
-        throw new ISE("Unable to get results from the report");
-      }
-
-      return rows;
+      return resultsReport.getResults();
     }
   }
 
@@ -1436,9 +1426,10 @@ public class MSQTestBase extends BaseCalciteQueryTest
                   pageInformation.getWorker() == null ? 0 : pageInformation.getWorker(),
                   pageInformation.getPartition() == null ? 0 : pageInformation.getPartition()
               )).flatMap(frame -> SqlStatementResourceHelper.getResultSequence(
-                  msqControllerTask,
-                  finalStage,
                   frame,
+                  finalStage.getFrameReader(),
+                  msqControllerTask.getQuerySpec().getColumnMappings(),
+                  new ResultsContext(msqControllerTask.getSqlTypeNames(), msqControllerTask.getSqlResultsContext()),
                   objectMapper
               )).withBaggage(closer).toList());
             }

@@ -25,6 +25,7 @@ import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.ReadableInputStreamFrameChannel;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -73,8 +74,11 @@ public abstract class DurableStorageInputChannelFactory implements InputChannelF
       final boolean isQueryResults
   )
   {
+    final String threadNameFormat =
+        StringUtils.encodeForFormat(Preconditions.checkNotNull(controllerTaskId, "controllerTaskId"))
+        + "-remote-fetcher-%d";
     final ExecutorService remoteInputStreamPool =
-        Executors.newCachedThreadPool(Execs.makeThreadFactory(controllerTaskId + "-remote-fetcher-%d"));
+        Executors.newCachedThreadPool(Execs.makeThreadFactory(threadNameFormat));
     closer.register(remoteInputStreamPool::shutdownNow);
     if (isQueryResults) {
       return new DurableStorageQueryResultsInputChannelFactory(
