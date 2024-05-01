@@ -275,7 +275,8 @@ public class QueryableIndexCursorSequenceBuilder
       } else {
         return new QueryableIndexVectorCursor(baseColumnSelectorFactory, baseOffset, vectorSize, closer);
       }
-    } catch (Throwable t) {
+    }
+    catch (Throwable t) {
       throw CloseableUtils.closeAndWrapInCatch(t, closer);
     }
   }
