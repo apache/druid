@@ -30,6 +30,7 @@ import org.apache.druid.math.expr.Function;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Supplier;
 
 /**
@@ -213,6 +214,8 @@ public abstract class FallbackVectorProcessor<T> implements ExprVectorProcessor<
       }
 
       final int sz = vectorBindings.getCurrentVectorSize();
+      boolean anyNulls = false;
+
       for (int i = 0; i < sz; i++) {
         for (final AdaptedExpr adaptedArg : adaptedArgs) {
           adaptedArg.setRowNumber(i);
@@ -221,9 +224,10 @@ public abstract class FallbackVectorProcessor<T> implements ExprVectorProcessor<
         final ExprEval<?> eval = fn.get();
         outValues[i] = eval.asLong();
         outNulls[i] = eval.isNumericNull();
+        anyNulls = anyNulls || outNulls[i];
       }
 
-      return new ExprEvalLongVector(outValues, outNulls);
+      return new ExprEvalLongVector(outValues, anyNulls ? outNulls : null);
     }
   }
 
@@ -255,6 +259,8 @@ public abstract class FallbackVectorProcessor<T> implements ExprVectorProcessor<
       }
 
       final int sz = vectorBindings.getCurrentVectorSize();
+      boolean anyNulls = false;
+
       for (int i = 0; i < sz; i++) {
         for (final AdaptedExpr adaptedArg : adaptedArgs) {
           adaptedArg.setRowNumber(i);
@@ -263,9 +269,10 @@ public abstract class FallbackVectorProcessor<T> implements ExprVectorProcessor<
         final ExprEval<?> eval = fn.get();
         outValues[i] = eval.asDouble();
         outNulls[i] = eval.isNumericNull();
+        anyNulls = anyNulls || outNulls[i];
       }
 
-      return new ExprEvalDoubleVector(outValues, outNulls);
+      return new ExprEvalDoubleVector(outValues, anyNulls ? outNulls : null);
     }
   }
 
@@ -367,6 +374,25 @@ public abstract class FallbackVectorProcessor<T> implements ExprVectorProcessor<
     public Object getLiteralValue()
     {
       return originalExpr.getLiteralValue();
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      AdaptedExpr that = (AdaptedExpr) o;
+      return Objects.equals(originalExpr, that.originalExpr) && Objects.equals(type, that.type);
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hash(originalExpr, type);
     }
   }
 
