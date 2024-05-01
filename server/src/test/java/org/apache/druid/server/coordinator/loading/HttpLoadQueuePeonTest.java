@@ -23,12 +23,12 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
+import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.coordination.DataSegmentChangeCallback;
 import org.apache.druid.server.coordination.DataSegmentChangeHandler;
 import org.apache.druid.server.coordination.DataSegmentChangeRequest;
@@ -65,7 +65,7 @@ import java.util.stream.Collectors;
  */
 public class HttpLoadQueuePeonTest
 {
-  private static final ObjectMapper MAPPER = new DefaultObjectMapper();
+  private static final ObjectMapper MAPPER = TestHelper.makeJsonMapper();
   private final List<DataSegment> segments =
       CreateDataSegments.ofDatasource("test")
                         .forIntervals(1, Granularities.DAY)
