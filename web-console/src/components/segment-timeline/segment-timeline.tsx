@@ -16,7 +16,8 @@
  * limitations under the License.
  */
 
-import { FormGroup, HTMLSelect, Radio, RadioGroup, ResizeSensor } from '@blueprintjs/core';
+import {FormGroup, Radio, RadioGroup, ResizeSensor, MenuItem, Button} from '@blueprintjs/core';
+import { ItemPredicate, ItemRenderer, Select2 } from "@blueprintjs/select";
 import type { AxisScale } from 'd3-axis';
 import { scaleLinear, scaleUtc } from 'd3-scale';
 import React from 'react';
@@ -528,6 +529,50 @@ ORDER BY "start" DESC`;
     const { capabilities } = this.props;
     const { datasources, activeDataType, activeDatasource, startDate, endDate } = this.state;
 
+    const filterDatasource: ItemPredicate<string> = (query, val, _index, exactMatch) => {
+      const normalizedTitle = val.toLowerCase();
+      const normalizedQuery = query.toLowerCase();
+
+      if (exactMatch) {
+        return normalizedTitle === normalizedQuery;
+      } else {
+        return ` ${normalizedTitle}`.indexOf(normalizedQuery) >= 0;
+      }
+    };
+
+    const datasourceRenderer: ItemRenderer<any> = (val, {handleClick, handleFocus, modifiers,}) => {
+      if (!modifiers.matchesPredicate) {
+        return null;
+      }
+      return (
+        <MenuItem
+          key={val}
+          disabled={modifiers.disabled}
+          active={modifiers.active}
+          onClick={handleClick}
+          onFocus={handleFocus}
+          roleStructure="listoption"
+          text={val}/>
+      );
+    }
+
+    const DatasourceSelect: React.FC = () => {
+      const showAll = 'Show all';
+      const handleItemSelected = (selectedItem: string) => {
+        this.setState({
+          activeDatasource: selectedItem === showAll ? null : selectedItem,
+        })
+      }
+      let datasourcesWzAll = [showAll].concat(datasources);
+      return (<Select2 items={datasourcesWzAll}
+                       onItemSelect={handleItemSelected}
+                       itemRenderer={datasourceRenderer}
+                       noResults={<MenuItem disabled={true} text="No results." roleStructure="listoption"/>}
+                       itemPredicate={filterDatasource}>
+        <Button text={activeDatasource === null ? showAll : activeDatasource}/>
+      </Select2>);
+    }
+
     return (
       <div className="segment-timeline app-view">
         {this.renderStackedBarChart()}
@@ -543,24 +588,7 @@ ORDER BY "start" DESC`;
           </FormGroup>
 
           <FormGroup label="Datasource">
-            <HTMLSelect
-              onChange={(e: any) =>
-                this.setState({
-                  activeDatasource: e.target.value === 'all' ? null : e.target.value,
-                })
-              }
-              value={activeDatasource == null ? 'all' : activeDatasource}
-              fill
-            >
-              <option value="all">Show all</option>
-              {datasources.map(d => {
-                return (
-                  <option key={d} value={d}>
-                    {d}
-                  </option>
-                );
-              })}
-            </HTMLSelect>
+            <DatasourceSelect/>
           </FormGroup>
 
           <FormGroup label="Interval">
