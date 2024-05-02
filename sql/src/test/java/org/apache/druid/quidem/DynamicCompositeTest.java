@@ -17,21 +17,31 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite;
+package org.apache.druid.quidem;
 
-import org.apache.druid.sql.calcite.NotYetSupported.NotYetSupportedProcessor;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.api.Test;
 
-@ExtendWith(NotYetSupportedProcessor.class)
-public class DecoupledPlanningCalciteQueryTest extends CalciteQueryTest
+import java.util.HashSet;
+import java.util.Set;
+import java.util.function.Function;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+
+public class DynamicCompositeTest
 {
-  @RegisterExtension
-  DecoupledExtension decoupledExtension = new DecoupledExtension(this);
-
-  @Override
-  protected QueryTestBuilder testBuilder()
+  @Test
+  public void testCompose()
   {
-    return decoupledExtension.testBuilder();
+    HashSet<Integer> set = new HashSet<Integer>();
+    Function<Integer, Integer> sq = x -> x * x;
+    Set<Integer> composite = DynamicComposite.make(set, Set.class, sq, Function.class);
+    composite.add(1);
+    assertEquals(1, set.size());
+    assertEquals(1, composite.size());
+
+    assertInstanceOf(Function.class, composite);
+    Function<Integer, Integer> sq2 = (Function<Integer, Integer>) composite;
+    assertEquals(9, sq2.apply(3));
   }
 }

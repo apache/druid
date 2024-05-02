@@ -17,21 +17,27 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite;
+package org.apache.druid.quidem;
 
-import org.apache.druid.sql.calcite.NotYetSupported.NotYetSupportedProcessor;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.api.extension.RegisterExtension;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
-@ExtendWith(NotYetSupportedProcessor.class)
-public class DecoupledPlanningCalciteQueryTest extends CalciteQueryTest
+public interface DruidConnectionExtras
 {
-  @RegisterExtension
-  DecoupledExtension decoupledExtension = new DecoupledExtension(this);
+  ObjectMapper getObjectMapper();
 
-  @Override
-  protected QueryTestBuilder testBuilder()
+  class DruidConnectionExtrasImpl implements DruidConnectionExtras
   {
-    return decoupledExtension.testBuilder();
+    private final ObjectMapper objectMapper;
+
+    public DruidConnectionExtrasImpl(ObjectMapper objectMapper)
+    {
+      this.objectMapper = objectMapper;
+    }
+
+    @Override
+    public ObjectMapper getObjectMapper()
+    {
+      return objectMapper;
+    }
   }
 }

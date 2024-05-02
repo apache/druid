@@ -140,6 +140,7 @@
 
         <!-- Allow the handful of flaky tests with transient failures to pass. -->
         <surefire.rerunFailingTestsCount>3</surefire.rerunFailingTestsCount>
+        <surefire.trimStackTrace>false</surefire.trimStackTrace>
 
         <!-- Using -DskipTests or -P skip-tests will skip both the unit tests and
              the "new" integration tests. To skip just the unit tests (but run the
@@ -1764,7 +1765,7 @@
                         <!-- Skip the tests which Surefire runs. Surefire runs the unit tests,
                              while its sister plugin, Failsafe, runs the "new" ITs. -->
                         <skipTests>${skipUTs}</skipTests>
-                        <trimStackTrace>false</trimStackTrace>
+                        <trimStackTrace>${surefire.trimStackTrace}</trimStackTrace>
                         <!-- our tests are very verbose, let's keep the volume down -->
                         <redirectTestOutputToFile>true</redirectTestOutputToFile>
                         <forkNode implementation="org.apache.maven.plugin.surefire.extensions.SurefireForkNodeFactory"/>
@@ -2167,6 +2168,7 @@
                                 <exclude>**/.settings/**/*</exclude> <!-- Eclipse -->
                                 <exclude>**/.classpath</exclude> <!-- Eclipse -->
                                 <exclude>**/.project</exclude> <!-- Eclipse -->
+                                <exclude>**/*.iq</exclude> <!-- quidem testfiles -->
                             </excludes>
                         </configuration>
                     </plugin>

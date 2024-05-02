@@ -17,21 +17,33 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite;
+package org.apache.druid.quidem;
 
-import org.apache.druid.sql.calcite.NotYetSupported.NotYetSupportedProcessor;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.api.extension.RegisterExtension;
+import java.io.File;
 
-@ExtendWith(NotYetSupportedProcessor.class)
-public class DecoupledPlanningCalciteQueryTest extends CalciteQueryTest
+public class ProjectPathUtils
 {
-  @RegisterExtension
-  DecoupledExtension decoupledExtension = new DecoupledExtension(this);
+  public static final File PROJECT_ROOT = findProjectRoot();
 
-  @Override
-  protected QueryTestBuilder testBuilder()
+  public static File getPathFromProjectRoot(String path)
   {
-    return decoupledExtension.testBuilder();
+    return new File(PROJECT_ROOT, path);
+  }
+
+  protected static File findProjectRoot()
+  {
+    File f = new File(".").getAbsoluteFile();
+    while (f != null) {
+      if (isProjectRoot(f)) {
+        return f;
+      }
+      f = f.getParentFile();
+    }
+    throw new IllegalStateException("Can't find project root!");
+  }
+
+  private static boolean isProjectRoot(File candidate)
+  {
+    return new File(candidate, "web-console").exists();
   }
 }
