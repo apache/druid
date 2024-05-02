@@ -589,8 +589,22 @@ public class TaskLockbox
                                      && conflictPosse.getTaskLock().getGroupId().equals(request.getGroupId())
                                      && conflictPosse.getTaskLock().getInterval().equals(request.getInterval())
                 );
-            if (allDifferentGranularity) {
+
+            // When using timechunk locks, lock types for can be changed for tasks within a task group.
+            // For example when a supervisor with EXCLUSIVE locks is changed to use concurrent APPEND locks,
+            // The new tasks must be granted different lock types without having to wait for the older ones to complete.
+            final boolean allDifferentTimechunkTypes = conflictPosses
+                .stream()
+                .allMatch(
+                    conflictPosse -> conflictPosse.taskLock.getGranularity() == LockGranularity.TIME_CHUNK
+                                     && request.getGranularity() == LockGranularity.TIME_CHUNK
+                                     && conflictPosse.getTaskLock().getGroupId().equals(request.getGroupId())
+                                     && conflictPosse.getTaskLock().getInterval().equals(request.getInterval())
+                );
+
+            if (allDifferentGranularity || allDifferentTimechunkTypes) {
               // Lock collision was because of the different granularity in the same group.
+              // OR because of different lock types for exclusive locks within the same group
               // We can add a new taskLockPosse.
               posseToUse = createNewTaskLockPosse(request);
             } else {
