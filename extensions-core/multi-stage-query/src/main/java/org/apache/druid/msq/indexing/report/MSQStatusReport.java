@@ -24,9 +24,11 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.indexer.TaskState;
+import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.msq.exec.SegmentLoadStatusFetcher;
-import org.apache.druid.msq.indexing.MSQWorkerTaskLauncher;
+import org.apache.druid.msq.exec.WorkerStats;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
+import org.apache.druid.msq.indexing.error.MSQFaultUtils;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
@@ -50,7 +52,7 @@ public class MSQStatusReport
 
   private final long durationMs;
 
-  private final Map<Integer, List<MSQWorkerTaskLauncher.WorkerStats>> workerStats;
+  private final Map<Integer, List<WorkerStats>> workerStats;
 
   private final int pendingTasks;
 
@@ -69,10 +71,11 @@ public class MSQStatusReport
       @JsonProperty("warnings") Collection<MSQErrorReport> warningReports,
       @JsonProperty("startTime") @Nullable DateTime startTime,
       @JsonProperty("durationMs") long durationMs,
-      @JsonProperty("workers") Map<Integer, List<MSQWorkerTaskLauncher.WorkerStats>> workerStats,
+      @JsonProperty("workers") Map<Integer, List<WorkerStats>> workerStats,
       @JsonProperty("pendingTasks") int pendingTasks,
       @JsonProperty("runningTasks") int runningTasks,
-      @JsonProperty("segmentLoadWaiterStatus") @Nullable SegmentLoadStatusFetcher.SegmentLoadWaiterStatus segmentLoadWaiterStatus,
+      @JsonProperty("segmentLoadWaiterStatus") @Nullable
+      SegmentLoadStatusFetcher.SegmentLoadWaiterStatus segmentLoadWaiterStatus,
       @JsonProperty("segmentReport") @Nullable MSQSegmentReport segmentReport
   )
   {
@@ -136,7 +139,7 @@ public class MSQStatusReport
   }
 
   @JsonProperty("workers")
-  public Map<Integer, List<MSQWorkerTaskLauncher.WorkerStats>> getWorkerStats()
+  public Map<Integer, List<WorkerStats>> getWorkerStats()
   {
     return workerStats;
   }
@@ -155,6 +158,22 @@ public class MSQStatusReport
   public MSQSegmentReport getSegmentReport()
   {
     return segmentReport;
+  }
+
+  /**
+   * Returns a {@link TaskStatus} appropriate for this status report.
+   */
+  public TaskStatus toTaskStatus(final String taskId)
+  {
+    if (status == TaskState.SUCCESS) {
+      return TaskStatus.success(taskId);
+    } else {
+      // Error report is nonnull when status code != SUCCESS. Use that message.
+      return TaskStatus.failure(
+          taskId,
+          MSQFaultUtils.generateMessageWithErrorCode(errorReport.getFault())
+      );
+    }
   }
 
   @Override

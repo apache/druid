@@ -23,6 +23,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.druid.msq.exec.ControllerClient;
+import org.apache.druid.msq.exec.OutputChannelMode;
 import org.apache.druid.msq.input.InputSlice;
 
 import javax.annotation.Nullable;
@@ -46,6 +48,12 @@ public class WorkOrder
   private final List<InputSlice> workerInputs;
   private final ExtraInfoHolder<?> extraInfoHolder;
 
+  @Nullable
+  private final List<String> workerIds;
+
+  @Nullable
+  private final OutputChannelMode outputChannelMode;
+
   @JsonCreator
   @SuppressWarnings("rawtypes")
   public WorkOrder(
@@ -53,7 +61,9 @@ public class WorkOrder
       @JsonProperty("stage") final int stageNumber,
       @JsonProperty("worker") final int workerNumber,
       @JsonProperty("input") final List<InputSlice> workerInputs,
-      @JsonProperty("extra") @Nullable final ExtraInfoHolder extraInfoHolder
+      @JsonProperty("extra") @Nullable final ExtraInfoHolder extraInfoHolder,
+      @JsonProperty("workers") @Nullable final List<String> workerIds,
+      @JsonProperty("output") @Nullable final OutputChannelMode outputChannelMode
   )
   {
     this.queryDefinition = Preconditions.checkNotNull(queryDefinition, "queryDefinition");
@@ -61,6 +71,8 @@ public class WorkOrder
     this.workerNumber = workerNumber;
     this.workerInputs = Preconditions.checkNotNull(workerInputs, "workerInputs");
     this.extraInfoHolder = extraInfoHolder;
+    this.workerIds = workerIds;
+    this.outputChannelMode = outputChannelMode;
   }
 
   @JsonProperty("query")
@@ -95,6 +107,31 @@ public class WorkOrder
     return extraInfoHolder;
   }
 
+  /**
+   * Worker IDs for this query, if known in advance (at the time the work order is created). May be null, in which
+   * case workers use {@link ControllerClient#getTaskList()} to find worker IDs.
+   */
+  @Nullable
+  @JsonProperty("workers")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public List<String> getWorkerIds()
+  {
+    return workerIds;
+  }
+
+  public boolean hasOutputChannelMode()
+  {
+    return outputChannelMode != null;
+  }
+
+  @Nullable
+  @JsonProperty("output")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public OutputChannelMode getOutputChannelMode()
+  {
+    return outputChannelMode;
+  }
+
   @Nullable
   public Object getExtraInfo()
   {
@@ -104,6 +141,23 @@ public class WorkOrder
   public StageDefinition getStageDefinition()
   {
     return queryDefinition.getStageDefinition(stageNumber);
+  }
+
+  public WorkOrder withOutputChannelMode(final OutputChannelMode newOutputChannelMode)
+  {
+    if (newOutputChannelMode == outputChannelMode) {
+      return this;
+    } else {
+      return new WorkOrder(
+          queryDefinition,
+          stageNumber,
+          workerNumber,
+          workerInputs,
+          extraInfoHolder,
+          workerIds,
+          newOutputChannelMode
+      );
+    }
   }
 
   @Override
@@ -120,13 +174,23 @@ public class WorkOrder
            && workerNumber == workOrder.workerNumber
            && Objects.equals(queryDefinition, workOrder.queryDefinition)
            && Objects.equals(workerInputs, workOrder.workerInputs)
-           && Objects.equals(extraInfoHolder, workOrder.extraInfoHolder);
+           && Objects.equals(extraInfoHolder, workOrder.extraInfoHolder)
+           && Objects.equals(workerIds, workOrder.workerIds)
+           && Objects.equals(outputChannelMode, workOrder.outputChannelMode);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(queryDefinition, stageNumber, workerInputs, workerNumber, extraInfoHolder);
+    return Objects.hash(
+        queryDefinition,
+        stageNumber,
+        workerNumber,
+        workerInputs,
+        extraInfoHolder,
+        workerIds,
+        outputChannelMode
+    );
   }
 
   @Override
@@ -138,6 +202,8 @@ public class WorkOrder
            ", workerNumber=" + workerNumber +
            ", workerInputs=" + workerInputs +
            ", extraInfoHolder=" + extraInfoHolder +
+           ", workerIds=" + workerIds +
+           ", outputChannelMode=" + outputChannelMode +
            '}';
   }
 }

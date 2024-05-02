@@ -26,12 +26,12 @@ import com.google.inject.Inject;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.ErrorResponse;
 import org.apache.druid.error.QueryExceptionCompat;
-import org.apache.druid.guice.annotations.MSQ;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.msq.guice.MultiStageQuery;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
 import org.apache.druid.msq.sql.SqlTaskStatus;
 import org.apache.druid.query.QueryException;
@@ -86,7 +86,7 @@ public class SqlTaskResource
 
   @Inject
   public SqlTaskResource(
-      final @MSQ SqlStatementFactory sqlStatementFactory,
+      final @MultiStageQuery SqlStatementFactory sqlStatementFactory,
       final ServerConfig serverConfig,
       final AuthorizerMapper authorizerMapper,
       final ObjectMapper jsonMapper

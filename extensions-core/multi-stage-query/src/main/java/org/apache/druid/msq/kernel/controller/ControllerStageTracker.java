@@ -26,11 +26,13 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntAVLTreeSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.key.ClusterByPartition;
 import org.apache.druid.frame.key.ClusterByPartitions;
 import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.exec.ClusterStatisticsMergeMode;
@@ -171,7 +173,14 @@ class ControllerStageTracker
       final long maxInputBytesPerWorker
   )
   {
-    final WorkerInputs workerInputs = WorkerInputs.create(stageDef, stageWorkerCountMap, slicer, assignmentStrategy, maxInputBytesPerWorker);
+    final WorkerInputs workerInputs = WorkerInputs.create(
+        stageDef,
+        stageWorkerCountMap,
+        slicer,
+        assignmentStrategy,
+        maxInputBytesPerWorker
+    );
+
     return new ControllerStageTracker(
         stageDef,
         workerInputs,
@@ -331,12 +340,15 @@ class ControllerStageTracker
    */
   Object getResultObject()
   {
-    if (phase == ControllerStagePhase.FINISHED) {
-      throw new ISE("Result object has been cleaned up prematurely");
-    } else if (phase != ControllerStagePhase.RESULTS_READY) {
-      throw new ISE("Result object is not ready yet");
+    if (!phase.isSuccess()) {
+      throw new ISE("Result object for stage[%s] is not ready yet", stageDef.getId());
     } else if (resultObject == null) {
-      throw new NullPointerException("resultObject was unexpectedly null");
+      throw new NullPointerException(
+          StringUtils.format(
+              "Result object for stage[%s] was unexpectedly null",
+              stageDef.getId()
+          )
+      );
     } else {
       return resultObject;
     }
@@ -382,7 +394,7 @@ class ControllerStageTracker
    * @param workerNumber                    the worker
    * @param partialKeyStatisticsInformation partial key statistics
    */
-  ControllerStagePhase addPartialKeyInformationForWorker(
+  void addPartialKeyInformationForWorker(
       final int workerNumber,
       final PartialKeyStatisticsInformation partialKeyStatisticsInformation
   )
@@ -412,7 +424,7 @@ class ControllerStageTracker
           if (partialKeyStatisticsInformation.getTimeSegments().contains(null)) {
             // Time should not contain null value
             failForReason(InsertTimeNullFault.instance());
-            return getPhase();
+            return;
           }
           completeKeyStatisticsInformation.mergePartialInformation(workerNumber, partialKeyStatisticsInformation);
         }
@@ -470,7 +482,6 @@ class ControllerStageTracker
       fail();
       throw e;
     }
-    return getPhase();
   }
 
   private void initializeTimeChunkWorkerTrackers()
@@ -502,7 +513,6 @@ class ControllerStageTracker
    * <br></br>
    * If all the stats from all the workers are merged, we transition the stage to {@link ControllerStagePhase#POST_READING}
    */
-
   void mergeClusterByStatisticsCollectorForTimeChunk(
       int workerNumber,
       Long timeChunk,
@@ -763,6 +773,58 @@ class ControllerStageTracker
   }
 
   /**
+   * Transitions phase directly from {@link ControllerStagePhase#READING_INPUT} to
+   * {@link ControllerStagePhase#POST_READING}, skipping {@link ControllerStagePhase#MERGING_STATISTICS}.
+   * This method is used for stages that sort but do not need to gather result key statistics.
+   */
+  void setDoneReadingInputForWorker(final int workerNumber)
+  {
+    if (stageDef.mustGatherResultKeyStatistics()) {
+      throw DruidException.defensive(
+          "Cannot setDoneReadingInput for stage[%s], it should send partial key information instead",
+          stageDef.getId()
+      );
+    }
+
+    if (!stageDef.doesSortDuringShuffle()) {
+      throw DruidException.defensive("Cannot setDoneReadingInput for stage[%s], it is not sorting", stageDef.getId());
+    }
+
+    if (workerNumber < 0 || workerNumber >= workerCount) {
+      throw new IAE("Invalid workerNumber[%s] for stage[%s]", workerNumber, stageDef.getId());
+    }
+
+    ControllerWorkerStagePhase currentPhase = workerToPhase.get(workerNumber);
+
+    if (currentPhase == null) {
+      throw new ISE("Worker[%d] not found for stage[%s]", workerNumber, stageDef.getId());
+    }
+
+    try {
+      if (ControllerWorkerStagePhase.PRESHUFFLE_WRITING_OUTPUT.canTransitionFrom(currentPhase)) {
+        workerToPhase.put(workerNumber, ControllerWorkerStagePhase.PRESHUFFLE_WRITING_OUTPUT);
+
+        if (allWorkersDoneReadingInput()) {
+          transitionTo(ControllerStagePhase.POST_READING);
+        }
+      } else {
+        throw new ISE(
+            "Worker[%d] for stage[%d] expected to be in phase that can transition to[%s]. Found phase[%s]",
+            workerNumber,
+            stageDef.getStageNumber(),
+            ControllerWorkerStagePhase.PRESHUFFLE_WRITING_OUTPUT,
+            currentPhase
+        );
+      }
+    }
+    catch (Exception e) {
+      // If this op fails, we're in an inconsistent state and must cancel the stage.
+      fail();
+      throw e;
+    }
+  }
+
+  /**
    * Accepts and sets the results that each worker produces for this particular stage
    *
    * @return true if the results for this stage have been gathered from all the workers, else false
@@ -938,6 +1000,21 @@ class ControllerStageTracker
   }
 
   /**
+   * True if all workers are done reading their inputs.
+   */
+  public boolean allWorkersDoneReadingInput()
+  {
+    for (final ControllerWorkerStagePhase phase : workerToPhase.values()) {
+      if (phase != ControllerWorkerStagePhase.PRESHUFFLE_WRITING_OUTPUT
+          && phase != ControllerWorkerStagePhase.RESULTS_READY) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  /**
    * True if all {@link org.apache.druid.msq.kernel.WorkOrder} are sent else false.
    */
   private boolean allWorkOrdersSent()
@@ -973,7 +1050,7 @@ class ControllerStageTracker
     if (newPhase.canTransitionFrom(phase)) {
       phase = newPhase;
     } else {
-      throw new IAE("Cannot transition from [%s] to [%s]", phase, newPhase);
+      throw new IAE("Cannot transition stage[%s] from[%s] to[%s]", stageDef.getId(), phase, newPhase);
     }
   }
 
