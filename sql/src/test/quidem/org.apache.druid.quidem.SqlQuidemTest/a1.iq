@@ -1,0 +1,148 @@
+!use druidtest://?numMergeBuffers=3
+!set outputformat mysql
+
+SELECT
+  isRobot, isNew, GROUPING(isRobot, isNew) AS "group", COUNT(*) AS "Cnt"
+FROM "wikipedia"
+GROUP BY GROUPING SETS ((isRobot), (isRobot, isNew))
+ORDER BY 2 DESC
+LIMIT 100;
++---------+-------+-------+-------+
+| isRobot | isNew | group | Cnt   |
++---------+-------+-------+-------+
+| false   | true  |     0 |  1977 |
+| true    | true  |     0 |   301 |
+| false   | false |     0 | 21847 |
+| true    | false |     0 | 15119 |
+| false   |       |     1 |  1977 |
+| true    |       |     1 |   301 |
+| false   |       |     1 | 21847 |
+| true    |       |     1 | 15119 |
++---------+-------+-------+-------+
+(8 rows)
+
+!ok
+LogicalSort(sort0=[$1], dir0=[DESC], fetch=[100])
+  LogicalAggregate(group=[{0, 1}], groups=[[{0, 1}, {0}]], group=[GROUPING($0, $1)], Cnt=[COUNT()])
+    LogicalProject(isRobot=[$9], isNew=[$8])
+      LogicalTableScan(table=[[druid, wikipedia]])
+
+!logicalPlan
+!druidPlan
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "wikipedia"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "isRobot",
+    "outputName" : "d0",
+    "outputType" : "STRING"
+  }, {
+    "type" : "default",
+    "dimension" : "isNew",
+    "outputName" : "d1",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "grouping",
+    "name" : "a0",
+    "groupings" : [ "isRobot", "isNew" ]
+  }, {
+    "type" : "count",
+    "name" : "a1"
+  } ],
+  "limitSpec" : {
+    "type" : "default",
+    "columns" : [ {
+      "dimension" : "d1",
+      "direction" : "descending",
+      "dimensionOrder" : {
+        "type" : "lexicographic"
+      }
+    } ],
+    "limit" : 100
+  },
+  "subtotalsSpec" : [ [ "d0", "d1" ], [ "d0" ] ]
+}
+!nativePlan
+
+SELECT
+  isRobot, isNew, GROUPING(isRobot, isNew) AS "group", COUNT(*) AS "Cnt"
+FROM "wikipedia"
+GROUP BY GROUPING SETS ((isRobot), (isRobot, isNew))
+ORDER BY 2 DESC;
++---------+-------+-------+-------+
+| isRobot | isNew | group | Cnt   |
++---------+-------+-------+-------+
+| false   | true  |     0 |  1977 |
+| true    | true  |     0 |   301 |
+| false   | false |     0 | 21847 |
+| true    | false |     0 | 15119 |
+| false   |       |     1 | 23824 |
+| true    |       |     1 | 15420 |
++---------+-------+-------+-------+
+(6 rows)
+
+!ok
+LogicalSort(sort0=[$1], dir0=[DESC])
+  LogicalAggregate(group=[{0, 1}], groups=[[{0, 1}, {0}]], group=[GROUPING($0, $1)], Cnt=[COUNT()])
+    LogicalProject(isRobot=[$9], isNew=[$8])
+      LogicalTableScan(table=[[druid, wikipedia]])
+
+!logicalPlan
+!druidPlan
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "wikipedia"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "isRobot",
+    "outputName" : "d0",
+    "outputType" : "STRING"
+  }, {
+    "type" : "default",
+    "dimension" : "isNew",
+    "outputName" : "d1",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "grouping",
+    "name" : "a0",
+    "groupings" : [ "isRobot", "isNew" ]
+  }, {
+    "type" : "count",
+    "name" : "a1"
+  } ],
+  "limitSpec" : {
+    "type" : "default",
+    "columns" : [ {
+      "dimension" : "d1",
+      "direction" : "descending",
+      "dimensionOrder" : {
+        "type" : "lexicographic"
+      }
+    } ]
+  },
+  "subtotalsSpec" : [ [ "d0", "d1" ], [ "d0" ] ]
+}
+!nativePlan
