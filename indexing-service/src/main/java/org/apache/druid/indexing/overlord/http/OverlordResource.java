@@ -210,7 +210,6 @@ public class OverlordResource
                      .build();
     }
 
-
     Access authResult = AuthorizationUtils.authorizeAllResourceActions(
         req,
         resourceActions,

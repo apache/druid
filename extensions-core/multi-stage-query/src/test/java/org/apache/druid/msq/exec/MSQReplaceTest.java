@@ -179,7 +179,8 @@ public class MSQReplaceTest extends MSQTestBase
                              context,
                              Collections.emptyList(),
                              Collections.singletonList(new FloatDimensionSchema("m1")),
-                             GranularityType.DAY
+                             GranularityType.DAY,
+                             Intervals.ONLY_ETERNITY
                          )
                      )
                      .verifyResults();
@@ -237,7 +238,8 @@ public class MSQReplaceTest extends MSQTestBase
                              context,
                              Collections.emptyList(),
                              Collections.singletonList(new FloatDimensionSchema("m1")),
-                             GranularityType.DAY
+                             GranularityType.DAY,
+                             ImmutableList.of(Intervals.of("2000-01-02T/P1D"))
                          )
                      )
                      .verifyResults();
@@ -327,7 +329,8 @@ public class MSQReplaceTest extends MSQTestBase
                              context,
                              Collections.emptyList(),
                              Collections.singletonList(new LongDimensionSchema("cnt")),
-                             GranularityType.HOUR
+                             GranularityType.HOUR,
+                             Intervals.ONLY_ETERNITY
                          )
                      )
                      .verifyResults();
@@ -402,7 +405,8 @@ public class MSQReplaceTest extends MSQTestBase
                              context,
                              Collections.emptyList(),
                              Collections.singletonList(new StringDimensionSchema("user")),
-                             GranularityType.HOUR
+                             GranularityType.HOUR,
+                             ImmutableList.of(Intervals.of("2016-06-27T01:00:00.000Z/2016-06-27T02:00:00.000Z"))
                          )
                      )
                      .verifyResults();
@@ -483,7 +487,8 @@ public class MSQReplaceTest extends MSQTestBase
                              context,
                              Collections.emptyList(),
                              Collections.singletonList(new FloatDimensionSchema("m1")),
-                             GranularityType.ALL
+                             GranularityType.ALL,
+                             Intervals.ONLY_ETERNITY
                          )
                      )
                      .verifyResults();
@@ -575,7 +580,8 @@ public class MSQReplaceTest extends MSQTestBase
                              context,
                              Collections.emptyList(),
                              Collections.singletonList(new FloatDimensionSchema("m1")),
-                             GranularityType.MONTH
+                             GranularityType.MONTH,
+                             Intervals.ONLY_ETERNITY
                          )
                      )
                      .verifyResults();
@@ -657,7 +663,8 @@ public class MSQReplaceTest extends MSQTestBase
                              context,
                              Collections.emptyList(),
                              Collections.singletonList(new FloatDimensionSchema("m1")),
-                             GranularityType.MONTH
+                             GranularityType.MONTH,
+                             ImmutableList.of(Intervals.of("2000-01-01T/2000-03-01T"))
                          )
                      )
                      .verifyResults();
@@ -742,7 +749,8 @@ public class MSQReplaceTest extends MSQTestBase
                              context,
                              Collections.emptyList(),
                              Collections.singletonList(new FloatDimensionSchema("m1")),
-                             GranularityType.MONTH
+                             GranularityType.MONTH,
+                             Collections.singletonList(Intervals.of("2000-01-01T/2002-01-01T"))
                          )
                      )
                      .verifyResults();
@@ -831,7 +839,8 @@ public class MSQReplaceTest extends MSQTestBase
                              context,
                              Collections.emptyList(),
                              Collections.singletonList(new FloatDimensionSchema("m1")),
-                             GranularityType.MONTH
+                             GranularityType.MONTH,
+                             Collections.singletonList(Intervals.of("2000-01-01T/2000-03-01T"))
                          )
                      )
                      .verifyResults();
@@ -895,7 +904,8 @@ public class MSQReplaceTest extends MSQTestBase
                              context,
                              Collections.emptyList(),
                              Collections.singletonList(new FloatDimensionSchema("m1")),
-                             GranularityType.MONTH
+                             GranularityType.MONTH,
+                             Collections.singletonList(Intervals.of("2000-01-01T/2002-01-01T"))
                          )
                      )
                      .verifyResults();
@@ -956,7 +966,8 @@ public class MSQReplaceTest extends MSQTestBase
                              context,
                              Collections.emptyList(),
                              Collections.singletonList(new FloatDimensionSchema("m1")),
-                             GranularityType.MONTH
+                             GranularityType.MONTH,
+                             Intervals.ONLY_ETERNITY
                          )
                      )
                      .verifyResults();
@@ -996,7 +1007,8 @@ public class MSQReplaceTest extends MSQTestBase
                                  new StringDimensionSchema("dim1"),
                                  new LongDimensionSchema("cnt")
                              ),
-                             GranularityType.DAY
+                             GranularityType.DAY,
+                             Intervals.ONLY_ETERNITY
                          )
                      )
                      .verifyResults();
@@ -1076,7 +1088,8 @@ public class MSQReplaceTest extends MSQTestBase
                              context,
                              Collections.emptyList(),
                              Collections.singletonList(new FloatDimensionSchema("m1")),
-                             GranularityType.ALL
+                             GranularityType.ALL,
+                             Intervals.ONLY_ETERNITY
                          )
                      )
                      .verifyResults();
@@ -1134,7 +1147,8 @@ public class MSQReplaceTest extends MSQTestBase
                              context,
                              Collections.emptyList(),
                              Arrays.asList(new FloatDimensionSchema("m1"), new DoubleDimensionSchema("m2")),
-                             GranularityType.QUARTER
+                             GranularityType.QUARTER,
+                             Intervals.ONLY_ETERNITY
                          )
                      )
                      .verifyResults();
@@ -1226,7 +1240,8 @@ public class MSQReplaceTest extends MSQTestBase
                              context,
                              Collections.emptyList(),
                              Collections.singletonList(new StringDimensionSchema("d")),
-                             GranularityType.ALL
+                             GranularityType.ALL,
+                             Intervals.ONLY_ETERNITY
                          )
                      )
                      .verifyResults();
@@ -1298,7 +1313,8 @@ public class MSQReplaceTest extends MSQTestBase
                              context,
                              Collections.emptyList(),
                              Collections.singletonList(new FloatDimensionSchema("d")),
-                             GranularityType.ALL
+                             GranularityType.ALL,
+                             Intervals.ONLY_ETERNITY
                          )
                      )
                      .verifyResults();
@@ -1381,7 +1397,8 @@ public class MSQReplaceTest extends MSQTestBase
                              context,
                              Collections.singletonList("d"),
                              Collections.singletonList(new StringDimensionSchema("d")),
-                             GranularityType.DAY
+                             GranularityType.DAY,
+                             ImmutableList.of(Intervals.of("1999-01-01T00:00:00.000Z/2002-01-01T00:00:00.000Z"))
                          )
                      )
                      .verifyResults();
@@ -1865,7 +1882,8 @@ public class MSQReplaceTest extends MSQTestBase
       Map<String, Object> context,
       List<String> partitionDimensions,
       List<DimensionSchema> dimensions,
-      GranularityType segmentGranularity
+      GranularityType segmentGranularity,
+      List<Interval> intervals
   )
   {
     if (!context.containsKey(Tasks.STORE_COMPACTION_STATE_KEY)
@@ -1892,7 +1910,7 @@ public class MSQReplaceTest extends MSQTestBase
         segmentGranularity.getDefaultGranularity(),
         GranularityType.NONE.getDefaultGranularity(),
         false,
-        Intervals.ONLY_ETERNITY
+        intervals
     );
     List<Object> metricsSpec = Collections.emptyList();
 

@@ -157,12 +157,12 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
   private final ClientCompactionTaskGranularitySpec granularitySpec;
   @Nullable
   private final CompactionTuningConfig tuningConfig;
+  @Nullable
+  private final CompactionStrategy compactionStrategy;
   @JsonIgnore
   private final SegmentProvider segmentProvider;
   @JsonIgnore
   private final PartitionConfigurationManager partitionConfigurationManager;
-  @Nullable
-  private final CompactionStrategy compactionStrategy;
   @JsonIgnore
   private final SegmentCacheManagerFactory segmentCacheManagerFactory;
 

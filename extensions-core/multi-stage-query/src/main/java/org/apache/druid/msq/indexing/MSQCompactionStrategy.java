@@ -23,8 +23,8 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.inject.Injector;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexer.TaskStatus;
@@ -45,6 +45,7 @@ import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
+import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.Query;
@@ -57,7 +58,6 @@ import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
-import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -81,46 +81,50 @@ import java.util.stream.Collectors;
 public class MSQCompactionStrategy implements CompactionStrategy
 {
   private static final Logger log = new Logger(MSQCompactionStrategy.class);
-  public static final String type = "MSQ";
+  public static final String TYPE = "MSQ";
   private static final Granularity DEFAULT_SEGMENT_GRANULARITY = Granularities.ALL;
 
-  OverlordClient overlordClient;
-  ObjectMapper jsonMapper;
+  private final ObjectMapper jsonMapper;
+  private final Injector injector;
 
   private static final String TIME_VIRTUAL_COLUMN = "vTime";
   private static final String TIME_COLUMN = ColumnHolder.TIME_COLUMN_NAME;
 
-  public MSQCompactionStrategy(@JacksonInject OverlordClient overlordClient, @JacksonInject JsonMapper jsonMapper)
+  public MSQCompactionStrategy(@JacksonInject ObjectMapper jsonMapper, @JacksonInject Injector injector)
   {
-    this.overlordClient = overlordClient;
     this.jsonMapper = jsonMapper;
+    this.injector = injector;
   }
 
   @Override
   @JsonProperty
   public String getType()
   {
-    return type;
+    return TYPE;
   }
 
-  public void setJsonMapper(ObjectMapper jsonMapper)
-  {
-    this.jsonMapper = jsonMapper;
-  }
-
-  @Override
-  public TaskStatus runCompactionTasks(
+  public List<MSQControllerTask> compactionToMSQTasks(
       CompactionTask compactionTask,
-      TaskToolbox taskToolbox,
       List<NonnullPair<Interval, DataSchema>> intervalDataSchemas
   ) throws JsonProcessingException
   {
     List<MSQControllerTask> msqControllerTasks = new ArrayList<>();
     QueryContext compactionTaskContext = new QueryContext(compactionTask.getContext());
 
+    // These checks cannot be included in compaction config validation as context param keys are unknown outside MSQ.
     if (!MultiStageQueryContext.isFinalizeAggregations(compactionTaskContext)) {
       throw InvalidInput.exception(
-          "finalizeAggregations=false currently not supported for auto-compaction with MSQ engine.");
+          "Config[%s] cannot be set to false for auto-compaction with MSQ engine.",
+          MultiStageQueryContext.CTX_FINALIZE_AGGREGATIONS,
+          MultiStageQueryContext.isFinalizeAggregations(compactionTaskContext)
+      );
+    }
+    if (MultiStageQueryContext.getAssignmentStrategy(compactionTaskContext) == WorkerAssignmentStrategy.AUTO) {
+      throw InvalidInput.exception(
+          "Config[%s] cannot be set to value[%s] for auto-compaction with MSQ engine.",
+          MultiStageQueryContext.CTX_TASK_ASSIGNMENT_STRATEGY,
+          WorkerAssignmentStrategy.AUTO
+      );
     }
 
     for (NonnullPair<Interval, DataSchema> intervalDataSchema : intervalDataSchemas) {
@@ -152,15 +156,21 @@ public class MSQCompactionStrategy implements CompactionStrategy
           null,
           null,
           null,
-          msqControllerTaskContext
+          msqControllerTaskContext,
+          injector
       );
-
-      // Doing a serde roundtrip for MSQControllerTask as the "injector" field of this class is supposed to be injected
-      // by the mapper.
-      MSQControllerTask serdedMSQControllerTask = jsonMapper.readerFor(MSQControllerTask.class)
-                                                            .readValue(jsonMapper.writeValueAsString(controllerTask));
-      msqControllerTasks.add(serdedMSQControllerTask);
+      msqControllerTasks.add(controllerTask);
     }
+    return msqControllerTasks;
+  }
+  @Override
+  public TaskStatus runCompactionTasks(
+      CompactionTask compactionTask,
+      TaskToolbox taskToolbox,
+      List<NonnullPair<Interval, DataSchema>> intervalDataSchemas
+  ) throws JsonProcessingException
+  {
+    List<MSQControllerTask> msqControllerTasks = compactionToMSQTasks(compactionTask, intervalDataSchemas);
 
     if (msqControllerTasks.isEmpty()) {
       log.warn(
@@ -210,6 +220,8 @@ public class MSQCompactionStrategy implements CompactionStrategy
     }
     // This parameter is used internally for the number of worker tasks only, so we subtract 1
     final int maxNumWorkers = maxNumTasks - 1;
+    // We don't consider maxRowsInMemory coming via CompactionTuningConfig since it always sets a default value if no
+    // value specified by user.
     final int maxRowsInMemory = MultiStageQueryContext.getRowsInMemory(compactionTaskContext);
 
     Integer rowsPerSegment = getRowsPerSegment(compactionTask);

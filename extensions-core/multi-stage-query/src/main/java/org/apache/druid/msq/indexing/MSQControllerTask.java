@@ -141,6 +141,22 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery, 
     addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, true);
   }
 
+  public MSQControllerTask(
+      @Nullable String id,
+      MSQSpec querySpec,
+      @Nullable String sqlQuery,
+      @Nullable Map<String, Object> sqlQueryContext,
+      @Nullable SqlResults.Context sqlResultsContext,
+      @Nullable List<SqlTypeName> sqlTypeNames,
+      @Nullable List<ColumnType> nativeTypeNames,
+      @Nullable Map<String, Object> context,
+      Injector injector
+  )
+  {
+    this(id, querySpec, sqlQuery, sqlQueryContext, sqlResultsContext, sqlTypeNames, nativeTypeNames, context);
+    this.injector = injector;
+  }
+
   @Override
   public String getType()
   {

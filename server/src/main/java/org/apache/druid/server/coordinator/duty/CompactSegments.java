@@ -475,7 +475,8 @@ public class CompactSegments implements CoordinatorCustomDuty
       if (compactionEngine == CompactionEngine.MSQ) {
         if (!autoCompactionContext.containsKey(maxNumTasksContextParam)) {
           // Since MSQ needs all task slots for the calculated #tasks to be available upfront, allot all available
-          // compaction slots to current compaction task to avoid stalling.
+          // compaction slots to current compaction task to avoid stalling. Setting "taskAssignment" to "auto" has the
+          // problem of not being able to determine the actual count, which is required for subsequent tasks.
           numCurrentCompactionTasksAndSubtasks = numAvailableCompactionTaskSlots;
           autoCompactionContext.put(maxNumTasksContextParam, numCurrentCompactionTasksAndSubtasks);
         } else {

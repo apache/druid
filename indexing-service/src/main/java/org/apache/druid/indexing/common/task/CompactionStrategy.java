@@ -42,11 +42,11 @@ import java.util.List;
     property = CompactionStrategy.TYPE_PROPERTY,
     visible = true)
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = NativeCompactionStrategy.type, value = NativeCompactionStrategy.class)
+    @JsonSubTypes.Type(name = NativeCompactionStrategy.TYPE, value = NativeCompactionStrategy.class)
 })
 public interface CompactionStrategy
 {
-  String TYPE_PROPERTY = "type";
+  String TYPE_PROPERTY = "TYPE";
 
   TaskStatus runCompactionTasks(
       CompactionTask compactionTask,

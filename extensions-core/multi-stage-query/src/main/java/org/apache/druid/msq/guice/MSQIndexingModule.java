@@ -199,7 +199,7 @@ public class MSQIndexingModule implements DruidModule
         NilInputSource.class
     );
 
-    module.registerSubtypes(new NamedType(MSQCompactionStrategy.class, MSQCompactionStrategy.type));
+    module.registerSubtypes(new NamedType(MSQCompactionStrategy.class, MSQCompactionStrategy.TYPE));
 
     FAULT_CLASSES.forEach(module::registerSubtypes);
     module.addSerializer(new CounterSnapshotsSerializer());
