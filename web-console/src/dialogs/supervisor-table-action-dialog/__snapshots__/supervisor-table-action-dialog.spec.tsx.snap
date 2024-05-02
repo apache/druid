@@ -116,7 +116,7 @@ exports[`SupervisorTableActionDialog matches snapshot 1`] = `
               <span
                 class="bp4-button-text"
               >
-                Statistics
+                Task stats
               </span>
             </button>
             <button
@@ -144,7 +144,7 @@ exports[`SupervisorTableActionDialog matches snapshot 1`] = `
               <span
                 class="bp4-button-text"
               >
-                Payload
+                Spec
               </span>
             </button>
             <button
