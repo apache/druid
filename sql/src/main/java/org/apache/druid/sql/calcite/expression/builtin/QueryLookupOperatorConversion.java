@@ -86,8 +86,8 @@ public class QueryLookupOperatorConversion implements SqlOperatorConversion
           final String lookupName = (String) lookupNameExpr.getLiteralValue();
 
           // Put the lookup names in the query context to facilitate selective loading of lookups.
-          plannerContext.queryContextMap().putIfAbsent(PlannerContext.CTX_LOOKUPS_TO_LOAD, new HashSet<>());
-          Set<String> lookupsToLoad = (Set<String>) plannerContext.queryContextMap().get(PlannerContext.CTX_LOOKUPS_TO_LOAD);
+          Set<String> lookupsToLoad = (Set<String>) plannerContext.queryContextMap()
+              .computeIfAbsent(PlannerContext.CTX_LOOKUPS_TO_LOAD, key -> new HashSet<>());
           lookupsToLoad.add(lookupName);
 
           if (arg.isSimpleExtraction() && lookupNameExpr.isLiteral()) {
