@@ -21,23 +21,43 @@ package org.apache.druid.msq.exec;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Injector;
-import org.apache.druid.client.coordinator.CoordinatorClient;
-import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.msq.indexing.MSQSpec;
+import org.apache.druid.msq.input.InputSpecSlicer;
+import org.apache.druid.msq.input.table.SegmentsInputSlice;
+import org.apache.druid.msq.input.table.TableInputSpec;
+import org.apache.druid.msq.kernel.QueryDefinition;
+import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
 import org.apache.druid.server.DruidNode;
 
 /**
- * Context used by multi-stage query controllers.
- *
- * Useful because it allows test fixtures to provide their own implementations.
+ * Context used by multi-stage query controllers. Useful because it allows test fixtures to provide their own
+ * implementations.
  */
 public interface ControllerContext
 {
-  ServiceEmitter emitter();
+  /**
+   * Configuration for {@link org.apache.druid.msq.kernel.controller.ControllerQueryKernel}.
+   */
+  ControllerQueryKernelConfig queryKernelConfig(MSQSpec querySpec, QueryDefinition queryDef);
 
+  /**
+   * Callback from the controller implementation to "register" the controller. Used in the indexing task implementation
+   * to set up the task chat web service.
+   */
+  void registerController(Controller controller, Closer closer);
+
+  /**
+   * JSON-enabled object mapper.
+   */
   ObjectMapper jsonMapper();
+
+  /**
+   * Emit a metric using a {@link ServiceEmitter}.
+   */
+  void emitMetric(String metric, Number value);
 
   /**
    * Provides a way for tasks to request injectable objects. Useful because tasks are not able to request injection
@@ -51,32 +71,33 @@ public interface ControllerContext
   DruidNode selfNode();
 
   /**
-   * Provide access to the Coordinator service.
+   * Provides an {@link InputSpecSlicer} that slices {@link TableInputSpec} into {@link SegmentsInputSlice}.
    */
-  CoordinatorClient coordinatorClient();
+  InputSpecSlicer newTableInputSpecSlicer();
 
   /**
-   * Provide access to segment actions in the Overlord.
+   * Provide access to segment actions in the Overlord. Only called for ingestion queries, i.e., where
+   * {@link MSQSpec#getDestination()} is {@link org.apache.druid.msq.indexing.destination.DataSourceMSQDestination}.
    */
   TaskActionClient taskActionClient();
 
   /**
    * Provides services about workers: starting, canceling, obtaining status.
+   *
+   * @param queryId               query ID
+   * @param querySpec             query spec
+   * @param queryKernelConfig     config from {@link #queryKernelConfig(MSQSpec, QueryDefinition)}
+   * @param workerFailureListener listener that receives callbacks when workers fail
    */
-  WorkerManagerClient workerManager();
-
-  /**
-   * Callback from the controller implementation to "register" the controller. Used in the indexing task implementation
-   * to set up the task chat web service.
-   */
-  void registerController(Controller controller, Closer closer);
+  WorkerManager newWorkerManager(
+      String queryId,
+      MSQSpec querySpec,
+      ControllerQueryKernelConfig queryKernelConfig,
+      WorkerFailureListener workerFailureListener
+  );
 
   /**
    * Client for communicating with workers.
    */
-  WorkerClient taskClientFor(Controller controller);
-  /**
-   * Writes controller task report.
-   */
-  void writeReports(String controllerTaskId, TaskReport.ReportMap reports);
+  WorkerClient newWorkerClient();
 }

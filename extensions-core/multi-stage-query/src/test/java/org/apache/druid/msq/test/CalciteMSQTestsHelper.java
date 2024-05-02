@@ -32,6 +32,7 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.frame.processor.Bouncer;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.IndexingServiceTuningConfigModule;
 import org.apache.druid.guice.JoinableFactoryModule;
@@ -175,6 +176,7 @@ public class CalciteMSQTestsHelper
               groupByBuffers
           ).getGroupingEngine();
           binder.bind(GroupingEngine.class).toInstance(groupingEngine);
+          binder.bind(Bouncer.class).toInstance(new Bouncer(1));
         };
     return ImmutableList.of(
         customBindings,

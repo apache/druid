@@ -62,7 +62,7 @@ public @interface SqlTestFrameworkConfig
 
   int minTopNThreshold() default TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD;
 
-  ResultCacheMode resultCache() default null;
+  ResultCacheMode resultCache() default ResultCacheMode.DISABLED;
 
   Class<? extends QueryComponentSupplier> supplier() default StandardComponentSupplier.class;
 

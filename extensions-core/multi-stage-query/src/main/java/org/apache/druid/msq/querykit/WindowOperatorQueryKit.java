@@ -76,7 +76,7 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
     ShuffleSpec nextShuffleSpec = findShuffleSpecForNextWindow(operatorList.get(0), maxWorkerCount);
     // add this shuffle spec to the last stage of the inner query
 
-    final QueryDefinitionBuilder queryDefBuilder = QueryDefinition.builder().queryId(queryId);
+    final QueryDefinitionBuilder queryDefBuilder = QueryDefinition.builder(queryId);
     if (nextShuffleSpec != null) {
       final ClusterBy windowClusterBy = nextShuffleSpec.clusterBy();
       originalQuery = (WindowOperatorQuery) originalQuery.withOverriddenContext(ImmutableMap.of(
@@ -178,7 +178,7 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
         );
       }
     }
-    return queryDefBuilder.queryId(queryId).build();
+    return queryDefBuilder.build();
   }
 
   /**

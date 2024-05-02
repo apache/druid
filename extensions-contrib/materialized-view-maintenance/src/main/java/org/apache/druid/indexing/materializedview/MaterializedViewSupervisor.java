@@ -299,12 +299,6 @@ public class MaterializedViewSupervisor implements Supervisor
   }
 
   @Override
-  public Set<String> getActiveRealtimeSequencePrefixes()
-  {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
   public int getActiveTaskGroupsCount()
   {
     throw new UnsupportedOperationException("Get Active Task Groups Count is not supported in MaterializedViewSupervisor");
