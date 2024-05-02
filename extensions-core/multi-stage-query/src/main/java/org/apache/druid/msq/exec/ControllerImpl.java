@@ -195,7 +195,6 @@ import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.storage.ExportStorageProvider;
