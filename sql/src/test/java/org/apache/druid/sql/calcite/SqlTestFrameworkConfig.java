@@ -29,8 +29,6 @@ import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
-import javax.ws.rs.DefaultValue;
-
 import java.io.Closeable;
 import java.lang.annotation.Annotation;
 import java.lang.annotation.ElementType;
@@ -57,7 +55,18 @@ import java.util.function.Function;
 @Target({ElementType.METHOD, ElementType.TYPE})
 public @interface SqlTestFrameworkConfig
 {
-  @DefaultValue("sdf")
+  @Retention(RetentionPolicy.RUNTIME)
+  @Target({ElementType.METHOD, ElementType.TYPE})
+  public @interface NumMergeBuffers {
+    int value() default 0;
+  }
+
+  @Retention(RetentionPolicy.RUNTIME)
+  @Target({ElementType.METHOD, ElementType.TYPE})
+  public @interface MinTopNThreshold {
+    int value() default 0;
+  }
+
   int numMergeBuffers() default 0;
 
   int minTopNThreshold() default TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD;
@@ -91,6 +100,21 @@ public @interface SqlTestFrameworkConfig
       }
     }
 
+    public SqlTestFrameworkConfigInstance(Annotation[] annotations)
+    {
+      try {
+        numMergeBuffers = getValue2(annotations, NumMergeBuffers.class.getMethod("value"));
+        minTopNThreshold = getValue2(annotations, MinTopNThreshold.class.getMethod("value"));
+//        resultCache = getValue2(annotations, SqlTestFrameworkConfig.class.getMethod("resultCache"));
+//        supplier = getValue2(annotations, SqlTestFrameworkConfig.class.getMethod("supplier"));
+      }
+      catch (NoSuchMethodException | SecurityException | IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
+        throw new RuntimeException(e);
+      }
+      this.resultCache = null;
+      this.supplier = null;
+    }
+
     private <T> T getValue(SqlTestFrameworkConfig[] annotations, Method method) throws IllegalAccessException, IllegalArgumentException, InvocationTargetException
     {
       T  value = (T) method.getDefaultValue();
@@ -99,6 +123,21 @@ public @interface SqlTestFrameworkConfig
         Class<SqlTestFrameworkConfig> ct = SqlTestFrameworkConfig.class;
       for (SqlTestFrameworkConfig annotation : annotations) {
         value = (T) method.invoke(annotation);
+      }
+      return value;
+
+    }
+    private <T> T getValue2(Annotation[] annotations, Method method) throws IllegalAccessException, IllegalArgumentException, InvocationTargetException
+    {
+      T  value = (T) method.getDefaultValue();
+//      Class<? extends Annotation> at = annotations[0].annotationType();
+//      Class<? extends Annotation> at2 = annotations[0].getClass();
+//        Class<SqlTestFrameworkConfig> ct = SqlTestFrameworkConfig.class;
+      Class<?> declaringClass = method.getDeclaringClass();
+      for (Annotation annotation : annotations) {
+        if (declaringClass.isInstance(annotation)) {
+          value = (T) method.invoke(annotation);
+        }
       }
       return value;
 
