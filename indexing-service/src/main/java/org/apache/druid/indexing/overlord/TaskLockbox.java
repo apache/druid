@@ -590,7 +590,7 @@ public class TaskLockbox
                                      && conflictPosse.getTaskLock().getInterval().equals(request.getInterval())
                 );
 
-            if (allConflictsAreForSameTaskGroupAndInterval) {
+            if (allLocksHaveSameTaskGroupAndInterval) {
               // Lock collision was because of the different granularity in the same group.
               // OR because of different lock types for exclusive locks within the same group
               // We can add a new taskLockPosse.
