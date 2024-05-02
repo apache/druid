@@ -104,18 +104,22 @@ public class GroupByResourcesReservationPool
   }
 
   /**
-   * Reserves appropriate resources, and maps it to the queryResourceId (usually the query's resource id) in the internal map
+   * Reserves appropriate resources, and maps it to the queryResourceId (usually the query's resource id) in the internal map.
    */
   public void reserve(QueryResourceId queryResourceId, GroupByQuery groupByQuery, boolean willMergeRunner)
   {
     if (queryResourceId == null) {
       throw DruidException.defensive("Query resource id must be populated");
     }
+    GroupByQueryResources resources =
+        GroupingEngine.prepareResource(groupByQuery, mergeBufferPool, willMergeRunner, groupByQueryConfig);
+
     pool.compute(queryResourceId, (id, existingResource) -> {
       if (existingResource != null) {
+        resources.close();
         throw DruidException.defensive("Resource with the given identifier [%s] is already present", id);
       }
-      return GroupingEngine.prepareResource(groupByQuery, mergeBufferPool, willMergeRunner, groupByQueryConfig);
+      return resources;
     });
   }
 
