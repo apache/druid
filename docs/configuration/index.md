@@ -582,9 +582,9 @@ This deep storage is used to interface with Cassandra. You must load the `druid-
 
 #### Centralized datasource schema
 
-Centralized datasource schema is an [experimental feature](../development/experimental.md) to centralized datasource schema management within the Coordinator.
-Traditionally, the datasource schema is built in the Brokers by combining schema for all the available segments
-of a datasource. Brokers issue segment metadata query to data nodes and tasks to fetch segment schema.
+Centralized datasource schema is an [experimental feature](../development/experimental.md) to centralized datasource schema building within the Coordinator.
+Traditionally, the datasource schema is built in the Brokers by combining schema for all the available segments of a datasource.
+Brokers issue segment metadata query to data nodes and tasks to fetch segment schema.
 In the new arrangement, tasks publish segment schema along with segment metadata to the database and schema for realtime segments is periodically pushed to the Coordinator in the segment announcement flow.
 This enables Coordinator to cache segment schemas and build datasource schema by combining segment schema.
 Brokers query the datasource schema from the Coordinator, while retaining the ability to build table schema if the
@@ -595,7 +595,7 @@ need arises.
 |`druid.centralizedDatasourceSchema.enabled`|Boolean flag for enabling datasource schema building in the Coordinator, this should be specified in the common runtime properties.|false|No.|
 |`druid.indexer.fork.property.druid.centralizedDatasourceSchema.enabled`| This config should be set when CentralizedDatasourceSchema feature is enabled. This should be specified in the MiddleManager runtime properties.|false|No.|
 
-Refer to properties with the prefix `druid.coordinator.kill.segmentSchema` in [Metadata Management](#Metadata management) to configure stale schema cleanup opeartions.
+For, stale schema cleanup configs, refer to properties with the prefix `druid.coordinator.kill.segmentSchema` in [Metadata Management](#Metadata management).
 
 ### Ingestion security configuration
 
@@ -1446,7 +1446,7 @@ MiddleManagers pass their configurations down to their child peons. The MiddleMa
 |`druid.worker.baseTaskDirs`|List of base temporary working directories, one of which is assigned per task in a round-robin fashion. This property can be used to allow usage of multiple disks for indexing. This property is recommended in place of and takes precedence over `${druid.indexer.task.baseTaskDir}`.  If this configuration is not set, `${druid.indexer.task.baseTaskDir}` is used. For example, `druid.worker.baseTaskDirs=[\"PATH1\",\"PATH2\",...]`.|null|
 |`druid.worker.baseTaskDirSize`|The total amount of bytes that can be used by tasks on any single task dir. This value is treated symmetrically across all directories, that is, if this is 500 GB and there are 3 `baseTaskDirs`, then each of those task directories is assumed to allow for 500 GB to be used and a total of 1.5 TB will potentially be available across all tasks. The actual amount of memory assigned to each task is discussed in [Configuring task storage sizes](../ingestion/tasks.md#configuring-task-storage-sizes)|`Long.MAX_VALUE`|
 |`druid.worker.category`|A string to name the category that the MiddleManager node belongs to.|`_default_worker_category`|
-|`druid.indexer.fork.property.druid.centralizedDatasourceSchema.enabled`| This config should be set when CentralizedDatasourceSchema feature is enabled. |false| 
+|`druid.indexer.fork.property.druid.centralizedDatasourceSchema.enabled`| This config should be set when [Centralized Datasource Schema](#Centralized Datasource Schema) feature is enabled. |false| 
 
 #### Peon processing
 
