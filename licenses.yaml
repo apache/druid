@@ -652,7 +652,7 @@ name: Apache Commons Configuration
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.8.0
+version: 2.10.1
 libraries:
   - org.apache.commons: commons-configuration2
 
@@ -1054,7 +1054,7 @@ name: org.bouncycastle bcprov-jdk18on
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: MIT License
-version: "1.76"
+version: "1.78.1"
 libraries:
   - org.bouncycastle: bcprov-jdk18on
   - org.bouncycastle: bcprov-ext-jdk18on
@@ -4223,7 +4223,7 @@ license_category: binary
 module: extensions/druid-azure-extensions
 license_name: MIT License
 copyright: Microsoft
-version: 1.11.1
+version: 1.11.4
 libraries:
   - com.azure: azure-identity
 
@@ -4234,7 +4234,7 @@ license_category: binary
 module: extensions/druid-azure-extensions
 license_name: MIT License
 copyright: Microsoft
-version: 12.21.1
+version: 12.25.4
 libraries:
   - com.azure: azure-storage-blob-batch
 
@@ -4245,7 +4245,7 @@ license_category: binary
 module: extensions/druid-azure-extensions
 license_name: MIT License
 copyright: Microsoft
-version: 12.24.1
+version: 12.24.4
 libraries:
   - com.azure: azure-storage-common
 
@@ -4256,7 +4256,7 @@ license_category: binary
 module: extensions/druid-azure-extensions
 license_name: MIT License
 copyright: Microsoft
-version: 12.10.1
+version: 12.10.3
 libraries:
   - com.azure: azure-storage-internal-avro
 
@@ -4277,7 +4277,7 @@ license_category: binary
 module: extensions/druid-azure-extensions
 license_name: MIT License
 copyright: Microsoft
-version: 1.13.11
+version: 1.14.2
 libraries:
   - com.azure: azure-core-http-netty
 
@@ -4288,7 +4288,7 @@ license_category: binary
 module: extensions/druid-azure-extensions
 license_name: MIT License
 copyright: Microsoft
-version: 1.45.1
+version: 1.48.0
 libraries:
   - com.azure: azure-core
 
