@@ -79,6 +79,10 @@ public class SqlResourceCollectorShuttle extends SqlShuttle
     // raw tables and views and such will have a IdentifierNamespace
     // since we are scoped to identifiers here, we should only pick up these
     SqlValidatorNamespace namespace = validator.getNamespace(id);
+
+    // Put an empty set to facilitate loading no lookups by default.
+    plannerContext.queryContextMap().putIfAbsent(PlannerContext.CTX_LOOKUPS_TO_LOAD, new HashSet<>());
+
     if (namespace != null && namespace.isWrapperFor(IdentifierNamespace.class)) {
       SqlValidatorTable validatorTable = namespace.getTable();
       // this should not probably be null if the namespace was not null,
@@ -91,7 +95,6 @@ public class SqlResourceCollectorShuttle extends SqlShuttle
 
           // Put the lookup names in the query context to facilitate selective loading of lookups.
           if (schema.equals(NamedLookupSchema.NAME)) {
-            plannerContext.queryContextMap().putIfAbsent(PlannerContext.CTX_LOOKUPS_TO_LOAD, new HashSet<>());
             Set<String> lookupsToLoad = (Set<String>) plannerContext.queryContextMap().get(PlannerContext.CTX_LOOKUPS_TO_LOAD);
             lookupsToLoad.add(resourceName);
           }

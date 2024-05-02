@@ -342,9 +342,9 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery, 
   {
     if (getQuerySpec().getQuery().getContext().containsKey(PlannerContext.CTX_LOOKUPS_TO_LOAD)) {
       List<String> lookupsToLoad = (List<String>) getQuerySpec().getQuery().getContext().get(PlannerContext.CTX_LOOKUPS_TO_LOAD);
-      return LookupLoadingSpec.loadOnly(new HashSet<>(lookupsToLoad));
+      return lookupsToLoad.isEmpty() ? LookupLoadingSpec.NONE : LookupLoadingSpec.loadOnly(new HashSet<>(lookupsToLoad));
     } else {
-      return LookupLoadingSpec.NONE;
+      return LookupLoadingSpec.ALL;
     }
   }
 }

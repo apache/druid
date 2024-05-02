@@ -271,7 +271,7 @@ public class IndexerControllerContext implements ControllerContext
         .put(MultiStageQueryContext.CTX_MAX_CONCURRENT_STAGES, queryKernelConfig.getMaxConcurrentStages());
 
     // Put the lookup names in the query context to facilitate selective loading of lookups.
-    if (querySpec.getQuery().getContext().containsKey(PlannerContext.CTX_LOOKUPS_TO_LOAD) && querySpec.getQuery().getContext().get(PlannerContext.CTX_LOOKUPS_TO_LOAD) != null) {
+    if (querySpec.getQuery().getContext().get(PlannerContext.CTX_LOOKUPS_TO_LOAD) != null) {
       taskContextOverridesBuilder.put(
           PlannerContext.CTX_LOOKUPS_TO_LOAD,
           querySpec.getQuery().getContext().get(PlannerContext.CTX_LOOKUPS_TO_LOAD)

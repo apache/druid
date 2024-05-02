@@ -27,6 +27,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -117,11 +118,19 @@ public class MSQWorkerTaskTest
   public void testGetDefaultLookupLoadingSpec()
   {
     MSQWorkerTask msqWorkerTask = new MSQWorkerTask(controllerTaskId, dataSource, workerNumber, context, retryCount);
+    Assert.assertEquals(LookupLoadingSpec.ALL, msqWorkerTask.getLookupLoadingSpec());
+  }
+
+  @Test
+  public void testGetLookupLoadingSpecUsingEmptyListInContext()
+  {
+    final ImmutableMap<String, Object> context = ImmutableMap.of(PlannerContext.CTX_LOOKUPS_TO_LOAD, Collections.emptyList());
+    MSQWorkerTask msqWorkerTask = new MSQWorkerTask(controllerTaskId, dataSource, workerNumber, context, retryCount);
     Assert.assertEquals(LookupLoadingSpec.NONE, msqWorkerTask.getLookupLoadingSpec());
   }
 
   @Test
-  public void testGetLookupLoadingSpecUsingContext()
+  public void testGetLookupLoadingSpecUsingNonEmptyListInContext()
   {
     final ImmutableMap<String, Object> context = ImmutableMap.of(PlannerContext.CTX_LOOKUPS_TO_LOAD, Arrays.asList("lookupName1", "lookupName2"));
     MSQWorkerTask msqWorkerTask = new MSQWorkerTask(controllerTaskId, dataSource, workerNumber, context, retryCount);

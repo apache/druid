@@ -102,11 +102,38 @@ public class MSQControllerTaskTest
         null,
         null
     );
+    Assert.assertEquals(LookupLoadingSpec.ALL, controllerTask.getLookupLoadingSpec());
+  }
+
+  @Test
+  public void testGetLookupLoadingSpecUsingEmptyListInContext()
+  {
+    MSQSpec build = MSQSpec
+        .builder()
+        .query(new Druids.ScanQueryBuilder()
+                   .intervals(new MultipleIntervalSegmentSpec(INTERVALS))
+                   .dataSource("target")
+                   .context(ImmutableMap.of(PlannerContext.CTX_LOOKUPS_TO_LOAD, Collections.emptyList()))
+                   .build()
+        )
+        .columnMappings(new ColumnMappings(Collections.emptyList()))
+        .tuningConfig(MSQTuningConfig.defaultConfig())
+        .build();
+    MSQControllerTask controllerTask = new MSQControllerTask(
+        null,
+        build,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+    );
     Assert.assertEquals(LookupLoadingSpec.NONE, controllerTask.getLookupLoadingSpec());
   }
 
   @Test
-  public void testGetLookupLoadingSpecUsingContext()
+  public void testGetLookupLoadingSpecUsingNonEmptyListInContext()
   {
     MSQSpec build = MSQSpec
         .builder()
