@@ -579,30 +579,18 @@ public class TaskLockbox
               || revokeAllIncompatibleActiveLocksIfPossible(conflictPosses, request)) {
             posseToUse = createNewTaskLockPosse(request);
           } else {
-            // During a rolling update, tasks of mixed versions can be run at the same time. Old tasks would request
-            // timeChunkLocks while new tasks would ask segmentLocks. The below check is to allow for old and new tasks
-            // to get locks of different granularities if they have the same groupId.
-            final boolean allDifferentGranularity = conflictPosses
+            // When a rolling upgrade happens or lock types are changed for an ongoing Streaming ingestion supervisor,
+            // the existing tasks might have or request different lock granularities or types than the new ones.
+            // To ensure a smooth transition, we must allocate the different lock types for the new tasks
+            // so that they can coexist and ingest with the required locks.
+            final boolean allConflictsAreForSameTaskGroupAndInterval = conflictPosses
                 .stream()
                 .allMatch(
-                    conflictPosse -> conflictPosse.taskLock.getGranularity() != request.getGranularity()
-                                     && conflictPosse.getTaskLock().getGroupId().equals(request.getGroupId())
+                    conflictPosse -> conflictPosse.getTaskLock().getGroupId().equals(request.getGroupId())
                                      && conflictPosse.getTaskLock().getInterval().equals(request.getInterval())
                 );
 
-            // When using timechunk locks, lock types for can be changed for tasks within a task group.
-            // For example when a supervisor with EXCLUSIVE locks is changed to use concurrent APPEND locks,
-            // The new tasks must be granted different lock types without having to wait for the older ones to complete.
-            final boolean allDifferentTimechunkTypes = conflictPosses
-                .stream()
-                .allMatch(
-                    conflictPosse -> conflictPosse.taskLock.getGranularity() == LockGranularity.TIME_CHUNK
-                                     && request.getGranularity() == LockGranularity.TIME_CHUNK
-                                     && conflictPosse.getTaskLock().getGroupId().equals(request.getGroupId())
-                                     && conflictPosse.getTaskLock().getInterval().equals(request.getInterval())
-                );
-
-            if (allDifferentGranularity || allDifferentTimechunkTypes) {
+            if (allConflictsAreForSameTaskGroupAndInterval) {
               // Lock collision was because of the different granularity in the same group.
               // OR because of different lock types for exclusive locks within the same group
               // We can add a new taskLockPosse.
