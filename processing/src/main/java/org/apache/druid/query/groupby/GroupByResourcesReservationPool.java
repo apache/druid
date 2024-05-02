@@ -105,6 +105,7 @@ public class GroupByResourcesReservationPool
 
   /**
    * Reserves appropriate resources, and maps it to the queryResourceId (usually the query's resource id) in the internal map.
+   * This is a blocking call, and can block upto the given query's timeout
    */
   public void reserve(QueryResourceId queryResourceId, GroupByQuery groupByQuery, boolean willMergeRunner)
   {

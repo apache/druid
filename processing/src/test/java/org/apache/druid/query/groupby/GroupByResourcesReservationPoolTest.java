@@ -67,7 +67,14 @@ public class GroupByResourcesReservationPoolTest
                                      .setGranularity(Granularities.ALL)
                                      .setContext(ImmutableMap.of("timeout", 0)) // Query can block indefinitely
                                      .build();
-
+    // Sanity checks that the query will acquire exactly one merge buffer. This safeguards the test being useful in
+    // case the merge buffer acquisition code changes to acquire less than one merge buffer (the test would be
+    // useless in that case) or more than one merge buffer (the test would incorrectly fail in that case)
+    Assert.assertTrue(
+        GroupByQueryResources.countRequiredMergeBufferNumForMergingQueryRunner(config, query)
+        + GroupByQueryResources.countRequiredMergeBufferNumForToolchestMerge(query)
+        == 1
+    );
 
     // Blocking pool with a single buffer, which means only one of the queries can succeed at a time
     BlockingPool<ByteBuffer> mergeBufferPool = new DefaultBlockingPool<>(() -> ByteBuffer.allocate(100), 1);
@@ -83,11 +90,6 @@ public class GroupByResourcesReservationPoolTest
 
     // THREAD 1
     executor.submit(() -> {
-      // Sanity checks that the query will acquire exactly one merge buffer. This safeguards the test being useful in
-      // case the merge buffer acquisition code changes to acquire less than one merge buffer (the test would be
-      // useless in that case) or more than one merge buffer (the test would incorrectly fail in that case)
-      assert (GroupByQueryResources.countRequiredMergeBufferNumForMergingQueryRunner(config, query)
-              + GroupByQueryResources.countRequiredMergeBufferNumForToolchestMerge(query) == 1);
 
       QueryResourceId queryResourceId1 = new QueryResourceId("test-id-1")
       {
@@ -122,8 +124,6 @@ public class GroupByResourcesReservationPoolTest
 
     // THREAD 2
     executor.submit(() -> {
-      assert (GroupByQueryResources.countRequiredMergeBufferNumForMergingQueryRunner(config, query)
-              + GroupByQueryResources.countRequiredMergeBufferNumForToolchestMerge(query) == 1);
       try {
         reserveCalledByFirstThread.await();
       }
