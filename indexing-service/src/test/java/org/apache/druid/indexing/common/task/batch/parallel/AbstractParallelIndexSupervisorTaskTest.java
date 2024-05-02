@@ -534,7 +534,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
       }
     }
 
-    public DataSegmentsWithSchemas getPublishedSegments(String taskId)
+    public DataSegmentsWithSchemas getPublishedSegmentsWithSchemas(String taskId)
     {
       final TaskContainer taskContainer = tasks.get(taskId);
       if (taskContainer == null || taskContainer.actionClient == null) {
@@ -667,7 +667,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
 
     public DataSegmentsWithSchemas getSegmentAndSchemas(Task task)
     {
-      return taskRunner.getPublishedSegments(task.getId());
+      return taskRunner.getPublishedSegmentsWithSchemas(task.getId());
     }
   }
 

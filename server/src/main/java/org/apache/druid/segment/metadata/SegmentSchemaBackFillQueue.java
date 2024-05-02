@@ -183,7 +183,7 @@ public class SegmentSchemaBackFillQueue
         emitter.emit(
             ServiceMetricEvent.builder()
                                        .setDimension("dataSource", entry.getKey())
-                                       .setMetric("metadatacache/backfill/count", polled.size())
+                                       .setMetric("metadatacache/backfill/count", entry.getValue().size())
         );
       }
       catch (Exception e) {
