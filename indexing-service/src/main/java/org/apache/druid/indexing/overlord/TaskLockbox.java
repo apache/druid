@@ -583,7 +583,7 @@ public class TaskLockbox
             // the existing tasks might have or request different lock granularities or types than the new ones.
             // To ensure a smooth transition, we must allocate the different lock types for the new tasks
             // so that they can coexist and ingest with the required locks.
-            final boolean allConflictsAreForSameTaskGroupAndInterval = conflictPosses
+            final boolean allLocksHaveSameTaskGroupAndInterval = conflictPosses
                 .stream()
                 .allMatch(
                     conflictPosse -> conflictPosse.getTaskLock().getGroupId().equals(request.getGroupId())
