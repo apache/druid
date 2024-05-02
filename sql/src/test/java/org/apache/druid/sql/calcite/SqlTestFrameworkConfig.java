@@ -29,6 +29,7 @@ import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
+import java.io.Closeable;
 import java.lang.annotation.Annotation;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -38,6 +39,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Function;
 
 /**
@@ -56,15 +58,77 @@ public @interface SqlTestFrameworkConfig
 
   ResultCacheMode resultCache() default ResultCacheMode.DISABLED;
 
+  /**
+   * Non-annotation version of {@link SqlTestFrameworkConfig}.
+   *
+   * Makes it less convoluted to work with configurations created at runtime.
+   */
+  class SqlTestFrameworkConfigInstance
+  {
+    public final int numMergeBuffers;
+    public final int minTopNThreshold;
+    public final ResultCacheMode resultCache;
 
+    public SqlTestFrameworkConfigInstance(SqlTestFrameworkConfig annotation)
+    {
+      numMergeBuffers = annotation.numMergeBuffers();
+      minTopNThreshold = annotation.minTopNThreshold();
+      resultCache = annotation.resultCache();
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hash(minTopNThreshold, numMergeBuffers, resultCache);
+    }
+
+    @Override
+    public boolean equals(Object obj)
+    {
+      if (obj == null || getClass() != obj.getClass()) {
+        return false;
+      }
+      SqlTestFrameworkConfigInstance other = (SqlTestFrameworkConfigInstance) obj;
+      return minTopNThreshold == other.minTopNThreshold
+          && numMergeBuffers == other.numMergeBuffers
+          && resultCache == other.resultCache;
+    }
+
+  }
+
+  class SqlTestFrameworkConfigStore implements Closeable
+  {
+    Map<SqlTestFrameworkConfigInstance, ConfigurationInstance> configMap = new HashMap<>();
+
+    public ConfigurationInstance getConfigurationInstance(
+        SqlTestFrameworkConfigInstance config,
+        Function<TempDirProducer, QueryComponentSupplier> testHostSupplier)
+    {
+      ConfigurationInstance ret = configMap.get(config);
+      if (!configMap.containsKey(config)) {
+        ret = new ConfigurationInstance(config, testHostSupplier.apply(new TempDirProducer("druid-test")));
+        configMap.put(config, ret);
+      }
+      return ret;
+    }
+
+    @Override
+    public void close()
+    {
+      for (ConfigurationInstance f : configMap.values()) {
+        f.close();
+      }
+      configMap.clear();
+    }
+  }
 
   /**
    * @see {@link SqlTestFrameworkConfig}
    */
   class Rule implements AfterAllCallback, BeforeEachCallback, BeforeAllCallback
   {
-    Map<SqlTestFrameworkConfig, ConfigurationInstance> configMap = new HashMap<>();
-    private SqlTestFrameworkConfig config;
+    SqlTestFrameworkConfigStore configStore = new SqlTestFrameworkConfigStore();
+    private SqlTestFrameworkConfigInstance config;
     private Function<TempDirProducer, QueryComponentSupplier> testHostSupplier;
     private Method method;
 
@@ -99,10 +163,7 @@ public @interface SqlTestFrameworkConfig
     @Override
     public void afterAll(ExtensionContext context)
     {
-      for (ConfigurationInstance f : configMap.values()) {
-        f.close();
-      }
-      configMap.clear();
+      configStore.close();
     }
 
     @Override
@@ -126,17 +187,22 @@ public @interface SqlTestFrameworkConfig
       }
     }
 
-    public void setConfig(SqlTestFrameworkConfig annotation)
+    private void setConfig(SqlTestFrameworkConfig annotation)
     {
-      config = annotation;
-      if (config == null) {
-        config = defaultConfig();
+      if (annotation == null) {
+        annotation = defaultConfig();
       }
+      config = new SqlTestFrameworkConfigInstance(annotation);
+    }
+
+    public SqlTestFrameworkConfigInstance getConfig()
+    {
+      return config;
     }
 
     public SqlTestFramework get()
     {
-      return getConfigurationInstance().framework;
+      return configStore.getConfigurationInstance(config, testHostSupplier).framework;
     }
 
     public <T extends Annotation> T getAnnotation(Class<T> annotationType)
@@ -144,14 +210,9 @@ public @interface SqlTestFrameworkConfig
       return method.getAnnotation(annotationType);
     }
 
-    private ConfigurationInstance getConfigurationInstance()
+    public String testName()
     {
-      return configMap.computeIfAbsent(config, this::buildConfiguration);
-    }
-
-    ConfigurationInstance buildConfiguration(SqlTestFrameworkConfig config)
-    {
-      return new ConfigurationInstance(config, testHostSupplier.apply(new TempDirProducer("druid-test")));
+      return method.getName();
     }
   }
 
@@ -159,13 +220,13 @@ public @interface SqlTestFrameworkConfig
   {
     public SqlTestFramework framework;
 
-    ConfigurationInstance(SqlTestFrameworkConfig config, QueryComponentSupplier testHost)
+    ConfigurationInstance(SqlTestFrameworkConfigInstance config, QueryComponentSupplier testHost)
     {
       SqlTestFramework.Builder builder = new SqlTestFramework.Builder(testHost)
           .catalogResolver(testHost.createCatalogResolver())
-          .minTopNThreshold(config.minTopNThreshold())
-          .mergeBufferCount(config.numMergeBuffers())
-          .withOverrideModule(config.resultCache().makeModule());
+          .minTopNThreshold(config.minTopNThreshold)
+          .mergeBufferCount(config.numMergeBuffers)
+          .withOverrideModule(config.resultCache.makeModule());
       framework = builder.build();
     }
 
