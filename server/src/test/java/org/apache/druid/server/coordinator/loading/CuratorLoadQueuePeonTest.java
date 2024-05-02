@@ -53,13 +53,13 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-public class LoadQueuePeonTest extends CuratorTestBase
+public class CuratorLoadQueuePeonTest extends CuratorTestBase
 {
   private static final String LOAD_QUEUE_PATH = "/druid/loadqueue/localhost:1234";
 
   private final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
 
-  private LoadQueuePeon loadQueuePeon;
+  private CuratorLoadQueuePeon loadQueuePeon;
   private PathChildrenCache loadQueueCache;
 
   @Before

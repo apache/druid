@@ -47,6 +47,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Use {@link HttpLoadQueuePeon} instead.
@@ -75,7 +76,7 @@ public class CuratorLoadQueuePeon implements LoadQueuePeon
   private final Duration loadTimeout;
 
   private final AtomicLong queuedSize = new AtomicLong(0);
-  private final CoordinatorRunStats stats = new CoordinatorRunStats();
+  private final AtomicReference<CoordinatorRunStats> stats = new AtomicReference<>(new CoordinatorRunStats());
 
   /**
    * Needs to be thread safe since it can be concurrently accessed via
@@ -172,7 +173,7 @@ public class CuratorLoadQueuePeon implements LoadQueuePeon
   @Override
   public CoordinatorRunStats getAndResetStats()
   {
-    return stats.getSnapshotAndReset();
+    return stats.getAndSet(new CoordinatorRunStats());
   }
 
   @Override
@@ -360,7 +361,7 @@ public class CuratorLoadQueuePeon implements LoadQueuePeon
 
     timedOutSegments.clear();
     queuedSize.set(0L);
-    stats.clear();
+    stats.get().clear();
   }
 
   private void onZkNodeDeleted(SegmentHolder segmentHolder, String path)
@@ -388,7 +389,7 @@ public class CuratorLoadQueuePeon implements LoadQueuePeon
     if (e != null) {
       log.error(e, "Server[%s], throwable caught when submitting [%s].", basePath, segmentHolder);
     }
-    stats.add(Stats.SegmentQueue.FAILED_ACTIONS, 1);
+    stats.get().add(Stats.SegmentQueue.FAILED_ACTIONS, 1);
 
     if (handleTimeout) {
       // Avoid removing the segment entry from the load/drop list in case config.getLoadTimeoutDelay() expires.

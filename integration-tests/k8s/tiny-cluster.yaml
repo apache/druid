@@ -73,7 +73,6 @@ spec:
     druid.discovery.type=k8s
     druid.discovery.k8s.clusterIdentifier=druid-it
     druid.serverview.type=http
-    druid.coordinator.loadqueuepeon.type=http
     druid.indexer.runner.type=httpRemote
 
     # Metadata Store
