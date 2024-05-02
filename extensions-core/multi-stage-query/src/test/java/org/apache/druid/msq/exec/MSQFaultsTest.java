@@ -27,6 +27,7 @@ import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
+import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -51,6 +52,7 @@ import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.hamcrest.CoreMatchers;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentMatcher;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
@@ -532,7 +534,10 @@ public class MSQFaultsTest extends MSQTestBase
 
     Mockito.doReturn(ImmutableSet.of(existingDataSegment))
            .when(testTaskActionClient)
-           .submit(ArgumentMatchers.isA(RetrieveUsedSegmentsAction.class));
+           .submit(ArgumentMatchers.argThat(
+               (ArgumentMatcher<TaskAction<?>>) argument ->
+                   argument instanceof RetrieveUsedSegmentsAction
+                   && "foo1".equals(((RetrieveUsedSegmentsAction) argument).getDataSource())));
 
     String expectedError = new TooManyBucketsFault(Limits.MAX_PARTITION_BUCKETS).getErrorMessage();
 
@@ -578,7 +583,10 @@ public class MSQFaultsTest extends MSQTestBase
 
     Mockito.doReturn(ImmutableSet.of(existingDataSegment))
            .when(testTaskActionClient)
-           .submit(ArgumentMatchers.isA(RetrieveUsedSegmentsAction.class));
+           .submit(ArgumentMatchers.argThat(
+               (ArgumentMatcher<TaskAction<?>>) argument ->
+                   argument instanceof RetrieveUsedSegmentsAction
+                   && "foo1".equals(((RetrieveUsedSegmentsAction) argument).getDataSource())));
 
     String expectedError = new TooManyBucketsFault(Limits.MAX_PARTITION_BUCKETS).getErrorMessage();
 

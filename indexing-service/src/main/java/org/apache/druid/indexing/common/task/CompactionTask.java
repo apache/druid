@@ -129,6 +129,7 @@ import java.util.stream.IntStream;
  */
 public class CompactionTask extends AbstractBatchIndexTask implements PendingSegmentAllocatingTask
 {
+  public static final String TYPE = "compact";
   private static final Logger log = new Logger(CompactionTask.class);
   private static final Clock UTC_CLOCK = Clock.systemUTC();
 
@@ -144,8 +145,6 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
    * instead of a more general approach such as new methods on the Task interface.
    */
   public static final String CTX_KEY_APPENDERATOR_TRACKING_TASK_ID = "appenderatorTrackingTaskId";
-
-  private static final String TYPE = "compact";
 
   private static final boolean STORE_COMPACTION_STATE = true;
 

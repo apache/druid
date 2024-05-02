@@ -141,6 +141,8 @@ public class Stats
         = CoordinatorStat.toDebugAndEmit("killedSupervisorSpecs", "metadata/kill/supervisor/count");
     public static final CoordinatorStat RULES
         = CoordinatorStat.toDebugAndEmit("killedRules", "metadata/kill/rule/count");
+    public static final CoordinatorStat SEGMENT_SCHEMA
+        = CoordinatorStat.toDebugAndEmit("killSchemas", "metadata/kill/segmentSchema/count");
     public static final CoordinatorStat AUDIT_LOGS
         = CoordinatorStat.toDebugAndEmit("killedAuditLogs", "metadata/kill/audit/count");
     public static final CoordinatorStat DATASOURCES
@@ -155,9 +157,6 @@ public class Stats
         = CoordinatorStat.toDebugAndEmit("killEligibleUnusedSegs", "kill/eligibleUnusedSegments/count");
     public static final CoordinatorStat PENDING_SEGMENTS
         = CoordinatorStat.toDebugAndEmit("killPendingSegs", "kill/pendingSegments/count");
-
-    public static final CoordinatorStat SEGMENT_SCHEMAS
-        = CoordinatorStat.toDebugAndEmit("killedSegmentSchemas", "kill/segmentSchemas/count");
   }
 
   public static class Balancer

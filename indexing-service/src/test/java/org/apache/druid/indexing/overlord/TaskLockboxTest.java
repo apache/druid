@@ -1948,8 +1948,10 @@ public class TaskLockboxTest
     // Only the replaceTask should attempt a delete on the upgradeSegments table
     EasyMock.expect(coordinator.deleteUpgradeSegmentsForTask(replaceTask.getId())).andReturn(0).once();
     // Any task may attempt pending segment clean up
-    EasyMock.expect(coordinator.deletePendingSegmentsForTaskAllocatorId(replaceTask.getId())).andReturn(0).once();
-    EasyMock.expect(coordinator.deletePendingSegmentsForTaskAllocatorId(appendTask.getId())).andReturn(0).once();
+    EasyMock.expect(coordinator.deletePendingSegmentsForTaskAllocatorId(replaceTask.getDataSource(), replaceTask.getId()))
+            .andReturn(0).once();
+    EasyMock.expect(coordinator.deletePendingSegmentsForTaskAllocatorId(appendTask.getDataSource(), appendTask.getId()))
+            .andReturn(0).once();
     EasyMock.replay(coordinator);
 
     final TaskLockbox taskLockbox = new TaskLockbox(taskStorage, coordinator);
