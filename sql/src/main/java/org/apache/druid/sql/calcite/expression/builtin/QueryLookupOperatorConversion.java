@@ -37,9 +37,7 @@ import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rule.ReverseLookupRule;
 
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 public class QueryLookupOperatorConversion implements SqlOperatorConversion
 {
@@ -85,10 +83,8 @@ public class QueryLookupOperatorConversion implements SqlOperatorConversion
           final String replaceMissingValueWith = getReplaceMissingValueWith(inputExpressions, plannerContext);
           final String lookupName = (String) lookupNameExpr.getLiteralValue();
 
-          // Put the lookup names in the query context to facilitate selective loading of lookups.
-          Set<String> lookupsToLoad = (Set<String>) plannerContext.queryContextMap()
-              .computeIfAbsent(PlannerContext.CTX_LOOKUPS_TO_LOAD, key -> new HashSet<>());
-          lookupsToLoad.add(lookupName);
+          // Collect the lookup names to facilitate selective loading of lookups.
+          plannerContext.getLookupsToLoad().add(lookupName);
 
           if (arg.isSimpleExtraction() && lookupNameExpr.isLiteral()) {
             return arg.getSimpleExtraction().cascade(

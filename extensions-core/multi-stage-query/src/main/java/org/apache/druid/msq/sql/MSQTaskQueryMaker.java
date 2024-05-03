@@ -52,6 +52,7 @@ import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.server.QueryResponse;
+import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.sql.calcite.parser.DruidSqlIngest;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.parser.DruidSqlReplace;
@@ -283,6 +284,16 @@ public class MSQTaskQueryMaker implements QueryMaker
 
     MSQTaskQueryMakerUtils.validateRealtimeReindex(querySpec);
 
+    Map<String, Object> context = new HashMap<>();
+    if (plannerContext.getLookupsToLoad() != null) {
+      if (plannerContext.getLookupsToLoad().isEmpty()) {
+        context.put(PlannerContext.CTX_LOOKUP_LOADING_MODE, LookupLoadingSpec.Mode.NONE);
+      } else {
+        context.put(PlannerContext.CTX_LOOKUP_LOADING_MODE, LookupLoadingSpec.Mode.ONLY_REQUIRED);
+        context.put(PlannerContext.CTX_LOOKUPS_TO_LOAD, plannerContext.getLookupsToLoad());
+      }
+    }
+
     final MSQControllerTask controllerTask = new MSQControllerTask(
         taskId,
         querySpec.withOverriddenContext(nativeQueryContext),
@@ -291,7 +302,7 @@ public class MSQTaskQueryMaker implements QueryMaker
         SqlResults.Context.fromPlannerContext(plannerContext),
         sqlTypeNames,
         columnTypeList,
-        null
+        context
     );
 
     FutureUtils.getUnchecked(overlordClient.runTask(taskId, controllerTask), true);

@@ -193,9 +193,16 @@ public class MSQWorkerTask extends AbstractTask
   @Override
   public LookupLoadingSpec getLookupLoadingSpec()
   {
-    if (getContext().containsKey(PlannerContext.CTX_LOOKUPS_TO_LOAD)) {
+    if (!getContext().containsKey(PlannerContext.CTX_LOOKUP_LOADING_MODE) || getContext().get(PlannerContext.CTX_LOOKUP_LOADING_MODE) == null) {
+      return LookupLoadingSpec.ALL;
+    }
+
+    String lookupLoadingMode = getContext().get(PlannerContext.CTX_LOOKUP_LOADING_MODE).toString();
+    if (lookupLoadingMode.equals(LookupLoadingSpec.Mode.NONE.toString())) {
+      return LookupLoadingSpec.NONE;
+    } else if (lookupLoadingMode.equals(LookupLoadingSpec.Mode.ONLY_REQUIRED.toString())) {
       List<String> lookupsToLoad = (List<String>) getContext().get(PlannerContext.CTX_LOOKUPS_TO_LOAD);
-      return lookupsToLoad.isEmpty() ? LookupLoadingSpec.NONE : LookupLoadingSpec.loadOnly(new HashSet<>(lookupsToLoad));
+      return LookupLoadingSpec.loadOnly(new HashSet<>(lookupsToLoad));
     } else {
       return LookupLoadingSpec.ALL;
     }

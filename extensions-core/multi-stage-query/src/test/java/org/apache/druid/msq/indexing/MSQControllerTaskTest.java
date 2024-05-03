@@ -21,7 +21,6 @@ package org.apache.druid.msq.indexing;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
@@ -102,45 +101,22 @@ public class MSQControllerTaskTest
         null,
         null
     );
-    Assert.assertEquals(LookupLoadingSpec.ALL, controllerTask.getLookupLoadingSpec());
-  }
-
-  @Test
-  public void testGetLookupLoadingSpecUsingEmptyListInContext()
-  {
-    MSQSpec build = MSQSpec
-        .builder()
-        .query(new Druids.ScanQueryBuilder()
-                   .intervals(new MultipleIntervalSegmentSpec(INTERVALS))
-                   .dataSource("target")
-                   .context(ImmutableMap.of(PlannerContext.CTX_LOOKUPS_TO_LOAD, Collections.emptyList()))
-                   .build()
-        )
-        .columnMappings(new ColumnMappings(Collections.emptyList()))
-        .tuningConfig(MSQTuningConfig.defaultConfig())
-        .build();
-    MSQControllerTask controllerTask = new MSQControllerTask(
-        null,
-        build,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
-    );
     Assert.assertEquals(LookupLoadingSpec.NONE, controllerTask.getLookupLoadingSpec());
   }
 
   @Test
-  public void testGetLookupLoadingSpecUsingNonEmptyListInContext()
+  public void testGetLookupLoadingSpecUsingLookupLoadingInfoInContext()
   {
     MSQSpec build = MSQSpec
         .builder()
         .query(new Druids.ScanQueryBuilder()
                    .intervals(new MultipleIntervalSegmentSpec(INTERVALS))
                    .dataSource("target")
-                   .context(ImmutableMap.of(PlannerContext.CTX_LOOKUPS_TO_LOAD, Arrays.asList("lookupName1", "lookupName2")))
+                   .context(
+                       ImmutableMap.of(
+                           PlannerContext.CTX_LOOKUPS_TO_LOAD, Arrays.asList("lookupName1", "lookupName2"),
+                           PlannerContext.CTX_LOOKUP_LOADING_MODE, LookupLoadingSpec.Mode.ONLY_REQUIRED)
+                   )
                    .build()
         )
         .columnMappings(new ColumnMappings(Collections.emptyList()))
@@ -156,8 +132,9 @@ public class MSQControllerTaskTest
         null,
         null
     );
-    Assert.assertEquals(LookupLoadingSpec.Mode.ONLY_REQUIRED, controllerTask.getLookupLoadingSpec().getMode());
-    Assert.assertEquals(ImmutableSet.of("lookupName1", "lookupName2"), controllerTask.getLookupLoadingSpec().getLookupsToLoad());
+
+    // Va;idate that MSQ Controller task doesn't load any lookups even if context has lookup info populated.
+    Assert.assertEquals(LookupLoadingSpec.NONE, controllerTask.getLookupLoadingSpec());
   }
 
   @Test

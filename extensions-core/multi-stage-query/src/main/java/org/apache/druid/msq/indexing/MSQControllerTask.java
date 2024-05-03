@@ -61,13 +61,11 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.run.SqlResults;
 import org.joda.time.Interval;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -141,7 +139,6 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery, 
     this.sqlResultsContext = sqlResultsContext;
     this.sqlTypeNames = sqlTypeNames;
     this.nativeTypeNames = nativeTypeNames;
-
     addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, true);
   }
 
@@ -340,11 +337,6 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery, 
   @Override
   public LookupLoadingSpec getLookupLoadingSpec()
   {
-    if (getQuerySpec().getQuery().getContext().containsKey(PlannerContext.CTX_LOOKUPS_TO_LOAD)) {
-      List<String> lookupsToLoad = (List<String>) getQuerySpec().getQuery().getContext().get(PlannerContext.CTX_LOOKUPS_TO_LOAD);
-      return lookupsToLoad.isEmpty() ? LookupLoadingSpec.NONE : LookupLoadingSpec.loadOnly(new HashSet<>(lookupsToLoad));
-    } else {
-      return LookupLoadingSpec.ALL;
-    }
+    return LookupLoadingSpec.NONE;
   }
 }

@@ -27,7 +27,6 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -52,7 +51,6 @@ public class MSQWorkerTaskTest
   @Test
   public void testEquals()
   {
-    Assert.assertEquals(msqWorkerTask, msqWorkerTask);
     Assert.assertEquals(
         msqWorkerTask,
         new MSQWorkerTask(controllerTaskId, dataSource, workerNumber, context, retryCount)
@@ -122,17 +120,19 @@ public class MSQWorkerTaskTest
   }
 
   @Test
-  public void testGetLookupLoadingSpecUsingEmptyListInContext()
+  public void testGetLookupLoadingSpecUsingLookupLoadingModeNoneInContext()
   {
-    final ImmutableMap<String, Object> context = ImmutableMap.of(PlannerContext.CTX_LOOKUPS_TO_LOAD, Collections.emptyList());
+    final ImmutableMap<String, Object> context = ImmutableMap.of(PlannerContext.CTX_LOOKUP_LOADING_MODE, LookupLoadingSpec.Mode.NONE);
     MSQWorkerTask msqWorkerTask = new MSQWorkerTask(controllerTaskId, dataSource, workerNumber, context, retryCount);
     Assert.assertEquals(LookupLoadingSpec.NONE, msqWorkerTask.getLookupLoadingSpec());
   }
 
   @Test
-  public void testGetLookupLoadingSpecUsingNonEmptyListInContext()
+  public void testGetLookupLoadingSpecUsingNonEmptyLookupListInContext()
   {
-    final ImmutableMap<String, Object> context = ImmutableMap.of(PlannerContext.CTX_LOOKUPS_TO_LOAD, Arrays.asList("lookupName1", "lookupName2"));
+    final ImmutableMap<String, Object> context = ImmutableMap.of(
+        PlannerContext.CTX_LOOKUPS_TO_LOAD, Arrays.asList("lookupName1", "lookupName2"),
+        PlannerContext.CTX_LOOKUP_LOADING_MODE, LookupLoadingSpec.Mode.ONLY_REQUIRED);
     MSQWorkerTask msqWorkerTask = new MSQWorkerTask(controllerTaskId, dataSource, workerNumber, context, retryCount);
     Assert.assertEquals(LookupLoadingSpec.Mode.ONLY_REQUIRED, msqWorkerTask.getLookupLoadingSpec().getMode());
     Assert.assertEquals(ImmutableSet.of("lookupName1", "lookupName2"), msqWorkerTask.getLookupLoadingSpec().getLookupsToLoad());

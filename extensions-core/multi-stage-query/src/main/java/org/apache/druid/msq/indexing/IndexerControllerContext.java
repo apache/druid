@@ -270,11 +270,17 @@ public class IndexerControllerContext implements ControllerContext
         .put(MultiStageQueryContext.CTX_IS_REINDEX, MSQControllerTask.isReplaceInputDataSourceTask(querySpec))
         .put(MultiStageQueryContext.CTX_MAX_CONCURRENT_STAGES, queryKernelConfig.getMaxConcurrentStages());
 
-    // Put the lookup names in the query context to facilitate selective loading of lookups.
-    if (querySpec.getQuery().getContext().get(PlannerContext.CTX_LOOKUPS_TO_LOAD) != null) {
+    // Put the lookup loading info in the task context to facilitate selective loading of lookups.
+    if (controllerTaskContext.get(PlannerContext.CTX_LOOKUP_LOADING_MODE) != null) {
+      taskContextOverridesBuilder.put(
+          PlannerContext.CTX_LOOKUP_LOADING_MODE,
+          controllerTaskContext.get(PlannerContext.CTX_LOOKUP_LOADING_MODE)
+      );
+    }
+    if (controllerTaskContext.get(PlannerContext.CTX_LOOKUPS_TO_LOAD) != null) {
       taskContextOverridesBuilder.put(
           PlannerContext.CTX_LOOKUPS_TO_LOAD,
-          querySpec.getQuery().getContext().get(PlannerContext.CTX_LOOKUPS_TO_LOAD)
+          controllerTaskContext.get(PlannerContext.CTX_LOOKUPS_TO_LOAD)
       );
     }
 

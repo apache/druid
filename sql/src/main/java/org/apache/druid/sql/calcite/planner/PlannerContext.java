@@ -61,6 +61,7 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -78,6 +79,7 @@ public class PlannerContext
   public static final String CTX_SQL_CURRENT_TIMESTAMP = "sqlCurrentTimestamp";
   public static final String CTX_SQL_TIME_ZONE = "sqlTimeZone";
   public static final String CTX_SQL_JOIN_ALGORITHM = "sqlJoinAlgorithm";
+  public static final String CTX_LOOKUP_LOADING_MODE = "lookupLoadingMode";
   public static final String CTX_LOOKUPS_TO_LOAD = "lookupsToLoad";
   private static final JoinAlgorithm DEFAULT_SQL_JOIN_ALGORITHM = JoinAlgorithm.BROADCAST;
 
@@ -143,6 +145,8 @@ public class PlannerContext
   // set of attributes for a SQL statement used in the EXPLAIN PLAN output
   private ExplainAttributes explainAttributes;
   private PlannerLookupCache lookupCache;
+  // set of lookups to load for a given task
+  private final Set<String> lookupsToLoad = new HashSet<>();
 
   private PlannerContext(
       final PlannerToolbox plannerToolbox,
@@ -342,6 +346,14 @@ public class PlannerContext
   public String getSchemaResourceType(String schema, String resourceName)
   {
     return plannerToolbox.rootSchema().getResourceType(schema, resourceName);
+  }
+
+  /**
+   * Returns the set of lookups to laod for a given task.
+   */
+  public Set<String> getLookupsToLoad()
+  {
+    return lookupsToLoad;
   }
 
   /**
