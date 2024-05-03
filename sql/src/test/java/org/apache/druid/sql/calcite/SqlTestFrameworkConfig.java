@@ -250,8 +250,7 @@ public class SqlTestFrameworkConfig
 
   public static List<Annotation> collectAnnotations(Class<?> testClass, Method method)
   {
-    List<Annotation> annotations = new ArrayList<>();
-    annotations.addAll(Arrays.asList(method.getAnnotations()));
+    List<Annotation> annotations = new ArrayList<>(Arrays.asList(method.getAnnotations()));
     Class<?> clz = testClass;
     while (clz != null) {
       annotations.addAll(Arrays.asList(clz.getAnnotations()));
