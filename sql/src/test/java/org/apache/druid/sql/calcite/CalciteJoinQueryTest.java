@@ -85,6 +85,7 @@ import org.apache.druid.server.QueryLifecycle;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.sql.calcite.DecoupledTestConfig.NativeQueryIgnore;
 import org.apache.druid.sql.calcite.NotYetSupported.Modes;
+import org.apache.druid.sql.calcite.SqlTestFrameworkConfig.MinTopNThreshold;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
@@ -120,7 +121,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     return false;
   }
 
-  @SqlTestFrameworkConfig(minTopNThreshold = 1)
+  @MinTopNThreshold(1)
   @Test
   public void testInnerJoinWithLimitAndAlias()
   {
