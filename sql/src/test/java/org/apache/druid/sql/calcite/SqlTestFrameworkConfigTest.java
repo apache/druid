@@ -41,20 +41,21 @@ public class SqlTestFrameworkConfigTest
         .verify();
   }
 
-
   @ResultCache(ResultCacheMode.ENABLED)
-  static class B {
-
+  static class B
+  {
   }
 
   @NumMergeBuffers(3)
   static class C extends B
   {
     @MinTopNThreshold(1)
-    public void imaginaryTestMethod1() {
+    public void imaginaryTestMethod1()
+    {
     }
 
-    public void imaginaryTestMethod2() {
+    public void imaginaryTestMethod2()
+    {
     }
   }
 
@@ -62,14 +63,16 @@ public class SqlTestFrameworkConfigTest
   static class D extends C
   {
     @NumMergeBuffers(1)
-    public void imaginaryTestMethod3() {
+    public void imaginaryTestMethod3()
+    {
     }
   }
 
   @Test
   public void testAnnotationProcessingChain() throws Exception
   {
-    List<Annotation> annotations1 = SqlTestFrameworkConfig.collectAnnotations(C.class, D.class.getMethod("imaginaryTestMethod1"));
+    List<Annotation> annotations1 = SqlTestFrameworkConfig
+        .collectAnnotations(C.class, D.class.getMethod("imaginaryTestMethod1"));
     SqlTestFrameworkConfig config = new SqlTestFrameworkConfig(annotations1);
     assertEquals(1, config.minTopNThreshold);
     assertEquals(3, config.numMergeBuffers);
@@ -79,7 +82,8 @@ public class SqlTestFrameworkConfigTest
   @Test
   public void testAnnotationOverridingClassHasDefault() throws Exception
   {
-    List<Annotation> annotations1 = SqlTestFrameworkConfig.collectAnnotations(D.class, D.class.getMethod("imaginaryTestMethod2"));
+    List<Annotation> annotations1 = SqlTestFrameworkConfig
+        .collectAnnotations(D.class, D.class.getMethod("imaginaryTestMethod2"));
     SqlTestFrameworkConfig config = new SqlTestFrameworkConfig(annotations1);
     assertEquals(2, config.minTopNThreshold);
     assertEquals(3, config.numMergeBuffers);
@@ -89,7 +93,8 @@ public class SqlTestFrameworkConfigTest
   @Test
   public void testAnnotationOverridingClassChangesDefault() throws Exception
   {
-    List<Annotation> annotations1 = SqlTestFrameworkConfig.collectAnnotations(D.class, D.class.getMethod("imaginaryTestMethod3"));
+    List<Annotation> annotations1 = SqlTestFrameworkConfig
+        .collectAnnotations(D.class, D.class.getMethod("imaginaryTestMethod3"));
     SqlTestFrameworkConfig config = new SqlTestFrameworkConfig(annotations1);
     assertEquals(2, config.minTopNThreshold);
     assertEquals(1, config.numMergeBuffers);

@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite;
 
 import com.google.api.client.util.Preconditions;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.topn.TopNQueryConfig;
 import org.apache.druid.sql.calcite.util.CacheTestHelperModule.ResultCacheMode;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
@@ -41,6 +42,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -135,6 +137,7 @@ public class SqlTestFrameworkConfig
     }
   }
 
+  @SuppressWarnings("unchecked")
   private <T> T getValueFromMap(Map<String, String> map, Class<? extends Annotation> annotationClass)
       throws IllegalAccessException, InvocationTargetException, NoSuchMethodException, SecurityException
   {
@@ -173,6 +176,7 @@ public class SqlTestFrameworkConfig
     throw new IAE("supplier [%s] is not known; known are [%s]", name, knownNames);
   }
 
+  @SuppressWarnings("unchecked")
   private <T> T getValueFromAnnotation(List<Annotation> annotations, Class<? extends Annotation> annotationClass)
       throws IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException,
       SecurityException
@@ -186,6 +190,7 @@ public class SqlTestFrameworkConfig
     return defaultValue(annotationClass);
   }
 
+  @SuppressWarnings("unchecked")
   private <T> T defaultValue(Class<? extends Annotation> annotationClass)
       throws IllegalAccessException, InvocationTargetException, NoSuchMethodException, SecurityException
   {
@@ -193,7 +198,7 @@ public class SqlTestFrameworkConfig
     Annotation annotation = annotationClass.getAnnotation(annotationClass);
     Preconditions.checkNotNull(
         annotation,
-        String.format("Annotation class [%s] must be annotated with itself to set default value", annotationClass)
+        StringUtils.format("Annotation class [%s] must be annotated with itself to set default value", annotationClass)
     );
     return (T) method.invoke(annotation);
   }
@@ -246,14 +251,14 @@ public class SqlTestFrameworkConfig
   public static List<Annotation> collectAnnotations(Class<?> testClass, Method method)
   {
     List<Annotation> annotations = new ArrayList<>();
-    annotations.addAll(List.of(method.getAnnotations()));
+    annotations.addAll(Arrays.asList(method.getAnnotations()));
     Class<?> clz = testClass;
     while (clz != null) {
-      annotations.addAll(List.of(clz.getAnnotations()));
+      annotations.addAll(Arrays.asList(clz.getAnnotations()));
       clz = clz.getSuperclass();
     }
     annotations.removeIf(
-        annotation -> annotation.getClass().getInterfaces()[0].getDeclaringClass() != SqlTestFrameworkConfig.class
+        annotation -> annotation.annotationType().getDeclaringClass() != SqlTestFrameworkConfig.class
     );
     return annotations;
   }
@@ -274,12 +279,12 @@ public class SqlTestFrameworkConfig
     }
 
     @Override
-    public void beforeEach(ExtensionContext context) throws NoSuchMethodException
+    public void beforeEach(ExtensionContext context)
     {
       setConfig(context);
     }
 
-    private void setConfig(ExtensionContext context) throws NoSuchMethodException
+    private void setConfig(ExtensionContext context)
     {
       method = context.getTestMethod().get();
       Class<?> testClass = context.getTestClass().get();
