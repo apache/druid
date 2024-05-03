@@ -59,6 +59,7 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -160,7 +161,7 @@ public class PlannerContext
     this.sql = sql;
     this.plannerConfig = Preconditions.checkNotNull(plannerConfig, "plannerConfig");
     this.engine = engine;
-    this.queryContext = queryContext;
+    this.queryContext = new HashMap<>(queryContext);
     this.localNow = Preconditions.checkNotNull(localNow, "localNow");
     this.stringifyArrays = stringifyArrays;
     this.useBoundsAndSelectors = useBoundsAndSelectors;

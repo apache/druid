@@ -32,7 +32,7 @@ import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.schema.DruidSchemaName;
 
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.List;
 
 public class DruidViewMacro implements TableMacro
@@ -61,7 +61,7 @@ public class DruidViewMacro implements TableMacro
              plannerFactory.createPlanner(
                  ViewSqlEngine.INSTANCE,
                  viewSql,
-                 new HashMap<>(),
+                 Collections.emptyMap(),
                  null
              )
     ) {
