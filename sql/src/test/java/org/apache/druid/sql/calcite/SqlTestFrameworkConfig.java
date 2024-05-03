@@ -232,7 +232,7 @@ public class SqlTestFrameworkConfig
     {
       ConfigurationInstance ret = configMap.get(config);
       if (!configMap.containsKey(config)) {
-        ret = new ConfigurationInstance(config, new TempDirProducer("druid-test"), queryComponentSupplierWrapper);
+        ret = new ConfigurationInstance(config, queryComponentSupplierWrapper);
         configMap.put(config, ret);
       }
       return ret;
@@ -330,18 +330,16 @@ public class SqlTestFrameworkConfig
 
     public ConfigurationInstance(
         SqlTestFrameworkConfig config,
-        TempDirProducer tempDirProducer,
         Function<QueryComponentSupplier, QueryComponentSupplier> queryComponentSupplierWrapper) throws Exception
     {
-      this(config, queryComponentSupplierWrapper.apply(makeQueryComponentSupplier(config.supplier, tempDirProducer)));
+      this(config, queryComponentSupplierWrapper.apply(makeQueryComponentSupplier(config.supplier)));
     }
 
     private static QueryComponentSupplier makeQueryComponentSupplier(
-        Class<? extends QueryComponentSupplier> supplierClazz,
-        TempDirProducer tempDirProducer) throws Exception
+        Class<? extends QueryComponentSupplier> supplierClazz) throws Exception
     {
       Constructor<? extends QueryComponentSupplier> constructor = supplierClazz.getConstructor(TempDirProducer.class);
-      return constructor.newInstance(tempDirProducer);
+      return constructor.newInstance(new TempDirProducer("druid-test"));
     }
 
     public void close()
