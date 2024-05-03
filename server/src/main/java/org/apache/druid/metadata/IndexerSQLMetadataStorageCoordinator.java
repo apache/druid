@@ -1860,9 +1860,14 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     }
   }
 
-  private SegmentIdWithShardSpec getTrueAllocatedId(
-      SegmentIdWithShardSpec allocatedId
-  )
+  /**
+   * Verifies that the allocated id doesn't already exist in the druid segments table.
+   * If yes, try to get the max unallocated id considering the unused segments for the datasource, version and interval
+   * Otherwise, use the same id.
+   * @param allocatedId The segment allcoted on the basis of used and pending segments
+   * @return a segment id that isn't already used by other unused segments
+   */
+  private SegmentIdWithShardSpec getTrueAllocatedId(SegmentIdWithShardSpec allocatedId)
   {
     // Check if there is a conflict with an existing entry in the segments table
     if (retrieveSegmentForId(allocatedId.asSegmentId().toString(), true) == null) {
