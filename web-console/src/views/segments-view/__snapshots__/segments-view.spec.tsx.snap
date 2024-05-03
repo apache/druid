@@ -70,7 +70,6 @@ exports[`SegmentsView matches snapshot 1`] = `
             "Is realtime",
             "Is published",
             "Is overshadowed",
-            "Actions",
           ]
         }
         onChange={[Function]}
@@ -356,6 +355,7 @@ exports[`SegmentsView matches snapshot 1`] = `
             "filterable": false,
             "id": "actions",
             "show": true,
+            "sortable": false,
             "width": 70,
           },
         ]

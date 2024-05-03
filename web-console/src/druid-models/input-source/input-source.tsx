@@ -117,7 +117,8 @@ export type InputSourceDesc =
     }
   | {
       type: 'delta';
-      tablePath?: string;
+      tablePath: string;
+      filter?: string;
     }
   | {
       type: 'sql';
@@ -624,6 +625,27 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
     placeholder: '/path/to/deltaTable',
     defined: typeIsKnown(KNOWN_TYPES, 'delta'),
     required: true,
+    info: (
+      <>
+        <p>A full path to the Delta Lake table.</p>
+      </>
+    ),
+  },
+  {
+    name: 'filter',
+    label: 'Delta filter',
+    type: 'json',
+    placeholder: '{"type": "=", "column": "name", "value": "foo"}',
+    defined: inputSource => inputSource.type === 'delta' && deepGet(inputSource, 'filter'),
+    required: false,
+    info: (
+      <>
+        <ExternalLink href={`${getLink('DOCS')}/ingestion/input-sources/#delta-filter-object`}>
+          filter
+        </ExternalLink>
+        <p>A Delta filter json object to filter Delta Lake scan files.</p>
+      </>
+    ),
   },
 
   // sql

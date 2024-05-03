@@ -178,12 +178,12 @@ public class SegmentSchemaBackFillQueue
         segmentSchemaManager.persistSchemaAndUpdateSegmentsTable(entry.getKey(), entry.getValue(), CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
         // Mark the segments as published in the cache.
         for (SegmentSchemaMetadataPlus plus : entry.getValue()) {
-          segmentSchemaCache.markInTransitSMQResultPublished(plus.getSegmentId());
+          segmentSchemaCache.markInMetadataQueryResultPublished(plus.getSegmentId());
         }
         emitter.emit(
             ServiceMetricEvent.builder()
                                        .setDimension("dataSource", entry.getKey())
-                                       .setMetric("metadatacache/backfill/count", polled.size())
+                                       .setMetric("metadatacache/backfill/count", entry.getValue().size())
         );
       }
       catch (Exception e) {

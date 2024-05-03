@@ -548,6 +548,9 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     }
   }
 
+  /**
+   * Verify that schema is present for each segment.
+   */
   public void verifySchema(DataSegmentsWithSchemas dataSegmentsWithSchemas)
   {
     int nonTombstoneSegments = 0;
@@ -556,11 +559,16 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         continue;
       }
       nonTombstoneSegments++;
-      Assert.assertTrue(dataSegmentsWithSchemas.getSegmentSchemaMapping()
-                                               .getSegmentIdToMetadataMap()
-                                               .containsKey(segment.getId().toString()));
+      Assert.assertTrue(
+          dataSegmentsWithSchemas.getSegmentSchemaMapping()
+                                 .getSegmentIdToMetadataMap()
+                                 .containsKey(segment.getId().toString())
+      );
     }
-    Assert.assertEquals(nonTombstoneSegments, dataSegmentsWithSchemas.getSegmentSchemaMapping().getSegmentIdToMetadataMap().size());
+    Assert.assertEquals(
+        nonTombstoneSegments,
+        dataSegmentsWithSchemas.getSegmentSchemaMapping().getSegmentIdToMetadataMap().size()
+    );
   }
 
   public TaskReport.ReportMap getReports() throws IOException
