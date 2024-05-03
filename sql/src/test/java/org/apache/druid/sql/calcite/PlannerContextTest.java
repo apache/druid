@@ -40,6 +40,7 @@ import org.apache.druid.sql.calcite.schema.ViewSchema;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.easymock.EasyMock;
 import org.junit.Assert;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
@@ -74,21 +75,31 @@ public class PlannerContextTest
 
   private static final String SQL = "SELECT 1";
 
+  private static PlannerContext plannerContext;
+
+  @BeforeEach
+  public void setup()
+  {
+    plannerContext = PlannerContext.create(PLANNER_TOOLBOX,
+                          SQL, // The actual query isn't important for this test
+                          ENGINE,
+                          Collections.emptyMap(),
+                          null);
+  }
+
   @Test
   public void testCreate()
   {
-    PlannerContext plannerContext = PlannerContext.create(PLANNER_TOOLBOX,
-                                                          SQL, // The actual query isn't important for this test
-                                                          ENGINE,
-                                                          Collections.emptyMap(),
-                                                          null);
-
     Assert.assertEquals(PLANNER_TOOLBOX, plannerContext.getPlannerToolbox());
     Assert.assertEquals(SQL, plannerContext.getSql());
     Assert.assertEquals(ENGINE, plannerContext.getEngine());
     Assert.assertEquals(NoOpPlannerHook.INSTANCE, plannerContext.getPlannerHook());
     Assert.assertTrue(plannerContext.queryContextMap().isEmpty());
+  }
 
+  @Test
+  public void testMutabilityOfQueryContextMap()
+  {
     // Validate that the map is mutable, even though an immutable map was passed during creation.
     plannerContext.queryContextMap().put("test", "value");
   }
