@@ -405,6 +405,20 @@
                 <artifactId>gson</artifactId>
                 <version>${gson.version}</version>
             </dependency>
+            <!-- Transitive dependency of kubernetes-client java and docker-java-core
+            in kubernetes-extensions and it-integration tests -->
+            <dependency>
+                <groupId>org.bouncycastle</groupId>
+                <artifactId>bcpkix-jdk18on</artifactId>
+                <version>1.78.1</version>
+            </dependency>
+            <!-- Transitive dependency of hive-common in druid-kerberos, druid-ranger-security and
+            druid-iceberg-extension  -->
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-configuration2</artifactId>
+                <version>2.10.1</version>
+            </dependency>
             <dependency>
                 <groupId>org.apache.zookeeper</groupId>
                 <artifactId>zookeeper</artifactId>

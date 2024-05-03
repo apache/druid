@@ -60,7 +60,6 @@ exports[`ServicesView renders data 1`] = `
           "Usage",
           "Start time",
           "Detail",
-          "Actions",
         ]
       }
       onChange={[Function]}
@@ -224,6 +223,7 @@ exports[`ServicesView renders data 1`] = `
           "filterable": false,
           "id": "actions",
           "show": true,
+          "sortable": false,
           "width": 70,
         },
       ]
