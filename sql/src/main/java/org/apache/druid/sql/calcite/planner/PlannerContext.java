@@ -37,6 +37,8 @@ import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.filter.InDimFilter;
+import org.apache.druid.query.filter.TypedInFilter;
 import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.lookup.RegisteredLookupExtractionFn;
@@ -370,11 +372,19 @@ public class PlannerContext
    * {@link org.apache.druid.query.filter.EqualityFilter}, and {@link org.apache.druid.query.filter.NullFilter} (false).
    *
    * Typically true when {@link NullHandling#replaceWithDefault()} and false when {@link NullHandling#sqlCompatible()}.
-   * Can be overriden by the undocumented context parameter {@link #CTX_SQL_USE_BOUNDS_AND_SELECTORS}.
+   * Can be overriden by the context parameter {@link #CTX_SQL_USE_BOUNDS_AND_SELECTORS}.
    */
   public boolean isUseBoundsAndSelectors()
   {
     return useBoundsAndSelectors;
+  }
+
+  /**
+   * Whether we should use {@link InDimFilter} (true) or {@link TypedInFilter} (false).
+   */
+  public boolean isUseLegacyInFilter()
+  {
+    return useBoundsAndSelectors || NullHandling.replaceWithDefault();
   }
 
   /**
