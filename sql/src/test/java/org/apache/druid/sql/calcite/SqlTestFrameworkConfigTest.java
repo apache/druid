@@ -24,9 +24,6 @@ import org.apache.druid.sql.calcite.SqlTestFrameworkConfig.MinTopNThreshold;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig.NumMergeBuffers;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig.SqlTestFrameworkConfigInstance;
 import org.junit.jupiter.api.Test;
-import org.junit.runner.JUnitCore;
-import org.junit.runner.Result;
-import org.junit.runner.notification.Failure;
 
 import java.lang.annotation.Annotation;
 
@@ -34,15 +31,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class SqlTestFrameworkConfigTest
 {
-  public static void main(String[] args) {
-    Result result = JUnitCore.runClasses(SqlTestFrameworkConfigTest.class);
-
-    for (Failure failure : result.getFailures()) {
-       System.out.println(failure.toString());
-    }
-
-    System.out.println(result.wasSuccessful());
- }
   @Test
   public void testEquals()
   {
