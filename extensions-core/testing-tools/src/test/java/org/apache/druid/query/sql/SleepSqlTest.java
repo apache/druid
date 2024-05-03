@@ -31,7 +31,6 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
-import org.apache.druid.sql.calcite.SqlTestFrameworkConfig.Supplier;
 import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
