@@ -67,6 +67,15 @@ public @interface SqlTestFrameworkConfig
     int value() default 0;
   }
 
+  /**
+   * Declares which {@link QueryComponentSupplier} must be used for the class.
+   */
+  @Retention(RetentionPolicy.RUNTIME)
+  @Target({ElementType.TYPE}) @interface SqlTestFrameWorkModule
+  {
+    Class<? extends QueryComponentSupplier> value();
+  }
+
   int numMergeBuffers() default 0;
 
   int minTopNThreshold() default TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD;
@@ -213,9 +222,9 @@ public @interface SqlTestFrameworkConfig
       };
     }
 
-    private SqlTestFramework.SqlTestFrameWorkModule getModuleAnnotationFor(Class<?> testClass)
+    private SqlTestFrameworkConfig.SqlTestFrameWorkModule getModuleAnnotationFor(Class<?> testClass)
     {
-      SqlTestFramework.SqlTestFrameWorkModule annotation = testClass.getAnnotation(SqlTestFramework.SqlTestFrameWorkModule.class);
+      SqlTestFrameworkConfig.SqlTestFrameWorkModule annotation = testClass.getAnnotation(SqlTestFrameworkConfig.SqlTestFrameWorkModule.class);
       if (annotation == null) {
         if (testClass.getSuperclass() == null) {
           throw new RE("Can't get QueryComponentSupplier for testclass!");

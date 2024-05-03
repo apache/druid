@@ -48,10 +48,11 @@ import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
+import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
+import org.apache.druid.sql.calcite.SqlTestFrameworkConfig.SqlTestFrameWorkModule;
 import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.apache.druid.sql.calcite.util.SqlTestFramework.SqlTestFrameWorkModule;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.timeline.DataSegment;
@@ -60,7 +61,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
-@SqlTestFrameWorkModule(TDigestSketchSqlAggregatorTest.TDigestComponentSupplier.class)
+@SqlTestFrameworkConfig.SqlTestFrameWorkModule(TDigestSketchSqlAggregatorTest.TDigestComponentSupplier.class)
 public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
 {
   protected static class TDigestComponentSupplier extends StandardComponentSupplier

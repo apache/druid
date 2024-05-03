@@ -45,6 +45,7 @@ import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.CalciteCatalogIngestionDmlTest.CatalogIngestionDmlComponentSupplier;
+import org.apache.druid.sql.calcite.SqlTestFrameworkConfig.SqlTestFrameWorkModule;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.external.Externals;
 import org.apache.druid.sql.calcite.filtration.Filtration;
@@ -52,12 +53,11 @@ import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.table.DatasourceTable;
 import org.apache.druid.sql.calcite.table.DruidTable;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.apache.druid.sql.calcite.util.SqlTestFramework.SqlTestFrameWorkModule;
 import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
 
-@SqlTestFrameWorkModule(CatalogIngestionDmlComponentSupplier.class)
+@SqlTestFrameworkConfig.SqlTestFrameWorkModule(CatalogIngestionDmlComponentSupplier.class)
 public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDmlTest
 {
   private final String operationName;

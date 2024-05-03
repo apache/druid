@@ -72,7 +72,6 @@ import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.sql.calcite.CalciteArraysQueryTest.ArraysComponentSupplier;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.sql.http.SqlParameter;
 import org.junit.Assert;
@@ -86,7 +85,7 @@ import java.util.Map;
 /**
  * Tests for array functions and array types
  */
-@SqlTestFramework.SqlTestFrameWorkModule(ArraysComponentSupplier.class)
+@SqlTestFrameworkConfig.SqlTestFrameWorkModule(ArraysComponentSupplier.class)
 public class CalciteArraysQueryTest extends BaseCalciteQueryTest
 {
   private static final Map<String, Object> QUERY_CONTEXT_UNNEST =

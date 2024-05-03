@@ -81,7 +81,6 @@ import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.CacheTestHelperModule.ResultCacheMode;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.sql.guice.SqlModule;
@@ -98,7 +97,7 @@ import java.util.List;
 import java.util.Properties;
 import java.util.stream.Collectors;
 
-@SqlTestFramework.SqlTestFrameWorkModule(HllSketchComponentSupplier.class)
+@SqlTestFrameworkConfig.SqlTestFrameWorkModule(HllSketchComponentSupplier.class)
 public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
 {
   private static final boolean ROUND = true;
