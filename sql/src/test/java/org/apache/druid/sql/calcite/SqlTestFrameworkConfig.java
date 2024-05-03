@@ -21,7 +21,6 @@ package org.apache.druid.sql.calcite;
 
 import com.google.api.client.util.Preconditions;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.RE;
 import org.apache.druid.query.topn.TopNQueryConfig;
 import org.apache.druid.sql.calcite.util.CacheTestHelperModule.ResultCacheMode;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
@@ -244,6 +243,21 @@ public class SqlTestFrameworkConfig
     }
   }
 
+  public static List<Annotation> collectAnnotations(Class<?> testClass, Method method)
+  {
+    List<Annotation> annotations = new ArrayList<>();
+    annotations.addAll(List.of(method.getAnnotations()));
+    Class<?> clz = testClass;
+    while (clz != null) {
+      annotations.addAll(List.of(clz.getAnnotations()));
+      clz = clz.getSuperclass();
+    }
+    annotations.removeIf(
+        annotation -> annotation.getClass().getInterfaces()[0].getDeclaringClass() != SqlTestFrameworkConfig.class
+    );
+    return annotations;
+  }
+
   /**
    * @see {@link SqlTestFrameworkConfig}
    */
@@ -252,18 +266,6 @@ public class SqlTestFrameworkConfig
     SqlTestFrameworkConfigStore configStore = new SqlTestFrameworkConfigStore();
     private SqlTestFrameworkConfig config;
     private Method method;
-
-    private SqlTestFrameworkConfig.Supplier getModuleAnnotationFor(Class<?> testClass)
-    {
-      SqlTestFrameworkConfig.Supplier annotation = testClass.getAnnotation(SqlTestFrameworkConfig.Supplier.class);
-      if (annotation == null) {
-        if (testClass.getSuperclass() == null) {
-          throw new RE("Can't get QueryComponentSupplier for testclass!");
-        }
-        return getModuleAnnotationFor(testClass.getSuperclass());
-      }
-      return annotation;
-    }
 
     @Override
     public void afterAll(ExtensionContext context)
@@ -280,26 +282,9 @@ public class SqlTestFrameworkConfig
     private void setConfig(ExtensionContext context) throws NoSuchMethodException
     {
       method = context.getTestMethod().get();
-      List<Annotation> annotations = collectAnnotations(method);
+      Class<?> testClass = context.getTestClass().get();
+      List<Annotation> annotations = collectAnnotations(testClass, method);
       config = new SqlTestFrameworkConfig(annotations);
-    }
-
-    private List<Annotation> collectAnnotations(Method method)
-    {
-      List<Annotation> annotations = new ArrayList<>();
-
-      annotations.addAll(List.of(method.getAnnotations()));
-
-      Class<?> clz = method.getDeclaringClass();
-      while (clz != null) {
-        annotations.addAll(List.of(clz.getAnnotations()));
-        clz = clz.getSuperclass();
-      }
-      annotations.removeIf(
-          annotation -> annotation.getClass().getInterfaces()[0].getDeclaringClass() != SqlTestFrameworkConfig.class
-      );
-
-      return annotations;
     }
 
     public SqlTestFrameworkConfig getConfig()
