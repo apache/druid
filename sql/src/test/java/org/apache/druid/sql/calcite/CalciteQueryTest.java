@@ -23,6 +23,8 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import org.apache.calcite.runtime.CalciteContextException;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
@@ -4042,6 +4044,49 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @Test
+  public void testGroupingWithNullPlusNonNullInFilter()
+  {
+    msqIncompatible();
+    testQuery(
+        "SELECT COUNT(*) FROM foo WHERE dim1 IN (NULL, 'abc')",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .filters(equality("dim1", "abc", ColumnType.STRING))
+                  .aggregators(aggregators(new CountAggregatorFactory("a0")))
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(new Object[]{1L})
+    );
+  }
+
+  @Test
+  public void testGroupingWithNotNullPlusNonNullInFilter()
+  {
+    msqIncompatible();
+    testQuery(
+        "SELECT COUNT(*) FROM foo WHERE dim1 NOT IN (NULL, 'abc')",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(
+                    InlineDataSource.fromIterable(
+                        ImmutableList.of(new Object[]{0L}),
+                        RowSignature.builder().add("EXPR$0", ColumnType.LONG).build()
+                    )
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("EXPR$0")
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(new Object[]{0L})
+    );
+  }
 
   @Test
   public void testGroupByNothingWithLiterallyFalseFilter()
@@ -5561,6 +5606,46 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testNotInAndIsNotNullFilter()
+  {
+    testQuery(
+        "SELECT dim1, COUNT(*) FROM druid.foo "
+        + "WHERE dim1 NOT IN ('ghi', 'abc', 'def') AND dim1 IS NOT NULL "
+        + "GROUP BY dim1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(dimensions(new DefaultDimensionSpec("dim1", "d0")))
+                        .setDimFilter(and(
+                            notNull("dim1"),
+                            not(in("dim1", ColumnType.STRING, ImmutableList.of("abc", "def", "ghi")))
+                        ))
+                        .setAggregatorSpecs(
+                            aggregators(
+                                new CountAggregatorFactory("a0")
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        NullHandling.sqlCompatible()
+        ? ImmutableList.of(
+            new Object[]{"", 1L},
+            new Object[]{"1", 1L},
+            new Object[]{"10.1", 1L},
+            new Object[]{"2", 1L}
+        )
+        : ImmutableList.of(
+            new Object[]{"1", 1L},
+            new Object[]{"10.1", 1L},
+            new Object[]{"2", 1L}
+        )
+    );
+  }
+
+  @Test
   public void testNotInAndLessThanFilter()
   {
     testQuery(
@@ -5635,6 +5720,245 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testInExpression()
+  {
+    // Cannot vectorize scalar_in_array expression.
+    cannotVectorize();
+
+    testQuery(
+        "SELECT dim1 IN ('abc', 'def', 'ghi'), COUNT(*)\n"
+        + "FROM druid.foo\n"
+        + "GROUP BY 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            expressionVirtualColumn(
+                                "v0",
+                                "scalar_in_array(\"dim1\",array('abc','def','ghi'))",
+                                ColumnType.LONG
+                            )
+                        )
+                        .setDimensions(dimensions(new DefaultDimensionSpec("v0", "d0", ColumnType.LONG)))
+                        .setAggregatorSpecs(new CountAggregatorFactory("a0"))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{false, 4L},
+            new Object[]{true, 2L}
+        )
+    );
+  }
+
+  @Test
+  public void testInExpressionBelowThreshold()
+  {
+    // Cannot vectorize scalar_in_array expression.
+    cannotVectorize();
+
+    testQuery(
+        "SELECT dim1 IN ('abc', 'def', 'ghi'), COUNT(*)\n"
+        + "FROM druid.foo\n"
+        + "GROUP BY 1",
+        QueryContexts.override(QUERY_CONTEXT_DEFAULT, QueryContexts.IN_FUNCTION_EXPR_THRESHOLD, 100),
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            expressionVirtualColumn(
+                                "v0",
+                                "((\"dim1\" == 'abc') || (\"dim1\" == 'def') || (\"dim1\" == 'ghi'))",
+                                ColumnType.LONG
+                            )
+                        )
+                        .setDimensions(dimensions(new DefaultDimensionSpec("v0", "d0", ColumnType.LONG)))
+                        .setAggregatorSpecs(new CountAggregatorFactory("a0"))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{false, 4L},
+            new Object[]{true, 2L}
+        )
+    );
+  }
+
+  @Test
+  public void testInOrIsNullExpression()
+  {
+    // Cannot vectorize scalar_in_array expression.
+    cannotVectorize();
+
+    testQuery(
+        "SELECT dim1 IN ('abc', 'def', 'ghi') OR dim1 IS NULL, COUNT(*)\n"
+        + "FROM druid.foo\n"
+        + "GROUP BY 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            expressionVirtualColumn(
+                                "v0",
+                                "(isnull(\"dim1\") || scalar_in_array(\"dim1\",array('abc','def','ghi')))",
+                                ColumnType.LONG
+                            )
+                        )
+                        .setDimensions(dimensions(new DefaultDimensionSpec("v0", "d0", ColumnType.LONG)))
+                        .setAggregatorSpecs(new CountAggregatorFactory("a0"))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{false, NullHandling.sqlCompatible() ? 4L : 3L},
+            new Object[]{true, NullHandling.sqlCompatible() ? 2L : 3L}
+        )
+    );
+  }
+
+  @Test
+  public void testNotInOrIsNullExpression()
+  {
+    // Cannot vectorize scalar_in_array expression.
+    cannotVectorize();
+
+    testQuery(
+        "SELECT NOT (dim1 IN ('abc', 'def', 'ghi') OR dim1 IS NULL), COUNT(*)\n"
+        + "FROM druid.foo\n"
+        + "GROUP BY 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            expressionVirtualColumn(
+                                "v0",
+                                "(notnull(\"dim1\") && (! scalar_in_array(\"dim1\",array('abc','def','ghi'))))",
+                                ColumnType.LONG
+                            )
+                        )
+                        .setDimensions(dimensions(new DefaultDimensionSpec("v0", "d0", ColumnType.LONG)))
+                        .setAggregatorSpecs(new CountAggregatorFactory("a0"))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{false, NullHandling.sqlCompatible() ? 2L : 3L},
+            new Object[]{true, NullHandling.sqlCompatible() ? 4L : 3L}
+        )
+    );
+  }
+
+  @Test
+  public void testNotInAndIsNotNullExpression()
+  {
+    // Cannot vectorize scalar_in_array expression.
+    cannotVectorize();
+
+    testQuery(
+        "SELECT dim1 NOT IN ('abc', 'def', 'ghi') AND dim1 IS NOT NULL, COUNT(*)\n"
+        + "FROM druid.foo\n"
+        + "GROUP BY 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            expressionVirtualColumn(
+                                "v0",
+                                "(notnull(\"dim1\") && (! scalar_in_array(\"dim1\",array('abc','def','ghi'))))",
+                                ColumnType.LONG
+                            )
+                        )
+                        .setDimensions(dimensions(new DefaultDimensionSpec("v0", "d0", ColumnType.LONG)))
+                        .setAggregatorSpecs(new CountAggregatorFactory("a0"))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{false, NullHandling.sqlCompatible() ? 2L : 3L},
+            new Object[]{true, NullHandling.sqlCompatible() ? 4L : 3L}
+        )
+    );
+  }
+
+  @Test
+  public void testInOrGreaterThanExpression()
+  {
+    // Cannot vectorize scalar_in_array expression.
+    cannotVectorize();
+
+    testQuery(
+        "SELECT dim1 IN ('abc', 'def', 'ghi') OR dim1 > 'zzz', COUNT(*)\n"
+        + "FROM druid.foo\n"
+        + "GROUP BY 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            expressionVirtualColumn(
+                                "v0",
+                                "(scalar_in_array(\"dim1\",array('abc','def','ghi')) || (\"dim1\" > 'zzz'))",
+                                ColumnType.LONG
+                            )
+                        )
+                        .setDimensions(dimensions(new DefaultDimensionSpec("v0", "d0", ColumnType.LONG)))
+                        .setAggregatorSpecs(new CountAggregatorFactory("a0"))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{false, 4L},
+            new Object[]{true, 2L}
+        )
+    );
+  }
+
+  @Test
+  public void testNotInAndLessThanExpression()
+  {
+    // Cannot vectorize scalar_in_array expression.
+    cannotVectorize();
+
+    testQuery(
+        "SELECT dim1 NOT IN ('abc', 'def', 'ghi') AND dim1 < 'zzz', COUNT(*)\n"
+        + "FROM druid.foo\n"
+        + "GROUP BY 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            expressionVirtualColumn(
+                                "v0",
+                                "((\"dim1\" < 'zzz') && (! scalar_in_array(\"dim1\",array('abc','def','ghi'))))",
+                                ColumnType.LONG
+                            )
+                        )
+                        .setDimensions(dimensions(new DefaultDimensionSpec("v0", "d0", ColumnType.LONG)))
+                        .setAggregatorSpecs(new CountAggregatorFactory("a0"))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{false, 2L},
+            new Object[]{true, 4L}
+        )
+    );
+  }
+
+  @Test
   public void testSqlIsNullToInFilter()
   {
     testQuery(
@@ -5688,14 +6012,32 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     final String elementsString = Joiner.on(",").join(elements.stream().map(s -> "'" + s + "'").iterator());
 
     testQuery(
-        "SELECT dim1, COUNT(*) FROM druid.foo WHERE dim1 IN (" + elementsString + ") GROUP BY dim1",
+        "SELECT dim1, COUNT(*) FROM druid.foo\n"
+        + "WHERE dim1 IN (" + elementsString + ") OR dim1 = 'xyz' OR dim1 IS NULL\n"
+        + "GROUP BY dim1",
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setDimensions(dimensions(new DefaultDimensionSpec("dim1", "d0")))
-                        .setDimFilter(in("dim1", elements))
+                        .setDimFilter(
+                            NullHandling.sqlCompatible()
+                            ? or(
+                                in("dim1", ImmutableSet.<String>builder().addAll(elements).add("xyz").build()),
+                                isNull("dim1")
+                            )
+                            : in(
+                                "dim1",
+                                Lists.newArrayList(
+                                    Iterables.concat(
+                                        Collections.singleton(null),
+                                        elements,
+                                        Collections.singleton("xyz")
+                                    )
+                                )
+                            )
+                        )
                         .setAggregatorSpecs(
                             aggregators(
                                 new CountAggregatorFactory("a0")
@@ -5704,7 +6046,139 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
+        NullHandling.sqlCompatible()
+        ? ImmutableList.of(
+            new Object[]{"abc", 1L},
+            new Object[]{"def", 1L}
+        )
+        : ImmutableList.of(
+            new Object[]{"", 1L},
+            new Object[]{"abc", 1L},
+            new Object[]{"def", 1L}
+        )
+    );
+  }
+
+  @Test
+  public void testInFilterWith23Elements_overScalarInArrayThreshold()
+  {
+    final List<String> elements = new ArrayList<>();
+    elements.add("abc");
+    elements.add("def");
+    elements.add("ghi");
+    for (int i = 0; i < 20; i++) {
+      elements.add("dummy" + i);
+    }
+
+    final String elementsString = Joiner.on(",").join(elements.stream().map(s -> "'" + s + "'").iterator());
+
+    testQuery(
+        "SELECT dim1, COUNT(*) FROM druid.foo\n"
+        + "WHERE dim1 IN (" + elementsString + ") OR dim1 = 'xyz' OR dim1 IS NULL\n"
+        + "GROUP BY dim1",
+        QueryContexts.override(QUERY_CONTEXT_DEFAULT, QueryContexts.IN_FUNCTION_THRESHOLD, 20),
         ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(dimensions(new DefaultDimensionSpec("dim1", "d0")))
+                        .setDimFilter(
+                            // [dim1 = xyz] is not combined into the IN filter, because SCALAR_IN_ARRAY was used,
+                            // and it is opaque to most optimizations. (That's its main purpose.)
+                            NullHandling.sqlCompatible()
+                            ? or(
+                                in("dim1", elements),
+                                isNull("dim1"),
+                                equality("dim1", "xyz", ColumnType.STRING)
+                            )
+                            : or(
+                                in("dim1", Arrays.asList(null, "xyz")),
+                                in("dim1", elements)
+                            )
+                        )
+                        .setAggregatorSpecs(
+                            aggregators(
+                                new CountAggregatorFactory("a0")
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        NullHandling.sqlCompatible()
+        ? ImmutableList.of(
+            new Object[]{"abc", 1L},
+            new Object[]{"def", 1L}
+        )
+        : ImmutableList.of(
+            new Object[]{"", 1L},
+            new Object[]{"abc", 1L},
+            new Object[]{"def", 1L}
+        )
+    );
+  }
+
+  @Test
+  public void testInFilterWith23Elements_overBothScalarInArrayAndInSubQueryThresholds()
+  {
+    // Verify that when an IN filter surpasses both inFunctionThreshold and inSubQueryThreshold, the
+    // inFunctionThreshold takes priority.
+    final List<String> elements = new ArrayList<>();
+    elements.add("abc");
+    elements.add("def");
+    elements.add("ghi");
+    for (int i = 0; i < 20; i++) {
+      elements.add("dummy" + i);
+    }
+
+    final String elementsString = Joiner.on(",").join(elements.stream().map(s -> "'" + s + "'").iterator());
+
+    testQuery(
+        "SELECT dim1, COUNT(*) FROM druid.foo\n"
+        + "WHERE dim1 IN (" + elementsString + ") OR dim1 = 'xyz' OR dim1 IS NULL\n"
+        + "GROUP BY dim1",
+        QueryContexts.override(
+            QUERY_CONTEXT_DEFAULT,
+            ImmutableMap.of(
+                QueryContexts.IN_FUNCTION_THRESHOLD, 20,
+                QueryContexts.IN_SUB_QUERY_THRESHOLD_KEY, 20
+            )
+        ),
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(dimensions(new DefaultDimensionSpec("dim1", "d0")))
+                        .setDimFilter(
+                            // [dim1 = xyz] is not combined into the IN filter, because SCALAR_IN_ARRAY was used,
+                            // and it is opaque to most optimizations. (That's its main purpose.)
+                            NullHandling.sqlCompatible()
+                            ? or(
+                                in("dim1", elements),
+                                isNull("dim1"),
+                                equality("dim1", "xyz", ColumnType.STRING)
+                            )
+                            : or(
+                                in("dim1", Arrays.asList(null, "xyz")),
+                                in("dim1", elements)
+                            )
+                        )
+                        .setAggregatorSpecs(
+                            aggregators(
+                                new CountAggregatorFactory("a0")
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        NullHandling.sqlCompatible()
+        ? ImmutableList.of(
+            new Object[]{"abc", 1L},
+            new Object[]{"def", 1L}
+        )
+        : ImmutableList.of(
+            new Object[]{"", 1L},
             new Object[]{"abc", 1L},
             new Object[]{"def", 1L}
         )
