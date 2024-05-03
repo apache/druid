@@ -51,10 +51,20 @@ import java.util.Set;
 import java.util.function.Function;
 
 /**
- * Annotation to specify desired framework settings.
+ * Specifies current framework settings.
  *
- * This class provides junit rule facilities to build the framework accordingly
- * to the annotation. These rules also cache the previously created frameworks.
+ * Intended usage from tests is via the annotations:
+ *   @SqlTestFrameworkConfig.MinTopNThreshold(33)
+ *
+ * In case of annotations used; it picks up all annotations from:
+ *  * the method
+ *  * its enclosing class and its parents
+ * if none contains a specific setting the default is being taken.
+ *
+ * All configurable setting should have:
+ *   * an annotation with `value` with the desired type
+ *   * the annotation itself should be annotated with itslef to set the default value
+ *   * a field should be added to the main config class
  */
 public class SqlTestFrameworkConfig
 {
@@ -101,10 +111,10 @@ public class SqlTestFrameworkConfig
   public SqlTestFrameworkConfig(List<Annotation> annotations)
   {
     try {
-      numMergeBuffers = getValue(annotations, NumMergeBuffers.class);
-      minTopNThreshold = getValue(annotations, MinTopNThreshold.class);
-      resultCache = getValue(annotations, ResultCache.class);
-      supplier = getValue(annotations, Supplier.class);
+      numMergeBuffers = getValueFromAnnotation(annotations, NumMergeBuffers.class);
+      minTopNThreshold = getValueFromAnnotation(annotations, MinTopNThreshold.class);
+      resultCache = getValueFromAnnotation(annotations, ResultCache.class);
+      supplier = getValueFromAnnotation(annotations, Supplier.class);
     }
     catch (NoSuchMethodException | SecurityException | IllegalAccessException | IllegalArgumentException
         | InvocationTargetException e) {
@@ -115,10 +125,10 @@ public class SqlTestFrameworkConfig
   public SqlTestFrameworkConfig(Map<String, String> queryParams)
   {
     try {
-      numMergeBuffers = getValue2(queryParams, NumMergeBuffers.class);
-      minTopNThreshold = getValue2(queryParams, MinTopNThreshold.class);
-      resultCache = getValue2(queryParams, ResultCache.class);
-      supplier = getValue2(queryParams, Supplier.class);
+      numMergeBuffers = getValueFromMap(queryParams, NumMergeBuffers.class);
+      minTopNThreshold = getValueFromMap(queryParams, MinTopNThreshold.class);
+      resultCache = getValueFromMap(queryParams, ResultCache.class);
+      supplier = getValueFromMap(queryParams, Supplier.class);
     }
     catch (NoSuchMethodException | SecurityException | IllegalAccessException | IllegalArgumentException
         | InvocationTargetException e) {
@@ -126,7 +136,7 @@ public class SqlTestFrameworkConfig
     }
   }
 
-  private <T> T getValue2(Map<String, String> map, Class<? extends Annotation> annotationClass)
+  private <T> T getValueFromMap(Map<String, String> map, Class<? extends Annotation> annotationClass)
       throws IllegalAccessException, InvocationTargetException, NoSuchMethodException, SecurityException
   {
     String value = map.get(annotationClass.getSimpleName());
@@ -164,7 +174,7 @@ public class SqlTestFrameworkConfig
     throw new IAE("supplier [%s] is not known; known are [%s]", name, knownNames);
   }
 
-  private <T> T getValue(List<Annotation> annotations, Class<? extends Annotation> annotationClass)
+  private <T> T getValueFromAnnotation(List<Annotation> annotations, Class<? extends Annotation> annotationClass)
       throws IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException,
       SecurityException
   {

@@ -96,7 +96,6 @@ import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.PlannerFixture;
-import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.sql.http.SqlParameter;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.Matcher;
@@ -136,7 +135,6 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * A base class for SQL query testing. It sets up query execution environment, provides useful helper methods,
  * and populates data using {@link CalciteTests#createMockWalker}.
  */
-@SqlTestFrameworkConfig.Supplier(StandardComponentSupplier.class)
 public class BaseCalciteQueryTest extends CalciteTestBase
 {
   public static final double ASSERTION_EPSILON = 1e-5;
