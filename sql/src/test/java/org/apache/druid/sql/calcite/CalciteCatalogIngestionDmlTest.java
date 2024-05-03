@@ -267,6 +267,55 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
                     new TableSpec(
                         DatasourceDefn.TABLE_TYPE,
                         ImmutableMap.of(
+                            DatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "ALL",
+                            DatasourceDefn.CLUSTER_KEYS_PROPERTY,
+                            ImmutableList.of(
+                                new ClusterKeySpec("dim1", false),
+                                new ClusterKeySpec("dim2", false)
+                            )
+                        ),
+                        ImmutableList.of(
+                            new ColumnSpec("__time", Columns.TIME_COLUMN, null),
+                            new ColumnSpec("dim1", Columns.STRING, null),
+                            new ColumnSpec("dim2", Columns.STRING, null),
+                            new ColumnSpec("cnt", Columns.LONG, null)
+                        )
+                    ),
+                    MAPPER
+                )),
+                DatasourceTable.EffectiveMetadata.toEffectiveColumns(RowSignature.builder()
+                    .addTimeColumn()
+                    .add("dim1", ColumnType.STRING)
+                    .add("dim2", ColumnType.STRING)
+                    .add("cnt", ColumnType.LONG)
+                    .build()),
+                false
+            )
+        ),
+        "tableWithClusteringDesc", new DatasourceTable(
+            FOO_TABLE_SIGNATURE,
+            new DatasourceTable.PhysicalDatasourceMetadata(
+                new TableDataSource("tableWithClusteringDesc"),
+                RowSignature.builder()
+                    .addTimeColumn()
+                    .add("dim1", ColumnType.STRING)
+                    .add("dim2", ColumnType.STRING)
+                    .add("cnt", ColumnType.LONG)
+                    .build(),
+                false,
+                false
+            ),
+            new DatasourceTable.EffectiveMetadata(
+                new DatasourceFacade(new ResolvedTable(
+                    new TableDefn(
+                        "tableWithClusteringDesc",
+                        DatasourceDefn.TABLE_TYPE,
+                        null,
+                        null
+                    ),
+                    new TableSpec(
+                        DatasourceDefn.TABLE_TYPE,
+                        ImmutableMap.of(
                             DatasourceDefn.CLUSTER_KEYS_PROPERTY,
                             ImmutableList.of(
                                 new ClusterKeySpec("dim1", false),
@@ -523,7 +572,7 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
                 .orderBy(
                     ImmutableList.of(
                         new ScanQuery.OrderBy("b", ScanQuery.Order.ASCENDING),
-                        new ScanQuery.OrderBy("d", ScanQuery.Order.DESCENDING)
+                        new ScanQuery.OrderBy("d", ScanQuery.Order.ASCENDING)
                     )
                 )
                 // Scan query lists columns in alphabetical order independent of the
@@ -570,7 +619,6 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
              "  data => ARRAY['2022-12-26T12:34:56,extra,10,\"20\",foo'],\n" +
              "  format => 'csv'))\n" +
              "  (a VARCHAR, b VARCHAR, c BIGINT, d VARCHAR, e VARCHAR)\n" +
-             "PARTITIONED BY ALL TIME\n" +
              "CLUSTERED BY dim1")
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
         .expectTarget("tableWithClustering", signature)
@@ -664,11 +712,11 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
 
   /**
    * Insert into a catalog table that has clustering defined on the table definition, but user specifies
-   * clustering on the ingest query on column that has not been defined in the table catalog definition.
-   * or in the select clause. Should fail with validation error.
+   * clustering on the ingest query on column that has not been specified in the select clause. Should fail with
+   * validation error.
    */
   @Test
-  public void testInsertTableWithClusteringWithClusteringOnBadColumn()
+  public void testInsertTableWithQueryDefinedClusteringOnNonSelectedColumn()
   {
     testIngestionQuery()
         .sql(StringUtils.format(dmlPrefixPattern, "tableWithClustering") + "\n" +
@@ -687,6 +735,84 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
         .expectValidationError(
             DruidException.class,
             "Column 'blah' not found in any table (line [13], column [14])")
+        .verify();
+  }
+
+  /**
+   * Insert into a catalog table that has clustering defined on the table definition, but one of the clustering
+   * columns specified has not been specified in the select clause. Should fail with validation error.
+   */
+  @Test
+  public void testInsertTableWithCatalogDefinedClusteringOnNonSelectedColumn()
+  {
+    testIngestionQuery()
+        .sql(StringUtils.format(dmlPrefixPattern, "tableWithClustering") + "\n" +
+             "SELECT\n" +
+             "  TIME_PARSE(a) AS __time,\n" +
+             "  b AS dim1,\n" +
+             "  e AS dim3,\n" +
+             "  1 AS cnt\n" +
+             "FROM TABLE(inline(\n" +
+             "  data => ARRAY['2022-12-26T12:34:56,extra,10,\"20\",foo'],\n" +
+             "  format => 'csv'))\n" +
+             "  (a VARCHAR, b VARCHAR, c BIGINT, d VARCHAR, e VARCHAR)\n" +
+             "PARTITIONED BY ALL TIME")
+        .expectValidationError(
+            DruidException.class,
+            "Column 'dim2' not found in any table (line [0], column [0])")
+        .verify();
+  }
+
+  /**
+   * Insert into a catalog table that has clustering defined on the table definition, but one of the clustering
+   * columns specified has not been specified in the select clause. Should fail with validation error.
+   */
+  @Test
+  public void testInsertTableWithCatalogDefinedClusteringDesc()
+  {
+    testIngestionQuery()
+        .sql(StringUtils.format(dmlPrefixPattern, "tableWithClusteringDesc") + "\n" +
+             "SELECT\n" +
+             "  TIME_PARSE(a) AS __time,\n" +
+             "  b AS dim1,\n" +
+             "  d AS dim2,\n" +
+             "  e AS dim3,\n" +
+             "  1 AS cnt\n" +
+             "FROM TABLE(inline(\n" +
+             "  data => ARRAY['2022-12-26T12:34:56,extra,10,\"20\",foo'],\n" +
+             "  format => 'csv'))\n" +
+             "  (a VARCHAR, b VARCHAR, c BIGINT, d VARCHAR, e VARCHAR)\n" +
+             "PARTITIONED BY ALL TIME")
+        .expectValidationError(
+            DruidException.class,
+            "Invalid CLUSTERED BY clause [`dim2` DESC]: cannot sort in descending order.")
+        .verify();
+  }
+
+  /**
+   * Insert into a catalog table that has clustering defined on the table definition, but one of the clustering
+   * columns specified has not been specified in the select clause. Should fail with validation error.
+   */
+  @Test
+  public void testInsertTableWithQueryDefinedClusteringDesc()
+  {
+    testIngestionQuery()
+        .sql(StringUtils.format(dmlPrefixPattern, "tableWithClusteringDesc") + "\n" +
+             "SELECT\n" +
+             "  TIME_PARSE(a) AS __time,\n" +
+             "  b AS dim1,\n" +
+             "  d AS dim2,\n" +
+             "  e AS dim3,\n" +
+             "  1 AS cnt\n" +
+             "FROM TABLE(inline(\n" +
+             "  data => ARRAY['2022-12-26T12:34:56,extra,10,\"20\",foo'],\n" +
+             "  format => 'csv'))\n" +
+             "  (a VARCHAR, b VARCHAR, c BIGINT, d VARCHAR, e VARCHAR)\n" +
+             "PARTITIONED BY ALL TIME\n" +
+             "CLUSTERED BY dim1 DESC")
+        .expectValidationError(
+            DruidException.class,
+            "Invalid CLUSTERED BY clause [`dim1` DESC]: cannot sort in descending order.")
         .verify();
   }
 
