@@ -142,7 +142,7 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
     }
   }
 
-  private void exportFrame(final Frame frame) throws IOException
+  private void exportFrame(final Frame frame)
   {
     final Sequence<Cursor> cursorSequence =
         new FrameStorageAdapter(frame, frameReader, Intervals.ETERNITY)
