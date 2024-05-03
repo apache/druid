@@ -70,7 +70,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
-@SqlTestFrameworkConfig.SqlTestFrameWorkModule(VarianceComponentSupplier.class)
+@SqlTestFrameworkConfig.Supplier(VarianceComponentSupplier.class)
 public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
 {
   public static class VarianceComponentSupplier extends StandardComponentSupplier

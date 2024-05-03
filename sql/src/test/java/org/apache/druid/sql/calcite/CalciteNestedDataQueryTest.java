@@ -88,7 +88,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@SqlTestFrameworkConfig.SqlTestFrameWorkModule(NestedComponentSupplier.class)
+@SqlTestFrameworkConfig.Supplier(NestedComponentSupplier.class)
 public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
 {
   private static final String DATA_SOURCE = "nested";

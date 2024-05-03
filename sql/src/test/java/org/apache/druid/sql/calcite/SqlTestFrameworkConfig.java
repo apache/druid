@@ -85,8 +85,8 @@ public interface SqlTestFrameworkConfig
    */
   @Retention(RetentionPolicy.RUNTIME)
   @Target({ElementType.METHOD, ElementType.TYPE})
-  @SqlTestFrameWorkModule(StandardComponentSupplier.class)
-  public @interface SqlTestFrameWorkModule
+  @Supplier(StandardComponentSupplier.class)
+  public @interface Supplier
   {
     Class<? extends QueryComponentSupplier> value();
   }
@@ -109,7 +109,7 @@ public interface SqlTestFrameworkConfig
         numMergeBuffers = getValue(annotations, NumMergeBuffers.class);
         minTopNThreshold = getValue(annotations, MinTopNThreshold.class);
         resultCache = getValue(annotations, ResultCache.class);
-        supplier = getValue(annotations, SqlTestFrameWorkModule.class);
+        supplier = getValue(annotations, Supplier.class);
       }
       catch (NoSuchMethodException | SecurityException | IllegalAccessException | IllegalArgumentException
           | InvocationTargetException e) {
@@ -123,7 +123,7 @@ public interface SqlTestFrameworkConfig
       numMergeBuffers = getValue2(queryParams, NumMergeBuffers.class);
       minTopNThreshold = getValue2(queryParams, MinTopNThreshold.class);
       resultCache = getValue2(queryParams, ResultCache.class);
-      supplier = getValue2(queryParams, SqlTestFrameWorkModule.class);
+      supplier = getValue2(queryParams, Supplier.class);
     }
     catch (NoSuchMethodException | SecurityException | IllegalAccessException | IllegalArgumentException
         | InvocationTargetException e) {
@@ -250,9 +250,9 @@ public interface SqlTestFrameworkConfig
     private SqlTestFrameworkConfigInstance config;
     private Method method;
 
-    private SqlTestFrameworkConfig.SqlTestFrameWorkModule getModuleAnnotationFor(Class<?> testClass)
+    private SqlTestFrameworkConfig.Supplier getModuleAnnotationFor(Class<?> testClass)
     {
-      SqlTestFrameworkConfig.SqlTestFrameWorkModule annotation = testClass.getAnnotation(SqlTestFrameworkConfig.SqlTestFrameWorkModule.class);
+      SqlTestFrameworkConfig.Supplier annotation = testClass.getAnnotation(SqlTestFrameworkConfig.Supplier.class);
       if (annotation == null) {
         if (testClass.getSuperclass() == null) {
           throw new RE("Can't get QueryComponentSupplier for testclass!");

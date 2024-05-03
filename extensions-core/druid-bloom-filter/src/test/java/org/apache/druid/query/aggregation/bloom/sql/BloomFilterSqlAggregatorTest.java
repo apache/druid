@@ -62,7 +62,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
-@SqlTestFrameworkConfig.SqlTestFrameWorkModule(BloomFilterSqlAggComponentSupplier.class)
+@SqlTestFrameworkConfig.Supplier(BloomFilterSqlAggComponentSupplier.class)
 public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
 {
   private static final int TEST_NUM_ENTRIES = 1000;

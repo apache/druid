@@ -38,7 +38,7 @@ import org.apache.druid.sql.calcite.run.SqlEngine;
 /**
  * Runs {@link CalciteArraysQueryTest} but with MSQ engine
  */
-@SqlTestFrameworkConfig.SqlTestFrameWorkModule(ArraysQueryMSQComponentSupplier.class)
+@SqlTestFrameworkConfig.Supplier(ArraysQueryMSQComponentSupplier.class)
 public class CalciteArraysQueryMSQTest extends CalciteArraysQueryTest
 {
   public static class ArraysQueryMSQComponentSupplier extends ArraysComponentSupplier

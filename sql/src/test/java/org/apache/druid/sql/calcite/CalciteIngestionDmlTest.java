@@ -55,7 +55,7 @@ import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.SqlQueryPlus;
 import org.apache.druid.sql.calcite.CalciteIngestionDmlTest.IngestionDmlComponentSupplier;
-import org.apache.druid.sql.calcite.SqlTestFrameworkConfig.SqlTestFrameWorkModule;
+import org.apache.druid.sql.calcite.SqlTestFrameworkConfig.Supplier;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.external.ExternalOperatorConversion;
 import org.apache.druid.sql.calcite.external.HttpOperatorConversion;
@@ -90,7 +90,7 @@ import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 
-@SqlTestFrameworkConfig.SqlTestFrameWorkModule(IngestionDmlComponentSupplier.class)
+@SqlTestFrameworkConfig.Supplier(IngestionDmlComponentSupplier.class)
 public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
 {
   protected static final Map<String, Object> DEFAULT_CONTEXT =

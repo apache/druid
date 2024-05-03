@@ -32,7 +32,7 @@ import org.apache.druid.catalog.sync.MetadataCatalog;
 import org.apache.druid.metadata.TestDerbyConnector.DerbyConnectorRule5;
 import org.apache.druid.sql.calcite.CalciteCatalogReplaceTest;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
-import org.apache.druid.sql.calcite.SqlTestFrameworkConfig.SqlTestFrameWorkModule;
+import org.apache.druid.sql.calcite.SqlTestFrameworkConfig.Supplier;
 import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
@@ -43,7 +43,7 @@ import static org.junit.Assert.fail;
 /**
  * Test the use of catalog specs to drive MSQ ingestion.
  */
-@SqlTestFrameworkConfig.SqlTestFrameWorkModule(CatalogReplaceComponentSupplier.class)
+@SqlTestFrameworkConfig.Supplier(CatalogReplaceComponentSupplier.class)
 public class CatalogReplaceTest extends CalciteCatalogReplaceTest
 {
   @RegisterExtension

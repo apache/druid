@@ -44,7 +44,7 @@ import org.junit.jupiter.api.Test;
 import java.util.HashMap;
 import java.util.Map;
 
-@SqlTestFrameworkConfig.SqlTestFrameWorkModule(ScanSignatureComponentSupplier.class)
+@SqlTestFrameworkConfig.Supplier(ScanSignatureComponentSupplier.class)
 public class CalciteScanSignatureTest extends BaseCalciteQueryTest
 {
   @Test

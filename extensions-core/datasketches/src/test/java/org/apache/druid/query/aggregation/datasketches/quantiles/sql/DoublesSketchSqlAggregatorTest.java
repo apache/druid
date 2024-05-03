@@ -73,7 +73,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-@SqlTestFrameworkConfig.SqlTestFrameWorkModule(DoublesSketchComponentSupplier.class)
+@SqlTestFrameworkConfig.Supplier(DoublesSketchComponentSupplier.class)
 public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
 {
   protected static class DoublesSketchComponentSupplier extends StandardComponentSupplier

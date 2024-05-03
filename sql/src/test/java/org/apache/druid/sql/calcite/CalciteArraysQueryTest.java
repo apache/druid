@@ -85,7 +85,7 @@ import java.util.Map;
 /**
  * Tests for array functions and array types
  */
-@SqlTestFrameworkConfig.SqlTestFrameWorkModule(ArraysComponentSupplier.class)
+@SqlTestFrameworkConfig.Supplier(ArraysComponentSupplier.class)
 public class CalciteArraysQueryTest extends BaseCalciteQueryTest
 {
   private static final Map<String, Object> QUERY_CONTEXT_UNNEST =

@@ -48,7 +48,7 @@ public class CalciteSelectJoinQueryMSQTest
   /**
    * Run all tests with {@link JoinAlgorithm#BROADCAST}.
    */
-  @SqlTestFrameworkConfig.SqlTestFrameWorkModule(BroadcastJoinComponentSupplier.class)
+  @SqlTestFrameworkConfig.Supplier(BroadcastJoinComponentSupplier.class)
   public static class BroadcastTest extends Base
   {
     @Override
@@ -62,7 +62,7 @@ public class CalciteSelectJoinQueryMSQTest
   /**
    * Run all tests with {@link JoinAlgorithm#SORT_MERGE}.
    */
-  @SqlTestFrameworkConfig.SqlTestFrameWorkModule(SortMergeJoinComponentSupplier.class)
+  @SqlTestFrameworkConfig.Supplier(SortMergeJoinComponentSupplier.class)
   public static class SortMergeTest extends Base
   {
     @Override
