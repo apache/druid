@@ -188,7 +188,7 @@ public class GroupByResourcesReservationPoolTest
   }
 
   @Test
-  public void testMultipleAllocationAttemptsFail()
+  public void testMultipleSimultaneousAllocationAttemptsFail()
   {
     BlockingPool<ByteBuffer> mergeBufferPool = new DefaultBlockingPool<>(() -> ByteBuffer.allocate(100), 1);
     GroupByResourcesReservationPool groupByResourcesReservationPool =
@@ -201,6 +201,27 @@ public class GroupByResourcesReservationPoolTest
         DruidException.class,
         () -> groupByResourcesReservationPool.reserve(queryResourceId, QUERY, true)
     );
+  }
 
+  @Test
+  public void testMultipleSequentialAllocationAttemptsSucceed()
+  {
+    BlockingPool<ByteBuffer> mergeBufferPool = new DefaultBlockingPool<>(() -> ByteBuffer.allocate(100), 1);
+    GroupByResourcesReservationPool groupByResourcesReservationPool =
+        new GroupByResourcesReservationPool(mergeBufferPool, CONFIG);
+    QueryResourceId queryResourceId = new QueryResourceId("test-id");
+
+    groupByResourcesReservationPool.reserve(queryResourceId, QUERY, true);
+    GroupByQueryResources oldResources = groupByResourcesReservationPool.fetch(queryResourceId);
+
+    // Cleanup the resources
+    groupByResourcesReservationPool.clean(queryResourceId);
+
+    // Repeat the calls
+    groupByResourcesReservationPool.reserve(queryResourceId, QUERY, true);
+    GroupByQueryResources newResources = groupByResourcesReservationPool.fetch(queryResourceId);
+    Assert.assertNotNull(newResources);
+
+    Assert.assertNotSame(oldResources, newResources);
   }
 }
