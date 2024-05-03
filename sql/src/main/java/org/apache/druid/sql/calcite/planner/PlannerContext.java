@@ -349,7 +349,7 @@ public class PlannerContext
   }
 
   /**
-   * Returns the set of lookups to laod for a given task.
+   * Returns the set of lookups to load for a given task.
    */
   public Set<String> getLookupsToLoad()
   {
