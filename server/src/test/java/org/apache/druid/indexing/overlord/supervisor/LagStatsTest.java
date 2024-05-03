@@ -19,24 +19,21 @@
 
 package org.apache.druid.indexing.overlord.supervisor;
 
-import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagMetric;
+import org.apache.druid.indexing.overlord.supervisor.autoscaler.AggregateFunction;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
 import org.junit.Assert;
 import org.junit.Test;
 
 public class LagStatsTest
 {
-
   @Test
-  public void lagStatsByMetric()
+  public void testAutoScalerLagComputation()
   {
-    int max = 1;
-    int avg = 2;
-    int total = 3;
-    LagStats lag = new LagStats(max, total, avg);
+    LagStats lagStats = new LagStats(1, 2, 3);
 
-    Assert.assertEquals(max, lag.get(LagMetric.MAX));
-    Assert.assertEquals(total, lag.get(LagMetric.TOTAL));
-    Assert.assertEquals(avg, lag.get(LagMetric.AVERAGE));
+    Assert.assertEquals(1, lagStats.getMetric(AggregateFunction.MAX));
+    Assert.assertEquals(2, lagStats.getMetric(AggregateFunction.SUM));
+    Assert.assertEquals(3, lagStats.getMetric(AggregateFunction.AVERAGE));
+    Assert.assertEquals(AggregateFunction.SUM, lagStats.getAggregateForScaling());
   }
 }

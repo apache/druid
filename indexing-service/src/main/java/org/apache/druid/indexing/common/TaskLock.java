@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.overlord.LockRequest;
 import org.joda.time.Interval;
 
@@ -62,4 +63,18 @@ public interface TaskLock
   boolean isRevoked();
 
   boolean conflict(LockRequest request);
+
+  /**
+   * Checks if the lock is revoked and throws a {@link DruidException} if so.
+   *
+   * @throws DruidException if the lock is revoked.
+   */
+  default void assertNotRevoked()
+  {
+    if (isRevoked()) {
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+          .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+          .build("Lock of type[%s] for interval[%s] was revoked", getType(), getInterval());
+    }
+  }
 }

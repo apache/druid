@@ -28,8 +28,6 @@ import org.apache.druid.client.indexing.IndexingTotalWorkerCapacityInfo;
 import org.apache.druid.client.indexing.IndexingWorker;
 import org.apache.druid.client.indexing.IndexingWorkerInfo;
 import org.apache.druid.client.indexing.NoopOverlordClient;
-import org.apache.druid.error.DruidException;
-import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
@@ -43,16 +41,16 @@ import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
 import org.apache.druid.metadata.SqlSegmentsMetadataManager;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
-import org.apache.druid.server.coordinator.TestDruidCoordinatorConfig;
+import org.apache.druid.server.coordinator.config.KillUnusedSegmentsConfig;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
-import org.hamcrest.MatcherAssert;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
@@ -92,7 +90,7 @@ public class KillUnusedSegmentsTest
 
   private CoordinatorDynamicConfig.Builder dynamicConfigBuilder;
   private TestOverlordClient overlordClient;
-  private TestDruidCoordinatorConfig.Builder configBuilder;
+  private KillUnusedSegmentsConfig.Builder configBuilder;
   private DruidCoordinatorRuntimeParams.Builder paramsBuilder;
 
   private KillUnusedSegments killDuty;
@@ -112,7 +110,9 @@ public class KillUnusedSegmentsTest
         TestHelper.makeJsonMapper(),
         Suppliers.ofInstance(config),
         derbyConnectorRule.metadataTablesConfigSupplier(),
-        connector
+        connector,
+        null,
+        CentralizedDatasourceSchemaConfig.create()
     );
     sqlSegmentsMetadataManager.start();
 
@@ -124,11 +124,11 @@ public class KillUnusedSegmentsTest
     connector.createSegmentTable();
 
     overlordClient = new TestOverlordClient();
-    configBuilder = new TestDruidCoordinatorConfig.Builder()
-        .withCoordinatorIndexingPeriod(Duration.standardSeconds(0))
-        .withCoordinatorKillDurationToRetain(Duration.standardHours(36))
-        .withCoordinatorKillMaxSegments(10)
-        .withCoordinatorKillBufferPeriod(Duration.standardSeconds(1));
+    configBuilder = KillUnusedSegmentsConfig.builder()
+        .withCleanupPeriod(Duration.standardSeconds(0))
+        .withDurationToRetain(Duration.standardHours(36))
+        .withMaxSegmentsToKill(10)
+        .withBufferPeriod(Duration.standardSeconds(1));
     dynamicConfigBuilder = CoordinatorDynamicConfig.builder()
         .withKillTaskSlotRatio(1.0);
     paramsBuilder = DruidCoordinatorRuntimeParams.newBuilder(DateTimes.nowUtc());
@@ -137,7 +137,7 @@ public class KillUnusedSegmentsTest
   @Test
   public void testKillWithDefaultCoordinatorConfig()
   {
-    configBuilder = new TestDruidCoordinatorConfig.Builder();
+    configBuilder = KillUnusedSegmentsConfig.builder();
     dynamicConfigBuilder = CoordinatorDynamicConfig.builder();
 
     final DateTime sixtyDaysAgo = NOW.minusDays(60);
@@ -179,8 +179,7 @@ public class KillUnusedSegmentsTest
   @Test
   public void testKillWithMultipleDatasources()
   {
-    configBuilder.withCoordinatorKillIgnoreDurationToRetain(true);
-    configBuilder.withCoordinatorKillMaxSegments(2);
+    configBuilder.withIgnoreDurationToRetain(true).withMaxSegmentsToKill(2);
 
     createAndAddUnusedSegment(DS1, YEAR_OLD, VERSION, NOW.minusDays(1));
     createAndAddUnusedSegment(DS1, MONTH_OLD, VERSION, NOW.minusDays(1));
@@ -237,8 +236,8 @@ public class KillUnusedSegmentsTest
   @Test
   public void testKillWithDifferentLastUpdatedTimesInWideInterval()
   {
-    configBuilder.withCoordinatorKillIgnoreDurationToRetain(true);
-    configBuilder.withCoordinatorKillBufferPeriod(Duration.standardDays(3));
+    configBuilder.withIgnoreDurationToRetain(true)
+                 .withBufferPeriod(Duration.standardDays(3));
 
     createAndAddUnusedSegment(DS1, YEAR_OLD, VERSION, NOW.minusDays(10));
     createAndAddUnusedSegment(DS1, MONTH_OLD, VERSION, NOW.minusDays(10));
@@ -266,8 +265,8 @@ public class KillUnusedSegmentsTest
   @Test
   public void testAddOlderSegmentsAfterInitialRun()
   {
-    configBuilder.withCoordinatorKillIgnoreDurationToRetain(true);
-    configBuilder.withCoordinatorKillMaxSegments(2);
+    configBuilder.withIgnoreDurationToRetain(true)
+                 .withMaxSegmentsToKill(2);
 
     createAndAddUnusedSegment(DS1, DAY_OLD, VERSION, NOW.minusDays(1));
     createAndAddUnusedSegment(DS1, NEXT_DAY, VERSION, NOW.minusDays(1));
@@ -344,7 +343,7 @@ public class KillUnusedSegmentsTest
   @Test
   public void testNegativeDurationToRetain()
   {
-    configBuilder.withCoordinatorKillDurationToRetain(Duration.standardHours(36).negated());
+    configBuilder.withDurationToRetain(Duration.standardHours(36).negated());
 
     createAndAddUnusedSegment(DS1, YEAR_OLD, VERSION, NOW.minusDays(10));
     createAndAddUnusedSegment(DS1, MONTH_OLD, VERSION, NOW.minusDays(10));
@@ -368,7 +367,7 @@ public class KillUnusedSegmentsTest
   @Test
   public void testIgnoreDurationToRetain()
   {
-    configBuilder.withCoordinatorKillIgnoreDurationToRetain(true);
+    configBuilder.withIgnoreDurationToRetain(true);
 
     createAndAddUnusedSegment(DS1, YEAR_OLD, VERSION, NOW.minusDays(10));
     createAndAddUnusedSegment(DS1, MONTH_OLD, VERSION, NOW.minusDays(10));
@@ -392,7 +391,7 @@ public class KillUnusedSegmentsTest
   @Test
   public void testLowerMaxSegmentsToKill()
   {
-    configBuilder.withCoordinatorKillMaxSegments(1);
+    configBuilder.withMaxSegmentsToKill(1);
 
     createAndAddUnusedSegment(DS1, YEAR_OLD, VERSION, NOW.minusDays(10));
     createAndAddUnusedSegment(DS1, MONTH_OLD, VERSION, NOW.minusDays(10));
@@ -415,7 +414,7 @@ public class KillUnusedSegmentsTest
   @Test
   public void testLargeKillPeriod()
   {
-    configBuilder.withCoordinatorKillPeriod(Duration.standardHours(1));
+    configBuilder.withCleanupPeriod(Duration.standardHours(1));
 
     createAndAddUnusedSegment(DS1, YEAR_OLD, VERSION, NOW.minusDays(10));
     createAndAddUnusedSegment(DS1, MONTH_OLD, VERSION, NOW.minusDays(10));
@@ -609,7 +608,7 @@ public class KillUnusedSegmentsTest
   @Test
   public void testKillFirstHalfEternitySegment()
   {
-    configBuilder.withCoordinatorKillIgnoreDurationToRetain(true);
+    configBuilder.withIgnoreDurationToRetain(true);
 
     final Interval firstHalfEternity = new Interval(DateTimes.MIN, DateTimes.of("2024"));
     createAndAddUnusedSegment(DS1, firstHalfEternity, VERSION, NOW.minusDays(60));
@@ -628,7 +627,7 @@ public class KillUnusedSegmentsTest
   @Test
   public void testKillEternitySegment()
   {
-    configBuilder.withCoordinatorKillIgnoreDurationToRetain(true);
+    configBuilder.withIgnoreDurationToRetain(true);
 
     createAndAddUnusedSegment(DS1, Intervals.ETERNITY, VERSION, NOW.minusDays(60));
 
@@ -646,7 +645,7 @@ public class KillUnusedSegmentsTest
   @Test
   public void testKillSecondHalfEternitySegment()
   {
-    configBuilder.withCoordinatorKillIgnoreDurationToRetain(true);
+    configBuilder.withIgnoreDurationToRetain(true);
     final Interval secondHalfEternity = new Interval(DateTimes.of("1970"), DateTimes.MAX);
 
     createAndAddUnusedSegment(DS1, secondHalfEternity, VERSION, NOW.minusDays(60));
@@ -685,7 +684,7 @@ public class KillUnusedSegmentsTest
   @Test
   public void testKillMultipleSegmentsInSameInterval()
   {
-    configBuilder.withCoordinatorKillIgnoreDurationToRetain(true);
+    configBuilder.withIgnoreDurationToRetain(true);
 
     createAndAddUnusedSegment(DS1, YEAR_OLD, "v1", NOW.minusDays(10));
     createAndAddUnusedSegment(DS1, YEAR_OLD, "v2", NOW.minusDays(10));
@@ -700,56 +699,6 @@ public class KillUnusedSegmentsTest
     Assert.assertEquals(3, stats.get(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, DS1_STAT_KEY));
 
     validateLastKillStateAndReset(DS1, YEAR_OLD);
-  }
-
-  @Test
-  public void testKillPeriodShorterThanIndexingPeriod()
-  {
-    MatcherAssert.assertThat(
-        Assert.assertThrows(
-            DruidException.class,
-            () -> new KillUnusedSegments(
-                sqlSegmentsMetadataManager,
-                overlordClient,
-                new TestDruidCoordinatorConfig.Builder()
-                    .withCoordinatorIndexingPeriod(Duration.standardSeconds(10))
-                    .withCoordinatorKillPeriod(Duration.standardSeconds(5))
-                    .build()
-            )
-        ),
-        new DruidExceptionMatcher(
-            DruidException.Persona.OPERATOR,
-            DruidException.Category.INVALID_INPUT,
-            "general"
-        ).expectMessageIs(
-            "druid.coordinator.kill.period[PT5S] is invalid. It must be greater than or equal to"
-            + " druid.coordinator.period.indexingPeriod[PT10S]."
-        )
-    );
-  }
-
-  @Test
-  public void testNegativeMaxKillSegments()
-  {
-    MatcherAssert.assertThat(
-        Assert.assertThrows(
-            DruidException.class,
-            () -> new KillUnusedSegments(
-                sqlSegmentsMetadataManager,
-                overlordClient,
-                new TestDruidCoordinatorConfig.Builder()
-                    .withCoordinatorKillMaxSegments(-5)
-                    .build()
-            )
-        ),
-        new DruidExceptionMatcher(
-            DruidException.Persona.OPERATOR,
-            DruidException.Category.INVALID_INPUT,
-            "general"
-        ).expectMessageIs(
-            "druid.coordinator.kill.maxSegments[-5] is invalid. It must be a positive integer."
-        )
-    );
   }
 
   private void validateLastKillStateAndReset(final String dataSource, @Nullable final Interval expectedKillInterval)
@@ -807,7 +756,6 @@ public class KillUnusedSegmentsTest
         0
     );
   }
-
 
   private void initDuty()
   {

@@ -59,7 +59,6 @@ import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.Stopwatch;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
@@ -69,6 +68,7 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifier;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
@@ -433,16 +433,19 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
   protected TaskAction<SegmentPublishResult> buildPublishAction(
       Set<DataSegment> segmentsToBeOverwritten,
       Set<DataSegment> segmentsToPublish,
+      SegmentSchemaMapping segmentSchemaMapping,
       TaskLockType lockType
   )
   {
     switch (lockType) {
       case REPLACE:
-        return SegmentTransactionalReplaceAction.create(segmentsToPublish);
+        return SegmentTransactionalReplaceAction.create(segmentsToPublish, segmentSchemaMapping);
       case APPEND:
-        return SegmentTransactionalAppendAction.forSegments(segmentsToPublish);
+        return SegmentTransactionalAppendAction.forSegments(segmentsToPublish, segmentSchemaMapping);
       default:
-        return SegmentTransactionalInsertAction.overwriteAction(segmentsToBeOverwritten, segmentsToPublish);
+        return SegmentTransactionalInsertAction.overwriteAction(segmentsToBeOverwritten, segmentsToPublish,
+                                                                segmentSchemaMapping
+        );
     }
   }
 
@@ -482,9 +485,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       if (lock == null) {
         return false;
       }
-      if (lock.isRevoked()) {
-        throw new ISE(StringUtils.format("Lock for interval [%s] was revoked.", cur));
-      }
+      lock.assertNotRevoked();
       locksAcquired++;
       intervalToLockVersion.put(cur, lock.getVersion());
     }
@@ -825,9 +826,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
             "Cannot acquire a lock for interval[%s]",
             interval
         );
-        if (lock.isRevoked()) {
-          throw new ISE(StringUtils.format("Lock for interval [%s] was revoked.", interval));
-        }
+        lock.assertNotRevoked();
         version = lock.getVersion();
       } else {
         version = existingLockVersion;

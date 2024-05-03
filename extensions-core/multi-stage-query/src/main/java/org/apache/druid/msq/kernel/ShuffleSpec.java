@@ -59,17 +59,13 @@ public interface ShuffleSpec
   ClusterBy clusterBy();
 
   /**
-   * Whether this stage aggregates by the {@link #clusterBy()} key.
-   */
-  boolean doesAggregate();
-
-  /**
-   * Number of partitions, if known.
+   * Number of partitions, if known in advance.
    *
    * Partition count is always known if {@link #kind()} is {@link ShuffleKind#MIX}, {@link ShuffleKind#HASH}, or
-   * {@link ShuffleKind#HASH_LOCAL_SORT}. It is not known if {@link #kind()} is {@link ShuffleKind#GLOBAL_SORT}.
+   * {@link ShuffleKind#HASH_LOCAL_SORT}. For {@link ShuffleKind#GLOBAL_SORT}, it is known if we have a single
+   * output partition.
    *
-   * @throws IllegalStateException if kind is {@link ShuffleKind#GLOBAL_SORT}
+   * @throws IllegalStateException if kind is {@link ShuffleKind#GLOBAL_SORT} with more than one target partition
    */
   int partitionCount();
 }

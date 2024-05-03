@@ -22,49 +22,36 @@ package org.apache.druid.msq.indexing.destination;
 import com.fasterxml.jackson.annotation.JsonValue;
 
 /**
- * Determines the destination for results of select queries.
+ * Determines the destination for results of select queries. Convertible to and from {@link MSQDestination} in a limited
+ * way, without as many options. Provided directly by end users in query context.
  */
 public enum MSQSelectDestination
 {
   /**
    * Writes all the results directly to the report.
    */
-  TASKREPORT("taskReport", false),
+  TASKREPORT("taskReport"),
+
   /**
-   * Writes all the results as files in a specified format to an external location outside druid.
+   * Writes all the results as files in a specified format to an external location outside Druid.
    */
-  EXPORT("export", false),
+  EXPORT("export"),
+
   /**
    * Writes the results as frame files to durable storage. Task report can be truncated to a preview.
    */
-  DURABLESTORAGE("durableStorage", true);
+  DURABLESTORAGE("durableStorage");
 
   private final String name;
-  private final boolean shouldTruncateResultsInTaskReport;
 
-  public boolean shouldTruncateResultsInTaskReport()
-  {
-    return shouldTruncateResultsInTaskReport;
-  }
-
-  MSQSelectDestination(String name, boolean shouldTruncateResultsInTaskReport)
+  MSQSelectDestination(String name)
   {
     this.name = name;
-    this.shouldTruncateResultsInTaskReport = shouldTruncateResultsInTaskReport;
   }
 
   @JsonValue
   public String getName()
   {
     return name;
-  }
-
-  @Override
-  public String toString()
-  {
-    return "MSQSelectDestination{" +
-           "name='" + name + '\'' +
-           ", shouldTruncateResultsInTaskReport=" + shouldTruncateResultsInTaskReport +
-           '}';
   }
 }

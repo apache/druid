@@ -45,6 +45,7 @@ import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.segment.DataSegmentsWithSchemas;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMetersTotals;
@@ -272,7 +273,9 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
       Collection<DataSegment> originalSegmentsIfAppend
   )
   {
-    final Collection<DataSegment> segments = getIndexingServiceClient().getPublishedSegments(task);
+    final DataSegmentsWithSchemas dataSegmentsWithSchemas = getIndexingServiceClient().getSegmentAndSchemas(task);
+    verifySchema(dataSegmentsWithSchemas);
+    final Collection<DataSegment> segments = dataSegmentsWithSchemas.getSegments();
     if (!appendToExisting && actualLockGranularity == LockGranularity.TIME_CHUNK) {
       // Initial write
       final Map<Interval, List<DataSegment>> intervalToSegments = SegmentUtils.groupSegmentsByInterval(segments);
@@ -303,7 +306,9 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
 
   private void assertShardSpecAfterOverwrite(ParallelIndexSupervisorTask task, LockGranularity actualLockGranularity)
   {
-    final Collection<DataSegment> segments = getIndexingServiceClient().getPublishedSegments(task);
+    DataSegmentsWithSchemas dataSegmentsWithSchemas = getIndexingServiceClient().getSegmentAndSchemas(task);
+    verifySchema(dataSegmentsWithSchemas);
+    final Collection<DataSegment> segments = dataSegmentsWithSchemas.getSegments();
     final Map<Interval, List<DataSegment>> intervalToSegments = SegmentUtils.groupSegmentsByInterval(segments);
     if (actualLockGranularity != LockGranularity.SEGMENT) {
       // Check the core partition set in the shardSpec
@@ -414,7 +419,9 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
     task.addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, lockGranularity == LockGranularity.TIME_CHUNK);
     Assert.assertEquals(TaskState.SUCCESS, getIndexingServiceClient().runAndWait(task).getStatusCode());
 
-    Set<DataSegment> segments = getIndexingServiceClient().getPublishedSegments(task);
+    DataSegmentsWithSchemas dataSegmentsWithSchemas = getIndexingServiceClient().getSegmentAndSchemas(task);
+    verifySchema(dataSegmentsWithSchemas);
+    Set<DataSegment> segments = dataSegmentsWithSchemas.getSegments();
     for (DataSegment segment : segments) {
       for (int i = 0; i < dimensionSchemas.size(); i++) {
         Assert.assertEquals(dimensionSchemas.get(i).getName(), segment.getDimensions().get(i));
@@ -467,7 +474,9 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
     task.addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, lockGranularity == LockGranularity.TIME_CHUNK);
     Assert.assertEquals(TaskState.SUCCESS, getIndexingServiceClient().runAndWait(task).getStatusCode());
 
-    Set<DataSegment> segments = getIndexingServiceClient().getPublishedSegments(task);
+    DataSegmentsWithSchemas dataSegmentsWithSchemas = getIndexingServiceClient().getSegmentAndSchemas(task);
+    verifySchema(dataSegmentsWithSchemas);
+    Set<DataSegment> segments = dataSegmentsWithSchemas.getSegments();
     for (DataSegment segment : segments) {
       Assert.assertFalse(segment.getDimensions().contains("unknownDim"));
     }
@@ -903,7 +912,10 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
     task.addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, lockGranularity == LockGranularity.TIME_CHUNK);
     Assert.assertEquals(TaskState.SUCCESS, getIndexingServiceClient().runAndWait(task).getStatusCode());
 
-    Set<DataSegment> segments = getIndexingServiceClient().getPublishedSegments(task);
+    DataSegmentsWithSchemas dataSegmentsWithSchemas = getIndexingServiceClient().getSegmentAndSchemas(task);
+    verifySchema(dataSegmentsWithSchemas);
+    Set<DataSegment> segments = dataSegmentsWithSchemas.getSegments();
+
     for (DataSegment segment : segments) {
       Assert.assertEquals(ImmutableList.of("ts", "explicitDim", "implicitDim"), segment.getDimensions());
     }
@@ -984,7 +996,9 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
     task.addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, lockGranularity == LockGranularity.TIME_CHUNK);
     Assert.assertEquals(TaskState.SUCCESS, getIndexingServiceClient().runAndWait(task).getStatusCode());
 
-    Set<DataSegment> segments = getIndexingServiceClient().getPublishedSegments(task);
+    DataSegmentsWithSchemas dataSegmentsWithSchemas = getIndexingServiceClient().getSegmentAndSchemas(task);
+    verifySchema(dataSegmentsWithSchemas);
+    Set<DataSegment> segments = dataSegmentsWithSchemas.getSegments();
     for (DataSegment segment : segments) {
       Assert.assertEquals(ImmutableList.of("ts", "explicitDim", "implicitDim"), segment.getDimensions());
     }

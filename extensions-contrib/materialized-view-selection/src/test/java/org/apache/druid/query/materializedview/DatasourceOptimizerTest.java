@@ -52,6 +52,8 @@ import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.query.topn.TopNQueryBuilder;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
@@ -89,12 +91,14 @@ public class DatasourceOptimizerTest extends CuratorTestBase
   private IndexerSQLMetadataStorageCoordinator metadataStorageCoordinator;
   private BatchServerInventoryView baseView;
   private BrokerServerView brokerServerView;
+  private SegmentSchemaManager segmentSchemaManager;
 
   @Before
   public void setUp() throws Exception
   {
     TestDerbyConnector derbyConnector = derbyConnectorRule.getConnector();
     derbyConnector.createDataSourceTable();
+    derbyConnector.createSegmentSchemasTable();
     derbyConnector.createSegmentTable();
     MaterializedViewConfig viewConfig = new MaterializedViewConfig();
     jsonMapper = TestHelper.makeJsonMapper();
@@ -106,10 +110,18 @@ public class DatasourceOptimizerTest extends CuratorTestBase
         jsonMapper,
         derbyConnector
     );
+    segmentSchemaManager = new SegmentSchemaManager(
+        derbyConnectorRule.metadataTablesConfigSupplier().get(),
+        jsonMapper,
+        derbyConnector
+    );
+
     metadataStorageCoordinator = new IndexerSQLMetadataStorageCoordinator(
         jsonMapper,
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
-        derbyConnector
+        derbyConnector,
+        segmentSchemaManager,
+        CentralizedDatasourceSchemaConfig.create()
     );
 
     setupServerAndCurator();
@@ -167,7 +179,7 @@ public class DatasourceOptimizerTest extends CuratorTestBase
               1024 * 1024
           );
           try {
-            metadataStorageCoordinator.commitSegments(Sets.newHashSet(segment));
+            metadataStorageCoordinator.commitSegments(Sets.newHashSet(segment), null);
             announceSegmentForServer(druidServer, segment, zkPathsConfig, jsonMapper);
           }
           catch (IOException e) {
@@ -192,7 +204,7 @@ public class DatasourceOptimizerTest extends CuratorTestBase
               1024
           );
           try {
-            metadataStorageCoordinator.commitSegments(Sets.newHashSet(segment));
+            metadataStorageCoordinator.commitSegments(Sets.newHashSet(segment), null);
             announceSegmentForServer(druidServer, segment, zkPathsConfig, jsonMapper);
           }
           catch (IOException e) {
