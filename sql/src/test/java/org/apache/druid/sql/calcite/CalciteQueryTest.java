@@ -2577,7 +2577,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @SqlTestFrameworkConfig(numMergeBuffers = 3)
+  @SqlTestFrameworkConfig.NumMergeBuffers(3)
   @Test
   public void testExactCountDistinctWithFilter()
   {
@@ -3416,7 +3416,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
    * This test case should be in {@link CalciteUnionQueryTest}. However, there's a bug in the test framework that
    * doesn't reset framework once the merge buffers
    */
-  @SqlTestFrameworkConfig(numMergeBuffers = 3)
+  @SqlTestFrameworkConfig.NumMergeBuffers(3)
   @Test
   public void testUnionAllSameTableThreeTimes()
   {
@@ -3460,7 +3460,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @SqlTestFrameworkConfig(numMergeBuffers = 3)
+  @SqlTestFrameworkConfig.NumMergeBuffers(3)
   @Test
   public void testExactCountDistinctUsingSubqueryOnUnionAllTables()
   {
@@ -7121,7 +7121,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @SqlTestFrameworkConfig(numMergeBuffers = 4)
+  @SqlTestFrameworkConfig.NumMergeBuffers(4)
   @Test
   public void testMultipleExactCountDistinctWithGroupingUsingGroupingSets()
   {
@@ -7385,7 +7385,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @SqlTestFrameworkConfig(numMergeBuffers = 3)
+  @SqlTestFrameworkConfig.NumMergeBuffers(3)
   @Test
   public void testDoubleNestedGroupBy()
   {
@@ -7440,7 +7440,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @SqlTestFrameworkConfig(numMergeBuffers = 3)
+  @SqlTestFrameworkConfig.NumMergeBuffers(3)
   @Test
   public void testDoubleNestedGroupBy2()
   {
@@ -8753,7 +8753,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledTestConfig(nativeQueryIgnore = NativeQueryIgnore.SLIGHTLY_WORSE_PLAN)
-  @SqlTestFrameworkConfig(numMergeBuffers = 3)
+  @SqlTestFrameworkConfig.NumMergeBuffers(3)
   @Test
   public void testQueryWithSelectProjectAndIdentityProjectDoesNotRename()
   {
@@ -10697,7 +10697,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @SqlTestFrameworkConfig(numMergeBuffers = 3)
+  @SqlTestFrameworkConfig.NumMergeBuffers(3)
   @Test
   public void testGroupingSets()
   {
@@ -10763,7 +10763,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @SqlTestFrameworkConfig(numMergeBuffers = 3)
+  @SqlTestFrameworkConfig.NumMergeBuffers(3)
   @Test
   public void testGroupingAggregatorDifferentOrder()
   {
@@ -11033,7 +11033,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @SqlTestFrameworkConfig(numMergeBuffers = 3)
+  @SqlTestFrameworkConfig.NumMergeBuffers(3)
   @Test
   public void testGroupByCube()
   {
@@ -11096,7 +11096,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @SqlTestFrameworkConfig(numMergeBuffers = 3)
+  @SqlTestFrameworkConfig.NumMergeBuffers(3)
   @Test
   public void testGroupingSetsWithDummyDimension()
   {
@@ -11159,7 +11159,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @SqlTestFrameworkConfig(numMergeBuffers = 3)
+  @SqlTestFrameworkConfig.NumMergeBuffers(3)
   @Test
   public void testGroupingSetsNoSuperset()
   {
@@ -11217,7 +11217,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @SqlTestFrameworkConfig(numMergeBuffers = 3)
+  @SqlTestFrameworkConfig.NumMergeBuffers(3)
   @Test
   public void testGroupingSetsWithOrderByDimension()
   {
@@ -11289,7 +11289,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @SqlTestFrameworkConfig(numMergeBuffers = 3)
+  @SqlTestFrameworkConfig.NumMergeBuffers(3)
   @Test
   public void testGroupingSetsWithOrderByAggregator()
   {
@@ -11359,7 +11359,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @SqlTestFrameworkConfig(numMergeBuffers = 3)
+  @SqlTestFrameworkConfig.NumMergeBuffers(3)
   @Test
   public void testGroupingSetsWithOrderByAggregatorWithLimit()
   {
@@ -13130,7 +13130,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @SqlTestFrameworkConfig(numMergeBuffers = 3)
+  @SqlTestFrameworkConfig.NumMergeBuffers(3)
   @Test
   public void testGroupingSetsWithLimit()
   {
@@ -13196,7 +13196,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @SqlTestFrameworkConfig(numMergeBuffers = 3)
+  @SqlTestFrameworkConfig.NumMergeBuffers(3)
   @Test
   public void testGroupingSetsWithLimitOrderByGran()
   {

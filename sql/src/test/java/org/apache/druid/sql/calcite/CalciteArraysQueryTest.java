@@ -3501,7 +3501,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @SqlTestFrameworkConfig(numMergeBuffers = 3)
+  @SqlTestFrameworkConfig.NumMergeBuffers(3)
   @Test
   public void testArrayAggGroupByArrayAggOfLongsFromSubquery()
   {
@@ -3574,7 +3574,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @SqlTestFrameworkConfig(numMergeBuffers = 3)
+  @SqlTestFrameworkConfig.NumMergeBuffers(3)
   @Test
   public void testArrayAggGroupByArrayAggOfStringsFromSubquery()
   {
@@ -3640,7 +3640,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @SqlTestFrameworkConfig(numMergeBuffers = 3)
+  @SqlTestFrameworkConfig.NumMergeBuffers(3)
   @Test
   public void testArrayAggGroupByArrayAggOfDoubleFromSubquery()
   {

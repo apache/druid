@@ -365,8 +365,7 @@ public class DruidAvaticaTestDriver implements Driver
       throw new SQLException("Can't decode URI", e);
     }
 
-    SqlTestFrameworkConfig config = MapToInterfaceHandler.newInstanceFor(SqlTestFrameworkConfig.class, queryParams);
-    return new SqlTestFrameworkConfigInstance(config);
+    return new SqlTestFrameworkConfigInstance(queryParams);
   }
 
   private void register()

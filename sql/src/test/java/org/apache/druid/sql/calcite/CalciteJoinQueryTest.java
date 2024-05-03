@@ -182,7 +182,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
 
   // Adjust topN threshold, so that the topN engine keeps only 1 slot for aggregates, which should be enough
   // to compute the query with limit 1.
-  @SqlTestFrameworkConfig(minTopNThreshold = 1)
+  @SqlTestFrameworkConfig.MinTopNThreshold(1)
   @Test
   @DecoupledTestConfig(nativeQueryIgnore = NativeQueryIgnore.EQUIV_PLAN)
   public void testExactTopNOnInnerJoinWithLimit()
@@ -5842,7 +5842,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @SqlTestFrameworkConfig(minTopNThreshold = 1)
+  @SqlTestFrameworkConfig.MinTopNThreshold(1)
   @Test
   @NotYetSupported(Modes.JOIN_TABLE_TABLE)
   public void testJoinWithAliasAndOrderByNoGroupBy()

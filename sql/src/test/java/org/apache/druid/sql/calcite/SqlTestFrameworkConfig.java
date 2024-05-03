@@ -20,7 +20,9 @@
 package org.apache.druid.sql.calcite;
 
 import com.google.api.client.util.Preconditions;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.RE;
+import org.apache.druid.query.topn.TopNQueryConfig;
 import org.apache.druid.sql.calcite.util.CacheTestHelperModule.ResultCacheMode;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.QueryComponentSupplier;
@@ -28,6 +30,7 @@ import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSuppl
 import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
+import org.reflections.Reflections;
 
 import java.io.Closeable;
 import java.lang.annotation.Annotation;
@@ -40,9 +43,11 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.Function;
 
 /**
@@ -55,12 +60,14 @@ public interface SqlTestFrameworkConfig
 {
   @Retention(RetentionPolicy.RUNTIME)
   @Target({ElementType.METHOD, ElementType.TYPE})
+  @NumMergeBuffers(0)
   public @interface NumMergeBuffers {
     int value();
   }
 
   @Retention(RetentionPolicy.RUNTIME)
   @Target({ElementType.METHOD, ElementType.TYPE})
+  @MinTopNThreshold(TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD)
   public @interface MinTopNThreshold {
     int value();
   }
@@ -110,6 +117,58 @@ public interface SqlTestFrameworkConfig
       }
     }
 
+    public SqlTestFrameworkConfigInstance(Map<String, String> queryParams)
+    {
+      try {
+      numMergeBuffers = getValue2(queryParams, NumMergeBuffers.class);
+      minTopNThreshold = getValue2(queryParams, MinTopNThreshold.class);
+      resultCache = getValue2(queryParams, ResultCache.class);
+      supplier = getValue2(queryParams, SqlTestFrameWorkModule.class);
+    }
+    catch (NoSuchMethodException | SecurityException | IllegalAccessException | IllegalArgumentException
+        | InvocationTargetException e) {
+      throw new RuntimeException(e);
+    }
+    }
+
+    private <T> T getValue2(Map<String, String> map, Class<? extends Annotation> annotationClass) throws IllegalAccessException, InvocationTargetException, NoSuchMethodException, SecurityException
+    {
+      String value = map.get(annotationClass.getSimpleName());
+      if(value == null ) {
+        return defaultValue(annotationClass);
+      }
+      Class<?> type = annotationClass.getMethod("value").getReturnType();
+
+      if (type == int.class) {
+        return (T) Integer.valueOf(value);
+      }
+      if (type == Class.class) {
+
+        Object clazz = getQueryComponentSupplierForName(value);
+        if (clazz != null) {
+          return (T) clazz;
+        }
+
+      }
+      throw new RuntimeException("don't know how to handle conversion to " + type);
+    }
+
+    private Object getQueryComponentSupplierForName(String name)
+    {
+      Set<Class<? extends QueryComponentSupplier>> subTypes = new Reflections("org.apache.druid")
+          .getSubTypesOf(QueryComponentSupplier.class);
+      Set<String> knownNames = new HashSet<String>();
+
+      for (Class<? extends QueryComponentSupplier> cl : subTypes) {
+        if (cl.getSimpleName().equals(name)) {
+          return cl;
+        }
+        knownNames.add(cl.getSimpleName());
+      }
+      throw new IAE("supplier [%s] is not known; known are [%s]", name, knownNames);
+    }
+
+
     private <T> T getValue(List<Annotation> annotations, Class<? extends Annotation> annotationClass)
         throws IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException,
         SecurityException
@@ -120,10 +179,17 @@ public interface SqlTestFrameworkConfig
           return (T) method.invoke(annotation);
         }
       }
+      return defaultValue(annotationClass);
+    }
+
+    private <T> T defaultValue(Class<? extends Annotation> annotationClass)
+        throws IllegalAccessException, InvocationTargetException, NoSuchMethodException, SecurityException
+    {
+      Method method = annotationClass.getMethod("value");
       Annotation annotation = annotationClass.getAnnotation(annotationClass);
       Preconditions.checkNotNull(
-          String.format("Annotation class [%s] must be annotated with itself to set default value", annotationClass),
-          annotation
+          annotation,
+          String.format("Annotation class [%s] must be annotated with itself to set default value", annotationClass)
       );
       return (T) method.invoke(annotation);
     }
@@ -219,7 +285,7 @@ public interface SqlTestFrameworkConfig
     {
       List<Annotation> annotations = new ArrayList<>();
 
-      annotations.addAll(List.of(method.getDeclaringClass().getAnnotations()));
+      annotations.addAll(List.of(method.getAnnotations()));
 
       Class<?> clz = method.getDeclaringClass();
       while (clz != null) {
@@ -227,7 +293,7 @@ public interface SqlTestFrameworkConfig
         clz = clz.getSuperclass();
       }
       annotations.removeIf(
-          annotation -> annotation.getClass().getDeclaringClass() != SqlTestFrameworkConfig.class
+          annotation -> annotation.getClass().getInterfaces()[0].getDeclaringClass() != SqlTestFrameworkConfig.class
       );
 
       return annotations;

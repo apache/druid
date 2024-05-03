@@ -136,7 +136,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * A base class for SQL query testing. It sets up query execution environment, provides useful helper methods,
  * and populates data using {@link CalciteTests#createMockWalker}.
  */
-@SqlTestFrameworkConfig(supplier = StandardComponentSupplier.class)
+@SqlTestFrameworkConfig.SqlTestFrameWorkModule(StandardComponentSupplier.class)
 public class BaseCalciteQueryTest extends CalciteTestBase
 {
   public static final double ASSERTION_EPSILON = 1e-5;
