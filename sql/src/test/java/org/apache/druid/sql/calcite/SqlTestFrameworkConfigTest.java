@@ -29,7 +29,7 @@ public class SqlTestFrameworkConfigTest
   @Test
   public void testEquals()
   {
-    EqualsVerifier.forClass(SqlTestFrameworkConfig.SqlTestFrameworkConfigInstance.class)
+    EqualsVerifier.forClass(SqlTestFrameworkConfig.SqlTestFrameworkConfigStore.class)
         .usingGetClass()
         .verify();
   }

@@ -56,19 +56,21 @@ import java.util.function.Function;
  * This class provides junit rule facilities to build the framework accordingly
  * to the annotation. These rules also cache the previously created frameworks.
  */
-public interface SqlTestFrameworkConfig
+public class SqlTestFrameworkConfig
 {
   @Retention(RetentionPolicy.RUNTIME)
   @Target({ElementType.METHOD, ElementType.TYPE})
   @NumMergeBuffers(0)
-  public @interface NumMergeBuffers {
+  public @interface NumMergeBuffers
+  {
     int value();
   }
 
   @Retention(RetentionPolicy.RUNTIME)
   @Target({ElementType.METHOD, ElementType.TYPE})
   @MinTopNThreshold(TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD)
-  public @interface MinTopNThreshold {
+  public @interface MinTopNThreshold
+  {
     int value();
   }
 
@@ -91,35 +93,28 @@ public interface SqlTestFrameworkConfig
     Class<? extends QueryComponentSupplier> value();
   }
 
-  /**
-   * Non-annotation version of {@link SqlTestFrameworkConfig}.
-   *
-   * Makes it less convoluted to work with configurations created at runtime.
-   */
-  class SqlTestFrameworkConfigInstance
+  public final int numMergeBuffers;
+  public final int minTopNThreshold;
+  public final ResultCacheMode resultCache;
+  public final Class<? extends QueryComponentSupplier> supplier;
+
+  public SqlTestFrameworkConfig(List<Annotation> annotations)
   {
-    public final int numMergeBuffers;
-    public final int minTopNThreshold;
-    public final ResultCacheMode resultCache;
-    public final Class<? extends QueryComponentSupplier> supplier;
-
-    public SqlTestFrameworkConfigInstance(List<Annotation> annotations)
-    {
-      try {
-        numMergeBuffers = getValue(annotations, NumMergeBuffers.class);
-        minTopNThreshold = getValue(annotations, MinTopNThreshold.class);
-        resultCache = getValue(annotations, ResultCache.class);
-        supplier = getValue(annotations, Supplier.class);
-      }
-      catch (NoSuchMethodException | SecurityException | IllegalAccessException | IllegalArgumentException
-          | InvocationTargetException e) {
-        throw new RuntimeException(e);
-      }
+    try {
+      numMergeBuffers = getValue(annotations, NumMergeBuffers.class);
+      minTopNThreshold = getValue(annotations, MinTopNThreshold.class);
+      resultCache = getValue(annotations, ResultCache.class);
+      supplier = getValue(annotations, Supplier.class);
     }
+    catch (NoSuchMethodException | SecurityException | IllegalAccessException | IllegalArgumentException
+        | InvocationTargetException e) {
+      throw new RuntimeException(e);
+    }
+  }
 
-    public SqlTestFrameworkConfigInstance(Map<String, String> queryParams)
-    {
-      try {
+  public SqlTestFrameworkConfig(Map<String, String> queryParams)
+  {
+    try {
       numMergeBuffers = getValue2(queryParams, NumMergeBuffers.class);
       minTopNThreshold = getValue2(queryParams, MinTopNThreshold.class);
       resultCache = getValue2(queryParams, ResultCache.class);
@@ -129,99 +124,97 @@ public interface SqlTestFrameworkConfig
         | InvocationTargetException e) {
       throw new RuntimeException(e);
     }
-    }
-
-    private <T> T getValue2(Map<String, String> map, Class<? extends Annotation> annotationClass) throws IllegalAccessException, InvocationTargetException, NoSuchMethodException, SecurityException
-    {
-      String value = map.get(annotationClass.getSimpleName());
-      if(value == null ) {
-        return defaultValue(annotationClass);
-      }
-      Class<?> type = annotationClass.getMethod("value").getReturnType();
-
-      if (type == int.class) {
-        return (T) Integer.valueOf(value);
-      }
-      if (type == Class.class) {
-
-        Object clazz = getQueryComponentSupplierForName(value);
-        if (clazz != null) {
-          return (T) clazz;
-        }
-
-      }
-      throw new RuntimeException("don't know how to handle conversion to " + type);
-    }
-
-    private Object getQueryComponentSupplierForName(String name)
-    {
-      Set<Class<? extends QueryComponentSupplier>> subTypes = new Reflections("org.apache.druid")
-          .getSubTypesOf(QueryComponentSupplier.class);
-      Set<String> knownNames = new HashSet<String>();
-
-      for (Class<? extends QueryComponentSupplier> cl : subTypes) {
-        if (cl.getSimpleName().equals(name)) {
-          return cl;
-        }
-        knownNames.add(cl.getSimpleName());
-      }
-      throw new IAE("supplier [%s] is not known; known are [%s]", name, knownNames);
-    }
-
-
-    private <T> T getValue(List<Annotation> annotations, Class<? extends Annotation> annotationClass)
-        throws IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException,
-        SecurityException
-    {
-      Method method = annotationClass.getMethod("value");
-      for (Annotation annotation : annotations) {
-        if (annotationClass.isInstance(annotation)) {
-          return (T) method.invoke(annotation);
-        }
-      }
-      return defaultValue(annotationClass);
-    }
-
-    private <T> T defaultValue(Class<? extends Annotation> annotationClass)
-        throws IllegalAccessException, InvocationTargetException, NoSuchMethodException, SecurityException
-    {
-      Method method = annotationClass.getMethod("value");
-      Annotation annotation = annotationClass.getAnnotation(annotationClass);
-      Preconditions.checkNotNull(
-          annotation,
-          String.format("Annotation class [%s] must be annotated with itself to set default value", annotationClass)
-      );
-      return (T) method.invoke(annotation);
-    }
-
-    @Override
-    public int hashCode()
-    {
-      return Objects.hash(minTopNThreshold, numMergeBuffers, resultCache, supplier);
-    }
-
-    @Override
-    public boolean equals(Object obj)
-    {
-      if (obj == null || getClass() != obj.getClass()) {
-        return false;
-      }
-      SqlTestFrameworkConfigInstance other = (SqlTestFrameworkConfigInstance) obj;
-      return minTopNThreshold == other.minTopNThreshold
-          && numMergeBuffers == other.numMergeBuffers
-          && resultCache == other.resultCache
-          && supplier == other.supplier;
-    }
   }
 
-  class SqlTestFrameworkConfigStore implements Closeable
+  private <T> T getValue2(Map<String, String> map, Class<? extends Annotation> annotationClass)
+      throws IllegalAccessException, InvocationTargetException, NoSuchMethodException, SecurityException
   {
-    Map<SqlTestFrameworkConfigInstance, ConfigurationInstance> configMap = new HashMap<>();
+    String value = map.get(annotationClass.getSimpleName());
+    if (value == null) {
+      return defaultValue(annotationClass);
+    }
+    Class<?> type = annotationClass.getMethod("value").getReturnType();
+
+    if (type == int.class) {
+      return (T) Integer.valueOf(value);
+    }
+    if (type == Class.class) {
+
+      Object clazz = getQueryComponentSupplierForName(value);
+      if (clazz != null) {
+        return (T) clazz;
+      }
+
+    }
+    throw new RuntimeException("don't know how to handle conversion to " + type);
+  }
+
+  private Object getQueryComponentSupplierForName(String name)
+  {
+    Set<Class<? extends QueryComponentSupplier>> subTypes = new Reflections("org.apache.druid")
+        .getSubTypesOf(QueryComponentSupplier.class);
+    Set<String> knownNames = new HashSet<String>();
+
+    for (Class<? extends QueryComponentSupplier> cl : subTypes) {
+      if (cl.getSimpleName().equals(name)) {
+        return cl;
+      }
+      knownNames.add(cl.getSimpleName());
+    }
+    throw new IAE("supplier [%s] is not known; known are [%s]", name, knownNames);
+  }
+
+  private <T> T getValue(List<Annotation> annotations, Class<? extends Annotation> annotationClass)
+      throws IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException,
+      SecurityException
+  {
+    Method method = annotationClass.getMethod("value");
+    for (Annotation annotation : annotations) {
+      if (annotationClass.isInstance(annotation)) {
+        return (T) method.invoke(annotation);
+      }
+    }
+    return defaultValue(annotationClass);
+  }
+
+  private <T> T defaultValue(Class<? extends Annotation> annotationClass)
+      throws IllegalAccessException, InvocationTargetException, NoSuchMethodException, SecurityException
+  {
+    Method method = annotationClass.getMethod("value");
+    Annotation annotation = annotationClass.getAnnotation(annotationClass);
+    Preconditions.checkNotNull(
+        annotation,
+        String.format("Annotation class [%s] must be annotated with itself to set default value", annotationClass)
+    );
+    return (T) method.invoke(annotation);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(minTopNThreshold, numMergeBuffers, resultCache, supplier);
+  }
+
+  @Override
+  public boolean equals(Object obj)
+  {
+    if (obj == null || getClass() != obj.getClass()) {
+      return false;
+    }
+    SqlTestFrameworkConfig other = (SqlTestFrameworkConfig) obj;
+    return minTopNThreshold == other.minTopNThreshold
+        && numMergeBuffers == other.numMergeBuffers
+        && resultCache == other.resultCache
+        && supplier == other.supplier;
+  }
+
+  public static class SqlTestFrameworkConfigStore implements Closeable
+  {
+    Map<SqlTestFrameworkConfig, ConfigurationInstance> configMap = new HashMap<>();
 
     public ConfigurationInstance getConfigurationInstance(
-        SqlTestFrameworkConfigInstance config,
-        Function<QueryComponentSupplier, QueryComponentSupplier> queryComponentSupplierWrapper
-    ) throws Exception
+        SqlTestFrameworkConfig config,
+        Function<QueryComponentSupplier, QueryComponentSupplier> queryComponentSupplierWrapper) throws Exception
     {
       ConfigurationInstance ret = configMap.get(config);
       if (!configMap.containsKey(config)) {
@@ -244,10 +237,10 @@ public interface SqlTestFrameworkConfig
   /**
    * @see {@link SqlTestFrameworkConfig}
    */
-  class Rule implements AfterAllCallback, BeforeEachCallback
+  public static class Rule implements AfterAllCallback, BeforeEachCallback
   {
     SqlTestFrameworkConfigStore configStore = new SqlTestFrameworkConfigStore();
-    private SqlTestFrameworkConfigInstance config;
+    private SqlTestFrameworkConfig config;
     private Method method;
 
     private SqlTestFrameworkConfig.Supplier getModuleAnnotationFor(Class<?> testClass)
@@ -278,7 +271,7 @@ public interface SqlTestFrameworkConfig
     {
       method = context.getTestMethod().get();
       List<Annotation> annotations = collectAnnotations(method);
-      config = new SqlTestFrameworkConfigInstance(annotations);
+      config = new SqlTestFrameworkConfig(annotations);
     }
 
     private List<Annotation> collectAnnotations(Method method)
@@ -299,7 +292,7 @@ public interface SqlTestFrameworkConfig
       return annotations;
     }
 
-    public SqlTestFrameworkConfigInstance getConfig()
+    public SqlTestFrameworkConfig getConfig()
     {
       return config;
     }
@@ -320,11 +313,11 @@ public interface SqlTestFrameworkConfig
     }
   }
 
-  public class ConfigurationInstance
+  public static class ConfigurationInstance
   {
     public SqlTestFramework framework;
 
-    ConfigurationInstance(SqlTestFrameworkConfigInstance config, QueryComponentSupplier testHost)
+    ConfigurationInstance(SqlTestFrameworkConfig config, QueryComponentSupplier testHost)
     {
 
       SqlTestFramework.Builder builder = new SqlTestFramework.Builder(testHost)
@@ -336,10 +329,9 @@ public interface SqlTestFrameworkConfig
     }
 
     public ConfigurationInstance(
-        SqlTestFrameworkConfigInstance config,
+        SqlTestFrameworkConfig config,
         TempDirProducer tempDirProducer,
-        Function<QueryComponentSupplier, QueryComponentSupplier> queryComponentSupplierWrapper
-    ) throws Exception
+        Function<QueryComponentSupplier, QueryComponentSupplier> queryComponentSupplierWrapper) throws Exception
     {
       this(config, queryComponentSupplierWrapper.apply(makeQueryComponentSupplier(config.supplier, tempDirProducer)));
     }

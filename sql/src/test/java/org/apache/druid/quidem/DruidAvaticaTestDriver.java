@@ -57,7 +57,6 @@ import org.apache.druid.sql.avatica.DruidAvaticaJsonHandler;
 import org.apache.druid.sql.avatica.DruidMeta;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig.ConfigurationInstance;
-import org.apache.druid.sql.calcite.SqlTestFrameworkConfig.SqlTestFrameworkConfigInstance;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig.SqlTestFrameworkConfigStore;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
@@ -115,7 +114,7 @@ public class DruidAvaticaTestDriver implements Driver
       return null;
     }
     try {
-      SqlTestFrameworkConfigInstance config = buildConfigfromURIParams(url);
+      SqlTestFrameworkConfig config = buildConfigfromURIParams(url);
 
       ConfigurationInstance ci = CONFIG_STORE.getConfigurationInstance(
           config,
@@ -350,7 +349,7 @@ public class DruidAvaticaTestDriver implements Driver
     return tempDir;
   }
 
-  public static SqlTestFrameworkConfigInstance buildConfigfromURIParams(String url) throws SQLException
+  public static SqlTestFrameworkConfig buildConfigfromURIParams(String url) throws SQLException
   {
     Map<String, String> queryParams;
     queryParams = new HashMap<>();
@@ -365,7 +364,7 @@ public class DruidAvaticaTestDriver implements Driver
       throw new SQLException("Can't decode URI", e);
     }
 
-    return new SqlTestFrameworkConfigInstance(queryParams);
+    return new SqlTestFrameworkConfig(queryParams);
   }
 
   private void register()
