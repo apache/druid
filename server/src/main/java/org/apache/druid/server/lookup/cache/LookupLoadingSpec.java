@@ -22,6 +22,10 @@ package org.apache.druid.server.lookup.cache;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.error.InvalidInput;
 
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -39,6 +43,10 @@ import java.util.Set;
  */
 public class LookupLoadingSpec
 {
+
+  public static final String CTX_LOOKUP_LOADING_MODE = "lookupLoadingMode";
+  public static final String CTX_LOOKUPS_TO_LOAD = "lookupsToLoad";
+
   public enum Mode
   {
     ALL, NONE, ONLY_REQUIRED
@@ -80,6 +88,34 @@ public class LookupLoadingSpec
     return lookupsToLoad;
   }
 
+  public static LookupLoadingSpec getSpecFromContext(Map<String, Object> context, LookupLoadingSpec defaultSpec)
+  {
+    if (context == null) {
+      return defaultSpec;
+    }
+
+    final Object lookupModeValue = context.get(LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE);
+    if (lookupModeValue == null) {
+      return defaultSpec;
+    }
+
+    final LookupLoadingSpec.Mode lookupLoadingMode = LookupLoadingSpec.Mode.valueOf(lookupModeValue.toString());
+
+    if (lookupLoadingMode == LookupLoadingSpec.Mode.NONE) {
+      return LookupLoadingSpec.NONE;
+    } else if (lookupLoadingMode == LookupLoadingSpec.Mode.ALL) {
+      return LookupLoadingSpec.ALL;
+    } else if (lookupLoadingMode == LookupLoadingSpec.Mode.ONLY_REQUIRED) {
+      Collection<String> lookupsToLoad = (Collection<String>) context.get(LookupLoadingSpec.CTX_LOOKUPS_TO_LOAD);
+      if (lookupsToLoad == null || lookupsToLoad.isEmpty()) {
+        throw InvalidInput.exception("Set of lookups to load cannot be %s for mode[ONLY_REQUIRED].", lookupsToLoad);
+      }
+      return LookupLoadingSpec.loadOnly(new HashSet<>(lookupsToLoad));
+    } else {
+      return defaultSpec;
+    }
+  }
+
   @Override
   public String toString()
   {
@@ -87,5 +123,24 @@ public class LookupLoadingSpec
            "mode=" + mode +
            ", lookupsToLoad=" + lookupsToLoad +
            '}';
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    LookupLoadingSpec that = (LookupLoadingSpec) o;
+    return mode == that.mode && Objects.equals(lookupsToLoad, that.lookupsToLoad);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(mode, lookupsToLoad);
   }
 }

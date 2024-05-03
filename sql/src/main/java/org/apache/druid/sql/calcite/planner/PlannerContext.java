@@ -80,8 +80,6 @@ public class PlannerContext
   public static final String CTX_SQL_CURRENT_TIMESTAMP = "sqlCurrentTimestamp";
   public static final String CTX_SQL_TIME_ZONE = "sqlTimeZone";
   public static final String CTX_SQL_JOIN_ALGORITHM = "sqlJoinAlgorithm";
-  public static final String CTX_LOOKUP_LOADING_MODE = "lookupLoadingMode";
-  public static final String CTX_LOOKUPS_TO_LOAD = "lookupsToLoad";
   private static final JoinAlgorithm DEFAULT_SQL_JOIN_ALGORITHM = JoinAlgorithm.BROADCAST;
 
   /**
@@ -357,7 +355,7 @@ public class PlannerContext
   }
 
   /**
-   * Returns the lookup to load for a given task.
+   * Returns the lookup loading spec for a given task.
    */
   public LookupLoadingSpec getLookupLoadingSpec()
   {

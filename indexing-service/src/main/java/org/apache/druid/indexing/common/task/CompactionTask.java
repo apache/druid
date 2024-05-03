@@ -92,6 +92,7 @@ import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
+import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentTimeline;
@@ -249,6 +250,12 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     this.segmentProvider = new SegmentProvider(dataSource, this.ioConfig.getInputSpec());
     this.partitionConfigurationManager = new PartitionConfigurationManager(this.tuningConfig);
     this.segmentCacheManagerFactory = segmentCacheManagerFactory;
+
+    // Unless context has been overridden to load lookups differently, we want to load no lookups by default in any task spawned
+    // up by the CompactionTask. We achieve this by populating this info in the context which is passed to the spawned tasks.
+    if (context == null || !context.containsKey(LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE)) {
+      addToContext(LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE, LookupLoadingSpec.Mode.NONE.toString());
+    }
   }
 
   @VisibleForTesting
@@ -1521,5 +1528,11 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
           getNumPersistThreads()
       );
     }
+  }
+
+  @Override
+  public LookupLoadingSpec getLookupLoadingSpec()
+  {
+    return LookupLoadingSpec.getSpecFromContext(getContext(), LookupLoadingSpec.NONE);
   }
 }

@@ -334,9 +334,13 @@ public interface Task
     );
   }
 
+  /**
+   * Fetch lookup loading spec based on the task context, defaulting to loading all lookups if context does not have overridden configuration.
+   * @return lookup loading spec
+   */
   @Nullable
   default LookupLoadingSpec getLookupLoadingSpec()
   {
-    return LookupLoadingSpec.ALL;
+    return LookupLoadingSpec.getSpecFromContext(getContext(), LookupLoadingSpec.ALL);
   }
 }

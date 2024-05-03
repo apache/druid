@@ -854,7 +854,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
     protected CompactionState expectedLastCompactionState = null;
     protected Set<Interval> expectedTombstoneIntervals = null;
     protected List<Object[]> expectedResultRows = null;
-    protected LookupLoadingSpec expectedLookupLoadingSpec = null;
+    protected LookupLoadingSpec expectedLookupLoadingSpec = LookupLoadingSpec.NONE;
     protected Matcher<Throwable> expectedValidationErrorMatcher = null;
     protected List<Pair<Predicate<MSQTaskReportPayload>, String>> adhocReportAssertionAndReasons = new ArrayList<>();
     protected Matcher<Throwable> expectedExecutionErrorMatcher = null;
@@ -1020,19 +1020,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
     protected void verifyLookupLoadingInfoInTaskContext(Map<String, Object> context)
     {
-      String lookupLoadingMode = context.get(PlannerContext.CTX_LOOKUP_LOADING_MODE).toString();
-      List<String> lookupsToLoad = (List<String>) context.get(PlannerContext.CTX_LOOKUPS_TO_LOAD);
-      if (expectedLookupLoadingSpec != null) {
-        Assert.assertEquals(expectedLookupLoadingSpec.getMode().toString(), lookupLoadingMode);
-        if (expectedLookupLoadingSpec.getMode().equals(LookupLoadingSpec.Mode.ONLY_REQUIRED)) {
-          Assert.assertEquals(new ArrayList<>(expectedLookupLoadingSpec.getLookupsToLoad()), lookupsToLoad);
-        } else {
-          Assert.assertNull(lookupsToLoad);
-        }
-      } else {
-        Assert.assertEquals(LookupLoadingSpec.Mode.NONE.toString(), lookupLoadingMode);
-        Assert.assertNull(lookupsToLoad);
-      }
+      LookupLoadingSpec specFromContext = LookupLoadingSpec.getSpecFromContext(context, LookupLoadingSpec.ALL);
+      Assert.assertEquals(expectedLookupLoadingSpec, specFromContext);
     }
 
     protected void verifyWorkerCount(CounterSnapshotsTree counterSnapshotsTree)
