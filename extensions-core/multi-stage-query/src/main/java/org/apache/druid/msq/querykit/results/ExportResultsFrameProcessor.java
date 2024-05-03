@@ -56,14 +56,12 @@ import java.util.stream.Collectors;
 public class ExportResultsFrameProcessor implements FrameProcessor<Object>
 {
   private final ReadableFrameChannel inputChannel;
-  private final ResultFormat exportFormat;
   private final FrameReader frameReader;
-  private final StorageConnector storageConnector;
-  private final ObjectMapper jsonMapper;
   private final ChannelCounters channelCounter;
-  final String exportFilePath;
+  private final String exportFilePath;
   private final Object2IntMap<String> outputColumnNameToFrameColumnNumberMap;
   private final RowSignature exportRowSignature;
+  private final ResultFormat.Writer formatter;
 
   public ExportResultsFrameProcessor(
       final ReadableFrameChannel inputChannel,
@@ -77,10 +75,7 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
   )
   {
     this.inputChannel = inputChannel;
-    this.exportFormat = exportFormat;
     this.frameReader = frameReader;
-    this.storageConnector = storageConnector;
-    this.jsonMapper = jsonMapper;
     this.channelCounter = channelCounter;
     this.exportFilePath = exportFilePath;
     this.outputColumnNameToFrameColumnNumberMap = new Object2IntOpenHashMap<>();
@@ -107,6 +102,17 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
       );
     }
     this.exportRowSignature = exportRowSignatureBuilder.build();
+    try {
+      OutputStream stream = storageConnector.write(exportFilePath);
+      formatter = exportFormat.createFormatter(stream, jsonMapper);
+      formatter.writeResponseStart();
+      formatter.writeHeaderFromRowSignature(exportRowSignature, false);
+    }
+    catch (IOException e) {
+      throw DruidException.forPersona(DruidException.Persona.USER)
+                          .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                          .build(e, "Exception occurred while opening a stream to the export location [%s].", exportFilePath);
+    }
   }
 
   @Override
@@ -142,58 +148,46 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
         new FrameStorageAdapter(frame, frameReader, Intervals.ETERNITY)
             .makeCursors(null, Intervals.ETERNITY, VirtualColumns.EMPTY, Granularities.ALL, false, null);
 
-    // Add headers if we are writing to a new file.
-    final boolean writeHeader = !storageConnector.pathExists(exportFilePath);
+    SequenceUtils.forEach(
+        cursorSequence,
+        cursor -> {
+          try {
+            final ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
 
-    try (OutputStream stream = storageConnector.write(exportFilePath)) {
-      ResultFormat.Writer formatter = exportFormat.createFormatter(stream, jsonMapper);
-      formatter.writeResponseStart();
+            //noinspection rawtypes
+            final List<BaseObjectColumnValueSelector> selectors =
+                frameReader.signature()
+                           .getColumnNames()
+                           .stream()
+                           .map(columnSelectorFactory::makeColumnValueSelector)
+                           .collect(Collectors.toList());
 
-      if (writeHeader) {
-        formatter.writeHeaderFromRowSignature(exportRowSignature, false);
-      }
-
-      SequenceUtils.forEach(
-          cursorSequence,
-          cursor -> {
-            try {
-              final ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
-
-              //noinspection rawtypes
-              @SuppressWarnings("rawtypes")
-              final List<BaseObjectColumnValueSelector> selectors =
-                  frameReader.signature()
-                             .getColumnNames()
-                             .stream()
-                             .map(columnSelectorFactory::makeColumnValueSelector)
-                             .collect(Collectors.toList());
-
-              while (!cursor.isDone()) {
-                formatter.writeRowStart();
-                for (int j = 0; j < exportRowSignature.size(); j++) {
-                  String columnName = exportRowSignature.getColumnName(j);
-                  BaseObjectColumnValueSelector<?> selector = selectors.get(outputColumnNameToFrameColumnNumberMap.getInt(columnName));
-                  formatter.writeRowField(columnName, selector.getObject());
-                }
-                channelCounter.incrementRowCount();
-                formatter.writeRowEnd();
-                cursor.advance();
+            while (!cursor.isDone()) {
+              formatter.writeRowStart();
+              for (int j = 0; j < exportRowSignature.size(); j++) {
+                String columnName = exportRowSignature.getColumnName(j);
+                BaseObjectColumnValueSelector<?> selector = selectors.get(outputColumnNameToFrameColumnNumberMap.getInt(columnName));
+                formatter.writeRowField(columnName, selector.getObject());
               }
-            }
-            catch (IOException e) {
-              throw DruidException.forPersona(DruidException.Persona.USER)
-                                  .ofCategory(DruidException.Category.RUNTIME_FAILURE)
-                                  .build(e, "Exception occurred while writing file to the export location [%s].", exportFilePath);
+              channelCounter.incrementRowCount();
+              formatter.writeRowEnd();
+              cursor.advance();
             }
           }
-      );
-      formatter.writeResponseEnd();
-    }
+          catch (IOException e) {
+            throw DruidException.forPersona(DruidException.Persona.USER)
+                                .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                                .build(e, "Exception occurred while writing file to the export location [%s].", exportFilePath);
+          }
+        }
+    );
   }
 
   @Override
   public void cleanup() throws IOException
   {
     FrameProcessors.closeAll(inputChannels(), outputChannels());
+    formatter.writeResponseEnd();
+    formatter.close();
   }
 }
