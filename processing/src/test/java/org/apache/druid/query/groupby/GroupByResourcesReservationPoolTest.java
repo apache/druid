@@ -23,12 +23,14 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.collections.BlockingPool;
 import org.apache.druid.collections.DefaultBlockingPool;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.QueryResourceId;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
@@ -37,6 +39,24 @@ import java.util.concurrent.ExecutorService;
 
 public class GroupByResourcesReservationPoolTest
 {
+
+  /**
+   * CONFIG + QUERY require exactly 1 merge buffer to succeed if 'willMergeRunners' is true while allocating the resources
+   */
+  private static final GroupByQueryConfig CONFIG = new GroupByQueryConfig();
+  private static final GroupByQuery QUERY = GroupByQuery.builder()
+                                                        .setInterval(Intervals.ETERNITY)
+                                                        .setDataSource("foo")
+                                                        .setDimensions(
+                                                            ImmutableList.of(
+                                                                new DefaultDimensionSpec("dim2", "_d0")
+                                                            )
+                                                        )
+                                                        .setGranularity(Granularities.ALL)
+                                                        .setContext(
+                                                            ImmutableMap.of("timeout", 0)
+                                                        ) // Query can block indefinitely
+                                                        .build();
 
   /**
    * This test confirms that the interleaved GroupByResourcesReservationPool.reserve() and GroupByResourcesReservationPool.clean()
@@ -53,33 +73,28 @@ public class GroupByResourcesReservationPoolTest
    * The test should complete under 10 seconds, and the majority of the time would be consumed by waiting for the thread
    * that sleeps for 5 seconds
    */
+  @Ignore(
+      "Isn't run as a part of CI since it sleeps for 5 seconds. Callers must run the test manually if any changes are made "
+      + "to the corresponding class"
+  )
   @Test(timeout = 100_000L)
   public void testInterleavedReserveAndRemove()
   {
     ExecutorService executor = Execs.multiThreaded(3, "group-by-resources-reservation-pool-test-%d");
 
-    // Group by query + query configuration that would try to acquire exactly 1 merge buffer
-    GroupByQueryConfig config = new GroupByQueryConfig();
-    GroupByQuery query = GroupByQuery.builder()
-                                     .setInterval(Intervals.ETERNITY)
-                                     .setDataSource("foo")
-                                     .setDimensions(ImmutableList.of(new DefaultDimensionSpec("dim2", "_d0")))
-                                     .setGranularity(Granularities.ALL)
-                                     .setContext(ImmutableMap.of("timeout", 0)) // Query can block indefinitely
-                                     .build();
     // Sanity checks that the query will acquire exactly one merge buffer. This safeguards the test being useful in
     // case the merge buffer acquisition code changes to acquire less than one merge buffer (the test would be
     // useless in that case) or more than one merge buffer (the test would incorrectly fail in that case)
-    Assert.assertTrue(
-        GroupByQueryResources.countRequiredMergeBufferNumForMergingQueryRunner(config, query)
-        + GroupByQueryResources.countRequiredMergeBufferNumForToolchestMerge(query)
-        == 1
+    Assert.assertEquals(
+        1,
+        GroupByQueryResources.countRequiredMergeBufferNumForMergingQueryRunner(CONFIG, QUERY)
+        + GroupByQueryResources.countRequiredMergeBufferNumForToolchestMerge(QUERY)
     );
 
     // Blocking pool with a single buffer, which means only one of the queries can succeed at a time
     BlockingPool<ByteBuffer> mergeBufferPool = new DefaultBlockingPool<>(() -> ByteBuffer.allocate(100), 1);
     GroupByResourcesReservationPool groupByResourcesReservationPool =
-        new GroupByResourcesReservationPool(mergeBufferPool, config);
+        new GroupByResourcesReservationPool(mergeBufferPool, CONFIG);
 
     // Latch indicating that the first thread has called reservationPool.reserve()
     CountDownLatch reserveCalledByFirstThread = new CountDownLatch(1);
@@ -110,7 +125,7 @@ public class GroupByResourcesReservationPoolTest
           return super.equals(o);
         }
       };
-      groupByResourcesReservationPool.reserve(queryResourceId1, query, true);
+      groupByResourcesReservationPool.reserve(queryResourceId1, QUERY, true);
       reserveCalledByFirstThread.countDown();
       try {
         reserveCalledBySecondThread.await();
@@ -146,10 +161,10 @@ public class GroupByResourcesReservationPoolTest
         }
       };
 
-      // Since the reserve() call is blocking, we need to execute it separately, so that we can countdown the latch
+      // Since the reserve() call is blocking, we need to execute it separately, so that we can count down the latch
       // and inform Thread1 the reserve call has been made by this thread
       executor.submit(() -> {
-        groupByResourcesReservationPool.reserve(queryResourceId2, query, true);
+        groupByResourcesReservationPool.reserve(queryResourceId2, QUERY, true);
         threadsCompleted.countDown();
       });
       try {
@@ -170,5 +185,22 @@ public class GroupByResourcesReservationPoolTest
     catch (InterruptedException e) {
       Assert.fail("Interrupted while waiting for the threads to complete");
     }
+  }
+
+  @Test
+  public void testMultipleAllocationAttemptsFail()
+  {
+    BlockingPool<ByteBuffer> mergeBufferPool = new DefaultBlockingPool<>(() -> ByteBuffer.allocate(100), 1);
+    GroupByResourcesReservationPool groupByResourcesReservationPool =
+        new GroupByResourcesReservationPool(mergeBufferPool, CONFIG);
+    QueryResourceId queryResourceId = new QueryResourceId("test-id");
+
+    groupByResourcesReservationPool.reserve(queryResourceId, QUERY, true);
+
+    Assert.assertThrows(
+        DruidException.class,
+        () -> groupByResourcesReservationPool.reserve(queryResourceId, QUERY, true)
+    );
+
   }
 }
