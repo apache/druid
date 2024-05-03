@@ -33,7 +33,6 @@ import org.apache.druid.segment.serde.ComplexMetricSerde;
 import org.apache.druid.segment.serde.ComplexMetrics;
 
 import javax.annotation.Nullable;
-import java.nio.ByteBuffer;
 
 /**
  * Reads values written by {@link ComplexFieldWriter}.
@@ -96,13 +95,11 @@ public class ComplexFieldReader implements FieldReader
     return true;
   }
 
+  /**
+   * Alternative interface to read the field from the memory without creating a selector and field pointer
+   */
   @Nullable
-  public static Object readFieldFromBuffer(
-      ComplexMetricSerde serde,
-      Memory memory,
-      long position,
-      long completeFieldLength
-  )
+  public static Object readFieldFromMemory(final ComplexMetricSerde serde, final Memory memory, final long position)
   {
     final byte nullByte = memory.getByte(position);
 
@@ -140,7 +137,7 @@ public class ComplexFieldReader implements FieldReader
     public T getObject()
     {
       //noinspection unchecked
-      return (T) readFieldFromBuffer(serde, memory, fieldPointer.position(), fieldPointer.length());
+      return (T) readFieldFromMemory(serde, memory, fieldPointer.position());
     }
 
     @Override

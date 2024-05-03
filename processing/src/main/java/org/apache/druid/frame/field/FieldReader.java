@@ -61,4 +61,9 @@ public interface FieldReader
    * Whether this field is comparable. Comparable fields can be compared as unsigned bytes.
    */
   boolean isComparable();
+
+  /**
+   *
+   */
+
 }

@@ -25,16 +25,14 @@ import org.apache.datasketches.memory.Memory;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
+import org.apache.druid.frame.field.ComplexFieldReader;
 import org.apache.druid.frame.field.FieldReader;
-import org.apache.druid.frame.field.ReadableFieldPointer;
-import org.apache.druid.frame.field.SettableFieldPointer;
 import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.read.FrameReaderUtils;
 import org.apache.druid.frame.write.FrameWriterUtils;
 import org.apache.druid.frame.write.RowBasedFrameWriter;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
@@ -234,7 +232,6 @@ public class FrameComparisonWidgetImpl implements FrameComparisonWidget
         int cmp = FrameReaderUtils.compareComplexTypes(
             dataRegion,
             rowPosition + comparableBytesStartPositionInRow,
-            comparableBytesEndPositionInRow - comparableBytesStartPositionInRow,
             keyArray,
             comparableBytesStartPositionInKey,
             comparableBytesEndPositionInKey - comparableBytesStartPositionInKey,
@@ -293,10 +290,8 @@ public class FrameComparisonWidgetImpl implements FrameComparisonWidget
     // Number of fields compared till now, which is equivalent to the index of the field to compare next
     int fieldsComparedTillNow = 0;
 
-    final Map<Integer, ColumnValueSelector> complexValueSelectors = new HashMap<>();
-    final Map<Integer, ColumnValueSelector> otherComplexValueSelectors = new HashMap<>();
-    final Map<Integer, SettableFieldPointer> fieldPointers = new HashMap<>();
-    final Map<Integer, SettableFieldPointer> otherFieldPointers = new HashMap<>();
+    // Memoize the serde instead of calling ComplexMetrics.getSerdeForType everytime
+    final Map<String, ComplexMetricSerde> serdeMap = new HashMap<>();
 
     for (RowKeyComparisonRunLengths.RunLengthEntry runLengthEntry : rowKeyComparisonRunLengths.getRunLengthEntries()) {
 
@@ -339,15 +334,11 @@ public class FrameComparisonWidgetImpl implements FrameComparisonWidget
         final int comparableBytesEndPositionInRow = getFieldEndPositionInRow(rowPosition, nextField - 1);
         final int otherComparableBytesEndPositionInRow = getFieldEndPositionInRow(otherRowPosition, nextField - 1);
 
-        complexValueSelectors.computeIfAbsent()
-
         int cmp = FrameReaderUtils.compareComplexTypes(
             dataRegion,
             rowPosition + comparableBytesStartPositionInRow,
-            comparableBytesEndPositionInRow - comparableBytesStartPositionInRow,
             otherWidgetImpl.dataRegion,
             otherRowPosition + otherComparableBytesStartPositionInRow,
-            otherComparableBytesEndPositionInRow - otherComparableBytesStartPositionInRow,
             columnType1,
             serde
         );
