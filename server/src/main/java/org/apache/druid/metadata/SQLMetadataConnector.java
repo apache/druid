@@ -339,10 +339,10 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
 
     for (String column : columns) {
       createStatementBuilder.append(column);
-      createStatementBuilder.append(",");
+      createStatementBuilder.append(",\n");
     }
 
-    createStatementBuilder.append("PRIMARY KEY (id))");
+    createStatementBuilder.append("PRIMARY KEY (id)\n)");
 
     createTable(
         tableName,
@@ -618,10 +618,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
       log.info("Adding columns %s to table[%s].", columnsToAdd, tableName);
     }
 
-    alterTable(
-        tableName,
-        alterCommands
-    );
+    alterTable(tableName, alterCommands);
   }
 
   @Override
@@ -1011,7 +1008,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                 tableName, getSerialType(), getPayloadType()
             ),
             StringUtils.format("CREATE INDEX idx_%1$s_fingerprint ON %1$s(fingerprint)", tableName),
-            StringUtils.format("CREATE INDEX idx_%1$s_used ON %1$s(used)", tableName)
+            StringUtils.format("CREATE INDEX idx_%1$s_used ON %1$s(used, used_status_last_updated)", tableName)
         )
     );
   }
@@ -1155,7 +1152,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   {
     String segmentsTables = tablesConfigSupplier.get().getSegmentsTable();
 
-    boolean schemaPersistenceRequirementMet =
+    final boolean schemaPersistenceRequirementMet =
         !centralizedDatasourceSchemaConfig.isEnabled() ||
         (tableHasColumn(segmentsTables, "schema_fingerprint")
          && tableHasColumn(segmentsTables, "num_rows"));
