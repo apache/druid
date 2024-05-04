@@ -56,12 +56,16 @@ import java.util.stream.Collectors;
 public class ExportResultsFrameProcessor implements FrameProcessor<Object>
 {
   private final ReadableFrameChannel inputChannel;
+  private final ResultFormat exportFormat;
   private final FrameReader frameReader;
+  private final StorageConnector storageConnector;
+  private final ObjectMapper jsonMapper;
   private final ChannelCounters channelCounter;
   private final String exportFilePath;
   private final Object2IntMap<String> outputColumnNameToFrameColumnNumberMap;
   private final RowSignature exportRowSignature;
-  private final ResultFormat.Writer formatter;
+
+  private ResultFormat.Writer exportWriter;
 
   public ExportResultsFrameProcessor(
       final ReadableFrameChannel inputChannel,
@@ -75,7 +79,10 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
   )
   {
     this.inputChannel = inputChannel;
+    this.exportFormat = exportFormat;
     this.frameReader = frameReader;
+    this.storageConnector = storageConnector;
+    this.jsonMapper = jsonMapper;
     this.channelCounter = channelCounter;
     this.exportFilePath = exportFilePath;
     this.outputColumnNameToFrameColumnNumberMap = new Object2IntOpenHashMap<>();
@@ -102,17 +109,6 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
       );
     }
     this.exportRowSignature = exportRowSignatureBuilder.build();
-    try {
-      OutputStream stream = storageConnector.write(exportFilePath);
-      formatter = exportFormat.createFormatter(stream, jsonMapper);
-      formatter.writeResponseStart();
-      formatter.writeHeaderFromRowSignature(exportRowSignature, false);
-    }
-    catch (IOException e) {
-      throw DruidException.forPersona(DruidException.Persona.USER)
-                          .ofCategory(DruidException.Category.RUNTIME_FAILURE)
-                          .build(e, "Exception occurred while opening a stream to the export location [%s].", exportFilePath);
-    }
   }
 
   @Override
@@ -137,6 +133,9 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
     if (inputChannel.isFinished()) {
       return ReturnOrAwait.returnObject(exportFilePath);
     } else {
+      if (exportWriter == null) {
+        createExportWriter();
+      }
       exportFrame(inputChannel.read());
       return ReturnOrAwait.awaitAll(1);
     }
@@ -163,14 +162,14 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
                            .collect(Collectors.toList());
 
             while (!cursor.isDone()) {
-              formatter.writeRowStart();
+              exportWriter.writeRowStart();
               for (int j = 0; j < exportRowSignature.size(); j++) {
                 String columnName = exportRowSignature.getColumnName(j);
                 BaseObjectColumnValueSelector<?> selector = selectors.get(outputColumnNameToFrameColumnNumberMap.getInt(columnName));
-                formatter.writeRowField(columnName, selector.getObject());
+                exportWriter.writeRowField(columnName, selector.getObject());
               }
               channelCounter.incrementRowCount();
-              formatter.writeRowEnd();
+              exportWriter.writeRowEnd();
               cursor.advance();
             }
           }
@@ -183,11 +182,27 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
     );
   }
 
+  private void createExportWriter()
+  {
+    try {
+      OutputStream stream = storageConnector.write(exportFilePath);
+      exportWriter = exportFormat.createFormatter(stream, jsonMapper);
+      exportWriter.writeResponseStart();
+      exportWriter.writeHeaderFromRowSignature(exportRowSignature, false);
+    }
+    catch (IOException e) {
+      throw DruidException.forPersona(DruidException.Persona.USER)
+                          .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                          .build(e, "Exception occurred while opening a stream to the export location [%s].", exportFilePath);
+    }
+  }
+
   @Override
   public void cleanup() throws IOException
   {
     FrameProcessors.closeAll(inputChannels(), outputChannels());
-    formatter.writeResponseEnd();
-    formatter.close();
+
+    exportWriter.writeResponseEnd();
+    exportWriter.close();
   }
 }
