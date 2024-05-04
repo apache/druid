@@ -19,47 +19,19 @@
 
 package org.apache.druid.sql.calcite;
 
-import com.google.common.collect.ImmutableMap;
-import org.apache.druid.query.QueryContexts;
-import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.sql.calcite.NotYetSupported.NotYetSupportedProcessor;
-import org.apache.druid.sql.calcite.planner.PlannerConfig;
-import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 @ExtendWith(NotYetSupportedProcessor.class)
 public class DecoupledPlanningCalciteQueryTest extends CalciteQueryTest
 {
-  private static final ImmutableMap<String, Object> CONTEXT_OVERRIDES =
-      ImmutableMap.<String, Object>builder()
-      .putAll(BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT)
-      .put(PlannerConfig.CTX_NATIVE_QUERY_SQL_PLANNING_MODE, PlannerConfig.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED)
-      .put(QueryContexts.ENABLE_DEBUG, true)
-      .build();
+  @RegisterExtension
+  DecoupledExtension decoupledExtension = new DecoupledExtension(this);
 
   @Override
   protected QueryTestBuilder testBuilder()
   {
-    CalciteTestConfig testConfig = new CalciteTestConfig(CONTEXT_OVERRIDES)
-    {
-      @Override
-      public SqlTestFramework.PlannerFixture plannerFixture(PlannerConfig plannerConfig, AuthConfig authConfig)
-      {
-        plannerConfig = plannerConfig.withOverrides(CONTEXT_OVERRIDES);
-        return queryFramework().plannerFixture(plannerConfig, authConfig);
-      }
-    };
-
-    QueryTestBuilder builder = new QueryTestBuilder(testConfig)
-        .cannotVectorize(cannotVectorize)
-        .skipVectorize(skipVectorize);
-
-    DecoupledTestConfig decTestConfig = queryFrameworkRule.getAnnotation(DecoupledTestConfig.class);
-
-    if (decTestConfig != null && decTestConfig.nativeQueryIgnore().isPresent()) {
-      builder.verifyNativeQueries(x -> false);
-    }
-
-    return builder;
+    return decoupledExtension.testBuilder();
   }
 }

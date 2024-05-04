@@ -29,6 +29,7 @@ import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.longs.LongList;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.msq.exec.Limits;
+import org.apache.druid.msq.exec.OutputChannelMode;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSpec;
 import org.apache.druid.msq.input.InputSpecSlicer;
@@ -238,7 +239,8 @@ public class WorkerInputsTest
         stageDef,
         new Int2IntAVLTreeMap(ImmutableMap.of(0, 2)),
         new StageInputSpecSlicer(
-            new Int2ObjectAVLTreeMap<>(ImmutableMap.of(0, ReadablePartitions.striped(0, 2, 3)))
+            new Int2ObjectAVLTreeMap<>(ImmutableMap.of(0, ReadablePartitions.striped(0, 2, 3))),
+            new Int2ObjectAVLTreeMap<>(ImmutableMap.of(0, OutputChannelMode.LOCAL_STORAGE))
         ),
         WorkerAssignmentStrategy.AUTO,
         Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
@@ -251,7 +253,8 @@ public class WorkerInputsTest
                         Collections.singletonList(
                             new StageInputSlice(
                                 0,
-                                new StripedReadablePartitions(0, 2, new IntAVLTreeSet(new int[]{0, 2}))
+                                new StripedReadablePartitions(0, 2, new IntAVLTreeSet(new int[]{0, 2})),
+                                OutputChannelMode.LOCAL_STORAGE
                             )
                         )
                     )
@@ -260,7 +263,8 @@ public class WorkerInputsTest
                         Collections.singletonList(
                             new StageInputSlice(
                                 0,
-                                new StripedReadablePartitions(0, 2, new IntAVLTreeSet(new int[]{1}))
+                                new StripedReadablePartitions(0, 2, new IntAVLTreeSet(new int[]{1})),
+                                OutputChannelMode.LOCAL_STORAGE
                             )
                         )
                     )
@@ -283,7 +287,8 @@ public class WorkerInputsTest
         stageDef,
         new Int2IntAVLTreeMap(ImmutableMap.of(0, 2)),
         new StageInputSpecSlicer(
-            new Int2ObjectAVLTreeMap<>(ImmutableMap.of(0, ReadablePartitions.striped(0, 2, 3)))
+            new Int2ObjectAVLTreeMap<>(ImmutableMap.of(0, ReadablePartitions.striped(0, 2, 3))),
+            new Int2ObjectAVLTreeMap<>(ImmutableMap.of(0, OutputChannelMode.LOCAL_STORAGE))
         ),
         WorkerAssignmentStrategy.AUTO,
         Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
@@ -296,7 +301,8 @@ public class WorkerInputsTest
                         Collections.singletonList(
                             new StageInputSlice(
                                 0,
-                                new StripedReadablePartitions(0, 2, new IntAVLTreeSet(new int[]{0, 1, 2}))
+                                new StripedReadablePartitions(0, 2, new IntAVLTreeSet(new int[]{0, 1, 2})),
+                                OutputChannelMode.LOCAL_STORAGE
                             )
                         )
                     )

@@ -25,23 +25,14 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.common.config.Configs;
-import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.java.util.common.guava.Yielder;
-import org.apache.druid.java.util.common.guava.Yielders;
-import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.msq.exec.Limits;
-import org.apache.druid.msq.indexing.destination.MSQSelectDestination;
-import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
 public class MSQResultsReport
 {
-  private static final Logger log = new Logger(MSQResultsReport.class);
   /**
    * Like {@link org.apache.druid.segment.column.RowSignature}, but allows duplicate column names for compatibility
    * with SQL (which also allows duplicate column names in query results).
@@ -49,72 +40,21 @@ public class MSQResultsReport
   private final List<ColumnAndType> signature;
   @Nullable
   private final List<SqlTypeName> sqlTypeNames;
-  private final Yielder<Object[]> resultYielder;
+  private final List<Object[]> results;
   private final boolean resultsTruncated;
 
-  public MSQResultsReport(
-      final List<ColumnAndType> signature,
-      @Nullable final List<SqlTypeName> sqlTypeNames,
-      final Yielder<Object[]> resultYielder,
-      @Nullable Boolean resultsTruncated
-  )
-  {
-    this.signature = Preconditions.checkNotNull(signature, "signature");
-    this.sqlTypeNames = sqlTypeNames;
-    this.resultYielder = Preconditions.checkNotNull(resultYielder, "resultYielder");
-    this.resultsTruncated = Configs.valueOrDefault(resultsTruncated, false);
-  }
-
-  /**
-   * Method that enables Jackson deserialization.
-   */
   @JsonCreator
-  static MSQResultsReport fromJson(
+  public MSQResultsReport(
       @JsonProperty("signature") final List<ColumnAndType> signature,
       @JsonProperty("sqlTypeNames") @Nullable final List<SqlTypeName> sqlTypeNames,
       @JsonProperty("results") final List<Object[]> results,
       @JsonProperty("resultsTruncated") final Boolean resultsTruncated
   )
   {
-    return new MSQResultsReport(signature, sqlTypeNames, Yielders.each(Sequences.simple(results)), resultsTruncated);
-  }
-
-  public static MSQResultsReport createReportAndLimitRowsIfNeeded(
-      final List<ColumnAndType> signature,
-      @Nullable final List<SqlTypeName> sqlTypeNames,
-      Yielder<Object[]> resultYielder,
-      MSQSelectDestination selectDestination
-  )
-  {
-    List<Object[]> results = new ArrayList<>();
-    long rowCount = 0;
-    int factor = 1;
-    while (!resultYielder.isDone()) {
-      results.add(resultYielder.get());
-      resultYielder = resultYielder.next(null);
-      ++rowCount;
-      if (selectDestination.shouldTruncateResultsInTaskReport() && rowCount >= Limits.MAX_SELECT_RESULT_ROWS) {
-        break;
-      }
-      if (rowCount % (factor * Limits.MAX_SELECT_RESULT_ROWS) == 0) {
-        log.warn(
-            "Task report is getting too large with %d rows. Large task reports can cause the controller to go out of memory. "
-            + "Consider using the 'limit %d' clause in your query to reduce the number of rows in the result. "
-            + "If you require all the results, consider setting [%s=%s] in the query context which will allow you to fetch large result sets.",
-            rowCount,
-            Limits.MAX_SELECT_RESULT_ROWS,
-            MultiStageQueryContext.CTX_SELECT_DESTINATION,
-            MSQSelectDestination.DURABLESTORAGE.getName()
-        );
-        factor = factor < 32 ? factor * 2 : 32;
-      }
-    }
-    return new MSQResultsReport(
-        signature,
-        sqlTypeNames,
-        Yielders.each(Sequences.simple(results)),
-        !resultYielder.isDone()
-    );
+    this.signature = Preconditions.checkNotNull(signature, "signature");
+    this.sqlTypeNames = sqlTypeNames;
+    this.results = Preconditions.checkNotNull(results, "results");
+    this.resultsTruncated = Configs.valueOrDefault(resultsTruncated, false);
   }
 
   @JsonProperty("signature")
@@ -132,9 +72,9 @@ public class MSQResultsReport
   }
 
   @JsonProperty("results")
-  public Yielder<Object[]> getResultYielder()
+  public List<Object[]> getResults()
   {
-    return resultYielder;
+    return results;
   }
 
   @JsonProperty("resultsTruncated")

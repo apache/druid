@@ -79,9 +79,9 @@ public class SegmentMetadata
   @Override
   public String toString()
   {
-    return "SegmentStats{" +
+    return "SegmentMetadata{" +
            "numRows=" + numRows +
-           ", fingerprint='" + schemaFingerprint + '\'' +
+           ", schemaFingerprint='" + schemaFingerprint + '\'' +
            '}';
   }
 }

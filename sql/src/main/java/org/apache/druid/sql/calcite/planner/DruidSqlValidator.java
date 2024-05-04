@@ -291,6 +291,7 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
       SqlSelect select,
       SqlNode enclosingNode)
   {
+    SqlNodeList catalogClustering = null;
     if (enclosingNode instanceof DruidSqlIngest) {
       // The target is a new or existing datasource.
       // The target namespace is both the target table ID and the row type for that table.
@@ -308,11 +309,10 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
         final DatasourceFacade tableMetadata = table == null
             ? null
             : table.effectiveMetadata().catalogMetadata();
-        // Convert CLUSTERED BY, or the catalog equivalent, to an ORDER BY clause
-        final SqlNodeList catalogClustering = convertCatalogClustering(tableMetadata);
-        rewriteClusteringToOrderBy(select, (DruidSqlIngest) enclosingNode, catalogClustering);
-        return new SelectNamespace(this, select, enclosingNode);
+        catalogClustering = convertCatalogClustering(tableMetadata);
       }
+      // Convert CLUSTERED BY, or the catalog equivalent, to an ORDER BY clause
+      rewriteClusteringToOrderBy(select, (DruidSqlIngest) enclosingNode, catalogClustering);
     }
     return super.createSelectNamespace(select, enclosingNode);
   }
@@ -408,6 +408,7 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
     }
     final SqlSelect select = (SqlSelect) source;
 
+    DruidSqlParserUtils.validateClusteredByColumns(clusteredBy);
     select.setOrderBy(clusteredBy);
   }
 
@@ -451,6 +452,17 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
     }
 
     if (effectiveGranularity == null) {
+      SqlNode source = ingestNode.getSource();
+      while (source instanceof SqlWith) {
+        source = ((SqlWith) source).getOperandList().get(1);
+      }
+      final SqlSelect select = (SqlSelect) source;
+
+      if (select.getOrderList() != null) {
+        throw DruidSqlParserUtils.problemParsing(
+            "CLUSTERED BY found before PARTITIONED BY, CLUSTERED BY must come after the PARTITIONED BY clause"
+        );
+      }
       throw InvalidSqlInput.exception(
           "Operation [%s] requires a PARTITIONED BY to be explicitly defined, but none was found.",
           operationName);

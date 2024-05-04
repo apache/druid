@@ -21,6 +21,7 @@ package org.apache.druid.server.coordinator.balancer;
 
 import org.apache.commons.math3.util.FastMath;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.timeline.DataSegment;
@@ -132,7 +133,7 @@ public class SortingCostComputer
     DateTime startYear = segment.getInterval().getStart().withMonthOfYear(1).withDayOfMonth(1).withMillisOfDay(0);
     long startTime = startYear.getMillis();
     long endTime = startTime + BUCKET_LENGTH;
-    return new Interval(startTime, endTime);
+    return Intervals.utc(startTime, endTime);
   }
 
   private boolean isAdhoc(DataSegment segment)
@@ -234,7 +235,7 @@ public class SortingCostComputer
       double xExpInv = FastMath.exp(-xVal);
 
       double yVal = getVal(y);
-      double yExp = FastMath.exp(yVal);
+      double yExp = FastMath.exp(+yVal);
       double yExpInv = FastMath.exp(-yVal);
 
       double cost = 0.0;
@@ -269,34 +270,34 @@ public class SortingCostComputer
     }
 
     /**
-     * Return last index in array that is strictly less than x
+     * Return last index in array that is strictly less than val
      */
-    private int lowerBound(int l, int r, long x, long[] a)
+    private int lowerBound(int l, int r, long val, long[] a)
     {
       if (l == r) {
-        return a[r] < x ? r : l - 1;
+        return a[r] < val ? r : l - 1;
       }
       int m = (l + r + 1) / 2;
-      if (a[m] < x) {
-        return lowerBound(m, r, x, a);
+      if (a[m] < val) {
+        return lowerBound(m, r, val, a);
       } else {
-        return lowerBound(l, m - 1, x, a);
+        return lowerBound(l, m - 1, val, a);
       }
     }
 
     /**
-     * Return first index in the array that is strictly greater than x
+     * Return first index in the array that is strictly greater than val
      */
-    private int upperBound(int l, int r, long x, long[] a)
+    private int upperBound(int l, int r, long val, long[] a)
     {
       if (l == r) {
-        return a[l] > x ? l : r + 1;
+        return a[l] > val ? l : r + 1;
       }
       int m = (l + r) / 2;
-      if (a[m] > x) {
-        return upperBound(l, m, x, a);
+      if (a[m] > val) {
+        return upperBound(l, m, val, a);
       } else {
-        return upperBound(m + 1, r, x, a);
+        return upperBound(m + 1, r, val, a);
       }
     }
 

@@ -21,7 +21,7 @@ package org.apache.druid.server.coordinator.balancer;
 
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.JodaUtils;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
@@ -204,7 +204,7 @@ public class SortingCostComputerTest
     List<Interval> intervals = new ArrayList<>();
     // add ALL granularity buckets
     for (int i = 0; i < 50; i++) {
-      intervals.add(new Interval(JodaUtils.MIN_INSTANT, JodaUtils.MAX_INSTANT));
+      intervals.add(Intervals.ETERNITY);
     }
     // add random large intervals
     for (int i = 0; i < 150; i++) {
