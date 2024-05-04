@@ -63,6 +63,7 @@ public class ImmutableRTreeObjectStrategy implements ObjectStrategy<ImmutableRTr
   @Override
   public ImmutableRTree fromByteBuffer(ByteBuffer buffer, int numBytes)
   {
+    // always create the duplicate buffer for creating the objects as original buffer may have mutations somewhere else which can corrupt objects
     ByteBuffer duplicateBuf = buffer.duplicate();
     duplicateBuf.limit(duplicateBuf.position() + numBytes);
     return new ImmutableRTree(duplicateBuf, bitmapFactory);
