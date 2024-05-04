@@ -63,8 +63,9 @@ public class ImmutableRTreeObjectStrategy implements ObjectStrategy<ImmutableRTr
   @Override
   public ImmutableRTree fromByteBuffer(ByteBuffer buffer, int numBytes)
   {
-    buffer.limit(buffer.position() + numBytes);
-    return new ImmutableRTree(buffer, bitmapFactory);
+    ByteBuffer duplicateBuf = buffer.duplicate();
+    duplicateBuf.limit(duplicateBuf.position() + numBytes);
+    return new ImmutableRTree(duplicateBuf, bitmapFactory);
   }
 
   @Override
