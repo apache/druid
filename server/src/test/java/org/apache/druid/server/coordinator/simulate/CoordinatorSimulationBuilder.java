@@ -442,22 +442,23 @@ public class CoordinatorSimulationBuilder
           executorFactory.create(1, ExecutorFactory.HISTORICAL_LOADER)
       );
 
+      final HttpLoadQueuePeonConfig httpLoadQueuePeonConfig = new HttpLoadQueuePeonConfig(null, null, null);
+      this.loadQueueTaskMaster = new LoadQueueTaskMaster(
+          OBJECT_MAPPER,
+          executorFactory.create(1, ExecutorFactory.LOAD_QUEUE_EXECUTOR),
+          executorFactory.create(1, ExecutorFactory.LOAD_CALLBACK_EXECUTOR),
+          httpLoadQueuePeonConfig,
+          httpClient
+      );
+      this.loadQueueManager =
+          new SegmentLoadQueueManager(coordinatorInventoryView, loadQueueTaskMaster);
       this.coordinatorConfig = new DruidCoordinatorConfig(
           new CoordinatorRunConfig(new Duration(1L), Duration.standardMinutes(1)),
           new CoordinatorPeriodConfig(null, null),
           CoordinatorKillConfigs.DEFAULT,
           createBalancerStrategy(balancerStrategy),
-          new HttpLoadQueuePeonConfig(null, null, null)
+          httpLoadQueuePeonConfig
       );
-      this.loadQueueTaskMaster = new LoadQueueTaskMaster(
-          OBJECT_MAPPER,
-          executorFactory.create(1, ExecutorFactory.LOAD_QUEUE_EXECUTOR),
-          executorFactory.create(1, ExecutorFactory.LOAD_CALLBACK_EXECUTOR),
-          coordinatorConfig.getHttpLoadQueuePeonConfig(),
-          httpClient
-      );
-      this.loadQueueManager =
-          new SegmentLoadQueueManager(coordinatorInventoryView, loadQueueTaskMaster);
 
       JacksonConfigManager jacksonConfigManager = mockConfigManager();
       setDynamicConfig(dynamicConfig);

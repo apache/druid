@@ -53,29 +53,6 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
   private final String datasource = DS.WIKI;
   private final List<DataSegment> segments = Segments.WIKI_10X1D;
 
-  private static final List<DataSegment> WIKI_HOURLY =
-      CreateDataSegments.ofDatasource("wiki_hourly")
-                        .forIntervals(3 * 24 * 365, Granularities.HOUR)
-                        .startingAt("2022-01-01")
-                        .withNumPartitions(50)
-                        .eachOfSizeInMb(1);
-
-  private static final List<DataSegment> WIKI_WEEKLY =
-      CreateDataSegments.ofDatasource("wiki_weekly")
-                        .forIntervals(3 * 52, Granularities.WEEK)
-                        .startingAt("2021-12-26")
-                        .withNumPartitions(100)
-                        .eachOfSizeInMb(10);
-
-  private static final List<DataSegment> WIKI_YEARLY =
-      CreateDataSegments.ofDatasource("wiki_yearly")
-                        .forIntervals(3, Granularities.YEAR)
-                        .startingAt("2022-01-01")
-                        .withNumPartitions(300)
-                        .eachOfSizeInMb(100);
-
-
-
   @Override
   public void setUp()
   {
@@ -94,10 +71,32 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
   @Test
   public void testLoadAndBalanceSeveralSortingCost()
   {
+    final List<DataSegment> wikiHourly =
+        CreateDataSegments.ofDatasource("wiki_hourly")
+                          .forIntervals(3 * 24 * 365, Granularities.HOUR)
+                          .startingAt("2022-01-01")
+                          .withNumPartitions(50)
+                          .eachOfSizeInMb(1);
+
+    final List<DataSegment> wikiWeekly =
+        CreateDataSegments.ofDatasource("wiki_weekly")
+                          .forIntervals(3 * 52, Granularities.WEEK)
+                          .startingAt("2021-12-26")
+                          .withNumPartitions(200)
+                          .eachOfSizeInMb(10);
+
+    final List<DataSegment> wikiYearly =
+        CreateDataSegments.ofDatasource("wiki_yearly")
+                          .forIntervals(3, Granularities.YEAR)
+                          .startingAt("2022-01-01")
+                          .withNumPartitions(1000)
+                          .eachOfSizeInMb(100);
+
+
     List<DataSegment> severalSegments = new ArrayList<>();
-    severalSegments.addAll(WIKI_YEARLY);
-    severalSegments.addAll(WIKI_WEEKLY);
-    severalSegments.addAll(WIKI_HOURLY);
+    severalSegments.addAll(wikiYearly);
+    severalSegments.addAll(wikiWeekly);
+    severalSegments.addAll(wikiHourly);
 
     CoordinatorDynamicConfig dynamicConfig =
         CoordinatorDynamicConfig.builder()
@@ -127,9 +126,7 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
     for (int i = 0; i < 50; i++) {
       LOG.info("Coordinator Run: " + (i + 1) + " / " + numCycles);
       runCoordinatorCycle();
-      if (i % 5 == 4) {
-        loadQueuedSegments();
-      }
+      loadQueuedSegments();
     }
     sim.cluster().addServer(historicalT14);
     sim.cluster().addServer(historicalT15);
@@ -137,9 +134,7 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
     for (int i = 50; i < numCycles; i++) {
       LOG.info("Coordinator Run: " + (i + 1) + " / " + numCycles);
       runCoordinatorCycle();
-      if (i % 5 == 4) {
-        loadQueuedSegments();
-      }
+      loadQueuedSegments();
     }
   }
 
@@ -162,7 +157,7 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
     startSimulation(sim);
     runCoordinatorCycle();
 
-    // Verify that that replicationThrottleLimit is honored
+    // Verify that replicationThrottleLimit is honored
     verifyValue(Metric.ASSIGNED_COUNT, 2L);
 
     loadQueuedSegments();
