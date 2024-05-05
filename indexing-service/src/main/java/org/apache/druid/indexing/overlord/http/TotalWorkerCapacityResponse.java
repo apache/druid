@@ -21,6 +21,10 @@ package org.apache.druid.indexing.overlord.http;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.indexing.overlord.CategoryCapacityInfo;
+
+import javax.annotation.Nullable;
+import java.util.Map;
 
 /**
  * Should be synchronized with org.apache.druid.client.indexing.IndexingTotalWorkerCapacityInfo
@@ -42,17 +46,24 @@ public class TotalWorkerCapacityResponse
    * it cannot be determined.
    */
   private final int usedClusterCapacity;
+  /**
+   * Used total category capacity of the current state of the cluster. This can be null if
+   * it cannot be determined.
+   */
+  private final Map<String, CategoryCapacityInfo> categoryCapacity;
 
   @JsonCreator
   public TotalWorkerCapacityResponse(
       @JsonProperty("currentClusterCapacity") int currentClusterCapacity,
       @JsonProperty("maximumCapacityWithAutoScale") int maximumCapacityWithAutoScale,
-      @JsonProperty("usedClusterCapacity") int usedClusterCapacity
+      @JsonProperty("usedClusterCapacity") int usedClusterCapacity,
+      @Nullable @JsonProperty("categoryCapacity") Map<String, CategoryCapacityInfo> categorycapacityinfos
   )
   {
     this.currentClusterCapacity = currentClusterCapacity;
     this.maximumCapacityWithAutoScale = maximumCapacityWithAutoScale;
     this.usedClusterCapacity = usedClusterCapacity;
+    this.categoryCapacity = categorycapacityinfos;
   }
 
   @JsonProperty
@@ -71,5 +82,11 @@ public class TotalWorkerCapacityResponse
   public int getUsedClusterCapacity()
   {
     return usedClusterCapacity;
+  }
+
+  @JsonProperty
+  public Map<String, CategoryCapacityInfo> getCategoryCapacity()
+  {
+    return categoryCapacity;
   }
 }

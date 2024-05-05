@@ -44,6 +44,7 @@ import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionHolder;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.overlord.CategoryCapacityInfo;
 import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageAdapter;
 import org.apache.druid.indexing.overlord.TaskMaster;
@@ -541,8 +542,17 @@ public class OverlordResource
           workerBehaviorConfig.getClass().getSimpleName()
       );
       maximumCapacity = -1;
+      ImmutableMap<String, CategoryCapacityInfo> categoryCapacityInfos = workerBehaviorConfig.getSelectStrategy()
+                                                                                             .getWorkerCategoryCapacity(
+                                                                                                 workers);
+      return Response.ok(new TotalWorkerCapacityResponse(
+          currentCapacity,
+          maximumCapacity,
+          usedCapacity,
+          categoryCapacityInfos
+      )).build();
     }
-    return Response.ok(new TotalWorkerCapacityResponse(currentCapacity, maximumCapacity, usedCapacity)).build();
+    return Response.ok(new TotalWorkerCapacityResponse(currentCapacity, maximumCapacity, usedCapacity, null)).build();
   }
 
   // default value is used for backwards compatibility

@@ -19,8 +19,10 @@
 
 package org.apache.druid.indexing.overlord.setup;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.indexing.common.task.NoopTask;
+import org.apache.druid.indexing.overlord.CategoryCapacityInfo;
 import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
 import org.apache.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
 import org.apache.druid.indexing.worker.Worker;
@@ -186,5 +188,87 @@ public class FillCapacityWithCategorySpecWorkerSelectStrategyTest
     );
 
     return worker;
+  }
+
+  @Test
+  public void testWorkerCategoryCapacity()
+  {
+    final WorkerCategorySpec workerCategorySpec = new WorkerCategorySpec(
+        ImmutableMap.of(
+            "kill",
+            new WorkerCategorySpec.CategoryConfig(
+                "c1",
+                ImmutableMap.of()
+            ),
+            "compact",
+            new WorkerCategorySpec.CategoryConfig(
+                "c1",
+                ImmutableMap.of()
+            ),
+            "single_phase_sub_task",
+            new WorkerCategorySpec.CategoryConfig(
+                "c1",
+                ImmutableMap.of()
+            ),
+            "partial_dimension_cardinality",
+            new WorkerCategorySpec.CategoryConfig(
+                "c1",
+                ImmutableMap.of()
+            ),
+            "partial_index_generate",
+            new WorkerCategorySpec.CategoryConfig(
+                "c1",
+                ImmutableMap.of()
+            ),
+            "partial_index_generic_merge",
+            new WorkerCategorySpec.CategoryConfig(
+                "c1",
+                ImmutableMap.of()
+            ),
+            "partial_range_index_generate",
+            new WorkerCategorySpec.CategoryConfig(
+                "c1",
+                ImmutableMap.of()
+            ),
+            "partial_dimension_distribution",
+            new WorkerCategorySpec.CategoryConfig(
+                "c1",
+                ImmutableMap.of()
+            ),
+            "index_kafka",
+            new WorkerCategorySpec.CategoryConfig(
+                "c2",
+                ImmutableMap.of()
+            )
+        ),
+        true
+    );
+    final EqualDistributionWithCategorySpecWorkerSelectStrategy strategy = new EqualDistributionWithCategorySpecWorkerSelectStrategy(
+        workerCategorySpec);
+
+    ImmutableMap<String, CategoryCapacityInfo> categoryCapacity = strategy.getWorkerCategoryCapacity(
+        WORKERS_FOR_TIER_TESTS.values()
+    );
+    Assert.assertEquals(10, categoryCapacity.get("c1").getCapacity());
+    Assert.assertArrayEquals(
+        ImmutableList.of(
+            "kill",
+            "compact",
+            "single_phase_sub_task",
+            "partial_dimension_cardinality",
+            "partial_index_generate",
+            "partial_index_generic_merge",
+            "partial_range_index_generate",
+            "partial_dimension_distribution"
+        ).toArray(),
+        categoryCapacity.get("c1").getTaskTypeList().toArray()
+    );
+    Assert.assertEquals(10, categoryCapacity.get("c2").getCapacity());
+    Assert.assertArrayEquals(
+        ImmutableList.of(
+            "index_kafka"
+        ).toArray(),
+        categoryCapacity.get("c2").getTaskTypeList().toArray()
+    );
   }
 }

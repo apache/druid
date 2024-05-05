@@ -1098,7 +1098,7 @@ public class CompactSegmentsTest
     Mockito.when(mockClient.cancelTask(conflictTaskId))
            .thenReturn(Futures.immediateFuture(null));
     Mockito.when(mockClient.getTotalWorkerCapacity())
-           .thenReturn(Futures.immediateFuture(new IndexingTotalWorkerCapacityInfo(0, 0)));
+           .thenReturn(Futures.immediateFuture(new IndexingTotalWorkerCapacityInfo(0, 0, null)));
     Mockito.when(mockClient.taskPayload(ArgumentMatchers.eq(conflictTaskId)))
            .thenReturn(Futures.immediateFuture(runningConflictCompactionTaskPayload));
 
@@ -2017,7 +2017,7 @@ public class CompactSegmentsTest
     @Override
     public ListenableFuture<IndexingTotalWorkerCapacityInfo> getTotalWorkerCapacity()
     {
-      return Futures.immediateFuture(new IndexingTotalWorkerCapacityInfo(5, 10));
+      return Futures.immediateFuture(new IndexingTotalWorkerCapacityInfo(5, 10, null));
     }
 
     private void compactSegments(
@@ -2193,7 +2193,7 @@ public class CompactSegmentsTest
     Mockito.when(mockClient.findLockedIntervals(ArgumentMatchers.any()))
            .thenReturn(Futures.immediateFuture(Collections.emptyMap()));
     Mockito.when(mockClient.getTotalWorkerCapacity())
-           .thenReturn(Futures.immediateFuture(new IndexingTotalWorkerCapacityInfo(0, 0)));
+           .thenReturn(Futures.immediateFuture(new IndexingTotalWorkerCapacityInfo(0, 0, null)));
     Mockito.when(mockClient.runTask(ArgumentMatchers.anyString(), payloadCaptor.capture()))
            .thenReturn(Futures.immediateFuture(null));
     return payloadCaptor;

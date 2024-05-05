@@ -22,6 +22,8 @@ package org.apache.druid.client.indexing;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import javax.annotation.Nullable;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -40,20 +42,34 @@ public class IndexingTotalWorkerCapacityInfo
    */
   private final int maximumCapacityWithAutoScale;
 
+  /**
+   * Used total category capacity of the current state of the cluster. This can be null if
+   * it cannot be determined.
+   */
+  private final Map<String, IndexingCategoryCapacityInfo> categoryCapacity;
+
   @JsonCreator
   public IndexingTotalWorkerCapacityInfo(
       @JsonProperty("currentClusterCapacity") int currentClusterCapacity,
-      @JsonProperty("maximumCapacityWithAutoScale") int maximumCapacityWithAutoScale
+      @JsonProperty("maximumCapacityWithAutoScale") int maximumCapacityWithAutoScale,
+      @Nullable @JsonProperty("categoryCapacity") Map<String, IndexingCategoryCapacityInfo> categorycapacity
   )
   {
     this.currentClusterCapacity = currentClusterCapacity;
     this.maximumCapacityWithAutoScale = maximumCapacityWithAutoScale;
+    this.categoryCapacity = categorycapacity;
   }
 
   @JsonProperty
   public int getCurrentClusterCapacity()
   {
     return currentClusterCapacity;
+  }
+
+  @JsonProperty
+  public Map<String, IndexingCategoryCapacityInfo> getCategoryCapacity()
+  {
+    return categoryCapacity;
   }
 
   @JsonProperty
@@ -71,9 +87,11 @@ public class IndexingTotalWorkerCapacityInfo
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
+
     IndexingTotalWorkerCapacityInfo that = (IndexingTotalWorkerCapacityInfo) o;
     return currentClusterCapacity == that.currentClusterCapacity
-           && maximumCapacityWithAutoScale == that.maximumCapacityWithAutoScale;
+           && maximumCapacityWithAutoScale == that.maximumCapacityWithAutoScale
+           && Objects.equals(categoryCapacity, that.categoryCapacity);
   }
 
   @Override
@@ -88,6 +106,7 @@ public class IndexingTotalWorkerCapacityInfo
     return "IndexingTotalWorkerCapacityInfo{" +
            "currentClusterCapacity=" + currentClusterCapacity +
            ", maximumCapacityWithAutoScale=" + maximumCapacityWithAutoScale +
+           ", categorycapacityinfos=" + categoryCapacity +
            '}';
   }
 }

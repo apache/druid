@@ -39,6 +39,7 @@ import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.common.task.KillUnusedSegmentsTask;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.overlord.CategoryCapacityInfo;
 import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageAdapter;
 import org.apache.druid.indexing.overlord.TaskMaster;
@@ -51,6 +52,7 @@ import org.apache.druid.indexing.overlord.WorkerTaskRunnerQueryAdapter;
 import org.apache.druid.indexing.overlord.autoscaling.AutoScaler;
 import org.apache.druid.indexing.overlord.autoscaling.ProvisioningStrategy;
 import org.apache.druid.indexing.overlord.setup.DefaultWorkerBehaviorConfig;
+import org.apache.druid.indexing.overlord.setup.EqualDistributionWithCategorySpecWorkerSelectStrategy;
 import org.apache.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
@@ -1513,6 +1515,7 @@ public class OverlordResourceTest
   public void testGetTotalWorkerCapacityWithUnknown()
   {
     WorkerBehaviorConfig workerBehaviorConfig = EasyMock.createMock(WorkerBehaviorConfig.class);
+    EasyMock.expect(workerBehaviorConfig.getSelectStrategy()).andReturn(WorkerBehaviorConfig.DEFAULT_STRATEGY);
     AtomicReference<WorkerBehaviorConfig> workerBehaviorConfigAtomicReference = new AtomicReference<>(workerBehaviorConfig);
     EasyMock.expect(configManager.watch(WorkerBehaviorConfig.CONFIG_KEY, WorkerBehaviorConfig.class)).andReturn(workerBehaviorConfigAtomicReference);
     EasyMock.expect(taskRunner.getTotalCapacity()).andReturn(-1);
@@ -1525,13 +1528,88 @@ public class OverlordResourceTest
         req,
         workerTaskRunnerQueryAdapter,
         configManager,
-        authConfig
+        authConfig,
+        workerBehaviorConfig
     );
     final Response response = overlordResource.getTotalWorkerCapacity();
     Assert.assertEquals(HttpResponseStatus.OK.getCode(), response.getStatus());
     Assert.assertEquals(-1, ((TotalWorkerCapacityResponse) response.getEntity()).getCurrentClusterCapacity());
     Assert.assertEquals(-1, ((TotalWorkerCapacityResponse) response.getEntity()).getUsedClusterCapacity());
     Assert.assertEquals(-1, ((TotalWorkerCapacityResponse) response.getEntity()).getMaximumCapacityWithAutoScale());
+  }
+
+  @Test
+  public void testGetTotalWorkerCapacityWithEqualDistributionCategoryStrategy()
+  {
+    WorkerBehaviorConfig workerBehaviorConfig = EasyMock.createMock(WorkerBehaviorConfig.class);
+    CategoryCapacityInfo firstCategoryCapacityInfo = new CategoryCapacityInfo(
+        ImmutableList.of(
+            "kill",
+            "compact",
+            "single_phase_sub_task",
+            "partial_dimension_cardinality",
+            "partial_index_generate",
+            "partial_index_generic_merge",
+            "partial_range_index_generate",
+            "partial_dimension_distribution"
+        ),
+        100
+    );
+    CategoryCapacityInfo secondCategoryCapacityInfo = new CategoryCapacityInfo(
+        ImmutableList.of("index_kafka"),
+        50
+    );
+    EqualDistributionWithCategorySpecWorkerSelectStrategy categoryStrategy = EasyMock.createMock(
+        EqualDistributionWithCategorySpecWorkerSelectStrategy.class);
+    ImmutableMap<String, CategoryCapacityInfo> mockCategoryCapacity = ImmutableMap.of(
+        "abc_category",
+        firstCategoryCapacityInfo,
+        "xxx_category",
+        secondCategoryCapacityInfo
+    );
+    EasyMock.expect(categoryStrategy.getWorkerCategoryCapacity(EasyMock.<Collection<ImmutableWorkerInfo>>anyObject()))
+            .andReturn(mockCategoryCapacity);
+    EasyMock.expect(workerBehaviorConfig.getSelectStrategy()).andReturn(categoryStrategy);
+    AtomicReference<WorkerBehaviorConfig> workerBehaviorConfigAtomicReference = new AtomicReference<>(
+        workerBehaviorConfig);
+    EasyMock.expect(configManager.watch(WorkerBehaviorConfig.CONFIG_KEY, WorkerBehaviorConfig.class))
+            .andReturn(workerBehaviorConfigAtomicReference);
+    EasyMock.expect(taskRunner.getTotalCapacity()).andReturn(-1);
+    EasyMock.expect(taskRunner.getUsedCapacity()).andReturn(-1);
+    EasyMock.replay(
+        taskRunner,
+        taskMaster,
+        taskStorageQueryAdapter,
+        indexerMetadataStorageAdapter,
+        req,
+        workerTaskRunnerQueryAdapter,
+        configManager,
+        authConfig,
+        categoryStrategy,
+        workerBehaviorConfig
+    );
+    final Response response = overlordResource.getTotalWorkerCapacity();
+    Assert.assertEquals(HttpResponseStatus.OK.getCode(), response.getStatus());
+    Assert.assertEquals(-1, ((TotalWorkerCapacityResponse) response.getEntity()).getCurrentClusterCapacity());
+    Assert.assertEquals(-1, ((TotalWorkerCapacityResponse) response.getEntity()).getUsedClusterCapacity());
+    Assert.assertEquals(-1, ((TotalWorkerCapacityResponse) response.getEntity()).getMaximumCapacityWithAutoScale());
+    Assert.assertEquals(100,
+                        ((TotalWorkerCapacityResponse) response.getEntity()).getCategoryCapacity()
+                                                                            .get("abc_category")
+                                                                            .getCapacity());
+    Assert.assertTrue(((TotalWorkerCapacityResponse) response.getEntity()).getCategoryCapacity()
+                                                                          .get("abc_category")
+                                                                          .getTaskTypeList()
+                                                                          .contains("compact"));
+    Assert.assertEquals(50,
+                        ((TotalWorkerCapacityResponse) response.getEntity()).getCategoryCapacity()
+                                                                            .get("xxx_category")
+                                                                            .getCapacity());
+    Assert.assertTrue(((TotalWorkerCapacityResponse) response.getEntity()).getCategoryCapacity()
+                                                                          .get("xxx_category")
+                                                                          .getTaskTypeList()
+                                                                          .contains("index_kafka"));
+
   }
 
   @Test

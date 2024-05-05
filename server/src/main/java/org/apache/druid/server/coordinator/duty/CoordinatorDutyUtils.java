@@ -31,6 +31,7 @@ import org.apache.druid.rpc.indexing.OverlordClient;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -52,7 +53,11 @@ public class CoordinatorDutyUtils
    *
    * @return the total worker capacity in the cluster, including autoscaling, if enabled.
    */
-  public static int getTotalWorkerCapacity(@Nonnull final OverlordClient overlordClient)
+  public static int getTotalWorkerCapacity(
+      @Nonnull final OverlordClient overlordClient,
+      double taskSlotRatio,
+      @Nullable String taskType
+  )
   {
     int totalWorkerCapacity;
     try {
@@ -61,6 +66,13 @@ public class CoordinatorDutyUtils
       totalWorkerCapacity = workerCapacityInfo.getMaximumCapacityWithAutoScale();
       if (totalWorkerCapacity < 0) {
         totalWorkerCapacity = workerCapacityInfo.getCurrentClusterCapacity();
+      }
+      if (workerCapacityInfo.getCategoryCapacity() != null && taskType != null) {
+        int totalCapacity = workerCapacityInfo.getCategoryCapacity().get(taskType).getCapacity();
+        return Math.min(
+            totalCapacity,
+            (int) (totalWorkerCapacity * taskSlotRatio)
+        );
       }
     }
     catch (ExecutionException e) {
@@ -81,8 +93,7 @@ public class CoordinatorDutyUtils
       Thread.currentThread().interrupt();
       throw new RuntimeException(e);
     }
-
-    return totalWorkerCapacity;
+    return (int) (totalWorkerCapacity * taskSlotRatio);
   }
 
   /**

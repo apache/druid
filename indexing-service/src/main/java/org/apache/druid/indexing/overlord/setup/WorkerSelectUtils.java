@@ -22,10 +22,16 @@ package org.apache.druid.indexing.overlord.setup;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.overlord.CategoryCapacityInfo;
 import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
 import org.apache.druid.indexing.overlord.config.WorkerTaskRunnerConfig;
+import org.apache.druid.indexing.worker.Worker;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
@@ -139,6 +145,44 @@ public class WorkerSelectUtils
 
     // select worker from all runnable workers by default
     return workerSelector.apply(ImmutableMap.copyOf(runnableWorkers));
+  }
+
+  @Nullable
+  public static ImmutableMap<String, CategoryCapacityInfo> getWorkerCategoryCapacity(
+      Collection<ImmutableWorkerInfo> workers,
+      @Nullable final WorkerCategorySpec workerCategorySpec
+  )
+  {
+    if (workerCategorySpec != null) {
+      final Map<String, CategoryCapacityInfo> categoryCapacityMap = new HashMap<>();
+      final Map<String, Integer> categoryToCapacityMap = workers.stream()
+                                                                .map(ImmutableWorkerInfo::getWorker)
+                                                                .collect(Collectors.groupingBy(
+                                                                    Worker::getCategory,
+                                                                    Collectors.summingInt(Worker::getCapacity)
+                                                                ));
+      for (Map.Entry<String, WorkerCategorySpec.CategoryConfig> entry : workerCategorySpec.getCategoryMap()
+                                                                                          .entrySet()) {
+        String taskType = entry.getKey();
+        String category = entry.getValue().getDefaultCategory();
+        if (!categoryCapacityMap.containsKey(category)) {
+          final List<String> taskTypes = new ArrayList<>();
+          taskTypes.add(taskType);
+          final CategoryCapacityInfo categoryCapacityInfo = new CategoryCapacityInfo(
+              taskTypes,
+              categoryToCapacityMap.get(category)
+          );
+          categoryCapacityMap.put(category, categoryCapacityInfo);
+        } else {
+          final CategoryCapacityInfo categoryCapacityInfo = categoryCapacityMap.get(category);
+          if (!categoryCapacityInfo.getTaskTypeList().contains(taskType)) {
+            categoryCapacityInfo.getTaskTypeList().add(taskType);
+          }
+        }
+      }
+      return ImmutableMap.copyOf(categoryCapacityMap);
+    }
+    return null;
   }
 
   // Get workers that could potentially run this task, ignoring affinityConfig/workerCategorySpec.
