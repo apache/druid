@@ -64,6 +64,7 @@ import org.apache.druid.sql.calcite.rule.ProjectAggregatePruneUnusedCallRule;
 import org.apache.druid.sql.calcite.rule.ReverseLookupRule;
 import org.apache.druid.sql.calcite.rule.RewriteFirstValueLastValueRule;
 import org.apache.druid.sql.calcite.rule.SortCollapseRule;
+import org.apache.druid.sql.calcite.rule.logical.DruidAggregateProjectMergeRule;
 import org.apache.druid.sql.calcite.rule.logical.DruidLogicalRules;
 import org.apache.druid.sql.calcite.run.EngineFeature;
 
@@ -191,6 +192,7 @@ public class CalciteRulesManager
           CoreRules.PROJECT_REMOVE,
           CoreRules.AGGREGATE_JOIN_TRANSPOSE,
           CoreRules.AGGREGATE_PROJECT_MERGE,
+          //DruidAggregateProjectMergeRule.Config.DEFAULT.toRule(),
           CoreRules.CALC_REMOVE,
           CoreRules.SORT_REMOVE
       );

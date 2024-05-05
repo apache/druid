@@ -15689,4 +15689,54 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
               )
       );
   }
+
+  @SqlTestFrameworkConfig(numMergeBuffers = 9)
+  @Test
+  public void testGS()
+  {
+    testBuilder()
+        .sql(
+            "SELECT\n"
+            //+ "  TIME_FLOOR(\"__time\", 'PT1H') ,\n"
+            + "  \"cityName\" ,\n"
+            + "  COUNT(DISTINCT \"page\") ,\n"
+            //+ "  COUNT(DISTINCT CASE WHEN \"channel\" = '#it.wikipedia' THEN \"user\" END), \n"
+            + "  COUNT(DISTINCT \"user\") FILTER (WHERE \"channel\" = '#it.wikipedia'), "
+            + "  COUNT(DISTINCT \"user\") \n"
+            + "FROM \"wikipedia\"\n"
+            + "GROUP BY 1"
+        )
+        .queryContext(ImmutableMap.of(
+            PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, false,
+            PlannerConfig.CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT, true
+        ))
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{"2015-09-12T00:00:00.000Z","264","5","149"},
+                new Object[]{"2015-09-12T01:00:00.000Z","1090","14","506"},
+                new Object[]{"2015-09-12T02:00:00.000Z","1045","10","459"},
+                new Object[]{"2015-09-12T03:00:00.000Z","766","10","427"},
+                new Object[]{"2015-09-12T04:00:00.000Z","781","6","427"},
+                new Object[]{"2015-09-12T05:00:00.000Z","1223","10","448"},
+                new Object[]{"2015-09-12T06:00:00.000Z","2092","13","498"},
+                new Object[]{"2015-09-12T07:00:00.000Z","2181","21","574"},
+                new Object[]{"2015-09-12T08:00:00.000Z","1552","36","707"},
+                new Object[]{"2015-09-12T09:00:00.000Z","1624","44","770"},
+                new Object[]{"2015-09-12T10:00:00.000Z","1710","37","785"},
+                new Object[]{"2015-09-12T11:00:00.000Z","1532","40","799"},
+                new Object[]{"2015-09-12T12:00:00.000Z","1633","45","855"},
+                new Object[]{"2015-09-12T13:00:00.000Z","1958","44","905"},
+                new Object[]{"2015-09-12T14:00:00.000Z","1779","48","886"},
+                new Object[]{"2015-09-12T15:00:00.000Z","1868","37","949"},
+                new Object[]{"2015-09-12T16:00:00.000Z","1846","50","969"},
+                new Object[]{"2015-09-12T17:00:00.000Z","2168","38","941"},
+                new Object[]{"2015-09-12T18:00:00.000Z","2043","40","925"},
+                new Object[]{ "2015-09-12T19:00:00.000Z","1924","32","930"},
+                new Object[]{"2015-09-12T20:00:00.000Z","1736","31","882"},
+                new Object[]{"2015-09-12T21:00:00.000Z","1672","40","861"},
+                new Object[]{"2015-09-12T22:00:00.000Z","1504","28","716"},
+                new Object[]{"2015-09-12T23:00:00.000Z","1407","20","631"}
+            )
+        ).run();
+  }
 }
