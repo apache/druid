@@ -1691,6 +1691,13 @@ public class ControllerImpl implements Controller
         throw new ISE("Column names are not unique: [%s]", columnMappings.getOutputColumnNames());
       }
 
+      final SegmentSource segmentSources = MultiStageQueryContext.getSegmentSources(querySpec.getQuery().context());
+      if (MSQControllerTask.isReplaceInputDataSourceTask(querySpec) && SegmentSource.REALTIME.equals(segmentSources)) {
+        throw DruidException.forPersona(DruidException.Persona.USER)
+                            .ofCategory(DruidException.Category.INVALID_INPUT)
+                            .build("REALTIME segment sources cannot be queried while reindexing into the same datasource");
+      }
+
       if (columnMappings.hasOutputColumn(ColumnHolder.TIME_COLUMN_NAME)) {
         // We know there's a single time column, because we've checked columnMappings.hasUniqueOutputColumnNames().
         final int timeColumn = columnMappings.getOutputColumnsByName(ColumnHolder.TIME_COLUMN_NAME).getInt(0);
