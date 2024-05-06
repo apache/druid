@@ -131,9 +131,16 @@ public class GroupByResourcesReservationPool
       throw DruidException.defensive("Resource with the given identifier [%s] is already present", queryResourceId);
     }
 
-    // We have reserved a spot in the map. Now begin the blocking call.
-    GroupByQueryResources resources =
-        GroupingEngine.prepareResource(groupByQuery, mergeBufferPool, willMergeRunner, groupByQueryConfig);
+    GroupByQueryResources resources;
+    try {
+      // We have reserved a spot in the map. Now begin the blocking call.
+      resources = GroupingEngine.prepareResource(groupByQuery, mergeBufferPool, willMergeRunner, groupByQueryConfig);
+    }
+    catch (Exception e) {
+      // Unable to allocate the resources, perform cleanup and rethrow the exception
+      pool.remove(queryResourceId);
+      throw e;
+    }
 
     // Resources have been allocated, spot has been reserved. The reference would ALWAYS refer to 'null'. Refer the
     // allocated resources from it
@@ -146,8 +153,17 @@ public class GroupByResourcesReservationPool
   @Nullable
   public GroupByQueryResources fetch(QueryResourceId queryResourceId)
   {
-    GroupByQueryResources resource = pool.get(queryResourceId).get();
-    assert resource != null;
+    AtomicReference<GroupByQueryResources> resourcesReference = pool.get(queryResourceId);
+    if (resourcesReference == null) {
+      // There weren't any resources allocated corresponding to the provided resource id
+      return null;
+    }
+    GroupByQueryResources resource = resourcesReference.get();
+    if (resource == null) {
+      throw DruidException.defensive(
+          "Query id [%s] had a non-null reference in the resource reservation pool, but no resources were found"
+      );
+    }
     return resource;
   }
 
@@ -160,7 +176,11 @@ public class GroupByResourcesReservationPool
     if (resourcesReference != null) {
       GroupByQueryResources resource = resourcesReference.get();
       // Reference should refer to a non-empty resource
-      assert resource != null;
+      if (resource == null) {
+        throw DruidException.defensive(
+            "Query id [%s] had a non-null reference in the resource reservation pool, but no resources were found"
+        );
+      }
       resource.close();
     }
   }
