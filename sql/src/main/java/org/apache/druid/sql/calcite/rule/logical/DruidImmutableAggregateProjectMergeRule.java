@@ -22,6 +22,8 @@ package org.apache.druid.sql.calcite.rule.logical;
 import com.google.common.base.MoreObjects;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import org.apache.calcite.plan.RelRule;
+import org.apache.calcite.rel.core.Aggregate;
+import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.core.RelFactories;
 import org.apache.calcite.tools.RelBuilderFactory;
 import org.immutables.value.Generated;
@@ -35,6 +37,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
+/**
+ * Custom version of {@link org.apache.calcite.rel.rules.ImmutableAggregateProjectMergeRule}
+ */
 @ParametersAreNonnullByDefault
 @Generated(
     from = "DruidAggregateProjectMergeRule",

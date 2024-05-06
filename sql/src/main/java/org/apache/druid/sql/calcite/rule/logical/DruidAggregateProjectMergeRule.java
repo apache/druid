@@ -53,13 +53,8 @@ import java.util.Set;
  * on top of a {@link Project} and if possible
  * aggregate through the project or removes the project.
  *
- * <p>This is only possible when the grouping expressions and arguments to
- * the aggregate functions are field references (i.e. not expressions).
- *
- * <p>In some cases, this rule has the effect of trimming: the aggregate will
- * use fewer columns than the project did.
- *
- * @see CoreRules#AGGREGATE_PROJECT_MERGE
+ * This is updated version of {@link org.apache.calcite.rel.rules.AggregateProjectMergeRule}
+ * to be able to handle expressions
  */
 @Value.Enclosing
 public class DruidAggregateProjectMergeRule
@@ -68,7 +63,7 @@ public class DruidAggregateProjectMergeRule
 {
 
   /**
-   * Creates an AggregateProjectMergeRule.
+   * Creates a DruidAggregateProjectMergeRule.
    */
   protected DruidAggregateProjectMergeRule(Config config)
   {
