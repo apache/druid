@@ -161,7 +161,8 @@ public class GroupByResourcesReservationPool
     GroupByQueryResources resource = resourcesReference.get();
     if (resource == null) {
       throw DruidException.defensive(
-          "Query id [%s] had a non-null reference in the resource reservation pool, but no resources were found"
+          "Query id [%s] had a non-null reference in the resource reservation pool, but no resources were found",
+          queryResourceId
       );
     }
     return resource;
@@ -178,7 +179,8 @@ public class GroupByResourcesReservationPool
       // Reference should refer to a non-empty resource
       if (resource == null) {
         throw DruidException.defensive(
-            "Query id [%s] had a non-null reference in the resource reservation pool, but no resources were found"
+            "Query id [%s] had a non-null reference in the resource reservation pool, but no resources were found",
+            queryResourceId
         );
       }
       resource.close();
