@@ -143,10 +143,9 @@ public class MSQWorkerTaskTest
   @Test
   public void testGetLookupLoadingSpecUsingInvalidInput()
   {
-    final HashMap<String, Object> context = new HashMap<String, Object>() {{
-        put(PlannerContext.CTX_LOOKUPS_TO_LOAD, null);
-        put(PlannerContext.CTX_LOOKUP_LOADING_MODE, LookupLoadingSpec.Mode.ONLY_REQUIRED);
-      }};
+    final HashMap<String, Object> context = new HashMap<>();
+    context.put(PlannerContext.CTX_LOOKUPS_TO_LOAD, null);
+    context.put(PlannerContext.CTX_LOOKUP_LOADING_MODE, LookupLoadingSpec.Mode.ONLY_REQUIRED);
     MSQWorkerTask msqWorkerTask = new MSQWorkerTask(controllerTaskId, dataSource, workerNumber, context, retryCount);
     DruidException exception = Assert.assertThrows(
         DruidException.class,
