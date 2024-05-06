@@ -21,12 +21,14 @@ package org.apache.druid.msq.indexing;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -136,5 +138,22 @@ public class MSQWorkerTaskTest
     MSQWorkerTask msqWorkerTask = new MSQWorkerTask(controllerTaskId, dataSource, workerNumber, context, retryCount);
     Assert.assertEquals(LookupLoadingSpec.Mode.ONLY_REQUIRED, msqWorkerTask.getLookupLoadingSpec().getMode());
     Assert.assertEquals(ImmutableSet.of("lookupName1", "lookupName2"), msqWorkerTask.getLookupLoadingSpec().getLookupsToLoad());
+  }
+
+  @Test
+  public void testGetLookupLoadingSpecUsingInvalidInput()
+  {
+    final HashMap<String, Object> context = new HashMap<String, Object>() {{
+        put(PlannerContext.CTX_LOOKUPS_TO_LOAD, null);
+        put(PlannerContext.CTX_LOOKUP_LOADING_MODE, LookupLoadingSpec.Mode.ONLY_REQUIRED);
+      }};
+    MSQWorkerTask msqWorkerTask = new MSQWorkerTask(controllerTaskId, dataSource, workerNumber, context, retryCount);
+    DruidException exception = Assert.assertThrows(
+        DruidException.class,
+        msqWorkerTask::getLookupLoadingSpec
+    );
+    Assert.assertEquals(
+        "Set of lookups to load cannot be NULL for mode = ONLY_REQUIRED.",
+        exception.getMessage());
   }
 }

@@ -27,6 +27,7 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Injector;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
@@ -193,15 +194,19 @@ public class MSQWorkerTask extends AbstractTask
   @Override
   public LookupLoadingSpec getLookupLoadingSpec()
   {
-    if (!getContext().containsKey(PlannerContext.CTX_LOOKUP_LOADING_MODE) || getContext().get(PlannerContext.CTX_LOOKUP_LOADING_MODE) == null) {
+    final Object lookupModeValue = getContext().get(PlannerContext.CTX_LOOKUP_LOADING_MODE);
+    if (lookupModeValue == null) {
       return LookupLoadingSpec.ALL;
     }
 
-    String lookupLoadingMode = getContext().get(PlannerContext.CTX_LOOKUP_LOADING_MODE).toString();
-    if (lookupLoadingMode.equals(LookupLoadingSpec.Mode.NONE.toString())) {
+    final LookupLoadingSpec.Mode lookupLoadingMode = LookupLoadingSpec.Mode.valueOf(lookupModeValue.toString());
+    if (lookupLoadingMode == LookupLoadingSpec.Mode.NONE) {
       return LookupLoadingSpec.NONE;
-    } else if (lookupLoadingMode.equals(LookupLoadingSpec.Mode.ONLY_REQUIRED.toString())) {
+    } else if (lookupLoadingMode == LookupLoadingSpec.Mode.ONLY_REQUIRED) {
       List<String> lookupsToLoad = (List<String>) getContext().get(PlannerContext.CTX_LOOKUPS_TO_LOAD);
+      if (lookupsToLoad == null) {
+        throw InvalidInput.exception("Set of lookups to load cannot be NULL for mode = ONLY_REQUIRED.");
+      }
       return LookupLoadingSpec.loadOnly(new HashSet<>(lookupsToLoad));
     } else {
       return LookupLoadingSpec.ALL;

@@ -139,6 +139,7 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery, 
     this.sqlResultsContext = sqlResultsContext;
     this.sqlTypeNames = sqlTypeNames;
     this.nativeTypeNames = nativeTypeNames;
+
     addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, true);
   }
 

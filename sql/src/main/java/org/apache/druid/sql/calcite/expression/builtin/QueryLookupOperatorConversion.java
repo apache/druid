@@ -83,8 +83,8 @@ public class QueryLookupOperatorConversion implements SqlOperatorConversion
           final String replaceMissingValueWith = getReplaceMissingValueWith(inputExpressions, plannerContext);
           final String lookupName = (String) lookupNameExpr.getLiteralValue();
 
-          // Collect the lookup names to facilitate selective loading of lookups.
-          plannerContext.getLookupsToLoad().add(lookupName);
+          // Add the lookup name to the set of lookups to selectively load.
+          plannerContext.addLookupToLoad(lookupName);
 
           if (arg.isSimpleExtraction() && lookupNameExpr.isLiteral()) {
             return arg.getSimpleExtraction().cascade(

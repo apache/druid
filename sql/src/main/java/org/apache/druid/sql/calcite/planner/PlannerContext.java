@@ -43,6 +43,7 @@ import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.lookup.RegisteredLookupExtractionFn;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
+import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.ResourceAction;
@@ -145,8 +146,8 @@ public class PlannerContext
   // set of attributes for a SQL statement used in the EXPLAIN PLAN output
   private ExplainAttributes explainAttributes;
   private PlannerLookupCache lookupCache;
-  // set of lookups to load for a given task
-  private final Set<String> lookupsToLoad = new HashSet<>();
+  // Lookup loading spec for a given task
+  private LookupLoadingSpec lookupLoadingSpec = LookupLoadingSpec.NONE;
 
   private PlannerContext(
       final PlannerToolbox plannerToolbox,
@@ -349,11 +350,25 @@ public class PlannerContext
   }
 
   /**
-   * Returns the set of lookups to load for a given task.
+   * Add a lookup name to load in the lookup loading spec.
    */
-  public Set<String> getLookupsToLoad()
+  public void addLookupToLoad(String lookupName)
   {
-    return lookupsToLoad;
+    if (lookupLoadingSpec.getLookupsToLoad() == null) {
+      lookupLoadingSpec = LookupLoadingSpec.loadOnly(Collections.singleton(lookupName));
+    } else {
+      Set<String> existingLookupsToLoad = new HashSet<>(lookupLoadingSpec.getLookupsToLoad());
+      existingLookupsToLoad.add(lookupName);
+      lookupLoadingSpec = LookupLoadingSpec.loadOnly(existingLookupsToLoad);
+    }
+  }
+
+  /**
+   * Returns the lookup loading spec for a given task.
+   */
+  public LookupLoadingSpec getLookupLoadingSpec()
+  {
+    return lookupLoadingSpec;
   }
 
   /**
