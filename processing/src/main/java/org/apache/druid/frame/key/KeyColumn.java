@@ -60,27 +60,6 @@ public class KeyColumn
     return order;
   }
 
-//  public static KeyColumn populateKeyColumnSignature(KeyColumn keyColumn, RowSignature rowSignature)
-//  {
-//    ColumnType columnTypeFromRowSignature = rowSignature.getColumnType(keyColumn.columnName()).orElse(null);
-//    if (columnTypeFromRowSignature == null) {
-//      return keyColumn;
-//    }
-//    if (keyColumn.columnType != null) {
-//      if (!columnTypeFromRowSignature.equals(keyColumn.columnType)) {
-//        throw DruidException.defensive(
-//            "Column type mismatch between [%s] and [%s]",
-//            keyColumn.columnType,
-//            columnTypeFromRowSignature
-//        );
-//      }
-//      return keyColumn;
-//    }
-//
-//    return new KeyColumn(keyColumn.columnName(), columnTypeFromRowSignature, keyColumn.order);
-//  }
-
-
   @Override
   public boolean equals(Object o)
   {

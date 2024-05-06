@@ -36,7 +36,7 @@ public class KeyCollectors
       final ClusterBy clusterBy,
       final boolean aggregate,
       final RowSignature rowSignature
-      )
+  )
   {
     final KeyCollectorFactory<?, ?> baseFactory;
 

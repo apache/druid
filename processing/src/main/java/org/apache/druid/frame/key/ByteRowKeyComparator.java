@@ -21,19 +21,13 @@ package org.apache.druid.frame.key;
 
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
-import it.unimi.dsi.fastutil.ints.IntArrayList;
-import it.unimi.dsi.fastutil.ints.IntList;
-import org.apache.druid.data.input.Row;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.read.FrameReaderUtils;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
 import org.apache.druid.segment.serde.ComplexMetrics;
 
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
@@ -55,7 +49,7 @@ public class ByteRowKeyComparator implements Comparator<byte[]>
       final List<KeyColumn> keyColumns,
       final RowKeyComparisonRunLengths rowKeyComparisonRunLengths,
       final RowSignature rowSignature
-      )
+  )
   {
     this.keyColumns = keyColumns;
     this.firstFieldPosition = computeFirstFieldPosition(keyColumns.size());

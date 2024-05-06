@@ -92,13 +92,13 @@ import java.util.stream.Collectors;
 @SqlTestFramework.SqlTestFrameWorkModule(NestedComponentSupplier.class)
 public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
 {
-  private static final String DATA_SOURCE = "nested";
-  private static final String DATA_SOURCE_MIXED = "nested_mix";
-  private static final String DATA_SOURCE_MIXED_2 = "nested_mix_2";
-  private static final String DATA_SOURCE_ARRAYS = "arrays";
-  private static final String DATA_SOURCE_ALL = "all_auto";
+  public static final String DATA_SOURCE = "nested";
+  public static final String DATA_SOURCE_MIXED = "nested_mix";
+  public static final String DATA_SOURCE_MIXED_2 = "nested_mix_2";
+  public static final String DATA_SOURCE_ARRAYS = "arrays";
+  public static final String DATA_SOURCE_ALL = "all_auto";
 
-  private static final List<ImmutableMap<String, Object>> RAW_ROWS = ImmutableList.of(
+  public static final List<ImmutableMap<String, Object>> RAW_ROWS = ImmutableList.of(
       ImmutableMap.<String, Object>builder()
                   .put("t", "2000-01-01")
                   .put("string", "aaa")
@@ -150,7 +150,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   .build()
   );
 
-  private static final InputRowSchema ALL_JSON_COLUMNS = new InputRowSchema(
+  public static final InputRowSchema ALL_JSON_COLUMNS = new InputRowSchema(
       new TimestampSpec("t", "iso", null),
       DimensionsSpec.builder().setDimensions(
           ImmutableList.<DimensionSchema>builder()
@@ -164,7 +164,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
       null
   );
 
-  private static final InputRowSchema JSON_AND_SCALAR_MIX = new InputRowSchema(
+  public static final InputRowSchema JSON_AND_SCALAR_MIX = new InputRowSchema(
       new TimestampSpec("t", "iso", null),
       DimensionsSpec.builder().setDimensions(
           ImmutableList.<DimensionSchema>builder()
@@ -177,10 +177,10 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
       ).build(),
       null
   );
-  private static final List<InputRow> ROWS =
+  public static final List<InputRow> ROWS =
       RAW_ROWS.stream().map(raw -> TestDataBuilder.createRow(raw, ALL_JSON_COLUMNS)).collect(Collectors.toList());
 
-  private static final List<InputRow> ROWS_MIX =
+  public static final List<InputRow> ROWS_MIX =
       RAW_ROWS.stream().map(raw -> TestDataBuilder.createRow(raw, JSON_AND_SCALAR_MIX)).collect(Collectors.toList());
 
   protected static class NestedComponentSupplier extends StandardComponentSupplier
@@ -1086,6 +1086,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByRootSingleTypeStringMixed2SparseJsonValueNonExistentPath()
   {
+    msqIncompatible();
     testQuery(
         "SELECT "
         + "JSON_VALUE(string_sparse, '$[1]'), "
@@ -2698,6 +2699,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testJsonAndArrayAgg()
   {
+    // MSQ cannot handle non-primitive arrays
+    msqIncompatible();
     cannotVectorize();
     testQuery(
         "SELECT "
@@ -5409,6 +5412,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testJoinOnNestedColumnThrows()
   {
+    msqIncompatible();
     DruidException e = Assertions.assertThrows(DruidException.class, () -> {
       testQuery(
           "SELECT * FROM druid.nested a INNER JOIN druid.nested b ON a.nester = b.nester",
@@ -5882,6 +5886,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByAndFilterVariant()
   {
+    msqIncompatible();
     testQuery(
         "SELECT "
         + "variant, "
@@ -5915,6 +5920,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testScanAllTypesAuto()
   {
+    msqIncompatible();
     skipVectorize();
     testQuery(
         "SELECT * FROM druid.all_auto",
@@ -6622,6 +6628,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testCoalesceOnNestedColumns()
   {
+    msqIncompatible();
     // jo.unnest is first entry in coalesce
     // so Calcite removes the coalesce to be used here
     testQuery(
@@ -6660,6 +6667,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testCoalesceOnNestedColumnsLater()
   {
+    msqIncompatible();
     // the first column in coalesce comes from the table
     // so a virtual expression is present for the coalesce
     testQuery(
@@ -6853,6 +6861,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testJsonQueryArrayNullArray()
   {
+    msqIncompatible();
     cannotVectorize();
     testBuilder()
         .sql("SELECT JSON_QUERY_ARRAY(arrayObject, '$.') FROM druid.arrays where arrayObject is null limit 1")
@@ -7072,6 +7081,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testJsonValueNestedEmptyArray()
   {
+    msqIncompatible();
     // test for regression
     skipVectorize();
     testQuery(

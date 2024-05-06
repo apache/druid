@@ -214,7 +214,7 @@ public class SortMergeJoinFrameProcessorFactory extends BaseFrameProcessorFactor
           "leftExpr#getBindingIfIdentifier"
       );
 
-      retVal.get(0).add(new KeyColumn(leftColumn,  KeyOrder.ASCENDING));
+      retVal.get(0).add(new KeyColumn(leftColumn, KeyOrder.ASCENDING));
       retVal.get(1).add(new KeyColumn(equiCondition.getRightColumn(), KeyOrder.ASCENDING));
     }
 

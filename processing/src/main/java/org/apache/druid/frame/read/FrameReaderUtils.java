@@ -34,7 +34,6 @@ import org.apache.druid.segment.serde.ComplexMetricSerde;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.util.function.Supplier;
 
 /**
