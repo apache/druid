@@ -19,7 +19,7 @@
 
 package org.apache.druid.sql.calcite;
 
-import com.google.api.client.util.Preconditions;
+import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.topn.TopNQueryConfig;
