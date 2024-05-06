@@ -1858,14 +1858,16 @@ public class MSQReplaceTest extends MSQTestBase
                          + " FROM foo"
                          + " PARTITIONED BY DAY")
                      .setQueryContext(context)
-                     .setExpectedDataSource("foo1")
                      .setExpectedValidationErrorMatcher(
                          new DruidExceptionMatcher(
                              DruidException.Persona.USER,
                              DruidException.Category.INVALID_INPUT,
                              "general"
                          ).expectMessageContains(
-                             "REALTIME segment sources cannot be queried while reindexing into the same datasource."))
+                             "Cannot ingest into datasource[foo] since it is also being queried from, with REALTIME "
+                             + "segments included. Ingest to a different datasource, or disable querying of realtime "
+                             + "segments by modifying [includeSegmentSource] in the query context.")
+                     )
                      .verifyPlanningErrors();
 
   }

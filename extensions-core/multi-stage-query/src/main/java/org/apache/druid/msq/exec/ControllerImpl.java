@@ -171,6 +171,7 @@ import org.apache.druid.msq.util.ArrayIngestMode;
 import org.apache.druid.msq.util.DimensionSchemaUtils;
 import org.apache.druid.msq.util.IntervalUtils;
 import org.apache.druid.msq.util.MSQFutureUtils;
+import org.apache.druid.msq.util.MSQTaskQueryMakerUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.msq.util.PassthroughAggregatorFactory;
 import org.apache.druid.query.Query;
@@ -1691,12 +1692,7 @@ public class ControllerImpl implements Controller
         throw new ISE("Column names are not unique: [%s]", columnMappings.getOutputColumnNames());
       }
 
-      final SegmentSource segmentSources = MultiStageQueryContext.getSegmentSources(querySpec.getQuery().context());
-      if (MSQControllerTask.isReplaceInputDataSourceTask(querySpec) && SegmentSource.REALTIME.equals(segmentSources)) {
-        throw DruidException.forPersona(DruidException.Persona.USER)
-                            .ofCategory(DruidException.Category.INVALID_INPUT)
-                            .build("REALTIME segment sources cannot be queried while reindexing into the same datasource.");
-      }
+      MSQTaskQueryMakerUtils.validateRealtimeReindex(querySpec);
 
       if (columnMappings.hasOutputColumn(ColumnHolder.TIME_COLUMN_NAME)) {
         // We know there's a single time column, because we've checked columnMappings.hasUniqueOutputColumnNames().

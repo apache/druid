@@ -34,7 +34,6 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.msq.exec.MSQTasks;
-import org.apache.druid.msq.exec.SegmentSource;
 import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
@@ -210,8 +209,6 @@ public class MSQTaskQueryMaker implements QueryMaker
 
     final MSQDestination destination;
 
-
-
     if (targetDataSource instanceof ExportDestination) {
       ExportDestination exportDestination = ((ExportDestination) targetDataSource);
       ResultFormat format = ResultFormat.fromString(sqlQueryContext.getString(DruidSqlIngest.SQL_EXPORT_FILE_FORMAT));
@@ -284,12 +281,7 @@ public class MSQTaskQueryMaker implements QueryMaker
                .tuningConfig(new MSQTuningConfig(maxNumWorkers, maxRowsInMemory, rowsPerSegment, indexSpec))
                .build();
 
-    final SegmentSource segmentSources = MultiStageQueryContext.getSegmentSources(sqlQueryContext);
-    if (MSQControllerTask.isReplaceInputDataSourceTask(querySpec) && SegmentSource.REALTIME.equals(segmentSources)) {
-      throw DruidException.forPersona(DruidException.Persona.USER)
-                          .ofCategory(DruidException.Category.INVALID_INPUT)
-                          .build("REALTIME segment sources cannot be queried while reindexing into the same datasource.");
-    }
+    MSQTaskQueryMakerUtils.validateRealtimeReindex(querySpec);
 
     final MSQControllerTask controllerTask = new MSQControllerTask(
         taskId,
