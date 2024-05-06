@@ -290,6 +290,7 @@
             <groupId>org.apache.kafka</groupId>
             <artifactId>kafka-clients</artifactId>
             <version>${apache.kafka.version}</version>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>javax.ws.rs</groupId>
@@ -407,6 +408,7 @@
                     <artifactId>jakarta.ws.rs-api</artifactId>
                 </exclusion>
             </exclusions>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>io.confluent</groupId>
@@ -417,6 +419,7 @@
         <dependency>
             <groupId>com.google.protobuf</groupId>
             <artifactId>protobuf-java</artifactId>
+            <scope>test</scope>
         </dependency>
 
         <!-- Tests -->
