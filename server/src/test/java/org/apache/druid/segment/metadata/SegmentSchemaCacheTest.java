@@ -70,7 +70,7 @@ public class SegmentSchemaCacheTest
     Assert.assertTrue(schema.isPresent());
     Assert.assertEquals(expected, schema.get());
 
-    cache.markInMetadataQueryResultPublished(id);
+    cache.markMetadataQueryResultPublished(id);
 
     schema = cache.getSchemaForSegment(id);
     Assert.assertTrue(schema.isPresent());
