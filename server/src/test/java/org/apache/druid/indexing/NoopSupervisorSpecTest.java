@@ -89,4 +89,12 @@ public class NoopSupervisorSpecTest
     Assert.assertEquals(-1, noOpSupervisor.getActiveTaskGroupsCount());
     Assert.assertEquals(SupervisorStateManager.BasicState.RUNNING, noOpSupervisor.getState());
   }
+
+  @Test
+  public void testNoppSupervisorStopTaskEarlyDoNothing()
+  {
+    NoopSupervisorSpec expectedSpec = new NoopSupervisorSpec(null, null);
+    Supervisor noOpSupervisor = expectedSpec.createSupervisor();
+    Assert.assertTrue(noOpSupervisor.stopTaskGroupEarly(0));
+  }
 }

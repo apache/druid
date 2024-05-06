@@ -1328,6 +1328,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     supervisor.start();
     supervisor.runInternal();
     supervisor.stopTaskGroupEarly(0);
+    // Only one task group, should return false
+    Assert.assertFalse(supervisor.stopTaskGroupEarly(1));
     supervisor.runInternal();
     verifyAll();
   }
