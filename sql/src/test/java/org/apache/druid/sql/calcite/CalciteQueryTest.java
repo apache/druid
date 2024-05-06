@@ -15691,7 +15691,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
   @SqlTestFrameworkConfig(numMergeBuffers = 4)
   @Test
-  public void testGS()
+  public void testGroupingSetsWithAggrgateCase()
   {
     cannotVectorize();
     testBuilder()

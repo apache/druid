@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.druid.annotations.EverythingIsNonnullByDefault;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.query.aggregation.constant.LongConstantAggregator;
 import org.apache.druid.query.aggregation.constant.LongConstantBufferAggregator;
 import org.apache.druid.query.aggregation.constant.LongConstantVectorAggregator;
@@ -40,6 +41,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * This class implements {@code grouping} function to determine the grouping that a row is part of. Different result rows
@@ -102,6 +104,9 @@ public class GroupingAggregatorFactory extends AggregatorFactory
   )
   {
     Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
+    if (groupings.stream().distinct().count() < groupings.size()) {
+      throw DruidException.defensive("Encountered same dimension in more than one grouping!");
+    }
     this.name = name;
     this.groupings = groupings;
     this.keyDimensions = keyDimensions;

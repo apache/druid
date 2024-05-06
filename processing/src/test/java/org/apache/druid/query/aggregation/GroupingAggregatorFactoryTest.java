@@ -21,6 +21,7 @@ package org.apache.druid.query.aggregation;
 
 import com.google.common.collect.Sets;
 import junitparams.converters.Nullable;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.constant.LongConstantAggregator;
 import org.apache.druid.query.aggregation.constant.LongConstantBufferAggregator;
@@ -96,6 +97,12 @@ public class GroupingAggregatorFactoryTest
       factory = factory.withKeyDimensions(Sets.newHashSet("b"));
       aggregator = factory.factorize(metricFactory);
       Assert.assertEquals(2, aggregator.getLong());
+    }
+
+    @Test
+    public void testWithDuplicateGroupings()
+    {
+      Assert.assertThrows(DruidException.class, () -> makeFactory(new String[]{"a", "a"}, null));
     }
   }
 

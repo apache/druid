@@ -70,19 +70,6 @@ public class DruidAggregateProjectMergeRule
     super(config);
   }
 
-  @Deprecated // to be removed before 2.0
-  public DruidAggregateProjectMergeRule(
-      Class<? extends Aggregate> aggregateClass,
-      Class<? extends Project> projectClass,
-      RelBuilderFactory relBuilderFactory
-  )
-  {
-    this(CoreRules.AGGREGATE_PROJECT_MERGE.config
-             .withRelBuilderFactory(relBuilderFactory)
-             .as(Config.class)
-             .withOperandFor(aggregateClass, projectClass));
-  }
-
   @Override
   public void onMatch(RelOptRuleCall call)
   {
