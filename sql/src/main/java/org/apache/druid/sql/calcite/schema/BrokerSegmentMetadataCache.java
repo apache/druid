@@ -159,7 +159,7 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
   public void start() throws InterruptedException
   {
     log.info("Initializing cache.");
-    cacheExec.submit(this::cacheExecLoop);
+    cacheExec.submit((Runnable) this::cacheExecLoop);
     if (config.isAwaitInitializationOnStart()) {
       awaitInitialization();
     }

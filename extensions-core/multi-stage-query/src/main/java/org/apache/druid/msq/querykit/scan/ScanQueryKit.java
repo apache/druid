@@ -92,7 +92,7 @@ public class ScanQueryKit implements QueryKit<ScanQuery>
       final int minStageNumber
   )
   {
-    final QueryDefinitionBuilder queryDefBuilder = QueryDefinition.builder().queryId(queryId);
+    final QueryDefinitionBuilder queryDefBuilder = QueryDefinition.builder(queryId);
     final DataSourcePlan dataSourcePlan = DataSourcePlan.forDataSource(
         queryKit,
         queryId,

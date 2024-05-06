@@ -49,10 +49,10 @@ import java.util.concurrent.atomic.AtomicReference;
  * Additionally, this class caches schema for realtime segments in {@link SegmentSchemaCache#realtimeSegmentSchema}. This mapping
  * is cleared either when the segment is removed or marked as finalized.
  * <p>
- * Finalized segments which do not have their schema information present in the DB, fetch their schema via SMQ.
- * SMQ results are cached in {@link SegmentSchemaCache#inTransitSMQResults}. Once the schema information is backfilled
- * in the DB, it is removed from {@link SegmentSchemaCache#inTransitSMQResults} and added to {@link SegmentSchemaCache#inTransitSMQPublishedResults}.
- * {@link SegmentSchemaCache#inTransitSMQPublishedResults} is cleared on each successfull DB poll.
+ * Finalized segments which do not have their schema information present in the DB, fetch their schema via metadata query.
+ * Metadata query results are cached in {@link SegmentSchemaCache#temporaryMetadataQueryResults}. Once the schema information is backfilled
+ * in the DB, it is removed from {@link SegmentSchemaCache#temporaryMetadataQueryResults} and added to {@link SegmentSchemaCache#temporaryPublishedMetadataQueryResults}.
+ * {@link SegmentSchemaCache#temporaryPublishedMetadataQueryResults} is cleared on each successfull DB poll.
  * <p>
  * {@link CoordinatorSegmentMetadataCache} uses this cache to fetch schema for a segment.
  * <p>
@@ -81,19 +81,19 @@ public class SegmentSchemaCache
   private final ConcurrentMap<SegmentId, SchemaPayloadPlus> realtimeSegmentSchema = new ConcurrentHashMap<>();
 
   /**
-   * If the segment schema is fetched via SMQ, subsequently it is added here.
+   * If the segment schema is fetched via segment metadata query, subsequently it is added here.
    * The mapping is removed when the schema information is backfilled in the DB.
    */
-  private final ConcurrentMap<SegmentId, SchemaPayloadPlus> inTransitSMQResults = new ConcurrentHashMap<>();
+  private final ConcurrentMap<SegmentId, SchemaPayloadPlus> temporaryMetadataQueryResults = new ConcurrentHashMap<>();
 
   /**
    * Once the schema information is backfilled in the DB, it is added here.
    * This map is cleared after each DB poll.
    * After the DB poll and before clearing this map it is possible that some results were added to this map.
    * These results would get lost after clearing this map.
-   * But, it should be fine since the schema could be retrieved if needed using SMQ, also the schema would be available in the next poll.
+   * But, it should be fine since the schema could be retrieved if needed using metadata query, also the schema would be available in the next poll.
    */
-  private final ConcurrentMap<SegmentId, SchemaPayloadPlus> inTransitSMQPublishedResults = new ConcurrentHashMap<>();
+  private final ConcurrentMap<SegmentId, SchemaPayloadPlus> temporaryPublishedMetadataQueryResults = new ConcurrentHashMap<>();
 
   private final ServiceEmitter emitter;
 
@@ -121,8 +121,8 @@ public class SegmentSchemaCache
     initialized.set(new CountDownLatch(1));
 
     finalizedSegmentSchemaInfo = new FinalizedSegmentSchemaInfo(ImmutableMap.of(), ImmutableMap.of());
-    inTransitSMQResults.clear();
-    inTransitSMQPublishedResults.clear();
+    temporaryMetadataQueryResults.clear();
+    temporaryPublishedMetadataQueryResults.clear();
   }
 
   public boolean isInitialized()
@@ -132,7 +132,7 @@ public class SegmentSchemaCache
 
   /**
    * {@link CoordinatorSegmentMetadataCache} startup waits on the cache initialization.
-   * This is being done to ensure that we don't execute SMQ for segment with schema already present in the DB.
+   * This is being done to ensure that we don't execute metadata query for segment with schema already present in the DB.
    */
   public void awaitInitialization() throws InterruptedException
   {
@@ -157,44 +157,44 @@ public class SegmentSchemaCache
   }
 
   /**
-   * Cache SMQ result. This entry is cleared when SMQ result is published to the DB.
+   * Cache metadata query result. This entry is cleared when metadata query result is published to the DB.
    */
-  public void addInTransitSMQResult(
+  public void addTemporaryMetadataQueryResult(
       SegmentId segmentId,
       RowSignature rowSignature,
       Map<String, AggregatorFactory> aggregatorFactories,
       long numRows
   )
   {
-    inTransitSMQResults.put(segmentId, new SchemaPayloadPlus(new SchemaPayload(rowSignature, aggregatorFactories), numRows));
+    temporaryMetadataQueryResults.put(segmentId, new SchemaPayloadPlus(new SchemaPayload(rowSignature, aggregatorFactories), numRows));
   }
 
   /**
-   * After, SMQ result is published to the DB, it is removed from the {@code inTransitSMQResults}
-   * and added to {@code inTransitSMQPublishedResults}.
+   * After, metadata query result is published to the DB, it is removed from temporaryMetadataQueryResults
+   * and added to temporaryPublishedMetadataQueryResults.
    */
-  public void markInTransitSMQResultPublished(SegmentId segmentId)
+  public void markInMetadataQueryResultPublished(SegmentId segmentId)
   {
-    if (!inTransitSMQResults.containsKey(segmentId)) {
-      log.error("SegmentId [%s] not found in InTransitSMQResultPublished map.", segmentId);
+    if (!temporaryMetadataQueryResults.containsKey(segmentId)) {
+      log.error("SegmentId [%s] not found in temporaryMetadataQueryResults map.", segmentId);
     }
 
-    inTransitSMQPublishedResults.put(segmentId, inTransitSMQResults.get(segmentId));
-    inTransitSMQResults.remove(segmentId);
+    temporaryPublishedMetadataQueryResults.put(segmentId, temporaryMetadataQueryResults.get(segmentId));
+    temporaryMetadataQueryResults.remove(segmentId);
   }
 
   /**
-   * {@code inTransitSMQPublishedResults} is reset on each DB poll.
+   * temporaryPublishedMetadataQueryResults is reset after each DB poll.
    */
-  public void resetInTransitSMQResultPublishedOnDBPoll()
+  public void resetTemporaryPublishedMetadataQueryResultOnDBPoll()
   {
-    inTransitSMQPublishedResults.clear();
+    temporaryPublishedMetadataQueryResults.clear();
   }
 
   /**
-   * Fetch schema for a given segment. Note, since schema corresponding to the current schema version in
-   * {@link CentralizedDatasourceSchemaConfig#SCHEMA_VERSION} is cached, there is no check on version here.
-   * Any change in version would require a service restart, so we will never end up with multi version schema.
+   * Fetch schema for a given segment. Note, that there is no check on schema version in this method,
+   * since schema corresponding to a particular version {@link CentralizedDatasourceSchemaConfig#SCHEMA_VERSION} is cached.
+   * Any change in version would require a service restart, so this cache will never have schema for multiple versions.
    */
   public Optional<SchemaPayloadPlus> getSchemaForSegment(SegmentId segmentId)
   {
@@ -208,18 +208,18 @@ public class SegmentSchemaCache
       return Optional.of(payloadPlus);
     }
 
-    // it is important to lookup {@code inTransitSMQResults} before {@code inTransitSMQPublishedResults}
+    // it is important to lookup temporaryMetadataQueryResults before temporaryPublishedMetadataQueryResults
     // other way round, if a segment schema is just published it is possible that the schema is missing
-    // in {@code inTransitSMQPublishedResults} and by the time we check {@code inTransitSMQResults} it is removed.
+    // in temporaryPublishedMetadataQueryResults and by the time we check temporaryMetadataQueryResults it is removed.
 
-    // segment schema has been fetched via SMQ
-    payloadPlus = inTransitSMQResults.get(segmentId);
+    // segment schema has been fetched via metadata query
+    payloadPlus = temporaryMetadataQueryResults.get(segmentId);
     if (payloadPlus != null) {
       return Optional.of(payloadPlus);
     }
 
-    // segment schema has been fetched via SMQ and the schema has been published to the DB
-    payloadPlus = inTransitSMQPublishedResults.get(segmentId);
+    // segment schema has been fetched via metadata query and the schema has been published to the DB
+    payloadPlus = temporaryPublishedMetadataQueryResults.get(segmentId);
     if (payloadPlus != null) {
       return Optional.of(payloadPlus);
     }
@@ -247,8 +247,8 @@ public class SegmentSchemaCache
   public boolean isSchemaCached(SegmentId segmentId)
   {
     return realtimeSegmentSchema.containsKey(segmentId) ||
-           inTransitSMQResults.containsKey(segmentId) ||
-           inTransitSMQPublishedResults.containsKey(segmentId) ||
+           temporaryMetadataQueryResults.containsKey(segmentId) ||
+           temporaryPublishedMetadataQueryResults.containsKey(segmentId) ||
            isFinalizedSegmentSchemaCached(segmentId);
   }
 
@@ -278,8 +278,8 @@ public class SegmentSchemaCache
   {
     // remove the segment from all the maps
     realtimeSegmentSchema.remove(segmentId);
-    inTransitSMQResults.remove(segmentId);
-    inTransitSMQPublishedResults.remove(segmentId);
+    temporaryMetadataQueryResults.remove(segmentId);
+    temporaryPublishedMetadataQueryResults.remove(segmentId);
 
     // Since finalizedSegmentMetadata & finalizedSegmentSchema is updated on each DB poll,
     // there is no need to remove segment from them.
@@ -296,11 +296,31 @@ public class SegmentSchemaCache
 
   public void emitStats()
   {
-    emitter.emit(ServiceMetricEvent.builder().setMetric("schemacache/realtime/count", realtimeSegmentSchema.size()));
-    emitter.emit(ServiceMetricEvent.builder().setMetric("schemacache/finalizedSegmentMetadata/count", getSegmentMetadataMap().size()));
-    emitter.emit(ServiceMetricEvent.builder().setMetric("schemacache/finalizedSchemaPayload/count", getSchemaPayloadMap().size()));
-    emitter.emit(ServiceMetricEvent.builder().setMetric("schemacache/inTransitSMQResults/count", inTransitSMQResults.size()));
-    emitter.emit(ServiceMetricEvent.builder().setMetric("schemacache/inTransitSMQPublishedResults/count", inTransitSMQPublishedResults.size()));
+    emitter.emit(ServiceMetricEvent.builder()
+                                   .setMetric(
+                                       "metadatacache/realtimeSegmentSchema/count",
+                                       realtimeSegmentSchema.size()
+                                   ));
+    emitter.emit(ServiceMetricEvent.builder()
+                                   .setMetric(
+                                       "metadatacache/finalizedSegmentMetadata/count",
+                                       getSegmentMetadataMap().size()
+                                   ));
+    emitter.emit(ServiceMetricEvent.builder()
+                                   .setMetric(
+                                       "metadatacache/finalizedSchemaPayload/count",
+                                       getSchemaPayloadMap().size()
+                                   ));
+    emitter.emit(ServiceMetricEvent.builder().setMetric(
+                     "metadatacache/temporaryMetadataQueryResults/count",
+                     temporaryMetadataQueryResults.size()
+                 )
+    );
+    emitter.emit(ServiceMetricEvent.builder().setMetric(
+                     "metadatacache/temporaryPublishedMetadataQueryResults/count",
+                     temporaryPublishedMetadataQueryResults.size()
+                 )
+    );
   }
 
   /**

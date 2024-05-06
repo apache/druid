@@ -54,12 +54,6 @@ public class MixShuffleSpec implements ShuffleSpec
   }
 
   @Override
-  public boolean doesAggregate()
-  {
-    return false;
-  }
-
-  @Override
   public int partitionCount()
   {
     return 1;

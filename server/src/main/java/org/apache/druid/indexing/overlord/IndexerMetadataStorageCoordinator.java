@@ -389,9 +389,9 @@ public interface IndexerMetadataStorageCoordinator
    * </ul>
    *
    * @param replaceSegments Segments being committed by a REPLACE task
-   * @return Map from originally allocated pending segment to its new upgraded ID.
+   * @return List of inserted pending segment records
    */
-  Map<SegmentIdWithShardSpec, SegmentIdWithShardSpec> upgradePendingSegmentsOverlappingWith(
+  List<PendingSegmentRecord> upgradePendingSegmentsOverlappingWith(
       Set<DataSegment> replaceSegments
   );
 
@@ -492,10 +492,11 @@ public interface IndexerMetadataStorageCoordinator
 
   /**
    * Delete pending segment for a give task group after all the tasks belonging to it have completed.
+   * @param datasource datasource of the task
    * @param taskAllocatorId task id / task group / replica group for an appending task
    * @return number of pending segments deleted from the metadata store
    */
-  int deletePendingSegmentsForTaskGroup(String taskAllocatorId);
+  int deletePendingSegmentsForTaskAllocatorId(String datasource, String taskAllocatorId);
 
   /**
    * Fetches all the pending segments of the datasource that overlap with a given interval.

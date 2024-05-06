@@ -26,19 +26,32 @@ import org.apache.druid.guice.SleepModule;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.scan.ScanQuery.ResultFormat;
+import org.apache.druid.query.sql.SleepSqlTest.SleepComponentSupplier;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
+import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.filtration.Filtration;
+import org.apache.druid.sql.calcite.util.SqlTestFramework.SqlTestFrameWorkModule;
+import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.junit.jupiter.api.Test;
 
+@SqlTestFrameWorkModule(SleepComponentSupplier.class)
 public class SleepSqlTest extends BaseCalciteQueryTest
 {
-  @Override
-  public void configureGuice(DruidInjectorBuilder builder)
+  public static class SleepComponentSupplier extends StandardComponentSupplier
   {
-    super.configureGuice(builder);
-    builder.addModule(new SleepModule());
+    public SleepComponentSupplier(TempDirProducer tempFolderProducer)
+    {
+      super(tempFolderProducer);
+    }
+
+    @Override
+    public void configureGuice(DruidInjectorBuilder builder)
+    {
+      super.configureGuice(builder);
+      builder.addModule(new SleepModule());
+    }
   }
 
   @Test

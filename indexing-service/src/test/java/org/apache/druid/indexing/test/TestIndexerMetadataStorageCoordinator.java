@@ -252,11 +252,11 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   }
 
   @Override
-  public Map<SegmentIdWithShardSpec, SegmentIdWithShardSpec> upgradePendingSegmentsOverlappingWith(
+  public List<PendingSegmentRecord> upgradePendingSegmentsOverlappingWith(
       Set<DataSegment> replaceSegments
   )
   {
-    return Collections.emptyMap();
+    return Collections.emptyList();
   }
 
   @Override
@@ -297,7 +297,7 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   }
 
   @Override
-  public int deletePendingSegmentsForTaskGroup(final String taskGroup)
+  public int deletePendingSegmentsForTaskAllocatorId(final String datasource, final String taskAllocatorId)
   {
     throw new UnsupportedOperationException();
   }
