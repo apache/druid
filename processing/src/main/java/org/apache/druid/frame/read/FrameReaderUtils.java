@@ -219,15 +219,11 @@ public class FrameReaderUtils
     return Integer.compare(length1, length2);
   }
 
-  // TODO(laksh): There's an implicit contract that if a field isn't comparable by bytes, then it must be serded using
-  //  the CopmlexMetricSerde.toBytes()
   public static int compareComplexTypes(
       final byte[] array1,
       final int position1,
-      final int length1,
       final byte[] array2,
       final int position2,
-      final int length2,
       final ColumnType columnType,
       final ComplexMetricSerde complexMetricSerde
   )
@@ -247,7 +243,6 @@ public class FrameReaderUtils
       final long position1,
       final byte[] array,
       final int position2,
-      final int length2,
       final ColumnType columnType,
       final ComplexMetricSerde complexMetricSerde
   )

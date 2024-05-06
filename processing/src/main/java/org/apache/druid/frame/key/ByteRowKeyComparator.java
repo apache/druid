@@ -136,10 +136,8 @@ public class ByteRowKeyComparator implements Comparator<byte[]>
         int cmp = FrameReaderUtils.compareComplexTypes(
             keyArray1,
             currentRunStartPosition1,
-            currentRunEndPosition1 - currentRunStartPosition1,
             keyArray2,
             currentRunStartPosition2,
-            currentRunEndPosition2 - currentRunStartPosition2,
             columnType,
             serde
         );

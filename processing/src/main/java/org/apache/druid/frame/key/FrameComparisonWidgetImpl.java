@@ -233,7 +233,6 @@ public class FrameComparisonWidgetImpl implements FrameComparisonWidget
             rowPosition + comparableBytesStartPositionInRow,
             keyArray,
             comparableBytesStartPositionInKey,
-            comparableBytesEndPositionInKey - comparableBytesStartPositionInKey,
             columnType,
             serde
         );

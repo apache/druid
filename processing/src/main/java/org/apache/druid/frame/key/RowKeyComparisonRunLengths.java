@@ -28,6 +28,7 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Supplier;
 
 public class RowKeyComparisonRunLengths
 {
@@ -38,7 +39,10 @@ public class RowKeyComparisonRunLengths
     for (KeyColumn keyColumn : keyColumns) {
 
       if (keyColumn.order() == KeyOrder.NONE) {
-        throw DruidException.defensive("Cannot sort on column [%s] and type [%s] when the sorting order isn't provided");
+        throw DruidException.defensive(
+            "Cannot sort on column [%s] when the sorting order isn't provided",
+            keyColumn.columnName()
+        );
       }
 
       ColumnType columnType = rowSignature.getColumnType(keyColumn.columnName())
