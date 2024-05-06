@@ -466,7 +466,7 @@ public class FrameWriterTest extends InitializedNullHandlingTest
       final List<String> sortColumnNames
   )
   {
-    final List<KeyColumn> keyColumns = computeSortColumns(sortColumnNames, signature);
+    final List<KeyColumn> keyColumns = computeSortColumns(sortColumnNames);
 
     if (keyColumns.isEmpty()) {
       return rows;
@@ -500,7 +500,7 @@ public class FrameWriterTest extends InitializedNullHandlingTest
         capabilitiesAdjustFn,
         rows,
         signature,
-        computeSortColumns(sortColumns, signature)
+        computeSortColumns(sortColumns)
     );
   }
 
@@ -508,7 +508,7 @@ public class FrameWriterTest extends InitializedNullHandlingTest
    * Converts the provided column names into {@link KeyColumn} according to the current {@link #sortedness}
    * parameter.
    */
-  private List<KeyColumn> computeSortColumns(final List<String> sortColumnNames, final RowSignature rowSignature)
+  private List<KeyColumn> computeSortColumns(final List<String> sortColumnNames)
   {
     if (sortedness == KeyOrder.NONE) {
       return Collections.emptyList();

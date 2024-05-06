@@ -380,7 +380,6 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
   static ClusterBy computeClusterByForResults(final GroupByQuery query)
   {
     if (query.getLimitSpec() instanceof DefaultLimitSpec) {
-      final RowSignature resultSignature = computeResultSignature(query);
       final DefaultLimitSpec defaultLimitSpec = (DefaultLimitSpec) query.getLimitSpec();
 
       if (!defaultLimitSpec.getColumns().isEmpty()) {
