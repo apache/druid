@@ -22,9 +22,8 @@ package org.apache.druid.indexing.overlord;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Objects;
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.guice.annotations.PublicApi;
-
-import java.util.List;
 
 
 /**
@@ -33,12 +32,12 @@ import java.util.List;
 @PublicApi
 public class CategoryCapacityInfo
 {
-  private final List<String> taskTypeList;
+  private ImmutableList<String> taskTypeList;
   private final int capacity;
 
   @JsonCreator
   public CategoryCapacityInfo(
-      @JsonProperty("taskType") List<String> taskTypeList,
+      @JsonProperty("taskType") ImmutableList<String> taskTypeList,
       @JsonProperty("capacity") int capacity
   )
   {
@@ -47,9 +46,14 @@ public class CategoryCapacityInfo
   }
 
   @JsonProperty("taskType")
-  public List<String> getTaskTypeList()
+  public ImmutableList<String> getTaskTypeList()
   {
     return taskTypeList;
+  }
+
+  public void setTaskTypeList(ImmutableList<String> taskTypeList)
+  {
+    this.taskTypeList = taskTypeList;
   }
 
   @JsonProperty("capacity")
@@ -90,7 +94,7 @@ public class CategoryCapacityInfo
   public String toString()
   {
     return "CapacityInfo{" +
-           ", taskTypeList=" + taskTypeList.toString() +
+           ", taskTypeList=" + taskTypeList +
            ", capacity=" + capacity;
   }
 }

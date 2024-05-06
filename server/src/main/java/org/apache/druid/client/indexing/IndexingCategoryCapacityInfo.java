@@ -84,7 +84,7 @@ public class IndexingCategoryCapacityInfo
   public String toString()
   {
     return "IndexingCategoryCapacityInfo{" +
-           "taskTypeList=" + taskTypeList.toString() +
+           "taskTypeList=" + taskTypeList +
            ", capacity=" + capacity;
   }
 }

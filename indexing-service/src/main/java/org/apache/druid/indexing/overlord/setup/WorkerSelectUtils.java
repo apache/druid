@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.overlord.setup;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import org.apache.druid.indexing.common.task.Task;
@@ -28,10 +29,8 @@ import org.apache.druid.indexing.overlord.config.WorkerTaskRunnerConfig;
 import org.apache.druid.indexing.worker.Worker;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
@@ -166,17 +165,19 @@ public class WorkerSelectUtils
         String taskType = entry.getKey();
         String category = entry.getValue().getDefaultCategory();
         if (!categoryCapacityMap.containsKey(category)) {
-          final List<String> taskTypes = new ArrayList<>();
-          taskTypes.add(taskType);
           final CategoryCapacityInfo categoryCapacityInfo = new CategoryCapacityInfo(
-              taskTypes,
+              ImmutableList.of(taskType),
               categoryToCapacityMap.get(category)
           );
           categoryCapacityMap.put(category, categoryCapacityInfo);
         } else {
           final CategoryCapacityInfo categoryCapacityInfo = categoryCapacityMap.get(category);
           if (!categoryCapacityInfo.getTaskTypeList().contains(taskType)) {
-            categoryCapacityInfo.getTaskTypeList().add(taskType);
+            ImmutableList<String> taskTypes = ImmutableList.<String>builder()
+                         .addAll(categoryCapacityInfo.getTaskTypeList())
+                         .add(taskType)
+                         .build();
+            categoryCapacityInfo.setTaskTypeList(taskTypes);
           }
         }
       }

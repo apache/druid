@@ -243,7 +243,7 @@ public class FillCapacityWithCategorySpecWorkerSelectStrategyTest
         ),
         true
     );
-    final EqualDistributionWithCategorySpecWorkerSelectStrategy strategy = new EqualDistributionWithCategorySpecWorkerSelectStrategy(
+    final FillCapacityWithCategorySpecWorkerSelectStrategy strategy = new FillCapacityWithCategorySpecWorkerSelectStrategy(
         workerCategorySpec);
 
     ImmutableMap<String, CategoryCapacityInfo> categoryCapacity = strategy.getWorkerCategoryCapacity(

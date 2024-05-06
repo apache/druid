@@ -1567,7 +1567,7 @@ public class OverlordResourceTest
         "xxx_category",
         secondCategoryCapacityInfo
     );
-    EasyMock.expect(categoryStrategy.getWorkerCategoryCapacity(EasyMock.<Collection<ImmutableWorkerInfo>>anyObject()))
+    EasyMock.expect(categoryStrategy.getWorkerCategoryCapacity(EasyMock.anyObject()))
             .andReturn(mockCategoryCapacity);
     EasyMock.expect(workerBehaviorConfig.getSelectStrategy()).andReturn(categoryStrategy);
     AtomicReference<WorkerBehaviorConfig> workerBehaviorConfigAtomicReference = new AtomicReference<>(
