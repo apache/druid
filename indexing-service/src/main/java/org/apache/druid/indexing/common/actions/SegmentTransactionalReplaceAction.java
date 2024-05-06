@@ -28,6 +28,7 @@ import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.CriticalAction;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
+import org.apache.druid.indexing.overlord.TaskLockbox;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.PendingSegmentRecord;
@@ -39,6 +40,7 @@ import org.apache.druid.timeline.DataSegment;
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.locks.Lock;
 import java.util.stream.Collectors;
 
 /**
@@ -116,50 +118,57 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
   @Override
   public SegmentPublishResult perform(Task task, TaskActionToolbox toolbox)
   {
-    TaskLocks.checkLockCoversSegments(task, toolbox.getTaskLockbox(), segments);
+    final TaskLockbox taskLockbox = toolbox.getTaskLockbox();
+    TaskLocks.checkLockCoversSegments(task, taskLockbox, segments);
+    final Lock transactionalLock = taskLockbox.acquireTransactionalReplaceLock(task);
 
-    // Find the active replace locks held only by this task
-    final Set<ReplaceTaskLock> replaceLocksForTask
-        = toolbox.getTaskLockbox().findReplaceLocksForTask(task);
-
-    final SegmentPublishResult publishResult;
     try {
-      publishResult = toolbox.getTaskLockbox().doInCriticalSection(
-          task,
-          segments.stream().map(DataSegment::getInterval).collect(Collectors.toSet()),
-          CriticalAction.<SegmentPublishResult>builder()
-              .onValidLocks(
-                  () -> toolbox.getIndexerMetadataStorageCoordinator()
-                               .commitReplaceSegments(segments, replaceLocksForTask, segmentSchemaMapping)
-              )
-              .onInvalidLocks(
-                  () -> SegmentPublishResult.fail(
-                      "Invalid task locks. Maybe they are revoked by a higher priority task."
-                      + " Please check the overlord log for details."
-                  )
-              )
-              .build()
-      );
-    }
-    catch (Exception e) {
-      throw new RuntimeException(e);
-    }
+      // Find the active replace locks held only by this task
+      final Set<ReplaceTaskLock> replaceLocksForTask
+          = toolbox.getTaskLockbox().findReplaceLocksForTask(task);
 
-    IndexTaskUtils.emitSegmentPublishMetrics(publishResult, task, toolbox);
-
-    // Upgrade any overlapping pending segments
-    // Do not perform upgrade in the same transaction as replace commit so that
-    // failure to upgrade pending segments does not affect success of the commit
-    if (publishResult.isSuccess() && toolbox.getSupervisorManager() != null) {
+      final SegmentPublishResult publishResult;
       try {
-        registerUpgradedPendingSegmentsOnSupervisor(task, toolbox, publishResult.getUpgradedPendingSegments());
+        publishResult = toolbox.getTaskLockbox().doInCriticalSection(
+            task,
+            segments.stream().map(DataSegment::getInterval).collect(Collectors.toSet()),
+            CriticalAction.<SegmentPublishResult>builder()
+                          .onValidLocks(
+                              () -> toolbox.getIndexerMetadataStorageCoordinator()
+                                           .commitReplaceSegments(segments, replaceLocksForTask, segmentSchemaMapping)
+                          )
+                          .onInvalidLocks(
+                              () -> SegmentPublishResult.fail(
+                                  "Invalid task locks. Maybe they are revoked by a higher priority task."
+                                  + " Please check the overlord log for details."
+                              )
+                          )
+                          .build()
+        );
       }
       catch (Exception e) {
-        log.error(e, "Error while upgrading pending segments for task[%s]", task.getId());
+        throw new RuntimeException(e);
       }
-    }
 
-    return publishResult;
+      IndexTaskUtils.emitSegmentPublishMetrics(publishResult, task, toolbox);
+
+      // Upgrade any overlapping pending segments
+      // Do not perform upgrade in the same transaction as replace commit so that
+      // failure to upgrade pending segments does not affect success of the commit
+      if (publishResult.isSuccess() && toolbox.getSupervisorManager() != null) {
+        try {
+          registerUpgradedPendingSegmentsOnSupervisor(task, toolbox, publishResult.getUpgradedPendingSegments());
+        }
+        catch (Exception e) {
+          log.error(e, "Error while upgrading pending segments for task[%s]", task.getId());
+        }
+      }
+
+      return publishResult;
+    }
+    finally {
+      taskLockbox.releaseTransactionalLock(task, transactionalLock);
+    }
   }
 
   /**

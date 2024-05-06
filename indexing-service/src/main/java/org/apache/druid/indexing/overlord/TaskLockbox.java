@@ -68,7 +68,10 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -86,6 +89,11 @@ import java.util.stream.Collectors;
  */
 public class TaskLockbox
 {
+  private static final long LOCK_ACQUIRE_TIMEOUT_SECONDS = 10L;
+
+  private final Map<String, ReadWriteLock> datasourceToConcurrentLock = new HashMap<>();
+  private final Map<String, Integer> datasourceToNumActiveLocks = new HashMap<>();
+
   // Datasource -> startTime -> Interval -> list of (Tasks + TaskLock)
   // Multiple shared locks can be acquired for the same dataSource and interval.
   // Note that revoked locks are also maintained in this map to notify that those locks are revoked to the callers when
@@ -1264,6 +1272,109 @@ public class TaskLockbox
       }
       finally {
         activeTasks.remove(task.getId());
+      }
+    }
+    finally {
+      giant.unlock();
+    }
+  }
+
+  /**
+   * Acquire a read lock to perform the segment transactional append action for a given datasource.
+   * Also verifies that all the locks are of the type APPEND for the task.
+   * @param task task to perform the append action
+   * @return the read lock acquired by the task
+   * @throws InterruptedException if interrupted while acquiring the lock
+   */
+  public Lock acquireTransactionalAppendLock(Task task)
+  {
+    for (TaskLockPosse lockPosse : findLockPossesForTask(task)) {
+      if (lockPosse.taskLock.getType() != TaskLockType.APPEND) {
+        throw new ISE(
+            "All the locks must be APPEND for segmentTransactionalAppend. Found lock of type[%s] for task[%s].",
+            lockPosse.taskLock.getType(), task.getId()
+        );
+      }
+    }
+    final String datasource = task.getDataSource();
+    giant.lock();
+    try {
+      final Lock lock = datasourceToConcurrentLock.computeIfAbsent(datasource, ds -> new ReentrantReadWriteLock())
+                                                  .readLock();
+      final boolean acquired = lock.tryLock(LOCK_ACQUIRE_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+      if (!acquired) {
+        throw new ISE("Timed out while fetching transactional append lock for datasource[%s].", datasource);
+      }
+      datasourceToNumActiveLocks.put(
+          datasource,
+          datasourceToNumActiveLocks.getOrDefault(datasource, 0) + 1
+      );
+      return lock;
+    }
+    catch (InterruptedException e) {
+      throw new ISE(e, "Interrupted while acquiring transactional append lock for datasource[%s].", datasource);
+    }
+    finally {
+      giant.unlock();
+    }
+  }
+
+  /**
+   * Acquire a write lock to perform the segment transactional replace action for a given datasource.
+   * Also verifies that all the locks are of the type REPLACE for the task.
+   * @param task task to perform the replace action
+   * @return the write lock acquired by the task
+   * @throws InterruptedException if interrupted while acquiring the lock
+   */
+  public Lock acquireTransactionalReplaceLock(Task task)
+  {
+    for (TaskLockPosse lockPosse : findLockPossesForTask(task)) {
+      if (lockPosse.taskLock.getType() != TaskLockType.REPLACE) {
+        throw new ISE(
+            "All the locks must be REPLACE for segmentTransactionalReplace. Found lock of type[%s] for task[%s].",
+            lockPosse.taskLock.getType(), task.getId()
+        );
+      }
+    }
+    final String datasource = task.getDataSource();
+    giant.lock();
+    try {
+      final Lock lock = datasourceToConcurrentLock.computeIfAbsent(datasource, ds -> new ReentrantReadWriteLock())
+                                                  .writeLock();
+      final boolean acquired = lock.tryLock(LOCK_ACQUIRE_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+      if (!acquired) {
+        throw new ISE("Timed out while acquiring transactional replace lock for datasource[%s].", datasource);
+      }
+      datasourceToNumActiveLocks.put(
+          datasource,
+          datasourceToNumActiveLocks.getOrDefault(datasource, 0) + 1
+      );
+      return lock;
+    }
+    catch (InterruptedException e) {
+      throw new ISE(e, "Interrupted while acquiring transactional replace lock for datasource[%s].", datasource);
+    }
+    finally {
+      giant.unlock();
+    }
+  }
+
+  /**
+   * Release the transactional lock acquired by a task to perform the APPEND / REPLACE action
+   * @param task task to perform the append action
+   * @param lock read / write lock acquired by the task
+   */
+  public void releaseTransactionalLock(Task task, Lock lock)
+  {
+    giant.lock();
+    try {
+      final String datasource = task.getDataSource();
+      lock.unlock();
+      final Integer numActiveLocks = datasourceToNumActiveLocks.get(datasource);
+      if (numActiveLocks == null || numActiveLocks <= 1) {
+        datasourceToNumActiveLocks.remove(datasource);
+      } else {
+        datasourceToNumActiveLocks.put(datasource, numActiveLocks - 1);
       }
     }
     finally {

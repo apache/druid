@@ -24,23 +24,22 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
-import org.apache.druid.indexing.common.TaskLock;
-import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.PendingSegmentAllocatingTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.CriticalAction;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
+import org.apache.druid.indexing.overlord.TaskLockbox;
 import org.apache.druid.metadata.ReplaceTaskLock;
 import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.locks.Lock;
 import java.util.stream.Collectors;
 
 /**
@@ -148,65 +147,61 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
           task.getType()
       );
     }
-    // Verify that all the locks are of expected type
-    final List<TaskLock> locks = toolbox.getTaskLockbox().findLocksForTask(task);
-    for (TaskLock lock : locks) {
-      if (lock.getType() != TaskLockType.APPEND) {
-        throw InvalidInput.exception(
-            "Cannot use action[%s] for task[%s] as it is holding a lock of type[%s] instead of [APPEND].",
-            "SegmentTransactionalAppendAction", task.getId(), lock.getType()
+    final TaskLockbox taskLockbox = toolbox.getTaskLockbox();
+    TaskLocks.checkLockCoversSegments(task, taskLockbox, segments);
+    final Lock transactionalLock = taskLockbox.acquireTransactionalAppendLock(task);
+
+    try {
+      final String datasource = task.getDataSource();
+      final Map<DataSegment, ReplaceTaskLock> segmentToReplaceLock
+          = TaskLocks.findReplaceLocksCoveringSegments(datasource, toolbox.getTaskLockbox(), segments);
+
+      final CriticalAction.Action<SegmentPublishResult> publishAction;
+      final String taskAllocatorId = ((PendingSegmentAllocatingTask) task).getTaskAllocatorId();
+      if (startMetadata == null) {
+        publishAction = () -> toolbox.getIndexerMetadataStorageCoordinator().commitAppendSegments(
+            segments,
+            segmentToReplaceLock,
+            taskAllocatorId,
+            segmentSchemaMapping
+        );
+      } else {
+        publishAction = () -> toolbox.getIndexerMetadataStorageCoordinator().commitAppendSegmentsAndMetadata(
+            segments,
+            segmentToReplaceLock,
+            startMetadata,
+            endMetadata,
+            taskAllocatorId,
+            segmentSchemaMapping
         );
       }
+
+      final SegmentPublishResult retVal;
+      try {
+        retVal = toolbox.getTaskLockbox().doInCriticalSection(
+            task,
+            segments.stream().map(DataSegment::getInterval).collect(Collectors.toSet()),
+            CriticalAction.<SegmentPublishResult>builder()
+                          .onValidLocks(publishAction)
+                          .onInvalidLocks(
+                              () -> SegmentPublishResult.fail(
+                                  "Invalid task locks. Maybe they are revoked by a higher priority task."
+                                  + " Please check the overlord log for details."
+                              )
+                          )
+                          .build()
+        );
+      }
+      catch (Exception e) {
+        throw new RuntimeException(e);
+      }
+
+      IndexTaskUtils.emitSegmentPublishMetrics(retVal, task, toolbox);
+      return retVal;
     }
-
-    TaskLocks.checkLockCoversSegments(task, toolbox.getTaskLockbox(), segments);
-
-    final String datasource = task.getDataSource();
-    final Map<DataSegment, ReplaceTaskLock> segmentToReplaceLock
-        = TaskLocks.findReplaceLocksCoveringSegments(datasource, toolbox.getTaskLockbox(), segments);
-
-    final CriticalAction.Action<SegmentPublishResult> publishAction;
-    final String taskAllocatorId = ((PendingSegmentAllocatingTask) task).getTaskAllocatorId();
-    if (startMetadata == null) {
-      publishAction = () -> toolbox.getIndexerMetadataStorageCoordinator().commitAppendSegments(
-          segments,
-          segmentToReplaceLock,
-          taskAllocatorId,
-          segmentSchemaMapping
-      );
-    } else {
-      publishAction = () -> toolbox.getIndexerMetadataStorageCoordinator().commitAppendSegmentsAndMetadata(
-          segments,
-          segmentToReplaceLock,
-          startMetadata,
-          endMetadata,
-          taskAllocatorId,
-          segmentSchemaMapping
-      );
+    finally {
+      taskLockbox.releaseTransactionalLock(task, transactionalLock);
     }
-
-    final SegmentPublishResult retVal;
-    try {
-      retVal = toolbox.getTaskLockbox().doInCriticalSection(
-          task,
-          segments.stream().map(DataSegment::getInterval).collect(Collectors.toSet()),
-          CriticalAction.<SegmentPublishResult>builder()
-              .onValidLocks(publishAction)
-              .onInvalidLocks(
-                  () -> SegmentPublishResult.fail(
-                      "Invalid task locks. Maybe they are revoked by a higher priority task."
-                      + " Please check the overlord log for details."
-                  )
-              )
-              .build()
-      );
-    }
-    catch (Exception e) {
-      throw new RuntimeException(e);
-    }
-
-    IndexTaskUtils.emitSegmentPublishMetrics(retVal, task, toolbox);
-    return retVal;
   }
 
   @Override
