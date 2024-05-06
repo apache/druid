@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.metrics;
 
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 
 import java.util.Map;
@@ -29,31 +30,31 @@ public interface TaskCountStatsProvider
    * Return the number of successful tasks for each datasource during emission period.
    */
   @Deprecated
-  Map<String, Long> getSuccessfulTaskCount();
+  Map<Pair<String, String>, Long> getSuccessfulTaskCount();
 
   /**
    * Return the number of failed tasks for each datasource during emission period.
    */
   @Deprecated
-  Map<String, Long> getFailedTaskCount();
+  Map<Pair<String, String>, Long> getFailedTaskCount();
 
   /**
    * Return the number of current running tasks for each datasource.
    */
   @Deprecated
-  Map<String, Long> getRunningTaskCount();
+  Map<Pair<String, String>, Long> getRunningTaskCount();
 
   /**
    * Return the number of current pending tasks for each datasource.
    */
   @Deprecated
-  Map<String, Long> getPendingTaskCount();
+  Map<Pair<String, String>, Long> getPendingTaskCount();
 
   /**
    * Return the number of current waiting tasks for each datasource.
    */
   @Deprecated
-  Map<String, Long> getWaitingTaskCount();
+  Map<Pair<String, String>, Long> getWaitingTaskCount();
 
   /**
    * Collects all task level stats. This method deprecates the other task stats

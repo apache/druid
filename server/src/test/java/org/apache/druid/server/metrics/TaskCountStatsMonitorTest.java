@@ -20,6 +20,7 @@
 package org.apache.druid.server.metrics;
 
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.CoordinatorStat;
@@ -39,33 +40,33 @@ public class TaskCountStatsMonitorTest
     statsProvider = new TaskCountStatsProvider()
     {
       @Override
-      public Map<String, Long> getSuccessfulTaskCount()
+      public Map<Pair<String, String>, Long> getSuccessfulTaskCount()
       {
-        return ImmutableMap.of("d1", 1L);
+        return ImmutableMap.of(Pair.of("d1", "t1"), 1L);
       }
 
       @Override
-      public Map<String, Long> getFailedTaskCount()
+      public Map<Pair<String, String>, Long> getFailedTaskCount()
       {
-        return ImmutableMap.of("d1", 1L);
+        return ImmutableMap.of(Pair.of("d1", "t1"), 1L);
       }
 
       @Override
-      public Map<String, Long> getRunningTaskCount()
+      public Map<Pair<String, String>, Long> getRunningTaskCount()
       {
-        return ImmutableMap.of("d1", 1L);
+        return ImmutableMap.of(Pair.of("d1", "t1"), 1L);
       }
 
       @Override
-      public Map<String, Long> getPendingTaskCount()
+      public Map<Pair<String, String>, Long> getPendingTaskCount()
       {
-        return ImmutableMap.of("d1", 1L);
+        return ImmutableMap.of(Pair.of("d1", "t1"), 1L);
       }
 
       @Override
-      public Map<String, Long> getWaitingTaskCount()
+      public Map<Pair<String, String>, Long> getWaitingTaskCount()
       {
-        return ImmutableMap.of("d1", 1L);
+        return ImmutableMap.of(Pair.of("d1", "t1"), 1L);
       }
 
       @Override
