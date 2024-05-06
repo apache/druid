@@ -23,6 +23,7 @@ import org.apache.druid.catalog.CatalogException;
 import org.apache.druid.catalog.model.Columns;
 import org.apache.druid.catalog.model.TableMetadata;
 import org.apache.druid.catalog.model.table.TableBuilder;
+import org.apache.druid.catalog.sql.CatalogQueryTest.CatalogQueryComponentSupplier;
 import org.apache.druid.catalog.storage.CatalogStorage;
 import org.apache.druid.catalog.storage.CatalogTests;
 import org.apache.druid.catalog.sync.CachedMetadataCatalog;
@@ -30,8 +31,10 @@ import org.apache.druid.catalog.sync.MetadataCatalog;
 import org.apache.druid.metadata.TestDerbyConnector.DerbyConnectorRule5;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.SqlSchema;
+import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
+import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -41,13 +44,14 @@ import java.util.Collections;
 
 import static org.junit.Assert.fail;
 
+@SqlTestFramework.SqlTestFrameWorkModule(CatalogQueryComponentSupplier.class)
 public class CatalogQueryTest extends BaseCalciteQueryTest
 {
   @RegisterExtension
   public static final DerbyConnectorRule5 DERBY_CONNECTION_RULE = new DerbyConnectorRule5();
 
-  private CatalogTests.DbFixture dbFixture;
-  private CatalogStorage storage;
+  private static CatalogTests.DbFixture dbFixture;
+  private static CatalogStorage storage;
 
   @Test
   public void testCatalogSchema()
@@ -76,49 +80,57 @@ public class CatalogQueryTest extends BaseCalciteQueryTest
     CatalogTests.tearDown(dbFixture);
   }
 
-  @Override
-  public CatalogResolver createCatalogResolver()
+  protected static class CatalogQueryComponentSupplier extends StandardComponentSupplier
   {
-    dbFixture = new CatalogTests.DbFixture(DERBY_CONNECTION_RULE);
-    storage = dbFixture.storage;
-    MetadataCatalog catalog = new CachedMetadataCatalog(
-        storage,
-        storage.schemaRegistry(),
-        storage.jsonMapper()
-    );
-    return new LiveCatalogResolver(catalog);
-  }
-
-  @Override
-  public void finalizeTestFramework(SqlTestFramework sqlTestFramework)
-  {
-    super.finalizeTestFramework(sqlTestFramework);
-    buildFooDatasource();
-  }
-
-  private void createTableMetadata(TableMetadata table)
-  {
-    try {
-      storage.tables().create(table);
+    public CatalogQueryComponentSupplier(TempDirProducer tempFolderProducer)
+    {
+      super(tempFolderProducer);
     }
-    catch (CatalogException e) {
-      fail(e.getMessage());
-    }
-  }
 
-  public void buildFooDatasource()
-  {
-    TableMetadata spec = TableBuilder.datasource("foo", "ALL")
-        .timeColumn()
-        .column("extra1", null)
-        .column("dim2", null)
-        .column("dim1", null)
-        .column("cnt", null)
-        .column("m1", Columns.DOUBLE)
-        .column("extra2", Columns.LONG)
-        .column("extra3", Columns.STRING)
-        .hiddenColumns(Arrays.asList("dim3", "unique_dim1"))
-        .build();
-    createTableMetadata(spec);
+    @Override
+    public CatalogResolver createCatalogResolver()
+    {
+      dbFixture = new CatalogTests.DbFixture(DERBY_CONNECTION_RULE);
+      storage = dbFixture.storage;
+      MetadataCatalog catalog = new CachedMetadataCatalog(
+          storage,
+          storage.schemaRegistry(),
+          storage.jsonMapper()
+      );
+      return new LiveCatalogResolver(catalog);
+    }
+
+    @Override
+    public void finalizeTestFramework(SqlTestFramework sqlTestFramework)
+    {
+      super.finalizeTestFramework(sqlTestFramework);
+      buildFooDatasource();
+    }
+
+    private void createTableMetadata(TableMetadata table)
+    {
+      try {
+        storage.tables().create(table);
+      }
+      catch (CatalogException e) {
+        fail(e.getMessage());
+      }
+    }
+
+    public void buildFooDatasource()
+    {
+      TableMetadata spec = TableBuilder.datasource("foo", "ALL")
+          .timeColumn()
+          .column("extra1", null)
+          .column("dim2", null)
+          .column("dim1", null)
+          .column("cnt", null)
+          .column("m1", Columns.DOUBLE)
+          .column("extra2", Columns.LONG)
+          .column("extra3", Columns.STRING)
+          .hiddenColumns(Arrays.asList("dim3", "unique_dim1"))
+          .build();
+      createTableMetadata(spec);
+    }
   }
 }

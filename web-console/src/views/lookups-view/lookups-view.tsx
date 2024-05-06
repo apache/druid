@@ -60,7 +60,6 @@ const tableColumns: string[] = [
   'Version',
   'Poll period',
   'Summary',
-  ACTION_COLUMN_LABEL,
 ];
 
 const DEFAULT_LOOKUP_TIER = '__default';
@@ -442,10 +441,10 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
           },
           {
             Header: ACTION_COLUMN_LABEL,
-            show: visibleColumns.shown(ACTION_COLUMN_LABEL),
             id: ACTION_COLUMN_ID,
             width: ACTION_COLUMN_WIDTH,
             filterable: false,
+            sortable: false,
             accessor: 'id',
             Cell: ({ original }) => {
               const lookupId = original.id;

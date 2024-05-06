@@ -32,6 +32,7 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.guice.NestedDataModule;
@@ -52,9 +53,10 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.filter.ArrayContainsElementFilter;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.ExpressionDimFilter;
-import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.LikeDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
+import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.topn.DimensionTopNMetricSpec;
@@ -70,12 +72,16 @@ import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.virtual.NestedFieldVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
+import org.apache.druid.sql.calcite.CalciteNestedDataQueryTest.NestedComponentSupplier;
 import org.apache.druid.sql.calcite.filtration.Filtration;
+import org.apache.druid.sql.calcite.util.SqlTestFramework;
+import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.hamcrest.CoreMatchers;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -83,6 +89,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
+@SqlTestFramework.SqlTestFrameWorkModule(NestedComponentSupplier.class)
 public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
 {
   private static final String DATA_SOURCE = "nested";
@@ -176,219 +183,227 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   private static final List<InputRow> ROWS_MIX =
       RAW_ROWS.stream().map(raw -> TestDataBuilder.createRow(raw, JSON_AND_SCALAR_MIX)).collect(Collectors.toList());
 
-  @Override
-  public void configureGuice(DruidInjectorBuilder builder)
+  protected static class NestedComponentSupplier extends StandardComponentSupplier
   {
-    super.configureGuice(builder);
-    builder.addModule(new NestedDataModule());
-  }
+    public NestedComponentSupplier(TempDirProducer tempFolderProducer)
+    {
+      super(tempFolderProducer);
+    }
 
-  @SuppressWarnings("resource")
-  @Override
-  public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
-      final QueryRunnerFactoryConglomerate conglomerate,
-      final JoinableFactoryWrapper joinableFactory,
-      final Injector injector
-  )
-  {
-    NestedDataModule.registerHandlersAndSerde();
-    final QueryableIndex index =
-        IndexBuilder.create()
-                    .tmpDir(newTempFolder())
-                    .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
-                    .schema(
-                        new IncrementalIndexSchema.Builder()
-                            .withMetrics(
-                                new CountAggregatorFactory("cnt")
-                            )
-                            .withDimensionsSpec(ALL_JSON_COLUMNS.getDimensionsSpec())
-                            .withRollup(false)
-                            .build()
-                    )
-                    .rows(ROWS)
-                    .buildMMappedIndex();
+    @Override
+    public void configureGuice(DruidInjectorBuilder builder)
+    {
+      super.configureGuice(builder);
+      builder.addModule(new NestedDataModule());
+    }
 
-    final QueryableIndex indexMix11 =
-        IndexBuilder.create()
-                    .tmpDir(newTempFolder())
-                    .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
-                    .schema(
-                        new IncrementalIndexSchema.Builder()
-                            .withMetrics(
-                                new CountAggregatorFactory("cnt")
-                            )
-                            .withDimensionsSpec(ALL_JSON_COLUMNS.getDimensionsSpec())
-                            .withRollup(false)
-                            .build()
-                    )
-                    .rows(ROWS)
-                    .buildMMappedIndex();
+    @SuppressWarnings("resource")
+    @Override
+    public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
+        final QueryRunnerFactoryConglomerate conglomerate,
+        final JoinableFactoryWrapper joinableFactory,
+        final Injector injector
+    )
+    {
+      NestedDataModule.registerHandlersAndSerde();
+      final QueryableIndex index =
+          IndexBuilder.create()
+                      .tmpDir(tempDirProducer.newTempFolder())
+                      .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+                      .schema(
+                          new IncrementalIndexSchema.Builder()
+                              .withMetrics(
+                                  new CountAggregatorFactory("cnt")
+                              )
+                              .withDimensionsSpec(ALL_JSON_COLUMNS.getDimensionsSpec())
+                              .withRollup(false)
+                              .build()
+                      )
+                      .rows(ROWS)
+                      .buildMMappedIndex();
 
-
-    final QueryableIndex indexMix12 =
-        IndexBuilder.create()
-                    .tmpDir(newTempFolder())
-                    .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
-                    .schema(
-                        new IncrementalIndexSchema.Builder()
-                            .withMetrics(
-                                new CountAggregatorFactory("cnt")
-                            )
-                            .withDimensionsSpec(JSON_AND_SCALAR_MIX.getDimensionsSpec())
-                            .withRollup(false)
-                            .build()
-                    )
-                    .rows(ROWS_MIX)
-                    .buildMMappedIndex();
-
-    final QueryableIndex indexMix21 =
-        IndexBuilder.create()
-                    .tmpDir(newTempFolder())
-                    .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
-                    .schema(
-                        new IncrementalIndexSchema.Builder()
-                            .withMetrics(
-                                new CountAggregatorFactory("cnt")
-                            )
-                            .withDimensionsSpec(JSON_AND_SCALAR_MIX.getDimensionsSpec())
-                            .withRollup(false)
-                            .build()
-                    )
-                    .rows(ROWS_MIX)
-                    .buildMMappedIndex();
-
-    final QueryableIndex indexMix22 =
-        IndexBuilder.create()
-                    .tmpDir(newTempFolder())
-                    .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
-                    .schema(
-                        new IncrementalIndexSchema.Builder()
-                            .withMetrics(
-                                new CountAggregatorFactory("cnt")
-                            )
-                            .withDimensionsSpec(ALL_JSON_COLUMNS.getDimensionsSpec())
-                            .withRollup(false)
-                            .build()
-                    )
-                    .rows(ROWS)
-                    .buildMMappedIndex();
-
-    final QueryableIndex indexArrays =
-        IndexBuilder.create()
-                    .tmpDir(newTempFolder())
-                    .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
-                    .schema(
-                        new IncrementalIndexSchema.Builder()
-                            .withTimestampSpec(NestedDataTestUtils.AUTO_SCHEMA.getTimestampSpec())
-                            .withDimensionsSpec(NestedDataTestUtils.AUTO_SCHEMA.getDimensionsSpec())
-                            .withMetrics(
-                                new CountAggregatorFactory("cnt")
-                            )
-                            .withRollup(false)
-                            .build()
-                    )
-                    .inputSource(
-                        ResourceInputSource.of(
-                            NestedDataTestUtils.class.getClassLoader(),
-                            NestedDataTestUtils.ARRAY_TYPES_DATA_FILE
-                        )
-                    )
-                    .inputFormat(TestDataBuilder.DEFAULT_JSON_INPUT_FORMAT)
-                    .inputTmpDir(newTempFolder())
-                    .buildMMappedIndex();
-
-    final QueryableIndex indexAllTypesAuto =
-        IndexBuilder.create()
-                    .tmpDir(newTempFolder())
-                    .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
-                    .schema(
-                        new IncrementalIndexSchema.Builder()
-                            .withTimestampSpec(NestedDataTestUtils.AUTO_SCHEMA.getTimestampSpec())
-                            .withDimensionsSpec(NestedDataTestUtils.AUTO_SCHEMA.getDimensionsSpec())
-                            .withMetrics(
-                                new CountAggregatorFactory("cnt")
-                            )
-                            .withRollup(false)
-                            .build()
-                    )
-                    .inputSource(
-                        ResourceInputSource.of(
-                            NestedDataTestUtils.class.getClassLoader(),
-                            NestedDataTestUtils.ALL_TYPES_TEST_DATA_FILE
-                        )
-                    )
-                    .inputFormat(TestDataBuilder.DEFAULT_JSON_INPUT_FORMAT)
-                    .inputTmpDir(newTempFolder())
-                    .buildMMappedIndex();
+      final QueryableIndex indexMix11 =
+          IndexBuilder.create()
+                      .tmpDir(tempDirProducer.newTempFolder())
+                      .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+                      .schema(
+                          new IncrementalIndexSchema.Builder()
+                              .withMetrics(
+                                  new CountAggregatorFactory("cnt")
+                              )
+                              .withDimensionsSpec(ALL_JSON_COLUMNS.getDimensionsSpec())
+                              .withRollup(false)
+                              .build()
+                      )
+                      .rows(ROWS)
+                      .buildMMappedIndex();
 
 
-    SpecificSegmentsQuerySegmentWalker walker = SpecificSegmentsQuerySegmentWalker.createWalker(injector, conglomerate);
-    walker.add(
-        DataSegment.builder()
-                   .dataSource(DATA_SOURCE)
-                   .interval(index.getDataInterval())
-                   .version("1")
-                   .shardSpec(new LinearShardSpec(0))
-                   .size(0)
-                   .build(),
-        index
-    ).add(
-        DataSegment.builder()
-                   .dataSource(DATA_SOURCE_MIXED)
-                   .interval(indexMix11.getDataInterval())
-                   .version("1")
-                   .shardSpec(new LinearShardSpec(0))
-                   .size(0)
-                   .build(),
-        indexMix11
-    ).add(
-        DataSegment.builder()
-                   .dataSource(DATA_SOURCE_MIXED)
-                   .interval(indexMix12.getDataInterval())
-                   .version("1")
-                   .shardSpec(new LinearShardSpec(1))
-                   .size(0)
-                   .build(),
-        indexMix12
-    ).add(
-        DataSegment.builder()
-                   .dataSource(DATA_SOURCE_MIXED_2)
-                   .interval(indexMix21.getDataInterval())
-                   .version("1")
-                   .shardSpec(new LinearShardSpec(0))
-                   .size(0)
-                   .build(),
-        indexMix21
-    ).add(
-        DataSegment.builder()
-                   .dataSource(DATA_SOURCE_MIXED_2)
-                   .interval(index.getDataInterval())
-                   .version("1")
-                   .shardSpec(new LinearShardSpec(1))
-                   .size(0)
-                   .build(),
-        indexMix22
-    ).add(
-        DataSegment.builder()
-                   .dataSource(DATA_SOURCE_ARRAYS)
-                   .version("1")
-                   .interval(indexArrays.getDataInterval())
-                   .shardSpec(new LinearShardSpec(1))
-                   .size(0)
-                   .build(),
-        indexArrays
-    ).add(
-        DataSegment.builder()
-                   .dataSource(DATA_SOURCE_ALL)
-                   .version("1")
-                   .interval(indexAllTypesAuto.getDataInterval())
-                   .shardSpec(new LinearShardSpec(1))
-                   .size(0)
-                   .build(),
-        indexAllTypesAuto
-    );
+      final QueryableIndex indexMix12 =
+          IndexBuilder.create()
+                      .tmpDir(tempDirProducer.newTempFolder())
+                      .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+                      .schema(
+                          new IncrementalIndexSchema.Builder()
+                              .withMetrics(
+                                  new CountAggregatorFactory("cnt")
+                              )
+                              .withDimensionsSpec(JSON_AND_SCALAR_MIX.getDimensionsSpec())
+                              .withRollup(false)
+                              .build()
+                      )
+                      .rows(ROWS_MIX)
+                      .buildMMappedIndex();
 
-    return walker;
+      final QueryableIndex indexMix21 =
+          IndexBuilder.create()
+                      .tmpDir(tempDirProducer.newTempFolder())
+                      .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+                      .schema(
+                          new IncrementalIndexSchema.Builder()
+                              .withMetrics(
+                                  new CountAggregatorFactory("cnt")
+                              )
+                              .withDimensionsSpec(JSON_AND_SCALAR_MIX.getDimensionsSpec())
+                              .withRollup(false)
+                              .build()
+                      )
+                      .rows(ROWS_MIX)
+                      .buildMMappedIndex();
+
+      final QueryableIndex indexMix22 =
+          IndexBuilder.create()
+                      .tmpDir(tempDirProducer.newTempFolder())
+                      .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+                      .schema(
+                          new IncrementalIndexSchema.Builder()
+                              .withMetrics(
+                                  new CountAggregatorFactory("cnt")
+                              )
+                              .withDimensionsSpec(ALL_JSON_COLUMNS.getDimensionsSpec())
+                              .withRollup(false)
+                              .build()
+                      )
+                      .rows(ROWS)
+                      .buildMMappedIndex();
+
+      final QueryableIndex indexArrays =
+          IndexBuilder.create()
+                      .tmpDir(tempDirProducer.newTempFolder())
+                      .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+                      .schema(
+                          new IncrementalIndexSchema.Builder()
+                              .withTimestampSpec(NestedDataTestUtils.AUTO_SCHEMA.getTimestampSpec())
+                              .withDimensionsSpec(NestedDataTestUtils.AUTO_SCHEMA.getDimensionsSpec())
+                              .withMetrics(
+                                  new CountAggregatorFactory("cnt")
+                              )
+                              .withRollup(false)
+                              .build()
+                      )
+                      .inputSource(
+                          ResourceInputSource.of(
+                              NestedDataTestUtils.class.getClassLoader(),
+                              NestedDataTestUtils.ARRAY_TYPES_DATA_FILE
+                          )
+                      )
+                      .inputFormat(TestDataBuilder.DEFAULT_JSON_INPUT_FORMAT)
+                      .inputTmpDir(tempDirProducer.newTempFolder())
+                      .buildMMappedIndex();
+
+      final QueryableIndex indexAllTypesAuto =
+          IndexBuilder.create()
+                      .tmpDir(tempDirProducer.newTempFolder())
+                      .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+                      .schema(
+                          new IncrementalIndexSchema.Builder()
+                              .withTimestampSpec(NestedDataTestUtils.AUTO_SCHEMA.getTimestampSpec())
+                              .withDimensionsSpec(NestedDataTestUtils.AUTO_SCHEMA.getDimensionsSpec())
+                              .withMetrics(
+                                  new CountAggregatorFactory("cnt")
+                              )
+                              .withRollup(false)
+                              .build()
+                      )
+                      .inputSource(
+                          ResourceInputSource.of(
+                              NestedDataTestUtils.class.getClassLoader(),
+                              NestedDataTestUtils.ALL_TYPES_TEST_DATA_FILE
+                          )
+                      )
+                      .inputFormat(TestDataBuilder.DEFAULT_JSON_INPUT_FORMAT)
+                      .inputTmpDir(tempDirProducer.newTempFolder())
+                      .buildMMappedIndex();
+
+
+      SpecificSegmentsQuerySegmentWalker walker = SpecificSegmentsQuerySegmentWalker.createWalker(injector, conglomerate);
+      walker.add(
+          DataSegment.builder()
+                     .dataSource(DATA_SOURCE)
+                     .interval(index.getDataInterval())
+                     .version("1")
+                     .shardSpec(new LinearShardSpec(0))
+                     .size(0)
+                     .build(),
+          index
+      ).add(
+          DataSegment.builder()
+                     .dataSource(DATA_SOURCE_MIXED)
+                     .interval(indexMix11.getDataInterval())
+                     .version("1")
+                     .shardSpec(new LinearShardSpec(0))
+                     .size(0)
+                     .build(),
+          indexMix11
+      ).add(
+          DataSegment.builder()
+                     .dataSource(DATA_SOURCE_MIXED)
+                     .interval(indexMix12.getDataInterval())
+                     .version("1")
+                     .shardSpec(new LinearShardSpec(1))
+                     .size(0)
+                     .build(),
+          indexMix12
+      ).add(
+          DataSegment.builder()
+                     .dataSource(DATA_SOURCE_MIXED_2)
+                     .interval(indexMix21.getDataInterval())
+                     .version("1")
+                     .shardSpec(new LinearShardSpec(0))
+                     .size(0)
+                     .build(),
+          indexMix21
+      ).add(
+          DataSegment.builder()
+                     .dataSource(DATA_SOURCE_MIXED_2)
+                     .interval(index.getDataInterval())
+                     .version("1")
+                     .shardSpec(new LinearShardSpec(1))
+                     .size(0)
+                     .build(),
+          indexMix22
+      ).add(
+          DataSegment.builder()
+                     .dataSource(DATA_SOURCE_ARRAYS)
+                     .version("1")
+                     .interval(indexArrays.getDataInterval())
+                     .shardSpec(new LinearShardSpec(1))
+                     .size(0)
+                     .build(),
+          indexArrays
+      ).add(
+          DataSegment.builder()
+                     .dataSource(DATA_SOURCE_ALL)
+                     .version("1")
+                     .interval(indexAllTypesAuto.getDataInterval())
+                     .shardSpec(new LinearShardSpec(1))
+                     .size(0)
+                     .build(),
+          indexAllTypesAuto
+      );
+
+      return walker;
+    }
   }
 
   @Test
@@ -536,6 +551,212 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                     .add("EXPR$0", ColumnType.STRING)
                     .add("EXPR$1", ColumnType.LONG)
                     .build()
+    );
+  }
+
+  @Test
+  public void testGroupByOnNestedColumn()
+  {
+    cannotVectorize();
+    testQuery(
+        "SELECT nester, SUM(strlen(string)) FROM druid.nested GROUP BY 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(DATA_SOURCE)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            new ExpressionVirtualColumn("v0", "strlen(\"string\")", ColumnType.LONG, queryFramework().macroTable())
+                        )
+                        .setDimensions(dimensions(new DefaultDimensionSpec("nester", "d0", ColumnType.NESTED_DATA)))
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "v0")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{null, 9L},
+            new Object[]{"\"hello\"", 3L},
+            new Object[]{"2", 3L},
+            new Object[]{"{\"array\":[\"a\",\"b\"],\"n\":{\"x\":\"hello\"}}", 3L},
+            new Object[]{"{\"array\":[\"a\",\"b\"],\"n\":{\"x\":1}}", 3L}
+        )
+    );
+  }
+
+  @Test
+  public void testGroupByOnNestedColumnWithOrderBy()
+  {
+    cannotVectorize();
+    testQuery(
+        "SELECT nester, SUM(strlen(string)) FROM druid.nested GROUP BY 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(DATA_SOURCE)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            new ExpressionVirtualColumn("v0", "strlen(\"string\")", ColumnType.LONG, queryFramework().macroTable())
+                        )
+                        .setDimensions(dimensions(new DefaultDimensionSpec("nester", "d0", ColumnType.NESTED_DATA)))
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "v0")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{null, 9L},
+            new Object[]{"\"hello\"", 3L},
+            new Object[]{"2", 3L},
+            new Object[]{"{\"array\":[\"a\",\"b\"],\"n\":{\"x\":\"hello\"}}", 3L},
+            new Object[]{"{\"array\":[\"a\",\"b\"],\"n\":{\"x\":1}}", 3L}
+        )
+    );
+  }
+
+  @Test
+  public void testGroupByOnNestedColumnWithOrderByAndLimit()
+  {
+    cannotVectorize();
+    testQuery(
+        "SELECT nester, SUM(strlen(string)) FROM druid.nested GROUP BY 1 ORDER BY 1 LIMIT 100",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(DATA_SOURCE)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            new ExpressionVirtualColumn(
+                                "v0",
+                                "strlen(\"string\")",
+                                ColumnType.LONG,
+                                queryFramework().macroTable()
+                            )
+                        )
+                        .setDimensions(dimensions(new DefaultDimensionSpec("nester", "d0", ColumnType.NESTED_DATA)))
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "v0")))
+                        .setLimitSpec(new DefaultLimitSpec(
+                            ImmutableList.of(new OrderByColumnSpec(
+                                "d0",
+                                OrderByColumnSpec.Direction.ASCENDING,
+                                StringComparators.NATURAL
+                            )),
+                            100
+                        ))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{null, 9L},
+            new Object[]{"\"hello\"", 3L},
+            new Object[]{"2", 3L},
+            new Object[]{"{\"array\":[\"a\",\"b\"],\"n\":{\"x\":\"hello\"}}", 3L},
+            new Object[]{"{\"array\":[\"a\",\"b\"],\"n\":{\"x\":1}}", 3L}
+        )
+    );
+  }
+
+  @Test
+  public void testGroupByOnNestedColumnWithOrderByAndLimit2()
+  {
+    cannotVectorize();
+    testQuery(
+        "SELECT nester, SUM(strlen(string)) FROM druid.nested GROUP BY 1 ORDER BY 1 LIMIT 2",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(DATA_SOURCE)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            new ExpressionVirtualColumn(
+                                "v0",
+                                "strlen(\"string\")",
+                                ColumnType.LONG,
+                                queryFramework().macroTable()
+                            )
+                        )
+                        .setDimensions(dimensions(new DefaultDimensionSpec("nester", "d0", ColumnType.NESTED_DATA)))
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "v0")))
+                        .setLimitSpec(new DefaultLimitSpec(
+                            ImmutableList.of(new OrderByColumnSpec(
+                                "d0",
+                                OrderByColumnSpec.Direction.ASCENDING,
+                                StringComparators.NATURAL
+                            )),
+                            2
+                        ))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{null, 9L},
+            new Object[]{"\"hello\"", 3L}
+        )
+    );
+  }
+
+  @Test
+  public void testGroupByOnNestedColumnWithLimit()
+  {
+    cannotVectorize();
+    testQuery(
+        "SELECT nester, SUM(strlen(string)) FROM druid.nested GROUP BY 1 LIMIT 100",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(DATA_SOURCE)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            new ExpressionVirtualColumn(
+                                "v0",
+                                "strlen(\"string\")",
+                                ColumnType.LONG,
+                                queryFramework().macroTable()
+                            )
+                        )
+                        .setDimensions(dimensions(new DefaultDimensionSpec("nester", "d0", ColumnType.NESTED_DATA)))
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "v0")))
+                        .setLimitSpec(new DefaultLimitSpec(null, 100))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{null, 9L},
+            new Object[]{"\"hello\"", 3L},
+            new Object[]{"2", 3L},
+            new Object[]{"{\"array\":[\"a\",\"b\"],\"n\":{\"x\":\"hello\"}}", 3L},
+            new Object[]{"{\"array\":[\"a\",\"b\"],\"n\":{\"x\":1}}", 3L}
+        )
+    );
+  }
+
+  @Test
+  public void testGroupByOnNestedColumnWithLimit2()
+  {
+    cannotVectorize();
+    testQuery(
+        "SELECT nester, SUM(strlen(string)) FROM druid.nested GROUP BY 1 LIMIT 2",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(DATA_SOURCE)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            new ExpressionVirtualColumn(
+                                "v0",
+                                "strlen(\"string\")",
+                                ColumnType.LONG,
+                                queryFramework().macroTable()
+                            )
+                        )
+                        .setDimensions(dimensions(new DefaultDimensionSpec("nester", "d0", ColumnType.NESTED_DATA)))
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "v0")))
+                        .setLimitSpec(new DefaultLimitSpec(null, 2))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{null, 9L},
+            new Object[]{"\"hello\"", 3L}
+        )
     );
   }
 
@@ -1375,7 +1596,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
       return;
     }
     cannotVectorize();
-    skipVectorize();
     testBuilder()
         .sql(
             "SELECT "
@@ -2892,7 +3112,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                                 new DefaultDimensionSpec("v1", "d0")
                             )
                         )
-                        .setDimFilter(in("v0", ImmutableList.of("1", "1.1"), null))
+                        .setDimFilter(in("v0", ImmutableList.of("1", "1.1")))
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
@@ -3761,10 +3981,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                             )
                         )
                         .setDimFilter(
-                            NullHandling.replaceWithDefault()
-                            ? in("v0", ImmutableSet.of("100", "200"), null)
-                            : or(equality("v0", 100L, ColumnType.LONG), equality("v0", 200L, ColumnType.LONG)
-                            )
+                            in("v0", ColumnType.LONG, ImmutableList.of(100L, 200L))
                         )
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
@@ -3804,12 +4021,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                             )
                         )
                         .setDimFilter(
-                            NullHandling.replaceWithDefault()
-                            ? in("v0", ImmutableSet.of("2.02", "3.03"), null)
-                            : or(
-                                equality("v0", 2.02, ColumnType.DOUBLE),
-                                equality("v0", 3.03, ColumnType.DOUBLE)
-                            )
+                            in("v0", ColumnType.DOUBLE, ImmutableList.of(2.02, 3.03))
                         )
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
@@ -3848,7 +4060,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                                 new DefaultDimensionSpec("v1", "d0")
                             )
                         )
-                        .setDimFilter(new InDimFilter("v0", ImmutableSet.of("300", "abcdef")))
+                        .setDimFilter(in("v0", ImmutableSet.of("300", "abcdef")))
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
@@ -3886,7 +4098,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                                 new DefaultDimensionSpec("v1", "d0")
                             )
                         )
-                        .setDimFilter(new InDimFilter("v0", ImmutableSet.of("hello", "1")))
+                        .setDimFilter(in("v0", ImmutableSet.of("hello", "1")))
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
@@ -5192,6 +5404,19 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                     .add("EXPR$1", ColumnType.LONG)
                     .build()
     );
+  }
+
+  @Test
+  public void testJoinOnNestedColumnThrows()
+  {
+    DruidException e = Assertions.assertThrows(DruidException.class, () -> {
+      testQuery(
+          "SELECT * FROM druid.nested a INNER JOIN druid.nested b ON a.nester = b.nester",
+          ImmutableList.of(),
+          ImmutableList.of()
+      );
+    });
+    Assertions.assertEquals("Cannot join when the join condition has column of type [COMPLEX<json>]", e.getMessage());
   }
 
   @Test

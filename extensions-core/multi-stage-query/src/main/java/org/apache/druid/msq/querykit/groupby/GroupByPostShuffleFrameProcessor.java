@@ -174,7 +174,6 @@ public class GroupByPostShuffleFrameProcessor implements FrameProcessor<Object>
 
     while (!frameCursor.isDone()) {
       final ResultRow currentRow = rowSupplierFromFrameCursor.get();
-
       if (outputRow == null) {
         outputRow = currentRow.copy();
       } else if (compareFn.compare(outputRow, currentRow) == 0) {

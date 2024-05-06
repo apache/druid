@@ -1141,7 +1141,86 @@ To use the Delta Lake input source, load the extension [`druid-deltalake-extensi
 You can use the Delta input source to read data stored in a Delta Lake table. For a given table, the input source scans
 the latest snapshot from the configured table. Druid ingests the underlying delta files from the table.
 
-The following is a sample spec:
+ | Property|Description|Required|
+|---------|-----------|--------|
+| type|Set this value to `delta`.|yes|
+| tablePath|The location of the Delta table.|yes|
+| filter|The JSON Object that filters data files within a snapshot.|no|
+
+### Delta filter object
+
+You can use these filters to filter out data files from a snapshot, reducing the number of files Druid has to ingest from
+a Delta table. This input source provides the following filters: `and`, `or`, `not`, `=`, `>`, `>=`, `<`, `<=`.
+
+When a filter is applied on non-partitioned columns, the filtering is best-effort as the Delta Kernel solely relies
+on statistics collected when the non-partitioned table is created. In this scenario, this Druid connector may ingest
+data that doesn't match the filter. To guarantee that the Delta Kernel prunes out unnecessary column values, only use
+filters on partitioned columns.
+
+
+`and` filter:
+
+| Property | Description                                                                                                                                                   | Required |
+|----------|---------------------------------------------------------------------------------------------------------------------------------------------------------------|----------|
+| type     | Set this value to `and`.                                                                                                                                      | yes      |
+| filters  | List of Delta filter predicates that get evaluated using logical AND where both conditions need to be true. `and` filter requires two filter predicates.      | yes      |
+
+`or` filter:
+
+| Property | Description                                                                                                                                                     | Required |
+|----------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------|----------|
+| type     | Set this value to `or`.                                                                                                                                         | yes      |
+| filters  | List of Delta filter predicates that get evaluated using logical OR where only one condition needs to be true. `or` filter requires two filter predicates.      | yes      |
+
+`not` filter:
+
+| Property | Description                                                                                                   | Required |
+|----------|---------------------------------------------------------------------------------------------------------------|----------|
+| type     | Set this value to `not`.                                                                                      | yes      |
+| filter   | The Delta filter predicate that gets evaluated using logical NOT. `not` filter requires one filter predicate. | yes      |
+
+`=` filter:
+
+| Property | Description                              | Required |
+|----------|------------------------------------------|----------|
+| type     | Set this value to `=`.                   | yes      |
+| column   | The table column to apply the filter on. | yes      |
+| value    | The value to use in the filter.          | yes      |
+
+`>` filter:
+
+| Property | Description                              | Required |
+|----------|------------------------------------------|----------|
+| type     | Set this value to `>`.                   | yes      |
+| column   | The table column to apply the filter on. | yes      |
+| value    | The value to use in the filter.          | yes      |
+
+`>=` filter:
+
+| Property | Description                              | Required |
+|----------|------------------------------------------|----------|
+| type     | Set this value to `>=`.                  | yes      |
+| column   | The table column to apply the filter on. | yes      |
+| value    | The value to use in the filter.          | yes      |
+
+`<` filter:
+
+| Property | Description                              | Required |
+|----------|------------------------------------------|----------|
+| type     | Set this value to `<`.                   | Yes      |
+| column   | The table column to apply the filter on. | Yes      |
+| value    | The value to use in the filter.          | Yes      |
+
+`<=` filter:
+
+| Property | Description                              | Required |
+|----------|------------------------------------------|----------|
+| type     | Set this value to `<=`.                  | yes      |
+| column   | The table column to apply the filter on. | yes      |
+| value    | The value to use in the filter.          | yes      |
+
+
+The following is a sample spec to read all records from the Delta table `/delta-table/foo`:
 
 ```json
 ...
@@ -1149,14 +1228,35 @@ The following is a sample spec:
       "type": "index_parallel",
       "inputSource": {
         "type": "delta",
-        "tablePath": "/delta-table/directory"
+        "tablePath": "/delta-table/foo"
       },
     }
-}
 ```
 
-| Property|Description|Required|
-|---------|-----------|--------|
-| type|Set this value to `delta`.|yes|
-| tablePath|The location of the Delta table.|yes|
+The following is a sample spec to read records from the Delta table `/delta-table/foo` to select records where `name = 'Employee4' and age >= 30`:
 
+```json
+...
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "delta",
+        "tablePath": "/delta-table/foo",
+        "filter": {
+          "type": "and",
+          "filters": [
+            {
+             "type": "=",
+             "column": "name",
+             "value": "Employee4"
+            },
+            {
+              "type": ">=",
+              "column": "age",
+              "value": "30"
+            }
+          ]
+        }
+      },
+    }
+```

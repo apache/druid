@@ -22,8 +22,8 @@ package org.apache.druid.sql.calcite;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
@@ -38,6 +38,7 @@ import org.apache.druid.sql.calcite.QueryTestRunner.QueryResults;
 import org.apache.druid.sql.calcite.QueryVerification.QueryResultsVerifier;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.junit.Assert;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -61,11 +62,7 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
 
   public static final boolean DUMP_ACTUAL_RESULTS = Boolean.parseBoolean(
       System.getProperty("druid.tests.sql.dumpActualResults")
-  );
-
-  static {
-    NullHandling.initializeForTests();
-  }
+  ) || developerIDEdetected();
 
   private static final ObjectMapper YAML_JACKSON = new DefaultObjectMapper(new YAMLFactory(), "tests");
 
@@ -225,8 +222,8 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
       testBuilder()
           .skipVectorize(true)
           .sql(testCase.getSql())
-          .queryContext(ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
-                                        QueryContexts.ENABLE_DEBUG, true,
+          .queryContext(ImmutableMap.of(QueryContexts.ENABLE_DEBUG, true,
+                                        PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
                                         QueryContexts.MAX_SUBQUERY_BYTES_KEY, "100000",
                                         QueryContexts.WINDOWING_STRICT_VALIDATION, false
                         )
@@ -234,6 +231,25 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
           .addCustomVerification(QueryVerification.ofResults(testCase))
           .run();
     }
+  }
+
+  @Test
+  public void testWindow()
+  {
+    testBuilder()
+            .sql("SELECT\n" +
+                    "(rank() over (order by count(*) desc)),\n" +
+                    "(rank() over (order by count(*) desc))\n" +
+                    "FROM \"wikipedia\"")
+            .queryContext(ImmutableMap.of(
+                    PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
+                    QueryContexts.ENABLE_DEBUG, true,
+                    QueryContexts.WINDOWING_STRICT_VALIDATION, false
+            ))
+            .expectedResults(ImmutableList.of(
+                    new Object[]{1L, 1L}
+            ))
+            .run();
   }
 
   private WindowOperatorQuery getWindowOperatorQuery(List<Query<?>> queries)

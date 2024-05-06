@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite.rel;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -85,7 +86,8 @@ import java.util.List;
  */
 public class Windowing
 {
-  private static final ImmutableMap<String, ProcessorMaker> KNOWN_WINDOW_FNS = ImmutableMap
+  @VisibleForTesting
+  public static final ImmutableMap<String, ProcessorMaker> KNOWN_WINDOW_FNS = ImmutableMap
       .<String, ProcessorMaker>builder()
       .put("LAG", (agg) ->
           new WindowOffsetProcessor(agg.getColumn(0), agg.getOutputName(), -agg.getConstantInt(1, 1)))
@@ -238,11 +240,16 @@ public class Windowing
 
     // Apply windowProject, if present.
     if (partialQuery.getWindowProject() != null) {
-      // We know windowProject is a mapping due to the isMapping() check in DruidRules. Check for null anyway,
-      // as defensive programming.
+      // We know windowProject is a mapping due to the isMapping() check in DruidRules.
+      // check anyway as defensive programming.
+      Preconditions.checkArgument(partialQuery.getWindowProject().isMapping());
       final Mappings.TargetMapping mapping = Preconditions.checkNotNull(
-          partialQuery.getWindowProject().getMapping(),
-          "mapping for windowProject[%s]", partialQuery.getWindowProject()
+          Project.getPartialMapping(
+              partialQuery.getWindowProject().getInput().getRowType().getFieldCount(),
+              partialQuery.getWindowProject().getProjects()
+          ),
+          "mapping for windowProject[%s]",
+          partialQuery.getWindowProject()
       );
 
       final List<String> windowProjectOutputColumns = new ArrayList<>();

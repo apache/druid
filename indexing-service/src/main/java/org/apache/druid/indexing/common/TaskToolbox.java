@@ -32,6 +32,7 @@ import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DruidNodeAnnouncer;
 import org.apache.druid.discovery.LookupNodeService;
+import org.apache.druid.indexer.report.TaskReportFileWriter;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.config.TaskConfig;
@@ -348,7 +349,7 @@ public class TaskToolbox
     for (final Collection<DataSegment> segmentCollection : segmentMultimap.asMap().values()) {
       getTaskActionClient().submit(
           SegmentTransactionalInsertAction.appendAction(
-              ImmutableSet.copyOf(segmentCollection), null, null
+              ImmutableSet.copyOf(segmentCollection), null, null, null
           )
       );
     }

@@ -54,24 +54,22 @@ public class MSQTestWorkerClient implements WorkerClient
   @Override
   public ListenableFuture<ClusterByStatisticsSnapshot> fetchClusterByStatisticsSnapshot(
       String workerTaskId,
-      String queryId,
-      int stageNumber
+      StageId stageId
   )
   {
-    StageId stageId = new StageId(queryId, stageNumber);
     return Futures.immediateFuture(inMemoryWorkers.get(workerTaskId).fetchStatisticsSnapshot(stageId));
   }
 
   @Override
   public ListenableFuture<ClusterByStatisticsSnapshot> fetchClusterByStatisticsSnapshotForTimeChunk(
       String workerTaskId,
-      String queryId,
-      int stageNumber,
+      StageId stageId,
       long timeChunk
   )
   {
-    StageId stageId = new StageId(queryId, stageNumber);
-    return Futures.immediateFuture(inMemoryWorkers.get(workerTaskId).fetchStatisticsSnapshotForTimeChunk(stageId, timeChunk));
+    return Futures.immediateFuture(
+        inMemoryWorkers.get(workerTaskId).fetchStatisticsSnapshotForTimeChunk(stageId, timeChunk)
+    );
   }
 
   @Override
@@ -123,20 +121,19 @@ public class MSQTestWorkerClient implements WorkerClient
       final ReadableByteChunksFrameChannel channel
   )
   {
-    try (InputStream inputStream = inMemoryWorkers.get(workerTaskId).readChannel(
-        stageId.getQueryId(),
-        stageId.getStageNumber(),
-        partitionNumber,
-        offset
-    )) {
+    try (InputStream inputStream =
+             inMemoryWorkers.get(workerTaskId)
+                            .readChannel(stageId.getQueryId(), stageId.getStageNumber(), partitionNumber, offset)) {
       byte[] buffer = new byte[8 * 1024];
+      boolean didRead = false;
       int bytesRead;
       while ((bytesRead = inputStream.read(buffer)) != -1) {
         channel.addChunk(Arrays.copyOf(buffer, bytesRead));
+        didRead = true;
       }
       inputStream.close();
 
-      return Futures.immediateFuture(true);
+      return Futures.immediateFuture(!didRead);
     }
     catch (Exception e) {
       throw new ISE(e, "Error reading frame file channel");

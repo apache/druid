@@ -33,13 +33,12 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.MetadataSupervisorManager;
+import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
-import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 
 import javax.annotation.Nullable;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -124,15 +123,6 @@ public class SupervisorManager
     }
 
     return Optional.absent();
-  }
-
-  public Set<String> getActiveRealtimeSequencePrefixes(String activeSupervisorId)
-  {
-    if (supervisors.containsKey(activeSupervisorId)) {
-      return supervisors.get(activeSupervisorId).lhs.getActiveRealtimeSequencePrefixes();
-    } else {
-      return Collections.emptySet();
-    }
   }
 
   public Optional<SupervisorSpec> getSupervisorSpec(String id)
@@ -328,16 +318,19 @@ public class SupervisorManager
    * allows the supervisor to include the pending segment in queries fired against
    * that segment version.
    */
-  public boolean registerNewVersionOfPendingSegmentOnSupervisor(
+  public boolean registerUpgradedPendingSegmentOnSupervisor(
       String supervisorId,
-      SegmentIdWithShardSpec basePendingSegment,
-      SegmentIdWithShardSpec newSegmentVersion
+      PendingSegmentRecord upgradedPendingSegment
   )
   {
     try {
       Preconditions.checkNotNull(supervisorId, "supervisorId cannot be null");
-      Preconditions.checkNotNull(basePendingSegment, "rootPendingSegment cannot be null");
-      Preconditions.checkNotNull(newSegmentVersion, "newSegmentVersion cannot be null");
+      Preconditions.checkNotNull(upgradedPendingSegment, "upgraded pending segment cannot be null");
+      Preconditions.checkNotNull(upgradedPendingSegment.getTaskAllocatorId(), "taskAllocatorId cannot be null");
+      Preconditions.checkNotNull(
+          upgradedPendingSegment.getUpgradedFromSegmentId(),
+          "upgradedFromSegmentId cannot be null"
+      );
 
       Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(supervisorId);
       Preconditions.checkNotNull(supervisor, "supervisor could not be found");
@@ -346,12 +339,12 @@ public class SupervisorManager
       }
 
       SeekableStreamSupervisor<?, ?, ?> seekableStreamSupervisor = (SeekableStreamSupervisor<?, ?, ?>) supervisor.lhs;
-      seekableStreamSupervisor.registerNewVersionOfPendingSegment(basePendingSegment, newSegmentVersion);
+      seekableStreamSupervisor.registerNewVersionOfPendingSegment(upgradedPendingSegment);
       return true;
     }
     catch (Exception e) {
-      log.error(e, "PendingSegment[%s] mapping update request to version[%s] on Supervisor[%s] failed",
-                basePendingSegment.asSegmentId(), newSegmentVersion.getVersion(), supervisorId);
+      log.error(e, "Failed to upgrade pending segment[%s] to new pending segment[%s] on Supervisor[%s].",
+                upgradedPendingSegment.getUpgradedFromSegmentId(), upgradedPendingSegment.getId().getVersion(), supervisorId);
     }
     return false;
   }

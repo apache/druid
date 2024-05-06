@@ -1113,7 +1113,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         .sql(
             "INSERT INTO druid.dst "
             + "SELECT __time, FLOOR(m1) as floor_m1, dim1, CEIL(m2) as ceil_m2 FROM foo "
-            + "CLUSTERED BY 2, dim1 DESC, CEIL(m2)"
+            + "CLUSTERED BY 2, dim1, CEIL(m2)"
         )
         .expectValidationError(invalidSqlIs(
             "CLUSTERED BY found before PARTITIONED BY, CLUSTERED BY must come after the PARTITIONED BY clause"
@@ -1640,6 +1640,15 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   {
     testIngestionQuery()
         .sql("INSERT INTO t SELECT __time, dim1 AS EXPR$0 FROM foo PARTITIONED BY ALL")
+        .expectValidationError(invalidSqlContains("Insertion requires columns to be named"))
+        .verify();
+  }
+
+  @Test
+  public void testInsertWithInvalidColumnName2InIngest()
+  {
+    testIngestionQuery()
+        .sql("INSERT INTO t SELECT __time, 1+1 FROM foo PARTITIONED BY ALL")
         .expectValidationError(invalidSqlContains("Insertion requires columns to be named"))
         .verify();
   }

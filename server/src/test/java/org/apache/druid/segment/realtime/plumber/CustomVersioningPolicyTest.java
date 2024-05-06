@@ -19,7 +19,8 @@
 
 package org.apache.druid.segment.realtime.plumber;
 
-import org.apache.druid.server.ServerTestHelper;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.segment.TestHelper;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
@@ -37,8 +38,9 @@ public class CustomVersioningPolicyTest
 
     CustomVersioningPolicy policy = new CustomVersioningPolicy(version);
 
-    CustomVersioningPolicy serialized = ServerTestHelper.MAPPER.readValue(
-        ServerTestHelper.MAPPER.writeValueAsBytes(policy),
+    final ObjectMapper mapper = TestHelper.makeJsonMapper();
+    CustomVersioningPolicy serialized = mapper.readValue(
+        mapper.writeValueAsBytes(policy),
         CustomVersioningPolicy.class
     );
 

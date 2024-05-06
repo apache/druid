@@ -39,6 +39,7 @@ import org.apache.calcite.rel.rules.CoreRules;
 import org.apache.calcite.rel.rules.DateRangeRules;
 import org.apache.calcite.rel.rules.JoinPushThroughJoinRule;
 import org.apache.calcite.rel.rules.PruneEmptyRules;
+import org.apache.calcite.runtime.Hook;
 import org.apache.calcite.sql.SqlExplainFormat;
 import org.apache.calcite.sql.SqlExplainLevel;
 import org.apache.calcite.sql2rel.RelDecorrelator;
@@ -62,6 +63,7 @@ import org.apache.druid.sql.calcite.rule.FilterJoinExcludePushToChildRule;
 import org.apache.druid.sql.calcite.rule.FlattenConcatRule;
 import org.apache.druid.sql.calcite.rule.ProjectAggregatePruneUnusedCallRule;
 import org.apache.druid.sql.calcite.rule.ReverseLookupRule;
+import org.apache.druid.sql.calcite.rule.RewriteFirstValueLastValueRule;
 import org.apache.druid.sql.calcite.rule.SortCollapseRule;
 import org.apache.druid.sql.calcite.rule.logical.DruidLogicalRules;
 import org.apache.druid.sql.calcite.run.EngineFeature;
@@ -238,17 +240,20 @@ public class CalciteRulesManager
     return ImmutableList.of(
         Programs.sequence(
             druidPreProgram,
+            SaveLogicalPlanProgram.INSTANCE,
             Programs.ofRules(druidConventionRuleSet(plannerContext)),
             new LoggingProgram("After Druid volcano planner program", isDebug)
         ),
         Programs.sequence(
             bindablePreProgram,
+            SaveLogicalPlanProgram.INSTANCE,
             Programs.ofRules(bindableConventionRuleSet(plannerContext)),
             new LoggingProgram("After bindable volcano planner program", isDebug)
         ),
         Programs.sequence(
             druidPreProgram,
             buildDecoupledLogicalOptimizationProgram(plannerContext),
+            SaveLogicalPlanProgram.INSTANCE,
             new LoggingProgram("After DecoupledLogicalOptimizationProgram program", isDebug),
             Programs.ofRules(logicalConventionRuleSet(plannerContext)),
             new LoggingProgram("After logical volcano planner program", isDebug)
@@ -330,6 +335,7 @@ public class CalciteRulesManager
       // make it impossible to convert to COALESCE.
       builder.addRuleInstance(new CaseToCoalesceRule());
       builder.addRuleInstance(new CoalesceLookupRule());
+      builder.addRuleInstance(new RewriteFirstValueLastValueRule());
     }
 
     // Remaining rules run as a single group until fixpoint.
@@ -364,6 +370,19 @@ public class CalciteRulesManager
     builder.addGroupEnd();
 
     return Programs.of(builder.build(), true, DefaultRelMetadataProvider.INSTANCE);
+  }
+
+  private static class SaveLogicalPlanProgram implements Program
+  {
+    public static SaveLogicalPlanProgram INSTANCE = new SaveLogicalPlanProgram();
+
+    @Override
+    public RelNode run(RelOptPlanner planner, RelNode rel, RelTraitSet requiredOutputTraits,
+        List<RelOptMaterialization> materializations, List<RelOptLattice> lattices)
+    {
+      Hook.TRIMMED.run(rel);
+      return rel;
+    }
   }
 
   private static class LoggingProgram implements Program

@@ -26,6 +26,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.MetricsEmittingQueryRunner;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
@@ -36,7 +37,10 @@ import org.joda.time.chrono.ISOChronology;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 /**
  *
@@ -51,7 +55,7 @@ public class GroupByQueryRunnerTestHelper
         toolChest
     );
 
-    Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query));
+    Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(populateResourceId(query)));
     return queryResult.toList();
   }
 
@@ -76,7 +80,7 @@ public class GroupByQueryRunnerTestHelper
         toolChest
     );
 
-    return theRunner.run(QueryPlus.wrap(query)).toList();
+    return theRunner.run(QueryPlus.wrap(populateResourceId(query))).toList();
   }
 
   public static ResultRow createExpectedRow(final GroupByQuery query, final String timestamp, Object... vals)
@@ -136,4 +140,18 @@ public class GroupByQueryRunnerTestHelper
     return expected;
   }
 
+  public static <T> QueryPlus<T> populateResourceId(QueryPlus<T> queryPlus)
+  {
+    return queryPlus.withQuery(populateResourceId(queryPlus.getQuery()));
+  }
+
+  public static <T> Query<T> populateResourceId(Query<T> query)
+  {
+    return query.withOverriddenContext(defaultResourceIdMap());
+  }
+
+  public static Map<String, Object> defaultResourceIdMap()
+  {
+    return Collections.singletonMap(QueryContexts.QUERY_RESOURCE_ID, UUID.randomUUID().toString());
+  }
 }

@@ -34,6 +34,8 @@ import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.ExecutorServiceMonitor;
 import org.apache.druid.query.ForwardingQueryProcessingPool;
 import org.apache.druid.query.QueryProcessingPool;
+import org.apache.druid.query.groupby.GroupByQueryConfig;
+import org.apache.druid.query.groupby.GroupByResourcesReservationPool;
 import org.apache.druid.server.metrics.MetricsModule;
 
 import java.nio.ByteBuffer;
@@ -86,5 +88,19 @@ public class RouterProcessingModule implements Module
       );
     }
     return DummyBlockingPool.instance();
+  }
+
+  /**
+   * Reservation pool injected with a dummy pool
+   */
+  @Provides
+  @LazySingleton
+  @Merging
+  public GroupByResourcesReservationPool getGroupByResourcesReservationPool(
+      @Merging BlockingPool<ByteBuffer> mergeBufferPool,
+      GroupByQueryConfig groupByQueryConfig
+  )
+  {
+    return new GroupByResourcesReservationPool(mergeBufferPool, groupByQueryConfig);
   }
 }

@@ -207,8 +207,6 @@ public class MaterializedViewSupervisorSpecTest
 
       Assert.assertThrows(UnsupportedOperationException.class, () -> supervisor.getActiveTaskGroupsCount());
 
-      Assert.assertThrows(UnsupportedOperationException.class, () -> supervisor.getActiveRealtimeSequencePrefixes());
-
       Callable<Integer> noop = new Callable<Integer>() {
         @Override
         public Integer call()

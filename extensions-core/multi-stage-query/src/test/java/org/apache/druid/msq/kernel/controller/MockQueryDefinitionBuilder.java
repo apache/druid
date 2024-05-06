@@ -21,6 +21,9 @@ package org.apache.druid.msq.kernel.controller;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import it.unimi.dsi.fastutil.ints.IntBooleanPair;
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
+import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.frame.key.KeyOrder;
@@ -30,21 +33,26 @@ import org.apache.druid.msq.input.InputSpec;
 import org.apache.druid.msq.input.stage.StageInputSpec;
 import org.apache.druid.msq.kernel.FrameProcessorFactory;
 import org.apache.druid.msq.kernel.GlobalSortMaxCountShuffleSpec;
+import org.apache.druid.msq.kernel.HashShuffleSpec;
+import org.apache.druid.msq.kernel.MixShuffleSpec;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.QueryDefinitionBuilder;
+import org.apache.druid.msq.kernel.ShuffleKind;
 import org.apache.druid.msq.kernel.ShuffleSpec;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.mockito.Mockito;
 
+import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.UUID;
 
 public class MockQueryDefinitionBuilder
 {
@@ -56,14 +64,14 @@ public class MockQueryDefinitionBuilder
   private final int numStages;
 
   // Maps a stage to all the other stages on which it has dependency, i.e. for an edge like A -> B, the adjacency list
-  // would have an entry like B : [ A, ... ]
-  private final Map<Integer, Set<Integer>> adjacencyList = new HashMap<>();
+  // would have an entry like B : [ <A, isBroadcast>, ... ]
+  private final Map<Integer, Set<IntBooleanPair>> adjacencyList = new HashMap<>();
 
   // Keeps a collection of those stages that have been already defined
   private final Set<Integer> definedStages = new HashSet<>();
 
   // Query definition builder corresponding to this mock builder
-  private final QueryDefinitionBuilder queryDefinitionBuilder = QueryDefinition.builder();
+  private final QueryDefinitionBuilder queryDefinitionBuilder = QueryDefinition.builder(UUID.randomUUID().toString());
 
 
   public MockQueryDefinitionBuilder(final int numStages)
@@ -71,35 +79,40 @@ public class MockQueryDefinitionBuilder
     this.numStages = numStages;
   }
 
-  public MockQueryDefinitionBuilder addVertex(final int outEdge, final int inEdge)
+  public MockQueryDefinitionBuilder addEdge(final int outVertex, final int inVertex)
+  {
+    return addEdge(outVertex, inVertex, false);
+  }
+
+  public MockQueryDefinitionBuilder addEdge(final int outVertex, final int inVertex, final boolean broadcast)
   {
     Preconditions.checkArgument(
-        outEdge < numStages,
+        outVertex < numStages,
         "vertex number can only be from 0 to one less than the total number of stages"
     );
 
     Preconditions.checkArgument(
-        inEdge < numStages,
+        inVertex < numStages,
         "vertex number can only be from 0 to one less than the total number of stages"
     );
 
     Preconditions.checkArgument(
-        !definedStages.contains(inEdge),
-        StringUtils.format("%s is already defined, cannot create more connections from it", inEdge)
+        !definedStages.contains(inVertex),
+        StringUtils.format("%s is already defined, cannot create more connections from it", inVertex)
     );
 
     Preconditions.checkArgument(
-        !definedStages.contains(outEdge),
-        StringUtils.format("%s is already defined, cannot create more connections to it", outEdge)
+        !definedStages.contains(outVertex),
+        StringUtils.format("%s is already defined, cannot create more connections to it", outVertex)
     );
 
-    adjacencyList.computeIfAbsent(inEdge, k -> new HashSet<>()).add(outEdge);
+    adjacencyList.computeIfAbsent(inVertex, k -> new HashSet<>()).add(IntBooleanPair.of(outVertex, broadcast));
     return this;
   }
 
   public MockQueryDefinitionBuilder defineStage(
       int stageNumber,
-      boolean shuffling,
+      @Nullable ShuffleKind shuffleKind,
       int maxWorkers
   )
   {
@@ -113,27 +126,60 @@ public class MockQueryDefinitionBuilder
     );
     definedStages.add(stageNumber);
 
-    ShuffleSpec shuffleSpec;
+    ShuffleSpec shuffleSpec = null;
 
-    if (shuffling) {
-      shuffleSpec = new GlobalSortMaxCountShuffleSpec(
-          new ClusterBy(
-              ImmutableList.of(
-                  new KeyColumn(SHUFFLE_KEY_COLUMN, KeyOrder.ASCENDING)
+    if (shuffleKind != null) {
+      switch (shuffleKind) {
+        case GLOBAL_SORT:
+          shuffleSpec = new GlobalSortMaxCountShuffleSpec(
+              new ClusterBy(
+                  ImmutableList.of(
+                      new KeyColumn(SHUFFLE_KEY_COLUMN, KeyOrder.ASCENDING)
+                  ),
+                  0
               ),
-              0
-          ),
-          MAX_NUM_PARTITIONS,
-          false
-      );
-    } else {
-      shuffleSpec = null;
+              MAX_NUM_PARTITIONS,
+              false
+          );
+          break;
+
+        case HASH_LOCAL_SORT:
+        case HASH:
+          shuffleSpec = new HashShuffleSpec(
+              new ClusterBy(
+                  ImmutableList.of(
+                      new KeyColumn(
+                          SHUFFLE_KEY_COLUMN,
+                          shuffleKind == ShuffleKind.HASH ? KeyOrder.NONE : KeyOrder.ASCENDING
+                      )
+                  ),
+                  0
+              ),
+              MAX_NUM_PARTITIONS
+          );
+          break;
+
+        case MIX:
+          shuffleSpec = MixShuffleSpec.instance();
+          break;
+      }
+
+      if (shuffleSpec == null || shuffleKind != shuffleSpec.kind()) {
+        throw new ISE("Oops, created an incorrect shuffleSpec[%s] for kind[%s]", shuffleSpec, shuffleKind);
+      }
     }
 
-    final List<InputSpec> inputSpecs =
-        adjacencyList.getOrDefault(stageNumber, new HashSet<>())
-                     .stream()
-                     .map(StageInputSpec::new).collect(Collectors.toList());
+    final List<InputSpec> inputSpecs = new ArrayList<>();
+    final IntSet broadcastInputNumbers = new IntOpenHashSet();
+
+    int inputNumber = 0;
+    for (final IntBooleanPair pair : adjacencyList.getOrDefault(stageNumber, Collections.emptySet())) {
+      inputSpecs.add(new StageInputSpec(pair.leftInt()));
+      if (pair.rightBoolean()) {
+        broadcastInputNumbers.add(inputNumber);
+      }
+      inputNumber++;
+    }
 
     if (inputSpecs.isEmpty()) {
       for (int i = 0; i < maxWorkers; i++) {
@@ -144,6 +190,7 @@ public class MockQueryDefinitionBuilder
     queryDefinitionBuilder.add(
         StageDefinition.builder(stageNumber)
                        .inputs(inputSpecs)
+                       .broadcastInputs(broadcastInputNumbers)
                        .processorFactory(Mockito.mock(FrameProcessorFactory.class))
                        .shuffleSpec(shuffleSpec)
                        .signature(RowSignature.builder().add(SHUFFLE_KEY_COLUMN, ColumnType.STRING).build())
@@ -153,14 +200,14 @@ public class MockQueryDefinitionBuilder
     return this;
   }
 
-  public MockQueryDefinitionBuilder defineStage(int stageNumber, boolean shuffling)
+  public MockQueryDefinitionBuilder defineStage(int stageNumber, @Nullable ShuffleKind shuffleKind)
   {
-    return defineStage(stageNumber, shuffling, 1);
+    return defineStage(stageNumber, shuffleKind, 1);
   }
 
   public MockQueryDefinitionBuilder defineStage(int stageNumber)
   {
-    return defineStage(stageNumber, false);
+    return defineStage(stageNumber, null);
   }
 
   public QueryDefinitionBuilder getQueryDefinitionBuilder()
@@ -205,8 +252,8 @@ public class MockQueryDefinitionBuilder
       return false;
     } else {
       visited.put(node, StageState.VISITING);
-      for (int neighbour : adjacencyList.getOrDefault(node, Collections.emptySet())) {
-        if (!checkAcyclic(neighbour, visited)) {
+      for (IntBooleanPair neighbour : adjacencyList.getOrDefault(node, Collections.emptySet())) {
+        if (!checkAcyclic(neighbour.leftInt(), visited)) {
           return false;
         }
       }
