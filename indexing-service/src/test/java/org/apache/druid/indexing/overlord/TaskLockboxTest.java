@@ -68,6 +68,7 @@ import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartialShardSpec;
 import org.apache.druid.timeline.partition.PartitionIds;
 import org.easymock.EasyMock;
+import org.hamcrest.CoreMatchers;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
@@ -84,6 +85,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
 public class TaskLockboxTest
@@ -2000,6 +2004,153 @@ public class TaskLockboxTest
     taskLockbox.remove(appendTask);
 
     EasyMock.verify(coordinator);
+  }
+
+  @Test
+  public void testAcquireTransactionalReplaceLockWithExclusiveTaskThrowsException()
+  {
+    final Task task = NoopTask.create();
+    lockbox.add(task);
+    tryTimeChunkLock(TaskLockType.EXCLUSIVE, task, Intervals.ETERNITY);
+    exception.expect(ISE.class);
+    exception.expectMessage(
+        String.format(
+            "All the locks must be of type REPLACE for segmentTransactionalReplace. Found lock of type[%s] for task[%s].",
+            TaskLockType.EXCLUSIVE.name(), task.getId()
+        )
+    );
+    lockbox.acquireTransactionalReplaceLock(task);
+  }
+
+  @Test
+  public void testAcquireTransactionalAppendLockWithReplaceTaskThrowsException()
+  {
+    final Task task = NoopTask.create();
+    lockbox.add(task);
+    tryTimeChunkLock(TaskLockType.REPLACE, task, Intervals.ETERNITY);
+    exception.expect(ISE.class);
+    exception.expectMessage(
+        String.format(
+            "All the locks must be of type APPEND for segmentTransactionalAppend. Found lock of type[%s] for task[%s].",
+            TaskLockType.REPLACE.name(), task.getId()
+        )
+    );
+    lockbox.acquireTransactionalAppendLock(task);
+  }
+
+  @Test
+  public void testAcquireTransactionalLocksSuccess() throws Exception
+  {
+    final Task appendTask = NoopTask.create();
+    final Task replaceTask = NoopTask.create();
+
+    final ExecutorService appendExec = Executors.newSingleThreadExecutor();
+    final ExecutorService replaceExec = Executors.newSingleThreadExecutor();
+
+    // Add several append locks consecutively and then release them in the at once later
+    for (int i = 0; i < 5; i++) {
+      acquireTransactionalAppendLock(appendTask, appendExec);
+    }
+    for (int i = 0; i < 5; i++) {
+      releaseTransactionalAppendLock(appendTask, appendExec);
+    }
+
+    // Add and remove replace locks in one after the other
+    acquireTransactionalReplaceLock(replaceTask, replaceExec);
+    releaseTransactionalReplaceLock(replaceTask, replaceExec);
+    acquireTransactionalReplaceLock(replaceTask, replaceExec);
+    releaseTransactionalReplaceLock(replaceTask, replaceExec);
+
+    // Add several append locks consecutively and then release them in the at once later
+    for (int i = 0; i < 5; i++) {
+      acquireTransactionalAppendLock(appendTask, appendExec);
+    }
+    for (int i = 0; i < 5; i++) {
+      releaseTransactionalAppendLock(appendTask, appendExec);
+    }
+  }
+
+  @Test
+  public void testAcquireReplaceTimesOutAfterAcquiringReplace() throws Exception
+  {
+    final Task replaceTask0 = NoopTask.create();
+    final Task replaceTask1 = NoopTask.create();
+
+    final ExecutorService replaceExec0 = Executors.newSingleThreadExecutor();
+    final ExecutorService replaceExec1 = Executors.newSingleThreadExecutor();
+
+    acquireTransactionalReplaceLock(replaceTask0, replaceExec0);
+    exception.expect(ExecutionException.class);
+    exception.expectCause(CoreMatchers.instanceOf(ISE.class));
+    exception.expectMessage(
+        String.format(
+            "Timed out while acquiring transactional replace lock for datasource[%s].",
+            replaceTask1.getDataSource()
+        )
+    );
+    acquireTransactionalReplaceLock(replaceTask1, replaceExec1);
+  }
+
+  @Test
+  public void testAcquireReplaceTimesOutAfterAcquiringAppend() throws Exception
+  {
+    final Task appendTask = NoopTask.create();
+    final Task replaceTask = NoopTask.create();
+
+    final ExecutorService appendExec = Executors.newSingleThreadExecutor();
+    final ExecutorService replaceExec = Executors.newSingleThreadExecutor();
+
+    acquireTransactionalAppendLock(appendTask, appendExec);
+    exception.expect(ExecutionException.class);
+    exception.expectCause(CoreMatchers.instanceOf(ISE.class));
+    exception.expectMessage(
+        String.format(
+            "Timed out while acquiring transactional replace lock for datasource[%s].",
+            replaceTask.getDataSource()
+        )
+    );
+    acquireTransactionalReplaceLock(replaceTask, replaceExec);
+  }
+
+  @Test
+  public void testAcquireAppendTimesOutAfterAcquiringReplace() throws Exception
+  {
+    final Task appendTask = NoopTask.create();
+    final Task replaceTask = NoopTask.create();
+
+    final ExecutorService appendExec = Executors.newSingleThreadExecutor();
+    final ExecutorService replaceExec = Executors.newSingleThreadExecutor();
+
+    acquireTransactionalReplaceLock(replaceTask, replaceExec);
+    exception.expect(ExecutionException.class);
+    exception.expectCause(CoreMatchers.instanceOf(ISE.class));
+    exception.expectMessage(
+        String.format(
+            "Timed out while acquiring transactional append lock for datasource[%s].",
+            appendTask.getDataSource()
+        )
+    );
+    acquireTransactionalAppendLock(appendTask, appendExec);
+  }
+
+  private void acquireTransactionalAppendLock(Task task, ExecutorService exec) throws Exception
+  {
+    exec.submit(() -> lockbox.acquireTransactionalAppendLock(task, 100)).get();
+  }
+
+  private void releaseTransactionalAppendLock(Task task, ExecutorService exec) throws Exception
+  {
+    exec.submit(() -> lockbox.releaseTransactionalAppendLock(task)).get();
+  }
+
+  private void acquireTransactionalReplaceLock(Task task, ExecutorService exec) throws Exception
+  {
+    exec.submit(() -> lockbox.acquireTransactionalReplaceLock(task, 100)).get();
+  }
+
+  private void releaseTransactionalReplaceLock(Task task, ExecutorService exec) throws Exception
+  {
+    exec.submit(() -> lockbox.releaseTransactionalReplaceLock(task)).get();
   }
 
   private class TaskLockboxValidator

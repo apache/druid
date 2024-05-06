@@ -39,7 +39,6 @@ import org.apache.druid.timeline.DataSegment;
 import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.locks.Lock;
 import java.util.stream.Collectors;
 
 /**
@@ -149,8 +148,7 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
     }
     final TaskLockbox taskLockbox = toolbox.getTaskLockbox();
     TaskLocks.checkLockCoversSegments(task, taskLockbox, segments);
-    final Lock transactionalLock = taskLockbox.acquireTransactionalAppendLock(task);
-
+    taskLockbox.acquireTransactionalAppendLock(task);
     try {
       final String datasource = task.getDataSource();
       final Map<DataSegment, ReplaceTaskLock> segmentToReplaceLock
@@ -200,7 +198,7 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
       return retVal;
     }
     finally {
-      taskLockbox.releaseTransactionalLock(task, transactionalLock);
+      taskLockbox.releaseTransactionalAppendLock(task);
     }
   }
 

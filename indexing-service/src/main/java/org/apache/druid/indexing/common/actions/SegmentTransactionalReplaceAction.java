@@ -40,7 +40,6 @@ import org.apache.druid.timeline.DataSegment;
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.locks.Lock;
 import java.util.stream.Collectors;
 
 /**
@@ -120,8 +119,7 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
   {
     final TaskLockbox taskLockbox = toolbox.getTaskLockbox();
     TaskLocks.checkLockCoversSegments(task, taskLockbox, segments);
-    final Lock transactionalLock = taskLockbox.acquireTransactionalReplaceLock(task);
-
+    taskLockbox.acquireTransactionalReplaceLock(task);
     try {
       // Find the active replace locks held only by this task
       final Set<ReplaceTaskLock> replaceLocksForTask
@@ -167,7 +165,7 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
       return publishResult;
     }
     finally {
-      taskLockbox.releaseTransactionalLock(task, transactionalLock);
+      taskLockbox.releaseTransactionalReplaceLock(task);
     }
   }
 
