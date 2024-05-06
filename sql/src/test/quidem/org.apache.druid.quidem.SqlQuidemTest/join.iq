@@ -1,0 +1,131 @@
+!use druidtest://?numMergeBuffers=3
+!set outputformat mysql
+
+with v as (
+  select cityName, count(1) as cnt from wikipedia
+  where cityName = 'New York'
+  group by 1
+  order by 1 asc
+),
+e as (
+  select cityName, count(1) as cnt from wikipedia
+  group by 1
+  order by 1 asc
+)
+select v.*,e.* from v inner join e on (e.cityName = v.cityName);
++----------+-----+-----------+------+
+| cityName | cnt | cityName0 | cnt0 |
++----------+-----+-----------+------+
+| New York |  13 | New York  |   13 |
++----------+-----+-----------+------+
+(1 row)
+
+!ok
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "query",
+      "query" : {
+        "queryType" : "groupBy",
+        "dataSource" : {
+          "type" : "table",
+          "name" : "wikipedia"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "filter" : {
+          "type" : "equals",
+          "column" : "cityName",
+          "matchValueType" : "STRING",
+          "matchValue" : "New York"
+        },
+        "granularity" : {
+          "type" : "all"
+        },
+        "dimensions" : [ {
+          "type" : "default",
+          "dimension" : "cityName",
+          "outputName" : "d0",
+          "outputType" : "STRING"
+        } ],
+        "aggregations" : [ {
+          "type" : "count",
+          "name" : "a0"
+        } ],
+        "limitSpec" : {
+          "type" : "NoopLimitSpec"
+        }
+      }
+    },
+    "right" : {
+      "type" : "query",
+      "query" : {
+        "queryType" : "groupBy",
+        "dataSource" : {
+          "type" : "table",
+          "name" : "wikipedia"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "granularity" : {
+          "type" : "all"
+        },
+        "dimensions" : [ {
+          "type" : "default",
+          "dimension" : "cityName",
+          "outputName" : "d0",
+          "outputType" : "STRING"
+        } ],
+        "aggregations" : [ {
+          "type" : "count",
+          "name" : "a0"
+        } ],
+        "limitSpec" : {
+          "type" : "NoopLimitSpec"
+        }
+      }
+    },
+    "rightPrefix" : "j0.",
+    "condition" : "(\"d0\" == \"j0.d0\")",
+    "joinType" : "INNER"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "resultFormat" : "compactedList",
+  "columns" : [ "a0", "d0", "j0.a0", "j0.d0" ],
+  "legacy" : false,
+  "columnTypes" : [ "LONG", "STRING", "LONG", "STRING" ],
+  "granularity" : {
+    "type" : "all"
+  }
+}
+!nativePlan
+LogicalProject(cityName=[$0], cnt=[$1], cityName0=[$2], cnt0=[$3])
+  LogicalJoin(condition=[=($2, $0)], joinType=[inner])
+    LogicalAggregate(group=[{0}], cnt=[COUNT()])
+      LogicalProject(cityName=[$2])
+        LogicalFilter(condition=[=($2, 'New York')])
+          LogicalTableScan(table=[[druid, wikipedia]])
+    LogicalAggregate(group=[{0}], cnt=[COUNT()])
+      LogicalProject(cityName=[$2])
+        LogicalTableScan(table=[[druid, wikipedia]])
+
+!convertedPlan
+LogicalJoin(condition=[=($2, $0)], joinType=[inner])
+  LogicalAggregate(group=[{0}], cnt=[COUNT()])
+    LogicalFilter(condition=[=($0, 'New York')])
+      LogicalProject(cityName=[$2])
+        LogicalTableScan(table=[[druid, wikipedia]])
+  LogicalAggregate(group=[{0}], cnt=[COUNT()])
+    LogicalProject(cityName=[$2])
+      LogicalTableScan(table=[[druid, wikipedia]])
+
+!logicalPlan

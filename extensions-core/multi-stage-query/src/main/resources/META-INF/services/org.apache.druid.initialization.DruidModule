@@ -13,8 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+org.apache.druid.msq.guice.IndexerMemoryManagementModule
+org.apache.druid.msq.guice.MSQDurableStorageModule
 org.apache.druid.msq.guice.MSQExternalDataSourceModule
 org.apache.druid.msq.guice.MSQIndexingModule
-org.apache.druid.msq.guice.MSQDurableStorageModule
 org.apache.druid.msq.guice.MSQSqlModule
+org.apache.druid.msq.guice.PeonMemoryManagementModule
 org.apache.druid.msq.guice.SqlTaskModule

@@ -555,7 +555,7 @@ public class DataSourcePlan
     // This is done to prevent loss of generality since MSQ can plan any type of DataSource.
     List<DataSource> children = unionDataSource.getDataSources();
 
-    final QueryDefinitionBuilder subqueryDefBuilder = QueryDefinition.builder();
+    final QueryDefinitionBuilder subqueryDefBuilder = QueryDefinition.builder(queryId);
     final List<DataSource> newChildren = new ArrayList<>();
     final List<InputSpec> inputSpecs = new ArrayList<>();
     final IntSet broadcastInputs = new IntOpenHashSet();
@@ -605,7 +605,7 @@ public class DataSourcePlan
       final boolean broadcast
   )
   {
-    final QueryDefinitionBuilder subQueryDefBuilder = QueryDefinition.builder();
+    final QueryDefinitionBuilder subQueryDefBuilder = QueryDefinition.builder(queryId);
     final DataSourceAnalysis analysis = dataSource.getAnalysis();
 
     final DataSourcePlan basePlan = forDataSource(
@@ -683,7 +683,7 @@ public class DataSourcePlan
         SortMergeJoinFrameProcessorFactory.validateCondition(dataSource.getConditionAnalysis())
     );
 
-    final QueryDefinitionBuilder subQueryDefBuilder = QueryDefinition.builder();
+    final QueryDefinitionBuilder subQueryDefBuilder = QueryDefinition.builder(queryId);
 
     // Plan the left input.
     // We're confident that we can cast dataSource.getLeft() to QueryDataSource, because DruidJoinQueryRel creates

@@ -63,20 +63,20 @@ public class SegmentSchemaCacheTest
     RowSignature rowSignature = RowSignature.builder().add("cx", ColumnType.FLOAT).build();
     SchemaPayloadPlus expected = new SchemaPayloadPlus(new SchemaPayload(rowSignature, Collections.emptyMap()), 20L);
     SegmentId id = SegmentId.dummy("ds");
-    cache.addInTransitSMQResult(id, rowSignature, Collections.emptyMap(), 20);
+    cache.addTemporaryMetadataQueryResult(id, rowSignature, Collections.emptyMap(), 20);
 
     Assert.assertTrue(cache.isSchemaCached(id));
     Optional<SchemaPayloadPlus> schema = cache.getSchemaForSegment(id);
     Assert.assertTrue(schema.isPresent());
     Assert.assertEquals(expected, schema.get());
 
-    cache.markInTransitSMQResultPublished(id);
+    cache.markInMetadataQueryResultPublished(id);
 
     schema = cache.getSchemaForSegment(id);
     Assert.assertTrue(schema.isPresent());
     Assert.assertEquals(expected, schema.get());
 
-    cache.resetInTransitSMQResultPublishedOnDBPoll();
+    cache.resetTemporaryPublishedMetadataQueryResultOnDBPoll();
 
     Assert.assertFalse(cache.isSchemaCached(id));
     schema = cache.getSchemaForSegment(id);

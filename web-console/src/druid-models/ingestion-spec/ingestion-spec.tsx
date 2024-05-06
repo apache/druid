@@ -1030,6 +1030,27 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           type: 'string',
           placeholder: '/path/to/deltaTable',
           required: true,
+          info: (
+            <>
+              <p>A full path to the Delta Lake table.</p>
+            </>
+          ),
+        },
+        {
+          name: 'inputSource.filter',
+          label: 'Delta filter',
+          type: 'json',
+          defaultValue: {},
+          info: (
+            <>
+              <ExternalLink
+                href={`${getLink('DOCS')}/ingestion/input-sources/#delta-filter-object`}
+              >
+                filter
+              </ExternalLink>
+              <p>A Delta filter json object to filter Delta Lake scan files.</p>
+            </>
+          ),
         },
       ];
 

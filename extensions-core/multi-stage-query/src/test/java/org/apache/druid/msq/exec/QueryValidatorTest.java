@@ -106,6 +106,8 @@ public class QueryValidatorTest
         0,
         0,
         Collections.singletonList(() -> inputFiles), // Slice with a large number of inputFiles
+        null,
+        null,
         null
     );
 
@@ -125,8 +127,7 @@ public class QueryValidatorTest
 
   private static QueryDefinition createQueryDefinition(int numColumns, int numWorkers)
   {
-    QueryDefinitionBuilder builder = QueryDefinition.builder();
-    builder.queryId(UUID.randomUUID().toString());
+    QueryDefinitionBuilder builder = QueryDefinition.builder(UUID.randomUUID().toString());
 
     StageDefinitionBuilder stageBuilder = StageDefinition.builder(0);
     builder.add(stageBuilder);
