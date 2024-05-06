@@ -3171,11 +3171,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             if (earliestTaskStart.plus(ioConfig.getTaskDuration()).isBeforeNow() || group.getShutdownEarly()) {
               // if this task has run longer than the configured duration
               // as long as the pending task groups are less than the configured stop task count.
+              // If shutdownEarly has been set, ignore stopTaskCount since this is a manual operator action.
               if (pendingCompletionTaskGroups.values()
                                              .stream()
                                              .mapToInt(CopyOnWriteArrayList::size)
                                              .sum() + stoppedTasks.get()
-                  < ioConfig.getMaxAllowedStops()) {
+                  < ioConfig.getMaxAllowedStops() || group.getShutdownEarly()) {
                 log.info(
                     "Task group [%d] has run for [%s]. Stopping.",
                     groupId,
