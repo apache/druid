@@ -202,7 +202,9 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
   {
     FrameProcessors.closeAll(inputChannels(), outputChannels());
 
-    exportWriter.writeResponseEnd();
-    exportWriter.close();
+    if (exportWriter != null) {
+      exportWriter.writeResponseEnd();
+      exportWriter.close();
+    }
   }
 }
