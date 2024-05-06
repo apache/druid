@@ -57,7 +57,7 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.BaseProgressIndicator;
-import org.apache.druid.segment.DataSegmentWithSchema;
+import org.apache.druid.segment.DataSegmentWithMetadata;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.QueryableIndex;
@@ -809,15 +809,15 @@ public class StreamAppenderator implements Appenderator
               continue;
             }
 
-            final DataSegmentWithSchema dataSegmentWithSchema = mergeAndPush(
+            final DataSegmentWithMetadata dataSegmentWithMetadata = mergeAndPush(
                 entry.getKey(),
                 entry.getValue(),
                 useUniquePath
             );
-            if (dataSegmentWithSchema != null) {
-              DataSegment segment = dataSegmentWithSchema.getDataSegment();
+            if (dataSegmentWithMetadata != null) {
+              DataSegment segment = dataSegmentWithMetadata.getDataSegment();
               dataSegments.add(segment);
-              SchemaPayloadPlus schemaPayloadPlus = dataSegmentWithSchema.getSegmentSchemaMetadata();
+              SchemaPayloadPlus schemaPayloadPlus = dataSegmentWithMetadata.getSegmentSchemaMetadata();
               if (schemaPayloadPlus != null) {
                 SchemaPayload schemaPayload = schemaPayloadPlus.getSchemaPayload();
                 segmentSchemaMapping.addSchema(
@@ -866,7 +866,7 @@ public class StreamAppenderator implements Appenderator
    * @return segment descriptor, or null if the sink is no longer valid
    */
   @Nullable
-  private DataSegmentWithSchema mergeAndPush(
+  private DataSegmentWithMetadata mergeAndPush(
       final SegmentIdWithShardSpec identifier,
       final Sink sink,
       final boolean useUniquePath
@@ -910,7 +910,7 @@ public class StreamAppenderator implements Appenderator
           );
         } else {
           log.info("Segment[%s] already pushed, skipping.", identifier);
-          return new DataSegmentWithSchema(
+          return new DataSegmentWithMetadata(
               objectMapper.readValue(descriptorFile, DataSegment.class),
               centralizedDatasourceSchemaConfig.isEnabled() ? TaskSegmentSchemaUtil.getSegmentSchema(
                   mergedTarget,
@@ -988,7 +988,7 @@ public class StreamAppenderator implements Appenderator
           objectMapper.writeValueAsString(segment.getLoadSpec())
       );
 
-      return new DataSegmentWithSchema(
+      return new DataSegmentWithMetadata(
           segment,
           centralizedDatasourceSchemaConfig.isEnabled()
           ? TaskSegmentSchemaUtil.getSegmentSchema(mergedTarget, indexIO)

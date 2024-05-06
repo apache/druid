@@ -62,7 +62,7 @@ import java.util.List;
 import java.util.Set;
 
 @RunWith(MockitoJUnitRunner.class)
-public class KillUnreferencedSegmentSchemaDutyTest
+public class KillUnreferencedSegmentSchemaTest
 {
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule =
@@ -109,8 +109,8 @@ public class KillUnreferencedSegmentSchemaDutyTest
         Period.parse("PT1H").toStandardDuration(),
         Period.parse("PT6H").toStandardDuration()
     );
-    KillUnreferencedSegmentSchemaDuty duty =
-        new TestKillUnreferencedSegmentSchemasDuty(cleanupConfig, segmentSchemaManager, dateTimes);
+    KillUnreferencedSegmentSchema duty =
+        new TestKillUnreferencedSegmentSchemas(cleanupConfig, segmentSchemaManager, dateTimes);
 
     Set<DataSegment> segments = new HashSet<>();
     List<SegmentSchemaManager.SegmentSchemaMetadataPlus> schemaMetadataPluses = new ArrayList<>();
@@ -215,8 +215,8 @@ public class KillUnreferencedSegmentSchemaDutyTest
         Period.parse("PT6H").toStandardDuration()
     );
 
-    KillUnreferencedSegmentSchemaDuty duty =
-        new TestKillUnreferencedSegmentSchemasDuty(cleanupConfig, segmentSchemaManager, dateTimes);
+    KillUnreferencedSegmentSchema duty =
+        new TestKillUnreferencedSegmentSchemas(cleanupConfig, segmentSchemaManager, dateTimes);
 
     RowSignature rowSignature = RowSignature.builder().add("c1", ColumnType.FLOAT).build();
 
@@ -287,8 +287,8 @@ public class KillUnreferencedSegmentSchemaDutyTest
         Period.parse("PT6H").toStandardDuration()
     );
 
-    KillUnreferencedSegmentSchemaDuty duty =
-        new TestKillUnreferencedSegmentSchemasDuty(cleanupConfig, segmentSchemaManager, dateTimes);
+    KillUnreferencedSegmentSchema duty =
+        new TestKillUnreferencedSegmentSchemas(cleanupConfig, segmentSchemaManager, dateTimes);
 
     // create 2 versions of same schema
     // unreferenced one should get deleted
@@ -361,12 +361,12 @@ public class KillUnreferencedSegmentSchemaDutyTest
     Assert.assertNull(getSchemaUsedStatus(fingerprintOldVersion));
   }
 
-  private static class TestKillUnreferencedSegmentSchemasDuty extends KillUnreferencedSegmentSchemaDuty
+  private static class TestKillUnreferencedSegmentSchemas extends KillUnreferencedSegmentSchema
   {
     private final List<DateTime> dateTimes;
     private int index = -1;
 
-    public TestKillUnreferencedSegmentSchemasDuty(
+    public TestKillUnreferencedSegmentSchemas(
         MetadataCleanupConfig config,
         SegmentSchemaManager segmentSchemaManager,
         List<DateTime> dateTimes
