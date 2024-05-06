@@ -58,8 +58,15 @@ public class FingerprintGenerator
       final Hasher hasher = Hashing.sha256().newHasher();
 
       hasher.putBytes(objectMapper.writeValueAsBytes(schemaPayload));
+      // add delimiter, inspired from org.apache.druid.metadata.PendingSegmentRecord.computeSequenceNamePrevIdSha1
+      hasher.putByte((byte) 0xff);
+
       hasher.putBytes(StringUtils.toUtf8(dataSource));
+      hasher.putByte((byte) 0xff);
+
       hasher.putBytes(Ints.toByteArray(version));
+      hasher.putByte((byte) 0xff);
+
       return BaseEncoding.base16().encode(hasher.hash().asBytes());
     }
     catch (IOException e) {

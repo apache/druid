@@ -50,7 +50,7 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.BaseProgressIndicator;
-import org.apache.druid.segment.DataSegmentWithSchema;
+import org.apache.druid.segment.DataSegmentWithMetadata;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.QueryableIndex;
@@ -715,16 +715,16 @@ public class BatchAppenderator implements Appenderator
             }
 
             // push it:
-            final DataSegmentWithSchema dataSegmentWithSchema = mergeAndPush(
+            final DataSegmentWithMetadata dataSegmentWithMetadata = mergeAndPush(
                 identifier,
                 sinkForIdentifier
             );
 
             // record it:
-            if (dataSegmentWithSchema.getDataSegment() != null) {
-              DataSegment segment = dataSegmentWithSchema.getDataSegment();
+            if (dataSegmentWithMetadata.getDataSegment() != null) {
+              DataSegment segment = dataSegmentWithMetadata.getDataSegment();
               dataSegments.add(segment);
-              SchemaPayloadPlus schemaPayloadPlus = dataSegmentWithSchema.getSegmentSchemaMetadata();
+              SchemaPayloadPlus schemaPayloadPlus = dataSegmentWithMetadata.getSegmentSchemaMetadata();
               if (schemaPayloadPlus != null) {
                 SchemaPayload schemaPayload = schemaPayloadPlus.getSchemaPayload();
                 segmentSchemaMapping.addSchema(
@@ -758,7 +758,7 @@ public class BatchAppenderator implements Appenderator
    * @param sink          sink to push
    * @return segment descriptor along with schema, or null if the sink is no longer valid
    */
-  private DataSegmentWithSchema mergeAndPush(
+  private DataSegmentWithMetadata mergeAndPush(
       final SegmentIdWithShardSpec identifier,
       final Sink sink
   )
@@ -793,7 +793,7 @@ public class BatchAppenderator implements Appenderator
       if (descriptorFile.exists()) {
         // Already pushed.
         log.info("Segment[%s] already pushed, skipping.", identifier);
-        return new DataSegmentWithSchema(
+        return new DataSegmentWithMetadata(
             objectMapper.readValue(descriptorFile, DataSegment.class),
             centralizedDatasourceSchemaConfig.isEnabled() ? TaskSegmentSchemaUtil.getSegmentSchema(
                 mergedTarget,
@@ -895,7 +895,7 @@ public class BatchAppenderator implements Appenderator
           objectMapper.writeValueAsString(segment.getLoadSpec())
       );
 
-      return new DataSegmentWithSchema(segment, schemaMetadata);
+      return new DataSegmentWithMetadata(segment, schemaMetadata);
     }
     catch (Exception e) {
       metrics.incrementFailedHandoffs();

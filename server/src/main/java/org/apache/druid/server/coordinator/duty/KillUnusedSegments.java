@@ -21,17 +21,15 @@ package org.apache.druid.server.coordinator.duty;
 
 import com.google.common.base.Predicate;
 import org.apache.druid.common.guava.FutureUtils;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.JodaUtils;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
-import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
+import org.apache.druid.server.coordinator.config.KillUnusedSegmentsConfig;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
@@ -84,50 +82,31 @@ public class KillUnusedSegments implements CoordinatorDuty
    */
   private final Map<String, DateTime> datasourceToLastKillIntervalEnd;
   private DateTime lastKillTime;
-  private final long bufferPeriod;
+  private final Duration bufferPeriod;
 
   private final SegmentsMetadataManager segmentsMetadataManager;
   private final OverlordClient overlordClient;
 
   public KillUnusedSegments(
-      final SegmentsMetadataManager segmentsMetadataManager,
-      final OverlordClient overlordClient,
-      final DruidCoordinatorConfig config
+      SegmentsMetadataManager segmentsMetadataManager,
+      OverlordClient overlordClient,
+      KillUnusedSegmentsConfig killConfig
   )
   {
-    if (config.getCoordinatorKillPeriod().getMillis() < config.getCoordinatorIndexingPeriod().getMillis()) {
-      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
-                          .ofCategory(DruidException.Category.INVALID_INPUT)
-                          .build(
-                              StringUtils.format(
-                                     "druid.coordinator.kill.period[%s] is invalid. It must be greater than or "
-                                     + "equal to druid.coordinator.period.indexingPeriod[%s].",
-                                     config.getCoordinatorKillPeriod(),
-                                     config.getCoordinatorIndexingPeriod()
-                                 )
-                          );
-    }
-    if (config.getCoordinatorKillMaxSegments() < 0) {
-      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
-                          .ofCategory(DruidException.Category.INVALID_INPUT)
-                          .build(StringUtils.format(
-                                     "druid.coordinator.kill.maxSegments[%d] is invalid. It must be a positive integer.",
-                                     config.getCoordinatorKillMaxSegments()
-                                 )
-                          );
-    }
-    this.period = config.getCoordinatorKillPeriod();
-    this.ignoreDurationToRetain = config.getCoordinatorKillIgnoreDurationToRetain();
-    this.durationToRetain = config.getCoordinatorKillDurationToRetain();
+    this.period = killConfig.getCleanupPeriod();
+
+    this.maxSegmentsToKill = killConfig.getMaxSegments();
+    this.ignoreDurationToRetain = killConfig.isIgnoreDurationToRetain();
+    this.durationToRetain = killConfig.getDurationToRetain();
     if (this.ignoreDurationToRetain) {
       log.info(
           "druid.coordinator.kill.durationToRetain[%s] will be ignored when discovering segments to kill "
           + "because druid.coordinator.kill.ignoreDurationToRetain is set to true.",
-          this.durationToRetain
+          durationToRetain
       );
     }
-    this.bufferPeriod = config.getCoordinatorKillBufferPeriod().getMillis();
-    this.maxSegmentsToKill = config.getCoordinatorKillMaxSegments();
+    this.bufferPeriod = killConfig.getBufferPeriod();
+
     datasourceToLastKillIntervalEnd = new ConcurrentHashMap<>();
 
     log.info(
@@ -145,16 +124,15 @@ public class KillUnusedSegments implements CoordinatorDuty
   @Override
   public DruidCoordinatorRuntimeParams run(final DruidCoordinatorRuntimeParams params)
   {
-    if (!canDutyRun()) {
+    if (canDutyRun()) {
+      return runInternal(params);
+    } else {
       log.debug(
           "Skipping KillUnusedSegments until period[%s] has elapsed after lastKillTime[%s].",
-          period,
-          lastKillTime
+          period, lastKillTime
       );
       return params;
     }
-
-    return runInternal(params);
   }
 
   private DruidCoordinatorRuntimeParams runInternal(final DruidCoordinatorRuntimeParams params)

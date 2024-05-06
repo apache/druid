@@ -36,9 +36,8 @@ import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.FingerprintGenerator;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.segment.metadata.SegmentSchemaTestUtils;
-import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
-import org.apache.druid.server.coordinator.TestDruidCoordinatorConfig;
+import org.apache.druid.server.coordinator.config.MetadataCleanupConfig;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -63,7 +62,7 @@ import java.util.List;
 import java.util.Set;
 
 @RunWith(MockitoJUnitRunner.class)
-public class KillUnreferencedSegmentSchemaDutyTest
+public class KillUnreferencedSegmentSchemaTest
 {
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule =
@@ -105,14 +104,13 @@ public class KillUnreferencedSegmentSchemaDutyTest
     dateTimes.add(now.plusMinutes(61));
     dateTimes.add(now.plusMinutes(6 * 60 + 1));
 
-    TestDruidCoordinatorConfig druidCoordinatorConfig = new TestDruidCoordinatorConfig.Builder()
-        .withMetadataStoreManagementPeriod(Period.parse("PT1H").toStandardDuration())
-        .withSegmentSchemaKillPeriod(Period.parse("PT1H").toStandardDuration())
-        .withSegmentSchemaKillDurationToRetain(Period.parse("PT6H").toStandardDuration())
-        .build();
-
-    KillUnreferencedSegmentSchemaDuty duty =
-        new TestKillUnreferencedSegmentSchemasDuty(druidCoordinatorConfig, segmentSchemaManager, dateTimes);
+    final MetadataCleanupConfig cleanupConfig = new MetadataCleanupConfig(
+        true,
+        Period.parse("PT1H").toStandardDuration(),
+        Period.parse("PT6H").toStandardDuration()
+    );
+    KillUnreferencedSegmentSchema duty =
+        new TestKillUnreferencedSegmentSchemas(cleanupConfig, segmentSchemaManager, dateTimes);
 
     Set<DataSegment> segments = new HashSet<>();
     List<SegmentSchemaManager.SegmentSchemaMetadataPlus> schemaMetadataPluses = new ArrayList<>();
@@ -211,14 +209,14 @@ public class KillUnreferencedSegmentSchemaDutyTest
     dateTimes.add(now);
     dateTimes.add(now.plusMinutes(61));
 
-    TestDruidCoordinatorConfig druidCoordinatorConfig = new TestDruidCoordinatorConfig.Builder()
-        .withMetadataStoreManagementPeriod(Period.parse("PT1H").toStandardDuration())
-        .withSegmentSchemaKillPeriod(Period.parse("PT1H").toStandardDuration())
-        .withSegmentSchemaKillDurationToRetain(Period.parse("PT6H").toStandardDuration())
-        .build();
+    MetadataCleanupConfig cleanupConfig = new MetadataCleanupConfig(
+        true,
+        Period.parse("PT1H").toStandardDuration(),
+        Period.parse("PT6H").toStandardDuration()
+    );
 
-    KillUnreferencedSegmentSchemaDuty duty =
-        new TestKillUnreferencedSegmentSchemasDuty(druidCoordinatorConfig, segmentSchemaManager, dateTimes);
+    KillUnreferencedSegmentSchema duty =
+        new TestKillUnreferencedSegmentSchemas(cleanupConfig, segmentSchemaManager, dateTimes);
 
     RowSignature rowSignature = RowSignature.builder().add("c1", ColumnType.FLOAT).build();
 
@@ -283,14 +281,14 @@ public class KillUnreferencedSegmentSchemaDutyTest
     dateTimes.add(now.plusMinutes(61));
     dateTimes.add(now.plusMinutes(6 * 60 + 1));
 
-    TestDruidCoordinatorConfig druidCoordinatorConfig = new TestDruidCoordinatorConfig.Builder()
-        .withMetadataStoreManagementPeriod(Period.parse("PT1H").toStandardDuration())
-        .withSegmentSchemaKillPeriod(Period.parse("PT1H").toStandardDuration())
-        .withSegmentSchemaKillDurationToRetain(Period.parse("PT6H").toStandardDuration())
-        .build();
+    MetadataCleanupConfig cleanupConfig = new MetadataCleanupConfig(
+        true,
+        Period.parse("PT1H").toStandardDuration(),
+        Period.parse("PT6H").toStandardDuration()
+    );
 
-    KillUnreferencedSegmentSchemaDuty duty =
-        new TestKillUnreferencedSegmentSchemasDuty(druidCoordinatorConfig, segmentSchemaManager, dateTimes);
+    KillUnreferencedSegmentSchema duty =
+        new TestKillUnreferencedSegmentSchemas(cleanupConfig, segmentSchemaManager, dateTimes);
 
     // create 2 versions of same schema
     // unreferenced one should get deleted
@@ -363,13 +361,13 @@ public class KillUnreferencedSegmentSchemaDutyTest
     Assert.assertNull(getSchemaUsedStatus(fingerprintOldVersion));
   }
 
-  private static class TestKillUnreferencedSegmentSchemasDuty extends KillUnreferencedSegmentSchemaDuty
+  private static class TestKillUnreferencedSegmentSchemas extends KillUnreferencedSegmentSchema
   {
     private final List<DateTime> dateTimes;
     private int index = -1;
 
-    public TestKillUnreferencedSegmentSchemasDuty(
-        DruidCoordinatorConfig config,
+    public TestKillUnreferencedSegmentSchemas(
+        MetadataCleanupConfig config,
         SegmentSchemaManager segmentSchemaManager,
         List<DateTime> dateTimes
     )

@@ -53,6 +53,10 @@ import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.balancer.CostBalancerStrategyFactory;
 import org.apache.druid.server.coordinator.compact.NewestSegmentFirstPolicy;
+import org.apache.druid.server.coordinator.config.CoordinatorKillConfigs;
+import org.apache.druid.server.coordinator.config.CoordinatorPeriodConfig;
+import org.apache.druid.server.coordinator.config.CoordinatorRunConfig;
+import org.apache.druid.server.coordinator.config.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDuty;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroup;
@@ -88,6 +92,7 @@ import java.util.concurrent.atomic.AtomicReference;
 public class DruidCoordinatorTest extends CuratorTestBase
 {
   private static final String LOADPATH = "/druid/loadqueue/localhost:1234";
+  private static final Duration LOAD_TIMEOUT = Duration.standardMinutes(15);
   private static final long COORDINATOR_START_DELAY = 1;
   private static final long COORDINATOR_PERIOD = 100;
 
@@ -142,10 +147,13 @@ public class DruidCoordinatorTest extends CuratorTestBase
     curator.create().creatingParentsIfNeeded().forPath(LOADPATH);
     objectMapper = new DefaultObjectMapper();
     newestSegmentFirstPolicy = new NewestSegmentFirstPolicy(objectMapper);
-    druidCoordinatorConfig = new TestDruidCoordinatorConfig.Builder()
-        .withCoordinatorStartDelay(new Duration(COORDINATOR_START_DELAY))
-        .withCoordinatorPeriod(new Duration(COORDINATOR_PERIOD))
-        .build();
+    druidCoordinatorConfig = new DruidCoordinatorConfig(
+        new CoordinatorRunConfig(new Duration(COORDINATOR_START_DELAY), new Duration(COORDINATOR_PERIOD)),
+        new CoordinatorPeriodConfig(null, null),
+        CoordinatorKillConfigs.DEFAULT,
+        new CostBalancerStrategyFactory(),
+        null
+    );
     pathChildrenCache = new PathChildrenCache(
         curator,
         LOADPATH,
@@ -159,7 +167,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         objectMapper,
         Execs.scheduledSingleThreaded("coordinator_test_load_queue_peon_scheduled-%d"),
         Execs.singleThreaded("coordinator_test_load_queue_peon-%d"),
-        druidCoordinatorConfig
+        LOAD_TIMEOUT
     );
     loadQueuePeon.start();
     druidNode = new DruidNode("hey", "what", false, 1234, null, true, false);
@@ -178,7 +186,6 @@ public class DruidCoordinatorTest extends CuratorTestBase
         new LatchableServiceAnnouncer(leaderAnnouncerLatch, leaderUnannouncerLatch),
         druidNode,
         new CoordinatorCustomDutyGroups(ImmutableSet.of()),
-        new CostBalancerStrategyFactory(),
         EasyMock.createNiceMock(LookupCoordinatorManager.class),
         new TestDruidLeaderSelector(),
         null,
@@ -354,7 +361,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         objectMapper,
         Execs.scheduledSingleThreaded("coordinator_test_load_queue_peon_cold_scheduled-%d"),
         Execs.singleThreaded("coordinator_test_load_queue_peon_cold-%d"),
-        druidCoordinatorConfig
+        LOAD_TIMEOUT
     );
     final PathChildrenCache pathChildrenCacheCold = new PathChildrenCache(
         curator,
@@ -453,7 +460,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         objectMapper,
         Execs.scheduledSingleThreaded("coordinator_test_load_queue_peon_cold_scheduled-%d"),
         Execs.singleThreaded("coordinator_test_load_queue_peon_cold-%d"),
-        druidCoordinatorConfig
+        LOAD_TIMEOUT
     );
 
     final LoadQueuePeon loadQueuePeonBroker1 = new CuratorLoadQueuePeon(
@@ -462,7 +469,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         objectMapper,
         Execs.scheduledSingleThreaded("coordinator_test_load_queue_peon_broker1_scheduled-%d"),
         Execs.singleThreaded("coordinator_test_load_queue_peon_broker1-%d"),
-        druidCoordinatorConfig
+        LOAD_TIMEOUT
     );
 
     final LoadQueuePeon loadQueuePeonBroker2 = new CuratorLoadQueuePeon(
@@ -471,7 +478,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         objectMapper,
         Execs.scheduledSingleThreaded("coordinator_test_load_queue_peon_broker2_scheduled-%d"),
         Execs.singleThreaded("coordinator_test_load_queue_peon_broker2-%d"),
-        druidCoordinatorConfig
+        LOAD_TIMEOUT
     );
 
     final LoadQueuePeon loadQueuePeonPoenServer = new CuratorLoadQueuePeon(
@@ -480,7 +487,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         objectMapper,
         Execs.scheduledSingleThreaded("coordinator_test_load_queue_peon_peon_scheduled-%d"),
         Execs.singleThreaded("coordinator_test_load_queue_peon_peon-%d"),
-        druidCoordinatorConfig
+        LOAD_TIMEOUT
     );
     final PathChildrenCache pathChildrenCacheCold = new PathChildrenCache(
         curator,
@@ -607,7 +614,6 @@ public class DruidCoordinatorTest extends CuratorTestBase
         new LatchableServiceAnnouncer(leaderAnnouncerLatch, leaderUnannouncerLatch),
         druidNode,
         emptyCustomDutyGroups,
-        new CostBalancerStrategyFactory(),
         EasyMock.createNiceMock(LookupCoordinatorManager.class),
         new TestDruidLeaderSelector(),
         null,
@@ -633,7 +639,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
     CoordinatorCustomDutyGroup group = new CoordinatorCustomDutyGroup(
         "group1",
         Duration.standardSeconds(1),
-        ImmutableList.of(new KillSupervisorsCustomDuty(new Duration("PT1S"), null, druidCoordinatorConfig))
+        ImmutableList.of(new KillSupervisorsCustomDuty(new Duration("PT1S"), null))
     );
     CoordinatorCustomDutyGroups customDutyGroups = new CoordinatorCustomDutyGroups(ImmutableSet.of(group));
     coordinator = new DruidCoordinator(
@@ -648,7 +654,6 @@ public class DruidCoordinatorTest extends CuratorTestBase
         new LatchableServiceAnnouncer(leaderAnnouncerLatch, leaderUnannouncerLatch),
         druidNode,
         customDutyGroups,
-        new CostBalancerStrategyFactory(),
         EasyMock.createNiceMock(LookupCoordinatorManager.class),
         new TestDruidLeaderSelector(),
         null,
@@ -689,7 +694,6 @@ public class DruidCoordinatorTest extends CuratorTestBase
         new LatchableServiceAnnouncer(leaderAnnouncerLatch, leaderUnannouncerLatch),
         druidNode,
         customDutyGroups,
-        new CostBalancerStrategyFactory(),
         EasyMock.createNiceMock(LookupCoordinatorManager.class),
         new TestDruidLeaderSelector(),
         null,
@@ -795,7 +799,6 @@ public class DruidCoordinatorTest extends CuratorTestBase
         new LatchableServiceAnnouncer(leaderAnnouncerLatch, leaderUnannouncerLatch),
         druidNode,
         groups,
-        new CostBalancerStrategyFactory(),
         EasyMock.createNiceMock(LookupCoordinatorManager.class),
         new TestDruidLeaderSelector(),
         null,

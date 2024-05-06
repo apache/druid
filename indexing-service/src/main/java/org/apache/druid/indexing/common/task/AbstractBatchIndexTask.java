@@ -444,8 +444,10 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       case APPEND:
         return SegmentTransactionalAppendAction.forSegments(segmentsToPublish, segmentSchemaMapping);
       default:
-        return SegmentTransactionalInsertAction.overwriteAction(segmentsToBeOverwritten, segmentsToPublish,
-                                                                segmentSchemaMapping
+        return SegmentTransactionalInsertAction.overwriteAction(
+            segmentsToBeOverwritten,
+            segmentsToPublish,
+            segmentSchemaMapping
         );
     }
   }

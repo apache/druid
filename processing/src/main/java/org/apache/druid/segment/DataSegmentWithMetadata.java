@@ -17,26 +17,41 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator.duty;
+package org.apache.druid.segment;
 
-import org.apache.druid.audit.AuditManager;
-import org.apache.druid.server.coordinator.config.MetadataCleanupConfig;
-import org.apache.druid.server.coordinator.stats.Stats;
-import org.joda.time.DateTime;
+import org.apache.druid.timeline.DataSegment;
 
-public class KillAuditLog extends MetadataCleanupDuty
+import javax.annotation.Nullable;
+
+/**
+ * Immutable wrapper class for segment and schema.
+ */
+public class DataSegmentWithMetadata
 {
-  private final AuditManager auditManager;
+  @Nullable
+  private final DataSegment dataSegment;
 
-  public KillAuditLog(MetadataCleanupConfig config, AuditManager auditManager)
+  @Nullable
+  private final SchemaPayloadPlus schemaPayloadPlus;
+
+  public DataSegmentWithMetadata(
+      @Nullable DataSegment dataSegment,
+      @Nullable SchemaPayloadPlus schemaPayloadPlus
+  )
   {
-    super("audit logs", config, Stats.Kill.AUDIT_LOGS);
-    this.auditManager = auditManager;
+    this.dataSegment = dataSegment;
+    this.schemaPayloadPlus = schemaPayloadPlus;
   }
 
-  @Override
-  protected int cleanupEntriesCreatedBefore(DateTime minCreatedTime)
+  @Nullable
+  public DataSegment getDataSegment()
   {
-    return auditManager.removeAuditLogsOlderThan(minCreatedTime.getMillis());
+    return dataSegment;
+  }
+
+  @Nullable
+  public SchemaPayloadPlus getSegmentSchemaMetadata()
+  {
+    return schemaPayloadPlus;
   }
 }

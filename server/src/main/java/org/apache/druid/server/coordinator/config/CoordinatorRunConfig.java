@@ -17,41 +17,38 @@
  * under the License.
  */
 
-package org.apache.druid.segment;
+package org.apache.druid.server.coordinator.config;
 
-import org.apache.druid.timeline.DataSegment;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.common.config.Configs;
+import org.joda.time.Duration;
 
-import javax.annotation.Nullable;
-
-/**
- * Immutable wrapper class for segment and schema.
- */
-public class DataSegmentWithSchema
+public class CoordinatorRunConfig
 {
-  @Nullable
-  private final DataSegment dataSegment;
+  @JsonProperty
+  private final Duration startDelay;
 
-  @Nullable
-  private final SchemaPayloadPlus schemaPayloadPlus;
+  @JsonProperty
+  private final Duration period;
 
-  public DataSegmentWithSchema(
-      @Nullable DataSegment dataSegment,
-      @Nullable SchemaPayloadPlus schemaPayloadPlus
+  @JsonCreator
+  public CoordinatorRunConfig(
+      @JsonProperty("startDelay") Duration startDelay,
+      @JsonProperty("period") Duration period
   )
   {
-    this.dataSegment = dataSegment;
-    this.schemaPayloadPlus = schemaPayloadPlus;
+    this.startDelay = Configs.valueOrDefault(startDelay, Duration.standardMinutes(5));
+    this.period = Configs.valueOrDefault(period, Duration.standardMinutes(1));
   }
 
-  @Nullable
-  public DataSegment getDataSegment()
+  public Duration getPeriod()
   {
-    return dataSegment;
+    return period;
   }
 
-  @Nullable
-  public SchemaPayloadPlus getSegmentSchemaMetadata()
+  public Duration getStartDelay()
   {
-    return schemaPayloadPlus;
+    return startDelay;
   }
 }
