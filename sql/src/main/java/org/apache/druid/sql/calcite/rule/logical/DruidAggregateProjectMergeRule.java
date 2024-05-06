@@ -1,26 +1,29 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to you under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
+
 package org.apache.druid.sql.calcite.rule.logical;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Sets;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.plan.RelRule;
-import org.apache.calcite.rel.RelCollations;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Aggregate;
 import org.apache.calcite.rel.core.Aggregate.Group;
@@ -34,7 +37,6 @@ import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.tools.RelBuilderFactory;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.calcite.util.Util;
-import org.apache.calcite.util.mapping.Mapping;
 import org.apache.calcite.util.mapping.Mappings;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.immutables.value.Value;
@@ -43,9 +45,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
-
-import static java.util.Objects.requireNonNull;
 
 /**
  * Planner rule that recognizes a {@link Aggregate}
@@ -66,8 +67,11 @@ public class DruidAggregateProjectMergeRule
     implements TransformationRule
 {
 
-  /** Creates an AggregateProjectMergeRule. */
-  protected DruidAggregateProjectMergeRule(Config config) {
+  /**
+   * Creates an AggregateProjectMergeRule.
+   */
+  protected DruidAggregateProjectMergeRule(Config config)
+  {
     super(config);
   }
 
@@ -75,14 +79,18 @@ public class DruidAggregateProjectMergeRule
   public DruidAggregateProjectMergeRule(
       Class<? extends Aggregate> aggregateClass,
       Class<? extends Project> projectClass,
-      RelBuilderFactory relBuilderFactory) {
+      RelBuilderFactory relBuilderFactory
+  )
+  {
     this(CoreRules.AGGREGATE_PROJECT_MERGE.config
-        .withRelBuilderFactory(relBuilderFactory)
-        .as(Config.class)
-        .withOperandFor(aggregateClass, projectClass));
+             .withRelBuilderFactory(relBuilderFactory)
+             .as(Config.class)
+             .withOperandFor(aggregateClass, projectClass));
   }
 
-  @Override public void onMatch(RelOptRuleCall call) {
+  @Override
+  public void onMatch(RelOptRuleCall call)
+  {
     final Aggregate aggregate = call.rel(0);
     final Project project = call.rel(1);
     RelNode x = apply(call, aggregate, project);
@@ -95,20 +103,16 @@ public class DruidAggregateProjectMergeRule
   {
     final Set<Integer> interestingFields = RelOptUtil.getAllFields(aggregate);
     final Map<Integer, Integer> map = new HashMap<>();
-    final Map<RexNode, RexNode> assignedNodeForExpr = new HashMap<>();
-    int originalFieldCount = project.getInput().getRowType().getFieldCount();
-    int currentAssignableIndex = originalFieldCount;
+    final Map<RexNode, Integer> assignedNodeForExpr = new HashMap<>();
+    List<RexNode> newRexNodes = new ArrayList<>();
     for (int source : interestingFields) {
       final RexNode rex = project.getProjects().get(source);
-      if (!(rex instanceof RexInputRef)) {
-        if (!assignedNodeForExpr.containsKey(rex)) {
-          RexNode newNode = new RexInputRef(currentAssignableIndex++, rex.getType());
-          assignedNodeForExpr.put(rex, newNode);
-        }
-        map.put(source, ((RexInputRef) assignedNodeForExpr.get(rex)).getIndex());
-      } else {
-        map.put(source, ((RexInputRef) rex).getIndex());
+      if (!assignedNodeForExpr.containsKey(rex)) {
+        RexNode newNode = new RexInputRef(source, rex.getType());
+        assignedNodeForExpr.put(rex, newRexNodes.size());
+        newRexNodes.add(newNode);
       }
+      map.put(source, assignedNodeForExpr.get(rex));
     }
 
     final ImmutableBitSet newGroupSet = aggregate.getGroupSet().permute(map);
@@ -116,42 +120,38 @@ public class DruidAggregateProjectMergeRule
     if (aggregate.getGroupType() != Group.SIMPLE) {
       newGroupingSets =
           ImmutableBitSet.ORDERING.immutableSortedCopy(
-              ImmutableBitSet.permute(aggregate.getGroupSets(), map));
+              Sets.newTreeSet(ImmutableBitSet.permute(aggregate.getGroupSets(), map)));
     }
 
-    final ImmutableList.Builder<AggregateCall> aggCalls =
-        ImmutableList.builder();
+    final ImmutableList.Builder<AggregateCall> aggCalls = ImmutableList.builder();
     final int sourceCount = aggregate.getInput().getRowType().getFieldCount();
-    final int targetCount = currentAssignableIndex;
-    final Mappings.TargetMapping targetMapping =
-        Mappings.target(map, sourceCount, targetCount);
+    final int targetCount = newRexNodes.size();
+    final Mappings.TargetMapping targetMapping = Mappings.target(map, sourceCount, targetCount);
     for (AggregateCall aggregateCall : aggregate.getAggCallList()) {
-      AggregateCall newAggCall;
-      if (aggregateCall.hasFilter() && Mappings.apply(targetMapping, aggregateCall.filterArg) >= originalFieldCount) {
-        newAggCall = AggregateCall.create(aggregateCall.getAggregation(), aggregateCall.isDistinct(), aggregateCall.isApproximate(), aggregateCall.ignoreNulls(),
-                                                     aggregateCall.rexList, Mappings.apply2((Mapping) targetMapping, aggregateCall.getArgList()),
-                                                    -1,
-                                                     aggregateCall.distinctKeys == null ? null : aggregateCall.distinctKeys.permute(targetMapping),
-                                                     RelCollations.permute(aggregateCall.collation, targetMapping), aggregateCall.getType(), aggregateCall.getName()
-        );
-      } else {
-        newAggCall = aggregateCall.transform(targetMapping);
-      }
-      aggCalls.add(newAggCall);
+      aggCalls.add(aggregateCall.transform(targetMapping));
     }
+
+    final RelBuilder relBuilder = call.builder();
+    relBuilder.push(project);
+    relBuilder.project(newRexNodes);
 
     final Aggregate newAggregate =
-        aggregate.copy(aggregate.getTraitSet(), project.getInput(),
-            newGroupSet, newGroupingSets, aggCalls.build());
+        aggregate.copy(aggregate.getTraitSet(), relBuilder.build(),
+                       newGroupSet, newGroupingSets, aggCalls.build()
+        );
+    relBuilder.push(newAggregate);
+
+    final List<Integer> newKeys =
+        Util.transform(
+            aggregate.getGroupSet().asList(),
+            key -> Objects.requireNonNull(
+                map.get(key),
+                () -> "no value found for key " + key + " in " + map
+            )
+        );
 
     // Add a project if the group set is not in the same order or
     // contains duplicates.
-    final RelBuilder relBuilder = call.builder();
-    relBuilder.push(newAggregate);
-    final List<Integer> newKeys =
-        Util.transform(aggregate.getGroupSet().asList(),
-            key -> requireNonNull(map.get(key),
-                () -> "no value found for key " + key + " in " + map));
     if (!newKeys.equals(newGroupSet.asList())) {
       final List<Integer> posList = new ArrayList<>();
       for (int newKey : newKeys) {
@@ -167,22 +167,33 @@ public class DruidAggregateProjectMergeRule
     return relBuilder.build();
   }
 
-  /** Rule configuration. */
+  /**
+   * Rule configuration.
+   */
   @Value.Immutable
-  public interface Config extends RelRule.Config {
+  public interface Config extends RelRule.Config
+  {
     Config DEFAULT = DruidImmutableAggregateProjectMergeRule.Config.of()
-                                                              .withOperandFor(Aggregate.class, Project.class);
+                                                                   .withOperandFor(Aggregate.class, Project.class);
 
-    @Override default DruidAggregateProjectMergeRule toRule() {
+    @Override
+    default DruidAggregateProjectMergeRule toRule()
+    {
       return new DruidAggregateProjectMergeRule(this);
     }
 
-    /** Defines an operand tree for the given classes. */
-    default Config withOperandFor(Class<? extends Aggregate> aggregateClass,
-        Class<? extends Project> projectClass) {
+    /**
+     * Defines an operand tree for the given classes.
+     */
+    default Config withOperandFor(
+        Class<? extends Aggregate> aggregateClass,
+        Class<? extends Project> projectClass
+    )
+    {
       return withOperandSupplier(b0 ->
-          b0.operand(aggregateClass).oneInput(b1 ->
-              b1.operand(projectClass).anyInputs())).as(Config.class);
+                                     b0.operand(aggregateClass).oneInput(b1 ->
+                                                                             b1.operand(projectClass).anyInputs())).as(
+          Config.class);
     }
   }
 }

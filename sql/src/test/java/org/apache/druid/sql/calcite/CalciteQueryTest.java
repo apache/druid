@@ -15690,17 +15690,17 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
       );
   }
 
-  @SqlTestFrameworkConfig(numMergeBuffers = 9)
+  @SqlTestFrameworkConfig(numMergeBuffers = 4)
   @Test
   public void testGS()
   {
+    cannotVectorize();
     testBuilder()
         .sql(
             "SELECT\n"
-            //+ "  TIME_FLOOR(\"__time\", 'PT1H') ,\n"
-            + "  \"cityName\" ,\n"
+            + "  TIME_FLOOR(\"__time\", 'PT1H') ,\n"
             + "  COUNT(DISTINCT \"page\") ,\n"
-            //+ "  COUNT(DISTINCT CASE WHEN \"channel\" = '#it.wikipedia' THEN \"user\" END), \n"
+            + "  COUNT(DISTINCT CASE WHEN \"channel\" = '#it.wikipedia' THEN \"user\" END), \n"
             + "  COUNT(DISTINCT \"user\") FILTER (WHERE \"channel\" = '#it.wikipedia'), "
             + "  COUNT(DISTINCT \"user\") \n"
             + "FROM \"wikipedia\"\n"
@@ -15712,30 +15712,30 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ))
         .expectedResults(
             ImmutableList.of(
-                new Object[]{"2015-09-12T00:00:00.000Z","264","5","149"},
-                new Object[]{"2015-09-12T01:00:00.000Z","1090","14","506"},
-                new Object[]{"2015-09-12T02:00:00.000Z","1045","10","459"},
-                new Object[]{"2015-09-12T03:00:00.000Z","766","10","427"},
-                new Object[]{"2015-09-12T04:00:00.000Z","781","6","427"},
-                new Object[]{"2015-09-12T05:00:00.000Z","1223","10","448"},
-                new Object[]{"2015-09-12T06:00:00.000Z","2092","13","498"},
-                new Object[]{"2015-09-12T07:00:00.000Z","2181","21","574"},
-                new Object[]{"2015-09-12T08:00:00.000Z","1552","36","707"},
-                new Object[]{"2015-09-12T09:00:00.000Z","1624","44","770"},
-                new Object[]{"2015-09-12T10:00:00.000Z","1710","37","785"},
-                new Object[]{"2015-09-12T11:00:00.000Z","1532","40","799"},
-                new Object[]{"2015-09-12T12:00:00.000Z","1633","45","855"},
-                new Object[]{"2015-09-12T13:00:00.000Z","1958","44","905"},
-                new Object[]{"2015-09-12T14:00:00.000Z","1779","48","886"},
-                new Object[]{"2015-09-12T15:00:00.000Z","1868","37","949"},
-                new Object[]{"2015-09-12T16:00:00.000Z","1846","50","969"},
-                new Object[]{"2015-09-12T17:00:00.000Z","2168","38","941"},
-                new Object[]{"2015-09-12T18:00:00.000Z","2043","40","925"},
-                new Object[]{ "2015-09-12T19:00:00.000Z","1924","32","930"},
-                new Object[]{"2015-09-12T20:00:00.000Z","1736","31","882"},
-                new Object[]{"2015-09-12T21:00:00.000Z","1672","40","861"},
-                new Object[]{"2015-09-12T22:00:00.000Z","1504","28","716"},
-                new Object[]{"2015-09-12T23:00:00.000Z","1407","20","631"}
+                new Object[]{1442016000000L, 264L, 5L, 5L, 149L},
+                new Object[]{1442019600000L, 1090L, 14L, 14L, 506L},
+                new Object[]{1442023200000L, 1045L, 10L, 10L, 459L},
+                new Object[]{1442026800000L, 766L, 10L, 10L, 427L},
+                new Object[]{1442030400000L, 781L, 6L, 6L, 427L},
+                new Object[]{1442034000000L, 1223L, 10L, 10L, 448L},
+                new Object[]{1442037600000L, 2092L, 13L, 13L, 498L},
+                new Object[]{1442041200000L, 2181L, 21L, 21L, 574L},
+                new Object[]{1442044800000L, 1552L, 36L, 36L, 707L},
+                new Object[]{1442048400000L, 1624L, 44L, 44L, 770L},
+                new Object[]{1442052000000L, 1710L, 37L, 37L, 785L},
+                new Object[]{1442055600000L, 1532L, 40L, 40L, 799L},
+                new Object[]{1442059200000L, 1633L, 45L, 45L, 855L},
+                new Object[]{1442062800000L, 1958L, 44L, 44L, 905L},
+                new Object[]{1442066400000L, 1779L, 48L, 48L, 886L},
+                new Object[]{1442070000000L, 1868L, 37L, 37L, 949L},
+                new Object[]{1442073600000L, 1846L, 50L, 50L, 969L},
+                new Object[]{1442077200000L, 2168L, 38L, 38L, 941L},
+                new Object[]{1442080800000L, 2043L, 40L, 40L, 925L},
+                new Object[]{1442084400000L, 1924L, 32L, 32L, 930L},
+                new Object[]{1442088000000L, 1736L, 31L, 31L, 882L},
+                new Object[]{1442091600000L, 1672L, 40L, 40L, 861L},
+                new Object[]{1442095200000L, 1504L, 28L, 28L, 716L},
+                new Object[]{1442098800000L, 1407L, 20L, 20L, 631L}
             )
         ).run();
   }

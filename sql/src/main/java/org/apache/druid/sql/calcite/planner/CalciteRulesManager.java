@@ -192,7 +192,7 @@ public class CalciteRulesManager
           CoreRules.PROJECT_REMOVE,
           CoreRules.AGGREGATE_JOIN_TRANSPOSE,
           CoreRules.AGGREGATE_PROJECT_MERGE,
-          //DruidAggregateProjectMergeRule.Config.DEFAULT.toRule(),
+          DruidAggregateProjectMergeRule.Config.DEFAULT.toRule(),
           CoreRules.CALC_REMOVE,
           CoreRules.SORT_REMOVE
       );
