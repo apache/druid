@@ -2014,7 +2014,7 @@ public class TaskLockboxTest
     tryTimeChunkLock(TaskLockType.EXCLUSIVE, task, Intervals.ETERNITY);
     exception.expect(ISE.class);
     exception.expectMessage(
-        String.format(
+        StringUtils.format(
             "All the locks must be of type REPLACE for segmentTransactionalReplace. Found lock of type[%s] for task[%s].",
             TaskLockType.EXCLUSIVE.name(), task.getId()
         )
@@ -2030,7 +2030,7 @@ public class TaskLockboxTest
     tryTimeChunkLock(TaskLockType.REPLACE, task, Intervals.ETERNITY);
     exception.expect(ISE.class);
     exception.expectMessage(
-        String.format(
+        StringUtils.format(
             "All the locks must be of type APPEND for segmentTransactionalAppend. Found lock of type[%s] for task[%s].",
             TaskLockType.REPLACE.name(), task.getId()
         )
@@ -2083,7 +2083,7 @@ public class TaskLockboxTest
     exception.expect(ExecutionException.class);
     exception.expectCause(CoreMatchers.instanceOf(ISE.class));
     exception.expectMessage(
-        String.format(
+        StringUtils.format(
             "Timed out while acquiring transactional replace lock for datasource[%s].",
             replaceTask1.getDataSource()
         )
@@ -2104,7 +2104,7 @@ public class TaskLockboxTest
     exception.expect(ExecutionException.class);
     exception.expectCause(CoreMatchers.instanceOf(ISE.class));
     exception.expectMessage(
-        String.format(
+        StringUtils.format(
             "Timed out while acquiring transactional replace lock for datasource[%s].",
             replaceTask.getDataSource()
         )
@@ -2125,7 +2125,7 @@ public class TaskLockboxTest
     exception.expect(ExecutionException.class);
     exception.expectCause(CoreMatchers.instanceOf(ISE.class));
     exception.expectMessage(
-        String.format(
+        StringUtils.format(
             "Timed out while acquiring transactional append lock for datasource[%s].",
             appendTask.getDataSource()
         )

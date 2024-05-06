@@ -1400,6 +1400,7 @@ public class TaskLockbox
       final Integer numActiveLocks = datasourceToNumActiveLocks.get(datasource);
       if (numActiveLocks == null || numActiveLocks <= 1) {
         datasourceToNumActiveLocks.remove(datasource);
+        datasourceToConcurrentLock.remove(datasource);
       } else {
         datasourceToNumActiveLocks.put(datasource, numActiveLocks - 1);
       }
