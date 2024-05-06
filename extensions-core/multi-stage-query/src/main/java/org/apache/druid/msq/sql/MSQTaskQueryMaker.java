@@ -28,7 +28,6 @@ import org.apache.calcite.util.Pair;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -80,7 +79,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 public class MSQTaskQueryMaker implements QueryMaker
@@ -290,7 +288,7 @@ public class MSQTaskQueryMaker implements QueryMaker
     if (MSQControllerTask.isReplaceInputDataSourceTask(querySpec) && SegmentSource.REALTIME.equals(segmentSources)) {
       throw DruidException.forPersona(DruidException.Persona.USER)
                           .ofCategory(DruidException.Category.INVALID_INPUT)
-                          .build("REALTIME segment sources cannot be queried while reindexing into the same datasource");
+                          .build("REALTIME segment sources cannot be queried while reindexing into the same datasource.");
     }
 
     final MSQControllerTask controllerTask = new MSQControllerTask(

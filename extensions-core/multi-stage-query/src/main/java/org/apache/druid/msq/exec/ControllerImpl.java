@@ -1695,7 +1695,7 @@ public class ControllerImpl implements Controller
       if (MSQControllerTask.isReplaceInputDataSourceTask(querySpec) && SegmentSource.REALTIME.equals(segmentSources)) {
         throw DruidException.forPersona(DruidException.Persona.USER)
                             .ofCategory(DruidException.Category.INVALID_INPUT)
-                            .build("REALTIME segment sources cannot be queried while reindexing into the same datasource");
+                            .build("REALTIME segment sources cannot be queried while reindexing into the same datasource.");
       }
 
       if (columnMappings.hasOutputColumn(ColumnHolder.TIME_COLUMN_NAME)) {
