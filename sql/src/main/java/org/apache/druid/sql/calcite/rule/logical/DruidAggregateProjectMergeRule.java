@@ -102,6 +102,9 @@ public class DruidAggregateProjectMergeRule
   public static @Nullable RelNode apply(RelOptRuleCall call, Aggregate aggregate, Project project)
   {
     final Set<Integer> interestingFields = RelOptUtil.getAllFields(aggregate);
+    if (interestingFields.isEmpty()) {
+      return null;
+    }
     final Map<Integer, Integer> map = new HashMap<>();
     final Map<RexNode, Integer> assignedNodeForExpr = new HashMap<>();
     List<RexNode> newRexNodes = new ArrayList<>();

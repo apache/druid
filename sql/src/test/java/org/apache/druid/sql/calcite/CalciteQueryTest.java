@@ -8791,8 +8791,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                             )
                                             .setDimensions(
                                                 dimensions(
-                                                    new DefaultDimensionSpec("dim1", "d0", ColumnType.STRING),
-                                                    new DefaultDimensionSpec("v0", "d1", ColumnType.LONG)
+                                                    new DefaultDimensionSpec("v0", "d0", ColumnType.LONG),
+                                                    new DefaultDimensionSpec("dim1", "d1", ColumnType.STRING)
                                                 )
                                             )
                                             .setAggregatorSpecs(
@@ -8835,9 +8835,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 new FilteredAggregatorFactory(
                                     new CountAggregatorFactory("_a1"),
                                     and(
-                                        notNull("d0"),
+                                        notNull("d1"),
                                         equality("a1", 0L, ColumnType.LONG),
-                                        expressionFilter("\"d1\"")
+                                        expressionFilter("\"d0\"")
                                     )
                                 )
                             )
@@ -12941,8 +12941,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setVirtualColumns(expressionVirtualColumn("v0", "1", ColumnType.LONG))
                         .setDimensions(
                             dimensions(
-                                new DefaultDimensionSpec("v0", "d0", ColumnType.LONG),
-                                new DefaultDimensionSpec("v0", "d1", ColumnType.LONG)
+                                new DefaultDimensionSpec("v0", "d0", ColumnType.LONG)
                             )
                         )
                         .setContext(QUERY_CONTEXT_DEFAULT)

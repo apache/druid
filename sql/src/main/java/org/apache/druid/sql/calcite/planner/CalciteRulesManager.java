@@ -193,7 +193,6 @@ public class CalciteRulesManager
           CoreRules.PROJECT_REMOVE,
           CoreRules.AGGREGATE_JOIN_TRANSPOSE,
           CoreRules.AGGREGATE_PROJECT_MERGE,
-          DruidAggregateProjectMergeRule.Config.DEFAULT.toRule(),
           CoreRules.CALC_REMOVE,
           CoreRules.SORT_REMOVE
       );
@@ -481,6 +480,7 @@ public class CalciteRulesManager
     rules.add(FilterJoinExcludePushToChildRule.FILTER_ON_JOIN_EXCLUDE_PUSH_TO_CHILD);
     rules.add(SortCollapseRule.instance());
     rules.add(ProjectAggregatePruneUnusedCallRule.instance());
+    rules.add(DruidAggregateProjectMergeRule.Config.DEFAULT.toRule());
 
     return rules.build();
   }
