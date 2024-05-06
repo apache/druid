@@ -203,7 +203,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     final String baseSequenceName;
     DateTime completionTimeout; // is set after signalTasksToFinish(); if not done by timeout, take corrective action
 
-    Boolean shutdownEarly = false;
+    Boolean shutdownEarly = false; // set by SupervisorManager.stopTaskGroupEarly
+
     TaskGroup(
         int groupId,
         ImmutableMap<PartitionIdType, SequenceOffsetType> startingSequences,
@@ -267,11 +268,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       return tasks.keySet();
     }
 
-    void setShutdownEarly() {
+    void setShutdownEarly()
+    {
       shutdownEarly = true;
     }
 
-    Boolean getShutdownEarly() {
+    Boolean getShutdownEarly()
+    {
       return shutdownEarly;
     }
 
@@ -1953,6 +1956,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     taskGroup.setShutdownEarly();
     return true;
   }
+
   private void discoverTasks() throws ExecutionException, InterruptedException
   {
     int taskCount = 0;

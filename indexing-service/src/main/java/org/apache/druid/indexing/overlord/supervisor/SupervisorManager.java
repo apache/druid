@@ -140,11 +140,10 @@ public class SupervisorManager
   public boolean stopTaskGroupEarly(String id, int taskGroupId)
   {
     Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(id);
-    if (supervisor == null) {
+    if (supervisor == null || supervisor.lhs == null) {
       return false;
     }
-    supervisor.lhs.stopTaskGroupEarly(taskGroupId);
-    return true;
+    return supervisor.lhs.stopTaskGroupEarly(taskGroupId);
   }
 
   public boolean createOrUpdateAndStartSupervisor(SupervisorSpec spec)

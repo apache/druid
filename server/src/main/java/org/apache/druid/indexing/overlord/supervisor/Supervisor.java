@@ -19,13 +19,11 @@
 
 package org.apache.druid.indexing.overlord.supervisor;
 
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 
 import javax.annotation.Nullable;
@@ -96,12 +94,9 @@ public interface Supervisor
 
   int getActiveTaskGroupsCount();
 
-  /**
-   * @return active sequence prefixes for reading and pending completion task groups of a seekable stream supervisor
-   */
-  Set<String> getActiveRealtimeSequencePrefixes();
-
-  default Boolean stopTaskGroupEarly(int taskGroupId) {
+  /** Stop the task group with id=taskGroupId the next time the supervisor runs regardless of task run time*/
+  default Boolean stopTaskGroupEarly(int taskGroupId)
+  {
     return true;
   }
 }
