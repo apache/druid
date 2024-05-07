@@ -1279,7 +1279,7 @@ public class TaskLockbox
 
   /**
    * Acquire a read lock to perform the segment transactional append action for a given datasource.
-   * Also verifies that all the locks are of the type APPEND for the task.
+   * Throws a DruidException when acquisition fails or times out.
    * @param task task to perform the append action
    * @param lockAcquireTimeoutMillis milliseconds to wait for lock acquisition
    */
@@ -1287,28 +1287,31 @@ public class TaskLockbox
   {
     final String datasource = task.getDataSource();
     final ReentrantReadWriteLock readWriteLock =
-        datasourceToConcurrentLock.computeIfAbsent(datasource, ds -> new ReentrantReadWriteLock(true));
-
+        datasourceToConcurrentLock.computeIfAbsent(datasource, ds -> new ReentrantReadWriteLock());
+    final boolean acquired;
     synchronized (readWriteLock) {
       try {
-        final boolean acquired = readWriteLock.readLock()
-                                              .tryLock(lockAcquireTimeoutMillis, TimeUnit.MILLISECONDS);
-        if (!acquired) {
-          throw DruidException
-              .forPersona(DruidException.Persona.OPERATOR)
-              .ofCategory(DruidException.Category.TIMEOUT)
-              .build("Timed out while acquiring transactional append lock for datasource[%s].", datasource);
-        }
+        acquired = readWriteLock.readLock()
+                                .tryLock(lockAcquireTimeoutMillis, TimeUnit.MILLISECONDS);
       }
       catch (InterruptedException e) {
-        throw new ISE(e, "Interrupted while acquiring transactional append lock for datasource[%s].", datasource);
+        throw DruidException
+            .forPersona(DruidException.Persona.OPERATOR)
+            .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+            .build(e, "Interrupted while acquiring transactional append lock for datasource[%s].", datasource);
       }
+    }
+    if (!acquired) {
+      throw DruidException
+          .forPersona(DruidException.Persona.OPERATOR)
+          .ofCategory(DruidException.Category.TIMEOUT)
+          .build("Timed out while acquiring transactional append lock for datasource[%s].", datasource);
     }
   }
 
   /**
    * Acquire a write lock to perform the segment transactional replace action for a given datasource.
-   * Also verifies that all the locks are of the type REPLACE for the task.
+   * Throws a DruidException when acquisition fails or times out.
    * @param task task to perform the replace action
    * @param lockAcquireTimeoutMillis milliseconds to wait for lock acquisition
    */
@@ -1316,22 +1319,25 @@ public class TaskLockbox
   {
     final String datasource = task.getDataSource();
     final ReentrantReadWriteLock readWriteLock =
-        datasourceToConcurrentLock.computeIfAbsent(datasource, ds -> new ReentrantReadWriteLock(true));
-
+        datasourceToConcurrentLock.computeIfAbsent(datasource, ds -> new ReentrantReadWriteLock());
+    final boolean acquired;
     synchronized (readWriteLock) {
       try {
-        final boolean acquired = readWriteLock.writeLock()
-                                              .tryLock(lockAcquireTimeoutMillis, TimeUnit.MILLISECONDS);
-        if (!acquired) {
-          throw DruidException
-              .forPersona(DruidException.Persona.OPERATOR)
-              .ofCategory(DruidException.Category.TIMEOUT)
-              .build("Timed out while acquiring transactional replace lock for datasource[%s].", datasource);
-        }
+        acquired = readWriteLock.writeLock()
+                                .tryLock(lockAcquireTimeoutMillis, TimeUnit.MILLISECONDS);
       }
       catch (InterruptedException e) {
-        throw new ISE(e, "Interrupted while acquiring transactional replace lock for datasource[%s].", datasource);
+        throw DruidException
+            .forPersona(DruidException.Persona.OPERATOR)
+            .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+            .build(e, "Interrupted while acquiring transactional replace lock for datasource[%s].", datasource);
       }
+    }
+    if (!acquired) {
+      throw DruidException
+          .forPersona(DruidException.Persona.OPERATOR)
+          .ofCategory(DruidException.Category.TIMEOUT)
+          .build("Timed out while acquiring transactional replace lock for datasource[%s].", datasource);
     }
   }
 
@@ -1342,10 +1348,10 @@ public class TaskLockbox
   public void releaseTransactionalAppendLock(Task task)
   {
     final String datasource = task.getDataSource();
-    if (!datasourceToConcurrentLock.containsKey(datasource)) {
+    final ReentrantReadWriteLock readWriteLock = datasourceToConcurrentLock.get(datasource);
+    if (readWriteLock == null) {
       return;
     }
-    final ReentrantReadWriteLock readWriteLock = datasourceToConcurrentLock.get(datasource);
     synchronized (readWriteLock) {
       readWriteLock.readLock().unlock();
       if (!readWriteLock.isWriteLocked() && readWriteLock.getReadLockCount() == 0 && !readWriteLock.hasQueuedThreads()) {
@@ -1361,10 +1367,10 @@ public class TaskLockbox
   public void releaseTransactionalReplaceLock(Task task)
   {
     final String datasource = task.getDataSource();
-    if (!datasourceToConcurrentLock.containsKey(datasource)) {
+    final ReentrantReadWriteLock readWriteLock = datasourceToConcurrentLock.get(datasource);
+    if (readWriteLock == null) {
       return;
     }
-    final ReentrantReadWriteLock readWriteLock = datasourceToConcurrentLock.get(datasource);
     synchronized (readWriteLock) {
       readWriteLock.writeLock().unlock();
       if (!readWriteLock.isWriteLocked() && readWriteLock.getReadLockCount() == 0 && !readWriteLock.hasQueuedThreads()) {

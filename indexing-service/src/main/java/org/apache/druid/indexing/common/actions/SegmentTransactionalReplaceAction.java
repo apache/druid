@@ -24,7 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableSet;
-import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
@@ -124,10 +124,9 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
     TaskLocks.checkLockCoversSegments(task, taskLockbox, segments);
     for (TaskLock taskLock : taskLockbox.findLocksForTask(task)) {
       if (taskLock.getType() != TaskLockType.REPLACE) {
-        throw DruidException.defensive(
-            "All the locks must be of type REPLACE for segmentTransactionalReplace. Found lock of type[%s] for task[%s].",
-            taskLock.getType(),
-            task.getId()
+        throw InvalidInput.exception(
+            "Cannot use action[%s] for task[%s] as it is holding a lock of type[%s] instead of [REPLACE].",
+            "SegmentTransactionalReplaceAction", task.getId(), taskLock.getType()
         );
       }
     }
@@ -160,12 +159,7 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
       // Do not perform upgrade in the same transaction as replace commit so that
       // failure to upgrade pending segments does not affect success of the commit
       if (publishResult.isSuccess() && toolbox.getSupervisorManager() != null) {
-        try {
-          registerUpgradedPendingSegmentsOnSupervisor(task, toolbox, publishResult.getUpgradedPendingSegments());
-        }
-        catch (Exception e) {
-          log.error(e, "Error while upgrading pending segments for task[%s]", task.getId());
-        }
+        tryRegisterUpgradedPendingSegmentsOnSupervisor(task, toolbox, publishResult.getUpgradedPendingSegments());
       }
 
       return publishResult;
@@ -181,26 +175,31 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
   /**
    * Registers upgraded pending segments on the active supervisor, if any
    */
-  private void registerUpgradedPendingSegmentsOnSupervisor(
+  private void tryRegisterUpgradedPendingSegmentsOnSupervisor(
       Task task,
       TaskActionToolbox toolbox,
       List<PendingSegmentRecord> upgradedPendingSegments
   )
   {
-    final SupervisorManager supervisorManager = toolbox.getSupervisorManager();
-    final Optional<String> activeSupervisorIdWithAppendLock =
-        supervisorManager.getActiveSupervisorIdForDatasourceWithAppendLock(task.getDataSource());
+    try {
+      final SupervisorManager supervisorManager = toolbox.getSupervisorManager();
+      final Optional<String> activeSupervisorIdWithAppendLock =
+          supervisorManager.getActiveSupervisorIdForDatasourceWithAppendLock(task.getDataSource());
 
-    if (!activeSupervisorIdWithAppendLock.isPresent()) {
-      return;
+      if (!activeSupervisorIdWithAppendLock.isPresent()) {
+        return;
+      }
+
+      upgradedPendingSegments.forEach(
+          upgradedPendingSegment -> supervisorManager.registerUpgradedPendingSegmentOnSupervisor(
+              activeSupervisorIdWithAppendLock.get(),
+              upgradedPendingSegment
+          )
+      );
     }
-
-    upgradedPendingSegments.forEach(
-        upgradedPendingSegment -> supervisorManager.registerUpgradedPendingSegmentOnSupervisor(
-            activeSupervisorIdWithAppendLock.get(),
-            upgradedPendingSegment
-        )
-    );
+    catch (Exception e) {
+      log.error(e, "Error while upgrading pending segments for task[%s]", task.getId());
+    }
   }
 
   @Override

@@ -152,9 +152,9 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
     TaskLocks.checkLockCoversSegments(task, taskLockbox, segments);
     for (TaskLock taskLock : taskLockbox.findLocksForTask(task)) {
       if (taskLock.getType() != TaskLockType.APPEND) {
-        throw DruidException.defensive(
-            "All the locks must be of type APPEND for segmentTransactionalAppend. Found lock of type[%s] for task[%s].",
-            taskLock.getType(), task.getId()
+        throw InvalidInput.exception(
+            "Cannot use action[%s] for task[%s] as it is holding a lock of type[%s] instead of [APPEND].",
+            "SegmentTransactionalAppendAction", task.getId(), taskLock.getType()
         );
       }
     }
