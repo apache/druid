@@ -73,59 +73,12 @@ import java.util.stream.Collectors;
  */
 public class SqlTestFrameworkConfig
 {
-  abstract static class IXP<T> {
-
-    final Class<? extends Annotation> annotationClass;
-    public IXP(Class<? extends Annotation> annotationClass)
-    {
-      this.annotationClass = annotationClass;
-    }
-
-    @SuppressWarnings("unchecked")
-    public final T fromAnnotations(List<Annotation> annotations) throws Exception
-    {
-      Method method = annotationClass.getMethod("value");
-      for (Annotation annotation : annotations) {
-        if (annotationClass.isInstance(annotation)) {
-          return (T) method.invoke(annotation);
-        }
-      }
-      return defaultValue();
-    }
-
-    @SuppressWarnings("unchecked")
-    @Nonnull
-    @Deprecated
-    public final T defaultValue() throws Exception
-    {
-      Method method = annotationClass.getMethod("value");
-      Annotation annotation = annotationClass.getAnnotation(annotationClass);
-      Preconditions.checkNotNull(
-          annotation,
-          StringUtils.format("Annotation class [%s] must be annotated with itself to set default value", annotationClass)
-      );
-      return (T) method.invoke(annotation);
-    }
-
-    public final T fromMap(Map<String, String> map) throws Exception {
-      String key = annotationClass.getSimpleName();
-      String value = map.get(key);
-      if (value == null) {
-        return defaultValue();
-      }
-      return fromString(value);
-    }
-
-    public abstract T fromString(String str) throws Exception;
-
-  }
-
   @Retention(RetentionPolicy.RUNTIME)
   @Target({ElementType.METHOD, ElementType.TYPE})
   @NumMergeBuffers(0)
   public @interface NumMergeBuffers
   {
-    static IXP<Integer> PROCESSOR = new IXP<Integer>(NumMergeBuffers.class)
+    static ConfigOptionProcessor<Integer> PROCESSOR = new ConfigOptionProcessor<Integer>(NumMergeBuffers.class)
     {
       @Override
       public Integer fromString(String str)
@@ -133,6 +86,7 @@ public class SqlTestFrameworkConfig
         return Integer.valueOf(str);
       }
     };
+
     int value();
   }
 
@@ -141,7 +95,7 @@ public class SqlTestFrameworkConfig
   @MinTopNThreshold(TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD)
   public @interface MinTopNThreshold
   {
-    static IXP<Integer> PROCESSOR = new IXP<Integer>(MinTopNThreshold.class)
+    static ConfigOptionProcessor<Integer> PROCESSOR = new ConfigOptionProcessor<Integer>(MinTopNThreshold.class)
     {
       @Override
       public Integer fromString(String str)
@@ -149,6 +103,7 @@ public class SqlTestFrameworkConfig
         return Integer.valueOf(str);
       }
     };
+
     int value();
   }
 
@@ -157,7 +112,7 @@ public class SqlTestFrameworkConfig
   @ResultCache(ResultCacheMode.DISABLED)
   public @interface ResultCache
   {
-    static IXP<ResultCacheMode> PROCESSOR = new IXP<ResultCacheMode>(ResultCache.class)
+    static ConfigOptionProcessor<ResultCacheMode> PROCESSOR = new ConfigOptionProcessor<ResultCacheMode>(ResultCache.class)
     {
       @Override
       public ResultCacheMode fromString(String str)
@@ -177,34 +132,10 @@ public class SqlTestFrameworkConfig
   @ComponentSupplier(StandardComponentSupplier.class)
   public @interface ComponentSupplier
   {
-    static LoadingCache<String, Set<Class<? extends QueryComponentSupplier>>> componentSupplierClassCache = CacheBuilder
-        .newBuilder()
-        .build(new CacheLoader<String, Set<Class<? extends QueryComponentSupplier>>>()
-        {
-          @Override
-          public Set<Class<? extends QueryComponentSupplier>> load(String pkg) throws Exception
-          {
-            return new Reflections(pkg).getSubTypesOf(QueryComponentSupplier.class);
-          }
-        });
-
-    static IXP<Class<? extends QueryComponentSupplier>> PROCESSOR = new IXP<Class<? extends QueryComponentSupplier>>(ComponentSupplier.class)
+    static ConfigOptionProcessor<Class<? extends QueryComponentSupplier>> PROCESSOR = new ConfigOptionProcessor<Class<? extends QueryComponentSupplier>>(
+        ComponentSupplier.class
+    )
     {
-      @Nonnull
-      private Class<? extends QueryComponentSupplier> getQueryComponentSupplierForName(String name) throws Exception
-      {
-        for (String pkg : new String[] {"org.apache.druid.sql.calcite", ""}) {
-          Set<Class<? extends QueryComponentSupplier>> availableSuppliers = componentSupplierClassCache.get(pkg);
-          for (Class<? extends QueryComponentSupplier> cl : availableSuppliers) {
-            if (cl.getSimpleName().equals(name)) {
-              return cl;
-            }
-          }
-        }
-        List<String> knownNames = componentSupplierClassCache.get("").stream().map(Class::getSimpleName).collect(Collectors.toList());
-        throw new IAE("ComponentSupplier [%s] is not known; known ones are [%s]", name, knownNames);
-      }
-
       @Override
       public Class<? extends QueryComponentSupplier> fromString(String name) throws Exception
       {
@@ -388,5 +319,80 @@ public class SqlTestFrameworkConfig
     {
       framework.close();
     }
+  }
+
+  abstract static class ConfigOptionProcessor<T>
+  {
+    final Class<? extends Annotation> annotationClass;
+
+    public ConfigOptionProcessor(Class<? extends Annotation> annotationClass)
+    {
+      this.annotationClass = annotationClass;
+    }
+
+    @SuppressWarnings("unchecked")
+    public final T fromAnnotations(List<Annotation> annotations) throws Exception
+    {
+      Method method = annotationClass.getMethod("value");
+      for (Annotation annotation : annotations) {
+        if (annotationClass.isInstance(annotation)) {
+          return (T) method.invoke(annotation);
+        }
+      }
+      return defaultValue();
+    }
+
+    @SuppressWarnings("unchecked")
+    @Nonnull
+    public final T defaultValue() throws Exception
+    {
+      Method method = annotationClass.getMethod("value");
+      Annotation annotation = annotationClass.getAnnotation(annotationClass);
+      Preconditions.checkNotNull(
+          annotation,
+          StringUtils
+              .format("Annotation class [%s] must be annotated with itself to set default value", annotationClass)
+      );
+      return (T) method.invoke(annotation);
+    }
+
+    public final T fromMap(Map<String, String> map) throws Exception
+    {
+      String key = annotationClass.getSimpleName();
+      String value = map.get(key);
+      if (value == null) {
+        return defaultValue();
+      }
+      return fromString(value);
+    }
+
+    public abstract T fromString(String str) throws Exception;
+  }
+
+  static LoadingCache<String, Set<Class<? extends QueryComponentSupplier>>> componentSupplierClassCache = CacheBuilder
+      .newBuilder()
+      .build(new CacheLoader<String, Set<Class<? extends QueryComponentSupplier>>>()
+      {
+        @Override
+        public Set<Class<? extends QueryComponentSupplier>> load(String pkg) throws Exception
+        {
+          return new Reflections(pkg).getSubTypesOf(QueryComponentSupplier.class);
+        }
+      });
+
+  @Nonnull
+  private static Class<? extends QueryComponentSupplier> getQueryComponentSupplierForName(String name) throws Exception
+  {
+    for (String pkg : new String[] {"org.apache.druid.sql.calcite", ""}) {
+      Set<Class<? extends QueryComponentSupplier>> availableSuppliers = componentSupplierClassCache.get(pkg);
+      for (Class<? extends QueryComponentSupplier> cl : availableSuppliers) {
+        if (cl.getSimpleName().equals(name)) {
+          return cl;
+        }
+      }
+    }
+    List<String> knownNames = componentSupplierClassCache.get("").stream().map(Class::getSimpleName)
+        .collect(Collectors.toList());
+    throw new IAE("ComponentSupplier [%s] is not known; known ones are [%s]", name, knownNames);
   }
 }

@@ -1,4 +1,4 @@
-!use druidtest://?ComponentSupplier=NestedComponentSupplier1
+!use druidtest://?ComponentSupplier=NestedComponentSupplier
 !set outputformat mysql
 
 select count(1) from nested;
