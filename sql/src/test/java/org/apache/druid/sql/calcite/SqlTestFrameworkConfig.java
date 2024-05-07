@@ -145,8 +145,7 @@ public class SqlTestFrameworkConfig
   @Nonnull
   private <T> T getValueFromMap(Map<String, String> map, Class<? extends Annotation> annotationClass) throws Exception
   {
-    String key = annotationClass.getSimpleName();
-    String value = map.get(key);
+    String value = map.get(annotationClass.getSimpleName());
     if (value == null) {
       return defaultValue(annotationClass);
     }
@@ -158,7 +157,7 @@ public class SqlTestFrameworkConfig
     if (type == Class.class) {
       return (T) getQueryComponentSupplierForName(value);
     }
-    throw new IAE("Cannot handle conversion of key [%s] with value [%s] to type [%s].", key, value, type);
+    throw new RuntimeException("don't know how to handle conversion to " + type);
   }
 
   static LoadingCache<String, Set<Class<? extends QueryComponentSupplier>>> componentSupplierClassCache = CacheBuilder
@@ -310,7 +309,7 @@ public class SqlTestFrameworkConfig
 
     public SqlTestFramework get() throws Exception
     {
-      return configStore.getConfigurationInstance(config, null).framework;
+      return configStore.getConfigurationInstance(config, x -> x).framework;
     }
 
     public <T extends Annotation> T getAnnotation(Class<T> annotationType)
@@ -343,18 +342,14 @@ public class SqlTestFrameworkConfig
         SqlTestFrameworkConfig config,
         Function<QueryComponentSupplier, QueryComponentSupplier> queryComponentSupplierWrapper) throws Exception
     {
-      this(config, makeQueryComponentSupplier(config.componentSupplier, queryComponentSupplierWrapper));
+      this(config, queryComponentSupplierWrapper.apply(makeQueryComponentSupplier(config.componentSupplier)));
     }
 
     private static QueryComponentSupplier makeQueryComponentSupplier(
-        Class<? extends QueryComponentSupplier> supplierClazz, Function<QueryComponentSupplier, QueryComponentSupplier> wrapper) throws Exception
+        Class<? extends QueryComponentSupplier> supplierClazz) throws Exception
     {
       Constructor<? extends QueryComponentSupplier> constructor = supplierClazz.getConstructor(TempDirProducer.class);
-      QueryComponentSupplier componentSupplier = constructor.newInstance(new TempDirProducer("druid-test"));
-      if (wrapper != null) {
-        return wrapper.apply(componentSupplier);
-      }
-      return componentSupplier;
+      return constructor.newInstance(new TempDirProducer("druid-test"));
     }
 
     public void close()
