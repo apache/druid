@@ -717,7 +717,7 @@ public class ControllerImpl implements Controller
 
     taskContextOverridesBuilder.put(
         MultiStageQueryContext.CTX_IS_REINDEX,
-        MSQControllerTask.isReplaceInputDataSourceTask(task)
+        MSQControllerTask.isReplaceInputDataSourceTask(task.getQuerySpec())
     );
 
     // propagate the controller's tags to the worker task for enhanced metrics reporting

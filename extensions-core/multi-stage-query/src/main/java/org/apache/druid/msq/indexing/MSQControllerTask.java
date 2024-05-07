@@ -303,14 +303,15 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery, 
    * Returns true if the task reads from the same table as the destination. In this case, we would prefer to fail
    * instead of reading any unused segments to ensure that old data is not read.
    */
-  public static boolean isReplaceInputDataSourceTask(MSQControllerTask task)
+  public static boolean isReplaceInputDataSourceTask(MSQSpec querySpec)
   {
-    return task.getQuerySpec()
-               .getQuery()
-               .getDataSource()
-               .getTableNames()
-               .stream()
-               .anyMatch(datasouce -> task.getDataSource().equals(datasouce));
+    if (isIngestion(querySpec)) {
+      final String targetDataSource = ((DataSourceMSQDestination) querySpec.getDestination()).getDataSource();
+      final Set<String> sourceTableNames = querySpec.getQuery().getDataSource().getTableNames();
+      return sourceTableNames.contains(targetDataSource);
+    } else {
+      return false;
+    }
   }
 
   public static boolean writeResultsToDurableStorage(final MSQSpec querySpec)
