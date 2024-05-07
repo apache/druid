@@ -22,8 +22,6 @@ package org.apache.druid.sql.calcite.rule.logical;
 import com.google.common.base.MoreObjects;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import org.apache.calcite.plan.RelRule;
-import org.apache.calcite.rel.core.Aggregate;
-import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.core.RelFactories;
 import org.apache.calcite.tools.RelBuilderFactory;
 import org.immutables.value.Generated;
@@ -42,22 +40,22 @@ import java.util.Objects;
  */
 @ParametersAreNonnullByDefault
 @Generated(
-    from = "DruidAggregateProjectMergeRule",
+    from = "DruidAggregateRemoveRedundancyRule",
     generator = "Immutables"
 )
-final class DruidImmutableAggregateProjectMergeRule
+final class DruidImmutableAggregateRemoveRedundancyRule
 {
-  private DruidImmutableAggregateProjectMergeRule()
+  private DruidImmutableAggregateRemoveRedundancyRule()
   {
   }
 
   @CheckReturnValue
   @Generated(
-      from = "DruidAggregateProjectMergeRule.Config",
+      from = "DruidAggregateRemoveRedundancyRule.Config",
       generator = "Immutables"
   )
   @Immutable
-  static final class Config implements DruidAggregateProjectMergeRule.Config
+  static final class Config implements DruidAggregateRemoveRedundancyRule.Config
   {
     private final RelBuilderFactory relBuilderFactory;
     @Nullable
@@ -221,7 +219,7 @@ final class DruidImmutableAggregateProjectMergeRule
       return INSTANCE != null && INSTANCE.equalTo(instance) ? INSTANCE : instance;
     }
 
-    public static Config copyOf(DruidAggregateProjectMergeRule.Config instance)
+    public static Config copyOf(DruidAggregateRemoveRedundancyRule.Config instance)
     {
       return instance instanceof Config ? (Config) instance : builder().from(instance).build();
     }
@@ -232,7 +230,7 @@ final class DruidImmutableAggregateProjectMergeRule
     }
 
     @Generated(
-        from = "DruidAggregateProjectMergeRule.Config",
+        from = "DruidAggregateRemoveRedundancyRule.Config",
         generator = "Immutables"
     )
     @NotThreadSafe
@@ -258,7 +256,7 @@ final class DruidImmutableAggregateProjectMergeRule
       }
 
       @CanIgnoreReturnValue
-      public Builder from(DruidAggregateProjectMergeRule.Config instance)
+      public Builder from(DruidAggregateRemoveRedundancyRule.Config instance)
       {
         Objects.requireNonNull(instance, "instance");
         this.from((Object) instance);
@@ -304,12 +302,12 @@ final class DruidImmutableAggregateProjectMergeRule
 
       public Config build()
       {
-        return DruidImmutableAggregateProjectMergeRule.Config.validate(new Config(this));
+        return DruidImmutableAggregateRemoveRedundancyRule.Config.validate(new Config(this));
       }
     }
 
     @Generated(
-        from = "DruidAggregateProjectMergeRule.Config",
+        from = "DruidAggregateRemoveRedundancyRule.Config",
         generator = "Immutables"
     )
     private final class InitShim

@@ -29,12 +29,10 @@ import org.apache.calcite.rel.core.Aggregate;
 import org.apache.calcite.rel.core.Aggregate.Group;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.Project;
-import org.apache.calcite.rel.rules.CoreRules;
 import org.apache.calcite.rel.rules.TransformationRule;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.tools.RelBuilder;
-import org.apache.calcite.tools.RelBuilderFactory;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.calcite.util.Util;
 import org.apache.calcite.util.mapping.Mappings;
@@ -54,18 +52,18 @@ import java.util.Set;
  * aggregate through the project or removes the project.
  *
  * This is updated version of {@link org.apache.calcite.rel.rules.AggregateProjectMergeRule}
- * to be able to handle expressions
+ * to be able to handle expressions.
  */
 @Value.Enclosing
-public class DruidAggregateProjectMergeRule
-    extends RelRule<DruidAggregateProjectMergeRule.Config>
+public class DruidAggregateRemoveRedundancyRule
+    extends RelRule<DruidAggregateRemoveRedundancyRule.Config>
     implements TransformationRule
 {
 
   /**
-   * Creates a DruidAggregateProjectMergeRule.
+   * Creates a DruidAggregateRemoveRedundancyRule.
    */
-  protected DruidAggregateProjectMergeRule(Config config)
+  protected DruidAggregateRemoveRedundancyRule(Config config)
   {
     super(config);
   }
@@ -78,6 +76,7 @@ public class DruidAggregateProjectMergeRule
     RelNode x = apply(call, aggregate, project);
     if (x != null) {
       call.transformTo(x);
+      call.getPlanner().prune(aggregate);
     }
   }
 
@@ -98,6 +97,10 @@ public class DruidAggregateProjectMergeRule
         newRexNodes.add(newNode);
       }
       map.put(source, assignedNodeForExpr.get(rex));
+    }
+
+    if (newRexNodes.size() == project.getProjects().size()) {
+      return null;
     }
 
     final ImmutableBitSet newGroupSet = aggregate.getGroupSet().permute(map);
@@ -158,13 +161,13 @@ public class DruidAggregateProjectMergeRule
   @Value.Immutable
   public interface Config extends RelRule.Config
   {
-    Config DEFAULT = DruidImmutableAggregateProjectMergeRule.Config.of()
-                                                                   .withOperandFor(Aggregate.class, Project.class);
+    Config DEFAULT = DruidImmutableAggregateRemoveRedundancyRule.Config.of()
+                                                                       .withOperandFor(Aggregate.class, Project.class);
 
     @Override
-    default DruidAggregateProjectMergeRule toRule()
+    default DruidAggregateRemoveRedundancyRule toRule()
     {
-      return new DruidAggregateProjectMergeRule(this);
+      return new DruidAggregateRemoveRedundancyRule(this);
     }
 
     /**

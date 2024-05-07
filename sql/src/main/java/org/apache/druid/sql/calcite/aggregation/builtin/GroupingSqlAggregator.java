@@ -90,7 +90,10 @@ public class GroupingSqlAggregator implements SqlAggregator
         }
       }
     }
-    AggregatorFactory factory = new GroupingAggregatorFactory(name, arguments);
+    AggregatorFactory factory = new GroupingAggregatorFactory(
+        name,
+        arguments.stream().distinct().collect(Collectors.toList())
+    );
     return Aggregation.create(factory);
   }
 

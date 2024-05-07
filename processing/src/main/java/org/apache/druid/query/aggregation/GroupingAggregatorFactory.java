@@ -41,7 +41,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  * This class implements {@code grouping} function to determine the grouping that a row is part of. Different result rows
@@ -104,7 +103,7 @@ public class GroupingAggregatorFactory extends AggregatorFactory
   )
   {
     Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
-    if (groupings.stream().distinct().count() < groupings.size()) {
+    if (!groupings.isEmpty() && groupings.stream().distinct().count() < groupings.size()) {
       throw DruidException.defensive("Encountered same dimension in more than one grouping!");
     }
     this.name = name;
