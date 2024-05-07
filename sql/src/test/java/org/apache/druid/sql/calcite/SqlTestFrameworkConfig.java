@@ -145,7 +145,8 @@ public class SqlTestFrameworkConfig
   @Nonnull
   private <T> T getValueFromMap(Map<String, String> map, Class<? extends Annotation> annotationClass) throws Exception
   {
-    String value = map.get(annotationClass.getSimpleName());
+    String key = annotationClass.getSimpleName();
+    String value = map.get(key);
     if (value == null) {
       return defaultValue(annotationClass);
     }
@@ -157,7 +158,7 @@ public class SqlTestFrameworkConfig
     if (type == Class.class) {
       return (T) getQueryComponentSupplierForName(value);
     }
-    throw new RuntimeException("don't know how to handle conversion to " + type);
+    throw new IAE("Cannot handle conversion of key [%s] with value [%s] to type [%s].", key, value, type);
   }
 
   static LoadingCache<String, Set<Class<? extends QueryComponentSupplier>>> componentSupplierClassCache = CacheBuilder
