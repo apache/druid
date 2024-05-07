@@ -69,11 +69,25 @@ import java.util.function.Function;
  */
 public class SqlTestFrameworkConfig
 {
+
+  public interface ConfigOptionHandler<T> {
+
+  }
+
+  public abstract class AbstractConfigOptionHandler<T> implements ConfigOptionHandler<T> {
+
+
+
+  }
+
+
   @Retention(RetentionPolicy.RUNTIME)
   @Target({ElementType.METHOD, ElementType.TYPE})
   @NumMergeBuffers(0)
   public @interface NumMergeBuffers
   {
+    static Object PARSER = 0;
+
     int value();
   }
 
@@ -112,7 +126,8 @@ public class SqlTestFrameworkConfig
   public SqlTestFrameworkConfig(List<Annotation> annotations)
   {
     try {
-      numMergeBuffers = getValueFromAnnotation(annotations, NumMergeBuffers.class);
+      numMergeBuffers = NumMergeBuffers.PARSER;getValueFromAnnotation(annotations, NumMergeBuffers.class);
+//      numMergeBuffers = getValueFromAnnotation(annotations, NumMergeBuffers.class);
       minTopNThreshold = getValueFromAnnotation(annotations, MinTopNThreshold.class);
       resultCache = getValueFromAnnotation(annotations, ResultCache.class);
       componentSupplier = getValueFromAnnotation(annotations, ComponentSupplier.class);
