@@ -78,10 +78,10 @@ public class SqlTestFrameworkConfig
   @NumMergeBuffers(0)
   public @interface NumMergeBuffers
   {
-    static ConfigOptionProcessor<Integer> PROCESSOR = new ConfigOptionProcessor<Integer>(NumMergeBuffers.class)
+    ConfigOptionProcessor<Integer> PROCESSOR = new ConfigOptionProcessor<Integer>(NumMergeBuffers.class)
     {
       @Override
-      public Integer fromString(String str)
+      public Integer fromString(String str) throws NumberFormatException
       {
         return Integer.valueOf(str);
       }
@@ -95,10 +95,10 @@ public class SqlTestFrameworkConfig
   @MinTopNThreshold(TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD)
   public @interface MinTopNThreshold
   {
-    static ConfigOptionProcessor<Integer> PROCESSOR = new ConfigOptionProcessor<Integer>(MinTopNThreshold.class)
+    ConfigOptionProcessor<Integer> PROCESSOR = new ConfigOptionProcessor<Integer>(MinTopNThreshold.class)
     {
       @Override
-      public Integer fromString(String str)
+      public Integer fromString(String str) throws NumberFormatException
       {
         return Integer.valueOf(str);
       }
@@ -112,7 +112,7 @@ public class SqlTestFrameworkConfig
   @ResultCache(ResultCacheMode.DISABLED)
   public @interface ResultCache
   {
-    static ConfigOptionProcessor<ResultCacheMode> PROCESSOR = new ConfigOptionProcessor<ResultCacheMode>(ResultCache.class)
+    ConfigOptionProcessor<ResultCacheMode> PROCESSOR = new ConfigOptionProcessor<ResultCacheMode>(ResultCache.class)
     {
       @Override
       public ResultCacheMode fromString(String str)
@@ -132,7 +132,7 @@ public class SqlTestFrameworkConfig
   @ComponentSupplier(StandardComponentSupplier.class)
   public @interface ComponentSupplier
   {
-    static ConfigOptionProcessor<Class<? extends QueryComponentSupplier>> PROCESSOR = new ConfigOptionProcessor<Class<? extends QueryComponentSupplier>>(
+    ConfigOptionProcessor<Class<? extends QueryComponentSupplier>> PROCESSOR = new ConfigOptionProcessor<Class<? extends QueryComponentSupplier>>(
         ComponentSupplier.class
     )
     {
@@ -374,7 +374,7 @@ public class SqlTestFrameworkConfig
       .build(new CacheLoader<String, Set<Class<? extends QueryComponentSupplier>>>()
       {
         @Override
-        public Set<Class<? extends QueryComponentSupplier>> load(String pkg) throws Exception
+        public Set<Class<? extends QueryComponentSupplier>> load(String pkg)
         {
           return new Reflections(pkg).getSubTypesOf(QueryComponentSupplier.class);
         }
