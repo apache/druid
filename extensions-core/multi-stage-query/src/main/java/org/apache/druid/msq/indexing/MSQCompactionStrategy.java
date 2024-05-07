@@ -87,8 +87,8 @@ public class MSQCompactionStrategy implements CompactionStrategy
   private final ObjectMapper jsonMapper;
   private final Injector injector;
 
-  private static final String TIME_VIRTUAL_COLUMN = "vTime";
-  private static final String TIME_COLUMN = ColumnHolder.TIME_COLUMN_NAME;
+  public static final String TIME_VIRTUAL_COLUMN = "vTime";
+  public static final String TIME_COLUMN = ColumnHolder.TIME_COLUMN_NAME;
 
   public MSQCompactionStrategy(@JacksonInject ObjectMapper jsonMapper, @JacksonInject Injector injector)
   {
@@ -263,22 +263,26 @@ public class MSQCompactionStrategy implements CompactionStrategy
 
   private static List<DimensionSpec> getAggregateDimensions(DataSchema ds)
   {
-    List<DimensionSpec> dimensionSpecs = ds.getDimensionsSpec().getDimensions().stream()
-                                           .map(dim -> new DefaultDimensionSpec(
-                                               dim.getName(),
-                                               dim.getName(),
-                                               dim.getColumnType()
-                                           ))
-                                           .collect(Collectors.toList());
+    List<DimensionSpec> dimensionSpecs = new ArrayList<>();
 
-
-    // Dimensions in group-by aren't allowed to have time column as the output name.
     if (isQueryGranularityEmpty(ds)) {
       dimensionSpecs.add(new DefaultDimensionSpec(TIME_COLUMN, TIME_VIRTUAL_COLUMN, ColumnType.LONG));
     } else {
       // The changed granularity would result in a new virtual column that needs to be aggregated upon.
       dimensionSpecs.add(new DefaultDimensionSpec(TIME_VIRTUAL_COLUMN, TIME_VIRTUAL_COLUMN, ColumnType.LONG));
     }
+
+    dimensionSpecs.addAll(ds.getDimensionsSpec().getDimensions().stream()
+                                           .map(dim -> new DefaultDimensionSpec(
+                                               dim.getName(),
+                                               dim.getName(),
+                                               dim.getColumnType()
+                                           ))
+                                           .collect(Collectors.toList()));
+
+
+    // Dimensions in group-by aren't allowed to have time column as the output name.
+
     return dimensionSpecs;
   }
 
