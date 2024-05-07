@@ -24,6 +24,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.indexing.common.TaskLock;
+import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.CriticalAction;
@@ -119,7 +122,15 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
   {
     final TaskLockbox taskLockbox = toolbox.getTaskLockbox();
     TaskLocks.checkLockCoversSegments(task, taskLockbox, segments);
-    taskLockbox.verifyLocksForReplaceTask(task);
+    for (TaskLock taskLock : taskLockbox.findLocksForTask(task)) {
+      if (taskLock.getType() != TaskLockType.REPLACE) {
+        throw DruidException.defensive(
+            "All the locks must be of type REPLACE for segmentTransactionalReplace. Found lock of type[%s] for task[%s].",
+            taskLock.getType(),
+            task.getId()
+        );
+      }
+    }
     taskLockbox.acquireTransactionalReplaceLock(task, TaskLockbox.LOCK_ACQUIRE_TIMEOUT_MILLIS);
     try {
       // Find the active replace locks held only by this task

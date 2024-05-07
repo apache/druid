@@ -24,6 +24,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
+import org.apache.druid.indexing.common.TaskLock;
+import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.PendingSegmentAllocatingTask;
 import org.apache.druid.indexing.common.task.Task;
@@ -148,7 +150,14 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
     }
     final TaskLockbox taskLockbox = toolbox.getTaskLockbox();
     TaskLocks.checkLockCoversSegments(task, taskLockbox, segments);
-    taskLockbox.verifyLocksForAppendTask(task);
+    for (TaskLock taskLock : taskLockbox.findLocksForTask(task)) {
+      if (taskLock.getType() != TaskLockType.APPEND) {
+        throw DruidException.defensive(
+            "All the locks must be of type APPEND for segmentTransactionalAppend. Found lock of type[%s] for task[%s].",
+            taskLock.getType(), task.getId()
+        );
+      }
+    }
     taskLockbox.acquireTransactionalAppendLock(task, TaskLockbox.LOCK_ACQUIRE_TIMEOUT_MILLIS);
     try {
       final String datasource = task.getDataSource();

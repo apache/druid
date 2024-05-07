@@ -2008,38 +2008,6 @@ public class TaskLockboxTest
   }
 
   @Test
-  public void testVerifyLocksForReplaceTask()
-  {
-    final Task task = NoopTask.create();
-    lockbox.add(task);
-    tryTimeChunkLock(TaskLockType.EXCLUSIVE, task, Intervals.ETERNITY);
-    exception.expect(DruidException.class);
-    exception.expectMessage(
-        StringUtils.format(
-            "All the locks must be of type REPLACE for segmentTransactionalReplace. Found lock of type[%s] for task[%s].",
-            TaskLockType.EXCLUSIVE.name(), task.getId()
-        )
-    );
-    lockbox.verifyLocksForReplaceTask(task);
-  }
-
-  @Test
-  public void testVerifyLocksForAppendTask()
-  {
-    final Task task = NoopTask.create();
-    lockbox.add(task);
-    tryTimeChunkLock(TaskLockType.REPLACE, task, Intervals.ETERNITY);
-    exception.expect(DruidException.class);
-    exception.expectMessage(
-        StringUtils.format(
-            "All the locks must be of type APPEND for segmentTransactionalAppend. Found lock of type[%s] for task[%s].",
-            TaskLockType.REPLACE.name(), task.getId()
-        )
-    );
-    lockbox.verifyLocksForAppendTask(task);
-  }
-
-  @Test
   public void testAcquireTransactionalLocksSuccess() throws Exception
   {
     final Task appendTask = NoopTask.create();

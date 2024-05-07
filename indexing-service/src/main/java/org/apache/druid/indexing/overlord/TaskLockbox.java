@@ -1278,38 +1278,6 @@ public class TaskLockbox
   }
 
   /**
-   * Verifies that every lock held by the replacing task is a REPLACE lock
-   * @param task replacing task
-   */
-  public void verifyLocksForReplaceTask(Task task)
-  {
-    for (TaskLockPosse lockPosse : findLockPossesForTask(task)) {
-      if (lockPosse.taskLock.getType() != TaskLockType.REPLACE) {
-        throw DruidException.defensive(
-            "All the locks must be of type REPLACE for segmentTransactionalReplace. Found lock of type[%s] for task[%s].",
-            lockPosse.taskLock.getType(), task.getId()
-        );
-      }
-    }
-  }
-
-  /**
-   * Verifies that every lock held by the appending task is an APPEND lock
-   * @param task appending task
-   */
-  public void verifyLocksForAppendTask(Task task)
-  {
-    for (TaskLockPosse lockPosse : findLockPossesForTask(task)) {
-      if (lockPosse.taskLock.getType() != TaskLockType.APPEND) {
-        throw DruidException.defensive(
-            "All the locks must be of type APPEND for segmentTransactionalAppend. Found lock of type[%s] for task[%s].",
-            lockPosse.taskLock.getType(), task.getId()
-        );
-      }
-    }
-  }
-
-  /**
    * Acquire a read lock to perform the segment transactional append action for a given datasource.
    * Also verifies that all the locks are of the type APPEND for the task.
    * @param task task to perform the append action
