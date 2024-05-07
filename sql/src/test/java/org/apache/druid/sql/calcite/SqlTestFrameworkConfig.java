@@ -32,6 +32,8 @@ import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.reflections.Reflections;
 
+import javax.annotation.Nonnull;
+
 import java.io.Closeable;
 import java.lang.annotation.Annotation;
 import java.lang.annotation.ElementType;
@@ -138,6 +140,7 @@ public class SqlTestFrameworkConfig
   }
 
   @SuppressWarnings("unchecked")
+  @Nonnull
   private <T> T getValueFromMap(Map<String, String> map, Class<? extends Annotation> annotationClass)
       throws IllegalAccessException, InvocationTargetException, NoSuchMethodException, SecurityException
   {
@@ -151,17 +154,13 @@ public class SqlTestFrameworkConfig
       return (T) Integer.valueOf(value);
     }
     if (type == Class.class) {
-
-      Object clazz = getQueryComponentSupplierForName(value);
-      if (clazz != null) {
-        return (T) clazz;
-      }
-
+      return (T) getQueryComponentSupplierForName(value);
     }
     throw new RuntimeException("don't know how to handle conversion to " + type);
   }
 
-  private Object getQueryComponentSupplierForName(String name)
+  @Nonnull
+  private Class<? extends QueryComponentSupplier> getQueryComponentSupplierForName(String name)
   {
     Set<Class<? extends QueryComponentSupplier>> subTypes = new Reflections("org.apache.druid")
         .getSubTypesOf(QueryComponentSupplier.class);
@@ -191,6 +190,7 @@ public class SqlTestFrameworkConfig
   }
 
   @SuppressWarnings("unchecked")
+  @Nonnull
   private <T> T defaultValue(Class<? extends Annotation> annotationClass)
       throws IllegalAccessException, InvocationTargetException, NoSuchMethodException, SecurityException
   {
