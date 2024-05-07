@@ -58,7 +58,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@SqlTestFrameworkConfig.Supplier(CompressedBigDecimalComponentSupplier.class)
+@SqlTestFrameworkConfig.ComponentSupplier(CompressedBigDecimalComponentSupplier.class)
 public abstract class CompressedBigDecimalSqlAggregatorTestBase extends BaseCalciteQueryTest
 {
   protected static class CompressedBigDecimalComponentSupplier extends StandardComponentSupplier

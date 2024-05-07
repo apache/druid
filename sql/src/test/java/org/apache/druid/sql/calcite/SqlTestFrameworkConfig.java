@@ -98,8 +98,8 @@ public class SqlTestFrameworkConfig
    */
   @Retention(RetentionPolicy.RUNTIME)
   @Target({ElementType.METHOD, ElementType.TYPE})
-  @Supplier(StandardComponentSupplier.class)
-  public @interface Supplier
+  @ComponentSupplier(StandardComponentSupplier.class)
+  public @interface ComponentSupplier
   {
     Class<? extends QueryComponentSupplier> value();
   }
@@ -107,7 +107,7 @@ public class SqlTestFrameworkConfig
   public final int numMergeBuffers;
   public final int minTopNThreshold;
   public final ResultCacheMode resultCache;
-  public final Class<? extends QueryComponentSupplier> supplier;
+  public final Class<? extends QueryComponentSupplier> componentSupplier;
 
   public SqlTestFrameworkConfig(List<Annotation> annotations)
   {
@@ -115,7 +115,7 @@ public class SqlTestFrameworkConfig
       numMergeBuffers = getValueFromAnnotation(annotations, NumMergeBuffers.class);
       minTopNThreshold = getValueFromAnnotation(annotations, MinTopNThreshold.class);
       resultCache = getValueFromAnnotation(annotations, ResultCache.class);
-      supplier = getValueFromAnnotation(annotations, Supplier.class);
+      componentSupplier = getValueFromAnnotation(annotations, ComponentSupplier.class);
     }
     catch (NoSuchMethodException | SecurityException | IllegalAccessException | IllegalArgumentException
         | InvocationTargetException e) {
@@ -129,7 +129,7 @@ public class SqlTestFrameworkConfig
       numMergeBuffers = getValueFromMap(queryParams, NumMergeBuffers.class);
       minTopNThreshold = getValueFromMap(queryParams, MinTopNThreshold.class);
       resultCache = getValueFromMap(queryParams, ResultCache.class);
-      supplier = getValueFromMap(queryParams, Supplier.class);
+      componentSupplier = getValueFromMap(queryParams, ComponentSupplier.class);
     }
     catch (NoSuchMethodException | SecurityException | IllegalAccessException | IllegalArgumentException
         | InvocationTargetException e) {
@@ -206,7 +206,7 @@ public class SqlTestFrameworkConfig
   @Override
   public int hashCode()
   {
-    return Objects.hash(minTopNThreshold, numMergeBuffers, resultCache, supplier);
+    return Objects.hash(minTopNThreshold, numMergeBuffers, resultCache, componentSupplier);
   }
 
   @Override
@@ -219,7 +219,7 @@ public class SqlTestFrameworkConfig
     return minTopNThreshold == other.minTopNThreshold
         && numMergeBuffers == other.numMergeBuffers
         && resultCache == other.resultCache
-        && supplier == other.supplier;
+        && componentSupplier == other.componentSupplier;
   }
 
   public static class SqlTestFrameworkConfigStore implements Closeable
@@ -331,7 +331,7 @@ public class SqlTestFrameworkConfig
         SqlTestFrameworkConfig config,
         Function<QueryComponentSupplier, QueryComponentSupplier> queryComponentSupplierWrapper) throws Exception
     {
-      this(config, queryComponentSupplierWrapper.apply(makeQueryComponentSupplier(config.supplier)));
+      this(config, queryComponentSupplierWrapper.apply(makeQueryComponentSupplier(config.componentSupplier)));
     }
 
     private static QueryComponentSupplier makeQueryComponentSupplier(

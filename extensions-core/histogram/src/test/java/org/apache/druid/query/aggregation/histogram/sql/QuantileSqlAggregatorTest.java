@@ -63,7 +63,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
-@SqlTestFrameworkConfig.Supplier(QuantileComponentSupplier.class)
+@SqlTestFrameworkConfig.ComponentSupplier(QuantileComponentSupplier.class)
 public class QuantileSqlAggregatorTest extends BaseCalciteQueryTest
 {
   protected static class QuantileComponentSupplier extends StandardComponentSupplier

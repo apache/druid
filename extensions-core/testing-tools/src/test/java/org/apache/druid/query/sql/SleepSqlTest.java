@@ -36,7 +36,7 @@ import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.junit.jupiter.api.Test;
 
-@SqlTestFrameworkConfig.Supplier(SleepComponentSupplier.class)
+@SqlTestFrameworkConfig.ComponentSupplier(SleepComponentSupplier.class)
 public class SleepSqlTest extends BaseCalciteQueryTest
 {
   public static class SleepComponentSupplier extends StandardComponentSupplier

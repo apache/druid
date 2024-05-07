@@ -56,7 +56,7 @@ import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
 
-@SqlTestFrameworkConfig.Supplier(CatalogIngestionDmlComponentSupplier.class)
+@SqlTestFrameworkConfig.ComponentSupplier(CatalogIngestionDmlComponentSupplier.class)
 public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDmlTest
 {
   private final String operationName;

@@ -31,7 +31,7 @@ import org.junit.jupiter.api.Test;
  * to only work with existing datasources. The strict option is a config option which
  * we enable only for this one test.
  */
-@SqlTestFrameworkConfig.Supplier(StrictInsertComponentSupplier.class)
+@SqlTestFrameworkConfig.ComponentSupplier(StrictInsertComponentSupplier.class)
 public class CalciteStrictInsertTest extends CalciteIngestionDmlTest
 {
   static class StrictInsertComponentSupplier extends IngestionDmlComponentSupplier

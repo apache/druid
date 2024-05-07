@@ -52,7 +52,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Collections;
 import java.util.List;
 
-@SqlTestFrameworkConfig.Supplier(ExportComponentSupplier.class)
+@SqlTestFrameworkConfig.ComponentSupplier(ExportComponentSupplier.class)
 public class CalciteExportTest extends CalciteIngestionDmlTest
 {
   protected static class ExportComponentSupplier extends IngestionDmlComponentSupplier

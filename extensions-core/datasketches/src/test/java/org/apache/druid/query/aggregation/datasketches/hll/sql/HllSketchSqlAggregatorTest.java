@@ -97,7 +97,7 @@ import java.util.List;
 import java.util.Properties;
 import java.util.stream.Collectors;
 
-@SqlTestFrameworkConfig.Supplier(HllSketchComponentSupplier.class)
+@SqlTestFrameworkConfig.ComponentSupplier(HllSketchComponentSupplier.class)
 public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
 {
   private static final boolean ROUND = true;

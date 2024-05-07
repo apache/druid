@@ -60,7 +60,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
-@SqlTestFrameworkConfig.Supplier(TDigestSketchSqlAggregatorTest.TDigestComponentSupplier.class)
+@SqlTestFrameworkConfig.ComponentSupplier(TDigestSketchSqlAggregatorTest.TDigestComponentSupplier.class)
 public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
 {
   protected static class TDigestComponentSupplier extends StandardComponentSupplier

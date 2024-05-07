@@ -48,7 +48,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * Runs {@link CalciteQueryTest} but with MSQ engine
  */
-@SqlTestFrameworkConfig.Supplier(SelectMSQComponentSupplier.class)
+@SqlTestFrameworkConfig.ComponentSupplier(SelectMSQComponentSupplier.class)
 public class CalciteSelectQueryMSQTest extends CalciteQueryTest
 {
   public static class SelectMSQComponentSupplier extends StandardComponentSupplier

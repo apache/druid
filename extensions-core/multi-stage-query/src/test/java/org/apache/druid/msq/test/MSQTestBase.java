@@ -255,7 +255,7 @@ import static org.mockito.Mockito.mock;
  * <p>
  * Controller -> Overlord communication happens in {@link MSQTestTaskActionClient}
  */
-@SqlTestFrameworkConfig.Supplier(MSQBaseComponentSupplier.class)
+@SqlTestFrameworkConfig.ComponentSupplier(MSQBaseComponentSupplier.class)
 public class MSQTestBase extends BaseCalciteQueryTest
 {
   public static final Map<String, Object> DEFAULT_MSQ_CONTEXT =

@@ -111,7 +111,7 @@ import static org.junit.Assert.fail;
  * so it is believed that most iteration on tests will happen through the
  * CalciteWindowQueryTest instead of this class.
  */
-@SqlTestFrameworkConfig.Supplier(DrillComponentSupplier.class)
+@SqlTestFrameworkConfig.ComponentSupplier(DrillComponentSupplier.class)
 public class DrillWindowQueryTest extends BaseCalciteQueryTest
 {
   private static final ObjectMapper MAPPER = new DefaultObjectMapper();

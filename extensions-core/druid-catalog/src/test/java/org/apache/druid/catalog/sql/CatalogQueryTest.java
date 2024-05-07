@@ -45,7 +45,7 @@ import java.util.Collections;
 
 import static org.junit.Assert.fail;
 
-@SqlTestFrameworkConfig.Supplier(CatalogQueryComponentSupplier.class)
+@SqlTestFrameworkConfig.ComponentSupplier(CatalogQueryComponentSupplier.class)
 public class CatalogQueryTest extends BaseCalciteQueryTest
 {
   @RegisterExtension

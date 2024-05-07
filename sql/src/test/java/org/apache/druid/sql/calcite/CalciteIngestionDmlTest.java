@@ -89,7 +89,7 @@ import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 
-@SqlTestFrameworkConfig.Supplier(IngestionDmlComponentSupplier.class)
+@SqlTestFrameworkConfig.ComponentSupplier(IngestionDmlComponentSupplier.class)
 public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
 {
   protected static final Map<String, Object> DEFAULT_CONTEXT =

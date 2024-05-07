@@ -48,7 +48,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
-@SqlTestFrameworkConfig.Supplier(BloomDimFilterComponentSupplier.class)
+@SqlTestFrameworkConfig.ComponentSupplier(BloomDimFilterComponentSupplier.class)
 public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
 {
   public static class BloomDimFilterComponentSupplier extends StandardComponentSupplier

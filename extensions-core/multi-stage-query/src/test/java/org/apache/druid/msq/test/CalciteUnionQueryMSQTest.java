@@ -52,7 +52,7 @@ import org.junit.jupiter.api.Test;
 /**
  * Runs {@link CalciteUnionQueryTest} but with MSQ engine
  */
-@SqlTestFrameworkConfig.Supplier(CalciteUnionQueryMSQTest.UnionQueryMSQComponentSupplier.class)
+@SqlTestFrameworkConfig.ComponentSupplier(CalciteUnionQueryMSQTest.UnionQueryMSQComponentSupplier.class)
 public class CalciteUnionQueryMSQTest extends CalciteUnionQueryTest
 {
 

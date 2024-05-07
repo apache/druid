@@ -81,7 +81,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
 
-@SqlTestFrameworkConfig.Supplier(ThetaSketchComponentSupplier.class)
+@SqlTestFrameworkConfig.ComponentSupplier(ThetaSketchComponentSupplier.class)
 public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
 {
   private static final String DATA_SOURCE = "foo";

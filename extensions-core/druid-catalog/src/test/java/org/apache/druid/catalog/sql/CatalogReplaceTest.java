@@ -42,7 +42,7 @@ import static org.junit.Assert.fail;
 /**
  * Test the use of catalog specs to drive MSQ ingestion.
  */
-@SqlTestFrameworkConfig.Supplier(CatalogReplaceComponentSupplier.class)
+@SqlTestFrameworkConfig.ComponentSupplier(CatalogReplaceComponentSupplier.class)
 public class CatalogReplaceTest extends CalciteCatalogReplaceTest
 {
   @RegisterExtension

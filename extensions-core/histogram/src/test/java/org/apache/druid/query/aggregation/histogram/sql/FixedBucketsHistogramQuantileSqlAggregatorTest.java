@@ -64,7 +64,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
-@SqlTestFrameworkConfig.Supplier(FixedBucketsHistogramComponentSupplier.class)
+@SqlTestFrameworkConfig.ComponentSupplier(FixedBucketsHistogramComponentSupplier.class)
 public class FixedBucketsHistogramQuantileSqlAggregatorTest extends BaseCalciteQueryTest
 {
   protected static class FixedBucketsHistogramComponentSupplier extends StandardComponentSupplier

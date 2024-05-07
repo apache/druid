@@ -61,7 +61,7 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@SqlTestFrameworkConfig.Supplier(ArrayOfDoublesComponentSupplier.class)
+@SqlTestFrameworkConfig.ComponentSupplier(ArrayOfDoublesComponentSupplier.class)
 public class ArrayOfDoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
 {
 
