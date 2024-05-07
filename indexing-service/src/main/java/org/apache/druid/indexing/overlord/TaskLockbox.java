@@ -66,9 +66,9 @@ import java.util.NavigableMap;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Consumer;
@@ -88,10 +88,9 @@ import java.util.stream.Collectors;
  */
 public class TaskLockbox
 {
-  private static final long LOCK_ACQUIRE_TIMEOUT_MILLIS = 10_000L;
+  public static final long LOCK_ACQUIRE_TIMEOUT_MILLIS = 10_000L;
 
-  private final Map<String, ReadWriteLock> datasourceToConcurrentLock = new HashMap<>();
-  private final Map<String, Integer> datasourceToNumActiveLocks = new HashMap<>();
+  private final ConcurrentHashMap<String, ReentrantReadWriteLock> datasourceToConcurrentLock = new ConcurrentHashMap<>();
 
   // Datasource -> startTime -> Interval -> list of (Tasks + TaskLock)
   // Multiple shared locks can be acquired for the same dataSource and interval.
@@ -1282,14 +1281,9 @@ public class TaskLockbox
    * Acquire a read lock to perform the segment transactional append action for a given datasource.
    * Also verifies that all the locks are of the type APPEND for the task.
    * @param task task to perform the append action
+   * @param lockAcquireTimeoutMillis milliseconds to wait for lock acquisition
    */
-  public void acquireTransactionalAppendLock(Task task)
-  {
-    acquireTransactionalAppendLock(task, LOCK_ACQUIRE_TIMEOUT_MILLIS);
-  }
-
-  @VisibleForTesting
-  void acquireTransactionalAppendLock(Task task, long lockAcquireTimeoutMillis)
+  public void acquireTransactionalAppendLock(Task task, long lockAcquireTimeoutMillis)
   {
     for (TaskLockPosse lockPosse : findLockPossesForTask(task)) {
       if (lockPosse.taskLock.getType() != TaskLockType.APPEND) {
@@ -1299,26 +1293,22 @@ public class TaskLockbox
         );
       }
     }
+
     final String datasource = task.getDataSource();
-    giant.lock();
-    try {
-      final boolean acquired = datasourceToConcurrentLock
-          .computeIfAbsent(datasource, ds -> new ReentrantReadWriteLock())
-          .readLock()
-          .tryLock(lockAcquireTimeoutMillis, TimeUnit.MILLISECONDS);
-      if (!acquired) {
-        throw new ISE("Timed out while acquiring transactional append lock for datasource[%s].", datasource);
+    final ReentrantReadWriteLock readWriteLock =
+        datasourceToConcurrentLock.computeIfAbsent(datasource, ds -> new ReentrantReadWriteLock(true));
+
+    synchronized (readWriteLock) {
+      try {
+        final boolean acquired = readWriteLock.readLock()
+                                              .tryLock(lockAcquireTimeoutMillis, TimeUnit.MILLISECONDS);
+        if (!acquired) {
+          throw new ISE("Timed out while acquiring transactional append lock for datasource[%s].", datasource);
+        }
       }
-      datasourceToNumActiveLocks.put(
-          datasource,
-          datasourceToNumActiveLocks.getOrDefault(datasource, 0) + 1
-      );
-    }
-    catch (InterruptedException e) {
-      throw new ISE(e, "Interrupted while acquiring transactional append lock for datasource[%s].", datasource);
-    }
-    finally {
-      giant.unlock();
+      catch (InterruptedException e) {
+        throw new ISE(e, "Interrupted while acquiring transactional append lock for datasource[%s].", datasource);
+      }
     }
   }
 
@@ -1326,14 +1316,9 @@ public class TaskLockbox
    * Acquire a write lock to perform the segment transactional replace action for a given datasource.
    * Also verifies that all the locks are of the type REPLACE for the task.
    * @param task task to perform the replace action
+   * @param lockAcquireTimeoutMillis milliseconds to wait for lock acquisition
    */
-  public void acquireTransactionalReplaceLock(Task task)
-  {
-    acquireTransactionalReplaceLock(task, LOCK_ACQUIRE_TIMEOUT_MILLIS);
-  }
-
-  @VisibleForTesting
-  void acquireTransactionalReplaceLock(Task task, long lockAcquireTimeoutMillis)
+  public void acquireTransactionalReplaceLock(Task task, long lockAcquireTimeoutMillis)
   {
     for (TaskLockPosse lockPosse : findLockPossesForTask(task)) {
       if (lockPosse.taskLock.getType() != TaskLockType.REPLACE) {
@@ -1343,26 +1328,22 @@ public class TaskLockbox
         );
       }
     }
+
     final String datasource = task.getDataSource();
-    giant.lock();
-    try {
-      final boolean acquired = datasourceToConcurrentLock
-          .computeIfAbsent(datasource, ds -> new ReentrantReadWriteLock())
-          .writeLock()
-          .tryLock(lockAcquireTimeoutMillis, TimeUnit.MILLISECONDS);
-      if (!acquired) {
-        throw new ISE("Timed out while acquiring transactional replace lock for datasource[%s].", datasource);
+    final ReentrantReadWriteLock readWriteLock =
+        datasourceToConcurrentLock.computeIfAbsent(datasource, ds -> new ReentrantReadWriteLock(true));
+
+    synchronized (readWriteLock) {
+      try {
+        final boolean acquired = readWriteLock.writeLock()
+                                              .tryLock(lockAcquireTimeoutMillis, TimeUnit.MILLISECONDS);
+        if (!acquired) {
+          throw new ISE("Timed out while acquiring transactional replace lock for datasource[%s].", datasource);
+        }
       }
-      datasourceToNumActiveLocks.put(
-          datasource,
-          datasourceToNumActiveLocks.getOrDefault(datasource, 0) + 1
-      );
-    }
-    catch (InterruptedException e) {
-      throw new ISE(e, "Interrupted while acquiring transactional replace lock for datasource[%s].", datasource);
-    }
-    finally {
-      giant.unlock();
+      catch (InterruptedException e) {
+        throw new ISE(e, "Interrupted while acquiring transactional replace lock for datasource[%s].", datasource);
+      }
     }
   }
 
@@ -1386,27 +1367,20 @@ public class TaskLockbox
 
   private void releaseTransactionalLock(Task task, boolean replace)
   {
-    giant.lock();
-    try {
-      final String datasource = task.getDataSource();
+    final String datasource = task.getDataSource();
+    final ReentrantReadWriteLock readWriteLock = datasourceToConcurrentLock.get(datasource);
+    synchronized (readWriteLock) {
       if (!datasourceToConcurrentLock.containsKey(datasource)) {
         return;
       }
       if (replace) {
-        datasourceToConcurrentLock.get(datasource).writeLock().unlock();
+        readWriteLock.writeLock().unlock();
       } else {
-        datasourceToConcurrentLock.get(datasource).readLock().unlock();
+        readWriteLock.readLock().unlock();
       }
-      final Integer numActiveLocks = datasourceToNumActiveLocks.get(datasource);
-      if (numActiveLocks == null || numActiveLocks <= 1) {
-        datasourceToNumActiveLocks.remove(datasource);
+      if (!readWriteLock.isWriteLocked() && readWriteLock.getReadLockCount() == 0 && !readWriteLock.hasQueuedThreads()) {
         datasourceToConcurrentLock.remove(datasource);
-      } else {
-        datasourceToNumActiveLocks.put(datasource, numActiveLocks - 1);
       }
-    }
-    finally {
-      giant.unlock();
     }
   }
 

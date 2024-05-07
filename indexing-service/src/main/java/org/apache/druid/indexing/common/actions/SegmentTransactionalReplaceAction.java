@@ -119,34 +119,29 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
   {
     final TaskLockbox taskLockbox = toolbox.getTaskLockbox();
     TaskLocks.checkLockCoversSegments(task, taskLockbox, segments);
-    taskLockbox.acquireTransactionalReplaceLock(task);
+    taskLockbox.acquireTransactionalReplaceLock(task, TaskLockbox.LOCK_ACQUIRE_TIMEOUT_MILLIS);
     try {
       // Find the active replace locks held only by this task
       final Set<ReplaceTaskLock> replaceLocksForTask
           = toolbox.getTaskLockbox().findReplaceLocksForTask(task);
 
       final SegmentPublishResult publishResult;
-      try {
-        publishResult = toolbox.getTaskLockbox().doInCriticalSection(
-            task,
-            segments.stream().map(DataSegment::getInterval).collect(Collectors.toSet()),
-            CriticalAction.<SegmentPublishResult>builder()
-                          .onValidLocks(
-                              () -> toolbox.getIndexerMetadataStorageCoordinator()
-                                           .commitReplaceSegments(segments, replaceLocksForTask, segmentSchemaMapping)
-                          )
-                          .onInvalidLocks(
-                              () -> SegmentPublishResult.fail(
-                                  "Invalid task locks. Maybe they are revoked by a higher priority task."
-                                  + " Please check the overlord log for details."
-                              )
-                          )
-                          .build()
-        );
-      }
-      catch (Exception e) {
-        throw new RuntimeException(e);
-      }
+      publishResult = toolbox.getTaskLockbox().doInCriticalSection(
+          task,
+          segments.stream().map(DataSegment::getInterval).collect(Collectors.toSet()),
+          CriticalAction.<SegmentPublishResult>builder()
+                        .onValidLocks(
+                            () -> toolbox.getIndexerMetadataStorageCoordinator()
+                                         .commitReplaceSegments(segments, replaceLocksForTask, segmentSchemaMapping)
+                        )
+                        .onInvalidLocks(
+                            () -> SegmentPublishResult.fail(
+                                "Invalid task locks. Maybe they are revoked by a higher priority task."
+                                + " Please check the overlord log for details."
+                            )
+                        )
+                        .build()
+      );
 
       IndexTaskUtils.emitSegmentPublishMetrics(publishResult, task, toolbox);
 
@@ -163,6 +158,9 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
       }
 
       return publishResult;
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
     }
     finally {
       taskLockbox.releaseTransactionalReplaceLock(task);

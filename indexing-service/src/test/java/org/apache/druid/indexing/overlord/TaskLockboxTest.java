@@ -2019,7 +2019,7 @@ public class TaskLockboxTest
             TaskLockType.EXCLUSIVE.name(), task.getId()
         )
     );
-    lockbox.acquireTransactionalReplaceLock(task);
+    lockbox.acquireTransactionalReplaceLock(task, 100);
   }
 
   @Test
@@ -2035,7 +2035,7 @@ public class TaskLockboxTest
             TaskLockType.REPLACE.name(), task.getId()
         )
     );
-    lockbox.acquireTransactionalAppendLock(task);
+    lockbox.acquireTransactionalAppendLock(task, 100);
   }
 
   @Test
