@@ -45,9 +45,8 @@ import org.apache.druid.sql.calcite.parser.DruidSqlParserUtils;
 import org.apache.druid.sql.calcite.parser.DruidSqlReplace;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -61,6 +60,7 @@ import static org.apache.druid.segment.column.ColumnType.FLOAT;
 import static org.apache.druid.segment.column.ColumnType.LONG;
 import static org.apache.druid.segment.column.ColumnType.STRING;
 import static org.apache.druid.segment.column.ColumnType.ofComplex;
+import static org.hamcrest.MatcherAssert.assertThat;
 
 public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
 {
@@ -657,7 +657,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
       Assert.fail("Exception should be thrown");
     }
     catch (DruidException e) {
-      MatcherAssert.assertThat(
+      assertThat(
           e,
           invalidSqlIs(
               "Invalid granularity['invalid_granularity'] specified after PARTITIONED BY clause."
@@ -733,8 +733,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
                 }
             ),
             null
-        ),
-        null
+        )
     );
 
     testQuery(
@@ -753,8 +752,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
                 }
             ),
             null
-        ),
-        null
+        )
     );
 
     // Not using testIngestionQuery, so must set didTest manually to satisfy the check in tearDown.
@@ -817,8 +815,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
                 }
             ),
             null
-        ),
-        null
+        )
     );
 
     testQuery(
@@ -837,8 +834,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
                 }
             ),
             null
-        ),
-        null
+        )
     );
 
     // Not using testIngestionQuery, so must set didTest manually to satisfy the check in tearDown.
@@ -924,8 +920,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
                 }
             ),
             null
-        ),
-        null
+        )
     );
 
     testQuery(
@@ -944,8 +939,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
                 }
             ),
             null
-        ),
-        null
+        )
     );
 
     // Not using testIngestionQuery, so must set didTest manually to satisfy the check in tearDown.
@@ -1004,8 +998,6 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   @Test
   public void testReplaceWithNonExistentOrdinalInClusteredBy()
   {
-    skipVectorize();
-
     final String sql = "REPLACE INTO dst"
                        + " OVERWRITE WHERE __time >= TIMESTAMP '2000-01-01 00:00:00' AND __time < TIMESTAMP '2000-01-02 00:00:00' "
                        + " SELECT * FROM foo"
@@ -1023,8 +1015,6 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   @Test
   public void testReplaceWithNegativeOrdinalInClusteredBy()
   {
-    skipVectorize();
-
     final String sql = "REPLACE INTO dst"
                        + " OVERWRITE WHERE __time >= TIMESTAMP '2000-01-01 00:00:00' AND __time < TIMESTAMP '2000-01-02 00:00:00' "
                        + " SELECT * FROM foo"

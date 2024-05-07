@@ -37,6 +37,8 @@ import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.filter.InDimFilter;
+import org.apache.druid.query.filter.TypedInFilter;
 import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.lookup.RegisteredLookupExtractionFn;
@@ -370,11 +372,19 @@ public class PlannerContext
    * {@link org.apache.druid.query.filter.EqualityFilter}, and {@link org.apache.druid.query.filter.NullFilter} (false).
    *
    * Typically true when {@link NullHandling#replaceWithDefault()} and false when {@link NullHandling#sqlCompatible()}.
-   * Can be overriden by the undocumented context parameter {@link #CTX_SQL_USE_BOUNDS_AND_SELECTORS}.
+   * Can be overriden by the context parameter {@link #CTX_SQL_USE_BOUNDS_AND_SELECTORS}.
    */
   public boolean isUseBoundsAndSelectors()
   {
     return useBoundsAndSelectors;
+  }
+
+  /**
+   * Whether we should use {@link InDimFilter} (true) or {@link TypedInFilter} (false).
+   */
+  public boolean isUseLegacyInFilter()
+  {
+    return useBoundsAndSelectors || NullHandling.replaceWithDefault();
   }
 
   /**
@@ -574,9 +584,8 @@ public class PlannerContext
   /**
    * Checks if the current {@link SqlEngine} supports a particular feature.
    *
-   * When executing a specific query, use this method instead of
-   * {@link SqlEngine#featureAvailable(EngineFeature, PlannerContext)}, because it also verifies feature flags such as
-   * {@link #CTX_ENABLE_WINDOW_FNS}.
+   * When executing a specific query, use this method instead of {@link SqlEngine#featureAvailable(EngineFeature)}
+   * because it also verifies feature flags such as {@link #CTX_ENABLE_WINDOW_FNS}.
    */
   public boolean featureAvailable(final EngineFeature feature)
   {
@@ -585,7 +594,11 @@ public class PlannerContext
       // Short-circuit: feature requires context flag.
       return false;
     }
-    return engine.featureAvailable(feature, this);
+    if (feature == EngineFeature.TIME_BOUNDARY_QUERY && !queryContext().isTimeBoundaryPlanningEnabled()) {
+      // Short-circuit: feature requires context flag.
+      return false;
+    }
+    return engine.featureAvailable(feature);
   }
 
   public QueryMaker getQueryMaker()

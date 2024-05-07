@@ -28,6 +28,8 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
@@ -43,7 +45,8 @@ public final class ConnectionUriUtils
   public static final String MARIADB_PREFIX = "jdbc:mariadb:";
 
   public static final String POSTGRES_DRIVER = "org.postgresql.Driver";
-  public static final String MYSQL_NON_REGISTERING_DRIVER = "com.mysql.jdbc.NonRegisteringDriver";
+  public static final String MYSQL_CONNECTION_URL = "com.mysql.cj.conf.ConnectionUrl";
+  public static final String MYSQL_HOST_INFO = "com.mysql.cj.conf.HostInfo";
 
   /**
    * This method checks {@param actualProperties} against {@param allowedProperties} if they are not system properties.
@@ -99,7 +102,7 @@ public final class ConnectionUriUtils
         }
         catch (ClassNotFoundException notFoundMaria2x) {
           throw new RuntimeException(
-              "Failed to find MySQL driver class. Please check the MySQL connector version 5.1.49 is in the classpath",
+              "Failed to find MySQL driver class. Please check the MySQL connector version 8.2.0 is in the classpath",
               notFoundMysql
           );
         }
@@ -177,21 +180,66 @@ public final class ConnectionUriUtils
   }
 
   public static Set<String> tryParseMySqlConnectionUri(String connectionUri)
-      throws ClassNotFoundException, NoSuchMethodException, InstantiationException, IllegalAccessException,
+      throws ClassNotFoundException, NoSuchMethodException, IllegalAccessException,
              InvocationTargetException
   {
-    Class<?> driverClass = Class.forName(MYSQL_NON_REGISTERING_DRIVER);
-    Method parseUrl = driverClass.getMethod("parseURL", String.class, Properties.class);
-    // almost the same as postgres, but is an instance level method
-    Properties properties = (Properties) parseUrl.invoke(
-        driverClass.getConstructor().newInstance(),
-        connectionUri,
-        null
-    );
-
-    if (properties == null) {
+    Class<?> connectionUrlClass = Class.forName(MYSQL_CONNECTION_URL);
+    Method isConnectionStringSupported = connectionUrlClass.getMethod("acceptsUrl", String.class);
+    if (!(boolean) isConnectionStringSupported.invoke(connectionUrlClass, connectionUri)) {
       throw new IAE("Invalid URL format for MySQL: [%s]", connectionUri);
     }
+    Method getConnectionUrlInstanceMethod = connectionUrlClass.getMethod("getConnectionUrlInstance", String.class, Properties.class);
+    Object conUrl = getConnectionUrlInstanceMethod.invoke(connectionUrlClass, connectionUri, null);
+    Method getHostsList = connectionUrlClass.getMethod("getHostsList");
+    return getKeysFromOptions(getPropertiesFromHosts((List<?>) getHostsList.invoke(conUrl)));
+  }
+
+  private static Properties getPropertiesFromHosts(List<?> hostsList)
+      throws NoSuchMethodException, InvocationTargetException, IllegalAccessException, ClassNotFoundException
+  {
+    Properties properties = new Properties();
+    Class<?> hostInfoClass = Class.forName(MYSQL_HOST_INFO);
+    for (Object host : hostsList) {
+      Method getHostMethod = hostInfoClass.getMethod("getHost");
+      String hostName = (String) getHostMethod.invoke(host);
+      if (hostName != null) {
+        properties.setProperty("HOST", hostName);
+      }
+
+      Method getPortMethod = hostInfoClass.getMethod("getPort");
+      Integer port = (Integer) getPortMethod.invoke(host);
+      if (port != null) {
+        properties.setProperty("PORT", String.valueOf(port));
+      }
+
+      Method getUserMethod = hostInfoClass.getMethod("getUser");
+      String user = (String) getUserMethod.invoke(host);
+      if (user != null) {
+        properties.setProperty("user", user);
+      }
+
+      Method getPasswordMethod = hostInfoClass.getMethod("getPassword");
+      String password = (String) getPasswordMethod.invoke(host);
+      if (password != null) {
+        properties.setProperty("password", password);
+      }
+
+      Method getHostPropertiesMethod = hostInfoClass.getMethod("getHostProperties");
+      Map<String, String> hostProperties =
+          (Map<String, String>) getHostPropertiesMethod.invoke(host);
+      if (hostProperties != null) {
+        for (Map.Entry<String, String> entry : hostProperties.entrySet()) {
+          if (entry.getKey() != null && entry.getValue() != null) {
+            properties.setProperty(entry.getKey(), entry.getValue());
+          }
+        }
+      }
+    }
+    return properties;
+  }
+
+  private static Set<String> getKeysFromOptions(Properties properties)
+  {
     Set<String> keys = Sets.newHashSetWithExpectedSize(properties.size());
     properties.forEach((k, v) -> keys.add((String) k));
     return keys;

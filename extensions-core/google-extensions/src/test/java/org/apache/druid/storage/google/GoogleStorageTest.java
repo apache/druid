@@ -19,9 +19,11 @@
 
 package org.apache.druid.storage.google;
 
+import com.google.api.client.http.AbstractInputStreamContent;
 import com.google.api.gax.paging.Page;
 import com.google.cloud.storage.Blob;
 import com.google.cloud.storage.BlobId;
+import com.google.cloud.storage.BlobInfo;
 import com.google.cloud.storage.Storage;
 import com.google.cloud.storage.StorageException;
 import com.google.common.collect.ImmutableList;
@@ -31,7 +33,9 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -66,11 +70,50 @@ public class GoogleStorageTest
   }
 
   @Test
+  public void testInsertDefaultBufferSize() throws IOException
+  {
+    final ByteArrayInputStream inputStream = new ByteArrayInputStream(new byte[0]);
+    final Capture<InputStream> inputStreamCapture = Capture.newInstance();
+    final AbstractInputStreamContent httpContent = EasyMock.createMock(AbstractInputStreamContent.class);
+    EasyMock.expect(httpContent.getInputStream()).andReturn(inputStream);
+    EasyMock.expect(
+        mockStorage.createFrom(
+            EasyMock.eq(BlobInfo.newBuilder(BlobId.of(BUCKET, PATH)).build()),
+            EasyMock.capture(inputStreamCapture)
+        )
+    ).andReturn(blob);
+    EasyMock.replay(httpContent, mockStorage, blob);
+    googleStorage.insert(BUCKET, PATH, httpContent, null);
+    EasyMock.verify(httpContent, mockStorage, blob);
+  }
+
+  @Test
+  public void testInsertCustomBufferSize() throws IOException
+  {
+    final int bufferSize = 100;
+    final ByteArrayInputStream inputStream = new ByteArrayInputStream(new byte[0]);
+    final Capture<InputStream> inputStreamCapture = Capture.newInstance();
+    final AbstractInputStreamContent httpContent = EasyMock.createMock(AbstractInputStreamContent.class);
+    EasyMock.expect(httpContent.getInputStream()).andReturn(inputStream);
+    EasyMock.expect(
+        mockStorage.createFrom(
+            EasyMock.eq(BlobInfo.newBuilder(BlobId.of(BUCKET, PATH)).build()),
+            EasyMock.capture(inputStreamCapture),
+            EasyMock.eq(bufferSize)
+        )
+    ).andReturn(blob);
+    EasyMock.replay(httpContent, mockStorage, blob);
+    googleStorage.insert(BUCKET, PATH, httpContent, bufferSize);
+    EasyMock.verify(httpContent, mockStorage, blob);
+  }
+
+  @Test
   public void testDeleteSuccess()
   {
     EasyMock.expect(mockStorage.delete(EasyMock.eq(BUCKET), EasyMock.eq(PATH))).andReturn(true);
     EasyMock.replay(mockStorage);
     googleStorage.delete(BUCKET, PATH);
+    EasyMock.verify(mockStorage);
   }
 
   @Test
@@ -79,6 +122,7 @@ public class GoogleStorageTest
     EasyMock.expect(mockStorage.delete(EasyMock.eq(BUCKET), EasyMock.eq(PATH))).andReturn(false);
     EasyMock.replay(mockStorage);
     googleStorage.delete(BUCKET, PATH);
+    EasyMock.verify(mockStorage);
   }
 
   @Test
@@ -87,6 +131,7 @@ public class GoogleStorageTest
     EasyMock.expect(mockStorage.delete(EasyMock.eq(BUCKET), EasyMock.eq(PATH))).andThrow(STORAGE_EXCEPTION);
     EasyMock.replay(mockStorage);
     Assert.assertThrows(StorageException.class, () -> googleStorage.delete(BUCKET, PATH));
+    EasyMock.verify(mockStorage);
   }
 
   @Test
@@ -107,7 +152,7 @@ public class GoogleStorageTest
     assertTrue(paths.size() == recordedPaths.size() && paths.containsAll(recordedPaths) && recordedPaths.containsAll(
         paths));
     assertEquals(BUCKET, recordedBlobIds.get(0).getBucket());
-
+    EasyMock.verify(mockStorage);
   }
 
   @Test
@@ -129,7 +174,7 @@ public class GoogleStorageTest
     assertTrue(paths.containsAll(recordedPaths));
     assertTrue(recordedPaths.containsAll(paths));
     assertEquals(BUCKET, recordedBlobIds.get(0).getBucket());
-
+    EasyMock.verify(mockStorage);
   }
 
   @Test
@@ -140,6 +185,7 @@ public class GoogleStorageTest
             .andThrow(STORAGE_EXCEPTION);
     EasyMock.replay(mockStorage);
     Assert.assertThrows(StorageException.class, () -> googleStorage.batchDelete(BUCKET, paths));
+    EasyMock.verify(mockStorage);
   }
 
   @Test
@@ -164,6 +210,7 @@ public class GoogleStorageTest
         new GoogleStorageObjectMetadata(BUCKET, PATH, SIZE, UPDATE_TIME.toEpochSecond() * 1000)
     );
 
+    EasyMock.verify(mockStorage);
   }
 
   @Test
@@ -172,6 +219,7 @@ public class GoogleStorageTest
     EasyMock.expect(mockStorage.get(EasyMock.eq(BUCKET), EasyMock.eq(PATH))).andReturn(blob);
     EasyMock.replay(mockStorage);
     assertTrue(googleStorage.exists(BUCKET, PATH));
+    EasyMock.verify(mockStorage);
   }
 
   @Test
@@ -180,6 +228,7 @@ public class GoogleStorageTest
     EasyMock.expect(mockStorage.get(EasyMock.eq(BUCKET), EasyMock.eq(PATH))).andReturn(null);
     EasyMock.replay(mockStorage);
     assertFalse(googleStorage.exists(BUCKET, PATH));
+    EasyMock.verify(mockStorage);
   }
 
   @Test
@@ -198,23 +247,25 @@ public class GoogleStorageTest
     long size = googleStorage.size(BUCKET, PATH);
 
     assertEquals(size, SIZE);
+    EasyMock.verify(mockStorage, blob);
   }
 
   @Test
   public void testVersion() throws IOException
   {
-    final String version = "7";
+    final String etag = "abcd";
     EasyMock.expect(mockStorage.get(
         EasyMock.eq(BUCKET),
         EasyMock.eq(PATH),
         EasyMock.anyObject(Storage.BlobGetOption.class)
     )).andReturn(blob);
 
-    EasyMock.expect(blob.getGeneratedId()).andReturn(version);
+    EasyMock.expect(blob.getEtag()).andReturn(etag);
 
     EasyMock.replay(mockStorage, blob);
 
-    assertEquals(version, googleStorage.version(BUCKET, PATH));
+    assertEquals(etag, googleStorage.version(BUCKET, PATH));
+    EasyMock.verify(mockStorage, blob);
   }
 
   @Test
@@ -279,5 +330,7 @@ public class GoogleStorageTest
     assertEquals(objectPage.getObjectList().get(0), objectMetadata1);
     assertEquals(objectPage.getObjectList().get(1), objectMetadata2);
     assertEquals(objectPage.getNextPageToken(), nextPageToken);
+
+    EasyMock.verify(mockStorage, blobPage, blob1, blob2);
   }
 }

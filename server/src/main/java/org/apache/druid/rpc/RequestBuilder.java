@@ -32,8 +32,6 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Duration;
 
 import javax.ws.rs.core.MediaType;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Objects;
@@ -77,11 +75,11 @@ public class RequestBuilder
     return this;
   }
 
-  public RequestBuilder jsonContent(final ObjectMapper jsonMapper, final Object content)
+  public RequestBuilder objectContent(final ObjectMapper objectMapper, final String contentType, final Object content)
   {
     try {
-      this.contentType = MediaType.APPLICATION_JSON;
-      this.content = jsonMapper.writeValueAsBytes(Preconditions.checkNotNull(content, "content"));
+      this.contentType = contentType;
+      this.content = objectMapper.writeValueAsBytes(Preconditions.checkNotNull(content, "content"));
       return this;
     }
     catch (JsonProcessingException e) {
@@ -89,16 +87,14 @@ public class RequestBuilder
     }
   }
 
+  public RequestBuilder jsonContent(final ObjectMapper jsonMapper, final Object content)
+  {
+    return objectContent(jsonMapper, MediaType.APPLICATION_JSON, content);
+  }
+
   public RequestBuilder smileContent(final ObjectMapper smileMapper, final Object content)
   {
-    try {
-      this.contentType = SmileMediaTypes.APPLICATION_JACKSON_SMILE;
-      this.content = smileMapper.writeValueAsBytes(Preconditions.checkNotNull(content, "content"));
-      return this;
-    }
-    catch (JsonProcessingException e) {
-      throw new RuntimeException(e);
-    }
+    return objectContent(smileMapper, SmileMediaTypes.APPLICATION_JACKSON_SMILE, content);
   }
 
   public RequestBuilder timeout(final Duration timeout)
@@ -121,8 +117,7 @@ public class RequestBuilder
   public Request build(ServiceLocation serviceLocation)
   {
     // It's expected that our encodedPathAndQueryString starts with '/' and the service base path doesn't end with one.
-    final String path = serviceLocation.getBasePath() + encodedPathAndQueryString;
-    final Request request = new Request(method, makeURL(serviceLocation, path));
+    final Request request = new Request(method, serviceLocation.toURL(encodedPathAndQueryString));
 
     for (final Map.Entry<String, String> entry : headers.entries()) {
       request.addHeader(entry.getKey(), entry.getValue());
@@ -133,29 +128,6 @@ public class RequestBuilder
     }
 
     return request;
-  }
-
-  private URL makeURL(final ServiceLocation serviceLocation, final String encodedPathAndQueryString)
-  {
-    final String scheme;
-    final int portToUse;
-
-    if (serviceLocation.getTlsPort() > 0) {
-      // Prefer HTTPS if available.
-      scheme = "https";
-      portToUse = serviceLocation.getTlsPort();
-    } else {
-      scheme = "http";
-      portToUse = serviceLocation.getPlaintextPort();
-    }
-
-    // Use URL constructor, not URI, since the path is already encoded.
-    try {
-      return new URL(scheme, serviceLocation.getHost(), portToUse, encodedPathAndQueryString);
-    }
-    catch (MalformedURLException e) {
-      throw new IllegalArgumentException(e);
-    }
   }
 
   @Override

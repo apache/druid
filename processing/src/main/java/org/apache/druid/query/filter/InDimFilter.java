@@ -31,6 +31,7 @@ import com.google.common.base.Suppliers;
 import com.google.common.collect.ForwardingSortedSet;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.Sets;
@@ -42,7 +43,6 @@ import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.java.util.common.ByteBufferUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Comparators;
@@ -69,12 +69,20 @@ import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
+/**
+ * Approximately like the SQL 'IN' filter, with the main difference being that this will match NULL values if contained
+ * in the values list instead of ignoring them.
+ * <p>
+ * This filter specifies all match values as a sorted string set; matching against other column types must incur the
+ * cost of converting values to check for matches. For the most part, {@link TypedInFilter} should be used instead.
+ */
 public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
 {
   /**
@@ -84,7 +92,7 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
    */
   private final ValuesSet values;
   // Computed eagerly, not lazily, because lazy computations would block all processing threads for a given query.
-  private final SortedSet<ByteBuffer> valuesUtf8;
+  private final List<ByteBuffer> valuesUtf8;
   private final String dimension;
   @Nullable
   private final ExtractionFn extractionFn;
@@ -806,9 +814,9 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
       return copyOf(values.iterator());
     }
 
-    public SortedSet<ByteBuffer> toUtf8()
+    public List<ByteBuffer> toUtf8()
     {
-      final TreeSet<ByteBuffer> valuesUtf8 = new TreeSet<>(ByteBufferUtils.utf8Comparator());
+      final List<ByteBuffer> valuesUtf8 = Lists.newArrayListWithCapacity(values.size());
 
       for (final String value : values) {
         if (value == null) {

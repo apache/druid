@@ -147,7 +147,8 @@ public class CompressedDoublesSerdeTest
           segmentWriteOutMedium,
           "test",
           order,
-          compressionStrategy
+          compressionStrategy,
+          segmentWriteOutMedium.getCloser()
       );
       serializer.open();
 
@@ -160,12 +161,14 @@ public class CompressedDoublesSerdeTest
 
   public void testWithValues(double[] values) throws Exception
   {
+    final SegmentWriteOutMedium segmentWriteOutMedium = new OffHeapMemorySegmentWriteOutMedium();
     ColumnarDoublesSerializer serializer = CompressionFactory.getDoubleSerializer(
         "test",
-        new OffHeapMemorySegmentWriteOutMedium(),
+        segmentWriteOutMedium,
         "test",
         order,
-        compressionStrategy
+        compressionStrategy,
+        segmentWriteOutMedium.getCloser()
     );
     serializer.open();
 
@@ -189,6 +192,9 @@ public class CompressedDoublesSerdeTest
         tryFill(doubles, values, start, end - start);
       }
       testConcurrentThreadReads(supplier, doubles, values);
+    }
+    finally {
+      segmentWriteOutMedium.close();
     }
   }
 

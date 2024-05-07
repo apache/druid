@@ -121,7 +121,7 @@ public class GroupByRowProcessor
           @Override
           public ByteBuffer get()
           {
-            final ResourceHolder<ByteBuffer> mergeBufferHolder = resource.getMergeBuffer();
+            final ResourceHolder<ByteBuffer> mergeBufferHolder = resource.getToolchestMergeBuffer();
             closeOnExit.register(mergeBufferHolder);
             return mergeBufferHolder.get();
           }

@@ -92,7 +92,7 @@ public class DruidQueryGenerator
         return newVertex.get();
       }
       inputVertex = vertexFactory.createVertex(
-          PartialDruidQuery.createOuterQuery(((PDQVertex) inputVertex).partialDruidQuery),
+          PartialDruidQuery.createOuterQuery(((PDQVertex) inputVertex).partialDruidQuery, vertexFactory.plannerContext),
           ImmutableList.of(inputVertex)
       );
       newVertex = inputVertex.extendWith(stack);

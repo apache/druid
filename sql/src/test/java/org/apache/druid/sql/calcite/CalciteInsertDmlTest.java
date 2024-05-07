@@ -52,10 +52,9 @@ import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
-import org.junit.Test;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
@@ -69,6 +68,7 @@ import static org.apache.druid.segment.column.ColumnType.DOUBLE;
 import static org.apache.druid.segment.column.ColumnType.FLOAT;
 import static org.apache.druid.segment.column.ColumnType.LONG;
 import static org.apache.druid.segment.column.ColumnType.STRING;
+import static org.hamcrest.MatcherAssert.assertThat;
 
 public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
 {
@@ -765,8 +765,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                 }
             ),
             null
-        ),
-        null
+        )
     );
 
     // Test correctness of the query when only the CLUSTERED BY clause is present
@@ -802,8 +801,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                 }
             ),
             null
-        ),
-        null
+        )
     );
 
     // Not using testIngestionQuery, so must set didTest manually to satisfy the check in tearDown.
@@ -866,8 +864,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                 }
             ),
             null
-        ),
-        null
+        )
     );
 
     // Test correctness of the query when only the CLUSTERED BY clause is present
@@ -900,8 +897,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                 }
             ),
             null
-        ),
-        null
+        )
     );
 
     // Not using testIngestionQuery, so must set didTest manually to satisfy the check in tearDown.
@@ -973,8 +969,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                 }
             ),
             null
-        ),
-        null
+        )
     );
 
     // Test correctness of the query when only the CLUSTERED BY clause is present
@@ -1005,8 +1000,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                 }
             ),
             null
-        ),
-        null
+        )
     );
 
     // Not using testIngestionQuery, so must set didTest manually to satisfy the check in tearDown.
@@ -1119,7 +1113,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         .sql(
             "INSERT INTO druid.dst "
             + "SELECT __time, FLOOR(m1) as floor_m1, dim1, CEIL(m2) as ceil_m2 FROM foo "
-            + "CLUSTERED BY 2, dim1 DESC, CEIL(m2)"
+            + "CLUSTERED BY 2, dim1, CEIL(m2)"
         )
         .expectValidationError(invalidSqlIs(
             "CLUSTERED BY found before PARTITIONED BY, CLUSTERED BY must come after the PARTITIONED BY clause"
@@ -1203,7 +1197,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
       Assert.fail("Exception should be thrown");
     }
     catch (DruidException e) {
-      MatcherAssert.assertThat(e, invalidSqlIs(
+      assertThat(e, invalidSqlIs(
           "Cannot use an ORDER BY clause on a Query of type [INSERT], use CLUSTERED BY instead"
       ));
     }
@@ -1222,7 +1216,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
       Assert.fail("Exception should be thrown");
     }
     catch (DruidException e) {
-      MatcherAssert.assertThat(
+      assertThat(
           e,
           invalidSqlIs(
               "Invalid granularity['invalid_granularity'] specified after PARTITIONED BY clause."
@@ -1249,7 +1243,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
       Assert.fail("Exception should be thrown");
     }
     catch (DruidException e) {
-      MatcherAssert.assertThat(
+      assertThat(
           e,
           invalidSqlIs("Cannot use an ORDER BY clause on a Query of type [INSERT], use CLUSTERED BY instead")
       );
@@ -1272,7 +1266,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
             )
     );
 
-    MatcherAssert.assertThat(
+    assertThat(
         e,
         invalidSqlIs("Operation [INSERT] requires a PARTITIONED BY to be explicitly defined, but none was found.")
     );
@@ -1342,8 +1336,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                 }
             ),
             null
-        ),
-        null
+        )
     );
 
 
@@ -1363,8 +1356,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                 }
             ),
             null
-        ),
-        null
+        )
     );
 
     // Not using testIngestionQuery, so must set didTest manually to satisfy the check in tearDown.
@@ -1447,8 +1439,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                 }
             ),
             null
-        ),
-        null
+        )
     );
 
     testQuery(
@@ -1467,8 +1458,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                 }
             ),
             null
-        ),
-        null
+        )
     );
 
     // Not using testIngestionQuery, so must set didTest manually to satisfy the check in tearDown.
@@ -1650,6 +1640,15 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   {
     testIngestionQuery()
         .sql("INSERT INTO t SELECT __time, dim1 AS EXPR$0 FROM foo PARTITIONED BY ALL")
+        .expectValidationError(invalidSqlContains("Insertion requires columns to be named"))
+        .verify();
+  }
+
+  @Test
+  public void testInsertWithInvalidColumnName2InIngest()
+  {
+    testIngestionQuery()
+        .sql("INSERT INTO t SELECT __time, 1+1 FROM foo PARTITIONED BY ALL")
         .expectValidationError(invalidSqlContains("Insertion requires columns to be named"))
         .verify();
   }

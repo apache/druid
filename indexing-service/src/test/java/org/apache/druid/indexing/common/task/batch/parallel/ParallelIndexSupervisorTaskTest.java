@@ -34,6 +34,8 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
+import org.apache.druid.indexer.report.KillTaskReport;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.IAE;
@@ -62,7 +64,6 @@ import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.experimental.runners.Enclosed;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
@@ -83,7 +84,6 @@ import java.util.stream.IntStream;
 import static org.easymock.EasyMock.expect;
 import static org.easymock.EasyMock.mock;
 
-@RunWith(Enclosed.class)
 public class ParallelIndexSupervisorTaskTest
 {
   @RunWith(Parameterized.class)
@@ -483,7 +483,7 @@ public class ParallelIndexSupervisorTaskTest
     public void testGetTaskReportOk() throws Exception
     {
       final String taskId = "task";
-      final Map<String, Object> report = ImmutableMap.of("foo", "bar");
+      final TaskReport.ReportMap report = TaskReport.buildTaskReports(new KillTaskReport("taskId", null));
 
       final OverlordClient client = mock(OverlordClient.class);
       expect(client.taskReportAsMap(taskId)).andReturn(Futures.immediateFuture(report));

@@ -55,6 +55,12 @@ public class MSQTestControllerClient implements ControllerClient
   }
 
   @Override
+  public void postDoneReadingInput(StageId stageId, int workerNumber)
+  {
+    controller.doneReadingInput(stageId.getStageNumber(), workerNumber);
+  }
+
+  @Override
   public void postCounters(String workerId, CounterSnapshotsTree snapshotsTree)
   {
     if (snapshotsTree != null) {

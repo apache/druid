@@ -442,11 +442,15 @@ public interface ApplyFunction extends NamedFunction
 
       Object[] array = arrayEval.asArray();
       if (array == null) {
-        return ExprEval.of(null);
+        return ExprEval.ofArray(arrayEval.asArrayType(), null);
       }
 
       SettableLambdaBinding lambdaBinding = new SettableLambdaBinding(arrayEval.elementType(), lambdaExpr, bindings);
       Object[] filtered = filter(arrayEval.asArray(), lambdaExpr, lambdaBinding).toArray();
+      // return null array expr if nothing is left in filtered
+      if (filtered.length == 0) {
+        return ExprEval.ofArray(arrayEval.asArrayType(), null);
+      }
       return ExprEval.ofArray(arrayEval.asArrayType(), filtered);
     }
 

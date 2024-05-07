@@ -14,6 +14,7 @@
       "tutorials/tutorial-rollup",
       "tutorials/tutorial-sketches-theta",
       "tutorials/tutorial-retention",
+      "tutorials/tutorial-append-data",
       "tutorials/tutorial-update-data",
       "tutorials/tutorial-compaction",
       "tutorials/tutorial-delete-data",
@@ -23,6 +24,7 @@
       "tutorials/docker",
       "tutorials/tutorial-kerberos-hadoop",
       "tutorials/tutorial-sql-query-view",
+      "tutorials/tutorial-sql-null",
       "tutorials/tutorial-unnest-arrays",
       "tutorials/tutorial-query-deep-storage",
       "tutorials/tutorial-jdbc"

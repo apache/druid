@@ -50,6 +50,7 @@ import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.sql.SqlStatementFactory;
+import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregationModule;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
@@ -67,8 +68,12 @@ import org.apache.druid.sql.calcite.view.InProcessViewManager;
 import org.apache.druid.sql.calcite.view.ViewManager;
 import org.apache.druid.timeline.DataSegment;
 
-import java.io.File;
+import java.io.Closeable;
 import java.io.IOException;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
@@ -99,7 +104,7 @@ import java.util.Set;
  * <p>
  * The framework should be built once per test class (not once per test method.)
  * Then, for each planner setup, call
- * {@link #plannerFixture(PlannerComponentSupplier, PlannerConfig, AuthConfig)}
+ * {@link #plannerFixture(PlannerConfig, AuthConfig)}
  * to get a {@link PlannerFixture} with a view manager and planner factory. Call
  * {@link PlannerFixture#statementFactory()} to
  * obtain a the test-specific planner and wrapper classes for that test. After
@@ -119,6 +124,16 @@ import java.util.Set;
 public class SqlTestFramework
 {
   /**
+   * Declares which {@link QueryComponentSupplier} must be used for the class.
+   */
+  @Retention(RetentionPolicy.RUNTIME)
+  @Target({ElementType.TYPE})
+  public @interface SqlTestFrameWorkModule
+  {
+    Class<? extends QueryComponentSupplier> value();
+  }
+
+  /**
    * Interface to provide various framework components. Extend to customize,
    * use {@link StandardComponentSupplier} for the "standard" components.
    * <p>
@@ -126,7 +141,7 @@ public class SqlTestFramework
    * exist in {@code BaseCalciteQueryTest}. Any changes here will impact that
    * base class, and possibly many test cases that extend that class.
    */
-  public interface QueryComponentSupplier
+  public interface QueryComponentSupplier extends Closeable
   {
     /**
      * Gather properties to be used within tests. Particularly useful when choosing
@@ -151,7 +166,7 @@ public class SqlTestFramework
         QueryRunnerFactoryConglomerate conglomerate,
         JoinableFactoryWrapper joinableFactory,
         Injector injector
-    ) throws IOException;
+    );
 
     SqlEngine createEngine(
         QueryLifecycleFactory qlf,
@@ -174,6 +189,12 @@ public class SqlTestFramework
     JoinableFactoryWrapper createJoinableFactoryWrapper(LookupExtractorFactoryContainerProvider lookupProvider);
 
     void finalizeTestFramework(SqlTestFramework sqlTestFramework);
+
+    PlannerComponentSupplier getPlannerComponentSupplier();
+    @Override
+    default void close() throws IOException
+    {
+    }
   }
 
   public interface PlannerComponentSupplier
@@ -197,13 +218,25 @@ public class SqlTestFramework
    */
   public static class StandardComponentSupplier implements QueryComponentSupplier
   {
-    private final File temporaryFolder;
+    protected final TempDirProducer tempDirProducer;
+    private final PlannerComponentSupplier plannerComponentSupplier;
 
     public StandardComponentSupplier(
-        final File temporaryFolder
+        final TempDirProducer tempDirProducer
     )
     {
-      this.temporaryFolder = temporaryFolder;
+      this.tempDirProducer = tempDirProducer;
+      this.plannerComponentSupplier = buildPlannerComponentSupplier();
+    }
+
+    /**
+     * Build the {@link PlannerComponentSupplier}.
+     *
+     * Implementations may override how this is being built.
+     */
+    protected PlannerComponentSupplier buildPlannerComponentSupplier()
+    {
+      return new StandardPlannerComponentSupplier();
     }
 
     @Override
@@ -245,7 +278,7 @@ public class SqlTestFramework
       return TestDataBuilder.createMockWalker(
           injector,
           conglomerate,
-          temporaryFolder,
+          tempDirProducer.newTempFolder("segments"),
           QueryStackTests.DEFAULT_NOOP_SCHEDULER,
           joinableFactory
       );
@@ -284,6 +317,18 @@ public class SqlTestFramework
     @Override
     public void finalizeTestFramework(SqlTestFramework sqlTestFramework)
     {
+    }
+
+    @Override
+    public PlannerComponentSupplier getPlannerComponentSupplier()
+    {
+      return plannerComponentSupplier;
+    }
+
+    @Override
+    public void close() throws IOException
+    {
+      tempDirProducer.close();
     }
   }
 
@@ -527,18 +572,13 @@ public class SqlTestFramework
     @LazySingleton
     public SpecificSegmentsQuerySegmentWalker segmentsQuerySegmentWalker(final Injector injector)
     {
-      try {
-        SpecificSegmentsQuerySegmentWalker walker = componentSupplier.createQuerySegmentWalker(
-            injector.getInstance(QueryRunnerFactoryConglomerate.class),
-            injector.getInstance(JoinableFactoryWrapper.class),
-            injector
-        );
-        resourceCloser.register(walker);
-        return walker;
-      }
-      catch (IOException e) {
-        throw new RE(e);
-      }
+      SpecificSegmentsQuerySegmentWalker walker = componentSupplier.createQuerySegmentWalker(
+          injector.getInstance(QueryRunnerFactoryConglomerate.class),
+          injector.getInstance(JoinableFactoryWrapper.class),
+          injector
+      );
+      resourceCloser.register(walker);
+      return walker;
     }
 
     @Provides
@@ -575,6 +615,7 @@ public class SqlTestFramework
         // test pulls in a module, then pull in that module, even though we are
         // not the Druid node to which the module is scoped.
         .ignoreLoadScopes()
+        .addModule(binder -> binder.bind(Closer.class).toInstance(resourceCloser))
         .addModule(new LookylooModule())
         .addModule(new SegmentWranglerModule())
         .addModule(new SqlAggregationModule())
@@ -647,18 +688,19 @@ public class SqlTestFramework
    * planner fixture is specific to one test and one planner config.
    */
   public PlannerFixture plannerFixture(
-      PlannerComponentSupplier componentSupplier,
       PlannerConfig plannerConfig,
       AuthConfig authConfig
   )
   {
-    return new PlannerFixture(this, componentSupplier, plannerConfig, authConfig);
+    PlannerComponentSupplier plannerComponentSupplier = componentSupplier.getPlannerComponentSupplier();
+    return new PlannerFixture(this, plannerComponentSupplier, plannerConfig, authConfig);
   }
 
   public void close()
   {
     try {
       resourceCloser.close();
+      componentSupplier.close();
     }
     catch (IOException e) {
       throw new RE(e);

@@ -54,7 +54,7 @@ ENV DRUID_HOME=/usr/local/druid
 COPY apache-druid-${DRUID_VERSION}-bin.tar.gz /usr/local/
 COPY druid-it-tools-${DRUID_VERSION}.jar /tmp/druid/extensions/druid-it-tools/
 COPY kafka-protobuf-provider-${CONFLUENT_VERSION}.jar /tmp/druid/lib/
-COPY mysql-connector-java-${MYSQL_VERSION}.jar /tmp/druid/lib/
+COPY mysql-connector-j-${MYSQL_VERSION}.jar /tmp/druid/lib/
 COPY mariadb-java-client-${MARIADB_VERSION}.jar /tmp/druid/lib/
 COPY test-setup.sh /
 COPY druid.sh /

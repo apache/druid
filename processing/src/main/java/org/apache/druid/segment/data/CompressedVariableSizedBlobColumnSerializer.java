@@ -66,13 +66,18 @@ public class CompressedVariableSizedBlobColumnSerializer implements Serializer
   {
     numValues = 0;
     currentOffset = 0;
-    offsetsSerializer = new CompressedLongsSerializer(segmentWriteOutMedium, compression);
+    offsetsSerializer = new CompressedLongsSerializer(
+        segmentWriteOutMedium,
+        compression,
+        segmentWriteOutMedium.getCloser()
+    );
     offsetsSerializer.open();
 
     valuesSerializer = new CompressedBlockSerializer(
         segmentWriteOutMedium,
         compression,
-        CompressedPools.BUFFER_SIZE
+        CompressedPools.BUFFER_SIZE,
+        segmentWriteOutMedium.getCloser()
     );
     valuesSerializer.open();
   }

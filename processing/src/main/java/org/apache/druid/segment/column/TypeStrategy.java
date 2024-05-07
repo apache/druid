@@ -19,7 +19,9 @@
 
 package org.apache.druid.segment.column;
 
+import it.unimi.dsi.fastutil.Hash;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.error.DruidException;
 
 import java.nio.ByteBuffer;
 import java.util.Comparator;
@@ -63,7 +65,7 @@ import java.util.Comparator;
  * {@code Comparator<Number>}.  So, we fall back to effectively erasing the generic type and having them all be
  * {@code Comparator<Object>}.
  */
-public interface TypeStrategy<T> extends Comparator<Object>
+public interface TypeStrategy<T> extends Comparator<Object>, Hash.Strategy<T>
 {
   /**
    * Estimate the size in bytes that writing this value to memory would require. This method is not required to be
@@ -169,5 +171,31 @@ public interface TypeStrategy<T> extends Comparator<Object>
   default T fromBytes(byte[] value)
   {
     throw new IllegalStateException("Not supported");
+  }
+
+  /**
+   * Whether the type is groupable or not. This is always true for all the primitive types, arrays, and nested arrays
+   * therefore the SQL and the native layer might ignore this flag for those types. For complex types, this flag can be
+   * true or false, depending on whether the semantics and implementation of the type naturally leads to groupability
+   * or not. For example, it makes sense for JSON columns to be groupable, however there is little sense in grouping
+   * sketches (before finalizing).
+   *
+   * If a type is groupable, it MUST implement the {@link #hashCode} and {@link #equals} correctly
+   */
+  default boolean groupable()
+  {
+    return false;
+  }
+
+  @Override
+  default int hashCode(T o)
+  {
+    throw DruidException.defensive("Not implemented. Check groupable() first");
+  }
+
+  @Override
+  default boolean equals(T a, T b)
+  {
+    throw DruidException.defensive("Not implemented. Check groupable() first");
   }
 }

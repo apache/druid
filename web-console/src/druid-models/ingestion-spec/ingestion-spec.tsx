@@ -208,7 +208,7 @@ export function getIngestionTitle(ingestionType: IngestionComboTypeWithExtra): s
 
 export function getIngestionImage(ingestionType: IngestionComboTypeWithExtra): string {
   const parts = ingestionType.split(':');
-  if (parts.length === 2) return parts[1].toLowerCase();
+  if (parts.length === 2) return parts[1];
   return ingestionType;
 }
 
@@ -297,7 +297,10 @@ export function getSchemaMode(spec: Partial<IngestionSpec>): SchemaMode {
   return Array.isArray(dimensions) && dimensions.length === 0 ? 'string-only-discovery' : 'fixed';
 }
 
-export function getArrayMode(spec: Partial<IngestionSpec>): ArrayMode {
+export function getArrayMode(
+  spec: Partial<IngestionSpec>,
+  whenUnclear: ArrayMode = 'arrays',
+): ArrayMode {
   const schemaMode = getSchemaMode(spec);
   switch (schemaMode) {
     case 'type-aware-discovery':
@@ -332,7 +335,7 @@ export function getArrayMode(spec: Partial<IngestionSpec>): ArrayMode {
         return 'multi-values';
       }
 
-      return 'arrays';
+      return whenUnclear;
     }
   }
 }
@@ -1027,6 +1030,27 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           type: 'string',
           placeholder: '/path/to/deltaTable',
           required: true,
+          info: (
+            <>
+              <p>A full path to the Delta Lake table.</p>
+            </>
+          ),
+        },
+        {
+          name: 'inputSource.filter',
+          label: 'Delta filter',
+          type: 'json',
+          defaultValue: {},
+          info: (
+            <>
+              <ExternalLink
+                href={`${getLink('DOCS')}/ingestion/input-sources/#delta-filter-object`}
+              >
+                filter
+              </ExternalLink>
+              <p>A Delta filter json object to filter Delta Lake scan files.</p>
+            </>
+          ),
         },
       ];
 
@@ -2068,6 +2092,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
   {
     name: 'spec.tuningConfig.maxPendingPersists',
     type: 'number',
+    defaultValue: 0,
     hideInMore: true,
     info: (
       <>
@@ -2414,7 +2439,10 @@ export function fillInputFormatIfNeeded(
     spec,
     'spec.ioConfig.inputFormat',
     getSpecType(spec) === 'kafka'
-      ? guessKafkaInputFormat(filterMap(sampleResponse.data, l => l.input))
+      ? guessKafkaInputFormat(
+          filterMap(sampleResponse.data, l => l.input),
+          typeof deepGet(spec, 'spec.ioConfig.topicPattern') === 'string',
+        )
       : guessSimpleInputFormat(
           filterMap(sampleResponse.data, l => l.input?.raw),
           isStreamingSpec(spec),
@@ -2426,15 +2454,27 @@ function noNumbers(xs: string[]): boolean {
   return xs.every(x => isNaN(Number(x)));
 }
 
-export function guessKafkaInputFormat(sampleRaw: Record<string, any>[]): InputFormat {
+export function guessKafkaInputFormat(
+  sampleRaw: Record<string, any>[],
+  multiTopic: boolean,
+): InputFormat {
   const hasHeader = sampleRaw.some(x => Object.keys(x).some(k => k.startsWith('kafka.header.')));
   const keys = filterMap(sampleRaw, x => x['kafka.key']);
-  const payloads = filterMap(sampleRaw, x => x.raw);
+  const valueFormat = guessSimpleInputFormat(
+    filterMap(sampleRaw, x => x.raw),
+    true,
+  );
+
+  if (!hasHeader && !keys.length && !multiTopic) {
+    // No headers or keys and just a single topic means do not pick the 'kafka' format by default as it is less performant
+    return valueFormat;
+  }
+
   return {
     type: 'kafka',
     headerFormat: hasHeader ? { type: 'string' } : undefined,
     keyFormat: keys.length ? guessSimpleInputFormat(keys, true) : undefined,
-    valueFormat: guessSimpleInputFormat(payloads, true),
+    valueFormat,
   };
 }
 

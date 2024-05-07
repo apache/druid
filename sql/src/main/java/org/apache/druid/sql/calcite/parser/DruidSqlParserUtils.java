@@ -241,18 +241,7 @@ public class DruidSqlParserUtils
 
   private static Granularity convertSqlLiteralCharToGranularity(SqlLiteral literal)
   {
-    String value = literal.getValueAs(String.class);
-    try {
-      return Granularity.fromString(value);
-    }
-    catch (IllegalArgumentException e) {
-      try {
-        return new PeriodGranularity(new Period(value), null, null);
-      }
-      catch (Exception e2) {
-        throw makeInvalidPartitionByException(literal);
-      }
-    }
+    return convertStringToGranularity(literal.getValueAs(String.class), literal);
   }
 
   private static Granularity convertSqlIdentiferToGranularity(SqlIdentifier identifier)
@@ -260,7 +249,11 @@ public class DruidSqlParserUtils
     if (identifier.names.isEmpty()) {
       throw makeInvalidPartitionByException(identifier);
     }
-    String value = identifier.names.get(0);
+    return convertStringToGranularity(identifier.names.get(0), identifier);
+  }
+
+  private static Granularity convertStringToGranularity(String value, SqlNode node)
+  {
     try {
       return Granularity.fromString(value);
     }
@@ -269,7 +262,7 @@ public class DruidSqlParserUtils
         return new PeriodGranularity(new Period(value), null, null);
       }
       catch (Exception e2) {
-        throw makeInvalidPartitionByException(identifier);
+        throw makeInvalidPartitionByException(node);
       }
     }
   }

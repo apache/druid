@@ -17,7 +17,7 @@
  */
 
 import { C } from '@druid-toolkit/query';
-import type { AxiosResponse } from 'axios';
+import type { AxiosResponse, CancelToken } from 'axios';
 import axios from 'axios';
 
 import { Api } from '../singletons';
@@ -267,6 +267,7 @@ export class DruidError extends Error {
   public startRowColumn?: RowColumn;
   public endRowColumn?: RowColumn;
   public suggestion?: QuerySuggestion;
+  public queryDuration?: number;
 
   // Deprecated
   public error?: string;
@@ -328,10 +329,13 @@ export async function queryDruidRune(runeQuery: Record<string, any>): Promise<an
   return runeResultResp.data;
 }
 
-export async function queryDruidSql<T = any>(sqlQueryPayload: Record<string, any>): Promise<T[]> {
+export async function queryDruidSql<T = any>(
+  sqlQueryPayload: Record<string, any>,
+  cancelToken?: CancelToken,
+): Promise<T[]> {
   let sqlResultResp: AxiosResponse;
   try {
-    sqlResultResp = await Api.instance.post('/druid/v2/sql', sqlQueryPayload);
+    sqlResultResp = await Api.instance.post('/druid/v2/sql', sqlQueryPayload, { cancelToken });
   } catch (e) {
     throw new Error(getDruidErrorMessage(e));
   }

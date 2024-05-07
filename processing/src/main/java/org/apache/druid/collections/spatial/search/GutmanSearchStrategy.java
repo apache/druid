@@ -23,15 +23,15 @@ import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
+import org.apache.druid.collections.spatial.ImmutableFloatPoint;
 import org.apache.druid.collections.spatial.ImmutableNode;
-import org.apache.druid.collections.spatial.ImmutablePoint;
 
 /**
  */
-public class GutmanSearchStrategy implements SearchStrategy
+public class GutmanSearchStrategy<TCoordinateArray, TPoint extends ImmutableNode<TCoordinateArray>> implements SearchStrategy<TCoordinateArray, TPoint>
 {
   @Override
-  public Iterable<ImmutableBitmap> search(ImmutableNode node, Bound bound)
+  public Iterable<ImmutableBitmap> search(ImmutableNode<TCoordinateArray> node, Bound<TCoordinateArray, TPoint> bound)
   {
     if (bound.getLimit() > 0) {
       return Iterables.transform(
@@ -49,10 +49,10 @@ public class GutmanSearchStrategy implements SearchStrategy
 
     return Iterables.transform(
         depthFirstSearch(node, bound),
-        new Function<ImmutablePoint, ImmutableBitmap>()
+        new Function<ImmutableFloatPoint, ImmutableBitmap>()
         {
           @Override
-          public ImmutableBitmap apply(ImmutablePoint immutablePoint)
+          public ImmutableBitmap apply(ImmutableFloatPoint immutablePoint)
           {
             return immutablePoint.getImmutableBitmap();
           }
@@ -60,18 +60,18 @@ public class GutmanSearchStrategy implements SearchStrategy
     );
   }
 
-  public Iterable<ImmutablePoint> depthFirstSearch(ImmutableNode node, final Bound bound)
+  public Iterable<ImmutableFloatPoint> depthFirstSearch(ImmutableNode node, final Bound bound)
   {
     if (node.isLeaf()) {
       return bound.filter(
           Iterables.transform(
               node.getChildren(),
-              new Function<ImmutableNode, ImmutablePoint>()
+              new Function<ImmutableNode, ImmutableFloatPoint>()
               {
                 @Override
-                public ImmutablePoint apply(ImmutableNode tNode)
+                public ImmutableFloatPoint apply(ImmutableNode tNode)
                 {
-                  return new ImmutablePoint(tNode);
+                  return new ImmutableFloatPoint(tNode);
                 }
               }
           )
@@ -90,10 +90,10 @@ public class GutmanSearchStrategy implements SearchStrategy
                     }
                   }
               ),
-              new Function<ImmutableNode, Iterable<ImmutablePoint>>()
+              new Function<ImmutableNode, Iterable<ImmutableFloatPoint>>()
               {
                 @Override
-                public Iterable<ImmutablePoint> apply(ImmutableNode child)
+                public Iterable<ImmutableFloatPoint> apply(ImmutableNode child)
                 {
                   return depthFirstSearch(child, bound);
                 }

@@ -320,18 +320,13 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
 
     return (
       <ConnectExternalDataDialog
-        onSetExternalConfig={(
-          externalConfig,
-          timeExpression,
-          partitionedByHint,
-          forceMultiValue,
-        ) => {
+        onSetExternalConfig={(externalConfig, timeExpression, partitionedByHint, arrayMode) => {
           this.handleNewTab(
             WorkbenchQuery.fromInitExternalConfig(
               externalConfig,
               timeExpression,
               partitionedByHint,
-              forceMultiValue,
+              arrayMode,
             ),
             'Ext ' + guessDataSourceNameFromInputSource(externalConfig.inputSource),
           );
@@ -634,6 +629,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
       this.props;
     const { columnMetadataState } = this.state;
     const currentTabEntry = this.getCurrentTabEntry();
+    const effectiveEngine = currentTabEntry.query.getEffectiveEngine();
 
     return (
       <div className="center-panel">
@@ -655,14 +651,15 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
           goToTask={goToTask}
           runMoreMenu={
             <Menu>
-              {allowExplain && (
-                <MenuItem
-                  icon={IconNames.CLEAN}
-                  text="Explain SQL query"
-                  onClick={this.openExplainDialog}
-                />
-              )}
-              {currentTabEntry.query.getEffectiveEngine() !== 'sql-msq-task' && (
+              {allowExplain &&
+                (effectiveEngine === 'sql-native' || effectiveEngine === 'sql-msq-task') && (
+                  <MenuItem
+                    icon={IconNames.CLEAN}
+                    text="Explain SQL query"
+                    onClick={this.openExplainDialog}
+                  />
+                )}
+              {effectiveEngine !== 'sql-msq-task' && (
                 <MenuItem
                   icon={IconNames.HISTORY}
                   text="Query history"
