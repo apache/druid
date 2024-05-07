@@ -465,6 +465,7 @@ public class StreamAppenderator implements Appenderator
             MoreExecutors.directExecutor()
         );
       } else {
+        log.info("Set persist flag for the reason: %s.", String.join(",", persistReasons));
         isPersistRequired = true;
       }
     }
