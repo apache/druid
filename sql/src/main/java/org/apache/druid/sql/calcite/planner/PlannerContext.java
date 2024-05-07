@@ -62,7 +62,6 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -146,8 +145,7 @@ public class PlannerContext
   // set of attributes for a SQL statement used in the EXPLAIN PLAN output
   private ExplainAttributes explainAttributes;
   private PlannerLookupCache lookupCache;
-  // Lookup loading spec for a given task
-  private LookupLoadingSpec lookupLoadingSpec = LookupLoadingSpec.NONE;
+  private final LookupLoadingSpec lookupLoadingSpec;
 
   private PlannerContext(
       final PlannerToolbox plannerToolbox,
@@ -182,6 +180,7 @@ public class PlannerContext
       sqlQueryId = UUID.randomUUID().toString();
     }
     this.sqlQueryId = sqlQueryId;
+    this.lookupLoadingSpec = LookupLoadingSpec.createSpecFromMode(LookupLoadingSpec.Mode.NONE);
   }
 
   public static PlannerContext create(
@@ -347,20 +346,6 @@ public class PlannerContext
   public String getSchemaResourceType(String schema, String resourceName)
   {
     return plannerToolbox.rootSchema().getResourceType(schema, resourceName);
-  }
-
-  /**
-   * Add a lookup name to load in the lookup loading spec.
-   */
-  public void addLookupToLoad(String lookupName)
-  {
-    if (lookupLoadingSpec.getLookupsToLoad() == null) {
-      lookupLoadingSpec = LookupLoadingSpec.loadOnly(Collections.singleton(lookupName));
-    } else {
-      Set<String> existingLookupsToLoad = new HashSet<>(lookupLoadingSpec.getLookupsToLoad());
-      existingLookupsToLoad.add(lookupName);
-      lookupLoadingSpec = LookupLoadingSpec.loadOnly(existingLookupsToLoad);
-    }
   }
 
   /**

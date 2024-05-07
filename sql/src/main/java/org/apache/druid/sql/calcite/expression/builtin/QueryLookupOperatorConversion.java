@@ -84,7 +84,7 @@ public class QueryLookupOperatorConversion implements SqlOperatorConversion
           final String lookupName = (String) lookupNameExpr.getLiteralValue();
 
           // Add the lookup name to the set of lookups to selectively load.
-          plannerContext.addLookupToLoad(lookupName);
+          plannerContext.getLookupLoadingSpec().addLookupToLoad(lookupName);
 
           if (arg.isSimpleExtraction() && lookupNameExpr.isLiteral()) {
             return arg.getSimpleExtraction().cascade(

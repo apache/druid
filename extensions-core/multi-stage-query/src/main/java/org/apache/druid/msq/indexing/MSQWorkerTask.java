@@ -205,7 +205,7 @@ public class MSQWorkerTask extends AbstractTask
     } else if (lookupLoadingMode == LookupLoadingSpec.Mode.ONLY_REQUIRED) {
       List<String> lookupsToLoad = (List<String>) getContext().get(PlannerContext.CTX_LOOKUPS_TO_LOAD);
       if (lookupsToLoad == null) {
-        throw InvalidInput.exception("Set of lookups to load cannot be NULL for mode = ONLY_REQUIRED.");
+        throw InvalidInput.exception("Set of lookups to load cannot be NULL for mode[ONLY_REQUIRED].");
       }
       return LookupLoadingSpec.loadOnly(new HashSet<>(lookupsToLoad));
     } else {

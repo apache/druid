@@ -22,6 +22,9 @@ package org.apache.druid.server.lookup.cache;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.error.InvalidInput;
 
+import javax.annotation.Nullable;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.Set;
 
 /**
@@ -44,8 +47,8 @@ public class LookupLoadingSpec
     ALL, NONE, ONLY_REQUIRED
   }
 
-  private final Mode mode;
-  private final ImmutableSet<String> lookupsToLoad;
+  private Mode mode;
+  private Set<String> lookupsToLoad;
 
   public static final LookupLoadingSpec ALL = new LookupLoadingSpec(Mode.ALL, null);
   public static final LookupLoadingSpec NONE = new LookupLoadingSpec(Mode.NONE, null);
@@ -54,6 +57,17 @@ public class LookupLoadingSpec
   {
     this.mode = mode;
     this.lookupsToLoad = lookupsToLoad == null ? null : ImmutableSet.copyOf(lookupsToLoad);
+  }
+
+  /**
+   * @param mode Allowed values are NONE and ALL. Use {@link LookupLoadingSpec#loadOnly} for creating spec for ONLY_REQUIRED mode.
+   */
+  public static LookupLoadingSpec createSpecFromMode(Mode mode)
+  {
+    if (mode == Mode.ONLY_REQUIRED) {
+      throw InvalidInput.exception("Use different method for creating lookup loading spec with mode[ONLY_REQUIRED].");
+    }
+    return new LookupLoadingSpec(mode, null);
   }
 
   /**
@@ -73,11 +87,25 @@ public class LookupLoadingSpec
   }
 
   /**
+   * Adds the given lookup name to the lookup loading spec, and also updates the mode to ONLY_REQUIRED.
+   */
+  public void addLookupToLoad(String lookupName)
+  {
+    mode = Mode.ONLY_REQUIRED;
+    if (lookupsToLoad == null) {
+      lookupsToLoad = new HashSet<>(Collections.singletonList(lookupName));
+    } else {
+      lookupsToLoad.add(lookupName);
+    }
+  }
+
+  /**
    * @return A non-null immutable set of lookup names when {@link LookupLoadingSpec#mode} is ONLY_REQUIRED, null otherwise.
    */
+  @Nullable
   public ImmutableSet<String> getLookupsToLoad()
   {
-    return lookupsToLoad;
+    return lookupsToLoad == null ? null : ImmutableSet.copyOf(lookupsToLoad);
   }
 
   @Override

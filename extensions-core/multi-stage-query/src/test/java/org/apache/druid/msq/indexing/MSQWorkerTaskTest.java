@@ -152,7 +152,7 @@ public class MSQWorkerTaskTest
         msqWorkerTask::getLookupLoadingSpec
     );
     Assert.assertEquals(
-        "Set of lookups to load cannot be NULL for mode = ONLY_REQUIRED.",
+        "Set of lookups to load cannot be NULL for mode[ONLY_REQUIRED].",
         exception.getMessage());
   }
 }
