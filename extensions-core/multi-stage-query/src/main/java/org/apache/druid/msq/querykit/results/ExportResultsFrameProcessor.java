@@ -65,7 +65,7 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
   private final Object2IntMap<String> outputColumnNameToFrameColumnNumberMap;
   private final RowSignature exportRowSignature;
 
-  private ResultFormat.Writer exportWriter;
+  private volatile ResultFormat.Writer exportWriter;
 
   public ExportResultsFrameProcessor(
       final ReadableFrameChannel inputChannel,
@@ -124,13 +124,14 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
   }
 
   @Override
-  public ReturnOrAwait<Object> runIncrementally(IntSet readableInputs)
+  public ReturnOrAwait<Object> runIncrementally(IntSet readableInputs) throws IOException
   {
     if (readableInputs.isEmpty()) {
       return ReturnOrAwait.awaitAll(1);
     }
 
     if (inputChannel.isFinished()) {
+      exportWriter.writeResponseEnd();
       return ReturnOrAwait.returnObject(exportFilePath);
     } else {
       if (exportWriter == null) {
@@ -182,15 +183,22 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
     );
   }
 
-  private void createExportWriter()
+  private void createExportWriter() throws IOException
   {
+    OutputStream stream = null;
     try {
-      OutputStream stream = storageConnector.write(exportFilePath);
+      stream = storageConnector.write(exportFilePath);
       exportWriter = exportFormat.createFormatter(stream, jsonMapper);
       exportWriter.writeResponseStart();
       exportWriter.writeHeaderFromRowSignature(exportRowSignature, false);
     }
     catch (IOException e) {
+      if (exportWriter != null) {
+        exportWriter.close();
+      }
+      if (stream != null) {
+        stream.close();
+      }
       throw DruidException.forPersona(DruidException.Persona.USER)
                           .ofCategory(DruidException.Category.RUNTIME_FAILURE)
                           .build(e, "Exception occurred while opening a stream to the export location [%s].", exportFilePath);
@@ -203,7 +211,6 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
     FrameProcessors.closeAll(inputChannels(), outputChannels());
 
     if (exportWriter != null) {
-      exportWriter.writeResponseEnd();
       exportWriter.close();
     }
   }
