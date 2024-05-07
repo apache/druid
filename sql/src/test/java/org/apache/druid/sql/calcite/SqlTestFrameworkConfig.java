@@ -174,20 +174,15 @@ public class SqlTestFrameworkConfig
   @Nonnull
   private Class<? extends QueryComponentSupplier> getQueryComponentSupplierForName(String name) throws ExecutionException
   {
-    Set<Class<? extends QueryComponentSupplier>> availableSuppliers;
-    availableSuppliers = componentSupplierClassCache.get("org.apache.druid.sql.calcite");
-    for (Class<? extends QueryComponentSupplier> cl : availableSuppliers) {
-      if (cl.getSimpleName().equals(name)) {
-        return cl;
+    for (String pkg : new String[] {"org.apache.druid.sql.calcite", ""}) {
+      Set<Class<? extends QueryComponentSupplier>> availableSuppliers = componentSupplierClassCache.get(pkg);
+      for (Class<? extends QueryComponentSupplier> cl : availableSuppliers) {
+        if (cl.getSimpleName().equals(name)) {
+          return cl;
+        }
       }
     }
-    availableSuppliers = componentSupplierClassCache.get("");
-    for (Class<? extends QueryComponentSupplier> cl : availableSuppliers) {
-      if (cl.getSimpleName().equals(name)) {
-        return cl;
-      }
-    }
-    List<String> knownNames = availableSuppliers.stream().map(Class::getSimpleName).collect(Collectors.toList());
+    List<String> knownNames = componentSupplierClassCache.get("").stream().map(Class::getSimpleName).collect(Collectors.toList());
     throw new IAE("ComponentSupplier [%s] is not known; known ones are [%s]", name, knownNames);
   }
 
