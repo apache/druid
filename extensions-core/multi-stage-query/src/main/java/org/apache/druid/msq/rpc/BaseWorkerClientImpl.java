@@ -148,7 +148,7 @@ public abstract class BaseWorkerClientImpl implements WorkerClient
   }
 
   /**
-   * Client-side method for {@link org.apache.druid.msq.indexing.client.WorkerChatHandler#httpPostCleanupStage}.
+   * Client-side method for {@link WorkerChatHandler#httpPostCleanupStage}.
    */
   @Override
   public ListenableFuture<Void> postCleanupStage(
