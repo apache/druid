@@ -20,6 +20,9 @@
 package org.apache.druid.sql.calcite;
 
 import com.google.common.base.Preconditions;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.topn.TopNQueryConfig;
@@ -46,12 +49,13 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * Specifies current framework settings.
@@ -119,8 +123,7 @@ public class SqlTestFrameworkConfig
       resultCache = getValueFromAnnotation(annotations, ResultCache.class);
       componentSupplier = getValueFromAnnotation(annotations, ComponentSupplier.class);
     }
-    catch (NoSuchMethodException | SecurityException | IllegalAccessException | IllegalArgumentException
-        | InvocationTargetException e) {
+    catch (Exception e) {
       throw new RuntimeException(e);
     }
   }
@@ -133,16 +136,14 @@ public class SqlTestFrameworkConfig
       resultCache = getValueFromMap(queryParams, ResultCache.class);
       componentSupplier = getValueFromMap(queryParams, ComponentSupplier.class);
     }
-    catch (NoSuchMethodException | SecurityException | IllegalAccessException | IllegalArgumentException
-        | InvocationTargetException e) {
+    catch (Exception e) {
       throw new RuntimeException(e);
     }
   }
 
   @SuppressWarnings("unchecked")
   @Nonnull
-  private <T> T getValueFromMap(Map<String, String> map, Class<? extends Annotation> annotationClass)
-      throws IllegalAccessException, InvocationTargetException, NoSuchMethodException, SecurityException
+  private <T> T getValueFromMap(Map<String, String> map, Class<? extends Annotation> annotationClass) throws Exception
   {
     String value = map.get(annotationClass.getSimpleName());
     if (value == null) {
@@ -159,19 +160,34 @@ public class SqlTestFrameworkConfig
     throw new RuntimeException("don't know how to handle conversion to " + type);
   }
 
-  @Nonnull
-  private Class<? extends QueryComponentSupplier> getQueryComponentSupplierForName(String name)
-  {
-    Set<Class<? extends QueryComponentSupplier>> subTypes = new Reflections("org.apache.druid")
-        .getSubTypesOf(QueryComponentSupplier.class);
-    Set<String> knownNames = new HashSet<String>();
+  static LoadingCache<String, Set<Class<? extends QueryComponentSupplier>>> componentSupplierClassCache = CacheBuilder
+      .newBuilder()
+      .build(new CacheLoader<String, Set<Class<? extends QueryComponentSupplier>>>()
+      {
+        @Override
+        public Set<Class<? extends QueryComponentSupplier>> load(String pkg) throws Exception
+        {
+          return new Reflections(pkg).getSubTypesOf(QueryComponentSupplier.class);
+        }
+      });
 
-    for (Class<? extends QueryComponentSupplier> cl : subTypes) {
+  @Nonnull
+  private Class<? extends QueryComponentSupplier> getQueryComponentSupplierForName(String name) throws ExecutionException
+  {
+    Set<Class<? extends QueryComponentSupplier>> availableSuppliers;
+    availableSuppliers = componentSupplierClassCache.get("org.apache.druid.sql.calcite");
+    for (Class<? extends QueryComponentSupplier> cl : availableSuppliers) {
       if (cl.getSimpleName().equals(name)) {
         return cl;
       }
-      knownNames.add(cl.getSimpleName());
     }
+    availableSuppliers = componentSupplierClassCache.get("");
+    for (Class<? extends QueryComponentSupplier> cl : availableSuppliers) {
+      if (cl.getSimpleName().equals(name)) {
+        return cl;
+      }
+    }
+    List<String> knownNames = availableSuppliers.stream().map(Class::getSimpleName).collect(Collectors.toList());
     throw new IAE("ComponentSupplier [%s] is not known; known ones are [%s]", name, knownNames);
   }
 
