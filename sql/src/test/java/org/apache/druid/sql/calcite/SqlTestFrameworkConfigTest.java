@@ -19,21 +19,16 @@
 
 package org.apache.druid.sql.calcite;
 
-import com.somewhere.AIU;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig.MinTopNThreshold;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig.NumMergeBuffers;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig.ResultCache;
 import org.apache.druid.sql.calcite.util.CacheTestHelperModule.ResultCacheMode;
-import org.apache.druid.sql.calcite.util.SqlTestFramework.QueryComponentSupplier;
 import org.junit.jupiter.api.Test;
-import org.reflections.Reflections;
 
 import java.lang.annotation.Annotation;
 import java.util.List;
-import java.util.Set;
 
-import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class SqlTestFrameworkConfigTest
@@ -122,21 +117,5 @@ public class SqlTestFrameworkConfigTest
     assertEquals(1, config.minTopNThreshold);
     assertEquals(1, config.numMergeBuffers);
     assertEquals(ResultCacheMode.DISABLED, config.resultCache);
-  }
-
-  private static final String ORG_APACHE_DRUID = "org.apache.druid.sql.calcite";
-
-  @Test
-  public void asd() {
-    Set<Class<? extends QueryComponentSupplier>> subTypes = new Reflections(ORG_APACHE_DRUID)
-        .getSubTypesOf(QueryComponentSupplier.class);
-    AIU a;
-    assertTrue(subTypes.contains(AIU.class));
-  }
-  @Test
-  public void asd2() {
-    Set<Class<? extends QueryComponentSupplier>> subTypes = new Reflections(ORG_APACHE_DRUID)
-        .getSubTypesOf(QueryComponentSupplier.class);
-    assertTrue(subTypes.contains(AIU.class));
   }
 }
