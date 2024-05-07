@@ -310,7 +310,7 @@ public class SqlTestFrameworkConfig
 
     public SqlTestFramework get() throws Exception
     {
-      return configStore.getConfigurationInstance(config, x -> x).framework;
+      return configStore.getConfigurationInstance(config, Function.identity()).framework;
     }
 
     public <T extends Annotation> T getAnnotation(Class<T> annotationType)
