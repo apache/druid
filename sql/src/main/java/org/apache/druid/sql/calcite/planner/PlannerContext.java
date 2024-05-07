@@ -62,6 +62,7 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -145,7 +146,7 @@ public class PlannerContext
   // set of attributes for a SQL statement used in the EXPLAIN PLAN output
   private ExplainAttributes explainAttributes;
   private PlannerLookupCache lookupCache;
-  private final LookupLoadingSpec lookupLoadingSpec;
+  private final Set<String> lookupsToLoad = new HashSet<>();
 
   private PlannerContext(
       final PlannerToolbox plannerToolbox,
@@ -180,7 +181,6 @@ public class PlannerContext
       sqlQueryId = UUID.randomUUID().toString();
     }
     this.sqlQueryId = sqlQueryId;
-    this.lookupLoadingSpec = LookupLoadingSpec.createSpecFromMode(LookupLoadingSpec.Mode.NONE);
   }
 
   public static PlannerContext create(
@@ -349,11 +349,19 @@ public class PlannerContext
   }
 
   /**
-   * Returns the lookup loading spec for a given task.
+   * Adds the given lookup name to the lookup loading spec.
+   */
+  public void addLookupToLoad(String lookupName)
+  {
+    lookupsToLoad.add(lookupName);
+  }
+
+  /**
+   * Returns the lookup to load for a given task.
    */
   public LookupLoadingSpec getLookupLoadingSpec()
   {
-    return lookupLoadingSpec;
+    return lookupsToLoad.isEmpty() ? LookupLoadingSpec.NONE : LookupLoadingSpec.loadOnly(lookupsToLoad);
   }
 
   /**

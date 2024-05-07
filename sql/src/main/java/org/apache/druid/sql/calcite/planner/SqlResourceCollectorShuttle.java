@@ -91,7 +91,7 @@ public class SqlResourceCollectorShuttle extends SqlShuttle
 
           // Add the lookup name to the set of lookups to selectively load.
           if (schema.equals(NamedLookupSchema.NAME)) {
-            plannerContext.getLookupLoadingSpec().addLookupToLoad(resourceName);
+            plannerContext.addLookupToLoad(resourceName);
           }
 
           final String resourceType = plannerContext.getSchemaResourceType(schema, resourceName);

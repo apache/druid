@@ -54,34 +54,6 @@ public class LookupLoadingSpecTest
   }
 
   @Test
-  public void testCreateSpecFromMode()
-  {
-    LookupLoadingSpec noneSpec = LookupLoadingSpec.createSpecFromMode(LookupLoadingSpec.Mode.NONE);
-    Assert.assertEquals(LookupLoadingSpec.Mode.NONE, noneSpec.getMode());
-    Assert.assertNull(noneSpec.getLookupsToLoad());
-
-    LookupLoadingSpec allSpec = LookupLoadingSpec.createSpecFromMode(LookupLoadingSpec.Mode.ALL);
-    Assert.assertEquals(LookupLoadingSpec.Mode.ALL, allSpec.getMode());
-    Assert.assertNull(allSpec.getLookupsToLoad());
-  }
-
-  @Test
-  public void testCreateSpecFromModeInvalidInput()
-  {
-    DruidException exception = Assert.assertThrows(DruidException.class, () -> LookupLoadingSpec.createSpecFromMode(LookupLoadingSpec.Mode.ONLY_REQUIRED));
-    Assert.assertEquals("Use different method for creating lookup loading spec with mode[ONLY_REQUIRED].", exception.getMessage());
-  }
-
-  @Test
-  public void testAddingLookupToLoad()
-  {
-    LookupLoadingSpec spec = LookupLoadingSpec.createSpecFromMode(LookupLoadingSpec.Mode.NONE);
-    spec.addLookupToLoad("lookupName1");
-    Assert.assertEquals(LookupLoadingSpec.Mode.ONLY_REQUIRED, spec.getMode());
-    Assert.assertEquals(ImmutableSet.of("lookupName1"), spec.getLookupsToLoad());
-  }
-
-  @Test
   public void testLoadingOnlyRequiredLookupsWithNullList()
   {
     DruidException exception = Assert.assertThrows(DruidException.class, () -> LookupLoadingSpec.loadOnly(null));
