@@ -154,7 +154,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         derbyConnectorRule.getConnector(),
         segmentSchemaManager,
-        CentralizedDatasourceSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig.create(true)
     );
     segmentSchemaCache = new SegmentSchemaCache(new NoopServiceEmitter());
     segmentsMetadataManager = new SqlSegmentsMetadataManager(
@@ -163,7 +163,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         derbyConnectorRule.metadataTablesConfigSupplier(),
         derbyConnectorRule.getConnector(),
         segmentSchemaCache,
-        CentralizedDatasourceSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig.create(true)
     );
     lockbox = new TaskLockbox(taskStorage, storageCoordinator);
     segmentCacheManagerFactory = new SegmentCacheManagerFactory(getObjectMapper());
@@ -442,7 +442,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         final TaskConfig config = new TaskConfigBuilder()
             .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
             .build();
-        CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig = new CentralizedDatasourceSchemaConfig();
+        CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig = CentralizedDatasourceSchemaConfig.create(true);
         centralizedDatasourceSchemaConfig.setEnabled(true);
         final TaskToolbox box = new TaskToolbox.Builder()
             .config(config)
