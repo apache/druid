@@ -324,7 +324,7 @@ public class ChainedProcessorManagerTest extends FrameProcessorExecutorTest.Base
     ChainedProcessorManager<List<Long>, List<Long>, Long> processorManager = new ChainedProcessorManager<>(
         ProcessorManagers.of(() -> new PrintFirstAndReturnRestFrameProcessor(writableFrameChannel, values, failureValue)),
         returnedValues -> {
-          List<Long> lists = returnedValues.stream().flatMap(List::stream).collect(Collectors.toList());
+          List<Long> lists = ((List<List<Long>>) returnedValues).stream().flatMap(List::stream).collect(Collectors.toList());
           return (ProcessorManager) chainedProcessors(
               writableFrameChannel,
               lists,
