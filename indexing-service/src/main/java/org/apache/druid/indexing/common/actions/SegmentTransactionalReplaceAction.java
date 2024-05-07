@@ -119,28 +119,28 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
   {
     final TaskLockbox taskLockbox = toolbox.getTaskLockbox();
     TaskLocks.checkLockCoversSegments(task, taskLockbox, segments);
+    taskLockbox.verifyLocksForReplaceTask(task);
     taskLockbox.acquireTransactionalReplaceLock(task, TaskLockbox.LOCK_ACQUIRE_TIMEOUT_MILLIS);
     try {
       // Find the active replace locks held only by this task
       final Set<ReplaceTaskLock> replaceLocksForTask
           = toolbox.getTaskLockbox().findReplaceLocksForTask(task);
 
-      final SegmentPublishResult publishResult;
-      publishResult = toolbox.getTaskLockbox().doInCriticalSection(
+      final SegmentPublishResult publishResult = toolbox.getTaskLockbox().doInCriticalSection(
           task,
           segments.stream().map(DataSegment::getInterval).collect(Collectors.toSet()),
           CriticalAction.<SegmentPublishResult>builder()
-                        .onValidLocks(
-                            () -> toolbox.getIndexerMetadataStorageCoordinator()
-                                         .commitReplaceSegments(segments, replaceLocksForTask, segmentSchemaMapping)
-                        )
-                        .onInvalidLocks(
-                            () -> SegmentPublishResult.fail(
-                                "Invalid task locks. Maybe they are revoked by a higher priority task."
-                                + " Please check the overlord log for details."
-                            )
-                        )
-                        .build()
+              .onValidLocks(
+                  () -> toolbox.getIndexerMetadataStorageCoordinator()
+                               .commitReplaceSegments(segments, replaceLocksForTask, segmentSchemaMapping)
+              )
+              .onInvalidLocks(
+                  () -> SegmentPublishResult.fail(
+                      "Invalid task locks. Maybe they are revoked by a higher priority task."
+                      + " Please check the overlord log for details."
+                  )
+              )
+              .build()
       );
 
       IndexTaskUtils.emitSegmentPublishMetrics(publishResult, task, toolbox);

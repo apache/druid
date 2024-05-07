@@ -1278,6 +1278,38 @@ public class TaskLockbox
   }
 
   /**
+   * Verifies that every lock held by the replacing task is a REPLACE lock
+   * @param task replacing task
+   */
+  public void verifyLocksForReplaceTask(Task task)
+  {
+    for (TaskLockPosse lockPosse : findLockPossesForTask(task)) {
+      if (lockPosse.taskLock.getType() != TaskLockType.REPLACE) {
+        throw DruidException.defensive(
+            "All the locks must be of type REPLACE for segmentTransactionalReplace. Found lock of type[%s] for task[%s].",
+            lockPosse.taskLock.getType(), task.getId()
+        );
+      }
+    }
+  }
+
+  /**
+   * Verifies that every lock held by the appending task is an APPEND lock
+   * @param task appending task
+   */
+  public void verifyLocksForAppendTask(Task task)
+  {
+    for (TaskLockPosse lockPosse : findLockPossesForTask(task)) {
+      if (lockPosse.taskLock.getType() != TaskLockType.APPEND) {
+        throw DruidException.defensive(
+            "All the locks must be of type APPEND for segmentTransactionalAppend. Found lock of type[%s] for task[%s].",
+            lockPosse.taskLock.getType(), task.getId()
+        );
+      }
+    }
+  }
+
+  /**
    * Acquire a read lock to perform the segment transactional append action for a given datasource.
    * Also verifies that all the locks are of the type APPEND for the task.
    * @param task task to perform the append action
@@ -1285,15 +1317,6 @@ public class TaskLockbox
    */
   public void acquireTransactionalAppendLock(Task task, long lockAcquireTimeoutMillis)
   {
-    for (TaskLockPosse lockPosse : findLockPossesForTask(task)) {
-      if (lockPosse.taskLock.getType() != TaskLockType.APPEND) {
-        throw new ISE(
-            "All the locks must be of type APPEND for segmentTransactionalAppend. Found lock of type[%s] for task[%s].",
-            lockPosse.taskLock.getType(), task.getId()
-        );
-      }
-    }
-
     final String datasource = task.getDataSource();
     final ReentrantReadWriteLock readWriteLock =
         datasourceToConcurrentLock.computeIfAbsent(datasource, ds -> new ReentrantReadWriteLock(true));
@@ -1320,15 +1343,6 @@ public class TaskLockbox
    */
   public void acquireTransactionalReplaceLock(Task task, long lockAcquireTimeoutMillis)
   {
-    for (TaskLockPosse lockPosse : findLockPossesForTask(task)) {
-      if (lockPosse.taskLock.getType() != TaskLockType.REPLACE) {
-        throw new ISE(
-            "All the locks must be of type REPLACE for segmentTransactionalReplace. Found lock of type[%s] for task[%s].",
-            lockPosse.taskLock.getType(), task.getId()
-        );
-      }
-    }
-
     final String datasource = task.getDataSource();
     final ReentrantReadWriteLock readWriteLock =
         datasourceToConcurrentLock.computeIfAbsent(datasource, ds -> new ReentrantReadWriteLock(true));
@@ -1353,7 +1367,17 @@ public class TaskLockbox
    */
   public void releaseTransactionalAppendLock(Task task)
   {
-    releaseTransactionalLock(task, false);
+    final String datasource = task.getDataSource();
+    if (!datasourceToConcurrentLock.containsKey(datasource)) {
+      return;
+    }
+    final ReentrantReadWriteLock readWriteLock = datasourceToConcurrentLock.get(datasource);
+    synchronized (readWriteLock) {
+      readWriteLock.readLock().unlock();
+      if (!readWriteLock.isWriteLocked() && readWriteLock.getReadLockCount() == 0 && !readWriteLock.hasQueuedThreads()) {
+        datasourceToConcurrentLock.remove(datasource);
+      }
+    }
   }
 
   /**
@@ -1362,22 +1386,13 @@ public class TaskLockbox
    */
   public void releaseTransactionalReplaceLock(Task task)
   {
-    releaseTransactionalLock(task, true);
-  }
-
-  private void releaseTransactionalLock(Task task, boolean replace)
-  {
     final String datasource = task.getDataSource();
+    if (!datasourceToConcurrentLock.containsKey(datasource)) {
+      return;
+    }
     final ReentrantReadWriteLock readWriteLock = datasourceToConcurrentLock.get(datasource);
     synchronized (readWriteLock) {
-      if (!datasourceToConcurrentLock.containsKey(datasource)) {
-        return;
-      }
-      if (replace) {
-        readWriteLock.writeLock().unlock();
-      } else {
-        readWriteLock.readLock().unlock();
-      }
+      readWriteLock.writeLock().unlock();
       if (!readWriteLock.isWriteLocked() && readWriteLock.getReadLockCount() == 0 && !readWriteLock.hasQueuedThreads()) {
         datasourceToConcurrentLock.remove(datasource);
       }

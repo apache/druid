@@ -148,6 +148,7 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
     }
     final TaskLockbox taskLockbox = toolbox.getTaskLockbox();
     TaskLocks.checkLockCoversSegments(task, taskLockbox, segments);
+    taskLockbox.verifyLocksForAppendTask(task);
     taskLockbox.acquireTransactionalAppendLock(task, TaskLockbox.LOCK_ACQUIRE_TIMEOUT_MILLIS);
     try {
       final String datasource = task.getDataSource();
@@ -174,23 +175,22 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
         );
       }
 
-      final SegmentPublishResult retVal;
-      retVal = toolbox.getTaskLockbox().doInCriticalSection(
+      final SegmentPublishResult publishResult = toolbox.getTaskLockbox().doInCriticalSection(
           task,
           segments.stream().map(DataSegment::getInterval).collect(Collectors.toSet()),
           CriticalAction.<SegmentPublishResult>builder()
-                        .onValidLocks(publishAction)
-                        .onInvalidLocks(
-                            () -> SegmentPublishResult.fail(
-                                "Invalid task locks. Maybe they are revoked by a higher priority task."
-                                + " Please check the overlord log for details."
-                            )
-                        )
-                        .build()
+              .onValidLocks(publishAction)
+              .onInvalidLocks(
+                  () -> SegmentPublishResult.fail(
+                      "Invalid task locks. Maybe they are revoked by a higher priority task."
+                      + " Please check the overlord log for details."
+                  )
+              )
+              .build()
       );
 
-      IndexTaskUtils.emitSegmentPublishMetrics(retVal, task, toolbox);
-      return retVal;
+      IndexTaskUtils.emitSegmentPublishMetrics(publishResult, task, toolbox);
+      return publishResult;
     }
     catch (Exception e) {
       throw new RuntimeException(e);

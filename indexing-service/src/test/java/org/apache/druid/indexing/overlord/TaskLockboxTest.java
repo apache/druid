@@ -29,6 +29,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.SegmentLock;
@@ -2007,35 +2008,35 @@ public class TaskLockboxTest
   }
 
   @Test
-  public void testAcquireTransactionalReplaceLockWithExclusiveTaskThrowsException()
+  public void testVerifyLocksForReplaceTask()
   {
     final Task task = NoopTask.create();
     lockbox.add(task);
     tryTimeChunkLock(TaskLockType.EXCLUSIVE, task, Intervals.ETERNITY);
-    exception.expect(ISE.class);
+    exception.expect(DruidException.class);
     exception.expectMessage(
         StringUtils.format(
             "All the locks must be of type REPLACE for segmentTransactionalReplace. Found lock of type[%s] for task[%s].",
             TaskLockType.EXCLUSIVE.name(), task.getId()
         )
     );
-    lockbox.acquireTransactionalReplaceLock(task, 100);
+    lockbox.verifyLocksForReplaceTask(task);
   }
 
   @Test
-  public void testAcquireTransactionalAppendLockWithReplaceTaskThrowsException()
+  public void testVerifyLocksForAppendTask()
   {
     final Task task = NoopTask.create();
     lockbox.add(task);
     tryTimeChunkLock(TaskLockType.REPLACE, task, Intervals.ETERNITY);
-    exception.expect(ISE.class);
+    exception.expect(DruidException.class);
     exception.expectMessage(
         StringUtils.format(
             "All the locks must be of type APPEND for segmentTransactionalAppend. Found lock of type[%s] for task[%s].",
             TaskLockType.REPLACE.name(), task.getId()
         )
     );
-    lockbox.acquireTransactionalAppendLock(task, 100);
+    lockbox.verifyLocksForAppendTask(task);
   }
 
   @Test
