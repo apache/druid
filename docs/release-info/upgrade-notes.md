@@ -26,6 +26,45 @@ The upgrade notes assume that you are upgrading from the Druid version that imme
 
 For the full release notes for a specific version, see the [releases page](https://github.com/apache/druid/releases).
 
+## 30.0.0
+
+### Upgrade notes
+
+#### Azure input source schema
+
+The `azure` schema for ingesting from Azure has been deprecated. Use the new `azureStorage` schema instead. It provides additional functionality. For more information, see [Azure input source schema](#azure-input-source-schema).
+
+Additionally, the new config `storageAccountEndpointSuffix` lets you configure the endpoint suffix to use so that you can override the default and connect to other endpoints, such as Azure Government.
+
+[#15630](https://github.com/apache/druid/pull/15630) [#16016](https://github.com/apache/druid/pull/16016)
+
+#### Append JsonPath function
+
+The `append` function for JsonPaths for ORC format now fails with an exception. Previously, it would run but not append anything.
+
+[#15772](https://github.com/apache/druid/pull/15772)
+
+#### Kinesis ingestion tuning
+
+The following properties have been deprecated as part of simplifying the memory tuning for Kinesis ingestion:
+
+- `recordBufferSize`,  use `recordBufferSizeBytes` instead
+- `maxRecordsPerPoll`, use `maxBytesPerPoll` instead
+
+[#15360](https://github.com/apache/druid/pull/15360)
+
+### Incompatible changes
+
+#### Changes to `targetDataSource` in EXPLAIN queries
+
+Druid 30.0.0 includes a breaking change that restores the behavior for `targetDataSource` to its 28.0.0 and earlier state, different from Druid 29.0.0 and only 29.0.0. In 29.0.0, `targetDataSource` returns a JSON object that includes the datasource name. In all other versions, `targetDataSource` returns a string containing the name of the datasource.
+
+If you're upgrading from any version other than 29.0.0, there is no change in behavior.
+
+If you are upgrading from 29.0.0, this is an incompatible change.
+
+[#16004](https://github.com/apache/druid/pull/16004)
+
 ## 29.0.1
 
 ### Incompatible changes
