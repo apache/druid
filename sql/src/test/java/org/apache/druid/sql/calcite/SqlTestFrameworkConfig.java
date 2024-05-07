@@ -173,7 +173,7 @@ public class SqlTestFrameworkConfig
       }
       knownNames.add(cl.getSimpleName());
     }
-    throw new IAE("supplier [%s] is not known; known are [%s]", name, knownNames);
+    throw new IAE("ComponentSupplier [%s] is not known; known ones are [%s]", name, knownNames);
   }
 
   @SuppressWarnings("unchecked")

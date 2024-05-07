@@ -66,14 +66,21 @@ public class SqlTestFrameworkConfigTest
     public void imaginaryTestMethod3()
     {
     }
+
+    @ResultCache(ResultCacheMode.DISABLED)
+    @NumMergeBuffers(1)
+    @MinTopNThreshold(1)
+    public void imaginaryTestMethod4()
+    {
+    }
   }
 
   @Test
   public void testAnnotationProcessingChain() throws Exception
   {
-    List<Annotation> annotations1 = SqlTestFrameworkConfig
+    List<Annotation> annotations = SqlTestFrameworkConfig
         .collectAnnotations(C.class, D.class.getMethod("imaginaryTestMethod1"));
-    SqlTestFrameworkConfig config = new SqlTestFrameworkConfig(annotations1);
+    SqlTestFrameworkConfig config = new SqlTestFrameworkConfig(annotations);
     assertEquals(1, config.minTopNThreshold);
     assertEquals(3, config.numMergeBuffers);
     assertEquals(ResultCacheMode.ENABLED, config.resultCache);
@@ -82,9 +89,9 @@ public class SqlTestFrameworkConfigTest
   @Test
   public void testAnnotationOverridingClassHasDefault() throws Exception
   {
-    List<Annotation> annotations1 = SqlTestFrameworkConfig
+    List<Annotation> annotations = SqlTestFrameworkConfig
         .collectAnnotations(D.class, D.class.getMethod("imaginaryTestMethod2"));
-    SqlTestFrameworkConfig config = new SqlTestFrameworkConfig(annotations1);
+    SqlTestFrameworkConfig config = new SqlTestFrameworkConfig(annotations);
     assertEquals(2, config.minTopNThreshold);
     assertEquals(3, config.numMergeBuffers);
     assertEquals(ResultCacheMode.ENABLED, config.resultCache);
@@ -93,12 +100,22 @@ public class SqlTestFrameworkConfigTest
   @Test
   public void testAnnotationOverridingClassChangesDefault() throws Exception
   {
-    List<Annotation> annotations1 = SqlTestFrameworkConfig
+    List<Annotation> annotations = SqlTestFrameworkConfig
         .collectAnnotations(D.class, D.class.getMethod("imaginaryTestMethod3"));
-    SqlTestFrameworkConfig config = new SqlTestFrameworkConfig(annotations1);
+    SqlTestFrameworkConfig config = new SqlTestFrameworkConfig(annotations);
     assertEquals(2, config.minTopNThreshold);
     assertEquals(1, config.numMergeBuffers);
     assertEquals(ResultCacheMode.ENABLED, config.resultCache);
   }
 
+  @Test
+  public void testAnnotationsAtTestLevel() throws Exception
+  {
+    List<Annotation> annotations = SqlTestFrameworkConfig
+        .collectAnnotations(D.class, D.class.getMethod("imaginaryTestMethod4"));
+    SqlTestFrameworkConfig config = new SqlTestFrameworkConfig(annotations);
+    assertEquals(1, config.minTopNThreshold);
+    assertEquals(1, config.numMergeBuffers);
+    assertEquals(ResultCacheMode.DISABLED, config.resultCache);
+  }
 }
