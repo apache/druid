@@ -2082,7 +2082,7 @@ public class TaskLockboxTest
 
     acquireTransactionalReplaceLock(replaceTask0, replaceExec0);
     exception.expect(ExecutionException.class);
-    exception.expectCause(CoreMatchers.instanceOf(ISE.class));
+    exception.expectCause(CoreMatchers.instanceOf(DruidException.class));
     exception.expectMessage(
         StringUtils.format(
             "Timed out while acquiring transactional replace lock for datasource[%s].",
@@ -2103,7 +2103,7 @@ public class TaskLockboxTest
 
     acquireTransactionalAppendLock(appendTask, appendExec);
     exception.expect(ExecutionException.class);
-    exception.expectCause(CoreMatchers.instanceOf(ISE.class));
+    exception.expectCause(CoreMatchers.instanceOf(DruidException.class));
     exception.expectMessage(
         StringUtils.format(
             "Timed out while acquiring transactional replace lock for datasource[%s].",
@@ -2124,7 +2124,7 @@ public class TaskLockboxTest
 
     acquireTransactionalReplaceLock(replaceTask, replaceExec);
     exception.expect(ExecutionException.class);
-    exception.expectCause(CoreMatchers.instanceOf(ISE.class));
+    exception.expectCause(CoreMatchers.instanceOf(DruidException.class));
     exception.expectMessage(
         StringUtils.format(
             "Timed out while acquiring transactional append lock for datasource[%s].",

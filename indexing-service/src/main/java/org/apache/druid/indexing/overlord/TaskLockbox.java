@@ -1326,7 +1326,10 @@ public class TaskLockbox
         final boolean acquired = readWriteLock.readLock()
                                               .tryLock(lockAcquireTimeoutMillis, TimeUnit.MILLISECONDS);
         if (!acquired) {
-          throw new ISE("Timed out while acquiring transactional append lock for datasource[%s].", datasource);
+          throw DruidException
+              .forPersona(DruidException.Persona.OPERATOR)
+              .ofCategory(DruidException.Category.TIMEOUT)
+              .build("Timed out while acquiring transactional append lock for datasource[%s].", datasource);
         }
       }
       catch (InterruptedException e) {
@@ -1352,7 +1355,10 @@ public class TaskLockbox
         final boolean acquired = readWriteLock.writeLock()
                                               .tryLock(lockAcquireTimeoutMillis, TimeUnit.MILLISECONDS);
         if (!acquired) {
-          throw new ISE("Timed out while acquiring transactional replace lock for datasource[%s].", datasource);
+          throw DruidException
+              .forPersona(DruidException.Persona.OPERATOR)
+              .ofCategory(DruidException.Category.TIMEOUT)
+              .build("Timed out while acquiring transactional replace lock for datasource[%s].", datasource);
         }
       }
       catch (InterruptedException e) {
