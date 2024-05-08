@@ -28,7 +28,6 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.io.File;
 import java.io.IOException;
 
 public class AzureOutputSerdeTest
@@ -50,7 +49,6 @@ public class AzureOutputSerdeTest
     AzureOutputConfig azureOutputConfig = new AzureOutputConfig(
         "TEST",
         "abc",
-        new File("/tmp"),
         HumanReadableBytes.valueOf(HumanReadableBytes.parse("100Mib")),
         2
     );
@@ -111,7 +109,6 @@ public class AzureOutputSerdeTest
     AzureOutputConfig azureOutputConfig = new AzureOutputConfig(
         "TEST",
         "abc",
-        new File("/tmp"),
         null,
         null
     );

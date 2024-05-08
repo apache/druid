@@ -30,8 +30,6 @@ import java.io.IOException;
 public class S3OutputConfigTest
 {
   @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
-  @Rule
   public ExpectedException expectedException = ExpectedException.none();
   private static String BUCKET = "BUCKET";
   private static String PREFIX = "PREFIX";
@@ -49,7 +47,6 @@ public class S3OutputConfigTest
     new S3OutputConfig(
         BUCKET,
         PREFIX,
-        temporaryFolder.newFolder(),
         HumanReadableBytes.valueOf(chunkSize),
         MAX_RETRY_COUNT,
         true

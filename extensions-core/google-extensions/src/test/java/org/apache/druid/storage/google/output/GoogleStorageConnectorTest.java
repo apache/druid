@@ -61,10 +61,10 @@ public class GoogleStorageConnectorTest
   @Before
   public void setUp() throws IOException
   {
-    GoogleOutputConfig config = new GoogleOutputConfig(BUCKET, PREFIX, temporaryFolder.newFolder(), CHUNK_SIZE, null);
+    GoogleOutputConfig config = new GoogleOutputConfig(BUCKET, PREFIX, CHUNK_SIZE, null);
     GoogleInputDataConfig inputDataConfig = new GoogleInputDataConfig();
     inputDataConfig.setMaxListingLength(MAX_LISTING_LEN);
-    googleStorageConnector = new GoogleStorageConnector(config, googleStorage, inputDataConfig);
+    googleStorageConnector = new GoogleStorageConnector(config, googleStorage, inputDataConfig, temporaryFolder.newFolder());
   }
 
   @Test

@@ -38,6 +38,7 @@ import org.apache.druid.storage.google.GoogleUtils;
 import org.apache.druid.storage.remote.ChunkingStorageConnector;
 import org.apache.druid.storage.remote.ChunkingStorageConnectorParameters;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -53,27 +54,30 @@ public class GoogleStorageConnector extends ChunkingStorageConnector<GoogleInput
   private final GoogleStorage storage;
   private final GoogleOutputConfig config;
   private final GoogleInputDataConfig inputDataConfig;
+  private final File tempDir;
 
   public GoogleStorageConnector(
       GoogleOutputConfig config,
       GoogleStorage googleStorage,
-      GoogleInputDataConfig inputDataConfig
+      GoogleInputDataConfig inputDataConfig,
+      File tempDir
   )
   {
     this.storage = googleStorage;
     this.config = config;
     this.inputDataConfig = inputDataConfig;
+    this.tempDir = tempDir;
 
     Preconditions.checkNotNull(config, "config is null");
-    Preconditions.checkNotNull(config.getTempDir(), "tempDir is null in google config");
+    Preconditions.checkNotNull(tempDir, "tempDir is null in google config");
 
     try {
-      FileUtils.mkdirp(config.getTempDir());
+      FileUtils.mkdirp(tempDir);
     }
     catch (IOException e) {
       throw new RE(
           e,
-          StringUtils.format("Cannot create tempDir [%s] for google storage connector", config.getTempDir())
+          StringUtils.format("Cannot create tempDir [%s] for google storage connector", tempDir)
       );
     }
   }
@@ -190,7 +194,7 @@ public class GoogleStorageConnector extends ChunkingStorageConnector<GoogleInput
     builder.start(from);
     builder.end(from + size);
     builder.cloudStoragePath(objectPath(path));
-    builder.tempDirSupplier(config::getTempDir);
+    builder.tempDirSupplier(() -> tempDir);
     builder.maxRetry(config.getMaxRetry());
     builder.retryCondition(GoogleUtils.GOOGLE_RETRY);
     builder.objectSupplier(((start, end) -> new GoogleInputRange(

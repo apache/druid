@@ -40,7 +40,6 @@ import org.apache.druid.storage.s3.output.S3StorageConnectorProvider;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.io.File;
 import java.util.Properties;
 
 public class S3StorageConnectorProviderTest
@@ -63,8 +62,6 @@ public class S3StorageConnectorProviderTest
     Assert.assertTrue(s3StorageConnectorProvider.get() instanceof S3StorageConnector);
     Assert.assertEquals("bucket", ((S3StorageConnectorProvider) s3StorageConnectorProvider).getBucket());
     Assert.assertEquals("prefix", ((S3StorageConnectorProvider) s3StorageConnectorProvider).getPrefix());
-    Assert.assertEquals(new File("/tmp"), ((S3StorageConnectorProvider) s3StorageConnectorProvider).getTempDir());
-
   }
 
   @Test

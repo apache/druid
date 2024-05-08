@@ -66,27 +66,21 @@ public class RetryableS3OutputStreamTest
 
   private S3OutputConfig config;
   private long chunkSize;
+  private File tempDir;
 
   @Before
   public void setup() throws IOException
   {
-    final File tempDir = temporaryFolder.newFolder();
+    tempDir = temporaryFolder.newFolder();
     chunkSize = 10L;
     config = new S3OutputConfig(
         "TEST",
         "TEST",
-        tempDir,
         HumanReadableBytes.valueOf(chunkSize),
         2,
         false
     )
     {
-      @Override
-      public File getTempDir()
-      {
-        return tempDir;
-      }
-
       @Override
       public Long getChunkSize()
       {
@@ -110,7 +104,8 @@ public class RetryableS3OutputStreamTest
         config,
         s3,
         path,
-        false
+        false,
+        tempDir
     )) {
       for (int i = 0; i < 25; i++) {
         bb.clear();
@@ -132,7 +127,8 @@ public class RetryableS3OutputStreamTest
         config,
         s3,
         path,
-        false
+        false,
+        tempDir
     )) {
       bb.clear();
       bb.putInt(1);
@@ -153,7 +149,8 @@ public class RetryableS3OutputStreamTest
         config,
         s3,
         path,
-        false
+        false,
+        tempDir
     )) {
       for (int i = 0; i < 600; i++) {
         out.write(i);
@@ -175,7 +172,8 @@ public class RetryableS3OutputStreamTest
         config,
         s3,
         path,
-        false
+        false,
+        tempDir
     )) {
       for (int i = 0; i < 25; i++) {
         bb.clear();
@@ -198,7 +196,8 @@ public class RetryableS3OutputStreamTest
         config,
         s3,
         path,
-        false
+        false,
+        tempDir
     )) {
       for (int i = 0; i < 2; i++) {
         bb.clear();

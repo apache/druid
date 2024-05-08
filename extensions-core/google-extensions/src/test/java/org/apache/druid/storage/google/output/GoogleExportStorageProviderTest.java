@@ -38,7 +38,7 @@ public class GoogleExportStorageProviderTest
   public void testGoogleExportStorageProvider()
   {
     GoogleExportStorageProvider googleExportStorageProvider = new GoogleExportStorageProvider("bucket-name", "validPath1");
-    googleExportStorageProvider.googleExportConfig = new GoogleExportConfig("tempLocalDir", null, null, validPrefixes);
+    googleExportStorageProvider.googleExportConfig = new GoogleExportConfig(null, null, validPrefixes);
     StorageConnector storageConnector = googleExportStorageProvider.get();
     Assert.assertNotNull(storageConnector);
     Assert.assertTrue(storageConnector instanceof GoogleStorageConnector);

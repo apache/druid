@@ -31,7 +31,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
-import java.io.File;
 import java.io.IOException;
 
 public class S3OutputSerdeTest
@@ -56,7 +55,6 @@ public class S3OutputSerdeTest
     S3OutputConfig s3OutputConfig = new S3OutputConfig(
         "TEST",
         "abc",
-        new File("/tmp"),
         HumanReadableBytes.valueOf(HumanReadableBytes.parse("100Mib")),
         2
     );
@@ -123,7 +121,6 @@ public class S3OutputSerdeTest
     S3OutputConfig s3OutputConfig = new S3OutputConfig(
         "TEST",
         "abc",
-        new File("/tmp"),
         null,
         null
     );

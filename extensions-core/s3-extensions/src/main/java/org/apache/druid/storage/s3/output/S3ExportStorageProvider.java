@@ -26,6 +26,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
+import com.google.inject.Injector;
+import com.google.inject.Key;
+import com.google.inject.name.Names;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.data.input.s3.S3InputSource;
 import org.apache.druid.error.DruidException;
@@ -39,6 +42,8 @@ import javax.validation.constraints.NotNull;
 import java.io.File;
 import java.net.URI;
 import java.util.List;
+
+import static org.apache.druid.server.metrics.DataSourceTaskIdHolder.TMP_DIR_BINDING;
 
 @JsonTypeName(S3ExportStorageProvider.TYPE_NAME)
 public class S3ExportStorageProvider implements ExportStorageProvider
@@ -55,6 +60,8 @@ public class S3ExportStorageProvider implements ExportStorageProvider
   S3ExportConfig s3ExportConfig;
   @JacksonInject
   ServerSideEncryptingAmazonS3 s3;
+  @JacksonInject
+  Injector injector;
 
   @JsonCreator
   public S3ExportStorageProvider(
@@ -69,12 +76,7 @@ public class S3ExportStorageProvider implements ExportStorageProvider
   @Override
   public StorageConnector get()
   {
-    final String tempDir = s3ExportConfig.getTempLocalDir();
-    if (tempDir == null) {
-      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
-                          .ofCategory(DruidException.Category.NOT_FOUND)
-                          .build("The runtime property `druid.export.storage.s3.tempLocalDir` must be configured for S3 export.");
-    }
+    final File tempDir = injector.getInstance(Key.get(File.class, Names.named(TMP_DIR_BINDING)));
     final List<String> allowedExportPaths = s3ExportConfig.getAllowedExportPaths();
     if (allowedExportPaths == null) {
       throw DruidException.forPersona(DruidException.Persona.OPERATOR)
@@ -86,11 +88,10 @@ public class S3ExportStorageProvider implements ExportStorageProvider
     final S3OutputConfig s3OutputConfig = new S3OutputConfig(
         bucket,
         prefix,
-        new File(tempDir),
         s3ExportConfig.getChunkSize(),
         s3ExportConfig.getMaxRetry()
     );
-    return new S3StorageConnector(s3OutputConfig, s3);
+    return new S3StorageConnector(s3OutputConfig, s3, tempDir);
   }
 
   @VisibleForTesting

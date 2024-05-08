@@ -77,6 +77,7 @@ public class RetryableS3OutputStream extends OutputStream
   private final S3OutputConfig config;
   private final ServerSideEncryptingAmazonS3 s3;
   private final String s3Key;
+  private final File tempDir;
   private final String uploadId;
   private final File chunkStorePath;
   private final long chunkSize;
@@ -106,11 +107,12 @@ public class RetryableS3OutputStream extends OutputStream
   public RetryableS3OutputStream(
       S3OutputConfig config,
       ServerSideEncryptingAmazonS3 s3,
-      String s3Key
+      String s3Key,
+      File tempDir
   ) throws IOException
   {
 
-    this(config, s3, s3Key, true);
+    this(config, s3, s3Key, true, tempDir);
   }
 
   @VisibleForTesting
@@ -118,12 +120,14 @@ public class RetryableS3OutputStream extends OutputStream
       S3OutputConfig config,
       ServerSideEncryptingAmazonS3 s3,
       String s3Key,
-      boolean chunkValidation
+      boolean chunkValidation,
+      File tempDir
   ) throws IOException
   {
     this.config = config;
     this.s3 = s3;
     this.s3Key = s3Key;
+    this.tempDir = tempDir;
 
     final InitiateMultipartUploadResult result;
     try {
@@ -135,7 +139,7 @@ public class RetryableS3OutputStream extends OutputStream
       throw new IOException("Unable to start multipart upload", e);
     }
     this.uploadId = result.getUploadId();
-    this.chunkStorePath = new File(config.getTempDir(), uploadId + UUID.randomUUID());
+    this.chunkStorePath = new File(tempDir, uploadId + UUID.randomUUID());
     FileUtils.mkdirp(this.chunkStorePath);
     this.chunkSize = config.getChunkSize();
     this.pushStopwatch = Stopwatch.createUnstarted();

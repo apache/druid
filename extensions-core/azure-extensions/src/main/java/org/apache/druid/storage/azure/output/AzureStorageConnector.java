@@ -29,6 +29,7 @@ import org.apache.druid.storage.azure.AzureUtils;
 import org.apache.druid.storage.remote.ChunkingStorageConnector;
 import org.apache.druid.storage.remote.ChunkingStorageConnectorParameters;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -48,14 +49,17 @@ public class AzureStorageConnector extends ChunkingStorageConnector<AzureInputRa
 
   private final AzureOutputConfig config;
   private final AzureStorage azureStorage;
+  private final File tempFile;
 
   public AzureStorageConnector(
       final AzureOutputConfig config,
-      final AzureStorage azureStorage
+      final AzureStorage azureStorage,
+      final File tempFile
   )
   {
     this.config = config;
     this.azureStorage = azureStorage;
+    this.tempFile = tempFile;
   }
 
   @Override
@@ -73,7 +77,7 @@ public class AzureStorageConnector extends ChunkingStorageConnector<AzureInputRa
   public ChunkingStorageConnectorParameters<AzureInputRange> buildInputParams(String path, long from, long size)
   {
     ChunkingStorageConnectorParameters.Builder<AzureInputRange> parameters = new ChunkingStorageConnectorParameters.Builder<>();
-    parameters.tempDirSupplier(config::getTempDir);
+    parameters.tempDirSupplier(() -> tempFile);
     parameters.maxRetry(config.getMaxRetry());
     parameters.cloudStoragePath(objectPath(path));
     parameters.retryCondition(AzureUtils.AZURE_RETRY);

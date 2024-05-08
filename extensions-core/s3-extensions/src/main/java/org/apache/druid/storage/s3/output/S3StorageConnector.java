@@ -39,6 +39,7 @@ import org.apache.druid.storage.s3.S3Utils;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 
 import javax.annotation.Nonnull;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -55,24 +56,26 @@ public class S3StorageConnector extends ChunkingStorageConnector<GetObjectReques
 
   private final S3OutputConfig config;
   private final ServerSideEncryptingAmazonS3 s3Client;
+  private final File tempDir;
 
   private static final String DELIM = "/";
   private static final Joiner JOINER = Joiner.on(DELIM).skipNulls();
   private static final int MAX_NUMBER_OF_LISTINGS = 1000;
 
-  public S3StorageConnector(S3OutputConfig config, ServerSideEncryptingAmazonS3 serverSideEncryptingAmazonS3)
+  public S3StorageConnector(S3OutputConfig config, ServerSideEncryptingAmazonS3 serverSideEncryptingAmazonS3, File tempDir)
   {
     this.config = config;
     this.s3Client = serverSideEncryptingAmazonS3;
+    this.tempDir = tempDir;
     Preconditions.checkNotNull(config, "config is null");
-    Preconditions.checkNotNull(config.getTempDir(), "tempDir is null in s3 config");
+    Preconditions.checkNotNull(tempDir, "tempDir is null in s3 config");
     try {
-      FileUtils.mkdirp(config.getTempDir());
+      FileUtils.mkdirp(tempDir);
     }
     catch (IOException e) {
       throw new RE(
           e,
-          StringUtils.format("Cannot create tempDir : [%s] for s3 storage connector", config.getTempDir())
+          StringUtils.format("Cannot create tempDir : [%s] for s3 storage connector", tempDir)
       );
     }
   }
@@ -115,7 +118,7 @@ public class S3StorageConnector extends ChunkingStorageConnector<GetObjectReques
     builder.start(from);
     builder.end(from + size);
     builder.cloudStoragePath(objectPath(path));
-    builder.tempDirSupplier(config::getTempDir);
+    builder.tempDirSupplier(() -> tempDir);
     builder.maxRetry(config.getMaxRetry());
     builder.retryCondition(S3Utils.S3RETRY);
     builder.objectSupplier((start, end) -> new GetObjectRequest(config.getBucket(), objectPath(path)).withRange(start, end - 1));
@@ -153,7 +156,7 @@ public class S3StorageConnector extends ChunkingStorageConnector<GetObjectReques
   @Override
   public OutputStream write(String path) throws IOException
   {
-    return new RetryableS3OutputStream(config, s3Client, objectPath(path));
+    return new RetryableS3OutputStream(config, s3Client, objectPath(path), tempDir);
   }
 
   @Override

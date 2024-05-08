@@ -37,7 +37,6 @@ import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.io.File;
 import java.util.Properties;
 
 public class AzureStorageConnectorProviderTest
@@ -59,8 +58,6 @@ public class AzureStorageConnectorProviderTest
     Assert.assertTrue(s3StorageConnectorProvider.get() instanceof AzureStorageConnector);
     Assert.assertEquals("container", ((AzureStorageConnectorProvider) s3StorageConnectorProvider).getContainer());
     Assert.assertEquals("prefix", ((AzureStorageConnectorProvider) s3StorageConnectorProvider).getPrefix());
-    Assert.assertEquals(new File("/tmp"), ((AzureStorageConnectorProvider) s3StorageConnectorProvider).getTempDir());
-
   }
 
   @Test

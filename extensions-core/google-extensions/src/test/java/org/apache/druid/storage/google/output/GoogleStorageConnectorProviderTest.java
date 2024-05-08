@@ -38,7 +38,6 @@ import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.io.File;
 import java.util.Properties;
 
 public class GoogleStorageConnectorProviderTest
@@ -60,8 +59,6 @@ public class GoogleStorageConnectorProviderTest
     Assert.assertTrue(googleStorageConnectorProvider.get() instanceof GoogleStorageConnector);
     Assert.assertEquals("bucket", ((GoogleStorageConnectorProvider) googleStorageConnectorProvider).getBucket());
     Assert.assertEquals("prefix", ((GoogleStorageConnectorProvider) googleStorageConnectorProvider).getPrefix());
-    Assert.assertEquals(new File("/tmp"), ((GoogleStorageConnectorProvider) googleStorageConnectorProvider).getTempDir());
-
   }
 
   @Test

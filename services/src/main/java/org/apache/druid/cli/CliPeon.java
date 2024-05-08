@@ -146,6 +146,8 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
+import static org.apache.druid.server.metrics.DataSourceTaskIdHolder.TASK_ID_BINDING;
+
 /**
  */
 @Command(
@@ -324,6 +326,14 @@ public class CliPeon extends GuiceRunnable
           public String getDataSourceFromTask(final Task task)
           {
             return task.getDataSource();
+          }
+
+          @Provides
+          @LazySingleton
+          @Named(DataSourceTaskIdHolder.TMP_DIR_BINDING)
+          public File getTempDirectoryFromTask(final TaskConfig taskConfig, @Named(DataSourceTaskIdHolder.TASK_ID_BINDING) String taskId)
+          {
+            return taskConfig.getTaskTempDir(taskId);
           }
 
           @Provides

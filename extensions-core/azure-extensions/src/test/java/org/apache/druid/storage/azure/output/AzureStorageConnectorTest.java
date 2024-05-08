@@ -57,8 +57,9 @@ public class AzureStorageConnectorTest
   public void setup() throws IOException
   {
     storageConnector = new AzureStorageConnector(
-        new AzureOutputConfig(CONTAINER, PREFIX, temporaryFolder.newFolder(), null, null),
-        azureStorage
+        new AzureOutputConfig(CONTAINER, PREFIX, null, null),
+        azureStorage,
+        temporaryFolder.newFolder()
     );
   }
 

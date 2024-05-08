@@ -21,7 +21,6 @@ package org.apache.druid.storage.azure.output;
 
 
 import org.apache.druid.error.DruidException;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.ISE;
 import org.junit.Assert;
@@ -48,7 +47,7 @@ public class AzureOutputConfigTest
     HumanReadableBytes chunkSize = new HumanReadableBytes("4001MiB");
     Assert.assertThrows(
         DruidException.class,
-        () -> new AzureOutputConfig(CONTAINER, PREFIX, temporaryFolder.newFolder(), chunkSize, MAX_RETRY_COUNT)
+        () -> new AzureOutputConfig(CONTAINER, PREFIX, chunkSize, MAX_RETRY_COUNT)
     );
   }
 
@@ -62,24 +61,7 @@ public class AzureOutputConfigTest
     //noinspection ResultOfObjectAllocationIgnored
     Assert.assertThrows(
         DruidException.class,
-        () -> new AzureOutputConfig(CONTAINER, PREFIX, tempDir, null, MAX_RETRY_COUNT)
+        () -> new AzureOutputConfig(CONTAINER, PREFIX, null, MAX_RETRY_COUNT)
     );
-  }
-
-  @Test
-  public void testTempDirectoryNotPresentButWritable() throws IOException
-  {
-    File tempDir = new File(temporaryFolder.newFolder() + "/notPresent1/notPresent2/notPresent3");
-    //noinspection ResultOfObjectAllocationIgnored
-    new AzureOutputConfig(CONTAINER, PREFIX, tempDir, null, MAX_RETRY_COUNT);
-  }
-
-  @Test
-  public void testTempDirectoryPresent() throws IOException
-  {
-    File tempDir = new File(temporaryFolder.newFolder() + "/notPresent1/notPresent2/notPresent3");
-    FileUtils.mkdirp(tempDir);
-    //noinspection ResultOfObjectAllocationIgnored
-    new AzureOutputConfig(CONTAINER, PREFIX, tempDir, null, MAX_RETRY_COUNT);
   }
 }

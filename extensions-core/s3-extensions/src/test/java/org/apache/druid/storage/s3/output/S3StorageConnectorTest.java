@@ -80,11 +80,10 @@ public class S3StorageConnectorTest
       storageConnector = new S3StorageConnector(new S3OutputConfig(
           BUCKET,
           PREFIX,
-          temporaryFolder.newFolder(),
           null,
           null,
           true
-      ), service);
+      ), service, temporaryFolder.newFolder());
     }
     catch (IOException e) {
       throw new RuntimeException(e);

@@ -26,10 +26,14 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
+import com.google.inject.Injector;
+import com.google.inject.Key;
+import com.google.inject.name.Names;
 import org.apache.druid.data.input.google.GoogleCloudStorageInputSource;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.server.metrics.DataSourceTaskIdHolder;
 import org.apache.druid.storage.ExportStorageProvider;
 import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.google.GoogleInputDataConfig;
@@ -58,6 +62,8 @@ public class GoogleExportStorageProvider implements ExportStorageProvider
   GoogleStorage googleStorage;
   @JacksonInject
   GoogleInputDataConfig googleInputDataConfig;
+  @JacksonInject
+  Injector injector;
 
   @JsonCreator
   public GoogleExportStorageProvider(
@@ -72,12 +78,7 @@ public class GoogleExportStorageProvider implements ExportStorageProvider
   @Override
   public StorageConnector get()
   {
-    final String tempDir = googleExportConfig.getTempLocalDir();
-    if (tempDir == null) {
-      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
-                          .ofCategory(DruidException.Category.NOT_FOUND)
-                          .build("The runtime property `druid.export.storage.google.tempLocalDir` must be configured for GCS export.");
-    }
+    final File tempDir = injector.getInstance(Key.get(File.class, Names.named(DataSourceTaskIdHolder.TMP_DIR_BINDING)));
     final List<String> allowedExportPaths = googleExportConfig.getAllowedExportPaths();
     if (allowedExportPaths == null) {
       throw DruidException.forPersona(DruidException.Persona.OPERATOR)
@@ -89,11 +90,10 @@ public class GoogleExportStorageProvider implements ExportStorageProvider
     final GoogleOutputConfig googleOutputConfig = new GoogleOutputConfig(
         bucket,
         prefix,
-        new File(tempDir),
         googleExportConfig.getChunkSize(),
         googleExportConfig.getMaxRetry()
     );
-    return new GoogleStorageConnector(googleOutputConfig, googleStorage, googleInputDataConfig);
+    return new GoogleStorageConnector(googleOutputConfig, googleStorage, googleInputDataConfig, tempDir);
   }
 
   @VisibleForTesting

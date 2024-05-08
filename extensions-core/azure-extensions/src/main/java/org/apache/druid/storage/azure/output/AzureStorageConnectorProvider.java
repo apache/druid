@@ -23,8 +23,12 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.google.inject.Injector;
+import com.google.inject.Key;
+import com.google.inject.name.Names;
 import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.java.util.common.HumanReadableBytes;
+import org.apache.druid.server.metrics.DataSourceTaskIdHolder;
 import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.StorageConnectorProvider;
 import org.apache.druid.storage.azure.AzureStorage;
@@ -40,22 +44,24 @@ public class AzureStorageConnectorProvider extends AzureOutputConfig implements 
   @Global
   @JacksonInject
   AzureStorage azureStorage;
+  @JacksonInject
+  Injector injector;
 
   @JsonCreator
   public AzureStorageConnectorProvider(
       @JsonProperty(value = "container", required = true) String container,
       @JsonProperty(value = "prefix", required = true) String prefix,
-      @JsonProperty(value = "tempDir", required = true) File tempDir,
       @JsonProperty(value = "chunkSize") @Nullable HumanReadableBytes chunkSize,
       @JsonProperty(value = "maxRetry") @Nullable Integer maxRetry
   )
   {
-    super(container, prefix, tempDir, chunkSize, maxRetry);
+    super(container, prefix, chunkSize, maxRetry);
   }
 
   @Override
   public StorageConnector get()
   {
-    return new AzureStorageConnector(this, azureStorage);
+    final File tempDir = injector.getInstance(Key.get(File.class, Names.named(DataSourceTaskIdHolder.TMP_DIR_BINDING)));
+    return new AzureStorageConnector(this, azureStorage, tempDir);
   }
 }
