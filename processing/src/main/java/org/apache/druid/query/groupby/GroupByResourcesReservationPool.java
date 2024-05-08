@@ -136,10 +136,10 @@ public class GroupByResourcesReservationPool
       // We have reserved a spot in the map. Now begin the blocking call.
       resources = GroupingEngine.prepareResource(groupByQuery, mergeBufferPool, willMergeRunner, groupByQueryConfig);
     }
-    catch (Exception e) {
+    catch (Throwable t) {
       // Unable to allocate the resources, perform cleanup and rethrow the exception
       pool.remove(queryResourceId);
-      throw e;
+      throw t;
     }
 
     // Resources have been allocated, spot has been reserved. The reference would ALWAYS refer to 'null'. Refer the
