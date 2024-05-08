@@ -122,7 +122,63 @@ public class RowKeyComparisonRunLengthsTest
   @Test
   public void testRunLengthsWithMultipleColumns()
   {
-    // 
+    final List<KeyColumn> keyColumns = ImmutableList.of(
+        new KeyColumn("longAsc1", KeyOrder.ASCENDING),
+        new KeyColumn("stringAsc1", KeyOrder.ASCENDING),
+        new KeyColumn("stringDesc1", KeyOrder.DESCENDING),
+        new KeyColumn("longDesc1", KeyOrder.DESCENDING),
+        new KeyColumn("complexDesc1", KeyOrder.DESCENDING),
+        new KeyColumn("complexAsc1", KeyOrder.ASCENDING),
+        new KeyColumn("complexAsc2", KeyOrder.ASCENDING),
+        new KeyColumn("stringAsc2", KeyOrder.ASCENDING)
+    );
+
+    final RowSignature signature = RowSignature.builder()
+                                               .add("longAsc1", ColumnType.LONG)
+                                               .add("stringAsc1", ColumnType.STRING)
+                                               .add("stringDesc1", ColumnType.STRING)
+                                               .add("longDesc1", ColumnType.LONG)
+                                               .add("complexDesc1", ColumnType.NESTED_DATA)
+                                               .add("complexAsc1", ColumnType.NESTED_DATA)
+                                               .add("complexAsc2", ColumnType.NESTED_DATA)
+                                               .add("stringAsc2", ColumnType.STRING)
+                                               .build();
+
+    final List<RowKeyComparisonRunLengths.RunLengthEntry> runLengthEntries =
+        RowKeyComparisonRunLengths.create(keyColumns, signature).getRunLengthEntries();
+
+    // Input keyColumns
+    // long ASC, string ASC, string DESC, long DESC, complex DESC, complex ASC, complex ASC, string ASC
+
+    // Output runLengthEntries would be
+    // (long, string ASC) (string, long DESC) (complex DESC) (complex ASC) (complex ASC) (string ASC)
+
+    Assert.assertEquals(6, runLengthEntries.size());
+
+    Assert.assertTrue(runLengthEntries.get(0).isByteComparable());
+    Assert.assertEquals(2, runLengthEntries.get(0).getRunLength());
+    Assert.assertEquals(KeyOrder.ASCENDING, runLengthEntries.get(0).getOrder());
+
+    Assert.assertTrue(runLengthEntries.get(1).isByteComparable());
+    Assert.assertEquals(2, runLengthEntries.get(1).getRunLength());
+    Assert.assertEquals(KeyOrder.DESCENDING, runLengthEntries.get(1).getOrder());
+
+    Assert.assertFalse(runLengthEntries.get(2).isByteComparable());
+    Assert.assertEquals(1, runLengthEntries.get(2).getRunLength());
+    Assert.assertEquals(KeyOrder.DESCENDING, runLengthEntries.get(2).getOrder());
+
+    Assert.assertFalse(runLengthEntries.get(3).isByteComparable());
+    Assert.assertEquals(1, runLengthEntries.get(3).getRunLength());
+    Assert.assertEquals(KeyOrder.ASCENDING, runLengthEntries.get(3).getOrder());
+
+    Assert.assertFalse(runLengthEntries.get(4).isByteComparable());
+    Assert.assertEquals(1, runLengthEntries.get(4).getRunLength());
+    Assert.assertEquals(KeyOrder.ASCENDING, runLengthEntries.get(4).getOrder());
+
+    Assert.assertTrue(runLengthEntries.get(5).isByteComparable());
+    Assert.assertEquals(1, runLengthEntries.get(5).getRunLength());
+    Assert.assertEquals(KeyOrder.ASCENDING, runLengthEntries.get(5).getOrder());
+
   }
 
 }
