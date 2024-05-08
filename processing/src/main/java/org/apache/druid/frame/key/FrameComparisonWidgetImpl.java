@@ -37,6 +37,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
 import org.apache.druid.segment.serde.ComplexMetrics;
 
+import javax.annotation.concurrent.NotThreadSafe;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -47,6 +48,7 @@ import java.util.Map;
  * Comparison logic in this class is very similar to {@link RowKeyComparator}, but is different because it works
  * on Frames instead of byte[].
  */
+@NotThreadSafe
 public class FrameComparisonWidgetImpl implements FrameComparisonWidget
 {
   private final Frame frame;
@@ -58,6 +60,9 @@ public class FrameComparisonWidgetImpl implements FrameComparisonWidget
   private final List<FieldReader> keyFieldReaders;
   private final int firstFieldPosition;
   private final RowKeyComparisonRunLengths rowKeyComparisonRunLengths;
+  // We memoize the serde instead of fetching it everytime from the global map, since that is thread-safe and is guarded by a
+  // ConcurrentHashMap, while we only access FrameComparisonWidget from a single thread.
+  private final Map<String, ComplexMetricSerde> serdeMap = new HashMap<>();
 
   private FrameComparisonWidgetImpl(
       final Frame frame,
@@ -288,9 +293,6 @@ public class FrameComparisonWidgetImpl implements FrameComparisonWidget
     // Number of fields compared till now, which is equivalent to the index of the field to compare next
     int fieldsComparedTillNow = 0;
 
-    // Memoize the serde instead of calling ComplexMetrics.getSerdeForType everytime
-    final Map<String, ComplexMetricSerde> serdeMap = new HashMap<>();
-
     for (RowKeyComparisonRunLengths.RunLengthEntry runLengthEntry : rowKeyComparisonRunLengths.getRunLengthEntries()) {
 
       if (runLengthEntry.getRunLength() <= 0) {
@@ -322,10 +324,11 @@ public class FrameComparisonWidgetImpl implements FrameComparisonWidget
         Preconditions.checkArgument(columnType1.equals(columnType2), "Different complex types cannot be compared");
 
         // Use serde for the current implementation.
-        ComplexMetricSerde serde = Preconditions.checkNotNull(
-            ComplexMetrics.getSerdeForType(complexTypeName),
-            "serde for type [%s] not present",
-            complexTypeName
+        ComplexMetricSerde serde = serdeMap.computeIfAbsent(
+            complexTypeName, name ->
+                Preconditions.checkNotNull(
+                    ComplexMetrics.getSerdeForType(name), "serde for type [%s] not present", complexTypeName
+                )
         );
 
         int nextField = fieldsComparedTillNow + 1;

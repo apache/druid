@@ -110,6 +110,12 @@ public class ByteRowKeyComparator implements Comparator<byte[]>
         continue;
       }
 
+      // Index of the next field that will get considered. Excludes the last field of the current run length that is being
+      // compared in this iteration
+      final int nextField = fieldsComparedTillNow + runLengthEntry.getRunLength();
+      final int currentRunEndPosition1 = RowKeyReader.fieldEndPosition(keyArray1, nextField - 1);
+      final int currentRunEndPosition2 = RowKeyReader.fieldEndPosition(keyArray2, nextField - 1);
+
       if (!runLengthEntry.isByteComparable()) {
         // Only complex types are not byte comparable. Nested arrays aren't supported in MSQ
         assert runLengthEntry.getRunLength() == 1;
@@ -128,10 +134,6 @@ public class ByteRowKeyComparator implements Comparator<byte[]>
             complexTypeName
         );
 
-        // Index of the next field that will get considered. Excludes the current field that we are comparing right now
-        final int nextField = fieldsComparedTillNow + 1;
-        final int currentRunEndPosition1 = RowKeyReader.fieldEndPosition(keyArray1, nextField - 1);
-        final int currentRunEndPosition2 = RowKeyReader.fieldEndPosition(keyArray2, nextField - 1);
 
         int cmp = FrameReaderUtils.compareComplexTypes(
             keyArray1,

@@ -32,6 +32,13 @@ import java.util.Objects;
 public class RowKeyComparisonRunLengths
 {
 
+  private final List<RunLengthEntry> runLengthEntries;
+
+  private RowKeyComparisonRunLengths(List<RunLengthEntry> runLengthEntries)
+  {
+    this.runLengthEntries = runLengthEntries;
+  }
+
   public static RowKeyComparisonRunLengths create(final List<KeyColumn> keyColumns, RowSignature rowSignature)
   {
     final List<RunLengthEntry> runLengthEntries = new ArrayList<>();
@@ -49,11 +56,7 @@ public class RowKeyComparisonRunLengths
 
       if (runLengthEntries.size() == 0) {
         runLengthEntries.add(
-            new RunLengthEntry(
-                isByteComparable(columnType),
-                1,
-                keyColumn.order()
-            )
+            new RunLengthEntry(isByteComparable(columnType), keyColumn.order())
         );
         continue;
       }
@@ -66,28 +69,19 @@ public class RowKeyComparisonRunLengths
           && isCurrentColumnByteComparable
           && lastRunLengthEntry.order.equals(keyColumn.order())
       ) {
-        lastRunLengthEntry.runLength++;
+        lastRunLengthEntry.incrementRunLength();
       } else {
         runLengthEntries.add(
-            new RunLengthEntry(
-                isCurrentColumnByteComparable,
-                1,
-                keyColumn.order()
-            )
+            new RunLengthEntry(isCurrentColumnByteComparable, keyColumn.order())
         );
       }
     }
     return new RowKeyComparisonRunLengths(runLengthEntries);
   }
 
-  public static boolean isByteComparable(@Nullable ColumnType columnType)
+  private static boolean isByteComparable(ColumnType columnType)
   {
-    // For backward compatibility
-    // Only types which were byte comparable were allowed. Therefore, if we don't know the columnType, we should assume
-    // that it is byte comparable
-    if (columnType == null) {
-      return true;
-    } else if (columnType.is(ValueType.COMPLEX)) {
+    if (columnType.is(ValueType.COMPLEX)) {
       if (columnType.getComplexTypeName() == null) {
         throw DruidException.defensive("Cannot sort unknown complex types");
       }
@@ -101,18 +95,10 @@ public class RowKeyComparisonRunLengths
     return true;
   }
 
-  private final List<RunLengthEntry> runLengthEntries;
-
-  public RowKeyComparisonRunLengths(List<RunLengthEntry> runLengthEntries)
-  {
-    this.runLengthEntries = runLengthEntries;
-  }
-
-  public List<RunLengthEntry> getRunLengthEntries()
+   public List<RunLengthEntry> getRunLengthEntries()
   {
     return runLengthEntries;
   }
-
 
   @Override
   public boolean equals(Object o)
@@ -145,14 +131,23 @@ public class RowKeyComparisonRunLengths
   public static class RunLengthEntry
   {
     private final boolean byteComparable;
-    private int runLength;
     private final KeyOrder order;
+    private int runLength;
 
-    private RunLengthEntry(boolean byteComparable, int runLength, KeyOrder order)
+    private RunLengthEntry(boolean byteComparable, KeyOrder order)
     {
       this.byteComparable = byteComparable;
-      this.runLength = runLength;
       this.order = order;
+      this.runLength = 1;
+    }
+
+    /**
+     * Increments the runLength by 1. Only to be used within this class during the creation of the
+     * {@link RowKeyComparisonRunLengths}
+     */
+    private void incrementRunLength()
+    {
+      ++runLength;
     }
 
     public boolean isByteComparable()
@@ -168,35 +163,6 @@ public class RowKeyComparisonRunLengths
     public KeyOrder getOrder()
     {
       return order;
-    }
-
-    @Override
-    public boolean equals(Object o)
-    {
-      if (this == o) {
-        return true;
-      }
-      if (o == null || getClass() != o.getClass()) {
-        return false;
-      }
-      RunLengthEntry that = (RunLengthEntry) o;
-      return byteComparable == that.byteComparable && runLength == that.runLength && order == that.order;
-    }
-
-    @Override
-    public int hashCode()
-    {
-      return Objects.hash(byteComparable, runLength, order);
-    }
-
-    @Override
-    public String toString()
-    {
-      return "RunLengthEntry{" +
-             "byteComparable=" + byteComparable +
-             ", runLength=" + runLength +
-             ", order=" + order +
-             '}';
     }
   }
 }

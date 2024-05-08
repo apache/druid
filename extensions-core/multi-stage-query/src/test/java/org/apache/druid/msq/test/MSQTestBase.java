@@ -1234,7 +1234,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
                                                                        .collect(Collectors.toList());
 
         log.info(
-            "Found rows which are sorted forcefully %s",
+            "Found rows which are sorted forcefully\n%s",
             transformedOutputRows.stream().map(Arrays::deepToString).collect(Collectors.joining("\n"))
         );
 

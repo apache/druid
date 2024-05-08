@@ -27,12 +27,20 @@ import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.systemfield.SystemFields;
 import org.apache.druid.guice.NestedDataModule;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.msq.indexing.MSQSpec;
+import org.apache.druid.msq.indexing.MSQTuningConfig;
+import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.NestedDataTestUtils;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.nested.StructuredData;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
+import org.apache.druid.sql.calcite.filtration.Filtration;
+import org.apache.druid.sql.calcite.planner.ColumnMapping;
+import org.apache.druid.sql.calcite.planner.ColumnMappings;
+import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.utils.CompressionUtils;
 import org.junit.jupiter.api.BeforeEach;
@@ -45,6 +53,7 @@ import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 
 public class MSQComplexGroupByTest extends MSQTestBase
 {
@@ -119,10 +128,106 @@ public class MSQComplexGroupByTest extends MSQTestBase
                      .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0)))
                      .setExpectedDataSource("foo1")
                      .setExpectedRowSignature(RowSignature.builder()
+                                                          .add("__time", ColumnType.LONG)
                                                           .add("obj", ColumnType.NESTED_DATA)
                                                           .add("cnt", ColumnType.LONG)
                                                           .build())
-                     .setExpectedResultRows(ImmutableList.of())
+                     .setExpectedResultRows(ImmutableList.of(
+                         new Object[]{
+                             0L,
+                             StructuredData.wrap(
+                                 ImmutableMap.of(
+                                     "a", 500,
+                                     "b", ImmutableMap.of(
+                                         "x", "e",
+                                         "z", ImmutableList.of(1, 2, 3, 4)
+                                     ),
+                                     "v", "a"
+                                 )
+                             ),
+                             1L
+                         },
+                         new Object[]{
+                             0L,
+                             StructuredData.wrap(
+                                 ImmutableMap.of(
+                                     "a", 100,
+                                     "b", ImmutableMap.of(
+                                         "x", "a",
+                                         "y", 1.1,
+                                         "z", ImmutableList.of(1, 2, 3, 4)
+                                     ),
+                                     "v", Collections.emptyList()
+                                 )
+                             ),
+                             2L
+                         },
+                         new Object[]{
+                             0L,
+                             StructuredData.wrap(
+                                 ImmutableMap.of(
+                                     "a", 700,
+                                     "b", ImmutableMap.of(
+                                         "x", "g",
+                                         "y", 1.1,
+                                         "z", Arrays.asList(9, null, 9, 9)
+                                     ),
+                                     "v", Collections.emptyList()
+                                 )
+                             ),
+                             1L
+                         },
+                         new Object[]{
+                             0L,
+                             StructuredData.wrap(
+                                 ImmutableMap.of(
+                                     "a", 200,
+                                     "b", ImmutableMap.of(
+                                         "x", "b",
+                                         "y", 1.1,
+                                         "z", ImmutableList.of(2, 4, 6)
+                                     ),
+                                     "v", Collections.emptyList()
+                                 )
+                             ),
+                             1L
+                         },
+                         new Object[]{
+                             0L,
+                             StructuredData.wrap(
+                                 ImmutableMap.of(
+                                     "a", 600,
+                                     "b", ImmutableMap.of(
+                                         "x", "f",
+                                         "y", 1.1,
+                                         "z", ImmutableList.of(6, 7, 8, 9)
+                                     ),
+                                     "v", "b"
+                                 )
+                             ),
+                             1L
+                         },
+                         new Object[]{
+                             0L,
+                             StructuredData.wrap(
+                                 ImmutableMap.of(
+                                     "a", 400,
+                                     "b", ImmutableMap.of(
+                                         "x", "d",
+                                         "y", 1.1,
+                                         "z", ImmutableList.of(3, 4)
+                                     ),
+                                     "v", Collections.emptyList()
+                                 )
+                             ),
+                             1L
+                         },
+                         new Object[]{
+                             0L,
+                             StructuredData.wrap(ImmutableMap.of("a", 300)),
+                             1L
+                         }
+                     ))
                      .verifyResults();
 
   }
@@ -142,11 +247,34 @@ public class MSQComplexGroupByTest extends MSQTestBase
                              + " )\n"
                              + " ORDER BY 1")
                      .setQueryContext(ImmutableMap.of())
+                     .setExpectedMSQSpec(MSQSpec
+                                             .builder()
+                                             .query(newScanQueryBuilder()
+                                                        .dataSource(CalciteTests.DATASOURCE1)
+                                                        .intervals(querySegmentSpec(Filtration.eternity()))
+                                                        .columns("cnt", "dim1")
+                                                        .build()
+                                             )
+                                             .columnMappings(new ColumnMappings(ImmutableList.of(
+                                                 new ColumnMapping("obj", "obj")
+                                             )))
+                                             .tuningConfig(MSQTuningConfig.defaultConfig())
+                                             .destination(TaskReportMSQDestination.INSTANCE)
+                                             .build()
+                     )
                      .setExpectedRowSignature(RowSignature.builder()
                                                           .add("obj", ColumnType.NESTED_DATA)
                                                           .build())
-                     .setExpectedResultRows(ImmutableList.of())
+                     .setExpectedResultRows(ImmutableList.of(
+                         new Object[]{"{\"a\":500,\"b\":{\"x\":\"e\",\"z\":[1,2,3,4]},\"v\":\"a\"}"},
+                         new Object[]{"{\"a\":100,\"b\":{\"x\":\"a\",\"y\":1.1,\"z\":[1,2,3,4]},\"v\":[]}"},
+                         new Object[]{"{\"a\":100,\"b\":{\"x\":\"a\",\"y\":1.1,\"z\":[1,2,3,4]},\"v\":[]}"},
+                         new Object[]{"{\"a\":700,\"b\":{\"x\":\"g\",\"y\":1.1,\"z\":[9,null,9,9]},\"v\":[]}"},
+                         new Object[]{"{\"a\":200,\"b\":{\"x\":\"b\",\"y\":1.1,\"z\":[2,4,6]},\"v\":[]}"},
+                         new Object[]{"{\"a\":600,\"b\":{\"x\":\"f\",\"y\":1.1,\"z\":[6,7,8,9]},\"v\":\"b\"}"},
+                         new Object[]{"{\"a\":400,\"b\":{\"x\":\"d\",\"y\":1.1,\"z\":[3,4]},\"v\":[]}"},
+                         new Object[]{"{\"a\":300}"}
+                     ))
                      .verifyResults();
   }
-
 }
