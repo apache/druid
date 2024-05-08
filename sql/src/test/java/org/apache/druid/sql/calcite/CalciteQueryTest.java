@@ -42,7 +42,6 @@ import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.OperatorFactoryBuilders;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
@@ -15712,90 +15711,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             + "GROUP BY 1"
         )
         .queryContext(queryContext)
-        .expectedQueries(
-            ImmutableList.of(
-                GroupByQuery.builder()
-                            .setDataSource(
-                                new QueryDataSource(
-                                    new GroupByQuery.Builder()
-                                        .setDataSource(CalciteTests.WIKIPEDIA)
-                                        .setInterval(querySegmentSpec(Filtration.eternity()))
-                                        .setGranularity(Granularities.ALL)
-                                        .setVirtualColumns(
-                                            new ExpressionVirtualColumn(
-                                                "v0",
-                                                "timestamp_floor(\"__time\",'PT1H',null,'UTC')",
-                                                ColumnType.LONG,
-                                                TestExprMacroTable.INSTANCE
-                                            ),
-                                            new ExpressionVirtualColumn(
-                                                "v1",
-                                                "istrue((\"channel\" == '#it.wikipedia'))",
-                                                ColumnType.LONG,
-                                                ExprMacroTable.nil()
-                                            )
-                                        )
-                                        .setDimensions(
-                                            new DefaultDimensionSpec("v0", "d0", ColumnType.LONG),
-                                            new DefaultDimensionSpec("page", "d1", ColumnType.STRING),
-                                            new DefaultDimensionSpec("user", "d2", ColumnType.STRING),
-                                            new DefaultDimensionSpec("v1", "d3", ColumnType.LONG)
-                                        )
-                                        .setAggregatorSpecs(
-                                            new GroupingAggregatorFactory(
-                                                "a0",
-                                                ImmutableList.of("v0", "page", "user", "v1")
-                                            )
-                                        )
-                                        .setLimitSpec(
-                                            NoopLimitSpec.instance()
-                                        )
-                                        .setSubtotalsSpec(
-                                            ImmutableList.of(
-                                                ImmutableList.of("d0", "d1"),
-                                                ImmutableList.of("d0", "d2", "d3"),
-                                                ImmutableList.of("d0", "d2")
-                                            )
-                                        )
-                                        .setContext(queryContext)
-                                        .build()
-                                )
-                            )
-                            .setInterval(querySegmentSpec(Filtration.eternity()))
-                            .setGranularity(Granularities.ALL)
-                            .setDimensions(
-                                new DefaultDimensionSpec("d0", "_d0", ColumnType.LONG)
-                            )
-                            .setAggregatorSpecs(
-                                aggregators(
-                                    new FilteredAggregatorFactory(
-                                        new CountAggregatorFactory("_a0"),
-                                        and(
-                                            notNull("d1"),
-                                            equality("a0", 3L, ColumnType.LONG)
-                                        )
-                                    ),
-                                    new FilteredAggregatorFactory(
-                                        new CountAggregatorFactory("_a1"),
-                                        and(
-                                            notNull("d2"),
-                                            equality("a0", 4L, ColumnType.LONG),
-                                            expressionFilter("\"d3\"")
-                                        )
-                                    ),
-                                    new FilteredAggregatorFactory(
-                                        new CountAggregatorFactory("_a2"),
-                                        and(
-                                            notNull("d2"),
-                                            equality("a0", 5L, ColumnType.LONG)
-                                        )
-                                    )
-                                )
-                            )
-                            .setContext(queryContext)
-                            .build()
-            )
-        )
         .expectedResults(
             ImmutableList.of(
                 new Object[]{1442016000000L, 264L, 5L, 5L, 149L},

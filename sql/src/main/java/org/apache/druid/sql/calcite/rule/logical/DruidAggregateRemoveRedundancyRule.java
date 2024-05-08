@@ -87,16 +87,16 @@ public class DruidAggregateRemoveRedundancyRule
       return null;
     }
     final Map<Integer, Integer> map = new HashMap<>();
-    final Map<RexNode, Integer> assignedNodeForExpr = new HashMap<>();
+    final Map<RexNode, Integer> assignedRefForExpr = new HashMap<>();
     List<RexNode> newRexNodes = new ArrayList<>();
     for (int source : interestingFields) {
       final RexNode rex = project.getProjects().get(source);
-      if (!assignedNodeForExpr.containsKey(rex)) {
+      if (!assignedRefForExpr.containsKey(rex)) {
         RexNode newNode = new RexInputRef(source, rex.getType());
-        assignedNodeForExpr.put(rex, newRexNodes.size());
+        assignedRefForExpr.put(rex, newRexNodes.size());
         newRexNodes.add(newNode);
       }
-      map.put(source, assignedNodeForExpr.get(rex));
+      map.put(source, assignedRefForExpr.get(rex));
     }
 
     if (newRexNodes.size() == project.getProjects().size()) {

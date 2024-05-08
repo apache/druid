@@ -53,3 +53,125 @@ LogicalAggregate(group=[{0}], cnt_case=[COUNT(DISTINCT $1)], cnt_filter=[COUNT(D
     LogicalTableScan(table=[[druid, wikipedia]])
 
 !logicalPlan
+
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "query",
+    "query" : {
+      "queryType" : "groupBy",
+      "dataSource" : {
+        "type" : "table",
+        "name" : "wikipedia"
+      },
+      "intervals" : {
+        "type" : "intervals",
+        "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      },
+      "virtualColumns" : [ {
+        "type" : "expression",
+        "name" : "v0",
+        "expression" : "timestamp_floor(\"__time\",'PT1H',null,'UTC')",
+        "outputType" : "LONG"
+      }, {
+        "type" : "expression",
+        "name" : "v1",
+        "expression" : "istrue((\"channel\" == '#it.wikipedia'))",
+        "outputType" : "LONG"
+      } ],
+      "granularity" : {
+        "type" : "all"
+      },
+      "dimensions" : [ {
+        "type" : "default",
+        "dimension" : "v0",
+        "outputName" : "d0",
+        "outputType" : "LONG"
+      }, {
+        "type" : "default",
+        "dimension" : "user",
+        "outputName" : "d1",
+        "outputType" : "STRING"
+      }, {
+        "type" : "default",
+        "dimension" : "v1",
+        "outputName" : "d2",
+        "outputType" : "LONG"
+      } ],
+      "aggregations" : [ {
+        "type" : "grouping",
+        "name" : "a0",
+        "groupings" : [ "v0", "user", "v1" ]
+      } ],
+      "limitSpec" : {
+        "type" : "NoopLimitSpec"
+      },
+      "subtotalsSpec" : [ [ "d0", "d1", "d2" ], [ "d0", "d1" ] ]
+    }
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "d0",
+    "outputName" : "_d0",
+    "outputType" : "LONG"
+  } ],
+  "aggregations" : [ {
+    "type" : "filtered",
+    "aggregator" : {
+      "type" : "count",
+      "name" : "_a0"
+    },
+    "filter" : {
+      "type" : "and",
+      "fields" : [ {
+        "type" : "not",
+        "field" : {
+          "type" : "null",
+          "column" : "d1"
+        }
+      }, {
+        "type" : "equals",
+        "column" : "a0",
+        "matchValueType" : "LONG",
+        "matchValue" : 0
+      }, {
+        "type" : "expression",
+        "expression" : "\"d2\""
+      } ]
+    },
+    "name" : "_a0"
+  }, {
+    "type" : "filtered",
+    "aggregator" : {
+      "type" : "count",
+      "name" : "_a1"
+    },
+    "filter" : {
+      "type" : "and",
+      "fields" : [ {
+        "type" : "not",
+        "field" : {
+          "type" : "null",
+          "column" : "d1"
+        }
+      }, {
+        "type" : "equals",
+        "column" : "a0",
+        "matchValueType" : "LONG",
+        "matchValue" : 1
+      } ]
+    },
+    "name" : "_a1"
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  }
+}
+!nativePlan
