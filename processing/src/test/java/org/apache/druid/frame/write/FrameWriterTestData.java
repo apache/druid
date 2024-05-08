@@ -21,18 +21,16 @@ package org.apache.druid.frame.write;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.google.common.hash.Hashing;
 import it.unimi.dsi.fastutil.objects.ObjectArrays;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.frame.key.ByteRowKeyComparatorTest;
 import org.apache.druid.frame.key.KeyOrder;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.segment.column.ColumnType;
 
-import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -270,8 +268,9 @@ public class FrameWriterTestData
       HyperUniquesAggregatorFactory.TYPE,
       Arrays.asList(
           null,
-          makeHllCollector(null),
-          makeHllCollector("foo")
+          ByteRowKeyComparatorTest.makeHllCollector(1),
+          ByteRowKeyComparatorTest.makeHllCollector(10),
+          ByteRowKeyComparatorTest.makeHllCollector(50)
       )
   );
 
@@ -291,17 +290,6 @@ public class FrameWriterTestData
                    .add(TEST_ARRAYS_DOUBLE)
                    .add(TEST_COMPLEX)
                    .build();
-
-  private static HyperLogLogCollector makeHllCollector(@Nullable final String value)
-  {
-    final HyperLogLogCollector collector = HyperLogLogCollector.makeLatestCollector();
-
-    if (value != null) {
-      collector.add(Hashing.murmur3_128().hashBytes(StringUtils.toUtf8(value)).asBytes());
-    }
-
-    return collector;
-  }
 
   public static class Dataset<T>
   {

@@ -101,7 +101,9 @@ public class FrameComparisonWidgetImplTest extends InitializedNullHandlingTest
         new KeyColumn("1", KeyOrder.ASCENDING),
         new KeyColumn("2", KeyOrder.ASCENDING),
         new KeyColumn("3", KeyOrder.ASCENDING),
-        new KeyColumn("4", KeyOrder.ASCENDING)
+        new KeyColumn("4", KeyOrder.ASCENDING),
+        new KeyColumn("5", KeyOrder.ASCENDING),
+        new KeyColumn("6", KeyOrder.ASCENDING)
     );
 
     final FrameComparisonWidget widget = createComparisonWidget(keyColumns);
@@ -109,7 +111,7 @@ public class FrameComparisonWidgetImplTest extends InitializedNullHandlingTest
     for (int i = 0; i < frame.numRows(); i++) {
       final boolean isAllNonNull =
           Arrays.stream(RowKeyComparatorTest.ALL_KEY_OBJECTS.get(i)).allMatch(Objects::nonNull);
-      Assert.assertEquals(isAllNonNull, widget.hasNonNullKeyParts(i, new int[]{0, 1, 2, 3}));
+      Assert.assertEquals(isAllNonNull, widget.hasNonNullKeyParts(i, new int[]{0, 1, 2, 3, 4, 5}));
     }
   }
 
@@ -148,7 +150,9 @@ public class FrameComparisonWidgetImplTest extends InitializedNullHandlingTest
         new KeyColumn("1", KeyOrder.ASCENDING),
         new KeyColumn("2", KeyOrder.ASCENDING),
         new KeyColumn("3", KeyOrder.ASCENDING),
-        new KeyColumn("4", KeyOrder.ASCENDING)
+        new KeyColumn("4", KeyOrder.ASCENDING),
+        new KeyColumn("5", KeyOrder.ASCENDING),
+        new KeyColumn("6", KeyOrder.ASCENDING)
     );
 
     final FrameComparisonWidget widget = createComparisonWidget(keyColumns);
@@ -168,7 +172,9 @@ public class FrameComparisonWidgetImplTest extends InitializedNullHandlingTest
         new KeyColumn("1", KeyOrder.ASCENDING),
         new KeyColumn("2", KeyOrder.ASCENDING),
         new KeyColumn("3", KeyOrder.ASCENDING),
-        new KeyColumn("4", KeyOrder.ASCENDING)
+        new KeyColumn("4", KeyOrder.ASCENDING),
+        new KeyColumn("5", KeyOrder.ASCENDING),
+        new KeyColumn("6", KeyOrder.ASCENDING)
     );
 
     final FrameComparisonWidget widget = createComparisonWidget(keyColumns);
@@ -200,6 +206,15 @@ public class FrameComparisonWidgetImplTest extends InitializedNullHandlingTest
     MatcherAssert.assertThat(widget.compare(4, firstKey), Matchers.greaterThan(0));
     MatcherAssert.assertThat(widget.compare(5, firstKey), Matchers.greaterThan(0));
     MatcherAssert.assertThat(widget.compare(6, firstKey), Matchers.greaterThan(0));
+    MatcherAssert.assertThat(widget.compare(7, firstKey), Matchers.greaterThan(0));
+    MatcherAssert.assertThat(widget.compare(8, firstKey), Matchers.greaterThan(0));
+
+    final RowKey eighthKey = KeyTestUtils.createKey(
+        RowKeyComparatorTest.SIGNATURE,
+        RowKeyComparatorTest.ALL_KEY_OBJECTS.get(7)
+    );
+
+    MatcherAssert.assertThat(widget.compare(8, eighthKey), Matchers.lessThan(0));
   }
 
   private FrameComparisonWidget createComparisonWidget(final List<KeyColumn> keyColumns)
