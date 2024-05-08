@@ -68,7 +68,10 @@ public class CoordinatorDutyUtils
         totalWorkerCapacity = workerCapacityInfo.getCurrentClusterCapacity();
       }
       if (workerCapacityInfo.getCategoryCapacity() != null && taskType != null) {
-        int totalCapacity = workerCapacityInfo.getCategoryCapacity().get(taskType).getCapacity();
+        int totalCapacity = workerCapacityInfo.getCategoryCapacity().values().stream()
+                                              .filter(category -> category.getTaskTypeList().contains(taskType))
+                                              .mapToInt(category -> category.getCapacity())
+                                              .sum();
         return Math.min(
             totalCapacity,
             (int) (totalWorkerCapacity * taskSlotRatio)
