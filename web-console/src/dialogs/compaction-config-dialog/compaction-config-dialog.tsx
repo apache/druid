@@ -17,15 +17,24 @@
  */
 
 import { Button, Callout, Classes, Code, Dialog, Intent, Switch } from '@blueprintjs/core';
+import { Tooltip2 } from '@blueprintjs/popover2';
 import React, { useState } from 'react';
 
 import type { FormJsonTabs } from '../../components';
-import { AutoForm, FormJsonSelector, JsonInput } from '../../components';
+import {
+  AutoForm,
+  ExternalLink,
+  FormGroupWithInfo,
+  FormJsonSelector,
+  JsonInput,
+  PopoverText,
+} from '../../components';
 import type { CompactionConfig } from '../../druid-models';
 import {
   COMPACTION_CONFIG_FIELDS,
   compactionConfigHasLegacyInputSegmentSizeBytesSet,
 } from '../../druid-models';
+import { getLink } from '../../links';
 import { deepDelete, deepGet, deepSet, formatBytesCompact } from '../../utils';
 import { CompactionHistoryDialog } from '../compaction-history-dialog/compaction-history-dialog';
 
@@ -102,17 +111,39 @@ export const CompactionConfigDialog = React.memo(function CompactionConfigDialog
               model={currentConfig}
               onChange={m => setCurrentConfig(m as CompactionConfig)}
             />
-            <Switch
-              label="Allow concurrent compactions (experimental)"
-              checked={typeof deepGet(currentConfig, 'taskContext.taskLockType') === 'string'}
-              onChange={() => {
-                setCurrentConfig(
-                  (typeof deepGet(currentConfig, 'taskContext.taskLockType') === 'string'
-                    ? deepDelete(currentConfig, 'taskContext.taskLockType')
-                    : deepSet(currentConfig, 'taskContext.taskLockType', 'REPLACE')) as any,
-                );
-              }}
-            />
+            <FormGroupWithInfo
+              inlineInfo
+              info={
+                <PopoverText>
+                  <p>
+                    If you want to append data to a datasource while compaction is running, you need
+                    to enable concurrent append and replace for the datasource by updating the
+                    compaction settings.
+                  </p>
+                  <p>
+                    For more information refer to the{' '}
+                    <ExternalLink
+                      href={`${getLink('DOCS')}/ingestion/concurrent-append-replace.html`}
+                    >
+                      documentation
+                    </ExternalLink>
+                    .
+                  </p>
+                </PopoverText>
+              }
+            >
+              <Switch
+                label="Use concurrent locks (experimental)"
+                checked={Boolean(deepGet(currentConfig, 'taskContext.useConcurrentLocks'))}
+                onChange={() => {
+                  setCurrentConfig(
+                    (deepGet(currentConfig, 'taskContext.useConcurrentLocks')
+                      ? deepDelete(currentConfig, 'taskContext.useConcurrentLocks')
+                      : deepSet(currentConfig, 'taskContext.useConcurrentLocks', true)) as any,
+                  );
+                }}
+              />
+            </FormGroupWithInfo>
           </>
         ) : (
           <JsonInput
@@ -132,7 +163,13 @@ export const CompactionConfigDialog = React.memo(function CompactionConfigDialog
             minimal
             onClick={() => setShowHistory(true)}
           />
-          {compactionConfig && <Button text="Delete" intent={Intent.DANGER} onClick={onDelete} />}
+          {compactionConfig ? (
+            <Button text="Delete" intent={Intent.DANGER} onClick={onDelete} />
+          ) : (
+            <Tooltip2 content="There is no compaction config currently set for this datasource">
+              <Button text="Delete" disabled intent={Intent.DANGER} />
+            </Tooltip2>
+          )}
           <Button text="Close" onClick={onClose} />
           <Button
             text="Submit"

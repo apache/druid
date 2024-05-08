@@ -36,8 +36,6 @@ import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.segment.data.ComparableList;
-import org.apache.druid.segment.data.ComparableStringArray;
 import org.apache.druid.segment.virtual.NestedFieldVirtualColumn;
 import org.junit.After;
 import org.junit.Assert;
@@ -50,9 +48,7 @@ import org.junit.runners.Parameterized;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiFunction;
@@ -143,10 +139,10 @@ public class NestedGroupByArrayQueryTest
         groupQuery,
         ImmutableList.of(
             new Object[]{null, 8L},
-            new Object[]{ComparableStringArray.of("a", "b"), 8L},
-            new Object[]{ComparableStringArray.of("a", "b", "c"), 4L},
-            new Object[]{ComparableStringArray.of("b", "c"), 4L},
-            new Object[]{ComparableStringArray.of("d", "e"), 4L}
+            new Object[]{new Object[]{"a", "b"}, 8L},
+            new Object[]{new Object[]{"a", "b", "c"}, 4L},
+            new Object[]{new Object[]{"b", "c"}, 4L},
+            new Object[]{new Object[]{"d", "e"}, 4L}
         )
     );
   }
@@ -168,10 +164,10 @@ public class NestedGroupByArrayQueryTest
         groupQuery,
         ImmutableList.of(
             new Object[]{null, 8L},
-            new Object[]{asComparableList(1L, 2L, 3L), 8L},
-            new Object[]{asComparableList(1L, 2L, 3L, 4L), 4L},
-            new Object[]{asComparableList(1L, 4L), 4L},
-            new Object[]{asComparableList(2L, 3L), 4L}
+            new Object[]{new Object[]{1L, 2L, 3L}, 8L},
+            new Object[]{new Object[]{1L, 2L, 3L, 4L}, 4L},
+            new Object[]{new Object[]{1L, 4L}, 4L},
+            new Object[]{new Object[]{2L, 3L}, 4L}
         )
     );
   }
@@ -193,10 +189,10 @@ public class NestedGroupByArrayQueryTest
         groupQuery,
         ImmutableList.of(
             new Object[]{null, 8L},
-            new Object[]{asComparableList(1.1, 2.2, 3.3), 8L},
-            new Object[]{asComparableList(1.1, 3.3), 4L},
-            new Object[]{asComparableList(2.2, 3.3, 4.0), 4L},
-            new Object[]{asComparableList(3.3, 4.4, 5.5), 4L}
+            new Object[]{new Object[]{1.1, 2.2, 3.3}, 8L},
+            new Object[]{new Object[]{1.1, 3.3}, 4L},
+            new Object[]{new Object[]{2.2, 3.3, 4.0}, 4L},
+            new Object[]{new Object[]{3.3, 4.4, 5.5}, 4L}
         )
     );
   }
@@ -455,9 +451,9 @@ public class NestedGroupByArrayQueryTest
         groupQuery,
         ImmutableList.of(
             new Object[]{null, 4L},
-            new Object[]{new ComparableList<>(Collections.emptyList()), 18L},
-            new Object[]{new ComparableList<>(Collections.singletonList(null)), 4L},
-            new Object[]{new ComparableList<>(Arrays.asList(null, null)), 2L}
+            new Object[]{new Object[]{}, 18L},
+            new Object[]{new Object[]{null}, 4L},
+            new Object[]{new Object[]{null, null}, 2L}
         )
     );
   }
@@ -503,15 +499,12 @@ public class NestedGroupByArrayQueryTest
           Assert.assertEquals((Double) expected.get(i)[j], (Double) resultRow[j], 0.01);
         } else if (rowSignature.getColumnType(j).map(t -> t.is(ValueType.FLOAT)).orElse(false)) {
           Assert.assertEquals((Float) expected.get(i)[j], (Float) resultRow[j], 0.01);
+        } else if (rowSignature.getColumnType(j).map(t -> t.isArray()).orElse(false)) {
+          Assert.assertArrayEquals((Object[]) expected.get(i)[j], (Object[]) resultRow[j]);
         } else {
           Assert.assertEquals(expected.get(i)[j], resultRow[j]);
         }
       }
     }
-  }
-
-  public static <T extends Comparable> ComparableList<T> asComparableList(T... objects)
-  {
-    return new ComparableList<>(Arrays.asList(objects));
   }
 }

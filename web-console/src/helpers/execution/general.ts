@@ -22,10 +22,7 @@ import type { CancelToken } from 'axios';
 import type { Execution } from '../../druid-models';
 import { IntermediateQueryState } from '../../utils';
 
-import {
-  updateExecutionWithDatasourceLoadedIfNeeded,
-  updateExecutionWithTaskIfNeeded,
-} from './sql-task-execution';
+import { updateExecutionWithTaskIfNeeded } from './sql-task-execution';
 
 export function extractResult(
   execution: Execution | IntermediateQueryState<Execution>,
@@ -49,14 +46,13 @@ export async function executionBackgroundStatusCheck(
   switch (execution.engine) {
     case 'sql-msq-task':
       execution = await updateExecutionWithTaskIfNeeded(execution, cancelToken);
-      execution = await updateExecutionWithDatasourceLoadedIfNeeded(execution, cancelToken);
       break;
 
     default:
       throw new Error(`can not background check execution for engine ${execution.engine}`);
   }
 
-  if (!execution.isFullyComplete()) return new IntermediateQueryState(execution);
+  if (execution.isWaitingForQuery()) return new IntermediateQueryState(execution);
 
   return execution;
 }

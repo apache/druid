@@ -19,6 +19,8 @@
 
 package org.apache.druid.data.input.azure;
 
+import com.azure.storage.blob.BlobContainerClient;
+import com.azure.storage.blob.BlobContainerClientBuilder;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
@@ -130,7 +132,7 @@ public class AzureInputSourceTest extends EasyMockSupport
   @Test
   public void test_createEntity_returnsExpectedEntity()
   {
-    EasyMock.expect(entityFactory.create(CLOUD_OBJECT_LOCATION_1)).andReturn(azureEntity1);
+    EasyMock.expect(entityFactory.create(CLOUD_OBJECT_LOCATION_1, storage, AzureInputSource.SCHEME)).andReturn(azureEntity1);
     EasyMock.expect(inputSplit.get()).andReturn(ImmutableList.of(CLOUD_OBJECT_LOCATION_1)).times(2);
     replayAll();
 
@@ -161,7 +163,7 @@ public class AzureInputSourceTest extends EasyMockSupport
     List<CloudBlobHolder> expectedCloudBlobs = ImmutableList.of(cloudBlobDruid1);
     Iterator<CloudBlobHolder> expectedCloudBlobsIterator = expectedCloudBlobs.iterator();
     EasyMock.expect(inputDataConfig.getMaxListingLength()).andReturn(MAX_LISTING_LENGTH);
-    EasyMock.expect(azureCloudBlobIterableFactory.create(prefixes, MAX_LISTING_LENGTH)).andReturn(
+    EasyMock.expect(azureCloudBlobIterableFactory.create(prefixes, MAX_LISTING_LENGTH, storage)).andReturn(
         azureCloudBlobIterable);
     EasyMock.expect(azureCloudBlobIterable.iterator()).andReturn(expectedCloudBlobsIterator);
     EasyMock.expect(cloudBlobDruid1.getContainerName()).andReturn(CONTAINER).anyTimes();
@@ -209,7 +211,7 @@ public class AzureInputSourceTest extends EasyMockSupport
     );
 
     EasyMock.expect(inputDataConfig.getMaxListingLength()).andReturn(MAX_LISTING_LENGTH);
-    EasyMock.expect(azureCloudBlobIterableFactory.create(prefixes, MAX_LISTING_LENGTH)).andReturn(
+    EasyMock.expect(azureCloudBlobIterableFactory.create(prefixes, MAX_LISTING_LENGTH, storage)).andReturn(
         azureCloudBlobIterable);
     EasyMock.expect(azureCloudBlobIterable.iterator()).andReturn(expectedCloudBlobsIterator);
     EasyMock.expect(cloudBlobDruid1.getBlobLength()).andReturn(100L).anyTimes();
@@ -357,7 +359,9 @@ public class AzureInputSourceTest extends EasyMockSupport
 
     final AzureEntity entity = new AzureEntity(
         new CloudObjectLocation("foo", "bar"),
-        (containerName, blobPath) -> null
+        storage,
+        AzureInputSource.SCHEME,
+        (containerName, blobPath, storage) -> null
     );
 
     Assert.assertEquals("azure://foo/bar", azureInputSource.getSystemFieldValue(entity, SystemField.URI));
@@ -371,7 +375,8 @@ public class AzureInputSourceTest extends EasyMockSupport
     EqualsVerifier.forClass(AzureInputSource.class)
                   .usingGetClass()
                   .withPrefabValues(Logger.class, new Logger(AzureStorage.class), new Logger(AzureStorage.class))
-                  .withPrefabValues(AzureStorage.class, new AzureStorage(null), new AzureStorage(null))
+                  .withPrefabValues(BlobContainerClient.class, new BlobContainerClientBuilder().buildClient(), new BlobContainerClientBuilder().buildClient())
+                  .withPrefabValues(AzureStorage.class, new AzureStorage(null, null), new AzureStorage(null, null))
                   .withNonnullFields("storage")
                   .withNonnullFields("entityFactory")
                   .withNonnullFields("azureCloudBlobIterableFactory")

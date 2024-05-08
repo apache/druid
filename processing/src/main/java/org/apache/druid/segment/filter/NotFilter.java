@@ -88,6 +88,27 @@ public class NotFilter implements Filter
               selector.getNumRows()
           );
         }
+
+        @Nullable
+        @Override
+        public <T> T computeBitmapResult(
+            BitmapResultFactory<T> bitmapResultFactory,
+            int applyRowCount,
+            int totalRowCount,
+            boolean includeUnknown
+        )
+        {
+          final T result = baseIndex.computeBitmapResult(
+              bitmapResultFactory,
+              applyRowCount,
+              totalRowCount,
+              !includeUnknown && useThreeValueLogic
+          );
+          if (result == null) {
+            return null;
+          }
+          return bitmapResultFactory.complement(result, selector.getNumRows());
+        }
       };
     }
     return null;

@@ -36,6 +36,7 @@ import './execution-summary-panel.scss';
 
 export interface ExecutionSummaryPanelProps {
   execution: Execution | undefined;
+  queryErrorDuration: number | undefined;
   onExecutionDetail(): void;
   onReset?: () => void;
 }
@@ -43,11 +44,21 @@ export interface ExecutionSummaryPanelProps {
 export const ExecutionSummaryPanel = React.memo(function ExecutionSummaryPanel(
   props: ExecutionSummaryPanelProps,
 ) {
-  const { execution, onExecutionDetail, onReset } = props;
+  const { execution, queryErrorDuration, onExecutionDetail, onReset } = props;
   const [showDestinationPages, setShowDestinationPages] = useState(false);
   const queryResult = execution?.result;
 
   const buttons: JSX.Element[] = [];
+
+  if (typeof queryErrorDuration === 'number') {
+    buttons.push(
+      <Button
+        key="timing"
+        minimal
+        text={`Error after ${formatDurationHybrid(queryErrorDuration)}`}
+      />,
+    );
+  }
 
   if (queryResult) {
     const wrapQueryLimit = queryResult.getSqlOuterLimit();

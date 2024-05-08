@@ -30,7 +30,8 @@ public class CardinalityAggregatorColumnSelectorStrategyFactory
   @Override
   public CardinalityAggregatorColumnSelectorStrategy makeColumnSelectorStrategy(
       ColumnCapabilities capabilities,
-      ColumnValueSelector selector
+      ColumnValueSelector selector,
+      String dimension
   )
   {
     switch (capabilities.getType()) {
@@ -45,5 +46,11 @@ public class CardinalityAggregatorColumnSelectorStrategyFactory
       default:
         throw new IAE("Cannot create query type helper from invalid type [%s]", capabilities.asTypeString());
     }
+  }
+
+  @Override
+  public boolean supportsComplexTypes()
+  {
+    return false;
   }
 }

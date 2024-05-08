@@ -533,7 +533,9 @@ public class AzureTaskLogsTest extends EasyMockSupport
         azureCloudBlobIterableFactory,
         MAX_KEYS,
         PREFIX_URI,
-        ImmutableList.of(object1, object2));
+        ImmutableList.of(object1, object2),
+        azureStorage
+    );
 
     EasyMock.replay(object1, object2);
     AzureTestUtils.expectDeleteObjects(
@@ -564,7 +566,8 @@ public class AzureTaskLogsTest extends EasyMockSupport
           azureCloudBlobIterableFactory,
           MAX_KEYS,
           PREFIX_URI,
-          ImmutableList.of(object1)
+          ImmutableList.of(object1),
+          azureStorage
       );
 
       EasyMock.replay(object1);
@@ -612,7 +615,9 @@ public class AzureTaskLogsTest extends EasyMockSupport
         azureCloudBlobIterableFactory,
         MAX_KEYS,
         PREFIX_URI,
-        ImmutableList.of(object1, object2));
+        ImmutableList.of(object1, object2),
+        azureStorage
+    );
 
     EasyMock.replay(object1, object2);
     AzureTestUtils.expectDeleteObjects(
@@ -642,7 +647,8 @@ public class AzureTaskLogsTest extends EasyMockSupport
           azureCloudBlobIterableFactory,
           MAX_KEYS,
           PREFIX_URI,
-          ImmutableList.of(object1)
+          ImmutableList.of(object1),
+          azureStorage
       );
 
       EasyMock.replay(object1);

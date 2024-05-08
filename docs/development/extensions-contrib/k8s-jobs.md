@@ -90,7 +90,10 @@ The custom template pod adapter allows you to specify a pod template file per ta
 
 The base pod template must be specified as the runtime property `druid.indexer.runner.k8s.podTemplate.base: /path/to/basePodSpec.yaml`
 
-Task specific pod templates can be specified as the runtime property `druid.indexer.runner.k8s.podTemplate.{taskType}: /path/to/taskSpecificPodSpec.yaml` where {taskType} is the name of the task type i.e `index_parallel`
+Task specific pod templates can be specified as the runtime property `druid.indexer.runner.k8s.podTemplate.{taskType}: /path/to/taskSpecificPodSpec.yaml` where {taskType} is the name of the task type i.e `index_parallel`.
+
+If you are trying to use the default image's environment variable parsing feature to set runtime properties, you need to add a extra escape underscore when specifying pod templates.
+e.g. set the environment variable `druid_indexer_runner_k8s_podTemplate_index__parallel` when setting `druid.indxer.runner.k8s.podTemplate.index_parallel`
 
 The following is an example Pod Template that uses the regular druid docker image.
 ```
@@ -233,6 +236,7 @@ data:
 |`druid.indexer.runner.peonMonitors`| `JsonArray`     | Overrides `druid.monitoring.monitors`. Use this property if you don't want to inherit monitors from the Overlord.                                                                                                                                |`[]`|No|
 |`druid.indexer.runner.graceTerminationPeriodSeconds`| `Long`          | Number of seconds you want to wait after a sigterm for container lifecycle hooks to complete.  Keep at a smaller value if you want tasks to hold locks for shorter periods.                                                                      |`PT30S` (K8s default)|No|
 |`druid.indexer.runner.capacity`| `Integer`       | Number of concurrent jobs that can be sent to Kubernetes.                                                                                                                                                                                        |`2147483647`|No|
+|`druid.indexer.runner.cpuCoreInMicro`| `Integer`       | Number of CPU micro core for the task.                                                                                                                                                                                                           | `1000`|No|
 
 ### Metrics added
 

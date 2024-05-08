@@ -19,10 +19,15 @@
 
 package org.apache.druid.testsEx.indexer;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testsEx.utils.AzureTestUtil;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
+
+import java.net.URI;
+import java.util.List;
 
 import static org.junit.Assert.fail;
 
@@ -67,6 +72,24 @@ public class AbstractAzureInputSourceParallelIndexTest extends AbstractCloudInpu
     }
     catch (Exception e) {
       LOG.warn(e, "Unable to delete container in azure");
+    }
+  }
+
+  public static void validateAzureSegmentFilesDeleted(String path)
+  {
+    List<URI> segmentFiles = ImmutableList.of();
+    try {
+      segmentFiles = azure.listFiles(path);
+    }
+    catch (Exception e) {
+      LOG.warn(e, "Failed to validate that azure segment files were deleted.");
+    }
+    finally {
+      Assert.assertEquals(
+            "Some segment files were not deleted: " + segmentFiles,
+            segmentFiles.size(),
+            0
+      );
     }
   }
 }

@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.segment.join.MapJoinableFactory;
 import org.apache.druid.segment.loading.SegmentLoader;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
@@ -37,7 +38,7 @@ import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.TestTimelineServerView;
 import org.easymock.EasyMock;
 import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 
@@ -52,7 +53,7 @@ public class DruidSchemaNoDataInitTest extends CalciteTestBase
       final QueryRunnerFactoryConglomerate conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(closer);
       final BrokerSegmentMetadataCache cache = new BrokerSegmentMetadataCache(
           CalciteTests.createMockQueryLifecycleFactory(
-              new SpecificSegmentsQuerySegmentWalker(conglomerate),
+              SpecificSegmentsQuerySegmentWalker.createWalker(conglomerate),
               conglomerate
           ),
           new TestTimelineServerView(Collections.emptyList()),
@@ -63,7 +64,8 @@ public class DruidSchemaNoDataInitTest extends CalciteTestBase
           new PhysicalDatasourceMetadataFactory(
               new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
               new SegmentManager(EasyMock.createMock(SegmentLoader.class))),
-          null
+          null,
+          CentralizedDatasourceSchemaConfig.create()
       );
 
       cache.start();

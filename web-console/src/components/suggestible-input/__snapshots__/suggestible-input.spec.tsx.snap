@@ -60,7 +60,7 @@ exports[`SuggestibleInput matches snapshot with escaped value 1`] = `
       class="bp4-input"
       style="padding-right: 0px;"
       type="text"
-      value="Here are some chars \\\\t\\\\r\\\\n lol"
+      value="Here are some chars \\t\\r\\n lol"
     />
     <span
       class="bp4-input-action"

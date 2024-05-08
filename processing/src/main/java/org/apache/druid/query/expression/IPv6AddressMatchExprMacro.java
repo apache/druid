@@ -20,60 +20,58 @@
 package org.apache.druid.query.expression;
 
 import inet.ipaddr.IPAddressString;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.ExpressionType;
- 
+
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.List;
- 
+
 /**
-  * <pre>
-  * Implements an expression that checks if an IPv6 address belongs to a subnet.
-  *
-  * Expression signatures:
-  * - long ipv6_match(string address, string subnet)
-  *
-  * Valid "address" argument formats are:
-  * - IPv6 address string (e.g., "2001:4860:4860::8888")
-  *
-  * The argument format for the "subnet" argument should be a literal in CIDR notation
-  * (e.g., "2001:db8::/64 ").
-  *
-  * If the "address" argument does not represent an IPv6 address then false is returned.
-  * </pre>
-  *
-*/
+ * <pre>
+ * Implements an expression that checks if an IPv6 address belongs to a subnet.
+ *
+ * Expression signatures:
+ * - long ipv6_match(string address, string subnet)
+ *
+ * Valid "address" argument formats are:
+ * - IPv6 address string (e.g., "2001:4860:4860::8888")
+ *
+ * The argument format for the "subnet" argument should be a literal in CIDR notation
+ * (e.g., "2001:db8::/64 ").
+ *
+ * If the "address" argument does not represent an IPv6 address then false is returned.
+ * </pre>
+ */
 public class IPv6AddressMatchExprMacro implements ExprMacroTable.ExprMacro
 {
   public static final String FN_NAME = "ipv6_match";
   private static final int ARG_SUBNET = 1;
- 
+
   @Override
   public String name()
   {
     return FN_NAME;
   }
- 
+
   @Override
   public Expr apply(final List<Expr> args)
   {
     validationHelperCheckArgumentCount(args, 2);
- 
+
     try {
       final Expr arg = args.get(0);
       final IPAddressString blockString = getSubnetInfo(args);
 
-      class IPv6AddressMatchExpr extends ExprMacroTable.BaseScalarUnivariateMacroFunctionExpr
+      class IPv6AddressMatchExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
       {
-        private IPv6AddressMatchExpr(Expr arg)
+        private IPv6AddressMatchExpr(List<Expr> args)
         {
-          super(FN_NAME, arg);
+          super(IPv6AddressMatchExprMacro.this, args);
         }
- 
+
         @Nonnull
         @Override
         public ExprEval eval(final ObjectBinding bindings)
@@ -89,23 +87,11 @@ public class IPv6AddressMatchExprMacro implements ExprMacroTable.ExprMacro
           }
           return ExprEval.ofLongBoolean(match);
         }
- 
+
         private boolean isStringMatch(String stringValue)
         {
           IPAddressString addressString = IPv6AddressExprUtils.parseString(stringValue);
           return addressString != null && blockString.prefixContains(addressString);
-        }
- 
-        @Override
-        public Expr visit(Shuttle shuttle)
-        {
-          return shuttle.visit(apply(shuttle.visitAll(args)));
-        }
- 
-        @Override
-        public String stringify()
-        {
-          return StringUtils.format("%s(%s, %s)", FN_NAME, arg.stringify(), args.get(ARG_SUBNET).stringify());
         }
 
         @Nullable
@@ -115,14 +101,14 @@ public class IPv6AddressMatchExprMacro implements ExprMacroTable.ExprMacro
           return ExpressionType.LONG;
         }
       }
- 
-      return new IPv6AddressMatchExpr(arg);
+
+      return new IPv6AddressMatchExpr(args);
     }
     catch (Exception e) {
       throw processingFailed(e, "failed to parse address");
     }
   }
- 
+
   private IPAddressString getSubnetInfo(List<Expr> args)
   {
     String subnetArgName = "subnet";

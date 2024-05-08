@@ -21,6 +21,7 @@ package org.apache.druid.storage.azure;
 
 import com.google.common.io.ByteSource;
 import com.google.inject.Inject;
+import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.loading.SegmentLoadingException;
@@ -37,16 +38,19 @@ public class AzureDataSegmentPuller
   private static final Logger log = new Logger(AzureDataSegmentPuller.class);
 
   private final AzureByteSourceFactory byteSourceFactory;
+  private final AzureStorage azureStorage;
 
   private final AzureAccountConfig azureAccountConfig;
 
   @Inject
   public AzureDataSegmentPuller(
       AzureByteSourceFactory byteSourceFactory,
+      @Global AzureStorage azureStorage,
       AzureAccountConfig azureAccountConfig
   )
   {
     this.byteSourceFactory = byteSourceFactory;
+    this.azureStorage = azureStorage;
     this.azureAccountConfig = azureAccountConfig;
   }
 
@@ -66,7 +70,7 @@ public class AzureDataSegmentPuller
 
       final String actualBlobPath = AzureUtils.maybeRemoveAzurePathPrefix(blobPath, azureAccountConfig.getBlobStorageEndpoint());
 
-      final ByteSource byteSource = byteSourceFactory.create(containerName, actualBlobPath);
+      final ByteSource byteSource = byteSourceFactory.create(containerName, actualBlobPath, azureStorage);
       final FileUtils.FileCopyResult result = CompressionUtils.unzip(
           byteSource,
           outDir,

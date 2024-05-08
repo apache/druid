@@ -58,7 +58,7 @@ exports[`SpecDialog matches snapshot no initSpec 1`] = `
           </button>
         </div>
         <div
-          class=" ace_editor ace_hidpi ace-tm spec-dialog-textarea placeholder-padding"
+          class=" ace_editor ace_hidpi ace-solarized-dark ace_dark spec-dialog-textarea placeholder-padding"
           id="ace-editor"
           style="width: 100%; height: 500px; font-size: 12px;"
         >
@@ -252,7 +252,7 @@ exports[`SpecDialog matches snapshot with initSpec 1`] = `
           </button>
         </div>
         <div
-          class=" ace_editor ace_hidpi ace-tm spec-dialog-textarea placeholder-padding"
+          class=" ace_editor ace_hidpi ace-solarized-dark ace_dark spec-dialog-textarea placeholder-padding"
           id="ace-editor"
           style="width: 100%; height: 500px; font-size: 12px;"
         >

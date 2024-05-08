@@ -58,7 +58,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.experimental.runners.Enclosed;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
@@ -84,7 +83,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-@RunWith(Enclosed.class)
 public class FrameProcessorExecutorTest
 {
   @RunWith(Parameterized.class)
@@ -400,7 +398,7 @@ public class FrameProcessorExecutorTest
     public final TemporaryFolder temporaryFolder = new TemporaryFolder();
     public final int numThreads;
 
-    FrameProcessorExecutor exec;
+    protected FrameProcessorExecutor exec;
 
     public BaseFrameProcessorExecutorTestSuite(int numThreads)
     {

@@ -37,7 +37,6 @@ import org.apache.druid.error.InvalidInput;
 import org.apache.druid.error.NotFound;
 import org.apache.druid.error.QueryExceptionCompat;
 import org.apache.druid.frame.channel.FrameChannelSequence;
-import org.apache.druid.guice.annotations.MSQ;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
@@ -48,6 +47,7 @@ import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.msq.exec.ResultsContext;
 import org.apache.druid.msq.guice.MultiStageQuery;
 import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.msq.indexing.MSQSpec;
@@ -131,7 +131,7 @@ public class SqlStatementResource
 
   @Inject
   public SqlStatementResource(
-      final @MSQ SqlStatementFactory msqSqlStatementFactory,
+      final @MultiStageQuery SqlStatementFactory msqSqlStatementFactory,
       final ObjectMapper jsonMapper,
       final OverlordClient overlordClient,
       final @MultiStageQuery StorageConnector storageConnector,
@@ -512,12 +512,11 @@ public class SqlStatementResource
   )
   {
     if (sqlStatementState == SqlStatementState.SUCCESS) {
-      Map<String, Object> payload =
+      MSQTaskReportPayload msqTaskReportPayload =
           SqlStatementResourceHelper.getPayload(contactOverlord(
               overlordClient.taskReportAsMap(queryId),
               queryId
           ));
-      MSQTaskReportPayload msqTaskReportPayload = jsonMapper.convertValue(payload, MSQTaskReportPayload.class);
       Optional<List<PageInformation>> pageList = SqlStatementResourceHelper.populatePageList(
           msqTaskReportPayload,
           msqDestination
@@ -541,27 +540,9 @@ public class SqlStatementResource
       List<Object[]> results = null;
       if (isSelectQuery) {
         results = new ArrayList<>();
-        Yielder<Object[]> yielder = null;
         if (msqTaskReportPayload.getResults() != null) {
-          yielder = msqTaskReportPayload.getResults().getResultYielder();
+          results = msqTaskReportPayload.getResults().getResults();
         }
-        try {
-          while (yielder != null && !yielder.isDone()) {
-            results.add(yielder.get());
-            yielder = yielder.next(null);
-          }
-        }
-        finally {
-          if (yielder != null) {
-            try {
-              yielder.close();
-            }
-            catch (IOException e) {
-              log.warn(e, StringUtils.format("Unable to close yielder for query[%s]", queryId));
-            }
-          }
-        }
-
       }
 
       return Optional.of(
@@ -607,7 +588,8 @@ public class SqlStatementResource
           taskResponse,
           statusPlus,
           sqlStatementState,
-          contactOverlord(overlordClient.taskReportAsMap(queryId), queryId)
+          contactOverlord(overlordClient.taskReportAsMap(queryId), queryId),
+          jsonMapper
       );
     } else {
       Optional<List<ColumnNameAndTypes>> signature = SqlStatementResourceHelper.getSignature(msqControllerTask);
@@ -735,19 +717,21 @@ public class SqlStatementResource
         );
       }
 
-      MSQTaskReportPayload msqTaskReportPayload = jsonMapper.convertValue(SqlStatementResourceHelper.getPayload(
-          contactOverlord(overlordClient.taskReportAsMap(queryId), queryId)), MSQTaskReportPayload.class);
+      MSQTaskReportPayload msqTaskReportPayload = SqlStatementResourceHelper.getPayload(
+          contactOverlord(overlordClient.taskReportAsMap(queryId), queryId)
+      );
 
-      if (msqTaskReportPayload.getResults().getResultYielder() == null) {
+      if (msqTaskReportPayload.getResults().getResults() == null) {
         results = Optional.empty();
       } else {
-        results = Optional.of(msqTaskReportPayload.getResults().getResultYielder());
+        results = Optional.of(Yielders.each(Sequences.simple(msqTaskReportPayload.getResults().getResults())));
       }
 
     } else if (msqControllerTask.getQuerySpec().getDestination() instanceof DurableStorageMSQDestination) {
 
-      MSQTaskReportPayload msqTaskReportPayload = jsonMapper.convertValue(SqlStatementResourceHelper.getPayload(
-          contactOverlord(overlordClient.taskReportAsMap(queryId), queryId)), MSQTaskReportPayload.class);
+      MSQTaskReportPayload msqTaskReportPayload = SqlStatementResourceHelper.getPayload(
+          contactOverlord(overlordClient.taskReportAsMap(queryId), queryId)
+      );
 
       List<PageInformation> pages =
           SqlStatementResourceHelper.populatePageList(
@@ -799,12 +783,17 @@ public class SqlStatementResource
                                   }
                                 })
                                 .collect(Collectors.toList()))
-                   .flatMap(frame -> SqlStatementResourceHelper.getResultSequence(
-                                msqControllerTask,
-                                finalStage,
-                                frame,
-                                jsonMapper
-                            )
+                   .flatMap(frame ->
+                                SqlStatementResourceHelper.getResultSequence(
+                                    frame,
+                                    finalStage.getFrameReader(),
+                                    msqControllerTask.getQuerySpec().getColumnMappings(),
+                                    new ResultsContext(
+                                        msqControllerTask.getSqlTypeNames(),
+                                        msqControllerTask.getSqlResultsContext()
+                                    ),
+                                    jsonMapper
+                                )
                    )
                    .withBaggage(closer)));
 

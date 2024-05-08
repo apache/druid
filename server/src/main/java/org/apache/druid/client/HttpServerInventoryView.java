@@ -187,6 +187,12 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
                 }
               }
 
+              @Override
+              public void nodeViewInitializedTimedOut()
+              {
+                nodeViewInitialized();
+              }
+
               private DruidServer toDruidServer(DiscoveryDruidNode node)
               {
                 final DruidNode druidNode = node.getDruidNode();

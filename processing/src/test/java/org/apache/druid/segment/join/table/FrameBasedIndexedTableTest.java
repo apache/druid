@@ -223,7 +223,7 @@ public class FrameBasedIndexedTableTest extends InitializedNullHandlingTest
         ROW_SIGNATURE,
         new ArrayList<>()
     );
-    Frame frame = Iterables.getOnlyElement(FrameCursorUtils.cursorToFrames(cursor, frameWriterFactory).toList());
+    Frame frame = Iterables.getOnlyElement(FrameCursorUtils.cursorToFramesSequence(cursor, frameWriterFactory).toList());
 
     dataSource = new FrameBasedInlineDataSource(
         ImmutableList.of(new FrameSignaturePair(frame, ROW_SIGNATURE)),

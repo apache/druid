@@ -28,6 +28,7 @@ import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.filter.RangeFilter;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.ValueType;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -39,6 +40,7 @@ public class Ranges
    * Negates single-ended Bound filters.
    *
    * @param range filter
+   *
    * @return negated filter, or null if this range is double-ended.
    */
   @Nullable
@@ -133,11 +135,12 @@ public class Ranges
 
   public static RangeFilter equalTo(final RangeRefKey rangeRefKey, final Object value)
   {
+    final Object castValue = castVal(rangeRefKey, value);
     return new RangeFilter(
         rangeRefKey.getColumn(),
         rangeRefKey.getMatchValueType(),
-        value,
-        value,
+        castValue,
+        castValue,
         false,
         false,
         null
@@ -149,7 +152,7 @@ public class Ranges
     return new RangeFilter(
         rangeRefKey.getColumn(),
         rangeRefKey.getMatchValueType(),
-        value,
+        castVal(rangeRefKey, value),
         null,
         true,
         false,
@@ -162,7 +165,7 @@ public class Ranges
     return new RangeFilter(
         rangeRefKey.getColumn(),
         rangeRefKey.getMatchValueType(),
-        value,
+        castVal(rangeRefKey, value),
         null,
         false,
         false,
@@ -176,7 +179,7 @@ public class Ranges
         rangeRefKey.getColumn(),
         rangeRefKey.getMatchValueType(),
         null,
-        value,
+        castVal(rangeRefKey, value),
         false,
         true,
         null
@@ -189,7 +192,7 @@ public class Ranges
         rangeRefKey.getColumn(),
         rangeRefKey.getMatchValueType(),
         null,
-        value,
+        castVal(rangeRefKey, value),
         false,
         false,
         null
@@ -212,5 +215,31 @@ public class Ranges
         true,
         null
     );
+  }
+
+  /**
+   * Casts a primitive value such that it matches the {@link RangeRefKey#getMatchValueType()} of a provided key.
+   * Leaves nonprimitive values as-is.
+   */
+  private static Object castVal(final RangeRefKey rangeRefKey, final Object value)
+  {
+    if (value instanceof String || value instanceof Number || value == null) {
+      final ColumnType columnType = rangeRefKey.getMatchValueType();
+      if (columnType.is(ValueType.STRING) && (value instanceof String || value == null)) {
+        // Short-circuit to save creation of ExprEval.
+        return value;
+      } else if (columnType.is(ValueType.DOUBLE) && value instanceof Double) {
+        // Short-circuit to save creation of ExprEval.
+        return value;
+      } else if (columnType.is(ValueType.LONG) && value instanceof Long) {
+        // Short-circuit to save creation of ExprEval.
+        return value;
+      } else {
+        final ExpressionType expressionType = ExpressionType.fromColumnType(columnType);
+        return ExprEval.ofType(expressionType, value).valueOrDefault();
+      }
+    } else {
+      return value;
+    }
   }
 }

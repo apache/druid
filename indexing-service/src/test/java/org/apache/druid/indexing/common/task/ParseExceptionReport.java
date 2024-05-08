@@ -19,7 +19,7 @@
 
 package org.apache.druid.indexing.common.task;
 
-import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
+import org.apache.druid.indexer.report.IngestionStatsAndErrors;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -41,7 +41,7 @@ public class ParseExceptionReport
 
   @SuppressWarnings("unchecked")
   public static ParseExceptionReport forPhase(
-      IngestionStatsAndErrorsTaskReportData reportData,
+      IngestionStatsAndErrors reportData,
       String phase
   )
   {

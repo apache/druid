@@ -43,6 +43,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
+import org.apache.druid.query.DimensionComparisonUtils;
 import org.apache.druid.query.Queries;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
@@ -67,8 +68,6 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.data.ComparableList;
-import org.apache.druid.segment.data.ComparableStringArray;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -599,11 +598,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
         needsReverseList.add(false);
         final ColumnType type = dimensions.get(i).getOutputType();
         dimensionTypes.add(type);
-        if (type.isNumeric()) {
-          comparators.add(StringComparators.NUMERIC);
-        } else {
-          comparators.add(StringComparators.LEXICOGRAPHIC);
-        }
+        comparators.add(StringComparators.NATURAL);
       }
     }
 
@@ -764,6 +759,12 @@ public class GroupByQuery extends BaseQuery<ResultRow>
     }
   }
 
+  /**
+   * Compares the dimensions for limit pushdown.
+   *
+   * Due to legacy reason, the provided StringComparator for the arrays isn't applied and must be changed once we
+   * get rid of the StringComparators for array types
+   */
   private static int compareDimsForLimitPushDown(
       final IntList fields,
       final List<Boolean> needsReverseList,
@@ -783,20 +784,22 @@ public class GroupByQuery extends BaseQuery<ResultRow>
       final Object rhsObj = rhs.get(fieldNumber);
 
       if (dimensionType.isNumeric()) {
-        if (comparator.equals(StringComparators.NUMERIC)) {
+        if (DimensionComparisonUtils.isNaturalComparator(dimensionType.getType(), comparator)) {
           dimCompare = DimensionHandlerUtils.compareObjectsAsType(lhsObj, rhsObj, dimensionType);
         } else {
           dimCompare = comparator.compare(String.valueOf(lhsObj), String.valueOf(rhsObj));
         }
       } else if (dimensionType.equals(ColumnType.STRING_ARRAY)) {
-        final ComparableStringArray lhsArr = DimensionHandlerUtils.convertToComparableStringArray(lhsObj);
-        final ComparableStringArray rhsArr = DimensionHandlerUtils.convertToComparableStringArray(rhsObj);
-        dimCompare = Comparators.<Comparable>naturalNullsFirst().compare(lhsArr, rhsArr);
+        final Object[] lhsArr = DimensionHandlerUtils.coerceToStringArray(lhsObj);
+        final Object[] rhsArr = DimensionHandlerUtils.coerceToStringArray(rhsObj);
+        dimCompare = ColumnType.STRING_ARRAY.getNullableStrategy().compare(lhsArr, rhsArr);
       } else if (dimensionType.equals(ColumnType.LONG_ARRAY)
                  || dimensionType.equals(ColumnType.DOUBLE_ARRAY)) {
-        final ComparableList lhsArr = DimensionHandlerUtils.convertToList(lhsObj, dimensionType.getElementType().getType());
-        final ComparableList rhsArr = DimensionHandlerUtils.convertToList(rhsObj, dimensionType.getElementType().getType());
-        dimCompare = Comparators.<Comparable>naturalNullsFirst().compare(lhsArr, rhsArr);
+        final Object[] lhsArr = DimensionHandlerUtils.convertToArray(lhsObj, dimensionType.getElementType());
+        final Object[] rhsArr = DimensionHandlerUtils.convertToArray(rhsObj, dimensionType.getElementType());
+        dimCompare = dimensionType.getNullableStrategy().compare(lhsArr, rhsArr);
+      } else if (DimensionComparisonUtils.isNaturalComparator(dimensionType.getType(), comparator)) {
+        dimCompare = DimensionHandlerUtils.compareObjectsAsType(lhsObj, rhsObj, dimensionType);
       } else {
         dimCompare = comparator.compare((String) lhsObj, (String) rhsObj);
       }

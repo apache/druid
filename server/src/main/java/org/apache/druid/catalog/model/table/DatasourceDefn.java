@@ -21,7 +21,6 @@ package org.apache.druid.catalog.model.table;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Strings;
 import org.apache.druid.catalog.model.CatalogUtils;
 import org.apache.druid.catalog.model.ColumnSpec;
 import org.apache.druid.catalog.model.Columns;
@@ -83,9 +82,6 @@ public class DatasourceDefn extends TableDefn
     public void validate(Object value, ObjectMapper jsonMapper)
     {
       String gran = decode(value, jsonMapper);
-      if (Strings.isNullOrEmpty(gran)) {
-        throw new IAE("Segment granularity is required.");
-      }
       CatalogUtils.validateGranularity(gran);
     }
   }
@@ -114,6 +110,34 @@ public class DatasourceDefn extends TableDefn
     }
   }
 
+  public static class ClusterKeysDefn extends ModelProperties.ListPropertyDefn<ClusterKeySpec>
+  {
+    public ClusterKeysDefn()
+    {
+      super(
+          CLUSTER_KEYS_PROPERTY,
+          "ClusterKeySpec list",
+          new TypeReference<List<ClusterKeySpec>>() {}
+      );
+    }
+
+    @Override
+    public void validate(Object value, ObjectMapper jsonMapper)
+    {
+      if (value == null) {
+        return;
+      }
+      List<ClusterKeySpec> clusterKeys = decode(value, jsonMapper);
+      for (ClusterKeySpec clusterKey : clusterKeys) {
+        if (clusterKey.desc()) {
+          throw new IAE(
+              StringUtils.format("Cannot specify DESC clustering key [%s]. Only ASC is supported.", clusterKey)
+          );
+        }
+      }
+    }
+  }
+
   public DatasourceDefn()
   {
     super(
@@ -122,11 +146,7 @@ public class DatasourceDefn extends TableDefn
         Arrays.asList(
             new SegmentGranularityFieldDefn(),
             new ModelProperties.IntPropertyDefn(TARGET_SEGMENT_ROWS_PROPERTY),
-            new ModelProperties.ListPropertyDefn<ClusterKeySpec>(
-                CLUSTER_KEYS_PROPERTY,
-                "cluster keys",
-                new TypeReference<List<ClusterKeySpec>>() { }
-            ),
+            new ClusterKeysDefn(),
             new HiddenColumnsDefn(),
             new ModelProperties.BooleanPropertyDefn(SEALED_PROPERTY)
         ),

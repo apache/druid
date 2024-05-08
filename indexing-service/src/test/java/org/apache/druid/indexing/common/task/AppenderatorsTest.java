@@ -47,6 +47,7 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorConfig;
@@ -176,7 +177,8 @@ public class AppenderatorsTest
           0L,
           OffHeapMemorySegmentWriteOutMediumFactory.instance(),
           IndexMerger.UNLIMITED_MAX_COLUMNS_TO_MERGE,
-          basePersistDirectory == null ? createNewBasePersistDirectory() : basePersistDirectory
+          basePersistDirectory == null ? createNewBasePersistDirectory() : basePersistDirectory,
+          null
       );
       metrics = new FireDepartmentMetrics();
 
@@ -244,7 +246,8 @@ public class AppenderatorsTest
               indexMerger,
               rowIngestionMeters,
               new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0),
-              false
+              false,
+              CentralizedDatasourceSchemaConfig.create()
           );
           break;
         case "CLOSED_SEGMENTS":
@@ -259,7 +262,8 @@ public class AppenderatorsTest
               indexMerger,
               rowIngestionMeters,
               new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0),
-              false
+              false,
+              CentralizedDatasourceSchemaConfig.create()
           );
 
           break;
@@ -275,7 +279,8 @@ public class AppenderatorsTest
               indexMerger,
               rowIngestionMeters,
               new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0),
-              false
+              false,
+              CentralizedDatasourceSchemaConfig.create()
           );
           break;
         default:
@@ -348,6 +353,7 @@ public class AppenderatorsTest
       private final IndexSpec indexSpecForIntermediatePersists;
       @Nullable
       private final SegmentWriteOutMediumFactory segmentWriteOutMediumFactory;
+      private final int numPersistThreads;
 
       public TestIndexTuningConfig(
           AppendableIndexSpec appendableIndexSpec,
@@ -360,7 +366,8 @@ public class AppenderatorsTest
           Long pushTimeout,
           @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
           Integer maxColumnsToMerge,
-          File basePersistDirectory
+          File basePersistDirectory,
+          Integer numPersistThreads
       )
       {
         this.appendableIndexSpec = appendableIndexSpec;
@@ -377,6 +384,8 @@ public class AppenderatorsTest
 
         this.partitionsSpec = null;
         this.indexSpecForIntermediatePersists = this.indexSpec;
+
+        this.numPersistThreads = numPersistThreads == null ? DEFAULT_NUM_PERSIST_THREADS : numPersistThreads;
       }
 
       @Override
@@ -466,6 +475,12 @@ public class AppenderatorsTest
       }
 
       @Override
+      public int getNumPersistThreads()
+      {
+        return numPersistThreads;
+      }
+
+      @Override
       public boolean equals(Object o)
       {
         if (this == o) {
@@ -483,6 +498,7 @@ public class AppenderatorsTest
                maxPendingPersists == that.maxPendingPersists &&
                reportParseExceptions == that.reportParseExceptions &&
                pushTimeout == that.pushTimeout &&
+               numPersistThreads == that.numPersistThreads &&
                Objects.equals(partitionsSpec, that.partitionsSpec) &&
                Objects.equals(indexSpec, that.indexSpec) &&
                Objects.equals(indexSpecForIntermediatePersists, that.indexSpecForIntermediatePersists) &&
@@ -506,7 +522,8 @@ public class AppenderatorsTest
             maxPendingPersists,
             reportParseExceptions,
             pushTimeout,
-            segmentWriteOutMediumFactory
+            segmentWriteOutMediumFactory,
+            numPersistThreads
         );
       }
 
@@ -526,6 +543,7 @@ public class AppenderatorsTest
                ", reportParseExceptions=" + reportParseExceptions +
                ", pushTimeout=" + pushTimeout +
                ", segmentWriteOutMediumFactory=" + segmentWriteOutMediumFactory +
+               ", numPersistThreads=" + numPersistThreads +
                '}';
       }
     }

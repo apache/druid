@@ -95,8 +95,8 @@ import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatMinAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
-import org.apache.druid.query.aggregation.first.FloatFirstAggregatorFactory;
-import org.apache.druid.query.aggregation.last.DoubleLastAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.first.FloatFirstAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.last.DoubleLastAggregatorFactory;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.DoubleDimensionHandler;
 import org.apache.druid.segment.IndexIO;
@@ -127,6 +127,7 @@ import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.NoopSegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentCacheManager;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
@@ -353,6 +354,7 @@ public class CompactionTaskTest
         true,
         false,
         5000L,
+        null,
         null,
         null,
         null,
@@ -665,6 +667,7 @@ public class CompactionTaskTest
             null,
             null,
             null,
+            null,
             null
         ),
         null,
@@ -747,6 +750,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
+        null,
         null
     );
 
@@ -771,6 +775,7 @@ public class CompactionTaskTest
         null,
         true,
         false,
+        null,
         null,
         null,
         null,
@@ -831,6 +836,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
+        null,
         null
     );
 
@@ -856,6 +862,7 @@ public class CompactionTaskTest
         true,
         false,
         5000L,
+        null,
         null,
         null,
         null,
@@ -1019,6 +1026,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
+        null,
         null
     );
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
@@ -1082,6 +1090,7 @@ public class CompactionTaskTest
         false,
         false,
         5000L,
+        null,
         null,
         null,
         null,
@@ -1161,6 +1170,7 @@ public class CompactionTaskTest
         null,
         null,
         10,
+        null,
         null,
         null,
         null,
@@ -1832,6 +1842,7 @@ public class CompactionTaskTest
             null,
             null,
             null,
+            null,
             null
         ),
         expectedSegmentGranularity,
@@ -1971,6 +1982,7 @@ public class CompactionTaskTest
         .taskLogPusher(null)
         .attemptId("1")
         .emitter(emitter)
+        .centralizedTableSchemaConfig(CentralizedDatasourceSchemaConfig.create())
         .build();
   }
 

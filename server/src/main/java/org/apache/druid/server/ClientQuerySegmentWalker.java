@@ -45,6 +45,7 @@ import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.PostProcessingOperator;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -57,7 +58,6 @@ import org.apache.druid.query.RetryQueryRunner;
 import org.apache.druid.query.RetryQueryRunnerConfig;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
-import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinableFactory;
@@ -170,7 +170,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   }
 
   @Override
-  public <T> QueryRunner<T> getQueryRunnerForIntervals(Query<T> query, Iterable<Interval> intervals)
+  public <T> QueryRunner<T> getQueryRunnerForIntervals(final Query<T> query, final Iterable<Interval> intervals)
   {
     final QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
 
@@ -183,6 +183,8 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         query.getId(),
         query.getSqlQueryId()
     ));
+
+    newQuery = ResourceIdPopulatingQueryRunner.populateResourceId(newQuery);
 
     final DataSource freeTradeDataSource = globalizeIfPossible(newQuery.getDataSource());
     // do an inlining dry run to see if any inlining is necessary, without actually running the queries.
@@ -253,10 +255,13 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   }
 
   @Override
-  public <T> QueryRunner<T> getQueryRunnerForSegments(Query<T> query, Iterable<SegmentDescriptor> specs)
+  public <T> QueryRunner<T> getQueryRunnerForSegments(final Query<T> query, final Iterable<SegmentDescriptor> specs)
   {
+
     // Inlining isn't done for segments-based queries, but we still globalify the table datasources if possible
-    final Query<T> freeTradeQuery = query.withDataSource(globalizeIfPossible(query.getDataSource()));
+    Query<T> freeTradeQuery = query.withDataSource(globalizeIfPossible(query.getDataSource()));
+
+    freeTradeQuery = ResourceIdPopulatingQueryRunner.populateResourceId(freeTradeQuery);
 
     if (canRunQueryUsingClusterWalker(query)) {
       return new QuerySwappingQueryRunner<>(
@@ -518,7 +523,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     return FluentQueryRunner
         .create(baseRunner, toolChest)
         .applyPreMergeDecoration()
-        .mergeResults()
+        .mergeResults(false)
         .applyPostMergeDecoration()
         .emitCPUTimeMetric(emitter)
         .postProcess(
@@ -669,10 +674,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       case ROW_LIMIT:
         if (limitAccumulator.get() >= rowLimitToUse) {
           subqueryStatsProvider.incrementQueriesExceedingRowLimit();
-          throw ResourceLimitExceededException.withMessage(
-              "Cannot issue the query, subqueries generated results beyond maximum[%d] rows",
-              rowLimitToUse
-          );
+          throw ResourceLimitExceededException.withMessage(rowLimitExceededMessage(rowLimitToUse));
         }
         subqueryStatsProvider.incrementSubqueriesWithRowLimit();
         dataSource = materializeResultsAsArray(
@@ -687,10 +689,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       case MEMORY_LIMIT:
         if (memoryLimitAccumulator.get() >= memoryLimit) {
           subqueryStatsProvider.incrementQueriesExceedingByteLimit();
-          throw ResourceLimitExceededException.withMessage(
-              "Cannot issue the query, subqueries generated results beyond maximum[%d] bytes",
-              memoryLimit
-          );
+          throw ResourceLimitExceededException.withMessage(byteLimitExceededMessage(memoryLimit));
         }
         Optional<DataSource> maybeDataSource = materializeResultsAsFrames(
             query,
@@ -707,10 +706,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
           // Check if the previous row limit accumulator has exceeded the memory results
           if (limitAccumulator.get() >= rowLimitToUse) {
             subqueryStatsProvider.incrementQueriesExceedingRowLimit();
-            throw ResourceLimitExceededException.withMessage(
-                "Cannot issue the query, subqueries generated results beyond maximum[%d] rows",
-                rowLimitToUse
-            );
+            throw ResourceLimitExceededException.withMessage(rowLimitExceededMessage(rowLimitToUse));
           }
           subqueryStatsProvider.incrementSubqueriesWithRowLimit();
           subqueryStatsProvider.incrementSubqueriesFallingBackToRowLimit();
@@ -769,10 +765,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
             limitAccumulator.addAndGet(frame.getFrame().numRows());
             if (memoryLimitAccumulator.addAndGet(frame.getFrame().numBytes()) >= memoryLimit) {
               subqueryStatsProvider.incrementQueriesExceedingByteLimit();
-              throw ResourceLimitExceededException.withMessage(
-                  "Subquery generated results beyond maximum[%d] bytes",
-                  memoryLimit
-              );
+              throw ResourceLimitExceededException.withMessage(byteLimitExceededMessage(memoryLimit));
 
             }
             frameSignaturePairs.add(frame);
@@ -819,10 +812,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         (acc, in) -> {
           if (limitAccumulator.getAndIncrement() >= rowLimitToUse) {
             subqueryStatsProvider.incrementQueriesExceedingRowLimit();
-            throw ResourceLimitExceededException.withMessage(
-                "Subquery generated results beyond maximum[%d] rows",
-                rowLimitToUse
-            );
+            throw ResourceLimitExceededException.withMessage(rowLimitExceededMessage(rowLimitToUse));
           }
           acc.add(in);
           return acc;
@@ -831,33 +821,30 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     return InlineDataSource.fromIterable(resultList, signature);
   }
 
-  /**
-   * A {@link QueryRunner} which validates that a *specific* query is passed in, and then swaps it with another one.
-   * Useful since the inlining we do relies on passing the modified query to the underlying {@link QuerySegmentWalker},
-   * and callers of {@link #getQueryRunnerForIntervals} aren't able to do this themselves.
-   */
-  private static class QuerySwappingQueryRunner<T> implements QueryRunner<T>
+  private static String byteLimitExceededMessage(final long memoryLimit)
   {
-    private final QueryRunner<T> baseRunner;
-    private final Query<T> query;
-    private final Query<T> newQuery;
-
-    public QuerySwappingQueryRunner(QueryRunner<T> baseRunner, Query<T> query, Query<T> newQuery)
-    {
-      this.baseRunner = baseRunner;
-      this.query = query;
-      this.newQuery = newQuery;
-    }
-
-    @Override
-    public Sequence<T> run(QueryPlus<T> queryPlus, ResponseContext responseContext)
-    {
-      //noinspection ObjectEquality
-      if (queryPlus.getQuery() != query) {
-        throw new ISE("Unexpected query received");
-      }
-
-      return baseRunner.run(queryPlus.withQuery(newQuery), responseContext);
-    }
+    return org.apache.druid.java.util.common.StringUtils.format(
+    "Cannot issue the query, subqueries generated results beyond maximum[%d] bytes. Increase the "
+    + "JVM's memory or set the '%s' in the query context to increase the space allocated for subqueries to "
+    + "materialize their results. Manually alter the value carefully as it can cause the broker to go out of memory.",
+        memoryLimit,
+        QueryContexts.MAX_SUBQUERY_BYTES_KEY
+    );
   }
+
+  private static String rowLimitExceededMessage(final int rowLimitUsed)
+  {
+    return org.apache.druid.java.util.common.StringUtils.format(
+        "Cannot issue the query, subqueries generated results beyond maximum[%d] rows. Try setting the "
+        + "'%s' in the query context to '%s' for enabling byte based limit, which chooses an optimal limit based on "
+        + "memory size and result's heap usage or manually configure the values of either '%s' or '%s' in the query "
+        + "context. Manually alter the value carefully as it can cause the broker to go out of memory.",
+        rowLimitUsed,
+        QueryContexts.MAX_SUBQUERY_BYTES_KEY,
+        SubqueryGuardrailHelper.AUTO_LIMIT_VALUE,
+        QueryContexts.MAX_SUBQUERY_BYTES_KEY,
+        QueryContexts.MAX_SUBQUERY_ROWS_KEY
+    );
+  }
+
 }

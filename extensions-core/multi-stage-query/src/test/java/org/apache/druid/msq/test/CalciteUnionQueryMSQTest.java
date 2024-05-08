@@ -40,65 +40,63 @@ import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.CalciteUnionQueryTest;
 import org.apache.druid.sql.calcite.QueryTestBuilder;
+import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.apache.druid.sql.calcite.util.SqlTestFramework;
+import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 /**
  * Runs {@link CalciteUnionQueryTest} but with MSQ engine
  */
+@SqlTestFramework.SqlTestFrameWorkModule(CalciteUnionQueryMSQTest.UnionQueryMSQComponentSupplier.class)
 public class CalciteUnionQueryMSQTest extends CalciteUnionQueryTest
 {
-  private TestGroupByBuffers groupByBuffers;
 
-  @Before
-  public void setup2()
+  public static class UnionQueryMSQComponentSupplier extends StandardComponentSupplier
   {
-    groupByBuffers = TestGroupByBuffers.createDefault();
-  }
+    public UnionQueryMSQComponentSupplier(TempDirProducer tempFolderProducer)
+    {
+      super(tempFolderProducer);
+    }
 
-  @After
-  public void teardown2()
-  {
-    groupByBuffers.close();
-  }
+    @Override
+    public void configureGuice(DruidInjectorBuilder builder)
+    {
+      super.configureGuice(builder);
+      builder.addModules(
+          CalciteMSQTestsHelper.fetchModules(tempDirProducer::newTempFolder, TestGroupByBuffers.createDefault()).toArray(new Module[0])
+      );
+    }
 
-  @Override
-  public void configureGuice(DruidInjectorBuilder builder)
-  {
-    super.configureGuice(builder);
-    builder.addModules(CalciteMSQTestsHelper.fetchModules(temporaryFolder, groupByBuffers).toArray(new Module[0]));
-  }
-
-
-  @Override
-  public SqlEngine createEngine(
-      QueryLifecycleFactory qlf,
-      ObjectMapper queryJsonMapper,
-      Injector injector
-  )
-  {
-    final WorkerMemoryParameters workerMemoryParameters =
-        WorkerMemoryParameters.createInstance(
-            WorkerMemoryParameters.PROCESSING_MINIMUM_BYTES * 50,
-            2,
-            10,
-            2,
-            0,
-            0
-        );
-    final MSQTestOverlordServiceClient indexingServiceClient = new MSQTestOverlordServiceClient(
-        queryJsonMapper,
-        injector,
-        new MSQTestTaskActionClient(queryJsonMapper, injector),
-        workerMemoryParameters,
-        ImmutableList.of()
-    );
-    return new MSQTaskSqlEngine(indexingServiceClient, queryJsonMapper);
+    @Override
+    public SqlEngine createEngine(
+        QueryLifecycleFactory qlf,
+        ObjectMapper queryJsonMapper,
+        Injector injector
+    )
+    {
+      final WorkerMemoryParameters workerMemoryParameters =
+          WorkerMemoryParameters.createInstance(
+              WorkerMemoryParameters.PROCESSING_MINIMUM_BYTES * 50,
+              2,
+              10,
+              2,
+              0,
+              0
+          );
+      final MSQTestOverlordServiceClient indexingServiceClient = new MSQTestOverlordServiceClient(
+          queryJsonMapper,
+          injector,
+          new MSQTestTaskActionClient(queryJsonMapper, injector),
+          workerMemoryParameters,
+          ImmutableList.of()
+      );
+      return new MSQTaskSqlEngine(indexingServiceClient, queryJsonMapper);
+    }
   }
 
   @Override
@@ -107,8 +105,7 @@ public class CalciteUnionQueryMSQTest extends CalciteUnionQueryTest
     return new QueryTestBuilder(new BaseCalciteQueryTest.CalciteTestConfig(true))
         .addCustomRunner(new ExtractResultsFactory(() -> (MSQTestOverlordServiceClient) ((MSQTaskSqlEngine) queryFramework().engine()).overlordClient()))
         .skipVectorize(true)
-        .verifyNativeQueries(new VerifyMSQSupportedNativeQueriesPredicate())
-        .msqCompatible(msqCompatible);
+        .verifyNativeQueries(new VerifyMSQSupportedNativeQueriesPredicate());
   }
 
   /**
@@ -128,7 +125,7 @@ public class CalciteUnionQueryMSQTest extends CalciteUnionQueryTest
 
   }
 
-  @Ignore("Ignored till MSQ can plan UNION ALL with any operand")
+  @Disabled("Ignored till MSQ can plan UNION ALL with any operand")
   @Test
   public void testUnionOnSubqueries()
   {

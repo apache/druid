@@ -27,11 +27,9 @@ import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -90,14 +88,13 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
-import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.metadata.MetadataSupervisorManager;
+import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nonnull;
@@ -152,6 +149,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     implements Supervisor
 {
   public static final String CHECKPOINTS_CTX_KEY = "checkpoints";
+  public static final String AUTOSCALER_SKIP_REASON_DIMENSION = "scalingSkipReason";
+  public static final String AUTOSCALER_REQUIRED_TASKS_METRIC = "task/autoScaler/requiredCount";
 
   private static final long MINIMUM_GET_OFFSET_PERIOD_MILLIS = 5000;
   private static final long INITIAL_GET_OFFSET_DELAY_MILLIS = 15000;
@@ -179,7 +178,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * time, there should only be up to a maximum of [taskCount] actively-reading task groups (tracked in the [activelyReadingTaskGroups]
    * map) + zero or more pending-completion task groups (tracked in [pendingCompletionTaskGroups]).
    */
-  private class TaskGroup
+  @VisibleForTesting
+  public class TaskGroup
   {
     final int groupId;
 
@@ -266,6 +266,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       return tasks.keySet();
     }
 
+    @VisibleForTesting
+    public String getBaseSequenceName()
+    {
+      return baseSequenceName;
+    }
   }
 
   private class TaskData
@@ -406,11 +411,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private class DynamicAllocationTasksNotice implements Notice
   {
     Callable<Integer> scaleAction;
+    ServiceEmitter emitter;
     private static final String TYPE = "dynamic_allocation_tasks_notice";
 
-    DynamicAllocationTasksNotice(Callable<Integer> scaleAction)
+    DynamicAllocationTasksNotice(Callable<Integer> scaleAction, ServiceEmitter emitter)
     {
       this.scaleAction = scaleAction;
+      this.emitter = emitter;
     }
 
     /**
@@ -451,17 +458,35 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
               return;
             }
           }
+          final Integer desiredTaskCount = scaleAction.call();
+          ServiceMetricEvent.Builder event = ServiceMetricEvent.builder()
+              .setDimension(DruidMetrics.DATASOURCE, dataSource)
+              .setDimension(DruidMetrics.STREAM, getIoConfig().getStream());
           if (nowTime - dynamicTriggerLastRunTime < autoScalerConfig.getMinTriggerScaleActionFrequencyMillis()) {
             log.info(
-                "DynamicAllocationTasksNotice submitted again in [%d] millis, minTriggerDynamicFrequency is [%s] for dataSource [%s], skipping it!",
+                "DynamicAllocationTasksNotice submitted again in [%d] millis, minTriggerDynamicFrequency is [%s] for dataSource [%s], skipping it! desired task count is [%s], active task count is [%s]",
                 nowTime - dynamicTriggerLastRunTime,
                 autoScalerConfig.getMinTriggerScaleActionFrequencyMillis(),
-                dataSource
+                dataSource,
+                desiredTaskCount,
+                getActiveTaskGroupsCount()
             );
+
+            if (desiredTaskCount > 0) {
+              emitter.emit(event.setDimension(
+                                    AUTOSCALER_SKIP_REASON_DIMENSION,
+                                    "minTriggerScaleActionFrequencyMillis not elapsed yet"
+                                )
+                                .setMetric(AUTOSCALER_REQUIRED_TASKS_METRIC, desiredTaskCount));
+            }
             return;
           }
-          final Integer desriedTaskCount = scaleAction.call();
-          boolean allocationSuccess = changeTaskCount(desriedTaskCount);
+
+          if (desiredTaskCount > 0) {
+            emitter.emit(event.setMetric(AUTOSCALER_REQUIRED_TASKS_METRIC, desiredTaskCount));
+          }
+
+          boolean allocationSuccess = changeTaskCount(desiredTaskCount);
           if (allocationSuccess) {
             dynamicTriggerLastRunTime = nowTime;
           }
@@ -876,14 +901,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         Preconditions.checkNotNull(id, "id");
         Optional<TaskRunner> taskRunner = taskMaster.getTaskRunner();
         if (taskRunner.isPresent()) {
-          Optional<? extends TaskRunnerWorkItem> item = Iterables.tryFind(
-              taskRunner.get().getRunningTasks(),
-              (Predicate<TaskRunnerWorkItem>) taskRunnerWorkItem -> id.equals(taskRunnerWorkItem.getTaskId())
-          );
-
-          if (item.isPresent()) {
-            return item.get().getLocation();
-          }
+          return taskRunner.get().getTaskLocation(id);
         } else {
           log.error("Failed to get task runner because I'm not the leader!");
         }
@@ -894,7 +912,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       @Override
       public Optional<TaskStatus> getTaskStatus(String id)
       {
-        return taskStorage.getStatus(id);
+        final Optional<TaskQueue> taskQueue = taskMaster.getTaskQueue();
+        if (taskQueue.isPresent()) {
+          return taskQueue.get().getTaskStatus(id);
+        } else {
+          return taskStorage.getStatus(id);
+        }
       }
     };
 
@@ -1079,42 +1102,23 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     addNotice(new ResetOffsetsNotice(resetDataSourceMetadata));
   }
 
-  /**
-   * The base sequence name of a seekable stream task group is used as a prefix of the sequence names
-   * of pending segments published by it.
-   * This method can be used to identify the active pending segments for a datasource
-   * by checking if the sequence name begins with any of the active realtime sequence prefix returned by this method
-   * @return the set of base sequence names of both active and pending completion task gruops.
-   */
-  @Override
-  public Set<String> getActiveRealtimeSequencePrefixes()
-  {
-    final Set<String> activeBaseSequences = new HashSet<>();
-    for (TaskGroup taskGroup : activelyReadingTaskGroups.values()) {
-      activeBaseSequences.add(taskGroup.baseSequenceName);
-    }
-    for (List<TaskGroup> taskGroupList : pendingCompletionTaskGroups.values()) {
-      for (TaskGroup taskGroup : taskGroupList) {
-        activeBaseSequences.add(taskGroup.baseSequenceName);
-      }
-    }
-    return activeBaseSequences;
-  }
-
   public void registerNewVersionOfPendingSegment(
-      SegmentIdWithShardSpec basePendingSegment,
-      SegmentIdWithShardSpec newSegmentVersion
+      PendingSegmentRecord pendingSegmentRecord
   )
   {
     for (TaskGroup taskGroup : activelyReadingTaskGroups.values()) {
-      for (String taskId : taskGroup.taskIds()) {
-        taskClient.registerNewVersionOfPendingSegmentAsync(taskId, basePendingSegment, newSegmentVersion);
+      if (taskGroup.baseSequenceName.equals(pendingSegmentRecord.getTaskAllocatorId())) {
+        for (String taskId : taskGroup.taskIds()) {
+          taskClient.registerNewVersionOfPendingSegmentAsync(taskId, pendingSegmentRecord);
+        }
       }
     }
     for (List<TaskGroup> taskGroupList : pendingCompletionTaskGroups.values()) {
       for (TaskGroup taskGroup : taskGroupList) {
-        for (String taskId : taskGroup.taskIds()) {
-          taskClient.registerNewVersionOfPendingSegmentAsync(taskId, basePendingSegment, newSegmentVersion);
+        if (taskGroup.baseSequenceName.equals(pendingSegmentRecord.getTaskAllocatorId())) {
+          for (String taskId : taskGroup.taskIds()) {
+            taskClient.registerNewVersionOfPendingSegmentAsync(taskId, pendingSegmentRecord);
+          }
         }
       }
     }
@@ -1159,14 +1163,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                     Instant handleNoticeEndTime = Instant.now();
                     Duration timeElapsed = Duration.between(handleNoticeStartTime, handleNoticeEndTime);
                     String noticeType = notice.getType();
-                    log.debug(
-                        "Handled notice [%s] from notices queue in [%d] ms, "
-                        + "current notices queue size [%d] for datasource [%s]",
-                        noticeType,
-                        timeElapsed.toMillis(),
-                        getNoticesQueueSize(),
-                        dataSource
-                    );
+                    if (log.isDebugEnabled()) {
+                      log.debug(
+                          "Handled notice [%s] from notices queue in [%d] ms, "
+                              + "current notices queue size [%d] for datasource [%s]",
+                          noticeType, timeElapsed.toMillis(), getNoticesQueueSize(), dataSource
+                      );
+                    }
                     emitNoticeProcessTime(noticeType, timeElapsed.toMillis());
                   }
                   catch (Throwable e) {
@@ -1214,9 +1217,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
   }
 
-  public Runnable buildDynamicAllocationTask(Callable<Integer> scaleAction)
+  public Runnable buildDynamicAllocationTask(Callable<Integer> scaleAction, ServiceEmitter emitter)
   {
-    return () -> addNotice(new DynamicAllocationTasksNotice(scaleAction));
+    return () -> addNotice(new DynamicAllocationTasksNotice(scaleAction, emitter));
   }
 
   private Runnable buildRunTask()
@@ -1532,7 +1535,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   }
 
   @VisibleForTesting
-  public void addTaskGroupToActivelyReadingTaskGroup(
+  public TaskGroup addTaskGroupToActivelyReadingTaskGroup(
       int taskGroupId,
       ImmutableMap<PartitionIdType, SequenceOffsetType> partitionOffsets,
       Optional<DateTime> minMsgTime,
@@ -1556,10 +1559,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           taskGroupId
       );
     }
+    return group;
   }
 
   @VisibleForTesting
-  public void addTaskGroupToPendingCompletionTaskGroup(
+  public TaskGroup addTaskGroupToPendingCompletionTaskGroup(
       int taskGroupId,
       ImmutableMap<PartitionIdType, SequenceOffsetType> partitionOffsets,
       Optional<DateTime> minMsgTime,
@@ -1579,6 +1583,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     group.tasks.putAll(tasks.stream().collect(Collectors.toMap(x -> x, x -> new TaskData())));
     pendingCompletionTaskGroups.computeIfAbsent(taskGroupId, x -> new CopyOnWriteArrayList<>())
                                .add(group);
+    return group;
   }
 
   @VisibleForTesting
@@ -3105,45 +3110,59 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     final List<ListenableFuture<Map<PartitionIdType, SequenceOffsetType>>> futures = new ArrayList<>();
     final List<Integer> futureGroupIds = new ArrayList<>();
 
-    boolean stopTasksEarly = false;
+    boolean stopTasksEarly;
     if (earlyStopTime != null && (earlyStopTime.isBeforeNow() || earlyStopTime.isEqualNow())) {
       log.info("Early stop requested - signalling tasks to complete");
 
       earlyStopTime = null;
       stopTasksEarly = true;
+    } else {
+      stopTasksEarly = false;
     }
 
-    int stoppedTasks = 0;
-    for (Entry<Integer, TaskGroup> entry : activelyReadingTaskGroups.entrySet()) {
-      Integer groupId = entry.getKey();
-      TaskGroup group = entry.getValue();
+    AtomicInteger stoppedTasks = new AtomicInteger();
+    // Sort task groups by start time to prioritize early termination of earlier groups, then iterate for processing
+    activelyReadingTaskGroups
+        .entrySet().stream().sorted(
+            Comparator.comparingLong(
+                (Entry<Integer, TaskGroup> entry) ->
+                    computeEarliestTaskStartTime(entry.getValue())
+                        .getMillis()))
+        .forEach(entry -> {
+          Integer groupId = entry.getKey();
+          TaskGroup group = entry.getValue();
 
-      if (stopTasksEarly) {
-        log.info("Stopping task group [%d] early. It has run for [%s]", groupId, ioConfig.getTaskDuration());
-        futureGroupIds.add(groupId);
-        futures.add(checkpointTaskGroup(group, true));
-      } else {
-        // find the longest running task from this group
-        DateTime earliestTaskStart = DateTimes.nowUtc();
-        for (TaskData taskData : group.tasks.values()) {
-          if (taskData.startTime != null && earliestTaskStart.isAfter(taskData.startTime)) {
-            earliestTaskStart = taskData.startTime;
-          }
-        }
-
-        if (earliestTaskStart.plus(ioConfig.getTaskDuration()).isBeforeNow()) {
-          // if this task has run longer than the configured duration
-          // as long as the pending task groups are less than the configured stop task count.
-          if (pendingCompletionTaskGroups.values().stream().mapToInt(CopyOnWriteArrayList::size).sum() + stoppedTasks
-                 < ioConfig.getStopTaskCount()) {
-            log.info("Task group [%d] has run for [%s]. Stopping.", groupId, ioConfig.getTaskDuration());
+          if (stopTasksEarly) {
+            log.info(
+                "Stopping task group [%d] early. It has run for [%s]",
+                groupId,
+                ioConfig.getTaskDuration()
+            );
             futureGroupIds.add(groupId);
             futures.add(checkpointTaskGroup(group, true));
-            stoppedTasks++;
+          } else {
+            DateTime earliestTaskStart = computeEarliestTaskStartTime(group);
+
+            if (earliestTaskStart.plus(ioConfig.getTaskDuration()).isBeforeNow()) {
+              // if this task has run longer than the configured duration
+              // as long as the pending task groups are less than the configured stop task count.
+              if (pendingCompletionTaskGroups.values()
+                                             .stream()
+                                             .mapToInt(CopyOnWriteArrayList::size)
+                                             .sum() + stoppedTasks.get()
+                  < ioConfig.getMaxAllowedStops()) {
+                log.info(
+                    "Task group [%d] has run for [%s]. Stopping.",
+                    groupId,
+                    ioConfig.getTaskDuration()
+                );
+                futureGroupIds.add(groupId);
+                futures.add(checkpointTaskGroup(group, true));
+                stoppedTasks.getAndIncrement();
+              }
+            }
           }
-        }
-      }
-    }
+        });
 
     List<Either<Throwable, Map<PartitionIdType, SequenceOffsetType>>> results = coalesceAndAwait(futures);
     for (int j = 0; j < results.size(); j++) {
@@ -3172,9 +3191,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         // If we received invalid endOffset values, we clear the known offset to refetch the last committed offset
         // from metadata. If any endOffset values are invalid, we treat the entire set as invalid as a safety measure.
         if (!endOffsetsAreInvalid) {
-          for (Entry<PartitionIdType, SequenceOffsetType> entry : endOffsets.entrySet()) {
-            partitionOffsets.put(entry.getKey(), entry.getValue());
-          }
+          partitionOffsets.putAll(endOffsets);
         } else {
           for (Entry<PartitionIdType, SequenceOffsetType> entry : endOffsets.entrySet()) {
             partitionOffsets.put(entry.getKey(), getNotSetMarker());
@@ -3198,6 +3215,15 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       // remove this task group from the list of current task groups now that it has been handled
       activelyReadingTaskGroups.remove(groupId);
     }
+  }
+
+  private DateTime computeEarliestTaskStartTime(TaskGroup group)
+  {
+    return group.tasks.values().stream()
+                      .filter(taskData -> taskData.startTime != null)
+                      .map(taskData -> taskData.startTime)
+                      .min(DateTime::compareTo)
+                      .orElse(DateTimes.nowUtc());
   }
 
   private ListenableFuture<Map<PartitionIdType, SequenceOffsetType>> checkpointTaskGroup(
@@ -3824,10 +3850,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
   }
 
-  private Map<PartitionIdType, SequenceOffsetType> getOffsetsFromMetadataStorage()
+  protected Map<PartitionIdType, SequenceOffsetType> getOffsetsFromMetadataStorage()
   {
-    final DataSourceMetadata dataSourceMetadata = indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(
-        dataSource);
+    final DataSourceMetadata dataSourceMetadata = retrieveDataSourceMetadata();
     if (dataSourceMetadata instanceof SeekableStreamDataSourceMetadata
         && checkSourceMetadataMatch(dataSourceMetadata)) {
       @SuppressWarnings("unchecked")
@@ -3848,6 +3873,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
 
     return Collections.emptyMap();
+  }
+
+  protected DataSourceMetadata retrieveDataSourceMetadata()
+  {
+    return indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(dataSource);
   }
 
   /**
@@ -3916,9 +3946,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         try {
           taskQueue.get().add(indexTask);
         }
-        catch (EntryExistsException e) {
+        catch (DruidException e) {
           stateManager.recordThrowableEvent(e);
-          log.error("Tried to add task [%s] but it already exists", indexTask.getId());
+          log.noStackTrace().error(e, "Tried to add task [%s] but encountered error", indexTask.getId());
         }
       } else {
         log.error("Failed to get task queue because I'm not the leader!");

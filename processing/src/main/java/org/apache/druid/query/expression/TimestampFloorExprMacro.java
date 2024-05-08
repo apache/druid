@@ -50,9 +50,9 @@ public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
     validationHelperCheckArgumentRange(args, 2, 4);
 
     if (args.stream().skip(1).allMatch(Expr::isLiteral)) {
-      return new TimestampFloorExpr(args);
+      return new TimestampFloorExpr(this, args);
     } else {
-      return new TimestampFloorDynamicExpr(args);
+      return new TimestampFloorDynamicExpr(this, args);
     }
   }
 
@@ -70,9 +70,9 @@ public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
   {
     private final PeriodGranularity granularity;
 
-    TimestampFloorExpr(final List<Expr> args)
+    TimestampFloorExpr(final TimestampFloorExprMacro macro, final List<Expr> args)
     {
-      super(FN_NAME, args);
+      super(macro, args);
       this.granularity = computeGranularity(args, InputBindings.nilBindings());
     }
 
@@ -102,12 +102,6 @@ public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
         return ExprEval.of(null);
       }
       return ExprEval.of(granularity.bucketStart(eval.asLong()));
-    }
-
-    @Override
-    public Expr visit(Shuttle shuttle)
-    {
-      return shuttle.visit(new TimestampFloorExpr(shuttle.visitAll(args)));
     }
 
     @Nullable
@@ -167,9 +161,9 @@ public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
 
   public static class TimestampFloorDynamicExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
   {
-    TimestampFloorDynamicExpr(final List<Expr> args)
+    TimestampFloorDynamicExpr(final TimestampFloorExprMacro macro, final List<Expr> args)
     {
-      super(FN_NAME, args);
+      super(macro, args);
     }
 
     @Nonnull
@@ -178,12 +172,6 @@ public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
     {
       final PeriodGranularity granularity = computeGranularity(args, bindings);
       return ExprEval.of(granularity.bucketStart(args.get(0).eval(bindings).asLong()));
-    }
-
-    @Override
-    public Expr visit(Shuttle shuttle)
-    {
-      return shuttle.visit(new TimestampFloorDynamicExpr(shuttle.visitAll(args)));
     }
 
     @Nullable

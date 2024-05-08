@@ -22,6 +22,7 @@ package org.apache.druid.indexing.common.actions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
@@ -106,7 +107,8 @@ public class SegmentTransactionalInsertActionTest
     SegmentPublishResult result1 = SegmentTransactionalInsertAction.appendAction(
         ImmutableSet.of(SEGMENT1),
         new ObjectMetadata(null),
-        new ObjectMetadata(ImmutableList.of(1))
+        new ObjectMetadata(ImmutableList.of(1)),
+        null
     ).perform(
         task,
         actionTestKit.getTaskActionToolbox()
@@ -116,7 +118,8 @@ public class SegmentTransactionalInsertActionTest
     SegmentPublishResult result2 = SegmentTransactionalInsertAction.appendAction(
         ImmutableSet.of(SEGMENT2),
         new ObjectMetadata(ImmutableList.of(1)),
-        new ObjectMetadata(ImmutableList.of(2))
+        new ObjectMetadata(ImmutableList.of(2)),
+        null
     ).perform(
         task,
         actionTestKit.getTaskActionToolbox()
@@ -144,14 +147,20 @@ public class SegmentTransactionalInsertActionTest
     SegmentPublishResult result = SegmentTransactionalInsertAction.appendAction(
         ImmutableSet.of(SEGMENT1),
         new ObjectMetadata(ImmutableList.of(1)),
-        new ObjectMetadata(ImmutableList.of(2))
+        new ObjectMetadata(ImmutableList.of(2)),
+        null
     ).perform(
         task,
         actionTestKit.getTaskActionToolbox()
     );
 
     Assert.assertEquals(
-        SegmentPublishResult.fail("java.lang.RuntimeException: Failed to update the metadata Store. The new start metadata is ahead of last commited end state."),
+        SegmentPublishResult.fail(
+            InvalidInput.exception(
+                "The new start metadata state[ObjectMetadata{theObject=[1]}] is ahead of the last commited end"
+                + " state[null]. Try resetting the supervisor."
+            ).toString()
+        ),
         result
     );
   }
@@ -162,7 +171,8 @@ public class SegmentTransactionalInsertActionTest
     final Task task = NoopTask.create();
     final SegmentTransactionalInsertAction action = SegmentTransactionalInsertAction.overwriteAction(
         null,
-        ImmutableSet.of(SEGMENT3)
+        ImmutableSet.of(SEGMENT3),
+        null
     );
     actionTestKit.getTaskLockbox().add(task);
     acquireTimeChunkLock(TaskLockType.EXCLUSIVE, task, INTERVAL, 5000);

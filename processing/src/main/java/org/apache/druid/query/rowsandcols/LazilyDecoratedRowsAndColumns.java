@@ -40,7 +40,7 @@ import org.apache.druid.query.operator.ColumnWithDirection;
 import org.apache.druid.query.operator.OffsetLimit;
 import org.apache.druid.query.rowsandcols.column.Column;
 import org.apache.druid.query.rowsandcols.column.ColumnAccessor;
-import org.apache.druid.query.rowsandcols.concrete.FrameRowsAndColumns;
+import org.apache.druid.query.rowsandcols.concrete.ColumnBasedFrameRowsAndColumns;
 import org.apache.druid.query.rowsandcols.semantic.ColumnSelectorFactoryMaker;
 import org.apache.druid.query.rowsandcols.semantic.DefaultRowsAndColumnsDecorator;
 import org.apache.druid.query.rowsandcols.semantic.RowsAndColumnsDecorator;
@@ -67,8 +67,8 @@ import java.util.function.Function;
 
 public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
 {
-  private static final Map<Class<?>, Function<LazilyDecoratedRowsAndColumns, ?>> AS_MAP =
-      RowsAndColumns.makeAsMap(LazilyDecoratedRowsAndColumns.class);
+  private static final Map<Class<?>, Function<LazilyDecoratedRowsAndColumns, ?>> AS_MAP = RowsAndColumns
+      .makeAsMap(LazilyDecoratedRowsAndColumns.class);
 
   private RowsAndColumns base;
   private Interval interval;
@@ -169,7 +169,7 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
       if (thePair == null) {
         reset(new EmptyRowsAndColumns());
       } else {
-        reset(new FrameRowsAndColumns(Frame.wrap(thePair.lhs), thePair.rhs));
+        reset(new ColumnBasedFrameRowsAndColumns(Frame.wrap(thePair.lhs), thePair.rhs));
       }
     }
   }
@@ -225,9 +225,9 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
         cols = base.getColumnNames();
       } else {
         cols = ImmutableList.<String>builder()
-            .addAll(base.getColumnNames())
-            .addAll(virtualColumns.getColumnNames())
-            .build();
+                            .addAll(base.getColumnNames())
+                            .addAll(virtualColumns.getColumnNames())
+                            .build();
       }
     }
     AtomicReference<RowSignature> siggy = new AtomicReference<>(null);

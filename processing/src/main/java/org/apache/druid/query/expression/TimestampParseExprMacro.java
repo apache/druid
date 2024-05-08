@@ -20,7 +20,6 @@
 package org.apache.druid.query.expression;
 
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -66,11 +65,11 @@ public class TimestampParseExprMacro implements ExprMacroTable.ExprMacro
         ? createDefaultParser(timeZone)
         : DateTimes.wrapFormatter(DateTimeFormat.forPattern(formatString).withZone(timeZone));
 
-    class TimestampParseExpr extends ExprMacroTable.BaseScalarUnivariateMacroFunctionExpr
+    class TimestampParseExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
     {
-      private TimestampParseExpr(Expr arg)
+      private TimestampParseExpr(List<Expr> args)
       {
-        super(FN_NAME, arg);
+        super(TimestampParseExprMacro.this, args);
       }
 
       @Nonnull
@@ -92,39 +91,15 @@ public class TimestampParseExprMacro implements ExprMacroTable.ExprMacro
         }
       }
 
-      @Override
-      public Expr visit(Shuttle shuttle)
-      {
-        return shuttle.visit(apply(shuttle.visitAll(args)));
-      }
-
       @Nullable
       @Override
       public ExpressionType getOutputType(InputBindingInspector inspector)
       {
         return ExpressionType.LONG;
       }
-
-      @Override
-      public String stringify()
-      {
-        if (args.size() > 2) {
-          return StringUtils.format(
-              "%s(%s, %s, %s)",
-              FN_NAME,
-              arg.stringify(),
-              args.get(1).stringify(),
-              args.get(2).stringify()
-          );
-        }
-        if (args.size() > 1) {
-          return StringUtils.format("%s(%s, %s)", FN_NAME, arg.stringify(), args.get(1).stringify());
-        }
-        return super.stringify();
-      }
     }
 
-    return new TimestampParseExpr(arg);
+    return new TimestampParseExpr(args);
   }
 
   /**

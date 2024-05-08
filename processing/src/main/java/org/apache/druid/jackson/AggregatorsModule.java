@@ -43,25 +43,26 @@ import org.apache.druid.query.aggregation.SerializablePairLongDoubleComplexMetri
 import org.apache.druid.query.aggregation.SerializablePairLongFloatComplexMetricSerde;
 import org.apache.druid.query.aggregation.SerializablePairLongLongComplexMetricSerde;
 import org.apache.druid.query.aggregation.SerializablePairLongStringComplexMetricSerde;
+import org.apache.druid.query.aggregation.SingleValueAggregatorFactory;
 import org.apache.druid.query.aggregation.any.DoubleAnyAggregatorFactory;
 import org.apache.druid.query.aggregation.any.FloatAnyAggregatorFactory;
 import org.apache.druid.query.aggregation.any.LongAnyAggregatorFactory;
 import org.apache.druid.query.aggregation.any.StringAnyAggregatorFactory;
 import org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
-import org.apache.druid.query.aggregation.first.DoubleFirstAggregatorFactory;
-import org.apache.druid.query.aggregation.first.FloatFirstAggregatorFactory;
-import org.apache.druid.query.aggregation.first.LongFirstAggregatorFactory;
-import org.apache.druid.query.aggregation.first.StringFirstAggregatorFactory;
-import org.apache.druid.query.aggregation.first.StringFirstFoldingAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.first.DoubleFirstAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.first.FloatFirstAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.first.LongFirstAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.first.StringFirstAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.first.StringFirstFoldingAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.last.DoubleLastAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.last.FloatLastAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.last.LongLastAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.last.StringLastAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.last.StringLastFoldingAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniqueFinalizingPostAggregator;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import org.apache.druid.query.aggregation.hyperloglog.PreComputedHyperUniquesSerde;
-import org.apache.druid.query.aggregation.last.DoubleLastAggregatorFactory;
-import org.apache.druid.query.aggregation.last.FloatLastAggregatorFactory;
-import org.apache.druid.query.aggregation.last.LongLastAggregatorFactory;
-import org.apache.druid.query.aggregation.last.StringLastAggregatorFactory;
-import org.apache.druid.query.aggregation.last.StringLastFoldingAggregatorFactory;
 import org.apache.druid.query.aggregation.mean.DoubleMeanAggregatorFactory;
 import org.apache.druid.query.aggregation.mean.DoubleMeanHolder;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
@@ -84,11 +85,23 @@ public class AggregatorsModule extends SimpleModule
 
     ComplexMetrics.registerSerde(HyperUniquesSerde.TYPE_NAME, new HyperUniquesSerde());
     ComplexMetrics.registerSerde(PreComputedHyperUniquesSerde.TYPE_NAME, new PreComputedHyperUniquesSerde());
-    ComplexMetrics.registerSerde(SerializablePairLongStringComplexMetricSerde.TYPE_NAME, new SerializablePairLongStringComplexMetricSerde());
+    ComplexMetrics.registerSerde(
+        SerializablePairLongStringComplexMetricSerde.TYPE_NAME,
+        new SerializablePairLongStringComplexMetricSerde()
+    );
 
-    ComplexMetrics.registerSerde(SerializablePairLongFloatComplexMetricSerde.TYPE_NAME, new SerializablePairLongFloatComplexMetricSerde());
-    ComplexMetrics.registerSerde(SerializablePairLongDoubleComplexMetricSerde.TYPE_NAME, new SerializablePairLongDoubleComplexMetricSerde());
-    ComplexMetrics.registerSerde(SerializablePairLongLongComplexMetricSerde.TYPE_NAME, new SerializablePairLongLongComplexMetricSerde());
+    ComplexMetrics.registerSerde(
+        SerializablePairLongFloatComplexMetricSerde.TYPE_NAME,
+        new SerializablePairLongFloatComplexMetricSerde()
+    );
+    ComplexMetrics.registerSerde(
+        SerializablePairLongDoubleComplexMetricSerde.TYPE_NAME,
+        new SerializablePairLongDoubleComplexMetricSerde()
+    );
+    ComplexMetrics.registerSerde(
+        SerializablePairLongLongComplexMetricSerde.TYPE_NAME,
+        new SerializablePairLongLongComplexMetricSerde()
+    );
 
     setMixInAnnotation(AggregatorFactory.class, AggregatorFactoryMixin.class);
     setMixInAnnotation(PostAggregator.class, PostAggregatorMixin.class);
@@ -129,7 +142,8 @@ public class AggregatorsModule extends SimpleModule
       @JsonSubTypes.Type(name = "doubleAny", value = DoubleAnyAggregatorFactory.class),
       @JsonSubTypes.Type(name = "stringAny", value = StringAnyAggregatorFactory.class),
       @JsonSubTypes.Type(name = "grouping", value = GroupingAggregatorFactory.class),
-      @JsonSubTypes.Type(name = "expression", value = ExpressionLambdaAggregatorFactory.class)
+      @JsonSubTypes.Type(name = "expression", value = ExpressionLambdaAggregatorFactory.class),
+      @JsonSubTypes.Type(name = "singleValue", value = SingleValueAggregatorFactory.class)
   })
   public interface AggregatorFactoryMixin
   {

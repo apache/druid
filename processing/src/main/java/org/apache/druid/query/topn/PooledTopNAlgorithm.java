@@ -768,7 +768,7 @@ public class PooledTopNAlgorithm
   }
 
   @Override
-  protected void closeAggregators(BufferAggregator[] bufferAggregators)
+  protected void resetAggregators(BufferAggregator[] bufferAggregators)
   {
     for (BufferAggregator agg : bufferAggregators) {
       agg.close();

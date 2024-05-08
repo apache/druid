@@ -38,7 +38,9 @@ import org.apache.calcite.rel.metadata.DefaultRelMetadataProvider;
 import org.apache.calcite.rel.rules.CoreRules;
 import org.apache.calcite.rel.rules.DateRangeRules;
 import org.apache.calcite.rel.rules.JoinPushThroughJoinRule;
+import org.apache.calcite.rel.rules.ProjectMergeRule;
 import org.apache.calcite.rel.rules.PruneEmptyRules;
+import org.apache.calcite.runtime.Hook;
 import org.apache.calcite.sql.SqlExplainFormat;
 import org.apache.calcite.sql.SqlExplainLevel;
 import org.apache.calcite.sql2rel.RelDecorrelator;
@@ -62,6 +64,7 @@ import org.apache.druid.sql.calcite.rule.FilterJoinExcludePushToChildRule;
 import org.apache.druid.sql.calcite.rule.FlattenConcatRule;
 import org.apache.druid.sql.calcite.rule.ProjectAggregatePruneUnusedCallRule;
 import org.apache.druid.sql.calcite.rule.ReverseLookupRule;
+import org.apache.druid.sql.calcite.rule.RewriteFirstValueLastValueRule;
 import org.apache.druid.sql.calcite.rule.SortCollapseRule;
 import org.apache.druid.sql.calcite.rule.logical.DruidLogicalRules;
 import org.apache.druid.sql.calcite.run.EngineFeature;
@@ -81,6 +84,8 @@ public class CalciteRulesManager
   private static final int HEP_DEFAULT_MATCH_LIMIT = Integer.parseInt(
       System.getProperty(HEP_DEFAULT_MATCH_LIMIT_CONFIG_STRING, "1200")
   );
+  public static final String BLOAT_PROPERTY = "sqlPlannerBloat";
+  public static final int DEFAULT_BLOAT = 1000;
 
   /**
    * Rules from {@link org.apache.calcite.plan.RelOptRules#BASE_RULES}, minus:
@@ -94,12 +99,14 @@ public class CalciteRulesManager
    * and {@link CoreRules#FILTER_INTO_JOIN}, which are part of {@link #FANCY_JOIN_RULES}.
    * 4) {@link CoreRules#PROJECT_FILTER_TRANSPOSE} because PartialDruidQuery would like to have the Project on top of the Filter -
    * this rule could create a lot of non-useful plans.
+   * 5) {@link CoreRules#PROJECT_MERGE} added later with bloat parameter configured from query context as a workaround for Calcite exception
+   * (there are not enough rules to produce a node with desired properties) thrown while running complex sql-queries with
+   * big amount of subqueries.
    */
   private static final List<RelOptRule> BASE_RULES =
       ImmutableList.of(
           CoreRules.AGGREGATE_STAR_TABLE,
           CoreRules.AGGREGATE_PROJECT_STAR_TABLE,
-          CoreRules.PROJECT_MERGE,
           CoreRules.FILTER_SCAN,
           CoreRules.FILTER_PROJECT_TRANSPOSE,
           CoreRules.JOIN_PUSH_EXPRESSIONS,
@@ -238,20 +245,36 @@ public class CalciteRulesManager
     return ImmutableList.of(
         Programs.sequence(
             druidPreProgram,
+            SaveLogicalPlanProgram.INSTANCE,
             Programs.ofRules(druidConventionRuleSet(plannerContext)),
             new LoggingProgram("After Druid volcano planner program", isDebug)
         ),
         Programs.sequence(
             bindablePreProgram,
+            SaveLogicalPlanProgram.INSTANCE,
             Programs.ofRules(bindableConventionRuleSet(plannerContext)),
             new LoggingProgram("After bindable volcano planner program", isDebug)
         ),
         Programs.sequence(
             druidPreProgram,
+            buildDecoupledLogicalOptimizationProgram(plannerContext),
+            SaveLogicalPlanProgram.INSTANCE,
+            new LoggingProgram("After DecoupledLogicalOptimizationProgram program", isDebug),
             Programs.ofRules(logicalConventionRuleSet(plannerContext)),
             new LoggingProgram("After logical volcano planner program", isDebug)
         )
     );
+  }
+
+  private Program buildDecoupledLogicalOptimizationProgram(PlannerContext plannerContext)
+  {
+    final HepProgramBuilder builder = HepProgram.builder();
+    builder.addMatchLimit(CalciteRulesManager.HEP_DEFAULT_MATCH_LIMIT);
+    builder.addGroupBegin();
+    builder.addRuleCollection(baseRuleSet(plannerContext));
+    builder.addRuleInstance(CoreRules.UNION_MERGE);
+    builder.addGroupEnd();
+    return Programs.of(builder.build(), true, DefaultRelMetadataProvider.INSTANCE);
   }
 
   /**
@@ -317,6 +340,7 @@ public class CalciteRulesManager
       // make it impossible to convert to COALESCE.
       builder.addRuleInstance(new CaseToCoalesceRule());
       builder.addRuleInstance(new CoalesceLookupRule());
+      builder.addRuleInstance(new RewriteFirstValueLastValueRule());
     }
 
     // Remaining rules run as a single group until fixpoint.
@@ -351,6 +375,19 @@ public class CalciteRulesManager
     builder.addGroupEnd();
 
     return Programs.of(builder.build(), true, DefaultRelMetadataProvider.INSTANCE);
+  }
+
+  private static class SaveLogicalPlanProgram implements Program
+  {
+    public static SaveLogicalPlanProgram INSTANCE = new SaveLogicalPlanProgram();
+
+    @Override
+    public RelNode run(RelOptPlanner planner, RelNode rel, RelTraitSet requiredOutputTraits,
+        List<RelOptMaterialization> materializations, List<RelOptLattice> lattices)
+    {
+      Hook.TRIMMED.run(rel);
+      return rel;
+    }
   }
 
   private static class LoggingProgram implements Program
@@ -405,7 +442,7 @@ public class CalciteRulesManager
   {
     final ImmutableList.Builder<RelOptRule> retVal = ImmutableList
         .<RelOptRule>builder()
-        .addAll(baseRuleSet(plannerContext))
+        .add(CoreRules.SORT_REMOVE)
         .add(new DruidLogicalRules(plannerContext).rules().toArray(new RelOptRule[0]));
     return retVal.build();
   }
@@ -420,6 +457,17 @@ public class CalciteRulesManager
                         .build();
   }
 
+  public List<RelOptRule> configurableRuleSet(PlannerContext plannerContext)
+  {
+    return ImmutableList.of(ProjectMergeRule.Config.DEFAULT.withBloat(getBloatProperty(plannerContext)).toRule());
+  }
+
+  private int getBloatProperty(PlannerContext plannerContext)
+  {
+    final Integer bloat = plannerContext.queryContext().getInt(BLOAT_PROPERTY);
+    return (bloat != null) ? bloat : DEFAULT_BLOAT;
+  }
+
   public List<RelOptRule> baseRuleSet(final PlannerContext plannerContext)
   {
     final PlannerConfig plannerConfig = plannerContext.getPlannerConfig();
@@ -429,6 +477,7 @@ public class CalciteRulesManager
     rules.addAll(BASE_RULES);
     rules.addAll(ABSTRACT_RULES);
     rules.addAll(ABSTRACT_RELATIONAL_RULES);
+    rules.addAll(configurableRuleSet(plannerContext));
 
     if (plannerContext.getJoinAlgorithm().requiresSubquery()) {
       rules.addAll(FANCY_JOIN_RULES);

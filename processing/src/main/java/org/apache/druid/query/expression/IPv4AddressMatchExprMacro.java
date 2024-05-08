@@ -23,7 +23,6 @@ import inet.ipaddr.AddressStringException;
 import inet.ipaddr.IPAddress;
 import inet.ipaddr.IPAddressString;
 import inet.ipaddr.ipv4.IPv4Address;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -77,11 +76,11 @@ public class IPv4AddressMatchExprMacro implements ExprMacroTable.ExprMacro
       final IPAddressString blockString = getSubnetInfo(args);
       final IPAddress block = blockString.toAddress().toPrefixBlock();
 
-      class IPv4AddressMatchExpr extends ExprMacroTable.BaseScalarUnivariateMacroFunctionExpr
+      class IPv4AddressMatchExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
       {
-        private IPv4AddressMatchExpr(Expr arg)
+        private IPv4AddressMatchExpr(List<Expr> args)
         {
-          super(FN_NAME, arg);
+          super(IPv4AddressMatchExprMacro.this, args);
         }
 
         @Nonnull
@@ -115,27 +114,15 @@ public class IPv4AddressMatchExprMacro implements ExprMacroTable.ExprMacro
           return address != null && block.contains(address);
         }
 
-        @Override
-        public Expr visit(Shuttle shuttle)
-        {
-          return shuttle.visit(apply(shuttle.visitAll(args)));
-        }
-
         @Nullable
         @Override
         public ExpressionType getOutputType(InputBindingInspector inspector)
         {
           return ExpressionType.LONG;
         }
-
-        @Override
-        public String stringify()
-        {
-          return StringUtils.format("%s(%s, %s)", FN_NAME, arg.stringify(), args.get(ARG_SUBNET).stringify());
-        }
       }
 
-      return new IPv4AddressMatchExpr(arg);
+      return new IPv4AddressMatchExpr(args);
     }
 
     catch (AddressStringException e) {

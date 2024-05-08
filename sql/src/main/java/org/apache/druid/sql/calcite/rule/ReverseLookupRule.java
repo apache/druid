@@ -84,9 +84,14 @@ public class ReverseLookupRule extends RelOptRule implements SubstitutionRule
   public static final String CTX_MAX_OPTIMIZE_COUNT = "maxOptimizeCountForDruidReverseLookupRule";
 
   /**
+   * Context parameter to prevent creating too-large IN filters as a result of reverse lookups.
+   */
+  public static final String CTX_THRESHOLD = "sqlReverseLookupThreshold";
+
+  /**
    * Context parameter for tests, to allow us to force the case where we avoid creating a bunch of ORs.
    */
-  public static final String CTX_MAX_IN_SIZE = "maxInSizeForDruidReverseLookupRule";
+  public static final int DEFAULT_THRESHOLD = 10000;
 
   private final PlannerContext plannerContext;
 
@@ -103,7 +108,10 @@ public class ReverseLookupRule extends RelOptRule implements SubstitutionRule
 
     final int maxOptimizeCount = plannerContext.queryContext().getInt(CTX_MAX_OPTIMIZE_COUNT, Integer.MAX_VALUE);
     final int maxInSize =
-        plannerContext.queryContext().getInt(CTX_MAX_IN_SIZE, plannerContext.queryContext().getInSubQueryThreshold());
+        Math.min(
+            plannerContext.queryContext().getInSubQueryThreshold(),
+            plannerContext.queryContext().getInt(CTX_THRESHOLD, DEFAULT_THRESHOLD)
+        );
     final ReverseLookupShuttle reverseLookupShuttle = new ReverseLookupShuttle(
         plannerContext,
         filter.getCluster().getRexBuilder(),
@@ -302,7 +310,7 @@ public class ReverseLookupRule extends RelOptRule implements SubstitutionRule
      * Collect and reverse a set of lookups that appear as children to OR.
      */
     private class CollectReverseLookups
-        extends CollectComparisons<RexNode, RexCall, RexNode, ReverseLookupKey>
+        extends CollectComparisons<RexNode, RexCall, RexNode, ReverseLookupKey, String, InDimFilter.ValuesSet>
     {
       private final RexBuilder rexBuilder;
 
@@ -325,6 +333,12 @@ public class ReverseLookupRule extends RelOptRule implements SubstitutionRule
         } else {
           return null;
         }
+      }
+
+      @Override
+      protected InDimFilter.ValuesSet makeCollection()
+      {
+        return new InDimFilter.ValuesSet();
       }
 
       @Nullable

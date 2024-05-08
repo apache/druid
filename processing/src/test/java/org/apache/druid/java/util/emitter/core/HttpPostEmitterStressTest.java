@@ -157,7 +157,7 @@ public class HttpPostEmitterStressTest
 
     httpClient.setGoHandler(new GoHandler() {
       @Override
-      protected <X extends Exception> ListenableFuture<Response> go(Request request) throws X
+      protected ListenableFuture<Response> go(Request request)
       {
         return GoHandlers.immediateFuture(EmitterTest.BAD_RESPONSE);
       }
@@ -197,7 +197,7 @@ public class HttpPostEmitterStressTest
 
     httpClient.setGoHandler(new GoHandler() {
       @Override
-      protected <X extends Exception> ListenableFuture<Response> go(Request request) throws X
+      protected ListenableFuture<Response> go(Request request)
       {
         return GoHandlers.immediateFuture(EmitterTest.BAD_RESPONSE);
       }

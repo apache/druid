@@ -33,7 +33,8 @@ import org.apache.iceberg.expressions.Expression;
     @JsonSubTypes.Type(name = "equals", value = IcebergEqualsFilter.class),
     @JsonSubTypes.Type(name = "and", value = IcebergAndFilter.class),
     @JsonSubTypes.Type(name = "not", value = IcebergNotFilter.class),
-    @JsonSubTypes.Type(name = "or", value = IcebergOrFilter.class)
+    @JsonSubTypes.Type(name = "or", value = IcebergOrFilter.class),
+    @JsonSubTypes.Type(name = "range", value = IcebergRangeFilter.class)
 })
 public interface IcebergFilter
 {

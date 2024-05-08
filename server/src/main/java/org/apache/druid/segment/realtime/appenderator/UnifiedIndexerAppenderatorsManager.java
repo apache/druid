@@ -216,7 +216,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates
+      boolean useMaxMemoryEstimates,
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
     synchronized (this) {
@@ -236,7 +237,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
           wrapIndexMerger(indexMerger),
           rowIngestionMeters,
           parseExceptionHandler,
-          useMaxMemoryEstimates
+          useMaxMemoryEstimates,
+          centralizedDatasourceSchemaConfig
       );
       datasourceBundle.addAppenderator(taskId, appenderator);
       return appenderator;
@@ -255,7 +257,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates
+      boolean useMaxMemoryEstimates,
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
     synchronized (this) {
@@ -275,7 +278,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
           wrapIndexMerger(indexMerger),
           rowIngestionMeters,
           parseExceptionHandler,
-          useMaxMemoryEstimates
+          useMaxMemoryEstimates,
+          centralizedDatasourceSchemaConfig
       );
       datasourceBundle.addAppenderator(taskId, appenderator);
       return appenderator;
@@ -294,7 +298,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates
+      boolean useMaxMemoryEstimates,
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
     synchronized (this) {
@@ -314,7 +319,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
           wrapIndexMerger(indexMerger),
           rowIngestionMeters,
           parseExceptionHandler,
-          useMaxMemoryEstimates
+          useMaxMemoryEstimates,
+          centralizedDatasourceSchemaConfig
       );
       datasourceBundle.addAppenderator(taskId, appenderator);
       return appenderator;
@@ -439,7 +445,6 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
           serviceEmitter,
           queryRunnerFactoryConglomerateProvider.get(),
           queryProcessingPool,
-          joinableFactoryWrapper,
           Preconditions.checkNotNull(cache, "cache"),
           cacheConfig,
           cachePopulatorStats
@@ -572,6 +577,12 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
     public SegmentWriteOutMediumFactory getSegmentWriteOutMediumFactory()
     {
       return baseConfig.getSegmentWriteOutMediumFactory();
+    }
+
+    @Override
+    public int getNumPersistThreads()
+    {
+      return baseConfig.getNumPersistThreads();
     }
   }
 

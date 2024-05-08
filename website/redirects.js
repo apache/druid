@@ -118,9 +118,22 @@ const Redirects=[
     "from": [
       "/docs/latest/development/community-extensions/kafka-simple.html",
       "/docs/latest/development/community-extensions/rabbitmq.html",
-      "/docs/latest/development/kafka-simple-consumer-firehose.html"
+      "/docs/latest/development/kafka-simple-consumer-firehose.html",
+      "/docs/latest/development/extensions-core/kafka-supervisor-operations.html",
+      "/docs/latest/development/extensions-core/kafka-supervisor-reference.html",
+      "/docs/latest/development/extensions-core/kafka-ingestion.html",
+      "/docs/latest/development/extensions-core/kafka-supervisor-operations",
+      "/docs/latest/development/extensions-core/kafka-supervisor-reference",
+      "/docs/latest/development/extensions-core/kafka-ingestion"
     ],
-    "to": "/docs/latest/development/extensions-core/kafka-ingestion"
+    "to": "/docs/latest/ingestion/kafka-ingestion"
+  },
+  {
+    "from": [
+      "/docs/latest/development/extensions-core/kinesis-ingestion.html",
+      "/docs/latest/development/extensions-core/kinesis-ingestion"
+    ],
+    "to": "/docs/latest/ingestion/kinesis-ingestion"
   },
   {
     "from": "/docs/latest/development/extensions-contrib/orc.html",

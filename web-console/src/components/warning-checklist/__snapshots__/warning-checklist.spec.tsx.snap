@@ -5,7 +5,7 @@ exports[`WarningChecklist matches snapshot 1`] = `
   class="warning-checklist"
 >
   <label
-    class="bp4-control bp4-switch"
+    class="bp4-control bp4-switch danger-switch"
   >
     <input
       type="checkbox"
@@ -16,7 +16,7 @@ exports[`WarningChecklist matches snapshot 1`] = `
     Check A
   </label>
   <label
-    class="bp4-control bp4-switch"
+    class="bp4-control bp4-switch danger-switch"
   >
     <input
       type="checkbox"
@@ -27,7 +27,7 @@ exports[`WarningChecklist matches snapshot 1`] = `
     Check B
   </label>
   <label
-    class="bp4-control bp4-switch"
+    class="bp4-control bp4-switch danger-switch"
   >
     <input
       type="checkbox"

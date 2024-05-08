@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.StorageConnectorProvider;
@@ -36,6 +37,7 @@ import java.io.File;
 public class AzureStorageConnectorProvider extends AzureOutputConfig implements StorageConnectorProvider
 {
 
+  @Global
   @JacksonInject
   AzureStorage azureStorage;
 

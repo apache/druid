@@ -227,6 +227,80 @@ public class DefaultLimitSpecTest
   }
 
   @Test
+  public void testSortByDimNullSubtotals()
+  {
+    DefaultLimitSpec limitSpec = new DefaultLimitSpec(
+        ImmutableList.of(new OrderByColumnSpec("k1", OrderByColumnSpec.Direction.ASCENDING, StringComparators.NUMERIC)),
+        null
+    );
+
+    Function<Sequence<ResultRow>, Sequence<ResultRow>> limitFn = limitSpec.build(
+        GroupByQuery.builder()
+                    .setDataSource("dummy")
+                    .setInterval("1000/3000")
+                    .setDimensions(new DefaultDimensionSpec("k1", "k1", ColumnType.DOUBLE))
+                    .setGranularity(Granularities.ALL)
+                    .build()
+    );
+
+    // No sorting, because the limit spec thinks sorting isn't necessary (it expects results naturally ordered on k1)
+    Assert.assertEquals(
+        testRowsList,
+        limitFn.apply(Sequences.simple(testRowsList)).toList()
+    );
+  }
+
+  @Test
+  public void testSortByDimEmptySubtotals()
+  {
+    DefaultLimitSpec limitSpec = new DefaultLimitSpec(
+        ImmutableList.of(new OrderByColumnSpec("k1", OrderByColumnSpec.Direction.ASCENDING, StringComparators.NUMERIC)),
+        null
+    );
+
+    Function<Sequence<ResultRow>, Sequence<ResultRow>> limitFn = limitSpec.build(
+        GroupByQuery.builder()
+                    .setDataSource("dummy")
+                    .setInterval("1000/3000")
+                    .setDimensions(new DefaultDimensionSpec("k1", "k1", ColumnType.DOUBLE))
+                    .setGranularity(Granularities.ALL)
+                    .setSubtotalsSpec(ImmutableList.of())
+                    .build()
+    );
+
+    // limit spec sorts rows because subtotalsSpec is set. (Otherwise, it wouldn't; see testSortByDimNullSubtotals.)
+    Assert.assertEquals(
+        ImmutableList.of(testRowsList.get(2), testRowsList.get(0), testRowsList.get(1)),
+        limitFn.apply(Sequences.simple(testRowsList)).toList()
+    );
+  }
+
+  @Test
+  public void testSortByDimSomeSubtotals()
+  {
+    DefaultLimitSpec limitSpec = new DefaultLimitSpec(
+        ImmutableList.of(new OrderByColumnSpec("k1", OrderByColumnSpec.Direction.ASCENDING, StringComparators.NUMERIC)),
+        null
+    );
+
+    Function<Sequence<ResultRow>, Sequence<ResultRow>> limitFn = limitSpec.build(
+        GroupByQuery.builder()
+                    .setDataSource("dummy")
+                    .setInterval("1000/3000")
+                    .setDimensions(new DefaultDimensionSpec("k1", "k1", ColumnType.DOUBLE))
+                    .setGranularity(Granularities.ALL)
+                    .setSubtotalsSpec(ImmutableList.of(ImmutableList.of("k1"), ImmutableList.of()))
+                    .build()
+    );
+
+    // limit spec sorts rows because subtotalsSpec is set. (Otherwise, it wouldn't; see testSortByDimNullSubtotals.)
+    Assert.assertEquals(
+        ImmutableList.of(testRowsList.get(2), testRowsList.get(0), testRowsList.get(1)),
+        limitFn.apply(Sequences.simple(testRowsList)).toList()
+    );
+  }
+
+  @Test
   public void testSortDimensionDescending()
   {
     DefaultLimitSpec limitSpec = new DefaultLimitSpec(

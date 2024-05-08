@@ -131,7 +131,7 @@ public class DefaultK8sApiClient implements K8sApiClient
           try {
             while (watch.hasNext()) {
               Watch.Response<V1Pod> item = watch.next();
-              if (item != null && item.type != null) {
+              if (item != null && item.type != null && !item.type.equals(WatchResult.BOOKMARK)) {
                 DiscoveryDruidNodeAndResourceVersion result = null;
                 if (item.object != null) {
                   result = new DiscoveryDruidNodeAndResourceVersion(
@@ -149,6 +149,11 @@ public class DefaultK8sApiClient implements K8sApiClient
                     item.type,
                     result
                 );
+                return true;
+              } else if (item != null && item.type != null && item.type.equals(WatchResult.BOOKMARK)) {
+                // Events with type BOOKMARK will only contain resourceVersion and no metadata. See
+                // Kubernetes API documentation for details.
+                LOGGER.debug("BOOKMARK event fired, no nothing, only update resourceVersion");
                 return true;
               } else {
                 LOGGER.error("WTH! item or item.type is NULL");

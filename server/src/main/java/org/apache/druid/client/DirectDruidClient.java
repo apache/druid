@@ -78,6 +78,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -127,7 +128,8 @@ public class DirectDruidClient<T> implements QueryRunner<T>
       HttpClient httpClient,
       String scheme,
       String host,
-      ServiceEmitter emitter
+      ServiceEmitter emitter,
+      ScheduledExecutorService queryCancellationExecutor
   )
   {
     this.warehouse = warehouse;
@@ -140,7 +142,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
 
     this.isSmile = this.objectMapper.getFactory() instanceof SmileFactory;
     this.openConnections = new AtomicInteger();
-    this.queryCancellationExecutor = Execs.scheduledSingleThreaded("query-cancellation-executor");
+    this.queryCancellationExecutor = queryCancellationExecutor;
   }
 
   public int getNumOpenConnections()
@@ -453,22 +455,29 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         throw new QueryTimeoutException(StringUtils.nonStrictFormat("Query[%s] url[%s] timed out.", query.getId(), url));
       }
 
-      future = httpClient.go(
-          new Request(
-              HttpMethod.POST,
-              new URL(url)
-          ).setContent(objectMapper.writeValueAsBytes(Queries.withTimeout(query, timeLeft)))
-           .setHeader(
-               HttpHeaders.Names.CONTENT_TYPE,
-               isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON
-           ),
-          responseHandler,
-          Duration.millis(timeLeft)
-      );
+      // increment is moved up so that if future initialization is queued by some other process,
+      // we can increment the count earlier so that we can route the request to a different server
+      openConnections.getAndIncrement();
+      try {
+        future = httpClient.go(
+            new Request(
+                HttpMethod.POST,
+                new URL(url)
+            ).setContent(objectMapper.writeValueAsBytes(Queries.withTimeout(query, timeLeft)))
+             .setHeader(
+                 HttpHeaders.Names.CONTENT_TYPE,
+                 isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON
+             ),
+            responseHandler,
+            Duration.millis(timeLeft)
+        );
+      }
+      catch (Exception e) {
+        openConnections.getAndDecrement();
+        throw e;
+      }
 
       queryWatcher.registerQueryFuture(query, future);
-
-      openConnections.getAndIncrement();
       Futures.addCallback(
           future,
           new FutureCallback<InputStream>()
@@ -551,7 +560,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
             if (!responseFuture.isDone()) {
               log.error("Error cancelling query[%s]", query);
             }
-            StatusResponseHolder response = responseFuture.get();
+            StatusResponseHolder response = responseFuture.get(30, TimeUnit.SECONDS);
             if (response.getStatus().getCode() >= 500) {
               log.error("Error cancelling query[%s]: queriable node returned status[%d] [%s].",
                   query,
@@ -561,6 +570,9 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           }
           catch (ExecutionException | InterruptedException e) {
             log.error(e, "Error cancelling query[%s]", query);
+          }
+          catch (TimeoutException e) {
+            log.error(e, "Timed out cancelling query[%s]", query);
           }
         };
         queryCancellationExecutor.schedule(checkRunnable, 5, TimeUnit.SECONDS);

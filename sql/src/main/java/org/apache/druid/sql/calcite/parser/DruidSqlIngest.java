@@ -19,13 +19,15 @@
 
 package org.apache.druid.sql.calcite.parser;
 
+import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlInsert;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.parser.SqlParserPos;
-import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.calcite.util.ImmutableNullableList;
 
 import javax.annotation.Nullable;
+import java.util.List;
 
 /**
  * Common base class to the two Druid "ingest" statements: INSERT and REPLACE.
@@ -34,13 +36,15 @@ import javax.annotation.Nullable;
  */
 public abstract class DruidSqlIngest extends SqlInsert
 {
-  protected final Granularity partitionedBy;
+  public static final String SQL_EXPORT_FILE_FORMAT = "__exportFileFormat";
 
-  // Used in the unparse function to generate the original query since we convert the string to an enum
-  protected final String partitionedByStringForUnparse;
+  @Nullable
+  protected final SqlGranularityLiteral partitionedBy;
 
   @Nullable
   protected final SqlNodeList clusteredBy;
+  @Nullable
+  private final SqlIdentifier exportFileFormat;
 
   public DruidSqlIngest(
       SqlParserPos pos,
@@ -48,19 +52,20 @@ public abstract class DruidSqlIngest extends SqlInsert
       SqlNode targetTable,
       SqlNode source,
       SqlNodeList columnList,
-      @Nullable Granularity partitionedBy,
-      @Nullable String partitionedByStringForUnparse,
-      @Nullable SqlNodeList clusteredBy
+      @Nullable SqlGranularityLiteral partitionedBy,
+      @Nullable SqlNodeList clusteredBy,
+      @Nullable SqlIdentifier exportFileFormat
   )
   {
     super(pos, keywords, targetTable, source, columnList);
 
-    this.partitionedByStringForUnparse = partitionedByStringForUnparse;
     this.partitionedBy = partitionedBy;
     this.clusteredBy = clusteredBy;
+    this.exportFileFormat = exportFileFormat;
   }
 
-  public Granularity getPartitionedBy()
+  @Nullable
+  public SqlGranularityLiteral getPartitionedBy()
   {
     return partitionedBy;
   }
@@ -69,5 +74,22 @@ public abstract class DruidSqlIngest extends SqlInsert
   public SqlNodeList getClusteredBy()
   {
     return clusteredBy;
+  }
+
+  @Nullable
+  public SqlIdentifier getExportFileFormat()
+  {
+    return exportFileFormat;
+  }
+
+  @Override
+  public List<SqlNode> getOperandList()
+  {
+    return ImmutableNullableList.<SqlNode>builder()
+        .addAll(super.getOperandList())
+        .add(partitionedBy)
+        .add(clusteredBy)
+        .add(exportFileFormat)
+        .build();
   }
 }

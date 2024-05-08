@@ -27,6 +27,7 @@ import org.apache.druid.query.QueryContexts.Vectorize;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
@@ -580,6 +581,19 @@ public class QueryContext
         QueryContexts.TIME_BOUNDARY_PLANNING_KEY,
         QueryContexts.DEFAULT_ENABLE_TIME_BOUNDARY_PLANNING
     );
+  }
+
+  public boolean isWindowingStrictValidation()
+  {
+    return getBoolean(
+        QueryContexts.WINDOWING_STRICT_VALIDATION,
+        QueryContexts.DEFAULT_WINDOWING_STRICT_VALIDATION
+    );
+  }
+
+  public QueryResourceId getQueryResourceId()
+  {
+    return new QueryResourceId(getString(QueryContexts.QUERY_RESOURCE_ID));
   }
 
   public String getBrokerServiceName()

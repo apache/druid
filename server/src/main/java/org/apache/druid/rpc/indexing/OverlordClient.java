@@ -30,6 +30,7 @@ import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.metadata.LockFilterPolicy;
@@ -83,6 +84,8 @@ public interface OverlordClient
    * @param interval   Umbrella interval to be considered by the kill task. Note that unused segments falling in this
    *                   widened umbrella interval may have different {@code used_status_last_updated} time, so the kill task
    *                   should also filter by {@code maxUsedStatusLastUpdatedTime}
+   * @param versions   An optional list of segment versions to kill in the given {@code interval}. If unspecified, all
+   *                   versions of segments in the {@code interval} must be killed.
    * @param maxSegmentsToKill  The maximum number of segments to kill
    * @param maxUsedStatusLastUpdatedTime The maximum {@code used_status_last_updated} time. Any unused segment in {@code interval}
    *                                   with {@code used_status_last_updated} no later than this time will be included in the
@@ -95,6 +98,7 @@ public interface OverlordClient
       String idPrefix,
       String dataSource,
       Interval interval,
+      @Nullable List<String> versions,
       @Nullable Integer maxSegmentsToKill,
       @Nullable DateTime maxUsedStatusLastUpdatedTime
   )
@@ -104,6 +108,7 @@ public interface OverlordClient
         taskId,
         dataSource,
         interval,
+        versions,
         false,
         null,
         maxSegmentsToKill,
@@ -162,7 +167,7 @@ public interface OverlordClient
    * Returns a {@link org.apache.druid.rpc.HttpResponseException} with code
    * {@link javax.ws.rs.core.Response.Status#NOT_FOUND} if there is no report available for some reason.
    */
-  ListenableFuture<Map<String, Object>> taskReportAsMap(String taskId);
+  ListenableFuture<TaskReport.ReportMap> taskReportAsMap(String taskId);
 
   /**
    * Returns the payload for a task as an instance of {@link ClientTaskQuery}. This method only works for tasks

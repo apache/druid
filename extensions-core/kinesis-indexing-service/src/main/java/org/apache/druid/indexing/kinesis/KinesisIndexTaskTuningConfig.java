@@ -115,7 +115,8 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
         intermediateHandoffPeriod,
         logParseExceptions,
         maxParseExceptions,
-        maxSavedParseExceptions
+        maxSavedParseExceptions,
+        null
     );
     this.recordBufferSize = recordBufferSize;
     this.recordBufferSizeBytes = recordBufferSizeBytes;
@@ -362,6 +363,6 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
            ", maxRecordsPerPoll=" + maxRecordsPerPoll +
            ", maxBytesPerPoll=" + maxBytesPerPoll +
            ", intermediateHandoffPeriod=" + getIntermediateHandoffPeriod() +
-           '}';
+            '}';
   }
 }

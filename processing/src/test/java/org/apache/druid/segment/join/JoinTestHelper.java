@@ -199,7 +199,7 @@ public class JoinTestHelper
 
   public static IndexBuilder createFactIndexBuilder(final File tmpDir) throws IOException
   {
-    return createFactIndexBuilder(ColumnConfig.ALWAYS_USE_INDEXES, tmpDir, -1);
+    return createFactIndexBuilder(ColumnConfig.SELECTION_SIZE, tmpDir, -1);
   }
 
   public static IndexBuilder createFactIndexBuilder(

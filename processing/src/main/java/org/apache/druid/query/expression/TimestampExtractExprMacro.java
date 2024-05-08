@@ -124,20 +124,6 @@ public class TimestampExtractExprMacro implements ExprMacroTable.ExprMacro
     }
   }
 
-  private static String stringifyExpr(final List<Expr> args)
-  {
-    if (args.size() > 2) {
-      return StringUtils.format(
-          "%s(%s, %s, %s)",
-          FN_NAME,
-          args.get(0).stringify(),
-          args.get(1).stringify(),
-          args.get(2).stringify()
-      );
-    }
-    return StringUtils.format("%s(%s, %s)", FN_NAME, args.get(0).stringify(), args.get(1).stringify());
-  }
-
   private static ISOChronology computeChronology(final List<Expr> args, final Expr.ObjectBinding bindings)
   {
     String timeZoneVal = (String) args.get(2).eval(bindings).value();
@@ -176,7 +162,7 @@ public class TimestampExtractExprMacro implements ExprMacroTable.ExprMacro
 
     private TimestampExtractExpr(final List<Expr> args, final Unit unit, final ISOChronology chronology)
     {
-      super(FN_NAME, args);
+      super(TimestampExtractExprMacro.this, args);
       this.unit = unit;
       this.chronology = chronology;
     }
@@ -194,23 +180,11 @@ public class TimestampExtractExprMacro implements ExprMacroTable.ExprMacro
       return getExprEval(dateTime, unit);
     }
 
-    @Override
-    public Expr visit(Shuttle shuttle)
-    {
-      return shuttle.visit(apply(shuttle.visitAll(args)));
-    }
-
     @Nullable
     @Override
     public ExpressionType getOutputType(InputBindingInspector inspector)
     {
       return getOutputExpressionType(unit);
-    }
-
-    @Override
-    public String stringify()
-    {
-      return stringifyExpr(args);
     }
   }
 
@@ -220,7 +194,7 @@ public class TimestampExtractExprMacro implements ExprMacroTable.ExprMacro
 
     private TimestampExtractDynamicExpr(final List<Expr> args, final Unit unit)
     {
-      super(FN_NAME, args);
+      super(TimestampExtractExprMacro.this, args);
       this.unit = unit;
     }
 
@@ -238,23 +212,11 @@ public class TimestampExtractExprMacro implements ExprMacroTable.ExprMacro
       return getExprEval(dateTime, unit);
     }
 
-    @Override
-    public Expr visit(Shuttle shuttle)
-    {
-      return shuttle.visit(apply(shuttle.visitAll(args)));
-    }
-
     @Nullable
     @Override
     public ExpressionType getOutputType(InputBindingInspector inspector)
     {
       return getOutputExpressionType(unit);
-    }
-
-    @Override
-    public String stringify()
-    {
-      return stringifyExpr(args);
     }
   }
 }

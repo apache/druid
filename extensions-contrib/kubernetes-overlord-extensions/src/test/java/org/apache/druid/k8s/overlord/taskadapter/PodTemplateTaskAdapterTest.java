@@ -23,6 +23,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import io.fabric8.kubernetes.api.model.PodTemplate;
+import io.fabric8.kubernetes.api.model.PodTemplateBuilder;
+import io.fabric8.kubernetes.api.model.VolumeBuilder;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
 import org.apache.commons.lang.RandomStringUtils;
@@ -33,7 +35,6 @@ import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.k8s.overlord.KubernetesTaskRunnerConfig;
 import org.apache.druid.k8s.overlord.common.Base64Compression;
 import org.apache.druid.k8s.overlord.common.DruidK8sConstants;
@@ -93,8 +94,8 @@ public class PodTemplateTaskAdapterTest
   @Test
   public void test_fromTask_withoutBasePodTemplateInRuntimeProperites_raisesIAE()
   {
-    Assert.assertThrows(
-        "Pod template task adapter requires a base pod template to be specified",
+    Exception exception = Assert.assertThrows(
+        "No base prop should throw an IAE",
         IAE.class,
         () -> new PodTemplateTaskAdapter(
         taskRunnerConfig,
@@ -104,19 +105,20 @@ public class PodTemplateTaskAdapterTest
         new Properties(),
         taskLogs
     ));
+    Assert.assertEquals(exception.getMessage(), "Pod template task adapter requires a base pod template to be specified under druid.indexer.runner.k8s.podTemplate.base");
   }
 
   @Test
-  public void test_fromTask_withBasePodTemplateInRuntimeProperites_withEmptyFile_raisesISE() throws IOException
+  public void test_fromTask_withBasePodTemplateInRuntimeProperites_withEmptyFile_raisesIAE() throws IOException
   {
     Path templatePath = Files.createFile(tempDir.resolve("empty.yaml"));
 
     Properties props = new Properties();
     props.setProperty("druid.indexer.runner.k8s.podTemplate.base", templatePath.toString());
 
-    Assert.assertThrows(
-        "Pod template task adapter requires a base pod template to be specified",
-        ISE.class,
+    Exception exception = Assert.assertThrows(
+        "Empty base pod template should throw a exception",
+        IAE.class,
         () -> new PodTemplateTaskAdapter(
         taskRunnerConfig,
         taskConfig,
@@ -125,6 +127,9 @@ public class PodTemplateTaskAdapterTest
         props,
         taskLogs
     ));
+
+    Assert.assertTrue(exception.getMessage().contains("Failed to load pod template file for"));
+
   }
 
   @Test
@@ -186,7 +191,7 @@ public class PodTemplateTaskAdapterTest
   }
 
   @Test
-  public void test_fromTask_withNoopPodTemplateInRuntimeProperties_withEmptyFile_raisesISE() throws IOException
+  public void test_fromTask_withNoopPodTemplateInRuntimeProperties_withEmptyFile_raisesIAE() throws IOException
   {
     Path baseTemplatePath = Files.createFile(tempDir.resolve("base.yaml"));
     Path noopTemplatePath = Files.createFile(tempDir.resolve("noop.yaml"));
@@ -196,7 +201,7 @@ public class PodTemplateTaskAdapterTest
     props.setProperty("druid.indexer.runner.k8s.podTemplate.base", baseTemplatePath.toString());
     props.setProperty("druid.indexer.runner.k8s.podTemplate.noop", noopTemplatePath.toString());
 
-    Assert.assertThrows(ISE.class, () -> new PodTemplateTaskAdapter(
+    Assert.assertThrows(IAE.class, () -> new PodTemplateTaskAdapter(
         taskRunnerConfig,
         taskConfig,
         node,
@@ -520,7 +525,51 @@ public class PodTemplateTaskAdapterTest
         .collect(Collectors.toList()).get(0).getValue());
   }
 
+  @Test
+  public void test_fromTask_withIndexKafkaPodTemplateInRuntimeProperites() throws IOException
+  {
+    Path baseTemplatePath = Files.createFile(tempDir.resolve("base.yaml"));
+    mapper.writeValue(baseTemplatePath.toFile(), podTemplateSpec);
 
+    Path kafkaTemplatePath = Files.createFile(tempDir.resolve("kafka.yaml"));
+    PodTemplate kafkaPodTemplate = new PodTemplateBuilder(podTemplateSpec)
+          .editTemplate()
+          .editSpec()
+          .setNewVolumeLike(0, new VolumeBuilder().withName("volume").build())
+          .endVolume()
+          .endSpec()
+          .endTemplate()
+          .build();
+    mapper.writeValue(kafkaTemplatePath.toFile(), kafkaPodTemplate);
+
+    Properties props = new Properties();
+    props.setProperty("druid.indexer.runner.k8s.podTemplate.base", baseTemplatePath.toString());
+    props.setProperty("druid.indexer.runner.k8s.podTemplate.index_kafka", kafkaTemplatePath.toString());
+
+    PodTemplateTaskAdapter adapter = new PodTemplateTaskAdapter(
+          taskRunnerConfig,
+          taskConfig,
+          node,
+          mapper,
+          props,
+          taskLogs
+    );
+
+    Task kafkaTask = new NoopTask("id", "id", "datasource", 0, 0, null) {
+      @Override
+      public String getType()
+      {
+        return "index_kafka";
+      }
+    };
+
+    Task noopTask = new NoopTask("id", "id", "datasource", 0, 0, null);
+    Job actual = adapter.fromTask(kafkaTask);
+    Assert.assertEquals(1, actual.getSpec().getTemplate().getSpec().getVolumes().size(), 1);
+
+    actual = adapter.fromTask(noopTask);
+    Assert.assertEquals(0, actual.getSpec().getTemplate().getSpec().getVolumes().size(), 1);
+  }
 
   private void assertJobSpecsEqual(Job actual, Job expected) throws IOException
   {

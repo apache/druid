@@ -169,7 +169,7 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
   {
     name: 'extractionNamespace.uri',
     type: 'string',
-    label: 'URI (deprecated)',
+    label: 'URI',
     placeholder: 's3://bucket/some/key/prefix/lookups-01.gz',
     defined: l =>
       oneOfKnown(deepGet(l, 'extractionNamespace.type'), KNOWN_EXTRACTION_NAMESPACE_TYPES, 'uri') &&
@@ -178,13 +178,10 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
       !deepGet(l, 'extractionNamespace.uriPrefix') && !deepGet(l, 'extractionNamespace.uri'),
     issueWithValue: issueWithUri,
     info: (
-      <>
-        <p>
-          URI for the file of interest, specified as a <Code>file</Code>, <Code>hdfs</Code>,{' '}
-          <Code>s3</Code>, or <Code>gs</Code> path
-        </p>
-        <p>The URI prefix option is strictly better than URI and should be used instead</p>
-      </>
+      <p>
+        URI for the file of interest, specified as a <Code>file</Code>, <Code>hdfs</Code>,{' '}
+        <Code>s3</Code>, or <Code>gs</Code> path
+      </p>
     ),
   },
   {

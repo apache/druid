@@ -25,6 +25,7 @@ import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.metadata.MetadataRuleManager;
 import org.apache.druid.metadata.MetadataSupervisorManager;
 import org.apache.druid.metadata.SegmentsMetadataManager;
+import org.apache.druid.segment.metadata.SegmentSchemaManager;
 
 /**
  * Contains all metadata managers used by the Coordinator.
@@ -37,6 +38,7 @@ public class MetadataManager
   private final MetadataSupervisorManager metadataSupervisorManager;
   private final MetadataRuleManager metadataRuleManager;
   private final IndexerMetadataStorageCoordinator storageCoordinator;
+  private final SegmentSchemaManager segmentSchemaManager;
 
   @Inject
   public MetadataManager(
@@ -45,7 +47,8 @@ public class MetadataManager
       SegmentsMetadataManager segmentsMetadataManager,
       MetadataSupervisorManager metadataSupervisorManager,
       MetadataRuleManager metadataRuleManager,
-      IndexerMetadataStorageCoordinator storageCoordinator
+      IndexerMetadataStorageCoordinator storageCoordinator,
+      SegmentSchemaManager segmentSchemaManager
   )
   {
     this.auditManager = auditManager;
@@ -54,6 +57,7 @@ public class MetadataManager
     this.metadataSupervisorManager = metadataSupervisorManager;
     this.metadataRuleManager = metadataRuleManager;
     this.storageCoordinator = storageCoordinator;
+    this.segmentSchemaManager = segmentSchemaManager;
   }
 
   public void onLeaderStart()
@@ -103,5 +107,10 @@ public class MetadataManager
   public IndexerMetadataStorageCoordinator indexer()
   {
     return storageCoordinator;
+  }
+
+  public SegmentSchemaManager schemas()
+  {
+    return segmentSchemaManager;
   }
 }

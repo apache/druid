@@ -29,9 +29,9 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.client.indexing.ClientKillUnusedSegmentsTaskQuery;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexing.common.KillTaskReport;
+import org.apache.druid.indexer.report.KillTaskReport;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.TaskLock;
-import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.MarkSegmentsAsUnusedAction;
 import org.apache.druid.indexing.common.actions.RetrieveUnusedSegmentsAction;
@@ -43,8 +43,10 @@ import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -83,6 +85,12 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
    */
   private static final int DEFAULT_SEGMENT_NUKE_BATCH_SIZE = 100;
 
+  /**
+   * The version of segments to delete in this {@link #getInterval()}.
+   */
+  @Nullable
+  private final List<String> versions;
+
   @Deprecated
   private final boolean markAsUnused;
   /**
@@ -107,6 +115,7 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
       @JsonProperty("id") String id,
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("interval") Interval interval,
+      @JsonProperty("versions") @Nullable List<String> versions,
       @JsonProperty("context") Map<String, Object> context,
       @JsonProperty("markAsUnused") @Deprecated Boolean markAsUnused,
       @JsonProperty("batchSize") Integer batchSize,
@@ -128,11 +137,25 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
     if (limit != null && limit <= 0) {
       throw InvalidInput.exception("limit[%d] must be a positive integer.", limit);
     }
-    if (limit != null && Boolean.TRUE.equals(markAsUnused)) {
-      throw InvalidInput.exception("limit[%d] cannot be provided when markAsUnused is enabled.", limit);
+    if (Boolean.TRUE.equals(markAsUnused)) {
+      if (limit != null) {
+        throw InvalidInput.exception("limit[%d] cannot be provided when markAsUnused is enabled.", limit);
+      }
+      if (!CollectionUtils.isNullOrEmpty(versions)) {
+        throw InvalidInput.exception("versions[%s] cannot be provided when markAsUnused is enabled.", versions);
+      }
     }
+    this.versions = versions;
     this.limit = limit;
     this.maxUsedStatusLastUpdatedTime = maxUsedStatusLastUpdatedTime;
+  }
+
+
+  @Nullable
+  @JsonProperty
+  public List<String> getVersions()
+  {
+    return versions;
   }
 
   /**
@@ -207,13 +230,9 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
     @Nullable Integer numTotalBatches = getNumTotalBatches();
     List<DataSegment> unusedSegments;
     LOG.info(
-        "Starting kill for datasource[%s] in interval[%s] with batchSize[%d], up to limit[%d] segments "
-        + "before maxUsedStatusLastUpdatedTime[%s] will be deleted%s",
-        getDataSource(),
-        getInterval(),
-        batchSize,
-        limit,
-        maxUsedStatusLastUpdatedTime,
+        "Starting kill for datasource[%s] in interval[%s] and versions[%s] with batchSize[%d], up to limit[%d]"
+        + " segments before maxUsedStatusLastUpdatedTime[%s] will be deleted%s",
+        getDataSource(), getInterval(), getVersions(), batchSize, limit, maxUsedStatusLastUpdatedTime,
         numTotalBatches != null ? StringUtils.format(" in [%d] batches.", numTotalBatches) : "."
     );
 
@@ -236,11 +255,9 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
         break;
       }
 
-      unusedSegments = toolbox
-              .getTaskActionClient()
-              .submit(
-                  new RetrieveUnusedSegmentsAction(getDataSource(), getInterval(), nextBatchSize, maxUsedStatusLastUpdatedTime
-              ));
+      unusedSegments = toolbox.getTaskActionClient().submit(
+          new RetrieveUnusedSegmentsAction(getDataSource(), getInterval(), getVersions(), nextBatchSize, maxUsedStatusLastUpdatedTime)
+      );
 
       // Fetch locks each time as a revokal could have occurred in between batches
       final NavigableMap<DateTime, List<TaskLock>> taskLockMap
@@ -263,7 +280,6 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
 
       toolbox.getTaskActionClient().submit(new SegmentNukeAction(new HashSet<>(unusedSegments)));
 
-
       // Kill segments from the deep storage only if their load specs are not being used by any used segments
       final List<DataSegment> segmentsToBeKilled = unusedSegments
           .stream()
@@ -273,7 +289,7 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
 
       toolbox.getDataSegmentKiller().kill(segmentsToBeKilled);
       numBatchesProcessed++;
-      numSegmentsKilled += unusedSegments.size();
+      numSegmentsKilled += segmentsToBeKilled.size();
 
       LOG.info("Processed [%d] batches for kill task[%s].", numBatchesProcessed, getId());
 
@@ -323,5 +339,11 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
         }
     );
     return taskLockMap;
+  }
+
+  @Override
+  public LookupLoadingSpec getLookupLoadingSpec()
+  {
+    return LookupLoadingSpec.NONE;
   }
 }

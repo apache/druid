@@ -21,7 +21,6 @@ package org.apache.druid.query.expression;
 
 import com.google.inject.Inject;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
@@ -74,15 +73,15 @@ public class LookupExprMacro implements ExprMacroTable.ExprMacro
         replaceMissingValueWith != null && replaceMissingValueWith.isLiteral()
         ? Evals.asString(replaceMissingValueWith.getLiteralValue())
         : null,
-        false,
+        null,
         null
     );
 
-    class LookupExpr extends ExprMacroTable.BaseScalarUnivariateMacroFunctionExpr
+    class LookupExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
     {
-      private LookupExpr(Expr arg)
+      private LookupExpr(final List<Expr> args)
       {
-        super(FN_NAME, arg);
+        super(LookupExprMacro.this, args);
       }
 
       @Nonnull
@@ -90,12 +89,6 @@ public class LookupExprMacro implements ExprMacroTable.ExprMacro
       public ExprEval eval(final ObjectBinding bindings)
       {
         return ExprEval.of(extractionFn.apply(NullHandling.emptyToNullIfNeeded(arg.eval(bindings).asString())));
-      }
-
-      @Override
-      public Expr visit(Shuttle shuttle)
-      {
-        return shuttle.visit(apply(shuttle.visitAll(args)));
       }
 
       @Nullable
@@ -106,28 +99,13 @@ public class LookupExprMacro implements ExprMacroTable.ExprMacro
       }
 
       @Override
-      public String stringify()
-      {
-        if (replaceMissingValueWith != null) {
-          return StringUtils.format(
-              "%s(%s, %s, %s)",
-              FN_NAME,
-              arg.stringify(),
-              lookupExpr.stringify(),
-              replaceMissingValueWith.stringify()
-          );
-        }
-        return StringUtils.format("%s(%s, %s)", FN_NAME, arg.stringify(), lookupExpr.stringify());
-      }
-
-      @Override
       public void decorateCacheKeyBuilder(CacheKeyBuilder builder)
       {
         builder.appendCacheable(extractionFn);
       }
     }
 
-    return new LookupExpr(arg);
+    return new LookupExpr(args);
   }
 
   private Expr getReplaceMissingValueWith(final List<Expr> args)

@@ -31,7 +31,7 @@ import java.io.IOException;
  * underlying sequence. Similar to {@link Yielder}, once close is called on the iterator, the calls to the rest of the
  * iterator's methods are undefined.
  */
-public class ScanResultValueIterator implements CloseableIterator
+public class ScanResultValueIterator implements CloseableIterator<ScanResultValue>
 {
   Yielder<ScanResultValue> yielder;
 
@@ -53,7 +53,7 @@ public class ScanResultValueIterator implements CloseableIterator
   }
 
   @Override
-  public Object next()
+  public ScanResultValue next()
   {
     ScanResultValue scanResultValue = yielder.get();
     yielder = yielder.next(null);

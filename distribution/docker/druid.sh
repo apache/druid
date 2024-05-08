@@ -148,7 +148,7 @@ env | grep ^druid_ | while read evar;
 do
     # Can't use IFS='=' to parse since var might have = in it (e.g. password)
     val=$(echo "$evar" | sed -e 's?[^=]*=??')
-    var=$(echo "$evar" | sed -e 's?^\([^=]*\)=.*?\1?g' -e 's?_?.?g')
+    var=$(echo "$evar" | sed -e 's?^\([^=]*\)=.*?\1?g' -e 's?__?%UNDERSCORE%?g' -e 's?_?.?g' -e 's?%UNDERSCORE%?_?g')
     setKey $SERVICE "$var" "$val"
 done
 
@@ -171,6 +171,9 @@ if [ -n "$DRUID_MAXDIRECTMEMORYSIZE" ]; then setJavaKey ${SERVICE} -XX:MaxDirect
 # If a value is specified in both then JAVA_OPTS will take precedence when using OpenJDK
 # However this behavior is not part of the spec and is thus implementation specific
 JAVA_OPTS="$(cat $SERVICE_CONF_DIR/jvm.config | xargs) $JAVA_OPTS"
+
+# Specify node type used for log4j2.xml
+JAVA_OPTS="-Ddruid.node.type=$SERVICE $JAVA_OPTS"
 
 if [ -n "$DRUID_LOG_LEVEL" ]
 then

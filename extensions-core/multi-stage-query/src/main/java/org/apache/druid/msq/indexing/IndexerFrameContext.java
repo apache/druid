@@ -20,7 +20,7 @@
 package org.apache.druid.msq.indexing;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.msq.exec.LoadedSegmentDataProviderFactory;
+import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.kernel.FrameContext;
 import org.apache.druid.msq.querykit.DataSegmentProvider;
@@ -39,20 +39,20 @@ public class IndexerFrameContext implements FrameContext
   private final IndexIO indexIO;
   private final DataSegmentProvider dataSegmentProvider;
   private final WorkerMemoryParameters memoryParameters;
-  private final LoadedSegmentDataProviderFactory loadedSegmentDataProviderFactory;
+  private final DataServerQueryHandlerFactory dataServerQueryHandlerFactory;
 
   public IndexerFrameContext(
       IndexerWorkerContext context,
       IndexIO indexIO,
       DataSegmentProvider dataSegmentProvider,
-      LoadedSegmentDataProviderFactory loadedSegmentDataProviderFactory,
+      DataServerQueryHandlerFactory dataServerQueryHandlerFactory,
       WorkerMemoryParameters memoryParameters
   )
   {
     this.context = context;
     this.indexIO = indexIO;
     this.dataSegmentProvider = dataSegmentProvider;
-    this.loadedSegmentDataProviderFactory = loadedSegmentDataProviderFactory;
+    this.dataServerQueryHandlerFactory = dataServerQueryHandlerFactory;
     this.memoryParameters = memoryParameters;
   }
 
@@ -81,9 +81,9 @@ public class IndexerFrameContext implements FrameContext
   }
 
   @Override
-  public LoadedSegmentDataProviderFactory loadedSegmentDataProviderFactory()
+  public DataServerQueryHandlerFactory dataServerQueryHandlerFactory()
   {
-    return loadedSegmentDataProviderFactory;
+    return dataServerQueryHandlerFactory;
   }
 
 

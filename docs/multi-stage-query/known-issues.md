@@ -42,11 +42,6 @@ an [UnknownError](./reference.md#error_UnknownError) with a message including "N
 - `GROUPING SETS` are not implemented. Queries using these features return a
   [QueryNotSupported](reference.md#error_QueryNotSupported) error.
 
-- The numeric varieties of the `EARLIEST` and `LATEST` aggregators do not work properly. Attempting to use the numeric
-  varieties of these aggregators lead to an error like
-  `java.lang.ClassCastException: class java.lang.Double cannot be cast to class org.apache.druid.collections.SerializablePair`.
-  The string varieties, however, do work properly.
-
 ## `INSERT` and `REPLACE` Statements
 
 - The `INSERT` and `REPLACE` statements with column lists, like `INSERT INTO tbl (a, b, c) SELECT ...`, is not implemented.
@@ -67,3 +62,9 @@ properties, and the `indexSpec` [`tuningConfig`](../ingestion/ingestion-spec.md#
 - `EXTERN` with input sources that match large numbers of files may exhaust available memory on the controller task.
 
 - `EXTERN` refers to external files. Use `FROM` to access `druid` input sources.
+
+## `WINDOW` Function
+
+- The maximum number of elements in a window cannot exceed a value of 100,000. 
+- To avoid `leafOperators` in MSQ engine, window functions have an extra scan stage after the window stage for cases 
+where native engine has a non-empty `leafOperator`.

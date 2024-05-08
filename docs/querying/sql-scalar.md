@@ -102,7 +102,7 @@ String functions accept strings, and return a type appropriate to the function.
 |`CHAR_LENGTH(expr)`|Alias for `LENGTH`.|
 |`CHARACTER_LENGTH(expr)`|Alias for `LENGTH`.|
 |`STRLEN(expr)`|Alias for `LENGTH`.|
-|`LOOKUP(expr, lookupName, [replaceMissingValueWith])`|Look up `expr` in a registered [query-time lookup table](lookups.md). Note that lookups can also be queried directly using the [`lookup` schema](sql.md#from). Optional constant `replaceMissingValueWith` can be passed as a third argument to be returned when value is missing from lookup.|
+|`LOOKUP(expr, lookupName, [replaceMissingValueWith])`|Look up `expr` in a registered [query-time lookup table](lookups.md) named `lookupName`. The optional constant `replaceMissingValueWith`, if provided, is returned when the `expr` is null or when the lookup does not contain a value for `expr`.<br /><br />Lookups can also be queried directly using the [`lookup` schema](sql.md#from).|
 |`LOWER(expr)`|Returns `expr` in all lowercase.|
 |`UPPER(expr)`|Returns `expr` in all uppercase.|
 |`LPAD(expr, length, [chars])`|Returns a string of `length` from `expr` left-padded with `chars`. If `length` is shorter than the length of `expr`, the result is `expr` which is truncated to `length`. The result will be null if either `expr` or `chars` is null. If `chars` is an empty string, no padding is added, however `expr` may be trimmed if necessary.|

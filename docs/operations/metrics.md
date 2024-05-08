@@ -70,11 +70,11 @@ Most metric values reset each emission period, as specified in `druid.monitoring
 |`sqlQuery/bytes`|Number of bytes returned in the SQL query response.|`id`, `nativeQueryIds`, `dataSource`, `remoteAddress`, `success`, `engine`| |
 |`serverview/init/time`|Time taken to initialize the broker server view. Useful to detect if brokers are taking too long to start.||Depends on the number of segments.|
 |`metadatacache/init/time`|Time taken to initialize the broker segment metadata cache. Useful to detect if brokers are taking too long to start||Depends on the number of segments.|
-|`metadatacache/refresh/count`|Number of segments to refresh in broker segment metadata cache.|`dataSource`|
-|`metadatacache/refresh/time`|Time taken to refresh segments in broker segment metadata cache.|`dataSource`|
-|`metadatacache/schemaPoll/count`|Number of coordinator polls to fetch datasource schema.||
-|`metadatacache/schemaPoll/failed`|Number of failed coordinator polls to fetch datasource schema.||
-|`metadatacache/schemaPoll/time`|Time taken for coordinator polls to fetch datasource schema.||
+|`metadatacache/refresh/count`|Number of segments to refresh in broker segment metadata cache.|`dataSource`||
+|`metadatacache/refresh/time`|Time taken to refresh segments in broker segment metadata cache.|`dataSource`||
+|`metadatacache/schemaPoll/count`|Number of coordinator polls to fetch datasource schema.|||
+|`metadatacache/schemaPoll/failed`|Number of failed coordinator polls to fetch datasource schema.|||
+|`metadatacache/schemaPoll/time`|Time taken for coordinator polls to fetch datasource schema.|||
 |`serverview/sync/healthy`|Sync status of the Broker with a segment-loading server such as a Historical or Peon. Emitted only when [HTTP-based server view](../configuration/index.md#segment-management) is enabled. This metric can be used in conjunction with `serverview/sync/unstableTime` to debug slow startup of Brokers.|`server`, `tier`|1 for fully synced servers, 0 otherwise|
 |`serverview/sync/unstableTime`|Time in milliseconds for which the Broker has been failing to sync with a segment-loading server. Emitted only when [HTTP-based server view](../configuration/index.md#segment-management) is enabled.|`server`, `tier`|Not emitted for synced servers.|
 |`subquery/rowLimit/count`|Number of subqueries whose results are materialized as rows (Java objects on heap).|This metric is only available if the `SubqueryCountStatsMonitor` module is included.| |
@@ -201,7 +201,7 @@ field in the `context` field of the ingestion spec. `tags` is expected to be a m
 
 ### Ingestion metrics for Kafka
 
-These metrics apply to the [Kafka indexing service](../development/extensions-core/kafka-ingestion.md).
+These metrics apply to the [Kafka indexing service](../ingestion/kafka-ingestion.md).
 
 |Metric|Description|Dimensions|Normal value|
 |------|-----------|----------|------------|
@@ -212,7 +212,7 @@ These metrics apply to the [Kafka indexing service](../development/extensions-co
 
 ### Ingestion metrics for Kinesis
 
-These metrics apply to the [Kinesis indexing service](../development/extensions-core/kinesis-ingestion.md).
+These metrics apply to the [Kinesis indexing service](../ingestion/kinesis-ingestion.md).
 
 |Metric|Description|Dimensions|Normal value|
 |------|-----------|----------|------------|
@@ -258,6 +258,7 @@ batch ingestion emit the following metrics. These metrics are deltas for each em
 |`ingest/notices/time`|Milliseconds taken to process a notice by the supervisor.|`dataSource`, `tags`| < 1s |
 |`ingest/pause/time`|Milliseconds spent by a task in a paused state without ingesting.|`dataSource`, `taskId`, `tags`| < 10 seconds|
 |`ingest/handoff/time`|Total number of milliseconds taken to handoff a set of segments.|`dataSource`, `taskId`, `taskType`, `groupId`, `tags`|Depends on the coordinator cycle time.|
+|`task/autoScaler/requiredCount`|Count of required tasks based on the calculations of `lagBased` auto scaler.|`dataSource`, `stream`, `scalingSkipReason`|Depends on auto scaler config.|
 
 If the JVM does not support CPU time measurement for the current thread, `ingest/merge/cpu` and `ingest/persists/cpu` will be 0.
 
@@ -294,6 +295,9 @@ If the JVM does not support CPU time measurement for the current thread, `ingest
 |`worker/taskSlot/idle/count`|Number of idle task slots on the reporting worker per emission period. This metric is only available if the `WorkerTaskCountStatsMonitor` module is included, and is only supported for Middle Manager nodes.| `category`, `workerVersion`|Varies|
 |`worker/taskSlot/total/count`|Number of total task slots on the reporting worker per emission period. This metric is only available if the `WorkerTaskCountStatsMonitor` module is included.| `category`, `workerVersion`|Varies|
 |`worker/taskSlot/used/count`|Number of busy task slots on the reporting worker per emission period. This metric is only available if the `WorkerTaskCountStatsMonitor` module is included.| `category`, `workerVersion`|Varies|
+|`worker/task/assigned/count`|Number of tasks assigned to an indexer per emission period. This metric is only available if the `WorkerTaskCountStatsMonitor` module is included.|`dataSource`|Varies|
+|`worker/task/completed/count`|Number of tasks completed by an indexer per emission period. This metric is only available if the `WorkerTaskCountStatsMonitor` module is included.|`dataSource`|Varies|
+|`worker/task/running/count`|Number of tasks running on an indexer per emission period. This metric is only available if the `WorkerTaskCountStatsMonitor` module is included.|`dataSource`|Varies|
 
 ## Shuffle metrics (Native parallel task)
 
@@ -332,6 +336,7 @@ These metrics are for the Druid Coordinator and are reset each time the Coordina
 |`segment/unneededEternityTombstone/count`|Number of non-overshadowed eternity tombstones marked as unused.| |Varies|
 |`segment/unavailable/count`|Number of unique segments left to load until all used segments are available for queries.|`dataSource`|0|
 |`segment/underReplicated/count`|Number of segments, including replicas, left to load until all used segments are available for queries.|`tier`, `dataSource`|0|
+|`segment/availableDeepStorageOnly/count`|Number of unique segments that are only available for querying directly from deep storage.|`dataSource`|Varies|
 |`tier/historical/count`|Number of available historical nodes in each tier.|`tier`|Varies|
 |`tier/replication/factor`|Configured maximum replication factor in each tier.|`tier`|Varies|
 |`tier/required/capacity`|Total capacity in bytes required in each tier.|`tier`|Varies|
@@ -342,6 +347,7 @@ These metrics are for the Druid Coordinator and are reset each time the Coordina
 |`killTask/availableSlot/count`| Number of available task slots that can be used for auto kill tasks in the auto kill run. This is the max number of task slots minus any currently running auto kill tasks.                                                                                                                                                                                                                                                                                                                     | |Varies|
 |`killTask/maxSlot/count`| Maximum number of task slots available for auto kill tasks in the auto kill run.                                                                                                                                                                                                                                                                                                                                                                                                                | |Varies|
 |`kill/task/count`| Number of tasks issued in the auto kill run.                                                                                                                                                                                                                                                                                                                                                                                                                                                    | |Varies|
+|`kill/eligibleUnusedSegments/count`|The number of unused segments of a datasource that are identified as eligible for deletion from the metadata store by the coordinator.|`dataSource`|Varies|
 |`kill/pendingSegments/count`|Number of stale pending segments deleted from the metadata store.|`dataSource`|Varies|
 |`segment/waitCompact/bytes`|Total bytes of this datasource waiting to be compacted by the auto compaction (only consider intervals/segments that are eligible for auto compaction).|`dataSource`|Varies|
 |`segment/waitCompact/count`|Total number of segments of this datasource waiting to be compacted by the auto compaction (only consider intervals/segments that are eligible for auto compaction).|`dataSource`|Varies|
@@ -363,8 +369,14 @@ These metrics are for the Druid Coordinator and are reset each time the Coordina
 |`serverview/sync/healthy`|Sync status of the Coordinator with a segment-loading server such as a Historical or Peon. Emitted only when [HTTP-based server view](../configuration/index.md#segment-management) is enabled. You can use this metric in conjunction with `serverview/sync/unstableTime` to debug slow startup of the Coordinator.|`server`, `tier`|1 for fully synced servers, 0 otherwise|
 |`serverview/sync/unstableTime`|Time in milliseconds for which the Coordinator has been failing to sync with a segment-loading server. Emitted only when [HTTP-based server view](../configuration/index.md#segment-management) is enabled.|`server`, `tier`|Not emitted for synced servers.|
 |`metadatacache/init/time`|Time taken to initialize the coordinator segment metadata cache.||Depends on the number of segments.|
-|`metadatacache/refresh/count`|Number of segments to refresh in coordinator segment metadata cache.|`dataSource`|
-|`metadatacache/refresh/time`|Time taken to refresh segments in coordinator segment metadata cache.|`dataSource`|
+|`metadatacache/refresh/count`|Number of segments to refresh in coordinator segment metadata cache.|`dataSource`||
+|`metadatacache/refresh/time`|Time taken to refresh segments in coordinator segment metadata cache.|`dataSource`||
+|`metadatacache/backfill/count`|Number of segments for which schema was back filled in the database.|`dataSource`||
+|`metadatacache/realtimeSegmentSchema/count`|Number of realtime segments for which schema is cached.||Depends on the number of realtime segments in the cluster.|
+|`metadatacache/finalizedSegmentMetadata/count`|Number of finalized segments for which schema metadata is cached.||Depends on the number of segments in the cluster.|
+|`metadatacache/finalizedSchemaPayload/count`|Number of finalized segment schema cached.||Depends on the number of distinct schema in the cluster.|
+|`metadatacache/temporaryMetadataQueryResults/count`|Number of segments for which schema was fetched by executing segment metadata query.||Eventually it should be 0.|
+|`metadatacache/temporaryPublishedMetadataQueryResults/count`|Number of segments for which schema is cached after back filling in the database.||This value gets reset after each database poll. Eventually it should be 0.|
 
 ## General Health
 
@@ -372,7 +384,7 @@ These metrics are for the Druid Coordinator and are reset each time the Coordina
 
 |Metric|Description|Dimensions|Normal value|
 |------|-----------|----------|------------|
-| `service/heartbeat` | Metric indicating the service is up. `ServiceStatusMonitor` must be enabled. | `leader` on the Overlord and Coordinator.<br />`workerVersion`, `category`, `status` on the Middle Manager.<br />`taskId`, `groupId`, `taskType`, `dataSource` on the Peon |1|
+| `service/heartbeat` | Metric indicating the service is up. This metric is emitted only when `ServiceStatusMonitor` is enabled. | `leader` on the Overlord and Coordinator.<br />`workerVersion`, `category`, `status` on the Middle Manager.<br />`taskId`, `groupId`, `taskType`, `dataSource`, `tags` on the Peon |1|
 
 ### Historical
 
@@ -393,19 +405,19 @@ For more information, see [Enabling Metrics](../configuration/index.md#enabling-
 
 |Metric|Description|Dimensions|Normal value|
 |------|-----------|----------|------------|
-|`jvm/pool/committed`|Committed pool|`poolKind`, `poolName`|Close to max pool|
-|`jvm/pool/init`|Initial pool|`poolKind`, `poolName`|Varies|
-|`jvm/pool/max`|Max pool|`poolKind`, `poolName`|Varies|
-|`jvm/pool/used`|Pool used|`poolKind`, `poolName`|< max pool|
-|`jvm/bufferpool/count`|Bufferpool count|`bufferpoolName`|Varies|
-|`jvm/bufferpool/used`|Bufferpool used|`bufferpoolName`|Close to capacity|
-|`jvm/bufferpool/capacity`|Bufferpool capacity|`bufferpoolName`|Varies|
-|`jvm/mem/init`|Initial memory|`memKind`|Varies|
-|`jvm/mem/max`|Max memory|`memKind`|Varies|
-|`jvm/mem/used`|Used memory|`memKind`|< max memory|
-|`jvm/mem/committed`|Committed memory|`memKind`|Close to max memory|
-|`jvm/gc/count`|Garbage collection count|`gcName` (cms/g1/parallel/etc.), `gcGen` (old/young)|Varies|
-|`jvm/gc/cpu`|Count of CPU time in Nanoseconds spent on garbage collection. Note: `jvm/gc/cpu` represents the total time over multiple GC cycles; divide by `jvm/gc/count` to get the mean GC time per cycle.|`gcName`, `gcGen`|Sum of `jvm/gc/cpu` should be within 10-30% of sum of `jvm/cpu/total`, depending on the GC algorithm used (reported by [`JvmCpuMonitor`](../configuration/index.md#enabling-metrics)). |
+|`jvm/pool/committed`|Committed pool|`poolKind`, `poolName`, `jvmVersion`|Close to max pool|
+|`jvm/pool/init`|Initial pool|`poolKind`, `poolName`, `jvmVersion`|Varies|
+|`jvm/pool/max`|Max pool|`poolKind`, `poolName`, `jvmVersion`|Varies|
+|`jvm/pool/used`|Pool used|`poolKind`, `poolName`, `jvmVersion`|< max pool|
+|`jvm/bufferpool/count`|Bufferpool count|`bufferpoolName`, `jvmVersion`|Varies|
+|`jvm/bufferpool/used`|Bufferpool used|`bufferpoolName`, `jvmVersion`|Close to capacity|
+|`jvm/bufferpool/capacity`|Bufferpool capacity|`bufferpoolName`, `jvmVersion`|Varies|
+|`jvm/mem/init`|Initial memory|`memKind`, `jvmVersion`|Varies|
+|`jvm/mem/max`|Max memory|`memKind`, `jvmVersion`|Varies|
+|`jvm/mem/used`|Used memory|`memKind`, `jvmVersion`|< max memory|
+|`jvm/mem/committed`|Committed memory|`memKind`, `jvmVersion`|Close to max memory|
+|`jvm/gc/count`|Garbage collection count|`gcName` (cms/g1/parallel/etc.), `gcGen` (old/young), `jvmVersion`|Varies|
+|`jvm/gc/cpu`|Count of CPU time in Nanoseconds spent on garbage collection. Note: `jvm/gc/cpu` represents the total time over multiple GC cycles; divide by `jvm/gc/count` to get the mean GC time per cycle.|`gcName`, `gcGen`, `jvmVersion`|Sum of `jvm/gc/cpu` should be within 10-30% of sum of `jvm/cpu/total`, depending on the GC algorithm used (reported by [`JvmCpuMonitor`](../configuration/index.md#enabling-metrics)). |
 
 ### ZooKeeper
 

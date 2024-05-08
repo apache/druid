@@ -195,7 +195,10 @@ public class ExpressionSelectors
       Expr expression
   )
   {
-    ExpressionPlan plan = ExpressionPlanner.plan(columnSelectorFactory, expression);
+    ExpressionPlan plan = ExpressionPlanner.plan(
+        columnSelectorFactory,
+        Expr.singleThreaded(expression, columnSelectorFactory)
+    );
     final RowIdSupplier rowIdSupplier = columnSelectorFactory.getRowIdSupplier();
 
     if (plan.is(ExpressionPlan.Trait.SINGLE_INPUT_SCALAR)) {
@@ -243,7 +246,10 @@ public class ExpressionSelectors
       @Nullable final ExtractionFn extractionFn
   )
   {
-    final ExpressionPlan plan = ExpressionPlanner.plan(columnSelectorFactory, expression);
+    final ExpressionPlan plan = ExpressionPlanner.plan(
+        columnSelectorFactory,
+        Expr.singleThreaded(expression, columnSelectorFactory)
+    );
 
     if (plan.any(ExpressionPlan.Trait.SINGLE_INPUT_SCALAR, ExpressionPlan.Trait.SINGLE_INPUT_MAPPABLE)) {
       final String column = plan.getSingleInputName();
