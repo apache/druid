@@ -47,3 +47,4 @@ website/i18n/*
 nbproject
 nbactions.xml
 nb-configuration.xml
+*.iq.out

@@ -29,6 +29,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.sql.calcite.expression.DirectOperatorConversion;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
+import org.apache.druid.sql.calcite.rel.Windowing;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.junit.Assert;
 import org.junit.Test;
@@ -36,6 +37,9 @@ import org.junit.Test;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
+
+import static org.junit.Assert.assertFalse;
 
 public class DruidOperatorTableTest
 {
@@ -96,5 +100,28 @@ public class DruidOperatorTableTest
 
     Assert.assertTrue(DruidOperatorTable.isFunctionSyntax(operator1.getSyntax()));
     Assert.assertFalse(DruidOperatorTable.isFunctionSyntax(operator2.getSyntax()));
+  }
+
+  @Test
+  public void testBuiltinWindowOperatorsSupportFramingAsExpected()
+  {
+    DruidOperatorTable operatorTable = new DruidOperatorTable(ImmutableSet.of(), ImmutableSet.of());
+    ImmutableSet<String> keySet = Windowing.KNOWN_WINDOW_FNS.keySet();
+    Set<SqlOperator> windowOps = operatorTable.getOperatorList().stream()
+        .filter(o -> keySet.contains(o.getKind().toString())).collect(Collectors.toSet());
+    for (SqlOperator operator : windowOps) {
+      switch (operator.kind) {
+        case FIRST_VALUE:
+        case LAST_VALUE:
+        case NTILE:
+          // These are handled with DruidSqlValidator and a rewrite rule.
+          continue;
+        default:
+          assertFalse(
+              operator + " allows framing; should be supported or rejected and then exclude from this check",
+              operator.allowsFraming()
+          );
+      }
+    }
   }
 }

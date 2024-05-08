@@ -22,7 +22,6 @@ package org.apache.druid.server.coordinator.loading;
 import com.google.common.collect.Sets;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.druid.client.DruidServer;
-import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategy;
@@ -56,8 +55,6 @@ import java.util.stream.Collectors;
 @NotThreadSafe
 public class StrategicSegmentAssigner implements SegmentActionHandler
 {
-  private static final EmittingLogger log = new EmittingLogger(StrategicSegmentAssigner.class);
-
   private final SegmentLoadQueueManager loadQueueManager;
   private final DruidCluster cluster;
   private final CoordinatorRunStats stats;
@@ -71,6 +68,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
   private final Map<String, Set<String>> datasourceToInvalidLoadTiers = new HashMap<>();
   private final Map<String, Integer> tierToHistoricalCount = new HashMap<>();
   private final Map<String, Set<SegmentId>> segmentsToDelete = new HashMap<>();
+  private final Map<String, Set<DataSegment>> segmentsWithZeroRequiredReplicas = new HashMap<>();
 
   public StrategicSegmentAssigner(
       SegmentLoadQueueManager loadQueueManager,
@@ -107,6 +105,11 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
   public Map<String, Set<SegmentId>> getSegmentsToDelete()
   {
     return segmentsToDelete;
+  }
+
+  public Map<String, Set<DataSegment>> getSegmentsWithZeroRequiredReplicas()
+  {
+    return segmentsWithZeroRequiredReplicas;
   }
 
   public Map<String, Set<String>> getDatasourceToInvalidLoadTiers()
@@ -223,6 +226,12 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     }
 
     SegmentReplicaCount replicaCountInCluster = replicaCountMap.getTotal(segment.getId());
+    if (replicaCountInCluster.required() <= 0) {
+      segmentsWithZeroRequiredReplicas
+          .computeIfAbsent(segment.getDataSource(), ds -> new HashSet<>())
+          .add(segment);
+    }
+
     final int replicaSurplus = replicaCountInCluster.loadedNotDropping()
                                - replicaCountInCluster.requiredAndLoadable();
 

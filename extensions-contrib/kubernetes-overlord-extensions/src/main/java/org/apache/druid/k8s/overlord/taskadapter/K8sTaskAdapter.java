@@ -153,7 +153,8 @@ public abstract class K8sTaskAdapter implements TaskAdapter
     com.google.common.base.Optional<InputStream> taskBody = taskLogs.streamTaskPayload(getTaskId(from).getOriginalTaskId());
     if (!taskBody.isPresent()) {
       throw InternalServerError.exception(
-          "Could not load task payload from deep storage for job [%s]. Check the overlord logs for any errors in uploading task payload to deep storage.",
+          "Could not load task payload from deep storage for job [%s]."
+          + " Check the overlord logs for any errors in uploading task payload to deep storage.",
           from.getMetadata().getName()
       );
     }

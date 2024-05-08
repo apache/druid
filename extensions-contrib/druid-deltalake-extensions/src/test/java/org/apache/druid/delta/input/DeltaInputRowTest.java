@@ -32,21 +32,44 @@ import io.delta.kernel.internal.util.Utils;
 import io.delta.kernel.types.StructType;
 import io.delta.kernel.utils.CloseableIterator;
 import io.delta.kernel.utils.FileStatus;
+import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.hadoop.conf.Configuration;
+import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 public class DeltaInputRowTest
 {
-  @Test
-  public void testDeltaInputRow() throws TableNotFoundException, IOException
+  public static Collection<Object[]> data()
+  {
+    Object[][] data = new Object[][]{
+        {NonPartitionedDeltaTable.DELTA_TABLE_PATH, NonPartitionedDeltaTable.FULL_SCHEMA, NonPartitionedDeltaTable.DIMENSIONS, NonPartitionedDeltaTable.EXPECTED_ROWS},
+        {PartitionedDeltaTable.DELTA_TABLE_PATH, PartitionedDeltaTable.FULL_SCHEMA, PartitionedDeltaTable.DIMENSIONS, PartitionedDeltaTable.EXPECTED_ROWS}
+    };
+    return Arrays.asList(data);
+  }
+
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testDeltaInputRow(
+      final String deltaTablePath,
+      final InputRowSchema schema,
+      final List<String> dimensions,
+      final List<Map<String, Object>> expectedRows
+  ) throws TableNotFoundException, IOException
   {
     final TableClient tableClient = DefaultTableClient.create(new Configuration());
-    final Scan scan = DeltaTestUtils.getScan(tableClient);
+    final Scan scan = DeltaTestUtils.getScan(tableClient, deltaTablePath);
 
     final Row scanState = scan.getScanState(tableClient);
     final StructType physicalReadSchema = ScanStateRow.getPhysicalDataReadSchema(tableClient, scanState);
@@ -76,13 +99,13 @@ public class DeltaInputRowTest
         while (dataIter.hasNext()) {
           FilteredColumnarBatch dataReadResult = dataIter.next();
           Row next = dataReadResult.getRows().next();
-          DeltaInputRow deltaInputRow = new DeltaInputRow(next, DeltaTestUtils.FULL_SCHEMA);
+          DeltaInputRow deltaInputRow = new DeltaInputRow(next, schema);
           Assert.assertNotNull(deltaInputRow);
-          Assert.assertEquals(DeltaTestUtils.DIMENSIONS, deltaInputRow.getDimensions());
+          Assert.assertEquals(dimensions, deltaInputRow.getDimensions());
 
-          Map<String, Object> expectedRow = DeltaTestUtils.EXPECTED_ROWS.get(totalRecordCount);
+          Map<String, Object> expectedRow = expectedRows.get(totalRecordCount);
           for (String key : expectedRow.keySet()) {
-            if (DeltaTestUtils.FULL_SCHEMA.getTimestampSpec().getTimestampColumn().equals(key)) {
+            if (schema.getTimestampSpec().getTimestampColumn().equals(key)) {
               final long expectedMillis = ((Long) expectedRow.get(key)) * 1000;
               Assert.assertEquals(expectedMillis, deltaInputRow.getTimestampFromEpoch());
             } else {
@@ -93,6 +116,23 @@ public class DeltaInputRowTest
         }
       }
     }
-    Assert.assertEquals(DeltaTestUtils.EXPECTED_ROWS.size(), totalRecordCount);
+    Assert.assertEquals(NonPartitionedDeltaTable.EXPECTED_ROWS.size(), totalRecordCount);
+  }
+
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testReadNonExistentTable()
+  {
+    final DeltaInputSource deltaInputSource = new DeltaInputSource("non-existent-table", null, null);
+
+    MatcherAssert.assertThat(
+        Assert.assertThrows(
+            DruidException.class,
+            () -> deltaInputSource.reader(null, null, null)
+        ),
+        DruidExceptionMatcher.invalidInput().expectMessageIs(
+            "tablePath[non-existent-table] not found."
+        )
+    );
   }
 }

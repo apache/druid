@@ -90,4 +90,9 @@ public interface MetadataStorageConnector
   void createSupervisorsTable();
 
   void deleteAllRecords(String tableName);
+
+  /**
+   * SegmentSchema table is created only when CentralizedDatasourceSchema feature is enabled.
+   */
+  void createSegmentSchemasTable();
 }

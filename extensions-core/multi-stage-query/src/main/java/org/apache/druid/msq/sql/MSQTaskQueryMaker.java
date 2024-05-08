@@ -281,6 +281,8 @@ public class MSQTaskQueryMaker implements QueryMaker
                .tuningConfig(new MSQTuningConfig(maxNumWorkers, maxRowsInMemory, rowsPerSegment, indexSpec))
                .build();
 
+    MSQTaskQueryMakerUtils.validateRealtimeReindex(querySpec);
+
     final MSQControllerTask controllerTask = new MSQControllerTask(
         taskId,
         querySpec.withOverriddenContext(nativeQueryContext),

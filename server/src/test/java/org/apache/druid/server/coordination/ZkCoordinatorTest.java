@@ -28,11 +28,11 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.IndexIO;
+import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.server.SegmentManager;
-import org.apache.druid.server.ServerTestHelper;
 import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
@@ -59,7 +59,7 @@ public class ZkCoordinatorTest extends CuratorTestBase
 {
   private static final Logger log = new Logger(ZkCoordinatorTest.class);
 
-  private final ObjectMapper jsonMapper = ServerTestHelper.MAPPER;
+  private final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
   private final DruidServerMetadata me = new DruidServerMetadata(
       "dummyServer",
       "dummyHost",
@@ -135,7 +135,7 @@ public class ZkCoordinatorTest extends CuratorTestBase
     CountDownLatch dropLatch = new CountDownLatch(1);
 
     SegmentLoadDropHandler segmentLoadDropHandler = new SegmentLoadDropHandler(
-        ServerTestHelper.MAPPER,
+        jsonMapper,
         new SegmentLoaderConfig() {
           @Override
           public File getInfoDir()

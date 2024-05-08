@@ -17,6 +17,8 @@
  */
 
 import type { QueryResult } from '@druid-toolkit/query';
+import { C } from '@druid-toolkit/query';
+import type { Filter } from 'react-table';
 
 import { filterMap, formatNumber, oneOf } from './general';
 import { deepSet } from './object-change';
@@ -55,4 +57,21 @@ export function getNumericColumnBraces(
   }
 
   return numericColumnBraces;
+}
+
+export interface Sorted {
+  id: string;
+  desc: boolean;
+}
+
+export interface TableState {
+  page: number;
+  pageSize: number;
+  filtered: Filter[];
+  sorted: Sorted[];
+}
+
+export function sortedToOrderByClause(sorted: Sorted[]): string | undefined {
+  if (!sorted.length) return;
+  return 'ORDER BY ' + sorted.map(sort => `${C(sort.id)} ${sort.desc ? 'DESC' : 'ASC'}`).join(', ');
 }

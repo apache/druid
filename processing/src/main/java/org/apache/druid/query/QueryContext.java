@@ -591,6 +591,10 @@ public class QueryContext
     );
   }
 
+  public QueryResourceId getQueryResourceId()
+  {
+    return new QueryResourceId(getString(QueryContexts.QUERY_RESOURCE_ID));
+  }
 
   public String getBrokerServiceName()
   {
