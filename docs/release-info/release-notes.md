@@ -477,9 +477,11 @@ You can now use the `kill/eligibleUnusedSegments/count` metric to find the numbe
 [#15941](https://github.com/apache/druid/pull/15941) [#15977](https://github.com/apache/druid/pull/15977)
 
 #### Changed real time query metrics
-<!--We don't use the term fire hydrants for user facing stuff. The only place it shows up in the docs is in an example of the logs. We need a diff way of explaining this -->
 
-Segment metrics like `query/segment/time` are now TBD
+This change eliminates the need to materialize results on the heap, which improves the performance of groupBy queries.
+
+Before realtime segments are pushed to deep storage, they consist of spill files.
+Segment metrics such as `query/segment/time` now report on per spill file for a realtime segment, rather than for the entire segment.
 
 [#15757](https://github.com/apache/druid/pull/15757)
 
