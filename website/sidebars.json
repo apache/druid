@@ -229,7 +229,7 @@
       }
     ]},
     { "type": "category",
-    "label": "Api reference",
+    "label": "API reference",
     "link": {
       "type": "doc",
       "id": "api-reference/api-reference"
