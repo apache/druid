@@ -169,6 +169,13 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
 
     @Nullable
     @Override
+    protected Map<String, Long> getReplicaLag()
+    {
+      return null;
+    }
+
+    @Nullable
+    @Override
     protected Map<String, Long> getPartitionTimeLag()
     {
       return null;

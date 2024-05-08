@@ -2123,6 +2123,13 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
       return null;
     }
 
+    @Nullable
+    @Override
+    protected Map<String, Long> getReplicaLag()
+    {
+      return null;
+    }
+
     @Override
     protected SeekableStreamIndexTaskIOConfig createTaskIoConfig(
         int groupId,
