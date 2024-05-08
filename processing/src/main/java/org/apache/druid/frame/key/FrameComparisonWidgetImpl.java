@@ -321,7 +321,8 @@ public class FrameComparisonWidgetImpl implements FrameComparisonWidget
 
         // Use serde for the current implementation.
         ComplexMetricSerde serde = serdeMap.computeIfAbsent(
-            complexTypeName, name ->
+            complexTypeName,
+            name ->
                 Preconditions.checkNotNull(
                     ComplexMetrics.getSerdeForType(name), "serde for type [%s] not present", complexTypeName
                 )

@@ -274,8 +274,6 @@ public class FrameWriterTest extends InitializedNullHandlingTest
   @Test
   public void test_complex()
   {
-    // Complex types can't be sorted, so skip the sortedness tests.
-    // Assume.assumeThat(sortedness, CoreMatchers.is(KeyOrder.NONE));
     testWithDataset(FrameWriterTestData.TEST_COMPLEX);
   }
 

@@ -16,6 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.frame.key;
 
 import com.google.common.collect.ImmutableList;
@@ -180,5 +181,4 @@ public class RowKeyComparisonRunLengthsTest
     Assert.assertEquals(KeyOrder.ASCENDING, runLengthEntries.get(5).getOrder());
 
   }
-
 }

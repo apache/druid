@@ -24,7 +24,6 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 
-import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -95,7 +94,7 @@ public class RowKeyComparisonRunLengths
     return true;
   }
 
-   public List<RunLengthEntry> getRunLengthEntries()
+  public List<RunLengthEntry> getRunLengthEntries()
   {
     return runLengthEntries;
   }
