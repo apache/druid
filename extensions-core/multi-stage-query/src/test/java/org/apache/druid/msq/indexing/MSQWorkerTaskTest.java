@@ -28,6 +28,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
@@ -144,15 +145,30 @@ public class MSQWorkerTaskTest
   public void testGetLookupLoadingSpecUsingInvalidInput()
   {
     final HashMap<String, Object> context = new HashMap<>();
-    context.put(PlannerContext.CTX_LOOKUPS_TO_LOAD, null);
     context.put(PlannerContext.CTX_LOOKUP_LOADING_MODE, LookupLoadingSpec.Mode.ONLY_REQUIRED);
+
+    // Setting CTX_LOOKUPS_TO_LOAD as null
+    context.put(PlannerContext.CTX_LOOKUPS_TO_LOAD, null);
+
     MSQWorkerTask msqWorkerTask = new MSQWorkerTask(controllerTaskId, dataSource, workerNumber, context, retryCount);
     DruidException exception = Assert.assertThrows(
         DruidException.class,
         msqWorkerTask::getLookupLoadingSpec
     );
     Assert.assertEquals(
-        "Set of lookups to load cannot be NULL for mode[ONLY_REQUIRED].",
+        "Set of lookups to load cannot be null for mode[ONLY_REQUIRED].",
+        exception.getMessage());
+
+    // Setting CTX_LOOKUPS_TO_LOAD as empty list
+    context.put(PlannerContext.CTX_LOOKUPS_TO_LOAD, Collections.emptyList());
+
+    msqWorkerTask = new MSQWorkerTask(controllerTaskId, dataSource, workerNumber, context, retryCount);
+    exception = Assert.assertThrows(
+        DruidException.class,
+        msqWorkerTask::getLookupLoadingSpec
+    );
+    Assert.assertEquals(
+        "Set of lookups to load cannot be [] for mode[ONLY_REQUIRED].",
         exception.getMessage());
   }
 }
