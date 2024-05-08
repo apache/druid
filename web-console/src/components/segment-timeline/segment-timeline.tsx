@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import {FormGroup, Radio, RadioGroup, ResizeSensor, MenuItem, Button} from '@blueprintjs/core';
+import {Button, FormGroup, MenuItem, Radio, RadioGroup, ResizeSensor} from '@blueprintjs/core';
 import { ItemPredicate, ItemRenderer, Select2 } from "@blueprintjs/select";
 import type { AxisScale } from 'd3-axis';
 import { scaleLinear, scaleUtc } from 'd3-scale';
@@ -563,11 +563,11 @@ ORDER BY "start" DESC`;
           activeDatasource: selectedItem === showAll ? null : selectedItem,
         })
       }
-      let datasourcesWzAll = [showAll].concat(datasources);
-      return (<Select2 items={datasourcesWzAll}
+      const datasourcesWzAll = [showAll].concat(datasources);
+      return (<Select2<string> items={datasourcesWzAll}
                        onItemSelect={handleItemSelected}
                        itemRenderer={datasourceRenderer}
-                       noResults={<MenuItem disabled={true} text="No results." roleStructure="listoption"/>}
+                       noResults={<MenuItem disabled text="No results." roleStructure="listoption"/>}
                        itemPredicate={filterDatasource}>
         <Button text={activeDatasource === null ? showAll : activeDatasource}/>
       </Select2>);
