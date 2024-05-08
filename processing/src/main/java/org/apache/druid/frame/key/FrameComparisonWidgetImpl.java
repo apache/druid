@@ -210,6 +210,13 @@ public class FrameComparisonWidgetImpl implements FrameComparisonWidget
         continue;
       }
 
+      // Index of the next field that will get considered. Excludes the current field that we are comparing right now
+      final int nextField = fieldsComparedTillNow + runLengthEntry.getRunLength();
+      final int comparableBytesEndPositionInKey = RowKeyReader.fieldEndPosition(keyArray, nextField - 1);
+      final int comparableBytesEndPositionInRow = getFieldEndPositionInRow(rowPosition, nextField - 1);
+
+      final int cmp;
+
       if (!runLengthEntry.isByteComparable()) {
         // Only complex types are not byte comparable. Nested arrays aren't supported in MSQ
         assert runLengthEntry.getRunLength() == 1;
@@ -228,12 +235,7 @@ public class FrameComparisonWidgetImpl implements FrameComparisonWidget
             complexTypeName
         );
 
-        // Index of the next field that will get considered. Excludes the current field that we are comparing right now
-        final int nextField = fieldsComparedTillNow + 1;
-        final int comparableBytesEndPositionInKey = RowKeyReader.fieldEndPosition(keyArray, nextField - 1);
-        final int comparableBytesEndPositionInRow = getFieldEndPositionInRow(rowPosition, nextField - 1);
-
-        int cmp = FrameReaderUtils.compareComplexTypes(
+        cmp = FrameReaderUtils.compareComplexTypes(
             dataRegion,
             rowPosition + comparableBytesStartPositionInRow,
             keyArray,
@@ -241,20 +243,8 @@ public class FrameComparisonWidgetImpl implements FrameComparisonWidget
             columnType,
             serde
         );
-
-        if (cmp != 0) {
-          return runLengthEntry.getOrder() == KeyOrder.ASCENDING ? cmp : -cmp;
-        }
-
-        fieldsComparedTillNow = nextField;
-        comparableBytesStartPositionInRow = comparableBytesEndPositionInRow;
-        comparableBytesStartPositionInKey = comparableBytesEndPositionInKey;
       } else {
-        int nextField = fieldsComparedTillNow + runLengthEntry.getRunLength();
-        final long comparableBytesEndPositionInRow = getFieldEndPositionInRow(rowPosition, nextField - 1);
-        final int comparableBytesEndPositionInKey = RowKeyReader.fieldEndPosition(keyArray, nextField - 1);
-
-        int cmp = FrameReaderUtils.compareMemoryToByteArrayUnsigned(
+        cmp = FrameReaderUtils.compareMemoryToByteArrayUnsigned(
             dataRegion,
             rowPosition + comparableBytesStartPositionInRow,
             comparableBytesEndPositionInRow - comparableBytesStartPositionInRow,
@@ -262,14 +252,14 @@ public class FrameComparisonWidgetImpl implements FrameComparisonWidget
             comparableBytesStartPositionInKey,
             comparableBytesEndPositionInKey - comparableBytesStartPositionInKey
         );
-        if (cmp != 0) {
-          return runLengthEntry.getOrder() == KeyOrder.ASCENDING ? cmp : -cmp;
-        }
-        fieldsComparedTillNow = nextField;
-        comparableBytesStartPositionInRow = comparableBytesEndPositionInRow;
-        comparableBytesStartPositionInKey = comparableBytesEndPositionInKey;
       }
 
+      if (cmp != 0) {
+        return runLengthEntry.getOrder() == KeyOrder.ASCENDING ? cmp : -cmp;
+      }
+      fieldsComparedTillNow = nextField;
+      comparableBytesStartPositionInRow = comparableBytesEndPositionInRow;
+      comparableBytesStartPositionInKey = comparableBytesEndPositionInKey;
     }
     return 0;
   }
@@ -299,6 +289,12 @@ public class FrameComparisonWidgetImpl implements FrameComparisonWidget
         // Defensive check
         continue;
       }
+
+      final int nextField = fieldsComparedTillNow + runLengthEntry.getRunLength();
+      final int comparableBytesEndPositionInRow = getFieldEndPositionInRow(rowPosition, nextField - 1);
+      final int otherComparableBytesEndPositionInRow = otherWidgetImpl.getFieldEndPositionInRow(otherRowPosition, nextField - 1);
+
+      final int cmp;
 
       if (!runLengthEntry.isByteComparable()) {
         // Only complex types are not byte comparable. Nested arrays aren't supported in MSQ
@@ -331,11 +327,7 @@ public class FrameComparisonWidgetImpl implements FrameComparisonWidget
                 )
         );
 
-        int nextField = fieldsComparedTillNow + 1;
-        final int comparableBytesEndPositionInRow = getFieldEndPositionInRow(rowPosition, nextField - 1);
-        final int otherComparableBytesEndPositionInRow = getFieldEndPositionInRow(otherRowPosition, nextField - 1);
-
-        int cmp = FrameReaderUtils.compareComplexTypes(
+        cmp = FrameReaderUtils.compareComplexTypes(
             dataRegion,
             rowPosition + comparableBytesStartPositionInRow,
             otherWidgetImpl.dataRegion,
@@ -343,21 +335,8 @@ public class FrameComparisonWidgetImpl implements FrameComparisonWidget
             columnType1,
             serde
         );
-
-        if (cmp != 0) {
-          return runLengthEntry.getOrder() == KeyOrder.ASCENDING ? cmp : -cmp;
-        }
-
-        fieldsComparedTillNow = nextField;
-        comparableBytesStartPositionInRow = comparableBytesEndPositionInRow;
-        otherComparableBytesStartPositionInRow = otherComparableBytesEndPositionInRow;
       } else {
-        int nextField = fieldsComparedTillNow + runLengthEntry.getRunLength();
-        final int comparableBytesEndPositionInRow = getFieldEndPositionInRow(rowPosition, nextField - 1);
-        final int otherComparableBytesEndPositionInRow =
-            otherWidgetImpl.getFieldEndPositionInRow(otherRowPosition, nextField - 1);
-
-        int cmp = FrameReaderUtils.compareMemoryUnsigned(
+        cmp = FrameReaderUtils.compareMemoryUnsigned(
             dataRegion,
             rowPosition + comparableBytesStartPositionInRow,
             comparableBytesEndPositionInRow - comparableBytesStartPositionInRow,
@@ -365,13 +344,15 @@ public class FrameComparisonWidgetImpl implements FrameComparisonWidget
             otherRowPosition + otherComparableBytesStartPositionInRow,
             otherComparableBytesEndPositionInRow - otherComparableBytesStartPositionInRow
         );
-        if (cmp != 0) {
-          return runLengthEntry.getOrder() == KeyOrder.ASCENDING ? cmp : -cmp;
-        }
-        fieldsComparedTillNow = nextField;
-        comparableBytesStartPositionInRow = comparableBytesEndPositionInRow;
-        otherComparableBytesStartPositionInRow = otherComparableBytesEndPositionInRow;
       }
+
+      if (cmp != 0) {
+        return runLengthEntry.getOrder() == KeyOrder.ASCENDING ? cmp : -cmp;
+      }
+
+      fieldsComparedTillNow = nextField;
+      comparableBytesStartPositionInRow = comparableBytesEndPositionInRow;
+      otherComparableBytesStartPositionInRow = otherComparableBytesEndPositionInRow;
     }
 
     return 0;

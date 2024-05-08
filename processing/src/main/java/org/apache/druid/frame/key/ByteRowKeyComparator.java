@@ -116,6 +116,8 @@ public class ByteRowKeyComparator implements Comparator<byte[]>
       final int currentRunEndPosition1 = RowKeyReader.fieldEndPosition(keyArray1, nextField - 1);
       final int currentRunEndPosition2 = RowKeyReader.fieldEndPosition(keyArray2, nextField - 1);
 
+      final int cmp;
+
       if (!runLengthEntry.isByteComparable()) {
         // Only complex types are not byte comparable. Nested arrays aren't supported in MSQ
         assert runLengthEntry.getRunLength() == 1;
@@ -134,8 +136,7 @@ public class ByteRowKeyComparator implements Comparator<byte[]>
             complexTypeName
         );
 
-
-        int cmp = FrameReaderUtils.compareComplexTypes(
+        cmp = FrameReaderUtils.compareComplexTypes(
             keyArray1,
             currentRunStartPosition1,
             keyArray2,
@@ -143,19 +144,9 @@ public class ByteRowKeyComparator implements Comparator<byte[]>
             columnType,
             serde
         );
-        if (cmp != 0) {
-          return runLengthEntry.getOrder() == KeyOrder.ASCENDING ? cmp : -cmp;
-        }
-        // We have only compared a single field here
-        fieldsComparedTillNow = nextField;
-        currentRunStartPosition1 = currentRunEndPosition1;
-        currentRunStartPosition2 = currentRunEndPosition2;
       } else {
         // The keys are byte comparable
-        int nextField = fieldsComparedTillNow + runLengthEntry.getRunLength();
-        final int currentRunEndPosition1 = RowKeyReader.fieldEndPosition(keyArray1, nextField - 1);
-        final int currentRunEndPosition2 = RowKeyReader.fieldEndPosition(keyArray2, nextField - 1);
-        int cmp = FrameReaderUtils.compareByteArraysUnsigned(
+        cmp = FrameReaderUtils.compareByteArraysUnsigned(
             keyArray1,
             currentRunStartPosition1,
             currentRunEndPosition1 - currentRunStartPosition1,
@@ -163,14 +154,15 @@ public class ByteRowKeyComparator implements Comparator<byte[]>
             currentRunStartPosition2,
             currentRunEndPosition2 - currentRunStartPosition2
         );
-        if (cmp != 0) {
-          return runLengthEntry.getOrder() == KeyOrder.ASCENDING ? cmp : -cmp;
-        }
-
-        fieldsComparedTillNow = nextField;
-        currentRunStartPosition1 = currentRunEndPosition1;
-        currentRunStartPosition2 = currentRunEndPosition2;
       }
+
+      if (cmp != 0) {
+        return runLengthEntry.getOrder() == KeyOrder.ASCENDING ? cmp : -cmp;
+      }
+
+      fieldsComparedTillNow = nextField;
+      currentRunStartPosition1 = currentRunEndPosition1;
+      currentRunStartPosition2 = currentRunEndPosition2;
     }
     return 0;
   }
