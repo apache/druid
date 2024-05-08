@@ -27,10 +27,50 @@ import org.apache.druid.segment.column.ValueType;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
+/**
+ * Denotes the ascending-descending run lengths of the fields of the keycolumns that can be compared together.
+ * It analyses the key columns and their types. It coalesces the adjacent key columns if they are:
+ * a. Byte comparable, i.e. the fields won't need to be deserialized before comparing. It doesn't care about the types
+ * b. Have same order
+ *
+ * All the primitive and the primitive arrays are byte comparable. The complex types are not byte comparable, and nested arrays
+ * and arrays of complex objects are not supported by MSQ right now.
+ *
+ * Consider a row with the key columns like:
+ *
+ * ColumnName       ColumnType        Order
+ * ==========================================
+ * longAsc1         LONG              ASC
+ * stringAsc1       STRING            ASC
+ * stringDesc1      STRING            DESC
+ * longDesc1        LONG              DESC
+ * complexDesc1     COMPLEX           DESC
+ * complexAsc1      COMPLEX           ASC
+ * complexAsc2      COMPLEX           ASC
+ * stringAsc2       STRING            ASC
+ *
+ * The run lengths generated would be:
+ *
+ * RunLengthEntry        Run length   Order     Is byte comparable    Explanation
+ * ====================================================================================================================
+ * RunLengthEntry#1      2            ASC       true                  Even though longAsc1 and stringAsc1 had different types,
+ *                                                                    both types are byte comparable and have same direction. Therefore,
+ *                                                                    they can be byte-compared together
+ *
+ * RunLengthEntry#2      2            DESC      true                  stringDesc1 can't be clubed with the previous stringAsc1 due to
+ *                                                                    different ordering. It is clubbed with the following longDesc1 due
+ *                                                                    to the reason stated above
+ * RunLengthEntry#3      1            DESC      false                 Non byte comparable types cannot be clubbed with anything
+ * RunLengthEntry#4      1            ASC       false                 Non byte comparable types cannot be clubbed with anything
+ * RunLengthEntry#5      1            ASC       false                 Non byte comparable types cannot be clubbed with anything despite
+ *                                                                    the previous key column having same order and the type
+ * RunLengthEntry#6      1            ASC       true                  Cannot be clubbed with previous entry. Its it own entry
+ *
+ */
 public class RowKeyComparisonRunLengths
 {
-
   private final List<RunLengthEntry> runLengthEntries;
 
   private RowKeyComparisonRunLengths(List<RunLengthEntry> runLengthEntries)
@@ -40,7 +80,7 @@ public class RowKeyComparisonRunLengths
 
   public static RowKeyComparisonRunLengths create(final List<KeyColumn> keyColumns, RowSignature rowSignature)
   {
-    final List<RunLengthEntry> runLengthEntries = new ArrayList<>();
+    final List<RunLengthEntryBuilder> runLengthEntryBuilders = new ArrayList<>();
     for (KeyColumn keyColumn : keyColumns) {
 
       if (keyColumn.order() == KeyOrder.NONE) {
@@ -53,9 +93,10 @@ public class RowKeyComparisonRunLengths
       ColumnType columnType = rowSignature.getColumnType(keyColumn.columnName())
                                           .orElseThrow(() -> DruidException.defensive("Need column types"));
 
-      if (runLengthEntries.size() == 0) {
-        runLengthEntries.add(
-            new RunLengthEntry(isByteComparable(columnType), keyColumn.order())
+      // First key column to be processed
+      if (runLengthEntryBuilders.size() == 0) {
+        runLengthEntryBuilders.add(
+            new RunLengthEntryBuilder(isByteComparable(columnType), keyColumn.order())
         );
         continue;
       }
@@ -63,19 +104,23 @@ public class RowKeyComparisonRunLengths
       // There is atleast one RunLengthEntry present in the array. Check if we can find a way to merge the current entry
       // with the previous one
       boolean isCurrentColumnByteComparable = isByteComparable(columnType);
-      RunLengthEntry lastRunLengthEntry = runLengthEntries.get(runLengthEntries.size() - 1);
-      if (lastRunLengthEntry.isByteComparable()
+      RunLengthEntryBuilder lastRunLengthEntryBuilder = runLengthEntryBuilders.get(runLengthEntryBuilders.size() - 1);
+      if (lastRunLengthEntryBuilder.byteComparable
           && isCurrentColumnByteComparable
-          && lastRunLengthEntry.order.equals(keyColumn.order())
+          && lastRunLengthEntryBuilder.order.equals(keyColumn.order())
       ) {
-        lastRunLengthEntry.incrementRunLength();
+        lastRunLengthEntryBuilder.runLength++;
       } else {
-        runLengthEntries.add(
-            new RunLengthEntry(isCurrentColumnByteComparable, keyColumn.order())
+        runLengthEntryBuilders.add(
+            new RunLengthEntryBuilder(isCurrentColumnByteComparable, keyColumn.order())
         );
       }
     }
-    return new RowKeyComparisonRunLengths(runLengthEntries);
+    return new RowKeyComparisonRunLengths(
+        runLengthEntryBuilders.stream()
+                              .map(RunLengthEntryBuilder::build)
+                              .collect(Collectors.toList())
+    );
   }
 
   private static boolean isByteComparable(ColumnType columnType)
@@ -131,22 +176,13 @@ public class RowKeyComparisonRunLengths
   {
     private final boolean byteComparable;
     private final KeyOrder order;
-    private int runLength;
+    private final int runLength;
 
-    private RunLengthEntry(boolean byteComparable, KeyOrder order)
+    private RunLengthEntry(final boolean byteComparable, final KeyOrder order, final int runLength)
     {
       this.byteComparable = byteComparable;
       this.order = order;
-      this.runLength = 1;
-    }
-
-    /**
-     * Increments the runLength by 1. Only to be used within this class during the creation of the
-     * {@link RowKeyComparisonRunLengths}
-     */
-    private void incrementRunLength()
-    {
-      ++runLength;
+      this.runLength = runLength;
     }
 
     public boolean isByteComparable()
@@ -162,6 +198,47 @@ public class RowKeyComparisonRunLengths
     public KeyOrder getOrder()
     {
       return order;
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      RunLengthEntry that = (RunLengthEntry) o;
+      return byteComparable == that.byteComparable && runLength == that.runLength && order == that.order;
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hash(byteComparable, order, runLength);
+    }
+  }
+
+  /**
+   * Builder for {@link RunLengthEntry}. Contains mutable state, therefore it isn't suitable for equality and hashCode.
+   */
+  private static class RunLengthEntryBuilder
+  {
+    private final boolean byteComparable;
+    private final KeyOrder order;
+    private int runLength;
+
+    public RunLengthEntryBuilder(boolean byteComparable, KeyOrder order)
+    {
+      this.byteComparable = byteComparable;
+      this.order = order;
+      this.runLength = 1;
+    }
+
+    public RunLengthEntry build()
+    {
+      return new RunLengthEntry(byteComparable, order, runLength);
     }
   }
 }

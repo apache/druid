@@ -1086,6 +1086,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByRootSingleTypeStringMixed2SparseJsonValueNonExistentPath()
   {
+    // Fails while planning
     msqIncompatible();
     testQuery(
         "SELECT "
@@ -2479,6 +2480,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByRootSingleTypeArrayDoubleElement()
   {
+    // Test framework doesn't register the RELAX_NULLS when running as part of MSQ tests
+    msqIncompatible();
     testBuilder()
         .sql(
             "SELECT "
@@ -5412,7 +5415,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testJoinOnNestedColumnThrows()
   {
-    msqIncompatible();
     DruidException e = Assertions.assertThrows(DruidException.class, () -> {
       testQuery(
           "SELECT * FROM druid.nested a INNER JOIN druid.nested b ON a.nester = b.nester",
@@ -5426,6 +5428,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testScanStringNotNullCast()
   {
+    // Scan results between native and the MSQ aren't in the same order.
+    msqIncompatible();
     skipVectorize();
     testQuery(
         "SELECT "
@@ -5886,6 +5890,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByAndFilterVariant()
   {
+    // Returns incorrect results with MSQ
     msqIncompatible();
     testQuery(
         "SELECT "
@@ -5920,6 +5925,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testScanAllTypesAuto()
   {
+    // Variant types are not supported by MSQ
     msqIncompatible();
     skipVectorize();
     testQuery(
@@ -6628,6 +6634,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testCoalesceOnNestedColumns()
   {
+    // Unnest on MSQ returns incorrect results
     msqIncompatible();
     // jo.unnest is first entry in coalesce
     // so Calcite removes the coalesce to be used here
@@ -6667,6 +6674,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testCoalesceOnNestedColumnsLater()
   {
+    // MSQ doesn't work well with unnest
     msqIncompatible();
     // the first column in coalesce comes from the table
     // so a virtual expression is present for the coalesce
@@ -6861,6 +6869,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testJsonQueryArrayNullArray()
   {
+    // Array complex JSON isn't supported
     msqIncompatible();
     cannotVectorize();
     testBuilder()
@@ -7081,6 +7090,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testJsonValueNestedEmptyArray()
   {
+    // Returns incorrect results with MSQ
     msqIncompatible();
     // test for regression
     skipVectorize();
