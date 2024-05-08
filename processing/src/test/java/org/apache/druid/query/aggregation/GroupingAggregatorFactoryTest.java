@@ -98,12 +98,6 @@ public class GroupingAggregatorFactoryTest
       aggregator = factory.factorize(metricFactory);
       Assert.assertEquals(2, aggregator.getLong());
     }
-
-    @Test
-    public void testWithDuplicateGroupings()
-    {
-      Assert.assertThrows(DruidException.class, () -> makeFactory(new String[]{"a", "a"}, null));
-    }
   }
 
   public static class GroupingDimensionsTest
@@ -137,6 +131,14 @@ public class GroupingAggregatorFactoryTest
           Long.SIZE - 1
       ));
       makeFactory(new String[Long.SIZE], null);
+    }
+
+    @Test
+    public void testWithDuplicateGroupings()
+    {
+      exception.expect(DruidException.class);
+      exception.expectMessage("Encountered same dimension more than once in groupings");
+      makeFactory(new String[]{"a", "a"}, null);
     }
   }
 

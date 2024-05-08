@@ -103,8 +103,17 @@ public class GroupingAggregatorFactory extends AggregatorFactory
   )
   {
     Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
-    if (!groupings.isEmpty() && groupings.stream().distinct().count() < groupings.size()) {
-      throw DruidException.defensive("Encountered same dimension in more than one grouping!");
+    Preconditions.checkArgument(!CollectionUtils.isNullOrEmpty(groupings), "Must have a non-empty grouping dimensions");
+    // (Long.SIZE - 1) is just a sanity check. In practice, it will be just few dimensions. This limit
+    // also makes sure that values are always positive.
+    Preconditions.checkArgument(
+        groupings.size() < Long.SIZE,
+        "Number of dimensions %s is more than supported %s",
+        groupings.size(),
+        Long.SIZE - 1
+    );
+    if (groupings.stream().distinct().count() < groupings.size()) {
+      throw DruidException.defensive("Encountered same dimension more than once in groupings");
     }
     this.name = name;
     this.groupings = groupings;
@@ -258,15 +267,6 @@ public class GroupingAggregatorFactory extends AggregatorFactory
    */
   private long groupingId(List<String> groupings, @Nullable Set<String> keyDimensions)
   {
-    Preconditions.checkArgument(!CollectionUtils.isNullOrEmpty(groupings), "Must have a non-empty grouping dimensions");
-    // (Long.SIZE - 1) is just a sanity check. In practice, it will be just few dimensions. This limit
-    // also makes sure that values are always positive.
-    Preconditions.checkArgument(
-        groupings.size() < Long.SIZE,
-        "Number of dimensions %s is more than supported %s",
-        groupings.size(),
-        Long.SIZE - 1
-    );
     long temp = 0L;
     for (String groupingDimension : groupings) {
       temp = temp << 1;
