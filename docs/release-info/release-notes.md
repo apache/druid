@@ -57,6 +57,51 @@ For tips about how to write a good release note, see [Release notes](https://git
 
 This section contains important information about new and existing features.
 
+### Centralized datasource schema (alpha)
+
+You can now configure Druid to centralize schema management using the Coordinator service. Previously, Brokers needed to query data nodes and tasks for segment schemas. Centralizing datasource schemas can improve startup time for Brokers and the efficiency of your deployment.
+
+If enabled, the following changes occur:
+
+- Realtime segment schema changes get periodically pushed to the Coordinator
+- Tasks publish segment schemas and metadata to the metadata database
+- The Coordinator service polls the schema and segment metadata to build datasource schemas
+- Brokers fetch datasource schemas from the Coordinator when possible. If not, the Broker builds the schema.
+
+This behavior is currently opt-in. To enable this feature, set the following configs:
+
+- In your common runtime properties, set `druid.centralizedDatasourceSchema.enabled` to true.
+- If you're using MiddleManagers, you also need to set `druid.indexer.fork.property.druid.centralizedDatasourceSchema.enabled` to true in your MiddleManager runtime properties.
+
+You can return to the previous behavior by changing the configs to false.
+
+You can configure the following properties to control how the Coordinator service handles unused segment schemas:
+
+|Name|Description|Required|Default|
+|-|-|-|-|
+|`druid.coordinator.kill.segmentSchema.on`| Boolean value for enabling automatic deletion of unused segment schemas. If set to true, the Coordinator service periodically identifies segment schemas that are not referenced by any used segment and marks them as unused. At a later point, these unused schemas are deleted. | No | True|
+|`druid.coordinator.kill.segmentSchema.period`| How often to do automatic deletion of segment schemas in [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) duration format. Value must be equal to or greater than `druid.coordinator.period.metadataStoreManagementPeriod`. Only applies if `druid.coordinator.kill.segmentSchema.on` is set to true.| No| `P1D`|
+|`druid.coordinator.kill.segmentSchema.durationToRetain`| [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) duration for the time a segment schema is retained for from when it's marked as unused. Only applies if `druid.coordinator.kill.segmentSchema.on` is set to true.| Yes, if `druid.coordinator.kill.segmentSchema.on` is set to true.| `P90D`|
+
+In addition there are new metrics for monitoring after enabling centralized datasource schemas:
+
+- `metadatacache/schemaPoll/count`
+- `metadatacache/schemaPoll/failed`
+- `metadatacache/schemaPoll/time`
+- `metadacache/init/time`
+- `metadatacache/refresh/count`
+- `metadatacache/refresh/time`
+- `metadatacache/backfill/count`
+- `metadatacache/finalizedSegmentMetadata/size`
+- `metadatacache/finalizedSegmentMetadata/count`
+- `metadatacache/finalizedSchemaPayload/count`
+- `metadatacache/temporaryMetadataQueryResults/count`
+- `metadatacache/temporaryPublishedMetadataQueryResults/count`
+
+For more information, see [Metrics](../operations/metrics.md).
+
+[#15817](https://github.com/apache/druid/pull/15817)
+
 ### Support for window functions
 
 Added support for using window functions with the MSQ task engine as the query engine.
@@ -134,6 +179,7 @@ Rather than sending a transform expression containing lookups to the sampler, Dr
   [#16235](https://github.com/apache/druid/pull/16235)
 * Fixed an issue with the [Tasks](https://druid.apache.org/docs/latest/operations/web-console#tasks) view returning incorrect values for **Created time** and **Duration** fields after the Overlord restarts [#16228](https://github.com/apache/druid/pull/16228)
 * Fixed the Azure icon not rendering in the web console [#16173](https://github.com/apache/druid/pull/16173)
+* Fixed the supervisor offset reset dialog in the web console [#16298](https://github.com/apache/druid/pull/16298)
 
 ### General ingestion
 
@@ -211,12 +257,26 @@ If your code or tests consume task reports, don't rely on the JSON to be a singl
 
 [#16041](https://github.com/apache/druid/pull/16041)
 
+#### Improved handling of lock types
+
+You can now grant locks with different types (EXCLUSIVE, SHARED, APPEND, REPLACE) for the same interval within a task group to ensure a transition to a newer set of tasks without failure.
+
+Previously, changing lock types in the Supervisor could lead to segment allocation errors due to lock conflicts for the new tasks when the older tasks are still running.
+
+[#16369](https://github.com/apache/druid/pull/16369)
+
 #### Other ingestion improvements
 
-* The task status output for a failed task now includes the exception message [#16286](https://github.com/apache/druid/pull/16286)
 * Added indexer level task metrics to provide more visibility in task distribution [#15991](https://github.com/apache/druid/pull/15991)
 * Added more logging detail for S3 `RetryableS3OutputStream`&mdash;this can help to determine whether to adjust chunk size [#16117](https://github.com/apache/druid/pull/16117)
 * Added error code to failure type `InternalServerError` [#16186](https://github.com/apache/druid/pull/16186)
+* Added a new index for pending segments table for datasource and `task_allocator_id` columns [#16355](https://github.com/apache/druid/pull/16355)
+* Changed default value of `useMaxMemoryEstimates` for Hadoop jobs to false [#16280](https://github.com/apache/druid/pull/16280)
+* Fixed a bug in the `MarkOvershadowedSegmentsAsUnused` Coordinator duty to also consider segments that are overshadowed by a segment that requires zero replicas [#16181](https://github.com/apache/druid/pull/16181)
+* Fixed a bug in the `markUsed` and `markUnused` APIs where an empty set of segment IDs would be inconsistently treated as null or non-null in different scenarios [#16145](https://github.com/apache/druid/pull/16145)
+* Fixed a bug where `numSegmentsKilled` is reported incorrectly [#16103](https://github.com/apache/druid/pull/16103)
+* Fixed a bug where completion task reports are not being generated on index_parallel tasks [#16042](https://github.com/apache/druid/pull/16042)
+* Fixed an issue where concurrent replace skipped intervals locked by append locks during compaction [#16316](https://github.com/apache/druid/pull/16316)
 * Improved error messages when supervisor's checkpoint state is invalid [#16208](https://github.com/apache/druid/pull/16208)
 * Improved serialization of `TaskReportMap` [#16217](https://github.com/apache/druid/pull/16217)
 * Improved compaction segment read and published fields to include sequential compaction tasks [#16171](https://github.com/apache/druid/pull/16171)
@@ -228,18 +288,16 @@ If your code or tests consume task reports, don't rely on the JSON to be a singl
 * Improved the `markUnused` API endpoint to handle an empty list of segment versions [#16198](https://github.com/apache/druid/pull/16198)
 * Improved the `segmentIds` filter in the `markUsed` API payload so that it's parameterized in the database query [#16174](https://github.com/apache/druid/pull/16174)
 * Optimized `isOvershadowed` when there is a unique minor version for an interval [#15952](https://github.com/apache/druid/pull/15952)
-* Fixed a bug in the `MarkOvershadowedSegmentsAsUnused` Coordinator duty to also consider segments that are overshadowed by a segment that requires zero replicas [#16181](https://github.com/apache/druid/pull/16181)
-* Fixed a bug in the `markUsed` and `markUnused` APIs where an empty set of segment IDs would be inconsistently treated as null or non-null in different scenarios [#16145](https://github.com/apache/druid/pull/16145)
-* Fixed a bug where `numSegmentsKilled` is reported incorrectly [#16103](https://github.com/apache/druid/pull/16103)
-* Fixed a bug where completion task reports are not being generated on index_parallel tasks [#16042](https://github.com/apache/druid/pull/16042)
 * Removed `EntryExistsException` thrown when trying to insert a duplicate task in the metadata store&mdash;Druid now throws a `DruidException` with error code `entryAlreadyExists` [#14448](https://github.com/apache/druid/pull/14448)
+* The task status output for a failed task now includes the exception message [#16286](https://github.com/apache/druid/pull/16286)
 
 ### SQL-based ingestion
 
-#### Manifest file for MSQ export
+#### Manifest files for MSQ task engine exports
 
-Export queries now create a manifest file at the destination.
-The manifest lists the files that were created as part of the export.
+Export queries that use the MSQ task engine now also create a manifest file at the destination, which lists the files created by the query.
+
+During a rolling update, older versions of workers don't return a list of exported files, and older Controllers don't create a manifest file. Therefore, export queries ran during this time might have incomplete manifests.
 
 [#15953](https://github.com/apache/druid/pull/15953)
 
@@ -252,12 +310,14 @@ Improved the task report for the MSQ task engine as follows:
 
 #### Other SQL-based ingestion improvements
 
-* Runtime exceptions generated while writing frames now include the name of the column where they occurred [#16130](https://github.com/apache/druid/pull/16130)
 * Added a new context parameter `storeCompactionState`. When set to `true`, Druid records the state of compaction for each segment in the `lastCompactionState` segment field [#15965](https://github.com/apache/druid/pull/15965)
 * Added SortMerge join support for `IS NOT DISTINCT FROM` operations [#16003](https://github.com/apache/druid/pull/16003)
+* Added support for selective loading of lookups so that MSQ task engine workers don't load unnecessary lookups [#16328](https://github.com/apache/druid/pull/16328)
 * Changed the controller checker for the MSQ task engine to check for closed only [#16161](https://github.com/apache/druid/pull/16161)
+* Fixed an incorrect check while generating MSQ task engine error report [#16273](https://github.com/apache/druid/pull/16273)
 * Improved the message you get when the MSQ task engine falls back to a broadcast join from a sort-merge [#16002](https://github.com/apache/druid/pull/16002)
 * Improved the speed of worker cancellation by bypassing unnecessary communication with the controller [#16158](https://github.com/apache/druid/pull/16158)
+* Runtime exceptions generated while writing frames now include the name of the column where they occurred [#16130](https://github.com/apache/druid/pull/16130)
 
 ### Streaming ingestion
 
@@ -284,9 +344,10 @@ As part of this change, the following properties have been deprecated:
 
 #### Improved autoscaling for Kinesis streams
 
-For Kinesis streams, autoscaling is now done on max lag per shard rather than the total lag for all shards.
+The Kinesis autoscaler now considers max lag in minutes instead of total lag. To maintain backwards compatibility, this change is opt-in for existing Kinesis connections. To opt in, set `lagBased.lagAggregate` in your supervisor spec to `MAX`. New connections use max lag by default.
 
 [#16284](https://github.com/apache/druid/pull/16284)
+[#16314](https://github.com/apache/druid/pull/16314)
 
 #### Parallelized incremental segment creation
 
@@ -331,7 +392,7 @@ Note that if the same columns are defined with different input types, Druid uses
 
 #### Added SCALAR_IN_ARRAY function
 
-Added `SCALAR_IN_ARRAY` function for checking if the scalar expression is present in the array:
+Added `SCALAR_IN_ARRAY` function for checking if a scalar expression appears in an array:
 
 `SCALAR_IN_ARRAY(expr, arr)`
 
@@ -402,6 +463,12 @@ For example:
 
 [#16274](https://github.com/apache/druid/pull/16274)
 
+#### Improved native queries
+
+Native queries can now group on nested columns and arrays.
+
+[#16068](https://github.com/apache/druid/pull/16068)
+
 #### Other querying improvements
 
 * `typedIn` filter can now run in replace-with-default mode [#16233](https://github.com/apache/druid/pull/16233)
@@ -412,12 +479,6 @@ For example:
 * Added support for using MV_FILTER_ONLY and MV_FILTER_NONE functions with a non literal argument [#16113](https://github.com/apache/druid/pull/16113)
 * Added `TypedInFilter` to replace `InDimFilter`&mdash;to improve performance when matching numeric columns [#16039](https://github.com/apache/druid/pull/16039)
 * Added the `radiusUnit` element to the `radius` bound [#16029](https://github.com/apache/druid/pull/16029)
-* Improved constant expression evaluation so that it's more thread-safe [#15694](https://github.com/apache/druid/pull/15694)
-* Improved performance for real-time queries using the MSQ task engine. Segments served by the same server are now grouped together, resulting in more efficient query handling [#15399](https://github.com/apache/druid/pull/15399)
-* Improved the error message you get when there's an issue with your PARTITIONED BY clause [#15961](https://github.com/apache/druid/pull/15961)
-* Improved strict NON NULL return type checks [#16279](https://github.com/apache/druid/pull/16279)
-* Improved array handling for Booleans to account for queries such as `select array[true, false] from datasource` [#16093](https://github.com/apache/druid/pull/16093)
-* Improved querying to decrease the chance of going OOM with high cardinality data Group By [#16114](https://github.com/apache/druid/pull/16114)
 * Fixed the return type for the IPV4_PARSE function. The function now correctly returns null if the string literal can't be represented as an IPV4 address [#15916](https://github.com/apache/druid/pull/15916)
 * Fixed an issue where several aggregators returned UNKNOWN or OTHER as their SQL type inference [#16216](https://github.com/apache/druid/pull/16216)
 * Fixed an issue where triggering a math expression processor on a segment that lacks a specific column results in an `Unable to vectorize expression` exception [#16128](https://github.com/apache/druid/pull/16128)
@@ -427,6 +488,20 @@ For example:
 * Fixed `REGEXP_LIKE`, `CONTAINS_STRING`, and `ICONTAINS_STRING` so that they correctly return null for null value inputs in ANSI SQL compatible null handling mode (the default configuration). Previously, they returned false [#15963](https://github.com/apache/druid/pull/15963)
 * Fixed issues with `ARRAY_CONTAINS` and `ARRAY_OVERLAP` with null left side arguments as well as `MV_CONTAINS` and `MV_OVERLAP` [#15974](https://github.com/apache/druid/pull/15974)
 * Fixed an issue which can occur when using schema auto-discovery on columns with a mix of array and scalar values and querying with scan queries [#16105](https://github.com/apache/druid/pull/16105)
+* Fixed windowed aggregates so that they update the aggregation value based on the final compute [#16244](https://github.com/apache/druid/pull/16244)
+* Fixed issues with the first/last vector aggregators [#16230](https://github.com/apache/druid/pull/16230)
+* Fixed an issue where groupBy queries that have  `bit_xor() is null` return the wrong result [#16237](https://github.com/apache/druid/pull/16237)
+* Fixed an issue where Broker merge buffers get into a deadlock when multiple simultaneous queries use them [#15420](https://github.com/apache/druid/pull/15420)
+* Fixed a mapping issue in window functions where two nodes get the same reference [#16301](https://github.com/apache/druid/pull/16301)
+* Improved constant expression evaluation so that it's more thread-safe [#15694](https://github.com/apache/druid/pull/15694)
+* Improved performance for real-time queries using the MSQ task engine. Segments served by the same server are now grouped together, resulting in more efficient query handling [#15399](https://github.com/apache/druid/pull/15399)
+* Improved the error message you get when there's an issue with your PARTITIONED BY clause [#15961](https://github.com/apache/druid/pull/15961)
+* Improved strict NON NULL return type checks [#16279](https://github.com/apache/druid/pull/16279)
+* Improved array handling for Booleans to account for queries such as `select array[true, false] from datasource` [#16093](https://github.com/apache/druid/pull/16093)
+* Improved querying to decrease the chance of going OOM with high cardinality data Group By [#16114](https://github.com/apache/druid/pull/16114)
+* Improved how scalars work in arrays [#16311](https://github.com/apache/druid/pull/16311)
+* Improved `LIKE` filtering performance with multiple wildcards by 20x for edge cases by avoiding using `java.util.regex.Pattern` to match `%` [#16153](https://github.com/apache/druid/pull/16153)
+* Modified the `IndexedTable` to reject building the index on the complex types to prevent joining on complex types [#16349](https://github.com/apache/druid/pull/16349)
 * Restored `enableWindowing` context parameter for window functions [#16229](https://github.com/apache/druid/pull/16229)
 
 ### Cluster management
@@ -461,12 +536,23 @@ Parallel compaction task completion reports now have `segmentsRead` and `segment
 
 [#15947](https://github.com/apache/druid/pull/15947)
 
+#### Changes to segment schema cleanup default values
+
+The following are the changes to the default values of segment schema cleanup:
+
+* The default value for `druid.coordinator.kill.segmentSchema.period` has changes from `PT1H` to `P1D`.
+* The default value for `druid.coordinator.kill.segmentSchema.durationToRetain` has changed from `PR6H` to `P90D`.
+
+[#16354](https://github.com/apache/druid/pull/16354)
+
 #### Other data management improvements
 
+* Changed the upload buffer size in GoogleTaskLogs to 1 MB instead of 15 MB to allow more uploads in parallel and prevent the MiddleManager service from running out of memory [#16236](https://github.com/apache/druid/pull/16236)
 * Improved compaction task reports. They can now contain multiple sets of segment output reports instead of overwriting previous reports [#15981](https://github.com/apache/druid/pull/15981/)
 * Improved segment killing in Azure to be faster [#15770](https://github.com/apache/druid/pull/15770)
 * Improved the retry behavior for deep storage connections [#15938](https://github.com/apache/druid/pull/15938)
 * Improved segment creation so that all segments created in a batch have the same `created_date` entry, which can help in troubleshooting ingestion issues [#15977](https://github.com/apache/druid/pull/15977)
+* Improved how Druid parses JSON by using `charsetFix` [#16212](https://github.com/apache/druid/pull/16212)
 
 ### Metrics and monitoring
 
@@ -496,6 +582,10 @@ You can now set custom dimensions for events emitted by the Kafka emitter as a J
 The Prometheus emitter extension now emits `service/heartbeat` and `zk-connected` metrics.
 
 [#16209](https://github.com/apache/druid/pull/16209)
+
+Also added the following missing metrics to the default prometheus-emitter mapping: `query/timeout/count`, `mergeBuffer/pendingRequests`, `ingest/events/processedWithError`, `ingest/notices/queueSize` and `segment/count`.
+
+[#16329](https://github.com/apache/druid/pull/16329)
 
 #### StatsD emitter improvements
 
@@ -530,6 +620,19 @@ You can now use ingestion payloads larger than 1 MB  for Azure.
 You can now configure the CPU cores for Peons (Kubernetes jobs) using the Overlord property `druid.indexer.runner.cpuCoreInMicro`.
   
 [#16008](https://github.com/apache/druid/pull/16008)
+
+#### Delta Lake improvements
+
+You can use these filters to filter out data files from a snapshot, reducing the number of files Druid has to ingest from a Delta table.
+
+For more information, see [Delta filter object](../ingestion/input-sources.md#delta-filter-object).
+
+[#16288](https://github.com/apache/druid/pull/16288)
+
+Also added a text box for the Delta Lake filter to the web console.
+The text box accepts an optional JSON object that is passed down as the `filter` to the delta input source.
+
+[#16379](https://github.com/apache/druid/pull/16379)
 
 ## Upgrade notes and incompatible changes
 
@@ -570,6 +673,20 @@ If you are upgrading from 29.0.0, this is an incompatible change.
 
 [#16004](https://github.com/apache/druid/pull/16004)
 
+#### Removed Zookeeper-based segment loading
+
+Zookeeper-based segment loading is being removed as it is known to have issues and has been deprecated for several releases. The recent improvements made to the Druid Coordinator are also known to work much better with HTTP-based segment loading.
+
+The following configs are being removed as they are not needed anymore:
+
+* `druid.coordinator.load.timeout`: Not needed as the default value of this parameter (15 minutes) is known to work well for all clusters.
+* `druid.coordinator.loadqueuepeon.type`: Not needed as this value will always be `http`.
+* `druid.coordinator.curator.loadqueuepeon.numCallbackThreads`: Not needed as zookeeper(curator)-based segment loading is not an option anymore.
+
+Auto-cleanup of compaction configs of inactive datasources is now enabled by default.
+
+[#15705](https://github.com/apache/druid/pull/15705)
+
 ### Developer notes
 
 #### Reduced size for Docker image
@@ -582,6 +699,10 @@ The Docker image now uses symlinks when there are duplicate jars present.
 
 The following dependencies have had their versions bumped:
 
+- Updated Azure POM from 1.2.19 to 1.2.23 to update transitive dependency `nimbus-jose-jwt` to address `CVE-2023-52428` [#16374](https://github.com/apache/druid/pull/16374)
+- Updated `commons-configuration2` from 2.8.0 to 2.10.1 to address `CVE-2024-29131` and `CVE-2024-29133` [#16374](https://github.com/apache/druid/pull/16374)
+- Updated `bcpkix-jdk18on` from 1.76 to 1.78.1 to address `CVE-2024-30172`, `CVE-2024-30171`, and `CVE-2024-29857` [#16374](https://github.com/apache/druid/pull/16374)
+- Updated `nimbus-jose-jwt` from 8.22.1 to 9.37.2 [#16320](https://github.com/apache/druid/pull/16320)
 - Updated `rewrite-maven-plugin` from 5.23.1 to 5.27.0 [#16238](https://github.com/apache/druid/pull/16238)
 - Updated `rewrite-testing-frameworks` from 2.4.1 to 2.6.0 [#16238](https://github.com/apache/druid/pull/16238)
 - Updated `json-path` from 2.3.0 to 2.9.0

@@ -65,6 +65,20 @@ If you are upgrading from 29.0.0, this is an incompatible change.
 
 [#16004](https://github.com/apache/druid/pull/16004)
 
+#### Removed Zookeeper-based segment loading
+
+Zookeeper-based segment loading is being removed as it is known to have issues and has been deprecated for several releases. The recent improvements made to the Druid Coordinator are also known to work much better with HTTP-based segment loading.
+
+The following configs are being removed as they are not needed anymore:
+
+* `druid.coordinator.load.timeout`: Not needed as the default value of this parameter (15 minutes) is known to work well for all clusters.
+* `druid.coordinator.loadqueuepeon.type`: Not needed as this value will always be `http`.
+* `druid.coordinator.curator.loadqueuepeon.numCallbackThreads`: Not needed as zookeeper(curator)-based segment loading is not an option anymore.
+
+Auto-cleanup of compaction configs of inactive datasources is now enabled by default.
+
+[#15705](https://github.com/apache/druid/pull/15705)
+
 ## 29.0.1
 
 ### Incompatible changes
