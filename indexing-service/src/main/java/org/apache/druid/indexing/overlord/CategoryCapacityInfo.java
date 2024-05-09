@@ -21,9 +21,10 @@ package org.apache.druid.indexing.overlord;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.guice.annotations.PublicApi;
+
+import java.util.Objects;
 
 
 /**
@@ -73,21 +74,19 @@ public class CategoryCapacityInfo
     }
 
     CategoryCapacityInfo that = (CategoryCapacityInfo) o;
-
-    if (!taskTypeList.equals(that.taskTypeList)) {
+    if (!Objects.equals(taskTypeList, that.taskTypeList)) {
       return false;
     }
     if (capacity != that.capacity) {
       return false;
     }
-
     return true;
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hashCode(taskTypeList, capacity);
+    return Objects.hash(taskTypeList, capacity);
   }
 
   @Override
