@@ -39,7 +39,9 @@ import org.apache.druid.server.initialization.BaseJettyTest;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.initialization.jetty.JettyServerInitUtils;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
+import org.apache.druid.server.security.AllowAllAuthenticator;
 import org.apache.druid.server.security.AllowAllAuthorizer;
+import org.apache.druid.server.security.AuthenticationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.server.Handler;
@@ -323,7 +325,7 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
   }
 
   @Test
-  public void testProxyEnebledCheck() throws Exception
+  public void testProxyEnabledCheck() throws Exception
   {
     HttpURLConnection connection = ((HttpURLConnection)
         new URL(StringUtils.format("http://localhost:%d/proxy/enabled", port)).openConnection());
@@ -494,7 +496,7 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
               injector.getInstance(DruidHttpClientConfig.class),
               coordinatorLeaderSelector,
               overlordLeaderSelector,
-              new AuthorizerMapper(ImmutableMap.of("test", new AllowAllAuthorizer()))
+              new AuthorizerMapper(ImmutableMap.of("allowAll", new AllowAllAuthorizer()))
           )
       );
 
@@ -505,6 +507,7 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
       root.addServlet(holder, "/druid/indexer/*");
       root.addServlet(holder, "/proxy/*");
 
+      AuthenticationUtils.addAuthenticationFilterChain(root, ImmutableList.of(new AllowAllAuthenticator()));
       JettyServerInitUtils.addExtensionFilters(root, injector);
 
       final HandlerList handlerList = new HandlerList();
