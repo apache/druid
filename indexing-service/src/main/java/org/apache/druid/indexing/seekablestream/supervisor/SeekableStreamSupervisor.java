@@ -1978,7 +1978,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   @Override
   public void handoffTaskGroupEarly(int taskGroupId)
   {
-    addNotice(new RunNotice());
+    addNotice(new HandoffTaskGroupNotice(taskGroupId));
   }
 
   private void discoverTasks() throws ExecutionException, InterruptedException
