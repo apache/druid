@@ -62,6 +62,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
+import java.util.Optional;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -765,11 +766,10 @@ public class TaskLockbox
 
     try {
       // Check if any of the locks held by this task have been revoked
-      final boolean areTaskLocksValid = intervals.stream().noneMatch(
-          interval -> getOnlyTaskLockPosseContainingInterval(task, interval)
-              .getTaskLock()
-              .isRevoked()
-      );
+      final boolean areTaskLocksValid = intervals.stream().noneMatch(interval -> {
+        Optional<TaskLockPosse> lockPosse = getOnlyTaskLockPosseContainingInterval(task, interval);
+        return lockPosse.isPresent() && lockPosse.get().getTaskLock().isRevoked();
+      });
       return action.perform(areTaskLocksValid);
     }
     finally {
@@ -1253,7 +1253,7 @@ public class TaskLockbox
   }
 
   /**
-   * Finds the currently-active lock posses for the task.
+   * Finds all the lock posses for the given task.
    */
   @GuardedBy("giant")
   private List<TaskLockPosse> findLockPossesForTask(final Task task)
@@ -1316,7 +1316,7 @@ public class TaskLockbox
   }
 
   @VisibleForTesting
-  TaskLockPosse getOnlyTaskLockPosseContainingInterval(Task task, Interval interval)
+  Optional<TaskLockPosse> getOnlyTaskLockPosseContainingInterval(Task task, Interval interval)
   {
     giant.lock();
     try {
@@ -1328,12 +1328,18 @@ public class TaskLockbox
       if (filteredPosses.isEmpty()) {
         throw new ISE("Cannot find any lock for task[%s] and interval[%s]", task.getId(), interval);
       } else if (filteredPosses.size() == 1) {
-        return filteredPosses.get(0);
-      } else {
+        return Optional.of(filteredPosses.get(0));
+      } else if (
+          filteredPosses.stream().anyMatch(
+              posse -> posse.taskLock.getGranularity() == LockGranularity.TIME_CHUNK
+          )
+      ) {
         throw new ISE(
-            "There are multiple lockPosses for task[%s] and interval[%s]",
+            "There are multiple timechunk lockPosses for task[%s] and interval[%s]",
             task.getId(), interval
         );
+      } else {
+        return Optional.empty();
       }
     }
     finally {

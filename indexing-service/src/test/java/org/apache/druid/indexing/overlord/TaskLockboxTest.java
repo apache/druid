@@ -82,6 +82,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -757,21 +758,23 @@ public class TaskLockboxTest
         ).isOk()
     );
 
-    final TaskLockPosse highLockPosse = lockbox.getOnlyTaskLockPosseContainingInterval(
+    final Optional<TaskLockPosse> highLockPosse = lockbox.getOnlyTaskLockPosseContainingInterval(
         highPriorityTask,
         Intervals.of("2018-12-16T09:00:00/2018-12-16T09:30:00")
     );
 
-    Assert.assertTrue(highLockPosse.containsTask(highPriorityTask));
-    Assert.assertFalse(highLockPosse.getTaskLock().isRevoked());
+    Assert.assertTrue(highLockPosse.isPresent());
+    Assert.assertTrue(highLockPosse.get().containsTask(highPriorityTask));
+    Assert.assertFalse(highLockPosse.get().getTaskLock().isRevoked());
 
-    final TaskLockPosse lowLockPosse = lockbox.getOnlyTaskLockPosseContainingInterval(
+    final Optional<TaskLockPosse> lowLockPosse = lockbox.getOnlyTaskLockPosseContainingInterval(
         lowPriorityTask,
         Intervals.of("2018-12-16T09:00:00/2018-12-16T10:00:00")
     );
 
-    Assert.assertTrue(lowLockPosse.containsTask(lowPriorityTask));
-    Assert.assertTrue(lowLockPosse.getTaskLock().isRevoked());
+    Assert.assertTrue(lowLockPosse.isPresent());
+    Assert.assertTrue(lowLockPosse.get().containsTask(lowPriorityTask));
+    Assert.assertTrue(lowLockPosse.get().getTaskLock().isRevoked());
   }
 
   @Test
