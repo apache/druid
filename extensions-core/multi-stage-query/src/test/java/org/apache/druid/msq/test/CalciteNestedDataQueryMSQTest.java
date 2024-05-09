@@ -31,16 +31,16 @@ import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.sql.calcite.CalciteNestedDataQueryTest;
 import org.apache.druid.sql.calcite.QueryTestBuilder;
+import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.run.SqlEngine;
-import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 /**
  * Runs {@link CalciteNestedDataQueryTest} but with MSQ engine
  */
-@SqlTestFramework.SqlTestFrameWorkModule(CalciteNestedDataQueryMSQTest.NestedDataQueryMSQComponentSupplier.class)
+@SqlTestFrameworkConfig.ComponentSupplier(CalciteNestedDataQueryMSQTest.NestedDataQueryMSQComponentSupplier.class)
 public class CalciteNestedDataQueryMSQTest extends CalciteNestedDataQueryTest
 {
 
