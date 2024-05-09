@@ -39,6 +39,8 @@ import org.apache.druid.server.initialization.BaseJettyTest;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.initialization.jetty.JettyServerInitUtils;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
+import org.apache.druid.server.security.AllowAllAuthorizer;
+import org.apache.druid.server.security.AuthorizerMapper;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
@@ -491,7 +493,8 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
               injector.getProvider(HttpClient.class),
               injector.getInstance(DruidHttpClientConfig.class),
               coordinatorLeaderSelector,
-              overlordLeaderSelector
+              overlordLeaderSelector,
+              new AuthorizerMapper(ImmutableMap.of("test", new AllowAllAuthorizer()))
           )
       );
 
