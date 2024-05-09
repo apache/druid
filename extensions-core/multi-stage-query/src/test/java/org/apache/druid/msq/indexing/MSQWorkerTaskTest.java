@@ -123,7 +123,7 @@ public class MSQWorkerTaskTest
   }
 
   @Test
-  public void testGetLookupLoadingSpecUsingLookupLoadingModeNoneInContext()
+  public void testGetLookupLoadingWithModeNoneInContext()
   {
     final ImmutableMap<String, Object> context = ImmutableMap.of(PlannerContext.CTX_LOOKUP_LOADING_MODE, LookupLoadingSpec.Mode.NONE);
     MSQWorkerTask msqWorkerTask = new MSQWorkerTask(controllerTaskId, dataSource, workerNumber, context, retryCount);
@@ -131,7 +131,7 @@ public class MSQWorkerTaskTest
   }
 
   @Test
-  public void testGetLookupLoadingSpecUsingNonEmptyLookupListInContext()
+  public void testGetLookupLoadingSpecWithLookupListInContext()
   {
     final ImmutableMap<String, Object> context = ImmutableMap.of(
         PlannerContext.CTX_LOOKUPS_TO_LOAD, Arrays.asList("lookupName1", "lookupName2"),
@@ -142,7 +142,7 @@ public class MSQWorkerTaskTest
   }
 
   @Test
-  public void testGetLookupLoadingSpecUsingInvalidInput()
+  public void testGetLookupLoadingSpecWithInvalidInput()
   {
     final HashMap<String, Object> context = new HashMap<>();
     context.put(PlannerContext.CTX_LOOKUP_LOADING_MODE, LookupLoadingSpec.Mode.ONLY_REQUIRED);
@@ -150,10 +150,10 @@ public class MSQWorkerTaskTest
     // Setting CTX_LOOKUPS_TO_LOAD as null
     context.put(PlannerContext.CTX_LOOKUPS_TO_LOAD, null);
 
-    MSQWorkerTask msqWorkerTask = new MSQWorkerTask(controllerTaskId, dataSource, workerNumber, context, retryCount);
+    MSQWorkerTask taskWithNullLookups = new MSQWorkerTask(controllerTaskId, dataSource, workerNumber, context, retryCount);
     DruidException exception = Assert.assertThrows(
         DruidException.class,
-        msqWorkerTask::getLookupLoadingSpec
+        taskWithNullLookups::getLookupLoadingSpec
     );
     Assert.assertEquals(
         "Set of lookups to load cannot be null for mode[ONLY_REQUIRED].",
@@ -162,10 +162,10 @@ public class MSQWorkerTaskTest
     // Setting CTX_LOOKUPS_TO_LOAD as empty list
     context.put(PlannerContext.CTX_LOOKUPS_TO_LOAD, Collections.emptyList());
 
-    msqWorkerTask = new MSQWorkerTask(controllerTaskId, dataSource, workerNumber, context, retryCount);
+    MSQWorkerTask taskWithEmptyLookups = new MSQWorkerTask(controllerTaskId, dataSource, workerNumber, context, retryCount);
     exception = Assert.assertThrows(
         DruidException.class,
-        msqWorkerTask::getLookupLoadingSpec
+        taskWithEmptyLookups::getLookupLoadingSpec
     );
     Assert.assertEquals(
         "Set of lookups to load cannot be [] for mode[ONLY_REQUIRED].",

@@ -43,8 +43,8 @@ import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 import javax.annotation.Nonnull;
+import java.util.Collection;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -203,7 +203,7 @@ public class MSQWorkerTask extends AbstractTask
     if (lookupLoadingMode == LookupLoadingSpec.Mode.NONE) {
       return LookupLoadingSpec.NONE;
     } else if (lookupLoadingMode == LookupLoadingSpec.Mode.ONLY_REQUIRED) {
-      List<String> lookupsToLoad = (List<String>) getContext().get(PlannerContext.CTX_LOOKUPS_TO_LOAD);
+      Collection<String> lookupsToLoad = (Collection<String>) getContext().get(PlannerContext.CTX_LOOKUPS_TO_LOAD);
       if (lookupsToLoad == null || lookupsToLoad.isEmpty()) {
         throw InvalidInput.exception("Set of lookups to load cannot be %s for mode[ONLY_REQUIRED].", lookupsToLoad);
       }
