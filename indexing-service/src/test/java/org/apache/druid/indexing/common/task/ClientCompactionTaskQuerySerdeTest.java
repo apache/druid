@@ -365,7 +365,7 @@ public class ClientCompactionTaskQuerySerdeTest
     Assert.assertEquals(expected.getDimensionsSpec(), actual.getDimensionsSpec());
     Assert.assertEquals(expected.getIoConfig(), actual.getIoConfig());
     Assert.assertEquals(expected.getTransformSpec(), actual.getTransformSpec());
-    Assert.assertEquals(expected.getMetricsSpec(), actual.getMetricsSpec());
+    Assert.assertArrayEquals(expected.getMetricsSpec(), actual.getMetricsSpec());
     Assert.assertEquals(expected.getTuningConfig(), actual.getTuningConfig());
     Assert.assertEquals(ImmutableMap.of(LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE, LookupLoadingSpec.Mode.NONE.toString()), actual.getContext());
   }
