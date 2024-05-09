@@ -27,7 +27,6 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.RetryUtils;
 
 import javax.annotation.Nullable;
-import java.io.File;
 import java.util.Objects;
 
 public class S3OutputConfig

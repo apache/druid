@@ -28,14 +28,13 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.name.Names;
 import org.apache.druid.java.util.common.HumanReadableBytes;
+import org.apache.druid.server.metrics.DataSourceTaskIdHolder;
 import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.StorageConnectorProvider;
 import org.apache.druid.storage.s3.S3StorageDruidModule;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 
 import java.io.File;
-
-import static org.apache.druid.server.metrics.DataSourceTaskIdHolder.TMP_DIR_BINDING;
 
 @JsonTypeName(S3StorageDruidModule.SCHEME)
 public class S3StorageConnectorProvider extends S3OutputConfig implements StorageConnectorProvider
@@ -59,7 +58,7 @@ public class S3StorageConnectorProvider extends S3OutputConfig implements Storag
   @Override
   public StorageConnector get()
   {
-    final File tempDir = injector.getInstance(Key.get(File.class, Names.named(TMP_DIR_BINDING)));
+    final File tempDir = injector.getInstance(Key.get(File.class, Names.named(DataSourceTaskIdHolder.TMP_DIR_BINDING)));
     return new S3StorageConnector(this, s3, tempDir);
   }
 }

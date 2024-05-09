@@ -146,8 +146,6 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
-import static org.apache.druid.server.metrics.DataSourceTaskIdHolder.TASK_ID_BINDING;
-
 /**
  */
 @Command(

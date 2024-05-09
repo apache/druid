@@ -77,7 +77,6 @@ public class RetryableS3OutputStream extends OutputStream
   private final S3OutputConfig config;
   private final ServerSideEncryptingAmazonS3 s3;
   private final String s3Key;
-  private final File tempDir;
   private final String uploadId;
   private final File chunkStorePath;
   private final long chunkSize;
@@ -127,7 +126,6 @@ public class RetryableS3OutputStream extends OutputStream
     this.config = config;
     this.s3 = s3;
     this.s3Key = s3Key;
-    this.tempDir = tempDir;
 
     final InitiateMultipartUploadResult result;
     try {

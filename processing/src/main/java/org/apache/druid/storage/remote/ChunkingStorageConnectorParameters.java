@@ -25,7 +25,6 @@ import org.apache.druid.data.input.impl.prefetch.ObjectOpenFunction;
 
 import java.io.File;
 import java.util.Objects;
-import java.util.function.Supplier;
 
 /**
  * POJO for storing the parameters required to support chunking of the downloads by {@link ChunkingStorageConnector}.
@@ -76,7 +75,7 @@ public class ChunkingStorageConnectorParameters<T>
   /**
    * Temporary directory where the chunks are stored
    */
-  private final Supplier<File> tempDirSupplier;
+  private final File tempDir;
 
   public ChunkingStorageConnectorParameters(
       long start,
@@ -86,7 +85,7 @@ public class ChunkingStorageConnectorParameters<T>
       ObjectOpenFunction<T> objectOpenFunction,
       Predicate<Throwable> retryCondition,
       int maxRetry,
-      Supplier<File> tempDirSupplier
+      File tempDir
   )
   {
     this.start = start;
@@ -96,7 +95,7 @@ public class ChunkingStorageConnectorParameters<T>
     this.objectOpenFunction = objectOpenFunction;
     this.retryCondition = retryCondition;
     this.maxRetry = maxRetry;
-    this.tempDirSupplier = tempDirSupplier;
+    this.tempDir = tempDir;
   }
 
   public long getStart()
@@ -134,9 +133,9 @@ public class ChunkingStorageConnectorParameters<T>
     return maxRetry;
   }
 
-  public Supplier<File> getTempDirSupplier()
+  public File getTempDir()
   {
-    return tempDirSupplier;
+    return tempDir;
   }
 
   @Override
@@ -156,7 +155,7 @@ public class ChunkingStorageConnectorParameters<T>
            Objects.equals(objectSupplier, that.objectSupplier) &&
            Objects.equals(objectOpenFunction, that.objectOpenFunction) &&
            Objects.equals(retryCondition, that.retryCondition) &&
-           Objects.equals(tempDirSupplier, that.tempDirSupplier);
+           Objects.equals(tempDir, that.tempDir);
   }
 
   @Override
@@ -170,7 +169,7 @@ public class ChunkingStorageConnectorParameters<T>
         objectOpenFunction,
         retryCondition,
         maxRetry,
-        tempDirSupplier
+        tempDir
     );
   }
 
@@ -187,7 +186,7 @@ public class ChunkingStorageConnectorParameters<T>
     private ObjectOpenFunction<T> objectOpenFunction;
     private Predicate<Throwable> retryCondition;
     private int maxRetry;
-    private Supplier<File> tempDirSupplier;
+    private File tempDir;
 
 
     public Builder<T> start(long start)
@@ -232,9 +231,9 @@ public class ChunkingStorageConnectorParameters<T>
       return this;
     }
 
-    public Builder<T> tempDirSupplier(Supplier<File> tempDirSupplier)
+    public Builder<T> tempDirSupplier(File tempDir)
     {
-      this.tempDirSupplier = tempDirSupplier;
+      this.tempDir = tempDir;
       return this;
     }
 
@@ -252,7 +251,7 @@ public class ChunkingStorageConnectorParameters<T>
           Preconditions.checkNotNull(objectOpenFunction, "'objectOpenFunction' not supplied"),
           Preconditions.checkNotNull(retryCondition, "'retryCondition' not supplied"),
           maxRetry,
-          Preconditions.checkNotNull(tempDirSupplier, "'tempDirSupplier' not supplied")
+          Preconditions.checkNotNull(tempDir, "'tempDir' not supplied")
       );
     }
   }

@@ -64,7 +64,7 @@ public class TestStorageConnector extends ChunkingStorageConnector<TestStorageCo
     builder.start(from);
     builder.end(from + size);
     builder.cloudStoragePath(path);
-    builder.tempDirSupplier(() -> tempDir);
+    builder.tempDirSupplier(tempDir);
     builder.retryCondition(Predicates.alwaysFalse());
     builder.maxRetry(2);
     builder.objectSupplier((start, end) -> new InputRange((int) start, (int) end));

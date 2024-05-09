@@ -118,7 +118,7 @@ public class S3StorageConnector extends ChunkingStorageConnector<GetObjectReques
     builder.start(from);
     builder.end(from + size);
     builder.cloudStoragePath(objectPath(path));
-    builder.tempDirSupplier(() -> tempDir);
+    builder.tempDirSupplier(tempDir);
     builder.maxRetry(config.getMaxRetry());
     builder.retryCondition(S3Utils.S3RETRY);
     builder.objectSupplier((start, end) -> new GetObjectRequest(config.getBucket(), objectPath(path)).withRange(start, end - 1));

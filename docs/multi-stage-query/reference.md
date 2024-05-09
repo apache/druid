@@ -157,7 +157,7 @@ The following runtime parameters must be configured to export into an S3 destina
 |----------------------------------------------|----------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----|
 | `druid.export.storage.s3.allowedExportPaths` | Yes      | An array of S3 prefixes that are whitelisted as export destinations. Export queries fail if the export destination does not match any of the configured prefixes. Example: `[\"s3://bucket1/export/\", \"s3://bucket2/export/\"]`                                   | n/a |
 | `druid.export.storage.s3.maxRetry`           | No       | Defines the max number times to attempt S3 API calls to avoid failures due to transient errors.                                                                                                                                                                     | 10  |
-| `druid.export.storage.s3.chunkSize`          | No       | Defines the size of each chunk to temporarily store in a local directory while transferring to durable storage. The chunk size must be between 5 MiB and 5 GiB. A large chunk size reduces the API calls to S3, however it requires more disk space to store the temporary chunks. | 100MiB |
+| `druid.export.storage.s3.chunkSize`          | No       | Defines the size of each chunk to temporarily store in the task's temporary directory while transferring to durable storage. The chunk size must be between 5 MiB and 5 GiB. A large chunk size reduces the API calls to S3, however it requires more disk space to store the temporary chunks. | 100MiB |
 
 
 ##### GS
@@ -189,7 +189,7 @@ The following runtime parameters must be configured to export into a GCS destina
 |--------------------------------------------------|----------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------|
 | `druid.export.storage.google.allowedExportPaths` | Yes      | An array of GS prefixes that are allowed as export destinations. Export queries fail if the export destination does not match any of the configured prefixes. Example: `[\"gs://bucket1/export/\", \"gs://bucket2/export/\"]` | n/a     |
 | `druid.export.storage.google.maxRetry`           | No       | Defines the max number times to attempt GS API calls to avoid failures due to transient errors.                                                                                                                               | 10      |
-| `druid.export.storage.google.chunkSize`          | No       | Defines the size of each chunk to temporarily store in a local directory while transferring to durable storage. A large chunk size reduces the API calls to GS; however, it requires more disk space to store the temporary chunks.              | 4MiB    |
+| `druid.export.storage.google.chunkSize`          | No       | Defines the size of each chunk to temporarily store in the task's temporary directory while transferring to durable storage. A large chunk size reduces the API calls to GS; however, it requires more disk space to store the temporary chunks.              | 4MiB    |
 
 ##### LOCAL
 
@@ -523,7 +523,7 @@ Common properties to configure the behavior of durable storage
 |`druid.msq.intermediate.storage.enable`  | Yes |  Whether to enable durable storage for the cluster. Set it to true to enable durable storage. For more information about enabling durable storage, see [Durable storage](../operations/durable-storage.md). | false | 
 |`druid.msq.intermediate.storage.type` |  Yes | The type of storage to use. Set it to `s3` for S3, `azure` for Azure and `google` for Google | n/a |
 |`druid.msq.intermediate.storage.maxRetry` |  No | Defines the max number times to attempt S3 API calls to avoid failures due to transient errors. | 10 |
-|`druid.msq.intermediate.storage.chunkSize` | No | Defines the size of each chunk to temporarily store in a local directory while transferring to durable storage. The chunk size must be between 5 MiB and 5 GiB. A large chunk size reduces the API calls made to the durable storage, however it requires more disk space to store the temporary chunks. Druid uses a default of 100MiB if the value is not provided.| 100MiB | 
+|`druid.msq.intermediate.storage.chunkSize` | No | Defines the size of each chunk to temporarily store in the task's temporary directory while transferring to durable storage. The chunk size must be between 5 MiB and 5 GiB. A large chunk size reduces the API calls made to the durable storage, however it requires more disk space to store the temporary chunks. Druid uses a default of 100MiB if the value is not provided.| 100MiB |
 
 To use S3 or Google for durable storage, you also need to configure the following properties:
 

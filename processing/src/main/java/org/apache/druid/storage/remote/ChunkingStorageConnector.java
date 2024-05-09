@@ -129,7 +129,7 @@ public abstract class ChunkingStorageConnector<T> implements StorageConnector
             }
 
             File outFile = new File(
-                params.getTempDirSupplier().get().getAbsolutePath(),
+                params.getTempDir().getAbsolutePath(),
                 UUID.randomUUID().toString()
             );
 

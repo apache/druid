@@ -33,6 +33,7 @@ import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.data.input.s3.S3InputSource;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.server.metrics.DataSourceTaskIdHolder;
 import org.apache.druid.storage.ExportStorageProvider;
 import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.s3.S3StorageDruidModule;
@@ -42,8 +43,6 @@ import javax.validation.constraints.NotNull;
 import java.io.File;
 import java.net.URI;
 import java.util.List;
-
-import static org.apache.druid.server.metrics.DataSourceTaskIdHolder.TMP_DIR_BINDING;
 
 @JsonTypeName(S3ExportStorageProvider.TYPE_NAME)
 public class S3ExportStorageProvider implements ExportStorageProvider
@@ -76,7 +75,7 @@ public class S3ExportStorageProvider implements ExportStorageProvider
   @Override
   public StorageConnector get()
   {
-    final File tempDir = injector.getInstance(Key.get(File.class, Names.named(TMP_DIR_BINDING)));
+    final File tempDir = injector.getInstance(Key.get(File.class, Names.named(DataSourceTaskIdHolder.TMP_DIR_BINDING)));
     final List<String> allowedExportPaths = s3ExportConfig.getAllowedExportPaths();
     if (allowedExportPaths == null) {
       throw DruidException.forPersona(DruidException.Persona.OPERATOR)

@@ -194,7 +194,7 @@ public class GoogleStorageConnector extends ChunkingStorageConnector<GoogleInput
     builder.start(from);
     builder.end(from + size);
     builder.cloudStoragePath(objectPath(path));
-    builder.tempDirSupplier(() -> tempDir);
+    builder.tempDirSupplier(tempDir);
     builder.maxRetry(config.getMaxRetry());
     builder.retryCondition(GoogleUtils.GOOGLE_RETRY);
     builder.objectSupplier(((start, end) -> new GoogleInputRange(
