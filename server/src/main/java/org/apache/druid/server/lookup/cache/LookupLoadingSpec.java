@@ -88,7 +88,7 @@ public class LookupLoadingSpec
     return lookupsToLoad;
   }
 
-  public static LookupLoadingSpec getSpecFromContext(Map<String, Object> context, LookupLoadingSpec defaultSpec)
+  public static LookupLoadingSpec createFromContext(Map<String, Object> context, LookupLoadingSpec defaultSpec)
   {
     if (context == null) {
       return defaultSpec;

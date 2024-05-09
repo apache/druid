@@ -67,15 +67,15 @@ public class LookupLoadingSpecTest
     Assert.assertEquals("Expected non-null set of lookups to load.", exception.getMessage());
   }
 
-  @MethodSource("provideParamsForTestGetSpecFromContext")
+  @MethodSource("provideParamsForTestCreateFromContext")
   @ParameterizedTest
   public void testGetLookupLoadingSpecFromContext(Map<String, Object> context, LookupLoadingSpec defaultSpec, LookupLoadingSpec expectedSpec)
   {
-    LookupLoadingSpec specFromContext = LookupLoadingSpec.getSpecFromContext(context, defaultSpec);
+    LookupLoadingSpec specFromContext = LookupLoadingSpec.createFromContext(context, defaultSpec);
     Assert.assertEquals(expectedSpec, specFromContext);
   }
 
-  public static Collection<Object[]> provideParamsForTestGetSpecFromContext()
+  public static Collection<Object[]> provideParamsForTestCreateFromContext()
   {
     ImmutableSet<String> lookupsToLoad = ImmutableSet.of("lookupName1", "lookupName2");
     final ImmutableMap<String, Object> contextWithModeOnlyRequired = ImmutableMap.of(

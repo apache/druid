@@ -355,7 +355,7 @@ public class PlannerContext
   }
 
   /**
-   * Returns the lookup loading spec for a given task.
+   * Lookup loading spec used if this context corresponds to an MSQ task.
    */
   public LookupLoadingSpec getLookupLoadingSpec()
   {

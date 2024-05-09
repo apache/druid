@@ -251,11 +251,8 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     this.partitionConfigurationManager = new PartitionConfigurationManager(this.tuningConfig);
     this.segmentCacheManagerFactory = segmentCacheManagerFactory;
 
-    // Unless context has been overridden to load lookups differently, we want to load no lookups by default in any task spawned
-    // up by the CompactionTask. We achieve this by populating this info in the context which is passed to the spawned tasks.
-    if (context == null || !context.containsKey(LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE)) {
-      addToContext(LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE, LookupLoadingSpec.Mode.NONE.toString());
-    }
+    // By default, do not load any lookups in sub-tasks launched by compaction task.
+    addToContextIfAbsent(LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE, LookupLoadingSpec.Mode.NONE.toString());
   }
 
   @VisibleForTesting
@@ -1533,6 +1530,6 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
   @Override
   public LookupLoadingSpec getLookupLoadingSpec()
   {
-    return LookupLoadingSpec.getSpecFromContext(getContext(), LookupLoadingSpec.NONE);
+    return LookupLoadingSpec.createFromContext(getContext(), LookupLoadingSpec.NONE);
   }
 }

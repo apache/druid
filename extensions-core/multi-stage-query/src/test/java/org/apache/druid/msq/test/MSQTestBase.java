@@ -1020,7 +1020,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
     protected void verifyLookupLoadingInfoInTaskContext(Map<String, Object> context)
     {
-      LookupLoadingSpec specFromContext = LookupLoadingSpec.getSpecFromContext(context, LookupLoadingSpec.ALL);
+      LookupLoadingSpec specFromContext = LookupLoadingSpec.createFromContext(context, LookupLoadingSpec.ALL);
       Assert.assertEquals(expectedLookupLoadingSpec, specFromContext);
     }
 
