@@ -21,7 +21,6 @@ package org.apache.druid.query.aggregation;
 
 import com.google.common.collect.Sets;
 import junitparams.converters.Nullable;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.constant.LongConstantAggregator;
 import org.apache.druid.query.aggregation.constant.LongConstantBufferAggregator;
@@ -136,7 +135,7 @@ public class GroupingAggregatorFactoryTest
     @Test
     public void testWithDuplicateGroupings()
     {
-      exception.expect(DruidException.class);
+      exception.expect(IllegalArgumentException.class);
       exception.expectMessage("Encountered same dimension more than once in groupings");
       makeFactory(new String[]{"a", "a"}, null);
     }

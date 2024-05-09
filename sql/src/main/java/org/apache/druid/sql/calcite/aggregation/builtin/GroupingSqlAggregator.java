@@ -33,6 +33,7 @@ import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.rel.CannotBuildQueryException;
 import org.apache.druid.sql.calcite.rel.InputAccessor;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
@@ -90,10 +91,17 @@ public class GroupingSqlAggregator implements SqlAggregator
         }
       }
     }
-    AggregatorFactory factory = new GroupingAggregatorFactory(
-        name,
-        arguments.stream().distinct().collect(Collectors.toList())
-    );
+    AggregatorFactory factory;
+    try {
+      factory = new GroupingAggregatorFactory(name, arguments);
+    }
+    catch (Exception e) {
+      if (null == plannerContext.getPlanningError()) {
+        plannerContext.setPlanningError("Grouping Aggregation [%s] is not supported", aggregateCall);
+      }
+      throw new CannotBuildQueryException(e.getMessage());
+    }
+
     return Aggregation.create(factory);
   }
 

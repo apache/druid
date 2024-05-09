@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.druid.annotations.EverythingIsNonnullByDefault;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.query.aggregation.constant.LongConstantAggregator;
 import org.apache.druid.query.aggregation.constant.LongConstantBufferAggregator;
 import org.apache.druid.query.aggregation.constant.LongConstantVectorAggregator;
@@ -112,9 +111,11 @@ public class GroupingAggregatorFactory extends AggregatorFactory
         groupings.size(),
         Long.SIZE - 1
     );
-    if (groupings.stream().distinct().count() < groupings.size()) {
-      throw DruidException.defensive("Encountered same dimension more than once in groupings");
-    }
+    Preconditions.checkArgument(
+        groupings.stream().distinct().count() == groupings.size(),
+        "Encountered same dimension more than once in groupings"
+    );
+
     this.name = name;
     this.groupings = groupings;
     this.keyDimensions = keyDimensions;
