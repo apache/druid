@@ -480,7 +480,7 @@ public class CalciteRulesManager
     rules.add(FilterJoinExcludePushToChildRule.FILTER_ON_JOIN_EXCLUDE_PUSH_TO_CHILD);
     rules.add(SortCollapseRule.instance());
     rules.add(ProjectAggregatePruneUnusedCallRule.instance());
-    rules.add(DruidAggregateRemoveRedundancyRule.Config.DEFAULT.toRule());
+    rules.add(DruidAggregateRemoveRedundancyRule.instance());
 
     return rules.build();
   }

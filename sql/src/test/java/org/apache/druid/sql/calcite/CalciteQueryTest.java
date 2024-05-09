@@ -15686,7 +15686,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
               ImmutableList.of(
                       new Object[]{null, null, null}
               )
-      );
+      ).run();
   }
 
   @SqlTestFrameworkConfig(numMergeBuffers = 4)
