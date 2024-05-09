@@ -172,6 +172,9 @@ if [ -n "$DRUID_MAXDIRECTMEMORYSIZE" ]; then setJavaKey ${SERVICE} -XX:MaxDirect
 # However this behavior is not part of the spec and is thus implementation specific
 JAVA_OPTS="$(cat $SERVICE_CONF_DIR/jvm.config | xargs) $JAVA_OPTS"
 
+# Specify node type used for log4j2.xml
+JAVA_OPTS="-Ddruid.node.type=$SERVICE $JAVA_OPTS"
+
 if [ -n "$DRUID_LOG_LEVEL" ]
 then
     sed -ri 's/"info"/"'$DRUID_LOG_LEVEL'"/g' $COMMON_CONF_DIR/log4j2.xml

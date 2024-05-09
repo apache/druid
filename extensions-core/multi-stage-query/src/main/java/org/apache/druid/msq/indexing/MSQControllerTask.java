@@ -58,6 +58,7 @@ import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.StandardRetryPolicy;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.calcite.run.SqlResults;
@@ -315,7 +316,7 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery, 
   }
 
   /**
-   * Returns true if the task reads from the same table as the destionation. In this case, we would prefer to fail
+   * Returns true if the task reads from the same table as the destination. In this case, we would prefer to fail
    * instead of reading any unused segments to ensure that old data is not read.
    */
   public static boolean isReplaceInputDataSourceTask(MSQSpec querySpec)
@@ -332,5 +333,11 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery, 
   public static boolean writeResultsToDurableStorage(final MSQSpec querySpec)
   {
     return querySpec.getDestination() instanceof DurableStorageMSQDestination;
+  }
+
+  @Override
+  public LookupLoadingSpec getLookupLoadingSpec()
+  {
+    return LookupLoadingSpec.NONE;
   }
 }

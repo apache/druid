@@ -29,6 +29,8 @@ import org.apache.druid.data.input.impl.DoubleDimensionSchema;
 import org.apache.druid.data.input.impl.FloatDimensionSchema;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
@@ -57,6 +59,7 @@ import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentMatcher;
@@ -1838,6 +1841,35 @@ public class MSQReplaceTest extends MSQTestBase
                          )
                      )
                      .verifyResults();
+  }
+
+  @Test
+  void testRealtimeQueryWithReindexShouldThrowException()
+  {
+    Map<String, Object> context = ImmutableMap.<String, Object>builder()
+                                              .putAll(DEFAULT_MSQ_CONTEXT)
+                                              .put(MultiStageQueryContext.CTX_INCLUDE_SEGMENT_SOURCE, SegmentSource.REALTIME.name())
+                                              .build();
+
+    testIngestQuery().setSql(
+                         "REPLACE INTO foo"
+                         + " OVERWRITE ALL"
+                         + " SELECT *"
+                         + " FROM foo"
+                         + " PARTITIONED BY DAY")
+                     .setQueryContext(context)
+                     .setExpectedValidationErrorMatcher(
+                         new DruidExceptionMatcher(
+                             DruidException.Persona.USER,
+                             DruidException.Category.INVALID_INPUT,
+                             "general"
+                         ).expectMessageContains(
+                             "Cannot ingest into datasource[foo] since it is also being queried from, with REALTIME "
+                             + "segments included. Ingest to a different datasource, or disable querying of realtime "
+                             + "segments by modifying [includeSegmentSource] in the query context.")
+                     )
+                     .verifyPlanningErrors();
+
   }
 
   @Nonnull

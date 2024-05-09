@@ -20,6 +20,7 @@
 package org.apache.druid.msq.indexing;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
@@ -34,12 +35,15 @@ import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
+import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.sql.calcite.planner.ColumnMapping;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -82,6 +86,55 @@ public class MSQControllerTaskTest
         null
     );
     Assert.assertTrue(controllerTask.getInputSourceResources().isEmpty());
+  }
+
+  @Test
+  public void testGetDefaultLookupLoadingSpec()
+  {
+    MSQControllerTask controllerTask = new MSQControllerTask(
+        null,
+        MSQ_SPEC,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+    );
+    Assert.assertEquals(LookupLoadingSpec.NONE, controllerTask.getLookupLoadingSpec());
+  }
+
+  @Test
+  public void testGetLookupLoadingSpecUsingLookupLoadingInfoInContext()
+  {
+    MSQSpec build = MSQSpec
+        .builder()
+        .query(new Druids.ScanQueryBuilder()
+                   .intervals(new MultipleIntervalSegmentSpec(INTERVALS))
+                   .dataSource("target")
+                   .context(
+                       ImmutableMap.of(
+                           PlannerContext.CTX_LOOKUPS_TO_LOAD, Arrays.asList("lookupName1", "lookupName2"),
+                           PlannerContext.CTX_LOOKUP_LOADING_MODE, LookupLoadingSpec.Mode.ONLY_REQUIRED)
+                   )
+                   .build()
+        )
+        .columnMappings(new ColumnMappings(Collections.emptyList()))
+        .tuningConfig(MSQTuningConfig.defaultConfig())
+        .build();
+    MSQControllerTask controllerTask = new MSQControllerTask(
+        null,
+        build,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+    );
+
+    // Va;idate that MSQ Controller task doesn't load any lookups even if context has lookup info populated.
+    Assert.assertEquals(LookupLoadingSpec.NONE, controllerTask.getLookupLoadingSpec());
   }
 
   @Test

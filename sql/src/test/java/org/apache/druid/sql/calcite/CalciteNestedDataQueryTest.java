@@ -74,7 +74,6 @@ import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFacto
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.CalciteNestedDataQueryTest.NestedComponentSupplier;
 import org.apache.druid.sql.calcite.filtration.Filtration;
-import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.timeline.DataSegment;
@@ -89,7 +88,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@SqlTestFramework.SqlTestFrameWorkModule(NestedComponentSupplier.class)
+@SqlTestFrameworkConfig.ComponentSupplier(NestedComponentSupplier.class)
 public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
 {
   public static final String DATA_SOURCE = "nested";
@@ -183,7 +182,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   public static final List<InputRow> ROWS_MIX =
       RAW_ROWS.stream().map(raw -> TestDataBuilder.createRow(raw, JSON_AND_SCALAR_MIX)).collect(Collectors.toList());
 
-  protected static class NestedComponentSupplier extends StandardComponentSupplier
+  public static class NestedComponentSupplier extends StandardComponentSupplier
   {
     public NestedComponentSupplier(TempDirProducer tempFolderProducer)
     {
