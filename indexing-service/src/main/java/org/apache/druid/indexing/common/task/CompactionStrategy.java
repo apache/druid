@@ -19,11 +19,9 @@
 
 package org.apache.druid.indexing.common.task;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.java.util.common.NonnullPair;
@@ -34,7 +32,7 @@ import java.util.List;
 
 /**
  * Strategy to be used for executing a compaction task.
- * All subtypes should be synchronized with {@link CompactionEngine}.
+ * Should be synchronized with {@link org.apache.druid.server.coordinator.UserCompactionStrategy}
  */
 @JsonTypeInfo(
     use = JsonTypeInfo.Id.NAME,
@@ -54,6 +52,7 @@ public interface CompactionStrategy
       List<NonnullPair<Interval, DataSchema>> dataSchemas
   ) throws JsonProcessingException;
 
-  @JsonProperty
+  CurrentSubTaskHolder getCurrentSubTaskHolder();
+
   String getType();
 }

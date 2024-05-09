@@ -28,25 +28,25 @@ import java.util.Objects;
 
 public class UserCompactionStrategy
 {
-  private final CompactionEngine type;
+  private final CompactionEngine TYPE;
 
   @JsonCreator
-  public UserCompactionStrategy(@JsonProperty("type") CompactionEngine type)
+  public UserCompactionStrategy(@JsonProperty("TYPE") CompactionEngine TYPE)
   {
-    this.type = type;
+    this.TYPE = TYPE;
   }
 
-  @JsonProperty
+  @JsonProperty("TYPE")
   public CompactionEngine getType()
   {
-    return type;
+    return TYPE;
   }
 
   @Override
   public String toString()
   {
     return "UserCompactionStrategy{" +
-           "type=" + type +
+           "TYPE=" + TYPE +
            '}';
   }
 
@@ -60,12 +60,12 @@ public class UserCompactionStrategy
       return false;
     }
     UserCompactionStrategy that = (UserCompactionStrategy) o;
-    return type == that.type;
+    return TYPE == that.TYPE;
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(type);
+    return Objects.hash(TYPE);
   }
 }

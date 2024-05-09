@@ -61,6 +61,24 @@ public class NativeCompactionStrategy implements CompactionStrategy
   {
   }
 
+  @Override
+  public CurrentSubTaskHolder getCurrentSubTaskHolder()
+  {
+    return new CurrentSubTaskHolder(
+        (taskObject, config) -> {
+          final ParallelIndexSupervisorTask indexTask = (ParallelIndexSupervisorTask) taskObject;
+          indexTask.stopGracefully(config);
+        }
+    );
+  }
+
+  @Override
+  @JsonProperty("TYPE")
+  public String getType()
+  {
+    return TYPE;
+  }
+
   /**
    * Generate {@link ParallelIndexIngestionSpec} from input dataschemas.
    *
@@ -269,12 +287,5 @@ public class NativeCompactionStrategy implements CompactionStrategy
     // Set the priority of the compaction task.
     newContext.put(Tasks.PRIORITY_KEY, compactionTask.getPriority());
     return newContext;
-  }
-
-  @Override
-  @JsonProperty
-  public String getType()
-  {
-    return TYPE;
   }
 }

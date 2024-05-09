@@ -167,12 +167,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
   private final SegmentCacheManagerFactory segmentCacheManagerFactory;
 
   @JsonIgnore
-  private final CurrentSubTaskHolder currentSubTaskHolder = new CurrentSubTaskHolder(
-      (taskObject, config) -> {
-        final ParallelIndexSupervisorTask indexTask = (ParallelIndexSupervisorTask) taskObject;
-        indexTask.stopGracefully(config);
-      }
-  );
+  private final CurrentSubTaskHolder currentSubTaskHolder;
 
   @JsonCreator
   public CompactionTask(
@@ -246,6 +241,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     this.partitionConfigurationManager = new PartitionConfigurationManager(this.tuningConfig);
     this.compactionStrategy = compactionStrategy;
     this.segmentCacheManagerFactory = segmentCacheManagerFactory;
+    this.currentSubTaskHolder = compactionStrategy.getCurrentSubTaskHolder();
   }
 
   @VisibleForTesting

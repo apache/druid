@@ -76,6 +76,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 public class MSQCompactionStrategy implements CompactionStrategy
@@ -97,10 +98,21 @@ public class MSQCompactionStrategy implements CompactionStrategy
   }
 
   @Override
-  @JsonProperty
+  @JsonProperty("TYPE")
   public String getType()
   {
     return TYPE;
+  }
+
+  @Override
+  public CurrentSubTaskHolder getCurrentSubTaskHolder()
+  {
+    return new CurrentSubTaskHolder(
+        (taskObject, config) -> {
+          final MSQControllerTask msqControllerTask = (MSQControllerTask) taskObject;
+          msqControllerTask.stopGracefully(config);
+        }
+    );
   }
 
   public List<MSQControllerTask> compactionToMSQTasks(
@@ -130,23 +142,23 @@ public class MSQCompactionStrategy implements CompactionStrategy
     for (NonnullPair<Interval, DataSchema> intervalDataSchema : intervalDataSchemas) {
       Query<?> query;
       Interval interval = intervalDataSchema.lhs;
-      DataSchema ds = intervalDataSchema.rhs;
+      DataSchema dataSchema = intervalDataSchema.rhs;
 
-      if (!isGroupBy(ds)) {
-        query = buildScanQuery(compactionTask, interval, ds);
+      if (!isGroupBy(dataSchema)) {
+        query = buildScanQuery(compactionTask, interval, dataSchema);
       } else {
-        query = buildGroupByQuery(compactionTask, interval, ds);
+        query = buildGroupByQuery(compactionTask, interval, dataSchema);
       }
 
       MSQSpec msqSpec = MSQSpec.builder()
                                .query(query)
-                               .columnMappings(getColumnMappings(ds))
-                               .destination(buildMSQDestination(compactionTask, ds, compactionTaskContext))
+                               .columnMappings(getColumnMappings(dataSchema))
+                               .destination(buildMSQDestination(compactionTask, dataSchema, compactionTaskContext))
                                .assignmentStrategy(MultiStageQueryContext.getAssignmentStrategy(compactionTaskContext))
                                .tuningConfig(buildMSQTuningConfig(compactionTask, compactionTaskContext))
                                .build();
 
-      Map<String, Object> msqControllerTaskContext = createMSQTaskContext(compactionTask, ds);
+      Map<String, Object> msqControllerTaskContext = createMSQTaskContext(compactionTask, dataSchema);
 
       MSQControllerTask controllerTask = new MSQControllerTask(
           compactionTask.getId(),
@@ -163,6 +175,7 @@ public class MSQCompactionStrategy implements CompactionStrategy
     }
     return msqControllerTasks;
   }
+
   @Override
   public TaskStatus runCompactionTasks(
       CompactionTask compactionTask,
@@ -188,7 +201,7 @@ public class MSQCompactionStrategy implements CompactionStrategy
 
   private static DataSourceMSQDestination buildMSQDestination(
       CompactionTask compactionTask,
-      DataSchema ds,
+      DataSchema dataSchema,
       QueryContext compactionTaskContext
   )
   {
@@ -199,8 +212,8 @@ public class MSQCompactionStrategy implements CompactionStrategy
     final List<String> segmentSortOrder = MultiStageQueryContext.getSortOrder(compactionTaskContext);
 
     return new DataSourceMSQDestination(
-        ds.getDataSource(),
-        ds.getGranularitySpec().getSegmentGranularity(),
+        dataSchema.getDataSource(),
+        dataSchema.getGranularitySpec().getSegmentGranularity(),
         segmentSortOrder,
         ImmutableList.of(replaceInterval)
     );
@@ -255,30 +268,30 @@ public class MSQCompactionStrategy implements CompactionStrategy
   {
     RowSignature.Builder rowSignatureBuilder = RowSignature.builder();
     rowSignatureBuilder.add(dataSchema.getTimestampSpec().getTimestampColumn(), ColumnType.LONG);
-    for (DimensionSchema ds : dataSchema.getDimensionsSpec().getDimensions()) {
-      rowSignatureBuilder.add(ds.getName(), ColumnType.fromString(ds.getTypeName()));
+    for (DimensionSchema dimensionSchema : dataSchema.getDimensionsSpec().getDimensions()) {
+      rowSignatureBuilder.add(dimensionSchema.getName(), ColumnType.fromString(dimensionSchema.getTypeName()));
     }
     return rowSignatureBuilder.build();
   }
 
-  private static List<DimensionSpec> getAggregateDimensions(DataSchema ds)
+  private static List<DimensionSpec> getAggregateDimensions(DataSchema dataSchema)
   {
     List<DimensionSpec> dimensionSpecs = new ArrayList<>();
 
-    if (isQueryGranularityEmpty(ds)) {
+    if (isQueryGranularityEmptyOrNone(dataSchema)) {
       dimensionSpecs.add(new DefaultDimensionSpec(TIME_COLUMN, TIME_VIRTUAL_COLUMN, ColumnType.LONG));
     } else {
       // The changed granularity would result in a new virtual column that needs to be aggregated upon.
       dimensionSpecs.add(new DefaultDimensionSpec(TIME_VIRTUAL_COLUMN, TIME_VIRTUAL_COLUMN, ColumnType.LONG));
     }
 
-    dimensionSpecs.addAll(ds.getDimensionsSpec().getDimensions().stream()
-                                           .map(dim -> new DefaultDimensionSpec(
-                                               dim.getName(),
-                                               dim.getName(),
-                                               dim.getColumnType()
-                                           ))
-                                           .collect(Collectors.toList()));
+    dimensionSpecs.addAll(dataSchema.getDimensionsSpec().getDimensions().stream()
+                                    .map(dim -> new DefaultDimensionSpec(
+                                        dim.getName(),
+                                        dim.getName(),
+                                        dim.getColumnType()
+                                    ))
+                                    .collect(Collectors.toList()));
 
 
     // Dimensions in group-by aren't allowed to have time column as the output name.
@@ -333,22 +346,30 @@ public class MSQCompactionStrategy implements CompactionStrategy
                                         .build();
   }
 
-  private static boolean isGroupBy(DataSchema ds)
+  private static boolean isGroupBy(DataSchema dataSchema)
   {
-    return ds.getAggregators().length > 0;
+    return dataSchema.getAggregators().length > 0;
   }
 
-  private static boolean isQueryGranularityEmpty(DataSchema ds)
+  private static boolean isQueryGranularityEmptyOrNone(DataSchema dataSchema)
   {
-    return ds.getGranularitySpec() == null || ds.getGranularitySpec().getQueryGranularity() == null;
+    return dataSchema.getGranularitySpec() == null
+           || dataSchema.getGranularitySpec().getQueryGranularity() == null
+           || Objects.equals(
+        dataSchema.getGranularitySpec().getQueryGranularity(),
+        Granularities.NONE
+    );
   }
 
-  private static VirtualColumns getVirtualColumns(DataSchema ds)
+  private static VirtualColumns getVirtualTimeColumn(DataSchema dataSchema)
   {
     VirtualColumns virtualColumns = VirtualColumns.EMPTY;
 
-    if (!isQueryGranularityEmpty(ds) && !ds.getGranularitySpec().getQueryGranularity().equals(Granularities.ALL)) {
-      PeriodGranularity periodQueryGranularity = (PeriodGranularity) ds.getGranularitySpec().getQueryGranularity();
+    if (!isQueryGranularityEmptyOrNone(dataSchema) && !dataSchema.getGranularitySpec()
+                                                                 .getQueryGranularity()
+                                                                 .equals(Granularities.ALL)) {
+      PeriodGranularity periodQueryGranularity = (PeriodGranularity) dataSchema.getGranularitySpec()
+                                                                               .getQueryGranularity();
       VirtualColumn virtualColumn = new ExpressionVirtualColumn(
           TIME_VIRTUAL_COLUMN,
           StringUtils.format(
@@ -370,7 +391,7 @@ public class MSQCompactionStrategy implements CompactionStrategy
 
     GroupByQuery.Builder builder = new GroupByQuery.Builder()
         .setDataSource(new TableDataSource(compactionTask.getDataSource()))
-        .setVirtualColumns(getVirtualColumns(dataSchema))
+        .setVirtualColumns(getVirtualTimeColumn(dataSchema))
         .setDimFilter(dimFilter)
         .setGranularity(new AllGranularity())
         .setDimensions(getAggregateDimensions(dataSchema))
@@ -384,21 +405,21 @@ public class MSQCompactionStrategy implements CompactionStrategy
     return builder.build();
   }
 
-  private Map<String, Object> createMSQTaskContext(CompactionTask compactionTask, DataSchema ds)
+  private Map<String, Object> createMSQTaskContext(CompactionTask compactionTask, DataSchema dataSchema)
       throws JsonProcessingException
   {
     Map<String, Object> context = new HashMap<>(compactionTask.getContext());
     context.put(
         DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY,
-        jsonMapper.writeValueAsString(ds.getGranularitySpec() != null
-                                      ? ds.getGranularitySpec()
-                                          .getSegmentGranularity()
+        jsonMapper.writeValueAsString(dataSchema.getGranularitySpec() != null
+                                      ? dataSchema.getGranularitySpec()
+                                                  .getSegmentGranularity()
                                       : DEFAULT_SEGMENT_GRANULARITY)
     );
-    if (!isQueryGranularityEmpty(ds)) {
+    if (!isQueryGranularityEmptyOrNone(dataSchema)) {
       context.put(
           DruidSqlInsert.SQL_INSERT_QUERY_GRANULARITY,
-          jsonMapper.writeValueAsString(ds.getGranularitySpec().getQueryGranularity())
+          jsonMapper.writeValueAsString(dataSchema.getGranularitySpec().getQueryGranularity())
       );
     }
     return context;
