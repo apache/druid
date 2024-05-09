@@ -84,7 +84,7 @@ public class ClientCompactionTaskQuerySerdeTest
   @Test
   public void testClientCompactionTaskQueryToCompactionTask() throws IOException
   {
-    Map<String, Object> context = ImmutableMap.of("key", "value");
+    final Map<String, Object> context = ImmutableMap.of("key", "value");
     final ObjectMapper mapper = setupInjectablesInObjectMapper(new DefaultObjectMapper());
     final ClientCompactionTaskQuery query = new ClientCompactionTaskQuery(
         "id",
@@ -236,9 +236,11 @@ public class ClientCompactionTaskQuerySerdeTest
         task.getMetricsSpec()
     );
 
+    // Verify values of context keys originally present in the ClientCompactionTaskQuery
     for (String key : context.keySet()) {
       Assert.assertEquals(context.get(key), task.getContext().get(key));
     }
+    // Verify values of context parameters added by the CompactionTask
     Assert.assertEquals(LookupLoadingSpec.Mode.NONE.toString(), task.getContext().get(LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE));
   }
 
