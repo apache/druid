@@ -72,8 +72,7 @@ public class LookupLoadingSpecTest
   public void testGetLookupLoadingSpecFromContext(Map<String, Object> context, LookupLoadingSpec defaultSpec, LookupLoadingSpec expectedSpec)
   {
     LookupLoadingSpec specFromContext = LookupLoadingSpec.getSpecFromContext(context, defaultSpec);
-    Assert.assertEquals(expectedSpec.getMode(), specFromContext.getMode());
-    Assert.assertEquals(expectedSpec.getLookupsToLoad(), specFromContext.getLookupsToLoad());
+    Assert.assertEquals(expectedSpec, specFromContext);
   }
 
   public static Collection<Object[]> provideParamsForTestGetSpecFromContext()
@@ -118,6 +117,12 @@ public class LookupLoadingSpecTest
         {
             contextWithModeNone,
             LookupLoadingSpec.ALL,
+            LookupLoadingSpec.NONE
+        },
+        // Default spec is returned in the case of context=null.
+        {
+            null,
+            LookupLoadingSpec.NONE,
             LookupLoadingSpec.NONE
         }
     };
