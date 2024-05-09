@@ -781,17 +781,9 @@ public class TaskQueue
                 );
 
                 if (status.isSuccess()) {
-                  collectedStats.get().add(
-                      Stats.TaskCount.SUCCESSFUL,
-                      RowKey.of(Dimension.DATASOURCE, task.getDataSource()),
-                      1
-                  );
+                  incrementTaskStat(Stats.TaskCount.SUCCESSFUL, task, collectedStats.get());
                 } else {
-                  collectedStats.get().add(
-                      Stats.TaskCount.FAILED,
-                      RowKey.of(Dimension.DATASOURCE, task.getDataSource()),
-                      1
-                  );
+                  incrementTaskStat(Stats.TaskCount.FAILED, task, collectedStats.get());
                 }
               }
             }

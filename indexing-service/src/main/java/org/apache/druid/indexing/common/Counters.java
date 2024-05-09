@@ -21,7 +21,6 @@ package org.apache.druid.indexing.common;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 
 public final class Counters
 {
@@ -34,17 +33,6 @@ public final class Counters
       counter = counters.computeIfAbsent(key, k -> new AtomicInteger());
     }
     return counter.getAndIncrement();
-  }
-
-  public static <K> long incrementAndGetLong(ConcurrentHashMap<K, AtomicLong> counters, K key)
-  {
-    // get() before computeIfAbsent() is an optimization to avoid locking in computeIfAbsent() if not needed.
-    // See https://github.com/apache/druid/pull/6898#discussion_r251384586.
-    AtomicLong counter = counters.get(key);
-    if (counter == null) {
-      counter = counters.computeIfAbsent(key, k -> new AtomicLong());
-    }
-    return counter.incrementAndGet();
   }
 
   private Counters()
