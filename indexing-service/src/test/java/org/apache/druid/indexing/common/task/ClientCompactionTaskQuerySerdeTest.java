@@ -63,6 +63,7 @@ import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
+import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.joda.time.Duration;
@@ -71,6 +72,7 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.Map;
 
 public class ClientCompactionTaskQuerySerdeTest
 {
@@ -82,6 +84,7 @@ public class ClientCompactionTaskQuerySerdeTest
   @Test
   public void testClientCompactionTaskQueryToCompactionTask() throws IOException
   {
+    Map<String, Object> context = ImmutableMap.of("key", "value");
     final ObjectMapper mapper = setupInjectablesInObjectMapper(new DefaultObjectMapper());
     final ClientCompactionTaskQuery query = new ClientCompactionTaskQuery(
         "id",
@@ -127,7 +130,7 @@ public class ClientCompactionTaskQuerySerdeTest
         new ClientCompactionTaskDimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
         new AggregatorFactory[] {new CountAggregatorFactory("cnt")},
         new ClientCompactionTaskTransformSpec(new SelectorDimFilter("dim1", "foo", null)),
-        ImmutableMap.of("key", "value")
+        context
     );
 
     final byte[] json = mapper.writeValueAsBytes(query);
@@ -220,7 +223,6 @@ public class ClientCompactionTaskQuerySerdeTest
         query.getIoConfig().isDropExisting(),
         task.getIoConfig().isDropExisting()
     );
-    Assert.assertEquals(query.getContext(), task.getContext());
     Assert.assertEquals(
         query.getDimensionsSpec().getDimensions(),
         task.getDimensionsSpec().getDimensions()
@@ -233,6 +235,11 @@ public class ClientCompactionTaskQuerySerdeTest
         query.getMetricsSpec(),
         task.getMetricsSpec()
     );
+
+    for (String key : context.keySet()) {
+      Assert.assertEquals(context.get(key), task.getContext().get(key));
+    }
+    Assert.assertEquals(LookupLoadingSpec.Mode.NONE.toString(), task.getContext().get(LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE));
   }
 
   @Test
@@ -351,7 +358,16 @@ public class ClientCompactionTaskQuerySerdeTest
     final byte[] json = mapper.writeValueAsBytes(task);
     final ClientCompactionTaskQuery actual = (ClientCompactionTaskQuery) mapper.readValue(json, ClientTaskQuery.class);
 
-    Assert.assertEquals(expected, actual);
+    Assert.assertEquals(expected.getDataSource(), actual.getDataSource());
+    Assert.assertEquals(expected.getId(), actual.getId());
+    Assert.assertEquals(expected.getType(), actual.getType());
+    Assert.assertEquals(expected.getGranularitySpec(), actual.getGranularitySpec());
+    Assert.assertEquals(expected.getDimensionsSpec(), actual.getDimensionsSpec());
+    Assert.assertEquals(expected.getIoConfig(), actual.getIoConfig());
+    Assert.assertEquals(expected.getTransformSpec(), actual.getTransformSpec());
+    Assert.assertEquals(expected.getMetricsSpec(), actual.getMetricsSpec());
+    Assert.assertEquals(expected.getTuningConfig(), actual.getTuningConfig());
+    Assert.assertEquals(ImmutableMap.of(LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE, LookupLoadingSpec.Mode.NONE.toString()), actual.getContext());
   }
 
   private static ObjectMapper setupInjectablesInObjectMapper(ObjectMapper objectMapper)
