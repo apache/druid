@@ -1086,7 +1086,9 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByRootSingleTypeStringMixed2SparseJsonValueNonExistentPath()
   {
-    // Fails while planning
+    // Fails while planning for MSQ because MSQ expects a defined type for the virtual column while planning (to figure
+    // out the scanSignature) whereas the NestedFieldVirtualColumn cannot determine the type for the non-existant path,
+    // due to which it returns null
     msqIncompatible();
     testQuery(
         "SELECT "
@@ -2480,8 +2482,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByRootSingleTypeArrayDoubleElement()
   {
-    // Test framework doesn't register the RELAX_NULLS when running as part of MSQ tests
-    msqIncompatible();
     testBuilder()
         .sql(
             "SELECT "
@@ -5428,9 +5428,50 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testScanStringNotNullCast()
   {
-    // Scan results between native and the MSQ aren't in the same order.
-    msqIncompatible();
     skipVectorize();
+    final List<Object[]> expectedResults;
+    if (NullHandling.sqlCompatible()) {
+      expectedResults = ImmutableList.of(
+          new Object[]{10L},
+          new Object[]{10L}
+      );
+    } else {
+      if (isRunningMSQ()) {
+        expectedResults = ImmutableList.of(
+            new Object[]{0L},
+            new Object[]{0L},
+            new Object[]{0L},
+            new Object[]{0L},
+            new Object[]{10L},
+            new Object[]{10L},
+            new Object[]{0L},
+            new Object[]{0L},
+            new Object[]{0L},
+            new Object[]{0L},
+            new Object[]{0L},
+            new Object[]{0L},
+            new Object[]{0L},
+            new Object[]{0L}
+        );
+      } else {
+        expectedResults = ImmutableList.of(
+            new Object[]{0L},
+            new Object[]{0L},
+            new Object[]{10L},
+            new Object[]{0L},
+            new Object[]{0L},
+            new Object[]{0L},
+            new Object[]{0L},
+            new Object[]{0L},
+            new Object[]{0L},
+            new Object[]{10L},
+            new Object[]{0L},
+            new Object[]{0L},
+            new Object[]{0L},
+            new Object[]{0L}
+        );
+      }
+    }
     testQuery(
         "SELECT "
         + "CAST(string_sparse as BIGINT)"
@@ -5448,27 +5489,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   .legacy(false)
                   .build()
         ),
-        NullHandling.sqlCompatible() ?
-        ImmutableList.of(
-            new Object[]{10L},
-            new Object[]{10L}
-        ) :
-        ImmutableList.of(
-            new Object[]{0L},
-            new Object[]{0L},
-            new Object[]{10L},
-            new Object[]{0L},
-            new Object[]{0L},
-            new Object[]{0L},
-            new Object[]{0L},
-            new Object[]{0L},
-            new Object[]{0L},
-            new Object[]{10L},
-            new Object[]{0L},
-            new Object[]{0L},
-            new Object[]{0L},
-            new Object[]{0L}
-        ),
+        expectedResults,
         RowSignature.builder()
                     .add("EXPR$0", ColumnType.LONG)
                     .build()
@@ -5890,8 +5911,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByAndFilterVariant()
   {
-    // Returns incorrect results with MSQ
-    msqIncompatible();
     testQuery(
         "SELECT "
         + "variant, "
@@ -5925,7 +5944,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testScanAllTypesAuto()
   {
-    // Variant types are not supported by MSQ
+    // Variant types are not supported by MSQ.
     msqIncompatible();
     skipVectorize();
     testQuery(
@@ -6634,8 +6653,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testCoalesceOnNestedColumns()
   {
-    // Unnest on MSQ returns incorrect results
-    msqIncompatible();
     // jo.unnest is first entry in coalesce
     // so Calcite removes the coalesce to be used here
     testQuery(
@@ -6674,8 +6691,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testCoalesceOnNestedColumnsLater()
   {
-    // MSQ doesn't work well with unnest
-    msqIncompatible();
     // the first column in coalesce comes from the table
     // so a virtual expression is present for the coalesce
     testQuery(
@@ -7090,7 +7105,9 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testJsonValueNestedEmptyArray()
   {
-    // Returns incorrect results with MSQ
+    // The data set has empty arrays, however MSQ returns nulls. The root cause of the issue is the incorrect
+    // capabilities returned by NestedFieldVirtualColumn when planning which causes MSQ to treat the nested path
+    // as STRING, even though it is an array.
     msqIncompatible();
     // test for regression
     skipVectorize();

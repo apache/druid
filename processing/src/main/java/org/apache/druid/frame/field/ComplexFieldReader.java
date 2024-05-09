@@ -89,12 +89,6 @@ public class ComplexFieldReader implements FieldReader
     return memory.getByte(position) == ComplexFieldWriter.NULL_BYTE;
   }
 
-  @Override
-  public boolean isComparable()
-  {
-    return true;
-  }
-
   /**
    * Alternative interface to read the field from the memory without creating a selector and field pointer
    */

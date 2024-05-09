@@ -721,6 +721,7 @@ public class DataSourcePlan
     final List<KeyColumn> leftPartitionKey = partitionKeys.get(0);
     leftBuilder.shuffleSpec(new HashShuffleSpec(new ClusterBy(leftPartitionKey, 0), maxWorkerCount));
     leftBuilder.signature(QueryKitUtils.sortableSignature(leftBuilder.getSignature(), leftPartitionKey));
+
     // Build up the right stage.
     final StageDefinitionBuilder rightBuilder = subQueryDefBuilder.getStageBuilder(
         ((StageInputSpec) Iterables.getOnlyElement(rightPlan.getInputSpecs())).getStageNumber()

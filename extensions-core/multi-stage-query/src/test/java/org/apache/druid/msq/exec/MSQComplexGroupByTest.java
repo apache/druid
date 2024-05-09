@@ -164,7 +164,7 @@ public class MSQComplexGroupByTest extends MSQTestBase
                                      "v", Collections.emptyList()
                                  )
                              ),
-                             2L
+                             1L
                          },
                          new Object[]{
                              0L,
@@ -293,7 +293,7 @@ public class MSQComplexGroupByTest extends MSQTestBase
                                      "v", Collections.emptyList()
                                  )
                              ),
-                             2L
+                             1L
                          },
                          new Object[]{
                              0L,
@@ -407,7 +407,6 @@ public class MSQComplexGroupByTest extends MSQTestBase
                      .setQueryContext(context)
                      .setExpectedResultRows(ImmutableList.of(
                          new Object[]{"{\"a\":500,\"b\":{\"x\":\"e\",\"z\":[1,2,3,4]},\"v\":\"a\"}"},
-                         new Object[]{"{\"a\":100,\"b\":{\"x\":\"a\",\"y\":1.1,\"z\":[1,2,3,4]},\"v\":[]}"},
                          new Object[]{"{\"a\":100,\"b\":{\"x\":\"a\",\"y\":1.1,\"z\":[1,2,3,4]},\"v\":[]}"},
                          new Object[]{"{\"a\":700,\"b\":{\"x\":\"g\",\"y\":1.1,\"z\":[9,null,9,9]},\"v\":[]}"},
                          new Object[]{"{\"a\":200,\"b\":{\"x\":\"b\",\"y\":1.1,\"z\":[2,4,6]},\"v\":[]}"},
