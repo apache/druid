@@ -109,6 +109,10 @@ public class CoordinatorRunStatsTest
     Assert.assertEquals(-4, stats.get(Stat.ERROR_1, Key.DUTY_1));
     Assert.assertEquals(2, stats.get(Stat.ERROR_1, Key.DUTY_2));
     Assert.assertEquals(1, stats.get(Stat.INFO_1, Key.DUTY_1));
+
+    // Verify sums
+    Assert.assertEquals(1, stats.getSum(Stat.INFO_1));
+    Assert.assertEquals(-2, stats.getSum(Stat.ERROR_1));
   }
 
   @Test
