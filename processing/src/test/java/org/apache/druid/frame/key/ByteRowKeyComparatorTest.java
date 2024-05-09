@@ -87,7 +87,7 @@ public class ByteRowKeyComparatorTest extends InitializedNullHandlingTest
 
   private static final Object[] OBJECTS1 =
       new Object[]{
-          makeHllCollector(5),
+          null,
           -1L,
           "foo",
           makeHllCollector(5),
@@ -98,10 +98,10 @@ public class ByteRowKeyComparatorTest extends InitializedNullHandlingTest
       };
   private static final Object[] OBJECTS2 =
       new Object[]{
-          makeHllCollector(5),
+          null,
           -1L,
           null,
-          makeHllCollector(50),
+          null,
           2L,
           1.2d,
           makeHllCollector(50),
@@ -137,7 +137,7 @@ public class ByteRowKeyComparatorTest extends InitializedNullHandlingTest
           makeHllCollector(5),
           3L,
           1.2d,
-          makeHllCollector(50),
+          null,
           makeHllCollector(5)
       };
   private static final Object[] OBJECTS6 =
@@ -159,8 +159,8 @@ public class ByteRowKeyComparatorTest extends InitializedNullHandlingTest
           makeHllCollector(5),
           2L,
           -1.2d,
-          makeHllCollector(5),
-          makeHllCollector(5)
+          null,
+          null
       };
   private static final Object[] OBJECTS8 =
       new Object[]{
@@ -400,7 +400,11 @@ public class ByteRowKeyComparatorTest extends InitializedNullHandlingTest
                    .collect(Collectors.toList());
   }
 
-  private static List<RowKey> sortUsingObjectComparator(final List<KeyColumn> keyColumns, final List<Object[]> objectss, final RowSignature rowSignature)
+  private static List<RowKey> sortUsingObjectComparator(
+      final List<KeyColumn> keyColumns,
+      final List<Object[]> objectss,
+      final RowSignature rowSignature
+  )
   {
     final List<Object[]> sortedObjectssCopy = objectss.stream().sorted(
         (o1, o2) -> {
