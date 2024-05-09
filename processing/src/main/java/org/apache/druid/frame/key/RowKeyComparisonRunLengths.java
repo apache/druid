@@ -25,9 +25,8 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
-import java.util.stream.Collectors;
 
 /**
  * Denotes the ascending-descending run lengths of the fields of the keycolumns that can be compared together.
@@ -66,14 +65,14 @@ import java.util.stream.Collectors;
  * RunLengthEntry#4      1            ASC       false                 Non byte comparable types cannot be clubbed with anything
  * RunLengthEntry#5      1            ASC       false                 Non byte comparable types cannot be clubbed with anything despite
  *                                                                    the previous key column having same order and the type
- * RunLengthEntry#6      1            ASC       true                  Cannot be clubbed with previous entry. Its it own entry
+ * RunLengthEntry#6      1            ASC       true                  Cannot be clubbed with previous entry. It is own entry
  *
  */
 public class RowKeyComparisonRunLengths
 {
-  private final List<RunLengthEntry> runLengthEntries;
+  private final RunLengthEntry[] runLengthEntries;
 
-  private RowKeyComparisonRunLengths(List<RunLengthEntry> runLengthEntries)
+  private RowKeyComparisonRunLengths(final RunLengthEntry[] runLengthEntries)
   {
     this.runLengthEntries = runLengthEntries;
   }
@@ -82,7 +81,6 @@ public class RowKeyComparisonRunLengths
   {
     final List<RunLengthEntryBuilder> runLengthEntryBuilders = new ArrayList<>();
     for (KeyColumn keyColumn : keyColumns) {
-
       if (keyColumn.order() == KeyOrder.NONE) {
         throw DruidException.defensive(
             "Cannot sort on column [%s] when the sorting order isn't provided",
@@ -116,11 +114,13 @@ public class RowKeyComparisonRunLengths
         );
       }
     }
-    return new RowKeyComparisonRunLengths(
-        runLengthEntryBuilders.stream()
-                              .map(RunLengthEntryBuilder::build)
-                              .collect(Collectors.toList())
-    );
+
+    RunLengthEntry[] runLengthEntries = new RunLengthEntry[runLengthEntryBuilders.size()];
+    for (int i = 0; i < runLengthEntryBuilders.size(); ++i) {
+      runLengthEntries[i] = runLengthEntryBuilders.get(i).build();
+    }
+
+    return new RowKeyComparisonRunLengths(runLengthEntries);
   }
 
   private static boolean isByteComparable(ColumnType columnType)
@@ -139,7 +139,7 @@ public class RowKeyComparisonRunLengths
     return true;
   }
 
-  public List<RunLengthEntry> getRunLengthEntries()
+  public RunLengthEntry[] getRunLengthEntries()
   {
     return runLengthEntries;
   }
@@ -154,70 +154,21 @@ public class RowKeyComparisonRunLengths
       return false;
     }
     RowKeyComparisonRunLengths that = (RowKeyComparisonRunLengths) o;
-    return Objects.equals(runLengthEntries, that.runLengthEntries);
+    return Arrays.equals(runLengthEntries, that.runLengthEntries);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(runLengthEntries);
+    return Arrays.hashCode(runLengthEntries);
   }
 
   @Override
   public String toString()
   {
-    return runLengthEntries.toString();
-  }
-
-  /**
-   * Information about a continguous run of keys, that has the same sorting order
-   */
-  public static class RunLengthEntry
-  {
-    private final boolean byteComparable;
-    private final KeyOrder order;
-    private final int runLength;
-
-    private RunLengthEntry(final boolean byteComparable, final KeyOrder order, final int runLength)
-    {
-      this.byteComparable = byteComparable;
-      this.order = order;
-      this.runLength = runLength;
-    }
-
-    public boolean isByteComparable()
-    {
-      return byteComparable;
-    }
-
-    public int getRunLength()
-    {
-      return runLength;
-    }
-
-    public KeyOrder getOrder()
-    {
-      return order;
-    }
-
-    @Override
-    public boolean equals(Object o)
-    {
-      if (this == o) {
-        return true;
-      }
-      if (o == null || getClass() != o.getClass()) {
-        return false;
-      }
-      RunLengthEntry that = (RunLengthEntry) o;
-      return byteComparable == that.byteComparable && runLength == that.runLength && order == that.order;
-    }
-
-    @Override
-    public int hashCode()
-    {
-      return Objects.hash(byteComparable, order, runLength);
-    }
+    return "RowKeyComparisonRunLengths{" +
+           "runLengthEntries=" + Arrays.toString(runLengthEntries) +
+           '}';
   }
 
   /**

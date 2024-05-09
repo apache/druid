@@ -203,7 +203,7 @@ public class FrameComparisonWidgetImpl implements FrameComparisonWidget
     // Number of fields compared till now, which is equivalent to the index of the field to compare next
     int fieldsComparedTillNow = 0;
 
-    for (RowKeyComparisonRunLengths.RunLengthEntry runLengthEntry : rowKeyComparisonRunLengths.getRunLengthEntries()) {
+    for (RunLengthEntry runLengthEntry : rowKeyComparisonRunLengths.getRunLengthEntries()) {
 
       if (runLengthEntry.getRunLength() <= 0) {
         // Defensive check
@@ -283,7 +283,7 @@ public class FrameComparisonWidgetImpl implements FrameComparisonWidget
     // Number of fields compared till now, which is equivalent to the index of the field to compare next
     int fieldsComparedTillNow = 0;
 
-    for (RowKeyComparisonRunLengths.RunLengthEntry runLengthEntry : rowKeyComparisonRunLengths.getRunLengthEntries()) {
+    for (RunLengthEntry runLengthEntry : rowKeyComparisonRunLengths.getRunLengthEntries()) {
 
       if (runLengthEntry.getRunLength() <= 0) {
         // Defensive check
