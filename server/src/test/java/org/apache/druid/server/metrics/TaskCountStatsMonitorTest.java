@@ -23,81 +23,44 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.CoordinatorStat;
+import org.apache.druid.server.coordinator.stats.Dimension;
+import org.apache.druid.server.coordinator.stats.RowKey;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
-
-import java.util.Map;
 
 public class TaskCountStatsMonitorTest
 {
-  private TaskCountStatsProvider statsProvider;
-
-  @Before
-  public void setUp()
-  {
-    statsProvider = new TaskCountStatsProvider()
-    {
-      @Override
-      public Map<String, Long> getSuccessfulTaskCount()
-      {
-        return ImmutableMap.of("d1", 1L);
-      }
-
-      @Override
-      public Map<String, Long> getFailedTaskCount()
-      {
-        return ImmutableMap.of("d1", 1L);
-      }
-
-      @Override
-      public Map<String, Long> getRunningTaskCount()
-      {
-        return ImmutableMap.of("d1", 1L);
-      }
-
-      @Override
-      public Map<String, Long> getPendingTaskCount()
-      {
-        return ImmutableMap.of("d1", 1L);
-      }
-
-      @Override
-      public Map<String, Long> getWaitingTaskCount()
-      {
-        return ImmutableMap.of("d1", 1L);
-      }
-
-      @Override
-      public CoordinatorRunStats getStats()
-      {
-        final CoordinatorRunStats stats = new CoordinatorRunStats();
-        stats.add(Stat.INFO_1, 10);
-        stats.addToSegmentStat(Stat.DEBUG_1, "hot", "wiki", 20);
-        return stats;
-      }
-    };
-  }
-
   @Test
   public void testMonitor()
   {
+    TaskCountStatsProvider statsProvider = () -> {
+      final CoordinatorRunStats stats = new CoordinatorRunStats();
+      stats.add(Stat.INFO_1, 10);
+      stats.add(
+          Stat.RUNNING_TASKS,
+          RowKey.with(Dimension.DATASOURCE, "wiki").and(Dimension.TASK_TYPE, "test"),
+          20
+      );
+      return stats;
+    };
+
     final TaskCountStatsMonitor monitor = new TaskCountStatsMonitor(statsProvider);
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     monitor.doMonitor(emitter);
-    Assert.assertEquals(7, emitter.getEvents().size());
-    emitter.verifyValue("task/success/count", 1L);
-    emitter.verifyValue("task/failed/count", 1L);
-    emitter.verifyValue("task/running/count", 1L);
-    emitter.verifyValue("task/pending/count", 1L);
-    emitter.verifyValue("task/waiting/count", 1L);
+
+    Assert.assertEquals(2, emitter.getEvents().size());
     emitter.verifyValue(Stat.INFO_1.getMetricName(), 10L);
-    emitter.verifyValue(Stat.DEBUG_1.getMetricName(), ImmutableMap.of("tier", "hot", "dataSource", "wiki"), 20L);
+    emitter.verifyValue(
+        Stat.RUNNING_TASKS.getMetricName(),
+        ImmutableMap.of("taskType", "test", "dataSource", "wiki"),
+        20L
+    );
   }
 
   private static class Stat
   {
     static final CoordinatorStat INFO_1 = CoordinatorStat.toLogAndEmit("i1", "info/1", CoordinatorStat.Level.INFO);
-    static final CoordinatorStat DEBUG_1 = CoordinatorStat.toDebugAndEmit("d1", "debug/1");
+    static final CoordinatorStat RUNNING_TASKS
+        = CoordinatorStat.toDebugAndEmit("runningTasks", "task/running/count");
   }
 }

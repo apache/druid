@@ -50,6 +50,7 @@ import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
+import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.joda.time.Duration;
 import org.joda.time.Period;
@@ -81,13 +82,13 @@ public class TaskQueueScaleTest
   private final int numTasks = 1000;
 
   @Rule
-  public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
+  public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule
+      = new TestDerbyConnector.DerbyConnectorRule();
 
   private TaskQueue taskQueue;
   private TaskStorage taskStorage;
   private TestTaskRunner taskRunner;
   private Closer closer;
-  private SegmentSchemaManager segmentSchemaManager;
 
   @Before
   public void setUp()
@@ -101,7 +102,11 @@ public class TaskQueueScaleTest
     taskRunner = new TestTaskRunner();
     closer.register(taskRunner::stop);
     final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
-    segmentSchemaManager = new SegmentSchemaManager(derbyConnectorRule.metadataTablesConfigSupplier().get(), jsonMapper, derbyConnectorRule.getConnector());
+    final SegmentSchemaManager segmentSchemaManager = new SegmentSchemaManager(
+        derbyConnectorRule.metadataTablesConfigSupplier().get(),
+        jsonMapper,
+        derbyConnectorRule.getConnector()
+    );
     final IndexerSQLMetadataStorageCoordinator storageCoordinator = new IndexerSQLMetadataStorageCoordinator(
         jsonMapper,
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
@@ -110,23 +115,13 @@ public class TaskQueueScaleTest
         CentralizedDatasourceSchemaConfig.create()
     );
 
-    final TaskActionClientFactory unsupportedTaskActionFactory =
-        task -> new TaskActionClient()
-        {
-          @Override
-          public <RetType> RetType submit(TaskAction<RetType> taskAction)
-          {
-            throw new UnsupportedOperationException();
-          }
-        };
-
     taskQueue = new TaskQueue(
         new TaskLockConfig(),
         new TaskQueueConfig(null, Period.millis(1), null, null, null),
         new DefaultTaskConfig(),
         taskStorage,
         taskRunner,
-        unsupportedTaskActionFactory, // Not used for anything serious
+        task -> null, // Not used for anything serious
         new TaskLockbox(taskStorage, storageCoordinator),
         new NoopServiceEmitter(),
         jsonMapper,
@@ -148,7 +143,10 @@ public class TaskQueueScaleTest
   {
     Assert.assertEquals("no tasks should be running", 0, taskRunner.getKnownTasks().size());
     Assert.assertEquals("no tasks should be known", 0, taskQueue.getTasks().size());
-    Assert.assertEquals("no tasks should be running", 0, taskQueue.getRunningTaskCount().size());
+
+    CoordinatorRunStats stats = taskQueue.getQueueStats();
+    long runningTaskCount = stats.getSum(Stats.TaskCount.RUNNING);
+    Assert.assertEquals("no tasks should be running", 0L, runningTaskCount);
 
     // Add all tasks.
     for (int i = 0; i < numTasks; i++) {
@@ -158,9 +156,10 @@ public class TaskQueueScaleTest
 
     // in theory we can get a race here, since we fetch the counts at separate times
     Assert.assertEquals("all tasks should be known", numTasks, taskQueue.getTasks().size());
-    long runningTasks = taskQueue.getRunningTaskCount().values().stream().mapToLong(Long::longValue).sum();
-    long pendingTasks = taskQueue.getPendingTaskCount().values().stream().mapToLong(Long::longValue).sum();
-    long waitingTasks = taskQueue.getWaitingTaskCount().values().stream().mapToLong(Long::longValue).sum();
+    stats = taskQueue.getQueueStats();
+    long runningTasks = stats.getSum(Stats.TaskCount.RUNNING);
+    long pendingTasks = stats.getSum(Stats.TaskCount.PENDING);
+    long waitingTasks = stats.getSum(Stats.TaskCount.WAITING);
     Assert.assertEquals("all tasks should be known", numTasks, (runningTasks + pendingTasks + waitingTasks));
 
     // Wait for all tasks to finish.
@@ -174,9 +173,10 @@ public class TaskQueueScaleTest
     Thread.sleep(100);
 
     Assert.assertEquals("no tasks should be active", 0, taskStorage.getActiveTasks().size());
-    runningTasks = taskQueue.getRunningTaskCount().values().stream().mapToLong(Long::longValue).sum();
-    pendingTasks = taskQueue.getPendingTaskCount().values().stream().mapToLong(Long::longValue).sum();
-    waitingTasks = taskQueue.getWaitingTaskCount().values().stream().mapToLong(Long::longValue).sum();
+    stats = taskQueue.getQueueStats();
+    runningTasks = stats.getSum(Stats.TaskCount.RUNNING);
+    pendingTasks = stats.getSum(Stats.TaskCount.PENDING);
+    waitingTasks = stats.getSum(Stats.TaskCount.WAITING);
     Assert.assertEquals("no tasks should be running", 0, runningTasks);
     Assert.assertEquals("no tasks should be pending", 0, pendingTasks);
     Assert.assertEquals("no tasks should be waiting", 0, waitingTasks);

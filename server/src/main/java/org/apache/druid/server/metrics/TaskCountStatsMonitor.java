@@ -44,13 +44,7 @@ public class TaskCountStatsMonitor extends AbstractMonitor
   @Override
   public boolean doMonitor(ServiceEmitter emitter)
   {
-    emit(emitter, "task/success/count", statsProvider.getSuccessfulTaskCount());
-    emit(emitter, "task/failed/count", statsProvider.getFailedTaskCount());
-    emit(emitter, "task/running/count", statsProvider.getRunningTaskCount());
-    emit(emitter, "task/pending/count", statsProvider.getPendingTaskCount());
-    emit(emitter, "task/waiting/count", statsProvider.getWaitingTaskCount());
-
-    CoordinatorRunStats stats = statsProvider.getStats();
+    final CoordinatorRunStats stats = statsProvider.getTaskCountStats();
     if (stats != null) {
       stats.forEachStat(
           (stat, dimensions, statValue)
@@ -59,17 +53,6 @@ public class TaskCountStatsMonitor extends AbstractMonitor
     }
 
     return true;
-  }
-
-  private void emit(ServiceEmitter emitter, String key, Map<String, Long> counts)
-  {
-    final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
-    if (counts != null) {
-      counts.forEach((k, v) -> {
-        builder.setDimension("dataSource", k);
-        emitter.emit(builder.setMetric(key, v));
-      });
-    }
   }
 
   private void emit(ServiceEmitter emitter, CoordinatorStat stat, Map<Dimension, String> dimensionValues, long value)

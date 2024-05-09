@@ -96,6 +96,11 @@ public class CoordinatorRunStats
     return statValues == null ? 0 : statValues.getLong(stat);
   }
 
+  public long getSum(CoordinatorStat stat)
+  {
+    return allStats.values().stream().mapToLong(map -> map.getLong(stat)).sum();
+  }
+
   public void forEachStat(StatHandler handler)
   {
     allStats.forEach(

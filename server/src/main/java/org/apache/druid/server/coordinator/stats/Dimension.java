@@ -29,6 +29,7 @@ public enum Dimension
   DUTY("duty"),
   DUTY_GROUP("dutyGroup"),
   DESCRIPTION("description"),
+  TASK_TYPE("taskType"),
   SERVER("server");
 
   private final String reportedName;
