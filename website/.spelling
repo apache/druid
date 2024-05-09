@@ -39,6 +39,7 @@ Actian
 Authorizer
 Avatica
 Avro
+Axios
 Azul
 AzureDNSZone
 BCP
@@ -99,6 +100,7 @@ Elasticsearch
 Enums
 FirehoseFactory
 FIRST_VALUE
+FIPS
 FlattenSpec
 Float.NEGATIVE_INFINITY
 Float.NEGATIVE_INFINITY.
@@ -191,13 +193,16 @@ Murmur3
 MVCC
 MV_TO_ARRAY
 NFS
+NPE
 OCF
 OIDC
 OLAP
+OOM
 OOMs
 OpenJDK
 OpenLDAP
 OpenTSDB
+ORC
 OutputStream
 ParAccel
 ParseSpec
@@ -248,6 +253,7 @@ uris
 UTF-16
 UTF-8
 UTF8
+UX
 XMLs
 ZK
 ZSTD
@@ -393,6 +399,10 @@ lookback
 lookups
 mapreduce
 masse
+matchers
+matcher
+materializations
+materialization
 maxBytes
 maxNumericInFilters
 maxNumFiles
@@ -417,6 +427,7 @@ namespaced
 namespaces
 natively
 netflow
+Netty
 nondescriptive
 nonfinalized
 non-null
@@ -526,6 +537,8 @@ stringDictionaryEncoding
 stringified
 sub-conditions
 subarray
+subfilters
+subfilter
 subnet
 subqueries
 subquery
@@ -2189,6 +2202,7 @@ regionName
 json
 metastore
 UserGroupInformation
+CVEs
 CVE-2019-17571
 CVE-2019-12399
 CVE-2018-17196

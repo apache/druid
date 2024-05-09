@@ -40,7 +40,7 @@ Additionally, the new config `storageAccountEndpointSuffix` lets you configure t
 
 #### Append JsonPath function
 
-The `append` function for JsonPaths for ORC format now fails with an exception. Previously, it would run but not append anything.
+The `append` function for JsonPath for ORC format now fails with an exception. Previously, it would run but not append anything.
 
 [#15772](https://github.com/apache/druid/pull/15772)
 

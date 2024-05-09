@@ -275,7 +275,7 @@ Previously, changing lock types in the Supervisor could lead to segment allocati
 * Fixed a bug in the `MarkOvershadowedSegmentsAsUnused` Coordinator duty to also consider segments that are overshadowed by a segment that requires zero replicas [#16181](https://github.com/apache/druid/pull/16181)
 * Fixed a bug in the `markUsed` and `markUnused` APIs where an empty set of segment IDs would be inconsistently treated as null or non-null in different scenarios [#16145](https://github.com/apache/druid/pull/16145)
 * Fixed a bug where `numSegmentsKilled` is reported incorrectly [#16103](https://github.com/apache/druid/pull/16103)
-* Fixed a bug where completion task reports are not being generated on index_parallel tasks [#16042](https://github.com/apache/druid/pull/16042)
+* Fixed a bug where completion task reports are not being generated on `index_parallel` tasks [#16042](https://github.com/apache/druid/pull/16042)
 * Fixed an issue where concurrent replace skipped intervals locked by append locks during compaction [#16316](https://github.com/apache/druid/pull/16316)
 * Improved error messages when supervisor's checkpoint state is invalid [#16208](https://github.com/apache/druid/pull/16208)
 * Improved serialization of `TaskReportMap` [#16217](https://github.com/apache/druid/pull/16217)
@@ -311,7 +311,7 @@ Improved the task report for the MSQ task engine as follows:
 #### Other SQL-based ingestion improvements
 
 * Added a new context parameter `storeCompactionState`. When set to `true`, Druid records the state of compaction for each segment in the `lastCompactionState` segment field [#15965](https://github.com/apache/druid/pull/15965)
-* Added SortMerge join support for `IS NOT DISTINCT FROM` operations [#16003](https://github.com/apache/druid/pull/16003)
+* Added `SortMerge` join support for `IS NOT DISTINCT FROM` operations [#16003](https://github.com/apache/druid/pull/16003)
 * Added support for selective loading of lookups so that MSQ task engine workers don't load unnecessary lookups [#16328](https://github.com/apache/druid/pull/16328)
 * Changed the controller checker for the MSQ task engine to check for closed only [#16161](https://github.com/apache/druid/pull/16161)
 * Fixed an incorrect check while generating MSQ task engine error report [#16273](https://github.com/apache/druid/pull/16273)
@@ -474,12 +474,12 @@ Native queries can now group on nested columns and arrays.
 * `typedIn` filter can now run in replace-with-default mode [#16233](https://github.com/apache/druid/pull/16233)
 * Added support for numeric arrays to window functions and subquery materializations [#15917](https://github.com/apache/druid/pull/15917)
 * Added support for single value aggregated Group By queries for scalars [#15700](https://github.com/apache/druid/pull/15700)
-* Added support for column reorderings with scan and sort style queries [#15815](https://github.com/apache/druid/pull/15815)
+* Added support for column reordering with scan and sort style queries [#15815](https://github.com/apache/druid/pull/15815)
 * Added support for joins in decoupled mode [#15957](https://github.com/apache/druid/pull/15957)
 * Added support for using MV_FILTER_ONLY and MV_FILTER_NONE functions with a non literal argument [#16113](https://github.com/apache/druid/pull/16113)
 * Added `TypedInFilter` to replace `InDimFilter`&mdash;to improve performance when matching numeric columns [#16039](https://github.com/apache/druid/pull/16039)
 * Added the `radiusUnit` element to the `radius` bound [#16029](https://github.com/apache/druid/pull/16029)
-* Fixed the return type for the IPV4_PARSE function. The function now correctly returns null if the string literal can't be represented as an IPV4 address [#15916](https://github.com/apache/druid/pull/15916)
+* Fixed the return type for the IPV4_PARSE function. The function now correctly returns null if the string literal can't be represented as an IPv4 address [#15916](https://github.com/apache/druid/pull/15916)
 * Fixed an issue where several aggregators returned UNKNOWN or OTHER as their SQL type inference [#16216](https://github.com/apache/druid/pull/16216)
 * Fixed an issue where triggering a math expression processor on a segment that lacks a specific column results in an `Unable to vectorize expression` exception [#16128](https://github.com/apache/druid/pull/16128)
 * Fixed NPE while loading lookups from an empty JDBC source [#16307](https://github.com/apache/druid/pull/16307)
@@ -500,7 +500,7 @@ Native queries can now group on nested columns and arrays.
 * Improved array handling for Booleans to account for queries such as `select array[true, false] from datasource` [#16093](https://github.com/apache/druid/pull/16093)
 * Improved querying to decrease the chance of going OOM with high cardinality data Group By [#16114](https://github.com/apache/druid/pull/16114)
 * Improved how scalars work in arrays [#16311](https://github.com/apache/druid/pull/16311)
-* Improved `LIKE` filtering performance with multiple wildcards by 20x for edge cases by avoiding using `java.util.regex.Pattern` to match `%` [#16153](https://github.com/apache/druid/pull/16153)
+* Improved `LIKE` filtering performance with multiple wildcards by not using `java.util.regex.Pattern` to match `%` [#16153](https://github.com/apache/druid/pull/16153)
 * Modified the `IndexedTable` to reject building the index on the complex types to prevent joining on complex types [#16349](https://github.com/apache/druid/pull/16349)
 * Restored `enableWindowing` context parameter for window functions [#16229](https://github.com/apache/druid/pull/16229)
 
@@ -508,7 +508,7 @@ Native queries can now group on nested columns and arrays.
 
 #### Improved partial index value matching for OR filter
 
-Partial index value matchers for the OR filter now use `PeekableIntIterator` instead of `IntIterator`. This change can significantly improve performance  when Druid uses the value matchers alongside an index offset.
+Partial index value matchers for the OR filter now use `PeekableIntIterator` instead of `IntIterator`. This change can significantly improve performance when Druid uses the value matchers alongside an index offset.
 
 [#16300](https://github.com/apache/druid/pull/16300)
 
@@ -516,7 +516,7 @@ Partial index value matchers for the OR filter now use `PeekableIntIterator` ins
 
 * Adjusted salt size for `Pac4jSessionStore` to 128 bits, which is FIPS compliant [#15758](https://github.com/apache/druid/pull/15758)
 * Improved Connection Count server select strategy to account for slow connection requests [#15975](https://github.com/apache/druid/pull/15975)
-* Improved Druid security to be more performant by using a cache for password hashes while validing LDAP passwords [#15993](https://github.com/apache/druid/pull/15993)
+* Improved Druid security by using a cache for password hashes while validating LDAP passwords [#15993](https://github.com/apache/druid/pull/15993)
 * Improved performance by reducing the number of metadata calls for the status of active tasks [#15724](https://github.com/apache/druid/pull/15724)
 
 ### Data management
@@ -547,7 +547,7 @@ The following are the changes to the default values of segment schema cleanup:
 
 #### Other data management improvements
 
-* Changed the upload buffer size in GoogleTaskLogs to 1 MB instead of 15 MB to allow more uploads in parallel and prevent the MiddleManager service from running out of memory [#16236](https://github.com/apache/druid/pull/16236)
+* Changed the upload buffer size in `GoogleTaskLogs` to 1 MB instead of 15 MB to allow more uploads in parallel and prevent the MiddleManager service from running out of memory [#16236](https://github.com/apache/druid/pull/16236)
 * Improved compaction task reports. They can now contain multiple sets of segment output reports instead of overwriting previous reports [#15981](https://github.com/apache/druid/pull/15981/)
 * Improved segment killing in Azure to be faster [#15770](https://github.com/apache/druid/pull/15770)
 * Improved the retry behavior for deep storage connections [#15938](https://github.com/apache/druid/pull/15938)
@@ -648,7 +648,7 @@ Additionally, the new config `storageAccountEndpointSuffix` lets you configure t
 
 #### Append JsonPath function
 
-The `append` function for JsonPaths for ORC format now fails with an exception. Previously, it would run but not append anything.
+The `append` function for JsonPath for ORC format now fails with an exception. Previously, it would run but not append anything.
 
 [#15772](https://github.com/apache/druid/pull/15772)
 
@@ -691,7 +691,7 @@ Auto-cleanup of compaction configs of inactive datasources is now enabled by def
 
 #### Reduced size for Docker image
 
-The Docker image now uses symlinks when there are duplicate jars present.
+The Docker image now uses symbolic links when there are duplicate jars present.
  
 [#15968](https://github.com/apache/druid/pull/15968)
 
@@ -707,15 +707,15 @@ The following dependencies have had their versions bumped:
 - Updated `rewrite-testing-frameworks` from 2.4.1 to 2.6.0 [#16238](https://github.com/apache/druid/pull/16238)
 - Updated `json-path` from 2.3.0 to 2.9.0
 - Updated Apache Delta Lake from 3.0.0 to 3.1.0
-- Updated Netty to 4.1.108.Final to address [CVE-2024-29025](https://github.com/advisories/GHSA-5jpm-x58v-624v) [#16267](https://github.com/apache/druid/pull/16267)
-- Updated Apache ZooKeeper to 3.8.4 to address [CVE-2024-23944](https://github.com/advisories/GHSA-r978-9m6m-6gm6) [#16267](https://github.com/apache/druid/pull/16267)
+- Updated Netty to `4.1.108.Final` to address `CVE-2024-29025` [#16267](https://github.com/apache/druid/pull/16267)
+- Updated Apache ZooKeeper to 3.8.4 to address `CVE-2024-23944` [#16267](https://github.com/apache/druid/pull/16267)
 - Updated `org.postgresql:postgresql` from 42.6.0 to 42.7.2 [#15931](https://github.com/apache/druid/pull/15931)
 - Updated `log4j.version` from 2.18.0 to 2.22.1 [#15934](https://github.com/apache/druid/pull/15934)
 - Updated `org.apache.commons.commons-compress` from 1.24.0 to 1.26.0 [#16009](https://github.com/apache/druid/pull/16009)
 - Updated `org.apache.commons.commons-codec` from 1.16.0 to 1.16.1 [#16009](https://github.com/apache/druid/pull/16009)
 - Updated `org.bitbucket.b_c:jose4j` from 0.9.3 to 0.9.6 [16078](https://github.com/apache/druid/pull/16078)
 - Updated `redis.clients:jedis` from 5.0.2 to 5.1.2 [#16074](https://github.com/apache/druid/pull/16074)
-- Updated Jetty to 9.4.54.v20240208 from 9.4.53.v20231009 [#16000](https://github.com/apache/druid/pull/16000)
+- Updated Jetty from `9.4.53.v20231009` to `9.4.54.v20240208` [#16000](https://github.com/apache/druid/pull/16000)
 - Updated `webpackdevmiddleware` from 5.3.3 to 5.3.4 in web console [#16195](https://github.com/apache/druid/pull/16195)
 - Updated `express` from 4.18.2 to 4.19.2 in web console [#16204](https://github.com/apache/druid/pull/16204)
 - Updated `druid-toolkit/query` from 0.21.9 to 0.22.11 in web console [#16213](https://github.com/apache/druid/pull/16213)
@@ -723,4 +723,4 @@ The following dependencies have had their versions bumped:
 - Updated Axios from 0.26.1 to 0.28.0 in web console [#16087](https://github.com/apache/druid/pull/16087)
 - Removed the `aws-sdk` transitive dependency to reduce the size of the compiled Ranger extension [#16011](https://github.com/apache/druid/pull/16011)
 - Removed end of life `log4j v1` dependencies [#15984](https://github.com/apache/druid/pull/15984)
-- Suppressed errors for the following CVEs: CVE-2023-52428(7.5), CVE-2023-50291(7.5), CVE-2023-50298(7.5), CVE-2023-50386(8.8), and CVE-2023-50292(7.5) [#16147](https://github.com/apache/druid/pull/16147)
+- Suppressed errors for the following CVEs: `CVE-2023-52428(7.5)`, `CVE-2023-50291(7.5)`, `CVE-2023-50298(7.5)`, `CVE-2023-50386(8.8)`, and `CVE-2023-50292(7.5)` [#16147](https://github.com/apache/druid/pull/16147)
