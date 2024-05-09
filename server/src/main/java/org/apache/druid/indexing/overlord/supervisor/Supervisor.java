@@ -94,9 +94,8 @@ public interface Supervisor
 
   int getActiveTaskGroupsCount();
 
-  /** Stop the task group with id=taskGroupId the next time the supervisor runs regardless of task run time*/
-  default Boolean stopTaskGroupEarly(int taskGroupId)
+  /** Handoff the task group with id=taskGroupId the next time the supervisor runs regardless of task run time*/
+  default void handoffTaskGroupEarly(int taskGroupId)
   {
-    return true;
   }
 }

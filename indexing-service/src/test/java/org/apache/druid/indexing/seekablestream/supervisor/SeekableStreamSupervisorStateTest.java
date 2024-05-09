@@ -1312,7 +1312,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         .andReturn(Futures.immediateFuture(checkpoints))
         .anyTimes();
 
-    // The task should only be pause/resumed once, after stopTaskGroupEarly has been called.
+    // The task should only be pause/resumed in one of the runInternal commands, after stopTaskGroupEarly has been called.
     EasyMock.expect(indexTaskClient.resumeAsync("id1"))
         .andReturn(Futures.immediateFuture(true))
         .once();
@@ -1327,9 +1327,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     supervisor.start();
     supervisor.runInternal();
-    supervisor.stopTaskGroupEarly(0);
-    // Only one task group, should return false
-    Assert.assertFalse(supervisor.stopTaskGroupEarly(1));
+    supervisor.handoffTaskGroupEarly(0);
     supervisor.runInternal();
     verifyAll();
   }

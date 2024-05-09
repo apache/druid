@@ -39,6 +39,7 @@ import org.apache.druid.segment.incremental.ParseExceptionReport;
 
 import javax.annotation.Nullable;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -137,13 +138,16 @@ public class SupervisorManager
     return supervisor == null ? Optional.absent() : Optional.fromNullable(supervisor.lhs.getState());
   }
 
-  public boolean stopTaskGroupEarly(String id, int taskGroupId)
+  public boolean handoffTaskGroupsEarly(String id, List<Integer> taskGroupIds)
   {
     Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(id);
     if (supervisor == null || supervisor.lhs == null) {
       return false;
     }
-    return supervisor.lhs.stopTaskGroupEarly(taskGroupId);
+    for (Integer taskGroup : taskGroupIds) {
+      supervisor.lhs.handoffTaskGroupEarly(taskGroup);
+    }
+    return true;
   }
 
   public boolean createOrUpdateAndStartSupervisor(SupervisorSpec spec)

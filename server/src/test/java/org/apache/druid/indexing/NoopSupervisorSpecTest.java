@@ -95,6 +95,6 @@ public class NoopSupervisorSpecTest
   {
     NoopSupervisorSpec expectedSpec = new NoopSupervisorSpec(null, null);
     Supervisor noOpSupervisor = expectedSpec.createSupervisor();
-    Assert.assertTrue(noOpSupervisor.stopTaskGroupEarly(0));
+    noOpSupervisor.handoffTaskGroupEarly(0);
   }
 }

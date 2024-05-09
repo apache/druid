@@ -396,18 +396,18 @@ public class SupervisorResource
   }
 
   @POST
-  @Path("/{id}/{taskGroupId}/stopEarly")
+  @Path("/{id}/taskGroups/restart")
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(SupervisorResourceFilter.class)
-  public Response stopTaskEarly(@PathParam("id") final String id, @PathParam("taskGroupId") final int taskGroupId)
+  public Response handoffTaskGroups(@PathParam("id") final String id, final List<Integer> taskGroupIds)
   {
     return asLeaderWithSupervisorManager(
         manager -> {
-          if (manager.stopTaskGroupEarly(id, taskGroupId)) {
-            return Response.ok(ImmutableMap.of("id", id, "taskGroupId", taskGroupId)).build();
+          if (manager.handoffTaskGroupsEarly(id, taskGroupIds)) {
+            return Response.ok(ImmutableMap.of("id", id, "taskGroupIds", taskGroupIds)).build();
           } else {
             return Response.status(Response.Status.NOT_FOUND)
-                .entity(ImmutableMap.of("error", StringUtils.format("taskGroupId [%s] for [%s] does not exist", taskGroupId, id)))
+                .entity(ImmutableMap.of("error", StringUtils.format("Supervisor was not found [%s]", id)))
                 .build();
           }
         }

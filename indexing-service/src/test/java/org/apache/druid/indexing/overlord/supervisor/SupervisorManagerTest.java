@@ -241,6 +241,27 @@ public class SupervisorManagerTest extends EasyMockSupport
   }
 
   @Test
+  public void testHandoffTaskGroupsEarly()
+  {
+    Map<String, SupervisorSpec> existingSpecs = ImmutableMap.of(
+        "id1", new TestSupervisorSpec("id1", supervisor1)
+    );
+
+    EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
+    supervisor1.start();
+    supervisor1.handoffTaskGroupEarly(1);
+
+    replayAll();
+
+    manager.start();
+
+    Assert.assertTrue(manager.handoffTaskGroupsEarly("id1", ImmutableList.of(1)));
+    Assert.assertFalse(manager.handoffTaskGroupsEarly("id2", ImmutableList.of(1)));
+
+    verifyAll();
+  }
+
+  @Test
   public void testStartAlreadyStarted()
   {
     EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(ImmutableMap.of());

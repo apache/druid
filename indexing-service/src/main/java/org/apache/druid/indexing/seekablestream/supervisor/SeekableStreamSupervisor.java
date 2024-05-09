@@ -669,6 +669,37 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
   }
 
+  private class HandoffTaskGroupNotice implements Notice
+  {
+    final Integer taskGroupId;
+    private static final String TYPE = "handoff_task_group_notice";
+
+    HandoffTaskGroupNotice(
+        final Integer taskGroupId
+    )
+    {
+      this.taskGroupId = taskGroupId;
+    }
+
+    @Override
+    public void handle()
+    {
+      TaskGroup taskGroup = activelyReadingTaskGroups.getOrDefault(taskGroupId, null);
+      if (taskGroup == null) {
+        log.info("Tried to stop task group that wasn't actively reading.");
+        return;
+      }
+
+      taskGroup.setShutdownEarly();
+    }
+
+    @Override
+    public String getType()
+    {
+      return TYPE;
+    }
+  }
+
   protected class CheckpointNotice implements Notice
   {
     private final int taskGroupId;
@@ -1945,16 +1976,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   }
 
   @Override
-  public Boolean stopTaskGroupEarly(int taskGroupId)
+  public void handoffTaskGroupEarly(int taskGroupId)
   {
-    TaskGroup taskGroup = activelyReadingTaskGroups.getOrDefault(taskGroupId, null);
-    if (taskGroup == null) {
-      log.info("Tried to stop task group that wasn't actively reading.");
-      return false;
-    }
-
-    taskGroup.setShutdownEarly();
-    return true;
+    addNotice(new RunNotice());
   }
 
   private void discoverTasks() throws ExecutionException, InterruptedException
