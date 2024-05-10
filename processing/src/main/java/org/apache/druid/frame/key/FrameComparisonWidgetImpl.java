@@ -54,7 +54,6 @@ public class FrameComparisonWidgetImpl implements FrameComparisonWidget
   private final Memory rowOffsetRegion;
   private final Memory dataRegion;
   private final int keyFieldCount;
-  private final List<KeyColumn> keyColumns;
   private final List<FieldReader> keyFieldReaders;
   private final int firstFieldPosition;
   private final RowKeyComparisonRunLengths rowKeyComparisonRunLengths;
@@ -66,7 +65,6 @@ public class FrameComparisonWidgetImpl implements FrameComparisonWidget
       final RowSignature signature,
       final Memory rowOffsetRegion,
       final Memory dataRegion,
-      final List<KeyColumn> keyColumns,
       final List<FieldReader> keyFieldReaders,
       final int firstFieldPosition,
       final RowKeyComparisonRunLengths rowKeyComparisonRunLengths,
@@ -78,7 +76,6 @@ public class FrameComparisonWidgetImpl implements FrameComparisonWidget
     this.signature = signature;
     this.rowOffsetRegion = rowOffsetRegion;
     this.dataRegion = dataRegion;
-    this.keyColumns = keyColumns;
     this.keyFieldCount = keyFieldReaders.size();
     this.keyFieldReaders = keyFieldReaders;
     this.firstFieldPosition = firstFieldPosition;
@@ -147,7 +144,6 @@ public class FrameComparisonWidgetImpl implements FrameComparisonWidget
         signature,
         frame.region(RowBasedFrameWriter.ROW_OFFSET_REGION),
         frame.region(RowBasedFrameWriter.ROW_DATA_REGION),
-        keyColumns,
         keyColumnReaders,
         ByteRowKeyComparator.computeFirstFieldPosition(signature.size()),
         rowKeyComparisonRunLengths,
@@ -237,7 +233,9 @@ public class FrameComparisonWidgetImpl implements FrameComparisonWidget
     // Number of fields compared till now, which is equivalent to the index of the field to compare next
     int fieldsComparedTillNow = 0;
 
-    for (RunLengthEntry runLengthEntry : rowKeyComparisonRunLengths.getRunLengthEntries()) {
+    for (int i = 0; i < rowKeyComparisonRunLengths.getRunLengthEntries().length; ++i) {
+
+      final RunLengthEntry runLengthEntry = rowKeyComparisonRunLengths.getRunLengthEntries()[i];
 
       if (runLengthEntry.getRunLength() <= 0) {
         // Defensive check
@@ -254,28 +252,13 @@ public class FrameComparisonWidgetImpl implements FrameComparisonWidget
       if (!runLengthEntry.isByteComparable()) {
         // Only complex types are not byte comparable. Nested arrays aren't supported in MSQ
         assert runLengthEntry.getRunLength() == 1;
-        // 'fieldsComparedTillNow' is the index of the current keyColumn in the keyColumns list. Sanity check that its
-        // a known complex type
-        ColumnType columnType = signature.getColumnType(keyColumns.get(fieldsComparedTillNow).columnName())
-                                         .orElseThrow(() -> DruidException.defensive("Complex type expected"));
-        String complexTypeName = Preconditions.checkNotNull(
-            columnType.getComplexTypeName(),
-            "complexType must be present for comparison"
-        );
-
-        ComplexMetricSerde serde = Preconditions.checkNotNull(
-            ComplexMetrics.getSerdeForType(complexTypeName),
-            "serde for type [%s] not present",
-            complexTypeName
-        );
-
         cmp = FrameReaderUtils.compareComplexTypes(
             dataRegion,
             rowPosition + comparableBytesStartPositionInRow,
             keyArray,
             comparableBytesStartPositionInKey,
-            columnType,
-            serde
+            columnTypes[i],
+            complexMetricSerdes[i]
         );
       } else {
         cmp = FrameReaderUtils.compareMemoryToByteArrayUnsigned(
