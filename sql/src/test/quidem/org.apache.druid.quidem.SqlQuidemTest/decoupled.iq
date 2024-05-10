@@ -1,5 +1,5 @@
 !set plannerStrategy DECOUPLED
-!use druidtest://?numMergeBuffers=3
+!use druidtest://?NumMergeBuffers=3
 !set outputformat mysql
 
 select cityName, count(case when delta > 0 then channel end) as cnt, count(1) as aall

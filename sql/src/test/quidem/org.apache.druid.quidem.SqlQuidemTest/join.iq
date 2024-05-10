@@ -1,4 +1,4 @@
-!use druidtest://?numMergeBuffers=3
+!use druidtest://?NumMergeBuffers=3
 !set outputformat mysql
 
 with v as (

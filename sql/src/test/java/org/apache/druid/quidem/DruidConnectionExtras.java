@@ -25,7 +25,7 @@ public interface DruidConnectionExtras
 {
   ObjectMapper getObjectMapper();
 
-  class DruidConnectionExtrasImpl implements DruidConnectionExtras
+  public class DruidConnectionExtrasImpl implements DruidConnectionExtras
   {
     private final ObjectMapper objectMapper;
 
