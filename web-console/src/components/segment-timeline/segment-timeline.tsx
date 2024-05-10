@@ -16,8 +16,9 @@
  * limitations under the License.
  */
 
-import {Button, FormGroup, MenuItem, Radio, RadioGroup, ResizeSensor} from '@blueprintjs/core';
-import { ItemPredicate, ItemRenderer, Select2 } from "@blueprintjs/select";
+import { Button, FormGroup, MenuItem, Radio, RadioGroup, ResizeSensor } from '@blueprintjs/core';
+import type { ItemPredicate, ItemRenderer } from '@blueprintjs/select';
+import { Select2 } from '@blueprintjs/select';
 import type { AxisScale } from 'd3-axis';
 import { scaleLinear, scaleUtc } from 'd3-scale';
 import React from 'react';
@@ -536,11 +537,14 @@ ORDER BY "start" DESC`;
       if (exactMatch) {
         return normalizedTitle === normalizedQuery;
       } else {
-        return ` ${normalizedTitle}`.indexOf(normalizedQuery) >= 0;
+        return ` ${normalizedTitle}`.includes(normalizedQuery);
       }
     };
 
-    const datasourceRenderer: ItemRenderer<any> = (val, {handleClick, handleFocus, modifiers,}) => {
+    const datasourceRenderer: ItemRenderer<string> = (
+      val,
+      { handleClick, handleFocus, modifiers },
+    ) => {
       if (!modifiers.matchesPredicate) {
         return null;
       }
@@ -552,26 +556,31 @@ ORDER BY "start" DESC`;
           onClick={handleClick}
           onFocus={handleFocus}
           roleStructure="listoption"
-          text={val}/>
+          text={val}
+        />
       );
-    }
+    };
 
     const DatasourceSelect: React.FC = () => {
       const showAll = 'Show all';
       const handleItemSelected = (selectedItem: string) => {
         this.setState({
           activeDatasource: selectedItem === showAll ? null : selectedItem,
-        })
-      }
+        });
+      };
       const datasourcesWzAll = [showAll].concat(datasources);
-      return (<Select2<string> items={datasourcesWzAll}
-                       onItemSelect={handleItemSelected}
-                       itemRenderer={datasourceRenderer}
-                       noResults={<MenuItem disabled text="No results." roleStructure="listoption"/>}
-                       itemPredicate={filterDatasource}>
-        <Button text={activeDatasource === null ? showAll : activeDatasource}/>
-      </Select2>);
-    }
+      return (
+        <Select2<string>
+          items={datasourcesWzAll}
+          onItemSelect={handleItemSelected}
+          itemRenderer={datasourceRenderer}
+          noResults={<MenuItem disabled text="No results." roleStructure="listoption" />}
+          itemPredicate={filterDatasource}
+        >
+          <Button text={activeDatasource === null ? showAll : activeDatasource} />
+        </Select2>
+      );
+    };
 
     return (
       <div className="segment-timeline app-view">
@@ -588,7 +597,7 @@ ORDER BY "start" DESC`;
           </FormGroup>
 
           <FormGroup label="Datasource">
-            <DatasourceSelect/>
+            <DatasourceSelect />
           </FormGroup>
 
           <FormGroup label="Interval">
