@@ -70,4 +70,14 @@ public class RunLengthEntry
   {
     return Objects.hash(byteComparable, order, runLength);
   }
+
+  @Override
+  public String toString()
+  {
+    return "RunLengthEntry{" +
+           "byteComparable=" + byteComparable +
+           ", order=" + order +
+           ", runLength=" + runLength +
+           '}';
+  }
 }
