@@ -5959,6 +5959,40 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testNotInOrEqualToOneOfThemExpression()
+  {
+    // Cannot vectorize scalar_in_array expression.
+    cannotVectorize();
+
+    testQuery(
+        "SELECT dim1 NOT IN ('abc', 'def', 'ghi') OR dim1 = 'def', COUNT(*)\n"
+        + "FROM druid.foo\n"
+        + "GROUP BY 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            expressionVirtualColumn(
+                                "v0",
+                                "(! scalar_in_array(\"dim1\",array('abc','ghi')))",
+                                ColumnType.LONG
+                            )
+                        )
+                        .setDimensions(dimensions(new DefaultDimensionSpec("v0", "d0", ColumnType.LONG)))
+                        .setAggregatorSpecs(new CountAggregatorFactory("a0"))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{false, 1L},
+            new Object[]{true, 5L}
+        )
+    );
+  }
+
+  @Test
   public void testSqlIsNullToInFilter()
   {
     testQuery(
