@@ -1753,6 +1753,21 @@ public class CompactionTaskTest
     Assert.assertEquals(LookupLoadingSpec.NONE, task.getLookupLoadingSpec());
   }
 
+  @Test
+  public void testGetDefaultLookupLoadingSpecWithTransformSpec()
+  {
+    final Builder builder = new Builder(
+        DATA_SOURCE,
+        segmentCacheManagerFactory,
+        RETRY_POLICY_FACTORY
+    );
+    final CompactionTask task = builder
+        .interval(Intervals.of("2000-01-01/2000-01-02"))
+        .transformSpec(new ClientCompactionTaskTransformSpec(new SelectorDimFilter("dim1", "foo", null)))
+        .build();
+    Assert.assertEquals(LookupLoadingSpec.ALL, task.getLookupLoadingSpec());
+  }
+
   private Granularity chooseFinestGranularityHelper(List<Granularity> granularities)
   {
     SettableSupplier<Granularity> queryGranularity = new SettableSupplier<>();

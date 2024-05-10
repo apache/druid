@@ -251,8 +251,13 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     this.partitionConfigurationManager = new PartitionConfigurationManager(this.tuningConfig);
     this.segmentCacheManagerFactory = segmentCacheManagerFactory;
 
-    // By default, do not load any lookups in sub-tasks launched by compaction task.
-    addToContextIfAbsent(LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE, LookupLoadingSpec.Mode.NONE.toString());
+    // Do not load any lookups in sub-tasks launched by compaction task, unless transformSpec is present.
+    // If transformSpec is present, we will not modify the context so that the sub-tasks can make the
+    // decision based on context values, loading all lookups by default.
+    // This is done to ensure backward compatibility since transformSpec can reference lookups.
+    if (transformSpec == null) {
+      addToContextIfAbsent(LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE, LookupLoadingSpec.Mode.NONE.toString());
+    }
   }
 
   @VisibleForTesting
@@ -1530,6 +1535,6 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
   @Override
   public LookupLoadingSpec getLookupLoadingSpec()
   {
-    return LookupLoadingSpec.createFromContext(getContext(), LookupLoadingSpec.NONE);
+    return LookupLoadingSpec.createFromContext(getContext(), transformSpec == null ? LookupLoadingSpec.NONE : LookupLoadingSpec.ALL);
   }
 }
