@@ -65,6 +65,11 @@ public class ITCatalogIngestErrorTest
   {
     client = new CatalogClient(clusterClient);
   }
+
+  /**
+   * If the segment grain is absent in the catalog and absent in the PARTITIONED BY clause in the query, then
+   * validation error.
+   */
   @Test
   public void testInsertNoPartitonedByFromCatalogOrQuery() throws ExecutionException, InterruptedException
   {
@@ -104,6 +109,10 @@ public class ITCatalogIngestErrorTest
     );
   }
 
+  /**
+   * Adding a new column during ingestion that is not defined in a sealed table should fail with
+   * proper validation error.
+   */
   @Test
   public void testInsertNonDefinedColumnIntoSealedCatalogTable() throws ExecutionException, InterruptedException
   {
@@ -146,6 +155,10 @@ public class ITCatalogIngestErrorTest
     );
   }
 
+  /**
+   * Assigning a column during ingestion, to an input type that is not compatible with the defined type of the
+   * column, should result in a proper validation error.
+   */
   @Test
   public void testInsertWithIncompatibleTypeAssignment() throws ExecutionException, InterruptedException
   {
@@ -187,6 +200,10 @@ public class ITCatalogIngestErrorTest
     );
   }
 
+  /**
+   * Assigning a complex type column during ingestion, to an input type that is not compatible with the defined type of
+   * the column, should result in a proper validation error.
+   */
   @Test
   public void testInsertGroupByWithIncompatibleTypeAssignment() throws ExecutionException, InterruptedException
   {
