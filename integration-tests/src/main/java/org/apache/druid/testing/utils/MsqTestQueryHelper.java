@@ -122,13 +122,28 @@ public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResu
    */
   public SqlTaskStatus submitMsqTaskSuccesfully(SqlQuery sqlQuery, String username, String password) throws ExecutionException, InterruptedException
   {
+    return submitMsqTaskWithExpectedStatusCode(sqlQuery, username, password, HttpResponseStatus.ACCEPTED);
+  }
+
+  /**
+   * Submits a {@link SqlQuery} to the MSQ API for execution. This method waits for the task to be accepted by the cluster
+   * and returns the status associated with the submitted task
+   */
+  public SqlTaskStatus submitMsqTaskWithExpectedStatusCode(
+      SqlQuery sqlQuery,
+      String username,
+      String password,
+      HttpResponseStatus expectedResponseStatus
+  ) throws ExecutionException, InterruptedException
+  {
     StatusResponseHolder statusResponseHolder = submitMsqTask(sqlQuery, username, password);
     // Check if the task has been accepted successfully
     HttpResponseStatus httpResponseStatus = statusResponseHolder.getStatus();
-    if (!httpResponseStatus.equals(HttpResponseStatus.ACCEPTED)) {
+    if (!httpResponseStatus.equals(expectedResponseStatus)) {
       throw new ISE(
           StringUtils.format(
-              "Unable to submit the task successfully. Received response status code [%d], and response content:\n[%s]",
+              "Expected response status code [%d] when submitting task. Received response status code [%d], and response content:\n[%s]",
+              expectedResponseStatus.getCode(),
               httpResponseStatus.getCode(),
               statusResponseHolder.getContent()
           )
