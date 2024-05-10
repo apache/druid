@@ -278,7 +278,8 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
   }
 
   @Override
-  protected Map<String, Long> getReplicaLag() {
+  protected Map<String, Long> getReplicaLag()
+  {
     Map<KafkaTopicPartition, Long> highestCurrentOffsets = getHighestCurrentOffsets();
     Map<String, Map<KafkaTopicPartition, Long>> currOffset = getTasksCurrentOffsets();
     if (currOffset == null) {
