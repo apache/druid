@@ -83,12 +83,11 @@ import org.apache.druid.server.coordinator.loading.LoadQueueTaskMaster;
 import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.loading.SegmentReplicaCount;
 import org.apache.druid.server.coordinator.loading.SegmentReplicationStatus;
-import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
-import org.apache.druid.server.coordinator.stats.CoordinatorStat;
-import org.apache.druid.server.coordinator.stats.Dimension;
-import org.apache.druid.server.coordinator.stats.RowKey;
-import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
+import org.apache.druid.server.stats.Dimension;
+import org.apache.druid.server.stats.DruidRunStats;
+import org.apache.druid.server.stats.DruidStat;
+import org.apache.druid.server.stats.RowKey;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
@@ -736,7 +735,7 @@ public class DruidCoordinator
         }
 
         // Emit stats collected from all duties
-        final CoordinatorRunStats allStats = params.getCoordinatorStats();
+        final DruidRunStats allStats = params.getCoordinatorStats();
         if (allStats.rowCount() > 0) {
           final AtomicInteger emittedCount = new AtomicInteger();
           allStats.forEachStat(
@@ -765,7 +764,7 @@ public class DruidCoordinator
       }
     }
 
-    private void emitStat(CoordinatorStat stat, Map<Dimension, String> dimensionValues, long value)
+    private void emitStat(DruidStat stat, Map<Dimension, String> dimensionValues, long value)
     {
       ServiceMetricEvent.Builder eventBuilder = new ServiceMetricEvent.Builder()
           .setDimension(Dimension.DUTY_GROUP.reportedName(), dutyGroupName);
@@ -801,7 +800,7 @@ public class DruidCoordinator
       segmentReplicationStatus = params.getSegmentReplicationStatus();
 
       // Collect stats for unavailable and under-replicated segments
-      final CoordinatorRunStats stats = params.getCoordinatorStats();
+      final DruidRunStats stats = params.getCoordinatorStats();
       getDatasourceToUnavailableSegmentCount().forEach(
           (dataSource, numUnavailable) -> stats.add(
               Stats.Segments.UNAVAILABLE,

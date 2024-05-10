@@ -23,9 +23,9 @@ import com.google.inject.Inject;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.AbstractMonitor;
-import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
-import org.apache.druid.server.coordinator.stats.CoordinatorStat;
-import org.apache.druid.server.coordinator.stats.Dimension;
+import org.apache.druid.server.stats.Dimension;
+import org.apache.druid.server.stats.DruidRunStats;
+import org.apache.druid.server.stats.DruidStat;
 
 import java.util.Map;
 
@@ -44,7 +44,7 @@ public class TaskCountStatsMonitor extends AbstractMonitor
   @Override
   public boolean doMonitor(ServiceEmitter emitter)
   {
-    final CoordinatorRunStats stats = statsProvider.getTaskCountStats();
+    final DruidRunStats stats = statsProvider.getTaskCountStats();
     if (stats != null) {
       stats.forEachStat(
           (stat, dimensions, statValue)
@@ -55,7 +55,7 @@ public class TaskCountStatsMonitor extends AbstractMonitor
     return true;
   }
 
-  private void emit(ServiceEmitter emitter, CoordinatorStat stat, Map<Dimension, String> dimensionValues, long value)
+  private void emit(ServiceEmitter emitter, DruidStat stat, Map<Dimension, String> dimensionValues, long value)
   {
     if (!stat.shouldEmit()) {
       return;

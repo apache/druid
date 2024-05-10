@@ -19,12 +19,12 @@
 
 package org.apache.druid.server.metrics;
 
-import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
+import org.apache.druid.server.stats.DruidRunStats;
 
 public interface TaskCountStatsProvider
 {
   /**
    * All task count stats collected since the previous invocation of this method.
    */
-  CoordinatorRunStats getTaskCountStats();
+  DruidRunStats getTaskCountStats();
 }

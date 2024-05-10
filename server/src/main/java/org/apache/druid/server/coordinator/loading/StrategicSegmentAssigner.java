@@ -24,13 +24,13 @@ import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.ServerHolder;
+import org.apache.druid.server.coordinator.Stats;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategy;
 import org.apache.druid.server.coordinator.rules.SegmentActionHandler;
-import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
-import org.apache.druid.server.coordinator.stats.CoordinatorStat;
-import org.apache.druid.server.coordinator.stats.Dimension;
-import org.apache.druid.server.coordinator.stats.RowKey;
-import org.apache.druid.server.coordinator.stats.Stats;
+import org.apache.druid.server.stats.Dimension;
+import org.apache.druid.server.stats.DruidRunStats;
+import org.apache.druid.server.stats.DruidStat;
+import org.apache.druid.server.stats.RowKey;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 
@@ -57,7 +57,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
 {
   private final SegmentLoadQueueManager loadQueueManager;
   private final DruidCluster cluster;
-  private final CoordinatorRunStats stats;
+  private final DruidRunStats stats;
   private final SegmentReplicaCountMap replicaCountMap;
   private final ReplicationThrottler replicationThrottler;
   private final RoundRobinServerSelector serverSelector;
@@ -75,7 +75,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
       DruidCluster cluster,
       BalancerStrategy strategy,
       SegmentLoadingConfig loadingConfig,
-      CoordinatorRunStats stats
+      DruidRunStats stats
   )
   {
     this.stats = stats;
@@ -92,7 +92,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     );
   }
 
-  public CoordinatorRunStats getStats()
+  public DruidRunStats getStats()
   {
     return stats;
   }
@@ -605,7 +605,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     return numCancelled;
   }
 
-  private void incrementSkipStat(CoordinatorStat stat, String reason, DataSegment segment, String tier)
+  private void incrementSkipStat(DruidStat stat, String reason, DataSegment segment, String tier)
   {
     final RowKey key = RowKey.with(Dimension.TIER, tier)
                              .with(Dimension.DATASOURCE, segment.getDataSource())
@@ -613,7 +613,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     stats.add(stat, key, 1);
   }
 
-  private void incrementStat(CoordinatorStat stat, DataSegment segment, String tier, long value)
+  private void incrementStat(DruidStat stat, DataSegment segment, String tier, long value)
   {
     stats.addToSegmentStat(stat, tier, segment.getDataSource(), value);
   }

@@ -60,10 +60,10 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.PasswordProvider;
 import org.apache.druid.metadata.PasswordProviderRedactionMixIn;
-import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
-import org.apache.druid.server.coordinator.stats.CoordinatorStat;
-import org.apache.druid.server.coordinator.stats.Dimension;
-import org.apache.druid.server.coordinator.stats.RowKey;
+import org.apache.druid.server.stats.Dimension;
+import org.apache.druid.server.stats.DruidRunStats;
+import org.apache.druid.server.stats.DruidStat;
+import org.apache.druid.server.stats.RowKey;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -151,8 +151,8 @@ public class TaskQueue
   private static final EmittingLogger log = new EmittingLogger(TaskQueue.class);
 
   private final AtomicInteger statusUpdatesInQueue = new AtomicInteger();
-  private final AtomicReference<CoordinatorRunStats> collectedStats
-      = new AtomicReference<>(new CoordinatorRunStats());
+  private final AtomicReference<DruidRunStats> collectedStats
+      = new AtomicReference<>(new DruidRunStats());
 
   public TaskQueue(
       TaskLockConfig lockConfig,
@@ -866,7 +866,7 @@ public class TaskQueue
     return rv;
   }
 
-  private void incrementTaskStat(CoordinatorStat stat, Task task, CoordinatorRunStats stats)
+  private void incrementTaskStat(DruidStat stat, Task task, DruidRunStats stats)
   {
     stats.add(
         stat,
@@ -894,9 +894,9 @@ public class TaskQueue
    * Task stats collected by the TaskQueue since the last invocation of this
    * method.
    */
-  public CoordinatorRunStats getQueueStats()
+  public DruidRunStats getQueueStats()
   {
-    final CoordinatorRunStats stats = collectedStats.getAndSet(new CoordinatorRunStats());
+    final DruidRunStats stats = collectedStats.getAndSet(new DruidRunStats());
 
     final int queuedUpdates = statusUpdatesInQueue.get();
     final long handledUpdates = stats.get(Stats.TaskQueue.HANDLED_STATUS_UPDATES);

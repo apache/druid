@@ -50,9 +50,9 @@ import org.apache.druid.server.coordinator.loading.LoadQueueTaskMaster;
 import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.loading.SegmentLoadingConfig;
 import org.apache.druid.server.coordinator.loading.StrategicSegmentAssigner;
-import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
+import org.apache.druid.server.stats.DruidRunStats;
 import org.apache.druid.testing.DeadlockDetectingTimeout;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -433,7 +433,7 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
         params.getDruidCluster(),
         params.getBalancerStrategy(),
         params.getSegmentLoadingConfig(),
-        new CoordinatorRunStats()
+        new DruidRunStats()
     );
   }
 }

@@ -17,12 +17,12 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator.stats;
+package org.apache.druid.server.stats;
 
 /**
- * A coordinator statistic, which may or may not be emitted as a metric.
+ * A Druid statistic, which be logged and/or emitted as a metric.
  */
-public class CoordinatorStat
+public class DruidStat
 {
   private final String metricName;
   private final String shortName;
@@ -33,9 +33,9 @@ public class CoordinatorStat
    *
    * @param shortName Unique name used while logging the stat
    */
-  public static CoordinatorStat toDebugOnly(String shortName)
+  public static DruidStat toDebugOnly(String shortName)
   {
-    return new CoordinatorStat(shortName, null, Level.DEBUG);
+    return new DruidStat(shortName, null, Level.DEBUG);
   }
 
   /**
@@ -44,9 +44,9 @@ public class CoordinatorStat
    * @param shortName  Unique name used while logging the stat
    * @param metricName Name to be used when emitting this stat as a metric
    */
-  public static CoordinatorStat toDebugAndEmit(String shortName, String metricName)
+  public static DruidStat toDebugAndEmit(String shortName, String metricName)
   {
-    return new CoordinatorStat(shortName, metricName, Level.DEBUG);
+    return new DruidStat(shortName, metricName, Level.DEBUG);
   }
 
   /**
@@ -56,12 +56,12 @@ public class CoordinatorStat
    * @param metricName Name to be used when emitting this stat as a metric
    * @param level      Logging level for this stat
    */
-  public static CoordinatorStat toLogAndEmit(String shortName, String metricName, Level level)
+  public static DruidStat toLogAndEmit(String shortName, String metricName, Level level)
   {
-    return new CoordinatorStat(shortName, metricName, level);
+    return new DruidStat(shortName, metricName, level);
   }
 
-  private CoordinatorStat(String shortStatName, String metricName, Level level)
+  private DruidStat(String shortStatName, String metricName, Level level)
   {
     this.metricName = metricName;
     this.shortName = shortStatName;

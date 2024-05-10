@@ -21,10 +21,10 @@ package org.apache.druid.server.metrics;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
-import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
-import org.apache.druid.server.coordinator.stats.CoordinatorStat;
-import org.apache.druid.server.coordinator.stats.Dimension;
-import org.apache.druid.server.coordinator.stats.RowKey;
+import org.apache.druid.server.stats.Dimension;
+import org.apache.druid.server.stats.DruidRunStats;
+import org.apache.druid.server.stats.DruidStat;
+import org.apache.druid.server.stats.RowKey;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -34,7 +34,7 @@ public class TaskCountStatsMonitorTest
   public void testMonitor()
   {
     TaskCountStatsProvider statsProvider = () -> {
-      final CoordinatorRunStats stats = new CoordinatorRunStats();
+      final DruidRunStats stats = new DruidRunStats();
       stats.add(Stat.INFO_1, 10);
       stats.add(
           Stat.RUNNING_TASKS,
@@ -59,8 +59,8 @@ public class TaskCountStatsMonitorTest
 
   private static class Stat
   {
-    static final CoordinatorStat INFO_1 = CoordinatorStat.toLogAndEmit("i1", "info/1", CoordinatorStat.Level.INFO);
-    static final CoordinatorStat RUNNING_TASKS
-        = CoordinatorStat.toDebugAndEmit("runningTasks", "task/running/count");
+    static final DruidStat INFO_1 = DruidStat.toLogAndEmit("i1", "info/1", DruidStat.Level.INFO);
+    static final DruidStat RUNNING_TASKS
+        = DruidStat.toDebugAndEmit("runningTasks", "task/running/count");
   }
 }

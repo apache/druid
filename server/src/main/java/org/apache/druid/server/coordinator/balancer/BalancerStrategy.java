@@ -20,7 +20,7 @@
 package org.apache.druid.server.coordinator.balancer;
 
 import org.apache.druid.server.coordinator.ServerHolder;
-import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
+import org.apache.druid.server.stats.DruidRunStats;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
@@ -74,5 +74,5 @@ public interface BalancerStrategy
   /**
    * Returns the stats collected by the strategy.
    */
-  CoordinatorRunStats getStats();
+  DruidRunStats getStats();
 }

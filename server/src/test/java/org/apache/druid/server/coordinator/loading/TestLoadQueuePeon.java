@@ -19,7 +19,7 @@
 
 package org.apache.druid.server.coordinator.loading;
 
-import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
+import org.apache.druid.server.stats.DruidRunStats;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
@@ -36,7 +36,7 @@ public class TestLoadQueuePeon implements LoadQueuePeon
   private final ConcurrentSkipListSet<DataSegment> segmentsToLoad = new ConcurrentSkipListSet<>();
   private final ConcurrentSkipListSet<DataSegment> segmentsToDrop = new ConcurrentSkipListSet<>();
 
-  private final CoordinatorRunStats stats = new CoordinatorRunStats();
+  private final DruidRunStats stats = new DruidRunStats();
 
   @Override
   public void loadSegment(DataSegment segment, SegmentAction action, @Nullable LoadPeonCallback callback)
@@ -57,7 +57,7 @@ public class TestLoadQueuePeon implements LoadQueuePeon
   }
 
   @Override
-  public CoordinatorRunStats getAndResetStats()
+  public DruidRunStats getAndResetStats()
   {
     return stats;
   }

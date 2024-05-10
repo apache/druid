@@ -28,8 +28,8 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordination.SegmentChangeRequestNoop;
 import org.apache.druid.server.coordinator.DruidCoordinator;
-import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
-import org.apache.druid.server.coordinator.stats.Stats;
+import org.apache.druid.server.coordinator.Stats;
+import org.apache.druid.server.stats.DruidRunStats;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
@@ -76,7 +76,7 @@ public class CuratorLoadQueuePeon implements LoadQueuePeon
   private final Duration loadTimeout;
 
   private final AtomicLong queuedSize = new AtomicLong(0);
-  private final AtomicReference<CoordinatorRunStats> stats = new AtomicReference<>(new CoordinatorRunStats());
+  private final AtomicReference<DruidRunStats> stats = new AtomicReference<>(new DruidRunStats());
 
   /**
    * Needs to be thread safe since it can be concurrently accessed via
@@ -171,9 +171,9 @@ public class CuratorLoadQueuePeon implements LoadQueuePeon
   }
 
   @Override
-  public CoordinatorRunStats getAndResetStats()
+  public DruidRunStats getAndResetStats()
   {
-    return stats.getAndSet(new CoordinatorRunStats());
+    return stats.getAndSet(new DruidRunStats());
   }
 
   @Override

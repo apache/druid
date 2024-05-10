@@ -32,10 +32,10 @@ import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
+import org.apache.druid.server.coordinator.Stats;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
 import org.apache.druid.server.coordinator.config.MetadataCleanupConfig;
-import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
-import org.apache.druid.server.coordinator.stats.Stats;
+import org.apache.druid.server.stats.DruidRunStats;
 import org.joda.time.Duration;
 import org.joda.time.Period;
 import org.junit.Assert;
@@ -68,12 +68,12 @@ public class KillCompactionConfigTest
 
   private CoordinatorConfigManager coordinatorConfigManager;
   private KillCompactionConfig killCompactionConfig;
-  private CoordinatorRunStats runStats;
+  private DruidRunStats runStats;
 
   @Before
   public void setup()
   {
-    runStats = new CoordinatorRunStats();
+    runStats = new DruidRunStats();
     Mockito.when(mockConnectorConfig.getConfigTable()).thenReturn("druid_config");
     Mockito.when(mockDruidCoordinatorRuntimeParams.getCoordinatorStats()).thenReturn(runStats);
     coordinatorConfigManager = new CoordinatorConfigManager(

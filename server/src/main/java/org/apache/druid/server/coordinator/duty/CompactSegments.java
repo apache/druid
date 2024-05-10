@@ -49,14 +49,14 @@ import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
+import org.apache.druid.server.coordinator.Stats;
 import org.apache.druid.server.coordinator.compact.CompactionSegmentIterator;
 import org.apache.druid.server.coordinator.compact.CompactionSegmentSearchPolicy;
 import org.apache.druid.server.coordinator.compact.CompactionStatistics;
 import org.apache.druid.server.coordinator.compact.SegmentsToCompact;
-import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
-import org.apache.druid.server.coordinator.stats.Dimension;
-import org.apache.druid.server.coordinator.stats.RowKey;
-import org.apache.druid.server.coordinator.stats.Stats;
+import org.apache.druid.server.stats.Dimension;
+import org.apache.druid.server.stats.DruidRunStats;
+import org.apache.druid.server.stats.RowKey;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.joda.time.Interval;
@@ -200,7 +200,7 @@ public class CompactSegments implements CoordinatorCustomDuty
         iterator
     );
 
-    final CoordinatorRunStats stats = params.getCoordinatorStats();
+    final DruidRunStats stats = params.getCoordinatorStats();
     stats.add(Stats.Compaction.MAX_SLOTS, compactionTaskCapacity);
     stats.add(Stats.Compaction.AVAILABLE_SLOTS, availableCompactionTaskSlots);
     stats.add(Stats.Compaction.SUBMITTED_TASKS, numSubmittedCompactionTasks);
@@ -508,7 +508,7 @@ public class CompactSegments implements CoordinatorCustomDuty
   private void addCompactionSnapshotStats(
       Map<String, AutoCompactionSnapshot.Builder> currentRunAutoCompactionSnapshotBuilders,
       CompactionSegmentIterator iterator,
-      CoordinatorRunStats stats
+      DruidRunStats stats
   )
   {
     // Mark all the segments remaining in the iterator as "awaiting compaction"
@@ -585,7 +585,7 @@ public class CompactSegments implements CoordinatorCustomDuty
   private void addStatsForDatasource(
       String dataSource,
       AutoCompactionSnapshot autoCompactionSnapshot,
-      CoordinatorRunStats stats
+      DruidRunStats stats
   )
   {
     final RowKey rowKey = RowKey.of(Dimension.DATASOURCE, dataSource);

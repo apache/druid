@@ -21,9 +21,9 @@ package org.apache.druid.server.coordinator.duty;
 
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
+import org.apache.druid.server.coordinator.Stats;
 import org.apache.druid.server.coordinator.config.MetadataCleanupConfig;
-import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
-import org.apache.druid.server.coordinator.stats.Stats;
+import org.apache.druid.server.stats.DruidRunStats;
 import org.joda.time.Duration;
 import org.junit.Assert;
 import org.junit.Before;
@@ -44,12 +44,12 @@ public class KillAuditLogTest
   private DruidCoordinatorRuntimeParams mockDruidCoordinatorRuntimeParams;
 
   private KillAuditLog killAuditLog;
-  private CoordinatorRunStats runStats;
+  private DruidRunStats runStats;
 
   @Before
   public void setup()
   {
-    runStats = new CoordinatorRunStats();
+    runStats = new DruidRunStats();
     Mockito.when(mockDruidCoordinatorRuntimeParams.getCoordinatorStats()).thenReturn(runStats);
   }
 

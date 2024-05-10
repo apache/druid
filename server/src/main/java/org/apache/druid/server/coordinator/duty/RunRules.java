@@ -27,13 +27,13 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.MetadataRuleManager;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
+import org.apache.druid.server.coordinator.Stats;
 import org.apache.druid.server.coordinator.loading.StrategicSegmentAssigner;
 import org.apache.druid.server.coordinator.rules.BroadcastDistributionRule;
 import org.apache.druid.server.coordinator.rules.Rule;
-import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
-import org.apache.druid.server.coordinator.stats.Dimension;
-import org.apache.druid.server.coordinator.stats.RowKey;
-import org.apache.druid.server.coordinator.stats.Stats;
+import org.apache.druid.server.stats.Dimension;
+import org.apache.druid.server.stats.DruidRunStats;
+import org.apache.druid.server.stats.RowKey;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 
@@ -118,7 +118,7 @@ public class RunRules implements CoordinatorDuty
 
   private void processSegmentDeletes(
       StrategicSegmentAssigner segmentAssigner,
-      CoordinatorRunStats runStats
+      DruidRunStats runStats
   )
   {
     segmentAssigner.getSegmentsToDelete().forEach((datasource, segmentIds) -> {

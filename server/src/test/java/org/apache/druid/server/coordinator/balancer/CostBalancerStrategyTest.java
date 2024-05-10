@@ -29,9 +29,9 @@ import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.ServerHolder;
+import org.apache.druid.server.coordinator.Stats;
 import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
-import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
-import org.apache.druid.server.coordinator.stats.Stats;
+import org.apache.druid.server.stats.DruidRunStats;
 import org.apache.druid.timeline.DataSegment;
 import org.junit.After;
 import org.junit.Assert;
@@ -330,7 +330,7 @@ public class CostBalancerStrategyTest
 
     // Verify that computation stats have been tracked
     strategy.findServersToLoadSegment(segment, Arrays.asList(serverA, serverB));
-    CoordinatorRunStats computeStats = strategy.getStats();
+    DruidRunStats computeStats = strategy.getStats();
 
     Assert.assertEquals(1L, computeStats.get(Stats.Balancer.COMPUTATION_COUNT));
 

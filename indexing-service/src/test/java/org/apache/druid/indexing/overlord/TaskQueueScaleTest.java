@@ -47,8 +47,8 @@ import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
-import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
+import org.apache.druid.server.stats.DruidRunStats;
 import org.joda.time.Duration;
 import org.joda.time.Period;
 import org.junit.After;
@@ -141,7 +141,7 @@ public class TaskQueueScaleTest
     Assert.assertEquals("no tasks should be running", 0, taskRunner.getKnownTasks().size());
     Assert.assertEquals("no tasks should be known", 0, taskQueue.getTasks().size());
 
-    CoordinatorRunStats stats = taskQueue.getQueueStats();
+    DruidRunStats stats = taskQueue.getQueueStats();
     long runningTaskCount = stats.getSum(Stats.TaskCount.RUNNING);
     Assert.assertEquals("no tasks should be running", 0L, runningTaskCount);
 

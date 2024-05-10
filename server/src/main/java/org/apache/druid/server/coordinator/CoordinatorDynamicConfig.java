@@ -26,7 +26,7 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.server.coordinator.duty.KillUnusedSegments;
-import org.apache.druid.server.coordinator.stats.Dimension;
+import org.apache.druid.server.stats.Dimension;
 import org.apache.druid.utils.JvmUtils;
 
 import javax.annotation.Nullable;

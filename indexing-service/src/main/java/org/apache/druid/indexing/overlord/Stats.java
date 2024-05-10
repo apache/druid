@@ -19,7 +19,7 @@
 
 package org.apache.druid.indexing.overlord;
 
-import org.apache.druid.server.coordinator.stats.CoordinatorStat;
+import org.apache.druid.server.stats.DruidStat;
 
 /**
  * Task-level stats emitted as metrics.
@@ -28,23 +28,23 @@ public class Stats
 {
   public static class TaskQueue
   {
-    public static final CoordinatorStat STATUS_UPDATES_IN_QUEUE
-        = CoordinatorStat.toDebugAndEmit("queuedStatusUpdates", "task/status/queue/count");
-    public static final CoordinatorStat HANDLED_STATUS_UPDATES
-        = CoordinatorStat.toDebugAndEmit("handledStatusUpdates", "task/status/updated/count");
+    public static final DruidStat STATUS_UPDATES_IN_QUEUE
+        = DruidStat.toDebugAndEmit("queuedStatusUpdates", "task/status/queue/count");
+    public static final DruidStat HANDLED_STATUS_UPDATES
+        = DruidStat.toDebugAndEmit("handledStatusUpdates", "task/status/updated/count");
   }
 
   public static class TaskCount
   {
-    public static final CoordinatorStat SUCCESSFUL
-        = CoordinatorStat.toDebugAndEmit("successfulTasks", "task/success/count");
-    public static final CoordinatorStat FAILED
-        = CoordinatorStat.toDebugAndEmit("failedTasks", "task/failed/count");
-    public static final CoordinatorStat RUNNING
-        = CoordinatorStat.toDebugAndEmit("runningTasks", "task/running/count");
-    public static final CoordinatorStat PENDING
-        = CoordinatorStat.toDebugAndEmit("pendingTasks", "task/pending/count");
-    public static final CoordinatorStat WAITING
-        = CoordinatorStat.toDebugAndEmit("waitingTasks", "task/waiting/count");
+    public static final DruidStat SUCCESSFUL
+        = DruidStat.toDebugAndEmit("successfulTasks", "task/success/count");
+    public static final DruidStat FAILED
+        = DruidStat.toDebugAndEmit("failedTasks", "task/failed/count");
+    public static final DruidStat RUNNING
+        = DruidStat.toDebugAndEmit("runningTasks", "task/running/count");
+    public static final DruidStat PENDING
+        = DruidStat.toDebugAndEmit("pendingTasks", "task/pending/count");
+    public static final DruidStat WAITING
+        = DruidStat.toDebugAndEmit("waitingTasks", "task/waiting/count");
   }
 }

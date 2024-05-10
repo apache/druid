@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator.stats;
+package org.apache.druid.server.stats;
 
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import org.apache.druid.java.util.common.StringUtils;
@@ -32,37 +32,40 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Contains statistics typically tracked during a single coordinator run or the
- * runtime of a single coordinator duty.
+ * Contains statistics typically collected during the run of a single Druid process,
+ * module or class. For example, it may be used to collect statistics during the
+ * run of a Coordinator duty group.
+ *
+ * @see DruidStat
  */
 @ThreadSafe
-public class CoordinatorRunStats
+public class DruidRunStats
 {
-  private static final CoordinatorRunStats EMPTY_INSTANCE = new CoordinatorRunStats()
+  private static final DruidRunStats EMPTY_INSTANCE = new DruidRunStats()
   {
     @Override
-    public void add(CoordinatorStat stat, RowKey rowKey, long value)
+    public void add(DruidStat stat, RowKey rowKey, long value)
     {
       throw new UnsupportedOperationException("Cannot add stats to empty CoordinatorRunStats instance");
     }
 
     @Override
-    public void updateMax(CoordinatorStat stat, RowKey rowKey, long value)
+    public void updateMax(DruidStat stat, RowKey rowKey, long value)
     {
       throw new UnsupportedOperationException("Cannot add stats to empty CoordinatorRunStats instance");
     }
   };
 
-  private final ConcurrentHashMap<RowKey, Object2LongOpenHashMap<CoordinatorStat>>
+  private final ConcurrentHashMap<RowKey, Object2LongOpenHashMap<DruidStat>>
       allStats = new ConcurrentHashMap<>();
   private final Map<Dimension, String> debugDimensions = new HashMap<>();
 
-  public static CoordinatorRunStats empty()
+  public static DruidRunStats empty()
   {
     return EMPTY_INSTANCE;
   }
 
-  public CoordinatorRunStats()
+  public DruidRunStats()
   {
     this(null);
   }
@@ -73,30 +76,30 @@ public class CoordinatorRunStats
    * @param debugDimensions Dimension values for which all metrics should be
    *                        collected and logged.
    */
-  public CoordinatorRunStats(Map<Dimension, String> debugDimensions)
+  public DruidRunStats(Map<Dimension, String> debugDimensions)
   {
     if (debugDimensions != null) {
       this.debugDimensions.putAll(debugDimensions);
     }
   }
 
-  public long getSegmentStat(CoordinatorStat stat, String tier, String datasource)
+  public long getSegmentStat(DruidStat stat, String tier, String datasource)
   {
     return get(stat, RowKey.with(Dimension.DATASOURCE, datasource).and(Dimension.TIER, tier));
   }
 
-  public long get(CoordinatorStat stat)
+  public long get(DruidStat stat)
   {
     return get(stat, RowKey.EMPTY);
   }
 
-  public long get(CoordinatorStat stat, RowKey rowKey)
+  public long get(DruidStat stat, RowKey rowKey)
   {
-    Object2LongOpenHashMap<CoordinatorStat> statValues = allStats.get(rowKey);
+    Object2LongOpenHashMap<DruidStat> statValues = allStats.get(rowKey);
     return statValues == null ? 0 : statValues.getLong(stat);
   }
 
-  public long getSum(CoordinatorStat stat)
+  public long getSum(DruidStat stat)
   {
     return allStats.values().stream().mapToLong(map -> map.getLong(stat)).sum();
   }
@@ -123,8 +126,8 @@ public class CoordinatorRunStats
     allStats.forEach(
         (rowKey, statMap) -> {
           // Categorize the stats by level
-          final Map<CoordinatorStat.Level, Map<CoordinatorStat, Long>> levelToStats
-              = new EnumMap<>(CoordinatorStat.Level.class);
+          final Map<DruidStat.Level, Map<DruidStat, Long>> levelToStats
+              = new EnumMap<>(DruidStat.Level.class);
 
           statMap.object2LongEntrySet().fastForEach(
               stat -> levelToStats.computeIfAbsent(stat.getKey().getLevel(), l -> new HashMap<>())
@@ -132,8 +135,8 @@ public class CoordinatorRunStats
           );
 
           // Add all the errors
-          final Map<CoordinatorStat, Long> errorStats = levelToStats
-              .getOrDefault(CoordinatorStat.Level.ERROR, Collections.emptyMap());
+          final Map<DruidStat, Long> errorStats = levelToStats
+              .getOrDefault(DruidStat.Level.ERROR, Collections.emptyMap());
           totalStats.addAndGet(errorStats.size());
           if (!errorStats.isEmpty()) {
             statsTable.append(
@@ -142,8 +145,8 @@ public class CoordinatorRunStats
           }
 
           // Add all the info level stats
-          final Map<CoordinatorStat, Long> infoStats = levelToStats
-              .getOrDefault(CoordinatorStat.Level.INFO, Collections.emptyMap());
+          final Map<DruidStat, Long> infoStats = levelToStats
+              .getOrDefault(DruidStat.Level.INFO, Collections.emptyMap());
           totalStats.addAndGet(infoStats.size());
           if (!infoStats.isEmpty()) {
             statsTable.append(
@@ -152,8 +155,8 @@ public class CoordinatorRunStats
           }
 
           // Add all the debug level stats if the row key has a debug dimension
-          final Map<CoordinatorStat, Long> debugStats = levelToStats
-              .getOrDefault(CoordinatorStat.Level.DEBUG, Collections.emptyMap());
+          final Map<DruidStat, Long> debugStats = levelToStats
+              .getOrDefault(DruidStat.Level.DEBUG, Collections.emptyMap());
           totalStats.addAndGet(debugStats.size());
           if (!debugStats.isEmpty() && hasDebugDimension(rowKey)) {
             statsTable.append(
@@ -179,9 +182,9 @@ public class CoordinatorRunStats
     return statsTable.toString();
   }
 
-  public boolean hasStat(CoordinatorStat stat)
+  public boolean hasStat(DruidStat stat)
   {
-    for (Object2LongOpenHashMap<CoordinatorStat> statValues : allStats.values()) {
+    for (Object2LongOpenHashMap<DruidStat> statValues : allStats.values()) {
       if (statValues.containsKey(stat)) {
         return true;
       }
@@ -199,18 +202,18 @@ public class CoordinatorRunStats
     allStats.clear();
   }
 
-  public void add(CoordinatorStat stat, long value)
+  public void add(DruidStat stat, long value)
   {
     add(stat, RowKey.EMPTY, value);
   }
 
-  public void add(CoordinatorStat stat, RowKey rowKey, long value)
+  public void add(DruidStat stat, RowKey rowKey, long value)
   {
     allStats.computeIfAbsent(rowKey, d -> new Object2LongOpenHashMap<>())
             .addTo(stat, value);
   }
 
-  public void addToSegmentStat(CoordinatorStat stat, String tier, String datasource, long value)
+  public void addToSegmentStat(DruidStat stat, String tier, String datasource, long value)
   {
     RowKey rowKey = RowKey.with(Dimension.TIER, tier)
                           .and(Dimension.DATASOURCE, datasource);
@@ -220,7 +223,7 @@ public class CoordinatorRunStats
   /**
    * Updates the maximum value of the stat for the given RowKey if applicable.
    */
-  public void updateMax(CoordinatorStat stat, RowKey rowKey, long value)
+  public void updateMax(DruidStat stat, RowKey rowKey, long value)
   {
     allStats.computeIfAbsent(rowKey, d -> new Object2LongOpenHashMap<>())
             .mergeLong(stat, value, Math::max);
@@ -249,7 +252,7 @@ public class CoordinatorRunStats
 
   public interface StatHandler
   {
-    void handle(CoordinatorStat stat, RowKey rowKey, long statValue);
+    void handle(DruidStat stat, RowKey rowKey, long statValue);
   }
 
 }

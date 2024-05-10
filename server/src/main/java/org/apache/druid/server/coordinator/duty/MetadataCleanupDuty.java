@@ -23,7 +23,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.config.MetadataCleanupConfig;
-import org.apache.druid.server.coordinator.stats.CoordinatorStat;
+import org.apache.druid.server.stats.DruidStat;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
@@ -41,7 +41,7 @@ public abstract class MetadataCleanupDuty implements CoordinatorDuty
   private static final Logger log = new Logger(MetadataCleanupDuty.class);
 
   private final String entryType;
-  private final CoordinatorStat cleanupCountStat;
+  private final DruidStat cleanupCountStat;
 
   private final MetadataCleanupConfig cleanupConfig;
 
@@ -50,7 +50,7 @@ public abstract class MetadataCleanupDuty implements CoordinatorDuty
   protected MetadataCleanupDuty(
       String entryType,
       MetadataCleanupConfig cleanupConfig,
-      CoordinatorStat cleanupCountStat
+      DruidStat cleanupCountStat
   )
   {
     this.entryType = entryType;

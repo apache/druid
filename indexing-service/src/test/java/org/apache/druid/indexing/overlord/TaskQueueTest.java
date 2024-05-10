@@ -82,9 +82,9 @@ import org.apache.druid.metadata.SQLMetadataConnector;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.server.DruidNode;
-import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.initialization.IndexerZkConfig;
 import org.apache.druid.server.initialization.ZkPathsConfig;
+import org.apache.druid.server.stats.DruidRunStats;
 import org.apache.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
@@ -373,7 +373,7 @@ public class TaskQueueTest extends IngestionTestBase
 
     // Verify that metrics are emitted on receiving announcement
     serviceEmitter.verifyEmitted("task/run/time", 1);
-    CoordinatorRunStats stats = taskQueue.getQueueStats();
+    DruidRunStats stats = taskQueue.getQueueStats();
     Assert.assertEquals(0L, stats.get(Stats.TaskQueue.STATUS_UPDATES_IN_QUEUE));
     Assert.assertEquals(1L, stats.get(Stats.TaskQueue.HANDLED_STATUS_UPDATES));
   }

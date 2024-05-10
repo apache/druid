@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator.stats;
+package org.apache.druid.server.stats;
 
 import java.util.Collections;
 import java.util.EnumMap;
