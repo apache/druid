@@ -4433,24 +4433,30 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       Map<PartitionIdType, Long> partitionTimeLags = getPartitionTimeLag();
       Map<String, Long> taskLag = getReplicaLag();
 
-      if (partitionRecordLags == null && partitionTimeLags == null) {
-        throw new ISE("Latest offsets have not been fetched");
-      }
       final String type = spec.getType();
+      Map<String, Object> metricTags = spec.getContextValue(DruidMetrics.TAGS);
 
       if (taskLag != null) {
         for (Entry<String, Long> entry : taskLag.entrySet()) {
-          emitter.emit(
-              ServiceMetricEvent.builder()
-                  .setDimension(DruidMetrics.DATASOURCE, dataSource)
-                  .setDimension(DruidMetrics.STREAM, getIoConfig().getStream())
-                  .setDimension(DruidMetrics.TASK_ID, entry.getKey())
-                  .setMetric(
-                      StringUtils.format("ingest/%s/replica/lag", type),
-                      entry.getValue()
-                  )
-          );
+          // we only emit this metric when the replica is lagging by more than 50 events.
+          if (entry.getValue() >= 50) {
+            emitter.emit(
+                ServiceMetricEvent.builder()
+                    .setDimension(DruidMetrics.DATASOURCE, dataSource)
+                    .setDimension(DruidMetrics.STREAM, getIoConfig().getStream())
+                    .setDimension(DruidMetrics.TASK_ID, entry.getKey())
+                    .setDimensionIfNotNull(DruidMetrics.TAGS, metricTags)
+                    .setMetric(
+                        StringUtils.format("ingest/%s/replica/lag", type),
+                        entry.getValue()
+                    )
+            );
+          }
         }
+      }
+
+      if (partitionRecordLags == null && partitionTimeLags == null) {
+        throw new ISE("Latest offsets have not been fetched");
       }
 
       BiConsumer<Map<PartitionIdType, Long>, String> emitFn = (partitionLags, suffix) -> {
@@ -4474,7 +4480,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         }
 
         LagStats lagStats = computeLags(partitionLags);
-        Map<String, Object> metricTags = spec.getContextValue(DruidMetrics.TAGS);
         for (Map.Entry<PartitionIdType, Long> entry : partitionLags.entrySet()) {
           emitter.emit(
               ServiceMetricEvent.builder()
