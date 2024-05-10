@@ -19,8 +19,6 @@
 
 package org.apache.druid.testsEx.catalog;
 
-import java.util.concurrent.ExecutionException;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
@@ -43,6 +41,8 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
+
+import java.util.concurrent.ExecutionException;
 
 import static org.junit.Assert.assertTrue;
 
