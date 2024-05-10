@@ -24,13 +24,8 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.error.DruidException;
 import org.junit.Assert;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Map;
 import java.util.Set;
 
 public class LookupLoadingSpecTest
@@ -67,66 +62,67 @@ public class LookupLoadingSpecTest
     Assert.assertEquals("Expected non-null set of lookups to load.", exception.getMessage());
   }
 
-  @MethodSource("provideParamsForTestCreateFromContext")
-  @ParameterizedTest
-  public void testGetLookupLoadingSpecFromContext(Map<String, Object> context, LookupLoadingSpec defaultSpec, LookupLoadingSpec expectedSpec)
-  {
-    LookupLoadingSpec specFromContext = LookupLoadingSpec.createFromContext(context, defaultSpec);
-    Assert.assertEquals(expectedSpec, specFromContext);
-  }
-
-  public static Collection<Object[]> provideParamsForTestCreateFromContext()
+  @Test
+  public void testCreateLookupLoadingSpecFromContext()
   {
     ImmutableSet<String> lookupsToLoad = ImmutableSet.of("lookupName1", "lookupName2");
-    final ImmutableMap<String, Object> contextWithModeOnlyRequired = ImmutableMap.of(
-        LookupLoadingSpec.CTX_LOOKUPS_TO_LOAD, new ArrayList<>(lookupsToLoad),
-        LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE, LookupLoadingSpec.Mode.ONLY_REQUIRED);
-    final ImmutableMap<String, Object> contextWithModeNone = ImmutableMap.of(
-        LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE, LookupLoadingSpec.Mode.NONE);
-    final ImmutableMap<String, Object> contextWithModeAll = ImmutableMap.of(
-        LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE, LookupLoadingSpec.Mode.ALL);
-    final ImmutableMap<String, Object> contextWithoutLookupKeys = ImmutableMap.of();
 
-    // Return params: <context, default LookupLoadingSpec, expected LookupLoadingSpec>
-    Object[][] params = new Object[][]{
-        // Default spec is returned in the case of context not having the lookup keys.
-        {
-            contextWithoutLookupKeys,
-            LookupLoadingSpec.ALL,
+    // Default spec is returned in the case of context not having the lookup keys.
+    Assert.assertEquals(
+        LookupLoadingSpec.ALL,
+        LookupLoadingSpec.createFromContext(
+            ImmutableMap.of(),
             LookupLoadingSpec.ALL
-        },
-        // Default spec is returned in the case of context not having the lookup keys.
-        {
-            contextWithoutLookupKeys,
-            LookupLoadingSpec.NONE,
+        )
+    );
+
+    // Default spec is returned in the case of context not having the lookup keys.
+    Assert.assertEquals(
+        LookupLoadingSpec.NONE,
+        LookupLoadingSpec.createFromContext(
+            ImmutableMap.of(),
             LookupLoadingSpec.NONE
-        },
-        // Only required lookups are returned in the case of context having the lookup keys.
-        {
-            contextWithModeOnlyRequired,
-            LookupLoadingSpec.ALL,
-            LookupLoadingSpec.loadOnly(lookupsToLoad)
-        },
-        // No lookups are returned in the case of context having mode=NONE, irrespective of the default spec.
-        {
-            contextWithModeAll,
-            LookupLoadingSpec.NONE,
+        )
+    );
+
+    // Only required lookups are returned in the case of context having the lookup keys.
+    Assert.assertEquals(
+        LookupLoadingSpec.loadOnly(lookupsToLoad),
+        LookupLoadingSpec.createFromContext(
+            ImmutableMap.of(
+                LookupLoadingSpec.CTX_LOOKUPS_TO_LOAD, new ArrayList<>(lookupsToLoad),
+                LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE, LookupLoadingSpec.Mode.ONLY_REQUIRED
+            ),
             LookupLoadingSpec.ALL
-        },
-        // All lookups are returned in the case of context having mode=ALL, irrespective of the default spec.
-        {
-            contextWithModeNone,
-            LookupLoadingSpec.ALL,
+        )
+    );
+
+    // No lookups are returned in the case of context having mode=NONE, irrespective of the default spec.
+    Assert.assertEquals(
+        LookupLoadingSpec.NONE,
+        LookupLoadingSpec.createFromContext(
+            ImmutableMap.of(
+                LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE, LookupLoadingSpec.Mode.NONE),
+            LookupLoadingSpec.ALL
+        )
+    );
+
+    // All lookups are returned in the case of context having mode=ALL, irrespective of the default spec.
+    Assert.assertEquals(
+        LookupLoadingSpec.ALL,
+        LookupLoadingSpec.createFromContext(
+            ImmutableMap.of(LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE, LookupLoadingSpec.Mode.ALL),
             LookupLoadingSpec.NONE
-        },
-        // Default spec is returned in the case of context=null.
-        {
+        )
+    );
+
+    // Default spec is returned in the case of context=null.
+    Assert.assertEquals(
+        LookupLoadingSpec.NONE,
+        LookupLoadingSpec.createFromContext(
             null,
-            LookupLoadingSpec.NONE,
             LookupLoadingSpec.NONE
-        }
-    };
-
-    return Arrays.asList(params);
+        )
+    );
   }
 }
