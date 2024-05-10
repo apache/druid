@@ -41,7 +41,7 @@ public class ControllerChatHandlerTest
     final Controller controller = Mockito.mock(Controller.class);
 
     TaskReport.ReportMap reportMap = new TaskReport.ReportMap();
-    reportMap.put("killUnusedSegments", new KillTaskReport("kill_1", new KillTaskReport.Stats(1, 2, 3)));
+    reportMap.put("killUnusedSegments", new KillTaskReport("kill_1", new KillTaskReport.Stats(1, 2)));
 
     Mockito.when(controller.liveReports())
            .thenReturn(reportMap);
