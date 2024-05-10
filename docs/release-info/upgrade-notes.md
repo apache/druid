@@ -53,6 +53,27 @@ The following properties have been deprecated as part of simplifying the memory 
 
 [#15360](https://github.com/apache/druid/pull/15360)
 
+#### Improved Supervisor rolling restarts
+
+The `stopTaskCount` config now prioritizes stopping older tasks first. As part of this change, you must also explicitly set a value for `stopTaskCount`. It no longer defaults to the same value as `taskCount`.
+
+[#15859](https://github.com/apache/druid/pull/15859)
+
+#### Changes to Coordinator default values
+
+The following are the changes to the default values for the Coordinator service:
+
+* The default value for `druid.coordinator.kill.period` (if unspecified) has changed from `P1D` to the value of `druid.coordinator.period.indexingPeriod`. Operators can choose to override `druid.coordinator.kill.period` and that takes precedence over the default behavior.
+* The default value for the dynamic configuration property `killTaskSlotRatio` has been updated from `1.0` to `0.1`. This ensures that kill tasks take up only one task slot by default instead of consuming all available task slots.
+
+[#16247](https://github.com/apache/druid/pull/16247)
+
+#### `GoogleTaskLogs` upload buffer size
+
+Changed the upload buffer size in `GoogleTaskLogs` to 1 MB instead of 15 MB to allow more uploads in parallel and prevent the MiddleManager service from running out of memory.
+
+[#16236](https://github.com/apache/druid/pull/16236)
+
 ### Incompatible changes
 
 #### Changes to `targetDataSource` in EXPLAIN queries
@@ -65,19 +86,30 @@ If you are upgrading from 29.0.0, this is an incompatible change.
 
 [#16004](https://github.com/apache/druid/pull/16004)
 
-#### Removed Zookeeper-based segment loading
+#### Removed ZooKeeper-based segment loading
 
-Zookeeper-based segment loading is being removed as it is known to have issues and has been deprecated for several releases. The recent improvements made to the Druid Coordinator are also known to work much better with HTTP-based segment loading.
+ZooKeeper-based segment loading is being removed as it is known to have issues and has been deprecated for several releases.
+The recent improvements made to the Druid Coordinator are also known to work much better with HTTP-based segment loading.
 
-The following configs are being removed as they are not needed anymore:
+[#15705](https://github.com/apache/druid/pull/15705)
+
+#### Removed Coordinator configs
+
+Removed the following Coordinator configs:
 
 * `druid.coordinator.load.timeout`: Not needed as the default value of this parameter (15 minutes) is known to work well for all clusters.
-* `druid.coordinator.loadqueuepeon.type`: Not needed as this value will always be `http`.
-* `druid.coordinator.curator.loadqueuepeon.numCallbackThreads`: Not needed as zookeeper(curator)-based segment loading is not an option anymore.
+* `druid.coordinator.loadqueuepeon.type`: Not needed as this value is always `http`.
+* `druid.coordinator.curator.loadqueuepeon.numCallbackThreads`: Not needed as ZooKeeper(curator)-based segment loading isn't an option anymore.
 
 Auto-cleanup of compaction configs of inactive datasources is now enabled by default.
 
 [#15705](https://github.com/apache/druid/pull/15705)
+
+#### Changed `useMaxMemoryEstimates` for Hadoop jobs
+
+The default value of the `useMaxMemoryEstimates` parameter for Hadoop jobs is now `false`.
+
+[#16280](https://github.com/apache/druid/pull/16280)
 
 ## 29.0.1
 
