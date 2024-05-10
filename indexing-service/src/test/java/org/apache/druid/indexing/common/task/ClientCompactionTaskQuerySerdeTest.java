@@ -310,6 +310,7 @@ public class ClientCompactionTaskQuerySerdeTest
         .transformSpec(new ClientCompactionTaskTransformSpec(new SelectorDimFilter("dim1", "foo", null)))
         .build();
 
+    Map<String, Object> expectedContext = new HashMap<>();
     final ClientCompactionTaskQuery expected = new ClientCompactionTaskQuery(
         task.getId(),
         "datasource",
@@ -354,22 +355,17 @@ public class ClientCompactionTaskQuerySerdeTest
         new ClientCompactionTaskDimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
         new AggregatorFactory[] {new CountAggregatorFactory("cnt")},
         new ClientCompactionTaskTransformSpec(new SelectorDimFilter("dim1", "foo", null)),
-        new HashMap<>()
+        expectedContext
     );
 
     final byte[] json = mapper.writeValueAsBytes(task);
     final ClientCompactionTaskQuery actual = (ClientCompactionTaskQuery) mapper.readValue(json, ClientTaskQuery.class);
 
-    Assert.assertEquals(expected.getDataSource(), actual.getDataSource());
-    Assert.assertEquals(expected.getId(), actual.getId());
-    Assert.assertEquals(expected.getType(), actual.getType());
-    Assert.assertEquals(expected.getGranularitySpec(), actual.getGranularitySpec());
-    Assert.assertEquals(expected.getDimensionsSpec(), actual.getDimensionsSpec());
-    Assert.assertEquals(expected.getIoConfig(), actual.getIoConfig());
-    Assert.assertEquals(expected.getTransformSpec(), actual.getTransformSpec());
-    Assert.assertArrayEquals(expected.getMetricsSpec(), actual.getMetricsSpec());
-    Assert.assertEquals(expected.getTuningConfig(), actual.getTuningConfig());
-    Assert.assertEquals(ImmutableMap.of(LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE, LookupLoadingSpec.Mode.NONE.toString()), actual.getContext());
+    // Verify that CompactionTask has added new parameters into the context
+    Assert.assertNotEquals(expected, actual);
+
+    expectedContext.put(LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE, LookupLoadingSpec.Mode.NONE.toString());
+    Assert.assertEquals(expected, actual);
   }
 
   private static ObjectMapper setupInjectablesInObjectMapper(ObjectMapper objectMapper)
