@@ -1531,10 +1531,4 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       );
     }
   }
-
-  @Override
-  public LookupLoadingSpec getLookupLoadingSpec()
-  {
-    return LookupLoadingSpec.createFromContext(getContext(), transformSpec == null ? LookupLoadingSpec.NONE : LookupLoadingSpec.ALL);
-  }
 }
