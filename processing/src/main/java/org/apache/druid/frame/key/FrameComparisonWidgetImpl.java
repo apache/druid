@@ -38,9 +38,7 @@ import org.apache.druid.segment.serde.ComplexMetricSerde;
 import org.apache.druid.segment.serde.ComplexMetrics;
 
 import javax.annotation.concurrent.NotThreadSafe;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Implementation of {@link FrameComparisonWidget} for pairs of {@link FrameType#ROW_BASED} frames.
@@ -60,9 +58,8 @@ public class FrameComparisonWidgetImpl implements FrameComparisonWidget
   private final List<FieldReader> keyFieldReaders;
   private final int firstFieldPosition;
   private final RowKeyComparisonRunLengths rowKeyComparisonRunLengths;
-  // We memoize the serde instead of fetching it everytime from the global map, since that is thread-safe and is guarded by a
-  // ConcurrentHashMap, while we only access FrameComparisonWidget from a single thread.
-  private final Map<String, ComplexMetricSerde> serdeMap = new HashMap<>();
+  private final ComplexMetricSerde[] complexMetricSerdes;
+  private final ColumnType[] columnTypes;
 
   private FrameComparisonWidgetImpl(
       final Frame frame,
@@ -72,7 +69,9 @@ public class FrameComparisonWidgetImpl implements FrameComparisonWidget
       final List<KeyColumn> keyColumns,
       final List<FieldReader> keyFieldReaders,
       final int firstFieldPosition,
-      final RowKeyComparisonRunLengths rowKeyComparisonRunLengths
+      final RowKeyComparisonRunLengths rowKeyComparisonRunLengths,
+      final ComplexMetricSerde[] complexMetricSerdes,
+      final ColumnType[] columnTypes
   )
   {
     this.frame = frame;
@@ -84,6 +83,8 @@ public class FrameComparisonWidgetImpl implements FrameComparisonWidget
     this.keyFieldReaders = keyFieldReaders;
     this.firstFieldPosition = firstFieldPosition;
     this.rowKeyComparisonRunLengths = rowKeyComparisonRunLengths;
+    this.complexMetricSerdes = complexMetricSerdes;
+    this.columnTypes = columnTypes;
   }
 
   /**
@@ -110,6 +111,37 @@ public class FrameComparisonWidgetImpl implements FrameComparisonWidget
       throw new ISE("Mismatched lengths for keyColumnReaders and keyColumns");
     }
 
+    final RowKeyComparisonRunLengths rowKeyComparisonRunLengths = RowKeyComparisonRunLengths.create(keyColumns, signature);
+    final RunLengthEntry[] runLengthEntries = rowKeyComparisonRunLengths.getRunLengthEntries();
+    final ComplexMetricSerde[] complexMetricSerdes = new ComplexMetricSerde[runLengthEntries.length];
+    final ColumnType[] columnTypes = new ColumnType[runLengthEntries.length];
+
+    int fieldsSeenSoFar = 0;
+    for (int i = 0; i < runLengthEntries.length; ++i) {
+      // If the run length entry isn't byte comparable, it most definitely is a complex type
+      if (runLengthEntries[i].isByteComparable()) {
+        complexMetricSerdes[i] = null;
+        columnTypes[i] = null;
+      } else {
+        final ColumnType columnType = signature.getColumnType(keyColumns.get(fieldsSeenSoFar).columnName())
+                                               .orElse(null);
+        if (columnType == null) {
+          throw DruidException.defensive("Expected column type for comparison");
+        }
+        final String complexTypeName = columnType.getComplexTypeName();
+        if (complexTypeName == null) {
+          throw DruidException.defensive("Expected complex type name for comparison");
+        }
+        complexMetricSerdes[i] = Preconditions.checkNotNull(
+            ComplexMetrics.getSerdeForType(complexTypeName),
+            "Cannot find serde for type [%s]",
+            complexTypeName
+        );
+        columnTypes[i] = columnType;
+      }
+      fieldsSeenSoFar += runLengthEntries[i].getRunLength();
+    }
+
     return new FrameComparisonWidgetImpl(
         FrameType.ROW_BASED.ensureType(frame),
         signature,
@@ -118,7 +150,9 @@ public class FrameComparisonWidgetImpl implements FrameComparisonWidget
         keyColumns,
         keyColumnReaders,
         ByteRowKeyComparator.computeFirstFieldPosition(signature.size()),
-        RowKeyComparisonRunLengths.create(keyColumns, signature)
+        rowKeyComparisonRunLengths,
+        complexMetricSerdes,
+        columnTypes
     );
   }
 
@@ -278,13 +312,11 @@ public class FrameComparisonWidgetImpl implements FrameComparisonWidget
     int comparableBytesStartPositionInRow = firstFieldPosition;
     int otherComparableBytesStartPositionInRow = otherWidgetImpl.firstFieldPosition;
 
-    // boolean ascending = true;
-
     // Number of fields compared till now, which is equivalent to the index of the field to compare next
     int fieldsComparedTillNow = 0;
 
-    for (RunLengthEntry runLengthEntry : rowKeyComparisonRunLengths.getRunLengthEntries()) {
-
+    for (int i = 0; i < rowKeyComparisonRunLengths.getRunLengthEntries().length; ++i) {
+      final RunLengthEntry runLengthEntry = rowKeyComparisonRunLengths.getRunLengthEntries()[i];
       if (runLengthEntry.getRunLength() <= 0) {
         // Defensive check
         continue;
@@ -299,42 +331,14 @@ public class FrameComparisonWidgetImpl implements FrameComparisonWidget
       if (!runLengthEntry.isByteComparable()) {
         // Only complex types are not byte comparable. Nested arrays aren't supported in MSQ
         assert runLengthEntry.getRunLength() == 1;
-        // 'fieldsComparedTillNow' is the index of the current keyColumn in the keyColumns list. Sanity check that its
-        // a known complex type
-        ColumnType columnType1 = signature.getColumnType(keyColumns.get(fieldsComparedTillNow).columnName())
-                                          .orElseThrow(() -> DruidException.defensive("Expected column type"));
-        String complexTypeName = Preconditions.checkNotNull(
-            columnType1.getComplexTypeName(),
-            "complexType must be present for comparison"
-        );
-
-        ColumnType columnType2 = otherWidgetImpl.signature
-            .getColumnType(otherWidgetImpl.keyColumns.get(fieldsComparedTillNow).columnName())
-            .orElseThrow(() -> DruidException.defensive("Expected column type for other frame"));
-
-        Preconditions.checkNotNull(
-            columnType2.getComplexTypeName(),
-            "complexType must be present for comparison"
-        );
-
-        Preconditions.checkArgument(columnType1.equals(columnType2), "Different complex types cannot be compared");
-
-        // Use serde for the current implementation.
-        ComplexMetricSerde serde = serdeMap.computeIfAbsent(
-            complexTypeName,
-            name ->
-                Preconditions.checkNotNull(
-                    ComplexMetrics.getSerdeForType(name), "serde for type [%s] not present", complexTypeName
-                )
-        );
 
         cmp = FrameReaderUtils.compareComplexTypes(
             dataRegion,
             rowPosition + comparableBytesStartPositionInRow,
             otherWidgetImpl.dataRegion,
             otherRowPosition + otherComparableBytesStartPositionInRow,
-            columnType1,
-            serde
+            columnTypes[i],
+            complexMetricSerdes[i]
         );
       } else {
         cmp = FrameReaderUtils.compareMemoryUnsigned(

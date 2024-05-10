@@ -90,10 +90,42 @@ public class ComplexFieldReader implements FieldReader
   }
 
   /**
+   * Alternative interface to read the field from the byte array without creating a selector and field pointer. It is much
+   * faster than wrapping the byte array in Memory for reading.
+   */
+  @Nullable
+  public static Object readFieldFromByteArray(
+      final ComplexMetricSerde serde,
+      final byte[] bytes,
+      final int position
+  )
+  {
+    final byte nullByte = bytes[position];
+
+    if (nullByte == ComplexFieldWriter.NULL_BYTE) {
+      return null;
+    } else if (nullByte == ComplexFieldWriter.NOT_NULL_BYTE) {
+      // Reads length in big-endian format
+      int length;
+      length = (bytes[position + 4] & 0xFF) << 24;
+      length |= (bytes[position + 3] & 0xFF) << 16;
+      length |= (bytes[position + 2] & 0xFF) << 8;
+      length |= (bytes[position + 1] & 0xFF);
+      return serde.fromBytes(bytes, position + ComplexFieldWriter.HEADER_SIZE, length);
+    } else {
+      throw new ISE("Unexpected null byte [%s]", nullByte);
+    }
+  }
+
+  /**
    * Alternative interface to read the field from the memory without creating a selector and field pointer
    */
   @Nullable
-  public static Object readFieldFromMemory(final ComplexMetricSerde serde, final Memory memory, final long position)
+  public static Object readFieldFromMemory(
+      final ComplexMetricSerde serde,
+      final Memory memory,
+      final long position
+  )
   {
     final byte nullByte = memory.getByte(position);
 

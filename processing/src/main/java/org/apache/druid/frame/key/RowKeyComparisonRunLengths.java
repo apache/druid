@@ -93,8 +93,9 @@ public class RowKeyComparisonRunLengths
 
       // First key column to be processed
       if (runLengthEntryBuilders.size() == 0) {
+        final boolean isByteComparable = isByteComparable(columnType);
         runLengthEntryBuilders.add(
-            new RunLengthEntryBuilder(isByteComparable(columnType), keyColumn.order())
+            new RunLengthEntryBuilder(isByteComparable, keyColumn.order())
         );
         continue;
       }
@@ -110,7 +111,10 @@ public class RowKeyComparisonRunLengths
         lastRunLengthEntryBuilder.runLength++;
       } else {
         runLengthEntryBuilders.add(
-            new RunLengthEntryBuilder(isCurrentColumnByteComparable, keyColumn.order())
+            new RunLengthEntryBuilder(
+                isCurrentColumnByteComparable,
+                keyColumn.order()
+            )
         );
       }
     }
@@ -123,7 +127,7 @@ public class RowKeyComparisonRunLengths
     return new RowKeyComparisonRunLengths(runLengthEntries);
   }
 
-  private static boolean isByteComparable(ColumnType columnType)
+  private static boolean isByteComparable(final ColumnType columnType)
   {
     if (columnType.is(ValueType.COMPLEX)) {
       if (columnType.getComplexTypeName() == null) {
@@ -180,7 +184,10 @@ public class RowKeyComparisonRunLengths
     private final KeyOrder order;
     private int runLength;
 
-    public RunLengthEntryBuilder(boolean byteComparable, KeyOrder order)
+    public RunLengthEntryBuilder(
+        final boolean byteComparable,
+        final KeyOrder order
+    )
     {
       this.byteComparable = byteComparable;
       this.order = order;

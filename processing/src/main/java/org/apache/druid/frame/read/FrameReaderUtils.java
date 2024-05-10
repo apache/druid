@@ -228,13 +228,9 @@ public class FrameReaderUtils
       final ComplexMetricSerde complexMetricSerde
   )
   {
-    return compareComplexTypes(
-        Memory.wrap(array1),
-        position1,
-        Memory.wrap(array2),
-        position2,
-        columnType,
-        complexMetricSerde
+    return columnType.getNullableStrategy().compare(
+        ComplexFieldReader.readFieldFromByteArray(complexMetricSerde, array1, position1),
+        ComplexFieldReader.readFieldFromByteArray(complexMetricSerde, array2, position2)
     );
   }
 
@@ -247,13 +243,9 @@ public class FrameReaderUtils
       final ComplexMetricSerde complexMetricSerde
   )
   {
-    return compareComplexTypes(
-        memory,
-        position1,
-        Memory.wrap(array),
-        position2,
-        columnType,
-        complexMetricSerde
+    return columnType.getNullableStrategy().compare(
+        ComplexFieldReader.readFieldFromMemory(complexMetricSerde, memory, position1),
+        ComplexFieldReader.readFieldFromByteArray(complexMetricSerde, array, position2)
     );
   }
 

@@ -28,6 +28,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
 import org.apache.druid.segment.serde.ComplexMetrics;
 
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
@@ -44,23 +45,30 @@ public class ByteRowKeyComparator implements Comparator<byte[]>
   private final int firstFieldPosition;
   private final RowKeyComparisonRunLengths rowKeyComparisonRunLengths;
   private final RowSignature rowSignature;
+  private final ComplexMetricSerde[] complexMetricSerdes;
+  private final ColumnType[] columnTypes;
 
   private ByteRowKeyComparator(
       final List<KeyColumn> keyColumns,
       final RowKeyComparisonRunLengths rowKeyComparisonRunLengths,
-      final RowSignature rowSignature
+      final RowSignature rowSignature,
+      final ComplexMetricSerde[] complexMetricSerdes,
+      final ColumnType[] columnTypes
   )
   {
     this.keyColumns = keyColumns;
     this.firstFieldPosition = computeFirstFieldPosition(keyColumns.size());
     this.rowKeyComparisonRunLengths = rowKeyComparisonRunLengths;
     this.rowSignature = relevantRowSignature(keyColumns, rowSignature);
+    this.complexMetricSerdes = complexMetricSerdes;
+    this.columnTypes = columnTypes;
   }
 
   // Trims down the rowSignature to relevant portion
   private static RowSignature relevantRowSignature(final List<KeyColumn> keyColumns, final RowSignature completeRowSignature)
   {
     final RowSignature.Builder builder = RowSignature.builder();
+
     for (final KeyColumn keyColumn : keyColumns) {
       builder.add(
           keyColumn.columnName(),
@@ -73,10 +81,48 @@ public class ByteRowKeyComparator implements Comparator<byte[]>
 
   public static ByteRowKeyComparator create(final List<KeyColumn> keyColumns, final RowSignature rowSignature)
   {
+    final RowKeyComparisonRunLengths rowKeyComparisonRunLengths = RowKeyComparisonRunLengths.create(
+        keyColumns,
+        rowSignature
+    );
+    final RunLengthEntry[] runLengthEntries = rowKeyComparisonRunLengths.getRunLengthEntries();
+    final ComplexMetricSerde[] complexMetricSerdes = new ComplexMetricSerde[runLengthEntries.length];
+    final ColumnType[] columnTypes = new ColumnType[runLengthEntries.length];
+
+    int fieldsSeenSoFar = 0;
+
+    for (int i = 0; i < runLengthEntries.length; ++i) {
+      if (runLengthEntries[i].isByteComparable()) {
+        complexMetricSerdes[i] = null;
+        columnTypes[i] = null;
+      } else {
+        final ColumnType columnType = rowSignature.getColumnType(keyColumns.get(fieldsSeenSoFar).columnName())
+                                                  .orElse(null);
+        if (columnType == null) {
+          throw DruidException.defensive("Expected column type for comparison");
+        }
+        final String complexTypeName = columnType.getComplexTypeName();
+        if (complexTypeName == null) {
+          throw DruidException.defensive("Expected complex type name for comparison");
+        }
+
+        complexMetricSerdes[i] = Preconditions.checkNotNull(
+            ComplexMetrics.getSerdeForType(complexTypeName),
+            "Cannot find serde for type [%s]",
+            complexTypeName
+        );
+        columnTypes[i] = columnType;
+      }
+
+      fieldsSeenSoFar += runLengthEntries[i].getRunLength();
+    }
+
     return new ByteRowKeyComparator(
         keyColumns,
         RowKeyComparisonRunLengths.create(keyColumns, rowSignature),
-        rowSignature
+        rowSignature,
+        complexMetricSerdes,
+        columnTypes
     );
   }
 
@@ -103,7 +149,8 @@ public class ByteRowKeyComparator implements Comparator<byte[]>
     // Number of fields compared till now, which is equivalent to the index of the field to compare next
     int fieldsComparedTillNow = 0;
 
-    for (RunLengthEntry runLengthEntry : rowKeyComparisonRunLengths.getRunLengthEntries()) {
+    for (int i = 0; i < rowKeyComparisonRunLengths.getRunLengthEntries().length; ++i) {
+      final RunLengthEntry runLengthEntry = rowKeyComparisonRunLengths.getRunLengthEntries()[i];
 
       if (runLengthEntry.getRunLength() <= 0) {
         // Defensive check
@@ -121,28 +168,13 @@ public class ByteRowKeyComparator implements Comparator<byte[]>
       if (!runLengthEntry.isByteComparable()) {
         // Only complex types are not byte comparable. Nested arrays aren't supported in MSQ
         assert runLengthEntry.getRunLength() == 1;
-        // 'fieldsComparedTillNow' is the index of the current keyColumn in the keyColumns list. Sanity check that its
-        // a known complex type
-        ColumnType columnType = rowSignature.getColumnType(keyColumns.get(fieldsComparedTillNow).columnName())
-                                            .orElseThrow(() -> DruidException.defensive("Expecting a complex column with known type"));
-        String complexTypeName = Preconditions.checkNotNull(
-            columnType.getComplexTypeName(),
-            "complexType must be present for comparison"
-        );
-
-        ComplexMetricSerde serde = Preconditions.checkNotNull(
-            ComplexMetrics.getSerdeForType(complexTypeName),
-            "serde for type [%s] not present",
-            complexTypeName
-        );
-
         cmp = FrameReaderUtils.compareComplexTypes(
             keyArray1,
             currentRunStartPosition1,
             keyArray2,
             currentRunStartPosition2,
-            columnType,
-            serde
+            columnTypes[i],
+            complexMetricSerdes[i]
         );
       } else {
         // The keys are byte comparable
@@ -180,13 +212,18 @@ public class ByteRowKeyComparator implements Comparator<byte[]>
     return firstFieldPosition == that.firstFieldPosition
            && Objects.equals(keyColumns, that.keyColumns)
            && Objects.equals(rowKeyComparisonRunLengths, that.rowKeyComparisonRunLengths)
-           && Objects.equals(rowSignature, that.rowSignature);
+           && Objects.equals(rowSignature, that.rowSignature)
+           && Arrays.equals(complexMetricSerdes, that.complexMetricSerdes)
+           && Arrays.equals(columnTypes, that.columnTypes);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(keyColumns, firstFieldPosition, rowKeyComparisonRunLengths, rowSignature);
+    int result = Objects.hash(keyColumns, firstFieldPosition, rowKeyComparisonRunLengths, rowSignature);
+    result = 31 * result + Arrays.hashCode(complexMetricSerdes);
+    result = 31 * result + Arrays.hashCode(columnTypes);
+    return result;
   }
 
   @Override
@@ -197,6 +234,8 @@ public class ByteRowKeyComparator implements Comparator<byte[]>
            ", firstFieldPosition=" + firstFieldPosition +
            ", rowKeyComparisonRunLengths=" + rowKeyComparisonRunLengths +
            ", rowSignature=" + rowSignature +
+           ", complexMetricSerdes=" + Arrays.toString(complexMetricSerdes) +
+           ", columnTypes=" + Arrays.toString(columnTypes) +
            '}';
   }
 }

@@ -243,7 +243,8 @@ public class FrameChannelMergerBenchmark
       channelFrames.add(new ArrayList<>());
     }
 
-    // Create "valueString", a string full of spaces to pad out the row.
+    // Create "valueString", a string full of spaces to pad out the row. Nested columns wrap up strings with the
+    // corresponding keyLength, therefore the padding works out for the nested types as well.
     final StringBuilder valueStringBuilder = new StringBuilder();
     for (int i = 0; i < rowLength - keyLength; i++) {
       valueStringBuilder.append(' ');
