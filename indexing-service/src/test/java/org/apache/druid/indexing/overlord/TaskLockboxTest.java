@@ -73,7 +73,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -83,6 +82,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -90,9 +90,6 @@ public class TaskLockboxTest
 {
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derby = new TestDerbyConnector.DerbyConnectorRule();
-
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
 
   private ObjectMapper objectMapper;
   private TaskStorage taskStorage;
@@ -104,9 +101,6 @@ public class TaskLockboxTest
   private final int HIGH_PRIORITY = 15;
   private final int MEDIUM_PRIORITY = 10;
   private final int LOW_PRIORITY = 5;
-
-  @Rule
-  public final ExpectedException exception = ExpectedException.none();
 
   @Before
   public void setup()
@@ -186,14 +180,16 @@ public class TaskLockboxTest
   }
 
   @Test
-  public void testLockAfterTaskComplete() throws InterruptedException
+  public void testLockAfterTaskComplete()
   {
-    Task task = NoopTask.create();
-    exception.expect(ISE.class);
-    exception.expectMessage("Unable to grant lock to inactive Task");
+    final Task task = NoopTask.create();
     lockbox.add(task);
     lockbox.remove(task);
-    acquireTimeChunkLock(TaskLockType.EXCLUSIVE, task, Intervals.of("2015-01-01/2015-01-02"));
+    ISE exception = Assert.assertThrows(
+        ISE.class,
+        () -> acquireTimeChunkLock(TaskLockType.EXCLUSIVE, task, Intervals.of("2015-01-01/2015-01-02"))
+    );
+    Assert.assertTrue(exception.getMessage().contains("Unable to grant lock to inactive Task"));
   }
 
   @Test
@@ -311,12 +307,15 @@ public class TaskLockboxTest
   @Test
   public void testTryLockAfterTaskComplete()
   {
-    Task task = NoopTask.create();
-    exception.expect(ISE.class);
-    exception.expectMessage("Unable to grant lock to inactive Task");
+    final Task task = NoopTask.create();
     lockbox.add(task);
     lockbox.remove(task);
-    Assert.assertFalse(tryTimeChunkLock(TaskLockType.EXCLUSIVE, task, Intervals.of("2015-01-01/2015-01-02")).isOk());
+
+    ISE exception = Assert.assertThrows(
+        ISE.class,
+        () -> tryTimeChunkLock(TaskLockType.EXCLUSIVE, task, Intervals.of("2015-01-01/2015-01-02"))
+    );
+    Assert.assertTrue(exception.getMessage().contains("Unable to grant lock to inactive Task"));
   }
 
   @Test
@@ -759,23 +758,23 @@ public class TaskLockboxTest
         ).isOk()
     );
 
-    final List<TaskLockPosse> highLockPosses = lockbox.getOnlyTaskLockPosseContainingInterval(
+    final Optional<TaskLockPosse> highLockPosse = lockbox.getOnlyTaskLockPosseContainingInterval(
         highPriorityTask,
         Intervals.of("2018-12-16T09:00:00/2018-12-16T09:30:00")
     );
 
-    Assert.assertEquals(1, highLockPosses.size());
-    Assert.assertTrue(highLockPosses.get(0).containsTask(highPriorityTask));
-    Assert.assertFalse(highLockPosses.get(0).getTaskLock().isRevoked());
+    Assert.assertTrue(highLockPosse.isPresent());
+    Assert.assertTrue(highLockPosse.get().containsTask(highPriorityTask));
+    Assert.assertFalse(highLockPosse.get().getTaskLock().isRevoked());
 
-    final List<TaskLockPosse> lowLockPosses = lockbox.getOnlyTaskLockPosseContainingInterval(
+    final Optional<TaskLockPosse> lowLockPosse = lockbox.getOnlyTaskLockPosseContainingInterval(
         lowPriorityTask,
         Intervals.of("2018-12-16T09:00:00/2018-12-16T10:00:00")
     );
 
-    Assert.assertEquals(1, lowLockPosses.size());
-    Assert.assertTrue(lowLockPosses.get(0).containsTask(lowPriorityTask));
-    Assert.assertTrue(lowLockPosses.get(0).getTaskLock().isRevoked());
+    Assert.assertTrue(lowLockPosse.isPresent());
+    Assert.assertTrue(lowLockPosse.get().containsTask(lowPriorityTask));
+    Assert.assertTrue(lowLockPosse.get().getTaskLock().isRevoked());
   }
 
   @Test

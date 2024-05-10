@@ -31,13 +31,13 @@ import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.sql.calcite.CalciteJoinQueryTest;
 import org.apache.druid.sql.calcite.QueryTestBuilder;
+import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.planner.JoinAlgorithm;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.run.QueryMaker;
 import org.apache.druid.sql.calcite.run.SqlEngine;
-import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 
 /**
@@ -48,7 +48,7 @@ public class CalciteSelectJoinQueryMSQTest
   /**
    * Run all tests with {@link JoinAlgorithm#BROADCAST}.
    */
-  @SqlTestFramework.SqlTestFrameWorkModule(BroadcastJoinComponentSupplier.class)
+  @SqlTestFrameworkConfig.ComponentSupplier(BroadcastJoinComponentSupplier.class)
   public static class BroadcastTest extends Base
   {
     @Override
@@ -62,7 +62,7 @@ public class CalciteSelectJoinQueryMSQTest
   /**
    * Run all tests with {@link JoinAlgorithm#SORT_MERGE}.
    */
-  @SqlTestFramework.SqlTestFrameWorkModule(SortMergeJoinComponentSupplier.class)
+  @SqlTestFrameworkConfig.ComponentSupplier(SortMergeJoinComponentSupplier.class)
   public static class SortMergeTest extends Base
   {
     @Override
