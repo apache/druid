@@ -15679,11 +15679,12 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                               .build()
               )
         ).expectedResults(
-              ResultMatchMode.RELAX_NULLS,
-              ImmutableList.of(
-                      new Object[]{null, null, null}
-              )
-      ).run();
+            NullHandling.sqlCompatible() ? ImmutableList.of(
+                new Object[]{null, null, null}
+            ) : ImmutableList.of(
+                new Object[]{false, false, ""}
+            )
+        ).run();
   }
 
   @SqlTestFrameworkConfig.NumMergeBuffers(4)
