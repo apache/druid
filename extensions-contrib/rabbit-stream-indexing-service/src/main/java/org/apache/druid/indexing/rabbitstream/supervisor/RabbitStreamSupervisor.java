@@ -263,7 +263,8 @@ public class RabbitStreamSupervisor extends SeekableStreamSupervisor<String, Lon
 
   @Nullable
   @Override
-  protected Map<String, Long> getReplicaLag() {
+  protected Map<String, Long> getReplicaLag()
+  {
     return null;
   }
 
