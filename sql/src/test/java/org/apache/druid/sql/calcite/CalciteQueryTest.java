@@ -15686,7 +15686,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
       ).run();
   }
 
-  @SqlTestFrameworkConfig(numMergeBuffers = 4)
+  @SqlTestFrameworkConfig.NumMergeBuffers(4)
   @Test
   public void testGroupingSetsWithAggrgateCase()
   {
