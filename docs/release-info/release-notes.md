@@ -158,6 +158,12 @@ Added support for using window functions with the MSQ task engine as the query e
 
 [#15470](https://github.com/apache/druid/pull/15470)
 
+### MSQ support for Google Cloud Storage
+
+You can now export MSQ results to a Google Cloud Storage (GCS) path by passing the function `google()` as an argument to the `EXTERN` function.
+
+[#16051](https://github.com/apache/druid/pull/16051)
+
 ### RabbitMQ extension
 
 A new RabbitMQ extension is available as a community contribution.
