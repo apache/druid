@@ -523,7 +523,7 @@ function TableModule(props: TableModuleProps) {
                   .applyIf(NEEDS_GROUPING_TO_ORDER, anyValue)
                   .applyIf(orderByCompareDuration, coalesce0);
 
-                const diff = SqlExpression.parse(`${mainMetric} - ${c}`);
+                const diff = mainMetric.subtract(c);
 
                 const ret: SqlExpression[] = [];
 
@@ -562,7 +562,7 @@ function TableModule(props: TableModuleProps) {
                     formatter: formatPercent,
                   });
                   ret.push(
-                    F('SAFE_DIVIDE', SqlExpression.parse(`(${diff}) * 1.0`), c).as(percentName),
+                    F('SAFE_DIVIDE', diff.multiply(SqlLiteral.ONE_POINT_ZERO), c).as(percentName),
                   );
                 }
 
@@ -574,7 +574,7 @@ function TableModule(props: TableModuleProps) {
                     formatter: formatPercent,
                   });
                   ret.push(
-                    F('ABS', F('SAFE_DIVIDE', SqlExpression.parse(`(${diff}) * 1.0`), c)).as(
+                    F('ABS', F('SAFE_DIVIDE', diff.multiply(SqlLiteral.ONE_POINT_ZERO), c)).as(
                       percentName,
                     ),
                   );

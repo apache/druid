@@ -18,6 +18,7 @@
 
 import type {
   QueryParameter,
+  QueryPayload,
   SqlClusteredByClause,
   SqlExpression,
   SqlPartitionedByClause,
@@ -446,7 +447,7 @@ export class WorkbenchQuery {
 
   public getApiQuery(makeQueryId: () => string = uuidv4): {
     engine: DruidEngine;
-    query: Record<string, any>;
+    query: QueryPayload;
     prefixLines: number;
     cancelQueryId?: string;
   } {
@@ -478,7 +479,7 @@ export class WorkbenchQuery {
       };
     }
 
-    let apiQuery: Record<string, any> = {};
+    let apiQuery: QueryPayload;
     if (this.isJsonLike()) {
       try {
         apiQuery = Hjson.parse(queryString);
