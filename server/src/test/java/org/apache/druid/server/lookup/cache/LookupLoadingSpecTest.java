@@ -25,7 +25,7 @@ import org.apache.druid.error.DruidException;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Set;
 
 public class LookupLoadingSpecTest
@@ -63,10 +63,8 @@ public class LookupLoadingSpecTest
   }
 
   @Test
-  public void testCreateLookupLoadingSpecFromContext()
+  public void testCreateLookupLoadingSpecFromEmptyContext()
   {
-    ImmutableSet<String> lookupsToLoad = ImmutableSet.of("lookupName1", "lookupName2");
-
     // Default spec is returned in the case of context not having the lookup keys.
     Assert.assertEquals(
         LookupLoadingSpec.ALL,
@@ -76,7 +74,6 @@ public class LookupLoadingSpecTest
         )
     );
 
-    // Default spec is returned in the case of context not having the lookup keys.
     Assert.assertEquals(
         LookupLoadingSpec.NONE,
         LookupLoadingSpec.createFromContext(
@@ -84,13 +81,37 @@ public class LookupLoadingSpecTest
             LookupLoadingSpec.NONE
         )
     );
+  }
+  @Test
+  public void testCreateLookupLoadingSpecFromNullContext()
+  {
+    // Default spec is returned in the case of context=null.
+    Assert.assertEquals(
+        LookupLoadingSpec.NONE,
+        LookupLoadingSpec.createFromContext(
+            null,
+            LookupLoadingSpec.NONE
+        )
+    );
 
+    Assert.assertEquals(
+        LookupLoadingSpec.ALL,
+        LookupLoadingSpec.createFromContext(
+            null,
+            LookupLoadingSpec.ALL
+        )
+    );
+  }
+
+  @Test
+  public void testCreateLookupLoadingSpecFromContext()
+  {
     // Only required lookups are returned in the case of context having the lookup keys.
     Assert.assertEquals(
-        LookupLoadingSpec.loadOnly(lookupsToLoad),
+        LookupLoadingSpec.loadOnly(ImmutableSet.of("lookup1", "lookup2")),
         LookupLoadingSpec.createFromContext(
             ImmutableMap.of(
-                LookupLoadingSpec.CTX_LOOKUPS_TO_LOAD, new ArrayList<>(lookupsToLoad),
+                LookupLoadingSpec.CTX_LOOKUPS_TO_LOAD, Arrays.asList("lookup1", "lookup2"),
                 LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE, LookupLoadingSpec.Mode.ONLY_REQUIRED
             ),
             LookupLoadingSpec.ALL
@@ -112,15 +133,6 @@ public class LookupLoadingSpecTest
         LookupLoadingSpec.ALL,
         LookupLoadingSpec.createFromContext(
             ImmutableMap.of(LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE, LookupLoadingSpec.Mode.ALL),
-            LookupLoadingSpec.NONE
-        )
-    );
-
-    // Default spec is returned in the case of context=null.
-    Assert.assertEquals(
-        LookupLoadingSpec.NONE,
-        LookupLoadingSpec.createFromContext(
-            null,
             LookupLoadingSpec.NONE
         )
     );
