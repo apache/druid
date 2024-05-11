@@ -82,6 +82,7 @@ public class LookupLoadingSpecTest
         )
     );
   }
+
   @Test
   public void testCreateLookupLoadingSpecFromNullContext()
   {
