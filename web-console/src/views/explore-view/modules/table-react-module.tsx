@@ -87,7 +87,11 @@ const TOP_VALUES_NAME = 'top_values';
 const TOP_VALUES_K = 5000;
 
 function coalesce0(ex: SqlExpression) {
-  return F('COALESCE', ex, 0);
+  return F('COALESCE', ex, SqlLiteral.ZERO);
+}
+
+function safeDivide0(a: SqlExpression, b: SqlExpression) {
+  return coalesce0(F('SAFE_DIVIDE', a, b));
 }
 
 function anyValue(ex: SqlExpression) {
@@ -562,7 +566,7 @@ function TableModule(props: TableModuleProps) {
                     formatter: formatPercent,
                   });
                   ret.push(
-                    F('SAFE_DIVIDE', diff.multiply(SqlLiteral.ONE_POINT_ZERO), c).as(percentName),
+                    safeDivide0(diff.multiply(SqlLiteral.ONE_POINT_ZERO), c).as(percentName),
                   );
                 }
 
@@ -574,7 +578,7 @@ function TableModule(props: TableModuleProps) {
                     formatter: formatPercent,
                   });
                   ret.push(
-                    F('ABS', F('SAFE_DIVIDE', diff.multiply(SqlLiteral.ONE_POINT_ZERO), c)).as(
+                    F('ABS', safeDivide0(diff.multiply(SqlLiteral.ONE_POINT_ZERO), c)).as(
                       percentName,
                     ),
                   );
