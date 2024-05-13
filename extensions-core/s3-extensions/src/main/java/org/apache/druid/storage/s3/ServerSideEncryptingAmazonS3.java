@@ -44,7 +44,6 @@ import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.RetryUtils;
 
 import java.io.File;
 
@@ -207,11 +206,7 @@ public class ServerSideEncryptingAmazonS3
 
       AmazonS3 amazonS3Client;
       try {
-        amazonS3Client = RetryUtils.retry(
-            () -> amazonS3ClientBuilder.build(),
-            (e) -> true,
-            RetryUtils.DEFAULT_MAX_TRIES
-        );
+        amazonS3Client = S3Utils.retryS3Operation(() -> amazonS3ClientBuilder.build());
       }
       catch (Exception e) {
         throw new RuntimeException(e);
