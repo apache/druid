@@ -203,7 +203,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     final String baseSequenceName;
     DateTime completionTimeout; // is set after signalTasksToFinish(); if not done by timeout, take corrective action
 
-    Boolean shutdownEarly = false; // set by SupervisorManager.stopTaskGroupEarly
+    boolean shutdownEarly = false; // set by SupervisorManager.stopTaskGroupEarly
 
     TaskGroup(
         int groupId,
