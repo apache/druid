@@ -31,6 +31,8 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.List;
 
+import static org.junit.Assume.assumeFalse;
+
 @RunWith(Parameterized.class)
 public class DecimalParquetInputTest extends BaseParquetInputTest
 {
@@ -38,8 +40,8 @@ public class DecimalParquetInputTest extends BaseParquetInputTest
   public static Iterable<Object[]> constructorFeeder()
   {
     return ImmutableList.of(
-        new Object[]{ParquetExtensionsModule.PARQUET_AVRO_INPUT_PARSER_TYPE},
-        new Object[]{ParquetExtensionsModule.PARQUET_SIMPLE_INPUT_PARSER_TYPE}
+            new Object[]{ParquetExtensionsModule.PARQUET_AVRO_INPUT_PARSER_TYPE},
+            new Object[]{ParquetExtensionsModule.PARQUET_SIMPLE_INPUT_PARSER_TYPE}
     );
   }
 
@@ -54,13 +56,12 @@ public class DecimalParquetInputTest extends BaseParquetInputTest
   public void testReadParquetDecimalFixedLen() throws IOException, InterruptedException
   {
     // parquet-avro does not correctly convert decimal types
-    if (parserType.equals(ParquetExtensionsModule.PARQUET_AVRO_INPUT_PARSER_TYPE)) {
-      return;
-    }
+    assumeFalse(parserType.equals(ParquetExtensionsModule.PARQUET_AVRO_INPUT_PARSER_TYPE));
+
     HadoopDruidIndexerConfig config = transformHadoopDruidIndexerConfig(
-        "example/decimals/dec_in_fix_len.json",
-        parserType,
-        true
+            "example/decimals/dec_in_fix_len.json",
+            parserType,
+            true
     );
     /*
     The raw data in the parquet file has the following columns:
@@ -101,13 +102,12 @@ public class DecimalParquetInputTest extends BaseParquetInputTest
   public void testReadParquetDecimali32() throws IOException, InterruptedException
   {
     // parquet-avro does not correctly convert decimal types
-    if (parserType.equals(ParquetExtensionsModule.PARQUET_AVRO_INPUT_PARSER_TYPE)) {
-      return;
-    }
+    assumeFalse(parserType.equals(ParquetExtensionsModule.PARQUET_AVRO_INPUT_PARSER_TYPE));
+
     HadoopDruidIndexerConfig config = transformHadoopDruidIndexerConfig(
-        "example/decimals/dec_in_i32.json",
-        parserType,
-        true
+            "example/decimals/dec_in_i32.json",
+            parserType,
+            true
     );
     /*
     The raw data in the parquet file has the following columns:
@@ -148,13 +148,12 @@ public class DecimalParquetInputTest extends BaseParquetInputTest
   public void testReadParquetDecimali64() throws IOException, InterruptedException
   {
     // parquet-avro does not correctly convert decimal types
-    if (parserType.equals(ParquetExtensionsModule.PARQUET_AVRO_INPUT_PARSER_TYPE)) {
-      return;
-    }
+    assumeFalse(parserType.equals(ParquetExtensionsModule.PARQUET_AVRO_INPUT_PARSER_TYPE));
+
     HadoopDruidIndexerConfig config = transformHadoopDruidIndexerConfig(
-        "example/decimals/dec_in_i64.json",
-        parserType,
-        true
+            "example/decimals/dec_in_i64.json",
+            parserType,
+            true
     );
     /*
     The raw data in the parquet file has the following columns:
