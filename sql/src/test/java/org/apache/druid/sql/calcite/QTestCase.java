@@ -43,7 +43,8 @@ public class QTestCase
   {
     this.testInfo = testInfo;
     sb = new StringBuffer();
-    sb.append("# " + testInfo.comment);
+    sb.append("# ");
+    sb.append(testInfo.comment);
     sb.append("\n");
   }
 

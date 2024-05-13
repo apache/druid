@@ -94,7 +94,6 @@ import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
 import org.junit.Assert;
-import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -107,8 +106,8 @@ import java.util.List;
 import java.util.Map;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assume.assumeFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 public class CalciteJoinQueryTest extends BaseCalciteQueryTest
 {
@@ -3588,10 +3587,11 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   {
     // JoinFilterAnalyzer bug causes incorrect results on this test in replace-with-default mode.
     // This test case was originally added in https://github.com/apache/druid/pull/11434 with a note about this.
-    Assumptions.assumeFalse(NullHandling.replaceWithDefault() && QueryContext.of(queryContext).getEnableJoinFilterRewrite());
+    assumeFalse(NullHandling.replaceWithDefault() && QueryContext.of(queryContext).getEnableJoinFilterRewrite());
 
     assumeFalse(
-        "join condition not support in decoupled mode", testBuilder().isDecoupledMode() && NullHandling.replaceWithDefault()
+        testBuilder().isDecoupledMode() && NullHandling.replaceWithDefault(),
+        "join condition not support in decoupled mode"
     );
 
     // Cannot vectorize due to 'concat' expression.
@@ -4702,7 +4702,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     cannotVectorize();
 
     // We don't handle non-equi join conditions for non-sql compatible mode.
-    Assumptions.assumeFalse(NullHandling.replaceWithDefault());
+    assumeFalse(NullHandling.replaceWithDefault());
 
     testQuery(
         "SELECT x.m1, y.m1 FROM foo x INNER JOIN foo y ON x.m1 > y.m1",
@@ -4765,7 +4765,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     cannotVectorize();
 
     // We don't handle non-equi join conditions for non-sql compatible mode.
-    Assumptions.assumeFalse(NullHandling.replaceWithDefault());
+    assumeFalse(NullHandling.replaceWithDefault());
 
     testQuery(
         "SELECT x.m1, y.m1 FROM foo x INNER JOIN foo y ON x.m1 = y.m1 AND x.m1 + y.m1 = 6.0",
@@ -5653,7 +5653,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testRegressionFilteredAggregatorsSubqueryJoins(Map<String, Object> queryContext)
   {
-    assumeFalse("not support in decoupled mode", testBuilder().isDecoupledMode() && NullHandling.replaceWithDefault());
+    assumeFalse(testBuilder().isDecoupledMode() && NullHandling.replaceWithDefault(), "not support in decoupled mode");
 
     cannotVectorize();
     testQuery(

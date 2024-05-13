@@ -45,7 +45,7 @@ public class DecoupledExtension implements BeforeEachCallback
   private File qCaseDir;
 
   @Override
-  public void beforeEach(ExtensionContext context) throws Exception
+  public void beforeEach(ExtensionContext context)
   {
     Class<?> testClass = context.getTestClass().get();
     qCaseDir = ProjectPathUtils.getPathFromProjectRoot("sql/src/test/quidem/" + testClass.getName());
