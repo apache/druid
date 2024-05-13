@@ -156,7 +156,7 @@ public class LookupLoadingSpecTest
   )
   public void testCreateLookupLoadingSpecFromInvalidModeInContext(String mode)
   {
-    DruidException exception = Assert.assertThrows(DruidException.class, () -> LookupLoadingSpec.createFromContext(
+    final DruidException exception = Assert.assertThrows(DruidException.class, () -> LookupLoadingSpec.createFromContext(
         ImmutableMap.of(LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE, mode), LookupLoadingSpec.ALL));
     Assert.assertEquals(String.format("Invalid value of %s[%s]. Allowed values are [ALL, NONE, ONLY_REQUIRED]",
                                       LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE, mode), exception.getMessage());
@@ -171,7 +171,7 @@ public class LookupLoadingSpecTest
   )
   public void testCreateLookupLoadingSpecFromInvalidLookupsInContext(Object lookupsToLoad)
   {
-    DruidException exception = Assert.assertThrows(DruidException.class, () ->
+    final DruidException exception = Assert.assertThrows(DruidException.class, () ->
         LookupLoadingSpec.createFromContext(
             ImmutableMap.of(
                 LookupLoadingSpec.CTX_LOOKUPS_TO_LOAD, lookupsToLoad,
