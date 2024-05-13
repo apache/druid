@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableSet;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.java.util.common.StringUtils;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -158,8 +159,8 @@ public class LookupLoadingSpecTest
   {
     final DruidException exception = Assert.assertThrows(DruidException.class, () -> LookupLoadingSpec.createFromContext(
         ImmutableMap.of(LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE, mode), LookupLoadingSpec.ALL));
-    Assert.assertEquals(String.format("Invalid value of %s[%s]. Allowed values are [ALL, NONE, ONLY_REQUIRED]",
-                                      LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE, mode), exception.getMessage());
+    Assert.assertEquals(StringUtils.format("Invalid value of %s[%s]. Allowed values are [ALL, NONE, ONLY_REQUIRED]",
+                                           LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE, mode), exception.getMessage());
   }
 
   @Test
@@ -178,7 +179,7 @@ public class LookupLoadingSpecTest
                 LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE, LookupLoadingSpec.Mode.ONLY_REQUIRED),
             LookupLoadingSpec.ALL)
     );
-    Assert.assertEquals(String.format("Invalid value of %s[%s]. Please provide a comma-separated list of lookup names.",
+    Assert.assertEquals(StringUtils.format("Invalid value of %s[%s]. Please provide a comma-separated list of lookup names.",
                                       LookupLoadingSpec.CTX_LOOKUPS_TO_LOAD, lookupsToLoad), exception.getMessage());
   }
 }
