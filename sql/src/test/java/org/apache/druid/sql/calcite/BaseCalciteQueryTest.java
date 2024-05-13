@@ -1155,16 +1155,12 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
     final List<ValueType> types = new ArrayList<>();
 
-    final boolean isMSQ = isMSQRowType(queryResults.signature);
-
-    if (!isMSQ) {
-      for (int i = 0; i < queryResults.signature.getColumnNames().size(); i++) {
-        Optional<ColumnType> columnType = queryResults.signature.getColumnType(i);
-        if (columnType.isPresent()) {
-          types.add(columnType.get().getType());
-        } else {
-          types.add(null);
-        }
+    for (int i = 0; i < queryResults.signature.getColumnNames().size(); i++) {
+      Optional<ColumnType> columnType = queryResults.signature.getColumnType(i);
+      if (columnType.isPresent()) {
+        types.add(columnType.get().getType());
+      } else {
+        types.add(null);
       }
     }
 
@@ -1181,17 +1177,11 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         matchMode.validate(
             row,
             i,
-            isMSQ ? null : types.get(i),
+            types.get(i),
             expectedCell,
             resultCell);
       }
     }
-  }
-
-  private boolean isMSQRowType(RowSignature signature)
-  {
-    List<String> colNames = signature.getColumnNames();
-    return colNames.size() == 1 && "TASK".equals(colNames.get(0));
   }
 
   public void assertResultsEquals(String sql, List<Object[]> expectedResults, List<Object[]> results)
@@ -1338,6 +1328,11 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   protected void msqIncompatible()
   {
     assumeFalse(testBuilder().config.isRunningMSQ(), "test case is not MSQ compatible");
+  }
+
+  protected boolean isRunningMSQ()
+  {
+    return testBuilder().config.isRunningMSQ();
   }
 
   protected static boolean isRewriteJoinToFilter(final Map<String, Object> queryContext)

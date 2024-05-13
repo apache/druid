@@ -1199,7 +1199,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
           // assert rollup
           Assert.assertEquals(expectedRollUp, queryableIndex.getMetadata().isRollup());
 
-          // asset query granularity
+          // assert query granularity
           Assert.assertEquals(expectedQueryGranularity, queryableIndex.getMetadata().getQueryGranularity());
 
           // assert aggregator factories
@@ -1231,7 +1231,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
                                                                        .collect(Collectors.toList());
 
         log.info(
-            "Found rows which are sorted forcefully %s",
+            "Found rows which are sorted forcefully\n%s",
             transformedOutputRows.stream().map(Arrays::deepToString).collect(Collectors.joining("\n"))
         );
 

@@ -19,34 +19,37 @@
 
 package org.apache.druid.frame.key;
 
-import org.apache.druid.segment.column.RowSignature;
-
-import java.util.Comparator;
-import java.util.List;
+import java.util.Objects;
 
 /**
- * Comparator for {@link RowKey} instances.
- *
- * Delegates the comparing to a {@link ByteRowKeyComparator}.
+ * Information about a continguous run of keys, that has the same sorting order
  */
-public class RowKeyComparator implements Comparator<RowKey>
+public class RunLengthEntry
 {
-  private final ByteRowKeyComparator byteRowKeyComparatorDelegate;
+  private final boolean byteComparable;
+  private final KeyOrder order;
+  private final int runLength;
 
-  private RowKeyComparator(final ByteRowKeyComparator byteRowKeyComparatorDelegate)
+  RunLengthEntry(final boolean byteComparable, final KeyOrder order, final int runLength)
   {
-    this.byteRowKeyComparatorDelegate = byteRowKeyComparatorDelegate;
+    this.byteComparable = byteComparable;
+    this.order = order;
+    this.runLength = runLength;
   }
 
-  public static RowKeyComparator create(final List<KeyColumn> keyColumns, RowSignature rowSignature)
+  public boolean isByteComparable()
   {
-    return new RowKeyComparator(ByteRowKeyComparator.create(keyColumns, rowSignature));
+    return byteComparable;
   }
 
-  @Override
-  public int compare(final RowKey key1, final RowKey key2)
+  public int getRunLength()
   {
-    return byteRowKeyComparatorDelegate.compare(key1.array(), key2.array());
+    return runLength;
+  }
+
+  public KeyOrder getOrder()
+  {
+    return order;
   }
 
   @Override
@@ -58,21 +61,23 @@ public class RowKeyComparator implements Comparator<RowKey>
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    RowKeyComparator that = (RowKeyComparator) o;
-    return byteRowKeyComparatorDelegate.equals(that.byteRowKeyComparatorDelegate);
+    RunLengthEntry that = (RunLengthEntry) o;
+    return byteComparable == that.byteComparable && runLength == that.runLength && order == that.order;
   }
 
   @Override
   public int hashCode()
   {
-    return byteRowKeyComparatorDelegate.hashCode();
+    return Objects.hash(byteComparable, order, runLength);
   }
 
   @Override
   public String toString()
   {
-    return "RowKeyComparator{" +
-           "byteRowKeyComparatorDelegate=" + byteRowKeyComparatorDelegate +
+    return "RunLengthEntry{" +
+           "byteComparable=" + byteComparable +
+           ", order=" + order +
+           ", runLength=" + runLength +
            '}';
   }
 }
