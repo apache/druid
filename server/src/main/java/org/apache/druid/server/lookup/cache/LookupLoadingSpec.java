@@ -22,6 +22,7 @@ package org.apache.druid.server.lookup.cache;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.error.InvalidInput;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Map;
@@ -94,19 +95,34 @@ public class LookupLoadingSpec
       return defaultSpec;
     }
 
-    final Object lookupModeValue = context.get(LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE);
+    final Object lookupModeValue = context.get(CTX_LOOKUP_LOADING_MODE);
     if (lookupModeValue == null) {
       return defaultSpec;
     }
 
-    final LookupLoadingSpec.Mode lookupLoadingMode = LookupLoadingSpec.Mode.valueOf(lookupModeValue.toString());
+    final LookupLoadingSpec.Mode lookupLoadingMode;
+    try {
+      lookupLoadingMode = LookupLoadingSpec.Mode.valueOf(lookupModeValue.toString());
+    }
+    catch (IllegalArgumentException e) {
+      throw InvalidInput.exception("Invalid value of %s[%s]. Allowed values are %s",
+                                   CTX_LOOKUP_LOADING_MODE, lookupModeValue.toString(), Arrays.asList(LookupLoadingSpec.Mode.values()));
+    }
 
-    if (lookupLoadingMode == LookupLoadingSpec.Mode.NONE) {
-      return LookupLoadingSpec.NONE;
-    } else if (lookupLoadingMode == LookupLoadingSpec.Mode.ALL) {
-      return LookupLoadingSpec.ALL;
-    } else if (lookupLoadingMode == LookupLoadingSpec.Mode.ONLY_REQUIRED) {
-      Collection<String> lookupsToLoad = (Collection<String>) context.get(LookupLoadingSpec.CTX_LOOKUPS_TO_LOAD);
+    if (lookupLoadingMode == Mode.NONE) {
+      return NONE;
+    } else if (lookupLoadingMode == Mode.ALL) {
+      return ALL;
+    } else if (lookupLoadingMode == Mode.ONLY_REQUIRED) {
+      Collection<String> lookupsToLoad;
+      try {
+        lookupsToLoad = (Collection<String>) context.get(CTX_LOOKUPS_TO_LOAD);
+      }
+      catch (ClassCastException e) {
+        throw InvalidInput.exception("Invalid value of %s[%s]. Please provide a comma-separated list of lookup names.",
+                                     CTX_LOOKUPS_TO_LOAD, context.get(CTX_LOOKUPS_TO_LOAD));
+      }
+
       if (lookupsToLoad == null || lookupsToLoad.isEmpty()) {
         throw InvalidInput.exception("Set of lookups to load cannot be %s for mode[ONLY_REQUIRED].", lookupsToLoad);
       }

@@ -21,13 +21,17 @@ package org.apache.druid.server.lookup.cache;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import junitparams.JUnitParamsRunner;
+import junitparams.Parameters;
 import org.apache.druid.error.DruidException;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 
 import java.util.Arrays;
 import java.util.Set;
 
+@RunWith(JUnitParamsRunner.class)
 public class LookupLoadingSpecTest
 {
   @Test
@@ -137,5 +141,44 @@ public class LookupLoadingSpecTest
             LookupLoadingSpec.NONE
         )
     );
+  }
+
+  @Test
+  @Parameters(
+      {
+          "NONE1",
+          "A",
+          "Random mode",
+          "all",
+          "only required",
+          "none"
+      }
+  )
+  public void testCreateLookupLoadingSpecFromInvalidModeInContext(String mode)
+  {
+    DruidException exception = Assert.assertThrows(DruidException.class, () -> LookupLoadingSpec.createFromContext(
+        ImmutableMap.of(LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE, mode), LookupLoadingSpec.ALL));
+    Assert.assertEquals(String.format("Invalid value of %s[%s]. Allowed values are [ALL, NONE, ONLY_REQUIRED]",
+                                      LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE, mode), exception.getMessage());
+  }
+
+  @Test
+  @Parameters(
+      {
+          "foo bar",
+          "foo]"
+      }
+  )
+  public void testCreateLookupLoadingSpecFromInvalidLookupsInContext(Object lookupsToLoad)
+  {
+    DruidException exception = Assert.assertThrows(DruidException.class, () ->
+        LookupLoadingSpec.createFromContext(
+            ImmutableMap.of(
+                LookupLoadingSpec.CTX_LOOKUPS_TO_LOAD, lookupsToLoad,
+                LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE, LookupLoadingSpec.Mode.ONLY_REQUIRED),
+            LookupLoadingSpec.ALL)
+    );
+    Assert.assertEquals(String.format("Invalid value of %s[%s]. Please provide a comma-separated list of lookup names.",
+                                      LookupLoadingSpec.CTX_LOOKUPS_TO_LOAD, lookupsToLoad), exception.getMessage());
   }
 }
