@@ -21,6 +21,7 @@ package org.apache.druid.indexing.overlord.supervisor;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
@@ -95,7 +96,8 @@ public interface Supervisor
   int getActiveTaskGroupsCount();
 
   /** Handoff the task group with id=taskGroupId the next time the supervisor runs regardless of task run time*/
-  default void handoffTaskGroupEarly(int taskGroupId)
+  default void handoffTaskGroupsEarly(List<Integer> taskGroupIds)
   {
+    throw new NotImplementedException("Supervisor does not have the feature to handoff task groups early implemented");
   }
 }

@@ -1327,7 +1327,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     supervisor.start();
     supervisor.runInternal();
-    supervisor.handoffTaskGroupEarly(0);
+    supervisor.handoffTaskGroupsEarly(ImmutableList.of(0));
 
     while (supervisor.getNoticesQueueSize() > 0) {
       Thread.sleep(100);

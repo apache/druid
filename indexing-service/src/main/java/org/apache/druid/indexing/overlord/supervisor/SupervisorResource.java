@@ -30,6 +30,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
@@ -395,19 +396,37 @@ public class SupervisorResource
     return terminate(id);
   }
 
+  /**
+   * This method will immediately try to handoff the list of task group ids for the given supervisor.
+   * This is a best effort API and makes no guarantees of execution, e.g. if a non-existent task group id
+   * is passed to it, the API call will still suceced.
+   */
   @POST
-  @Path("/{id}/taskGroups/restart")
+  @Path("/{id}/taskGroups/handoff")
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(SupervisorResourceFilter.class)
   public Response handoffTaskGroups(@PathParam("id") final String id, final List<Integer> taskGroupIds)
   {
+    if (taskGroupIds == null || taskGroupIds.isEmpty()) {
+      return Response.status(Response.Status.BAD_REQUEST)
+          .entity(ImmutableMap.of("error", "List of task groups to handoff can't be empty"))
+          .build();
+
+    }
     return asLeaderWithSupervisorManager(
         manager -> {
-          if (manager.handoffTaskGroupsEarly(id, taskGroupIds)) {
-            return Response.ok(ImmutableMap.of("id", id, "taskGroupIds", taskGroupIds)).build();
-          } else {
-            return Response.status(Response.Status.NOT_FOUND)
-                .entity(ImmutableMap.of("error", StringUtils.format("Supervisor was not found [%s]", id)))
+          try {
+            if (manager.handoffTaskGroupsEarly(id, taskGroupIds)) {
+              return Response.ok(ImmutableMap.of("id", id, "taskGroupIds", taskGroupIds)).build();
+            } else {
+              return Response.status(Response.Status.NOT_FOUND)
+                  .entity(ImmutableMap.of("error", StringUtils.format("Supervisor was not found [%s]", id)))
+                  .build();
+            }
+          }
+          catch (NotImplementedException e) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                .entity(ImmutableMap.of("error", StringUtils.format("Supervisor [%s] does not support early handoff", id)))
                 .build();
           }
         }

@@ -143,9 +143,7 @@ public class SupervisorManager
     if (supervisor == null || supervisor.lhs == null) {
       return false;
     }
-    for (Integer taskGroup : taskGroupIds) {
-      supervisor.lhs.handoffTaskGroupEarly(taskGroup);
-    }
+    supervisor.lhs.handoffTaskGroupsEarly(taskGroupIds);
     return true;
   }
 

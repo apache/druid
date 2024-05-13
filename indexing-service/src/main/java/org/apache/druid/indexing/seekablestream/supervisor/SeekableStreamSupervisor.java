@@ -669,28 +669,30 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
   }
 
-  private class HandoffTaskGroupNotice implements Notice
+  private class HandoffTaskGroupsNotice implements Notice
   {
-    final Integer taskGroupId;
+    final List<Integer> taskGroupIds;
     private static final String TYPE = "handoff_task_group_notice";
 
-    HandoffTaskGroupNotice(
-        final Integer taskGroupId
+    HandoffTaskGroupsNotice(
+        @Nonnull final List<Integer> taskGroupIds
     )
     {
-      this.taskGroupId = taskGroupId;
+      this.taskGroupIds = taskGroupIds;
     }
 
     @Override
     public void handle()
     {
-      TaskGroup taskGroup = activelyReadingTaskGroups.getOrDefault(taskGroupId, null);
-      if (taskGroup == null) {
-        log.info("Tried to stop task group that wasn't actively reading.");
-        return;
-      }
+      for (Integer taskGroupId : taskGroupIds) {
+        TaskGroup taskGroup = activelyReadingTaskGroups.getOrDefault(taskGroupId, null);
+        if (taskGroup == null) {
+          log.info("Tried to stop task group that wasn't actively reading.");
+          continue;
+        }
 
-      taskGroup.setShutdownEarly();
+        taskGroup.setShutdownEarly();
+      }
     }
 
     @Override
@@ -1976,9 +1978,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   }
 
   @Override
-  public void handoffTaskGroupEarly(int taskGroupId)
+  public void handoffTaskGroupsEarly(List<Integer> taskGroupIds)
   {
-    addNotice(new HandoffTaskGroupNotice(taskGroupId));
+    addNotice(new HandoffTaskGroupsNotice(taskGroupIds));
   }
 
   private void discoverTasks() throws ExecutionException, InterruptedException

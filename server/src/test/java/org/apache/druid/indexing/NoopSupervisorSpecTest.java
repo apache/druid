@@ -19,6 +19,8 @@
 
 package org.apache.druid.indexing;
 
+import com.google.common.collect.ImmutableList;
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.druid.indexing.overlord.ObjectMetadata;
 import org.apache.druid.indexing.overlord.supervisor.NoopSupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.Supervisor;
@@ -95,6 +97,8 @@ public class NoopSupervisorSpecTest
   {
     NoopSupervisorSpec expectedSpec = new NoopSupervisorSpec(null, null);
     Supervisor noOpSupervisor = expectedSpec.createSupervisor();
-    noOpSupervisor.handoffTaskGroupEarly(0);
+    Assert.assertThrows(NotImplementedException.class,
+        () -> noOpSupervisor.handoffTaskGroupsEarly(ImmutableList.of())
+    );
   }
 }

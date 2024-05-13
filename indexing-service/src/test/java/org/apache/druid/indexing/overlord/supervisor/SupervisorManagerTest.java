@@ -249,7 +249,7 @@ public class SupervisorManagerTest extends EasyMockSupport
 
     EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
     supervisor1.start();
-    supervisor1.handoffTaskGroupEarly(1);
+    supervisor1.handoffTaskGroupsEarly(ImmutableList.of(1));
 
     replayAll();
 

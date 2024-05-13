@@ -3550,6 +3550,61 @@ Host: http://ROUTER_IP:ROUTER_PORT
   ```
 </details>
 
+### Handoff task groups for a supervisor early
+
+Trigger handoff for specified task groups of a supervisor early. This is a best effort API and makes no guarantees of handoff execution
+
+#### URL
+
+`POST` `/druid/indexer/v1/supervisor/{supervisorId}/taskGroups/handoff`
+
+#### Sample request
+
+The following example shows how to handoff task groups for a Kafka supervisor with the name `social_media` and has the task groups: `1,2,3`.
+
+<Tabs>
+
+<TabItem value="3" label="cURL">
+
+
+```shell
+curl --request POST "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor/social_media/taskGroups/handoff"
+--header 'Content-Type: application/json'
+--data-raw '["1", "2", "3"]'
+```
+
+</TabItem>
+<TabItem value="4" label="HTTP">
+
+
+```HTTP
+POST /druid/indexer/v1/supervisor/social_media/taskGroups/handoff HTTP/1.1
+Host: http://ROUTER_IP:ROUTER_PORT
+Content-Type: application/json
+
+[1, 2, 3]
+```
+
+</TabItem>
+</Tabs>
+
+#### Sample response
+
+<details>
+  <summary>View the response</summary>
+
+  ```json
+{
+  "id": "social_media",
+  "taskGroupIds": [
+    1,
+    2,
+    3
+  ]
+}
+  ```
+</details>
+
 ### Shut down a supervisor
 
 Shuts down a supervisor. This endpoint is deprecated and will be removed in future releases. Use the equivalent [terminate](#terminate-a-supervisor) endpoint instead.
