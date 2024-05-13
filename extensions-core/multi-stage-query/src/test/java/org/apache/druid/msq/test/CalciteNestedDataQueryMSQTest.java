@@ -24,26 +24,29 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import org.apache.druid.guice.DruidInjectorBuilder;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
-import org.apache.druid.msq.test.CalciteArraysQueryMSQTest.ArraysQueryMSQComponentSupplier;
 import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.server.QueryLifecycleFactory;
-import org.apache.druid.sql.calcite.CalciteArraysQueryTest;
+import org.apache.druid.sql.calcite.CalciteNestedDataQueryTest;
 import org.apache.druid.sql.calcite.QueryTestBuilder;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.run.SqlEngine;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 /**
- * Runs {@link CalciteArraysQueryTest} but with MSQ engine
+ * Runs {@link CalciteNestedDataQueryTest} but with MSQ engine
  */
-@SqlTestFrameworkConfig.ComponentSupplier(ArraysQueryMSQComponentSupplier.class)
-public class CalciteArraysQueryMSQTest extends CalciteArraysQueryTest
+@SqlTestFrameworkConfig.ComponentSupplier(CalciteNestedDataQueryMSQTest.NestedDataQueryMSQComponentSupplier.class)
+public class CalciteNestedDataQueryMSQTest extends CalciteNestedDataQueryTest
 {
-  public static class ArraysQueryMSQComponentSupplier extends ArraysComponentSupplier
+
+  public static class NestedDataQueryMSQComponentSupplier extends NestedComponentSupplier
   {
-    public ArraysQueryMSQComponentSupplier(TempDirProducer tempFolderProducer)
+    public NestedDataQueryMSQComponentSupplier(TempDirProducer tempFolderProducer)
     {
       super(tempFolderProducer);
     }
@@ -92,5 +95,18 @@ public class CalciteArraysQueryMSQTest extends CalciteArraysQueryTest
         .skipVectorize(true)
         .verifyNativeQueries(new VerifyMSQSupportedNativeQueriesPredicate());
   }
-}
 
+  @Override
+  @Test
+  public void testJoinOnNestedColumnThrows()
+  {
+    Assertions.assertThrows(ISE.class, () -> {
+      testQuery(
+          "SELECT * FROM druid.nested a INNER JOIN druid.nested b ON a.nester = b.nester",
+          ImmutableList.of(),
+          ImmutableList.of()
+      );
+    });
+  }
+
+}

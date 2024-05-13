@@ -142,8 +142,6 @@ public abstract class DruidQuidemTestBase
         DruidQuidemConnectionFactory connectionFactory = new DruidQuidemConnectionFactory();
         ConfigBuilder configBuilder = Quidem.configBuilder()
             .withConnectionFactory(connectionFactory)
-            // this is not nice - but it makes it possible to do queryContext
-            // changes
             .withPropertyHandler(connectionFactory)
             .withCommandHandler(new DruidQuidemCommandHandler());
 

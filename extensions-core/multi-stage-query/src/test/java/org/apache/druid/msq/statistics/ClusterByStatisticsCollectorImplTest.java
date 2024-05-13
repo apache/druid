@@ -108,7 +108,7 @@ public class ClusterByStatisticsCollectorImplTest extends InitializedNullHandlin
                   .iterator();
 
     final NavigableMap<RowKey, List<Integer>> sortedKeyWeights =
-        computeSortedKeyWeightsFromUnweightedKeys(keys, clusterBy.keyComparator());
+        computeSortedKeyWeightsFromUnweightedKeys(keys, clusterBy.keyComparator(SIGNATURE));
 
     doTest(
         clusterBy,
@@ -157,7 +157,7 @@ public class ClusterByStatisticsCollectorImplTest extends InitializedNullHandlin
     }
 
     final NavigableMap<RowKey, List<Integer>> sortedKeyWeights =
-        computeSortedKeyWeightsFromUnweightedKeys(keys, clusterBy.keyComparator());
+        computeSortedKeyWeightsFromUnweightedKeys(keys, clusterBy.keyComparator(SIGNATURE));
 
     doTest(
         clusterBy,
@@ -208,7 +208,7 @@ public class ClusterByStatisticsCollectorImplTest extends InitializedNullHandlin
     }
 
     final NavigableMap<RowKey, List<Integer>> sortedKeyWeights =
-        computeSortedKeyWeightsFromUnweightedKeys(keys, clusterBy.keyComparator());
+        computeSortedKeyWeightsFromUnweightedKeys(keys, clusterBy.keyComparator(SIGNATURE));
 
     doTest(
         clusterBy,
@@ -267,7 +267,7 @@ public class ClusterByStatisticsCollectorImplTest extends InitializedNullHandlin
     }
 
     final NavigableMap<RowKey, List<Integer>> sortedKeyWeights =
-        computeSortedKeyWeightsFromUnweightedKeys(keys, clusterBy.keyComparator());
+        computeSortedKeyWeightsFromUnweightedKeys(keys, clusterBy.keyComparator(SIGNATURE));
 
     doTest(
         clusterBy,
@@ -331,7 +331,7 @@ public class ClusterByStatisticsCollectorImplTest extends InitializedNullHandlin
     }
 
     final NavigableMap<RowKey, List<Integer>> sortedKeyWeights =
-        computeSortedKeyWeightsFromUnweightedKeys(keys, clusterBy.keyComparator());
+        computeSortedKeyWeightsFromUnweightedKeys(keys, clusterBy.keyComparator(SIGNATURE));
 
     doTest(
         clusterBy,
@@ -402,7 +402,7 @@ public class ClusterByStatisticsCollectorImplTest extends InitializedNullHandlin
     }
 
     final NavigableMap<RowKey, List<Integer>> sortedKeyWeights =
-        computeSortedKeyWeightsFromUnweightedKeys(keys, clusterBy.keyComparator());
+        computeSortedKeyWeightsFromUnweightedKeys(keys, clusterBy.keyComparator(SIGNATURE));
 
     doTest(
         clusterBy,
@@ -551,7 +551,7 @@ public class ClusterByStatisticsCollectorImplTest extends InitializedNullHandlin
       final BiConsumer<String, ClusterByStatisticsCollectorImpl> testFn
   )
   {
-    final Comparator<RowKey> comparator = clusterBy.keyComparator();
+    final Comparator<RowKey> comparator = clusterBy.keyComparator(SIGNATURE);
 
     // Load into single collector, sorted order.
     final ClusterByStatisticsCollectorImpl sortedCollector = makeCollector(clusterBy, aggregate);
@@ -649,7 +649,7 @@ public class ClusterByStatisticsCollectorImplTest extends InitializedNullHandlin
         testName,
         partitions,
         sortedKeyWeights.firstKey(),
-        clusterBy.keyComparator()
+        clusterBy.keyComparator(SIGNATURE)
     );
     verifyPartitionWeights(testName, clusterBy, partitions, sortedKeyWeights, aggregate, expectedPartitionSize);
   }

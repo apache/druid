@@ -57,7 +57,6 @@ import org.apache.druid.sql.avatica.DruidAvaticaJsonHandler;
 import org.apache.druid.sql.avatica.DruidMeta;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig.ConfigurationInstance;
-import org.apache.druid.sql.calcite.SqlTestFrameworkConfig.SqlTestFrameworkConfigInstance;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig.SqlTestFrameworkConfigStore;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
@@ -70,12 +69,12 @@ import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.Builder;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.PlannerComponentSupplier;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.QueryComponentSupplier;
-import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.sql.guice.SqlModule;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.client.utils.URLEncodedUtils;
 import org.eclipse.jetty.server.Server;
+
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
@@ -114,16 +113,14 @@ public class DruidAvaticaTestDriver implements Driver
     if (!acceptsURL(url)) {
       return null;
     }
-    SqlTestFrameworkConfigInstance config = buildConfigfromURIParams(url);
-
-    ConfigurationInstance ci = CONFIG_STORE.getConfigurationInstance(
-        config,
-        tempDirProducer -> new AvaticaBasedTestConnectionSupplier(
-            new StandardComponentSupplier(tempDirProducer)
-        )
-    );
-
     try {
+      SqlTestFrameworkConfig config = buildConfigfromURIParams(url);
+
+      ConfigurationInstance ci = CONFIG_STORE.getConfigurationInstance(
+          config,
+          x -> new AvaticaBasedTestConnectionSupplier(x)
+      );
+
       AvaticaJettyServer server = ci.framework.injector().getInstance(AvaticaJettyServer.class);
       return server.getConnection(info);
     }
@@ -352,7 +349,7 @@ public class DruidAvaticaTestDriver implements Driver
     return tempDir;
   }
 
-  public static SqlTestFrameworkConfigInstance buildConfigfromURIParams(String url) throws SQLException
+  public static SqlTestFrameworkConfig buildConfigfromURIParams(String url) throws SQLException
   {
     Map<String, String> queryParams;
     queryParams = new HashMap<>();
@@ -367,8 +364,7 @@ public class DruidAvaticaTestDriver implements Driver
       throw new SQLException("Can't decode URI", e);
     }
 
-    SqlTestFrameworkConfig config = MapToInterfaceHandler.newInstanceFor(SqlTestFrameworkConfig.class, queryParams);
-    return new SqlTestFrameworkConfigInstance(config);
+    return new SqlTestFrameworkConfig(queryParams);
   }
 
   private void register()
