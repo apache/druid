@@ -43,6 +43,7 @@ import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.indexing.seekablestream.supervisor.IdleConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec;
+import org.apache.druid.indexing.seekablestream.supervisor.TaskCreationStopConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScalerConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
@@ -146,6 +147,7 @@ public class SeekableStreamSamplerSpecTest extends EasyMockSupport
         null,
         null,
         true,
+        null,
         null,
         null,
         null,
@@ -330,7 +332,8 @@ public class SeekableStreamSamplerSpecTest extends EasyMockSupport
         Period earlyMessageRejectionPeriod,
         @Nullable AutoScalerConfig autoScalerConfig,
         DateTime lateMessageRejectionStartDateTime,
-        @Nullable IdleConfig idleConfig
+        @Nullable IdleConfig idleConfig,
+        @Nullable TaskCreationStopConfig taskCreationStopConfig
     )
     {
       super(
@@ -348,7 +351,8 @@ public class SeekableStreamSamplerSpecTest extends EasyMockSupport
           autoScalerConfig,
           lateMessageRejectionStartDateTime,
           idleConfig,
-          null
+          null,
+          taskCreationStopConfig
       );
     }
   }

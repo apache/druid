@@ -52,6 +52,12 @@ public class SupervisorStateManagerConfig
   @JsonProperty("idleConfig.inactiveAfterMillis")
   private long inactiveAfterMillis = 600_000L;
 
+  @JsonProperty("taskCreationStopConfig.enabled")
+  private boolean taskCreationStopConfigEnabled = false;
+
+  @JsonProperty("taskCreationStopConfig.noProgressTimeoutMillis")
+  private long noProgressTimeoutMillis = 60_000L;
+
   public SupervisorStateManagerConfig()
   {
 
@@ -100,5 +106,15 @@ public class SupervisorStateManagerConfig
   public long getInactiveAfterMillis()
   {
     return inactiveAfterMillis;
+  }
+
+  public boolean isTaskCreationStopConfigEnabled()
+  {
+    return taskCreationStopConfigEnabled;
+  }
+
+  public long getNoProgressTimeoutMillis()
+  {
+    return noProgressTimeoutMillis;
   }
 }

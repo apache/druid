@@ -22,7 +22,6 @@ package org.apache.druid.segment.incremental;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.java.util.common.parsers.UnparseableColumnsParseException;
@@ -93,7 +92,7 @@ public class ParseExceptionHandler
     }
 
     if (rowIngestionMeters.getUnparseable() + rowIngestionMeters.getProcessedWithError() > maxAllowedParseExceptions) {
-      throw new RE("Max parse exceptions[%s] exceeded", maxAllowedParseExceptions);
+      throw new ParseException(null, "Max parse exceptions[%s] exceeded", maxAllowedParseExceptions);
     }
   }
 

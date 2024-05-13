@@ -72,7 +72,7 @@ public class SeekableStreamSupervisorStateManagerTest
     Assert.assertEquals(SeekableStreamState.CREATING_TASKS, stateManager.getSupervisorState());
     Assert.assertEquals(BasicState.RUNNING, stateManager.getSupervisorState().getBasicState());
 
-    stateManager.markRunFinished();
+    stateManager.markRunFinished(null);
     Assert.assertEquals(BasicState.RUNNING, stateManager.getSupervisorState());
     Assert.assertEquals(BasicState.RUNNING, stateManager.getSupervisorState().getBasicState());
 
@@ -93,7 +93,7 @@ public class SeekableStreamSupervisorStateManagerTest
     Assert.assertEquals(BasicState.RUNNING, stateManager.getSupervisorState());
     Assert.assertEquals(BasicState.RUNNING, stateManager.getSupervisorState().getBasicState());
 
-    stateManager.markRunFinished();
+    stateManager.markRunFinished(null);
     Assert.assertEquals(BasicState.RUNNING, stateManager.getSupervisorState());
     Assert.assertEquals(BasicState.RUNNING, stateManager.getSupervisorState().getBasicState());
   }
@@ -116,7 +116,7 @@ public class SeekableStreamSupervisorStateManagerTest
     Assert.assertEquals(SeekableStreamState.CREATING_TASKS, stateManager.getSupervisorState());
     Assert.assertEquals(BasicState.RUNNING, stateManager.getSupervisorState().getBasicState());
 
-    stateManager.markRunFinished();
+    stateManager.markRunFinished(null);
     Assert.assertEquals(BasicState.RUNNING, stateManager.getSupervisorState());
     Assert.assertEquals(BasicState.RUNNING, stateManager.getSupervisorState().getBasicState());
 
@@ -126,7 +126,7 @@ public class SeekableStreamSupervisorStateManagerTest
     Assert.assertEquals(BasicState.IDLE, stateManager.getSupervisorState().getBasicState());
 
     // Stay in idle state when supervisor is running until or unless it is specifically set to a different state
-    stateManager.markRunFinished();
+    stateManager.markRunFinished(null);
     Assert.assertEquals(BasicState.IDLE, stateManager.getSupervisorState());
     Assert.assertEquals(BasicState.IDLE, stateManager.getSupervisorState().getBasicState());
 
@@ -156,7 +156,7 @@ public class SeekableStreamSupervisorStateManagerTest
     Assert.assertEquals(BasicState.STOPPING, stateManager.getSupervisorState());
     Assert.assertEquals(BasicState.STOPPING, stateManager.getSupervisorState().getBasicState());
 
-    stateManager.markRunFinished();
+    stateManager.markRunFinished(null);
     Assert.assertEquals(BasicState.STOPPING, stateManager.getSupervisorState());
     Assert.assertEquals(BasicState.STOPPING, stateManager.getSupervisorState().getBasicState());
   }
@@ -164,14 +164,14 @@ public class SeekableStreamSupervisorStateManagerTest
   @Test
   public void testStreamFailureLostContact()
   {
-    stateManager.markRunFinished(); // clean run without errors
+    stateManager.markRunFinished(null); // clean run without errors
 
     Assert.assertEquals(BasicState.RUNNING, stateManager.getSupervisorState());
 
     for (int i = 0; i < config.getUnhealthinessThreshold(); i++) {
       Assert.assertEquals(BasicState.RUNNING, stateManager.getSupervisorState());
       stateManager.recordThrowableEvent(new StreamException(new IllegalStateException("DOH!")));
-      stateManager.markRunFinished();
+      stateManager.markRunFinished(null);
     }
     Assert.assertEquals(SeekableStreamState.LOST_CONTACT_WITH_STREAM, stateManager.getSupervisorState());
     Assert.assertEquals(BasicState.UNHEALTHY_SUPERVISOR, stateManager.getSupervisorState().getBasicState());
@@ -190,7 +190,7 @@ public class SeekableStreamSupervisorStateManagerTest
     for (int i = 0; i < config.getUnhealthinessThreshold(); i++) {
       Assert.assertEquals(SeekableStreamState.CONNECTING_TO_STREAM, stateManager.getSupervisorState());
       stateManager.recordThrowableEvent(new StreamException(new IllegalStateException("DOH!")));
-      stateManager.markRunFinished();
+      stateManager.markRunFinished(null);
     }
     Assert.assertEquals(SeekableStreamState.UNABLE_TO_CONNECT_TO_STREAM, stateManager.getSupervisorState());
     Assert.assertEquals(BasicState.UNHEALTHY_SUPERVISOR, stateManager.getSupervisorState().getBasicState());
@@ -209,7 +209,7 @@ public class SeekableStreamSupervisorStateManagerTest
     for (int i = 0; i < config.getUnhealthinessThreshold(); i++) {
       Assert.assertEquals(SeekableStreamState.DISCOVERING_INITIAL_TASKS, stateManager.getSupervisorState());
       stateManager.recordThrowableEvent(new NullPointerException("oof"));
-      stateManager.markRunFinished();
+      stateManager.markRunFinished(null);
     }
     Assert.assertEquals(BasicState.UNHEALTHY_SUPERVISOR, stateManager.getSupervisorState());
     Assert.assertEquals(BasicState.UNHEALTHY_SUPERVISOR, stateManager.getSupervisorState().getBasicState());
@@ -224,15 +224,15 @@ public class SeekableStreamSupervisorStateManagerTest
   @Test
   public void testTransientUnhealthiness()
   {
-    stateManager.markRunFinished();
+    stateManager.markRunFinished(null);
     for (int j = 1; j < 3; j++) {
       for (int i = 0; i < config.getUnhealthinessThreshold() - 1; i++) {
         stateManager.recordThrowableEvent(new NullPointerException("oof"));
-        stateManager.markRunFinished();
+        stateManager.markRunFinished(null);
         Assert.assertEquals(BasicState.RUNNING, stateManager.getSupervisorState());
       }
 
-      stateManager.markRunFinished(); // clean run
+      stateManager.markRunFinished(null); // clean run
       Assert.assertEquals(BasicState.RUNNING, stateManager.getSupervisorState());
       Assert.assertEquals(BasicState.RUNNING, stateManager.getSupervisorState().getBasicState());
       Assert.assertEquals(j * (config.getUnhealthinessThreshold() - 1), stateManager.getExceptionEvents().size());
@@ -242,11 +242,11 @@ public class SeekableStreamSupervisorStateManagerTest
   @Test
   public void testNonTransientTaskUnhealthiness()
   {
-    stateManager.markRunFinished();
+    stateManager.markRunFinished(null);
     for (int i = 0; i < config.getTaskUnhealthinessThreshold(); i++) {
       Assert.assertEquals(BasicState.RUNNING, stateManager.getSupervisorState());
-      stateManager.recordCompletedTaskState(TaskState.FAILED);
-      stateManager.markRunFinished();
+      stateManager.recordCompletedTaskState(TaskState.FAILED, null);
+      stateManager.markRunFinished(null);
     }
     Assert.assertEquals(BasicState.UNHEALTHY_TASKS, stateManager.getSupervisorState());
     Assert.assertEquals(BasicState.UNHEALTHY_TASKS, stateManager.getSupervisorState().getBasicState());
@@ -257,12 +257,12 @@ public class SeekableStreamSupervisorStateManagerTest
   public void testTransientTaskUnhealthiness()
   {
     // Only half are failing
-    stateManager.markRunFinished();
+    stateManager.markRunFinished(null);
     for (int i = 0; i < config.getTaskUnhealthinessThreshold() + 3; i++) {
       Assert.assertEquals(BasicState.RUNNING, stateManager.getSupervisorState());
-      stateManager.recordCompletedTaskState(TaskState.FAILED);
-      stateManager.recordCompletedTaskState(TaskState.SUCCESS);
-      stateManager.markRunFinished();
+      stateManager.recordCompletedTaskState(TaskState.FAILED, null);
+      stateManager.recordCompletedTaskState(TaskState.SUCCESS, null);
+      stateManager.markRunFinished(null);
     }
     Assert.assertEquals(BasicState.RUNNING, stateManager.getSupervisorState());
     Assert.assertEquals(BasicState.RUNNING, stateManager.getSupervisorState().getBasicState());
@@ -276,14 +276,14 @@ public class SeekableStreamSupervisorStateManagerTest
     for (int i = 0; i < config.getUnhealthinessThreshold(); i++) {
       Assert.assertEquals(BasicState.PENDING, stateManager.getSupervisorState());
       stateManager.recordThrowableEvent(new Exception("Except the inevitable"));
-      stateManager.markRunFinished();
+      stateManager.markRunFinished(null);
     }
     Assert.assertEquals(BasicState.UNHEALTHY_SUPERVISOR, stateManager.getSupervisorState());
 
     // Recover after config.healthinessThreshold successful task completions
     for (int i = 0; i < config.getHealthinessThreshold(); i++) {
       Assert.assertEquals(BasicState.UNHEALTHY_SUPERVISOR, stateManager.getSupervisorState());
-      stateManager.markRunFinished();
+      stateManager.markRunFinished(null);
     }
     Assert.assertEquals(BasicState.RUNNING, stateManager.getSupervisorState());
     Assert.assertEquals(config.getUnhealthinessThreshold(), stateManager.getExceptionEvents().size());
@@ -297,21 +297,21 @@ public class SeekableStreamSupervisorStateManagerTest
   @Test
   public void testTaskRecoveryWithHealthinessThreshold()
   {
-    stateManager.markRunFinished();
+    stateManager.markRunFinished(null);
 
     // Put into an unhealthy state
     for (int i = 0; i < config.getTaskUnhealthinessThreshold(); i++) {
       Assert.assertEquals(BasicState.RUNNING, stateManager.getSupervisorState());
-      stateManager.recordCompletedTaskState(TaskState.FAILED);
-      stateManager.markRunFinished();
+      stateManager.recordCompletedTaskState(TaskState.FAILED, null);
+      stateManager.markRunFinished(null);
     }
     Assert.assertEquals(BasicState.UNHEALTHY_TASKS, stateManager.getSupervisorState());
 
     // Recover after config.healthinessThreshold successful task completions
     for (int i = 0; i < config.getTaskHealthinessThreshold(); i++) {
       Assert.assertEquals(BasicState.UNHEALTHY_TASKS, stateManager.getSupervisorState());
-      stateManager.recordCompletedTaskState(TaskState.SUCCESS);
-      stateManager.markRunFinished();
+      stateManager.recordCompletedTaskState(TaskState.SUCCESS, null);
+      stateManager.markRunFinished(null);
     }
     Assert.assertEquals(BasicState.RUNNING, stateManager.getSupervisorState());
   }
@@ -319,12 +319,12 @@ public class SeekableStreamSupervisorStateManagerTest
   @Test
   public void testTwoUnhealthyStates()
   {
-    stateManager.markRunFinished();
+    stateManager.markRunFinished(null);
 
     for (int i = 0; i < Math.max(config.getTaskUnhealthinessThreshold(), config.getUnhealthinessThreshold()); i++) {
       stateManager.recordThrowableEvent(new NullPointerException("somebody goofed"));
-      stateManager.recordCompletedTaskState(TaskState.FAILED);
-      stateManager.markRunFinished();
+      stateManager.recordCompletedTaskState(TaskState.FAILED, null);
+      stateManager.markRunFinished(null);
     }
     // UNHEALTHY_SUPERVISOR should take priority over UNHEALTHY_TASKS
     Assert.assertEquals(BasicState.UNHEALTHY_SUPERVISOR, stateManager.getSupervisorState());
@@ -341,7 +341,7 @@ public class SeekableStreamSupervisorStateManagerTest
     );
     for (Exception exception : exceptions) {
       stateManager.recordThrowableEvent(exception);
-      stateManager.markRunFinished();
+      stateManager.markRunFinished(null);
     }
 
     Assert.assertEquals(BasicState.UNHEALTHY_SUPERVISOR, stateManager.getSupervisorState());

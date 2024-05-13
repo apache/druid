@@ -24,6 +24,7 @@ import com.google.common.base.Preconditions;
 import org.apache.commons.lang.exception.ExceptionUtils;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.parsers.ParseException;
 import org.joda.time.DateTime;
 
 import java.util.ArrayList;
@@ -59,6 +60,7 @@ public class SupervisorStateManager
   {
     UNHEALTHY_SUPERVISOR(false, false),
     UNHEALTHY_TASKS(false, false),
+    UNHEALTHY_TASKS_STOP_CREATING_NEW(false, false),
 
     PENDING(true, true),
     RUNNING(true, false),
@@ -106,7 +108,9 @@ public class SupervisorStateManager
   private int consecutiveFailedRuns = 0;
   private int consecutiveSuccessfulRuns = 0;
   private int consecutiveFailedTasks = 0;
+  private int consecutiveParseExceptionFailedTasks = 0;
   private int consecutiveSuccessfulTasks = 0;
+  private Boolean shouldStopTaskCreation;
 
   public SupervisorStateManager(SupervisorStateManagerConfig supervisorStateManagerConfig, boolean suspended)
   {
@@ -141,7 +145,12 @@ public class SupervisorStateManager
     // if we're over our task unhealthiness threshold, set the state to UNHEALTHY_TASKS
     if (consecutiveFailedTasks >= supervisorStateManagerConfig.getTaskUnhealthinessThreshold()) {
       hasHitTaskUnhealthinessThreshold = true;
-      supervisorState = BasicState.UNHEALTHY_TASKS;
+      if (consecutiveFailedTasks == consecutiveParseExceptionFailedTasks
+          && Boolean.TRUE.equals(shouldStopTaskCreation)) {
+        supervisorState = BasicState.UNHEALTHY_TASKS_STOP_CREATING_NEW;
+      } else {
+        supervisorState = BasicState.UNHEALTHY_TASKS;
+      }
       return;
     }
 
@@ -180,18 +189,22 @@ public class SupervisorStateManager
     currentRunSuccessful = false;
   }
 
-  public void recordCompletedTaskState(TaskState state)
+  public void recordCompletedTaskState(TaskState state, String errorMsg)
   {
     if (state.isSuccess()) {
       consecutiveSuccessfulTasks++;
       consecutiveFailedTasks = 0;
+      consecutiveParseExceptionFailedTasks = 0;
     } else if (state.isFailure()) {
       consecutiveFailedTasks++;
+      if (errorMsg != null && errorMsg.contains(ParseException.class.getName())) {
+        consecutiveParseExceptionFailedTasks++;
+      }
       consecutiveSuccessfulTasks = 0;
     }
   }
 
-  public void markRunFinished()
+  public void markRunFinished(Boolean shouldStopTaskCreation)
   {
     atLeastOneSuccessfulRun |= currentRunSuccessful;
 
@@ -207,6 +220,7 @@ public class SupervisorStateManager
     }
     // reset for next run
     currentRunSuccessful = true;
+    this.shouldStopTaskCreation = shouldStopTaskCreation;
   }
 
   public List<ExceptionEvent> getExceptionEvents()
@@ -237,6 +251,11 @@ public class SupervisorStateManager
   public boolean isIdle()
   {
     return SupervisorStateManager.BasicState.IDLE.equals(supervisorState);
+  }
+
+  public boolean shouldStopTaskCreation()
+  {
+    return BasicState.UNHEALTHY_TASKS_STOP_CREATING_NEW.equals(supervisorState);
   }
 
   protected Deque<ExceptionEvent> getRecentEventsQueue()

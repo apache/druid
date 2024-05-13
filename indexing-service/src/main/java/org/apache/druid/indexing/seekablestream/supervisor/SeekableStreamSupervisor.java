@@ -858,7 +858,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   // snapshots latest sequences from stream to be verified in next run cycle of inactive stream check
   private final Map<PartitionIdType, SequenceOffsetType> previousSequencesFromStream = new HashMap<>();
   private long lastActiveTimeMillis;
+  private Long lastMakingProgressTimeMillis = null;
   private final IdleConfig idleConfig;
+  private final TaskCreationStopConfig taskCreationStopConfig;
 
   public SeekableStreamSupervisor(
       final String supervisorId,
@@ -927,6 +929,23 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       idleConfig = new IdleConfig(
           spec.getSupervisorStateManagerConfig().isIdleConfigEnabled(),
           spec.getSupervisorStateManagerConfig().getInactiveAfterMillis()
+      );
+    }
+
+    TaskCreationStopConfig specTaskCreationStopConfig = spec.getIoConfig().getTaskCreationStopConfig();
+    if (specTaskCreationStopConfig != null) {
+      if (specTaskCreationStopConfig.getNoProgressTimeoutMillis() != null) {
+        taskCreationStopConfig = specTaskCreationStopConfig;
+      } else {
+        taskCreationStopConfig = new TaskCreationStopConfig(
+            specTaskCreationStopConfig.isEnabled(),
+            spec.getSupervisorStateManagerConfig().getNoProgressTimeoutMillis()
+        );
+      }
+    } else {
+      taskCreationStopConfig = new TaskCreationStopConfig(
+          spec.getSupervisorStateManagerConfig().isTaskCreationStopConfigEnabled(),
+          spec.getSupervisorStateManagerConfig().getNoProgressTimeoutMillis()
       );
     }
 
@@ -1670,10 +1689,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         } else if (stateManager.isIdle()) {
           log.info("[%s] supervisor is idle.", dataSource);
         } else if (!spec.isSuspended()) {
-          log.info("[%s] supervisor is running.", dataSource);
-
-          stateManager.maybeSetState(SeekableStreamSupervisorStateManager.SeekableStreamState.CREATING_TASKS);
-          createNewTasks();
+          if (stateManager.shouldStopTaskCreation()) {
+            log.info("[%s] supervisor is running, but task creation is stopped due to record parsing errors.", dataSource);
+          } else {
+            log.info("[%s] supervisor is running.", dataSource);
+            stateManager.maybeSetState(SeekableStreamSupervisorStateManager.SeekableStreamState.CREATING_TASKS);
+            createNewTasks();
+          }
         } else {
           log.info("[%s] supervisor is suspended.", dataSource);
           gracefulShutdownInternal();
@@ -1687,7 +1709,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       log.warn(e, "Exception in supervisor run loop for dataSource [%s]", dataSource);
     }
     finally {
-      stateManager.markRunFinished();
+      stateManager.markRunFinished(checkStreamProgressAndStopTaskCreationIfNeeded());
     }
   }
 
@@ -3289,17 +3311,17 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       while (i.hasNext()) {
         Entry<String, TaskData> taskEntry = i.next();
         String taskId = taskEntry.getKey();
-        TaskData task = taskEntry.getValue();
+        TaskData taskData = taskEntry.getValue();
 
-        if (task.status != null) {
-          if (task.status.isSuccess()) {
+        if (taskData.status != null) {
+          if (taskData.status.isSuccess()) {
             // If any task in this group has already completed, stop the rest of the tasks in the group and return.
             // This will cause us to create a new set of tasks next cycle that will start from the sequences in
             // metadata store (which will have advanced if we succeeded in publishing and will remain the same if
             // publishing failed and we need to re-ingest)
-            stateManager.recordCompletedTaskState(TaskState.SUCCESS);
+            stateManager.recordCompletedTaskState(TaskState.SUCCESS, taskData.status.getErrorMsg());
             return Futures.transform(
-                stopTasksInGroup(taskGroup, "task[%s] succeeded in the taskGroup", task.status.getId()),
+                stopTasksInGroup(taskGroup, "task[%s] succeeded in the taskGroup", taskData.status.getId()),
                 new Function<Object, Map<PartitionIdType, SequenceOffsetType>>()
                 {
                   @Nullable
@@ -3313,7 +3335,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             );
           }
 
-          if (task.status.isRunnable()) {
+          if (taskData.status.isRunnable()) {
             if (taskInfoProvider.getTaskLocation(taskId).equals(TaskLocation.unknown())) {
               killTask(taskId, "Killing task [%s] which hasn't been assigned to a worker", taskId);
               i.remove();
@@ -3494,7 +3516,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           Preconditions.checkNotNull(taskData.status, "task[%s] has null status", taskId);
 
           if (taskData.status.isFailure()) {
-            stateManager.recordCompletedTaskState(TaskState.FAILED);
+            stateManager.recordCompletedTaskState(TaskState.FAILED, taskData.status.getErrorMsg());
             iTask.remove(); // remove failed task
             if (group.tasks.isEmpty()) {
               // if all tasks in the group have failed, just nuke all task groups with this partition set and restart
@@ -3507,7 +3529,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             // If one of the pending completion tasks was successful, stop the rest of the tasks in the group as
             // we no longer need them to publish their segment.
             log.info("Task [%s] completed successfully, stopping tasks %s", taskId, group.taskIds());
-            stateManager.recordCompletedTaskState(TaskState.SUCCESS);
+            stateManager.recordCompletedTaskState(TaskState.SUCCESS, taskData.status.getErrorMsg());
             futures.add(
                 stopTasksInGroup(group, "Task [%s] completed successfully, stopping tasks %s", taskId, group.taskIds())
             );
@@ -3599,7 +3621,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
         // remove failed tasks
         if (taskData.status.isFailure()) {
-          stateManager.recordCompletedTaskState(TaskState.FAILED);
+          stateManager.recordCompletedTaskState(TaskState.FAILED, taskData.status.getErrorMsg());
           iTasks.remove();
           continue;
         }
@@ -3607,7 +3629,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         // check for successful tasks, and if we find one, stop all tasks in the group and remove the group so it can
         // be recreated with the next set of sequences
         if (taskData.status.isSuccess()) {
-          stateManager.recordCompletedTaskState(TaskState.SUCCESS);
+          stateManager.recordCompletedTaskState(TaskState.SUCCESS, taskData.status.getErrorMsg());
           futures.add(stopTasksInGroup(taskGroup, "task[%s] succeeded in the same taskGroup", taskData.status.getId()));
           iTaskGroups.remove();
           break;
@@ -3642,13 +3664,35 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       idle = false;
     }
 
-    previousSequencesFromStream.clear();
-    previousSequencesFromStream.putAll(latestSequencesFromStream);
     if (!idle) {
       stateManager.maybeSetState(SupervisorStateManager.BasicState.RUNNING);
     } else if (!stateManager.isIdle() && idleTime > idleConfig.getInactiveAfterMillis()) {
       stateManager.maybeSetState(SupervisorStateManager.BasicState.IDLE);
     }
+  }
+
+  private Boolean checkStreamProgressAndStopTaskCreationIfNeeded()
+  {
+    Map<PartitionIdType, SequenceOffsetType> latestSequencesFromStream = getLatestSequencesFromStream();
+    boolean noProgress = previousSequencesFromStream.equals(latestSequencesFromStream) && computeTotalLag() > 0;
+    previousSequencesFromStream.clear();
+    previousSequencesFromStream.putAll(latestSequencesFromStream);
+
+    if (!taskCreationStopConfig.isEnabled() || spec.isSuspended()) {
+      return null;
+    }
+
+    if (noProgress) {
+      if (lastMakingProgressTimeMillis != null &&
+          Instant.now().toEpochMilli() - lastMakingProgressTimeMillis
+          > taskCreationStopConfig.getNoProgressTimeoutMillis()) {
+        return true;
+      }
+    } else {
+      lastMakingProgressTimeMillis = Instant.now().toEpochMilli();
+    }
+
+    return null;
   }
 
   private long computeTotalLag()

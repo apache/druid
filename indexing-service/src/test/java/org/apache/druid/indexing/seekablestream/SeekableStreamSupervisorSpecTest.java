@@ -1070,6 +1070,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
         null,
         null,
         null,
+        null,
         null
     )
     {
@@ -1125,6 +1126,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
         null,
         null,
         new IdleConfig(true, null),
+        null,
         null
     )
     {
@@ -1292,6 +1294,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
           mapper.convertValue(getScaleOutProperties(2), AutoScalerConfig.class),
           null,
           null,
+          null,
           null
       )
       {
@@ -1310,6 +1313,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
           null,
           null,
           mapper.convertValue(getScaleInProperties(), AutoScalerConfig.class),
+          null,
           null,
           null,
           null
