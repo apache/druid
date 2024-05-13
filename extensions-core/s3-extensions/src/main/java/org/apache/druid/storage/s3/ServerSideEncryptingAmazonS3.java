@@ -44,6 +44,7 @@ import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.RetryUtils;
 
 import java.io.File;
 
@@ -204,7 +205,19 @@ public class ServerSideEncryptingAmazonS3
         throw new ISE("S3StorageConfig cannot be null!");
       }
 
-      return new ServerSideEncryptingAmazonS3(amazonS3ClientBuilder.build(), s3StorageConfig.getServerSideEncryption());
+      AmazonS3 amazonS3Client;
+      try {
+        amazonS3Client = RetryUtils.retry(
+            () -> amazonS3ClientBuilder.build(),
+            (e) -> true,
+            RetryUtils.DEFAULT_MAX_TRIES
+        );
+      }
+      catch (Exception e) {
+        throw new RuntimeException(e);
+      }
+
+      return new ServerSideEncryptingAmazonS3(amazonS3Client, s3StorageConfig.getServerSideEncryption());
     }
   }
 }
