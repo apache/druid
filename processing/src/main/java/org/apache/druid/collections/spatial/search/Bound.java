@@ -45,6 +45,12 @@ public interface Bound<TCoordinateArray, TPoint extends ImmutableNode<TCoordinat
 
   boolean contains(TCoordinateArray coords);
 
+  /***
+   * containsObj is mainly used to create object matechers on top custom/extensible spatial column,
+   * it receives it as object and corresponding implementations need to logic to unpack the objects and invoke contains
+   * @param input Takes an object spatial column as input
+   * @return boolean value if it falls within given bound
+   */
   boolean containsObj(@Nullable Object input);
 
   Iterable<TPoint> filter(Iterable<TPoint> points);
