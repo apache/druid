@@ -3570,7 +3570,7 @@ The following example shows how to handoff task groups for a Kafka supervisor wi
 ```shell
 curl --request POST "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor/social_media/taskGroups/handoff"
 --header 'Content-Type: application/json'
---data-raw '["1", "2", "3"]'
+--data-raw '{"taskGroupIds": ["1", "2", "3"]}'
 ```
 
 </TabItem>
@@ -3582,7 +3582,9 @@ POST /druid/indexer/v1/supervisor/social_media/taskGroups/handoff HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 Content-Type: application/json
 
-[1, 2, 3]
+{
+  "taskGroupIds": [1, 2, 3],
+}
 ```
 
 </TabItem>

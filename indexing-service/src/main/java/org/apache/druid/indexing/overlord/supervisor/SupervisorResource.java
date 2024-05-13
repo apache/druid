@@ -19,6 +19,8 @@
 
 package org.apache.druid.indexing.overlord.supervisor;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
@@ -49,6 +51,7 @@ import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
@@ -403,10 +406,12 @@ public class SupervisorResource
    */
   @POST
   @Path("/{id}/taskGroups/handoff")
+  @Consumes(MediaType.APPLICATION_JSON)
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(SupervisorResourceFilter.class)
-  public Response handoffTaskGroups(@PathParam("id") final String id, final List<Integer> taskGroupIds)
+  public Response handoffTaskGroups(@PathParam("id") final String id, @Nonnull final HandoffTaskGroupsRequest handoffTaskGroupsRequest)
   {
+    List<Integer> taskGroupIds = handoffTaskGroupsRequest.getTaskGroupIds();
     if (taskGroupIds == null || taskGroupIds.isEmpty()) {
       return Response.status(Response.Status.BAD_REQUEST)
           .entity(ImmutableMap.of("error", "List of task groups to handoff can't be empty"))
@@ -668,5 +673,23 @@ public class SupervisorResource
           return Response.ok(ImmutableMap.of("status", "success")).build();
         }
     );
+  }
+
+  public static class HandoffTaskGroupsRequest
+  {
+
+    private final List<Integer> taskGroupIds;
+
+    @JsonCreator
+    public HandoffTaskGroupsRequest(@JsonProperty("taskGroupIds") List<Integer> taskGroupIds)
+    {
+      this.taskGroupIds = taskGroupIds;
+    }
+
+    @JsonProperty
+    public List<Integer> getTaskGroupIds()
+    {
+      return taskGroupIds;
+    }
   }
 }
