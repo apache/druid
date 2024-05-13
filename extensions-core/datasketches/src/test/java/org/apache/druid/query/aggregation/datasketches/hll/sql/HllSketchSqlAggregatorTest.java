@@ -48,6 +48,7 @@ import org.apache.druid.query.aggregation.datasketches.hll.HllSketchToEstimatePo
 import org.apache.druid.query.aggregation.datasketches.hll.HllSketchToEstimateWithBoundsPostAggregator;
 import org.apache.druid.query.aggregation.datasketches.hll.HllSketchToStringPostAggregator;
 import org.apache.druid.query.aggregation.datasketches.hll.HllSketchUnionPostAggregator;
+import org.apache.druid.query.aggregation.datasketches.hll.sql.HllSketchSqlAggregatorTest.HllSketchComponentSupplier;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
@@ -75,10 +76,13 @@ import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFacto
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
+import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.CacheTestHelperModule.ResultCacheMode;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.calcite.util.SqlTestFramework;
+import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.sql.guice.SqlModule;
 import org.apache.druid.timeline.DataSegment;
@@ -94,6 +98,7 @@ import java.util.List;
 import java.util.Properties;
 import java.util.stream.Collectors;
 
+@SqlTestFramework.SqlTestFrameWorkModule(HllSketchComponentSupplier.class)
 public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
 {
   private static final boolean ROUND = true;
@@ -233,64 +238,71 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
       )
   );
 
-
-  @Override
-  public void gatherProperties(Properties properties)
+  public static class HllSketchComponentSupplier extends StandardComponentSupplier
   {
-    super.gatherProperties(properties);
+    public HllSketchComponentSupplier(TempDirProducer tempFolderProducer)
+    {
+      super(tempFolderProducer);
+    }
 
-    // Use APPROX_COUNT_DISTINCT_DS_HLL as APPROX_COUNT_DISTINCT impl for these tests.
-    properties.put(SqlModule.PROPERTY_SQL_APPROX_COUNT_DISTINCT_CHOICE, HllSketchApproxCountDistinctSqlAggregator.NAME);
-  }
+    @Override
+    public void gatherProperties(Properties properties)
+    {
+      super.gatherProperties(properties);
 
-  @Override
-  public void configureGuice(DruidInjectorBuilder builder)
-  {
-    super.configureGuice(builder);
-    builder.addModule(new HllSketchModule());
-  }
+      // Use APPROX_COUNT_DISTINCT_DS_HLL as APPROX_COUNT_DISTINCT impl for these tests.
+      properties.put(SqlModule.PROPERTY_SQL_APPROX_COUNT_DISTINCT_CHOICE, HllSketchApproxCountDistinctSqlAggregator.NAME);
+    }
 
-  @SuppressWarnings("resource")
-  @Override
-  public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
-      final QueryRunnerFactoryConglomerate conglomerate,
-      final JoinableFactoryWrapper joinableFactory,
-      final Injector injector
-  )
-  {
-    HllSketchModule.registerSerde();
-    final QueryableIndex index = IndexBuilder
-        .create()
-        .tmpDir(newTempFolder())
-        .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
-        .schema(
-            new IncrementalIndexSchema.Builder()
-                .withMetrics(
-                    new CountAggregatorFactory("cnt"),
-                    new DoubleSumAggregatorFactory("m1", "m1"),
-                    new HllSketchBuildAggregatorFactory("hllsketch_dim1", "dim1", null, null, null, false, ROUND),
-                    new HllSketchBuildAggregatorFactory("hllsketch_dim3", "dim3", null, null, null, false, false),
-                    new HllSketchBuildAggregatorFactory("hllsketch_m1", "m1", null, null, null, false, ROUND),
-                    new HllSketchBuildAggregatorFactory("hllsketch_f1", "f1", null, null, null, false, ROUND),
-                    new HllSketchBuildAggregatorFactory("hllsketch_l1", "l1", null, null, null, false, ROUND),
-                    new HllSketchBuildAggregatorFactory("hllsketch_d1", "d1", null, null, null, false, ROUND)
-                )
-                .withRollup(false)
-                .build()
-        )
-        .rows(TestDataBuilder.ROWS1_WITH_NUMERIC_DIMS)
-        .buildMMappedIndex();
+    @Override
+    public void configureGuice(DruidInjectorBuilder builder)
+    {
+      super.configureGuice(builder);
+      builder.addModule(new HllSketchModule());
+    }
 
-    return SpecificSegmentsQuerySegmentWalker.createWalker(injector, conglomerate).add(
-        DataSegment.builder()
-                   .dataSource(CalciteTests.DATASOURCE1)
-                   .interval(index.getDataInterval())
-                   .version("1")
-                   .shardSpec(new LinearShardSpec(0))
-                   .size(0)
-                   .build(),
-        index
-    );
+    @SuppressWarnings("resource")
+    @Override
+    public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
+        final QueryRunnerFactoryConglomerate conglomerate,
+        final JoinableFactoryWrapper joinableFactory,
+        final Injector injector
+    )
+    {
+      HllSketchModule.registerSerde();
+      final QueryableIndex index = IndexBuilder
+          .create()
+          .tmpDir(tempDirProducer.newTempFolder())
+          .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+          .schema(
+              new IncrementalIndexSchema.Builder()
+                  .withMetrics(
+                      new CountAggregatorFactory("cnt"),
+                      new DoubleSumAggregatorFactory("m1", "m1"),
+                      new HllSketchBuildAggregatorFactory("hllsketch_dim1", "dim1", null, null, null, false, ROUND),
+                      new HllSketchBuildAggregatorFactory("hllsketch_dim3", "dim3", null, null, null, false, false),
+                      new HllSketchBuildAggregatorFactory("hllsketch_m1", "m1", null, null, null, false, ROUND),
+                      new HllSketchBuildAggregatorFactory("hllsketch_f1", "f1", null, null, null, false, ROUND),
+                      new HllSketchBuildAggregatorFactory("hllsketch_l1", "l1", null, null, null, false, ROUND),
+                      new HllSketchBuildAggregatorFactory("hllsketch_d1", "d1", null, null, null, false, ROUND)
+                  )
+                  .withRollup(false)
+                  .build()
+          )
+          .rows(TestDataBuilder.ROWS1_WITH_NUMERIC_DIMS)
+          .buildMMappedIndex();
+
+      return SpecificSegmentsQuerySegmentWalker.createWalker(injector, conglomerate).add(
+          DataSegment.builder()
+                     .dataSource(CalciteTests.DATASOURCE1)
+                     .interval(index.getDataInterval())
+                     .version("1")
+                     .shardSpec(new LinearShardSpec(0))
+                     .size(0)
+                     .build(),
+          index
+      );
+    }
   }
 
   @Test

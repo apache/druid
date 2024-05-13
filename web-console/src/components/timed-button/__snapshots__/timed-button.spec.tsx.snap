@@ -18,7 +18,7 @@ exports[`TimedButton matches snapshot 1`] = `
         <Blueprint4.MenuItem
           active={false}
           disabled={false}
-          icon="selection"
+          icon="tick-circle"
           multiline={false}
           onClick={[Function]}
           popoverProps={{}}

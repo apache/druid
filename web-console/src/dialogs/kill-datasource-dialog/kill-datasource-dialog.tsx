@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Code, Intent } from '@blueprintjs/core';
+import { Intent, Tag } from '@blueprintjs/core';
 import React, { useState } from 'react';
 
 import { FormGroupWithInfo, PopoverText } from '../../components';
@@ -74,13 +74,14 @@ export const KillDatasourceDialog = function KillDatasourceDialog(
       warningChecks={[
         <>
           I understand that this operation will delete all metadata about the unused segments of{' '}
-          <Code>{datasource}</Code> and removes them from deep storage.
+          <Tag minimal>{datasource}</Tag> and removes them from deep storage.
         </>,
         'I understand that this operation cannot be undone.',
       ]}
     >
       <p>
-        Are you sure you want to permanently delete unused segments in <Code>{datasource}</Code>?
+        Are you sure you want to permanently delete unused segments in{' '}
+        <Tag minimal>{datasource}</Tag>?
       </p>
       <p>This action is not reversible and the data deleted will be lost.</p>
       <FormGroupWithInfo

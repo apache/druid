@@ -40,6 +40,7 @@ import java.util.Set;
 
 public class ArchiveTask extends AbstractFixedIntervalTask
 {
+  public static final String TYPE = "archive";
   private static final Logger log = new Logger(ArchiveTask.class);
 
   public ArchiveTask(
@@ -60,7 +61,7 @@ public class ArchiveTask extends AbstractFixedIntervalTask
   @Override
   public String getType()
   {
-    return "archive";
+    return TYPE;
   }
 
   @Nonnull
