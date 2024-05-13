@@ -80,7 +80,7 @@ Previously, changing lock types in the Supervisor could lead to segment allocati
 
 [#16369](https://github.com/apache/druid/pull/16369)
 
-### Improved performance for AND filters
+### Improved AND filter performance
 
 Druid query processing now adaptively determines when children of AND filters should compute indexes and when to simply match rows during the scan based on selectivity of other filters.
 Known as filter partitioning, it can result in dramatic performance increases, depending on the order of filters in the query.
@@ -219,11 +219,11 @@ This prevents the expression from blocking the flow.
 
 #### Other web console improvements
 
-* You can now set `maxCompactionTaskSlots` to zero to top compaction tasks [#15877](https://github.com/apache/druid/pull/15877)
-* The web console now suggests the `azureStorage` input type instead of the deprecated `azure` storage type [#15820](https://github.com/apache/druid/pull/15820)
-* The download query detail archive option is now more resilient when the detail archive is incomplete [#16071](https://github.com/apache/druid/pull/16071)
 * Added the fields **Avro bytes decoder** and **Proto bytes decoder** for their input formats [#15950](https://github.com/apache/druid/pull/15950)
 * Added support for exporting results for queries that use the MSQ task engine [#15969](https://github.com/apache/druid/pull/15969)
+* Fixed an issue with the [Tasks](https://druid.apache.org/docs/latest/operations/web-console#tasks) view returning incorrect values for **Created time** and **Duration** fields after the Overlord restarts [#16228](https://github.com/apache/druid/pull/16228)
+* Fixed the Azure icon not rendering in the web console [#16173](https://github.com/apache/druid/pull/16173)
+* Fixed the supervisor offset reset dialog in the web console [#16298](https://github.com/apache/druid/pull/16298)
 * Improved the user experience when the web console is operating in manual capabilities mode [#16191](https://github.com/apache/druid/pull/16191)
 * Improved the web console to detect doubles better [#15998](https://github.com/apache/druid/pull/15998)
 * Improved the query timer as follows:
@@ -232,9 +232,9 @@ This prevents the expression from blocking the flow.
   * Error state is lost if tab is switched twice
 
   [#16235](https://github.com/apache/druid/pull/16235)
-* Fixed an issue with the [Tasks](https://druid.apache.org/docs/latest/operations/web-console#tasks) view returning incorrect values for **Created time** and **Duration** fields after the Overlord restarts [#16228](https://github.com/apache/druid/pull/16228)
-* Fixed the Azure icon not rendering in the web console [#16173](https://github.com/apache/druid/pull/16173)
-* Fixed the supervisor offset reset dialog in the web console [#16298](https://github.com/apache/druid/pull/16298)
+* The web console now suggests the `azureStorage` input type instead of the deprecated `azure` storage type [#15820](https://github.com/apache/druid/pull/15820)
+* The download query detail archive option is now more resilient when the detail archive is incomplete [#16071](https://github.com/apache/druid/pull/16071)
+* You can now set `maxCompactionTaskSlots` to zero to top compaction tasks [#15877](https://github.com/apache/druid/pull/15877)
 
 ### General ingestion
 
@@ -265,11 +265,11 @@ You can now ingest data from multiple storage accounts using the new `azureStora
 
 Improved the [Data management API](https://druid.apache.org/docs/latest/api-reference/data-management-api) as follows:
 
-* You can now mark segments as used or unused within the specified interval using an optional list of versions.
-For example: `(interval, [versions])`. When `versions` is unspecified, all versions of segments in the `interval` are marked as used or unused, preserving the old behavior [#16141](https://github.com/apache/druid/pull/16141)
-* The `segmentIds` filter in the Data management API payload is now parameterized in the database query [#16174](https://github.com/apache/druid/pull/16174)
 * Fixed a bug in the `markUsed` and `markUnused` APIs where an empty set of segment IDs would be inconsistently treated as null or non-null in different scenarios [#16145](https://github.com/apache/druid/pull/16145)
 * Improved the `markUnused` API endpoint to handle an empty list of segment versions [#16198](https://github.com/apache/druid/pull/16198)
+* The `segmentIds` filter in the Data management API payload is now parameterized in the database query [#16174](https://github.com/apache/druid/pull/16174)
+* You can now mark segments as used or unused within the specified interval using an optional list of versions.
+For example: `(interval, [versions])`. When `versions` is unspecified, all versions of segments in the `interval` are marked as used or unused, preserving the old behavior [#16141](https://github.com/apache/druid/pull/16141)
 
 #### Nested columns performance improvement
 
@@ -479,19 +479,6 @@ If you use the MSQ task engine to run queries, you can now use the following str
 
 [#15836](https://github.com/apache/druid/pull/15836/)
 
-#### Improved filter bundles
-
-Improved filter bundles as follows:
-
-* Renamed the parameter `selectionRowCount` on `makeFilterBundle` to `applyRowCount`, and redefined as an upper bound on rows remaining after short-circuiting (rather than number of rows selected so far).
-This definition works better for OR filters, which pass through the
-FALSE set rather than the TRUE set to the next subfilter.
-* `AndFilter` uses `min(applyRowCount, indexIntersectionSize)` rather than using `selectionRowCount` for the first subfilter and `indexIntersectionSize` for each filter thereafter. This improves accuracy when the incoming `applyRowCount` is smaller than the row count from the first few indexes.
-* `OrFilter` uses `min(applyRowCount, totalRowCount - indexUnionSize)` rather than `applyRowCount` for subfilters. This allows an OR filter to pass
-information about short-circuiting to its subfilters.
-
-[#16292](https://github.com/apache/druid/pull/16292)
-
 #### Improved catalog tables
 
 You can validate complex target column types against source input expressions during DML INSERT/REPLACE operations.
@@ -531,13 +518,6 @@ Added a new `TypedInFilter` filter to replace `InDimFilter`&mdash;to improve per
 
 [#16233](https://github.com/apache/druid/pull/16233)
 
-#### Improved partial index value matching for OR filter
-
-Partial index value matchers for the OR filter now use `PeekableIntIterator` instead of `IntIterator`.
-This change can significantly improve performance when Druid uses the value matchers alongside an index offset.
-
-[#16300](https://github.com/apache/druid/pull/16300)
-
 #### Heap dictionaries clear out
 
 Improved querying to decrease the chance of going OOM with high cardinality data Group By.
@@ -549,7 +529,6 @@ Improved querying to decrease the chance of going OOM with high cardinality data
 * Added support for numeric arrays to window functions and subquery materializations [#15917](https://github.com/apache/druid/pull/15917)
 * Added support for single value aggregated groupBy queries for scalars [#15700](https://github.com/apache/druid/pull/15700)
 * Added support for column reordering with scan and sort style queries [#15815](https://github.com/apache/druid/pull/15815)
-* Added support for joins in decoupled mode [#15957](https://github.com/apache/druid/pull/15957)
 * Added support for using MV_FILTER_ONLY and MV_FILTER_NONE functions with a non-literal argument [#16113](https://github.com/apache/druid/pull/16113)
 * Added the `radiusUnit` element to the `radius` bound [#16029](https://github.com/apache/druid/pull/16029)
 * Fixed the return type for the IPV4_PARSE function. The function now correctly returns null if the string literal can't be represented as an IPv4 address [#15916](https://github.com/apache/druid/pull/15916)
@@ -566,12 +545,13 @@ Improved querying to decrease the chance of going OOM with high cardinality data
 * Fixed an issue where groupBy queries that have `bit_xor() is null` return the wrong result [#16237](https://github.com/apache/druid/pull/16237)
 * Fixed an issue where Broker merge buffers get into a deadlock when multiple simultaneous queries use them [#15420](https://github.com/apache/druid/pull/15420)
 * Fixed a mapping issue in window functions where two nodes get the same reference [#16301](https://github.com/apache/druid/pull/16301)
+* Improved processing of index backed OR expressions [#16300](https://github.com/apache/druid/pull/16300)
 * Improved constant expression evaluation so that it's more thread-safe [#15694](https://github.com/apache/druid/pull/15694)
 * Improved performance for real-time queries using the MSQ task engine. Segments served by the same server are now grouped together, resulting in more efficient query handling [#15399](https://github.com/apache/druid/pull/15399)
 * Improved strict NON NULL return type checks [#16279](https://github.com/apache/druid/pull/16279)
 * Improved array handling for Booleans to account for queries such as `select array[true, false] from datasource` [#16093](https://github.com/apache/druid/pull/16093)
 * Improved how scalars work in arrays [#16311](https://github.com/apache/druid/pull/16311)
-* Improved `LIKE` filtering performance with multiple wildcards by not using `java.util.regex.Pattern` to match `%` [#16153](https://github.com/apache/druid/pull/16153)
+* Improved LIKE filtering performance with multiple wildcards by not using `java.util.regex.Pattern` to match `%` [#16153](https://github.com/apache/druid/pull/16153)
 * Modified the `IndexedTable` to reject building the index on the complex types to prevent joining on complex types [#16349](https://github.com/apache/druid/pull/16349)
 * Restored `enableWindowing` context parameter for window functions [#16229](https://github.com/apache/druid/pull/16229)
 
@@ -808,7 +788,7 @@ The following dependencies have had their versions bumped:
 - Updated `log4j.version` from 2.18.0 to 2.22.1 [#15934](https://github.com/apache/druid/pull/15934)
 - Updated `org.apache.commons.commons-compress` from 1.24.0 to 1.26.0 [#16009](https://github.com/apache/druid/pull/16009)
 - Updated `org.apache.commons.commons-codec` from 1.16.0 to 1.16.1 [#16009](https://github.com/apache/druid/pull/16009)
-- Updated `org.bitbucket.b_c:jose4j` from 0.9.3 to 0.9.6 [16078](https://github.com/apache/druid/pull/16078)
+- Updated `org.bitbucket.b_c:jose4j` from 0.9.3 to 0.9.6 [#16078](https://github.com/apache/druid/pull/16078)
 - Updated `redis.clients:jedis` from 5.0.2 to 5.1.2 [#16074](https://github.com/apache/druid/pull/16074)
 - Updated Jetty from `9.4.53.v20231009` to `9.4.54.v20240208` [#16000](https://github.com/apache/druid/pull/16000)
 - Updated `webpackdevmiddleware` from 5.3.3 to 5.3.4 in web console [#16195](https://github.com/apache/druid/pull/16195)
