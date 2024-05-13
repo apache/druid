@@ -179,20 +179,38 @@ public interface TypeStrategy<T> extends Comparator<Object>, Hash.Strategy<T>
    * true or false, depending on whether the semantics and implementation of the type naturally leads to groupability
    * or not. For example, it makes sense for JSON columns to be groupable, however there is little sense in grouping
    * sketches (before finalizing).
-   *
-   * If a type is groupable, it MUST implement the {@link #hashCode} and {@link #equals} correctly
+   * <p>
+   * If a type is groupable, following statements MUST hold:
+   * <p>
+   * a. {@link #equals(Object, Object)} must be implemented. It should return true if and only if two objects are equal
+   *    and can be grouped together.
+   * <p>
+   * b. {@link #hashCode(Object)} must be implemented, and must be consistent with equals. It should return a hashCode
+   *    for the given object. For two objects that are equal, it must return the same hash value. For two objects that are
+   *    not equal, it can return the same hash value (or not). A conscious effort must be made to minimise collisions between
+   *    the hash values of two non-equal objects for faster grouping.
+   * <p>
+   * c. {@link #compare(Object, Object)} must be consistent with equals. Apart from abiding by the definition of
+   *    {@link Comparator#compare}, it must not return 0 for two objects that are not equals, and converse must also hold,
+   *    i.e. if the value returned by compare is not zero, then the arguments must not be equal.
    */
   default boolean groupable()
   {
     return false;
   }
 
+  /**
+   * @see #groupable()
+   */
   @Override
   default int hashCode(T o)
   {
     throw DruidException.defensive("Not implemented. Check groupable() first");
   }
 
+  /**
+   * @see #groupable()
+   */
   @Override
   default boolean equals(T a, T b)
   {

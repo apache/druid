@@ -67,6 +67,7 @@ public class ClusterByStatisticsCollectorImpl implements ClusterByStatisticsColl
 
   private ClusterByStatisticsCollectorImpl(
       final ClusterBy clusterBy,
+      final RowSignature rowSignature,
       final RowKeyReader keyReader,
       final KeyCollectorFactory<?, ?> keyCollectorFactory,
       final long maxRetainedBytes,
@@ -78,7 +79,7 @@ public class ClusterByStatisticsCollectorImpl implements ClusterByStatisticsColl
     this.keyReader = keyReader;
     this.keyCollectorFactory = keyCollectorFactory;
     this.maxRetainedBytes = maxRetainedBytes;
-    this.buckets = new TreeMap<>(clusterBy.bucketComparator());
+    this.buckets = new TreeMap<>(clusterBy.bucketComparator(rowSignature));
     this.maxBuckets = maxBuckets;
     this.checkHasMultipleValues = checkHasMultipleValues;
     this.hasMultipleValues = checkHasMultipleValues ? new boolean[clusterBy.getColumns().size()] : null;
@@ -98,10 +99,12 @@ public class ClusterByStatisticsCollectorImpl implements ClusterByStatisticsColl
   )
   {
     final RowKeyReader keyReader = clusterBy.keyReader(signature);
-    final KeyCollectorFactory<?, ?> keyCollectorFactory = KeyCollectors.makeStandardFactory(clusterBy, aggregate);
+    final KeyCollectorFactory<?, ?> keyCollectorFactory =
+        KeyCollectors.makeStandardFactory(clusterBy, aggregate, signature);
 
     return new ClusterByStatisticsCollectorImpl(
         clusterBy,
+        signature,
         keyReader,
         keyCollectorFactory,
         maxRetainedBytes,
