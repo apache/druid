@@ -19,7 +19,6 @@
 
 package org.apache.druid.testsEx.catalog;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import org.apache.druid.catalog.model.Columns;
@@ -27,7 +26,6 @@ import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.TableMetadata;
 import org.apache.druid.catalog.model.table.DatasourceDefn;
 import org.apache.druid.catalog.model.table.TableBuilder;
-import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.msq.sql.SqlTaskStatus;
 import org.apache.druid.sql.http.SqlQuery;
@@ -53,7 +51,6 @@ import static org.junit.Assert.assertTrue;
 @Category(Catalog.class)
 public class ITCatalogIngestErrorTest
 {
-  private static final ObjectMapper MAPPER = new DefaultObjectMapper();
   @Inject
   private MsqTestQueryHelper msqHelper;
   @Inject
