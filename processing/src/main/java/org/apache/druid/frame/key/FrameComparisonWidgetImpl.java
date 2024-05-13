@@ -49,14 +49,52 @@ import java.util.List;
 @NotThreadSafe
 public class FrameComparisonWidgetImpl implements FrameComparisonWidget
 {
+
+  /**
+   * Frame for comparison
+   */
   private final Frame frame;
+
+  /**
+   * Row signature of the frame
+   */
   private final RowSignature signature;
+
+  /**
+   * Row offset region of the frame
+   */
   private final Memory rowOffsetRegion;
+
+  /**
+   * Data region of the frame
+   */
   private final Memory dataRegion;
+
+  /**
+   * Number of fields in the key column
+   */
   private final int keyFieldCount;
+
+  /**
+   * Field readers for the key
+   */
   private final List<FieldReader> keyFieldReaders;
+
+  /**
+   * Starting position of the first field in the row
+   */
   private final int firstFieldPosition;
+
+  /**
+   * Run lengths created for comparing the key columns
+   */
   private final RowKeyComparisonRunLengths rowKeyComparisonRunLengths;
+
+  /**
+   * Pre-computed array of ComplexMetricSerde corresponding to the computed run-lengths. If the run length entry is
+   * byte-comparable, the corresponding serde is null, and if it's not byte comparable, the corresponding serde isn't null
+   * (since only complex columns are not byte comparable)
+   */
   private final ComplexMetricSerde[] complexMetricSerdes;
   private final ColumnType[] columnTypes;
 
@@ -120,18 +158,22 @@ public class FrameComparisonWidgetImpl implements FrameComparisonWidget
         complexMetricSerdes[i] = null;
         columnTypes[i] = null;
       } else {
-        final ColumnType columnType = signature.getColumnType(keyColumns.get(fieldsSeenSoFar).columnName())
-                                               .orElse(null);
+        final String columnName = keyColumns.get(fieldsSeenSoFar).columnName();
+        final ColumnType columnType = signature.getColumnType(columnName).orElse(null);
         if (columnType == null) {
-          throw DruidException.defensive("Expected column type for comparison");
+          throw DruidException.defensive(
+              "Cannot compare on the byte incomparable column [%s] without knowing it's type",
+              columnName
+          );
         }
         final String complexTypeName = columnType.getComplexTypeName();
         if (complexTypeName == null) {
-          throw DruidException.defensive("Expected complex type name for comparison");
+          throw DruidException.defensive("Expected complex type name for column [%s] for comparison", columnName);
         }
         complexMetricSerdes[i] = Preconditions.checkNotNull(
             ComplexMetrics.getSerdeForType(complexTypeName),
-            "Cannot find serde for type [%s]",
+            "Cannot find serde for column [%s] of type [%s]",
+            columnName,
             complexTypeName
         );
         columnTypes[i] = columnType;

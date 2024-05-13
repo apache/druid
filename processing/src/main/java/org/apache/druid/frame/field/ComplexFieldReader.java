@@ -105,7 +105,7 @@ public class ComplexFieldReader implements FieldReader
     if (nullByte == ComplexFieldWriter.NULL_BYTE) {
       return null;
     } else if (nullByte == ComplexFieldWriter.NOT_NULL_BYTE) {
-      // Reads length in big-endian format
+      // Reads length in little-endian format
       int length;
       length = (bytes[position + 4] & 0xFF) << 24;
       length |= (bytes[position + 3] & 0xFF) << 16;

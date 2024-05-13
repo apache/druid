@@ -236,7 +236,7 @@ public class FrameWriterUtils
       final ColumnType columnType = signature.getColumnType(keyColumn.columnName()).orElse(null);
 
       if (columnType == null) {
-        throw new IAE("Sort column [%s] is not comparable (type = %s)", keyColumn.columnName(), columnType);
+        throw new IAE("Sort column [%s] type is unknown", keyColumn.columnName(), columnType);
       }
     }
   }
