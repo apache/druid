@@ -687,7 +687,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       for (Integer taskGroupId : taskGroupIds) {
         TaskGroup taskGroup = activelyReadingTaskGroups.getOrDefault(taskGroupId, null);
         if (taskGroup == null) {
-          log.info("Tried to stop task group that wasn't actively reading.");
+          log.info("Tried to stop task group [%d] for supervisor [%s] that wasn't actively reading.", taskGroupId, supervisorId);
           continue;
         }
 
