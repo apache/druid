@@ -137,6 +137,16 @@ public class SupervisorManager
     return supervisor == null ? Optional.absent() : Optional.fromNullable(supervisor.lhs.getState());
   }
 
+  public boolean handoffTaskGroupsEarly(String id, List<Integer> taskGroupIds)
+  {
+    Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(id);
+    if (supervisor == null || supervisor.lhs == null) {
+      return false;
+    }
+    supervisor.lhs.handoffTaskGroupsEarly(taskGroupIds);
+    return true;
+  }
+
   public boolean createOrUpdateAndStartSupervisor(SupervisorSpec spec)
   {
     Preconditions.checkState(started, "SupervisorManager not started");
