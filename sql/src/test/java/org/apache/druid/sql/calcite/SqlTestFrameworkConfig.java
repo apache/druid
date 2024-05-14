@@ -301,7 +301,7 @@ public class SqlTestFrameworkConfig
     public String buildTestCaseName(ExtensionContext context)
     {
       List<String> names = new ArrayList<String>();
-      Pattern pattern = Pattern.compile("\\([^\\)]*\\)");
+      Pattern pattern = Pattern.compile("\\([^)]*\\)");
       // this will add all name pieces - except the "last" which would be the
       // Class level name
       do {
