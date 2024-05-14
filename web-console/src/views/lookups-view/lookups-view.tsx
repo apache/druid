@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, Icon, Intent } from '@blueprintjs/core';
+import { Button, Icon, Intent, Tag } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 import type { Filter } from 'react-table';
@@ -295,8 +295,16 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
           );
         }}
         confirmButtonText="Delete lookup"
-        successText="Lookup was deleted"
-        failText="Could not delete lookup"
+        successText={
+          <>
+            Lookup <Tag minimal>{deleteLookupName}</Tag> was deleted
+          </>
+        }
+        failText={
+          <>
+            Could not delete lookup <Tag minimal>{deleteLookupName}</Tag>
+          </>
+        }
         intent={Intent.DANGER}
         onClose={() => {
           this.setState({ deleteLookupTier: undefined, deleteLookupName: undefined });
