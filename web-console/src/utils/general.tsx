@@ -338,6 +338,22 @@ export function pluralIfNeeded(n: NumberLike, singular: string, plural?: string)
 
 // ----------------------------
 
+export function partition<T>(xs: T[], predicate: (x: T, i: number) => boolean): [T[], T[]] {
+  const match: T[] = [];
+  const nonMatch: T[] = [];
+
+  for (let i = 0; i < xs.length; i++) {
+    const x = xs[i];
+    if (predicate(x, i)) {
+      match.push(x);
+    } else {
+      nonMatch.push(x);
+    }
+  }
+
+  return [match, nonMatch];
+}
+
 export function filterMap<T, Q>(xs: readonly T[], f: (x: T, i: number) => Q | undefined): Q[] {
   return xs.map(f).filter((x: Q | undefined) => typeof x !== 'undefined') as Q[];
 }
