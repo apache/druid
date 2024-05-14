@@ -66,7 +66,12 @@ export const KillDatasourceDialog = function KillDatasourceDialog(
         return resp.data;
       }}
       confirmButtonText="Permanently delete unused segments"
-      successText="Kill task was issued. Unused segments in datasource will be deleted"
+      successText={
+        <>
+          Kill task was issued. Unused segments in datasource <Tag minimal>{datasource}</Tag> will
+          be deleted
+        </>
+      }
       failText="Failed submit kill task"
       intent={Intent.DANGER}
       onClose={onClose}

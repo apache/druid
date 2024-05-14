@@ -38,8 +38,8 @@ export interface AsyncActionDialogProps {
   className?: string;
   icon?: IconName;
   intent?: Intent;
-  successText: string;
-  failText: string;
+  successText: ReactNode;
+  failText: ReactNode;
   warningChecks?: ReactNode[];
   children?: ReactNode;
 }

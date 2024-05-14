@@ -151,6 +151,26 @@ public class QueryTestRunner
     public QueryResults(
         final Map<String, Object> queryContext,
         final String vectorizeOption,
+        final RowSignature rowSignature,
+        final List<Object[]> results,
+        final List<Query<?>> recordedQueries,
+        final PlannerCaptureHook capture
+    )
+    {
+      this.queryContext = queryContext;
+      this.vectorizeOption = vectorizeOption;
+      this.sqlSignature = null;
+      this.signature = rowSignature;
+      this.results = results;
+      this.recordedQueries = recordedQueries;
+      this.resourceActions = null;
+      this.exception = null;
+      this.capture = capture;
+    }
+
+    public QueryResults(
+        final Map<String, Object> queryContext,
+        final String vectorizeOption,
         final RuntimeException exception
     )
     {
@@ -165,9 +185,9 @@ public class QueryTestRunner
       this.sqlSignature = null;
     }
 
-    public QueryResults withResults(List<Object[]> newResults)
+    public QueryResults withSignatureAndResults(final RowSignature rowSignature, final List<Object[]> newResults)
     {
-      return new QueryResults(queryContext, vectorizeOption, sqlSignature, newResults, recordedQueries, capture);
+      return new QueryResults(queryContext, vectorizeOption, rowSignature, newResults, recordedQueries, capture);
     }
   }
 

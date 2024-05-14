@@ -54,7 +54,6 @@ public class ClientKillUnusedSegmentsTaskQuerySerdeTest
         "datasource",
         Intervals.of("2020-01-01/P1D"),
         null,
-        false,
         99,
         5,
         DateTimes.nowUtc()
@@ -65,7 +64,6 @@ public class ClientKillUnusedSegmentsTaskQuerySerdeTest
     Assert.assertEquals(taskQuery.getDataSource(), fromJson.getDataSource());
     Assert.assertEquals(taskQuery.getInterval(), fromJson.getInterval());
     Assert.assertNull(taskQuery.getVersions());
-    Assert.assertEquals(taskQuery.getMarkAsUnused(), fromJson.isMarkAsUnused());
     Assert.assertEquals(taskQuery.getBatchSize(), Integer.valueOf(fromJson.getBatchSize()));
     Assert.assertEquals(taskQuery.getLimit(), fromJson.getLimit());
     Assert.assertEquals(taskQuery.getMaxUsedStatusLastUpdatedTime(), fromJson.getMaxUsedStatusLastUpdatedTime());
@@ -79,7 +77,6 @@ public class ClientKillUnusedSegmentsTaskQuerySerdeTest
             "datasource",
             Intervals.of("2020-01-01/P1D"),
             null,
-            true,
             null,
             null,
             null
@@ -90,7 +87,6 @@ public class ClientKillUnusedSegmentsTaskQuerySerdeTest
     Assert.assertEquals(taskQuery.getDataSource(), fromJson.getDataSource());
     Assert.assertEquals(taskQuery.getInterval(), fromJson.getInterval());
     Assert.assertNull(taskQuery.getVersions());
-    Assert.assertEquals(taskQuery.getMarkAsUnused(), fromJson.isMarkAsUnused());
     Assert.assertEquals(100, fromJson.getBatchSize());
     Assert.assertNull(taskQuery.getLimit());
     Assert.assertNull(taskQuery.getMaxUsedStatusLastUpdatedTime());
@@ -105,7 +101,6 @@ public class ClientKillUnusedSegmentsTaskQuerySerdeTest
         Intervals.of("2020-01-01/P1D"),
         null,
         null,
-        true,
         99,
         null,
         null
@@ -119,7 +114,6 @@ public class ClientKillUnusedSegmentsTaskQuerySerdeTest
     Assert.assertEquals(task.getDataSource(), taskQuery.getDataSource());
     Assert.assertEquals(task.getInterval(), taskQuery.getInterval());
     Assert.assertNull(taskQuery.getVersions());
-    Assert.assertEquals(task.isMarkAsUnused(), taskQuery.getMarkAsUnused());
     Assert.assertEquals(Integer.valueOf(task.getBatchSize()), taskQuery.getBatchSize());
     Assert.assertNull(taskQuery.getLimit());
     Assert.assertNull(taskQuery.getMaxUsedStatusLastUpdatedTime());
@@ -134,7 +128,6 @@ public class ClientKillUnusedSegmentsTaskQuerySerdeTest
         Intervals.of("2020-01-01/P1D"),
         ImmutableList.of("v1", "v2"),
         null,
-        null,
         99,
         100,
         DateTimes.nowUtc()
@@ -148,7 +141,6 @@ public class ClientKillUnusedSegmentsTaskQuerySerdeTest
     Assert.assertEquals(task.getDataSource(), taskQuery.getDataSource());
     Assert.assertEquals(task.getInterval(), taskQuery.getInterval());
     Assert.assertEquals(task.getVersions(), taskQuery.getVersions());
-    Assert.assertNull(taskQuery.getMarkAsUnused());
     Assert.assertEquals(Integer.valueOf(task.getBatchSize()), taskQuery.getBatchSize());
     Assert.assertEquals(task.getLimit(), taskQuery.getLimit());
     Assert.assertEquals(task.getMaxUsedStatusLastUpdatedTime(), taskQuery.getMaxUsedStatusLastUpdatedTime());
