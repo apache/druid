@@ -5705,9 +5705,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testInExpressionBelowThreshold()
   {
-    // Cannot vectorize scalar_in_array expression.
-    cannotVectorize();
-
     testQuery(
         "SELECT dim1 IN ('abc', 'def', 'ghi'), COUNT(*)\n"
         + "FROM druid.foo\n"
@@ -16068,9 +16065,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
   @SqlTestFrameworkConfig.NumMergeBuffers(4)
   @Test
-  public void testGroupingSetsWithAggrgateCase()
+  public void testGroupingSetsWithAggregateCase()
   {
-    cannotVectorize();
     msqIncompatible();
     final Map<String, Object> queryContext = ImmutableMap.of(
         PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, false,
