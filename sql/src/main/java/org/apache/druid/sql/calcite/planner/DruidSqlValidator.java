@@ -60,10 +60,12 @@ import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.sql.calcite.expression.builtin.ScalarInArrayOperatorConversion;
 import org.apache.druid.sql.calcite.parser.DruidSqlIngest;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.parser.DruidSqlParserUtils;
@@ -772,6 +774,59 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
       }
     }
     super.validateCall(call, scope);
+  }
+
+  @Override
+  protected SqlNode performUnconditionalRewrites(SqlNode node, final boolean underFrom)
+  {
+    if (node != null && (node.getKind() == SqlKind.IN || node.getKind() == SqlKind.NOT_IN)) {
+      final SqlNode rewritten = rewriteInToScalarInArrayIfNeeded((SqlCall) node, underFrom);
+      //noinspection ObjectEquality
+      if (rewritten != node) {
+        return rewritten;
+      }
+    }
+
+    return super.performUnconditionalRewrites(node, underFrom);
+  }
+
+  /**
+   * Rewrites "x IN (values)" to "SCALAR_IN_ARRAY(x, values)", if appropriate. Checks the form of the IN and checks
+   * the value of {@link QueryContext#getInFunctionThreshold()}.
+   *
+   * @param call      call to {@link SqlKind#IN} or {@link SqlKind#NOT_IN}
+   * @param underFrom underFrom arg from {@link #performUnconditionalRewrites(SqlNode, boolean)}, used for
+   *                  recursive calls
+   *
+   * @return rewritten call, or the original call if no rewrite was appropriate
+   */
+  private SqlNode rewriteInToScalarInArrayIfNeeded(final SqlCall call, final boolean underFrom)
+  {
+    if (call.getOperandList().size() == 2 && call.getOperandList().get(1) instanceof SqlNodeList) {
+      // expr IN (values)
+      final SqlNode exprNode = call.getOperandList().get(0);
+      final SqlNodeList valuesNode = (SqlNodeList) call.getOperandList().get(1);
+
+      // Confirm valuesNode is big enough to convert to SCALAR_IN_ARRAY, and references only nonnull literals.
+      // (Can't include NULL literals in the conversion, because SCALAR_IN_ARRAY matches NULLs as if they were regular
+      // values, whereas IN does not.)
+      if (valuesNode.size() > plannerContext.queryContext().getInFunctionThreshold()
+          && valuesNode.stream().allMatch(node -> node.getKind() == SqlKind.LITERAL && !SqlUtil.isNull(node))) {
+        final SqlCall newCall = ScalarInArrayOperatorConversion.SQL_FUNCTION.createCall(
+            call.getParserPosition(),
+            performUnconditionalRewrites(exprNode, underFrom),
+            SqlStdOperatorTable.ARRAY_VALUE_CONSTRUCTOR.createCall(valuesNode)
+        );
+
+        if (call.getKind() == SqlKind.NOT_IN) {
+          return SqlStdOperatorTable.NOT.createCall(call.getParserPosition(), newCall);
+        } else {
+          return newCall;
+        }
+      }
+    }
+
+    return call;
   }
 
   public static CalciteContextException buildCalciteContextException(String message, SqlNode call)

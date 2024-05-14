@@ -46,6 +46,7 @@ import org.apache.druid.query.lookup.LookupExtractionFn;
 import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.sql.calcite.expression.builtin.MultiValueStringOperatorConversions;
 import org.apache.druid.sql.calcite.expression.builtin.QueryLookupOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.ScalarInArrayOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.SearchOperatorConversion;
 import org.apache.druid.sql.calcite.filtration.CollectComparisons;
 import org.apache.druid.sql.calcite.planner.Calcites;
@@ -275,12 +276,16 @@ public class ReverseLookupRule extends RelOptRule implements SubstitutionRule
     }
 
     /**
-     * When we encounter SEARCH, expand it using {@link SearchOperatorConversion#expandSearch(RexCall, RexBuilder)}
+     * When we encounter SEARCH, expand it using {@link SearchOperatorConversion#expandSearch(RexCall, RexBuilder, int)}
      * and continue processing what lies beneath.
      */
     private RexNode visitSearch(final RexCall call)
     {
-      final RexNode expanded = SearchOperatorConversion.expandSearch(call, rexBuilder);
+      final RexNode expanded = SearchOperatorConversion.expandSearch(
+          call,
+          rexBuilder,
+          plannerContext.queryContext().getInFunctionThreshold()
+      );
 
       if (expanded instanceof RexCall) {
         final RexNode converted = visitCall((RexCall) expanded);
@@ -300,10 +305,17 @@ public class ReverseLookupRule extends RelOptRule implements SubstitutionRule
      */
     private RexNode visitComparison(final RexCall call)
     {
-      return CollectionUtils.getOnlyElement(
+      final RexNode retVal = CollectionUtils.getOnlyElement(
           new CollectReverseLookups(Collections.singletonList(call), rexBuilder).collect(),
           ret -> new ISE("Expected to collect single node, got[%s]", ret)
       );
+
+      //noinspection ObjectEquality
+      if (retVal != call) {
+        return retVal;
+      } else {
+        return super.visitCall(call);
+      }
     }
 
     /**
@@ -398,12 +410,13 @@ public class ReverseLookupRule extends RelOptRule implements SubstitutionRule
           return Collections.singleton(null);
         } else {
           // Compute the set of values that this comparison operator matches.
-          // Note that MV_CONTAINS and MV_OVERLAP match nulls, but other comparison operators do not.
+          // Note that MV_CONTAINS, MV_OVERLAP, and SCALAR_IN_ARRAY match nulls, but other comparison operators do not.
           // See "isBinaryComparison" for the set of operators we might encounter here.
           final RexNode matchLiteral = call.getOperands().get(1);
           final boolean matchNulls =
               call.getOperator().equals(MultiValueStringOperatorConversions.CONTAINS.calciteOperator())
-              || call.getOperator().equals(MultiValueStringOperatorConversions.OVERLAP.calciteOperator());
+              || call.getOperator().equals(MultiValueStringOperatorConversions.OVERLAP.calciteOperator())
+              || call.getOperator().equals(ScalarInArrayOperatorConversion.SQL_FUNCTION);
           return toStringSet(matchLiteral, matchNulls);
         }
       }
@@ -559,8 +572,16 @@ public class ReverseLookupRule extends RelOptRule implements SubstitutionRule
         } else {
           return SearchOperatorConversion.makeIn(
               reverseLookupKey.arg,
-              stringsToRexNodes(reversedMatchValues, rexBuilder),
+              reversedMatchValues,
+              rexBuilder.getTypeFactory()
+                        .createTypeWithNullability(
+                            rexBuilder.getTypeFactory().createSqlType(SqlTypeName.VARCHAR),
+                            true
+                        ),
               reverseLookupKey.negate,
+
+              // Use regular equals, or SCALAR_IN_ARRAY, depending on inFunctionThreshold.
+              reversedMatchValues.size() >= plannerContext.queryContext().getInFunctionThreshold(),
               rexBuilder
           );
         }
@@ -598,7 +619,8 @@ public class ReverseLookupRule extends RelOptRule implements SubstitutionRule
       return call.getKind() == SqlKind.EQUALS
              || call.getKind() == SqlKind.NOT_EQUALS
              || call.getOperator().equals(MultiValueStringOperatorConversions.CONTAINS.calciteOperator())
-             || call.getOperator().equals(MultiValueStringOperatorConversions.OVERLAP.calciteOperator());
+             || call.getOperator().equals(MultiValueStringOperatorConversions.OVERLAP.calciteOperator())
+             || call.getOperator().equals(ScalarInArrayOperatorConversion.SQL_FUNCTION);
     } else {
       return false;
     }
