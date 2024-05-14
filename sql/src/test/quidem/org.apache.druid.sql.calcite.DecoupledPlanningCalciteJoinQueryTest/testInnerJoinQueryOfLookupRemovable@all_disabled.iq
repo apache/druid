@@ -1,14 +1,14 @@
-# testInnerJoinQueryOfLookupRemovable@all_disabled case-crc:25b83d15
+# testInnerJoinQueryOfLookupRemovable@all_disabled case-crc:f9e61e4e
 # quidem testcase reason: DEFINETLY_WORSE_PLAN
-!set sqlQueryId dummy
-!set defaultTimeout 300000
 !set debug true
-!set maxScatterGatherBytes 9223372036854775807
+!set defaultTimeout 300000
+!set enableJoinFilterRewrite false
 !set enableJoinFilterRewriteValueColumnFilters false
 !set enableRewriteJoinToFilter false
-!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set maxScatterGatherBytes 9223372036854775807
 !set plannerStrategy DECOUPLED
-!set enableJoinFilterRewrite false
+!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set sqlQueryId dummy
 !set outputformat mysql
 !use druidtest:///
 SELECT dim1, dim2, t1.sk

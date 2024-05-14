@@ -1,11 +1,11 @@
-# testVirtualColumnOnMVFilterMultiJoinExpression@default case-crc:a431c313
+# testVirtualColumnOnMVFilterMultiJoinExpression@default case-crc:0f7e2c53
 # quidem testcase reason: DEFINETLY_WORSE_PLAN
-!set sqlQueryId dummy
-!set defaultTimeout 300000
 !set debug true
+!set defaultTimeout 300000
 !set maxScatterGatherBytes 9223372036854775807
-!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
 !set plannerStrategy DECOUPLED
+!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set sqlQueryId dummy
 !set outputformat mysql
 !use druidtest:///
 SELECT foo1.dim3, foo2.dim3 FROM druid.numfoo as foo1 INNER JOIN (SELECT foo3.dim3 FROM druid.numfoo as foo3 INNER JOIN druid.numfoo as foo4    ON MV_FILTER_ONLY(foo3.dim3, ARRAY['a']) = MV_FILTER_ONLY(foo4.dim3, ARRAY['a'])) as foo2 ON MV_FILTER_ONLY(foo1.dim3, ARRAY['a']) = MV_FILTER_ONLY(foo2.dim3, ARRAY['a'])

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableSortedMap;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.sql.SqlExplainFormat;
@@ -662,15 +663,13 @@ public class QueryTestRunner
     DruidQTestInfo iqTestInfo = config.getQTestInfo();
     if (iqTestInfo != null) {
       QTestCase qt = new QTestCase(iqTestInfo);
-      Map<String, Object> queryContext = builder.getQueryContext();
+      Map<String, Object> queryContext = ImmutableSortedMap.<String, Object>naturalOrder()
+          .putAll(builder.getQueryContext())
+          .putAll(builder.plannerConfig.getNonDefaultAsQueryContext())
+          .build();
       for (Entry<String, Object> entry : queryContext.entrySet()) {
         qt.println(StringUtils.format("!set %s %s", entry.getKey(), entry.getValue()));
       }
-      Map<String, Object> queryContext1 = builder.plannerConfig.getNonDefaultAsQueryContext();
-      for (Entry<String, Object> entry : queryContext1.entrySet()) {
-        qt.println(StringUtils.format("!set %s %s", entry.getKey(), entry.getValue()));
-      }
-
       qt.println("!set outputformat mysql");
       qt.println("!use " + builder.config.queryFramework().getDruidTestURI());
 

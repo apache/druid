@@ -1,15 +1,15 @@
-# testLeftJoinSubqueryWithSelectorFilter@filter-rewrites case-crc:cc6beb91
+# testLeftJoinSubqueryWithSelectorFilter@filter-rewrites case-crc:1fe88b1a
 # quidem testcase reason: EQUIV_PLAN
-!set sqlQueryId dummy
-!set defaultTimeout 300000
+!set computeInnerJoinCostAsFilter false
 !set debug true
-!set maxScatterGatherBytes 9223372036854775807
+!set defaultTimeout 300000
+!set enableJoinFilterRewrite true
 !set enableJoinFilterRewriteValueColumnFilters true
 !set enableRewriteJoinToFilter false
-!set computeInnerJoinCostAsFilter false
-!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set maxScatterGatherBytes 9223372036854775807
 !set plannerStrategy DECOUPLED
-!set enableJoinFilterRewrite true
+!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set sqlQueryId dummy
 !set outputformat mysql
 !use druidtest:///
 SELECT dim1, l1.k

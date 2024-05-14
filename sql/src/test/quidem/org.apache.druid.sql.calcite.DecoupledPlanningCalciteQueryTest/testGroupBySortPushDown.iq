@@ -1,11 +1,11 @@
-# testGroupBySortPushDown case-crc:5655a1ec
+# testGroupBySortPushDown case-crc:0f7a48bb
 # quidem testcase reason: AGG_COL_EXCHANGE
-!set sqlQueryId dummy
-!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set debug true
 !set defaultTimeout 300000
 !set maxScatterGatherBytes 9223372036854775807
 !set plannerStrategy DECOUPLED
-!set debug true
+!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set sqlQueryId dummy
 !set outputformat mysql
 !use druidtest:///
 SELECT dim2, dim1, SUM(cnt) FROM druid.foo GROUP BY dim2, dim1 ORDER BY dim1 LIMIT 4;

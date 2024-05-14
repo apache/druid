@@ -1,14 +1,14 @@
-# testInnerJoinQueryOfLookup@all_enabled case-crc:33c35499
+# testInnerJoinQueryOfLookup@all_enabled case-crc:93392df4
 # quidem testcase reason: FINALIZING_FIELD_ACCESS
-!set sqlQueryId dummy
-!set defaultTimeout 300000
 !set debug true
-!set maxScatterGatherBytes 9223372036854775807
+!set defaultTimeout 300000
+!set enableJoinFilterRewrite true
 !set enableJoinFilterRewriteValueColumnFilters true
 !set enableRewriteJoinToFilter true
-!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set maxScatterGatherBytes 9223372036854775807
 !set plannerStrategy DECOUPLED
-!set enableJoinFilterRewrite true
+!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set sqlQueryId dummy
 !set outputformat mysql
 !use druidtest:///
 SELECT dim1, dim2, t1.v, t1.v

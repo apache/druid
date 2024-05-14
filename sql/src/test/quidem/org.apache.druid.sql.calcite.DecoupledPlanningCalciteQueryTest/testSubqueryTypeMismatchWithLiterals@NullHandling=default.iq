@@ -1,11 +1,11 @@
-# testSubqueryTypeMismatchWithLiterals@NullHandling=default case-crc:55baf28f
+# testSubqueryTypeMismatchWithLiterals@NullHandling=default case-crc:e7079756
 # quidem testcase reason: AGGREGATE_REMOVE_NOT_FIRED
-!set sqlQueryId dummy
-!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set debug true
 !set defaultTimeout 300000
 !set maxScatterGatherBytes 9223372036854775807
 !set plannerStrategy DECOUPLED
-!set debug true
+!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set sqlQueryId dummy
 !set outputformat mysql
 !use druidtest:///
 SELECT 

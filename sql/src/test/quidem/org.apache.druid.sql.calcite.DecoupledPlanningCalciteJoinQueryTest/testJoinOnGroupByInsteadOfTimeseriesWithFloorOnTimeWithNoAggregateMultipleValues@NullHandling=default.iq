@@ -1,11 +1,11 @@
-# testJoinOnGroupByInsteadOfTimeseriesWithFloorOnTimeWithNoAggregateMultipleValues@NullHandling=default case-crc:b873fcbb
+# testJoinOnGroupByInsteadOfTimeseriesWithFloorOnTimeWithNoAggregateMultipleValues@NullHandling=default case-crc:86f4769d
 # quidem testcase reason: JOIN_FILTER_LOCATIONS
-!set sqlQueryId dummy
-!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set debug true
 !set defaultTimeout 300000
 !set maxScatterGatherBytes 9223372036854775807
 !set plannerStrategy DECOUPLED
-!set debug true
+!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set sqlQueryId dummy
 !set outputformat mysql
 !use druidtest:///
 SELECT CAST(__time AS BIGINT), m1, ANY_VALUE(dim3, 100, false) FROM foo WHERE (CAST(TIME_FLOOR(__time, 'PT1H') AS BIGINT) + 1, m1) IN

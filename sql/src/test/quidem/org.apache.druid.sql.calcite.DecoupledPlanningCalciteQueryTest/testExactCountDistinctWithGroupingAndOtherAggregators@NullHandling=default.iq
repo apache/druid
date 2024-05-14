@@ -1,11 +1,11 @@
-# testExactCountDistinctWithGroupingAndOtherAggregators@NullHandling=default case-crc:80416865
+# testExactCountDistinctWithGroupingAndOtherAggregators@NullHandling=default case-crc:f03f8870
 # quidem testcase reason: AGG_COL_EXCHANGE
-!set sqlQueryId dummy
-!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set debug true
 !set defaultTimeout 300000
 !set maxScatterGatherBytes 9223372036854775807
 !set plannerStrategy DECOUPLED
-!set debug true
+!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set sqlQueryId dummy
 !set useApproximateCountDistinct false
 !set outputformat mysql
 !use druidtest:///

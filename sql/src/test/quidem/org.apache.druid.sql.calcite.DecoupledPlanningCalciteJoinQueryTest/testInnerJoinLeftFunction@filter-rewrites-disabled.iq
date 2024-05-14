@@ -1,14 +1,14 @@
-# testInnerJoinLeftFunction@filter-rewrites-disabled case-crc:da4555b7
+# testInnerJoinLeftFunction@filter-rewrites-disabled case-crc:49782da2
 # quidem testcase reason: JOIN_FILTER_LOCATIONS
-!set sqlQueryId dummy
-!set defaultTimeout 300000
 !set debug true
-!set maxScatterGatherBytes 9223372036854775807
+!set defaultTimeout 300000
+!set enableJoinFilterRewrite false
 !set enableJoinFilterRewriteValueColumnFilters true
 !set enableRewriteJoinToFilter true
-!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set maxScatterGatherBytes 9223372036854775807
 !set plannerStrategy DECOUPLED
-!set enableJoinFilterRewrite false
+!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set sqlQueryId dummy
 !set outputformat mysql
 !use druidtest:///
 SELECT foo.dim1, foo.dim2, l.k, l.v

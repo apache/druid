@@ -1,12 +1,12 @@
-# testInnerJoinOnTwoInlineDataSources_withLeftDirectAccess@default@NullHandling=sql case-crc:ca2c56e9
+# testInnerJoinOnTwoInlineDataSources_withLeftDirectAccess@default@NullHandling=sql case-crc:cddd4617
 # quidem testcase reason: JOIN_LEFT_DIRECT_ACCESS
-!set sqlQueryId dummy
-!set defaultTimeout 300000
 !set debug true
-!set maxScatterGatherBytes 9223372036854775807
+!set defaultTimeout 300000
 !set enableJoinLeftTableScanDirect true
-!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set maxScatterGatherBytes 9223372036854775807
 !set plannerStrategy DECOUPLED
+!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set sqlQueryId dummy
 !set outputformat mysql
 !use druidtest:///
 with abc as

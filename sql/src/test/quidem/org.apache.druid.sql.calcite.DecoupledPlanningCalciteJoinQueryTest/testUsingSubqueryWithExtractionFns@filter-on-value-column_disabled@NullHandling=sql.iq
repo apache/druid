@@ -1,14 +1,14 @@
-# testUsingSubqueryWithExtractionFns@filter-on-value-column_disabled@NullHandling=sql case-crc:c71da62e
+# testUsingSubqueryWithExtractionFns@filter-on-value-column_disabled@NullHandling=sql case-crc:8312764a
 # quidem testcase reason: JOIN_FILTER_LOCATIONS
-!set sqlQueryId dummy
-!set defaultTimeout 300000
 !set debug true
-!set maxScatterGatherBytes 9223372036854775807
+!set defaultTimeout 300000
+!set enableJoinFilterRewrite true
 !set enableJoinFilterRewriteValueColumnFilters false
 !set enableRewriteJoinToFilter true
-!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set maxScatterGatherBytes 9223372036854775807
 !set plannerStrategy DECOUPLED
-!set enableJoinFilterRewrite true
+!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set sqlQueryId dummy
 !set outputformat mysql
 !use druidtest:///
 SELECT dim2, COUNT(*) FROM druid.foo WHERE substring(dim2, 1, 1) IN (SELECT substring(dim1, 1, 1) FROM druid.foo WHERE dim1 <> '')group by dim2;

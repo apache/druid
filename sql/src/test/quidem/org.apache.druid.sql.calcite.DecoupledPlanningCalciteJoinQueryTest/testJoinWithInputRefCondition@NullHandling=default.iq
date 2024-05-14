@@ -1,11 +1,11 @@
-# testJoinWithInputRefCondition@NullHandling=default case-crc:a8c0f240
+# testJoinWithInputRefCondition@NullHandling=default case-crc:9a6c217b
 # quidem testcase reason: JOIN_FILTER_LOCATIONS
-!set sqlQueryId dummy
-!set defaultTimeout 300000
 !set debug true
+!set defaultTimeout 300000
 !set maxScatterGatherBytes 9223372036854775807
-!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
 !set plannerStrategy DECOUPLED
+!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set sqlQueryId dummy
 !set outputformat mysql
 !use druidtest:///
 SELECT COUNT(*) FILTER (WHERE FLOOR(100) NOT IN (SELECT m1 FROM foo)) FROM foo;

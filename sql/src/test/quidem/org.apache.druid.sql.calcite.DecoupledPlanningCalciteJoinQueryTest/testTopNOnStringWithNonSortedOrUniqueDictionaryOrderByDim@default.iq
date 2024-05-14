@@ -1,11 +1,11 @@
-# testTopNOnStringWithNonSortedOrUniqueDictionaryOrderByDim@default case-crc:94e7e664
+# testTopNOnStringWithNonSortedOrUniqueDictionaryOrderByDim@default case-crc:1100fa9d
 # quidem testcase reason: EQUIV_PLAN
-!set sqlQueryId dummy
-!set defaultTimeout 300000
 !set debug true
+!set defaultTimeout 300000
 !set maxScatterGatherBytes 9223372036854775807
-!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
 !set plannerStrategy DECOUPLED
+!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set sqlQueryId dummy
 !set outputformat mysql
 !use druidtest:///
 SELECT druid.broadcast.dim4, COUNT(*)

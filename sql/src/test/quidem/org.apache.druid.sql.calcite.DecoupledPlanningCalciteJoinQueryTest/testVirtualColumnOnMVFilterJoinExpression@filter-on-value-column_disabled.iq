@@ -1,14 +1,14 @@
-# testVirtualColumnOnMVFilterJoinExpression@filter-on-value-column_disabled case-crc:2116c5d2
+# testVirtualColumnOnMVFilterJoinExpression@filter-on-value-column_disabled case-crc:98ed9bb6
 # quidem testcase reason: SLIGHTLY_WORSE_PLAN
-!set sqlQueryId dummy
-!set defaultTimeout 300000
 !set debug true
-!set maxScatterGatherBytes 9223372036854775807
+!set defaultTimeout 300000
+!set enableJoinFilterRewrite true
 !set enableJoinFilterRewriteValueColumnFilters false
 !set enableRewriteJoinToFilter true
-!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set maxScatterGatherBytes 9223372036854775807
 !set plannerStrategy DECOUPLED
-!set enableJoinFilterRewrite true
+!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set sqlQueryId dummy
 !set outputformat mysql
 !use druidtest:///
 SELECT foo1.dim3, foo2.dim3 FROM druid.numfoo as foo1 INNER JOIN druid.numfoo as foo2 ON MV_FILTER_ONLY(foo1.dim3, ARRAY['a']) = MV_FILTER_ONLY(foo2.dim3, ARRAY['a'])

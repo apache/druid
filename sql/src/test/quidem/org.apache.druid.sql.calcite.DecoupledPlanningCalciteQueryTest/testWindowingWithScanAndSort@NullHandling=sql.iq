@@ -1,12 +1,12 @@
-# testWindowingWithScanAndSort@NullHandling=sql case-crc:24efe380
+# testWindowingWithScanAndSort@NullHandling=sql case-crc:bb1d6e53
 # quidem testcase reason: SLIGHTLY_WORSE_PLAN
-!set sqlQueryId dummy
-!set defaultTimeout 300000
 !set debug true
+!set defaultTimeout 300000
 !set enableWindowing true
 !set maxScatterGatherBytes 9223372036854775807
-!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
 !set plannerStrategy DECOUPLED
+!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set sqlQueryId dummy
 !set outputformat mysql
 !use druidtest:///
 with t AS (

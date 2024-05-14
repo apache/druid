@@ -1,11 +1,11 @@
-# testInnerJoinQueryOfLookupRemovable@default case-crc:c025c7ff
+# testInnerJoinQueryOfLookupRemovable@default case-crc:56875820
 # quidem testcase reason: DEFINETLY_WORSE_PLAN
-!set sqlQueryId dummy
-!set defaultTimeout 300000
 !set debug true
+!set defaultTimeout 300000
 !set maxScatterGatherBytes 9223372036854775807
-!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
 !set plannerStrategy DECOUPLED
+!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set sqlQueryId dummy
 !set outputformat mysql
 !use druidtest:///
 SELECT dim1, dim2, t1.sk

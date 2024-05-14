@@ -1,15 +1,15 @@
-# testLeftJoinOnTwoInlineDataSources_withLeftDirectAccess@filter-rewrites@NullHandling=default case-crc:47dc2525
+# testLeftJoinOnTwoInlineDataSources_withLeftDirectAccess@filter-rewrites@NullHandling=default case-crc:f53ef0f5
 # quidem testcase reason: JOIN_LEFT_DIRECT_ACCESS
-!set sqlQueryId dummy
-!set defaultTimeout 300000
 !set debug true
-!set maxScatterGatherBytes 9223372036854775807
-!set enableJoinFilterRewriteValueColumnFilters true
-!set enableRewriteJoinToFilter false
-!set enableJoinLeftTableScanDirect true
-!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
-!set plannerStrategy DECOUPLED
+!set defaultTimeout 300000
 !set enableJoinFilterRewrite true
+!set enableJoinFilterRewriteValueColumnFilters true
+!set enableJoinLeftTableScanDirect true
+!set enableRewriteJoinToFilter false
+!set maxScatterGatherBytes 9223372036854775807
+!set plannerStrategy DECOUPLED
+!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set sqlQueryId dummy
 !set outputformat mysql
 !use druidtest:///
 with abc as

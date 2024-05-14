@@ -1,11 +1,11 @@
-# testGroupByWithLiteralInSubqueryGrouping case-crc:ddf0feaf
+# testGroupByWithLiteralInSubqueryGrouping case-crc:a63c5a2f
 # quidem testcase reason: IMPROVED_PLAN
-!set sqlQueryId dummy
-!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set debug true
 !set defaultTimeout 300000
 !set maxScatterGatherBytes 9223372036854775807
 !set plannerStrategy DECOUPLED
-!set debug true
+!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set sqlQueryId dummy
 !set outputformat mysql
 !use druidtest:///
 SELECT 
@@ -30,8 +30,8 @@ SELECT
 +-------+----+
 | t1    | t2 |
 +-------+----+
-| dummy | b  |
 | dummy |    |
+| dummy | b  |
 +-------+----+
 (2 rows)
 
