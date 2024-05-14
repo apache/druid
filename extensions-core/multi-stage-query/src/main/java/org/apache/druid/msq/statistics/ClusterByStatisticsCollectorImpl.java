@@ -212,6 +212,12 @@ public class ClusterByStatisticsCollectorImpl implements ClusterByStatisticsColl
     return count;
   }
 
+  @VisibleForTesting
+  long getTotalRetainedBytes()
+  {
+    return totalRetainedBytes;
+  }
+
   @Override
   public boolean hasMultipleValues(final int keyPosition)
   {
@@ -414,7 +420,7 @@ public class ClusterByStatisticsCollectorImpl implements ClusterByStatisticsColl
   void downSample()
   {
     long newTotalRetainedBytes = totalRetainedBytes;
-    final long targetTotalRetainedBytes = totalRetainedBytes / 2;
+    final long targetTotalRetainedBytes = Math.min(totalRetainedBytes / 2, maxRetainedBytes);
 
     final List<Pair<Long, BucketHolder>> sortedHolders = new ArrayList<>(buckets.size());
     final RowKeyReader trimmedRowReader = keyReader.trimmedKeyReader(clusterBy.getBucketByCount());
