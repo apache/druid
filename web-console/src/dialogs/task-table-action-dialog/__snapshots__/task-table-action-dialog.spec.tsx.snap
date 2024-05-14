@@ -97,34 +97,6 @@ exports[`TaskTableActionDialog matches snapshot 1`] = `
             >
               <span
                 aria-hidden="true"
-                class="bp4-icon bp4-icon-align-left"
-                icon="align-left"
-              >
-                <svg
-                  data-icon="align-left"
-                  height="20"
-                  role="img"
-                  viewBox="0 0 20 20"
-                  width="20"
-                >
-                  <path
-                    d="M1 7h10c.55 0 1-.45 1-1s-.45-1-1-1H1c-.55 0-1 .45-1 1s.45 1 1 1zm0-4h18c.55 0 1-.45 1-1s-.45-1-1-1H1c-.55 0-1 .45-1 1s.45 1 1 1zm14 14H1c-.55 0-1 .45-1 1s.45 1 1 1h14c.55 0 1-.45 1-1s-.45-1-1-1zm4-8H1c-.55 0-1 .45-1 1s.45 1 1 1h18c.55 0 1-.45 1-1s-.45-1-1-1zM1 15h6c.55 0 1-.45 1-1s-.45-1-1-1H1c-.55 0-1 .45-1 1s.45 1 1 1z"
-                    fill-rule="evenodd"
-                  />
-                </svg>
-              </span>
-              <span
-                class="bp4-button-text"
-              >
-                Payload
-              </span>
-            </button>
-            <button
-              class="bp4-button bp4-minimal tab-button"
-              type="button"
-            >
-              <span
-                aria-hidden="true"
                 class="bp4-icon bp4-icon-comparison"
                 icon="comparison"
               >
@@ -153,6 +125,34 @@ exports[`TaskTableActionDialog matches snapshot 1`] = `
             >
               <span
                 aria-hidden="true"
+                class="bp4-icon bp4-icon-align-left"
+                icon="align-left"
+              >
+                <svg
+                  data-icon="align-left"
+                  height="20"
+                  role="img"
+                  viewBox="0 0 20 20"
+                  width="20"
+                >
+                  <path
+                    d="M1 7h10c.55 0 1-.45 1-1s-.45-1-1-1H1c-.55 0-1 .45-1 1s.45 1 1 1zm0-4h18c.55 0 1-.45 1-1s-.45-1-1-1H1c-.55 0-1 .45-1 1s.45 1 1 1zm14 14H1c-.55 0-1 .45-1 1s.45 1 1 1h14c.55 0 1-.45 1-1s-.45-1-1-1zm4-8H1c-.55 0-1 .45-1 1s.45 1 1 1h18c.55 0 1-.45 1-1s-.45-1-1-1zM1 15h6c.55 0 1-.45 1-1s-.45-1-1-1H1c-.55 0-1 .45-1 1s.45 1 1 1z"
+                    fill-rule="evenodd"
+                  />
+                </svg>
+              </span>
+              <span
+                class="bp4-button-text"
+              >
+                Spec
+              </span>
+            </button>
+            <button
+              class="bp4-button bp4-minimal tab-button"
+              type="button"
+            >
+              <span
+                aria-hidden="true"
                 class="bp4-icon bp4-icon-align-justify"
                 icon="align-justify"
               >
@@ -172,7 +172,7 @@ exports[`TaskTableActionDialog matches snapshot 1`] = `
               <span
                 class="bp4-button-text"
               >
-                Logs
+                Log
               </span>
             </button>
           </div>
