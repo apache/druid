@@ -53,6 +53,9 @@ differs from SQL standard behavior, where columns are inserted based on position
 including the `createBitmapIndex` and `multiValueHandling` [dimension](../ingestion/ingestion-spec.md#dimension-objects)
 properties, and the `indexSpec` [`tuningConfig`](../ingestion/ingestion-spec.md#tuningconfig) property.
 
+- Queries using `EXTERN` to export data sometimes do not contain all the results. Certain rows maybe missing from the
+created files.
+
 ## `EXTERN` Function
 
 - The [schemaless dimensions](../ingestion/ingestion-spec.md#inclusions-and-exclusions)
