@@ -17,22 +17,41 @@
  * under the License.
  */
 
-package org.apache.druid.server;
+package org.apache.druid.segment;
 
-import com.fasterxml.jackson.databind.InjectableValues;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.jackson.DefaultObjectMapper;
-import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
+import org.apache.druid.timeline.DataSegment;
 
-public class ServerTestHelper
+import javax.annotation.Nullable;
+
+/**
+ * Immutable wrapper class for segment and schema.
+ */
+public class DataSegmentWithMetadata
 {
-  public static final ObjectMapper MAPPER = new DefaultObjectMapper();
+  @Nullable
+  private final DataSegment dataSegment;
 
-  static {
-    MAPPER.setInjectableValues(
-        new InjectableValues.Std()
-            .addValue(ObjectMapper.class.getName(), MAPPER)
-            .addValue(PruneSpecsHolder.class, PruneSpecsHolder.DEFAULT)
-    );
+  @Nullable
+  private final SchemaPayloadPlus schemaPayloadPlus;
+
+  public DataSegmentWithMetadata(
+      @Nullable DataSegment dataSegment,
+      @Nullable SchemaPayloadPlus schemaPayloadPlus
+  )
+  {
+    this.dataSegment = dataSegment;
+    this.schemaPayloadPlus = schemaPayloadPlus;
+  }
+
+  @Nullable
+  public DataSegment getDataSegment()
+  {
+    return dataSegment;
+  }
+
+  @Nullable
+  public SchemaPayloadPlus getSegmentSchemaMetadata()
+  {
+    return schemaPayloadPlus;
   }
 }

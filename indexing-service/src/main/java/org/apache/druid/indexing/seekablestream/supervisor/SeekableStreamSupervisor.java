@@ -203,6 +203,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     final String baseSequenceName;
     DateTime completionTimeout; // is set after signalTasksToFinish(); if not done by timeout, take corrective action
 
+    boolean shutdownEarly = false; // set by SupervisorManager.stopTaskGroupEarly
+
     TaskGroup(
         int groupId,
         ImmutableMap<PartitionIdType, SequenceOffsetType> startingSequences,
@@ -264,6 +266,16 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     Set<String> taskIds()
     {
       return tasks.keySet();
+    }
+
+    void setShutdownEarly()
+    {
+      shutdownEarly = true;
+    }
+
+    Boolean getShutdownEarly()
+    {
+      return shutdownEarly;
     }
 
     @VisibleForTesting
@@ -648,6 +660,39 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     public void handle()
     {
       resetOffsetsInternal(dataSourceMetadata);
+    }
+
+    @Override
+    public String getType()
+    {
+      return TYPE;
+    }
+  }
+
+  private class HandoffTaskGroupsNotice implements Notice
+  {
+    final List<Integer> taskGroupIds;
+    private static final String TYPE = "handoff_task_group_notice";
+
+    HandoffTaskGroupsNotice(
+        @Nonnull final List<Integer> taskGroupIds
+    )
+    {
+      this.taskGroupIds = taskGroupIds;
+    }
+
+    @Override
+    public void handle()
+    {
+      for (Integer taskGroupId : taskGroupIds) {
+        TaskGroup taskGroup = activelyReadingTaskGroups.getOrDefault(taskGroupId, null);
+        if (taskGroup == null) {
+          log.info("Tried to stop task group [%d] for supervisor [%s] that wasn't actively reading.", taskGroupId, supervisorId);
+          continue;
+        }
+
+        taskGroup.setShutdownEarly();
+      }
     }
 
     @Override
@@ -1932,6 +1977,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     return false;
   }
 
+  @Override
+  public void handoffTaskGroupsEarly(List<Integer> taskGroupIds)
+  {
+    addNotice(new HandoffTaskGroupsNotice(taskGroupIds));
+  }
+
   private void discoverTasks() throws ExecutionException, InterruptedException
   {
     int taskCount = 0;
@@ -3143,14 +3194,15 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           } else {
             DateTime earliestTaskStart = computeEarliestTaskStartTime(group);
 
-            if (earliestTaskStart.plus(ioConfig.getTaskDuration()).isBeforeNow()) {
+            if (earliestTaskStart.plus(ioConfig.getTaskDuration()).isBeforeNow() || group.getShutdownEarly()) {
               // if this task has run longer than the configured duration
               // as long as the pending task groups are less than the configured stop task count.
+              // If shutdownEarly has been set, ignore stopTaskCount since this is a manual operator action.
               if (pendingCompletionTaskGroups.values()
                                              .stream()
                                              .mapToInt(CopyOnWriteArrayList::size)
                                              .sum() + stoppedTasks.get()
-                  < ioConfig.getMaxAllowedStops()) {
+                  < ioConfig.getMaxAllowedStops() || group.getShutdownEarly()) {
                 log.info(
                     "Task group [%d] has run for [%s]. Stopping.",
                     groupId,

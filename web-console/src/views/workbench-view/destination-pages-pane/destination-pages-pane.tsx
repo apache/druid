@@ -82,9 +82,11 @@ export const DestinationPagesPane = React.memo(function DestinationPagesPane(
 
   const numTotalRows = destination?.numTotalRows;
 
-  function getPageUrl(pageIndex: number) {
+  function getResultUrl(pageIndex: number) {
     return UrlBaser.base(
-      `/druid/v2/sql/statements/${id}/results?page=${pageIndex}&resultFormat=${desiredResultFormat}`,
+      `/druid/v2/sql/statements/${id}/results?${
+        pageIndex < 0 ? '' : `page=${pageIndex}&`
+      }resultFormat=${desiredResultFormat}`,
     );
   }
 
@@ -94,13 +96,10 @@ export const DestinationPagesPane = React.memo(function DestinationPagesPane(
     return `${id}_page_${pageNumberString}_of_${numPagesString}.${desiredExtension}`;
   }
 
-  async function downloadAllPages() {
+  async function downloadAllData() {
     if (!pages) return;
-    const numPages = pages.length;
-    for (let i = 0; i < pages.length; i++) {
-      downloadUrl(getPageUrl(i), getPageFilename(i, numPages));
-      await wait(100);
-    }
+    downloadUrl(getResultUrl(-1), `${id}_all_data.${desiredExtension}`);
+    await wait(100);
   }
 
   const numPages = pages.length;
@@ -139,8 +138,8 @@ export const DestinationPagesPane = React.memo(function DestinationPagesPane(
           <Button
             intent={Intent.PRIMARY}
             icon={IconNames.DOWNLOAD}
-            text={`Download all data (${pluralIfNeeded(numPages, 'file')})`}
-            onClick={() => void downloadAllPages()}
+            text="Download all data (concatenated)"
+            onClick={() => void downloadAllData()}
           />
         )}
       </p>
@@ -185,7 +184,7 @@ export const DestinationPagesPane = React.memo(function DestinationPagesPane(
                 icon={IconNames.DOWNLOAD}
                 text="Download"
                 minimal
-                href={getPageUrl(value)}
+                href={getResultUrl(value)}
                 download={getPageFilename(value, numPages)}
               />
             ),

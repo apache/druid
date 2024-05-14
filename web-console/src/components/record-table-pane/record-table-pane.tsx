@@ -104,7 +104,7 @@ export const RecordTablePane = React.memo(function RecordTablePane(props: Record
   const finalPage =
     hasMoreResults && Math.floor(queryResult.rows.length / pagination.pageSize) === pagination.page; // on the last page
 
-  const numericColumnBraces = getNumericColumnBraces(queryResult, pagination);
+  const numericColumnBraces = getNumericColumnBraces(queryResult, undefined, pagination);
   return (
     <div className={classNames('record-table-pane', { 'more-results': hasMoreResults })}>
       {finalPage ? (

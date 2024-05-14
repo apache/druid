@@ -546,7 +546,7 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
       ? parsedQuery.getSelectExpressionForIndex(editingColumn)
       : undefined;
 
-  const numericColumnBraces = getNumericColumnBraces(queryResult, pagination);
+  const numericColumnBraces = getNumericColumnBraces(queryResult, undefined, pagination);
   return (
     <div className={classNames('result-table-pane', { 'more-results': hasMoreResults })}>
       {finalPage ? (

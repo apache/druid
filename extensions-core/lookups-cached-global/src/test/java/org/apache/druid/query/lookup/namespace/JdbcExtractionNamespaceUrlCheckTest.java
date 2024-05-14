@@ -156,46 +156,6 @@ public class JdbcExtractionNamespaceUrlCheckTest
           }
       );
     }
-
-    @Test
-    public void testWhenInvalidUrlFormat()
-    {
-      expectedException.expect(IllegalArgumentException.class);
-      expectedException.expectMessage("Invalid URL format for MySQL: [jdbc:mysql:/invalid-url::3006]");
-      new JdbcExtractionNamespace(
-          new MetadataStorageConnectorConfig()
-          {
-            @Override
-            public String getConnectURI()
-            {
-              return "jdbc:mysql:/invalid-url::3006";
-            }
-          },
-          TABLE_NAME,
-          KEY_NAME,
-          VAL_NAME,
-          TS_COLUMN,
-          "some filter",
-          new Period(10),
-          null,
-          0,
-          null,
-          new JdbcAccessSecurityConfig()
-          {
-            @Override
-            public Set<String> getAllowedProperties()
-            {
-              return ImmutableSet.of("valid_key1", "valid_key2");
-            }
-
-            @Override
-            public boolean isEnforceAllowedProperties()
-            {
-              return true;
-            }
-          }
-      );
-    }
   }
 
   public static class PostgreSqlTest
