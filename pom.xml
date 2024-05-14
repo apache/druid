@@ -75,6 +75,8 @@
         <java.version>8</java.version>
         <project.build.resourceEncoding>UTF-8</project.build.resourceEncoding>
         <aether.version>0.9.0.M2</aether.version>
+        <!-- Downgraded the version of Apache Curator from 5.5.0 to 5.3.0 to avoid a bug in the new version
+         FYI, https://github.com/apache/druid/pull/16425 -->
         <apache.curator.version>5.3.0</apache.curator.version>
         <apache.kafka.version>3.6.1</apache.kafka.version>
         <!-- when updating apache ranger, verify the usage of aws-bundle-sdk vs aws-logs-sdk

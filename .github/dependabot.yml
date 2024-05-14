@@ -15,3 +15,6 @@ updates:
       # pin Testng dependencies to 7.3.0
       - dependency-name: "org.testng"
         versions: "[7.4.0,)"
+      # pin Curator dependencies to 5.3.0 util https://issues.apache.org/jira/browse/CURATOR-696 has been resolved
+      - dependency-name: "org.apache.curator"
+        versions: "[5.4.0,)"
