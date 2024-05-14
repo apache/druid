@@ -119,7 +119,8 @@ public class LookupLoadingSpec
         lookupsToLoad = (Collection<String>) context.get(CTX_LOOKUPS_TO_LOAD);
       }
       catch (ClassCastException e) {
-        throw InvalidInput.exception("Invalid value of %s[%s]. Please provide a comma-separated list of lookup names.",
+        throw InvalidInput.exception("Invalid value of %s[%s]. Please provide a comma-separated list of "
+                                     + "lookup names. For example: [\"lookupName1\", \"lookupName2\"]",
                                      CTX_LOOKUPS_TO_LOAD, context.get(CTX_LOOKUPS_TO_LOAD));
       }
 

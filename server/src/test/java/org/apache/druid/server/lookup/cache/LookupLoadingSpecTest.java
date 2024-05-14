@@ -179,7 +179,8 @@ public class LookupLoadingSpecTest
                 LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE, LookupLoadingSpec.Mode.ONLY_REQUIRED),
             LookupLoadingSpec.ALL)
     );
-    Assert.assertEquals(StringUtils.format("Invalid value of %s[%s]. Please provide a comma-separated list of lookup names.",
-                                      LookupLoadingSpec.CTX_LOOKUPS_TO_LOAD, lookupsToLoad), exception.getMessage());
+    Assert.assertEquals(StringUtils.format("Invalid value of %s[%s]. Please provide a comma-separated list of "
+                                           + "lookup names. For example: [\"lookupName1\", \"lookupName2\"]",
+                                           LookupLoadingSpec.CTX_LOOKUPS_TO_LOAD, lookupsToLoad), exception.getMessage());
   }
 }
