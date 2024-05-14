@@ -20,7 +20,9 @@
 package org.apache.druid.indexing.overlord;
 
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.metadata.ReplaceTaskLock;
+import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.PartialShardSpec;
@@ -188,14 +190,15 @@ public interface IndexerMetadataStorageCoordinator
   int markSegmentsAsUnusedWithinInterval(String dataSource, Interval interval);
 
   /**
-   * Attempts to insert a set of segments to the metadata storage. Returns the set of segments actually added (segments
-   * with identifiers already in the metadata storage will not be added).
+   * Attempts to insert a set of segments and corresponding schema to the metadata storage.
+   * Returns the set of segments actually added (segments with identifiers already in the metadata storage will not be added).
    *
    * @param segments set of segments to add
+   * @param segmentSchemaMapping segment schema information to add
    *
    * @return set of segments actually added
    */
-  Set<DataSegment> commitSegments(Set<DataSegment> segments) throws IOException;
+  Set<DataSegment> commitSegments(Set<DataSegment> segments, @Nullable SegmentSchemaMapping segmentSchemaMapping) throws IOException;
 
   /**
    * Allocates pending segments for the given requests in the pending segments table.
@@ -238,7 +241,7 @@ public interface IndexerMetadataStorageCoordinator
    *                                identifier may have a version lower than this one, but will not have one higher.
    * @param skipSegmentLineageCheck if true, perform lineage validation using previousSegmentId for this sequence.
    *                                Should be set to false if replica tasks would index events in same order
-   *
+   * @param taskAllocatorId         The task allocator id with which the pending segment is associated
    * @return the pending segment identifier, or null if it was impossible to allocate a new segment
    */
   SegmentIdWithShardSpec allocatePendingSegment(
@@ -248,7 +251,8 @@ public interface IndexerMetadataStorageCoordinator
       Interval interval,
       PartialShardSpec partialShardSpec,
       String maxVersion,
-      boolean skipSegmentLineageCheck
+      boolean skipSegmentLineageCheck,
+      String taskAllocatorId
   );
 
   /**
@@ -276,8 +280,8 @@ public interface IndexerMetadataStorageCoordinator
   int deletePendingSegments(String dataSource);
 
   /**
-   * Attempts to insert a set of segments to the metadata storage. Returns the set of segments actually added (segments
-   * with identifiers already in the metadata storage will not be added).
+   * Attempts to insert a set of segments and corresponding schema to the metadata storage.
+   * Returns the set of segments actually added (segments with identifiers already in the metadata storage will not be added).
    * <p/>
    * If startMetadata and endMetadata are set, this insertion will be atomic with a compare-and-swap on dataSource
    * commit metadata.
@@ -292,6 +296,7 @@ public interface IndexerMetadataStorageCoordinator
    * @param endMetadata    dataSource metadata post-insert will have this endMetadata merged in with
    *                       {@link DataSourceMetadata#plus(DataSourceMetadata)}. If null, this insert will not
    *                       involve a metadata transaction
+   * @param segmentSchemaMapping segment schema information to persist.
    *
    * @return segment publish result indicating transaction success or failure, and set of segments actually published.
    * This method must only return a failure code if it is sure that the transaction did not happen. If it is not sure,
@@ -303,12 +308,14 @@ public interface IndexerMetadataStorageCoordinator
   SegmentPublishResult commitSegmentsAndMetadata(
       Set<DataSegment> segments,
       @Nullable DataSourceMetadata startMetadata,
-      @Nullable DataSourceMetadata endMetadata
+      @Nullable DataSourceMetadata endMetadata,
+      @Nullable SegmentSchemaMapping segmentSchemaMapping
   ) throws IOException;
 
   /**
-   * Commits segments created by an APPEND task. This method also handles segment
-   * upgrade scenarios that may result from concurrent append and replace.
+   * Commits segments and corresponding schema created by an APPEND task.
+   * This method also handles segment upgrade scenarios that may result
+   * from concurrent append and replace.
    * <ul>
    * <li>If a REPLACE task committed a segment that overlaps with any of the
    * appendSegments while this APPEND task was in progress, the appendSegments
@@ -322,10 +329,14 @@ public interface IndexerMetadataStorageCoordinator
    *                                   must be committed in a single transaction.
    * @param appendSegmentToReplaceLock Map from append segment to the currently
    *                                   active REPLACE lock (if any) covering it
+   * @param taskAllocatorId            allocator id of the task committing the segments to be appended
+   * @param segmentSchemaMapping       schema of append segments
    */
   SegmentPublishResult commitAppendSegments(
       Set<DataSegment> appendSegments,
-      Map<DataSegment, ReplaceTaskLock> appendSegmentToReplaceLock
+      Map<DataSegment, ReplaceTaskLock> appendSegmentToReplaceLock,
+      String taskAllocatorId,
+      @Nullable SegmentSchemaMapping segmentSchemaMapping
   );
 
   /**
@@ -340,12 +351,15 @@ public interface IndexerMetadataStorageCoordinator
       Set<DataSegment> appendSegments,
       Map<DataSegment, ReplaceTaskLock> appendSegmentToReplaceLock,
       DataSourceMetadata startMetadata,
-      DataSourceMetadata endMetadata
+      DataSourceMetadata endMetadata,
+      String taskGroup,
+      @Nullable SegmentSchemaMapping segmentSchemaMapping
   );
 
   /**
-   * Commits segments created by a REPLACE task. This method also handles the
-   * segment upgrade scenarios that may result from concurrent append and replace.
+   * Commits segments and corresponding schema created by a REPLACE task.
+   * This method also handles the segment upgrade scenarios that may result
+   * from concurrent append and replace.
    * <ul>
    * <li>If an APPEND task committed a segment to an interval locked by this task,
    * the append segment is upgraded to the version of the corresponding lock.
@@ -356,10 +370,12 @@ public interface IndexerMetadataStorageCoordinator
    * @param replaceSegments        All segments created by a REPLACE task that
    *                               must be committed in a single transaction.
    * @param locksHeldByReplaceTask All active non-revoked REPLACE locks held by the task
+   * @param segmentSchemaMapping  Segment schema to add.
    */
   SegmentPublishResult commitReplaceSegments(
       Set<DataSegment> replaceSegments,
-      Set<ReplaceTaskLock> locksHeldByReplaceTask
+      Set<ReplaceTaskLock> locksHeldByReplaceTask,
+      @Nullable SegmentSchemaMapping segmentSchemaMapping
   );
 
   /**
@@ -373,13 +389,10 @@ public interface IndexerMetadataStorageCoordinator
    * </ul>
    *
    * @param replaceSegments Segments being committed by a REPLACE task
-   * @param activeRealtimeSequencePrefixes Set of sequence prefixes of active and pending completion task groups
-   *                                       of the supervisor (if any) for this datasource
-   * @return Map from originally allocated pending segment to its new upgraded ID.
+   * @return List of inserted pending segment records
    */
-  Map<SegmentIdWithShardSpec, SegmentIdWithShardSpec> upgradePendingSegmentsOverlappingWith(
-      Set<DataSegment> replaceSegments,
-      Set<String> activeRealtimeSequencePrefixes
+  List<PendingSegmentRecord> upgradePendingSegmentsOverlappingWith(
+      Set<DataSegment> replaceSegments
   );
 
   /**
@@ -476,4 +489,20 @@ public interface IndexerMetadataStorageCoordinator
    * @return number of deleted entries from the metadata store
    */
   int deleteUpgradeSegmentsForTask(String taskId);
+
+  /**
+   * Delete pending segment for a give task group after all the tasks belonging to it have completed.
+   * @param datasource datasource of the task
+   * @param taskAllocatorId task id / task group / replica group for an appending task
+   * @return number of pending segments deleted from the metadata store
+   */
+  int deletePendingSegmentsForTaskAllocatorId(String datasource, String taskAllocatorId);
+
+  /**
+   * Fetches all the pending segments of the datasource that overlap with a given interval.
+   * @param datasource datasource to be queried
+   * @param interval interval with which segments overlap
+   * @return List of pending segment records
+   */
+  List<PendingSegmentRecord> getPendingSegments(String datasource, Interval interval);
 }

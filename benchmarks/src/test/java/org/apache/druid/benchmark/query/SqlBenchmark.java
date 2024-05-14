@@ -456,7 +456,9 @@ public class SqlBenchmark
       // 39: EARLIEST aggregator double
       "SELECT EARLIEST(double4) FROM foo",
       // 40: EARLIEST aggregator float
-      "SELECT EARLIEST(float3) FROM foo"
+      "SELECT EARLIEST(float3) FROM foo",
+      // 41: nested OR filter
+      "SELECT dimSequential, COUNT(*) from foo WHERE dimSequential = '1' AND (dimMultivalEnumerated IN ('Hello', 'World', 'Foo', 'Bar', 'Baz') OR sumLongSequential = 1) GROUP BY 1"
   );
 
   @Param({"5000000"})
@@ -520,7 +522,8 @@ public class SqlBenchmark
       "37",
       "38",
       "39",
-      "40"
+      "40",
+      "41"
   })
   private String query;
 
@@ -554,7 +557,7 @@ public class SqlBenchmark
           schemaInfo,
           DimensionsSpec.builder().setDimensions(columnSchemas).build(),
           TransformSpec.NONE,
-          IndexSpec.DEFAULT,
+          IndexSpec.builder().withStringDictionaryEncoding(getStringEncodingStrategy()).build(),
           Granularities.NONE,
           rowsPerSegment
       );

@@ -34,6 +34,7 @@ import {
   Radio,
   RadioGroup,
   Switch,
+  Tag,
   TextArea,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
@@ -3073,8 +3074,9 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               <p>Your partitioning and sorting configuration is uncommon.</p>
               <p>
                 For best performance the first dimension in your schema (
-                <Code>{firstDimensionName}</Code>), which is what the data will be primarily sorted
-                on, commonly matches the partitioning dimension (<Code>{partitionDimension}</Code>).
+                <Tag minimal>{firstDimensionName}</Tag>), which is what the data will be primarily
+                sorted on, commonly matches the partitioning dimension (
+                <Tag minimal>{partitionDimension}</Tag>).
               </p>
               <p>
                 <Button
@@ -3243,6 +3245,26 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                   <>
                     Creates segments as additional shards of the latest version, effectively
                     appending to the segment set instead of replacing it.
+                  </>
+                ),
+              },
+              {
+                name: 'suspended',
+                type: 'boolean',
+                defined: isStreamingSpec,
+                defaultValue: false,
+                info: (
+                  <>
+                    <p>Create a supervisor in a suspended state.</p>
+                    <p>
+                      Creating a supervisor in a suspended state can be helpful if you are not yet
+                      ready to begin ingesting data or if you prefer to configure the
+                      supervisor&apos;s metadata before starting it.
+                    </p>
+                    <p>
+                      You can configure the exact offsets that the supervisor will read from using
+                      the <Code>Actions</Code> menu on the <Code>Supervisors</Code> tab.
+                    </p>
                   </>
                 ),
               },
@@ -3431,11 +3453,11 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                   <p>
                     You have enabled type-aware schema discovery (
                     <Code>useSchemaDiscovery: true</Code>) to ingest data into the existing
-                    datasource <Code>{datasource}</Code>.
+                    datasource <Tag minimal>{datasource}</Tag>.
                   </p>
                   <p>
                     If you used string-based schema discovery when first ingesting data to{' '}
-                    <Code>{datasource}</Code>, using type-aware schema discovery now can cause
+                    <Tag minimal>{datasource}</Tag>, using type-aware schema discovery now can cause
                     problems with the values multi-value string dimensions.
                   </p>
                   <p>

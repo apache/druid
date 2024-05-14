@@ -38,18 +38,24 @@ public class SegmentCreateRequest
   private final String sequenceName;
   private final String previousSegmentId;
   private final PartialShardSpec partialShardSpec;
+  private final String upgradedFromSegmentId;
+  private final String taskAllocatorId;
 
   public SegmentCreateRequest(
       String sequenceName,
       String previousSegmentId,
       String version,
-      PartialShardSpec partialShardSpec
+      PartialShardSpec partialShardSpec,
+      String upgradedFromSegmentId,
+      String taskAllocatorId
   )
   {
     this.sequenceName = sequenceName;
     this.previousSegmentId = previousSegmentId == null ? "" : previousSegmentId;
     this.version = version;
     this.partialShardSpec = partialShardSpec;
+    this.upgradedFromSegmentId = upgradedFromSegmentId;
+    this.taskAllocatorId = taskAllocatorId;
   }
 
   public String getSequenceName()
@@ -74,5 +80,15 @@ public class SegmentCreateRequest
   public PartialShardSpec getPartialShardSpec()
   {
     return partialShardSpec;
+  }
+
+  public String getUpgradedFromSegmentId()
+  {
+    return upgradedFromSegmentId;
+  }
+
+  public String getTaskAllocatorId()
+  {
+    return taskAllocatorId;
   }
 }

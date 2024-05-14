@@ -203,17 +203,51 @@ public class JSONFlattenerMaker implements ObjectFlatteners.FlattenerMaker<JsonN
     return null;
   }
 
+  /**
+   * Fix up a string so it can round-trip through UTF-8 encoding without loss of fidelity. This comes up when a string
+   * has surrogates (e.g. \uD900) that appear in invalid positions, such as alone rather than as part of a
+   * surrogate pair.
+   *
+   * This operation is useful because when a string cannot round-trip properly, it can cause it to sort differently
+   * relative to other strings after an encode/decode round-trip. This causes incorrect ordering in cases where strings
+   * are sorted, then encoded, then decoded again.
+   *
+   * @param s   string, or null
+   * @param enc UTF-8 encoder
+   *
+   * @return the original string, or a fixed version that can round-trip properly
+   */
   @Nullable
-  private static String charsetFix(String s, CharsetEncoder enc)
+  static String charsetFix(@Nullable String s, CharsetEncoder enc)
   {
-    if (s != null && !enc.canEncode(s)) {
-      // Some whacky characters are in this string (e.g. \uD900). These are problematic because they are decodeable
-      // by new String(...) but will not encode into the same character. This dance here will replace these
-      // characters with something more sane.
+    if (s != null && !isBmp(s) && !enc.canEncode(s)) {
+      // Note: the check isBmp isn't necessary for correct behavior, but it improves performance in the common case
+      // where all characters are in BMP. It short-circuits "enc.canEncode", which is a slow operation. The short
+      // circuit is valid because if every char in a string is in BMP, it is definitely encodable as UTF-8.
+
+      // This dance here will replace the original string with one that can be round-tripped.
       return StringUtils.fromUtf8(StringUtils.toUtf8(s));
     } else {
       return s;
     }
+  }
+
+  /**
+   * Returns whether every character in a string is in BMP (basic multilingual plane).
+   */
+  private static boolean isBmp(String s)
+  {
+    for (int i = 0; i < s.length(); i++) {
+      final char c = s.charAt(i);
+
+      // All 16-bit code units are either valid code points, or surrogates. So if this char is not a surrogate,
+      // it must represent a code point in BMP.
+      if (Character.isSurrogate(c)) {
+        return false;
+      }
+    }
+
+    return true;
   }
 
   private static boolean isFlatList(JsonNode list)

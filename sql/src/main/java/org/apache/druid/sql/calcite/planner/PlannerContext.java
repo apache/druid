@@ -37,10 +37,13 @@ import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.filter.InDimFilter;
+import org.apache.druid.query.filter.TypedInFilter;
 import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.lookup.RegisteredLookupExtractionFn;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
+import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.ResourceAction;
@@ -59,6 +62,7 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -76,6 +80,8 @@ public class PlannerContext
   public static final String CTX_SQL_CURRENT_TIMESTAMP = "sqlCurrentTimestamp";
   public static final String CTX_SQL_TIME_ZONE = "sqlTimeZone";
   public static final String CTX_SQL_JOIN_ALGORITHM = "sqlJoinAlgorithm";
+  public static final String CTX_LOOKUP_LOADING_MODE = "lookupLoadingMode";
+  public static final String CTX_LOOKUPS_TO_LOAD = "lookupsToLoad";
   private static final JoinAlgorithm DEFAULT_SQL_JOIN_ALGORITHM = JoinAlgorithm.BROADCAST;
 
   /**
@@ -140,6 +146,7 @@ public class PlannerContext
   // set of attributes for a SQL statement used in the EXPLAIN PLAN output
   private ExplainAttributes explainAttributes;
   private PlannerLookupCache lookupCache;
+  private final Set<String> lookupsToLoad = new HashSet<>();
 
   private PlannerContext(
       final PlannerToolbox plannerToolbox,
@@ -342,6 +349,22 @@ public class PlannerContext
   }
 
   /**
+   * Adds the given lookup name to the lookup loading spec.
+   */
+  public void addLookupToLoad(String lookupName)
+  {
+    lookupsToLoad.add(lookupName);
+  }
+
+  /**
+   * Returns the lookup to load for a given task.
+   */
+  public LookupLoadingSpec getLookupLoadingSpec()
+  {
+    return lookupsToLoad.isEmpty() ? LookupLoadingSpec.NONE : LookupLoadingSpec.loadOnly(lookupsToLoad);
+  }
+
+  /**
    * Return the query context as a mutable map. Use this form when
    * modifying the context during planning.
    */
@@ -370,11 +393,19 @@ public class PlannerContext
    * {@link org.apache.druid.query.filter.EqualityFilter}, and {@link org.apache.druid.query.filter.NullFilter} (false).
    *
    * Typically true when {@link NullHandling#replaceWithDefault()} and false when {@link NullHandling#sqlCompatible()}.
-   * Can be overriden by the undocumented context parameter {@link #CTX_SQL_USE_BOUNDS_AND_SELECTORS}.
+   * Can be overriden by the context parameter {@link #CTX_SQL_USE_BOUNDS_AND_SELECTORS}.
    */
   public boolean isUseBoundsAndSelectors()
   {
     return useBoundsAndSelectors;
+  }
+
+  /**
+   * Whether we should use {@link InDimFilter} (true) or {@link TypedInFilter} (false).
+   */
+  public boolean isUseLegacyInFilter()
+  {
+    return useBoundsAndSelectors || NullHandling.replaceWithDefault();
   }
 
   /**

@@ -39,8 +39,7 @@ import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
 import org.apache.druid.server.SegmentManager;
-import org.apache.druid.server.coordination.SegmentLoadDropHandler.DataSegmentChangeRequestAndStatus;
-import org.apache.druid.server.coordination.SegmentLoadDropHandler.Status.STATE;
+import org.apache.druid.server.coordination.SegmentChangeStatus.State;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
@@ -503,14 +502,14 @@ public class SegmentLoadDropHandlerTest
         new SegmentChangeRequestDrop(segment2)
     );
 
-    ListenableFuture<List<SegmentLoadDropHandler.DataSegmentChangeRequestAndStatus>> future = segmentLoadDropHandler
+    ListenableFuture<List<DataSegmentChangeResponse>> future = segmentLoadDropHandler
         .processBatch(batch);
 
-    Map<DataSegmentChangeRequest, SegmentLoadDropHandler.Status> expectedStatusMap = new HashMap<>();
-    expectedStatusMap.put(batch.get(0), SegmentLoadDropHandler.Status.PENDING);
-    expectedStatusMap.put(batch.get(1), SegmentLoadDropHandler.Status.SUCCESS);
-    List<SegmentLoadDropHandler.DataSegmentChangeRequestAndStatus> result = future.get();
-    for (SegmentLoadDropHandler.DataSegmentChangeRequestAndStatus requestAndStatus : result) {
+    Map<DataSegmentChangeRequest, SegmentChangeStatus> expectedStatusMap = new HashMap<>();
+    expectedStatusMap.put(batch.get(0), SegmentChangeStatus.PENDING);
+    expectedStatusMap.put(batch.get(1), SegmentChangeStatus.SUCCESS);
+    List<DataSegmentChangeResponse> result = future.get();
+    for (DataSegmentChangeResponse requestAndStatus : result) {
       Assert.assertEquals(expectedStatusMap.get(requestAndStatus.getRequest()), requestAndStatus.getStatus());
     }
 
@@ -519,7 +518,7 @@ public class SegmentLoadDropHandlerTest
     }
 
     result = segmentLoadDropHandler.processBatch(ImmutableList.of(new SegmentChangeRequestLoad(segment1))).get();
-    Assert.assertEquals(SegmentLoadDropHandler.Status.SUCCESS, result.get(0).getStatus());
+    Assert.assertEquals(SegmentChangeStatus.SUCCESS, result.get(0).getStatus());
 
     segmentLoadDropHandler.stop();
   }
@@ -549,21 +548,21 @@ public class SegmentLoadDropHandlerTest
 
     List<DataSegmentChangeRequest> batch = ImmutableList.of(new SegmentChangeRequestLoad(segment1));
 
-    ListenableFuture<List<DataSegmentChangeRequestAndStatus>> future = segmentLoadDropHandler
+    ListenableFuture<List<DataSegmentChangeResponse>> future = segmentLoadDropHandler
         .processBatch(batch);
 
     for (Runnable runnable : scheduledRunnable) {
       runnable.run();
     }
-    List<DataSegmentChangeRequestAndStatus> result = future.get();
-    Assert.assertEquals(STATE.FAILED, result.get(0).getStatus().getState());
+    List<DataSegmentChangeResponse> result = future.get();
+    Assert.assertEquals(State.FAILED, result.get(0).getStatus().getState());
 
     future = segmentLoadDropHandler.processBatch(batch);
     for (Runnable runnable : scheduledRunnable) {
       runnable.run();
     }
     result = future.get();
-    Assert.assertEquals(STATE.SUCCESS, result.get(0).getStatus().getState());
+    Assert.assertEquals(State.SUCCESS, result.get(0).getStatus().getState());
 
     segmentLoadDropHandler.stop();
   }
@@ -597,13 +596,13 @@ public class SegmentLoadDropHandlerTest
     List<DataSegmentChangeRequest> batch = ImmutableList.of(new SegmentChangeRequestLoad(segment1));
 
     // Request 1: Load the segment
-    ListenableFuture<List<DataSegmentChangeRequestAndStatus>> future = segmentLoadDropHandler
+    ListenableFuture<List<DataSegmentChangeResponse>> future = segmentLoadDropHandler
         .processBatch(batch);
     for (Runnable runnable : scheduledRunnable) {
       runnable.run();
     }
-    List<DataSegmentChangeRequestAndStatus> result = future.get();
-    Assert.assertEquals(STATE.SUCCESS, result.get(0).getStatus().getState());
+    List<DataSegmentChangeResponse> result = future.get();
+    Assert.assertEquals(State.SUCCESS, result.get(0).getStatus().getState());
     scheduledRunnable.clear();
 
     // Request 2: Drop the segment
@@ -613,7 +612,7 @@ public class SegmentLoadDropHandlerTest
       runnable.run();
     }
     result = future.get();
-    Assert.assertEquals(STATE.SUCCESS, result.get(0).getStatus().getState());
+    Assert.assertEquals(State.SUCCESS, result.get(0).getStatus().getState());
     scheduledRunnable.clear();
 
     // check invocations after a load-drop sequence
@@ -633,7 +632,7 @@ public class SegmentLoadDropHandlerTest
       runnable.run();
     }
     result = future.get();
-    Assert.assertEquals(STATE.SUCCESS, result.get(0).getStatus().getState());
+    Assert.assertEquals(State.SUCCESS, result.get(0).getStatus().getState());
     scheduledRunnable.clear();
 
     // check invocations - 1 more load has happened
@@ -653,7 +652,7 @@ public class SegmentLoadDropHandlerTest
       runnable.run();
     }
     result = future.get();
-    Assert.assertEquals(STATE.SUCCESS, result.get(0).getStatus().getState());
+    Assert.assertEquals(State.SUCCESS, result.get(0).getStatus().getState());
     scheduledRunnable.clear();
 
     // check invocations - the load segment counter should bump up

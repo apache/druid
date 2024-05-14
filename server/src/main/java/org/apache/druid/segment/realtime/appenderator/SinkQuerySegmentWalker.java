@@ -61,6 +61,7 @@ import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.realtime.FireHydrant;
 import org.apache.druid.segment.realtime.plumber.Sink;
 import org.apache.druid.segment.realtime.plumber.SinkSegmentReference;
+import org.apache.druid.server.ResourceIdPopulatingQueryRunner;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
@@ -333,18 +334,21 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
         );
       }
 
-      // 1) Merge results using the toolChest, finalize if necessary.
-      // 2) Measure CPU time of that operation.
-      // 3) Release all sink segment references.
-      return QueryRunnerHelper.makeClosingQueryRunner(
-          CPUTimeMetricQueryRunner.safeBuild(
-              new FinalizeResultsQueryRunner<>(toolChest.mergeResults(mergedRunner), toolChest),
-              toolChest,
-              emitter,
-              cpuTimeAccumulator,
-              true
-          ),
-          () -> CloseableUtils.closeAll(allSegmentReferences)
+      // 1) Populate resource id to the query
+      // 2) Merge results using the toolChest, finalize if necessary.
+      // 3) Measure CPU time of that operation.
+      // 4) Release all sink segment references.
+      return new ResourceIdPopulatingQueryRunner<>(
+          QueryRunnerHelper.makeClosingQueryRunner(
+              CPUTimeMetricQueryRunner.safeBuild(
+                  new FinalizeResultsQueryRunner<>(toolChest.mergeResults(mergedRunner, true), toolChest),
+                  toolChest,
+                  emitter,
+                  cpuTimeAccumulator,
+                  true
+              ),
+              () -> CloseableUtils.closeAll(allSegmentReferences)
+          )
       );
     }
     catch (Throwable e) {
@@ -352,13 +356,13 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
     }
   }
 
-  public void registerNewVersionOfPendingSegment(
+  public void registerUpgradedPendingSegment(
       SegmentIdWithShardSpec basePendingSegment,
-      SegmentIdWithShardSpec newSegmentVersion
+      SegmentIdWithShardSpec upgradedPendingSegment
   )
   {
     newIdToBasePendingSegment.put(
-        newSegmentVersion.asSegmentId().toDescriptor(),
+        upgradedPendingSegment.asSegmentId().toDescriptor(),
         basePendingSegment.asSegmentId().toDescriptor()
     );
   }

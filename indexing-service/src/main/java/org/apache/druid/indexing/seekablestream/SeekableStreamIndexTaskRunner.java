@@ -51,13 +51,14 @@ import org.apache.druid.error.ErrorResponse;
 import org.apache.druid.indexer.IngestionState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
-import org.apache.druid.indexing.common.IngestionStatsAndErrors;
-import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
+import org.apache.druid.indexer.report.IngestionStatsAndErrors;
+import org.apache.druid.indexer.report.IngestionStatsAndErrorsTaskReport;
+import org.apache.druid.indexer.report.TaskContextReport;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskRealtimeMetricsMonitorBuilder;
-import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.CheckPointDataSourceMetadataAction;
 import org.apache.druid.indexing.common.actions.ResetDataSourceMetadataAction;
@@ -77,6 +78,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
@@ -462,9 +464,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                 if (lock == null) {
                   return false;
                 }
-                if (lock.isRevoked()) {
-                  throw new ISE(StringUtils.format("Lock for interval [%s] was revoked.", segmentId.getInterval()));
-                }
+                lock.assertNotRevoked();
                 return true;
               }
             }
@@ -1134,7 +1134,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                 null,
                 null
             )
-        )
+        ),
+        new TaskContextReport(task.getId(), task.getContext())
     );
   }
 
@@ -1573,18 +1574,15 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   @Path("/pendingSegmentVersion")
   @Consumes(MediaType.APPLICATION_JSON)
   @Produces(MediaType.APPLICATION_JSON)
-  public Response registerNewVersionOfPendingSegment(
-      PendingSegmentVersions pendingSegmentVersions,
+  public Response registerUpgradedPendingSegment(
+      PendingSegmentRecord upgradedPendingSegment,
       // this field is only for internal purposes, shouldn't be usually set by users
       @Context final HttpServletRequest req
   )
   {
     authorizationCheck(req, Action.WRITE);
     try {
-      ((StreamAppenderator) appenderator).registerNewVersionOfPendingSegment(
-          pendingSegmentVersions.getBaseSegment(),
-          pendingSegmentVersions.getNewVersion()
-      );
+      ((StreamAppenderator) appenderator).registerUpgradedPendingSegment(upgradedPendingSegment);
       return Response.ok().build();
     }
     catch (DruidException e) {
@@ -1596,8 +1594,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     catch (Exception e) {
       log.error(
           e,
-          "Could not register new version[%s] of pending segment[%s]",
-          pendingSegmentVersions.getNewVersion(), pendingSegmentVersions.getBaseSegment()
+          "Could not register pending segment[%s] upgraded from[%s]",
+          upgradedPendingSegment.getId().asSegmentId(), upgradedPendingSegment.getUpgradedFromSegmentId()
       );
       return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
     }

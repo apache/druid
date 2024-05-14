@@ -48,10 +48,10 @@ import org.apache.druid.indexer.Property;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
-import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
@@ -127,8 +127,9 @@ import java.util.stream.IntStream;
  * serialization fields of this class must correspond to those of {@link
  * ClientCompactionTaskQuery}.
  */
-public class CompactionTask extends AbstractBatchIndexTask
+public class CompactionTask extends AbstractBatchIndexTask implements PendingSegmentAllocatingTask
 {
+  public static final String TYPE = "compact";
   private static final Logger log = new Logger(CompactionTask.class);
   private static final Clock UTC_CLOCK = Clock.systemUTC();
 
@@ -144,8 +145,6 @@ public class CompactionTask extends AbstractBatchIndexTask
    * instead of a more general approach such as new methods on the Task interface.
    */
   public static final String CTX_KEY_APPENDERATOR_TRACKING_TASK_ID = "appenderatorTrackingTaskId";
-
-  private static final String TYPE = "compact";
 
   private static final boolean STORE_COMPACTION_STATE = true;
 
@@ -398,6 +397,12 @@ public class CompactionTask extends AbstractBatchIndexTask
   public String getType()
   {
     return TYPE;
+  }
+
+  @Override
+  public String getTaskAllocatorId()
+  {
+    return getGroupId();
   }
 
   @Nonnull

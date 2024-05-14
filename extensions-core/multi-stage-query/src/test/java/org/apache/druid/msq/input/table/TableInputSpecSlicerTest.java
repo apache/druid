@@ -19,15 +19,20 @@
 
 package org.apache.druid.msq.input.table;
 
+import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.StringTuple;
+import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
+import org.apache.druid.indexing.common.actions.TaskAction;
+import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.msq.exec.SegmentSource;
 import org.apache.druid.msq.input.NilInputSlice;
-import org.apache.druid.msq.querykit.DataSegmentTimelineView;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentTimeline;
+import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.junit.Assert;
@@ -35,7 +40,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Collections;
-import java.util.Optional;
 
 public class TableInputSpecSlicerTest extends InitializedNullHandlingTest
 {
@@ -94,19 +98,44 @@ public class TableInputSpecSlicerTest extends InitializedNullHandlingTest
   );
   private SegmentTimeline timeline;
   private TableInputSpecSlicer slicer;
+  private TaskActionClient taskActionClient;
 
   @Before
   public void setUp()
   {
     timeline = SegmentTimeline.forSegments(ImmutableList.of(SEGMENT1, SEGMENT2, SEGMENT3));
-    DataSegmentTimelineView timelineView = (dataSource, intervals) -> {
-      if (DATASOURCE.equals(dataSource)) {
-        return Optional.of(timeline);
-      } else {
-        return Optional.empty();
+    taskActionClient = new TaskActionClient()
+    {
+      @Override
+      @SuppressWarnings("unchecked")
+      public <RetType> RetType submit(TaskAction<RetType> taskAction)
+      {
+        if (taskAction instanceof RetrieveUsedSegmentsAction) {
+          final RetrieveUsedSegmentsAction retrieveUsedSegmentsAction = (RetrieveUsedSegmentsAction) taskAction;
+          final String dataSource = retrieveUsedSegmentsAction.getDataSource();
+
+          if (DATASOURCE.equals(dataSource)) {
+            return (RetType) FluentIterable
+                .from(retrieveUsedSegmentsAction.getIntervals())
+                .transformAndConcat(
+                    interval ->
+                        VersionedIntervalTimeline.getAllObjects(timeline.lookup(interval))
+                )
+                .toList();
+          } else {
+            return (RetType) Collections.emptyList();
+          }
+        }
+
+        throw new UnsupportedOperationException();
       }
     };
-    slicer = new TableInputSpecSlicer(timelineView);
+
+    slicer = new TableInputSpecSlicer(
+        null /* not used for SegmentSource.NONE */,
+        taskActionClient,
+        SegmentSource.NONE
+    );
   }
 
   @Test

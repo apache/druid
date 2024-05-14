@@ -28,6 +28,7 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.sql.SqlExplainFormat;
 import org.apache.calcite.sql.SqlExplainLevel;
 import org.apache.calcite.sql.SqlInsert;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -148,6 +149,26 @@ public class QueryTestRunner
     public QueryResults(
         final Map<String, Object> queryContext,
         final String vectorizeOption,
+        final RowSignature rowSignature,
+        final List<Object[]> results,
+        final List<Query<?>> recordedQueries,
+        final PlannerCaptureHook capture
+    )
+    {
+      this.queryContext = queryContext;
+      this.vectorizeOption = vectorizeOption;
+      this.sqlSignature = null;
+      this.signature = rowSignature;
+      this.results = results;
+      this.recordedQueries = recordedQueries;
+      this.resourceActions = null;
+      this.exception = null;
+      this.capture = capture;
+    }
+
+    public QueryResults(
+        final Map<String, Object> queryContext,
+        final String vectorizeOption,
         final RuntimeException exception
     )
     {
@@ -162,9 +183,9 @@ public class QueryTestRunner
       this.sqlSignature = null;
     }
 
-    public QueryResults withResults(List<Object[]> newResults)
+    public QueryResults withSignatureAndResults(final RowSignature rowSignature, final List<Object[]> newResults)
     {
-      return new QueryResults(queryContext, vectorizeOption, sqlSignature, newResults, recordedQueries, capture);
+      return new QueryResults(queryContext, vectorizeOption, rowSignature, newResults, recordedQueries, capture);
     }
   }
 
@@ -304,7 +325,8 @@ public class QueryTestRunner
 
     private PlannerCaptureHook getCaptureHook()
     {
-      if (builder.getQueryContext().containsKey(PlannerCaptureHook.NEED_CAPTURE_HOOK) || builder.expectedLogicalPlan != null) {
+      if (builder.getQueryContext().containsKey(PlannerCaptureHook.NEED_CAPTURE_HOOK)
+          || builder.expectedLogicalPlan != null) {
         return new PlannerCaptureHook();
       }
       return null;
@@ -549,7 +571,8 @@ public class QueryTestRunner
           "",
           hook.relRoot().rel,
           SqlExplainFormat.TEXT,
-          SqlExplainLevel.DIGEST_ATTRIBUTES);
+          SqlExplainLevel.DIGEST_ATTRIBUTES
+      );
       String plan;
       SqlInsert insertNode = hook.insertNode();
       if (insertNode == null) {
@@ -639,6 +662,16 @@ public class QueryTestRunner
           builder.expectedResults,
           builder.expectedResultMatchMode,
           builder.expectedResultSignature
+      );
+    }
+
+    // Validate: don't set both skipVectorize and cannotVectorize.
+    if (builder.skipVectorize && builder.queryCannotVectorize) {
+      throw new IAE(
+          "Do not set both skipVectorize and cannotVectorize. Use cannotVectorize if a query is not currently "
+          + "able to vectorize, but may be able to in the future. Use skipVectorize if a query *can* vectorize, but "
+          + "for some reason we need to skip the test on the vectorized code path. In most situations, cannotVectorize "
+          + "is the one you want."
       );
     }
 

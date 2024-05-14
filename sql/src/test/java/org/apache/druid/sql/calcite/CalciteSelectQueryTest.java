@@ -480,7 +480,6 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSafeDivideWithoutTable()
   {
-    skipVectorize();
     cannotVectorize();
     final Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
 

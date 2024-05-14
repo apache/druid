@@ -38,7 +38,7 @@ import org.apache.druid.query.UnnestDataSource;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMinAggregatorFactory;
-import org.apache.druid.query.aggregation.first.DoubleFirstAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.first.DoubleFirstAggregatorFactory;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.ordering.StringComparators;

@@ -140,7 +140,7 @@ public class SequenceProcessorManagerTest
     Assert.assertEquals(0, closed.get());
   }
 
-  private static class NilFrameProcessor implements FrameProcessor<Unit>
+  public static class NilFrameProcessor<T> implements FrameProcessor<T>
   {
     @Override
     public List<ReadableFrameChannel> inputChannels()
@@ -155,7 +155,7 @@ public class SequenceProcessorManagerTest
     }
 
     @Override
-    public ReturnOrAwait<Unit> runIncrementally(IntSet readableInputs)
+    public ReturnOrAwait<T> runIncrementally(IntSet readableInputs)
     {
       throw new UnsupportedOperationException();
     }

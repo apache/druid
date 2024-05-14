@@ -21,6 +21,7 @@ package org.apache.druid.indexing.overlord.supervisor;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
@@ -29,7 +30,6 @@ import org.apache.druid.segment.incremental.ParseExceptionReport;
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 public interface Supervisor
 {
@@ -95,8 +95,9 @@ public interface Supervisor
 
   int getActiveTaskGroupsCount();
 
-  /**
-   * @return active sequence prefixes for reading and pending completion task groups of a seekable stream supervisor
-   */
-  Set<String> getActiveRealtimeSequencePrefixes();
+  /** Handoff the task group with id=taskGroupId the next time the supervisor runs regardless of task run time*/
+  default void handoffTaskGroupsEarly(List<Integer> taskGroupIds)
+  {
+    throw new NotImplementedException("Supervisor does not have the feature to handoff task groups early implemented");
+  }
 }

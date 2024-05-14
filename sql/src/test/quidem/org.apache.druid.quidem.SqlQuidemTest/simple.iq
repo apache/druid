@@ -1,0 +1,60 @@
+!use druidtest:///
+!set outputformat mysql
+
+select 1+5;
++--------+
+| EXPR$0 |
++--------+
+|      6 |
++--------+
+(1 row)
+
+!ok
+
+select cityName, countryName from wikipedia where cityName='New York' limit 1;
++----------+---------------+
+| cityName | countryName   |
++----------+---------------+
+| New York | United States |
++----------+---------------+
+(1 row)
+
+!ok
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "wikipedia"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "resultFormat" : "compactedList",
+  "limit" : 1,
+  "filter" : {
+    "type" : "equals",
+    "column" : "cityName",
+    "matchValueType" : "STRING",
+    "matchValue" : "New York"
+  },
+  "columns" : [ "cityName", "countryName" ],
+  "legacy" : false,
+  "columnTypes" : [ "STRING", "STRING" ],
+  "granularity" : {
+    "type" : "all"
+  }
+}
+!nativePlan
+LogicalSort(fetch=[1])
+  LogicalFilter(condition=[=($0, 'New York')])
+    LogicalProject(cityName=[$2], countryName=[$5])
+      LogicalTableScan(table=[[druid, wikipedia]])
+
+!logicalPlan
+LogicalSort(fetch=[1])
+  LogicalProject(cityName=[$2], countryName=[$5])
+    LogicalFilter(condition=[=($2, 'New York')])
+      LogicalTableScan(table=[[druid, wikipedia]])
+
+!convertedPlan

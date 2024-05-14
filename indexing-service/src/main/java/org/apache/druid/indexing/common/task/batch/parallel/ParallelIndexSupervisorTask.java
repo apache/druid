@@ -40,10 +40,10 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
-import org.apache.druid.indexing.common.IngestionStatsAndErrors;
-import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
+import org.apache.druid.indexer.report.IngestionStatsAndErrors;
+import org.apache.druid.indexer.report.IngestionStatsAndErrorsTaskReport;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.TaskLockType;
-import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
@@ -52,6 +52,7 @@ import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.IndexTask.IndexIngestionSpec;
 import org.apache.druid.indexing.common.task.IndexTask.IndexTuningConfig;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
+import org.apache.druid.indexing.common.task.PendingSegmentAllocatingTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.Tasks;
@@ -65,6 +66,7 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.indexing.OverlordClient;
+import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.incremental.RowIngestionMetersTotals;
@@ -72,6 +74,7 @@ import org.apache.druid.segment.incremental.SimpleRowIngestionMeters;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
@@ -131,7 +134,8 @@ import java.util.stream.Collectors;
  *
  * @see ParallelIndexTaskRunner
  */
-public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implements ChatHandler
+public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
+    implements ChatHandler, PendingSegmentAllocatingTask
 {
   public static final String TYPE = "index_parallel";
 
@@ -206,7 +210,6 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   private Long segmentsRead;
   private Long segmentsPublished;
   private final boolean isCompactionTask;
-
 
   @JsonCreator
   public ParallelIndexSupervisorTask(
@@ -356,7 +359,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         getGroupId(),
         baseSubtaskSpecName,
         ingestionSchema,
-        getContext()
+        getContext(),
+        toolbox.getCentralizedTableSchemaConfig()
     );
   }
 
@@ -437,7 +441,9 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         ingestionSchema.getDataSchema(),
         ioConfigs,
         ingestionSchema.getTuningConfig(),
-        getContext()
+        getContext(),
+        toolbox.getJsonMapper(),
+        toolbox.getCentralizedTableSchemaConfig()
     );
   }
 
@@ -474,6 +480,12 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         getIngestionMode(),
         getIngestionSchema().getTuningConfig()
     );
+  }
+
+  @Override
+  public String getTaskAllocatorId()
+  {
+    return getGroupId();
   }
 
   @Nullable
@@ -1139,11 +1151,16 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   {
     final Set<DataSegment> oldSegments = new HashSet<>();
     final Set<DataSegment> newSegments = new HashSet<>();
+    final SegmentSchemaMapping segmentSchemaMapping = new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
+
     reportsMap
         .values()
         .forEach(report -> {
           oldSegments.addAll(report.getOldSegments());
           newSegments.addAll(report.getNewSegments());
+          if (report.getSegmentSchemaMapping() != null) {
+            segmentSchemaMapping.merge(report.getSegmentSchemaMapping());
+          }
         });
     final boolean storeCompactionState = getContextValue(
         Tasks.STORE_COMPACTION_STATE_KEY,
@@ -1154,7 +1171,6 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         toolbox,
         ingestionSchema
     );
-
 
     Set<DataSegment> tombStones = Collections.emptySet();
     if (getIngestionMode() == IngestionMode.REPLACE) {
@@ -1181,16 +1197,16 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
     final TaskLockType taskLockType = getTaskLockHelper().getLockTypeToUse();
     final TransactionalSegmentPublisher publisher =
-        (segmentsToBeOverwritten, segmentsToPublish, commitMetadata) -> toolbox.getTaskActionClient().submit(
-            buildPublishAction(segmentsToBeOverwritten, segmentsToPublish, taskLockType)
+        (segmentsToBeOverwritten, segmentsToPublish, commitMetadata, map) -> toolbox.getTaskActionClient().submit(
+            buildPublishAction(segmentsToBeOverwritten, segmentsToPublish, map, taskLockType)
         );
 
     final boolean published =
         newSegments.isEmpty()
-        || publisher.publishSegments(oldSegments, newSegments, annotateFunction, null).isSuccess();
+        || publisher.publishSegments(oldSegments, newSegments, annotateFunction, null, segmentSchemaMapping).isSuccess();
 
     if (published) {
-      LOG.info("Published [%d] segments", newSegments.size());
+      LOG.info("Published [%d] segments & [%d] schemas", newSegments.size(), segmentSchemaMapping.getSchemaCount());
 
       // segment metrics:
       emitMetric(toolbox.getEmitter(), "ingest/tombstones/count", tombStones.size());
@@ -1683,21 +1699,24 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     final SimpleRowIngestionMeters buildSegmentsRowStats = new SimpleRowIngestionMeters();
     for (String runningTaskId : runningTaskIds) {
       try {
-        final Map<String, Object> report = getTaskReport(toolbox.getOverlordClient(), runningTaskId);
+        final TaskReport.ReportMap report = getTaskReport(toolbox.getOverlordClient(), runningTaskId);
 
         if (report == null || report.isEmpty()) {
           // task does not have a running report yet
           continue;
         }
 
-        Map<String, Object> ingestionStatsAndErrors = (Map<String, Object>) report.get("ingestionStatsAndErrors");
-        Map<String, Object> payload = (Map<String, Object>) ingestionStatsAndErrors.get("payload");
-        Map<String, Object> rowStats = (Map<String, Object>) payload.get("rowStats");
+        final IngestionStatsAndErrorsTaskReport ingestionStatsReport
+            = (IngestionStatsAndErrorsTaskReport) report.get(IngestionStatsAndErrorsTaskReport.REPORT_KEY);
+
+        final IngestionStatsAndErrors payload = ingestionStatsReport.getPayload();
+
+        Map<String, Object> rowStats = payload.getRowStats();
         Map<String, Object> totals = (Map<String, Object>) rowStats.get("totals");
         Map<String, Object> buildSegments = (Map<String, Object>) totals.get(RowIngestionMeters.BUILD_SEGMENTS);
 
         if (includeUnparseable) {
-          Map<String, Object> taskUnparseableEvents = (Map<String, Object>) payload.get("unparseableEvents");
+          Map<String, Object> taskUnparseableEvents = payload.getUnparseableEvents();
           List<ParseExceptionReport> buildSegmentsUnparseableEvents = (List<ParseExceptionReport>)
               taskUnparseableEvents.get(RowIngestionMeters.BUILD_SEGMENTS);
           unparseableEvents.addAll(buildSegmentsUnparseableEvents);
@@ -1804,7 +1823,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   }
 
   @VisibleForTesting
-  public TaskReport.ReportMap doGetLiveReports(boolean isFullReport)
+  TaskReport.ReportMap doGetLiveReports(boolean isFullReport)
   {
     Pair<Map<String, Object>, Map<String, Object>> rowStatsAndUnparsebleEvents =
         doGetRowStatsAndUnparseableEvents(isFullReport, true);
@@ -1846,7 +1865,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
    */
   @Nullable
   @VisibleForTesting
-  static Map<String, Object> getTaskReport(final OverlordClient overlordClient, final String taskId)
+  static TaskReport.ReportMap getTaskReport(final OverlordClient overlordClient, final String taskId)
       throws InterruptedException, ExecutionException
   {
     try {

@@ -515,7 +515,7 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
           throw new DruidError(e);
         }
 
-        return result.attachQuery({}, SqlQuery.maybeParse(previewQueryString));
+        return result.attachQuery({} as any, SqlQuery.maybeParse(previewQueryString));
       }
     },
     backgroundStatusCheck: executionBackgroundResultStatusCheck,

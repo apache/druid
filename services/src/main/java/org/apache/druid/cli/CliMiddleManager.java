@@ -130,6 +130,8 @@ public class CliMiddleManager extends ServerRunnable
           @Override
           public void configure(Binder binder)
           {
+            validateCentralizedDatasourceSchemaConfig(getProperties());
+
             binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/middlemanager");
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8091);
             binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(8291);

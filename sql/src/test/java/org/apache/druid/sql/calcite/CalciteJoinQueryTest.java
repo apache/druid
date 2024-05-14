@@ -85,6 +85,7 @@ import org.apache.druid.server.QueryLifecycle;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.sql.calcite.DecoupledTestConfig.NativeQueryIgnore;
 import org.apache.druid.sql.calcite.NotYetSupported.Modes;
+import org.apache.druid.sql.calcite.SqlTestFrameworkConfig.MinTopNThreshold;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
@@ -120,7 +121,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     return false;
   }
 
-  @SqlTestFrameworkConfig(minTopNThreshold = 1)
+  @MinTopNThreshold(1)
   @Test
   public void testInnerJoinWithLimitAndAlias()
   {
@@ -181,7 +182,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
 
   // Adjust topN threshold, so that the topN engine keeps only 1 slot for aggregates, which should be enough
   // to compute the query with limit 1.
-  @SqlTestFrameworkConfig(minTopNThreshold = 1)
+  @SqlTestFrameworkConfig.MinTopNThreshold(1)
   @Test
   @DecoupledTestConfig(nativeQueryIgnore = NativeQueryIgnore.EQUIV_PLAN)
   public void testExactTopNOnInnerJoinWithLimit()
@@ -3359,7 +3360,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testGroupByOverGroupByOverInnerJoinOnTwoInlineDataSources(Map<String, Object> queryContext)
   {
-    skipVectorize();
     cannotVectorize();
     testQuery(
         "with abc as\n"
@@ -4876,7 +4876,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   {
     // Cannot vectorize JOIN operator.
     cannotVectorize();
-    skipVectorize();
     testQuery(
         "SELECT dim1, dim2, COUNT(*) FROM druid.foo\n"
         + "WHERE dim1 = 'xxx' OR dim2 IN (SELECT dim1 FROM druid.foo WHERE dim1 LIKE '%bc')\n"
@@ -5843,7 +5842,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @SqlTestFrameworkConfig(minTopNThreshold = 1)
+  @SqlTestFrameworkConfig.MinTopNThreshold(1)
   @Test
   @NotYetSupported(Modes.JOIN_TABLE_TABLE)
   public void testJoinWithAliasAndOrderByNoGroupBy()
