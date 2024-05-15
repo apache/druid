@@ -34,8 +34,9 @@ import com.google.inject.Provides;
 import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
 import com.google.inject.util.Modules;
+import com.google.inject.util.Providers;
 import org.apache.calcite.avatica.server.AbstractAvaticaHandler;
-import org.apache.druid.cli.CliBroker;
+import org.apache.druid.cli.CliBroker2;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
@@ -43,6 +44,7 @@ import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.StartupInjectorBuilder;
+import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
@@ -50,6 +52,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
+import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.DruidNode;
@@ -72,9 +75,12 @@ import org.apache.druid.sql.calcite.SqlTestFrameworkConfig.SqlTestFrameworkConfi
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
+import org.apache.druid.sql.calcite.run.NativeSqlEngine;
 import org.apache.druid.sql.calcite.run.SqlEngine;
+import org.apache.druid.sql.calcite.schema.BrokerSegmentMetadataCache;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.schema.DruidSchemaName;
+import org.apache.druid.sql.calcite.util.CacheTestHelperModule;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.Builder;
@@ -259,7 +265,7 @@ public class Launcher
     {
       delegate.configureGuice(builder);
       TestRequestLogger testRequestLogger = new TestRequestLogger();
-      builder.addModule(connectionModule);
+//      builder.addModule(connectionModule);
       builder.addModule(
           binder -> {
             binder.bindConstant().annotatedWith(Names.named("serviceName")).to("test");
@@ -406,6 +412,7 @@ public class Launcher
     localProps.put("druid.enableTlsPort", "false");
     localProps.put("druid.zk.service.enabled", "false");
     localProps.put("druid.plaintextPort","12345");
+    localProps.put("druid.host", "localhost");
 
 
     Module m = binder -> binder.bind(Properties.class).toInstance(localProps);
@@ -423,6 +430,18 @@ public class Launcher
     }
 
     @Provides
+    @LazySingleton
+    public SqlEngine createMockSqlEngine(
+        final QuerySegmentWalker walker,
+        final QueryRunnerFactoryConglomerate conglomerate,
+        @Json ObjectMapper jsonMapper    )
+    {
+      return new NativeSqlEngine(CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate), jsonMapper);
+    }
+
+
+    @Provides
+    @LazySingleton
     DruidNodeDiscoveryProvider getProvider() {
       final DruidNode coordinatorNode = new DruidNode("test-coordinator", "dummy", false, 8081, null, true, false);
       FakeDruidNodeDiscoveryProvider provider = new FakeDruidNodeDiscoveryProvider(
@@ -502,7 +521,7 @@ public class Launcher
 
   }
 
-  private static Module discoverModule()
+  private static DiscovertModule discoverModule()
   {
 
 //    DruidNodeDiscoveryProvider instance = ;
@@ -558,7 +577,9 @@ public class Launcher
 
     SqlTestFramework framework = getCI().extracted(
           propOverrideModuel(),
-          discoverModule()
+          discoverModule(),
+          binder -> binder.bind(BrokerSegmentMetadataCache.class).toProvider(Providers.of(null))
+
         )
 
         ;
@@ -568,7 +589,21 @@ public class Launcher
 
 
 
-    CliBroker c = new CliBroker();
+    CliBroker2 c = new CliBroker2() {
+      protected List<? extends Module> getModules() {
+        List<Module>  ret = new ArrayList<>();
+        ret.add(discoverModule());
+        ret.add(propOverrideModuel());
+        ret.add(framework.testSetupModule());
+//        ret.add(new AvaticaBasedConnectionModule());
+        ret.add(binder -> binder.bind(RequestLogger.class).toInstance(new TestRequestLogger()));
+        ret.add(CacheTestHelperModule.ResultCacheMode.DISABLED.makeModule());
+        ret.addAll(super.getModules());
+        return ret;
+      }
+
+
+    };
     framework.injector().injectMembers(c);
     // c.configure(new Properties());
     c.run();

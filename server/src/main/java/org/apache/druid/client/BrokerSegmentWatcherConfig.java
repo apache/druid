@@ -40,7 +40,7 @@ public class BrokerSegmentWatcherConfig
   private boolean watchRealtimeTasks = true;
 
   @JsonProperty
-  private boolean awaitInitializationOnStart = true;
+  private boolean awaitInitializationOnStart = false;
 
   public Set<String> getWatchedTiers()
   {

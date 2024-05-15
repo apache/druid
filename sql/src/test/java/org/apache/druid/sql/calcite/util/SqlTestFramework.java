@@ -39,6 +39,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
+import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.topn.TopNQueryConfig;
 import org.apache.druid.segment.DefaultColumnFormatConfig;
@@ -565,7 +566,7 @@ public class SqlTestFramework
 
     @Provides
     @LazySingleton
-    public SpecificSegmentsQuerySegmentWalker segmentsQuerySegmentWalker(final Injector injector)
+    public QuerySegmentWalker segmentsQuerySegmentWalker(final Injector injector)
     {
       SpecificSegmentsQuerySegmentWalker walker = componentSupplier.createQuerySegmentWalker(
           injector.getInstance(QueryRunnerFactoryConglomerate.class),
@@ -581,10 +582,42 @@ public class SqlTestFramework
     public QueryLifecycleFactory queryLifecycleFactory(final Injector injector)
     {
       return QueryFrameworkUtils.createMockQueryLifecycleFactory(
-          injector.getInstance(SpecificSegmentsQuerySegmentWalker.class),
+          injector.getInstance(QuerySegmentWalker.class),
           injector.getInstance(QueryRunnerFactoryConglomerate.class)
       );
     }
+
+    @Provides
+    @LazySingleton
+    ViewManager createViewManager() {
+return      componentSupplier.getPlannerComponentSupplier().createViewManager();
+    }
+
+    @Provides
+    @LazySingleton
+    public DruidSchemaCatalog makeCatalog(
+        final Injector injector,
+        final PlannerConfig plannerConfig,
+        final AuthConfig authConfig,
+        final ViewManager viewManager,
+        QueryRunnerFactoryConglomerate conglomerate,
+        QuerySegmentWalker  walker
+
+        ) {
+      final DruidSchemaCatalog rootSchema = QueryFrameworkUtils.createMockRootSchema(
+          injector,
+          conglomerate,
+          (SpecificSegmentsQuerySegmentWalker) walker,
+          plannerConfig,
+          viewManager,
+          componentSupplier.getPlannerComponentSupplier().createSchemaManager(),
+          authorizerMapper,
+          builder.catalogResolver
+      );
+      return rootSchema;
+
+    }
+
   }
 
   public static final DruidViewMacroFactory DRUID_VIEW_MACRO_FACTORY = new TestDruidViewMacroFactory();
@@ -614,7 +647,7 @@ public class SqlTestFramework
         .addModule(new SegmentWranglerModule())
         .addModule(new SqlAggregationModule())
         .addModule(new ExpressionModule())
-        .addModule(new TestSetupModule(builder));
+        .addModule(testSetupModule());
 
     builder.componentSupplier.configureGuice(injectorBuilder);
 
@@ -625,6 +658,11 @@ public class SqlTestFramework
     this.engine = builder.componentSupplier.createEngine(queryLifecycleFactory(), queryJsonMapper(), injector);
     componentSupplier.configureJsonMapper(queryJsonMapper());
     componentSupplier.finalizeTestFramework(this);
+  }
+
+  public TestSetupModule testSetupModule()
+  {
+    return new TestSetupModule(builder);
   }
 
   public Injector injector()

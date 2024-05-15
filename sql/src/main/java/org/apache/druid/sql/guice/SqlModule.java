@@ -44,7 +44,6 @@ import org.apache.druid.sql.calcite.planner.CalcitePlannerModule;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.run.NativeSqlEngine;
-import org.apache.druid.sql.calcite.schema.DruidCalciteSchemaModule;
 import org.apache.druid.sql.calcite.schema.DruidSchemaManager;
 import org.apache.druid.sql.calcite.schema.NoopDruidSchemaManager;
 import org.apache.druid.sql.calcite.view.DruidViewModule;
@@ -78,17 +77,22 @@ public class SqlModule implements Module
       return;
     }
 
-    PolyBind.optionBinder(binder, Key.get(ViewManager.class))
-            .addBinding(NoopViewManager.TYPE)
-            .to(NoopViewManager.class)
-            .in(LazySingleton.class);
+    if(false) {
+      PolyBind.optionBinder(binder, Key.get(ViewManager.class))
+              .addBinding(NoopViewManager.TYPE)
+              .to(NoopViewManager.class)
+              .in(LazySingleton.class);
+    }
 
-    PolyBind.createChoiceWithDefault(
-        binder,
-        PROPERTY_SQL_VIEW_MANAGER_TYPE,
-        Key.get(ViewManager.class),
-        NoopViewManager.TYPE
-    );
+    if(false) {
+      PolyBind.createChoiceWithDefault(
+          binder,
+          PROPERTY_SQL_VIEW_MANAGER_TYPE,
+          Key.get(ViewManager.class),
+          NoopViewManager.TYPE
+      );
+    }
+
 
     PolyBind.optionBinder(binder, Key.get(DruidSchemaManager.class))
             .addBinding(NoopDruidSchemaManager.TYPE)
@@ -104,7 +108,7 @@ public class SqlModule implements Module
 
     binder.bind(TableDefnRegistry.class).in(LazySingleton.class);
 
-    binder.install(new DruidCalciteSchemaModule());
+//    binder.install(new DruidCalciteSchemaModule());
     binder.install(new CalcitePlannerModule());
     binder.install(new SqlAggregationModule());
     binder.install(new DruidViewModule());

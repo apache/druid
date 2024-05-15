@@ -24,6 +24,7 @@ import org.apache.druid.jackson.JacksonModule;
 import org.apache.druid.math.expr.ExpressionProcessingModule;
 import org.apache.druid.utils.RuntimeInfo;
 
+import java.util.Arrays;
 import java.util.Properties;
 
 /**
@@ -74,9 +75,9 @@ public class StartupInjectorBuilder extends BaseInjectorBuilder<StartupInjectorB
 
   public StartupInjectorBuilder forServer()
   {
-//    withExtensions();
+    withExtensions();
     add(
-//        new PropertiesModule(Arrays.asList("common.runtime.properties", "runtime.properties")),
+        new PropertiesModule(Arrays.asList("common.runtime.properties", "runtime.properties")),
         new RuntimeInfoModule()
     );
     return this;
