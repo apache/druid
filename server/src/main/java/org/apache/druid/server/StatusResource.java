@@ -137,7 +137,7 @@ public class StatusResource
 
     public Status(Collection<DruidModule> modules)
     {
-      this.version = getDruidVersion();
+      this.version = "30.0.0-asd1";//getDruidVersion();
       this.modules = getExtensionVersions(modules);
       this.memory = new Memory(JvmUtils.getRuntimeInfo());
     }
