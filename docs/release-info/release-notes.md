@@ -181,6 +181,14 @@ This section contains detailed release notes separated by areas.
 
 ### Web console
 
+#### Improved the Supervisors view
+
+You can now use the **Supervisors** view to dynamically query supervisors and display additional information on newly added columns.
+
+![Surface more information on the supervisors view](./assets/30.0.0-supervisors.png)
+
+[#16318](https://github.com/apache/druid/pull/16318)
+
 #### Search in tables and columns
 
 You can now use the **Query** view to search in tables and columns.
@@ -188,18 +196,6 @@ You can now use the **Query** view to search in tables and columns.
 ![Use the sidebar to search in tables and columns in Query view](./assets/30.0.0-console-search.png)
 
 [#15990](https://github.com/apache/druid/pull/15990)
-
-#### Improved array ingestion UX
-
-Improved the array ingestion experience in the web console by:
-
-- Adding `arrayIngestMode` to the Run panel selection, making it more prominent.
-- Ensuring that the `arrayIngestMode: array` context parameter is only set when the user opts in to arrays.
-- Setting `arrayIngestMode: array` only if Druid detects that the ingestion spec includes dimensions specs of type `auto` + `castToType: ARRAY<...>`.
-
-![Run panel shows array ingest mode](./assets/30.0.0-run-panel.png)
-
-[#15927](https://github.com/apache/druid/pull/15927)
 
 #### Kafka input format
 
@@ -234,7 +230,7 @@ This prevents the expression from blocking the flow.
   [#16235](https://github.com/apache/druid/pull/16235)
 * The web console now suggests the `azureStorage` input type instead of the deprecated `azure` storage type [#15820](https://github.com/apache/druid/pull/15820)
 * The download query detail archive option is now more resilient when the detail archive is incomplete [#16071](https://github.com/apache/druid/pull/16071)
-* You can now set `maxCompactionTaskSlots` to zero to top compaction tasks [#15877](https://github.com/apache/druid/pull/15877)
+* You can now set `maxCompactionTaskSlots` to zero to stop compaction tasks [#15877](https://github.com/apache/druid/pull/15877)
 
 ### General ingestion
 
