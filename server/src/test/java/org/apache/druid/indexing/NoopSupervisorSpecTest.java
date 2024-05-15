@@ -97,7 +97,7 @@ public class NoopSupervisorSpecTest
   {
     NoopSupervisorSpec expectedSpec = new NoopSupervisorSpec(null, null);
     Supervisor noOpSupervisor = expectedSpec.createSupervisor();
-    Assert.assertThrows(NotImplementedException.class,
+    Assert.assertThrows(UnsupportedOperationException.class,
         () -> noOpSupervisor.handoffTaskGroupsEarly(ImmutableList.of())
     );
   }
