@@ -75,7 +75,9 @@ export function dataTypeToIcon(dataType: string): IconName {
       return IconNames.DIAGRAM_TREE;
 
     case 'COMPLEX<HYPERUNIQUE>':
+    case 'COMPLEX<HLLSKETCH>':
     case 'COMPLEX<HLLSKETCHBUILD>':
+    case 'COMPLEX<THETASKETCH>':
     case 'COMPLEX<THETASKETCHBUILD>':
       return IconNames.SNOWFLAKE;
 

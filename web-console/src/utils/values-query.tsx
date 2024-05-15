@@ -26,6 +26,7 @@ import {
   SqlColumnList,
   SqlQuery,
   SqlRecord,
+  SqlType,
   SqlValues,
 } from '@druid-toolkit/query';
 
@@ -33,11 +34,19 @@ import { oneOf } from './general';
 
 const SAMPLE_ARRAY_SEPARATOR = '<#>'; // Note that this is a regexp so don't add anything that is a special regexp thing
 
-function nullForColumn(column: Column): LiteralValue {
-  return oneOf(column.sqlType, 'BIGINT', 'DOUBLE', 'FLOAT') ? 0 : '';
+function getEffectiveSqlType(column: Column): string | undefined {
+  const sqlType = column.sqlType;
+  if (sqlType === 'ARRAY' && String(column.nativeType).startsWith('ARRAY<')) {
+    return `${SqlType.fromNativeType(String(column.nativeType).slice(6, -1))} ARRAY`;
+  }
+  return sqlType;
 }
 
-export function sampleDataToQuery(sample: QueryResult): SqlQuery {
+function nullForSqlType(sqlType: string | undefined): LiteralValue {
+  return oneOf(sqlType, 'BIGINT', 'DOUBLE', 'FLOAT') ? 0 : '';
+}
+
+export function queryResultToValuesQuery(sample: QueryResult): SqlQuery {
   const { header, rows } = sample;
   return SqlQuery.create(
     new SqlAlias({
@@ -45,14 +54,26 @@ export function sampleDataToQuery(sample: QueryResult): SqlQuery {
         rows.map(row =>
           SqlRecord.create(
             row.map((r, i) => {
-              if (header[i].nativeType === 'COMPLEX<json>') {
+              const column = header[i];
+              const { nativeType } = column;
+              const sqlType = getEffectiveSqlType(column);
+              if (nativeType === 'COMPLEX<json>') {
                 return L(JSON.stringify(r));
-              } else if (String(header[i].sqlType).endsWith(' ARRAY')) {
+              } else if (String(sqlType).endsWith(' ARRAY')) {
                 return L(r.join(SAMPLE_ARRAY_SEPARATOR));
+              } else if (
+                sqlType === 'OTHER' &&
+                String(nativeType).startsWith('COMPLEX<') &&
+                typeof r === 'string' &&
+                r.startsWith('"') &&
+                r.endsWith('"')
+              ) {
+                // r is a JSON encoded base64 string
+                return L(r.slice(1, -1));
               } else if (r == null || typeof r === 'object') {
                 // Avoid actually using NULL literals as they create havoc in the VALUES type system and throw errors.
                 // Also, cleanup array if it happens to get here, it shouldn't.
-                return L(nullForColumn(header[i]));
+                return L(nullForSqlType(sqlType));
               } else {
                 return L(r);
               }
@@ -61,19 +82,23 @@ export function sampleDataToQuery(sample: QueryResult): SqlQuery {
         ),
       ),
       alias: RefName.alias('t'),
-      columns: SqlColumnList.create(header.map((_, i) => RefName.create(`c${i}`, true))),
+      columns: SqlColumnList.create(header.map((_, i) => RefName.create(`c${i + 1}`, true))),
     }),
   ).changeSelectExpressions(
-    header.map(({ name, nativeType, sqlType }, i) => {
-      let ex: SqlExpression = C(`c${i}`);
+    header.map((column, i) => {
+      const { name, nativeType } = column;
+      const sqlType = getEffectiveSqlType(column);
+      let ex: SqlExpression = C(`c${i + 1}`);
       if (nativeType === 'COMPLEX<json>') {
         ex = F('PARSE_JSON', ex);
-      } else if (sqlType && sqlType.endsWith(' ARRAY')) {
+      } else if (String(sqlType).endsWith(' ARRAY')) {
         ex = F('STRING_TO_ARRAY', ex, SAMPLE_ARRAY_SEPARATOR);
-        if (sqlType !== 'VARCHAR ARRAY') {
+        if (sqlType && sqlType !== 'ARRAY' && sqlType !== 'VARCHAR ARRAY') {
           ex = ex.cast(sqlType);
         }
-      } else if (sqlType) {
+      } else if (sqlType === 'OTHER' && String(nativeType).startsWith('COMPLEX<')) {
+        ex = F('DECODE_BASE64_COMPLEX', String(nativeType).slice(8, -1), ex);
+      } else if (sqlType && sqlType !== 'OTHER') {
         ex = ex.cast(sqlType);
       }
       return ex.as(name, true);
