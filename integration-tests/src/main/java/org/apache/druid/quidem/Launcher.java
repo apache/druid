@@ -24,15 +24,22 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
+import com.google.inject.AbstractModule;
 import com.google.inject.Binder;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
 import com.google.inject.util.Modules;
 import org.apache.calcite.avatica.server.AbstractAvaticaHandler;
 import org.apache.druid.cli.CliBroker;
+import org.apache.druid.discovery.DiscoveryDruidNode;
+import org.apache.druid.discovery.DruidNodeDiscovery;
+import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.StartupInjectorBuilder;
@@ -90,10 +97,14 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
+import java.util.function.BooleanSupplier;
 
 public class Launcher
 {
@@ -389,18 +400,125 @@ public class Launcher
     Launcher.main1(null);
   }
 
+  private static Module propOverrideModuel()
+  {
+    Properties localProps = new Properties();
+    localProps.put("druid.enableTlsPort", "false");
+    localProps.put("druid.zk.service.enabled", "false");
+    localProps.put("druid.plaintextPort","12345");
+
+
+    Module m = binder -> binder.bind(Properties.class).toInstance(localProps);
+    return m;
+  }
+
+  public static class DiscovertModule extends AbstractModule {
+
+    DiscovertModule() {
+    }
+
+    @Override
+    protected void configure()
+    {
+    }
+
+    @Provides
+    DruidNodeDiscoveryProvider getProvider() {
+      final DruidNode coordinatorNode = new DruidNode("test-coordinator", "dummy", false, 8081, null, true, false);
+      FakeDruidNodeDiscoveryProvider provider = new FakeDruidNodeDiscoveryProvider(
+          ImmutableMap.of(
+              NodeRole.COORDINATOR, new FakeDruidNodeDiscovery(ImmutableMap.of(NodeRole.COORDINATOR, coordinatorNode))
+          )
+      );
+      return provider;
+    }
+
+    /**
+     * A fake {@link DruidNodeDiscoveryProvider} for {@link #createMockSystemSchema}.
+     */
+    private static class FakeDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvider
+    {
+      private final Map<NodeRole, FakeDruidNodeDiscovery> nodeDiscoveries;
+
+      public FakeDruidNodeDiscoveryProvider(Map<NodeRole, FakeDruidNodeDiscovery> nodeDiscoveries)
+      {
+        this.nodeDiscoveries = nodeDiscoveries;
+      }
+
+      @Override
+      public BooleanSupplier getForNode(DruidNode node, NodeRole nodeRole)
+      {
+        boolean get = nodeDiscoveries.getOrDefault(nodeRole, new FakeDruidNodeDiscovery())
+                                     .getAllNodes()
+                                     .stream()
+                                     .anyMatch(x -> x.getDruidNode().equals(node));
+        return () -> get;
+      }
+
+      @Override
+      public DruidNodeDiscovery getForNodeRole(NodeRole nodeRole)
+      {
+        return nodeDiscoveries.getOrDefault(nodeRole, new FakeDruidNodeDiscovery());
+      }
+    }
+
+    private static class FakeDruidNodeDiscovery implements DruidNodeDiscovery
+    {
+      private final Set<DiscoveryDruidNode> nodes;
+
+      FakeDruidNodeDiscovery()
+      {
+        this.nodes = new HashSet<>();
+      }
+
+      FakeDruidNodeDiscovery(Map<NodeRole, DruidNode> nodes)
+      {
+        this.nodes = Sets.newHashSetWithExpectedSize(nodes.size());
+        nodes.forEach((k, v) -> {
+          addNode(v, k);
+        });
+      }
+
+      @Override
+      public Collection<DiscoveryDruidNode> getAllNodes()
+      {
+        return nodes;
+      }
+
+      void addNode(DruidNode node, NodeRole role)
+      {
+        final DiscoveryDruidNode discoveryNode = new DiscoveryDruidNode(node, role, ImmutableMap.of());
+        this.nodes.add(discoveryNode);
+      }
+
+      @Override
+      public void registerListener(Listener listener)
+      {
+
+      }
+    }
+
+
+
+  }
+
+  private static Module discoverModule()
+  {
+
+//    DruidNodeDiscoveryProvider instance = ;
+//    Module m = binder -> binder.bind(DruidNodeDiscoveryProvider.class).toInstance(instance);
+    return new DiscovertModule();
+
+  }
+
   static class CustomStartupInjectorBuilder extends StartupInjectorBuilder {
 
     private List<com.google.inject.Module> overrideModules =new ArrayList<>();
 
     public CustomStartupInjectorBuilder()
     {
-      Properties localProps = new Properties();
-      localProps.put("druid.enableTlsPort", "false");
-      localProps.put("druid.plaintextPort","12345");
-
-
-      addOverride(binder -> binder.bind(Properties.class).toInstance(localProps));
+      Module m = propOverrideModuel();
+      addOverride(m);
 //      addOverride(binder -> {
 //        binder.bind(SSLClientConfig.class).toProvider(Providers.of(null));
 //        binder.bind(SSLClientConfig.class).annotatedWith(Global.class).toProvider(Providers.of(null));
@@ -431,11 +549,19 @@ public class Launcher
 
   }
 
-  private static void main1(Object object)
+  private static void main1(Object object) throws Exception
   {
     final Injector injector = new CustomStartupInjectorBuilder()
         .forTests()
         .build();
+
+
+    SqlTestFramework framework = getCI().extracted(
+          propOverrideModuel(),
+          discoverModule()
+        )
+
+        ;
 
 //    SSLContextProvider u = injector.getInstance(SSLContextProvider.class);
 //    System.out.println(u);
@@ -443,7 +569,7 @@ public class Launcher
 
 
     CliBroker c = new CliBroker();
-    injector.injectMembers(c);
+    framework.injector().injectMembers(c);
     // c.configure(new Properties());
     c.run();
 

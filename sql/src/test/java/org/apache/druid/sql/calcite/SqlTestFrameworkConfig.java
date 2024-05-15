@@ -26,6 +26,7 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
+import com.google.inject.Module;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.topn.TopNQueryConfig;
@@ -335,8 +336,19 @@ public class SqlTestFrameworkConfig
   public static class ConfigurationInstance
   {
     public SqlTestFramework framework;
+    private SqlTestFrameworkConfig config;
+    private QueryComponentSupplier testHost;
 
     ConfigurationInstance(SqlTestFrameworkConfig config, QueryComponentSupplier testHost)
+    {
+      this.config = config;
+      this.testHost = testHost;
+      SqlTestFramework framework1 = extracted();
+      framework=framework1;
+    }
+
+    //FIXME remove
+    public SqlTestFramework extracted(Module ...modules)
     {
       SqlTestFramework.Builder builder = new SqlTestFramework.Builder(testHost)
           .withConfig(config)
@@ -344,7 +356,12 @@ public class SqlTestFrameworkConfig
           .minTopNThreshold(config.minTopNThreshold)
           .mergeBufferCount(config.numMergeBuffers)
           .withOverrideModule(config.resultCache.makeModule());
-      framework = builder.build();
+      for (Module m : modules) {
+        builder.withOverrideModule(m);
+      }
+
+      SqlTestFramework framework1 = builder.build();
+      return framework1;
     }
 
     public ConfigurationInstance(

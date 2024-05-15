@@ -20,11 +20,7 @@
 package org.apache.druid.initialization;
 
 import com.google.inject.Injector;
-import org.apache.druid.curator.CuratorModule;
-import org.apache.druid.curator.discovery.DiscoveryModule;
 import org.apache.druid.discovery.NodeRole;
-import org.apache.druid.guice.AnnouncerModule;
-import org.apache.druid.guice.CoordinatorDiscoveryModule;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.guice.DruidSecondaryModule;
 import org.apache.druid.guice.ExpressionModule;
@@ -106,8 +102,8 @@ public class CoreInjectorBuilder extends DruidInjectorBuilder
         HttpClientModule.escalatedGlobal(),
         new HttpClientModule("druid.broker.http", Client.class, true),
         new HttpClientModule("druid.broker.http", EscalatedClient.class, true),
-        new CuratorModule(),
-        new AnnouncerModule(),
+//        new CuratorModule(),
+//        new AnnouncerModule(),
         new MetricsModule(),
         new SegmentWriteOutMediumModule(),
         new ServerModule(),
@@ -115,12 +111,12 @@ public class CoreInjectorBuilder extends DruidInjectorBuilder
         new JettyServerModule(),
         new ExpressionModule(),
         new NestedDataModule(),
-        new DiscoveryModule(),
+//        new DiscoveryModule(),
         new ServerViewModule(),
         new MetadataConfigModule(),
         new DerbyMetadataStorageDruidModule(),
         new JacksonConfigManagerModule(),
-        new CoordinatorDiscoveryModule(),
+//        new CoordinatorDiscoveryModule(),
         new LocalDataStorageDruidModule(),
         new TombstoneDataStorageModule(),
         new FirehoseModule(),

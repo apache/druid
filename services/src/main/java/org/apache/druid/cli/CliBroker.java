@@ -47,7 +47,6 @@ import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LegacyBrokerParallelMergeConfigModule;
 import org.apache.druid.guice.LifecycleModule;
-import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.QueryableModule;
 import org.apache.druid.guice.SegmentWranglerModule;
@@ -164,7 +163,7 @@ public class CliBroker extends ServerRunnable
 
           LifecycleModule.register(binder, Server.class);
           binder.bind(SegmentManager.class).in(LazySingleton.class);
-          binder.bind(ZkCoordinator.class).in(ManageLifecycle.class);
+//          binder.bind(ZkCoordinator.class).in(ManageLifecycle.class);
           binder.bind(ServerTypeConfig.class).toInstance(new ServerTypeConfig(ServerType.BROKER));
           Jerseys.addResource(binder, HistoricalResource.class);
           Jerseys.addResource(binder, SegmentListerResource.class);
