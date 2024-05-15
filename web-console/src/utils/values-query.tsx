@@ -32,6 +32,13 @@ import {
 
 const SAMPLE_ARRAY_SEPARATOR = '<#>'; // Note that this is a regexp so don't add anything that is a special regexp thing
 
+/**
+ This function corrects for the legacy behaviour where Druid sometimes returns array columns as
+ { sqlType: 'ARRAY', nativeType: 'ARRAY<STRING>' }
+ instead of the more correct description of
+ { sqlType: 'VARCHAR ARRAY', nativeType: 'ARRAY<STRING>' }
+ use this function to get the effective SQL type of `VARCHAR ARRAY`
+ */
 function getEffectiveSqlType(column: Column): string | undefined {
   const sqlType = column.sqlType;
   if (sqlType === 'ARRAY' && String(column.nativeType).startsWith('ARRAY<')) {
