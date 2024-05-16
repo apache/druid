@@ -310,7 +310,7 @@ FROM sys.servers
 WHERE "server_type" = 'historical'
 ORDER BY "fill" DESC`,
         });
-        // Note: for some reason adding ` AND "curr_size" * 100.0 / "max_size" > 90` to the filter does not work as off this writing Apr 8, 2024
+        // Note: for some reason adding ` AND "curr_size" * 100.0 / "max_size" > 90` to the filter does not work as of this writing Apr 8, 2024
       } catch (e) {
         controls.addIssue(`Could not run a sys.servers query. Got: ${e.message}`);
         return;
