@@ -312,7 +312,7 @@ public class CliBroker2 extends ServerRunnable
   )
   {
     return new ServerInjectorBuilder(baseInjector)
-        .nodeRoles(nodeRoles)
+        .nodeRoles(null)
         .serviceModules(modules)
         .build();
   }
