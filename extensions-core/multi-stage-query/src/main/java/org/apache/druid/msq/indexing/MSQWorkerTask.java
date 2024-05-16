@@ -27,7 +27,6 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Injector;
-import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
@@ -38,13 +37,9 @@ import org.apache.druid.msq.exec.MSQTasks;
 import org.apache.druid.msq.exec.Worker;
 import org.apache.druid.msq.exec.WorkerContext;
 import org.apache.druid.msq.exec.WorkerImpl;
-import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.security.ResourceAction;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 import javax.annotation.Nonnull;
-import java.util.Collection;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -189,27 +184,5 @@ public class MSQWorkerTask extends AbstractTask
   public int hashCode()
   {
     return Objects.hash(super.hashCode(), controllerTaskId, workerNumber, retryCount, worker);
-  }
-
-  @Override
-  public LookupLoadingSpec getLookupLoadingSpec()
-  {
-    final Object lookupModeValue = getContext().get(PlannerContext.CTX_LOOKUP_LOADING_MODE);
-    if (lookupModeValue == null) {
-      return LookupLoadingSpec.ALL;
-    }
-
-    final LookupLoadingSpec.Mode lookupLoadingMode = LookupLoadingSpec.Mode.valueOf(lookupModeValue.toString());
-    if (lookupLoadingMode == LookupLoadingSpec.Mode.NONE) {
-      return LookupLoadingSpec.NONE;
-    } else if (lookupLoadingMode == LookupLoadingSpec.Mode.ONLY_REQUIRED) {
-      Collection<String> lookupsToLoad = (Collection<String>) getContext().get(PlannerContext.CTX_LOOKUPS_TO_LOAD);
-      if (lookupsToLoad == null || lookupsToLoad.isEmpty()) {
-        throw InvalidInput.exception("Set of lookups to load cannot be %s for mode[ONLY_REQUIRED].", lookupsToLoad);
-      }
-      return LookupLoadingSpec.loadOnly(new HashSet<>(lookupsToLoad));
-    } else {
-      return LookupLoadingSpec.ALL;
-    }
   }
 }

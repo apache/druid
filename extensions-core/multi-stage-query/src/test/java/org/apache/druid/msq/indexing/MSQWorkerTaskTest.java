@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -125,7 +124,7 @@ public class MSQWorkerTaskTest
   @Test
   public void testGetLookupLoadingWithModeNoneInContext()
   {
-    final ImmutableMap<String, Object> context = ImmutableMap.of(PlannerContext.CTX_LOOKUP_LOADING_MODE, LookupLoadingSpec.Mode.NONE);
+    final ImmutableMap<String, Object> context = ImmutableMap.of(LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE, LookupLoadingSpec.Mode.NONE);
     MSQWorkerTask msqWorkerTask = new MSQWorkerTask(controllerTaskId, dataSource, workerNumber, context, retryCount);
     Assert.assertEquals(LookupLoadingSpec.NONE, msqWorkerTask.getLookupLoadingSpec());
   }
@@ -134,8 +133,8 @@ public class MSQWorkerTaskTest
   public void testGetLookupLoadingSpecWithLookupListInContext()
   {
     final ImmutableMap<String, Object> context = ImmutableMap.of(
-        PlannerContext.CTX_LOOKUPS_TO_LOAD, Arrays.asList("lookupName1", "lookupName2"),
-        PlannerContext.CTX_LOOKUP_LOADING_MODE, LookupLoadingSpec.Mode.ONLY_REQUIRED);
+        LookupLoadingSpec.CTX_LOOKUPS_TO_LOAD, Arrays.asList("lookupName1", "lookupName2"),
+        LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE, LookupLoadingSpec.Mode.ONLY_REQUIRED);
     MSQWorkerTask msqWorkerTask = new MSQWorkerTask(controllerTaskId, dataSource, workerNumber, context, retryCount);
     Assert.assertEquals(LookupLoadingSpec.Mode.ONLY_REQUIRED, msqWorkerTask.getLookupLoadingSpec().getMode());
     Assert.assertEquals(ImmutableSet.of("lookupName1", "lookupName2"), msqWorkerTask.getLookupLoadingSpec().getLookupsToLoad());
@@ -145,10 +144,10 @@ public class MSQWorkerTaskTest
   public void testGetLookupLoadingSpecWithInvalidInput()
   {
     final HashMap<String, Object> context = new HashMap<>();
-    context.put(PlannerContext.CTX_LOOKUP_LOADING_MODE, LookupLoadingSpec.Mode.ONLY_REQUIRED);
+    context.put(LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE, LookupLoadingSpec.Mode.ONLY_REQUIRED);
 
     // Setting CTX_LOOKUPS_TO_LOAD as null
-    context.put(PlannerContext.CTX_LOOKUPS_TO_LOAD, null);
+    context.put(LookupLoadingSpec.CTX_LOOKUPS_TO_LOAD, null);
 
     MSQWorkerTask taskWithNullLookups = new MSQWorkerTask(controllerTaskId, dataSource, workerNumber, context, retryCount);
     DruidException exception = Assert.assertThrows(
@@ -160,7 +159,7 @@ public class MSQWorkerTaskTest
         exception.getMessage());
 
     // Setting CTX_LOOKUPS_TO_LOAD as empty list
-    context.put(PlannerContext.CTX_LOOKUPS_TO_LOAD, Collections.emptyList());
+    context.put(LookupLoadingSpec.CTX_LOOKUPS_TO_LOAD, Collections.emptyList());
 
     MSQWorkerTask taskWithEmptyLookups = new MSQWorkerTask(controllerTaskId, dataSource, workerNumber, context, retryCount);
     exception = Assert.assertThrows(
