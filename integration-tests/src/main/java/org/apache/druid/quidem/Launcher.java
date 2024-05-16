@@ -34,6 +34,7 @@ import com.google.inject.name.Names;
 import com.google.inject.util.Modules;
 import org.apache.calcite.avatica.server.AbstractAvaticaHandler;
 import org.apache.druid.cli.CliBroker2;
+import org.apache.druid.cli.GuiceRunnable;
 import org.apache.druid.curator.CuratorModule;
 import org.apache.druid.curator.discovery.DiscoveryModule;
 import org.apache.druid.guice.AnnouncerModule;
@@ -42,6 +43,7 @@ import org.apache.druid.guice.BrokerServiceModule;
 import org.apache.druid.guice.CoordinatorDiscoveryModule;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.guice.ExpressionModule;
+import org.apache.druid.guice.ExtensionsModule;
 import org.apache.druid.guice.FirehoseModule;
 import org.apache.druid.guice.JacksonConfigManagerModule;
 import org.apache.druid.guice.JavaScriptModule;
@@ -68,10 +70,13 @@ import org.apache.druid.guice.security.DruidAuthModule;
 import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.initialization.Log4jShutterDownerModule;
+import org.apache.druid.initialization.ServerInjectorBuilder;
 import org.apache.druid.initialization.TombstoneDataStorageModule;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.java.util.common.lifecycle.Lifecycle;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.metadata.storage.derby.DerbyMetadataStorageDruidModule;
 import org.apache.druid.query.DefaultQueryConfig;
@@ -93,6 +98,7 @@ import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.AuthenticatorMapper;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Escalator;
+import org.apache.druid.server.security.TLSCertificateCheckerModule;
 import org.apache.druid.sql.avatica.AvaticaMonitor;
 import org.apache.druid.sql.avatica.DruidAvaticaJsonHandler;
 import org.apache.druid.sql.avatica.DruidMeta;
@@ -141,6 +147,7 @@ public class Launcher
   public static final String DEFAULT_URI = URI_PREFIX + "/";
 
   static final SqlTestFrameworkConfigStore CONFIG_STORE = new SqlTestFrameworkConfigStore();
+  private static Logger log = new Logger(Launcher.class);
 
   public Launcher()
   {
@@ -430,15 +437,21 @@ public class Launcher
 
   private static Module propOverrideModuel1()
   {
+    Properties localProps = makeLocalProps();
+
+
+    Module m = binder -> binder.bind(Properties.class).toInstance(localProps);
+    return m;
+  }
+
+  private static Properties makeLocalProps()
+  {
     Properties localProps = new Properties();
     localProps.put("druid.enableTlsPort", "false");
     localProps.put("druid.zk.service.enabled", "false");
     localProps.put("druid.plaintextPort","12345");
     localProps.put("druid.host", "localhost");
-
-
-    Module m = binder -> binder.bind(Properties.class).toInstance(localProps);
-    return m;
+    return localProps;
   }
 
   static class CustomStartupInjectorBuilder extends StartupInjectorBuilder {
@@ -578,10 +591,12 @@ public class Launcher
 
 //      builder.addModule(new StorageNodeModule());
 
-//      builder.addModules(new CliBroker2().getmodules2().toArray(new Module[0]));
+
 
       builder.addModule(
           binder -> {
+            // why need to add this?
+//            binder.bind(ResponseContextConfig.class).toInstance(ResponseContextConfig.newConfig(false));
             binder.bindConstant().annotatedWith(Names.named("serviceName")).to("test");
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
             binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
@@ -607,12 +622,13 @@ public class Launcher
       );
 
       if(true) {
-        builder.addModules(
+
+        builder.add(
         new Log4jShutterDownerModule(),
         new LifecycleModule(),
-//          ExtensionsModule.SecondaryModule.class,
+          ExtensionsModule.SecondaryModule.class,
             new DruidAuthModule(),
-//          TLSCertificateCheckerModule.class,
+          TLSCertificateCheckerModule.class,
 //          EmitterModule.class,
             HttpClientModule.global(),
             HttpClientModule.escalatedGlobal(),
@@ -647,7 +663,17 @@ public class Launcher
             new ServiceClientModule(),
             new StorageConnectorModule()
 );
+//      builder.addModules();
+//        builder.addModules(new CliBroker2().getmodules2().toArray(new Module[0]));
+
+      CliBroker2 cliBroker2 = new CliBroker2();
+      cliBroker2.configure(makeLocalProps(), null);
+      overrideModules.addAll(cliBroker2.getmodules2());
+
+      builder.add(ServerInjectorBuilder.registerNodeRoleModule(ImmutableSet.of()));
+
       }
+
     }
 
     @Override
@@ -713,7 +739,10 @@ public class Launcher
 //    SSLContextProvider u = injector.getInstance(SSLContextProvider.class);
 //    System.out.println(u);
 
-
+    if(true) {
+Lifecycle lifecycle = GuiceRunnable.initLifecycle(framework.injector(), log);
+lifecycle.join();
+    }else {
     CliBroker2 c = new CliBroker2() {
       protected List<? extends Module> getModules() {
         List<Module>  ret = new ArrayList<>();
@@ -735,6 +764,7 @@ public class Launcher
 //     c.configure(new Properties());
 
     c.run2();
+    }
 
   }
 

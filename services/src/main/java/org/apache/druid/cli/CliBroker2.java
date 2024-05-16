@@ -198,7 +198,7 @@ public class CliBroker2 extends ServerRunnable
           LifecycleModule.registerKey(binder, Key.get(SelfDiscoveryResource.class));
         },
 //        new LookupModule(),
-        new LookylooModule(),
+//        new LookylooModule(),
         new SqlModule()
     );
   }
