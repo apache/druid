@@ -184,6 +184,10 @@ public class SqlTestFramework
     default void close() throws IOException
     {
     }
+
+    default void configureGuice(CoreInjectorBuilder injectorBuilder, List<Module> overrideModules) {
+      configureGuice(injectorBuilder);
+    }
   }
 
   public interface PlannerComponentSupplier
@@ -646,13 +650,15 @@ return      componentSupplier.getPlannerComponentSupplier().createViewManager();
         .addModule(new LookylooModule())
         .addModule(new SegmentWranglerModule())
         .addModule(new SqlAggregationModule())
-        .addModule(new ExpressionModule())
-        .addModule(testSetupModule());
+        .addModule(new ExpressionModule());
+//        .addModule(testSetupModule());
 
-    builder.componentSupplier.configureGuice(injectorBuilder);
+    List<Module> overrideModules = new ArrayList<>(builder.overrideModules);
+    overrideModules.add(testSetupModule());
+    builder.componentSupplier.configureGuice(injectorBuilder, overrideModules);
 
     ServiceInjectorBuilder serviceInjector = new ServiceInjectorBuilder(injectorBuilder);
-    serviceInjector.addAll(builder.overrideModules);
+    serviceInjector.addAll(overrideModules);
 
     this.injector = serviceInjector.build();
     this.engine = builder.componentSupplier.createEngine(queryLifecycleFactory(), queryJsonMapper(), injector);

@@ -65,7 +65,7 @@ import org.apache.druid.guice.http.HttpClientModule;
 import org.apache.druid.guice.security.AuthenticatorModule;
 import org.apache.druid.guice.security.AuthorizerModule;
 import org.apache.druid.guice.security.DruidAuthModule;
-import org.apache.druid.guice.security.EscalatorModule;
+import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.initialization.Log4jShutterDownerModule;
 import org.apache.druid.initialization.TombstoneDataStorageModule;
@@ -85,8 +85,6 @@ import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QuerySchedulerProvider;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
-import org.apache.druid.server.initialization.AuthenticatorMapperModule;
-import org.apache.druid.server.initialization.AuthorizerMapperModule;
 import org.apache.druid.server.initialization.ExternalStorageAccessSecurityModule;
 import org.apache.druid.server.initialization.jetty.JettyServerModule;
 import org.apache.druid.server.log.RequestLogger;
@@ -555,11 +553,17 @@ public class Launcher
     @Override
     public void configureGuice(DruidInjectorBuilder builder)
     {
+      throw new RuntimeException("f");
+    }
+
+    @Override
+    public void configureGuice(CoreInjectorBuilder builder, List<Module> overrideModules)
+    {
       delegate.configureGuice(builder);
       TestRequestLogger testRequestLogger = new TestRequestLogger();
 //      builder.addModule(connectionModule);
 
-//      builder.addModule(new DiscovertModule());
+      overrideModules.add(new DiscovertModule());
 
       if(false) {
       builder.addModule(new LegacyBrokerParallelMergeConfigModule());
@@ -571,48 +575,6 @@ public class Launcher
       builder.addModule(new BrokerServiceModule());
       }
 
-      if(false) {
-        builder.addModules(
-        new Log4jShutterDownerModule(),
-        new LifecycleModule(),
-//          ExtensionsModule.SecondaryModule.class,
-            new DruidAuthModule(),
-//          TLSCertificateCheckerModule.class,
-//          EmitterModule.class,
-            HttpClientModule.global(),
-            HttpClientModule.escalatedGlobal(),
-            new HttpClientModule("druid.broker.http", Client.class, true),
-            new HttpClientModule("druid.broker.http", EscalatedClient.class, true),
-            new CuratorModule(),
-            new AnnouncerModule(),
-//          new MetricsModule(),
-            new SegmentWriteOutMediumModule(),
-            new ServerModule(),
-            new StorageNodeModule(),
-            new JettyServerModule(),
-            new ExpressionModule(),
-            new NestedDataModule(),
-            new DiscoveryModule(),
-            new ServerViewModule(),
-            new MetadataConfigModule(),
-            new DerbyMetadataStorageDruidModule(),
-            new JacksonConfigManagerModule(),
-            new CoordinatorDiscoveryModule(),
-            new LocalDataStorageDruidModule(),
-            new TombstoneDataStorageModule(),
-            new FirehoseModule(),
-            new JavaScriptModule(),
-            new AuthenticatorModule(),
-            new AuthenticatorMapperModule(),
-            new EscalatorModule(),
-            new AuthorizerModule(),
-            new AuthorizerMapperModule(),
-            new StartupLoggingModule(),
-            new ExternalStorageAccessSecurityModule(),
-            new ServiceClientModule(),
-            new StorageConnectorModule()
-);
-      }
 
 //      builder.addModule(new StorageNodeModule());
 
@@ -644,6 +606,48 @@ public class Launcher
           }
       );
 
+      if(true) {
+        builder.addModules(
+        new Log4jShutterDownerModule(),
+        new LifecycleModule(),
+//          ExtensionsModule.SecondaryModule.class,
+            new DruidAuthModule(),
+//          TLSCertificateCheckerModule.class,
+//          EmitterModule.class,
+            HttpClientModule.global(),
+            HttpClientModule.escalatedGlobal(),
+            new HttpClientModule("druid.broker.http", Client.class, true),
+            new HttpClientModule("druid.broker.http", EscalatedClient.class, true),
+            new CuratorModule(),
+            new AnnouncerModule(),
+//          new MetricsModule(),
+            new SegmentWriteOutMediumModule(),
+            new ServerModule(),
+            new StorageNodeModule(),
+            new JettyServerModule(),
+            new ExpressionModule(),
+            new NestedDataModule(),
+            new DiscoveryModule(),
+            new ServerViewModule(),
+            new MetadataConfigModule(),
+            new DerbyMetadataStorageDruidModule(),
+            new JacksonConfigManagerModule(),
+            new CoordinatorDiscoveryModule(),
+            new LocalDataStorageDruidModule(),
+            new TombstoneDataStorageModule(),
+            new FirehoseModule(),
+            new JavaScriptModule(),
+            new AuthenticatorModule(),
+//            new AuthenticatorMapperModule(),
+//            new EscalatorModule(),
+            new AuthorizerModule(),
+//            new AuthorizerMapperModule(),
+            new StartupLoggingModule(),
+            new ExternalStorageAccessSecurityModule(),
+            new ServiceClientModule(),
+            new StorageConnectorModule()
+);
+      }
     }
 
     @Override
