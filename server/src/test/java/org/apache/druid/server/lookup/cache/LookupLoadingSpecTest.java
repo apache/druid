@@ -19,13 +19,20 @@
 
 package org.apache.druid.server.lookup.cache;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import junitparams.JUnitParamsRunner;
+import junitparams.Parameters;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.java.util.common.StringUtils;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 
+import java.util.Arrays;
 import java.util.Set;
 
+@RunWith(JUnitParamsRunner.class)
 public class LookupLoadingSpecTest
 {
   @Test
@@ -58,5 +65,122 @@ public class LookupLoadingSpecTest
   {
     DruidException exception = Assert.assertThrows(DruidException.class, () -> LookupLoadingSpec.loadOnly(null));
     Assert.assertEquals("Expected non-null set of lookups to load.", exception.getMessage());
+  }
+
+  @Test
+  public void testCreateLookupLoadingSpecFromEmptyContext()
+  {
+    // Default spec is returned in the case of context not having the lookup keys.
+    Assert.assertEquals(
+        LookupLoadingSpec.ALL,
+        LookupLoadingSpec.createFromContext(
+            ImmutableMap.of(),
+            LookupLoadingSpec.ALL
+        )
+    );
+
+    Assert.assertEquals(
+        LookupLoadingSpec.NONE,
+        LookupLoadingSpec.createFromContext(
+            ImmutableMap.of(),
+            LookupLoadingSpec.NONE
+        )
+    );
+  }
+
+  @Test
+  public void testCreateLookupLoadingSpecFromNullContext()
+  {
+    // Default spec is returned in the case of context=null.
+    Assert.assertEquals(
+        LookupLoadingSpec.NONE,
+        LookupLoadingSpec.createFromContext(
+            null,
+            LookupLoadingSpec.NONE
+        )
+    );
+
+    Assert.assertEquals(
+        LookupLoadingSpec.ALL,
+        LookupLoadingSpec.createFromContext(
+            null,
+            LookupLoadingSpec.ALL
+        )
+    );
+  }
+
+  @Test
+  public void testCreateLookupLoadingSpecFromContext()
+  {
+    // Only required lookups are returned in the case of context having the lookup keys.
+    Assert.assertEquals(
+        LookupLoadingSpec.loadOnly(ImmutableSet.of("lookup1", "lookup2")),
+        LookupLoadingSpec.createFromContext(
+            ImmutableMap.of(
+                LookupLoadingSpec.CTX_LOOKUPS_TO_LOAD, Arrays.asList("lookup1", "lookup2"),
+                LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE, LookupLoadingSpec.Mode.ONLY_REQUIRED
+            ),
+            LookupLoadingSpec.ALL
+        )
+    );
+
+    // No lookups are returned in the case of context having mode=NONE, irrespective of the default spec.
+    Assert.assertEquals(
+        LookupLoadingSpec.NONE,
+        LookupLoadingSpec.createFromContext(
+            ImmutableMap.of(
+                LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE, LookupLoadingSpec.Mode.NONE),
+            LookupLoadingSpec.ALL
+        )
+    );
+
+    // All lookups are returned in the case of context having mode=ALL, irrespective of the default spec.
+    Assert.assertEquals(
+        LookupLoadingSpec.ALL,
+        LookupLoadingSpec.createFromContext(
+            ImmutableMap.of(LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE, LookupLoadingSpec.Mode.ALL),
+            LookupLoadingSpec.NONE
+        )
+    );
+  }
+
+  @Test
+  @Parameters(
+      {
+          "NONE1",
+          "A",
+          "Random mode",
+          "all",
+          "only required",
+          "none"
+      }
+  )
+  public void testCreateLookupLoadingSpecFromInvalidModeInContext(String mode)
+  {
+    final DruidException exception = Assert.assertThrows(DruidException.class, () -> LookupLoadingSpec.createFromContext(
+        ImmutableMap.of(LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE, mode), LookupLoadingSpec.ALL));
+    Assert.assertEquals(StringUtils.format("Invalid value of %s[%s]. Allowed values are [ALL, NONE, ONLY_REQUIRED]",
+                                           LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE, mode), exception.getMessage());
+  }
+
+  @Test
+  @Parameters(
+      {
+          "foo bar",
+          "foo]"
+      }
+  )
+  public void testCreateLookupLoadingSpecFromInvalidLookupsInContext(Object lookupsToLoad)
+  {
+    final DruidException exception = Assert.assertThrows(DruidException.class, () ->
+        LookupLoadingSpec.createFromContext(
+            ImmutableMap.of(
+                LookupLoadingSpec.CTX_LOOKUPS_TO_LOAD, lookupsToLoad,
+                LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE, LookupLoadingSpec.Mode.ONLY_REQUIRED),
+            LookupLoadingSpec.ALL)
+    );
+    Assert.assertEquals(StringUtils.format("Invalid value of %s[%s]. Please provide a comma-separated list of "
+                                           + "lookup names. For example: [\"lookupName1\", \"lookupName2\"]",
+                                           LookupLoadingSpec.CTX_LOOKUPS_TO_LOAD, lookupsToLoad), exception.getMessage());
   }
 }

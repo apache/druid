@@ -7135,4 +7135,181 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                     .build()
     );
   }
+
+  @Test
+  public void testNvlJsonValueDoubleMissingColumn()
+  {
+    testQuery(
+        "SELECT\n"
+        + "JSON_VALUE(nest, '$.nonexistent' RETURNING DOUBLE),\n"
+        + "NVL(JSON_VALUE(nest, '$.nonexistent' RETURNING DOUBLE), 1.0),\n"
+        + "NVL(JSON_VALUE(nest, '$.nonexistent' RETURNING DOUBLE), 1.0) > 0\n"
+        + "FROM druid.nested\n"
+        + "WHERE NVL(JSON_VALUE(nest, '$.nonexistent' RETURNING DOUBLE), 1.0) > 0\n"
+        + "LIMIT 1",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(DATA_SOURCE)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(
+                    expressionVirtualColumn("v0", "nvl(\"v1\",1.0)", ColumnType.DOUBLE),
+                    new NestedFieldVirtualColumn(
+                        "nest",
+                        "$.nonexistent",
+                        "v1",
+                        ColumnType.DOUBLE
+                    ),
+                    expressionVirtualColumn("v2", "notnull(nvl(\"v1\",1.0))", ColumnType.LONG)
+                )
+                .filters(range("v0", ColumnType.LONG, NullHandling.sqlCompatible() ? 0.0 : "0", null, true, false))
+                .limit(1)
+                .columns("v0", "v1", "v2")
+                .build()
+        ),
+        NullHandling.sqlCompatible()
+        ? ImmutableList.of(new Object[]{null, 1.0, true})
+        : ImmutableList.of(),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.DOUBLE)
+                    .add("EXPR$1", ColumnType.DOUBLE)
+                    .add("EXPR$2", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testNvlJsonValueDoubleSometimesMissing()
+  {
+    testQuery(
+        "SELECT\n"
+        + "JSON_VALUE(nest, '$.y' RETURNING DOUBLE),\n"
+        + "NVL(JSON_VALUE(nest, '$.y' RETURNING DOUBLE), 1.0),\n"
+        + "NVL(JSON_VALUE(nest, '$.y' RETURNING DOUBLE), 1.0) > 0,\n"
+        + "NVL(JSON_VALUE(nest, '$.y' RETURNING DOUBLE), 1.0) = 1.0\n"
+        + "FROM druid.nested",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(DATA_SOURCE)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(
+                    new NestedFieldVirtualColumn("nest", "$.y", "v0", ColumnType.DOUBLE),
+                    expressionVirtualColumn("v1", "nvl(\"v0\",1.0)", ColumnType.DOUBLE),
+                    expressionVirtualColumn("v2", "(nvl(\"v0\",1.0) > 0)", ColumnType.LONG),
+                    expressionVirtualColumn("v3", "(nvl(\"v0\",1.0) == 1.0)", ColumnType.LONG)
+                )
+                .columns("v0", "v1", "v2", "v3")
+                .build()
+        ),
+        NullHandling.sqlCompatible()
+        ? ImmutableList.of(
+            new Object[]{2.02, 2.02, true, false},
+            new Object[]{null, 1.0, true, true},
+            new Object[]{3.03, 3.03, true, false},
+            new Object[]{null, 1.0, true, true},
+            new Object[]{null, 1.0, true, true},
+            new Object[]{2.02, 2.02, true, false},
+            new Object[]{null, 1.0, true, true}
+        )
+        : ImmutableList.of(
+            new Object[]{2.02, 2.02, true, false},
+            new Object[]{null, 0.0, false, false},
+            new Object[]{3.03, 3.03, true, false},
+            new Object[]{null, 0.0, false, false},
+            new Object[]{null, 0.0, false, false},
+            new Object[]{2.02, 2.02, true, false},
+            new Object[]{null, 0.0, false, false}
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.DOUBLE)
+                    .add("EXPR$1", ColumnType.DOUBLE)
+                    .add("EXPR$2", ColumnType.LONG)
+                    .add("EXPR$3", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testNvlJsonValueDoubleSometimesMissingRangeFilter()
+  {
+    testQuery(
+        "SELECT\n"
+        + "JSON_VALUE(nest, '$.y' RETURNING DOUBLE),\n"
+        + "NVL(JSON_VALUE(nest, '$.y' RETURNING DOUBLE), 1.0),\n"
+        + "NVL(JSON_VALUE(nest, '$.y' RETURNING DOUBLE), 1.0) > 0\n"
+        + "FROM druid.nested\n"
+        + "WHERE NVL(JSON_VALUE(nest, '$.y' RETURNING DOUBLE), 1.0) > 0",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(DATA_SOURCE)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(
+                    expressionVirtualColumn("v0", "nvl(\"v1\",1.0)", ColumnType.DOUBLE),
+                    new NestedFieldVirtualColumn("nest", "$.y", "v1", ColumnType.DOUBLE),
+                    expressionVirtualColumn("v2", "notnull(nvl(\"v1\",1.0))", ColumnType.LONG)
+                )
+                .filters(range("v0", ColumnType.LONG, NullHandling.sqlCompatible() ? 0.0 : "0", null, true, false))
+                .columns("v0", "v1", "v2")
+                .build()
+        ),
+        NullHandling.sqlCompatible()
+        ? ImmutableList.of(
+            new Object[]{2.02, 2.02, true},
+            new Object[]{null, 1.0, true},
+            new Object[]{3.03, 3.03, true},
+            new Object[]{null, 1.0, true},
+            new Object[]{null, 1.0, true},
+            new Object[]{2.02, 2.02, true},
+            new Object[]{null, 1.0, true}
+        )
+        : ImmutableList.of(
+            new Object[]{2.02, 2.02, true},
+            new Object[]{3.03, 3.03, true},
+            new Object[]{2.02, 2.02, true}
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.DOUBLE)
+                    .add("EXPR$1", ColumnType.DOUBLE)
+                    .add("EXPR$2", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testNvlJsonValueDoubleSometimesMissingEqualityFilter()
+  {
+    testQuery(
+        "SELECT\n"
+        + "JSON_VALUE(nest, '$.y' RETURNING DOUBLE),\n"
+        + "NVL(JSON_VALUE(nest, '$.y' RETURNING DOUBLE), 1.0),\n"
+        + "NVL(JSON_VALUE(nest, '$.y' RETURNING DOUBLE), 1.0) > 0\n"
+        + "FROM druid.nested\n"
+        + "WHERE NVL(JSON_VALUE(nest, '$.y' RETURNING DOUBLE), 1.0) = 1.0",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(DATA_SOURCE)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(
+                    expressionVirtualColumn("v0", "nvl(\"v1\",1.0)", ColumnType.DOUBLE),
+                    new NestedFieldVirtualColumn("nest", "$.y", "v1", ColumnType.DOUBLE),
+                    expressionVirtualColumn("v2", "notnull(nvl(\"v1\",1.0))", ColumnType.LONG)
+                )
+                .filters(equality("v0", 1.0, ColumnType.DOUBLE))
+                .columns("v0", "v1", "v2")
+                .build()
+        ),
+        NullHandling.sqlCompatible()
+        ? ImmutableList.of(
+            new Object[]{null, 1.0, true},
+            new Object[]{null, 1.0, true},
+            new Object[]{null, 1.0, true},
+            new Object[]{null, 1.0, true}
+        )
+        : ImmutableList.of(),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.DOUBLE)
+                    .add("EXPR$1", ColumnType.DOUBLE)
+                    .add("EXPR$2", ColumnType.LONG)
+                    .build()
+    );
+  }
 }

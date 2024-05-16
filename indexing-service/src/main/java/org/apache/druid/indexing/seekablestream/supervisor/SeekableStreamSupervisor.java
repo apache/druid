@@ -203,7 +203,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     final String baseSequenceName;
     DateTime completionTimeout; // is set after signalTasksToFinish(); if not done by timeout, take corrective action
 
-    boolean shutdownEarly = false; // set by SupervisorManager.stopTaskGroupEarly
+    boolean handoffEarly = false; // set by SupervisorManager.stopTaskGroupEarly
 
     TaskGroup(
         int groupId,
@@ -268,14 +268,14 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       return tasks.keySet();
     }
 
-    void setShutdownEarly()
+    void setHandoffEarly()
     {
-      shutdownEarly = true;
+      handoffEarly = true;
     }
 
-    Boolean getShutdownEarly()
+    Boolean getHandoffEarly()
     {
-      return shutdownEarly;
+      return handoffEarly;
     }
 
     @VisibleForTesting
@@ -690,8 +690,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           log.info("Tried to stop task group [%d] for supervisor [%s] that wasn't actively reading.", taskGroupId, supervisorId);
           continue;
         }
-
-        taskGroup.setShutdownEarly();
+        log.info("Task group [%d] for supervisor [%s] will handoff early.", taskGroupId, supervisorId);
+        taskGroup.setHandoffEarly();
       }
     }
 
@@ -3194,7 +3194,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           } else {
             DateTime earliestTaskStart = computeEarliestTaskStartTime(group);
 
-            if (earliestTaskStart.plus(ioConfig.getTaskDuration()).isBeforeNow() || group.getShutdownEarly()) {
+            if (earliestTaskStart.plus(ioConfig.getTaskDuration()).isBeforeNow() || group.getHandoffEarly()) {
               // if this task has run longer than the configured duration
               // as long as the pending task groups are less than the configured stop task count.
               // If shutdownEarly has been set, ignore stopTaskCount since this is a manual operator action.
@@ -3202,7 +3202,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                                              .stream()
                                              .mapToInt(CopyOnWriteArrayList::size)
                                              .sum() + stoppedTasks.get()
-                  < ioConfig.getMaxAllowedStops() || group.getShutdownEarly()) {
+                  < ioConfig.getMaxAllowedStops() || group.getHandoffEarly()) {
                 log.info(
                     "Task group [%d] has run for [%s]. Stopping.",
                     groupId,
