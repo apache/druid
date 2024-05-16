@@ -78,18 +78,17 @@ public class SqlModule implements Module
       return;
     }
 
-      PolyBind.optionBinder(binder, Key.get(ViewManager.class))
-              .addBinding(NoopViewManager.TYPE)
-              .to(NoopViewManager.class)
-              .in(LazySingleton.class);
+    PolyBind.optionBinder(binder, Key.get(ViewManager.class))
+            .addBinding(NoopViewManager.TYPE)
+            .to(NoopViewManager.class)
+            .in(LazySingleton.class);
 
-      PolyBind.createChoiceWithDefault(
-          binder,
-          PROPERTY_SQL_VIEW_MANAGER_TYPE,
-          Key.get(ViewManager.class),
-          NoopViewManager.TYPE
-      );
-
+    PolyBind.createChoiceWithDefault(
+        binder,
+        PROPERTY_SQL_VIEW_MANAGER_TYPE,
+        Key.get(ViewManager.class),
+        NoopViewManager.TYPE
+    );
 
     PolyBind.optionBinder(binder, Key.get(DruidSchemaManager.class))
             .addBinding(NoopDruidSchemaManager.TYPE)
