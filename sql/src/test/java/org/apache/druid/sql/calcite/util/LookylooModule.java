@@ -45,9 +45,6 @@ import java.util.List;
  */
 public class LookylooModule implements DruidModule
 {
-  public LookylooModule() {
-    int asd1=1;
-  }
   private static final String LOOKYLOO_INJECTIVE = "lookyloo121";
   private static final String LOOKYLOO_CHAINED = "lookyloo-chain";
 

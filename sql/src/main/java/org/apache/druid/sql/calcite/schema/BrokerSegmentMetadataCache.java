@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite.schema;
 
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.Sets;
+import com.google.inject.Inject;
 import org.apache.druid.client.InternalQueryConfig;
 import org.apache.druid.client.ServerView;
 import org.apache.druid.client.TimelineServerView;
@@ -76,6 +77,7 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
   private final BrokerSegmentMetadataCacheConfig config;
   private final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
 
+  @Inject
   public BrokerSegmentMetadataCache(
       final QueryLifecycleFactory queryLifecycleFactory,
       final TimelineServerView serverView,

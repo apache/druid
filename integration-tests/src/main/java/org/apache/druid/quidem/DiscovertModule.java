@@ -28,7 +28,6 @@ import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
-import org.apache.druid.discovery.DruidNodeDiscovery.Listener;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
@@ -71,6 +70,7 @@ public class DiscovertModule extends AbstractModule {
       localProps.put("druid.zk.service.enabled", "false");
       localProps.put("druid.plaintextPort", "12345");
       localProps.put("druid.host", "localhost");
+      localProps.put("druid.broker.segment.awaitInitializationOnStart","false");
       return localProps;
     }
 

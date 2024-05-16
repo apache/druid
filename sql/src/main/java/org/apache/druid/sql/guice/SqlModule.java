@@ -77,12 +77,10 @@ public class SqlModule implements Module
       return;
     }
 
-    if(false) {
       PolyBind.optionBinder(binder, Key.get(ViewManager.class))
               .addBinding(NoopViewManager.TYPE)
               .to(NoopViewManager.class)
               .in(LazySingleton.class);
-    }
 
     if(false) {
       PolyBind.createChoiceWithDefault(
