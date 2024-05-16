@@ -335,8 +335,6 @@ public class ControllerImpl implements Controller
         context.injector().getInstance(CentralizedDatasourceSchemaConfig.class);
 
     publishSchema= centralizedDatasourceSchemaConfig != null && centralizedDatasourceSchemaConfig.isEnabled();
-
-    log.info("publishSchema is [%s]", publishSchema);
   }
 
   @Override
@@ -1528,7 +1526,6 @@ public class ControllerImpl implements Controller
       boolean instanceOfSegmentWithSchema = !segmentsPlus.isEmpty() && segmentsPlus.iterator().next() instanceof DataSegmentExtendedWithSchema;
 
       if (instanceOfSegmentWithSchema) {
-        log.info("Received instance of DataSegmentWithSchema.");
         segments = new HashSet<>();
         Set<DataSegmentExtendedWithSchema> segmentsWithSchema = (Set<DataSegmentExtendedWithSchema>) segmentsPlus;
         Map<String, SegmentMetadata> segmentIdToMetadataMap = new HashMap<>();
@@ -1563,7 +1560,6 @@ public class ControllerImpl implements Controller
           );
         }
       } else {
-        log.info("Received instance of DataSegment.");
         segments = (Set<DataSegment>) segmentsPlus;
       }
 
@@ -1599,9 +1595,6 @@ public class ControllerImpl implements Controller
       }
       log.info("Query [%s] publishing %d segments.", queryDef.getQueryId(), segments.size());
 
-      if (segmentSchemaMapping != null) {
-        log.info("SegmentSchemaMapping is not null [%s]", segmentSchemaMapping);
-      }
       publishAllSegments(new DataSegmentsWithSchemas(segments, segmentSchemaMapping));
     } else if (MSQControllerTask.isExport(querySpec)) {
       // Write manifest file.

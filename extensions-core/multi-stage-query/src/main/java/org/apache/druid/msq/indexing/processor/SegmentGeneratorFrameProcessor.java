@@ -185,7 +185,6 @@ public class SegmentGeneratorFrameProcessor implements FrameProcessor<DataSegmen
     String fingerprint = null;
 
     if (segmentSchemaMapping != null) {
-      log.info("SegmentSchemaMapping is [%s]", segmentSchemaMapping);
       Map<String, SegmentMetadata> segmentMetadataMap = segmentSchemaMapping.getSegmentIdToMetadataMap();
       SegmentMetadata segmentMetadata = segmentMetadataMap.get(dataSegment.getId().toString());
       if (segmentMetadata != null) {
@@ -194,8 +193,6 @@ public class SegmentGeneratorFrameProcessor implements FrameProcessor<DataSegmen
         long numRows = segmentMetadata.getNumRows();
         schemaPayloadPlus = new SchemaPayloadPlus(schemaPayload, numRows);
       }
-    } else {
-      log.info("SegmentSchemaMapping is null.");
     }
 
     return new DataSegmentExtendedWithSchema(

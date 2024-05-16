@@ -57,7 +57,7 @@ public class RemoteTaskActionClient implements TaskActionClient
   @Override
   public <RetType> RetType submit(TaskAction<RetType> taskAction) throws IOException
   {
-    log.debug("Performing action for task[%s]: %s", task.getId(), taskAction);
+    log.info("Performing action for task[%s]: %s", task.getId(), taskAction);
 
     try {
       // We're using a ServiceClient directly here instead of OverlordClient, because OverlordClient does

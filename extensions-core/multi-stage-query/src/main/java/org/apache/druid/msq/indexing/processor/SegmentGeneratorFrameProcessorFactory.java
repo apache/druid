@@ -35,7 +35,6 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.counters.CounterTracker;
 import org.apache.druid.msq.counters.SegmentGenerationProgressCounter;
 import org.apache.druid.msq.counters.SegmentGeneratorMetricsWrapper;
@@ -65,7 +64,6 @@ import org.apache.druid.segment.realtime.appenderator.Appenderators;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
-import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.DataSegmentExtendedWithSchema;
 import org.joda.time.Period;
 
@@ -81,9 +79,6 @@ import java.util.function.Consumer;
 public class SegmentGeneratorFrameProcessorFactory
     implements FrameProcessorFactory<DataSegmentExtendedWithSchema, Set<DataSegmentExtendedWithSchema>, List<SegmentIdWithShardSpec>>
 {
-
-  private static final Logger log = new Logger(SegmentGeneratorFrameProcessorFactory.class);
-
   private final DataSchema dataSchema;
   private final ColumnMappings columnMappings;
   private final MSQTuningConfig tuningConfig;
@@ -102,7 +97,6 @@ public class SegmentGeneratorFrameProcessorFactory
     this.columnMappings = Preconditions.checkNotNull(columnMappings, "columnMappings");
     this.tuningConfig = Preconditions.checkNotNull(tuningConfig, "tuningConfig");
     this.publishSchema = publishSchema;
-    log.info("Publish schema is [%s]", publishSchema);
   }
 
   @JsonProperty
