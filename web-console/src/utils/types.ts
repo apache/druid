@@ -41,6 +41,9 @@ export function dataTypeToIcon(dataType: string): IconName {
   const typeUpper = dataType.toUpperCase();
 
   switch (typeUpper) {
+    case 'NULL':
+      return IconNames.CIRCLE;
+
     case 'TIMESTAMP':
       return IconNames.TIME;
 
@@ -83,6 +86,9 @@ export function dataTypeToIcon(dataType: string): IconName {
 
     case 'COMPLEX<QUANTILESDOUBLESSKETCH>':
     case 'COMPLEX<APPROXIMATEHISTOGRAM>':
+    case 'COMPLEX<FIXEDBUCKETSHISTOGRAM>':
+    case 'COMPLEX<ARRAYOFDOUBLESSKETCH>':
+    case 'COMPLEX<MOMENTSKETCH>':
       return IconNames.HORIZONTAL_DISTRIBUTION;
 
     case 'COMPLEX<VARIANCE>':
@@ -95,8 +101,15 @@ export function dataTypeToIcon(dataType: string): IconName {
     case 'COMPLEX<SERIALIZABLEPAIRLONGSTRING>':
       return IconNames.DOUBLE_CHEVRON_RIGHT;
 
-    case 'NULL':
-      return IconNames.CIRCLE;
+    case 'COMPLEX<BLOOM>':
+      return IconNames.FILTER_LIST;
+
+    case 'COMPLEX<KLLDOUBLESSKETCH>':
+    case 'COMPLEX<KLLFLOATSSKETCH>':
+      return IconNames.HURRICANE;
+
+    case 'COMPLEX<COMPRESSEDBIGDECIMAL>':
+      return IconNames.SORT_NUMERICAL_DESC;
 
     default:
       if (typeUpper.startsWith('ARRAY')) return IconNames.ARRAY;
