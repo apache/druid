@@ -34,7 +34,6 @@ import com.google.inject.Provides;
 import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
 import com.google.inject.util.Modules;
-import com.google.inject.util.Providers;
 import org.apache.calcite.avatica.server.AbstractAvaticaHandler;
 import org.apache.druid.cli.CliBroker2;
 import org.apache.druid.curator.CuratorModule;
@@ -445,7 +444,7 @@ public class Launcher
     Launcher.main3(null);
   }
 
-  private static Module propOverrideModuel()
+  private static Module propOverrideModuel1()
   {
     Properties localProps = new Properties();
     localProps.put("druid.enableTlsPort", "false");
@@ -466,6 +465,24 @@ public class Launcher
     @Override
     protected void configure()
     {
+//      builder.addModule(propOverrideModuel());
+    }
+
+    @Provides
+    @LazySingleton
+    public BrokerSegmentMetadataCache provideCache() {
+      return null;
+    }
+
+    @Provides
+    @LazySingleton
+    public Properties getProps() {
+      Properties localProps = new Properties();
+      localProps.put("druid.enableTlsPort", "false");
+      localProps.put("druid.zk.service.enabled", "false");
+      localProps.put("druid.plaintextPort", "12345");
+      localProps.put("druid.host", "localhost");
+      return localProps;
     }
 
     @Provides
@@ -560,23 +577,14 @@ public class Launcher
 
   }
 
-  private static DiscovertModule discoverModule()
-  {
-
-//    DruidNodeDiscoveryProvider instance = ;
-//    Module m = binder -> binder.bind(DruidNodeDiscoveryProvider.class).toInstance(instance);
-    return new DiscovertModule();
-
-  }
-
   static class CustomStartupInjectorBuilder extends StartupInjectorBuilder {
 
     private List<com.google.inject.Module> overrideModules =new ArrayList<>();
 
     public CustomStartupInjectorBuilder()
     {
-      Module m = propOverrideModuel();
-      addOverride(m);
+//      Module m = propOverrideModuel();
+//      addOverride(m);
 //      addOverride(binder -> {
 //        binder.bind(SSLClientConfig.class).toProvider(Providers.of(null));
 //        binder.bind(SSLClientConfig.class).annotatedWith(Global.class).toProvider(Providers.of(null));
@@ -615,9 +623,7 @@ public class Launcher
 
 
     SqlTestFramework framework = getCI().extracted(
-          propOverrideModuel(),
-          discoverModule(),
-          binder -> binder.bind(BrokerSegmentMetadataCache.class).toProvider(Providers.of(null))
+          new DiscovertModule()
 
         )
 
@@ -631,8 +637,8 @@ public class Launcher
     CliBroker2 c = new CliBroker2() {
       protected List<? extends Module> getModules() {
         List<Module>  ret = new ArrayList<>();
-        ret.add(discoverModule());
-        ret.add(propOverrideModuel());
+        ret.add(new DiscovertModule());
+//        ret.add(propOverrideModuel());
         ret.add(framework.testSetupModule());
 //        ret.add(new AvaticaBasedConnectionModule());
         ret.add(binder -> binder.bind(RequestLogger.class).toInstance(new TestRequestLogger()));
@@ -687,9 +693,7 @@ public class Launcher
       TestRequestLogger testRequestLogger = new TestRequestLogger();
 //      builder.addModule(connectionModule);
 
-      builder.addModule(discoverModule());
-      builder.addModule(binder -> binder.bind(BrokerSegmentMetadataCache.class).toProvider(Providers.of(null)));
-//      builder.addModule(propOverrideModuel());
+//      builder.addModule(new DiscovertModule());
 
       if(false) {
       builder.addModule(new LegacyBrokerParallelMergeConfigModule());
@@ -843,8 +847,8 @@ public class Launcher
     CliBroker2 c = new CliBroker2() {
       protected List<? extends Module> getModules() {
         List<Module>  ret = new ArrayList<>();
-        ret.add(discoverModule());
-        ret.add(propOverrideModuel());
+        ret.add(new DiscovertModule());
+//        ret.add(propOverrideModuel());
         ret.add(framework.testSetupModule());
 //        ret.add(new AvaticaBasedConnectionModule());
         ret.add(binder -> binder.bind(RequestLogger.class).toInstance(new TestRequestLogger()));
