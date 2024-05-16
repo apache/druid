@@ -3594,17 +3594,7 @@ Content-Type: application/json
 
 <details>
   <summary>View the response</summary>
-
-  ```json
-{
-  "id": "social_media",
-  "taskGroupIds": [
-    1,
-    2,
-    3
-  ]
-}
-  ```
+(empty response)
 </details>
 
 ### Shut down a supervisor
