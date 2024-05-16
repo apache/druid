@@ -37,35 +37,67 @@ import com.google.inject.util.Modules;
 import com.google.inject.util.Providers;
 import org.apache.calcite.avatica.server.AbstractAvaticaHandler;
 import org.apache.druid.cli.CliBroker2;
+import org.apache.druid.curator.CuratorModule;
+import org.apache.druid.curator.discovery.DiscoveryModule;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.guice.AnnouncerModule;
 import org.apache.druid.guice.BrokerProcessingModule;
 import org.apache.druid.guice.BrokerServiceModule;
+import org.apache.druid.guice.CoordinatorDiscoveryModule;
 import org.apache.druid.guice.DruidInjectorBuilder;
+import org.apache.druid.guice.ExpressionModule;
+import org.apache.druid.guice.FirehoseModule;
+import org.apache.druid.guice.JacksonConfigManagerModule;
+import org.apache.druid.guice.JavaScriptModule;
 import org.apache.druid.guice.JoinableFactoryModule;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LegacyBrokerParallelMergeConfigModule;
+import org.apache.druid.guice.LifecycleModule;
+import org.apache.druid.guice.LocalDataStorageDruidModule;
+import org.apache.druid.guice.MetadataConfigModule;
+import org.apache.druid.guice.NestedDataModule;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.SegmentWranglerModule;
+import org.apache.druid.guice.ServerModule;
+import org.apache.druid.guice.ServerViewModule;
 import org.apache.druid.guice.StartupInjectorBuilder;
+import org.apache.druid.guice.StartupLoggingModule;
+import org.apache.druid.guice.StorageNodeModule;
+import org.apache.druid.guice.annotations.Client;
+import org.apache.druid.guice.annotations.EscalatedClient;
 import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.guice.http.HttpClientModule;
+import org.apache.druid.guice.security.AuthenticatorModule;
+import org.apache.druid.guice.security.AuthorizerModule;
+import org.apache.druid.guice.security.DruidAuthModule;
+import org.apache.druid.guice.security.EscalatorModule;
 import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.initialization.Log4jShutterDownerModule;
+import org.apache.druid.initialization.TombstoneDataStorageModule;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.metadata.storage.derby.DerbyMetadataStorageDruidModule;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
+import org.apache.druid.rpc.guice.ServiceClientModule;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
+import org.apache.druid.segment.writeout.SegmentWriteOutMediumModule;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QuerySchedulerProvider;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
+import org.apache.druid.server.initialization.AuthenticatorMapperModule;
+import org.apache.druid.server.initialization.AuthorizerMapperModule;
+import org.apache.druid.server.initialization.ExternalStorageAccessSecurityModule;
+import org.apache.druid.server.initialization.jetty.JettyServerModule;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.log.TestRequestLogger;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -93,6 +125,7 @@ import org.apache.druid.sql.calcite.util.SqlTestFramework.Builder;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.PlannerComponentSupplier;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.QueryComponentSupplier;
 import org.apache.druid.sql.guice.SqlModule;
+import org.apache.druid.storage.StorageConnectorModule;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.client.utils.URLEncodedUtils;
@@ -656,7 +689,6 @@ public class Launcher
 
       builder.addModule(discoverModule());
       builder.addModule(binder -> binder.bind(BrokerSegmentMetadataCache.class).toProvider(Providers.of(null)));
-
 //      builder.addModule(propOverrideModuel());
 
       if(false) {
@@ -667,6 +699,49 @@ public class Launcher
       builder.addModule(new SegmentWranglerModule());
       builder.addModule(new JoinableFactoryModule());
       builder.addModule(new BrokerServiceModule());
+      }
+
+      if(false) {
+        builder.addModules(
+        new Log4jShutterDownerModule(),
+        new LifecycleModule(),
+//          ExtensionsModule.SecondaryModule.class,
+            new DruidAuthModule(),
+//          TLSCertificateCheckerModule.class,
+//          EmitterModule.class,
+            HttpClientModule.global(),
+            HttpClientModule.escalatedGlobal(),
+            new HttpClientModule("druid.broker.http", Client.class, true),
+            new HttpClientModule("druid.broker.http", EscalatedClient.class, true),
+            new CuratorModule(),
+            new AnnouncerModule(),
+//          new MetricsModule(),
+            new SegmentWriteOutMediumModule(),
+            new ServerModule(),
+            new StorageNodeModule(),
+            new JettyServerModule(),
+            new ExpressionModule(),
+            new NestedDataModule(),
+            new DiscoveryModule(),
+            new ServerViewModule(),
+            new MetadataConfigModule(),
+            new DerbyMetadataStorageDruidModule(),
+            new JacksonConfigManagerModule(),
+            new CoordinatorDiscoveryModule(),
+            new LocalDataStorageDruidModule(),
+            new TombstoneDataStorageModule(),
+            new FirehoseModule(),
+            new JavaScriptModule(),
+            new AuthenticatorModule(),
+            new AuthenticatorMapperModule(),
+            new EscalatorModule(),
+            new AuthorizerModule(),
+            new AuthorizerMapperModule(),
+            new StartupLoggingModule(),
+            new ExternalStorageAccessSecurityModule(),
+            new ServiceClientModule(),
+            new StorageConnectorModule()
+);
       }
 
 //      builder.addModule(new StorageNodeModule());
