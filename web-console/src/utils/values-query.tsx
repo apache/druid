@@ -29,6 +29,9 @@ import {
   SqlType,
   SqlValues,
 } from '@druid-toolkit/query';
+import * as JSONBig from 'json-bigint-native';
+
+import { oneOf } from './general';
 
 const SAMPLE_ARRAY_SEPARATOR = '<#>'; // Note that this is a regexp so don't add anything that is a special regexp thing
 
@@ -51,6 +54,10 @@ function columnIsAllNulls(rows: readonly unknown[][], columnIndex: number): bool
   return rows.every(row => row[columnIndex] === null);
 }
 
+function isJsonString(x: unknown): boolean {
+  return typeof x === 'string' && oneOf(x[0], '"', '{', '[');
+}
+
 export function queryResultToValuesQuery(sample: QueryResult): SqlQuery {
   const { header, rows } = sample;
   return SqlQuery.create(
@@ -63,7 +70,7 @@ export function queryResultToValuesQuery(sample: QueryResult): SqlQuery {
               const { nativeType } = column;
               const sqlType = getEffectiveSqlType(column);
               if (nativeType === 'COMPLEX<json>') {
-                return L(JSON.stringify(r));
+                return L(isJsonString(r) ? r : JSONBig.stringify(r));
               } else if (String(sqlType).endsWith(' ARRAY')) {
                 return L(r.join(SAMPLE_ARRAY_SEPARATOR));
               } else if (
