@@ -130,6 +130,10 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpRequest.BodyPublishers;
+import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -139,6 +143,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+
+import static org.junit.Assert.assertNotEquals;
 
 public class Launcher
 {
@@ -740,8 +746,21 @@ public class Launcher
 //    System.out.println(u);
 
     if(true) {
-Lifecycle lifecycle = GuiceRunnable.initLifecycle(framework.injector(), log);
-lifecycle.join();
+        Lifecycle lifecycle = GuiceRunnable.initLifecycle(framework.injector(), log);
+
+        HttpRequest request = HttpRequest.newBuilder()
+           .uri(URI.create("http://localhost:12345/druid/v2/sql"))
+           .header("Content-Type", "application/json")
+           .POST(BodyPublishers.ofString("{\"query\":\"Select * from foo\"}"))
+           .build();
+        System.out.println(request);
+//        request.
+        HttpClient hc = HttpClient.newHttpClient();
+        HttpResponse<String> a = hc.send(request, HttpResponse.BodyHandlers.ofString());
+        System.out.println(a);
+        assertNotEquals(400, a.statusCode());
+
+        lifecycle.stop();
     }else {
     CliBroker2 c = new CliBroker2() {
       protected List<? extends Module> getModules() {
