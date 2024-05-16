@@ -598,6 +598,7 @@ public class Launcher
 //        ret.add(new AvaticaBasedConnectionModule());
         ret.add(binder -> binder.bind(RequestLogger.class).toInstance(new TestRequestLogger()));
         ret.add(CacheTestHelperModule.ResultCacheMode.DISABLED.makeModule());
+        ret.add(new QuidemCaptureModule());
         ret.addAll(super.getModules());
         return ret;
       }
@@ -606,6 +607,7 @@ public class Launcher
     };
     framework.injector().injectMembers(c);
     // c.configure(new Properties());
+
     c.run();
 
   }
