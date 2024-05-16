@@ -41,8 +41,14 @@ import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.guice.BrokerProcessingModule;
+import org.apache.druid.guice.BrokerServiceModule;
 import org.apache.druid.guice.DruidInjectorBuilder;
+import org.apache.druid.guice.JoinableFactoryModule;
 import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.guice.LegacyBrokerParallelMergeConfigModule;
+import org.apache.druid.guice.QueryRunnerFactoryModule;
+import org.apache.druid.guice.SegmentWranglerModule;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.initialization.DruidModule;
@@ -403,7 +409,7 @@ public class Launcher
   @Test
   public void runIt() throws Exception
   {
-    Launcher.main1(null);
+    Launcher.main3(null);
   }
 
   private static Module propOverrideModuel()
@@ -611,5 +617,176 @@ public class Launcher
     c.run();
 
   }
+
+
+  private static ConfigurationInstance getCI2() throws SQLException, Exception
+  {
+    SqlTestFrameworkConfig config = buildConfigfromURIParams("druidtest:///");
+
+    ConfigurationInstance ci = CONFIG_STORE.getConfigurationInstance(
+        config,
+        x -> new AvaticaBasedTestConnectionSupplier2(x)
+    );
+    return ci;
+  }
+
+  static class AvaticaBasedTestConnectionSupplier2 implements QueryComponentSupplier
+  {
+    private QueryComponentSupplier delegate;
+    private AvaticaBasedConnectionModule connectionModule;
+
+    public AvaticaBasedTestConnectionSupplier2(QueryComponentSupplier delegate)
+    {
+      this.delegate = delegate;
+      this.connectionModule = new AvaticaBasedConnectionModule();
+    }
+
+    @Override
+    public void gatherProperties(Properties properties)
+    {
+      delegate.gatherProperties(properties);
+    }
+
+    @Override
+    public void configureGuice(DruidInjectorBuilder builder)
+    {
+      delegate.configureGuice(builder);
+      TestRequestLogger testRequestLogger = new TestRequestLogger();
+//      builder.addModule(connectionModule);
+
+      builder.addModule(discoverModule());
+      builder.addModule(binder -> binder.bind(BrokerSegmentMetadataCache.class).toProvider(Providers.of(null)));
+
+//      builder.addModule(propOverrideModuel());
+
+      if(false) {
+      builder.addModule(new LegacyBrokerParallelMergeConfigModule());
+      builder.addModule(new BrokerProcessingModule());
+//      new QueryableModule(),
+      builder.addModule(new QueryRunnerFactoryModule());
+      builder.addModule(new SegmentWranglerModule());
+      builder.addModule(new JoinableFactoryModule());
+      builder.addModule(new BrokerServiceModule());
+      }
+
+//      builder.addModule(new StorageNodeModule());
+
+//      builder.addModules(new CliBroker2().getmodules2().toArray(new Module[0]));
+
+      builder.addModule(
+          binder -> {
+            binder.bindConstant().annotatedWith(Names.named("serviceName")).to("test");
+            binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
+            binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
+            binder.bind(AuthenticatorMapper.class).toInstance(CalciteTests.TEST_AUTHENTICATOR_MAPPER);
+            binder.bind(AuthorizerMapper.class).toInstance(CalciteTests.TEST_AUTHORIZER_MAPPER);
+            binder.bind(Escalator.class).toInstance(CalciteTests.TEST_AUTHENTICATOR_ESCALATOR);
+            binder.bind(RequestLogger.class).toInstance(testRequestLogger);
+            binder.bind(String.class)
+                .annotatedWith(DruidSchemaName.class)
+                .toInstance(CalciteTests.DRUID_SCHEMA_NAME);
+            binder.bind(ServiceEmitter.class).to(NoopServiceEmitter.class);
+            binder.bind(QuerySchedulerProvider.class).in(LazySingleton.class);
+            binder.bind(QueryScheduler.class)
+                .toProvider(QuerySchedulerProvider.class)
+                .in(LazySingleton.class);
+            binder.install(new SqlModule.SqlStatementFactoryModule());
+            binder.bind(new TypeLiteral<Supplier<DefaultQueryConfig>>()
+            {
+            }).toInstance(Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of())));
+            binder.bind(CalciteRulesManager.class).toInstance(new CalciteRulesManager(ImmutableSet.of()));
+            binder.bind(CatalogResolver.class).toInstance(CatalogResolver.NULL_RESOLVER);
+          }
+      );
+
+    }
+
+    @Override
+    public QueryRunnerFactoryConglomerate createCongolmerate(Builder builder, Closer closer)
+    {
+      return delegate.createCongolmerate(builder, closer);
+    }
+
+    @Override
+    public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(QueryRunnerFactoryConglomerate conglomerate,
+        JoinableFactoryWrapper joinableFactory, Injector injector)
+    {
+      return delegate.createQuerySegmentWalker(conglomerate, joinableFactory, injector);
+    }
+
+    @Override
+    public SqlEngine createEngine(QueryLifecycleFactory qlf, ObjectMapper objectMapper, Injector injector)
+    {
+      return delegate.createEngine(qlf, objectMapper, injector);
+    }
+
+    @Override
+    public void configureJsonMapper(ObjectMapper mapper)
+    {
+      delegate.configureJsonMapper(mapper);
+    }
+
+    @Override
+    public JoinableFactoryWrapper createJoinableFactoryWrapper(LookupExtractorFactoryContainerProvider lookupProvider)
+    {
+      return delegate.createJoinableFactoryWrapper(lookupProvider);
+    }
+
+    @Override
+    public void finalizeTestFramework(SqlTestFramework sqlTestFramework)
+    {
+      delegate.finalizeTestFramework(sqlTestFramework);
+    }
+
+    @Override
+    public void close() throws IOException
+    {
+      connectionModule.close();
+      delegate.close();
+    }
+
+    @Override
+    public PlannerComponentSupplier getPlannerComponentSupplier()
+    {
+      return delegate.getPlannerComponentSupplier();
+    }
+  }
+
+
+  private static void main3(Object object) throws Exception
+ {
+
+    SqlTestFramework framework = getCI2().framework
+        //      builder.addModule(propOverrideModuel());
+
+        ;
+
+//    SSLContextProvider u = injector.getInstance(SSLContextProvider.class);
+//    System.out.println(u);
+
+
+    CliBroker2 c = new CliBroker2() {
+      protected List<? extends Module> getModules() {
+        List<Module>  ret = new ArrayList<>();
+        ret.add(discoverModule());
+        ret.add(propOverrideModuel());
+        ret.add(framework.testSetupModule());
+//        ret.add(new AvaticaBasedConnectionModule());
+        ret.add(binder -> binder.bind(RequestLogger.class).toInstance(new TestRequestLogger()));
+        ret.add(CacheTestHelperModule.ResultCacheMode.DISABLED.makeModule());
+        ret.add(new QuidemCaptureModule());
+        ret.addAll(super.getModules());
+        return ret;
+      }
+
+
+    };
+    framework.injector().injectMembers(c);
+//     c.configure(new Properties());
+
+    c.run2();
+
+  }
+
 
 }

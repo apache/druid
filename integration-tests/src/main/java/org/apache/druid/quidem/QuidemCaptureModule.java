@@ -31,7 +31,4 @@ public class QuidemCaptureModule implements Module
   {
     Jerseys.addResource(binder, QuidemCapture.class);
   }
-
-
-
 }

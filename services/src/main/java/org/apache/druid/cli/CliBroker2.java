@@ -20,9 +20,10 @@
 package org.apache.druid.cli;
 
 import com.github.rvesse.airline.annotations.Command;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.google.inject.Inject;
+import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
@@ -36,7 +37,6 @@ import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.selector.CustomTierSelectorStrategyConfig;
 import org.apache.druid.client.selector.ServerSelectorStrategy;
 import org.apache.druid.client.selector.TierSelectorStrategy;
-import org.apache.druid.curator.ZkEnablementConfig;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.BrokerProcessingModule;
 import org.apache.druid.guice.BrokerServiceModule;
@@ -52,6 +52,8 @@ import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.QueryableModule;
 import org.apache.druid.guice.SegmentWranglerModule;
 import org.apache.druid.guice.ServerTypeConfig;
+import org.apache.druid.initialization.ServerInjectorBuilder;
+import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.RetryQueryRunnerConfig;
@@ -93,7 +95,7 @@ public class CliBroker2 extends ServerRunnable
 {
   private static final Logger log = new Logger(CliBroker2.class);
 
-  private boolean isZkEnabled = true;
+  private boolean isZkEnabled = false;
 
   public CliBroker2()
   {
@@ -101,15 +103,9 @@ public class CliBroker2 extends ServerRunnable
   }
 
 
-  List<? extends Module> getmodules2()
+  public List<? extends Module> getmodules2()
   {
     return getModules();
-  }
-
-  @Inject
-  public void configure(Properties properties)
-  {
-    isZkEnabled = ZkEnablementConfig.isEnabled(properties);
   }
 
   @Override
@@ -283,4 +279,43 @@ public class CliBroker2 extends ServerRunnable
         new SqlModule()
     );
   }
+
+
+  public void run2()
+  {
+    final Injector injector = makeInjector2(getNodeRoles(getProperties()));
+    final Lifecycle lifecycle = initLifecycle(injector);
+
+    try {
+      lifecycle.join();
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public Injector makeInjector2(Set<NodeRole> nodeRoles)
+  {
+    try {
+      return makeServerInjector11(baseInjector, nodeRoles, getModules());
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  @VisibleForTesting
+  public static Injector makeServerInjector11(
+      final Injector baseInjector,
+      final Set<NodeRole> nodeRoles,
+      final Iterable<? extends Module> modules
+  )
+  {
+    return new ServerInjectorBuilder(baseInjector)
+        .nodeRoles(nodeRoles)
+        .serviceModules(modules)
+        .build();
+  }
+
+
 }
