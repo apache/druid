@@ -654,14 +654,20 @@ return      componentSupplier.getPlannerComponentSupplier().createViewManager();
         // test pulls in a module, then pull in that module, even though we are
         // not the Druid node to which the module is scoped.
         .ignoreLoadScopes()
-        .addModule(new LookylooModule())
-        .addModule(new SegmentWranglerModule())
-      .addModule(new SqlAggregationModule())
+//        .addModule(new LookylooModule())
+//        .addModule(new SegmentWranglerModule())
+//      .addModule(new SqlAggregationModule())
 //      .addModule(new SqlModule())
-        .addModule(new ExpressionModule());
+//        .addModule(new ExpressionModule());
 //        .addModule(testSetupModule());
+        ;
 
     List<Module> overrideModules = new ArrayList<>(builder.overrideModules);
+    overrideModules.add(new LookylooModule());
+    overrideModules.add(new SqlAggregationModule());
+    overrideModules.add(new SegmentWranglerModule());
+    overrideModules.add(new ExpressionModule());
+
     overrideModules.add(testSetupModule());
     builder.componentSupplier.configureGuice(injectorBuilder, overrideModules);
 
