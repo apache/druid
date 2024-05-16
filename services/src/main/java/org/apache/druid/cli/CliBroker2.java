@@ -20,7 +20,6 @@
 package org.apache.druid.cli;
 
 import com.github.rvesse.airline.annotations.Command;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Injector;
@@ -283,39 +282,18 @@ public class CliBroker2 extends ServerRunnable
 
   public void run2()
   {
-    final Injector injector = makeInjector2(getNodeRoles(getProperties()));
-    final Lifecycle lifecycle = initLifecycle(injector);
-
     try {
+      Injector injector = new ServerInjectorBuilder(baseInjector)
+          .nodeRoles(null)
+          .serviceModules(getModules())
+          .build();
+
+      Lifecycle lifecycle = initLifecycle(injector);
       lifecycle.join();
     }
     catch (Exception e) {
       throw new RuntimeException(e);
     }
   }
-
-  public Injector makeInjector2(Set<NodeRole> nodeRoles)
-  {
-    try {
-      return makeServerInjector11(baseInjector, nodeRoles, getModules());
-    }
-    catch (Exception e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  @VisibleForTesting
-  public static Injector makeServerInjector11(
-      final Injector baseInjector,
-      final Set<NodeRole> nodeRoles,
-      final Iterable<? extends Module> modules
-  )
-  {
-    return new ServerInjectorBuilder(baseInjector)
-        .nodeRoles(null)
-        .serviceModules(modules)
-        .build();
-  }
-
 
 }
