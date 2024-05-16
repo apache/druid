@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Maps;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.client.DruidServerConfig;
+import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.guice.ExtensionsLoader;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.StringUtils;
@@ -137,14 +138,14 @@ public class StatusResource
 
     public Status(Collection<DruidModule> modules)
     {
-      this.version = "30.0.0-asd1";//getDruidVersion();
+      this.version = getDruidVersion();
       this.modules = getExtensionVersions(modules);
       this.memory = new Memory(JvmUtils.getRuntimeInfo());
     }
 
     private String getDruidVersion()
     {
-      return Status.class.getPackage().getImplementationVersion();
+      return GuavaUtils.firstNonNull(Status.class.getPackage().getImplementationVersion(), "unknown");
     }
 
     @JsonProperty

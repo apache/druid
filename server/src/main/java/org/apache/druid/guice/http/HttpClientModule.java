@@ -120,7 +120,7 @@ public class HttpClientModule implements Module
       final Binding<SSLContext> sslContextBinding = getSslContextBinding();
 
       if (sslContextBinding != null) {
-//        builder.withSslContext(sslContextBinding.getProvider().get());
+        builder.withSslContext(sslContextBinding.getProvider().get());
       }
 
       HttpClient client = HttpClientInit.createClient(

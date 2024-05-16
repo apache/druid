@@ -90,6 +90,7 @@ import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QuerySchedulerProvider;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
+import org.apache.druid.server.initialization.AuthorizerMapperModule;
 import org.apache.druid.server.initialization.ExternalStorageAccessSecurityModule;
 import org.apache.druid.server.initialization.jetty.JettyServerModule;
 import org.apache.druid.server.log.RequestLogger;
@@ -607,7 +608,7 @@ public class Launcher
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
             binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
             binder.bind(AuthenticatorMapper.class).toInstance(CalciteTests.TEST_AUTHENTICATOR_MAPPER);
-            binder.bind(AuthorizerMapper.class).toInstance(CalciteTests.TEST_AUTHORIZER_MAPPER);
+//            binder.bind(AuthorizerMapper.class).toInstance(CalciteTests.TEST_AUTHORIZER_MAPPER);
             binder.bind(Escalator.class).toInstance(CalciteTests.TEST_AUTHENTICATOR_ESCALATOR);
             binder.bind(RequestLogger.class).toInstance(testRequestLogger);
             binder.bind(String.class)
@@ -663,7 +664,7 @@ public class Launcher
 //            new AuthenticatorMapperModule(),
 //            new EscalatorModule(),
             new AuthorizerModule(),
-//            new AuthorizerMapperModule(),
+            new AuthorizerMapperModule(),
             new StartupLoggingModule(),
             new ExternalStorageAccessSecurityModule(),
             new ServiceClientModule(),
@@ -750,17 +751,9 @@ public class Launcher
     if(true) {
         Lifecycle lifecycle = GuiceRunnable.initLifecycle(framework.injector(), log);
 
-        HttpRequest request = HttpRequest.newBuilder()
-           .uri(URI.create("http://localhost:12345/druid/v2/sql"))
-           .header("Content-Type", "application/json")
-           .POST(BodyPublishers.ofString("{\"query\":\"Select * from foo\"}"))
-           .build();
-        System.out.println(request);
-//        request.
-        HttpClient hc = HttpClient.newHttpClient();
-        HttpResponse<String> a = hc.send(request, HttpResponse.BodyHandlers.ofString());
-        System.out.println(a);
-        assertNotEquals(400, a.statusCode());
+        chk1();
+        chkStatus();
+
 
         lifecycle.stop();
     }else {
@@ -786,6 +779,36 @@ public class Launcher
 
     c.run2();
     }
+
+  }
+
+  private static void chk1() throws IOException, InterruptedException
+  {
+    HttpRequest request = HttpRequest.newBuilder()
+       .uri(URI.create("http://localhost:12345/druid/v2/sql"))
+       .header("Content-Type", "application/json")
+       .POST(BodyPublishers.ofString("{\"query\":\"Select * from foo\"}"))
+       .build();
+    System.out.println(request);
+//        request.
+    HttpClient hc = HttpClient.newHttpClient();
+    HttpResponse<String> a = hc.send(request, HttpResponse.BodyHandlers.ofString());
+    System.out.println(a);
+    assertNotEquals(400, a.statusCode());
+  }
+  private static void chkStatus() throws IOException, InterruptedException
+  {
+    HttpRequest request = HttpRequest.newBuilder()
+       .uri(URI.create("http://localhost:12345/status"))
+       .header("Content-Type", "application/json")
+       .GET()
+       .build();
+    System.out.println(request);
+//        request.
+    HttpClient hc = HttpClient.newHttpClient();
+    HttpResponse<String> a = hc.send(request, HttpResponse.BodyHandlers.ofString());
+    System.out.println(a);
+    assertNotEquals(400, a.statusCode());
 
   }
 
