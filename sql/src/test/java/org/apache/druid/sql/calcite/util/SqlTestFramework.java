@@ -53,6 +53,7 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.apache.druid.sql.calcite.TempDirProducer;
+import org.apache.druid.sql.calcite.aggregation.SqlAggregationModule;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
@@ -569,7 +570,14 @@ public class SqlTestFramework
 
     @Provides
     @LazySingleton
-    public QuerySegmentWalker segmentsQuerySegmentWalker(final Injector injector)
+    public QuerySegmentWalker querySegmentWalker(final Injector injector)
+    {
+      return injector.getInstance(SpecificSegmentsQuerySegmentWalker.class);
+    }
+
+    @Provides
+    @LazySingleton
+    public SpecificSegmentsQuerySegmentWalker specificSegmentsQuerySegmentWalker(final Injector injector)
     {
       SpecificSegmentsQuerySegmentWalker walker = componentSupplier.createQuerySegmentWalker(
           injector.getInstance(QueryRunnerFactoryConglomerate.class),
@@ -648,7 +656,8 @@ return      componentSupplier.getPlannerComponentSupplier().createViewManager();
         .ignoreLoadScopes()
         .addModule(new LookylooModule())
         .addModule(new SegmentWranglerModule())
-//        .addModule(new SqlAggregationModule())
+      .addModule(new SqlAggregationModule())
+//      .addModule(new SqlModule())
         .addModule(new ExpressionModule());
 //        .addModule(testSetupModule());
 
