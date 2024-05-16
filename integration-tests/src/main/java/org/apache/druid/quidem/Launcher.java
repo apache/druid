@@ -83,7 +83,7 @@ public class Launcher
 
     ConfigurationInstance ci = CONFIG_STORE.getConfigurationInstance(
         config,
-        x -> new BrokerBasedTestConnection(x)
+        x -> new ExposedAsBrokerQueryComponentSupplierWrapper(x)
     );
     return ci;
   }

@@ -129,11 +129,14 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Properties;
 
-class BrokerBasedTestConnection implements QueryComponentSupplier
+/**
+ * A wrapper class to expose a {@link QueryComponentSupplier} as a Broker service.
+ */
+public class ExposedAsBrokerQueryComponentSupplierWrapper implements QueryComponentSupplier
 {
   private QueryComponentSupplier delegate;
 
-  public BrokerBasedTestConnection(QueryComponentSupplier delegate)
+  public ExposedAsBrokerQueryComponentSupplierWrapper(QueryComponentSupplier delegate)
   {
     this.delegate = delegate;
   }
@@ -180,7 +183,7 @@ class BrokerBasedTestConnection implements QueryComponentSupplier
 
     installForServerModules(builder);
 
-    overrideModules.addAll(BrokerBasedTestConnection.brokerModules());
+    overrideModules.addAll(ExposedAsBrokerQueryComponentSupplierWrapper.brokerModules());
     overrideModules.add(new DiscovertModule());
 
   }
