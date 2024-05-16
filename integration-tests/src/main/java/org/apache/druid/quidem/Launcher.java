@@ -741,12 +741,7 @@ public class Launcher
  {
 
     SqlTestFramework framework = getCI2().framework
-        //      builder.addModule(propOverrideModuel());
-
         ;
-
-//    SSLContextProvider u = injector.getInstance(SSLContextProvider.class);
-//    System.out.println(u);
 
     if(true) {
         Lifecycle lifecycle = GuiceRunnable.initLifecycle(framework.injector(), log);
@@ -790,7 +785,6 @@ public class Launcher
        .POST(BodyPublishers.ofString("{\"query\":\"Select * from foo\"}"))
        .build();
     System.out.println(request);
-//        request.
     HttpClient hc = HttpClient.newHttpClient();
     HttpResponse<String> a = hc.send(request, HttpResponse.BodyHandlers.ofString());
     System.out.println(a);
