@@ -48,15 +48,21 @@ import org.apache.druid.msq.util.SequenceUtils;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.SchemaPayload;
+import org.apache.druid.segment.SchemaPayloadPlus;
+import org.apache.druid.segment.SegmentMetadata;
+import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
 import org.apache.druid.sql.calcite.planner.ColumnMapping;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.DataSegmentExtendedWithSchema;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
@@ -64,10 +70,11 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
-public class SegmentGeneratorFrameProcessor implements FrameProcessor<DataSegment>
+public class SegmentGeneratorFrameProcessor implements FrameProcessor<DataSegmentExtendedWithSchema>
 {
   private static final Logger log = new Logger(SegmentGeneratorFrameProcessor.class);
 
@@ -121,7 +128,7 @@ public class SegmentGeneratorFrameProcessor implements FrameProcessor<DataSegmen
   }
 
   @Override
-  public ReturnOrAwait<DataSegment> runIncrementally(final IntSet readableInputs) throws InterruptedException
+  public ReturnOrAwait<DataSegmentExtendedWithSchema> runIncrementally(final IntSet readableInputs) throws InterruptedException
   {
     if (firstRun) {
       log.debug("Starting job for segment [%s].", segmentIdWithShardSpec.asSegmentId());
@@ -157,7 +164,7 @@ public class SegmentGeneratorFrameProcessor implements FrameProcessor<DataSegmen
         appenderator.clear();
 
         log.debug("Finished work for segment [%s].", segmentIdWithShardSpec.asSegmentId());
-        return ReturnOrAwait.returnObject(Iterables.getOnlyElement(metadata.getSegments()));
+        return ReturnOrAwait.returnObject(getSegmentAndSchema(metadata));
       }
     } else {
       if (appenderator.getSegments().isEmpty()) {
@@ -167,6 +174,36 @@ public class SegmentGeneratorFrameProcessor implements FrameProcessor<DataSegmen
       addFrame(inChannel.read());
       return ReturnOrAwait.awaitAll(1);
     }
+  }
+
+  private DataSegmentExtendedWithSchema getSegmentAndSchema(SegmentsAndCommitMetadata metadata)
+  {
+    DataSegment dataSegment = Iterables.getOnlyElement(metadata.getSegments());
+    SegmentSchemaMapping segmentSchemaMapping = metadata.getSegmentSchemaMapping();
+
+    SchemaPayloadPlus schemaPayloadPlus = null;
+    String fingerprint = null;
+
+    if (segmentSchemaMapping != null) {
+      log.info("SegmentSchemaMapping is [%s]", segmentSchemaMapping);
+      Map<String, SegmentMetadata> segmentMetadataMap = segmentSchemaMapping.getSegmentIdToMetadataMap();
+      SegmentMetadata segmentMetadata = segmentMetadataMap.get(dataSegment.getId().toString());
+      if (segmentMetadata != null) {
+        fingerprint = segmentMetadata.getSchemaFingerprint();
+        SchemaPayload schemaPayload = segmentSchemaMapping.getSchemaFingerprintToPayloadMap().get(fingerprint);
+        long numRows = segmentMetadata.getNumRows();
+        schemaPayloadPlus = new SchemaPayloadPlus(schemaPayload, numRows);
+      }
+    } else {
+      log.info("SegmentSchemaMapping is null.");
+    }
+
+    return new DataSegmentExtendedWithSchema(
+        dataSegment,
+        schemaPayloadPlus,
+        fingerprint,
+        CentralizedDatasourceSchemaConfig.SCHEMA_VERSION
+    );
   }
 
   @Override

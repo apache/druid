@@ -35,6 +35,7 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.counters.CounterTracker;
 import org.apache.druid.msq.counters.SegmentGenerationProgressCounter;
 import org.apache.druid.msq.counters.SegmentGeneratorMetricsWrapper;
@@ -65,6 +66,7 @@ import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.DataSegmentExtendedWithSchema;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
@@ -77,22 +79,30 @@ import java.util.function.Consumer;
 
 @JsonTypeName("segmentGenerator")
 public class SegmentGeneratorFrameProcessorFactory
-    implements FrameProcessorFactory<DataSegment, Set<DataSegment>, List<SegmentIdWithShardSpec>>
+    implements FrameProcessorFactory<DataSegmentExtendedWithSchema, Set<DataSegmentExtendedWithSchema>, List<SegmentIdWithShardSpec>>
 {
+
+  private static final Logger log = new Logger(SegmentGeneratorFrameProcessorFactory.class);
+
   private final DataSchema dataSchema;
   private final ColumnMappings columnMappings;
   private final MSQTuningConfig tuningConfig;
+  @Nullable
+  private final Boolean publishSchema;
 
   @JsonCreator
   public SegmentGeneratorFrameProcessorFactory(
       @JsonProperty("dataSchema") final DataSchema dataSchema,
       @JsonProperty("columnMappings") final ColumnMappings columnMappings,
-      @JsonProperty("tuningConfig") final MSQTuningConfig tuningConfig
+      @JsonProperty("tuningConfig") final MSQTuningConfig tuningConfig,
+      @JsonProperty("publishSchema") @Nullable final Boolean publishSchema
   )
   {
     this.dataSchema = Preconditions.checkNotNull(dataSchema, "dataSchema");
     this.columnMappings = Preconditions.checkNotNull(columnMappings, "columnMappings");
     this.tuningConfig = Preconditions.checkNotNull(tuningConfig, "tuningConfig");
+    this.publishSchema = publishSchema;
+    log.info("Publish schema is [%s]", publishSchema);
   }
 
   @JsonProperty
@@ -113,8 +123,15 @@ public class SegmentGeneratorFrameProcessorFactory
     return tuningConfig;
   }
 
+  @JsonProperty
+  @Nullable
+  public Boolean getPublishSchema()
+  {
+    return publishSchema;
+  }
+
   @Override
-  public ProcessorsAndChannels<DataSegment, Set<DataSegment>> makeProcessors(
+  public ProcessorsAndChannels<DataSegmentExtendedWithSchema, Set<DataSegmentExtendedWithSchema>> makeProcessors(
       StageDefinition stageDefinition,
       int workerNumber,
       List<InputSlice> inputSlices,
@@ -194,8 +211,7 @@ public class SegmentGeneratorFrameProcessorFactory
                   meters,
                   parseExceptionHandler,
                   true,
-                  // MSQ doesn't support CentralizedDatasourceSchema feature as of now.
-                  CentralizedDatasourceSchemaConfig.create(false)
+                  CentralizedDatasourceSchemaConfig.create(Boolean.TRUE.equals(publishSchema))
               );
 
           return new SegmentGeneratorFrameProcessor(
@@ -226,14 +242,14 @@ public class SegmentGeneratorFrameProcessorFactory
   }
 
   @Override
-  public TypeReference<Set<DataSegment>> getResultTypeReference()
+  public TypeReference<Set<DataSegmentExtendedWithSchema>> getResultTypeReference()
   {
-    return new TypeReference<Set<DataSegment>>() {};
+    return new TypeReference<Set<DataSegmentExtendedWithSchema>>() {};
   }
 
   @Nullable
   @Override
-  public Set<DataSegment> mergeAccumulatedResult(Set<DataSegment> accumulated, Set<DataSegment> otherAccumulated)
+  public Set<DataSegmentExtendedWithSchema> mergeAccumulatedResult(Set<DataSegmentExtendedWithSchema> accumulated, Set<DataSegmentExtendedWithSchema> otherAccumulated)
   {
     accumulated.addAll(otherAccumulated);
     return accumulated;
