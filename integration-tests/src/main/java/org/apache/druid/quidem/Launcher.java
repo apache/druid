@@ -618,7 +618,7 @@ public class Launcher
             binder.bind(QueryScheduler.class)
                 .toProvider(QuerySchedulerProvider.class)
                 .in(LazySingleton.class);
-            binder.install(new SqlModule.SqlStatementFactoryModule());
+//            binder.install(new SqlModule.SqlStatementFactoryModule());
             binder.bind(new TypeLiteral<Supplier<DefaultQueryConfig>>()
             {
             }).toInstance(Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of())));
@@ -667,7 +667,9 @@ public class Launcher
             new StartupLoggingModule(),
             new ExternalStorageAccessSecurityModule(),
             new ServiceClientModule(),
-            new StorageConnectorModule()
+            new StorageConnectorModule(),
+            new SqlModule()
+
 );
 //      builder.addModules();
 //        builder.addModules(new CliBroker2().getmodules2().toArray(new Module[0]));

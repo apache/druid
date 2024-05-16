@@ -44,6 +44,7 @@ import org.apache.druid.sql.calcite.planner.CalcitePlannerModule;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.run.NativeSqlEngine;
+import org.apache.druid.sql.calcite.schema.DruidCalciteSchemaModule;
 import org.apache.druid.sql.calcite.schema.DruidSchemaManager;
 import org.apache.druid.sql.calcite.schema.NoopDruidSchemaManager;
 import org.apache.druid.sql.calcite.view.DruidViewModule;
@@ -106,7 +107,7 @@ public class SqlModule implements Module
 
     binder.bind(TableDefnRegistry.class).in(LazySingleton.class);
 
-//    binder.install(new DruidCalciteSchemaModule());
+    binder.install(new DruidCalciteSchemaModule());
     binder.install(new CalcitePlannerModule());
     binder.install(new SqlAggregationModule());
     binder.install(new DruidViewModule());

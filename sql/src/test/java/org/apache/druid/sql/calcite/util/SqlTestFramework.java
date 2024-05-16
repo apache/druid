@@ -53,7 +53,6 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.apache.druid.sql.calcite.TempDirProducer;
-import org.apache.druid.sql.calcite.aggregation.SqlAggregationModule;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
@@ -649,7 +648,7 @@ return      componentSupplier.getPlannerComponentSupplier().createViewManager();
         .ignoreLoadScopes()
         .addModule(new LookylooModule())
         .addModule(new SegmentWranglerModule())
-        .addModule(new SqlAggregationModule())
+//        .addModule(new SqlAggregationModule())
         .addModule(new ExpressionModule());
 //        .addModule(testSetupModule());
 

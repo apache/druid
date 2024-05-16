@@ -77,7 +77,6 @@ import org.apache.druid.server.router.TieredBrokerConfig;
 import org.apache.druid.sql.calcite.schema.DruidSchemaName;
 import org.apache.druid.sql.calcite.schema.MetadataSegmentView;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.apache.druid.sql.calcite.util.LookylooModule;
 import org.apache.druid.sql.guice.SqlModule;
 import org.apache.druid.timeline.PruneLoadSpec;
 import org.eclipse.jetty.server.Server;
@@ -196,10 +195,10 @@ public class CliBroker2 extends ServerRunnable
 
           Jerseys.addResource(binder, SelfDiscoveryResource.class);
           LifecycleModule.registerKey(binder, Key.get(SelfDiscoveryResource.class));
-        },
+        }
 //        new LookupModule(),
 //        new LookylooModule(),
-        new SqlModule()
+//        new SqlModule()
     );
   }
 
