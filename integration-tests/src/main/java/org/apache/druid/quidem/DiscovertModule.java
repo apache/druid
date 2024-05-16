@@ -53,7 +53,6 @@ public class DiscovertModule extends AbstractModule {
     @Override
     protected void configure()
     {
-//      builder.addModule(propOverrideModuel());
     }
 
     @Provides
