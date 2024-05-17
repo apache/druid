@@ -495,7 +495,6 @@ public abstract class ITCatalogIngestAndQueryTest
         null,
         HttpResponseStatus.BAD_REQUEST
     );
-    LOG.info("Error message:\n%s", sqlTaskStatus.getError().getUnderlyingException().getMessage());
     assertTrue(sqlTaskStatus.getError() != null && sqlTaskStatus.getError()
         .getUnderlyingException()
         .getMessage()
@@ -590,7 +589,6 @@ public abstract class ITCatalogIngestAndQueryTest
         null,
         HttpResponseStatus.BAD_REQUEST
     );
-    LOG.info("Error message:\n%s", sqlTaskStatus.getError().getUnderlyingException().getMessage());
     assertTrue(sqlTaskStatus.getError() != null && sqlTaskStatus.getError()
         .getUnderlyingException()
         .getMessage()
