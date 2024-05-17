@@ -20,8 +20,8 @@ import './modules';
 
 import { Intent, Menu, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import type { SqlExpression, SqlTable } from '@druid-toolkit/query';
-import { C, L, sql, SqlLiteral, SqlQuery, T } from '@druid-toolkit/query';
+import type { SqlExpression } from '@druid-toolkit/query';
+import { C, L, sql, SqlLiteral, SqlQuery, SqlTable, T } from '@druid-toolkit/query';
 import type { ExpressionMeta, TransferValue } from '@druid-toolkit/visuals-core';
 import {
   useModuleContainer,
@@ -35,7 +35,7 @@ import { useStore } from 'zustand';
 import { ShowValueDialog } from '../../dialogs/show-value-dialog/show-value-dialog';
 import { useLocalStorageState, useQueryManager } from '../../hooks';
 import { AppToaster } from '../../singletons';
-import { deepGet, filterMap, findMap, LocalStorageKeys, oneOf, queryDruidSql } from '../../utils';
+import { deepGet, filterMap, LocalStorageKeys, oneOf, queryDruidSql } from '../../utils';
 
 import { ControlPane } from './control-pane/control-pane';
 import { DroppableContainer } from './droppable-container/droppable-container';
@@ -150,8 +150,11 @@ async function getMaxTimeForTable(tableName: string): Promise<Date | undefined> 
     query: sql`SELECT MAX(__time) AS "maxTime" FROM ${T(tableName)}`,
   });
 
-  const maxTime = new Date(deepGet(d, '0.maxTime'));
+  let maxTime = new Date(deepGet(d, '0.maxTime'));
   if (isNaN(maxTime.valueOf())) return;
+
+  // Add 1ms to the maxTime date so as to allow filters like `"__time" < {maxTime}" to capture the last event which might also be the only event
+  maxTime = new Date(maxTime.valueOf() + 1);
 
   // micro-cache set
   lastMaxTimeTable = tableName;
@@ -162,12 +165,15 @@ async function getMaxTimeForTable(tableName: string): Promise<Date | undefined> 
 }
 
 function getFirstTableName(q: SqlQuery): string | undefined {
-  return (
-    findMap(q.getWithParts(), withPart => {
-      if (!(withPart.query instanceof SqlQuery)) return;
-      return getFirstTableName(withPart.query);
-    }) ?? q.getFirstTableName()
-  );
+  let tableName: string | undefined;
+  q.walk(ex => {
+    if (ex instanceof SqlTable) {
+      tableName = ex.getName();
+      return;
+    }
+    return ex;
+  });
+  return tableName;
 }
 
 async function extendedQueryDruidSql<T = any>(sqlQueryPayload: Record<string, any>): Promise<T[]> {
