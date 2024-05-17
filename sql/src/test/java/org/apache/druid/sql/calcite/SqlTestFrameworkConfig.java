@@ -389,10 +389,10 @@ public class SqlTestFrameworkConfig
     Map<String, String> map = new HashMap<>();
     SqlTestFrameworkConfig def = new SqlTestFrameworkConfig(Collections.emptyList());
     if (def.numMergeBuffers != numMergeBuffers) {
-      map.put("NumMergeBuffers", String.valueOf(numMergeBuffers));
+      map.put("numMergeBuffers", String.valueOf(numMergeBuffers));
     }
     if (def.minTopNThreshold != minTopNThreshold) {
-      map.put("MinTopNThreshold", String.valueOf(minTopNThreshold));
+      map.put("minTopNThreshold", String.valueOf(minTopNThreshold));
     }
     if (!equals(new SqlTestFrameworkConfig(map))) {
       throw new IAE("Can't reproduce config via map!");

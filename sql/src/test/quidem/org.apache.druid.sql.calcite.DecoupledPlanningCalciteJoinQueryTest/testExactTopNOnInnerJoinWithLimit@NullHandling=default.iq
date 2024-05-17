@@ -1,4 +1,4 @@
-# testExactTopNOnInnerJoinWithLimit@NullHandling=default case-crc:d28d4632
+# testExactTopNOnInnerJoinWithLimit@NullHandling=default case-crc:1b8b1878
 # quidem testcase reason: EQUIV_PLAN
 !set debug true
 !set defaultTimeout 300000
@@ -8,7 +8,7 @@
 !set sqlQueryId dummy
 !set useApproximateTopN false
 !set outputformat mysql
-!use druidtest:///?MinTopNThreshold=1
+!use druidtest:///?minTopNThreshold=1
 select f1."dim4", sum("m1") from numfoo f1 inner join (
   select "dim4" from numfoo where dim4 <> 'a' group by 1
 ) f2 on f1."dim4" = f2."dim4" group by 1 limit 1;

@@ -1,4 +1,4 @@
-# testQueryWithSelectProjectAndIdentityProjectDoesNotRename@NullHandling=default case-crc:d6c371b5
+# testQueryWithSelectProjectAndIdentityProjectDoesNotRename@NullHandling=default case-crc:5a66a3be
 # quidem testcase reason: SLIGHTLY_WORSE_PLAN
 !set debug true
 !set defaultTimeout 300000
@@ -9,7 +9,7 @@
 !set useApproximateCountDistinct false
 !set useGroupingSetForExactDistinct true
 !set outputformat mysql
-!use druidtest:///?NumMergeBuffers=3
+!use druidtest:///?numMergeBuffers=3
 SELECT
 (SUM(CASE WHEN (TIMESTAMP '2000-01-04 17:00:00'<=__time AND __time<TIMESTAMP '2022-01-05 17:00:00') THEN 1 ELSE 0 END)*1.0/COUNT(DISTINCT CASE WHEN (TIMESTAMP '2000-01-04 17:00:00'<=__time AND __time<TIMESTAMP '2022-01-05 17:00:00') THEN dim1 END))
 FROM druid.foo
