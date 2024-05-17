@@ -1231,6 +1231,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         new IdleConfig(true, 200L),
+        null,
         null
     )
     {
