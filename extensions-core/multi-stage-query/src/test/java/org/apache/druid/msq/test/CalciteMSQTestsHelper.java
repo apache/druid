@@ -77,6 +77,7 @@ import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFacto
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.server.coordination.NoopDataSegmentAnnouncer;
+import org.apache.druid.sql.calcite.CalciteNestedDataQueryTest;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.timeline.DataSegment;
@@ -286,6 +287,101 @@ public class CalciteMSQTestsHelper
                                 ResourceInputSource.of(
                                     NestedDataTestUtils.class.getClassLoader(),
                                     NestedDataTestUtils.ARRAY_TYPES_DATA_FILE
+                                )
+                            )
+                            .inputFormat(TestDataBuilder.DEFAULT_JSON_INPUT_FORMAT)
+                            .inputTmpDir(tempFolderProducer.apply("tmpDir"))
+                            .buildMMappedIndex();
+        break;
+      case CalciteNestedDataQueryTest.DATA_SOURCE:
+      case CalciteNestedDataQueryTest.DATA_SOURCE_MIXED:
+        if (segmentId.getPartitionNum() == 0) {
+          index = IndexBuilder.create()
+                              .tmpDir(tempFolderProducer.apply("tmpDir"))
+                              .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+                              .schema(
+                                  new IncrementalIndexSchema.Builder()
+                                      .withMetrics(
+                                          new CountAggregatorFactory("cnt")
+                                      )
+                                      .withDimensionsSpec(CalciteNestedDataQueryTest.ALL_JSON_COLUMNS.getDimensionsSpec())
+                                      .withRollup(false)
+                                      .build()
+                              )
+                              .rows(CalciteNestedDataQueryTest.ROWS)
+                              .buildMMappedIndex();
+        } else if (segmentId.getPartitionNum() == 1) {
+          index = IndexBuilder.create()
+                              .tmpDir(tempFolderProducer.apply("tmpDir"))
+                              .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+                              .schema(
+                                  new IncrementalIndexSchema.Builder()
+                                      .withMetrics(
+                                          new CountAggregatorFactory("cnt")
+                                      )
+                                      .withDimensionsSpec(CalciteNestedDataQueryTest.JSON_AND_SCALAR_MIX.getDimensionsSpec())
+                                      .withRollup(false)
+                                      .build()
+                              )
+                              .rows(CalciteNestedDataQueryTest.ROWS_MIX)
+                              .buildMMappedIndex();
+        } else {
+          throw new ISE("Cannot query segment %s in test runner", segmentId);
+        }
+        break;
+      case CalciteNestedDataQueryTest.DATA_SOURCE_MIXED_2:
+        if (segmentId.getPartitionNum() == 0) {
+          index = IndexBuilder.create()
+                              .tmpDir(tempFolderProducer.apply("tmpDir"))
+                              .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+                              .schema(
+                                  new IncrementalIndexSchema.Builder()
+                                      .withMetrics(
+                                          new CountAggregatorFactory("cnt")
+                                      )
+                                      .withDimensionsSpec(CalciteNestedDataQueryTest.JSON_AND_SCALAR_MIX.getDimensionsSpec())
+                                      .withRollup(false)
+                                      .build()
+                              )
+                              .rows(CalciteNestedDataQueryTest.ROWS_MIX)
+                              .buildMMappedIndex();
+        } else if (segmentId.getPartitionNum() == 1) {
+          index = IndexBuilder.create()
+                      .tmpDir(tempFolderProducer.apply("tmpDir"))
+                      .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+                      .schema(
+                          new IncrementalIndexSchema.Builder()
+                              .withMetrics(
+                                  new CountAggregatorFactory("cnt")
+                              )
+                              .withDimensionsSpec(CalciteNestedDataQueryTest.ALL_JSON_COLUMNS.getDimensionsSpec())
+                              .withRollup(false)
+                              .build()
+                      )
+                      .rows(CalciteNestedDataQueryTest.ROWS)
+                      .buildMMappedIndex();
+        } else {
+          throw new ISE("Cannot query segment %s in test runner", segmentId);
+        }
+        break;
+      case CalciteNestedDataQueryTest.DATA_SOURCE_ALL:
+        index = IndexBuilder.create()
+                            .tmpDir(tempFolderProducer.apply("tmpDir"))
+                            .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+                            .schema(
+                                new IncrementalIndexSchema.Builder()
+                                    .withTimestampSpec(NestedDataTestUtils.AUTO_SCHEMA.getTimestampSpec())
+                                    .withDimensionsSpec(NestedDataTestUtils.AUTO_SCHEMA.getDimensionsSpec())
+                                    .withMetrics(
+                                        new CountAggregatorFactory("cnt")
+                                    )
+                                    .withRollup(false)
+                                    .build()
+                            )
+                            .inputSource(
+                                ResourceInputSource.of(
+                                    NestedDataTestUtils.class.getClassLoader(),
+                                    NestedDataTestUtils.ALL_TYPES_TEST_DATA_FILE
                                 )
                             )
                             .inputFormat(TestDataBuilder.DEFAULT_JSON_INPUT_FORMAT)

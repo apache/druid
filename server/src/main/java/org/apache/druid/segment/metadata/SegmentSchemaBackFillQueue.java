@@ -178,7 +178,7 @@ public class SegmentSchemaBackFillQueue
         segmentSchemaManager.persistSchemaAndUpdateSegmentsTable(entry.getKey(), entry.getValue(), CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
         // Mark the segments as published in the cache.
         for (SegmentSchemaMetadataPlus plus : entry.getValue()) {
-          segmentSchemaCache.markInMetadataQueryResultPublished(plus.getSegmentId());
+          segmentSchemaCache.markMetadataQueryResultPublished(plus.getSegmentId());
         }
         emitter.emit(
             ServiceMetricEvent.builder()

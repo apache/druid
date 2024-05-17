@@ -89,10 +89,57 @@ public class ComplexFieldReader implements FieldReader
     return memory.getByte(position) == ComplexFieldWriter.NULL_BYTE;
   }
 
-  @Override
-  public boolean isComparable()
+  /**
+   * Alternative interface to read the field from the byte array without creating a selector and field pointer. It is much
+   * faster than wrapping the byte array in Memory for reading.
+   */
+  @Nullable
+  public static Object readFieldFromByteArray(
+      final ComplexMetricSerde serde,
+      final byte[] bytes,
+      final int position
+  )
   {
-    return false;
+    final byte nullByte = bytes[position];
+
+    if (nullByte == ComplexFieldWriter.NULL_BYTE) {
+      return null;
+    } else if (nullByte == ComplexFieldWriter.NOT_NULL_BYTE) {
+      // Reads length in little-endian format
+      int length;
+      length = (bytes[position + 4] & 0xFF) << 24;
+      length |= (bytes[position + 3] & 0xFF) << 16;
+      length |= (bytes[position + 2] & 0xFF) << 8;
+      length |= (bytes[position + 1] & 0xFF);
+      return serde.fromBytes(bytes, position + ComplexFieldWriter.HEADER_SIZE, length);
+    } else {
+      throw new ISE("Unexpected null byte [%s]", nullByte);
+    }
+  }
+
+  /**
+   * Alternative interface to read the field from the memory without creating a selector and field pointer
+   */
+  @Nullable
+  public static Object readFieldFromMemory(
+      final ComplexMetricSerde serde,
+      final Memory memory,
+      final long position
+  )
+  {
+    final byte nullByte = memory.getByte(position);
+
+    if (nullByte == ComplexFieldWriter.NULL_BYTE) {
+      return null;
+    } else if (nullByte == ComplexFieldWriter.NOT_NULL_BYTE) {
+      final int length = memory.getInt(position + Byte.BYTES);
+      final byte[] bytes = new byte[length];
+      memory.getByteArray(position + ComplexFieldWriter.HEADER_SIZE, bytes, 0, length);
+
+      return serde.fromBytes(bytes, 0, length);
+    } else {
+      throw new ISE("Unexpected null byte [%s]", nullByte);
+    }
   }
 
   /**
@@ -115,21 +162,8 @@ public class ComplexFieldReader implements FieldReader
     @Override
     public T getObject()
     {
-      final long fieldPosition = fieldPointer.position();
-      final byte nullByte = memory.getByte(fieldPosition);
-
-      if (nullByte == ComplexFieldWriter.NULL_BYTE) {
-        return null;
-      } else if (nullByte == ComplexFieldWriter.NOT_NULL_BYTE) {
-        final int length = memory.getInt(fieldPosition + Byte.BYTES);
-        final byte[] bytes = new byte[length];
-        memory.getByteArray(fieldPosition + ComplexFieldWriter.HEADER_SIZE, bytes, 0, length);
-
-        //noinspection unchecked
-        return (T) serde.fromBytes(bytes, 0, length);
-      } else {
-        throw new ISE("Unexpected null byte [%s]", nullByte);
-      }
+      //noinspection unchecked
+      return (T) readFieldFromMemory(serde, memory, fieldPointer.position());
     }
 
     @Override

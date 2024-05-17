@@ -436,7 +436,6 @@ public class OverlordClientImplTest
         null,
         null,
         null,
-        null,
         null
     );
 

@@ -1655,7 +1655,7 @@ name: Apache Curator
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 5.5.0
+version: 5.3.0
 libraries:
   - org.apache.curator: curator-client
   - org.apache.curator: curator-framework
@@ -2397,20 +2397,6 @@ license_name: Apache License version 2.0
 version: 0.9
 libraries:
   - org.skife.config: config-magic
-
----
-
-name: Ion Java
-license_category: binary
-module: java-core
-license_name: Apache License version 2.0
-version: 1.0.2
-libraries:
-  - software.amazon.ion: ion-java
-notices:
-  - ion-java: |
-      Amazon Ion Java
-      Copyright 2007-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
 ---
 
@@ -5108,7 +5094,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Imply Data
-version: 0.22.11
+version: 0.22.13
 
 ---
 

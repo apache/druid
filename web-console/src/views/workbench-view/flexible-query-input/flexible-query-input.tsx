@@ -190,7 +190,7 @@ export class FlexibleQueryInput extends React.PureComponent<
     const found = dedupe(findAllSqlQueriesInText(queryString), ({ startRowColumn }) =>
       String(startRowColumn.row),
     );
-    if (found.length <= 1) return []; // Do not highlight a single query or no queries
+    if (!found.length) return [];
 
     // Do not report the first query if it is basically the main query minus whitespace
     const firstQuery = found[0].sql;
