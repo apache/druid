@@ -18,7 +18,7 @@
 
 import './modules';
 
-import { Menu, MenuItem } from '@blueprintjs/core';
+import { Intent, Menu, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import type { SqlExpression, SqlTable } from '@druid-toolkit/query';
 import { C, L, sql, SqlLiteral, SqlQuery, T } from '@druid-toolkit/query';
@@ -28,11 +28,13 @@ import {
   useParameterValues,
   useSingleHost,
 } from '@druid-toolkit/visuals-react';
+import copy from 'copy-to-clipboard';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore } from 'zustand';
 
 import { ShowValueDialog } from '../../dialogs/show-value-dialog/show-value-dialog';
 import { useLocalStorageState, useQueryManager } from '../../hooks';
+import { AppToaster } from '../../singletons';
 import { deepGet, filterMap, findMap, LocalStorageKeys, oneOf, queryDruidSql } from '../../utils';
 
 import { ControlPane } from './control-pane/control-pane';
@@ -320,6 +322,18 @@ export const ExploreView = React.memo(function ExploreView() {
           }}
           moreMenu={
             <Menu>
+              <MenuItem
+                icon={IconNames.DUPLICATE}
+                text="Copy last query"
+                disabled={!QUERY_HISTORY.length}
+                onClick={() => {
+                  copy(QUERY_HISTORY[0]?.sqlQuery, { format: 'text/plain' });
+                  AppToaster.show({
+                    message: `Copied query to clipboard`,
+                    intent: Intent.SUCCESS,
+                  });
+                }}
+              />
               <MenuItem
                 icon={IconNames.HISTORY}
                 text="Show query history"

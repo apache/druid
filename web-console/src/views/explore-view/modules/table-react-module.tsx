@@ -454,6 +454,34 @@ function TableModule(props: TableModuleProps) {
       };
     }
 
+    const makeCompareQuery = (compare: string) => {
+      return getInitQuery(table, shiftTimeInExpression(where, compare))
+        .applyIf(topValuesQuery, q =>
+          q.addInnerJoin(
+            T(TOP_VALUES_NAME),
+            getJoinCondition(splitColumns, T('t'), T(TOP_VALUES_NAME)),
+          ),
+        )
+        .applyForEach(splitColumns, (q, splitColumn) =>
+          q.addSelect(toGroupByExpression(splitColumn, timeBucket, compare), {
+            addToGroupBy: 'end',
+          }),
+        )
+        .applyIf(orderByCompareDuration === compare, q =>
+          q.applyForEach(showColumns, (q, showColumn) =>
+            q.addSelect(toShowColumnExpression(showColumn, multipleValueMode)),
+          ),
+        )
+        .applyForEach(metrics, (q, metric) =>
+          q.addSelect(metric.expression.as(`${metric.name}:cmp:${compare}:value`)),
+        )
+        .applyIf(compare === orderByCompareDuration && orderByCompareType === 'value', q =>
+          q
+            .changeOrderByExpression(effectiveOrderBy.changeExpression(C(orderByCompareMeasure!)))
+            .changeLimitValue(maxRows),
+        );
+    };
+
     const main = T('main');
     const leader = T(orderByCompareDuration ? `compare_${orderByCompareDuration}` : 'main');
     const query = SqlQuery.from(leader)
@@ -465,36 +493,7 @@ function TableModule(props: TableModuleProps) {
         ).concat(
           SqlWithPart.simple('main', mainQuery),
           compares.map(compare =>
-            SqlWithPart.simple(
-              `compare_${compare}`,
-              getInitQuery(table, shiftTimeInExpression(where, compare))
-                .applyIf(topValuesQuery, q =>
-                  q.addInnerJoin(
-                    T(TOP_VALUES_NAME),
-                    getJoinCondition(splitColumns, T('t'), T(TOP_VALUES_NAME)),
-                  ),
-                )
-                .applyForEach(splitColumns, (q, splitColumn) =>
-                  q.addSelect(toGroupByExpression(splitColumn, timeBucket, compare), {
-                    addToGroupBy: 'end',
-                  }),
-                )
-                .applyIf(orderByCompareDuration === compare, q =>
-                  q.applyForEach(showColumns, (q, showColumn) =>
-                    q.addSelect(toShowColumnExpression(showColumn, multipleValueMode)),
-                  ),
-                )
-                .applyForEach(metrics, (q, metric) =>
-                  q.addSelect(metric.expression.as(metric.name)),
-                )
-                .applyIf(compare === orderByCompareDuration && orderByCompareType === 'value', q =>
-                  q
-                    .changeOrderByExpression(
-                      effectiveOrderBy.changeExpression(C(orderByCompareMeasure!)),
-                    )
-                    .changeLimitValue(maxRows),
-                ),
-            ),
+            SqlWithPart.simple(`compare_${compare}`, makeCompareQuery(compare)),
           ),
         ),
       )
@@ -517,17 +516,17 @@ function TableModule(props: TableModuleProps) {
             ),
             compares.flatMap(compare =>
               metrics.flatMap(metric => {
-                const c = T(`compare_${compare}`)
-                  .column(metric.name)
-                  .applyIf(NEEDS_GROUPING_TO_ORDER, anyValue)
-                  .applyIf(compare !== orderByCompareDuration, coalesce0);
-
                 const mainMetric = main
                   .column(metric.name)
                   .applyIf(NEEDS_GROUPING_TO_ORDER, anyValue)
                   .applyIf(orderByCompareDuration, coalesce0);
 
-                const diff = mainMetric.subtract(c);
+                const cmp = T(`compare_${compare}`)
+                  .column(`${metric.name}:cmp:${compare}:value`)
+                  .applyIf(NEEDS_GROUPING_TO_ORDER, anyValue)
+                  .applyIf(compare !== orderByCompareDuration, coalesce0);
+
+                const diff = mainMetric.subtract(cmp);
 
                 const ret: SqlExpression[] = [];
 
@@ -537,7 +536,7 @@ function TableModule(props: TableModuleProps) {
                     group: `Comparison to ${compare}`,
                     displayName: `${metric.name} (value)`,
                   });
-                  ret.push(c.as(valueName));
+                  ret.push(cmp.as(valueName));
                 }
 
                 if (compareTypes.includes('delta')) {
@@ -550,12 +549,12 @@ function TableModule(props: TableModuleProps) {
                 }
 
                 if (compareTypes.includes('absDelta')) {
-                  const deltaName = `${metric.name}:cmp:${compare}:absDelta`;
-                  columnHints.set(deltaName, {
+                  const absDeltaName = `${metric.name}:cmp:${compare}:absDelta`;
+                  columnHints.set(absDeltaName, {
                     group: `Comparison to ${compare}`,
                     displayName: `${metric.name} (Abs. delta)`,
                   });
-                  ret.push(F('ABS', diff).as(deltaName));
+                  ret.push(F('ABS', diff).as(absDeltaName));
                 }
 
                 if (compareTypes.includes('percent')) {
@@ -566,20 +565,20 @@ function TableModule(props: TableModuleProps) {
                     formatter: formatPercent,
                   });
                   ret.push(
-                    safeDivide0(diff.multiply(SqlLiteral.ONE_POINT_ZERO), c).as(percentName),
+                    safeDivide0(diff.multiply(SqlLiteral.ONE_POINT_ZERO), cmp).as(percentName),
                   );
                 }
 
                 if (compareTypes.includes('absPercent')) {
-                  const percentName = `${metric.name}:cmp:${compare}:absPercent`;
-                  columnHints.set(percentName, {
+                  const absPercentName = `${metric.name}:cmp:${compare}:absPercent`;
+                  columnHints.set(absPercentName, {
                     group: `Comparison to ${compare}`,
                     displayName: `${metric.name} (abs. %)`,
                     formatter: formatPercent,
                   });
                   ret.push(
-                    F('ABS', safeDivide0(diff.multiply(SqlLiteral.ONE_POINT_ZERO), c)).as(
-                      percentName,
+                    F('ABS', safeDivide0(diff.multiply(SqlLiteral.ONE_POINT_ZERO), cmp)).as(
+                      absPercentName,
                     ),
                   );
                 }
