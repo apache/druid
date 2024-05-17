@@ -143,7 +143,11 @@
         <skipTests>false</skipTests>
         <skipUTs>${skipTests}</skipUTs>
         <skipITs>${skipTests}</skipITs>
-        <fork.version>${project.version}-dev</fork.version>
+
+        <!-- build docker image -->
+        <branch.tag>base</branch.tag>
+        <docker.image.version>${project.version}-dev-${branch.tag}</docker.image.version>
+
 
         <!-- NetBeans has a problem when we use late binding with @ in the surefire arg line.
              Therefore we set this empty property here.

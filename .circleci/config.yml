@@ -46,7 +46,7 @@ jobs:
             --username ${JFROG_DEPLOY_USER} \
             --password ${JFROG_DEPLOY_PW}
             DOCKER_REPO=${DOCKER_REGISTRY}/conviva-druid
-            DOCKER_TAG=$(mvn help:evaluate -Dexpression=fork.version -q -DforceStdout)
+            DOCKER_TAG=$(mvn help:evaluate -Dexpression=docker.image.version -q -DforceStdout)
 
             if docker pull ${DOCKER_REPO}:${DOCKER_TAG} &> /dev/null; then
                 echo "[INFO] Docker image already exists: ${DOCKER_REPO}:${DOCKER_TAG}, remove it"
