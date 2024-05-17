@@ -186,7 +186,7 @@ public class MaterializedViewSupervisor implements Supervisor
       log.makeAlert(e, StringUtils.format("uncaught exception in %s.", supervisorId)).emit();
     }
     finally {
-      stateManager.markRunFinished(null);
+      stateManager.markRunFinished();
     }
   }
 

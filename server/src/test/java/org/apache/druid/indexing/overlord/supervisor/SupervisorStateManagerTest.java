@@ -43,12 +43,12 @@ public class SupervisorStateManagerTest
     Assert.assertFalse(stateManagerConfig.isIdleConfigEnabled());
     Assert.assertEquals(600000, stateManagerConfig.getInactiveAfterMillis());
 
-    supervisorStateManager.markRunFinished(null);
+    supervisorStateManager.markRunFinished();
 
     Assert.assertEquals(SupervisorStateManager.BasicState.RUNNING, supervisorStateManager.getSupervisorState());
 
     supervisorStateManager.maybeSetState(SupervisorStateManager.BasicState.IDLE);
-    supervisorStateManager.markRunFinished(null);
+    supervisorStateManager.markRunFinished();
 
     Assert.assertEquals(SupervisorStateManager.BasicState.IDLE, supervisorStateManager.getSupervisorState());
   }

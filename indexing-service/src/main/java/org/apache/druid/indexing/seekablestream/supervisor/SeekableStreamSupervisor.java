@@ -3671,7 +3671,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
   }
 
-  private Boolean checkStreamProgressAndStopTaskCreationIfNeeded()
+  private boolean checkStreamProgressAndStopTaskCreationIfNeeded()
   {
     Map<PartitionIdType, SequenceOffsetType> latestSequencesFromStream = getLatestSequencesFromStream();
     boolean noProgress = previousSequencesFromStream.equals(latestSequencesFromStream) && computeTotalLag() > 0;
@@ -3679,7 +3679,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     previousSequencesFromStream.putAll(latestSequencesFromStream);
 
     if (!taskCreationStopConfig.isEnabled() || spec.isSuspended()) {
-      return null;
+      return false;
     }
 
     if (noProgress) {
@@ -3692,7 +3692,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       lastMakingProgressTimeMillis = Instant.now().toEpochMilli();
     }
 
-    return null;
+    return false;
   }
 
   private long computeTotalLag()

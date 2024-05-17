@@ -3356,7 +3356,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     final DateTime startTime = DateTimes.nowUtc();
     supervisor = getTestableSupervisor(2, 1, true, "PT1S", null, null);
     final KafkaSupervisorTuningConfig tuningConfig = supervisor.getTuningConfig();
-    supervisor.getStateManager().markRunFinished(null);
+    supervisor.getStateManager().markRunFinished();
 
     //not adding any events
     Task id1 = createKafkaIndexTask(
@@ -3460,7 +3460,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   {
     supervisor = getTestableSupervisor(2, 1, true, "PT1S", null, null);
     final KafkaSupervisorTuningConfig tuningConfig = supervisor.getTuningConfig();
-    supervisor.getStateManager().markRunFinished(null);
+    supervisor.getStateManager().markRunFinished();
 
     //not adding any events
     final KafkaIndexTask id1 = createKafkaIndexTask(

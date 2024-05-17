@@ -204,7 +204,11 @@ public class SupervisorStateManager
     }
   }
 
-  public void markRunFinished(Boolean shouldStopTaskCreation)
+  public void markRunFinished() {
+    markRunFinished(false);
+  }
+
+  public void markRunFinished(boolean shouldStopTaskCreation)
   {
     atLeastOneSuccessfulRun |= currentRunSuccessful;
 
