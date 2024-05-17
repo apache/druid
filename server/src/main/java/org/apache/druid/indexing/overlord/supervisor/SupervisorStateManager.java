@@ -24,7 +24,7 @@ import com.google.common.base.Preconditions;
 import org.apache.commons.lang.exception.ExceptionUtils;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.parsers.ParseException;
+import org.apache.druid.java.util.common.parsers.MaxParseExceptionExceededException;
 import org.joda.time.DateTime;
 
 import java.util.ArrayList;
@@ -197,14 +197,15 @@ public class SupervisorStateManager
       consecutiveParseExceptionFailedTasks = 0;
     } else if (state.isFailure()) {
       consecutiveFailedTasks++;
-      if (errorMsg != null && errorMsg.contains(ParseException.class.getName())) {
+      if (errorMsg != null && errorMsg.contains(MaxParseExceptionExceededException.class.getName())) {
         consecutiveParseExceptionFailedTasks++;
       }
       consecutiveSuccessfulTasks = 0;
     }
   }
 
-  public void markRunFinished() {
+  public void markRunFinished()
+  {
     markRunFinished(false);
   }
 
