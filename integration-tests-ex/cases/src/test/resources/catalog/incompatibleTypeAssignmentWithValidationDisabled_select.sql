@@ -4,7 +4,7 @@
     "expectedResults": [
       {
         "__time": 1672058096000,
-        "varchar_col": ["extra", "foo"],
+        "double_col": 0.0
       }
     ]
   }
