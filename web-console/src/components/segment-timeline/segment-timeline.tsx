@@ -569,7 +569,6 @@ ORDER BY "start" DESC`;
           activeDatasource: selectedItem === showAll ? null : selectedItem,
         });
       };
-      
       const datasourcesWzAll = [showAll].concat(datasources);
       return (
         <Select2<string>
