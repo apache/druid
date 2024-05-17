@@ -115,6 +115,29 @@ public class MSQCompactionStrategy implements CompactionStrategy
     );
   }
 
+  @Override
+  public TaskStatus runCompactionTasks(
+      CompactionTask compactionTask,
+      TaskToolbox taskToolbox,
+      List<NonnullPair<Interval, DataSchema>> intervalDataSchemas
+  ) throws JsonProcessingException
+  {
+    List<MSQControllerTask> msqControllerTasks = compactionToMSQTasks(compactionTask, intervalDataSchemas);
+
+    if (msqControllerTasks.isEmpty()) {
+      log.warn(
+          "Can't find segments from inputSpec[%s], nothing to do.",
+          compactionTask.getIoConfig().getInputSpec()
+      );
+    }
+    return runSubtasks(
+        msqControllerTasks,
+        taskToolbox,
+        compactionTask.getCurrentSubTaskHolder(),
+        compactionTask.getId()
+    );
+  }
+
   public List<MSQControllerTask> compactionToMSQTasks(
       CompactionTask compactionTask,
       List<NonnullPair<Interval, DataSchema>> intervalDataSchemas
@@ -174,29 +197,6 @@ public class MSQCompactionStrategy implements CompactionStrategy
       msqControllerTasks.add(controllerTask);
     }
     return msqControllerTasks;
-  }
-
-  @Override
-  public TaskStatus runCompactionTasks(
-      CompactionTask compactionTask,
-      TaskToolbox taskToolbox,
-      List<NonnullPair<Interval, DataSchema>> intervalDataSchemas
-  ) throws JsonProcessingException
-  {
-    List<MSQControllerTask> msqControllerTasks = compactionToMSQTasks(compactionTask, intervalDataSchemas);
-
-    if (msqControllerTasks.isEmpty()) {
-      log.warn(
-          "Can't find segments from inputSpec[%s], nothing to do.",
-          compactionTask.getIoConfig().getInputSpec()
-      );
-    }
-    return runSubtasks(
-        msqControllerTasks,
-        taskToolbox,
-        compactionTask.getCurrentSubTaskHolder(),
-        compactionTask.getId()
-    );
   }
 
   private static DataSourceMSQDestination buildMSQDestination(
@@ -279,6 +279,7 @@ public class MSQCompactionStrategy implements CompactionStrategy
     List<DimensionSpec> dimensionSpecs = new ArrayList<>();
 
     if (isQueryGranularityEmptyOrNone(dataSchema)) {
+      // Dimensions in group-by aren't allowed to have time column name as the output name.
       dimensionSpecs.add(new DefaultDimensionSpec(TIME_COLUMN, TIME_VIRTUAL_COLUMN, ColumnType.LONG));
     } else {
       // The changed granularity would result in a new virtual column that needs to be aggregated upon.
@@ -292,9 +293,6 @@ public class MSQCompactionStrategy implements CompactionStrategy
                                         dim.getColumnType()
                                     ))
                                     .collect(Collectors.toList()));
-
-
-    // Dimensions in group-by aren't allowed to have time column as the output name.
 
     return dimensionSpecs;
   }
@@ -361,7 +359,7 @@ public class MSQCompactionStrategy implements CompactionStrategy
     );
   }
 
-  private static VirtualColumns getVirtualTimeColumn(DataSchema dataSchema)
+  private static VirtualColumns getVirtualColumns(DataSchema dataSchema)
   {
     VirtualColumns virtualColumns = VirtualColumns.EMPTY;
 
@@ -370,6 +368,7 @@ public class MSQCompactionStrategy implements CompactionStrategy
                                                                  .equals(Granularities.ALL)) {
       PeriodGranularity periodQueryGranularity = (PeriodGranularity) dataSchema.getGranularitySpec()
                                                                                .getQueryGranularity();
+      // Need to create a virtual column for time as that's the only way to support query granularity
       VirtualColumn virtualColumn = new ExpressionVirtualColumn(
           TIME_VIRTUAL_COLUMN,
           StringUtils.format(
@@ -391,7 +390,7 @@ public class MSQCompactionStrategy implements CompactionStrategy
 
     GroupByQuery.Builder builder = new GroupByQuery.Builder()
         .setDataSource(new TableDataSource(compactionTask.getDataSource()))
-        .setVirtualColumns(getVirtualTimeColumn(dataSchema))
+        .setVirtualColumns(getVirtualColumns(dataSchema))
         .setDimFilter(dimFilter)
         .setGranularity(new AllGranularity())
         .setDimensions(getAggregateDimensions(dataSchema))
@@ -422,6 +421,7 @@ public class MSQCompactionStrategy implements CompactionStrategy
           jsonMapper.writeValueAsString(dataSchema.getGranularitySpec().getQueryGranularity())
       );
     }
+    context.put(MultiStageQueryContext.CTX_SEGMENT_LOAD_WAIT, true);
     return context;
   }
 
