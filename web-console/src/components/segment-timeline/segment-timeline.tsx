@@ -17,6 +17,7 @@
  */
 
 import { Button, FormGroup, MenuItem, Radio, RadioGroup, ResizeSensor } from '@blueprintjs/core';
+import { IconNames } from '@blueprintjs/icons';
 import type { ItemPredicate, ItemRenderer } from '@blueprintjs/select';
 import { Select2 } from '@blueprintjs/select';
 import type { AxisScale } from 'd3-axis';
@@ -576,8 +577,13 @@ ORDER BY "start" DESC`;
           itemRenderer={datasourceRenderer}
           noResults={<MenuItem disabled text="No results." roleStructure="listoption" />}
           itemPredicate={filterDatasource}
+          fill
         >
-          <Button text={activeDatasource === null ? showAll : activeDatasource} />
+          <Button
+            text={activeDatasource === null ? showAll : activeDatasource}
+            fill
+            rightIcon={IconNames.CARET_DOWN}
+          />
         </Select2>
       );
     };
