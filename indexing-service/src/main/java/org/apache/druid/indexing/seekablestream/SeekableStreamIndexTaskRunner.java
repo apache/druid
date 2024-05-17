@@ -1844,6 +1844,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   @VisibleForTesting
   public Response pause() throws InterruptedException
   {
+    log.info("Task runner status: %s", status);
+
     if (!(status == Status.PAUSED || status == Status.READING)) {
       return Response.status(Response.Status.CONFLICT)
                      .type(MediaType.TEXT_PLAIN)
