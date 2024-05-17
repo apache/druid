@@ -129,6 +129,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
+
     this.jsonMapper = jsonMapper;
     this.dbTables = dbTables;
     this.connector = connector;
