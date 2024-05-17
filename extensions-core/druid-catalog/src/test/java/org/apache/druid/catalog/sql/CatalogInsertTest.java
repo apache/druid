@@ -31,10 +31,10 @@ import org.apache.druid.catalog.sync.CachedMetadataCatalog;
 import org.apache.druid.catalog.sync.MetadataCatalog;
 import org.apache.druid.metadata.TestDerbyConnector.DerbyConnectorRule5;
 import org.apache.druid.sql.calcite.CalciteCatalogInsertTest;
+import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
-import org.apache.druid.sql.calcite.util.SqlTestFramework.SqlTestFrameWorkModule;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import static org.junit.Assert.fail;
@@ -42,7 +42,7 @@ import static org.junit.Assert.fail;
 /**
  * Test the use of catalog specs to drive MSQ ingestion.
  */
-@SqlTestFrameWorkModule(CatalogInsertComponentSupplier.class)
+@SqlTestFrameworkConfig.ComponentSupplier(CatalogInsertComponentSupplier.class)
 public class CatalogInsertTest extends CalciteCatalogInsertTest
 {
   @RegisterExtension

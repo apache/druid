@@ -939,7 +939,6 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
             Intervals.of("2011-04-01/P4D"),
             null,
             null,
-            false,
             null,
             null,
             null
@@ -1038,7 +1037,6 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
             Intervals.of("2011-04-01/P4D"),
             null,
             null,
-            false,
             null,
             maxSegmentsToKill,
             null

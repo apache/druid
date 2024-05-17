@@ -21,6 +21,7 @@ package org.apache.druid.msq.exec;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.JsonInputFormat;
@@ -70,6 +71,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
+import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.filtration.Filtration;
@@ -227,7 +229,9 @@ public class MSQSelectTest extends MSQTestBase
             new Object[]{1L, "1"},
             new Object[]{1L, "def"},
             new Object[]{1L, "abc"}
-        )).verifyResults();
+        ))
+        .setExpectedLookupLoadingSpec(LookupLoadingSpec.NONE)
+        .verifyResults();
   }
 
   @MethodSource("data")
@@ -742,6 +746,7 @@ public class MSQSelectTest extends MSQTestBase
                    .build())
         .setExpectedRowSignature(rowSignature)
         .setExpectedResultRows(ImmutableList.of(new Object[]{4L}))
+        .setExpectedLookupLoadingSpec(LookupLoadingSpec.loadOnly(ImmutableSet.of("lookyloo")))
         .verifyResults();
   }
 
@@ -808,6 +813,7 @@ public class MSQSelectTest extends MSQTestBase
                 new Object[]{"xabc", 1L}
             )
         )
+        .setExpectedLookupLoadingSpec(LookupLoadingSpec.loadOnly(ImmutableSet.of("lookyloo")))
         .verifyResults();
   }
 

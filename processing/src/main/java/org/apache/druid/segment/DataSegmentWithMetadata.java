@@ -26,7 +26,7 @@ import javax.annotation.Nullable;
 /**
  * Immutable wrapper class for segment and schema.
  */
-public class DataSegmentWithSchema
+public class DataSegmentWithMetadata
 {
   @Nullable
   private final DataSegment dataSegment;
@@ -34,7 +34,7 @@ public class DataSegmentWithSchema
   @Nullable
   private final SchemaPayloadPlus schemaPayloadPlus;
 
-  public DataSegmentWithSchema(
+  public DataSegmentWithMetadata(
       @Nullable DataSegment dataSegment,
       @Nullable SchemaPayloadPlus schemaPayloadPlus
   )

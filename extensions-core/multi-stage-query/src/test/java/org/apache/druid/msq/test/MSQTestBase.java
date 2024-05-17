@@ -153,6 +153,7 @@ import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.server.coordination.NoopDataSegmentAnnouncer;
+import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.sql.DirectStatement;
@@ -160,6 +161,7 @@ import org.apache.druid.sql.SqlQueryPlus;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.SqlToolbox;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
+import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.external.ExternalOperatorConversion;
@@ -254,7 +256,7 @@ import static org.mockito.Mockito.mock;
  * <p>
  * Controller -> Overlord communication happens in {@link MSQTestTaskActionClient}
  */
-@SqlTestFramework.SqlTestFrameWorkModule(MSQBaseComponentSupplier.class)
+@SqlTestFrameworkConfig.ComponentSupplier(MSQBaseComponentSupplier.class)
 public class MSQTestBase extends BaseCalciteQueryTest
 {
   public static final Map<String, Object> DEFAULT_MSQ_CONTEXT =
@@ -853,6 +855,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
     protected CompactionState expectedLastCompactionState = null;
     protected Set<Interval> expectedTombstoneIntervals = null;
     protected List<Object[]> expectedResultRows = null;
+    protected LookupLoadingSpec expectedLookupLoadingSpec = LookupLoadingSpec.NONE;
     protected Matcher<Throwable> expectedValidationErrorMatcher = null;
     protected List<Pair<Predicate<MSQTaskReportPayload>, String>> adhocReportAssertionAndReasons = new ArrayList<>();
     protected Matcher<Throwable> expectedExecutionErrorMatcher = null;
@@ -914,6 +917,12 @@ public class MSQTestBase extends BaseCalciteQueryTest
     public Builder setExpectedResultRows(List<Object[]> expectedResultRows)
     {
       this.expectedResultRows = expectedResultRows;
+      return asBuilder();
+    }
+
+    public Builder setExpectedLookupLoadingSpec(LookupLoadingSpec lookupLoadingSpec)
+    {
+      this.expectedLookupLoadingSpec = lookupLoadingSpec;
       return asBuilder();
     }
 
@@ -1008,6 +1017,12 @@ public class MSQTestBase extends BaseCalciteQueryTest
       );
 
       assertThat(e, expectedValidationErrorMatcher);
+    }
+
+    protected void verifyLookupLoadingInfoInTaskContext(Map<String, Object> context)
+    {
+      LookupLoadingSpec specFromContext = LookupLoadingSpec.createFromContext(context, LookupLoadingSpec.ALL);
+      Assert.assertEquals(expectedLookupLoadingSpec, specFromContext);
     }
 
     protected void verifyWorkerCount(CounterSnapshotsTree counterSnapshotsTree)
@@ -1165,7 +1180,9 @@ public class MSQTestBase extends BaseCalciteQueryTest
         verifyWorkerCount(reportPayload.getCounters());
         verifyCounters(reportPayload.getCounters());
 
-        MSQSpec foundSpec = indexingServiceClient.getMSQControllerTask(controllerId).getQuerySpec();
+        MSQControllerTask msqControllerTask = indexingServiceClient.getMSQControllerTask(controllerId);
+        MSQSpec foundSpec = msqControllerTask.getQuerySpec();
+        verifyLookupLoadingInfoInTaskContext(msqControllerTask.getContext());
         log.info(
             "found generated segments: %s",
             segmentManager.getAllDataSegments().stream().map(s -> s.toString()).collect(
@@ -1202,7 +1219,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
           // assert rollup
           Assert.assertEquals(expectedRollUp, queryableIndex.getMetadata().isRollup());
 
-          // asset query granularity
+          // assert query granularity
           Assert.assertEquals(expectedQueryGranularity, queryableIndex.getMetadata().getQueryGranularity());
 
           // assert aggregator factories
@@ -1234,7 +1251,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
                                                                        .collect(Collectors.toList());
 
         log.info(
-            "Found rows which are sorted forcefully %s",
+            "Found rows which are sorted forcefully\n%s",
             transformedOutputRows.stream().map(Arrays::deepToString).collect(Collectors.joining("\n"))
         );
 
@@ -1393,6 +1410,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
           throw new ISE("Query %s failed due to %s", sql, payload.getStatus().getErrorReport().toString());
         } else {
           MSQControllerTask msqControllerTask = indexingServiceClient.getMSQControllerTask(controllerId);
+          verifyLookupLoadingInfoInTaskContext(msqControllerTask.getContext());
 
           final MSQSpec spec = msqControllerTask.getQuerySpec();
           final List<Object[]> rows;
