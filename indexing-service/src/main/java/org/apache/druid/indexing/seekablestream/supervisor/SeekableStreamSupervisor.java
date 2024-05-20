@@ -2154,7 +2154,14 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     final List<ListenableFuture<Void>> stopFutures = new ArrayList<>();
     for (int i = 0; i < results.size(); i++) {
       String taskId = futureTaskIds.get(i);
-      if (results.get(i).isError() || results.get(i).valueOrThrow() == null) {
+      Either<Throwable, Boolean> either = results.get(i);
+      if (either.isError() || either.valueOrThrow() == null) {
+        if (either.isError()) {
+          log.error(either.error(), "Error occurs during getting task status");
+        } else {
+          log.error("isValue() returned true but value is null");
+        }
+
         killTask(taskId, "Task [%s] failed to return status, killing task", taskId);
       } else if (Boolean.valueOf(false).equals(results.get(i).valueOrThrow())) {
         // "return false" above means that we want to stop the task.
@@ -3123,7 +3130,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       // Ignore return value; but kill tasks that failed to return anything at all.
       if (results.get(i).isError()) {
         String taskId = futureTaskIds.get(i);
-        log.noStackTrace().warn(results.get(i).error(), "Task [%s] failed to return start time, killing task", taskId);
+        log.warn(results.get(i).error(), "Task [%s] failed to return start time, killing task", taskId);
         killTask(taskId, "Task [%s] failed to return start time, killing task", taskId);
       }
     }
@@ -3298,6 +3305,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                 // Get the exception
                 final Throwable pauseException = input.get(i).error();
                 stateManager.recordThrowableEvent(pauseException);
+
+                log.error(pauseException, "Exception occurs during pause");
 
                 killTask(
                     taskId,
