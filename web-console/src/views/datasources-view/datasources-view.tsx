@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { FormGroup, InputGroup, Intent, MenuItem, Switch } from '@blueprintjs/core';
+import { FormGroup, InputGroup, Intent, MenuItem, Switch, Tag } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { SqlQuery, T } from '@druid-toolkit/query';
 import classNames from 'classnames';
@@ -651,8 +651,18 @@ GROUP BY 1, 2`;
           return resp.data;
         }}
         confirmButtonText="Mark as unused all segments"
-        successText="All segments in datasource have been marked as unused"
-        failText="Failed to mark as unused all segments in datasource"
+        successText={
+          <>
+            All segments in datasource <Tag minimal>{datasourceToMarkAsUnusedAllSegmentsIn}</Tag>{' '}
+            have been marked as unused
+          </>
+        }
+        failText={
+          <>
+            Failed to mark as unused all segments in datasource{' '}
+            <Tag minimal>{datasourceToMarkAsUnusedAllSegmentsIn}</Tag>
+          </>
+        }
         intent={Intent.DANGER}
         onClose={() => {
           this.setState({ datasourceToMarkAsUnusedAllSegmentsIn: undefined });
@@ -684,8 +694,19 @@ GROUP BY 1, 2`;
           return resp.data;
         }}
         confirmButtonText="Mark as used all segments"
-        successText="All non-overshadowed segments in datasource have been marked as used"
-        failText="Failed to mark as used all non-overshadowed segments in datasource"
+        successText={
+          <>
+            All non-overshadowed segments in datasource{' '}
+            <Tag minimal>{datasourceToMarkAllNonOvershadowedSegmentsAsUsedIn}</Tag> have been marked
+            as used
+          </>
+        }
+        failText={
+          <>
+            Failed to mark as used all non-overshadowed segments in datasource{' '}
+            <Tag minimal>{datasourceToMarkAllNonOvershadowedSegmentsAsUsedIn}</Tag>
+          </>
+        }
         intent={Intent.PRIMARY}
         onClose={() => {
           this.setState({ datasourceToMarkAllNonOvershadowedSegmentsAsUsedIn: undefined });

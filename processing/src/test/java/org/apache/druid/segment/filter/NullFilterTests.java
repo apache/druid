@@ -229,6 +229,12 @@ public class NullFilterTests
             ImmutableList.of("0", "1", "2", "3", "4", "5")
         );
 
+        assertFilterMatches(NullFilter.forColumn("vd0-nvl-2"), ImmutableList.of());
+        assertFilterMatches(
+            NotDimFilter.of(NullFilter.forColumn("vd0-nvl-2")),
+            ImmutableList.of("0", "1", "2", "3", "4", "5")
+        );
+
         assertFilterMatches(NullFilter.forColumn("vf0-add-sub"), ImmutableList.of());
         assertFilterMatches(
             NotDimFilter.of(NullFilter.forColumn("vf0-add-sub")),
@@ -273,6 +279,12 @@ public class NullFilterTests
 
         assertFilterMatches(NullFilter.forColumn("vl0"), ImmutableList.of("3"));
         assertFilterMatches(NotDimFilter.of(NullFilter.forColumn("vl0")), ImmutableList.of("0", "1", "2", "4", "5"));
+
+        assertFilterMatches(NullFilter.forColumn("vd0-nvl-2"), ImmutableList.of());
+        assertFilterMatches(
+            NotDimFilter.of(NullFilter.forColumn("vd0-nvl-2")),
+            ImmutableList.of("0", "1", "2", "3", "4", "5")
+        );
 
         if (NullHandling.sqlCompatible()) {
           // these fail in default value mode that cannot be tested as numeric default values becuase of type

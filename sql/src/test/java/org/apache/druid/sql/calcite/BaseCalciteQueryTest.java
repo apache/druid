@@ -96,8 +96,6 @@ import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.PlannerFixture;
-import org.apache.druid.sql.calcite.util.SqlTestFramework.SqlTestFrameWorkModule;
-import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.sql.http.SqlParameter;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.Matcher;
@@ -137,7 +135,6 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * A base class for SQL query testing. It sets up query execution environment, provides useful helper methods,
  * and populates data using {@link CalciteTests#createMockWalker}.
  */
-@SqlTestFrameWorkModule(StandardComponentSupplier.class)
 public class BaseCalciteQueryTest extends CalciteTestBase
 {
   public static final double ASSERTION_EPSILON = 1e-5;
@@ -628,7 +625,12 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   public SqlTestFramework queryFramework()
   {
-    return queryFrameworkRule.get();
+    try {
+      return queryFrameworkRule.get();
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
   }
 
   public void assumeFeatureAvailable(EngineFeature feature)
@@ -1032,16 +1034,12 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
     final List<ValueType> types = new ArrayList<>();
 
-    final boolean isMSQ = isMSQRowType(queryResults.signature);
-
-    if (!isMSQ) {
-      for (int i = 0; i < queryResults.signature.getColumnNames().size(); i++) {
-        Optional<ColumnType> columnType = queryResults.signature.getColumnType(i);
-        if (columnType.isPresent()) {
-          types.add(columnType.get().getType());
-        } else {
-          types.add(null);
-        }
+    for (int i = 0; i < queryResults.signature.getColumnNames().size(); i++) {
+      Optional<ColumnType> columnType = queryResults.signature.getColumnType(i);
+      if (columnType.isPresent()) {
+        types.add(columnType.get().getType());
+      } else {
+        types.add(null);
       }
     }
 
@@ -1058,17 +1056,11 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         matchMode.validate(
             row,
             i,
-            isMSQ ? null : types.get(i),
+            types.get(i),
             expectedCell,
             resultCell);
       }
     }
-  }
-
-  private boolean isMSQRowType(RowSignature signature)
-  {
-    List<String> colNames = signature.getColumnNames();
-    return colNames.size() == 1 && "TASK".equals(colNames.get(0));
   }
 
   public void assertResultsEquals(String sql, List<Object[]> expectedResults, List<Object[]> results)
@@ -1215,6 +1207,11 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   protected void msqIncompatible()
   {
     assumeFalse(testBuilder().config.isRunningMSQ(), "test case is not MSQ compatible");
+  }
+
+  protected boolean isRunningMSQ()
+  {
+    return testBuilder().config.isRunningMSQ();
   }
 
   protected static boolean isRewriteJoinToFilter(final Map<String, Object> queryContext)
