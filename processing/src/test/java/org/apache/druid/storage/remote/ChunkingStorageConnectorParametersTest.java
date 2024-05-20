@@ -55,7 +55,7 @@ public class ChunkingStorageConnectorParametersTest
     builder.maxRetry(10);
     builder.cloudStoragePath("/path");
     builder.retryCondition(Predicates.alwaysTrue());
-    builder.tempDirSupplier(new File("/tmp"));
+    builder.tempDir(new File("/tmp"));
     ChunkingStorageConnectorParameters<Void> parameters = builder.build();
     Assert.assertEquals(0, parameters.getStart());
     Assert.assertEquals(10, parameters.getEnd());

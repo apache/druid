@@ -328,14 +328,6 @@ public class CliPeon extends GuiceRunnable
 
           @Provides
           @LazySingleton
-          @Named(DataSourceTaskIdHolder.TMP_DIR_BINDING)
-          public File getTempDirectoryFromTask(final TaskConfig taskConfig, @Named(DataSourceTaskIdHolder.TASK_ID_BINDING) String taskId)
-          {
-            return taskConfig.getTaskTempDir(taskId);
-          }
-
-          @Provides
-          @LazySingleton
           @Named(DataSourceTaskIdHolder.TASK_ID_BINDING)
           public String getTaskIDFromTask(final Task task)
           {

@@ -27,7 +27,6 @@ import com.google.inject.Key;
 import com.google.inject.multibindings.Multibinder;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.JsonConfigProvider;
-import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexing.overlord.duty.OverlordDuty;
 import org.apache.druid.initialization.DruidModule;
@@ -83,10 +82,6 @@ public class MSQDurableStorageModule implements DruidModule
           StorageConnectorProvider.class,
           MultiStageQuery.class
       );
-
-      binder.bind(Key.get(StorageConnector.class, MultiStageQuery.class))
-            .toProvider(Key.get(StorageConnectorProvider.class, MultiStageQuery.class))
-            .in(LazySingleton.class);
 
       if (nodeRoles.contains(NodeRole.OVERLORD)) {
         JsonConfigProvider.bind(

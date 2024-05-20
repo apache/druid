@@ -153,7 +153,7 @@
             <groupId>org.apache.druid</groupId>
             <artifactId>druid-server</artifactId>
             <version>${project.parent.version}</version>
-            <scope>provided</scope>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.easymock</groupId>

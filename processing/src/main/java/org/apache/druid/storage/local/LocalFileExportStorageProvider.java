@@ -54,7 +54,7 @@ public class LocalFileExportStorageProvider implements ExportStorageProvider
   }
 
   @Override
-  public StorageConnector get()
+  public StorageConnector createStorageConnector(File tempDir)
   {
     final File exportDestination = validateAndGetPath(storageConfig.getBaseDir(), exportPath);
     try {

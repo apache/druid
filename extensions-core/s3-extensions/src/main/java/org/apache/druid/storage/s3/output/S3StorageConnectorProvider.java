@@ -24,11 +24,7 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import com.google.inject.Injector;
-import com.google.inject.Key;
-import com.google.inject.name.Names;
 import org.apache.druid.java.util.common.HumanReadableBytes;
-import org.apache.druid.server.metrics.DataSourceTaskIdHolder;
 import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.StorageConnectorProvider;
 import org.apache.druid.storage.s3.S3StorageDruidModule;
@@ -41,8 +37,6 @@ public class S3StorageConnectorProvider extends S3OutputConfig implements Storag
 {
   @JacksonInject
   ServerSideEncryptingAmazonS3 s3;
-  @JacksonInject
-  Injector injector;
 
   @JsonCreator
   public S3StorageConnectorProvider(
@@ -56,9 +50,8 @@ public class S3StorageConnectorProvider extends S3OutputConfig implements Storag
   }
 
   @Override
-  public StorageConnector get()
+  public StorageConnector createStorageConnector(File tempDir)
   {
-    final File tempDir = injector.getInstance(Key.get(File.class, Names.named(DataSourceTaskIdHolder.TMP_DIR_BINDING)));
     return new S3StorageConnector(this, s3, tempDir);
   }
 }

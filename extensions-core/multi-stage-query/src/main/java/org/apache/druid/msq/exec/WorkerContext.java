@@ -32,7 +32,7 @@ import java.io.File;
 
 /**
  * Context used by multi-stage query workers.
- *
+ * <br>
  * Useful because it allows test fixtures to provide their own implementations.
  */
 public interface WorkerContext

@@ -77,7 +77,7 @@ public class AzureStorageConnector extends ChunkingStorageConnector<AzureInputRa
   public ChunkingStorageConnectorParameters<AzureInputRange> buildInputParams(String path, long from, long size)
   {
     ChunkingStorageConnectorParameters.Builder<AzureInputRange> parameters = new ChunkingStorageConnectorParameters.Builder<>();
-    parameters.tempDirSupplier(tempFile);
+    parameters.tempDir(tempFile);
     parameters.maxRetry(config.getMaxRetry());
     parameters.cloudStoragePath(objectPath(path));
     parameters.retryCondition(AzureUtils.AZURE_RETRY);

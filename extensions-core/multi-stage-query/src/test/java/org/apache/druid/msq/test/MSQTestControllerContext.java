@@ -39,6 +39,7 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
@@ -69,6 +70,7 @@ import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
+import java.io.File;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -90,6 +92,7 @@ public class MSQTestControllerContext implements ControllerContext
       "MultiStageQuery-test-controller-client"
   ));
   private final CoordinatorClient coordinatorClient;
+  private final File file = FileUtils.createTempDir();
   private final DruidNode node = new DruidNode(
       "controller",
       "localhost",
@@ -118,7 +121,7 @@ public class MSQTestControllerContext implements ControllerContext
     this.mapper = mapper;
     this.injector = injector;
     this.taskActionClient = taskActionClient;
-    coordinatorClient = Mockito.mock(CoordinatorClient.class);
+    this.coordinatorClient = Mockito.mock(CoordinatorClient.class);
 
     Mockito.when(coordinatorClient.fetchServerViewSegments(
                      ArgumentMatchers.anyString(),
@@ -328,6 +331,12 @@ public class MSQTestControllerContext implements ControllerContext
         IndexerControllerContext.makeTaskContext(querySpec, queryKernelConfig, ImmutableMap.of()),
         0
     );
+  }
+
+  @Override
+  public File tempDir()
+  {
+    return file;
   }
 
   @Override

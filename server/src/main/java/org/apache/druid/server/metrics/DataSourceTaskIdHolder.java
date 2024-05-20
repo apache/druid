@@ -29,7 +29,6 @@ public class DataSourceTaskIdHolder
 {
   public static final String DATA_SOURCE_BINDING = "druidDataSource";
   public static final String TASK_ID_BINDING = "druidTaskId";
-  public static final String TMP_DIR_BINDING = "druidTempDirectory";
   public static final String LOOKUPS_TO_LOAD_FOR_TASK = "lookupsToLoadForTask";
   @Named(DATA_SOURCE_BINDING)
   @Inject(optional = true)

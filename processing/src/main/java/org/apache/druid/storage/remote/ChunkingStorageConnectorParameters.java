@@ -231,7 +231,7 @@ public class ChunkingStorageConnectorParameters<T>
       return this;
     }
 
-    public Builder<T> tempDirSupplier(File tempDir)
+    public Builder<T> tempDir(File tempDir)
     {
       this.tempDir = tempDir;
       return this;

@@ -23,11 +23,7 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import com.google.inject.Injector;
-import com.google.inject.Key;
-import com.google.inject.name.Names;
 import org.apache.druid.java.util.common.HumanReadableBytes;
-import org.apache.druid.server.metrics.DataSourceTaskIdHolder;
 import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.StorageConnectorProvider;
 import org.apache.druid.storage.google.GoogleInputDataConfig;
@@ -47,9 +43,6 @@ public class GoogleStorageConnectorProvider extends GoogleOutputConfig implement
   @JacksonInject
   GoogleInputDataConfig googleInputDataConfig;
 
-  @JacksonInject
-  Injector injector;
-
   @JsonCreator
   public GoogleStorageConnectorProvider(
       @JsonProperty(value = "bucket", required = true) String bucket,
@@ -62,9 +55,8 @@ public class GoogleStorageConnectorProvider extends GoogleOutputConfig implement
   }
 
   @Override
-  public StorageConnector get()
+  public StorageConnector createStorageConnector(File tempDir)
   {
-    final File tempDir = injector.getInstance(Key.get(File.class, Names.named(DataSourceTaskIdHolder.TMP_DIR_BINDING)));
     return new GoogleStorageConnector(this, googleStorage, googleInputDataConfig, tempDir);
   }
 }
