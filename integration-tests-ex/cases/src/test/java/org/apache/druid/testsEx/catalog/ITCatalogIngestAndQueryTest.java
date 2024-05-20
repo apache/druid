@@ -499,7 +499,7 @@ public abstract class ITCatalogIngestAndQueryTest
         .getUnderlyingException()
         .getMessage()
         .equals(
-            String.format("Column [extra] is not defined in the target table [druid.%s] strict schema", tableName))
+            StringUtils.format("Column [extra] is not defined in the target table [druid.%s] strict schema", tableName))
     );
 
     // Submit the task and wait for the datasource to get loaded
