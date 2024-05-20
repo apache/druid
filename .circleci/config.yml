@@ -61,4 +61,7 @@ workflows:
   druid-build:
     jobs:
       - build_docker_image:
+          filters:
+            branches:
+              only: 'conviva-druid-28.0.0-dev'
           context: 'conviva_deploy'
