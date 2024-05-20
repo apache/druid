@@ -24,11 +24,11 @@ description: How to use LATEST_BY or deltas for up-to-date values and ANY for de
   ~ under the License.
   -->
 
-This tutorial describes potential uses for LATEST_BY, deltas, and ANY aggregations to solve certain UPSERT and deduplication use cases for Apache Druid.
+This tutorial describes strategies in Apache Druid for use cases that might be handled by UPSERT in other databases. You can use the LATEST_BY aggregation at query time or "deltas" for numeric dimensions at insert time.
+
+The tutorial also includes an example of the ANY aggregation to handle deduplication use cases. 
 
 The [Update data](./tutorial-update-data.md) tutorial demonstrates how to use batch operations to updadate data according to the timestamp, including UPSERT cases. However, with streaming data, you can potentially use LATEST_BY or deltas to satisfy requirements for updates.
-
-Additionally, the ANY function can solve for cases where you would otherwise want to perform deduplication.
 
 ## Prerequisites
 
@@ -36,26 +36,26 @@ Before you follow the steps in this tutorial, download Druid as described in the
 
 You should be familiar with data querying in Druid. If you haven't already, go through the [Query data](../tutorials/tutorial-query.md) tutorial first.
 
-## Use LATEST_BY to get the current value for a field
+## Use LATEST_BY to retrieve updated values
 
-Sometimes you want to read the latest value of a measure `my-measure` for a corresponding dimension `my-diimension`. Instead of updating your data or using UPSERT, if you append all updates during ingestion, then you can preform the following type of query:
+Sometimes you want to read the latest value of one dimension or measure as it relates to another dimension. In a transactional database, you might maintain dimension or measure using UPSERT, but in Druid you can append all updates or changes during ingestion. The LATEST_BY function lets you get the most recent value for the dimension with the following type of query:
 
 ```sql
-SELECT my_dimession,
-       LATEST_BY(my_measure, update_timestamp)
+SELECT dimension,
+       LATEST_BY(changed_dimension, update_timestamp)
 FROM my_table
 GROUP BY 1
 ```
 
-For example, consider the following table of events that log the total number of points for a user:
+For example, consider the following table of events that log the total number of points over for a user:
 
 | `__time` |  `user_id`| `total_points`|
-| --- | --- | --- | --- |
+| --- | --- | --- |
 | `2024-01-01T01:00:00.000Z`|`funny_bunny1`| 10 |
 | `2024-01-01T01:05:00.000Z`|`funny_bunny1`| 30 |
 | `2024-01-01T02:00:00.000Z`|`funny_bunny1`| 35 |
-| `2024-01-01T02:00:00.000Z`|`creepy_monkey2`| 30 |
-| `2024-01-01T02:05:00.000Z`|`creepy_monkey2`| 55 |
+| `2024-01-01T02:00:00.000Z`|`silly_monkey2`| 30 |
+| `2024-01-01T02:05:00.000Z`|`silly_monkey2`| 55 |
 | `2024-01-01T03:00:00.000Z`|`funny_bunny1`| 40 |
 
 <details>
@@ -67,7 +67,7 @@ WITH "ext" AS (
   SELECT *
   FROM TABLE(
     EXTERN(
-     '{"type":"inline","data":"{\"timestamp\":\"2024-01-01T01:00:00Z\",\"user_id\":\"funny_bunny1\", \"points\":10}\n{\"timestamp\":\"2024-01-01T01:05:00Z\",\"user_id\":\"funny_bunny1\", \"points\":30}\n{\"timestamp\": \"2024-01-01T02:00:00Z\",\"user_id\":\"funny_bunny1\", \"points\":35}\n{\"timestamp\":\"2024-01-01T02:00:00Z\",\"user_id\":\"creepy_monkey2\", \"points\":30}\n{\"timestamp\":\"2024-01-01T02:05:00Z\",\"user_id\":\"creepy_monkey2\", \"points\":55}\n{\"timestamp\":\"2024-01-01T03:00:00Z\",\"user_id\":\"funny_bunny1\", \"points\":40}"}',
+     '{"type":"inline","data":"{\"timestamp\":\"2024-01-01T01:00:00Z\",\"user_id\":\"funny_bunny1\", \"points\":10}\n{\"timestamp\":\"2024-01-01T01:05:00Z\",\"user_id\":\"funny_bunny1\", \"points\":30}\n{\"timestamp\": \"2024-01-01T02:00:00Z\",\"user_id\":\"funny_bunny1\", \"points\":35}\n{\"timestamp\":\"2024-01-01T02:00:00Z\",\"user_id\":\"silly_monkey2\", \"points\":30}\n{\"timestamp\":\"2024-01-01T02:05:00Z\",\"user_id\":\"silly_monkey2\", \"points\":55}\n{\"timestamp\":\"2024-01-01T03:00:00Z\",\"user_id\":\"funny_bunny1\", \"points\":40}"}',
      '{"type":"json"}'
     )
   ) EXTEND ("timestamp" VARCHAR, "user_id" VARCHAR, "points" BIGINT)
@@ -81,7 +81,7 @@ PARTITIONED BY DAY
 ```
 </details>
 
-The following query gives us the latest points value for each user_id. In the example, the values increase each time, but this method works if the values fluctuate:
+The following query gives us most recent `points` value for each `user_id`:
 
 ```sql
 SELECT user_id,
@@ -90,12 +90,51 @@ FROM latest_by_tutorial1
 GROUP BY 1
 ```
 
-This method requires an additional timestamp to track the update times so that Druid can track the latest version.
+Returns
 
-You can use this query shape as a subquery to do additional processing. However, if there a lot of values for "my_dimesion", the query can be expensive.
+|  `user_id`| `total_points`|
+| --- | --- |
+|`silly_monkey2`| 55 |
+|`funny_bunny1`| 40 |
 
-Consider the following data that represents points for various users:
+In the example, the values increase each time, but this method works even if the values fluctuate up and down.
 
+You can use this query shape as a subquery to do additional processing. However, if there a lot of values for `user_id`, the query can be expensive.
+
+If your want the to track the latest value for different times within a larger time frame, you need an additional timestamp to record update times so Druid can track the latest version. Consider the following data that represents points for various users updated within an hour time frame:
+
+| `__time` | `update_time` | `user_id`| `total_points`|
+| --- | --- | --- | --- |
+| `2024-01-01T01:00:00.000Z`| `2024-01-01T01:00:00.000Z`|`funny_bunny1`| 10 |
+|`2024-01-01T01:00:00.000Z`| `2024-01-01T01:05:00.000Z`|`funny_bunny1`| 30 |
+|`2024-01-01T02:00:00.000Z`| `2024-01-01T02:00:00.000Z`|`funny_bunny1`| 35 |
+|`2024-01-01T02:00:00.000Z`|`2024-01-01T02:00:00.000Z`|`silly_monkey2`| 30 |
+|`2024-01-01T02:00:00.000Z`| `2024-01-01T02:05:00.000Z`|`silly_monkey2`| 55 |
+|`2024-01-01T03:00:00.000Z`| `2024-01-01T03:00:00.000Z`|`funny_bunny1`| 40 |
+
+<details>
+<summary>Insert sample data</summary>
+
+```sql
+REPLACE INTO "latest_by_tutorial2" OVERWRITE ALL
+WITH "ext" AS (
+  SELECT *
+  FROM TABLE(
+    EXTERN(
+     '{"type":"inline","data":"{\"timestamp\":\"2024-01-01T01:00:00Z\",\"updated_timestamp\":\"2024-01-01T01:00:00Z\",\"user_id\":\"funny_bunny1\", \"points\":10}\n{\"timestamp\":\"2024-01-01T01:05:00Z\",\"updated_timestamp\":\"2024-01-01T01:05:00Z\",\"user_id\":\"funny_bunny1\", \"points\":30}\n{\"timestamp\": \"2024-01-01T02:00:00Z\",\"updated_timestamp\":\"2024-01-01T02:00:00Z\",\"user_id\":\"funny_bunny1\", \"points\":35}\n{\"timestamp\":\"2024-01-01T02:00:00Z\",\"updated_timestamp\":\"2024-01-01T02:00:00Z\",\"user_id\":\"silly_monkey2\", \"points\":30}\n{\"timestamp\":\"2024-01-01T02:00:00Z\",\"updated_timestamp\":\"2024-01-01T02:05:00Z\",\"user_id\":\"silly_monkey2\", \"points\":55}\n{\"timestamp\":\"2024-01-01T03:00:00Z\",\"updated_timestamp\":\"2024-01-01T03:00:00Z\",\"user_id\":\"funny_bunny1\", \"points\":40}"}',
+     '{"type":"json"}'
+    )
+  ) EXTEND ("timestamp" VARCHAR, "updated_timestamp" VARCHAR, "user_id" VARCHAR, "points" BIGINT)
+)
+SELECT
+  TIME_PARSE("timestamp") AS "__time",
+  "updated_timestamp",
+  "user_id",
+  "points"
+FROM "ext"
+PARTITIONED BY DAY
+```
+</details>
 
 
 The following query demonstrates how to query for the latest points value by user for each hour:
@@ -103,8 +142,8 @@ The following query demonstrates how to query for the latest points value by use
 ```sql
 SELECT FLOOR("__time" TO HOUR) AS "hour_time",
       "user_id",
-       LATEST_BY("points", TIME_PARSE(updated_timestamp)) AS latest_points_hour
-FROM latest_by_tutorial
+       LATEST_BY("points", TIME_PARSE(updated_timestamp)) AS "latest_points_hour"
+FROM latest_by_tutorial2
 GROUP BY 1,2
 ```
 
@@ -114,173 +153,68 @@ The results are as follows:
 |---|---|---|
 |`2024-01-01T01:00:00.000Z`|`funny_bunny1`|20|
 |`2024-01-01T02:00:00.000Z`|`funny_bunny1`|5|
-|`2024-01-01T02:00:00.000Z`|`creepy_monkey2`|25|
+|`2024-01-01T02:00:00.000Z`|`silly_monkey2`|25|
 |`2024-01-01T03:00:00.000Z`|`funny_bunny1`|10|
 
-In the resulting `update_tutorial` datasource, individual rows are uniquely identified by `__time`, `animal`, and `number`.
-To view the results, open a new tab and run the following query:
+You can set up a periodic batch ingestion job that reindexes modified data into a new datasource for direct querying without grouping to mitigate for the cost of these kinds of queries is to.
+ 
+Alternatively, you can perform ingestion-time aggregation and use the LATEST_BY aggregation at ingestion time to append updates with streaming ingestion into a rolled up datasource. Appending into a time chunk adds new segments and does not perfectly roll up data, so rows may be partial rather than complete rollups, and you may have multiple partially rolled up rows. In this case you still need to use GROUP BY query for correct querying of the rolled-up data source, you secan tune automatic compaction right to significantly reduce the number of stale rows and improve your performance
 
-```sql
-SELECT * FROM "update_tutorial"
-```
+## Use delta values and aggregation for updated values
+
+Instead of appending the latest total value in your events, you could log the change in value with each event and use the aggregator you usually use. This method may allow you to avoid a level of aggregation and grouping in your queries.
+
+For example, consider a datasource with a measure column `y` that you aggregate with SUM, grouped by by another dimension `x`. If you want to update the value of `y` for `x` from 3 to 2, then insert -1 for `y`. This way the aggregation SUM(`y`) is correct for any queries grouped by `x`. This may offer a significant performance advantage but the trade off is that the aggregation has to always be a SUM.
+
+In other cases, the updates to the data may already be deltas to the original, and so the data engineering required to append the updates would be simple. Another simplification here is that you don't need the update timestamp. Just as before, the same mitigations as the previous case apply to improve performance with autocompaction and rollup at ingestion time.
+
+For example, consider the following table of events that log the change in point total for a user:
+
+| `__time` |  `user_id`| `delta`|
+| --- | --- | --- |
+| `2024-01-01T01:00:00.000Z`|`funny_bunny1`| 10 |
+| `2024-01-01T01:05:00.000Z`|`funny_bunny1`| 10 |
+| `2024-01-01T02:00:00.000Z`|`funny_bunny1`| 5 |
+| `2024-01-01T02:00:00.000Z`|`silly_monkey2`| 30 |
+| `2024-01-01T02:05:00.000Z`|`silly_monkey2`| -5 |
+| `2024-01-01T03:00:00.000Z`|`funny_bunny1`| 10 |
 
 <details>
-<summary> View the results</summary>
-
-| `__time` | `animal` | `number`|
-| -- | -- | -- |
-| `2024-01-01T01:01:35.000Z`| `lion`| 300 |
-| `2024-01-01T05:01:35.000Z`| `mongoose`| 737 |
-| `2024-01-01T06:01:35.000Z`| `snake`| 1234 |
-| `2024-01-01T07:01:35.000Z`| `octopus`| 115 |
-| `2024-01-02T01:01:35.000Z`| `opossum`| 300 |
-| `2024-01-02T05:01:35.000Z`| `skunk`| 737 |
-| `2024-01-02T06:01:35.000Z`| `iguana`| 1234 |
-| `2024-01-02T07:01:35.000Z`| `seahorse`| 115 |
-
-</details>
-
-The results contain records for eight animals over two days.
-
-## Overwrite all data
-
-You can use the REPLACE function with OVERWRITE ALL to replace the entire datasource with new data while dropping the old data.
-
-In the web console, open a new tab and run the following query to overwrite timestamp data for the entire `update_tutorial` datasource:
+<summary>Insert sample data</summary>
 
 ```sql
-REPLACE INTO "update_tutorial" OVERWRITE ALL
-WITH "ext" AS (SELECT *
-FROM TABLE(
-  EXTERN(
-    '{"type":"inline","data":"{\"timestamp\":\"2024-01-02T07:01:35Z\",\"animal\":\"octopus\", \"number\":115}\n{\"timestamp\":\"2024-01-02T05:01:35Z\",\"animal\":\"mongoose\", \"number\":737}\n{\"timestamp\":\"2024-01-02T06:01:35Z\",\"animal\":\"snake\", \"number\":1234}\n{\"timestamp\":\"2024-01-02T01:01:35Z\",\"animal\":\"lion\", \"number\":300}\n{\"timestamp\":\"2024-01-03T07:01:35Z\",\"animal\":\"seahorse\", \"number\":115}\n{\"timestamp\":\"2024-01-03T05:01:35Z\",\"animal\":\"skunk\", \"number\":737}\n{\"timestamp\":\"2024-01-03T06:01:35Z\",\"animal\":\"iguana\", \"number\":1234}\n{\"timestamp\":\"2024-01-03T01:01:35Z\",\"animal\":\"opossum\", \"number\":300}"}',
-    '{"type":"json"}'
-  )
-) EXTEND ("timestamp" VARCHAR, "animal" VARCHAR, "number" BIGINT))
+REPLACE INTO "delta_tutorial" OVERWRITE ALL
+WITH "ext" AS (
+  SELECT *
+  FROM TABLE(
+    EXTERN(
+     '{"type":"inline","data":"{\"timestamp\":\"2024-01-01T01:00:00Z\",\"user_id\":\"funny_bunny1\", \"points\":10}\n{\"timestamp\":\"2024-01-01T01:05:00Z\",\"user_id\":\"funny_bunny1\", \"points\":10}\n{\"timestamp\": \"2024-01-01T02:00:00Z\",\"user_id\":\"funny_bunny1\", \"points\":5}\n{\"timestamp\":\"2024-01-01T02:00:00Z\",\"user_id\":\"silly_monkey2\", \"points\":30}\n{\"timestamp\":\"2024-01-01T02:05:00Z\",\"user_id\":\"silly_monkey2\", \"points\":-5}\n{\"timestamp\":\"2024-01-01T03:00:00Z\",\"user_id\":\"funny_bunny1\", \"points\":10}"}',
+     '{"type":"json"}'
+    )
+  ) EXTEND ("timestamp" VARCHAR, "user_id" VARCHAR, "points" BIGINT)
+)
 SELECT
   TIME_PARSE("timestamp") AS "__time",
-  "animal",
-  "number"
+  "user_id",
+  "points"
 FROM "ext"
 PARTITIONED BY DAY
 ```
 
-<details>
-<summary> View the results</summary>
-
-| `__time` | `animal` | `number`|
-| -- | -- | -- |
-| `2024-01-02T01:01:35.000Z`| `lion`| 300 |
-| `2024-01-02T05:01:35.000Z`| `mongoose`| 737 |
-| `2024-01-02T06:01:35.000Z`| `snake`| 1234 |
-| `2024-01-02T07:01:35.000Z`| `octopus`| 115 |
-| `2024-01-03T01:01:35.000Z`| `opossum`| 300 |
-| `2024-01-03T05:01:35.000Z`| `skunk`| 737 |
-| `2024-01-03T06:01:35.000Z`| `iguana`| 1234 |
-| `2024-01-03T07:01:35.000Z`| `seahorse`| 115 |
-
 </details>
 
-Note that the values in the `__time` column have changed to one day later.
-
-## Overwrite records for a specific time range
-
-You can use the REPLACE function to overwrite a specific time range of a datasource. When you overwrite a specific time range, that time range must align with the granularity specified in the PARTITIONED BY clause.
-
-In the web console, open a new tab and run the following query to insert a new row and update specific rows. Note that the OVERWRITE WHERE clause tells the query to only update records for the date 2024-01-03.
+The following query returns the same points per hour as the second LATEST_BY example:
 
 ```sql
-REPLACE INTO "update_tutorial" 
-  OVERWRITE WHERE "__time" >= TIMESTAMP'2024-01-03 00:00:00' AND "__time" < TIMESTAMP'2024-01-04 00:00:00'
-WITH "ext" AS (SELECT *
-FROM TABLE(
-  EXTERN(
-    '{"type":"inline","data":"{\"timestamp\":\"2024-01-03T01:01:35Z\",\"animal\":\"tiger\", \"number\":300}\n{\"timestamp\":\"2024-01-03T07:01:35Z\",\"animal\":\"seahorse\", \"number\":500}\n{\"timestamp\":\"2024-01-03T05:01:35Z\",\"animal\":\"polecat\", \"number\":626}\n{\"timestamp\":\"2024-01-03T06:01:35Z\",\"animal\":\"iguana\", \"number\":300}\n{\"timestamp\":\"2024-01-03T01:01:35Z\",\"animal\":\"flamingo\", \"number\":999}"}',
-    '{"type":"json"}'
-  )
-) EXTEND ("timestamp" VARCHAR, "animal" VARCHAR, "number" BIGINT))
-SELECT
-  TIME_PARSE("timestamp") AS "__time",
-  "animal",
-  "number"
-FROM "ext"
-PARTITIONED BY DAY
+SELECT FLOOR("__time" TO HOUR) as "hour_time",
+       "user_id",
+       SUM("points") AS "latest_points_hour"
+FROM "delta_tutorial"
+GROUP BY 1,2
 ```
 
-<details>
-<summary> View the results</summary>
+## Use ANY for deduplication
 
-| `__time` | `animal` | `number`|
-| -- | -- | -- |
-| `2024-01-02T01:01:35.000Z`| `lion`| 300 |
-| `2024-01-02T05:01:35.000Z`| `mongoose`| 737 |
-| `2024-01-02T06:01:35.000Z`| `snake`| 1234 |
-| `2024-01-02T07:01:35.000Z`| `octopus`| 115 |
-| `2024-01-03T01:01:35.000Z`| `flamingo`| 999 |
-| `2024-01-03T01:01:35.000Z`| `tiger`| 300 |
-| `2024-01-03T05:01:35.000Z`| `polecat`| 626 |
-| `2024-01-03T06:01:35.000Z`| `iguana`| 300 |
-| `2024-01-03T07:01:35.000Z`| `seahorse`| 500 |
-
-</details>
-
-Note the changes in the resulting datasource:
-
-* There is now a new row called `flamingo`.
-* The `opossum` row has the value `tiger`.
-* The `skunk` row has the value `polecat`.
-* The `iguana` and `seahorse` rows have different numbers.
-
-## Update a row using partial segment overshadowing
-
-In Druid, you can overlay older data with newer data for the entire segment or portions of the segment within a particular partition.
-This capability is called [overshadowing](../ingestion/tasks.md#overshadowing-between-segments).
-
-You can use partial overshadowing to update a single row by adding a smaller time granularity segment on top of the existing data.
-It's a less common variation on a more common approach where you replace the entire time chunk.
-
-The following example demonstrates how update data using partial overshadowing with mixed segment granularity.  
-Note the following important points about the example:
-
-* The query updates a single record for a specific `number` row.
-* The original datasource uses DAY segment granularity.
-* The new data segment is at HOUR granularity and represents a time range that's smaller than the existing data.
-* The OVERWRITE WHERE and WHERE TIME_IN_INTERVAL clauses specify the destination where the update occurs and the source of the update, respectively.
-* The query replaces everything within the specified interval. To update only a subset of data in that interval, you have to carry forward all records, changing only what you want to change. You can accomplish that by using the [CASE](../querying/sql-functions.md#case) function in the SELECT list.
-
-```sql
-REPLACE INTO "update_tutorial"
-   OVERWRITE
-       WHERE "__time" >= TIMESTAMP'2024-01-03 05:00:00' AND "__time" < TIMESTAMP'2024-01-03 06:00:00'
-SELECT 
-   "__time", 
-   "animal", 
-   CAST(486 AS BIGINT) AS "number"
-FROM "update_tutorial" 
-WHERE TIME_IN_INTERVAL("__time", '2024-01-03T05:01:35Z/PT1S')
-PARTITIONED BY FLOOR(__time TO HOUR)
-```
-
-<details>
-<summary> View the results</summary>
-
-| `__time` | `animal` | `number`|
-| -- | -- | -- |
-| `2024-01-02T01:01:35.000Z`| `lion`| 300 |
-| `2024-01-02T05:01:35.000Z`| `mongoose`| 737 |
-| `2024-01-02T06:01:35.000Z`| `snake`| 1234 |
-| `2024-01-02T07:01:35.000Z`| `octopus`| 115 |
-| `2024-01-03T01:01:35.000Z`| `flamingo`| 999 |
-| `2024-01-03T01:01:35.000Z`| `tiger`| 300 |
-| `2024-01-03T05:01:35.000Z`| `polecat`| 486 |
-| `2024-01-03T06:01:35.000Z`| `iguana`| 300 |
-| `2024-01-03T07:01:35.000Z`| `seahorse`| 500 |
-
-</details>
-
-Note that the `number` for `polecat` has changed from 626 to 486.
-
-When you perform partial segment overshadowing multiple times, you can create segment fragmentation that could affect query performance. Use [compaction](../data-management/compaction.md) to correct any fragmentation.
 
 ## Learn more
 
