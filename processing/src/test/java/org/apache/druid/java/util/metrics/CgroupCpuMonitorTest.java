@@ -82,7 +82,7 @@ public class CgroupCpuMonitorTest
     Assert.assertEquals("cgroup/cpu/cores_quota", coresEvent.get("metric"));
     Assert.assertEquals(3.0D, coresEvent.get("value"));
     Assert.assertEquals("cgroup/cpuacct/usage", usageEvent.get("metric"));
-    Assert.assertEquals(5000000, usageEvent.get("value"));
+    Assert.assertEquals(5000000L, usageEvent.get("value"));
   }
 
   @Test

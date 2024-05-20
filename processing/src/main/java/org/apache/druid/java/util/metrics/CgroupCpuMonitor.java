@@ -33,7 +33,7 @@ public class CgroupCpuMonitor extends FeedDefiningMonitor
   final CgroupDiscoverer cgroupDiscoverer;
   final Map<String, String[]> dimensions;
   private long previousUsage;
-  private long previousSnapshotAt = 0l;
+  private long previousSnapshotAt = 0L;
 
   public CgroupCpuMonitor(CgroupDiscoverer cgroupDiscoverer, final Map<String, String[]> dimensions, String feed)
   {
