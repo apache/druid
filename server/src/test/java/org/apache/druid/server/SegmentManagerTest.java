@@ -219,7 +219,7 @@ public class SegmentManagerTest
   }
 
   @Test
-  public void testLoadSegment() throws ExecutionException, InterruptedException, SegmentLoadingException
+  public void testLoadSegment() throws ExecutionException, InterruptedException
   {
     final List<Future<Boolean>> futures = SEGMENTS.stream()
                                                   .map(

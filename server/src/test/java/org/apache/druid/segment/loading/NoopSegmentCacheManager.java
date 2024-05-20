@@ -24,7 +24,6 @@ import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.timeline.DataSegment;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 
@@ -41,26 +40,25 @@ public class NoopSegmentCacheManager implements SegmentCacheManager
   }
 
   @Override
-  public List<DataSegment> getCachedSegments() throws IOException
+  public List<DataSegment> getCachedSegments()
   {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public void storeInfoFile(DataSegment segment) throws IOException
+  public void storeInfoFile(DataSegment segment)
   {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public boolean removeInfoFile(DataSegment segment) throws IOException
+  public boolean removeInfoFile(DataSegment segment)
   {
     throw new UnsupportedOperationException();
   }
 
   @Override
   public ReferenceCountingSegment getSegment(DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback loadFailed)
-      throws SegmentLoadingException
   {
     throw new UnsupportedOperationException();
   }
