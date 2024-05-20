@@ -1869,19 +1869,36 @@ public class ControllerImpl implements Controller
         ((DataSourceMSQDestination) task.getQuerySpec().getDestination()).getReplaceTimeChunks()
     );
 
-    DimensionsSpec dimensionsSpec = dataSchema.getDimensionsSpec();
     Map<String, Object> transformSpec = TransformSpec.NONE.equals(dataSchema.getTransformSpec())
                                         ? null
                                         : new ClientCompactionTaskTransformSpec(
                                             dataSchema.getTransformSpec().getFilter()
                                         ).asMap(jsonMapper);
-    List<Object> metricsSpec = dataSchema.getAggregators() == null
-                               ? null
-                               : jsonMapper.convertValue(
-                                   dataSchema.getAggregators(), new TypeReference<List<Object>>()
-                                   {
-                                   });
 
+
+    DimensionsSpec dimensionsSpec;
+    List<Object> metricsSpec;
+
+    if (task.getQuerySpec().getQuery() instanceof GroupByQuery) {
+      GroupByQuery groupByQuery = (GroupByQuery) task.getQuerySpec().getQuery();
+
+
+      dimensionsSpec = new DimensionsSpec(groupByQuery.getDimensions()
+                                                      .stream()
+                                                      .map(dimensionSpec -> DimensionSchema.getDefaultSchemaForBuiltInType(
+                                                          dimensionSpec.getOutputName(),
+                                                          dimensionSpec.getOutputType()
+                                                      ))
+                                                      .collect(
+                                                          Collectors.toList()));
+      metricsSpec = jsonMapper.convertValue(
+          groupByQuery.getAggregatorSpecs(), new TypeReference<List<Object>>()
+          {
+          });
+    } else {
+      dimensionsSpec = new DimensionsSpec(dataSchema.getDimensionsSpec().getDimensions());
+      metricsSpec = Collections.emptyList();
+    }
 
     IndexSpec indexSpec = tuningConfig.getIndexSpec();
 
