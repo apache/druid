@@ -19,22 +19,13 @@
 
 package org.apache.druid.java.util.metrics.cgroups;
 
-import com.google.common.primitives.Longs;
-import org.apache.druid.java.util.common.logger.Logger;
-
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.util.List;
-import java.util.Objects;
-
 /**
  * Collect CPU share and quota information from cpu cgroup files.
  */
 public class Cpu
 {
-  private static final Logger LOG = new Logger(Cpu.class);
   private static final String CGROUP = "cpu";
+  private static final String CPU_USAGE_FILE = "cpuacct.usage";
   private static final String CPU_SHARES_FILE = "cpu.shares";
   private static final String CPU_QUOTA_FILE = "cpu.cfs_quota_us";
   private static final String CPU_PERIOD_FILE = "cpu.cfs_period_us";
@@ -51,28 +42,17 @@ public class Cpu
    *
    * @return A snapshot with the data populated.
    */
-  public CpuAllocationMetric snapshot()
+  public CpuMetrics snapshot()
   {
-    return new CpuAllocationMetric(
-        readLongValue(CPU_SHARES_FILE, -1),
-        readLongValue(CPU_QUOTA_FILE, 0),
-        readLongValue(CPU_PERIOD_FILE, 0)
+    return new CpuMetrics(
+        CgroupUtil.readLongValue(cgroupDiscoverer, CGROUP, CPU_SHARES_FILE, -1),
+        CgroupUtil.readLongValue(cgroupDiscoverer, CGROUP, CPU_QUOTA_FILE, 0),
+        CgroupUtil.readLongValue(cgroupDiscoverer, CGROUP, CPU_PERIOD_FILE, 0),
+        CgroupUtil.readLongValue(cgroupDiscoverer, CGROUP, CPU_USAGE_FILE, -1)
     );
   }
 
-  private long readLongValue(String fileName, long defaultValeue)
-  {
-    try {
-      List<String> lines = Files.readAllLines(Paths.get(cgroupDiscoverer.discover(CGROUP).toString(), fileName));
-      return lines.stream().map(Longs::tryParse).filter(Objects::nonNull).findFirst().orElse(defaultValeue);
-    }
-    catch (RuntimeException | IOException ex) {
-      LOG.error(ex, "Unable to fetch %s", fileName);
-      return defaultValeue;
-    }
-  }
-
-  public static class CpuAllocationMetric
+  public static class CpuMetrics
   {
     // Maps to cpu.shares - the share of CPU given to the process
     private final long shares;
@@ -85,11 +65,15 @@ public class Cpu
     // bandwidth decisions
     private final long periodUs;
 
-    CpuAllocationMetric(long shares, long quotaUs, long periodUs)
+    // Maps to cpuacct.uage - the total CPU time (in nanoseconds) consumed by all tasks in this cgroup
+    private final long usageNs;
+
+    CpuMetrics(long shares, long quotaUs, long periodUs, long usageNs)
     {
       this.shares = shares;
       this.quotaUs = quotaUs;
       this.periodUs = periodUs;
+      this.usageNs = usageNs;
     }
 
     public final long getShares()
@@ -105,6 +89,11 @@ public class Cpu
     public final long getPeriodUs()
     {
       return periodUs;
+    }
+
+    public final long getUsageNs()
+    {
+      return usageNs;
     }
   }
 }

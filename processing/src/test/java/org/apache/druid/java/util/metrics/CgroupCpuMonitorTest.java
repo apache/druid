@@ -63,6 +63,7 @@ public class CgroupCpuMonitorTest
     TestUtils.copyOrReplaceResource("/cpu.shares", new File(cpuDir, "cpu.shares"));
     TestUtils.copyOrReplaceResource("/cpu.cfs_quota_us", new File(cpuDir, "cpu.cfs_quota_us"));
     TestUtils.copyOrReplaceResource("/cpu.cfs_period_us", new File(cpuDir, "cpu.cfs_period_us"));
+    TestUtils.copyOrReplaceResource("/cpuacct.usage", new File(cpuDir, "cpuacct.usage"));
   }
 
   @Test
@@ -72,13 +73,16 @@ public class CgroupCpuMonitorTest
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     Assert.assertTrue(monitor.doMonitor(emitter));
     final List<Event> actualEvents = emitter.getEvents();
-    Assert.assertEquals(2, actualEvents.size());
+    Assert.assertEquals(3, actualEvents.size());
     final Map<String, Object> sharesEvent = actualEvents.get(0).toMap();
     final Map<String, Object> coresEvent = actualEvents.get(1).toMap();
+    final Map<String, Object> usageEvent = actualEvents.get(2).toMap();
     Assert.assertEquals("cgroup/cpu/shares", sharesEvent.get("metric"));
     Assert.assertEquals(1024L, sharesEvent.get("value"));
     Assert.assertEquals("cgroup/cpu/cores_quota", coresEvent.get("metric"));
     Assert.assertEquals(3.0D, coresEvent.get("value"));
+    Assert.assertEquals("cgroup/cpuacct/usage", usageEvent.get("metric"));
+    Assert.assertEquals(5000000, usageEvent.get("value"));
   }
 
   @Test

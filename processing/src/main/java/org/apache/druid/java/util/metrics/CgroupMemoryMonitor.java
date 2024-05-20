@@ -60,16 +60,18 @@ public class CgroupMemoryMonitor extends FeedDefiningMonitor
   {
     final Memory memory = new Memory(cgroupDiscoverer);
     final Memory.MemoryStat stat = memory.snapshot();
+    final ServiceMetricEvent.Builder builder = builder();
+    MonitorUtils.addDimensionsToBuilder(builder, dimensions);
+    emitter.emit(builder.setMetric("cgroup/memory/usage/bytes", stat.getUsage()));
+    emitter.emit(builder.setMetric("cgroup/memory/limit/bytes", stat.getLimit()));
+
     stat.getMemoryStats().forEach((key, value) -> {
-      final ServiceMetricEvent.Builder builder = builder();
-      MonitorUtils.addDimensionsToBuilder(builder, dimensions);
       // See https://www.kernel.org/doc/Documentation/cgroup-v1/memory.txt
       // There are inconsistent units for these. Most are bytes.
       emitter.emit(builder.setMetric(StringUtils.format("cgroup/memory/%s", key), value));
     });
     stat.getNumaMemoryStats().forEach((key, value) -> {
-      final ServiceMetricEvent.Builder builder = builder().setDimension("numaZone", Long.toString(key));
-      MonitorUtils.addDimensionsToBuilder(builder, dimensions);
+      builder().setDimension("numaZone", Long.toString(key));
       value.forEach((k, v) -> emitter.emit(builder.setMetric(StringUtils.format("cgroup/memory_numa/%s/pages", k), v)));
     });
     return true;

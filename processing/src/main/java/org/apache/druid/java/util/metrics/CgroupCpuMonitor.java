@@ -25,12 +25,15 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.cgroups.CgroupDiscoverer;
 import org.apache.druid.java.util.metrics.cgroups.Cpu;
 
+import java.time.Instant;
 import java.util.Map;
 
 public class CgroupCpuMonitor extends FeedDefiningMonitor
 {
   final CgroupDiscoverer cgroupDiscoverer;
   final Map<String, String[]> dimensions;
+  private long previousUsage;
+  private long previousSnapshotAt = 0l;
 
   public CgroupCpuMonitor(CgroupDiscoverer cgroupDiscoverer, final Map<String, String[]> dimensions, String feed)
   {
@@ -58,7 +61,8 @@ public class CgroupCpuMonitor extends FeedDefiningMonitor
   public boolean doMonitor(ServiceEmitter emitter)
   {
     final Cpu cpu = new Cpu(cgroupDiscoverer);
-    final Cpu.CpuAllocationMetric cpuSnapshot = cpu.snapshot();
+    final Cpu.CpuMetrics cpuSnapshot = cpu.snapshot();
+    long now = Instant.now().getNano();
 
     final ServiceMetricEvent.Builder builder = builder();
     MonitorUtils.addDimensionsToBuilder(builder, dimensions);
@@ -67,7 +71,16 @@ public class CgroupCpuMonitor extends FeedDefiningMonitor
         "cgroup/cpu/cores_quota",
         computeProcessorQuota(cpuSnapshot.getQuotaUs(), cpuSnapshot.getPeriodUs())
     ));
+    emitter.emit(builder.setMetric("cgroup/cpuacct/usage", cpuSnapshot.getUsageNs()));
 
+    if (previousSnapshotAt > 0) {
+      long currentUsage = cpu.snapshot().getUsageNs();
+      double usagePercentage = 100.0 * (currentUsage - previousUsage) / (now - previousSnapshotAt);
+      emitter.emit(builder.setMetric("cgroup/cpu/usage/percentage", usagePercentage));
+      previousUsage = currentUsage;
+    }
+
+    previousSnapshotAt = now;
     return true;
   }
 
