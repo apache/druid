@@ -516,8 +516,8 @@ These metrics are available on operating systems with the cgroup kernel feature.
 |------|-----------|----------|------------|
 |`cgroup/cpu/shares`|Relative value of CPU time available to this process. Read from `cpu.shares`.||Varies|
 |`cgroup/cpu/cores_quota`|Number of cores available to this process. Derived from `cpu.cfs_quota_us`/`cpu.cfs_period_us`.||Varies. A value of -1 indicates there is no explicit quota set.|
-|`cgroup/cpuacct/usage`|Reports the total CPU time (in nanoseconds) consumed by all tasks in this process||Varies|
 |`cgroup/cpu/usage/percentage`|Total cpu percentage used by cgroup of process that is running||0-100|
+|`cgroup/cpuacct/usage/timeNs`|Reports the total CPU time (in nanoseconds) consumed by all tasks in this process||Varies|
 |`cgroup/memory/*`|Memory stats for this process, such as `cache` and `total_swap`. Each stat produces a separate metric. Read from `memory.stat`.||Varies|
 |`cgroup/memory_numa/*/pages`|Memory stats, per NUMA node, for this process, such as `total` and `unevictable`. Each stat produces a separate metric. Read from `memory.num_stat`.|`numaZone`|Varies|
 |`cgroup/memory/usage/bytes`|Reports the maximum memory used by processes in the cgroup (in bytes)||Varies|

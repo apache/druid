@@ -22,6 +22,7 @@ package org.apache.druid.java.util.metrics.cgroups;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.primitives.Longs;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.metrics.CgroupUtil;
 
 import java.io.BufferedReader;
 import java.io.IOException;

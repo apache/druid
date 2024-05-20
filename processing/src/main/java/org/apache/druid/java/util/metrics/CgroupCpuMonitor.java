@@ -71,7 +71,7 @@ public class CgroupCpuMonitor extends FeedDefiningMonitor
         "cgroup/cpu/cores_quota",
         computeProcessorQuota(cpuSnapshot.getQuotaUs(), cpuSnapshot.getPeriodUs())
     ));
-    emitter.emit(builder.setMetric("cgroup/cpuacct/usage", cpuSnapshot.getUsageNs()));
+    emitter.emit(builder.setMetric("cgroup/cpuacct/usage/timeNs", cpuSnapshot.getUsageNs()));
 
     if (previousSnapshotAt > 0) {
       long currentUsage = cpu.snapshot().getUsageNs();

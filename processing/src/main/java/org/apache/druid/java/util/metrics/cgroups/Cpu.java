@@ -19,13 +19,15 @@
 
 package org.apache.druid.java.util.metrics.cgroups;
 
+import org.apache.druid.java.util.metrics.CgroupUtil;
+
 /**
  * Collect CPU share and quota information from cpu cgroup files.
  */
 public class Cpu
 {
   private static final String CGROUP = "cpu";
-  private static final String CPU_USAGE_FILE = "cpuacct.usage";
+  private static final String CPUACCT_USAGE_FILE = "cpuacct.usage";
   private static final String CPU_SHARES_FILE = "cpu.shares";
   private static final String CPU_QUOTA_FILE = "cpu.cfs_quota_us";
   private static final String CPU_PERIOD_FILE = "cpu.cfs_period_us";
@@ -48,7 +50,7 @@ public class Cpu
         CgroupUtil.readLongValue(cgroupDiscoverer, CGROUP, CPU_SHARES_FILE, -1),
         CgroupUtil.readLongValue(cgroupDiscoverer, CGROUP, CPU_QUOTA_FILE, 0),
         CgroupUtil.readLongValue(cgroupDiscoverer, CGROUP, CPU_PERIOD_FILE, 0),
-        CgroupUtil.readLongValue(cgroupDiscoverer, CGROUP, CPU_USAGE_FILE, -1)
+        CgroupUtil.readLongValue(cgroupDiscoverer, CGROUP, CPUACCT_USAGE_FILE, -1)
     );
   }
 
