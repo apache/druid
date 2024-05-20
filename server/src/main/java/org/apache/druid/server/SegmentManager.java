@@ -19,30 +19,23 @@
 
 package org.apache.druid.server;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
 import org.apache.druid.common.guava.SettableSupplier;
-import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.planning.DataSourceAnalysis;
-import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.ReferenceCountingSegment;
-import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.join.table.IndexedTable;
 import org.apache.druid.segment.join.table.ReferenceCountingIndexedTable;
-import org.apache.druid.segment.loading.MMappedQueryableSegmentizerFactory;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentLoadingException;
-import org.apache.druid.segment.loading.SegmentizerFactory;
 import org.apache.druid.server.metrics.SegmentRowCountDistribution;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -51,7 +44,6 @@ import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.utils.CollectionUtils;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -338,7 +330,7 @@ public class SegmentManager
   {
     final ReferenceCountingSegment segment;
     try {
-       segment = cacheManager.getSegment(dataSegment, lazy, loadFailed);
+      segment = cacheManager.getSegment(dataSegment, lazy, loadFailed);
       if (segment == null) {
         throw new SegmentLoadingException("Null adapter from loadSpec[%s]", dataSegment.getLoadSpec());
       }

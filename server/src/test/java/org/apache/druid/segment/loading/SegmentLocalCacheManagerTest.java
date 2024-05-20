@@ -30,9 +30,7 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.TestIndex;
-import org.apache.druid.server.coordination.SegmentLoadDropHandler;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
@@ -115,32 +113,6 @@ public class SegmentLocalCacheManagerTest
             "canHandleSegments() is false. getCachedSegments() must be invoked only"
             + " when canHandleSegments() returns true.")
     );
-  }
-
-  @Test
-  public void testIfSegmentIsLoadedV2() throws IOException
-  {
-    final DataSegment cachedSegment = dataSegmentWithInterval("2014-10-20T00:00:00Z/P1D");
-//    manager.storeInfoFile(cachedSegment);
-
-    String defaultStorageDir = DataSegmentPusher.getDefaultStorageDir(cachedSegment, false);
-
-    final File cachedSegmentFile = new File(
-        localSegmentCacheFolder,
-//        "test_segment_loader/2014-10-20T00:00:00.000Z_2014-10-21T00:00:00.000Z/2015-05-27T03:38:35.683Z/0"
-        defaultStorageDir
-    );
-
-    FileUtils.mkdirp(cachedSegmentFile);
-
-    log.info("Manual write path[%s]", cachedSegmentFile.getAbsolutePath());
-
-    log.info("Segment stuff[%s]", cachedSegment.getLoadSpec());
-
-    Assert.assertTrue("Expect cache hit", manager.isSegmentCached(cachedSegment));
-
-    final DataSegment uncachedSegment = dataSegmentWithInterval("2014-10-21T00:00:00Z/P1D");
-    Assert.assertFalse("Expect cache miss", manager.isSegmentCached(uncachedSegment));
   }
 
   @Test

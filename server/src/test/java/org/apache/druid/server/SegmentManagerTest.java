@@ -202,7 +202,6 @@ public class SegmentManagerTest
     storageLoc = new TestStorageLocation(temporaryFolder);
     SegmentLoaderConfig config = new SegmentLoaderConfig()
         .withLocations(Collections.singletonList(storageLoc.toStorageLocationConfig(MAX_SIZE, null)));
-//        .withInfoDir(storageLoc.getInfoDir());
     objectMapper = TestHelper.makeJsonMapper();
     objectMapper.registerSubtypes(SegmentLoadDropHandlerCacheTest.TestLoadSpec.class);
     objectMapper.registerSubtypes(SegmentLoadDropHandlerCacheTest.TestSegmentizerFactory.class);

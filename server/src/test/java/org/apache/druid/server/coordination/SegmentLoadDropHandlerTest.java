@@ -378,7 +378,6 @@ public class SegmentLoadDropHandlerTest
 
     for (DataSegment segment : segments) {
       testStorageLocation.deleteSegmentInfoFromCache(segment);
-//      segmentCacheManager.removeInfoFile(segment);
     }
 
     Assert.assertEquals(0, infoDir.listFiles().length);

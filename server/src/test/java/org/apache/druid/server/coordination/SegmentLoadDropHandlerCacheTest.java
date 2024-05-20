@@ -39,7 +39,6 @@ import org.apache.druid.segment.loading.LoadSpec;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLoadingException;
-import org.apache.druid.segment.loading.SegmentLocalCacheLoader;
 import org.apache.druid.segment.loading.SegmentLocalCacheManager;
 import org.apache.druid.segment.loading.SegmentizerFactory;
 import org.apache.druid.server.SegmentManager;

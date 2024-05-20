@@ -91,12 +91,8 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.join.JoinableFactoryWrapperTest;
-import org.apache.druid.segment.loading.NoopSegmentCacheManager;
-import org.apache.druid.segment.loading.SegmentCacheManager;
-import org.apache.druid.segment.loading.SegmentLoader;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLoadingException;
-import org.apache.druid.segment.loading.SegmentLocalCacheLoader;
 import org.apache.druid.segment.loading.SegmentLocalCacheManager;
 import org.apache.druid.segment.loading.TombstoneLoadSpec;
 import org.apache.druid.segment.loading.TombstoneSegmentizerFactory;
@@ -107,25 +103,20 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
-import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.easymock.EasyMock;
-import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
 import javax.annotation.Nullable;
-import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -155,13 +146,12 @@ public class ServerManagerTest
 
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
-  private TestStorageLocation storageLoc;
   private ObjectMapper objectMapper;
 
   @Before
   public void setUp() throws IOException
   {
-    storageLoc = new TestStorageLocation(temporaryFolder);
+    TestStorageLocation storageLoc = new TestStorageLocation(temporaryFolder);
     SegmentLoaderConfig config = new SegmentLoaderConfig()
         .withLocations(Collections.singletonList(storageLoc.toStorageLocationConfig(1000L, null)));
 
@@ -169,40 +159,6 @@ public class ServerManagerTest
     objectMapper.registerSubtypes(SegmentLoadDropHandlerCacheTest.TestLoadSpec.class);
     objectMapper.registerSubtypes(SegmentLoadDropHandlerCacheTest.TestSegmentizerFactory.class);
     objectMapper.registerSubtypes(TombstoneLoadSpec.class);
-
-//    SegmentCacheManager cacheManager =  new NoopSegmentCacheManager()
-//    {
-//      @Override
-//      public ReferenceCountingSegment getSegment(final DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback SegmentLazyLoadFailCallback)
-//      {
-//        if (segment.isTombstone()) {
-//          return ReferenceCountingSegment
-//              .wrapSegment(TombstoneSegmentizerFactory.segmentForTombstone(segment), segment.getShardSpec());
-//        } else {
-//          return ReferenceCountingSegment.wrapSegment(new SegmentForTesting(
-//              MapUtils.getString(segment.getLoadSpec(), "version"),
-//              (Interval) segment.getLoadSpec().get("interval")
-//          ), segment.getShardSpec());
-//        }
-//      }
-//
-//      @Override
-//      public void storeInfoFile(DataSegment segment)
-//      {
-//      }
-//
-//      @Override
-//      public void cleanup(DataSegment segment)
-//      {
-//
-//      }
-//
-//      @Override
-//      public void loadSegmentIntoPageCache(DataSegment segment, ExecutorService exec)
-//      {
-//
-//      }
-//    };
 
     final SegmentLocalCacheManager localCacheManager = new SegmentLocalCacheManager(
         config,
@@ -238,36 +194,6 @@ public class ServerManagerTest
     queryNotifyLatch = new CountDownLatch(1);
     factory = new MyQueryRunnerFactory(queryWaitLatch, queryWaitYieldLatch, queryNotifyLatch);
     serverManagerExec = Execs.multiThreaded(2, "ServerManagerTest-%d");
-//    segmentManager = new SegmentManager(
-//        new SegmentLoader()
-//        {
-//          @Override
-//          public ReferenceCountingSegment getSegment(final DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback SegmentLazyLoadFailCallback)
-//          {
-//            if (segment.isTombstone()) {
-//              return ReferenceCountingSegment
-//                  .wrapSegment(TombstoneSegmentizerFactory.segmentForTombstone(segment), segment.getShardSpec());
-//            } else {
-//              return ReferenceCountingSegment.wrapSegment(new SegmentForTesting(
-//                  MapUtils.getString(segment.getLoadSpec(), "version"),
-//                  (Interval) segment.getLoadSpec().get("interval")
-//              ), segment.getShardSpec());
-//            }
-//          }
-//
-//          @Override
-//          public void cleanup(DataSegment segment)
-//          {
-//
-//          }
-//
-//          @Override
-//          public void loadSegmentIntoPageCache(DataSegment segment, ExecutorService exec)
-//          {
-//
-//          }
-//        }
-//    );
     serverManager = new ServerManager(
         new QueryRunnerFactoryConglomerate()
         {
@@ -689,23 +615,23 @@ public class ServerManagerTest
             return false;
           }
 
-              @Override
-              public DimFilter getFilter()
-              {
-                return null;
-              }
+          @Override
+          public DimFilter getFilter()
+          {
+            return null;
+          }
 
-              @Override
-              public String getType()
-              {
-                return null;
-              }
+          @Override
+          public String getType()
+          {
+            return null;
+          }
 
-              @Override
-              public Query<Object> withOverriddenContext(Map<String, Object> contextOverride)
-              {
-                return this;
-              }
+          @Override
+          public Query<Object> withOverriddenContext(Map<String, Object> contextOverride)
+          {
+            return this;
+          }
 
           @Override
           public Query<Object> withQuerySegmentSpec(QuerySegmentSpec spec)
