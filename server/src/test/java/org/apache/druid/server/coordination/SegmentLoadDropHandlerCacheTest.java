@@ -100,7 +100,6 @@ public class SegmentLoadDropHandlerCacheTest
         segmentAnnouncer,
         Mockito.mock(DataSegmentServerAnnouncer.class),
         segmentManager,
-        cacheManager,
         new ServerTypeConfig(ServerType.HISTORICAL)
     );
     EmittingLogger.registerEmitter(new NoopServiceEmitter());

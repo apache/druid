@@ -34,7 +34,6 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.loading.NoopSegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.StorageLocationConfig;
@@ -263,7 +262,6 @@ public class SegmentLoadDropHandlerTest
         announcer,
         Mockito.mock(DataSegmentServerAnnouncer.class),
         segmentManager,
-        segmentCacheManager,
         scheduledExecutorFactory.create(5, "SegmentLoadDropHandlerTest-[%d]"),
         new ServerTypeConfig(ServerType.HISTORICAL)
     );
@@ -453,7 +451,6 @@ public class SegmentLoadDropHandlerTest
         announcer,
         Mockito.mock(DataSegmentServerAnnouncer.class),
         segmentManager,
-        segmentCacheManager,
         new ServerTypeConfig(ServerType.HISTORICAL)
     );
 
@@ -525,7 +522,6 @@ public class SegmentLoadDropHandlerTest
         announcer,
         Mockito.mock(DataSegmentServerAnnouncer.class),
         segmentManager,
-        segmentCacheManager,
         scheduledExecutorFactory.create(5, "SegmentLoadDropHandlerTest-[%d]"),
         new ServerTypeConfig(ServerType.HISTORICAL)
     );
@@ -572,7 +568,6 @@ public class SegmentLoadDropHandlerTest
         announcer,
         Mockito.mock(DataSegmentServerAnnouncer.class),
         segmentManager,
-        segmentCacheManager,
         scheduledExecutorFactory.create(5, "SegmentLoadDropHandlerTest-[%d]"),
         new ServerTypeConfig(ServerType.HISTORICAL)
     );

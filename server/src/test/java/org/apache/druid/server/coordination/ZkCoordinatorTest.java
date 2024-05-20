@@ -170,7 +170,6 @@ public class ZkCoordinatorTest extends CuratorTestBase
         EasyMock.createNiceMock(DataSegmentAnnouncer.class),
         EasyMock.createNiceMock(DataSegmentServerAnnouncer.class),
         EasyMock.createNiceMock(SegmentManager.class),
-        EasyMock.createNiceMock(SegmentCacheManager.class),
         EasyMock.createNiceMock(ScheduledExecutorService.class),
         new ServerTypeConfig(ServerType.HISTORICAL)
     )

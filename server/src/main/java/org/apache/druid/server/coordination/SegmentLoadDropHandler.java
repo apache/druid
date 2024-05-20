@@ -87,7 +87,6 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
   private final ScheduledExecutorService exec;
   private final ServerTypeConfig serverTypeConfig;
   private final ConcurrentSkipListSet<DataSegment> segmentsToDelete;
-  private final SegmentCacheManager segmentCacheManager;
 
   private volatile boolean started = false;
 
@@ -108,7 +107,6 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
       DataSegmentAnnouncer announcer,
       DataSegmentServerAnnouncer serverAnnouncer,
       SegmentManager segmentManager,
-      SegmentCacheManager segmentCacheManager,
       ServerTypeConfig serverTypeConfig
   )
   {
@@ -118,7 +116,6 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
         announcer,
         serverAnnouncer,
         segmentManager,
-        segmentCacheManager,
         Executors.newScheduledThreadPool(
             config.getNumLoadingThreads(),
             Execs.makeThreadFactory("SimpleDataSegmentChangeHandler-%s")
@@ -134,7 +131,6 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
       DataSegmentAnnouncer announcer,
       DataSegmentServerAnnouncer serverAnnouncer,
       SegmentManager segmentManager,
-      SegmentCacheManager segmentCacheManager,
       ScheduledExecutorService exec,
       ServerTypeConfig serverTypeConfig
   )
@@ -144,7 +140,6 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     this.announcer = announcer;
     this.serverAnnouncer = serverAnnouncer;
     this.segmentManager = segmentManager;
-    this.segmentCacheManager = segmentCacheManager;
     this.exec = exec;
     this.serverTypeConfig = serverTypeConfig;
 
