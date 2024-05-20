@@ -19,23 +19,30 @@
 
 package org.apache.druid.server;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
 import org.apache.druid.common.guava.SettableSupplier;
+import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.planning.DataSourceAnalysis;
+import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.ReferenceCountingSegment;
+import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.join.table.IndexedTable;
 import org.apache.druid.segment.join.table.ReferenceCountingIndexedTable;
-import org.apache.druid.segment.loading.SegmentLoader;
+import org.apache.druid.segment.loading.MMappedQueryableSegmentizerFactory;
+import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentLoadingException;
+import org.apache.druid.segment.loading.SegmentizerFactory;
 import org.apache.druid.server.metrics.SegmentRowCountDistribution;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -44,7 +51,9 @@ import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.utils.CollectionUtils;
 
+import java.io.File;
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -56,13 +65,14 @@ import java.util.stream.StreamSupport;
 
 /**
  * This class is responsible for managing data sources and their states like timeline, total segment size, and number of
- * segments.  All public methods of this class must be thread-safe.
+ * segments. All public methods of this class must be thread-safe.
  */
 public class SegmentManager
 {
   private static final EmittingLogger log = new EmittingLogger(SegmentManager.class);
 
-  private final SegmentLoader segmentLoader;
+  private final SegmentCacheManager cacheManager;
+
   private final ConcurrentHashMap<String, DataSourceState> dataSources = new ConcurrentHashMap<>();
 
   /**
@@ -139,13 +149,12 @@ public class SegmentManager
     }
   }
 
-
   @Inject
   public SegmentManager(
-      SegmentLoader segmentLoader
+      SegmentCacheManager cacheManager
   )
   {
-    this.segmentLoader = segmentLoader;
+    this.cacheManager = cacheManager;
   }
 
   @VisibleForTesting
@@ -241,8 +250,9 @@ public class SegmentManager
                    .orElseThrow(() -> new ISE("Cannot handle datasource: %s", analysis.getBaseDataSource()));
   }
 
+  @VisibleForTesting
   public boolean loadSegment(final DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback loadFailed)
-      throws SegmentLoadingException
+      throws SegmentLoadingException, IOException
   {
     return loadSegment(segment, lazy, loadFailed, null);
   }
@@ -262,8 +272,12 @@ public class SegmentManager
    *
    * @throws SegmentLoadingException if the segment cannot be loaded
    */
-  public boolean loadSegment(final DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback loadFailed,
-                             ExecutorService loadSegmentIntoPageCacheExec) throws SegmentLoadingException
+  public boolean loadSegment(
+      final DataSegment segment,
+      boolean lazy,
+      SegmentLazyLoadFailCallback loadFailed,
+      ExecutorService loadSegmentIntoPageCacheExec
+  ) throws SegmentLoadingException, IOException
   {
     final ReferenceCountingSegment adapter = getSegmentReference(segment, lazy, loadFailed);
 
@@ -306,31 +320,32 @@ public class SegmentManager
             long numOfRows = (segment.isTombstone() || storageAdapter == null) ? 0 : storageAdapter.getNumRows();
             dataSourceState.addSegment(segment, numOfRows);
             // Asyncly load segment index files into page cache in a thread pool
-            segmentLoader.loadSegmentIntoPageCache(segment, loadSegmentIntoPageCacheExec);
+            cacheManager.loadSegmentIntoPageCache(segment, loadSegmentIntoPageCacheExec);
             resultSupplier.set(true);
-
           }
 
           return dataSourceState;
         }
     );
-
-    return resultSupplier.get();
+    final boolean loadResult = resultSupplier.get();
+    if (loadResult) {
+      cacheManager.storeInfoFile(segment);
+    }
+    return loadResult;
   }
 
   private ReferenceCountingSegment getSegmentReference(final DataSegment dataSegment, boolean lazy, SegmentLazyLoadFailCallback loadFailed) throws SegmentLoadingException
   {
     final ReferenceCountingSegment segment;
     try {
-      segment = segmentLoader.getSegment(dataSegment, lazy, loadFailed);
+       segment = cacheManager.getSegment(dataSegment, lazy, loadFailed);
+      if (segment == null) {
+        throw new SegmentLoadingException("Null adapter from loadSpec[%s]", dataSegment.getLoadSpec());
+      }
     }
     catch (SegmentLoadingException e) {
-      segmentLoader.cleanup(dataSegment);
+      cacheManager.cleanup(dataSegment);
       throw e;
-    }
-
-    if (segment == null) {
-      throw new SegmentLoadingException("Null adapter from loadSpec[%s]", dataSegment.getLoadSpec());
     }
     return segment;
   }
@@ -392,6 +407,16 @@ public class SegmentManager
         }
     );
 
-    segmentLoader.cleanup(segment);
+    cacheManager.cleanup(segment);
+  }
+
+  public List<DataSegment> getCachedSegments() throws IOException
+  {
+    return cacheManager.getCachedSegments();
+  }
+
+  public boolean canHandleSegments()
+  {
+    return cacheManager.canHandleSegments();
   }
 }

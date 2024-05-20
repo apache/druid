@@ -137,9 +137,10 @@ public class SegmentManagerBroadcastJoinIndexedTableTest extends InitializedNull
             );
           }
         },
+        TestIndex.INDEX_IO,
         objectMapper
     );
-    segmentManager = new SegmentManager(new SegmentLocalCacheLoader(segmentCacheManager, indexIO, objectMapper));
+    segmentManager = new SegmentManager(segmentCacheManager);
     joinableFactory = new BroadcastTableJoinableFactory(segmentManager);
     EmittingLogger.registerEmitter(new NoopServiceEmitter());
   }

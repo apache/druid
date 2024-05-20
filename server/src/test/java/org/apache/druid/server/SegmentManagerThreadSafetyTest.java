@@ -36,6 +36,7 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPuller;
@@ -112,9 +113,10 @@ public class SegmentManagerThreadSafetyTest
             );
           }
         },
+        TestIndex.INDEX_IO,
         objectMapper
     );
-    segmentManager = new SegmentManager(new SegmentLocalCacheLoader(segmentCacheManager, indexIO, objectMapper));
+    segmentManager = new SegmentManager(segmentCacheManager);
     exec = Execs.multiThreaded(NUM_THREAD, "SegmentManagerThreadSafetyTest-%d");
     EmittingLogger.registerEmitter(new NoopServiceEmitter());
   }
@@ -159,7 +161,7 @@ public class SegmentManagerThreadSafetyTest
             try {
               segmentManager.loadSegment(segment, false, SegmentLazyLoadFailCallback.NOOP);
             }
-            catch (SegmentLoadingException e) {
+            catch (SegmentLoadingException | IOException e) {
               throw new RuntimeException(e);
             }
           }

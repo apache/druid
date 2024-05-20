@@ -67,7 +67,8 @@ import java.util.concurrent.ThreadLocalRandom;
 import static org.mockito.ArgumentMatchers.any;
 
 /**
- * This class includes tests that cover the storage location layer as well.
+ * Similar to {@link SegmentLoadDropHandlerTest}. This class includes tests that cover the
+ * storage location layer as well.
  */
 public class SegmentLoadDropHandlerCacheTest
 {
@@ -90,12 +91,8 @@ public class SegmentLoadDropHandlerCacheTest
     objectMapper = TestHelper.makeJsonMapper();
     objectMapper.registerSubtypes(TestLoadSpec.class);
     objectMapper.registerSubtypes(TestSegmentizerFactory.class);
-    SegmentCacheManager cacheManager = new SegmentLocalCacheManager(config, objectMapper);
-    SegmentManager segmentManager = new SegmentManager(new SegmentLocalCacheLoader(
-        cacheManager,
-        TestIndex.INDEX_IO,
-        objectMapper
-    ));
+    SegmentCacheManager cacheManager = new SegmentLocalCacheManager(config, TestIndex.INDEX_IO, objectMapper);
+    SegmentManager segmentManager = new SegmentManager(cacheManager);
     segmentAnnouncer = Mockito.mock(DataSegmentAnnouncer.class);
     loadDropHandler = new SegmentLoadDropHandler(
         objectMapper,

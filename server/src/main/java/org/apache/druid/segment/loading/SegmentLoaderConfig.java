@@ -125,6 +125,11 @@ public class SegmentLoaderConfig
     return infoDir;
   }
 
+  public File getInfoDirTrueValue()
+  {
+    return infoDir;
+  }
+
   public int getStatusQueueMaxSize()
   {
     return statusQueueMaxSize;
@@ -158,7 +163,7 @@ public class SegmentLoaderConfig
   }
 
   /**
-   * Convert StorageLocationConfig objects to StorageLocation objects
+   * Convert a list of {@link StorageLocationConfig} objects to {@link StorageLocation} objects.
    * <p>
    * Note: {@link #getLocations} is called instead of variable access because some testcases overrides this method
    */

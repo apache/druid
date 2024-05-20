@@ -31,12 +31,14 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.IndexIO;
+import org.apache.druid.segment.ReferenceCountingSegment;
+import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.segment.loading.CacheTestSegmentLoader;
+import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.loading.NoopSegmentCacheManager;
-import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.StorageLocationConfig;
+import org.apache.druid.segment.loading.TombstoneSegmentizerFactory;
 import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.coordination.SegmentChangeStatus.State;
@@ -64,17 +66,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListSet;
-import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-/**
- */
 public class SegmentLoadDropHandlerTest
 {
-  public static final int COUNT = 50;
+  private static final int COUNT = 50;
 
   private final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
 
@@ -85,7 +85,7 @@ public class SegmentLoadDropHandlerTest
   private TestStorageLocation testStorageLocation;
   private AtomicInteger announceCount;
   private ConcurrentSkipListSet<DataSegment> segmentsAnnouncedByMe;
-  private SegmentCacheManager segmentCacheManager;
+  private LoadDropSegmentCacheManager segmentCacheManager;
   private Set<DataSegment> segmentsRemovedFromCache;
   private SegmentManager segmentManager;
   private List<Runnable> scheduledRunnable;
@@ -117,29 +117,18 @@ public class SegmentLoadDropHandlerTest
     }
 
     locations = Collections.singletonList(
-        testStorageLocation.toStorageLocationConfig()
+        testStorageLocation.toStorageLocationConfig(100000L, null)
     );
 
     scheduledRunnable = new ArrayList<>();
 
     segmentsRemovedFromCache = new HashSet<>();
-    segmentCacheManager = new NoopSegmentCacheManager()
-    {
-      @Override
-      public boolean isSegmentCached(DataSegment segment)
-      {
-        Map<String, Object> loadSpec = segment.getLoadSpec();
-        return new File(MapUtils.getString(loadSpec, "cacheDir")).exists();
-      }
+    jsonMapper.registerSubtypes(SegmentLoadDropHandlerCacheTest.TestLoadSpec.class);
+    jsonMapper.registerSubtypes(SegmentLoadDropHandlerCacheTest.TestSegmentizerFactory.class);
 
-      @Override
-      public void cleanup(DataSegment segment)
-      {
-        segmentsRemovedFromCache.add(segment);
-      }
-    };
+    segmentCacheManager = new LoadDropSegmentCacheManager();
 
-    segmentManager = new SegmentManager(new CacheTestSegmentLoader());
+    segmentManager = new SegmentManager(segmentCacheManager);
     segmentsAnnouncedByMe = new ConcurrentSkipListSet<>();
     announceCount = new AtomicInteger(0);
 
@@ -254,25 +243,18 @@ public class SegmentLoadDropHandlerTest
       }
     };
 
-    scheduledExecutorFactory = new ScheduledExecutorFactory()
-    {
-      @Override
-      public ScheduledExecutorService create(int corePoolSize, String nameFormat)
+    scheduledExecutorFactory = (corePoolSize, nameFormat) -> {
+      // Override normal behavior by adding the runnable to a list so that you can make sure
+      // all the shceduled runnables are executed by explicitly calling run() on each item in the list
+      return new ScheduledThreadPoolExecutor(corePoolSize, Execs.makeThreadFactory(nameFormat))
       {
-            /*
-               Override normal behavoir by adding the runnable to a list so that you can make sure
-               all the shceduled runnables are executed by explicitly calling run() on each item in the list
-             */
-        return new ScheduledThreadPoolExecutor(corePoolSize, Execs.makeThreadFactory(nameFormat))
+        @Override
+        public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit)
         {
-          @Override
-          public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit)
-          {
-            scheduledRunnable.add(command);
-            return null;
-          }
-        };
-      }
+          scheduledRunnable.add(command);
+          return null;
+        }
+      };
     };
 
     segmentLoadDropHandler = new SegmentLoadDropHandler(
@@ -382,12 +364,13 @@ public class SegmentLoadDropHandlerTest
 
     for (DataSegment segment : segments) {
       testStorageLocation.writeSegmentInfoToCache(segment);
+      segmentCacheManager.addCachedSegment(segment);
     }
 
     testStorageLocation.checkInfoCache(segments);
     Assert.assertTrue(segmentManager.getDataSourceCounts().isEmpty());
     segmentLoadDropHandler.start();
-    Assert.assertTrue(!segmentManager.getDataSourceCounts().isEmpty());
+    Assert.assertFalse(segmentManager.getDataSourceCounts().isEmpty());
     for (int i = 0; i < COUNT; ++i) {
       Assert.assertEquals(11L, segmentManager.getDataSourceCounts().get("test" + i).longValue());
       Assert.assertEquals(2L, segmentManager.getDataSourceCounts().get("test_two" + i).longValue());
@@ -397,6 +380,7 @@ public class SegmentLoadDropHandlerTest
 
     for (DataSegment segment : segments) {
       testStorageLocation.deleteSegmentInfoFromCache(segment);
+//      segmentCacheManager.removeInfoFile(segment);
     }
 
     Assert.assertEquals(0, infoDir.listFiles().length);
@@ -409,18 +393,35 @@ public class SegmentLoadDropHandlerTest
         dataSource,
         interval,
         version,
-        ImmutableMap.of("version", version, "interval", interval, "cacheDir", infoDir),
+        ImmutableMap.of("type", "test", "version", version, "interval", interval, "cacheDir", infoDir),
         Arrays.asList("dim1", "dim2", "dim3"),
         Arrays.asList("metric1", "metric2"),
         NoneShardSpec.instance(),
         IndexIO.CURRENT_VERSION_ID,
-        123L
+        1L
     );
   }
 
   @Test
   public void testStartStop() throws Exception
   {
+    Set<DataSegment> segments = new HashSet<>();
+    for (int i = 0; i < COUNT; ++i) {
+      segments.add(makeSegment("test" + i, "1", Intervals.of("P1d/2011-04-01")));
+      segments.add(makeSegment("test" + i, "1", Intervals.of("P1d/2011-04-02")));
+      segments.add(makeSegment("test" + i, "2", Intervals.of("P1d/2011-04-02")));
+      segments.add(makeSegment("test_two" + i, "1", Intervals.of("P1d/2011-04-01")));
+      segments.add(makeSegment("test_two" + i, "1", Intervals.of("P1d/2011-04-02")));
+    }
+
+    for (DataSegment segment : segments) {
+      testStorageLocation.writeSegmentInfoToCache(segment);
+      segmentCacheManager.addCachedSegment(segment);
+    }
+
+    testStorageLocation.checkInfoCache(segments);
+
+    // We need a similar test where the getInfoDir() and getLocations() is empty mocking peon config.
     SegmentLoadDropHandler handler = new SegmentLoadDropHandler(
         jsonMapper,
         new SegmentLoaderConfig()
@@ -456,24 +457,11 @@ public class SegmentLoadDropHandlerTest
         new ServerTypeConfig(ServerType.HISTORICAL)
     );
 
-    Set<DataSegment> segments = new HashSet<>();
-    for (int i = 0; i < COUNT; ++i) {
-      segments.add(makeSegment("test" + i, "1", Intervals.of("P1d/2011-04-01")));
-      segments.add(makeSegment("test" + i, "1", Intervals.of("P1d/2011-04-02")));
-      segments.add(makeSegment("test" + i, "2", Intervals.of("P1d/2011-04-02")));
-      segments.add(makeSegment("test_two" + i, "1", Intervals.of("P1d/2011-04-01")));
-      segments.add(makeSegment("test_two" + i, "1", Intervals.of("P1d/2011-04-02")));
-    }
 
-    for (DataSegment segment : segments) {
-      testStorageLocation.writeSegmentInfoToCache(segment);
-    }
-
-    testStorageLocation.checkInfoCache(segments);
     Assert.assertTrue(segmentManager.getDataSourceCounts().isEmpty());
 
     handler.start();
-    Assert.assertTrue(!segmentManager.getDataSourceCounts().isEmpty());
+    Assert.assertFalse(segmentManager.getDataSourceCounts().isEmpty());
     for (int i = 0; i < COUNT; ++i) {
       Assert.assertEquals(3L, segmentManager.getDataSourceCounts().get("test" + i).longValue());
       Assert.assertEquals(2L, segmentManager.getDataSourceCounts().get("test_two" + i).longValue());
@@ -666,5 +654,58 @@ public class SegmentLoadDropHandlerTest
            .dropSegment(ArgumentMatchers.any());
 
     segmentLoadDropHandler.stop();
+  }
+
+
+  private class LoadDropSegmentCacheManager extends NoopSegmentCacheManager
+  {
+    private final List<DataSegment> cachedSegments = new ArrayList<>();
+
+    private void addCachedSegment(final DataSegment segment)
+    {
+      this.cachedSegments.add(segment);
+    }
+
+    @Override
+    public boolean canHandleSegments()
+    {
+      return true;
+    }
+
+    @Override
+    public List<DataSegment> getCachedSegments()
+    {
+      return this.cachedSegments;
+    }
+
+    @Override
+    public ReferenceCountingSegment getSegment(final DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback SegmentLazyLoadFailCallback)
+    {
+      if (segment.isTombstone()) {
+        return ReferenceCountingSegment
+            .wrapSegment(TombstoneSegmentizerFactory.segmentForTombstone(segment), segment.getShardSpec());
+      } else {
+        return ReferenceCountingSegment.wrapSegment(new ServerManagerTest.SegmentForTesting(
+            MapUtils.getString(segment.getLoadSpec(), "version"),
+            (Interval) segment.getLoadSpec().get("interval")
+        ), segment.getShardSpec());
+      }
+    }
+
+    @Override
+    public void loadSegmentIntoPageCache(DataSegment segment, ExecutorService exec)
+    {
+    }
+
+    @Override
+    public void storeInfoFile(DataSegment segment)
+    {
+    }
+
+    @Override
+    public void cleanup(DataSegment segment)
+    {
+      segmentsRemovedFromCache.add(segment);
+    }
   }
 }

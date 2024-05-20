@@ -79,6 +79,7 @@ import org.apache.druid.segment.DataSegmentsWithSchemas;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
+import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
@@ -206,7 +207,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
         );
       }
     };
-    segmentCacheManagerFactory = new SegmentCacheManagerFactory(getObjectMapper());
+    segmentCacheManagerFactory = new SegmentCacheManagerFactory(TestIndex.INDEX_IO, getObjectMapper());
     this.lockGranularity = lockGranularity;
   }
 
@@ -2073,6 +2074,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
             return ImmutableList.of(new StorageLocationConfig(localDeepStorage, null, null));
           }
         },
+        TestIndex.INDEX_IO,
         objectMapper
     );
 

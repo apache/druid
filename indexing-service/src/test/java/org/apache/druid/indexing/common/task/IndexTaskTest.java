@@ -74,6 +74,7 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.SegmentSchemaMapping;
+import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -207,6 +208,7 @@ public class IndexTaskTest extends IngestionTestBase
             );
           }
         },
+        TestIndex.INDEX_IO,
         jsonMapper
     );
     taskRunner = new TestTaskRunner();

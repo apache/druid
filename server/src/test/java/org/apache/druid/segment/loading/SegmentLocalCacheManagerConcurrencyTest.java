@@ -31,12 +31,14 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.segment.TestIndex;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.hamcrest.CoreMatchers;
 import org.joda.time.Interval;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -95,6 +97,7 @@ public class SegmentLocalCacheManagerConcurrencyTest
 
     manager = new SegmentLocalCacheManager(
         new SegmentLoaderConfig().withLocations(locations),
+        TestIndex.INDEX_IO,
         jsonMapper
     );
     executorService = Execs.multiThreaded(4, "segment-loader-local-cache-manager-concurrency-test-%d");

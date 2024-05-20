@@ -19,9 +19,13 @@
 
 package org.apache.druid.segment.loading;
 
+import org.apache.druid.segment.ReferenceCountingSegment;
+import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.timeline.DataSegment;
 
 import java.io.File;
+import java.io.IOException;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 
 /**
@@ -30,6 +34,36 @@ import java.util.concurrent.ExecutorService;
  */
 public class NoopSegmentCacheManager implements SegmentCacheManager
 {
+  @Override
+  public boolean canHandleSegments()
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public List<DataSegment> getCachedSegments() throws IOException
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public void storeInfoFile(DataSegment segment) throws IOException
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public boolean removeInfoFile(DataSegment segment) throws IOException
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public ReferenceCountingSegment getSegment(DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback loadFailed)
+      throws SegmentLoadingException
+  {
+    throw new UnsupportedOperationException();
+  }
 
   @Override
   public boolean isSegmentCached(DataSegment segment)

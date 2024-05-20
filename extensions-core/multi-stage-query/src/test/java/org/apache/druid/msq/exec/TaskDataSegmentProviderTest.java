@@ -48,6 +48,7 @@ import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
@@ -144,6 +145,7 @@ public class TaskDataSegmentProviderTest
         new SegmentLoaderConfig().withLocations(
             ImmutableList.of(new StorageLocationConfig(cacheDir, 10_000_000_000L, null))
         ),
+        TestIndex.INDEX_IO,
         jsonMapper
     );
 

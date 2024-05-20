@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.TestIndex;
 import org.apache.druid.server.coordination.TestStorageLocation;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
@@ -59,9 +60,11 @@ public class SegmentLocalCacheLoaderTest
     objectMapper = TestHelper.makeJsonMapper();
     objectMapper.registerSubtypes(TombstoneLoadSpec.class);
     objectMapper.registerSubtypes(TombstoneSegmentizerFactory.class);
-    SegmentCacheManager cacheManager = new SegmentLocalCacheManager(config, objectMapper);
-
-    segmentLocalCacheLoader = new SegmentLocalCacheLoader(cacheManager, null, objectMapper);
+    segmentLocalCacheLoader = new SegmentLocalCacheLoader(
+        new SegmentLocalCacheManager(config, TestIndex.INDEX_IO, objectMapper),
+        TestIndex.INDEX_IO,
+        objectMapper
+    );
 
     TombstoneLoadSpec.writeFactoryFile(storageLoc.getCacheDir());
   }

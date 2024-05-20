@@ -21,15 +21,23 @@ package org.apache.druid.segment.loading;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.output.NullOutputStream;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.segment.IndexIO;
+import org.apache.druid.segment.ReferenceCountingSegment;
+import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -38,6 +46,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
@@ -86,6 +96,8 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
 
   private final StorageLocationSelectorStrategy strategy;
 
+  private final IndexIO indexIO;
+
   private ExecutorService loadSegmentsIntoPageCacheOnDownloadExec = null;
 
   // Note that we only create this via injection in historical and realtime nodes. Peons create these
@@ -96,6 +108,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       List<StorageLocation> locations,
       SegmentLoaderConfig config,
       @Nonnull StorageLocationSelectorStrategy strategy,
+      IndexIO indexIO,
       @Json ObjectMapper mapper
   )
   {
@@ -103,6 +116,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     this.jsonMapper = mapper;
     this.locations = locations;
     this.strategy = strategy;
+    this.indexIO = indexIO;
     log.info("Using storage location strategy: [%s]", this.strategy.getClass().getSimpleName());
 
     if (this.config.getNumThreadsToLoadSegmentsIntoPageCacheOnDownload() != 0) {
@@ -118,10 +132,11 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   SegmentLocalCacheManager(
       SegmentLoaderConfig config,
       @Nonnull StorageLocationSelectorStrategy strategy,
+      IndexIO indexIO,
       @Json ObjectMapper mapper
   )
   {
-    this(config.toStorageLocations(), config, strategy, mapper);
+    this(config.toStorageLocations(), config, strategy, indexIO, mapper);
   }
 
   /**
@@ -129,13 +144,14 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
    *
    * This ctor is mainly for test cases, including test cases in other modules
    */
-  @VisibleForTesting
   public SegmentLocalCacheManager(
       SegmentLoaderConfig config,
+      IndexIO indexIO,
       @Json ObjectMapper mapper
   )
   {
     this.config = config;
+    this.indexIO = indexIO;
     this.jsonMapper = mapper;
     this.locations = config.toStorageLocations();
     this.strategy = new LeastBytesUsedStorageLocationSelectorStrategy(locations);
@@ -143,7 +159,131 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   }
 
 
-  static String getSegmentDir(DataSegment segment)
+  @Override
+  public boolean canHandleSegments()
+  {
+    return !(locations == null || locations.isEmpty());
+  }
+
+  @Override
+  public List<DataSegment> getCachedSegments() throws IOException
+  {
+    if (!canHandleSegments()) {
+      throw DruidException.defensive(
+          "canHandleSegments() is false. getCachedSegments() must be invoked only when canHandleSegments() returns true."
+      );
+    }
+    final File baseDir = getInfoDir();
+
+    List<DataSegment> cachedSegments = new ArrayList<>();
+    File[] segmentsToLoad = baseDir.listFiles();
+
+    int ignored = 0;
+
+    for (int i = 0; i < segmentsToLoad.length; i++) {
+      File file = segmentsToLoad[i];
+      log.info("Loading segment cache file [%d/%d][%s].", i + 1, segmentsToLoad.length, file);
+      try {
+        final DataSegment segment = jsonMapper.readValue(file, DataSegment.class);
+
+        if (!segment.getId().toString().equals(file.getName())) {
+          log.warn("Ignoring cache file[%s] for segment[%s].", file.getPath(), segment.getId());
+          ignored++;
+        } else if (isSegmentCached(segment)) {
+          cachedSegments.add(segment);
+        } else {
+          final SegmentId segmentId = segment.getId();
+          log.warn("Unable to find cache file for segment[%s]. Deleting lookup entry.", segmentId);
+          if (!removeInfoFile(segment)) {
+            log.warn(
+                "Unable to delete cache file[%s] for segment[%s].",
+                getInfoFileName(segment), segmentId);
+          }
+        }
+      }
+      catch (Exception e) {
+        log.makeAlert(e, "Failed to load segment from segmentInfo file")
+           .addData("file", file)
+           .emit();
+      }
+    }
+
+    if (ignored > 0) {
+      log.makeAlert("Ignored misnamed segment cache files on startup.")
+         .addData("numIgnored", ignored)
+         .emit();
+    }
+
+    return cachedSegments;
+  }
+
+  @Override
+  public void storeInfoFile(DataSegment segment) throws IOException
+  {
+    final File segmentInfoCacheFile = new File(getInfoDir(), segment.getId().toString());
+    if (!segmentInfoCacheFile.exists()) {
+      jsonMapper.writeValue(segmentInfoCacheFile, segment);
+    }
+  }
+
+  @Override
+  public boolean removeInfoFile(DataSegment segment) throws IOException
+  {
+    return new File(getInfoDir(), segment.getId().toString()).delete();
+  }
+
+  @Override
+  public ReferenceCountingSegment getSegment(DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback loadFailed) throws SegmentLoadingException
+  {
+    final File segmentFiles = getSegmentFiles(segment);
+    final File factoryJson = new File(segmentFiles, "factory.json");
+    final SegmentizerFactory factory;
+
+    if (factoryJson.exists()) {
+      try {
+        factory = jsonMapper.readValue(factoryJson, SegmentizerFactory.class);
+      }
+      catch (IOException e) {
+        throw new SegmentLoadingException(e, "%s", e.getMessage());
+      }
+    } else {
+      factory = new MMappedQueryableSegmentizerFactory(indexIO);
+    }
+
+    Segment segmentObject = factory.factorize(segment, segmentFiles, lazy, loadFailed);
+
+    return ReferenceCountingSegment.wrapSegment(segmentObject, segment.getShardSpec());
+  }
+
+  private File getInfoDir() throws IOException
+  {
+    // Defensive check to see if locations is empty or not?! Otherwise, leave a comment
+    // pointing to where the validation is to see that this is non-empty. Alternatively, move this to the
+    // constructor.
+    File infoDir;
+    if (config.getInfoDirTrueValue() != null) {
+      infoDir = config.getInfoDirTrueValue();
+    } else if (!config.getLocations().isEmpty()) {
+      infoDir = new File(config.getLocations().get(0).getPath(), "info_dir");
+    } else if (!locations.isEmpty()) {
+      infoDir = new File(locations.get(0).getPath(), "info_dir");
+    } else {
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+          .ofCategory(DruidException.Category.NOT_FOUND)
+          .build("Could not determine infoDir. Make sure 'druid.segmentCache.infoDir' "
+                 + "or 'druid.segmentCache.locations'is set correctly.");
+    }
+
+    FileUtils.mkdirp(infoDir); // Should we only do it on writes?
+    return infoDir;
+  }
+
+  private String getInfoFileName(DataSegment segment) throws IOException
+  {
+    return new File(getInfoDir(), segment.getId().toString()).toString();
+  }
+
+  private static String getSegmentDir(DataSegment segment)
   {
     return DataSegmentPusher.getDefaultStorageDir(segment, false);
   }
@@ -254,7 +394,9 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
         File storageDir = loc.segmentDirectoryAsFile(segmentDir);
         boolean success = loadInLocationWithStartMarkerQuietly(loc, segment, storageDir, false);
         if (!success) {
-          throw new SegmentLoadingException("Failed to load segment %s in reserved location [%s]", segment.getId(), loc.getPath().getAbsolutePath());
+          throw new SegmentLoadingException(
+              "Failed to load segment[%s] in reserved location[%s]", segment.getId(), loc.getPath().getAbsolutePath()
+          );
         }
         return storageDir;
       }
@@ -275,7 +417,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
         }
       }
     }
-    throw new SegmentLoadingException("Failed to load segment %s in all locations.", segment.getId());
+    throw new SegmentLoadingException("Failed to load segment[%s] in all locations.", segment.getId());
   }
 
   /**

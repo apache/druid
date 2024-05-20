@@ -20,6 +20,7 @@
 package org.apache.druid.server.coordination;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.collect.ImmutableList;
@@ -83,13 +84,21 @@ import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.join.JoinableFactoryWrapperTest;
+import org.apache.druid.segment.loading.NoopSegmentCacheManager;
+import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentLoader;
+import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLoadingException;
+import org.apache.druid.segment.loading.SegmentLocalCacheLoader;
+import org.apache.druid.segment.loading.SegmentLocalCacheManager;
+import org.apache.druid.segment.loading.TombstoneLoadSpec;
 import org.apache.druid.segment.loading.TombstoneSegmentizerFactory;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.initialization.ServerConfig;
@@ -98,17 +107,25 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
+import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.timeline.partition.PartitionChunk;
+import org.apache.druid.timeline.partition.TombstoneShardSpec;
+import org.easymock.EasyMock;
+import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.rules.ExpectedException;
+import org.junit.rules.TemporaryFolder;
 
 import javax.annotation.Nullable;
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -123,8 +140,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
-/**
- */
 public class ServerManagerTest
 {
   @Rule
@@ -138,9 +153,84 @@ public class ServerManagerTest
   private ExecutorService serverManagerExec;
   private SegmentManager segmentManager;
 
+  @Rule
+  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  private TestStorageLocation storageLoc;
+  private ObjectMapper objectMapper;
+
   @Before
-  public void setUp()
+  public void setUp() throws IOException
   {
+    storageLoc = new TestStorageLocation(temporaryFolder);
+    SegmentLoaderConfig config = new SegmentLoaderConfig()
+        .withLocations(Collections.singletonList(storageLoc.toStorageLocationConfig(1000L, null)));
+
+    objectMapper = TestHelper.makeJsonMapper();
+    objectMapper.registerSubtypes(SegmentLoadDropHandlerCacheTest.TestLoadSpec.class);
+    objectMapper.registerSubtypes(SegmentLoadDropHandlerCacheTest.TestSegmentizerFactory.class);
+    objectMapper.registerSubtypes(TombstoneLoadSpec.class);
+
+//    SegmentCacheManager cacheManager =  new NoopSegmentCacheManager()
+//    {
+//      @Override
+//      public ReferenceCountingSegment getSegment(final DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback SegmentLazyLoadFailCallback)
+//      {
+//        if (segment.isTombstone()) {
+//          return ReferenceCountingSegment
+//              .wrapSegment(TombstoneSegmentizerFactory.segmentForTombstone(segment), segment.getShardSpec());
+//        } else {
+//          return ReferenceCountingSegment.wrapSegment(new SegmentForTesting(
+//              MapUtils.getString(segment.getLoadSpec(), "version"),
+//              (Interval) segment.getLoadSpec().get("interval")
+//          ), segment.getShardSpec());
+//        }
+//      }
+//
+//      @Override
+//      public void storeInfoFile(DataSegment segment)
+//      {
+//      }
+//
+//      @Override
+//      public void cleanup(DataSegment segment)
+//      {
+//
+//      }
+//
+//      @Override
+//      public void loadSegmentIntoPageCache(DataSegment segment, ExecutorService exec)
+//      {
+//
+//      }
+//    };
+
+    final SegmentLocalCacheManager localCacheManager = new SegmentLocalCacheManager(
+        config,
+        TestIndex.INDEX_IO,
+        objectMapper
+    )
+    {
+      @Override
+      public ReferenceCountingSegment getSegment(
+          final DataSegment segment,
+          boolean lazy,
+          SegmentLazyLoadFailCallback SegmentLazyLoadFailCallback
+      )
+      {
+        if (segment.isTombstone()) {
+          return ReferenceCountingSegment
+              .wrapSegment(TombstoneSegmentizerFactory.segmentForTombstone(segment), segment.getShardSpec());
+        } else {
+          return ReferenceCountingSegment.wrapSegment(new SegmentForTesting(
+              MapUtils.getString(segment.getLoadSpec(), "version"),
+              (Interval) segment.getLoadSpec().get("interval")
+          ), segment.getShardSpec());
+        }
+      }
+    };
+
+    segmentManager = new SegmentManager(localCacheManager);
+
     EmittingLogger.registerEmitter(new NoopServiceEmitter());
     NullHandling.initializeForTests();
     queryWaitLatch = new CountDownLatch(1);
@@ -148,36 +238,36 @@ public class ServerManagerTest
     queryNotifyLatch = new CountDownLatch(1);
     factory = new MyQueryRunnerFactory(queryWaitLatch, queryWaitYieldLatch, queryNotifyLatch);
     serverManagerExec = Execs.multiThreaded(2, "ServerManagerTest-%d");
-    segmentManager = new SegmentManager(
-        new SegmentLoader()
-        {
-          @Override
-          public ReferenceCountingSegment getSegment(final DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback SegmentLazyLoadFailCallback)
-          {
-            if (segment.isTombstone()) {
-              return ReferenceCountingSegment
-                  .wrapSegment(TombstoneSegmentizerFactory.segmentForTombstone(segment), segment.getShardSpec());
-            } else {
-              return ReferenceCountingSegment.wrapSegment(new SegmentForTesting(
-                  MapUtils.getString(segment.getLoadSpec(), "version"),
-                  (Interval) segment.getLoadSpec().get("interval")
-              ), segment.getShardSpec());
-            }
-          }
-
-          @Override
-          public void cleanup(DataSegment segment)
-          {
-
-          }
-
-          @Override
-          public void loadSegmentIntoPageCache(DataSegment segment, ExecutorService exec)
-          {
-
-          }
-        }
-    );
+//    segmentManager = new SegmentManager(
+//        new SegmentLoader()
+//        {
+//          @Override
+//          public ReferenceCountingSegment getSegment(final DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback SegmentLazyLoadFailCallback)
+//          {
+//            if (segment.isTombstone()) {
+//              return ReferenceCountingSegment
+//                  .wrapSegment(TombstoneSegmentizerFactory.segmentForTombstone(segment), segment.getShardSpec());
+//            } else {
+//              return ReferenceCountingSegment.wrapSegment(new SegmentForTesting(
+//                  MapUtils.getString(segment.getLoadSpec(), "version"),
+//                  (Interval) segment.getLoadSpec().get("interval")
+//              ), segment.getShardSpec());
+//            }
+//          }
+//
+//          @Override
+//          public void cleanup(DataSegment segment)
+//          {
+//
+//          }
+//
+//          @Override
+//          public void loadSegmentIntoPageCache(DataSegment segment, ExecutorService exec)
+//          {
+//
+//          }
+//        }
+//    );
     serverManager = new ServerManager(
         new QueryRunnerFactoryConglomerate()
         {
@@ -226,18 +316,17 @@ public class ServerManagerTest
         "test",
         Intervals.of("P1d/2011-04-01"),
         ImmutableList.of(
-            new Pair<String, Interval>("1", Intervals.of("P1d/2011-04-01"))
+            new Pair<>("1", Intervals.of("P1d/2011-04-01"))
         )
     );
     waitForTestVerificationAndCleanup(future);
-
 
     future = assertQueryable(
         Granularities.DAY,
         "test", Intervals.of("P2d/2011-04-02"),
         ImmutableList.of(
-            new Pair<String, Interval>("1", Intervals.of("P1d/2011-04-01")),
-            new Pair<String, Interval>("2", Intervals.of("P1d/2011-04-02"))
+            new Pair<>("1", Intervals.of("P1d/2011-04-01")),
+            new Pair<>("2", Intervals.of("P1d/2011-04-02"))
         )
     );
     waitForTestVerificationAndCleanup(future);
@@ -266,7 +355,7 @@ public class ServerManagerTest
         Granularities.DAY,
         dataSouce, interval,
         ImmutableList.of(
-            new Pair<String, Interval>("2", interval)
+            new Pair<>("2", interval)
         )
     );
     waitForTestVerificationAndCleanup(future);
@@ -276,7 +365,7 @@ public class ServerManagerTest
         Granularities.DAY,
         dataSouce, interval,
         ImmutableList.of(
-            new Pair<String, Interval>("1", interval)
+            new Pair<>("1", interval)
         )
     );
     waitForTestVerificationAndCleanup(future);
@@ -291,7 +380,7 @@ public class ServerManagerTest
         Granularities.DAY,
         "test", Intervals.of("2011-04-04/2011-04-06"),
         ImmutableList.of(
-            new Pair<String, Interval>("3", Intervals.of("2011-04-04/2011-04-05"))
+            new Pair<>("3", Intervals.of("2011-04-04/2011-04-05"))
         )
     );
     waitForTestVerificationAndCleanup(future);
@@ -303,11 +392,11 @@ public class ServerManagerTest
         Granularities.HOUR,
         "test", Intervals.of("2011-04-04/2011-04-04T06"),
         ImmutableList.of(
-            new Pair<String, Interval>("2", Intervals.of("2011-04-04T00/2011-04-04T01")),
-            new Pair<String, Interval>("2", Intervals.of("2011-04-04T01/2011-04-04T02")),
-            new Pair<String, Interval>("2", Intervals.of("2011-04-04T02/2011-04-04T03")),
-            new Pair<String, Interval>("2", Intervals.of("2011-04-04T04/2011-04-04T05")),
-            new Pair<String, Interval>("2", Intervals.of("2011-04-04T05/2011-04-04T06"))
+            new Pair<>("2", Intervals.of("2011-04-04T00/2011-04-04T01")),
+            new Pair<>("2", Intervals.of("2011-04-04T01/2011-04-04T02")),
+            new Pair<>("2", Intervals.of("2011-04-04T02/2011-04-04T03")),
+            new Pair<>("2", Intervals.of("2011-04-04T04/2011-04-04T05")),
+            new Pair<>("2", Intervals.of("2011-04-04T05/2011-04-04T06"))
         )
     );
     waitForTestVerificationAndCleanup(future);
@@ -316,9 +405,9 @@ public class ServerManagerTest
         Granularities.HOUR,
         "test", Intervals.of("2011-04-04/2011-04-04T03"),
         ImmutableList.of(
-            new Pair<String, Interval>("2", Intervals.of("2011-04-04T00/2011-04-04T01")),
-            new Pair<String, Interval>("2", Intervals.of("2011-04-04T01/2011-04-04T02")),
-            new Pair<String, Interval>("2", Intervals.of("2011-04-04T02/2011-04-04T03"))
+            new Pair<>("2", Intervals.of("2011-04-04T00/2011-04-04T01")),
+            new Pair<>("2", Intervals.of("2011-04-04T01/2011-04-04T02")),
+            new Pair<>("2", Intervals.of("2011-04-04T02/2011-04-04T03"))
         )
     );
     waitForTestVerificationAndCleanup(future);
@@ -327,8 +416,8 @@ public class ServerManagerTest
         Granularities.HOUR,
         "test", Intervals.of("2011-04-04T04/2011-04-04T06"),
         ImmutableList.of(
-            new Pair<String, Interval>("2", Intervals.of("2011-04-04T04/2011-04-04T05")),
-            new Pair<String, Interval>("2", Intervals.of("2011-04-04T05/2011-04-04T06"))
+            new Pair<>("2", Intervals.of("2011-04-04T04/2011-04-04T05")),
+            new Pair<>("2", Intervals.of("2011-04-04T05/2011-04-04T06"))
         )
     );
     waitForTestVerificationAndCleanup(future);
@@ -343,7 +432,7 @@ public class ServerManagerTest
         Granularities.DAY,
         "test", Intervals.of("2011-04-04/2011-04-06"),
         ImmutableList.of(
-            new Pair<String, Interval>("3", Intervals.of("2011-04-04/2011-04-05"))
+            new Pair<>("3", Intervals.of("2011-04-04/2011-04-05"))
         )
     );
 
@@ -382,7 +471,7 @@ public class ServerManagerTest
         Granularities.DAY,
         "test", Intervals.of("2011-04-04/2011-04-06"),
         ImmutableList.of(
-            new Pair<String, Interval>("3", Intervals.of("2011-04-04/2011-04-05"))
+            new Pair<>("3", Intervals.of("2011-04-04/2011-04-05"))
         )
     );
 
@@ -425,7 +514,7 @@ public class ServerManagerTest
         Granularities.DAY,
         "test", Intervals.of("2011-04-04/2011-04-06"),
         ImmutableList.of(
-            new Pair<String, Interval>("3", Intervals.of("2011-04-04/2011-04-05"))
+            new Pair<>("3", Intervals.of("2011-04-04/2011-04-05"))
         )
     );
 
@@ -600,23 +689,23 @@ public class ServerManagerTest
             return false;
           }
 
-          @Override
-          public DimFilter getFilter()
-          {
-            return null;
-          }
+              @Override
+              public DimFilter getFilter()
+              {
+                return null;
+              }
 
-          @Override
-          public String getType()
-          {
-            return null;
-          }
+              @Override
+              public String getType()
+              {
+                return null;
+              }
 
-          @Override
-          public Query<Object> withOverriddenContext(Map<String, Object> contextOverride)
-          {
-            return this;
-          }
+              @Override
+              public Query<Object> withOverriddenContext(Map<String, Object> contextOverride)
+              {
+                return this;
+              }
 
           @Override
           public Query<Object> withQuerySegmentSpec(QuerySegmentSpec spec)
@@ -637,7 +726,7 @@ public class ServerManagerTest
   private void waitForTestVerificationAndCleanup(Future future)
   {
     try {
-      queryNotifyLatch.await(1000, TimeUnit.MILLISECONDS);
+      queryNotifyLatch.await(5000, TimeUnit.MILLISECONDS);
       queryWaitYieldLatch.countDown();
       queryWaitLatch.countDown();
       future.get();
@@ -698,35 +787,55 @@ public class ServerManagerTest
         intervals
     );
     return serverManagerExec.submit(
-        new Runnable()
-        {
-          @Override
-          public void run()
-          {
-            Sequence<Result<SearchResultValue>> seq = runner.run(QueryPlus.wrap(query));
-            seq.toList();
-            Iterator<SegmentForTesting> adaptersIter = factory.getAdapters().iterator();
+        () -> {
+          Sequence<Result<SearchResultValue>> seq = runner.run(QueryPlus.wrap(query));
+          seq.toList();
+          Iterator<SegmentForTesting> adaptersIter = factory.getAdapters().iterator();
 
-            while (expectedIter.hasNext() && adaptersIter.hasNext()) {
-              Pair<String, Interval> expectedVals = expectedIter.next();
-              SegmentForTesting value = adaptersIter.next();
+          while (expectedIter.hasNext() && adaptersIter.hasNext()) {
+            Pair<String, Interval> expectedVals = expectedIter.next();
+            SegmentForTesting value = adaptersIter.next();
 
-              Assert.assertEquals(expectedVals.lhs, value.getVersion());
-              Assert.assertEquals(expectedVals.rhs, value.getInterval());
-            }
-
-            Assert.assertFalse(expectedIter.hasNext());
-            Assert.assertFalse(adaptersIter.hasNext());
+            Assert.assertEquals(expectedVals.lhs, value.getVersion());
+            Assert.assertEquals(expectedVals.rhs, value.getInterval());
           }
+
+          Assert.assertFalse(expectedIter.hasNext());
+          Assert.assertFalse(adaptersIter.hasNext());
         }
     );
   }
 
-  public void loadQueryable(String dataSource, String version, Interval interval)
+  private void loadQueryableMock(String dataSource, String version, Interval interval)
+  {
+    try {
+      EasyMock.expect(
+          segmentManager.loadSegment(
+              new DataSegment(
+                  dataSource,
+                  interval,
+                  version,
+                  ImmutableMap.of("version", version, "interval", interval, "type", "test"),
+                  Arrays.asList("dim1", "dim2", "dim3"),
+                  Arrays.asList("metric1", "metric2"),
+                  NoneShardSpec.instance(),
+                  IndexIO.CURRENT_VERSION_ID,
+                  123L
+              ),
+              false,
+              SegmentLazyLoadFailCallback.NOOP
+          )).andReturn(true);
+    }
+    catch (SegmentLoadingException | IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  private void loadQueryable(String dataSource, String version, Interval interval)
   {
     try {
       if ("testTombstone".equals(dataSource)) {
-        segmentManager.loadSegment(
+        Assert.assertTrue(segmentManager.loadSegment(
             new DataSegment(
                 dataSource,
                 interval,
@@ -738,37 +847,39 @@ public class ServerManagerTest
                 ),
                 Arrays.asList("dim1", "dim2", "dim3"),
                 Arrays.asList("metric1", "metric2"),
-                NoneShardSpec.instance(),
+                TombstoneShardSpec.INSTANCE,
                 IndexIO.CURRENT_VERSION_ID,
-                123L
+                1L
             ),
             false,
             SegmentLazyLoadFailCallback.NOOP
-        );
+        ));
       } else {
-        segmentManager.loadSegment(
-            new DataSegment(
-                dataSource,
-                interval,
-                version,
-                ImmutableMap.of("version", version, "interval", interval),
-                Arrays.asList("dim1", "dim2", "dim3"),
-                Arrays.asList("metric1", "metric2"),
-                NoneShardSpec.instance(),
-                IndexIO.CURRENT_VERSION_ID,
-                123L
-            ),
-            false,
-            SegmentLazyLoadFailCallback.NOOP
+        Assert.assertTrue(
+            segmentManager.loadSegment(
+                new DataSegment(
+                    dataSource,
+                    interval,
+                    version,
+                    ImmutableMap.of("version", version, "interval", interval, "type", "test"),
+                    Arrays.asList("dim1", "dim2", "dim3"),
+                    Arrays.asList("metric1", "metric2"),
+                    NoneShardSpec.instance(),
+                    IndexIO.CURRENT_VERSION_ID,
+                    1L
+                ),
+                false,
+                SegmentLazyLoadFailCallback.NOOP
+            )
         );
       }
     }
-    catch (SegmentLoadingException e) {
+    catch (SegmentLoadingException | IOException e) {
       throw new RuntimeException(e);
     }
   }
 
-  public void dropQueryable(String dataSource, String version, Interval interval)
+  private void dropQueryable(String dataSource, String version, Interval interval)
   {
     segmentManager.dropSegment(
         new DataSegment(
@@ -785,7 +896,7 @@ public class ServerManagerTest
     );
   }
 
-  public static class MyQueryRunnerFactory implements QueryRunnerFactory<Result<SearchResultValue>, SearchQuery>
+  private static class MyQueryRunnerFactory implements QueryRunnerFactory<Result<SearchResultValue>, SearchQuery>
   {
     private final CountDownLatch waitLatch;
     private final CountDownLatch waitYieldLatch;
@@ -879,7 +990,7 @@ public class ServerManagerTest
     }
   }
 
-  private static class SegmentForTesting implements Segment
+  public static class SegmentForTesting implements Segment
   {
     private final String version;
     private final Interval interval;

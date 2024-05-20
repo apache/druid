@@ -66,6 +66,7 @@ public class TestStorageLocation
     }
 
     File segmentInfoCacheFile = new File(infoDir, segment.getId().toString());
+    log.info("Written seg[%s] to [%s]", segment.getId(), segmentInfoCacheFile);
     try {
       jsonMapper.writeValue(segmentInfoCacheFile, segment);
     }
