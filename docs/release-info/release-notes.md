@@ -71,14 +71,18 @@ This change eliminates the need to materialize results on the heap, which improv
 
 ### Concurrent append and replace improvements
 
-Improved concurrent replace to work with supervisors using concurrent locks.
+Streaming ingestion supervisors now support concurrent append, that is streaming tasks can be run concurrently with a replace task (compaction or re-indexing) if it also happens to be using concurrent locks. Set the context parameter `useConcurrentLocks` to true to enable concurrent append.
+
+Once the supervisor has been updated to have `"useConcurrentLocks": true`, the transition to concurrent append happens seamlessly without causing any ingestion lag or task failures.
 
 [#15995](https://github.com/apache/druid/pull/15995)
-
-You can now grant locks with different types (EXCLUSIVE, SHARED, APPEND, REPLACE) for the same interval within a task group to ensure a transition to a newer set of tasks without failure.
-Previously, changing lock types in the Supervisor could lead to segment allocation errors due to lock conflicts for the new tasks when the older tasks are still running.
-
 [#16369](https://github.com/apache/druid/pull/16369)
+
+Druid now performs active cleanup of stale pending segments by tracking the set of tasks using such pending segments.
+This allows concurrent append and replace to upgrade only a minimal set of pending segments and thus improve performance and eliminate errors.
+Additionally, it helps in reducing load on the metadata store.
+
+[#16144](https://github.com/apache/druid/pull/16144)
 
 ### Improved AND filter performance
 
@@ -273,22 +277,11 @@ Nested column serialization now releases nested field compression buffers as soo
 
 [#16076](https://github.com/apache/druid/pull/16076)
 
-#### Segment allocation
-
-Druid now associates pending segments with the task groups that created them.
-
-Associating pending segments with the task groups facilitates clean up of unneeded segments as soon as all tasks in the group exit.
-Cleaning up pending segments helps delete entries immediately after tasks exit and can alleviate the load on the metadata store during segment allocation.
-This can also help with segment allocation failures due to conflicting pending segments that are no longer needed in some cases.
-
-The change ensures that an append action upgrades a segment set which corresponds exactly to the pending segment upgrades made by the concurrent replace action, and eliminates any duplication in query results that may occur.
-
-[#16144](https://github.com/apache/druid/pull/16144)
-
 #### Improved task context reporting
 
-Added a new type of task report `TaskContextReport`.
-Starting with Druid 30.0.0, all tasks will include `taskContext` in the final JSON that Druid serves over the task report APIs or writes to files.
+Add a new field `taskContext` in the task reports of non-MSQ tasks.
+The payload of this field contains the entire context used by the task during its runtime.
+
 The following is the new report structure for non-MSQ tasks:
 
 ```json
@@ -308,7 +301,6 @@ The following is the new report structure for non-MSQ tasks:
 ```
 
 This change is backwards compatible as it only adds a new field at the top-level of the JSON and doesn't modify any existing fields.
-If your code or tests consume task reports, don't rely on the JSON to be a singleton map.
 
 [#16041](https://github.com/apache/druid/pull/16041)
 
@@ -434,10 +426,11 @@ Prior to this change, updating a Kafka streaming supervisor topic from single to
 #### Dynamic table append
 
 You can now use the `TABLE(APPEND(...))` function to implicitly create unions based on table schemas.
-For example, the two following queries are equivalent:
+
+For example, the following queries are equivalent:
 
 ```sql
-TABLE(APPEND('table1','table2','table3'))
+SELECT * FROM TABLE(APPEND('table1','table2','table3'))
 ```
 
 and
@@ -516,7 +509,7 @@ Added a new `TypedInFilter` filter to replace `InDimFilter`&mdash;to improve per
 
 #### Heap dictionaries clear out
 
-Improved querying to decrease the chance of going OOM with high cardinality data Group By.
+Improved object handling to reduce the chances of running out of memory with Group By queries on high cardinality data.
 
 [#16114](https://github.com/apache/druid/pull/16114)
 
@@ -530,7 +523,7 @@ Improved querying to decrease the chance of going OOM with high cardinality data
 * Fixed the return type for the IPV4_PARSE function. The function now correctly returns null if the string literal can't be represented as an IPv4 address [#15916](https://github.com/apache/druid/pull/15916)
 * Fixed an issue where several aggregators returned UNKNOWN or OTHER as their SQL type inference [#16216](https://github.com/apache/druid/pull/16216)
 * Fixed an issue where triggering a math expression processor on a segment that lacks a specific column results in an `Unable to vectorize expression` exception [#16128](https://github.com/apache/druid/pull/16128)
-* Fixed NPE while loading lookups from an empty JDBC source [#16307](https://github.com/apache/druid/pull/16307)
+* Fixed error while loading lookups from an empty JDBC source [#16307](https://github.com/apache/druid/pull/16307)
 * Fixed `ColumnType` to `RelDataType` conversion for nested arrays [#16138](https://github.com/apache/druid/pull/16138)
 * Fixed `WindowingscanAndSort` query issues on top of Joins [#15996](https://github.com/apache/druid/pull/15996)
 * Fixed `REGEXP_LIKE`, `CONTAINS_STRING`, and `ICONTAINS_STRING` so that they correctly return null for null value inputs in ANSI SQL compatible null handling mode (the default configuration). Previously, they returned false [#15963](https://github.com/apache/druid/pull/15963)
@@ -553,15 +546,9 @@ Improved querying to decrease the chance of going OOM with high cardinality data
 
 ### Cluster management
 
-#### Use cache for password hashes
-
-Improved Druid security by using a cache for password hashes while validating LDAP passwords.
-
-[#15993](https://github.com/apache/druid/pull/15993)
-
 #### Improved retrieving active task status
 
-Improved performance by reducing the number of metadata calls to retrieve the status of active tasks.
+Improved performance of the Overlord API `/indexer/v1/taskStatus` by serving status of active tasks from memory rather than querying the metadata.
 
 [#15724](https://github.com/apache/druid/pull/15724)
 
@@ -576,8 +563,8 @@ Improved performance by reducing the number of metadata calls to retrieve the st
 
 Changed to the default values for the Coordinator service as follows:
 
-* The default value for `druid.coordinator.kill.period` (if unspecified) has changed from `P1D` to the value of `druid.coordinator.period.indexingPeriod`. Operators can choose to override `druid.coordinator.kill.period` and that takes precedence over the default behavior.
-* The default value for the dynamic configuration property `killTaskSlotRatio` has been updated from `1.0` to `0.1`. This ensures that kill tasks take up only one task slot by default instead of consuming all available task slots.
+* The default value of `druid.coordinator.kill.period` has been changed from `P1D` to the runtime value of `druid.coordinator.period.indexingPeriod`. This default value can be overridden by explicitly specifying `druid.coordinator.kill.period` in the Coordinator runtime properties.
+* The default value for the dynamic configuration property `killTaskSlotRatio` has been updated from `1.0` to `0.1`. This ensures that kill tasks take up at least one task slot and at most 10% of all available task slots by default.
 
 [#16247](https://github.com/apache/druid/pull/16247)
 
@@ -676,6 +663,12 @@ Also added a text box for the Delta Lake filter to the web console.
 The text box accepts an optional JSON object that is passed down as the `filter` to the delta input source.
 
 [#16379](https://github.com/apache/druid/pull/16379)
+
+#### Improve performance of LDAP credentials validator
+
+Improved performance of LDAP credentials validator by keeping password hashes in an in-memory cache. This helps avoid re-computation of password hashes, thus speeding up the process of LDAP-based Druid authentication.
+
+[#15993](https://github.com/apache/druid/pull/15993)
 
 ## Upgrade notes and incompatible changes
 
