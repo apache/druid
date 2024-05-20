@@ -54,7 +54,6 @@ import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.join.JoinableFactory;
-import org.apache.druid.segment.loading.SegmentLoader;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QuerySchedulerProvider;
 import org.apache.druid.server.ResponseContextConfig;
@@ -117,9 +116,6 @@ public class SqlModuleTest
   @Mock
   private JoinableFactory joinableFactory;
 
-  @Mock
-  private SegmentLoader segmentLoader;
-
   private Injector injector;
 
   @Before
@@ -135,8 +131,7 @@ public class SqlModuleTest
         querySegmentWalker,
         queryToolChestWarehouse,
         lookupExtractorFactoryContainerProvider,
-        joinableFactory,
-        segmentLoader
+        joinableFactory
     );
   }
 
@@ -203,7 +198,6 @@ public class SqlModuleTest
               binder.bind(QueryToolChestWarehouse.class).toInstance(queryToolChestWarehouse);
               binder.bind(LookupExtractorFactoryContainerProvider.class).toInstance(lookupExtractorFactoryContainerProvider);
               binder.bind(JoinableFactory.class).toInstance(joinableFactory);
-              binder.bind(SegmentLoader.class).toInstance(segmentLoader);
               binder.bind(QuerySchedulerProvider.class).in(LazySingleton.class);
               binder.bind(QueryScheduler.class)
                     .toProvider(QuerySchedulerProvider.class)

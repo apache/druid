@@ -142,9 +142,7 @@ public class SegmentManager
   }
 
   @Inject
-  public SegmentManager(
-      SegmentCacheManager cacheManager
-  )
+  public SegmentManager(SegmentCacheManager cacheManager)
   {
     this.cacheManager = cacheManager;
   }

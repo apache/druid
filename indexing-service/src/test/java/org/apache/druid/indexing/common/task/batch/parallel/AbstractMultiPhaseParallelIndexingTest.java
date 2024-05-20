@@ -57,9 +57,7 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.loading.SegmentCacheManager;
-import org.apache.druid.segment.loading.SegmentLoader;
 import org.apache.druid.segment.loading.SegmentLoadingException;
-import org.apache.druid.segment.loading.SegmentLocalCacheLoader;
 import org.apache.druid.segment.loading.TombstoneLoadSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
@@ -308,9 +306,8 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
   {
     final SegmentCacheManager cacheManager = new SegmentCacheManagerFactory(TestIndex.INDEX_IO, getObjectMapper())
         .manufacturate(tempSegmentDir);
-    final SegmentLoader loader = new SegmentLocalCacheLoader(cacheManager, getIndexIO(), getObjectMapper());
     try {
-      return loader.getSegment(dataSegment, false, SegmentLazyLoadFailCallback.NOOP);
+      return cacheManager.getSegment(dataSegment, false, SegmentLazyLoadFailCallback.NOOP);
     }
     catch (SegmentLoadingException e) {
       throw new RuntimeException(e);
