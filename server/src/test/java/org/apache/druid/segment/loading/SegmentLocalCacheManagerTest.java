@@ -24,12 +24,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.datasketches.cpc.TestUtil;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
@@ -64,7 +66,7 @@ public class SegmentLocalCacheManagerTest
 
   public SegmentLocalCacheManagerTest()
   {
-    jsonMapper = new DefaultObjectMapper();
+    jsonMapper = TestHelper.makeJsonMapper();
     jsonMapper.registerSubtypes(new NamedType(LocalLoadSpec.class, "local"),
                                 new NamedType(TombstoneLoadSpec.class, "tombstone"));
     jsonMapper.setInjectableValues(
