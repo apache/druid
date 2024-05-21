@@ -422,7 +422,7 @@ public class SupervisorResource
         manager -> {
           try {
             if (manager.handoffTaskGroupsEarly(id, taskGroupIds)) {
-              return Response.ok(ImmutableMap.of("id", id, "taskGroupIds", taskGroupIds)).build();
+              return Response.ok().build();
             } else {
               return Response.status(Response.Status.NOT_FOUND)
                   .entity(ImmutableMap.of("error", StringUtils.format("Supervisor was not found [%s]", id)))
