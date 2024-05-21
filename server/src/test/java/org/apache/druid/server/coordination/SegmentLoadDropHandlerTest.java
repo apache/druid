@@ -72,20 +72,22 @@ public class SegmentLoadDropHandlerTest
 
   private SegmentLoadDropHandler segmentLoadDropHandler;
   private DataSegmentAnnouncer segmentAnnouncer;
-  private AtomicInteger observedAnnouncedSegmentsCount;
-  private ConcurrentSkipListSet<DataSegment> observedAnnouncedSegments;
   private DataSegmentServerAnnouncer serverAnnouncer;
-  private AtomicInteger observedAnnouncedServerCount;
   private LoadDropSegmentCacheManager segmentCacheManager;
-  private Set<DataSegment> observedSegmentsRemovedFromCache;
   private SegmentManager segmentManager;
   private List<Runnable> scheduledRunnable;
   private SegmentLoaderConfig segmentLoaderConfig;
   private SegmentLoaderConfig noAnnouncerSegmentLoaderConfig;
   private ScheduledExecutorFactory scheduledExecutorFactory;
+
   private File infoDir;
   private List<StorageLocationConfig> locations;
   private TestStorageLocation testStorageLocation;
+
+  private Set<DataSegment> observedSegmentsRemovedFromCache;
+  private ConcurrentSkipListSet<DataSegment> observedAnnouncedSegments;
+  private AtomicInteger observedAnnouncedSegmentsCount;
+  private AtomicInteger observedAnnouncedServerCount;
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
@@ -709,17 +711,5 @@ public class SegmentLoadDropHandlerTest
   private DataSegment makeSegment(String dataSource, String version, Interval interval)
   {
     return TestSegmentUtils.makeSegment(dataSource, version, interval);
-  }
-
-  private void startLoadDropHandler() throws IOException
-  {
-    segmentLoadDropHandler.start();
-    Assert.assertEquals(1, observedAnnouncedServerCount.get());
-  }
-
-  private void stopLoadDropHandler()
-  {
-    segmentLoadDropHandler.stop();
-    Assert.assertEquals(1, observedAnnouncedServerCount.get());
   }
 }
