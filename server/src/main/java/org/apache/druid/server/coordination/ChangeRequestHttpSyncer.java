@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RetryUtils;
@@ -82,12 +83,12 @@ public class ChangeRequestHttpSyncer<T>
   private final CountDownLatch initializationLatch = new CountDownLatch(1);
 
   /**
-   * Lock to implement proper start-then-stop semantics. Used to ensure the following:
+   * Lock to implement proper start-then-stop semantics. Used to ensure that:
    * <ul>
-   * <li>No state update happens after {@link #stop()}</li>
-   * <li>sync is not scheduled after {@link #stop()}</li>
-   * <li>Any pending sync is skipped when {@link #stop()} has been called</li>
-   * <li>Duplicate syncs are not scheduled</li>
+   * <li>No state update happens after {@link #stop()}.</li>
+   * <li>No sync is scheduled after {@link #stop()}.</li>
+   * <li>Any pending sync is skipped when {@link #stop()} has been called.</li>
+   * <li>Duplicate syncs are not scheduled on the executor.</li>
    * </ul>
    */
   private final LifecycleLock startStopLock = new LifecycleLock();
@@ -95,9 +96,10 @@ public class ChangeRequestHttpSyncer<T>
   private final String logIdentity;
   private int consecutiveFailedAttemptCount = 0;
 
-  private final Stopwatch sinceSyncerStart = Stopwatch.createUnstarted(); // done, does not need sync
+  // All stopwatches are guarded by the the startStopLock
+  private final Stopwatch sinceSyncerStart = Stopwatch.createUnstarted();
   private final Stopwatch sinceLastSyncRequest = Stopwatch.createUnstarted();
-  private final Stopwatch sinceLastSyncSuccess = Stopwatch.createUnstarted(); // done, does not need sync
+  private final Stopwatch sinceLastSyncSuccess = Stopwatch.createUnstarted();
   private final Stopwatch sinceUnstable = Stopwatch.createUnstarted();
 
   @Nullable
@@ -228,15 +230,18 @@ public class ChangeRequestHttpSyncer<T>
            && sinceLastSyncSuccess.hasNotElapsed(maxDurationToWaitForSync);
   }
 
-  private void sync()
+  private void sendSyncRequest()
   {
     if (!startStopLock.awaitStarted(1, TimeUnit.MILLISECONDS)) {
       log.info("Skipping sync for server[%s] as syncer has not started yet.", logIdentity);
       return;
     }
 
-    // Can two syncs happen together?
-    sinceLastSyncRequest.restart();
+    // Synchronized to tackle the remote possibility of two syncs trying to reset
+    // the stopwatch together
+    synchronized (startStopLock) {
+      sinceLastSyncRequest.restart();
+    }
 
     try {
       final String req = getRequestString();
@@ -337,6 +342,7 @@ public class ChangeRequestHttpSyncer<T>
               }
             }
 
+            @GuardedBy("startStopLock")
             private void handleFailure(Throwable t)
             {
               String logMsg = StringUtils.format(
@@ -352,7 +358,9 @@ public class ChangeRequestHttpSyncer<T>
     }
     catch (Throwable th) {
       try {
-        markServerUnstableAndAlert(th, "Sending Request");
+        synchronized (startStopLock) {
+          markServerUnstableAndAlert(th, "Sending Request");
+        }
       }
       finally {
         addNextSyncToWorkQueue();
@@ -392,9 +400,9 @@ public class ChangeRequestHttpSyncer<T>
               RetryUtils.nextRetrySleepMillis(consecutiveFailedAttemptCount)
           );
           log.info("Scheduling next sync for server[%s] in [%d] millis.", logIdentity, delayMillis);
-          executor.schedule(this::sync, delayMillis, TimeUnit.MILLISECONDS);
+          executor.schedule(this::sendSyncRequest, delayMillis, TimeUnit.MILLISECONDS);
         } else {
-          executor.execute(this::sync);
+          executor.execute(this::sendSyncRequest);
         }
       }
       catch (Throwable th) {
@@ -412,6 +420,7 @@ public class ChangeRequestHttpSyncer<T>
     }
   }
 
+  @GuardedBy("startStopLock")
   private void markServerUnstableAndAlert(Throwable throwable, String action)
   {
     if (consecutiveFailedAttemptCount++ == 0) {
