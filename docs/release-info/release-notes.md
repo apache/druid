@@ -220,7 +220,6 @@ This prevents the expression from blocking the flow.
 #### Other web console improvements
 
 * Added the fields **Avro bytes decoder** and **Proto bytes decoder** for their input formats [#15950](https://github.com/apache/druid/pull/15950)
-* Added support for exporting results for queries that use the MSQ task engine [#15969](https://github.com/apache/druid/pull/15969)
 * Fixed an issue with the [Tasks](https://druid.apache.org/docs/latest/operations/web-console#tasks) view returning incorrect values for **Created time** and **Duration** fields after the Overlord restarts [#16228](https://github.com/apache/druid/pull/16228)
 * Fixed the Azure icon not rendering in the web console [#16173](https://github.com/apache/druid/pull/16173)
 * Fixed the supervisor offset reset dialog in the web console [#16298](https://github.com/apache/druid/pull/16298)
@@ -352,7 +351,8 @@ When set to `true`, Druid records the state of compaction for each segment in th
 
 #### Selective loading of lookups
 
-Druid now supports selective loading of lookups so that MSQ task engine workers don't load unnecessary lookups.
+Druid now supports selective loading of lookups in the task layer.
+Also, `KillUnusedSegmentsTask` now returns an empty set of lookups to load.
 
 [#16328](https://github.com/apache/druid/pull/16328)
 
