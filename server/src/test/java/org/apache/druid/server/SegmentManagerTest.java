@@ -27,11 +27,8 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.query.TableDataSource;
-import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.ReferenceCountingSegment;
-import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
-import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
@@ -40,9 +37,7 @@ import org.apache.druid.segment.loading.SegmentLocalCacheManager;
 import org.apache.druid.server.SegmentManager.DataSourceState;
 import org.apache.druid.server.coordination.TestStorageLocation;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
-import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.timeline.partition.NumberedOverwriteShardSpec;
 import org.apache.druid.timeline.partition.PartitionIds;
 import org.joda.time.Interval;
@@ -52,7 +47,6 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
-import org.mockito.Mockito;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -69,117 +63,12 @@ import java.util.stream.Collectors;
 
 public class SegmentManagerTest
 {
-  private static class SegmentForTesting implements Segment
-  {
-    private final String version;
-    private final Interval interval;
-    private final StorageAdapter storageAdapter;
-
-    SegmentForTesting(String version, Interval interval)
-    {
-      this.version = version;
-      this.interval = interval;
-      storageAdapter = Mockito.mock(StorageAdapter.class);
-      Mockito.when(storageAdapter.getNumRows()).thenReturn(1);
-    }
-
-    public String getVersion()
-    {
-      return version;
-    }
-
-    public Interval getInterval()
-    {
-      return interval;
-    }
-
-    @Override
-    public SegmentId getId()
-    {
-      return SegmentId.dummy(version);
-    }
-
-    @Override
-    public Interval getDataInterval()
-    {
-      return interval;
-    }
-
-    @Override
-    public QueryableIndex asQueryableIndex()
-    {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public StorageAdapter asStorageAdapter()
-    {
-      return storageAdapter;
-    }
-
-    @Override
-    public void close()
-    {
-    }
-  }
-
   private static final List<DataSegment> SEGMENTS = ImmutableList.of(
-      new DataSegment(
-          "small_source",
-          Intervals.of("0/1000"),
-          "0",
-          ImmutableMap.of("type", "test", "interval", Intervals.of("0/1000"), "version", 0),
-          new ArrayList<>(),
-          new ArrayList<>(),
-          NoneShardSpec.instance(),
-          0,
-          10
-      ),
-      new DataSegment(
-          "small_source",
-          Intervals.of("1000/2000"),
-          "0",
-          ImmutableMap.of("type", "test", "interval", Intervals.of("1000/2000"), "version", 0),
-          new ArrayList<>(),
-          new ArrayList<>(),
-          NoneShardSpec.instance(),
-          0,
-          10
-      ),
-      new DataSegment(
-          "large_source",
-          Intervals.of("0/1000"),
-          "0",
-          ImmutableMap.of("type", "test", "interval", Intervals.of("0/1000"), "version", 0),
-          new ArrayList<>(),
-          new ArrayList<>(),
-          NoneShardSpec.instance(),
-          0,
-          100
-      ),
-      new DataSegment(
-          "large_source",
-          Intervals.of("1000/2000"),
-          "0",
-          ImmutableMap.of("type", "test", "interval", Intervals.of("1000/2000"), "version", 0),
-          new ArrayList<>(),
-          new ArrayList<>(),
-          NoneShardSpec.instance(),
-          0,
-          100
-      ),
-      // overshadowing the ahead segment
-      new DataSegment(
-          "large_source",
-          Intervals.of("1000/2000"),
-          "1",
-          ImmutableMap.of("type", "test", "interval", Intervals.of("1000/2000"), "version", 1),
-          new ArrayList<>(),
-          new ArrayList<>(),
-          NoneShardSpec.instance(),
-          1,
-          100
-      )
+      TestSegmentUtils.makeSegment("small_source", "0", Intervals.of("0/1000")),
+      TestSegmentUtils.makeSegment("small_source", "0", Intervals.of("1000/2000")),
+      TestSegmentUtils.makeSegment("large_source", "0", Intervals.of("0/1000")),
+      TestSegmentUtils.makeSegment("large_source", "0", Intervals.of("1000/2000")),
+      TestSegmentUtils.makeSegment("large_source", "1", Intervals.of("1000/2000"))
   );
 
   private ExecutorService executor;
@@ -440,7 +329,7 @@ public class SegmentManagerTest
           segment.getVersion(),
           segment.getShardSpec().createChunk(
               ReferenceCountingSegment.wrapSegment(
-                  ReferenceCountingSegment.wrapSegment(new SegmentForTesting(
+                  ReferenceCountingSegment.wrapSegment(new TestSegmentUtils.SegmentForTesting(
                       MapUtils.getString(segment.getLoadSpec(), "version"),
                       (Interval) segment.getLoadSpec().get("interval")
                   ), segment.getShardSpec()),

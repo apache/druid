@@ -653,7 +653,7 @@ public class SegmentLoadDropHandlerTest
         return ReferenceCountingSegment
             .wrapSegment(TombstoneSegmentizerFactory.segmentForTombstone(segment), segment.getShardSpec());
       } else {
-        return ReferenceCountingSegment.wrapSegment(new ServerManagerTest.SegmentForTesting(
+        return ReferenceCountingSegment.wrapSegment(new TestSegmentUtils.SegmentForTesting(
             MapUtils.getString(segment.getLoadSpec(), "version"),
             (Interval) segment.getLoadSpec().get("interval")
         ), segment.getShardSpec());
