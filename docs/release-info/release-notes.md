@@ -71,11 +71,10 @@ This change eliminates the need to materialize results on the heap, which improv
 
 ### Concurrent append and replace improvements
 
-Streaming ingestion supervisors now support concurrent append, that is streaming tasks can be run concurrently with a replace task (compaction or re-indexing) if it also happens to be using concurrent locks. Set the context parameter `useConcurrentLocks` to true to enable concurrent append.
+Streaming ingestion supervisors now support concurrent append, that is streaming tasks can run concurrently with a replace task (compaction or re-indexing) if it also happens to be using concurrent locks. Set the context parameter `useConcurrentLocks` to true to enable concurrent append.
 
-Once the supervisor has been updated to have `"useConcurrentLocks": true`, the transition to concurrent append happens seamlessly without causing any ingestion lag or task failures.
+Once you update the supervisor to have `"useConcurrentLocks": true`, the transition to concurrent append happens seamlessly without causing any ingestion lag or task failures.
 
-[#15995](https://github.com/apache/druid/pull/15995)
 [#16369](https://github.com/apache/druid/pull/16369)
 
 Druid now performs active cleanup of stale pending segments by tracking the set of tasks using such pending segments.
@@ -224,7 +223,6 @@ This prevents the expression from blocking the flow.
 * Fixed the Azure icon not rendering in the web console [#16173](https://github.com/apache/druid/pull/16173)
 * Fixed the supervisor offset reset dialog in the web console [#16298](https://github.com/apache/druid/pull/16298)
 * Improved the user experience when the web console is operating in manual capabilities mode [#16191](https://github.com/apache/druid/pull/16191)
-* Improved the web console to detect doubles better [#15998](https://github.com/apache/druid/pull/15998)
 * Improved the query timer as follows:
   * Timer isn't shown if an error happens
   * Timer resets if changing tabs while query is running
@@ -535,7 +533,6 @@ Improved object handling to reduce the chances of running out of memory with Gro
 * Fixed an issue where Broker merge buffers get into a deadlock when multiple simultaneous queries use them [#15420](https://github.com/apache/druid/pull/15420)
 * Fixed a mapping issue in window functions where two nodes get the same reference [#16301](https://github.com/apache/druid/pull/16301)
 * Improved processing of index backed OR expressions [#16300](https://github.com/apache/druid/pull/16300)
-* Improved constant expression evaluation so that it's more thread-safe [#15694](https://github.com/apache/druid/pull/15694)
 * Improved performance for real-time queries using the MSQ task engine. Segments served by the same server are now grouped together, resulting in more efficient query handling [#15399](https://github.com/apache/druid/pull/15399)
 * Improved strict NON NULL return type checks [#16279](https://github.com/apache/druid/pull/16279)
 * Improved array handling for Booleans to account for queries such as `select array[true, false] from datasource` [#16093](https://github.com/apache/druid/pull/16093)
@@ -773,7 +770,6 @@ The following dependencies have had their versions bumped:
 - Updated Apache Delta Lake from 3.0.0 to 3.1.0
 - Updated Netty to `4.1.108.Final` to address `CVE-2024-29025` [#16267](https://github.com/apache/druid/pull/16267)
 - Updated Apache ZooKeeper to 3.8.4 to address `CVE-2024-23944` [#16267](https://github.com/apache/druid/pull/16267)
-- Updated `org.postgresql:postgresql` from 42.6.0 to 42.7.2 [#15931](https://github.com/apache/druid/pull/15931)
 - Updated `log4j.version` from 2.18.0 to 2.22.1 [#15934](https://github.com/apache/druid/pull/15934)
 - Updated `org.apache.commons.commons-compress` from 1.24.0 to 1.26.0 [#16009](https://github.com/apache/druid/pull/16009)
 - Updated `org.apache.commons.commons-codec` from 1.16.0 to 1.16.1 [#16009](https://github.com/apache/druid/pull/16009)
