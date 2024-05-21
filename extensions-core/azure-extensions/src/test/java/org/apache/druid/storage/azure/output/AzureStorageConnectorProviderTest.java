@@ -55,7 +55,7 @@ public class AzureStorageConnectorProviderTest
     StorageConnectorProvider s3StorageConnectorProvider = getStorageConnectorProvider(properties);
 
     Assert.assertTrue(s3StorageConnectorProvider instanceof AzureStorageConnectorProvider);
-    Assert.assertTrue( s3StorageConnectorProvider.createStorageConnector(tempDir) instanceof AzureStorageConnector);
+    Assert.assertTrue(s3StorageConnectorProvider.createStorageConnector(tempDir) instanceof AzureStorageConnector);
     Assert.assertEquals("container", ((AzureStorageConnectorProvider) s3StorageConnectorProvider).getContainer());
     Assert.assertEquals("prefix", ((AzureStorageConnectorProvider) s3StorageConnectorProvider).getPrefix());
   }

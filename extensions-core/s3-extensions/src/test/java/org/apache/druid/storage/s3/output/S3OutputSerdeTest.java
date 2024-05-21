@@ -47,7 +47,6 @@ public class S3OutputSerdeTest
     String json = jsonStringReadyForAssert("{\n"
                                            + "  \"bucket\": \"TEST\",\n"
                                            + "  \"prefix\": \"abc\",\n"
-                                           + "  \"tempDir\": \"/tmp\",\n"
                                            + "  \"chunkSize\":104857600,\n"
                                            + "  \"maxRetry\": 2\n"
                                            + "}\n");
@@ -72,7 +71,6 @@ public class S3OutputSerdeTest
   {
     String json = jsonStringReadyForAssert("{\n"
                                            + "  \"bucket\": \"TEST\",\n"
-                                           + "  \"tempDir\": \"/tmp\",\n"
                                            + "  \"chunkSize\":104857600,\n"
                                            + "  \"maxRetry\": 2\n"
                                            + "}\n");
@@ -86,7 +84,6 @@ public class S3OutputSerdeTest
   {
     String json = jsonStringReadyForAssert("{\n"
                                            + "  \"prefix\": \"abc\",\n"
-                                           + "  \"tempDir\": \"/tmp\",\n"
                                            + "  \"chunkSize\":104857600,\n"
                                            + "  \"maxRetry\": 2\n"
                                            + "}\n");
@@ -96,24 +93,9 @@ public class S3OutputSerdeTest
   }
 
   @Test
-  public void noTempDir() throws JsonProcessingException
-  {
-    String json = jsonStringReadyForAssert("{\n"
-                                           + "  \"prefix\": \"abc\",\n"
-                                           + "  \"bucket\": \"TEST\",\n"
-                                           + "  \"chunkSize\":104857600,\n"
-                                           + "  \"maxRetry\": 2\n"
-                                           + "}\n");
-    expectedException.expect(MismatchedInputException.class);
-    expectedException.expectMessage("Missing required creator property 'tempDir'");
-    MAPPER.readValue(json, S3OutputConfig.class);
-  }
-
-  @Test
   public void leastArguments() throws JsonProcessingException
   {
     String json = jsonStringReadyForAssert("{\n"
-                                           + "  \"tempDir\": \"/tmp\",\n"
                                            + "  \"prefix\": \"abc\",\n"
                                            + "  \"bucket\": \"TEST\"\n"
                                            + "}\n");
@@ -135,7 +117,6 @@ public class S3OutputSerdeTest
     String json = jsonStringReadyForAssert("{\n"
                                            + "  \"prefix\": \"abc\",\n"
                                            + "  \"bucket\": \"TEST\",\n"
-                                           + "  \"tempDir\": \"/tmp\",\n"
                                            + "  \"chunkSize\":104,\n"
                                            + "  \"maxRetry\": 2\n"
                                            + "}\n");
