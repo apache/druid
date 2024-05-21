@@ -119,14 +119,6 @@ public class SegmentLoaderConfig
 
   public File getInfoDir()
   {
-    if (infoDir == null) {
-      infoDir = new File(locations.get(0).getPath(), "info_dir");
-    }
-    return infoDir;
-  }
-
-  public File getInfoDirTrueValue()
-  {
     return infoDir;
   }
 

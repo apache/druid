@@ -551,10 +551,10 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
    *
    * Returns true if _either_:
    *
-   * (1) Our {@link #serverTypeConfig} indicates we are a segment server. This is necessary for Brokers to be able
-   * to detect that we exist.
-   * (2) The segment manager is able to handle segments. This is necessary for Coordinators to be able to
-   * assign segments to us.
+   * <li> Our {@link #serverTypeConfig} indicates we are a segment server. This is necessary for Brokers to be able
+   * to detect that we exist.</li>
+   * <li> The segment manager is able to handle segments. This is necessary for Coordinators to be able to
+   * assign segments to us.</li>
    */
   private boolean shouldAnnounce()
   {

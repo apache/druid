@@ -181,7 +181,6 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       log.info("Loading segment cache file [%d/%d][%s].", i + 1, segmentsToLoad.length, file);
       try {
         final DataSegment segment = jsonMapper.readValue(file, DataSegment.class);
-
         if (!segment.getId().toString().equals(file.getName())) {
           log.warn("Ignoring cache file[%s] for segment[%s].", file.getPath(), segment.getId());
           ignored++;
@@ -190,11 +189,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
         } else {
           final SegmentId segmentId = segment.getId();
           log.warn("Unable to find cache file for segment[%s]. Deleting lookup entry.", segmentId);
-          if (!removeInfoFile(segment)) {
-            log.warn(
-                "Unable to delete cache file[%s] for segment[%s].",
-                getInfoFileName(segment), segmentId);
-          }
+          removeInfoFile(segment);
         }
       }
       catch (Exception e) {
@@ -246,19 +241,19 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   }
 
 
-  private boolean removeInfoFile(DataSegment segment) throws IOException
+  private void removeInfoFile(DataSegment segment) throws IOException
   {
-    return new File(getInfoDir(), segment.getId().toString()).delete();
+    final File segmentInfoCacheFile = new File(getInfoDir(), segment.getId().toString());
+    if (!segmentInfoCacheFile.delete()) {
+      log.warn("Unable to delete cache file[%s] for segment[%s].", segmentInfoCacheFile, segment.getId());
+    }
   }
 
   private File getInfoDir() throws IOException
   {
-    // Defensive check to see if locations is empty or not?! Otherwise, leave a comment
-    // pointing to where the validation is to see that this is non-empty. Alternatively, move this to the
-    // constructor.
     File infoDir;
-    if (config.getInfoDirTrueValue() != null) {
-      infoDir = config.getInfoDirTrueValue();
+    if (config.getInfoDir() != null) {
+      infoDir = config.getInfoDir();
     } else if (!config.getLocations().isEmpty()) {
       infoDir = new File(config.getLocations().get(0).getPath(), "info_dir");
     } else if (!locations.isEmpty()) {
@@ -270,13 +265,8 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
                  + "or 'druid.segmentCache.locations'is set correctly.");
     }
 
-    FileUtils.mkdirp(infoDir); // Should we only do it on writes?
+    FileUtils.mkdirp(infoDir);
     return infoDir;
-  }
-
-  private String getInfoFileName(DataSegment segment) throws IOException
-  {
-    return new File(getInfoDir(), segment.getId().toString()).toString();
   }
 
   private static String getSegmentDir(DataSegment segment)
