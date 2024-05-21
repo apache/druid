@@ -1042,36 +1042,21 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     // setting connection to read-only will allow some database such as MySQL
     // to automatically use read-only transaction mode, further optimizing the query
     final List<DataSegment> segments = connector.inReadOnlyTransaction(
-        new TransactionCallback<List<DataSegment>>()
-        {
-          @Override
-          public List<DataSegment> inTransaction(Handle handle, TransactionStatus status)
-          {
-            return handle
-                .createQuery(StringUtils.format("SELECT payload FROM %s WHERE used=true", getSegmentsTable()))
-                .setFetchSize(connector.getStreamingFetchSize())
-                .map(
-                    new ResultSetMapper<DataSegment>()
-                    {
-                      @Override
-                      public DataSegment map(int index, ResultSet r, StatementContext ctx) throws SQLException
-                      {
-                        try {
-                          DataSegment segment = jsonMapper.readValue(r.getBytes("payload"), DataSegment.class);
-                          return replaceWithExistingSegmentIfPresent(segment);
-                        }
-                        catch (IOException e) {
-                          log.makeAlert(e, "Failed to read segment from db.").emit();
-                          // If one entry in database is corrupted doPoll() should continue to work overall. See
-                          // filter by `Objects::nonNull` below in this method.
-                          return null;
-                        }
-                      }
-                    }
-                )
-                .list();
-          }
-        }
+        (handle, status) -> handle
+            .createQuery(StringUtils.format("SELECT payload FROM %s WHERE used=true", getSegmentsTable()))
+            .setFetchSize(connector.getStreamingFetchSize())
+            .map((index, r, ctx) -> {
+              try {
+                DataSegment segment = jsonMapper.readValue(r.getBytes("payload"), DataSegment.class);
+                return replaceWithExistingSegmentIfPresent(segment);
+              }
+              catch (IOException e) {
+                log.makeAlert(e, "Failed to read segment from db.").emit();
+                // If one entry in database is corrupted doPoll() should continue to work overall. See
+                // filter by `Objects::nonNull` below in this method.
+                return null;
+              }
+            }).list()
     );
 
     Preconditions.checkNotNull(
@@ -1157,25 +1142,18 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
         (handle, status) -> {
           handle.createQuery(schemaPollQuery)
                 .setFetchSize(connector.getStreamingFetchSize())
-                .map(
-                    new ResultSetMapper<Void>()
-                    {
-                      @Override
-                      public Void map(int index, ResultSet r, StatementContext ctx) throws SQLException
-                      {
-                        try {
-                          schemaMapBuilder.put(
-                              r.getString("fingerprint"),
-                              jsonMapper.readValue(r.getBytes("payload"), SchemaPayload.class)
-                          );
-                        }
-                        catch (IOException e) {
-                          log.makeAlert(e, "Failed to read schema from db.").emit();
-                        }
-                        return null;
-                      }
-                    })
-                .list();
+                .map((index, r, ctx) -> {
+                  try {
+                    schemaMapBuilder.put(
+                        r.getString("fingerprint"),
+                        jsonMapper.readValue(r.getBytes("payload"), SchemaPayload.class)
+                    );
+                  }
+                  catch (IOException e) {
+                    log.makeAlert(e, "Failed to read schema from db.").emit();
+                  }
+                  return null;
+                }).list();
 
           segmentSchemaCache.resetTemporaryPublishedMetadataQueryResultOnDBPoll();
           return null;
@@ -1196,18 +1174,16 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     } else {
       log.info(
           "Polled and found total [%,d] segments and [%,d] schema in the database in [%,d] ms.",
-          segments.size(),
-          schemaMap.size(),
-          stopwatch.millisElapsed()
+          segments.size(), schemaMap.size(), stopwatch.millisElapsed()
       );
     }
-    stopwatch.restart();
 
-    createDatasourcesSnapshot(stopwatch, segments);
+    createDatasourcesSnapshot(segments);
   }
 
-  private void createDatasourcesSnapshot(Stopwatch stopwatch, List<DataSegment> segments)
+  private void createDatasourcesSnapshot(List<DataSegment> segments)
   {
+    final Stopwatch stopwatch = Stopwatch.createStarted();
     // dataSourcesSnapshot is updated only here and the DataSourcesSnapshot object is immutable. If data sources or
     // segments are marked as used or unused directly (via markAs...() methods in SegmentsMetadataManager), the
     // dataSourcesSnapshot can become invalid until the next database poll.

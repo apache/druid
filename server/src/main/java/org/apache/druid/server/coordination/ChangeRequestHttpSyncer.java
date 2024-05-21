@@ -82,18 +82,22 @@ public class ChangeRequestHttpSyncer<T>
   private final CountDownLatch initializationLatch = new CountDownLatch(1);
 
   /**
-   * This lock is used to ensure proper start-then-stop semantics and making sure after stopping no state update happens
-   * and {@link #sync} is not again scheduled in {@link #executor} and if there was a previously scheduled sync before
-   * stopping, it is skipped and also, it is used to ensure that duplicate syncs are never scheduled in the executor.
+   * Lock to implement proper start-then-stop semantics. Used to ensure the following:
+   * <ul>
+   * <li>No state update happens after {@link #stop()}</li>
+   * <li>sync is not scheduled after {@link #stop()}</li>
+   * <li>Any pending sync is skipped when {@link #stop()} has been called</li>
+   * <li>Duplicate syncs are not scheduled</li>
+   * </ul>
    */
   private final LifecycleLock startStopLock = new LifecycleLock();
 
   private final String logIdentity;
   private int consecutiveFailedAttemptCount = 0;
 
-  private final Stopwatch sinceSyncerStart = Stopwatch.createUnstarted();
+  private final Stopwatch sinceSyncerStart = Stopwatch.createUnstarted(); // done, does not need sync
   private final Stopwatch sinceLastSyncRequest = Stopwatch.createUnstarted();
-  private final Stopwatch sinceLastSyncSuccess = Stopwatch.createUnstarted();
+  private final Stopwatch sinceLastSyncSuccess = Stopwatch.createUnstarted(); // done, does not need sync
   private final Stopwatch sinceUnstable = Stopwatch.createUnstarted();
 
   @Nullable
@@ -220,11 +224,8 @@ public class ChangeRequestHttpSyncer<T>
    */
   public boolean isSyncedSuccessfully()
   {
-    if (consecutiveFailedAttemptCount > 0) {
-      return false;
-    } else {
-      return sinceLastSyncSuccess.hasNotElapsed(maxDurationToWaitForSync);
-    }
+    return consecutiveFailedAttemptCount <= 0
+           && sinceLastSyncSuccess.hasNotElapsed(maxDurationToWaitForSync);
   }
 
   private void sync()
@@ -234,6 +235,7 @@ public class ChangeRequestHttpSyncer<T>
       return;
     }
 
+    // Can two syncs happen together?
     sinceLastSyncRequest.restart();
 
     try {
