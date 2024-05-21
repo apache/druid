@@ -24,7 +24,6 @@ import com.amazonaws.ClientConfigurationFactory;
 import com.amazonaws.Protocol;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration;
-import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.fasterxml.jackson.core.Version;
@@ -142,9 +141,7 @@ public class S3StorageDruidModule implements DruidModule
         .withClientConfiguration(S3Utils.setProxyConfig(configuration, proxyConfig).withProtocol(protocol))
         .withChunkedEncodingDisabled(clientConfig.isDisableChunkedEncoding())
         .withPathStyleAccessEnabled(clientConfig.isEnablePathStyleAccess())
-        .withRegion(Regions.US_WEST_2)
         .withForceGlobalBucketAccessEnabled(clientConfig.isForceGlobalBucketAccessEnabled());
-
 
     if (StringUtils.isNotEmpty(endpointConfig.getUrl())) {
       amazonS3ClientBuilder.setEndpointConfiguration(

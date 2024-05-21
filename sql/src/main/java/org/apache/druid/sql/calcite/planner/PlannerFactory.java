@@ -112,7 +112,7 @@ public class PlannerFactory extends PlannerToolbox
         queryContext,
         hook
     );
-    
+
     return new DruidPlanner(buildFrameworkConfig(context), context, engine, hook);
   }
 

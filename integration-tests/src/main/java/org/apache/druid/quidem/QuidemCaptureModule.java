@@ -30,6 +30,5 @@ public class QuidemCaptureModule implements Module
   public void configure(Binder binder)
   {
     Jerseys.addResource(binder, QuidemCapture.class);
-//    Hook.CONVERTED.add(null)
   }
 }

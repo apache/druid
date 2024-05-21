@@ -99,8 +99,7 @@ public class Launcher
       chk1();
       chkStatus();
 
-      lifecycle.join();
-//      lifecycle.stop();
+      lifecycle.stop();
     } else {
 
     }
