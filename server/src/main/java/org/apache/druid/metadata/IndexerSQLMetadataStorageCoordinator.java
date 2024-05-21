@@ -28,7 +28,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
 import com.google.common.io.BaseEncoding;
 import com.google.inject.Inject;
@@ -130,6 +129,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
+
     this.jsonMapper = jsonMapper;
     this.dbTables = dbTables;
     this.connector = connector;
@@ -1013,33 +1013,6 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     return allocatedSegmentIds;
   }
 
-  @SuppressWarnings("UnstableApiUsage")
-  private String getSequenceNameAndPrevIdSha(
-      SegmentCreateRequest request,
-      SegmentIdWithShardSpec pendingSegmentId,
-      boolean skipSegmentLineageCheck
-  )
-  {
-    final Hasher hasher = Hashing.sha1().newHasher()
-                                 .putBytes(StringUtils.toUtf8(request.getSequenceName()))
-                                 .putByte((byte) 0xff);
-
-    if (skipSegmentLineageCheck) {
-      final Interval interval = pendingSegmentId.getInterval();
-      hasher
-          .putLong(interval.getStartMillis())
-          .putLong(interval.getEndMillis());
-    } else {
-      hasher
-          .putBytes(StringUtils.toUtf8(request.getPreviousSegmentId()));
-    }
-
-    hasher.putByte((byte) 0xff);
-    hasher.putBytes(StringUtils.toUtf8(pendingSegmentId.getVersion()));
-
-    return BaseEncoding.base16().encode(hasher.hash().asBytes());
-  }
-
   @Nullable
   private SegmentIdWithShardSpec allocatePendingSegment(
       final Handle handle,
@@ -1727,7 +1700,6 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       // The number of core partitions must always be chosen from the set of used segments in the SegmentTimeline.
       // When the core partitions have been dropped, using pending segments may lead to an incorrect state
       // where the chunk is believed to have core partitions and queries results are incorrect.
-
       SegmentIdWithShardSpec pendingSegmentId = new SegmentIdWithShardSpec(
           dataSource,
           interval,
@@ -1739,7 +1711,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           )
       );
       return new PendingSegmentRecord(
-          pendingSegmentId,
+          getTrueAllocatedId(pendingSegmentId),
           request.getSequenceName(),
           request.getPreviousSegmentId(),
           request.getUpgradedFromSegmentId(),
@@ -1875,8 +1847,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       // The number of core partitions must always be chosen from the set of used segments in the SegmentTimeline.
       // When the core partitions have been dropped, using pending segments may lead to an incorrect state
       // where the chunk is believed to have core partitions and queries results are incorrect.
-
-      return new SegmentIdWithShardSpec(
+      final SegmentIdWithShardSpec allocatedId = new SegmentIdWithShardSpec(
           dataSource,
           interval,
           Preconditions.checkNotNull(newSegmentVersion, "newSegmentVersion"),
@@ -1886,7 +1857,72 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
               committedMaxId == null ? 0 : committedMaxId.getShardSpec().getNumCorePartitions()
           )
       );
+      return getTrueAllocatedId(allocatedId);
     }
+  }
+
+  /**
+   * Verifies that the allocated id doesn't already exist in the druid segments table.
+   * If yes, try to get the max unallocated id considering the unused segments for the datasource, version and interval
+   * Otherwise, use the same id.
+   * @param allocatedId The segment allcoted on the basis of used and pending segments
+   * @return a segment id that isn't already used by other unused segments
+   */
+  private SegmentIdWithShardSpec getTrueAllocatedId(SegmentIdWithShardSpec allocatedId)
+  {
+    // Check if there is a conflict with an existing entry in the segments table
+    if (retrieveSegmentForId(allocatedId.asSegmentId().toString(), true) == null) {
+      return allocatedId;
+    }
+
+    // If yes, try to compute allocated partition num using the max unused segment shard spec
+    SegmentIdWithShardSpec unusedMaxId = getUnusedMaxId(
+        allocatedId.getDataSource(),
+        allocatedId.getInterval(),
+        allocatedId.getVersion()
+    );
+    // No unused segment. Just return the allocated id
+    if (unusedMaxId == null) {
+      return allocatedId;
+    }
+
+    int maxPartitionNum = Math.max(
+        allocatedId.getShardSpec().getPartitionNum(),
+        unusedMaxId.getShardSpec().getPartitionNum() + 1
+    );
+    return new SegmentIdWithShardSpec(
+        allocatedId.getDataSource(),
+        allocatedId.getInterval(),
+        allocatedId.getVersion(),
+        new NumberedShardSpec(
+            maxPartitionNum,
+            allocatedId.getShardSpec().getNumCorePartitions()
+        )
+    );
+  }
+
+  private SegmentIdWithShardSpec getUnusedMaxId(String datasource, Interval interval, String version)
+  {
+    List<DataSegment> unusedSegments = retrieveUnusedSegmentsForInterval(
+        datasource,
+        interval,
+        ImmutableList.of(version),
+        null,
+        null
+    );
+
+    SegmentIdWithShardSpec unusedMaxId = null;
+    int maxPartitionNum = -1;
+    for (DataSegment unusedSegment : unusedSegments) {
+      if (unusedSegment.getInterval().equals(interval)) {
+        int partitionNum = unusedSegment.getShardSpec().getPartitionNum();
+        if (maxPartitionNum < partitionNum) {
+          maxPartitionNum = partitionNum;
+          unusedMaxId = SegmentIdWithShardSpec.fromDataSegment(unusedSegment);
+        }
+      }
+    }
+    return unusedMaxId;
   }
 
   @Override
@@ -2813,17 +2849,18 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   @Override
-  public int deletePendingSegmentsForTaskAllocatorId(final String pendingSegmentsGroup)
+  public int deletePendingSegmentsForTaskAllocatorId(final String datasource, final String taskAllocatorId)
   {
     return connector.getDBI().inTransaction(
         (handle, status) -> handle
             .createStatement(
                 StringUtils.format(
-                    "DELETE FROM %s WHERE task_allocator_id = :task_allocator_id",
+                    "DELETE FROM %s WHERE dataSource = :dataSource AND task_allocator_id = :task_allocator_id",
                     dbTables.getPendingSegmentsTable()
                 )
             )
-            .bind("task_allocator_id", pendingSegmentsGroup)
+            .bind("dataSource", datasource)
+            .bind("task_allocator_id", taskAllocatorId)
             .execute()
     );
   }

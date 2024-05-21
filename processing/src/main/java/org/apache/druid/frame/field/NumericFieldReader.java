@@ -76,13 +76,6 @@ public abstract class NumericFieldReader implements FieldReader
     return memory.getByte(position) == nullIndicatorByte;
   }
 
-
-  @Override
-  public boolean isComparable()
-  {
-    return true;
-  }
-
   /**
    * Creates a column value selector for the element written at fieldPointer's position in the memory.
    * The nullilty check is handled by the nullIndicatorByte

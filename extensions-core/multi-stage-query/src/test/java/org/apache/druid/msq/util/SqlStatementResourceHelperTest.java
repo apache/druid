@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.counters.CounterSnapshots;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
+import org.apache.druid.msq.exec.OutputChannelMode;
 import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
 import org.apache.druid.msq.indexing.destination.DurableStorageMSQDestination;
 import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
@@ -77,7 +78,8 @@ public class SqlStatementResourceHelperTest
         ImmutableMap.of(),
         ImmutableMap.of(),
         ImmutableMap.of(0, 3),
-        ImmutableMap.of(0, 15)
+        ImmutableMap.of(0, 15),
+        ImmutableMap.of(0, OutputChannelMode.LOCAL_STORAGE)
     ), counterSnapshots, null);
 
     Optional<List<PageInformation>> pages = SqlStatementResourceHelper.populatePageList(
@@ -117,7 +119,8 @@ public class SqlStatementResourceHelperTest
         ImmutableMap.of(),
         ImmutableMap.of(),
         ImmutableMap.of(0, 4),
-        ImmutableMap.of(0, 4)
+        ImmutableMap.of(0, 4),
+        ImmutableMap.of(0, OutputChannelMode.LOCAL_STORAGE)
     ), counterSnapshots, null);
 
     Optional<List<PageInformation>> pages = SqlStatementResourceHelper.populatePageList(
@@ -158,7 +161,8 @@ public class SqlStatementResourceHelperTest
         ImmutableMap.of(),
         ImmutableMap.of(),
         ImmutableMap.of(0, 4),
-        ImmutableMap.of(0, 21)
+        ImmutableMap.of(0, 21),
+        ImmutableMap.of(0, OutputChannelMode.LOCAL_STORAGE)
     ), counterSnapshots, null);
 
     Optional<List<PageInformation>> pages =
@@ -197,7 +201,8 @@ public class SqlStatementResourceHelperTest
         ImmutableMap.of(),
         ImmutableMap.of(),
         ImmutableMap.of(0, 4),
-        ImmutableMap.of(0, 21)
+        ImmutableMap.of(0, 21),
+        ImmutableMap.of(0, OutputChannelMode.LOCAL_STORAGE)
     ), counterSnapshots, null);
 
     Optional<List<PageInformation>> pages = SqlStatementResourceHelper.populatePageList(
@@ -237,7 +242,8 @@ public class SqlStatementResourceHelperTest
         ImmutableMap.of(),
         ImmutableMap.of(),
         ImmutableMap.of(0, 4),
-        ImmutableMap.of(0, 13)
+        ImmutableMap.of(0, 13),
+        ImmutableMap.of(0, OutputChannelMode.LOCAL_STORAGE)
     ), counterSnapshots, null);
 
     Optional<List<PageInformation>> pages = SqlStatementResourceHelper.populatePageList(
@@ -278,7 +284,8 @@ public class SqlStatementResourceHelperTest
             ImmutableMap.of(),
             ImmutableMap.of(),
             ImmutableMap.of(0, 1),
-            ImmutableMap.of(0, 1)
+            ImmutableMap.of(0, 1),
+            ImmutableMap.of(0, OutputChannelMode.LOCAL_STORAGE)
         ),
         counterSnapshots,
         null
@@ -315,7 +322,8 @@ public class SqlStatementResourceHelperTest
             ImmutableMap.of(),
             ImmutableMap.of(),
             ImmutableMap.of(0, 1),
-            ImmutableMap.of(0, 1)
+            ImmutableMap.of(0, 1),
+            ImmutableMap.of(0, OutputChannelMode.LOCAL_STORAGE)
         ),
         counterSnapshots,
         null
@@ -354,7 +362,8 @@ public class SqlStatementResourceHelperTest
             ImmutableMap.of(),
             ImmutableMap.of(),
             ImmutableMap.of(0, 1),
-            ImmutableMap.of(0, 1)
+            ImmutableMap.of(0, 1),
+            ImmutableMap.of(0, OutputChannelMode.LOCAL_STORAGE)
         ),
         counterSnapshots,
         null

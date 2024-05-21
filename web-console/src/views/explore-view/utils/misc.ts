@@ -34,7 +34,7 @@ export function toggle<T>(xs: readonly T[], x: T, eq?: (a: T, b: T) => boolean):
 }
 
 export function getInitQuery(table: SqlExpression, where: SqlExpression): SqlQuery {
-  return SqlQuery.from(table).applyIf(String(where) !== 'TRUE', q =>
+  return SqlQuery.from(table.as('t')).applyIf(String(where) !== 'TRUE', q =>
     q.changeWhereExpression(where),
   );
 }

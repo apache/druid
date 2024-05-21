@@ -92,6 +92,7 @@ import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
+import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentTimeline;
@@ -129,6 +130,7 @@ import java.util.stream.IntStream;
  */
 public class CompactionTask extends AbstractBatchIndexTask implements PendingSegmentAllocatingTask
 {
+  public static final String TYPE = "compact";
   private static final Logger log = new Logger(CompactionTask.class);
   private static final Clock UTC_CLOCK = Clock.systemUTC();
 
@@ -144,8 +146,6 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
    * instead of a more general approach such as new methods on the Task interface.
    */
   public static final String CTX_KEY_APPENDERATOR_TRACKING_TASK_ID = "appenderatorTrackingTaskId";
-
-  private static final String TYPE = "compact";
 
   private static final boolean STORE_COMPACTION_STATE = true;
 
@@ -250,6 +250,14 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     this.segmentProvider = new SegmentProvider(dataSource, this.ioConfig.getInputSpec());
     this.partitionConfigurationManager = new PartitionConfigurationManager(this.tuningConfig);
     this.segmentCacheManagerFactory = segmentCacheManagerFactory;
+
+    // Do not load any lookups in sub-tasks launched by compaction task, unless transformSpec is present.
+    // If transformSpec is present, we will not modify the context so that the sub-tasks can make the
+    // decision based on context values, loading all lookups by default.
+    // This is done to ensure backward compatibility since transformSpec can reference lookups.
+    if (transformSpec == null) {
+      addToContextIfAbsent(LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE, LookupLoadingSpec.Mode.NONE.toString());
+    }
   }
 
   @VisibleForTesting

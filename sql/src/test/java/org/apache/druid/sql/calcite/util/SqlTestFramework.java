@@ -70,10 +70,6 @@ import org.apache.druid.timeline.DataSegment;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
@@ -123,16 +119,6 @@ import java.util.Set;
  */
 public class SqlTestFramework
 {
-  /**
-   * Declares which {@link QueryComponentSupplier} must be used for the class.
-   */
-  @Retention(RetentionPolicy.RUNTIME)
-  @Target({ElementType.TYPE})
-  public @interface SqlTestFrameWorkModule
-  {
-    Class<? extends QueryComponentSupplier> value();
-  }
-
   /**
    * Interface to provide various framework components. Extend to customize,
    * use {@link StandardComponentSupplier} for the "standard" components.
@@ -191,6 +177,10 @@ public class SqlTestFramework
     void finalizeTestFramework(SqlTestFramework sqlTestFramework);
 
     PlannerComponentSupplier getPlannerComponentSupplier();
+    @Override
+    default void close() throws IOException
+    {
+    }
   }
 
   public interface PlannerComponentSupplier
@@ -611,6 +601,7 @@ public class SqlTestFramework
         // test pulls in a module, then pull in that module, even though we are
         // not the Druid node to which the module is scoped.
         .ignoreLoadScopes()
+        .addModule(binder -> binder.bind(Closer.class).toInstance(resourceCloser))
         .addModule(new LookylooModule())
         .addModule(new SegmentWranglerModule())
         .addModule(new SqlAggregationModule())

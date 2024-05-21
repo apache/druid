@@ -26,7 +26,10 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 
+import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.Iterator;
 import java.util.Objects;
 
@@ -35,11 +38,24 @@ import java.util.Objects;
  */
 public class ServiceLocation
 {
+  private static final String HTTP_SCHEME = "http";
+  private static final String HTTPS_SCHEME = "https";
+  private static final Splitter HOST_SPLITTER = Splitter.on(":").limit(2);
+
   private final String host;
   private final int plaintextPort;
   private final int tlsPort;
   private final String basePath;
 
+  /**
+   * Create a service location.
+   *
+   * @param host          hostname or address
+   * @param plaintextPort plaintext port
+   * @param tlsPort       TLS port
+   * @param basePath      base path; must be encoded and must not include trailing "/". In particular, to use root as
+   *                      the base path, pass "" for this parameter.
+   */
   public ServiceLocation(final String host, final int plaintextPort, final int tlsPort, final String basePath)
   {
     this.host = Preconditions.checkNotNull(host, "host");
@@ -48,13 +64,19 @@ public class ServiceLocation
     this.basePath = Preconditions.checkNotNull(basePath, "basePath");
   }
 
+  /**
+   * Create a service location based on a {@link DruidNode}, without a base path.
+   */
   public static ServiceLocation fromDruidNode(final DruidNode druidNode)
   {
     return new ServiceLocation(druidNode.getHost(), druidNode.getPlaintextPort(), druidNode.getTlsPort(), "");
   }
 
-  private static final Splitter SPLITTER = Splitter.on(":").limit(2);
-
+  /**
+   * Create a service location based on a {@link DruidServerMetadata}.
+   *
+   * @throws IllegalArgumentException if the server metadata cannot be mapped to a service location.
+   */
   public static ServiceLocation fromDruidServerMetadata(final DruidServerMetadata druidServerMetadata)
   {
     final String host = getHostFromString(
@@ -71,7 +93,7 @@ public class ServiceLocation
 
   private static String getHostFromString(@NotNull String s)
   {
-    Iterator<String> iterator = SPLITTER.split(s).iterator();
+    Iterator<String> iterator = HOST_SPLITTER.split(s).iterator();
     ImmutableList<String> strings = ImmutableList.copyOf(iterator);
     return strings.get(0);
   }
@@ -81,7 +103,7 @@ public class ServiceLocation
     if (s == null) {
       return -1;
     }
-    Iterator<String> iterator = SPLITTER.split(s).iterator();
+    Iterator<String> iterator = HOST_SPLITTER.split(s).iterator();
     ImmutableList<String> strings = ImmutableList.copyOf(iterator);
     try {
       return Integer.parseInt(strings.get(1));
@@ -109,6 +131,33 @@ public class ServiceLocation
   public String getBasePath()
   {
     return basePath;
+  }
+
+  public URL toURL(@Nullable final String encodedPathAndQueryString)
+  {
+    final String scheme;
+    final int portToUse;
+
+    if (tlsPort > 0) {
+      // Prefer HTTPS if available.
+      scheme = HTTPS_SCHEME;
+      portToUse = tlsPort;
+    } else {
+      scheme = HTTP_SCHEME;
+      portToUse = plaintextPort;
+    }
+
+    try {
+      return new URL(
+          scheme,
+          host,
+          portToUse,
+          basePath + (encodedPathAndQueryString == null ? "" : encodedPathAndQueryString)
+      );
+    }
+    catch (MalformedURLException e) {
+      throw new IllegalArgumentException(e);
+    }
   }
 
   @Override
@@ -143,4 +192,5 @@ public class ServiceLocation
            ", basePath='" + basePath + '\'' +
            '}';
   }
+
 }

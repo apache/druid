@@ -239,12 +239,24 @@ export function formatNumber(n: NumberLike): string {
   return n.toLocaleString('en-US', { maximumFractionDigits: 20 });
 }
 
+export function formatRate(n: NumberLike) {
+  return numeral(n).format('0,0.0') + '/s';
+}
+
 export function formatBytes(n: NumberLike): string {
   return numeral(n).format('0.00 b');
 }
 
+export function formatByteRate(n: NumberLike): string {
+  return numeral(n).format('0.00 b') + '/s';
+}
+
 export function formatBytesCompact(n: NumberLike): string {
   return numeral(n).format('0.00b');
+}
+
+export function formatByteRateCompact(n: NumberLike): string {
+  return numeral(n).format('0.00b') + '/s';
 }
 
 export function formatMegabytes(n: NumberLike): string {
@@ -325,6 +337,22 @@ export function pluralIfNeeded(n: NumberLike, singular: string, plural?: string)
 }
 
 // ----------------------------
+
+export function partition<T>(xs: T[], predicate: (x: T, i: number) => boolean): [T[], T[]] {
+  const match: T[] = [];
+  const nonMatch: T[] = [];
+
+  for (let i = 0; i < xs.length; i++) {
+    const x = xs[i];
+    if (predicate(x, i)) {
+      match.push(x);
+    } else {
+      nonMatch.push(x);
+    }
+  }
+
+  return [match, nonMatch];
+}
 
 export function filterMap<T, Q>(xs: readonly T[], f: (x: T, i: number) => Q | undefined): Q[] {
   return xs.map(f).filter((x: Q | undefined) => typeof x !== 'undefined') as Q[];

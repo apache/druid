@@ -17,6 +17,8 @@
  */
 
 import type { QueryResult } from '@druid-toolkit/query';
+import { C } from '@druid-toolkit/query';
+import type { Filter } from 'react-table';
 
 import { filterMap, formatNumber, oneOf } from './general';
 import { deepSet } from './object-change';
@@ -30,9 +32,16 @@ export function changePage(pagination: Pagination, page: number): Pagination {
   return deepSet(pagination, 'page', page);
 }
 
+export interface ColumnHint {
+  displayName?: string;
+  group?: string;
+  formatter?: (x: any) => string;
+}
+
 export function getNumericColumnBraces(
   queryResult: QueryResult,
-  pagination?: Pagination,
+  columnHints: Map<string, ColumnHint> | undefined,
+  pagination: Pagination | undefined,
 ): Record<number, string[]> {
   let rows = queryResult.rows;
 
@@ -45,8 +54,9 @@ export function getNumericColumnBraces(
   if (rows.length) {
     queryResult.header.forEach((column, i) => {
       if (!oneOf(column.nativeType, 'LONG', 'FLOAT', 'DOUBLE')) return;
+      const formatter = columnHints?.get(column.name)?.formatter || formatNumber;
       const brace = filterMap(rows, row =>
-        oneOf(typeof row[i], 'number', 'bigint') ? formatNumber(row[i]) : undefined,
+        oneOf(typeof row[i], 'number', 'bigint') ? formatter(row[i]) : undefined,
       );
       if (rows.length === brace.length) {
         numericColumnBraces[i] = brace;
@@ -55,4 +65,21 @@ export function getNumericColumnBraces(
   }
 
   return numericColumnBraces;
+}
+
+export interface Sorted {
+  id: string;
+  desc: boolean;
+}
+
+export interface TableState {
+  page: number;
+  pageSize: number;
+  filtered: Filter[];
+  sorted: Sorted[];
+}
+
+export function sortedToOrderByClause(sorted: Sorted[]): string | undefined {
+  if (!sorted.length) return;
+  return 'ORDER BY ' + sorted.map(sort => `${C(sort.id)} ${sort.desc ? 'DESC' : 'ASC'}`).join(', ');
 }
