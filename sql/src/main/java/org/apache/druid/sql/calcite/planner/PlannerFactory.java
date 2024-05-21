@@ -39,6 +39,7 @@ import org.apache.calcite.tools.FrameworkConfig;
 import org.apache.calcite.tools.Frameworks;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.quidem.DruidHook;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthConfig;
@@ -112,6 +113,7 @@ public class PlannerFactory extends PlannerToolbox
         queryContext,
         hook
     );
+    DruidHook.dispatch(DruidHook.SQL, sql);
 
     return new DruidPlanner(buildFrameworkConfig(context), context, engine, hook);
   }

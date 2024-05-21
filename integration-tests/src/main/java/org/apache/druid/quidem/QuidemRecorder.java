@@ -19,46 +19,24 @@
 
 package org.apache.druid.quidem;
 
-import javax.ws.rs.GET;
-import javax.ws.rs.Path;
-import javax.ws.rs.Produces;
-import javax.ws.rs.core.MediaType;
-
-@Path("/quidem")
-public class QuidemCapture
+public class QuidemRecorder implements AutoCloseable, DruidHook
 {
-
-  private QuidemRecorder recorder = null;
-
-  @GET
-  @Path("/")
-  @Produces(MediaType.TEXT_PLAIN)
-  public String getSome()
+  public QuidemRecorder()
   {
-    return "Asd";
+    DruidHook.register(DruidHook.SQL, this);
+    DruidHook.register(DruidHook.RESULTSET, this);
   }
 
-  @GET
-  @Path("/start")
-  @Produces(MediaType.TEXT_PLAIN)
-  public synchronized String getSome1()
+  @Override
+  public void close()
   {
-    stopIfRunning();
-    start();
-    return null;
+    DruidHook.unregister(DruidHook.SQL, this);
+    DruidHook.unregister(DruidHook.RESULTSET, this);
   }
 
-  private void start()
+  @Override
+  public <T> void dispatch1(HookKey<T> key, T object)
   {
-    recorder = new QuidemRecorder();
-  }
-
-  private void stopIfRunning()
-  {
-    if (recorder != null) {
-      recorder.close();
-      recorder = null;
-    }
-
+    System.out.println(object);
   }
 }
