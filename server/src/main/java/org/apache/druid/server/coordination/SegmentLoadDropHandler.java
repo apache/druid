@@ -558,7 +558,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
    */
   private boolean shouldAnnounce()
   {
-    return serverTypeConfig.getServerType().isSegmentServer() || !segmentManager.canHandleSegments();
+    return serverTypeConfig.getServerType().isSegmentServer() || segmentManager.canHandleSegments();
   }
 
   private static class BackgroundSegmentAnnouncer implements AutoCloseable
