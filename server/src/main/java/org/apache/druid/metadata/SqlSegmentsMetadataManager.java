@@ -71,12 +71,9 @@ import org.skife.jdbi.v2.Query;
 import org.skife.jdbi.v2.StatementContext;
 import org.skife.jdbi.v2.TransactionCallback;
 import org.skife.jdbi.v2.TransactionStatus;
-import org.skife.jdbi.v2.tweak.ResultSetMapper;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -1036,9 +1033,8 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     final Stopwatch stopwatch = Stopwatch.createStarted();
     log.info("Starting polling of segment table.");
 
-    // some databases such as PostgreSQL require auto-commit turned off
+    // Some databases such as PostgreSQL require auto-commit turned off
     // to stream results back, enabling transactions disables auto-commit
-    //
     // setting connection to read-only will allow some database such as MySQL
     // to automatically use read-only transaction mode, further optimizing the query
     final List<DataSegment> segments = connector.inReadOnlyTransaction(
@@ -1067,11 +1063,13 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     if (segments.isEmpty()) {
       log.info("No segments found in the database!");
     } else {
-      log.info("Polled and found [%,d] segments in the database in [%,d] ms.", segments.size(), stopwatch.millisElapsed());
+      log.info(
+          "Polled and found [%,d] segments in the database in [%,d] ms.",
+          segments.size(), stopwatch.millisElapsed()
+      );
     }
-    stopwatch.restart();
 
-    createDatasourcesSnapshot(stopwatch, segments);
+    createDatasourcesSnapshot(segments);
   }
 
   private void doPollSegmentAndSchema()
