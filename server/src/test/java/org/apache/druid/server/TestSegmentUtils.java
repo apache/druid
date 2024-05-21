@@ -101,7 +101,6 @@ public class TestSegmentUtils
   @JsonTypeName("testSegmentFactory")
   public static class TestSegmentizerFactory implements SegmentizerFactory
   {
-
     @Override
     public Segment factorize(
         DataSegment segment,
@@ -120,7 +119,7 @@ public class TestSegmentUtils
         dataSource,
         interval,
         version,
-        ImmutableMap.of("type", "test", "version", version, "interval", interval),
+        ImmutableMap.of("type", "test"),
         Arrays.asList("dim1", "dim2", "dim3"),
         Arrays.asList("metric1", "metric2"),
         NoneShardSpec.instance(),

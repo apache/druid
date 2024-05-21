@@ -38,8 +38,6 @@ import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.loading.SegmentLocalCacheManager;
 import org.apache.druid.server.SegmentManager.DataSourceState;
-import org.apache.druid.server.coordination.SegmentLoadDropHandler;
-import org.apache.druid.server.coordination.SegmentLoadDropHandlerCacheTest;
 import org.apache.druid.server.coordination.TestStorageLocation;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -189,22 +187,19 @@ public class SegmentManagerTest
 
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
-  private SegmentLoadDropHandler loadDropHandler;
-  private TestStorageLocation storageLoc;
-  private ObjectMapper objectMapper;
 
   private static final long MAX_SIZE = 1000L;
-  private static final long SEGMENT_SIZE = 100L;
 
   @Before
   public void setup() throws IOException
   {
-    storageLoc = new TestStorageLocation(temporaryFolder);
-    SegmentLoaderConfig config = new SegmentLoaderConfig()
+    final TestStorageLocation storageLoc = new TestStorageLocation(temporaryFolder);
+    final SegmentLoaderConfig config = new SegmentLoaderConfig()
         .withLocations(Collections.singletonList(storageLoc.toStorageLocationConfig(MAX_SIZE, null)));
-    objectMapper = TestHelper.makeJsonMapper();
-    objectMapper.registerSubtypes(SegmentLoadDropHandlerCacheTest.TestLoadSpec.class);
-    objectMapper.registerSubtypes(SegmentLoadDropHandlerCacheTest.TestSegmentizerFactory.class);
+
+    final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
+    objectMapper.registerSubtypes(TestSegmentUtils.TestLoadSpec.class);
+    objectMapper.registerSubtypes(TestSegmentUtils.TestSegmentizerFactory.class);
 
     segmentManager = new SegmentManager(
         new SegmentLocalCacheManager(config, TestIndex.INDEX_IO, objectMapper)

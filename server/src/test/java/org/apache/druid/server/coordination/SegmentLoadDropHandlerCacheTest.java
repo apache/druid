@@ -19,32 +19,20 @@
 
 package org.apache.druid.server.coordination;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.io.Files;
 import org.apache.druid.guice.ServerTypeConfig;
-import org.apache.druid.java.util.common.FileUtils;
-import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.segment.IndexIO;
-import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.loading.DataSegmentPusher;
-import org.apache.druid.segment.loading.LoadSpec;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.loading.SegmentLocalCacheManager;
-import org.apache.druid.segment.loading.SegmentizerFactory;
 import org.apache.druid.server.SegmentManager;
+import org.apache.druid.server.TestSegmentUtils;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -55,13 +43,10 @@ import org.mockito.Mockito;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-import java.util.concurrent.ThreadLocalRandom;
 
 import static org.mockito.ArgumentMatchers.any;
 
@@ -77,7 +62,6 @@ public class SegmentLoadDropHandlerCacheTest
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
   private SegmentLoadDropHandler loadDropHandler;
   private TestStorageLocation storageLoc;
-  private ObjectMapper objectMapper;
   private DataSegmentAnnouncer segmentAnnouncer;
 
   @Before
@@ -87,9 +71,10 @@ public class SegmentLoadDropHandlerCacheTest
     SegmentLoaderConfig config = new SegmentLoaderConfig()
         .withLocations(Collections.singletonList(storageLoc.toStorageLocationConfig(MAX_SIZE, null)))
         .withInfoDir(storageLoc.getInfoDir());
-    objectMapper = TestHelper.makeJsonMapper();
-    objectMapper.registerSubtypes(TestLoadSpec.class);
-    objectMapper.registerSubtypes(TestSegmentizerFactory.class);
+    final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
+    objectMapper.registerSubtypes(TestSegmentUtils.TestLoadSpec.class);
+    objectMapper.registerSubtypes(TestSegmentUtils.TestSegmentizerFactory.class);
+
     SegmentCacheManager cacheManager = new SegmentLocalCacheManager(config, TestIndex.INDEX_IO, objectMapper);
     SegmentManager segmentManager = new SegmentManager(cacheManager);
     segmentAnnouncer = Mockito.mock(DataSegmentAnnouncer.class);
@@ -117,7 +102,7 @@ public class SegmentLoadDropHandlerCacheTest
       storageLoc.writeSegmentInfoToCache(segment);
       String storageDir = DataSegmentPusher.getDefaultStorageDir(segment, false);
       File segmentDir = new File(cacheDir, storageDir);
-      new TestLoadSpec((int) SEGMENT_SIZE, name).loadSegment(segmentDir);
+      new TestSegmentUtils.TestLoadSpec((int) SEGMENT_SIZE, name).loadSegment(segmentDir);
       expectedSegments.add(segment);
     }
 
@@ -147,84 +132,6 @@ public class SegmentLoadDropHandlerCacheTest
 
   private DataSegment makeSegment(String dataSource, String name)
   {
-    return new DataSegment(
-        dataSource,
-        Intervals.utc(System.currentTimeMillis() - 60 * 1000, System.currentTimeMillis()),
-        name,
-        ImmutableMap.of("type", "test", "name", name, "size", SEGMENT_SIZE),
-        Arrays.asList("dim1", "dim2", "dim3"),
-        Arrays.asList("metric1", "metric2"),
-        NoneShardSpec.instance(),
-        IndexIO.CURRENT_VERSION_ID,
-        SEGMENT_SIZE
-    );
-  }
-
-  @JsonTypeName("test")
-  public static class TestLoadSpec implements LoadSpec
-  {
-
-    private final int size;
-    private final String name;
-
-    @JsonCreator
-    public TestLoadSpec(
-        @JsonProperty("size") int size,
-        @JsonProperty("name") String name
-    )
-    {
-      this.size = size;
-      this.name = name;
-    }
-
-    @Override
-    public LoadSpecResult loadSegment(File destDir) throws SegmentLoadingException
-    {
-      File segmentFile = new File(destDir, "segment");
-      File factoryJson = new File(destDir, "factory.json");
-      try {
-        FileUtils.mkdirp(destDir);
-        segmentFile.createNewFile();
-        factoryJson.createNewFile();
-      }
-      catch (IOException e) {
-        throw new SegmentLoadingException(
-            e,
-            "Failed to create files under dir '%s'",
-            destDir.getAbsolutePath()
-        );
-      }
-
-      try {
-        byte[] bytes = new byte[size];
-        ThreadLocalRandom.current().nextBytes(bytes);
-        Files.write(bytes, segmentFile);
-        Files.write("{\"type\":\"testSegmentFactory\"}".getBytes(StandardCharsets.UTF_8), factoryJson);
-      }
-      catch (IOException e) {
-        throw new SegmentLoadingException(
-            e,
-            "Failed to write data in directory %s",
-            destDir.getAbsolutePath()
-        );
-      }
-      return new LoadSpecResult(size);
-    }
-  }
-
-  @JsonTypeName("testSegmentFactory")
-  public static class TestSegmentizerFactory implements SegmentizerFactory
-  {
-
-    @Override
-    public Segment factorize(
-        DataSegment segment,
-        File parentDir,
-        boolean lazy,
-        SegmentLazyLoadFailCallback loadFailed
-    )
-    {
-      return Mockito.mock(Segment.class);
-    }
+    return TestSegmentUtils.makeSegment(dataSource, name, SEGMENT_SIZE);
   }
 }

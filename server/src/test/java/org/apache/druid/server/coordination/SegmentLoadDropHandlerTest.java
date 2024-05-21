@@ -19,9 +19,7 @@
 
 package org.apache.druid.server.coordination;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.guice.ServerTypeConfig;
@@ -30,20 +28,18 @@ import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
-import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.loading.NoopSegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.segment.loading.TombstoneSegmentizerFactory;
 import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
 import org.apache.druid.server.SegmentManager;
+import org.apache.druid.server.TestSegmentUtils;
 import org.apache.druid.server.coordination.SegmentChangeStatus.State;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
@@ -57,7 +53,6 @@ import org.mockito.Mockito;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -75,15 +70,12 @@ public class SegmentLoadDropHandlerTest
 {
   private static final int COUNT = 50;
 
-  private final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
-
   private SegmentLoadDropHandler segmentLoadDropHandler;
-
   private DataSegmentAnnouncer announcer;
   private File infoDir;
   private TestStorageLocation testStorageLocation;
-  private AtomicInteger announceCount;
-  private ConcurrentSkipListSet<DataSegment> segmentsAnnouncedByMe;
+  private AtomicInteger observedAnnounceCount;
+  private ConcurrentSkipListSet<DataSegment> observedAnnouncedSegments;
   private LoadDropSegmentCacheManager segmentCacheManager;
   private Set<DataSegment> segmentsRemovedFromCache;
   private SegmentManager segmentManager;
@@ -118,51 +110,47 @@ public class SegmentLoadDropHandlerTest
     locations = Collections.singletonList(
         testStorageLocation.toStorageLocationConfig(100000L, null)
     );
-
     scheduledRunnable = new ArrayList<>();
 
     segmentsRemovedFromCache = new HashSet<>();
-    jsonMapper.registerSubtypes(SegmentLoadDropHandlerCacheTest.TestLoadSpec.class);
-    jsonMapper.registerSubtypes(SegmentLoadDropHandlerCacheTest.TestSegmentizerFactory.class);
-
     segmentCacheManager = new LoadDropSegmentCacheManager();
 
     segmentManager = new SegmentManager(segmentCacheManager);
-    segmentsAnnouncedByMe = new ConcurrentSkipListSet<>();
-    announceCount = new AtomicInteger(0);
+    observedAnnouncedSegments = new ConcurrentSkipListSet<>();
+    observedAnnounceCount = new AtomicInteger(0);
 
     announcer = new DataSegmentAnnouncer()
     {
       @Override
       public void announceSegment(DataSegment segment)
       {
-        segmentsAnnouncedByMe.add(segment);
-        announceCount.incrementAndGet();
+        observedAnnouncedSegments.add(segment);
+        observedAnnounceCount.incrementAndGet();
       }
 
       @Override
       public void unannounceSegment(DataSegment segment)
       {
-        segmentsAnnouncedByMe.remove(segment);
-        announceCount.decrementAndGet();
+        observedAnnouncedSegments.remove(segment);
+        observedAnnounceCount.decrementAndGet();
       }
 
       @Override
       public void announceSegments(Iterable<DataSegment> segments)
       {
         for (DataSegment segment : segments) {
-          segmentsAnnouncedByMe.add(segment);
+          observedAnnouncedSegments.add(segment);
         }
-        announceCount.addAndGet(Iterables.size(segments));
+        observedAnnounceCount.addAndGet(Iterables.size(segments));
       }
 
       @Override
       public void unannounceSegments(Iterable<DataSegment> segments)
       {
         for (DataSegment segment : segments) {
-          segmentsAnnouncedByMe.remove(segment);
+          observedAnnouncedSegments.remove(segment);
         }
-        announceCount.addAndGet(-Iterables.size(segments));
+        observedAnnounceCount.addAndGet(-Iterables.size(segments));
       }
 
       @Override
@@ -281,7 +269,7 @@ public class SegmentLoadDropHandlerTest
 
     segmentLoadDropHandler.removeSegment(segment, DataSegmentChangeCallback.NOOP);
 
-    Assert.assertFalse(segmentsAnnouncedByMe.contains(segment));
+    Assert.assertFalse(observedAnnouncedSegments.contains(segment));
 
     segmentLoadDropHandler.addSegment(segment, DataSegmentChangeCallback.NOOP);
 
@@ -294,7 +282,7 @@ public class SegmentLoadDropHandlerTest
       runnable.run();
     }
 
-    Assert.assertTrue(segmentsAnnouncedByMe.contains(segment));
+    Assert.assertTrue(observedAnnouncedSegments.contains(segment));
     Assert.assertFalse("segment files shouldn't be deleted", segmentsRemovedFromCache.contains(segment));
 
     segmentLoadDropHandler.stop();
@@ -316,11 +304,11 @@ public class SegmentLoadDropHandlerTest
 
     segmentLoadDropHandler.addSegment(segment, DataSegmentChangeCallback.NOOP);
 
-    Assert.assertTrue(segmentsAnnouncedByMe.contains(segment));
+    Assert.assertTrue(observedAnnouncedSegments.contains(segment));
 
     segmentLoadDropHandler.removeSegment(segment, DataSegmentChangeCallback.NOOP);
 
-    Assert.assertFalse(segmentsAnnouncedByMe.contains(segment));
+    Assert.assertFalse(observedAnnouncedSegments.contains(segment));
 
     segmentLoadDropHandler.addSegment(segment, DataSegmentChangeCallback.NOOP);
 
@@ -333,7 +321,7 @@ public class SegmentLoadDropHandlerTest
       runnable.run();
     }
 
-    Assert.assertTrue(segmentsAnnouncedByMe.contains(segment));
+    Assert.assertTrue(observedAnnouncedSegments.contains(segment));
     Assert.assertFalse("segment files shouldn't be deleted", segmentsRemovedFromCache.contains(segment));
 
     segmentLoadDropHandler.stop();
@@ -372,7 +360,7 @@ public class SegmentLoadDropHandlerTest
       Assert.assertEquals(11L, segmentManager.getDataSourceCounts().get("test" + i).longValue());
       Assert.assertEquals(2L, segmentManager.getDataSourceCounts().get("test_two" + i).longValue());
     }
-    Assert.assertEquals(13 * COUNT, announceCount.get());
+    Assert.assertEquals(13 * COUNT, observedAnnounceCount.get());
     segmentLoadDropHandler.stop();
 
     for (DataSegment segment : segments) {
@@ -385,17 +373,7 @@ public class SegmentLoadDropHandlerTest
 
   private DataSegment makeSegment(String dataSource, String version, Interval interval)
   {
-    return new DataSegment(
-        dataSource,
-        interval,
-        version,
-        ImmutableMap.of("type", "test", "version", version, "interval", interval, "cacheDir", infoDir),
-        Arrays.asList("dim1", "dim2", "dim3"),
-        Arrays.asList("metric1", "metric2"),
-        NoneShardSpec.instance(),
-        IndexIO.CURRENT_VERSION_ID,
-        1L
-    );
+    return TestSegmentUtils.makeSegment(dataSource, version, interval);
   }
 
   @Test
@@ -460,7 +438,7 @@ public class SegmentLoadDropHandlerTest
       Assert.assertEquals(3L, segmentManager.getDataSourceCounts().get("test" + i).longValue());
       Assert.assertEquals(2L, segmentManager.getDataSourceCounts().get("test_two" + i).longValue());
     }
-    Assert.assertEquals(5 * COUNT, announceCount.get());
+    Assert.assertEquals(5 * COUNT, observedAnnounceCount.get());
     handler.stop();
 
     for (DataSegment segment : segments) {

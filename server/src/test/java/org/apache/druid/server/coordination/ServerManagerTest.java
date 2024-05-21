@@ -20,7 +20,6 @@
 package org.apache.druid.server.coordination;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.collect.ImmutableList;
@@ -94,7 +93,6 @@ import org.apache.druid.segment.join.JoinableFactoryWrapperTest;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.loading.SegmentLocalCacheManager;
-import org.apache.druid.segment.loading.TombstoneLoadSpec;
 import org.apache.druid.segment.loading.TombstoneSegmentizerFactory;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.initialization.ServerConfig;
@@ -106,7 +104,6 @@ import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
-import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -146,7 +143,6 @@ public class ServerManagerTest
 
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
-  private ObjectMapper objectMapper;
 
   @Before
   public void setUp() throws IOException
@@ -155,15 +151,10 @@ public class ServerManagerTest
     SegmentLoaderConfig config = new SegmentLoaderConfig()
         .withLocations(Collections.singletonList(storageLoc.toStorageLocationConfig(1000L, null)));
 
-    objectMapper = TestHelper.makeJsonMapper();
-    objectMapper.registerSubtypes(SegmentLoadDropHandlerCacheTest.TestLoadSpec.class);
-    objectMapper.registerSubtypes(SegmentLoadDropHandlerCacheTest.TestSegmentizerFactory.class);
-    objectMapper.registerSubtypes(TombstoneLoadSpec.class);
-
     final SegmentLocalCacheManager localCacheManager = new SegmentLocalCacheManager(
         config,
         TestIndex.INDEX_IO,
-        objectMapper
+        TestHelper.makeJsonMapper()
     )
     {
       @Override
@@ -732,31 +723,6 @@ public class ServerManagerTest
     );
   }
 
-  private void loadQueryableMock(String dataSource, String version, Interval interval)
-  {
-    try {
-      EasyMock.expect(
-          segmentManager.loadSegment(
-              new DataSegment(
-                  dataSource,
-                  interval,
-                  version,
-                  ImmutableMap.of("version", version, "interval", interval, "type", "test"),
-                  Arrays.asList("dim1", "dim2", "dim3"),
-                  Arrays.asList("metric1", "metric2"),
-                  NoneShardSpec.instance(),
-                  IndexIO.CURRENT_VERSION_ID,
-                  123L
-              ),
-              false,
-              SegmentLazyLoadFailCallback.NOOP
-          )).andReturn(true);
-    }
-    catch (SegmentLoadingException | IOException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
   private void loadQueryable(String dataSource, String version, Interval interval)
   {
     try {
@@ -787,7 +753,7 @@ public class ServerManagerTest
                     dataSource,
                     interval,
                     version,
-                    ImmutableMap.of("version", version, "interval", interval, "type", "test"),
+                    ImmutableMap.of("version", version, "interval", interval),
                     Arrays.asList("dim1", "dim2", "dim3"),
                     Arrays.asList("metric1", "metric2"),
                     NoneShardSpec.instance(),
