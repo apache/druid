@@ -134,7 +134,6 @@ public class ZkCoordinatorTest extends CuratorTestBase
     CountDownLatch dropLatch = new CountDownLatch(1);
 
     SegmentLoadDropHandler segmentLoadDropHandler = new SegmentLoadDropHandler(
-        jsonMapper,
         new SegmentLoaderConfig() {
           @Override
           public File getInfoDir()

@@ -51,11 +51,6 @@ public interface SegmentCacheManager
   void storeInfoFile(DataSegment segment) throws IOException;
 
   /**
-   * Remove the segment info from disk for the specified disk.
-   */
-  boolean removeInfoFile(DataSegment segment) throws IOException;
-
-  /**
    * Returns a {@link ReferenceCountingSegment} that will be added by the {@link org.apache.druid.server.SegmentManager}
    * to the {@link org.apache.druid.timeline.VersionedIntervalTimeline}. This method can be called multiple times
    * by the {@link org.apache.druid.server.SegmentManager} and implementation can either return same {@link ReferenceCountingSegment}

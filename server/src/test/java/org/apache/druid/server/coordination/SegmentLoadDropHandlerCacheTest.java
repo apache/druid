@@ -94,7 +94,6 @@ public class SegmentLoadDropHandlerCacheTest
     SegmentManager segmentManager = new SegmentManager(cacheManager);
     segmentAnnouncer = Mockito.mock(DataSegmentAnnouncer.class);
     loadDropHandler = new SegmentLoadDropHandler(
-        objectMapper,
         config,
         segmentAnnouncer,
         Mockito.mock(DataSegmentServerAnnouncer.class),

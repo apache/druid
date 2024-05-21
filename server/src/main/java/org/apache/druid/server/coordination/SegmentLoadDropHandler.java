@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.coordination;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
 import com.google.common.cache.Cache;
@@ -78,7 +77,6 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
   // Synchronizes start/stop of this object.
   private final Object startStopLock = new Object();
 
-  private final ObjectMapper jsonMapper;
   private final SegmentLoaderConfig config;
   private final DataSegmentAnnouncer announcer;
   private final DataSegmentServerAnnouncer serverAnnouncer;
@@ -101,7 +99,6 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
 
   @Inject
   public SegmentLoadDropHandler(
-      ObjectMapper jsonMapper,
       SegmentLoaderConfig config,
       DataSegmentAnnouncer announcer,
       DataSegmentServerAnnouncer serverAnnouncer,
@@ -110,7 +107,6 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
   )
   {
     this(
-        jsonMapper,
         config,
         announcer,
         serverAnnouncer,
@@ -125,7 +121,6 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
 
   @VisibleForTesting
   SegmentLoadDropHandler(
-      ObjectMapper jsonMapper,
       SegmentLoaderConfig config,
       DataSegmentAnnouncer announcer,
       DataSegmentServerAnnouncer serverAnnouncer,
@@ -134,7 +129,6 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
       ServerTypeConfig serverTypeConfig
   )
   {
-    this.jsonMapper = jsonMapper;
     this.config = config;
     this.announcer = announcer;
     this.serverAnnouncer = serverAnnouncer;

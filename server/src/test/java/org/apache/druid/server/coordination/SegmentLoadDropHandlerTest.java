@@ -257,7 +257,6 @@ public class SegmentLoadDropHandlerTest
     };
 
     segmentLoadDropHandler = new SegmentLoadDropHandler(
-        jsonMapper,
         segmentLoaderConfig,
         announcer,
         Mockito.mock(DataSegmentServerAnnouncer.class),
@@ -420,7 +419,6 @@ public class SegmentLoadDropHandlerTest
 
     // We need a similar test where the getInfoDir() and getLocations() is empty mocking peon config.
     SegmentLoadDropHandler handler = new SegmentLoadDropHandler(
-        jsonMapper,
         new SegmentLoaderConfig()
         {
           @Override
@@ -516,7 +514,6 @@ public class SegmentLoadDropHandlerTest
            .thenThrow(new RuntimeException("segment loading failure test"))
            .thenReturn(true);
     final SegmentLoadDropHandler segmentLoadDropHandler = new SegmentLoadDropHandler(
-        jsonMapper,
         segmentLoaderConfig,
         announcer,
         Mockito.mock(DataSegmentServerAnnouncer.class),
@@ -562,7 +559,6 @@ public class SegmentLoadDropHandlerTest
     );
     Mockito.doNothing().when(segmentManager).dropSegment(ArgumentMatchers.any());
     final SegmentLoadDropHandler segmentLoadDropHandler = new SegmentLoadDropHandler(
-        jsonMapper,
         noAnnouncerSegmentLoaderConfig,
         announcer,
         Mockito.mock(DataSegmentServerAnnouncer.class),
