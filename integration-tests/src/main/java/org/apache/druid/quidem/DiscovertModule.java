@@ -51,6 +51,7 @@ public class DiscovertModule extends AbstractModule {
       return null;
     }
 
+
     @Provides
     @LazySingleton
     public Properties getProps() {
