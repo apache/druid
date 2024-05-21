@@ -19,10 +19,16 @@
 
 package org.apache.druid.quidem;
 
+import java.io.PrintStream;
+
 public class QuidemRecorder implements AutoCloseable, DruidHook
 {
-  public QuidemRecorder()
+  private PrintStream printStream;
+
+  public QuidemRecorder(PrintStream printStream)
   {
+    this.printStream = printStream;
+    printStream.println("#started");
     DruidHook.register(DruidHook.SQL, this);
     DruidHook.register(DruidHook.RESULTSET, this);
   }
@@ -37,6 +43,15 @@ public class QuidemRecorder implements AutoCloseable, DruidHook
   @Override
   public <T> void dispatch1(HookKey<T> key, T object)
   {
-    System.out.println(object);
+    if(DruidHook.SQL.equals(key)) {
+      printStream.println(object);
+      printStream.print(";");
+      return;
+    }
+    if (DruidHook.RESULTSET.equals(key)) {
+      printStream.println(object);
+      printStream.println("!ok");
+      return;
+    }
   }
 }

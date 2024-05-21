@@ -185,6 +185,7 @@ public class ExposedAsBrokerQueryComponentSupplierWrapper implements QueryCompon
 
     overrideModules.addAll(ExposedAsBrokerQueryComponentSupplierWrapper.brokerModules());
     overrideModules.add(new DiscovertModule());
+    builder.add(QuidemCaptureModule.class);
 
   }
 

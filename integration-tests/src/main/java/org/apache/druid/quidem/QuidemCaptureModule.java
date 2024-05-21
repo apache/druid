@@ -29,6 +29,6 @@ public class QuidemCaptureModule implements Module
   @Override
   public void configure(Binder binder)
   {
-    Jerseys.addResource(binder, QuidemCapture.class);
+    Jerseys.addResource(binder, QuidemCaptureResource.class);
   }
 }

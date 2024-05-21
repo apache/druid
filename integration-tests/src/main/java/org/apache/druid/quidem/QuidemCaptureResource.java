@@ -24,10 +24,12 @@ import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 
-@Path("/quidem")
-public class QuidemCapture
-{
+import java.io.IOException;
+import java.io.PrintStream;
 
+@Path("/quidem")
+public class QuidemCaptureResource
+{
   private QuidemRecorder recorder = null;
 
   @GET
@@ -41,16 +43,16 @@ public class QuidemCapture
   @GET
   @Path("/start")
   @Produces(MediaType.TEXT_PLAIN)
-  public synchronized String getSome1()
+  public synchronized String getSome1() throws IOException
   {
     stopIfRunning();
     start();
-    return null;
+    return recorder.toString();
   }
 
-  private void start()
+  private void start() throws IOException
   {
-    recorder = new QuidemRecorder();
+    recorder = new QuidemRecorder(new PrintStream("/tmp/new.iq"));
   }
 
   private void stopIfRunning()
