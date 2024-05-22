@@ -54,6 +54,7 @@ jobs:
       build_jdk: 8
       runtime_jdk: 8
       testing_groups: -Dgroups=${{ matrix.testing_group }}
+      override_config_path: ./environment-configs/test-groups/prepopulated-data
       use_indexer: middleManager
       group: ${{ matrix.testing_group }}
 
