@@ -55,11 +55,11 @@ export function getNumericColumnBraces(
     queryResult.header.forEach((column, i) => {
       if (!oneOf(column.nativeType, 'LONG', 'FLOAT', 'DOUBLE')) return;
       const formatter = columnHints?.get(column.name)?.formatter || formatNumber;
-      const brace = filterMap(rows, row =>
+      const braces = filterMap(rows, row =>
         oneOf(typeof row[i], 'number', 'bigint') ? formatter(row[i]) : undefined,
       );
-      if (rows.length === brace.length) {
-        numericColumnBraces[i] = brace;
+      if (braces.length) {
+        numericColumnBraces[i] = braces;
       }
     });
   }
