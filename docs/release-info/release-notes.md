@@ -268,6 +268,13 @@ Added a new experimental interface `TaskContextEnricher` to enrich context with 
 
 ### SQL-based ingestion
 
+#### Sorting on complex columns
+
+The MSQ task engine now supports sorting and grouping on complex columns.
+This change also allows the MSQ task engine to roll up on JSON columns.
+
+[#16322](https://github.com/apache/druid/pull/16322)
+
 #### Manifest files for MSQ task engine exports
 
 Export queries that use the MSQ task engine now also create a manifest file at the destination, which lists the files created by the query.
