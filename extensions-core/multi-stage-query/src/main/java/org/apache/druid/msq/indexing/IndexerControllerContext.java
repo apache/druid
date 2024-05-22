@@ -55,7 +55,7 @@ import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
 import org.apache.druid.server.DruidNode;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
@@ -271,16 +271,16 @@ public class IndexerControllerContext implements ControllerContext
         .put(MultiStageQueryContext.CTX_MAX_CONCURRENT_STAGES, queryKernelConfig.getMaxConcurrentStages());
 
     // Put the lookup loading info in the task context to facilitate selective loading of lookups.
-    if (controllerTaskContext.get(PlannerContext.CTX_LOOKUP_LOADING_MODE) != null) {
+    if (controllerTaskContext.get(LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE) != null) {
       taskContextOverridesBuilder.put(
-          PlannerContext.CTX_LOOKUP_LOADING_MODE,
-          controllerTaskContext.get(PlannerContext.CTX_LOOKUP_LOADING_MODE)
+          LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE,
+          controllerTaskContext.get(LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE)
       );
     }
-    if (controllerTaskContext.get(PlannerContext.CTX_LOOKUPS_TO_LOAD) != null) {
+    if (controllerTaskContext.get(LookupLoadingSpec.CTX_LOOKUPS_TO_LOAD) != null) {
       taskContextOverridesBuilder.put(
-          PlannerContext.CTX_LOOKUPS_TO_LOAD,
-          controllerTaskContext.get(PlannerContext.CTX_LOOKUPS_TO_LOAD)
+          LookupLoadingSpec.CTX_LOOKUPS_TO_LOAD,
+          controllerTaskContext.get(LookupLoadingSpec.CTX_LOOKUPS_TO_LOAD)
       );
     }
 

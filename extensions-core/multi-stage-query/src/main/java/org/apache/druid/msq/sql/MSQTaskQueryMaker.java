@@ -285,9 +285,9 @@ public class MSQTaskQueryMaker implements QueryMaker
     MSQTaskQueryMakerUtils.validateRealtimeReindex(querySpec);
 
     final Map<String, Object> context = new HashMap<>();
-    context.put(PlannerContext.CTX_LOOKUP_LOADING_MODE, plannerContext.getLookupLoadingSpec().getMode());
+    context.put(LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE, plannerContext.getLookupLoadingSpec().getMode());
     if (plannerContext.getLookupLoadingSpec().getMode() == LookupLoadingSpec.Mode.ONLY_REQUIRED) {
-      context.put(PlannerContext.CTX_LOOKUPS_TO_LOAD, plannerContext.getLookupLoadingSpec().getLookupsToLoad());
+      context.put(LookupLoadingSpec.CTX_LOOKUPS_TO_LOAD, plannerContext.getLookupLoadingSpec().getLookupsToLoad());
     }
 
     final MSQControllerTask controllerTask = new MSQControllerTask(

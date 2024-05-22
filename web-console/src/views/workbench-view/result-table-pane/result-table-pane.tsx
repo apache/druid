@@ -620,7 +620,7 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
                       {numericColumnBraces[i] ? (
                         <BracedText
                           className="table-padding"
-                          text={formatNumber(value)}
+                          text={typeof value === 'number' ? formatNumber(value) : String(value)}
                           braces={numericColumnBraces[i]}
                           padFractionalPart
                         />

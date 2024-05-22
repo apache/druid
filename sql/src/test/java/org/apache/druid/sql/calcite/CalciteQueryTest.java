@@ -603,6 +603,38 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testDiv()
+  {
+    cannotVectorize();
+    final Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
+
+    testQuery(
+        "select cnt, m1, div(m1, 2), div(cnt+2, cnt+1) from foo",
+        context,
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(
+                    expressionVirtualColumn("v0", "div(\"m1\",2)", ColumnType.LONG),
+                    expressionVirtualColumn("v1", "div((\"cnt\" + 2),(\"cnt\" + 1))", ColumnType.LONG)
+                )
+                .columns(ImmutableList.of("cnt", "m1", "v0", "v1"))
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{1L, 1.0f, 0L, 1L},
+            new Object[]{1L, 2.0f, 1L, 1L},
+            new Object[]{1L, 3.0f, 1L, 1L},
+            new Object[]{1L, 4.0f, 2L, 1L},
+            new Object[]{1L, 5.0f, 2L, 1L},
+            new Object[]{1L, 6.0f, 3L, 1L}
+        )
+    );
+  }
+
+  @Test
   public void testGroupByLimitWrappingOrderByAgg()
   {
     testQuery(

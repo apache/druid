@@ -465,6 +465,7 @@ public class StreamAppenderator implements Appenderator
             MoreExecutors.directExecutor()
         );
       } else {
+        log.info("Marking ready for non-incremental async persist due to reasons[%s].", persistReasons);
         isPersistRequired = true;
       }
     }
