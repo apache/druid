@@ -68,6 +68,7 @@ import org.apache.druid.sql.calcite.table.RowSignatures;
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -124,7 +125,7 @@ public class Windowing
   {
     final Window window = Preconditions.checkNotNull(partialQuery.getWindow(), "window");
 
-    List<WindowGroupProcessorWrapper> wrapperObjs = new ArrayList<>();
+    List<WindowComputationProcessor> wrapperObjs = new ArrayList<>();
 
     final List<String> windowOutputColumns = new ArrayList<>(sourceRowSignature.getColumnNames());
     final String outputNamePrefix = Calcites.findUnusedPrefixForDigits("w", sourceRowSignature.getColumnNames());
@@ -202,7 +203,7 @@ public class Windowing
         throw new ISE("No processors from Window[%s], why was this code called?", window);
       }
 
-      wrapperObjs.add(new WindowGroupProcessorWrapper(windowGroup, new WindowOperatorFactory(
+      wrapperObjs.add(new WindowComputationProcessor(group, new WindowOperatorFactory(
           processors.size() == 1 ?
           processors.get(0) : new ComposingProcessor(processors.toArray(new Processor[0]))
       )));
@@ -220,10 +221,10 @@ public class Windowing
       priorSortColumns = computeSortColumnsFromRelCollation(priorCollation, sourceRowSignature);
     }
 
-    Collections.sort(wrapperObjs);
+    wrapperObjs.sort(MOVE_EMPTY_GROUPS_FIRST);
     ArrayList<OperatorFactory> ops = new ArrayList<>();
-    for (WindowGroupProcessorWrapper wrapperObj : wrapperObjs) {
-      final WindowGroup group = new WindowGroup(window, wrapperObj.getGroup(), sourceRowSignature);
+    for (WindowComputationProcessor wrapperObj : wrapperObjs) {
+      final WindowGroup group = wrapperObj.getGroup();
       final LinkedHashSet<ColumnWithDirection> sortColumns = new LinkedHashSet<>();
       for (String partitionColumn : group.getPartitionColumns()) {
         sortColumns.add(ColumnWithDirection.ascending(partitionColumn));
@@ -279,24 +280,24 @@ public class Windowing
   }
 
   /**
-   * A wrapper object which stores {@link org.apache.calcite.rel.core.Window.Group}
+   * A wrapper class which stores {@link WindowGroup}
    * along with its computed {@link WindowOperatorFactory}
-   *
+   * <p>
    * this allows us to sort the window groups in order to optimise the order of operators we would need to compute
    * without losing the aggregate column name information (which is part of the computed WindowOperatorFactory)
    */
-  private static class WindowGroupProcessorWrapper implements Comparable<WindowGroupProcessorWrapper>
+  private static class WindowComputationProcessor
   {
-    private final Window.Group group;
+    private final WindowGroup group;
     private final OperatorFactory processorOperatorFactory;
 
-    public WindowGroupProcessorWrapper(Window.Group group, OperatorFactory processorOperatorFactory)
+    public WindowComputationProcessor(WindowGroup group, OperatorFactory processorOperatorFactory)
     {
       this.group = group;
       this.processorOperatorFactory = processorOperatorFactory;
     }
 
-    public Window.Group getGroup()
+    public WindowGroup getGroup()
     {
       return group;
     }
@@ -304,23 +305,6 @@ public class Windowing
     public OperatorFactory getProcessorOperatorFactory()
     {
       return processorOperatorFactory;
-    }
-
-    @Override
-    public int compareTo(WindowGroupProcessorWrapper o)
-    {
-      // Need to work on this method to optimise the order in which we need to process based on the partitions
-      // currently just moves the empty windows to the front
-      if (this.group.keys.isEmpty() && o.group.keys.isEmpty()) {
-        return 0;
-      }
-      if (this.group.keys.isEmpty()) {
-        return -1;
-      }
-      if (o.group.keys.isEmpty()) {
-        return 1;
-      }
-      return 0;
     }
 
     @Override
@@ -332,10 +316,10 @@ public class Windowing
       if (o == null || getClass() != o.getClass()) {
         return false;
       }
-      WindowGroupProcessorWrapper wrapper = (WindowGroupProcessorWrapper) o;
-      return Objects.equals(group, wrapper.group) && Objects.equals(
+      WindowComputationProcessor obj = (WindowComputationProcessor) o;
+      return Objects.equals(group, obj.group) && Objects.equals(
           processorOperatorFactory,
-          wrapper.processorOperatorFactory
+          obj.processorOperatorFactory
       );
     }
 
@@ -345,6 +329,23 @@ public class Windowing
       return Objects.hash(group, processorOperatorFactory);
     }
   }
+
+  /**
+   * Comparator on {@link WindowComputationProcessor}
+   * to move the empty windows to the front
+   */
+  private static final Comparator<WindowComputationProcessor> MOVE_EMPTY_GROUPS_FIRST = (o1, o2) -> {
+    if (o1.getGroup().getPartitionColumns().isEmpty() && o2.getGroup().getPartitionColumns().isEmpty()) {
+      return 0;
+    }
+    if (o1.getGroup().getPartitionColumns().isEmpty()) {
+      return -1;
+    }
+    if (o2.getGroup().getPartitionColumns().isEmpty()) {
+      return 1;
+    }
+    return 0;
+  };
 
   private final RowSignature signature;
 
