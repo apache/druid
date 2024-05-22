@@ -36,17 +36,19 @@ import java.util.concurrent.ExecutorService;
 public interface SegmentCacheManager
 {
   /**
-   * Indicates whether the cache manager can handle segments or not.
+   * Return whether the cache manager can handle segments or not.
    */
   boolean canHandleSegments();
 
   /**
-   * Return the set of cached segments. Should be invoked only when {@link #canHandleSegments()}} is true.
+   * Return the set of cached segments from local disk. This should be called only
+   * when {@link #canHandleSegments()} is true.
    */
   List<DataSegment> getCachedSegments() throws IOException;
 
   /**
-   * Store the segment info on disk for the specified disk.
+   * Store a segment info file on disk for the supplied segment. This operation is idempotent when called
+   * multiple times for a given segment.
    */
   void storeInfoFile(DataSegment segment) throws IOException;
 

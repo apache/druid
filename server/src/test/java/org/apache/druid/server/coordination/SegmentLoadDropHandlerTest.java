@@ -103,17 +103,12 @@ public class SegmentLoadDropHandlerTest
   @Before
   public void setUp() throws IOException
   {
-    try {
-      testStorageLocation = new TestStorageLocation(temporaryFolder);
-      infoDir = testStorageLocation.getInfoDir();
-    }
-    catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-
+    testStorageLocation = new TestStorageLocation(temporaryFolder);
+    infoDir = testStorageLocation.getInfoDir();
     locations = Collections.singletonList(
         testStorageLocation.toStorageLocationConfig(100000L, null)
     );
+
     scheduledRunnable = new ArrayList<>();
 
     observedSegmentsRemovedFromCache = new HashSet<>();
