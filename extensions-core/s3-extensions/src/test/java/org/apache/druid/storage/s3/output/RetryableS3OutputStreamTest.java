@@ -244,7 +244,7 @@ public class RetryableS3OutputStreamTest
       }
       partRequests.add(request);
       UploadPartResult result = new UploadPartResult();
-      result.setETag(StringUtils.format("%s", request.getPartNumber()));
+      result.setETag(StringUtils.format("etag-%s", request.getPartNumber()));
       result.setPartNumber(request.getPartNumber());
       return result;
     }
@@ -285,8 +285,8 @@ public class RetryableS3OutputStreamTest
           eTags.stream().map(PartETag::getPartNumber).collect(Collectors.toSet())
       );
       Assert.assertEquals(
-          partNumbersFromRequest,
-          eTags.stream().map(tag -> Integer.parseInt(tag.getETag())).collect(Collectors.toSet())
+          partNumbersFromRequest.stream().map(partNumber -> "etag-" + partNumber).collect(Collectors.toSet()),
+          eTags.stream().map(PartETag::getETag).collect(Collectors.toSet())
       );
       Assert.assertEquals(
           expectedFileSize,
