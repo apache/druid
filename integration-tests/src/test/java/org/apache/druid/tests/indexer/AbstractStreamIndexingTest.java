@@ -279,7 +279,26 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
           FIRST_EVENT_TIME.plusSeconds(secondsToGenerateFirstRound)
       );
 
-      verifyIngestedData(generatedTestConfig, numWritten);
+      // Make sure we consume the rest of the data
+      long finalNumWritten = numWritten;
+      ITRetryUtil.retryUntilTrue(
+          () ->
+              finalNumWritten == this.queryHelper.countRows(
+                  generatedTestConfig.getFullDatasourceName(),
+                  Intervals.ETERNITY,
+                  name -> new LongSumAggregatorFactory(name, "count")
+              ),
+          StringUtils.format(
+              "dataSource[%s] consumed [%,d] events, expected [%,d]",
+              generatedTestConfig.getFullDatasourceName(),
+              this.queryHelper.countRows(
+                  generatedTestConfig.getFullDatasourceName(),
+                  Intervals.ETERNITY,
+                  name -> new LongSumAggregatorFactory(name, "count")
+              ),
+              numWritten
+          )
+      );
     }
   }
 
