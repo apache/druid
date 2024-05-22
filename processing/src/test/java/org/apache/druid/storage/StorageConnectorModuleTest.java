@@ -46,7 +46,7 @@ public class StorageConnectorModuleTest
   public void testJsonSerde() throws JsonProcessingException
   {
     StorageConnectorProvider storageConnectorProvider = objectMapper.readValue(JSON, StorageConnectorProvider.class);
-    StorageConnector storageConnector = storageConnectorProvider.createStorageConnector(new File("/tmp"));
+    StorageConnector storageConnector = storageConnectorProvider.createStorageConnector(new File("/tmp/tmpDir"));
     Assert.assertTrue(storageConnector instanceof LocalFileStorageConnector);
     Assert.assertEquals(new File("/tmp"), ((LocalFileStorageConnector) storageConnector).getBasePath());
   }

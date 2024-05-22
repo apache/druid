@@ -41,7 +41,6 @@ public class AzureOutputSerdeTest
     String json = jsonStringReadyForAssert("{\n"
                                            + "  \"container\": \"TEST\",\n"
                                            + "  \"prefix\": \"abc\",\n"
-                                           + "  \"tempDir\": \"/tmp\",\n"
                                            + "  \"chunkSize\":104857600,\n"
                                            + "  \"maxRetry\": 2\n"
                                            + "}\n");
@@ -66,7 +65,6 @@ public class AzureOutputSerdeTest
   {
     String json = jsonStringReadyForAssert("{\n"
                                            + "  \"container\": \"TEST\",\n"
-                                           + "  \"tempDir\": \"/tmp\",\n"
                                            + "  \"chunkSize\":104857600,\n"
                                            + "  \"maxRetry\": 2\n"
                                            + "}\n");
@@ -78,19 +76,6 @@ public class AzureOutputSerdeTest
   {
     String json = jsonStringReadyForAssert("{\n"
                                            + "  \"prefix\": \"abc\",\n"
-                                           + "  \"tempDir\": \"/tmp\",\n"
-                                           + "  \"chunkSize\":104857600,\n"
-                                           + "  \"maxRetry\": 2\n"
-                                           + "}\n");
-    Assert.assertThrows(MismatchedInputException.class, () -> MAPPER.readValue(json, AzureOutputConfig.class));
-  }
-
-  @Test
-  public void noTempDir()
-  {
-    String json = jsonStringReadyForAssert("{\n"
-                                           + "  \"prefix\": \"abc\",\n"
-                                           + "  \"container\": \"TEST\",\n"
                                            + "  \"chunkSize\":104857600,\n"
                                            + "  \"maxRetry\": 2\n"
                                            + "}\n");
@@ -101,7 +86,6 @@ public class AzureOutputSerdeTest
   public void leastArguments() throws JsonProcessingException
   {
     String json = jsonStringReadyForAssert("{\n"
-                                           + "  \"tempDir\": \"/tmp\",\n"
                                            + "  \"prefix\": \"abc\",\n"
                                            + "  \"container\": \"TEST\"\n"
                                            + "}\n");
@@ -123,7 +107,6 @@ public class AzureOutputSerdeTest
     String json = jsonStringReadyForAssert("{\n"
                                            + "  \"prefix\": \"abc\",\n"
                                            + "  \"container\": \"TEST\",\n"
-                                           + "  \"tempDir\": \"/tmp\",\n"
                                            + "  \"chunkSize\":104,\n"
                                            + "  \"maxRetry\": 2\n"
                                            + "}\n");

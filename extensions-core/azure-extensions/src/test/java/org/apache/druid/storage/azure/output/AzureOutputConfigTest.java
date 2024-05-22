@@ -22,21 +22,11 @@ package org.apache.druid.storage.azure.output;
 
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.HumanReadableBytes;
-import org.apache.druid.java.util.common.ISE;
 import org.junit.Assert;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-
-import java.io.File;
-import java.io.IOException;
 
 public class AzureOutputConfigTest
 {
-
-  @Rule
-  public final TemporaryFolder temporaryFolder = new TemporaryFolder();
-
   private static final String CONTAINER = "container";
   private static final String PREFIX = "prefix";
   private static final int MAX_RETRY_COUNT = 0;
@@ -48,20 +38,6 @@ public class AzureOutputConfigTest
     Assert.assertThrows(
         DruidException.class,
         () -> new AzureOutputConfig(CONTAINER, PREFIX, chunkSize, MAX_RETRY_COUNT)
-    );
-  }
-
-  @Test
-  public void testTempDirectoryNotWritable() throws IOException
-  {
-    File tempDir = temporaryFolder.newFolder();
-    if (!tempDir.setWritable(false)) {
-      throw new ISE("Unable to change the permission of temp folder for %s", this.getClass().getName());
-    }
-    //noinspection ResultOfObjectAllocationIgnored
-    Assert.assertThrows(
-        DruidException.class,
-        () -> new AzureOutputConfig(CONTAINER, PREFIX, null, MAX_RETRY_COUNT)
     );
   }
 }

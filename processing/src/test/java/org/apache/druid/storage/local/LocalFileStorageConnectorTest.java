@@ -49,14 +49,15 @@ public class LocalFileStorageConnectorTest
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
-  private File exportDir;
+  private File storageDir;
   private StorageConnector storageConnector;
 
   @Before
   public void init() throws IOException
   {
-    exportDir = temporaryFolder.newFolder();
-    storageConnector = new LocalFileStorageConnectorProvider(exportDir).createStorageConnector(temporaryFolder.newFolder());
+    storageDir = temporaryFolder.newFolder();
+    File temporaryDir = temporaryFolder.newFolder();
+    storageConnector = new LocalFileStorageConnectorProvider(storageDir).createStorageConnector(temporaryDir);
   }
 
   @Test
@@ -69,14 +70,14 @@ public class LocalFileStorageConnectorTest
 
     // check if file is created
     Assert.assertTrue(storageConnector.pathExists(uuid));
-    Assert.assertTrue(new File(exportDir.getAbsolutePath(), uuid).exists());
+    Assert.assertTrue(new File(storageDir.getAbsolutePath(), uuid).exists());
 
     // check contents
     checkContents(uuid);
 
     // delete file
     storageConnector.deleteFile(uuid);
-    Assert.assertFalse(new File(exportDir.getAbsolutePath(), uuid).exists());
+    Assert.assertFalse(new File(storageDir.getAbsolutePath(), uuid).exists());
   }
 
   @Test
@@ -96,14 +97,14 @@ public class LocalFileStorageConnectorTest
     checkContents(uuid1);
     checkContents(uuid2);
 
-    File baseFile = new File(exportDir.getAbsolutePath(), uuid_base);
+    File baseFile = new File(storageDir.getAbsolutePath(), uuid_base);
     Assert.assertTrue(baseFile.exists());
     Assert.assertTrue(baseFile.isDirectory());
     Assert.assertEquals(2, baseFile.listFiles().length);
 
     storageConnector.deleteRecursively(uuid_base);
     Assert.assertFalse(baseFile.exists());
-    Assert.assertTrue(new File(exportDir.getAbsolutePath(), topLevelDir).exists());
+    Assert.assertTrue(new File(storageDir.getAbsolutePath(), topLevelDir).exists());
   }
 
   @Test
@@ -118,8 +119,8 @@ public class LocalFileStorageConnectorTest
 
     // delete file
     storageConnector.deleteFiles(ImmutableList.of(uuid1, uuid2));
-    Assert.assertFalse(new File(exportDir.getAbsolutePath(), uuid1).exists());
-    Assert.assertFalse(new File(exportDir.getAbsolutePath(), uuid2).exists());
+    Assert.assertFalse(new File(storageDir.getAbsolutePath(), uuid1).exists());
+    Assert.assertFalse(new File(storageDir.getAbsolutePath(), uuid2).exists());
   }
 
   @Test
@@ -128,7 +129,7 @@ public class LocalFileStorageConnectorTest
     File file = temporaryFolder.newFile();
     expectedException.expect(IAE.class);
     StorageConnectorProvider storageConnectorProvider = new LocalFileStorageConnectorProvider(file);
-    storageConnectorProvider.createStorageConnector(exportDir);
+    storageConnectorProvider.createStorageConnector(storageDir);
   }
 
   @Test
