@@ -36,7 +36,6 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.storage.s3.NoopServerSideEncryption;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 import org.easymock.EasyMock;
-import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -50,6 +49,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class RetryableS3OutputStreamTest
@@ -206,9 +206,7 @@ public class RetryableS3OutputStreamTest
         out.write(bb.array());
       }
 
-      expectedException.expect(RuntimeException.class);
-      expectedException.expectCause(CoreMatchers.instanceOf(AmazonClientException.class));
-      expectedException.expectMessage("Upload failure test. Remaining failures [1]");
+      // No exception is thrown in the main thread, since the upload now happens in a separate threadpool.
       bb.clear();
       bb.putInt(3);
       out.write(bb.array());
@@ -275,8 +273,10 @@ public class RetryableS3OutputStreamTest
       Assert.assertNotNull(completeRequest);
       Assert.assertFalse(cancelled);
 
+      Set<Integer> partNumbersFromRequest = partRequests.stream().map(UploadPartRequest::getPartNumber).collect(Collectors.toSet());
+      Assert.assertEquals(partRequests.size(), partNumbersFromRequest.size());
+
       for (int i = 0; i < partRequests.size(); i++) {
-        Assert.assertEquals(i + 1, partRequests.get(i).getPartNumber());
         if (i < partRequests.size() - 1) {
           Assert.assertEquals(chunkSize, partRequests.get(i).getPartSize());
         } else {
@@ -286,12 +286,12 @@ public class RetryableS3OutputStreamTest
       final List<PartETag> eTags = completeRequest.getPartETags();
       Assert.assertEquals(partRequests.size(), eTags.size());
       Assert.assertEquals(
-          partRequests.stream().map(UploadPartRequest::getPartNumber).collect(Collectors.toList()),
-          eTags.stream().map(PartETag::getPartNumber).collect(Collectors.toList())
+          partNumbersFromRequest,
+          eTags.stream().map(PartETag::getPartNumber).collect(Collectors.toSet())
       );
       Assert.assertEquals(
-          partRequests.stream().map(UploadPartRequest::getPartNumber).collect(Collectors.toList()),
-          eTags.stream().map(tag -> Integer.parseInt(tag.getETag())).collect(Collectors.toList())
+          partNumbersFromRequest,
+          eTags.stream().map(tag -> Integer.parseInt(tag.getETag())).collect(Collectors.toSet())
       );
       Assert.assertEquals(
           expectedFileSize,
