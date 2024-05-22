@@ -48,7 +48,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
@@ -110,16 +109,15 @@ public class RetryableS3OutputStream extends OutputStream
   private boolean closed;
 
   /**
-   * A map to store number of files pending to be uploaded for a given uploadId.
+   * An atomic counter to store number of files pending to be uploaded for the particular uploadId.
    */
-  private static final ConcurrentHashMap<String, AtomicInteger> PENDING_FILES = new ConcurrentHashMap<>();
+  private final AtomicInteger pendingFiles = new AtomicInteger(0);
 
   /**
-   * A map containing the lock for a given uploadId used for notifying the main thread about the completion of
-   * s3.uploadPart() for all chunks for the uploadId, and hence starting the s3.completeMultipartUpload() for
-   * the uploadId.
+   * A lock used for notifying the main thread about the completion of s3.uploadPart() for all chunks
+   * and hence starting the s3.completeMultipartUpload() for the uploadId.
    */
-  private static final ConcurrentHashMap<String, Object> FILE_LOCK_MAP = new ConcurrentHashMap<>();
+  private final Object fileLock = new Object();
 
   /**
    * Semaphore to restrict the maximum number of simultaneous chunks on disk.
@@ -228,7 +226,7 @@ public class RetryableS3OutputStream extends OutputStream
     if (chunk.length() > 0) {
       try {
         SEMAPHORE.acquire(); // Acquire a permit from the semaphore
-        PENDING_FILES.computeIfAbsent(uploadId, f -> new AtomicInteger(0)).incrementAndGet();
+        pendingFiles.incrementAndGet();
 
         UPLOAD_EXECUTOR.submit(() -> {
           try {
@@ -241,11 +239,9 @@ public class RetryableS3OutputStream extends OutputStream
           }
           finally {
             SEMAPHORE.release(); // Release the permit after upload is completed
-            AtomicInteger counter = PENDING_FILES.get(uploadId);
-            int remaining = counter.decrementAndGet();
-            if (remaining == 0) {
-              synchronized (FILE_LOCK_MAP.computeIfAbsent(uploadId, f -> new Object())) {
-                FILE_LOCK_MAP.get(uploadId).notifyAll();
+            if (pendingFiles.decrementAndGet() == 0) {
+              synchronized (fileLock) {
+                fileLock.notifyAll();
               }
             }
           }
@@ -345,9 +341,8 @@ public class RetryableS3OutputStream extends OutputStream
 
   private void completeMultipartUpload()
   {
-    Object fileLock = FILE_LOCK_MAP.computeIfAbsent(uploadId, f -> new Object());
     synchronized (fileLock) {
-      while (PENDING_FILES.getOrDefault(uploadId, new AtomicInteger(0)).get() > 0) {
+      while (pendingFiles.get() > 0) {
         try {
           LOG.info("Waiting for lock for completing multipart task for uploadId [%s].", uploadId);
           fileLock.wait();
@@ -390,8 +385,6 @@ public class RetryableS3OutputStream extends OutputStream
       catch (IOException e) {
         throw new RuntimeException(e);
       }
-      PENDING_FILES.remove(uploadId);
-      FILE_LOCK_MAP.remove(uploadId);
     }
   }
 
