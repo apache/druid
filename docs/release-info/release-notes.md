@@ -59,7 +59,7 @@ This section contains important information about new and existing features.
 
 ### Improved native queries
 
-Native queries can now group on nested columns and arrays.
+Native queries can now group on supported complex columns and nested arrays.
 
 [#16068](https://github.com/apache/druid/pull/16068)
 
@@ -116,9 +116,12 @@ To enable this feature, set the following configs:
 
 ### MSQ support for window functions
 
-Added support for using window functions with the MSQ task engine as the query engine.
+You can now run window functions in the MSQ task engine using the context flag `enableWindowing:true`.
+
+In the native engine, you must use a group by clause to enable window functions. This requirement is removed in the MSQ task engine.
 
 [#15470](https://github.com/apache/druid/pull/15470)
+[#16229](https://github.com/apache/druid/pull/16229)
 
 ### MSQ support for Google Cloud Storage
 
@@ -235,28 +238,9 @@ Nested column serialization now releases nested field compression buffers as soo
 
 #### Improved task context reporting
 
-Add a new field `taskContext` in the task reports of non-MSQ tasks.
-The payload of this field contains the entire context used by the task during its runtime.
+Added a new field `taskContext` in the task reports of non-MSQ tasks. The change is backward compatible. The payload of this field contains the entire context used by the task during its runtime.
 
-The following is the new report structure for non-MSQ tasks:
-
-```json
-{
-   "ingestionStatsAndErrors": {
-      // existing report content
-   },
-   "taskContext": {
-      "taskId": "xyz",
-      "type": "taskContext",
-      "payload": {
-         "forceTimeChunkLock": true,
-         "useLineageBasedSegmentAllocation": true
-       }
-   }
-}
-```
-
-This change is backwards compatible as it only adds a new field at the top-level of the JSON and doesn't modify any existing fields.
+Added a new experimental interface `TaskContextEnricher` to enrich context with use case specific logic.
 
 [#16041](https://github.com/apache/druid/pull/16041)
 
