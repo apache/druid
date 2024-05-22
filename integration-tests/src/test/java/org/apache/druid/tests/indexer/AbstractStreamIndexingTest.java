@@ -230,6 +230,59 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
     }
   }
 
+  protected void doTestIndexDataHandoffEarly(
+      @Nullable Boolean transactionEnabled
+  ) throws Exception
+  {
+    final GeneratedTestConfig generatedTestConfig = new GeneratedTestConfig(
+        INPUT_FORMAT,
+        getResourceAsString(JSON_INPUT_FORMAT_PATH)
+    );
+    try (
+        final Closeable closer = createResourceCloser(generatedTestConfig);
+        final StreamEventWriter streamEventWriter = createStreamEventWriter(config, transactionEnabled)
+    ) {
+      final String taskSpec = generatedTestConfig.getStreamIngestionPropsTransform()
+          .apply(getResourceAsString(SUPERVISOR_WITH_IDLE_BEHAVIOUR_ENABLED_SPEC_TEMPLATE_PATH));
+      LOG.info("supervisorSpec: [%s]\n", taskSpec);
+      // Start supervisor
+      generatedTestConfig.setSupervisorId(indexer.submitSupervisor(taskSpec));
+      LOG.info("Submitted supervisor");
+
+      // Start generating half of the data
+      int secondsToGenerateRemaining = TOTAL_NUMBER_OF_SECOND;
+      int secondsToGenerateFirstRound = TOTAL_NUMBER_OF_SECOND / 2;
+      secondsToGenerateRemaining = secondsToGenerateRemaining - secondsToGenerateFirstRound;
+      final StreamGenerator streamGenerator = new WikipediaStreamEventStreamGenerator(
+          new JsonEventSerializer(jsonMapper),
+          EVENTS_PER_SECOND,
+          CYCLE_PADDING_MS
+      );
+      long numWritten = streamGenerator.run(
+          generatedTestConfig.getStreamName(),
+          streamEventWriter,
+          secondsToGenerateFirstRound,
+          FIRST_EVENT_TIME
+      );
+
+      // Trigger early handoff
+      indexer.handoffTaskGroupEarly(
+          generatedTestConfig.getFullDatasourceName(),
+          jsonMapper.writeValueAsString(ImmutableList.of(0, 1))
+      );
+
+      // Load the rest of the data
+      numWritten += streamGenerator.run(
+          generatedTestConfig.getStreamName(),
+          streamEventWriter,
+          secondsToGenerateRemaining,
+          FIRST_EVENT_TIME.plusSeconds(secondsToGenerateFirstRound)
+      );
+
+      verifyIngestedData(generatedTestConfig, numWritten);
+    }
+  }
+
   void doTestIndexDataWithLosingCoordinator(@Nullable Boolean transactionEnabled) throws Exception
   {
     testIndexWithLosingNodeHelper(
