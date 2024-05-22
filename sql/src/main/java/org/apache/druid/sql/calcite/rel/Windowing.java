@@ -125,7 +125,7 @@ public class Windowing
   {
     final Window window = Preconditions.checkNotNull(partialQuery.getWindow(), "window");
 
-    List<WindowComputationProcessor> wrapperObjs = new ArrayList<>();
+    List<WindowComputationProcessor> windowGroupProcessors = new ArrayList<>();
 
     final List<String> windowOutputColumns = new ArrayList<>(sourceRowSignature.getColumnNames());
     final String outputNamePrefix = Calcites.findUnusedPrefixForDigits("w", sourceRowSignature.getColumnNames());
@@ -203,7 +203,7 @@ public class Windowing
         throw new ISE("No processors from Window[%s], why was this code called?", window);
       }
 
-      wrapperObjs.add(new WindowComputationProcessor(group, new WindowOperatorFactory(
+      windowGroupProcessors.add(new WindowComputationProcessor(group, new WindowOperatorFactory(
           processors.size() == 1 ?
           processors.get(0) : new ComposingProcessor(processors.toArray(new Processor[0]))
       )));
@@ -221,10 +221,10 @@ public class Windowing
       priorSortColumns = computeSortColumnsFromRelCollation(priorCollation, sourceRowSignature);
     }
 
-    wrapperObjs.sort(MOVE_EMPTY_GROUPS_FIRST);
+    windowGroupProcessors.sort(MOVE_EMPTY_GROUPS_FIRST);
     ArrayList<OperatorFactory> ops = new ArrayList<>();
-    for (WindowComputationProcessor wrapperObj : wrapperObjs) {
-      final WindowGroup group = wrapperObj.getGroup();
+    for (WindowComputationProcessor windowComputationProcessor : windowGroupProcessors) {
+      final WindowGroup group = windowComputationProcessor.getGroup();
       final LinkedHashSet<ColumnWithDirection> sortColumns = new LinkedHashSet<>();
       for (String partitionColumn : group.getPartitionColumns()) {
         sortColumns.add(ColumnWithDirection.ascending(partitionColumn));
@@ -244,7 +244,7 @@ public class Windowing
         priorPartitionColumns = group.getPartitionColumns();
       }
 
-      ops.add(wrapperObj.getProcessorOperatorFactory());
+      ops.add(windowComputationProcessor.getProcessorOperatorFactory());
     }
 
     // Apply windowProject, if present.
