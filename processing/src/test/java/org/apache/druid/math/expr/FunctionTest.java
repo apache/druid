@@ -964,6 +964,8 @@ public class FunctionTest extends InitializedNullHandlingTest
   {
     assertExpr("left('hello', 0)", NullHandling.sqlCompatible() ? "" : null);
     assertExpr("left('hello', 2)", "he");
+    assertExpr("left('hello', '2')", "he");
+    assertExpr("left('hello', 'hello')", null);
     assertExpr("left('hello', 10)", "hello");
     assertExpr("left('hello', null)", null);
     assertExpr("left(31337, 2)", "31");
@@ -982,6 +984,8 @@ public class FunctionTest extends InitializedNullHandlingTest
   {
     assertExpr("right('hello', 0)", NullHandling.sqlCompatible() ? "" : null);
     assertExpr("right('hello', 2)", "lo");
+    assertExpr("right('hello', '2')", "lo");
+    assertExpr("right('hello', 'hello')", null);
     assertExpr("right('hello', 10)", "hello");
     assertExpr("right('hello', null)", null);
     assertExpr("right(31337, 2)", "37");
@@ -1000,6 +1004,8 @@ public class FunctionTest extends InitializedNullHandlingTest
   {
     assertExpr("repeat('hello', 0)", null);
     assertExpr("repeat('hello', 2)", "hellohello");
+    assertExpr("repeat('hello', '2')", "hellohello");
+    assertExpr("repeat('hello', 'hello')", null);
     assertExpr("repeat('hello', -1)", null);
     assertExpr("repeat('hello', null)", null);
     assertExpr("repeat(null, 10)", null);
