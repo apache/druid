@@ -107,53 +107,12 @@ You can now configure Druid to manage datasource schema centrally on the Coordin
 Previously, Brokers needed to query data nodes and tasks for segment schemas.
 Centralizing datasource schemas can improve startup time for Brokers and the efficiency of your deployment.
 
-If enabled, the following changes occur:
-
-- Realtime segment schema changes get periodically pushed to the Coordinator
-- Tasks publish segment schemas and metadata to the metadata store
-- The Coordinator polls the schema and segment metadata to build datasource schemas
-- Brokers fetch datasource schemas from the Coordinator when possible. If not, the Broker builds the schema itself by the existing mechanism of querying Historical services.
-
-This behavior is currently opt-in. To enable this feature, set the following configs:
+To enable this feature, set the following configs:
 
 - In your common runtime properties, set `druid.centralizedDatasourceSchema.enabled` to true.
 - If you are using MiddleManagers, you also need to set `druid.indexer.fork.property.druid.centralizedDatasourceSchema.enabled` to true in your MiddleManager runtime properties.
 
-You can return to the previous behavior by changing the configs to false.
-
-You can configure the following properties to control how the Coordinator service handles unused segment schemas:
-
-|Name|Description|Required|Default|
-|-|-|-|-|
-|`druid.coordinator.kill.segmentSchema.on`| Boolean value for enabling automatic deletion of unused segment schemas. If set to true, the Coordinator service periodically identifies segment schemas that are not referenced by any used segment and marks them as unused. At a later point, these unused schemas are deleted. | No | True|
-|`druid.coordinator.kill.segmentSchema.period`| How often to do automatic deletion of segment schemas in [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) duration format. Value must be equal to or greater than `druid.coordinator.period.metadataStoreManagementPeriod`. Only applies if `druid.coordinator.kill.segmentSchema.on` is set to true.| No| `P1D`|
-|`druid.coordinator.kill.segmentSchema.durationToRetain`| [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) duration for the time a segment schema is retained for from when it's marked as unused. Only applies if `druid.coordinator.kill.segmentSchema.on` is set to true.| Yes, if `druid.coordinator.kill.segmentSchema.on` is set to true.| `P90D`|
-
-In addition, there are new metrics available to monitor the performance of centralized schema management:
-
-- `metadatacache/schemaPoll/count`
-- `metadatacache/schemaPoll/failed`
-- `metadatacache/schemaPoll/time`
-- `metadacache/init/time`
-- `metadatacache/refresh/count`
-- `metadatacache/refresh/time`
-- `metadatacache/backfill/count`
-- `metadatacache/finalizedSegmentMetadata/size`
-- `metadatacache/finalizedSegmentMetadata/count`
-- `metadatacache/finalizedSchemaPayload/count`
-- `metadatacache/temporaryMetadataQueryResults/count`
-- `metadatacache/temporaryPublishedMetadataQueryResults/count`
-
-For more information, see [Metrics](../operations/metrics.md).
-
 [#15817](https://github.com/apache/druid/pull/15817)
-
-Also, note the following changes to the default values of segment schema cleanup:
-
-* The default value for `druid.coordinator.kill.segmentSchema.period` has changes from `PT1H` to `P1D`.
-* The default value for `druid.coordinator.kill.segmentSchema.durationToRetain` has changed from `PR6H` to `P90D`.
-
-[#16354](https://github.com/apache/druid/pull/16354)
 
 ### MSQ support for window functions
 
