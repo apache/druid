@@ -63,7 +63,6 @@ services:
       service: druid-historical
     environment:
       - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
-      - AWS_REGION=us-west-2
     depends_on:
       - druid-zookeeper-kafka
 
