@@ -7409,6 +7409,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
     );
 
     cannotVectorize();
+    msqIncompatible();
     testQuery(
         "SELECT "
         + "str, "
@@ -7474,6 +7475,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
     );
 
     cannotVectorize();
+    msqIncompatible();
     testQuery(
         "SELECT "
         + "long, "
@@ -7539,6 +7541,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
     );
 
     cannotVectorize();
+    msqIncompatible();
     testQuery(
         "SELECT "
         + "\"double\", "
