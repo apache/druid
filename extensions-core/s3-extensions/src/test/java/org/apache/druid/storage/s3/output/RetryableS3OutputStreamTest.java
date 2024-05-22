@@ -242,7 +242,9 @@ public class RetryableS3OutputStreamTest
             new IOE("Upload failure test. Remaining failures [%s]", --uploadFailuresLeft)
         );
       }
-      partRequests.add(request);
+      synchronized (partRequests) {
+        partRequests.add(request);
+      }
       UploadPartResult result = new UploadPartResult();
       result.setETag(StringUtils.format("etag-%s", request.getPartNumber()));
       result.setPartNumber(request.getPartNumber());
