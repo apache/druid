@@ -27,7 +27,6 @@ import com.amazonaws.services.s3.model.InitiateMultipartUploadResult;
 import com.amazonaws.services.s3.model.PartETag;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Stopwatch;
 import com.google.common.io.CountingOutputStream;
 import it.unimi.dsi.fastutil.io.FastBufferedOutputStream;
@@ -134,17 +133,6 @@ public class RetryableS3OutputStream extends OutputStream
       S3OutputConfig config,
       ServerSideEncryptingAmazonS3 s3,
       String s3Key
-  ) throws IOException
-  {
-    this(config, s3, s3Key, true);
-  }
-
-  @VisibleForTesting
-  protected RetryableS3OutputStream(
-      S3OutputConfig config,
-      ServerSideEncryptingAmazonS3 s3,
-      String s3Key,
-      boolean chunkValidation
   ) throws IOException
   {
     this.config = config;

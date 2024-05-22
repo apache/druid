@@ -109,8 +109,7 @@ public class RetryableS3OutputStreamTest
     try (RetryableS3OutputStream out = new RetryableS3OutputStream(
         config,
         s3,
-        path,
-        false
+        path
     )) {
       for (int i = 0; i < 25; i++) {
         bb.clear();
@@ -131,8 +130,7 @@ public class RetryableS3OutputStreamTest
     try (RetryableS3OutputStream out = new RetryableS3OutputStream(
         config,
         s3,
-        path,
-        false
+        path
     )) {
       bb.clear();
       bb.putInt(1);
@@ -152,8 +150,7 @@ public class RetryableS3OutputStreamTest
     try (RetryableS3OutputStream out = new RetryableS3OutputStream(
         config,
         s3,
-        path,
-        false
+        path
     )) {
       for (int i = 0; i < 600; i++) {
         out.write(i);
@@ -174,8 +171,7 @@ public class RetryableS3OutputStreamTest
     try (RetryableS3OutputStream out = new RetryableS3OutputStream(
         config,
         s3,
-        path,
-        false
+        path
     )) {
       for (int i = 0; i < 25; i++) {
         bb.clear();
@@ -197,8 +193,7 @@ public class RetryableS3OutputStreamTest
     try (RetryableS3OutputStream out = new RetryableS3OutputStream(
         config,
         s3,
-        path,
-        false
+        path
     )) {
       for (int i = 0; i < 2; i++) {
         bb.clear();
