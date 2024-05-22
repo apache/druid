@@ -217,11 +217,11 @@ public class MSQWindowTest extends MSQTestBase
                     .add("w1", ColumnType.DOUBLE)
                     .build(),
         ImmutableList.of(
+            new NaivePartitioningOperatorFactory(ImmutableList.of()),
+            new WindowOperatorFactory(proc1),
             new NaiveSortOperatorFactory(ImmutableList.of(ColumnWithDirection.ascending("d0"))),
             new NaivePartitioningOperatorFactory(ImmutableList.of("d0")),
-            new WindowOperatorFactory(proc),
-            new NaivePartitioningOperatorFactory(ImmutableList.of()),
-            new WindowOperatorFactory(proc1)
+            new WindowOperatorFactory(proc)
         ),
         null
     );
