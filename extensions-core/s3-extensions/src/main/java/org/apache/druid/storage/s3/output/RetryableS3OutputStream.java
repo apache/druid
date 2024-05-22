@@ -33,6 +33,7 @@ import com.google.common.io.CountingOutputStream;
 import it.unimi.dsi.fastutil.io.FastBufferedOutputStream;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.RetryUtils;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.storage.s3.S3Utils;
@@ -49,7 +50,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -128,7 +128,7 @@ public class RetryableS3OutputStream extends OutputStream
   /**
    * Threadpool used for uploading the chunks asynchronously.
    */
-  private static final ExecutorService UPLOAD_EXECUTOR = Executors.newFixedThreadPool(10);
+  private static final ExecutorService UPLOAD_EXECUTOR = Execs.multiThreaded(10, "UploadThreadPool-%d");
 
   public RetryableS3OutputStream(
       S3OutputConfig config,
