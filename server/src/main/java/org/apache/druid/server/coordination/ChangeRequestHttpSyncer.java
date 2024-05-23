@@ -27,7 +27,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RetryUtils;
@@ -96,7 +95,6 @@ public class ChangeRequestHttpSyncer<T>
   private final String logIdentity;
   private int consecutiveFailedAttemptCount = 0;
 
-  // All stopwatches are guarded by the startStopLock
   private final Stopwatch sinceSyncerStart = Stopwatch.createUnstarted();
   private final Stopwatch sinceLastSyncRequest = Stopwatch.createUnstarted();
   private final Stopwatch sinceLastSyncSuccess = Stopwatch.createUnstarted();
@@ -147,7 +145,7 @@ public class ChangeRequestHttpSyncer<T>
         startStopLock.exitStart();
       }
 
-      sinceSyncerStart.restart();
+      safeRestart(sinceSyncerStart);
       addNextSyncToWorkQueue();
     }
   }
@@ -237,11 +235,7 @@ public class ChangeRequestHttpSyncer<T>
       return;
     }
 
-    // Synchronized to tackle the remote possibility of two syncs trying to reset
-    // the stopwatch together
-    synchronized (startStopLock) {
-      sinceLastSyncRequest.restart();
-    }
+    safeRestart(sinceLastSyncRequest);
 
     try {
       final String req = getRequestString();
@@ -277,7 +271,7 @@ public class ChangeRequestHttpSyncer<T>
                   final int responseCode = responseHandler.getStatus();
                   if (responseCode == HttpServletResponse.SC_NO_CONTENT) {
                     log.debug("Received NO CONTENT from server[%s]", logIdentity);
-                    sinceLastSyncSuccess.restart();
+                    safeRestart(sinceLastSyncSuccess);
                     return;
                   } else if (responseCode != HttpServletResponse.SC_OK) {
                     handleFailure(new ISE("Received sync response [%d]", responseCode));
@@ -313,7 +307,7 @@ public class ChangeRequestHttpSyncer<T>
                     log.info("Server[%s] synced successfully.", logIdentity);
                   }
 
-                  sinceLastSyncSuccess.restart();
+                  safeRestart(sinceLastSyncSuccess);
                 }
                 catch (Exception ex) {
                   markServerUnstableAndAlert(ex, "Processing Response");
@@ -342,7 +336,6 @@ public class ChangeRequestHttpSyncer<T>
               }
             }
 
-            @GuardedBy("startStopLock")
             private void handleFailure(Throwable t)
             {
               String logMsg = StringUtils.format(
@@ -358,9 +351,7 @@ public class ChangeRequestHttpSyncer<T>
     }
     catch (Throwable th) {
       try {
-        synchronized (startStopLock) {
-          markServerUnstableAndAlert(th, "Sending Request");
-        }
+        markServerUnstableAndAlert(th, "Sending Request");
       }
       finally {
         addNextSyncToWorkQueue();
@@ -420,11 +411,17 @@ public class ChangeRequestHttpSyncer<T>
     }
   }
 
-  @GuardedBy("startStopLock")
+  private void safeRestart(Stopwatch stopwatch)
+  {
+    synchronized (startStopLock) {
+      stopwatch.restart();
+    }
+  }
+
   private void markServerUnstableAndAlert(Throwable throwable, String action)
   {
     if (consecutiveFailedAttemptCount++ == 0) {
-      sinceUnstable.restart();
+      safeRestart(sinceUnstable);
     }
 
     final long unstableSeconds = getUnstableTimeMillis() / 1000;
