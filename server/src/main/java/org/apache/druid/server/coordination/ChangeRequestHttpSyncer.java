@@ -96,7 +96,7 @@ public class ChangeRequestHttpSyncer<T>
   private final String logIdentity;
   private int consecutiveFailedAttemptCount = 0;
 
-  // All stopwatches are guarded by the the startStopLock
+  // All stopwatches are guarded by the startStopLock
   private final Stopwatch sinceSyncerStart = Stopwatch.createUnstarted();
   private final Stopwatch sinceLastSyncRequest = Stopwatch.createUnstarted();
   private final Stopwatch sinceLastSyncSuccess = Stopwatch.createUnstarted();

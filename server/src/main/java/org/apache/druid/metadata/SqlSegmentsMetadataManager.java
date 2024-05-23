@@ -1171,7 +1171,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
       log.info("No segments found in the database!");
     } else {
       log.info(
-          "Polled and found total [%,d] segments and [%,d] schema in the database in [%,d] ms.",
+          "Polled and found [%,d] segments and [%,d] schemas in the database in [%,d] ms.",
           segments.size(), schemaMap.size(), stopwatch.millisElapsed()
       );
     }
