@@ -534,9 +534,12 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
         );
       }
     }
-    if (tableMetadata == null) {
+    final boolean isCatalogValidationEnabled = plannerContext.queryContext().isCatalogValidationEnabled();
+    if (tableMetadata == null || !isCatalogValidationEnabled) {
       return sourceType;
     }
+
+    // disable sealed mode validation if catalog validation is disabled.
     final boolean isStrict = tableMetadata.isSealed();
     final List<Map.Entry<String, RelDataType>> fields = new ArrayList<>();
     for (RelDataTypeField sourceField : sourceFields) {
@@ -592,6 +595,8 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
     // matches above.
     final RelDataType targetType = typeFactory.createStructType(fields);
     final SqlValidatorTable target = insertNs.resolve().getTable();
+
+    // disable type checking if catalog validation is disabled.
     checkTypeAssignment(scope, target, sourceType, targetType, insert);
     return targetType;
   }
