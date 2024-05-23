@@ -111,12 +111,13 @@ public class LocalCatalog extends IcebergCatalog
     }
     LocalCatalog that = (LocalCatalog) o;
     return warehousePath.equals(that.warehousePath)
-           && Objects.equals(catalogProperties, that.catalogProperties);
+           && Objects.equals(catalogProperties, that.catalogProperties)
+           && Objects.equals(caseSensitive, that.caseSensitive);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(warehousePath, catalogProperties);
+    return Objects.hash(warehousePath, catalogProperties, caseSensitive);
   }
 }
