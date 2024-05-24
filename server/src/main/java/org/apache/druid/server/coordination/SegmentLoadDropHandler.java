@@ -203,14 +203,12 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
    */
   private void loadSegment(
       DataSegment segment,
-      boolean lazy,
       @Nullable ExecutorService loadSegmentIntoPageCacheExec
   ) throws SegmentLoadingException
   {
     try {
       segmentManager.loadSegment(
           segment,
-          lazy,
           () -> this.removeSegment(segment, DataSegmentChangeCallback.NOOP, false),
           loadSegmentIntoPageCacheExec
       );
@@ -254,7 +252,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
           segmentsToDelete.remove(segment);
         }
       }
-      loadSegment(segment, false, null);
+      loadSegment(segment, null);
       // announce segment even if the segment file already exists.
       try {
         announcer.announceSegment(segment);
@@ -288,17 +286,24 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     final List<DataSegment> segments = segmentManager.getCachedSegments();
 
     // Start a temporary thread pool to load segments into page cache during bootstrap
-    ExecutorService loadingExecutor = null;
-    ExecutorService loadSegmentsIntoPageCacheOnBootstrapExec =
-        config.getNumThreadsToLoadSegmentsIntoPageCacheOnBootstrap() != 0 ?
-        Execs.multiThreaded(config.getNumThreadsToLoadSegmentsIntoPageCacheOnBootstrap(),
-                            "Load-Segments-Into-Page-Cache-On-Bootstrap-%s") : null;
+    final ExecutorService loadingExecutor = Execs.multiThreaded(
+        config.getNumBootstrapThreads(), "Segment-Load-Startup-%s"
+    );
+
+    final ExecutorService loadSegmentsIntoPageCacheOnBootstrapExec;
+    if (config.getNumThreadsToLoadSegmentsIntoPageCacheOnBootstrap() != 0) {
+      loadSegmentsIntoPageCacheOnBootstrapExec = Execs.multiThreaded(
+          config.getNumThreadsToLoadSegmentsIntoPageCacheOnBootstrap(),
+          "Load-Segments-Into-Page-Cache-On-Bootstrap-%s"
+      );
+    } else {
+      loadSegmentsIntoPageCacheOnBootstrapExec = null;
+    }
+
     try (final BackgroundSegmentAnnouncer backgroundSegmentAnnouncer =
              new BackgroundSegmentAnnouncer(announcer, exec, config.getAnnounceIntervalMillis())) {
 
       backgroundSegmentAnnouncer.startAnnouncing();
-
-      loadingExecutor = Execs.multiThreaded(config.getNumBootstrapThreads(), "Segment-Load-Startup-%s");
 
       final int numSegments = segments.size();
       final CountDownLatch latch = new CountDownLatch(numSegments);
@@ -308,13 +313,20 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
         loadingExecutor.submit(
             () -> {
               try {
-                log.info(
-                    "Loading segment[%d/%d][%s]",
-                    counter.incrementAndGet(),
-                    numSegments,
-                    segment.getId()
-                );
-                loadSegment(segment, config.isLazyLoadOnStart(), loadSegmentsIntoPageCacheOnBootstrapExec);
+                try {
+                  log.info(
+                      "Loading segment[%d/%d][%s]",
+                      counter.incrementAndGet(), numSegments, segment.getId()
+                  );
+                  segmentManager.loadSegmentOnBootstrap(
+                      segment,
+                      () -> this.removeSegment(segment, DataSegmentChangeCallback.NOOP, false)
+                  );
+                }
+                catch (Exception e) {
+                  removeSegment(segment, DataSegmentChangeCallback.NOOP, false);
+                  throw new SegmentLoadingException(e, "Exception loading segment[%s]", segment.getId());
+                }
                 try {
                   backgroundSegmentAnnouncer.announceSegment(segment);
                 }

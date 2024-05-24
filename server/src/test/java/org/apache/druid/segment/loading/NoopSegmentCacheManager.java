@@ -23,6 +23,7 @@ import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.timeline.DataSegment;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -57,8 +58,18 @@ public class NoopSegmentCacheManager implements SegmentCacheManager
     throw new UnsupportedOperationException();
   }
 
+  @Nullable
   @Override
-  public ReferenceCountingSegment getSegment(DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback loadFailed)
+  public ReferenceCountingSegment getSegment(DataSegment segment, SegmentLazyLoadFailCallback loadFailed)
+      throws SegmentLoadingException
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Nullable
+  @Override
+  public ReferenceCountingSegment getBootstrapSegment(DataSegment segment, SegmentLazyLoadFailCallback loadFailed)
+      throws SegmentLoadingException
   {
     throw new UnsupportedOperationException();
   }
@@ -94,7 +105,13 @@ public class NoopSegmentCacheManager implements SegmentCacheManager
   }
 
   @Override
-  public void loadSegmentIntoPageCache(DataSegment segment, ExecutorService exec)
+  public void loadSegmentIntoPageCache(DataSegment segment)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public void loadSegmentIntoPageCacheOnBootstrap(DataSegment segment)
   {
     throw new UnsupportedOperationException();
   }

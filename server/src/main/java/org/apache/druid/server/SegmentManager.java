@@ -240,11 +240,79 @@ public class SegmentManager
                    .orElseThrow(() -> new ISE("Cannot handle datasource: %s", analysis.getBaseDataSource()));
   }
 
+  public boolean loadSegmentOnBootstrap(
+      final DataSegment dataSegment,
+      SegmentLazyLoadFailCallback loadFailed
+  ) throws SegmentLoadingException, IOException
+  {
+    final ReferenceCountingSegment segmentAdapter;
+    try {
+      segmentAdapter = cacheManager.getBootstrapSegment(dataSegment, loadFailed);
+      if (segmentAdapter == null) {
+        throw new SegmentLoadingException("Null segmentAdapter from loadSpec[%s]", dataSegment.getLoadSpec());
+      }
+    }
+    catch (SegmentLoadingException e) {
+      cacheManager.cleanup(dataSegment);
+      throw e;
+    }
+
+    final SettableSupplier<Boolean> resultSupplier = new SettableSupplier<>();
+
+    // compute() is used to ensure that the operation for a data source is executed atomically
+    dataSources.compute(
+        dataSegment.getDataSource(),
+        (k, v) -> {
+          final DataSourceState dataSourceState = v == null ? new DataSourceState() : v;
+          final VersionedIntervalTimeline<String, ReferenceCountingSegment> loadedIntervals =
+              dataSourceState.getTimeline();
+          final PartitionChunk<ReferenceCountingSegment> entry = loadedIntervals.findChunk(
+              dataSegment.getInterval(),
+              dataSegment.getVersion(),
+              dataSegment.getShardSpec().getPartitionNum()
+          );
+
+          if (entry != null) {
+            log.warn("Told to load an segmentAdapter for segmentAdapter[%s] that already exists", segmentAdapter.getId());
+            resultSupplier.set(false);
+          } else {
+            IndexedTable table = segmentAdapter.as(IndexedTable.class);
+            if (table != null) {
+              if (dataSourceState.isEmpty() || dataSourceState.numSegments == dataSourceState.tablesLookup.size()) {
+                dataSourceState.tablesLookup.put(segmentAdapter.getId(), new ReferenceCountingIndexedTable(table));
+              } else {
+                log.error("Cannot load segmentAdapter[%s] with IndexedTable, no existing segments are joinable", segmentAdapter.getId());
+              }
+            } else if (dataSourceState.tablesLookup.size() > 0) {
+              log.error("Cannot load segmentAdapter[%s] without IndexedTable, all existing segments are joinable", segmentAdapter.getId());
+            }
+            loadedIntervals.add(
+                dataSegment.getInterval(),
+                dataSegment.getVersion(),
+                dataSegment.getShardSpec().createChunk(segmentAdapter)
+            );
+            StorageAdapter storageAdapter = segmentAdapter.asStorageAdapter();
+            long numOfRows = (dataSegment.isTombstone() || storageAdapter == null) ? 0 : storageAdapter.getNumRows();
+            dataSourceState.addSegment(dataSegment, numOfRows);
+            // Asyncly load segmentAdapter index files into page cache in a thread pool
+            cacheManager.loadSegmentIntoPageCacheOnBootstrap(dataSegment);
+            resultSupplier.set(true);
+          }
+
+          return dataSourceState;
+        }
+    );
+    final boolean loadResult = resultSupplier.get();
+    if (loadResult) {
+      cacheManager.storeInfoFile(dataSegment);
+    }
+    return loadResult;
+  }
+
   /**
    * Load a single segment.
    *
    * @param segment segment to load
-   * @param lazy    whether to lazy load columns metadata
    * @param loadFailed callBack to execute when segment lazy load failed
    * @param loadSegmentIntoPageCacheExec If null is specified, the default thread pool in segment loader to load
    *                                     segments into page cache on download will be used. You can specify a dedicated
@@ -257,12 +325,11 @@ public class SegmentManager
    */
   public boolean loadSegment(
       final DataSegment segment,
-      boolean lazy,
       SegmentLazyLoadFailCallback loadFailed,
       ExecutorService loadSegmentIntoPageCacheExec
   ) throws SegmentLoadingException, IOException
   {
-    final ReferenceCountingSegment adapter = getSegmentReference(segment, lazy, loadFailed);
+    final ReferenceCountingSegment adapter = getSegmentReference(segment, loadFailed);
 
     final SettableSupplier<Boolean> resultSupplier = new SettableSupplier<>();
 
@@ -303,7 +370,7 @@ public class SegmentManager
             long numOfRows = (segment.isTombstone() || storageAdapter == null) ? 0 : storageAdapter.getNumRows();
             dataSourceState.addSegment(segment, numOfRows);
             // Asyncly load segment index files into page cache in a thread pool
-            cacheManager.loadSegmentIntoPageCache(segment, loadSegmentIntoPageCacheExec);
+            cacheManager.loadSegmentIntoPageCache(segment);
             resultSupplier.set(true);
           }
 
@@ -317,11 +384,14 @@ public class SegmentManager
     return loadResult;
   }
 
-  private ReferenceCountingSegment getSegmentReference(final DataSegment dataSegment, boolean lazy, SegmentLazyLoadFailCallback loadFailed) throws SegmentLoadingException
+  private ReferenceCountingSegment getSegmentReference(
+      final DataSegment dataSegment,
+      SegmentLazyLoadFailCallback loadFailed
+  ) throws SegmentLoadingException
   {
     final ReferenceCountingSegment segment;
     try {
-      segment = cacheManager.getSegment(dataSegment, lazy, loadFailed);
+      segment = cacheManager.getSegment(dataSegment, loadFailed);
       if (segment == null) {
         throw new SegmentLoadingException("Null adapter from loadSpec[%s]", dataSegment.getLoadSpec());
       }

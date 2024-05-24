@@ -75,10 +75,22 @@ public interface SegmentCacheManager
   @Nullable
   ReferenceCountingSegment getSegment(
       DataSegment segment,
-      boolean lazy,
       SegmentLazyLoadFailCallback loadFailed
   ) throws SegmentLoadingException;
 
+
+  /**
+   *
+   * @param segment
+   * @param loadFailed
+   * @return
+   * @throws SegmentLoadingException
+   */
+  @Nullable
+  ReferenceCountingSegment getBootstrapSegment(
+      DataSegment segment,
+      SegmentLazyLoadFailCallback loadFailed
+  ) throws SegmentLoadingException;
 
   /**
    * Checks whether a segment is already cached. It can return false even if {@link #reserve(DataSegment)}
@@ -130,7 +142,11 @@ public interface SegmentCacheManager
    * instead of a major page fault to make the query latency more consistent.
    *
    * @param segment The segment to load its index files into page cache
-   * @param exec The thread pool to use
    */
-  void loadSegmentIntoPageCache(DataSegment segment, ExecutorService exec);
+  void loadSegmentIntoPageCache(DataSegment segment);
+
+  /**
+   *
+   */
+  void loadSegmentIntoPageCacheOnBootstrap(DataSegment segment);
 }

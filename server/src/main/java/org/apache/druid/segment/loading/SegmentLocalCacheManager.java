@@ -95,6 +95,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   private final IndexIO indexIO;
 
   private ExecutorService loadSegmentsIntoPageCacheOnDownloadExec = null;
+  private ExecutorService loadSegmentsIntoPageCacheOnBootstrapExec = null;
 
   // Note that we only create this via injection in historical and realtime nodes. Peons create these
   // objects via SegmentCacheManagerFactory objects, so that they can store segments in task-specific
@@ -121,6 +122,15 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
           Execs.makeThreadFactory("LoadSegmentsIntoPageCacheOnDownload-%s"));
       log.info("Size of thread pool to load segments into page cache on download [%d]",
                config.getNumThreadsToLoadSegmentsIntoPageCacheOnDownload());
+    }
+
+    if (config.getNumThreadsToLoadSegmentsIntoPageCacheOnBootstrap() != 0) {
+      loadSegmentsIntoPageCacheOnBootstrapExec = Execs.multiThreaded(
+          config.getNumThreadsToLoadSegmentsIntoPageCacheOnBootstrap(),
+          "Load-Segments-Into-Page-Cache-On-Bootstrap-%s"
+      );
+      log.info("Size of thread pool to load segments into page cache on bootstrap [%d]",
+               config.getNumThreadsToLoadSegmentsIntoPageCacheOnBootstrap());
     }
   }
 
@@ -227,7 +237,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   }
 
   @Override
-  public ReferenceCountingSegment getSegment(DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback loadFailed) throws SegmentLoadingException
+  public ReferenceCountingSegment getSegment(DataSegment segment, SegmentLazyLoadFailCallback loadFailed) throws SegmentLoadingException
   {
     final File segmentFiles = getSegmentFiles(segment);
     final File factoryJson = new File(segmentFiles, "factory.json");
@@ -244,7 +254,30 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       factory = new MMappedQueryableSegmentizerFactory(indexIO);
     }
 
-    Segment segmentObject = factory.factorize(segment, segmentFiles, lazy, loadFailed);
+    Segment segmentObject = factory.factorize(segment, segmentFiles, false, loadFailed);
+
+    return ReferenceCountingSegment.wrapSegment(segmentObject, segment.getShardSpec());
+  }
+
+  @Override
+  public ReferenceCountingSegment getBootstrapSegment(DataSegment segment, SegmentLazyLoadFailCallback loadFailed) throws SegmentLoadingException
+  {
+    final File segmentFiles = getSegmentFiles(segment);
+    final File factoryJson = new File(segmentFiles, "factory.json");
+    final SegmentizerFactory factory;
+
+    if (factoryJson.exists()) {
+      try {
+        factory = jsonMapper.readValue(factoryJson, SegmentizerFactory.class);
+      }
+      catch (IOException e) {
+        throw new SegmentLoadingException(e, "%s", e.getMessage());
+      }
+    } else {
+      factory = new MMappedQueryableSegmentizerFactory(indexIO);
+    }
+
+    Segment segmentObject = factory.factorize(segment, segmentFiles, config.isLazyLoadOnStart(), loadFailed);
 
     return ReferenceCountingSegment.wrapSegment(segmentObject, segment.getShardSpec());
   }
@@ -582,14 +615,63 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   }
 
   @Override
-  public void loadSegmentIntoPageCache(DataSegment segment, ExecutorService exec)
+  public void loadSegmentIntoPageCache(DataSegment segment)
   {
-    ExecutorService execToUse = exec != null ? exec : loadSegmentsIntoPageCacheOnDownloadExec;
-    if (execToUse == null) {
+    if (loadSegmentsIntoPageCacheOnDownloadExec == null) {
       return;
     }
 
-    execToUse.submit(
+    loadSegmentsIntoPageCacheOnDownloadExec.submit(
+        () -> {
+          final ReferenceCountingLock lock = createOrGetLock(segment);
+          synchronized (lock) {
+            try {
+              for (StorageLocation location : locations) {
+                File localStorageDir = new File(location.getPath(), DataSegmentPusher.getDefaultStorageDir(segment, false));
+                if (localStorageDir.exists()) {
+                  File baseFile = location.getPath();
+                  if (localStorageDir.equals(baseFile)) {
+                    continue;
+                  }
+
+                  log.info("Loading directory[%s] into page cache", localStorageDir);
+
+                  File[] children = localStorageDir.listFiles();
+                  if (children != null) {
+                    for (File child : children) {
+                      InputStream in = null;
+                      try {
+                        in = new FileInputStream(child);
+                        IOUtils.copy(in, new NullOutputStream());
+
+                        log.info("Loaded [%s] into page cache", child.getAbsolutePath());
+                      }
+                      catch (Exception e) {
+                        log.error("Failed to load [%s] into page cache, [%s]", child.getAbsolutePath(), e.getMessage());
+                      }
+                      finally {
+                        IOUtils.closeQuietly(in);
+                      }
+                    }
+                  }
+                }
+              }
+            }
+            finally {
+              unlock(segment, lock);
+            }
+          }
+        }
+    );
+  }
+
+  @Override
+  public void loadSegmentIntoPageCacheOnBootstrap(DataSegment segment)
+  {
+    if (loadSegmentsIntoPageCacheOnBootstrapExec == null) {
+      return;
+    }
+    loadSegmentsIntoPageCacheOnBootstrapExec.submit(
         () -> {
           final ReferenceCountingLock lock = createOrGetLock(segment);
           synchronized (lock) {

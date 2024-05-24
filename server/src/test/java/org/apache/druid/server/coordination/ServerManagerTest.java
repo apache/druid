@@ -147,7 +147,6 @@ public class ServerManagerTest
       @Override
       public ReferenceCountingSegment getSegment(
           final DataSegment segment,
-          boolean lazy,
           SegmentLazyLoadFailCallback SegmentLazyLoadFailCallback
       )
       {
@@ -730,7 +729,6 @@ public class ServerManagerTest
                 IndexIO.CURRENT_VERSION_ID,
                 1L
             ),
-            false,
             SegmentLazyLoadFailCallback.NOOP,
             null
         ));
@@ -748,7 +746,6 @@ public class ServerManagerTest
                     IndexIO.CURRENT_VERSION_ID,
                     1L
                 ),
-                false,
                 SegmentLazyLoadFailCallback.NOOP,
                 null
             )

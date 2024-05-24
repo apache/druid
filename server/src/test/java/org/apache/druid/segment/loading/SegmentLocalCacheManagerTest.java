@@ -142,7 +142,7 @@ public class SegmentLocalCacheManagerTest
     );
     FileUtils.mkdirp(segmentFile);
     // should not throw any exception
-    manager.loadSegmentIntoPageCache(segment, null);
+    manager.loadSegmentIntoPageCache(segment);
   }
 
   @Test
@@ -155,7 +155,7 @@ public class SegmentLocalCacheManagerTest
     );
     FileUtils.mkdirp(segmentFile);
     // should not throw any exception
-    manager.loadSegmentIntoPageCache(segment, Executors.newSingleThreadExecutor());
+    manager.loadSegmentIntoPageCache(segment);
   }
 
   @Test
