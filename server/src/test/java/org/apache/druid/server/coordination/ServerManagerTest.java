@@ -75,7 +75,6 @@ import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.join.JoinableFactoryWrapperTest;
@@ -145,10 +144,7 @@ public class ServerManagerTest
     )
     {
       @Override
-      public ReferenceCountingSegment getSegment(
-          final DataSegment segment,
-          SegmentLazyLoadFailCallback SegmentLazyLoadFailCallback
-      )
+      public ReferenceCountingSegment getSegment(final DataSegment segment)
       {
         if (segment.isTombstone()) {
           return ReferenceCountingSegment
@@ -728,8 +724,7 @@ public class ServerManagerTest
                 TombstoneShardSpec.INSTANCE,
                 IndexIO.CURRENT_VERSION_ID,
                 1L
-            ),
-            SegmentLazyLoadFailCallback.NOOP
+            )
         );
       } else {
         segmentManager.loadSegment(
@@ -743,8 +738,7 @@ public class ServerManagerTest
                 NoneShardSpec.instance(),
                 IndexIO.CURRENT_VERSION_ID,
                 1L
-            ),
-            SegmentLazyLoadFailCallback.NOOP
+            )
         );
       }
     }

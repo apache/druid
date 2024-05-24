@@ -131,7 +131,7 @@ public class SegmentManagerThreadSafetyTest
         .range(0, 16)
         .mapToObj(i -> exec.submit(() -> {
           try {
-            segmentManager.loadSegment(segment, SegmentLazyLoadFailCallback.NOOP);
+            segmentManager.loadSegment(segment);
           }
           catch (SegmentLoadingException | IOException e) {
             throw new RuntimeException(e);
@@ -161,7 +161,7 @@ public class SegmentManagerThreadSafetyTest
         .mapToObj(i -> exec.submit(() -> {
           for (DataSegment segment : segments) {
             try {
-              segmentManager.loadSegment(segment, SegmentLazyLoadFailCallback.NOOP);
+              segmentManager.loadSegment(segment);
             }
             catch (SegmentLoadingException | IOException e) {
               throw new RuntimeException(e);

@@ -28,7 +28,6 @@ import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.segment.ReferenceCountingSegment;
-import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
@@ -124,7 +123,7 @@ public class SegmentManagerTest
   public void testDropSegment() throws SegmentLoadingException, ExecutionException, InterruptedException, IOException
   {
     for (DataSegment eachSegment : SEGMENTS) {
-      segmentManager.loadSegment(eachSegment, SegmentLazyLoadFailCallback.NOOP);
+      segmentManager.loadSegment(eachSegment);
     }
 
     final List<Future<Void>> futures = ImmutableList.of(SEGMENTS.get(0), SEGMENTS.get(2)).stream()
@@ -150,10 +149,7 @@ public class SegmentManagerTest
   private Void loadSegmentOrFail(DataSegment segment)
   {
     try {
-      segmentManager.loadSegment(
-          segment,
-          SegmentLazyLoadFailCallback.NOOP
-      );
+      segmentManager.loadSegment(segment);
     }
     catch (IOException | SegmentLoadingException e) {
       throw new RuntimeException(e);
@@ -165,8 +161,8 @@ public class SegmentManagerTest
   public void testLoadDropSegment()
       throws SegmentLoadingException, ExecutionException, InterruptedException, IOException
   {
-    segmentManager.loadSegment(SEGMENTS.get(0), SegmentLazyLoadFailCallback.NOOP);
-    segmentManager.loadSegment(SEGMENTS.get(2), SegmentLazyLoadFailCallback.NOOP);
+    segmentManager.loadSegment(SEGMENTS.get(0));
+    segmentManager.loadSegment(SEGMENTS.get(2));
 
     final List<Future<Void>> loadFutures = ImmutableList.of(SEGMENTS.get(1), SEGMENTS.get(3), SEGMENTS.get(4))
                                                      .stream()
@@ -201,10 +197,10 @@ public class SegmentManagerTest
   public void testLoadDuplicatedSegmentsSequentially() throws SegmentLoadingException, IOException
   {
     for (DataSegment segment : SEGMENTS) {
-      segmentManager.loadSegment(segment, SegmentLazyLoadFailCallback.NOOP);
+      segmentManager.loadSegment(segment);
     }
     // try to load an existing segment
-    segmentManager.loadSegment(SEGMENTS.get(0), SegmentLazyLoadFailCallback.NOOP);
+    segmentManager.loadSegment(SEGMENTS.get(0));
 
     assertResult(SEGMENTS);
   }
@@ -232,7 +228,7 @@ public class SegmentManagerTest
   @Test
   public void testNonExistingSegmentsSequentially() throws SegmentLoadingException, IOException
   {
-    segmentManager.loadSegment(SEGMENTS.get(0), SegmentLazyLoadFailCallback.NOOP);
+    segmentManager.loadSegment(SEGMENTS.get(0));
 
     // try to drop a non-existing segment of different data source
     segmentManager.dropSegment(SEGMENTS.get(2));
@@ -243,7 +239,7 @@ public class SegmentManagerTest
   public void testNonExistingSegmentsInParallel()
       throws SegmentLoadingException, ExecutionException, InterruptedException, IOException
   {
-    segmentManager.loadSegment(SEGMENTS.get(0), SegmentLazyLoadFailCallback.NOOP);
+    segmentManager.loadSegment(SEGMENTS.get(0));
     final List<Future<Void>> futures = ImmutableList.of(SEGMENTS.get(1), SEGMENTS.get(2))
                                                     .stream()
                                                     .map(
@@ -266,7 +262,7 @@ public class SegmentManagerTest
   @Test
   public void testRemoveEmptyTimeline() throws SegmentLoadingException, IOException
   {
-    segmentManager.loadSegment(SEGMENTS.get(0), SegmentLazyLoadFailCallback.NOOP);
+    segmentManager.loadSegment(SEGMENTS.get(0));
     assertResult(ImmutableList.of(SEGMENTS.get(0)));
     Assert.assertEquals(1, segmentManager.getDataSources().size());
     segmentManager.dropSegment(SEGMENTS.get(0));
@@ -303,7 +299,7 @@ public class SegmentManagerTest
         10
     );
 
-    segmentManager.loadSegment(segment, SegmentLazyLoadFailCallback.NOOP);
+    segmentManager.loadSegment(segment);
     assertResult(ImmutableList.of(segment));
 
     segmentManager.dropSegment(segment);

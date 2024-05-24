@@ -230,16 +230,12 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
         }
       }
       try {
-        segmentManager.loadSegment(
-            segment,
-            () -> this.removeSegment(segment, DataSegmentChangeCallback.NOOP, false)
-        );
+        segmentManager.loadSegment(segment);
       }
       catch (Exception e) {
         removeSegment(segment, DataSegmentChangeCallback.NOOP, false);
         throw new SegmentLoadingException(e, "Exception loading segment[%s]", segment.getId());
       }
-      // announce segment even if the segment file already exists.
       try {
         announcer.announceSegment(segment);
       }
@@ -275,16 +271,6 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     final ExecutorService loadingExecutor = Execs.multiThreaded(
         config.getNumBootstrapThreads(), "Segment-Load-Startup-%s"
     );
-
-    final ExecutorService loadSegmentsIntoPageCacheOnBootstrapExec;
-    if (config.getNumThreadsToLoadSegmentsIntoPageCacheOnBootstrap() != 0) {
-      loadSegmentsIntoPageCacheOnBootstrapExec = Execs.multiThreaded(
-          config.getNumThreadsToLoadSegmentsIntoPageCacheOnBootstrap(),
-          "Load-Segments-Into-Page-Cache-On-Bootstrap-%s"
-      );
-    } else {
-      loadSegmentsIntoPageCacheOnBootstrapExec = null;
-    }
 
     try (final BackgroundSegmentAnnouncer backgroundSegmentAnnouncer =
              new BackgroundSegmentAnnouncer(announcer, exec, config.getAnnounceIntervalMillis())) {
@@ -356,11 +342,6 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     finally {
       if (loadingExecutor != null) {
         loadingExecutor.shutdownNow();
-      }
-      if (loadSegmentsIntoPageCacheOnBootstrapExec != null) {
-        // At this stage, all tasks have been submitted, send a shutdown command to the bootstrap
-        // thread pool so threads will exit after finishing the tasks
-        loadSegmentsIntoPageCacheOnBootstrapExec.shutdown();
       }
       stopwatch.stop();
       log.info("Cache load of [%d] bootstrap segments took [%,d]ms.", segments.size(), stopwatch.millisElapsed());

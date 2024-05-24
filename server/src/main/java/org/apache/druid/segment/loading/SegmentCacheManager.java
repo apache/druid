@@ -73,8 +73,7 @@ public interface SegmentCacheManager
    */
   @Nullable
   ReferenceCountingSegment getSegment(
-      DataSegment segment,
-      SegmentLazyLoadFailCallback loadFailed
+      DataSegment segment
   ) throws SegmentLoadingException;
 
 

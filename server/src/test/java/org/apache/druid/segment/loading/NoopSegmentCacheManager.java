@@ -59,8 +59,7 @@ public class NoopSegmentCacheManager implements SegmentCacheManager
 
   @Nullable
   @Override
-  public ReferenceCountingSegment getSegment(DataSegment segment, SegmentLazyLoadFailCallback loadFailed)
-      throws SegmentLoadingException
+  public ReferenceCountingSegment getSegment(DataSegment segment)
   {
     throw new UnsupportedOperationException();
   }
@@ -68,7 +67,6 @@ public class NoopSegmentCacheManager implements SegmentCacheManager
   @Nullable
   @Override
   public ReferenceCountingSegment getBootstrapSegment(DataSegment segment, SegmentLazyLoadFailCallback loadFailed)
-      throws SegmentLoadingException
   {
     throw new UnsupportedOperationException();
   }

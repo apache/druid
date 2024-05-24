@@ -243,25 +243,12 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   }
 
   @Override
-  public ReferenceCountingSegment getSegment(DataSegment segment, SegmentLazyLoadFailCallback loadFailed) throws SegmentLoadingException
+  public ReferenceCountingSegment getSegment(DataSegment segment) throws SegmentLoadingException
   {
     final File segmentFiles = getSegmentFiles(segment);
-    final File factoryJson = new File(segmentFiles, "factory.json");
-    final SegmentizerFactory factory;
+    final SegmentizerFactory factory = getSegmentFactory(segmentFiles);
 
-    if (factoryJson.exists()) {
-      try {
-        factory = jsonMapper.readValue(factoryJson, SegmentizerFactory.class);
-      }
-      catch (IOException e) {
-        throw new SegmentLoadingException(e, "%s", e.getMessage());
-      }
-    } else {
-      factory = new MMappedQueryableSegmentizerFactory(indexIO);
-    }
-
-    Segment segmentObject = factory.factorize(segment, segmentFiles, false, loadFailed);
-
+    final Segment segmentObject = factory.factorize(segment, segmentFiles, false, SegmentLazyLoadFailCallback.NOOP);
     return ReferenceCountingSegment.wrapSegment(segmentObject, segment.getShardSpec());
   }
 
@@ -269,6 +256,14 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   public ReferenceCountingSegment getBootstrapSegment(DataSegment segment, SegmentLazyLoadFailCallback loadFailed) throws SegmentLoadingException
   {
     final File segmentFiles = getSegmentFiles(segment);
+    final SegmentizerFactory factory = getSegmentFactory(segmentFiles);
+
+    final Segment segmentObject = factory.factorize(segment, segmentFiles, config.isLazyLoadOnStart(), loadFailed);
+    return ReferenceCountingSegment.wrapSegment(segmentObject, segment.getShardSpec());
+  }
+
+  private SegmentizerFactory getSegmentFactory(final File segmentFiles) throws SegmentLoadingException
+  {
     final File factoryJson = new File(segmentFiles, "factory.json");
     final SegmentizerFactory factory;
 
@@ -277,15 +272,12 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
         factory = jsonMapper.readValue(factoryJson, SegmentizerFactory.class);
       }
       catch (IOException e) {
-        throw new SegmentLoadingException(e, "%s", e.getMessage());
+        throw new SegmentLoadingException(e, "Failed to get segment facotry for %s", e.getMessage());
       }
     } else {
       factory = new MMappedQueryableSegmentizerFactory(indexIO);
     }
-
-    Segment segmentObject = factory.factorize(segment, segmentFiles, config.isLazyLoadOnStart(), loadFailed);
-
-    return ReferenceCountingSegment.wrapSegment(segmentObject, segment.getShardSpec());
+    return factory;
   }
 
   private File getInfoDir()

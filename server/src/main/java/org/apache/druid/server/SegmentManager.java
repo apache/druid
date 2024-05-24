@@ -240,7 +240,13 @@ public class SegmentManager
   }
 
   /**
-   * Load a single segment on bootstrap. It uses
+   * Bootstrap load the supplied segment. If the segment was already loaded previously, this method does nothing.
+   *
+   * @param dataSegment segment to bootstrap
+   * @param loadFailed callback to execute when segment lazy load failed. This applies only
+   *                  when lazy loading is enabled.
+   *
+   * @throws SegmentLoadingException if the segment cannot be loaded
    */
   public void loadSegmentOnBootstrap(
       final DataSegment dataSegment,
@@ -251,14 +257,53 @@ public class SegmentManager
     try {
       segmentAdapter = cacheManager.getBootstrapSegment(dataSegment, loadFailed);
       if (segmentAdapter == null) {
-        throw new SegmentLoadingException("Null segmentAdapter from loadSpec[%s]", dataSegment.getLoadSpec());
+        throw new SegmentLoadingException(
+            "No segment adapter found for bootstrap segment[%s] with loadSpec[%s].",
+            dataSegment.getId(), dataSegment.getLoadSpec()
+        );
       }
     }
     catch (SegmentLoadingException e) {
       cacheManager.cleanup(dataSegment);
       throw e;
     }
+    loadSegment(dataSegment, segmentAdapter, true);
+  }
 
+  /**
+   * Load the supplied segment. If the segment was already loaded previously, this method does nothing.
+   * Unlike {@link #loadSegmentOnBootstrap(DataSegment, SegmentLazyLoadFailCallback)} this method doesn't accept a lazy
+   * load fail callback because it doesn't support lazy loading.
+   *
+   * @param dataSegment segment to load
+   *
+   * @throws SegmentLoadingException if the segment cannot be loaded
+   */
+  public void loadSegment(final DataSegment dataSegment) throws SegmentLoadingException, IOException
+  {
+    final ReferenceCountingSegment segmentAdapter;
+    try {
+      segmentAdapter = cacheManager.getSegment(dataSegment);
+      if (segmentAdapter == null) {
+        throw new SegmentLoadingException(
+            "No segment adapter found for segment[%s] with loadSpec[%s].",
+            dataSegment.getId(), dataSegment.getLoadSpec()
+        );
+      }
+    }
+    catch (SegmentLoadingException e) {
+      cacheManager.cleanup(dataSegment);
+      throw e;
+    }
+    loadSegment(dataSegment, segmentAdapter, false);
+  }
+
+  private void loadSegment(
+      final DataSegment dataSegment,
+      final ReferenceCountingSegment segmentAdapter,
+      final boolean isBootstrap
+  ) throws IOException
+  {
     final SettableSupplier<Boolean> resultSupplier = new SettableSupplier<>();
 
     // compute() is used to ensure that the operation for a data source is executed atomically
@@ -275,7 +320,7 @@ public class SegmentManager
           );
 
           if (entry != null) {
-            log.warn("Told to load an segmentAdapter for segmentAdapter[%s] that already exists", segmentAdapter.getId());
+            log.warn("Told to load an adapter for segment[%s] that already exists", dataSegment.getId());
             resultSupplier.set(false);
           } else {
             IndexedTable table = segmentAdapter.as(IndexedTable.class);
@@ -296,8 +341,12 @@ public class SegmentManager
             StorageAdapter storageAdapter = segmentAdapter.asStorageAdapter();
             long numOfRows = (dataSegment.isTombstone() || storageAdapter == null) ? 0 : storageAdapter.getNumRows();
             dataSourceState.addSegment(dataSegment, numOfRows);
-            // Asyncly load segmentAdapter index files into page cache in a thread pool
-            cacheManager.loadSegmentIntoPageCacheOnBootstrap(dataSegment);
+
+            if (isBootstrap) {
+              cacheManager.loadSegmentIntoPageCacheOnBootstrap(dataSegment);
+            } else {
+              cacheManager.loadSegmentIntoPageCache(dataSegment);
+            }
             resultSupplier.set(true);
           }
 
@@ -308,91 +357,6 @@ public class SegmentManager
     if (loadResult) {
       cacheManager.storeInfoFile(dataSegment);
     }
-  }
-
-  /**
-   * Load a single segment. If the segment was already loaded, it does nothing.
-   *
-   * @param segment segment to load
-   * @param loadFailed callBack to execute when segment lazy load failed
-   *
-   * @throws SegmentLoadingException if the segment cannot be loaded
-   */
-  public void loadSegment(
-      final DataSegment segment,
-      SegmentLazyLoadFailCallback loadFailed
-  ) throws SegmentLoadingException, IOException
-  {
-    final ReferenceCountingSegment adapter = getSegmentReference(segment, loadFailed);
-
-    final SettableSupplier<Boolean> resultSupplier = new SettableSupplier<>();
-
-    // compute() is used to ensure that the operation for a data source is executed atomically
-    dataSources.compute(
-        segment.getDataSource(),
-        (k, v) -> {
-          final DataSourceState dataSourceState = v == null ? new DataSourceState() : v;
-          final VersionedIntervalTimeline<String, ReferenceCountingSegment> loadedIntervals =
-              dataSourceState.getTimeline();
-          final PartitionChunk<ReferenceCountingSegment> entry = loadedIntervals.findChunk(
-              segment.getInterval(),
-              segment.getVersion(),
-              segment.getShardSpec().getPartitionNum()
-          );
-
-          if (entry != null) {
-            log.warn("Told to load an adapter for segment[%s] that already exists", segment.getId());
-            resultSupplier.set(false);
-          } else {
-
-            IndexedTable table = adapter.as(IndexedTable.class);
-            if (table != null) {
-              if (dataSourceState.isEmpty() || dataSourceState.numSegments == dataSourceState.tablesLookup.size()) {
-                dataSourceState.tablesLookup.put(segment.getId(), new ReferenceCountingIndexedTable(table));
-              } else {
-                log.error("Cannot load segment[%s] with IndexedTable, no existing segments are joinable", segment.getId());
-              }
-            } else if (dataSourceState.tablesLookup.size() > 0) {
-              log.error("Cannot load segment[%s] without IndexedTable, all existing segments are joinable", segment.getId());
-            }
-            loadedIntervals.add(
-                segment.getInterval(),
-                segment.getVersion(),
-                segment.getShardSpec().createChunk(adapter)
-            );
-            StorageAdapter storageAdapter = adapter.asStorageAdapter();
-            long numOfRows = (segment.isTombstone() || storageAdapter == null) ? 0 : storageAdapter.getNumRows();
-            dataSourceState.addSegment(segment, numOfRows);
-            // Asyncly load segment index files into page cache in a thread pool
-            cacheManager.loadSegmentIntoPageCache(segment);
-            resultSupplier.set(true);
-          }
-
-          return dataSourceState;
-        }
-    );
-    if (resultSupplier.get()) {
-      cacheManager.storeInfoFile(segment);
-    }
-  }
-
-  private ReferenceCountingSegment getSegmentReference(
-      final DataSegment dataSegment,
-      SegmentLazyLoadFailCallback loadFailed
-  ) throws SegmentLoadingException
-  {
-    final ReferenceCountingSegment segment;
-    try {
-      segment = cacheManager.getSegment(dataSegment, loadFailed);
-      if (segment == null) {
-        throw new SegmentLoadingException("Null adapter from loadSpec[%s]", dataSegment.getLoadSpec());
-      }
-    }
-    catch (SegmentLoadingException e) {
-      cacheManager.cleanup(dataSegment);
-      throw e;
-    }
-    return segment;
   }
 
   public void dropSegment(final DataSegment segment)
