@@ -42,6 +42,7 @@ import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
@@ -407,12 +408,24 @@ public class CompactSegmentsTest
         DataSegment afterNoon = createSegment(dataSourceName, j, false, k);
         if (j == 3) {
           // Make two intervals on this day compacted (two compacted intervals back-to-back)
-          beforeNoon = beforeNoon.withLastCompactionState(new CompactionState(partitionsSpec, null, null, null, ImmutableMap.of(), ImmutableMap.of()));
-          afterNoon = afterNoon.withLastCompactionState(new CompactionState(partitionsSpec, null, null, null, ImmutableMap.of(), ImmutableMap.of()));
+          beforeNoon = beforeNoon.withLastCompactionState(new CompactionState(partitionsSpec, null,
+                                                                              Collections.emptyMap(),
+                                                                              null, null, ImmutableMap.of(), ImmutableMap.of(),
+                                                                              CompactionEngine.NATIVE
+          ));
+          afterNoon = afterNoon.withLastCompactionState(new CompactionState(partitionsSpec, null,
+                                                                            Collections.emptyMap(),
+                                                                            null, null, ImmutableMap.of(), ImmutableMap.of(),
+                                                                            CompactionEngine.NATIVE
+          ));
         }
         if (j == 1) {
           // Make one interval on this day compacted
-          afterNoon = afterNoon.withLastCompactionState(new CompactionState(partitionsSpec, null, null, null, ImmutableMap.of(), ImmutableMap.of()));
+          afterNoon = afterNoon.withLastCompactionState(new CompactionState(partitionsSpec, null,
+                                                                            Collections.emptyMap(),
+                                                                            null, null, ImmutableMap.of(), ImmutableMap.of(),
+                                                                            CompactionEngine.NATIVE
+          ));
         }
         segments.add(beforeNoon);
         segments.add(afterNoon);
@@ -1797,7 +1810,8 @@ public class CompactSegmentsTest
                 compactionConfigs,
                 numCompactionTaskSlots == null ? null : 1.0, // 100% when numCompactionTaskSlots is not null
                 numCompactionTaskSlots,
-                useAutoScaleSlots
+                useAutoScaleSlots,
+                null
             )
         )
         .build();
@@ -2108,7 +2122,7 @@ public class CompactSegmentsTest
                 clientCompactionTaskQuery.getDimensionsSpec() == null ? null : new DimensionsSpec(
                     clientCompactionTaskQuery.getDimensionsSpec().getDimensions()
                 ),
-                metricsSpec,
+                Collections.emptyMap(), metricsSpec,
                 transformSpec,
                 ImmutableMap.of(
                     "bitmap",
@@ -2120,7 +2134,8 @@ public class CompactSegmentsTest
                     "longEncoding",
                     "longs"
                 ),
-                ImmutableMap.of()
+                ImmutableMap.of(),
+                CompactionEngine.NATIVE
             ),
             1,
             segmentSize

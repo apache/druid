@@ -35,7 +35,7 @@ import org.apache.druid.msq.counters.CounterSnapshotsSerializer;
 import org.apache.druid.msq.counters.SegmentGenerationProgressCounter;
 import org.apache.druid.msq.counters.SuperSorterProgressTrackerCounter;
 import org.apache.druid.msq.counters.WarningCounters;
-import org.apache.druid.msq.indexing.MSQCompactionStrategy;
+import org.apache.druid.msq.indexing.MSQCompactionRunner;
 import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.msq.indexing.MSQWorkerTask;
 import org.apache.druid.msq.indexing.error.BroadcastTablesTooLargeFault;
@@ -199,7 +199,7 @@ public class MSQIndexingModule implements DruidModule
         NilInputSource.class
     );
 
-    module.registerSubtypes(new NamedType(MSQCompactionStrategy.class, MSQCompactionStrategy.TYPE));
+    module.registerSubtypes(new NamedType(MSQCompactionRunner.class, MSQCompactionRunner.type));
 
     FAULT_CLASSES.forEach(module::registerSubtypes);
     module.addSerializer(new CounterSnapshotsSerializer());

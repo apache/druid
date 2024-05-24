@@ -32,6 +32,7 @@ import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
@@ -160,7 +161,6 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        getSegmentCacheManagerFactory(),
         RETRY_POLICY_FACTORY
     );
     final CompactionTask compactionTask = builder
@@ -185,7 +185,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
       CompactionState expectedState = new CompactionState(
           new DynamicPartitionsSpec(null, Long.MAX_VALUE),
           new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
-          ImmutableList.of(expectedLongSumMetric),
+          Collections.emptyMap(), ImmutableList.of(expectedLongSumMetric),
           null,
           compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper()),
           getObjectMapper().readValue(
@@ -198,7 +198,8 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
                   )
               ),
               Map.class
-          )
+          ),
+          CompactionEngine.NATIVE
       );
       Assert.assertEquals("Compaction state for " + segment.getId(), expectedState, segment.getLastCompactionState());
     }
@@ -215,7 +216,6 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        getSegmentCacheManagerFactory(),
         RETRY_POLICY_FACTORY
     );
     final CompactionTask compactionTask = builder
@@ -236,7 +236,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
       CompactionState expectedState = new CompactionState(
           new HashedPartitionsSpec(null, 3, null),
           new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
-          ImmutableList.of(expectedLongSumMetric),
+          Collections.emptyMap(), ImmutableList.of(expectedLongSumMetric),
           null,
           compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper()),
           getObjectMapper().readValue(
@@ -249,7 +249,8 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
                   )
               ),
               Map.class
-          )
+          ),
+          CompactionEngine.NATIVE
       );
       Assert.assertEquals("Compaction state for " + segment.getId(), expectedState, segment.getLastCompactionState());
     }
@@ -281,7 +282,6 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        getSegmentCacheManagerFactory(),
         RETRY_POLICY_FACTORY
     );
     final CompactionTask compactionTask = builder
@@ -302,7 +302,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
       CompactionState expectedState = new CompactionState(
           new SingleDimensionPartitionsSpec(7, null, "dim", false),
           new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
-          ImmutableList.of(expectedLongSumMetric),
+          Collections.emptyMap(), ImmutableList.of(expectedLongSumMetric),
           null,
           compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper()),
           getObjectMapper().readValue(
@@ -315,7 +315,8 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
                   )
               ),
               Map.class
-          )
+          ),
+          CompactionEngine.NATIVE
       );
       Assert.assertEquals("Compaction state for " + segment.getId(), expectedState, segment.getLastCompactionState());
     }
@@ -332,7 +333,6 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        getSegmentCacheManagerFactory(),
         RETRY_POLICY_FACTORY
     );
 
@@ -363,7 +363,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
       CompactionState expectedState = new CompactionState(
           new SingleDimensionPartitionsSpec(7, null, "dim", false),
           new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
-          ImmutableList.of(expectedLongSumMetric),
+          Collections.emptyMap(), ImmutableList.of(expectedLongSumMetric),
           null,
           compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper()),
           getObjectMapper().readValue(
@@ -378,7 +378,8 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
                   )
               ),
               Map.class
-          )
+          ),
+          CompactionEngine.NATIVE
       );
       Assert.assertEquals("Compaction state for " + segment.getId(), expectedState, segment.getLastCompactionState());
     }
@@ -395,7 +396,6 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        getSegmentCacheManagerFactory(),
         RETRY_POLICY_FACTORY
     );
     final CompactionTask compactionTask = builder
@@ -419,7 +419,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
       CompactionState expectedState = new CompactionState(
           new DimensionRangePartitionsSpec(7, null, Arrays.asList("dim1", "dim2"), false),
           new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
-          ImmutableList.of(expectedLongSumMetric),
+          Collections.emptyMap(), ImmutableList.of(expectedLongSumMetric),
           null,
           compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper()),
           getObjectMapper().readValue(
@@ -432,7 +432,8 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
                   )
               ),
               Map.class
-          )
+          ),
+          CompactionEngine.NATIVE
       );
       Assert.assertEquals("Compaction state for " + segment.getId(), expectedState, segment.getLastCompactionState());
     }
@@ -449,7 +450,6 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        getSegmentCacheManagerFactory(),
         RETRY_POLICY_FACTORY
     );
     final CompactionTask compactionTask = builder
@@ -470,7 +470,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
       CompactionState expectedState = new CompactionState(
           new SingleDimensionPartitionsSpec(7, null, "dim", false),
           new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
-          ImmutableList.of(expectedLongSumMetric),
+          Collections.emptyMap(), ImmutableList.of(expectedLongSumMetric),
           null,
           compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper()),
           getObjectMapper().readValue(
@@ -483,7 +483,8 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
                   )
               ),
               Map.class
-          )
+          ),
+          CompactionEngine.NATIVE
       );
       Assert.assertEquals("Compaction state for " + segment.getId(), expectedState, segment.getLastCompactionState());
     }
@@ -500,7 +501,6 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        getSegmentCacheManagerFactory(),
         RETRY_POLICY_FACTORY
     );
     final CompactionTask compactionTask = builder
@@ -524,7 +524,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
       CompactionState expectedState = new CompactionState(
           new DimensionRangePartitionsSpec(7, null, Arrays.asList("dim1", "dim2"), false),
           new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
-          ImmutableList.of(expectedLongSumMetric),
+          Collections.emptyMap(), ImmutableList.of(expectedLongSumMetric),
           null,
           compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper()),
           getObjectMapper().readValue(
@@ -537,7 +537,8 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
                   )
               ),
               Map.class
-          )
+          ),
+          CompactionEngine.NATIVE
       );
       Assert.assertEquals("Compaction state for " + segment.getId(), expectedState, segment.getLastCompactionState());
     }
@@ -551,7 +552,6 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        getSegmentCacheManagerFactory(),
         RETRY_POLICY_FACTORY
     );
     final CompactionTask compactionTask = builder
@@ -582,7 +582,6 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        getSegmentCacheManagerFactory(),
         RETRY_POLICY_FACTORY
     );
     final CompactionTask compactionTask = builder
@@ -609,7 +608,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
       CompactionState expectedState = new CompactionState(
           new DynamicPartitionsSpec(null, Long.MAX_VALUE),
           new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
-          ImmutableList.of(expectedLongSumMetric),
+          Collections.emptyMap(), ImmutableList.of(expectedLongSumMetric),
           getObjectMapper().readValue(
               getObjectMapper().writeValueAsString(compactionTask.getTransformSpec()),
               Map.class
@@ -625,7 +624,8 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
                   )
               ),
               Map.class
-          )
+          ),
+          CompactionEngine.NATIVE
       );
       Assert.assertEquals("Compaction state for " + segment.getId(), expectedState, segment.getLastCompactionState());
     }
@@ -639,7 +639,6 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        getSegmentCacheManagerFactory(),
         RETRY_POLICY_FACTORY
     );
     final CompactionTask compactionTask = builder
@@ -672,7 +671,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
       CompactionState expectedState = new CompactionState(
           new DynamicPartitionsSpec(null, Long.MAX_VALUE),
           new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
-          ImmutableList.of(expectedCountMetric, expectedLongSumMetric),
+          Collections.emptyMap(), ImmutableList.of(expectedCountMetric, expectedLongSumMetric),
           getObjectMapper().readValue(
               getObjectMapper().writeValueAsString(compactionTask.getTransformSpec()),
               Map.class
@@ -688,7 +687,8 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
                   )
               ),
               Map.class
-          )
+          ),
+          CompactionEngine.NATIVE
       );
       Assert.assertEquals("Compaction state for " + segment.getId(), expectedState, segment.getLastCompactionState());
     }
@@ -702,7 +702,6 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
     runIndexTask(null, true);
     final Builder builder = new Builder(
         DATA_SOURCE,
-        getSegmentCacheManagerFactory(),
         RETRY_POLICY_FACTORY
     );
     final CompactionTask compactionTask = builder
@@ -752,7 +751,6 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
     runIndexTask(null, true);
     final Builder builder = new Builder(
         DATA_SOURCE,
-        getSegmentCacheManagerFactory(),
         RETRY_POLICY_FACTORY
     );
     final CompactionTask compactionTask = builder
@@ -844,7 +842,6 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        getSegmentCacheManagerFactory(),
         RETRY_POLICY_FACTORY
     );
     final CompactionTask compactionTask = builder
@@ -891,7 +888,6 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        getSegmentCacheManagerFactory(),
         RETRY_POLICY_FACTORY
     );
     final CompactionTask compactionTask = builder

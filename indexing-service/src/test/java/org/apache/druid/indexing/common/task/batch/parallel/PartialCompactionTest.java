@@ -241,7 +241,6 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
   {
     return new Builder(
         DATASOURCE,
-        getSegmentCacheManagerFactory(),
         RETRY_POLICY_FACTORY
     );
   }

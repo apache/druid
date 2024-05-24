@@ -22,6 +22,7 @@ package org.apache.druid.server.coordinator;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.indexer.CompactionEngine;
 
 import javax.annotation.Nullable;
@@ -52,7 +53,8 @@ public class CoordinatorCompactionConfig
         compactionConfigs,
         baseConfig.compactionTaskSlotRatio,
         baseConfig.maxCompactionTaskSlots,
-        baseConfig.useAutoScaleSlots
+        baseConfig.useAutoScaleSlots,
+        null
     );
   }
 
@@ -67,18 +69,19 @@ public class CoordinatorCompactionConfig
         baseConfig.compactionConfigs,
         compactionTaskSlotRatio == null ? baseConfig.compactionTaskSlotRatio : compactionTaskSlotRatio,
         maxCompactionTaskSlots == null ? baseConfig.maxCompactionTaskSlots : maxCompactionTaskSlots,
-        useAutoScaleSlots == null ? baseConfig.useAutoScaleSlots : useAutoScaleSlots
+        useAutoScaleSlots == null ? baseConfig.useAutoScaleSlots : useAutoScaleSlots,
+        null
     );
   }
 
   public static CoordinatorCompactionConfig from(List<DataSourceCompactionConfig> compactionConfigs)
   {
-    return new CoordinatorCompactionConfig(compactionConfigs, null, null, null);
+    return new CoordinatorCompactionConfig(compactionConfigs, null, null, null, null);
   }
 
   public static CoordinatorCompactionConfig empty()
   {
-    return new CoordinatorCompactionConfig(ImmutableList.of(), null, null, null);
+    return new CoordinatorCompactionConfig(ImmutableList.of(), null, null, null, null);
   }
 
   @JsonCreator
@@ -86,18 +89,15 @@ public class CoordinatorCompactionConfig
       @JsonProperty("compactionConfigs") List<DataSourceCompactionConfig> compactionConfigs,
       @JsonProperty("compactionTaskSlotRatio") @Nullable Double compactionTaskSlotRatio,
       @JsonProperty("maxCompactionTaskSlots") @Nullable Integer maxCompactionTaskSlots,
-      @JsonProperty("useAutoScaleSlots") @Nullable Boolean useAutoScaleSlots
+      @JsonProperty("useAutoScaleSlots") @Nullable Boolean useAutoScaleSlots,
+      @JsonProperty("compactionEngine") @Nullable CompactionEngine compactionEngine
   )
   {
     this.compactionConfigs = compactionConfigs;
-    this.compactionTaskSlotRatio = compactionTaskSlotRatio == null ?
-                                   DEFAULT_COMPACTION_TASK_RATIO :
-                                   compactionTaskSlotRatio;
-    this.maxCompactionTaskSlots = maxCompactionTaskSlots == null ?
-                                  DEFAULT_MAX_COMPACTION_TASK_SLOTS :
-                                  maxCompactionTaskSlots;
-    this.useAutoScaleSlots = useAutoScaleSlots == null ? DEFAULT_USE_AUTO_SCALE_SLOTS : useAutoScaleSlots;
-    this.compactionEngine = DEFAULT_COMPACTION_ENGINE;
+    this.compactionTaskSlotRatio = Configs.valueOrDefault(compactionTaskSlotRatio, DEFAULT_COMPACTION_TASK_RATIO);
+    this.maxCompactionTaskSlots = Configs.valueOrDefault(maxCompactionTaskSlots, DEFAULT_MAX_COMPACTION_TASK_SLOTS);
+    this.useAutoScaleSlots = Configs.valueOrDefault(useAutoScaleSlots, DEFAULT_USE_AUTO_SCALE_SLOTS);
+    this.compactionEngine = Configs.valueOrDefault(compactionEngine, DEFAULT_COMPACTION_ENGINE);
   }
 
   @JsonProperty
@@ -150,8 +150,12 @@ public class CoordinatorCompactionConfig
   @Override
   public int hashCode()
   {
-    return Objects.hash(compactionConfigs, compactionTaskSlotRatio, maxCompactionTaskSlots, useAutoScaleSlots,
-                        compactionEngine
+    return Objects.hash(
+        compactionConfigs,
+        compactionTaskSlotRatio,
+        maxCompactionTaskSlots,
+        useAutoScaleSlots,
+        compactionEngine
     );
   }
 
@@ -163,7 +167,7 @@ public class CoordinatorCompactionConfig
            ", compactionTaskSlotRatio=" + compactionTaskSlotRatio +
            ", maxCompactionTaskSlots=" + maxCompactionTaskSlots +
            ", useAutoScaleSlots=" + useAutoScaleSlots +
-           ", engine=" + compactionEngine +
+           ", compactionEngine=" + compactionEngine +
            '}';
   }
 }

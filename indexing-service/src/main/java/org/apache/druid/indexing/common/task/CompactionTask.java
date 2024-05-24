@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.common.task;
 
-import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -42,20 +41,17 @@ import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
-import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexer.Checks;
 import org.apache.druid.indexer.Property;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
-import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.IndexTask.IndexTuningConfig;
-import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTask;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -158,14 +154,9 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
   @Nullable
   private final CompactionTuningConfig tuningConfig;
   @Nullable
-  private final CompactionStrategy compactionStrategy;
+  private final CompactionRunner compactionRunner;
   @JsonIgnore
   private final SegmentProvider segmentProvider;
-  @JsonIgnore
-  private final PartitionConfigurationManager partitionConfigurationManager;
-  @JsonIgnore
-  private final SegmentCacheManagerFactory segmentCacheManagerFactory;
-
   @JsonIgnore
   private final CurrentSubTaskHolder currentSubTaskHolder;
 
@@ -185,8 +176,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       @JsonProperty("granularitySpec") @Nullable final ClientCompactionTaskGranularitySpec granularitySpec,
       @JsonProperty("tuningConfig") @Nullable final TuningConfig tuningConfig,
       @JsonProperty("context") @Nullable final Map<String, Object> context,
-      @JsonProperty("compactionStrategy") final CompactionStrategy compactionStrategy,
-      @JacksonInject SegmentCacheManagerFactory segmentCacheManagerFactory
+      @JsonProperty("compactionRunner") final CompactionRunner compactionRunner
   )
   {
     super(
@@ -238,10 +228,8 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     }
     this.tuningConfig = tuningConfig != null ? getTuningConfig(tuningConfig) : null;
     this.segmentProvider = new SegmentProvider(dataSource, this.ioConfig.getInputSpec());
-    this.partitionConfigurationManager = new PartitionConfigurationManager(this.tuningConfig);
-    this.compactionStrategy = compactionStrategy;
-    this.segmentCacheManagerFactory = segmentCacheManagerFactory;
-    this.currentSubTaskHolder = compactionStrategy.getCurrentSubTaskHolder();
+    this.compactionRunner = compactionRunner;
+    this.currentSubTaskHolder = compactionRunner.getCurrentSubTaskHolder();
   }
 
   @VisibleForTesting
@@ -349,16 +337,6 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     return dimensionsSpec;
   }
 
-  public PartitionConfigurationManager getPartitionConfigurationManager()
-  {
-    return partitionConfigurationManager;
-  }
-
-  public SegmentCacheManagerFactory getSegmentCacheManagerFactory()
-  {
-    return segmentCacheManagerFactory;
-  }
-
   @JsonProperty
   @Nullable
   public ClientCompactionTaskTransformSpec getTransformSpec()
@@ -391,15 +369,15 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
 
   @Nullable
   @JsonProperty
-  public ParallelIndexTuningConfig getTuningConfig()
+  public CompactionTuningConfig getTuningConfig()
   {
     return tuningConfig;
   }
 
   @JsonProperty
-  public CompactionStrategy getCompactionStrategy()
+  public CompactionRunner getCompactionRunner()
   {
-    return compactionStrategy;
+    return compactionRunner;
   }
 
   @Override
@@ -487,17 +465,16 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
         getMetricBuilder()
     );
 
-    if (compactionStrategy == null) {
-      // Can only happen for MSQ engine, when the json subtype reqd for deserialization isn't available due to
-      // missing extn.
-      throw DruidException.forPersona(DruidException.Persona.ADMIN)
-                          .ofCategory(DruidException.Category.NOT_FOUND)
-                          .build(
-                              "Extension[druid-multi-stage-query] required for running compaction on MSQ "
-                              + "not found on the Indexer.");
+    registerResourceCloserOnAbnormalExit(compactionRunner.getCurrentSubTaskHolder());
+    Pair<Boolean, String> supportsCompactionConfig = compactionRunner.supportsCompactionConfig(this);
+    if (!supportsCompactionConfig.lhs) {
+      throw InvalidInput.exception(
+          "Compaction config for engine[%s] not supported[%s]",
+          compactionRunner.getType(),
+          supportsCompactionConfig.rhs
+      );
     }
-    registerResourceCloserOnAbnormalExit(currentSubTaskHolder);
-    return compactionStrategy.runCompactionTasks(this, toolbox, intervalDataSchemas);
+    return compactionRunner.runCompactionTasks(this, intervalDataSchemas, toolbox);
   }
 
   /**
@@ -1041,39 +1018,9 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     }
   }
 
-  @VisibleForTesting
-  static class PartitionConfigurationManager
-  {
-    @Nullable
-    private final CompactionTuningConfig tuningConfig;
-
-    PartitionConfigurationManager(@Nullable CompactionTuningConfig tuningConfig)
-    {
-      this.tuningConfig = tuningConfig;
-    }
-
-    @Nullable
-    CompactionTuningConfig computeTuningConfig()
-    {
-      CompactionTuningConfig newTuningConfig = tuningConfig == null
-                                               ? CompactionTuningConfig.defaultConfig()
-                                               : tuningConfig;
-      PartitionsSpec partitionsSpec = newTuningConfig.getGivenOrDefaultPartitionsSpec();
-      if (partitionsSpec instanceof DynamicPartitionsSpec) {
-        final DynamicPartitionsSpec dynamicPartitionsSpec = (DynamicPartitionsSpec) partitionsSpec;
-        partitionsSpec = new DynamicPartitionsSpec(
-            dynamicPartitionsSpec.getMaxRowsPerSegment(),
-            dynamicPartitionsSpec.getMaxTotalRowsOr(DynamicPartitionsSpec.DEFAULT_COMPACTION_MAX_TOTAL_ROWS)
-        );
-      }
-      return newTuningConfig.withPartitionsSpec(partitionsSpec);
-    }
-  }
-
   public static class Builder
   {
     private final String dataSource;
-    private final SegmentCacheManagerFactory segmentCacheManagerFactory;
     private final RetryPolicyFactory retryPolicyFactory;
 
     private CompactionIOConfig ioConfig;
@@ -1091,16 +1038,14 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     private TuningConfig tuningConfig;
     @Nullable
     private Map<String, Object> context;
-    private CompactionStrategy compactionStrategy;
+    private CompactionRunner compactionRunner;
 
     public Builder(
         String dataSource,
-        SegmentCacheManagerFactory segmentCacheManagerFactory,
         RetryPolicyFactory retryPolicyFactory
     )
     {
       this.dataSource = dataSource;
-      this.segmentCacheManagerFactory = segmentCacheManagerFactory;
       this.retryPolicyFactory = retryPolicyFactory;
     }
 
@@ -1174,9 +1119,9 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       return this;
     }
 
-    public Builder compactionStrategy(CompactionStrategy compactionStrategy)
+    public Builder compactionRunner(CompactionRunner compactionRunner)
     {
-      this.compactionStrategy = compactionStrategy;
+      this.compactionRunner = compactionRunner;
       return this;
     }
 
@@ -1197,8 +1142,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
           granularitySpec,
           tuningConfig,
           context,
-          compactionStrategy,
-          segmentCacheManagerFactory
+          compactionRunner
       );
     }
   }

@@ -207,7 +207,7 @@ public class DataSourceCompactionConfig
            Arrays.equals(metricsSpec, that.metricsSpec) &&
            Objects.equals(transformSpec, that.transformSpec) &&
            Objects.equals(ioConfig, that.ioConfig) &&
-           Objects.equals(compactionEngine, that.compactionEngine) &&
+           this.compactionEngine == that.compactionEngine &&
            Objects.equals(taskContext, that.taskContext);
   }
 
@@ -238,56 +238,28 @@ public class DataSourceCompactionConfig
   )
   {
     CompactionEngine newCompactionEngine = newConfig.getEngine();
-    String engineSourceLog = "specified in spec";
+    String engineSource = "specified in spec";
     if (newCompactionEngine == null) {
       newCompactionEngine = defaultCompactionEngine;
-      engineSourceLog = "set as default";
+      engineSource = "set as default";
+      newConfig = new DataSourceCompactionConfig(
+          newConfig.getDataSource(),
+          newConfig.getTaskPriority(),
+          newConfig.getInputSegmentSizeBytes(),
+          newConfig.getMaxRowsPerSegment(),
+          newConfig.getSkipOffsetFromLatest(),
+          newConfig.getTuningConfig(),
+          newConfig.getGranularitySpec(),
+          newConfig.getDimensionsSpec(),
+          newConfig.getMetricsSpec(),
+          newConfig.getTransformSpec(),
+          newConfig.getIoConfig(),
+          newCompactionEngine,
+          newConfig.getTaskContext()
+      );
     }
-    if (newCompactionEngine == CompactionEngine.MSQ) {
-      if (newConfig.getTuningConfig() != null) {
-        PartitionsSpec partitionsSpec = newConfig.getTuningConfig().getPartitionsSpec();
 
-        if (partitionsSpec != null && !(partitionsSpec instanceof DimensionRangePartitionsSpec
-                                        || partitionsSpec instanceof DynamicPartitionsSpec)) {
-          throw InvalidInput.exception(
-              "Invalid partition spec type[%s] for MSQ compaction engine[%s]."
-              + " Type must be either DynamicPartitionsSpec or DynamicRangePartitionsSpec.",
-              partitionsSpec.getClass(),
-              engineSourceLog
-          );
-        }
-        if (partitionsSpec instanceof DynamicPartitionsSpec
-            && ((DynamicPartitionsSpec) partitionsSpec).getMaxTotalRows() != null) {
-          throw InvalidInput.exception(
-              "maxTotalRows[%d] in DynamicPartitionsSpec not supported for MSQ compaction engine %s.",
-              ((DynamicPartitionsSpec) partitionsSpec).getMaxTotalRows(), engineSourceLog
-          );
-        }
-      }
-      if (newConfig.getMetricsSpec() != null
-          && newConfig.getGranularitySpec() != null
-          && !newConfig.getGranularitySpec()
-                       .isRollup()) {
-        throw InvalidInput.exception("rollup in granularitySpec must be set to True if metricsSpec is specifed.");
-      }
-    }
-    if (newCompactionEngine == newConfig.getEngine()) {
-      return newConfig;
-    }
-    return new DataSourceCompactionConfig(
-        newConfig.getDataSource(),
-        newConfig.getTaskPriority(),
-        newConfig.getInputSegmentSizeBytes(),
-        newConfig.getMaxRowsPerSegment(),
-        newConfig.getSkipOffsetFromLatest(),
-        newConfig.getTuningConfig(),
-        newConfig.getGranularitySpec(),
-        newConfig.getDimensionsSpec(),
-        newConfig.getMetricsSpec(),
-        newConfig.getTransformSpec(),
-        newConfig.getIoConfig(),
-        newCompactionEngine, newConfig.getTaskContext()
-    );
+    ClientCompactionRunnerInfo.supportsCompactionConfig(newConfig, engineSource);
+    return newConfig;
   }
-
 }

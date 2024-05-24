@@ -19,11 +19,14 @@
 
 package org.apache.druid.indexing.common.task;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JacksonInject;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
+import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.TaskToolbox;
@@ -34,6 +37,7 @@ import org.apache.druid.indexing.input.DruidInputSource;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.NonnullPair;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -43,6 +47,7 @@ import org.apache.druid.utils.CollectionUtils;
 import org.codehaus.jackson.annotate.JsonCreator;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -50,33 +55,44 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-public class NativeCompactionStrategy implements CompactionStrategy
+public class NativeCompactionRunner implements CompactionRunner
 {
-  private static final Logger log = new Logger(NativeCompactionStrategy.class);
-  public static final String TYPE = "NATIVE";
+  private static final Logger log = new Logger(NativeCompactionRunner.class);
+  public static final String type = "NATIVE";
   private static final boolean STORE_COMPACTION_STATE = true;
+  @JsonIgnore
+  private final SegmentCacheManagerFactory segmentCacheManagerFactory;
+  @JsonIgnore
+  private final CurrentSubTaskHolder currentSubTaskHolder = new CurrentSubTaskHolder(
+      (taskObject, config) -> {
+        final ParallelIndexSupervisorTask indexTask = (ParallelIndexSupervisorTask) taskObject;
+        indexTask.stopGracefully(config);
+      });
 
   @JsonCreator
-  public NativeCompactionStrategy()
+  public NativeCompactionRunner(@JacksonInject SegmentCacheManagerFactory segmentCacheManagerFactory)
   {
+    this.segmentCacheManagerFactory = segmentCacheManagerFactory;
   }
 
   @Override
   public CurrentSubTaskHolder getCurrentSubTaskHolder()
   {
-    return new CurrentSubTaskHolder(
-        (taskObject, config) -> {
-          final ParallelIndexSupervisorTask indexTask = (ParallelIndexSupervisorTask) taskObject;
-          indexTask.stopGracefully(config);
-        }
-    );
+    return currentSubTaskHolder;
   }
 
   @Override
-  @JsonProperty("TYPE")
+  public Pair<Boolean, String> supportsCompactionConfig(
+      CompactionTask compactionTask
+  )
+  {
+    return Pair.of(true, null);
+  }
+
+  @Override
   public String getType()
   {
-    return TYPE;
+    return type;
   }
 
   /**
@@ -89,7 +105,7 @@ public class NativeCompactionStrategy implements CompactionStrategy
       List<NonnullPair<Interval, DataSchema>> dataschemas,
       final TaskToolbox toolbox,
       final CompactionIOConfig ioConfig,
-      final CompactionTask.PartitionConfigurationManager partitionConfigurationManager,
+      final PartitionConfigurationManager partitionConfigurationManager,
       final CoordinatorClient coordinatorClient,
       final SegmentCacheManagerFactory segmentCacheManagerFactory
   )
@@ -167,17 +183,21 @@ public class NativeCompactionStrategy implements CompactionStrategy
   @Override
   public TaskStatus runCompactionTasks(
       CompactionTask compactionTask,
-      TaskToolbox taskToolbox,
-      List<NonnullPair<Interval, DataSchema>> dataSchemas
-  ) throws JsonProcessingException
+      List<NonnullPair<Interval, DataSchema>> dataSchemas,
+      TaskToolbox taskToolbox
+  ) throws Exception
   {
+    final PartitionConfigurationManager partitionConfigurationManager =
+        new NativeCompactionRunner.PartitionConfigurationManager(compactionTask.getTuningConfig());
+
+
     final List<ParallelIndexIngestionSpec> ingestionSpecs = createIngestionSpecs(
         dataSchemas,
         taskToolbox,
         compactionTask.getIoConfig(),
-        compactionTask.getPartitionConfigurationManager(),
+        partitionConfigurationManager,
         taskToolbox.getCoordinatorClient(),
-        compactionTask.getSegmentCacheManagerFactory()
+        segmentCacheManagerFactory
     );
 
     List<ParallelIndexSupervisorTask> subtasks = IntStream
@@ -203,7 +223,7 @@ public class NativeCompactionStrategy implements CompactionStrategy
     return runParallelIndexSubtasks(
         subtasks,
         taskToolbox,
-        compactionTask.getCurrentSubTaskHolder(),
+        currentSubTaskHolder,
         compactionTask.getId()
     );
   }
@@ -287,5 +307,34 @@ public class NativeCompactionStrategy implements CompactionStrategy
     // Set the priority of the compaction task.
     newContext.put(Tasks.PRIORITY_KEY, compactionTask.getPriority());
     return newContext;
+  }
+
+  @VisibleForTesting
+  static class PartitionConfigurationManager
+  {
+    @Nullable
+    private final CompactionTask.CompactionTuningConfig tuningConfig;
+
+    PartitionConfigurationManager(@Nullable CompactionTask.CompactionTuningConfig tuningConfig)
+    {
+      this.tuningConfig = tuningConfig;
+    }
+
+    @Nullable
+    CompactionTask.CompactionTuningConfig computeTuningConfig()
+    {
+      CompactionTask.CompactionTuningConfig newTuningConfig = tuningConfig == null
+                                               ? CompactionTask.CompactionTuningConfig.defaultConfig()
+                                               : tuningConfig;
+      PartitionsSpec partitionsSpec = newTuningConfig.getGivenOrDefaultPartitionsSpec();
+      if (partitionsSpec instanceof DynamicPartitionsSpec) {
+        final DynamicPartitionsSpec dynamicPartitionsSpec = (DynamicPartitionsSpec) partitionsSpec;
+        partitionsSpec = new DynamicPartitionsSpec(
+            dynamicPartitionsSpec.getMaxRowsPerSegment(),
+            dynamicPartitionsSpec.getMaxTotalRowsOr(DynamicPartitionsSpec.DEFAULT_COMPACTION_MAX_TOTAL_ROWS)
+        );
+      }
+      return newTuningConfig.withPartitionsSpec(partitionsSpec);
+    }
   }
 }

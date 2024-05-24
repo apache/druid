@@ -65,7 +65,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class MSQCompactionStrategyTest
+public class MSQCompactionRunnerTest
 {
   private static final String DATA_SOURCE = "dataSource";
   private static final Interval COMPACTION_INTERVAL = Intervals.of("2017-01-01/2017-07-01");
@@ -120,7 +120,6 @@ public class MSQCompactionStrategyTest
         new ClientCompactionTaskTransformSpec(dimFilter);
     final CompactionTask.Builder builder = new CompactionTask.Builder(
         DATA_SOURCE,
-        null,
         null
     );
     IndexSpec indexSpec = IndexSpec.builder()
@@ -158,7 +157,7 @@ public class MSQCompactionStrategyTest
         new TransformSpec(dimFilter, Collections.emptyList())
     );
 
-    List<MSQControllerTask> msqControllerTasks = new MSQCompactionStrategy(JSON_MAPPER, null)
+    List<MSQControllerTask> msqControllerTasks = new MSQCompactionRunner(JSON_MAPPER, null)
         .compactionToMSQTasks(
             taskCreatedWithTransformSpec,
             Collections.singletonList(new NonnullPair<>(

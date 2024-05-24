@@ -51,6 +51,7 @@ import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
@@ -283,10 +284,11 @@ public class SystemSchemaTest extends CalciteTestBase
   private final CompactionState expectedCompactionState = new CompactionState(
       new DynamicPartitionsSpec(null, null),
       null,
-      null,
+      Collections.emptyMap(), null,
       null,
       Collections.singletonMap("test", "map"),
-      Collections.singletonMap("test2", "map2")
+      Collections.singletonMap("test2", "map2"),
+      CompactionEngine.NATIVE
   );
 
   private final DataSegment publishedCompactedSegment1 = new DataSegment(

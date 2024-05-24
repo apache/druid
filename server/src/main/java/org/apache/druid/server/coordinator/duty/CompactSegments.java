@@ -50,7 +50,7 @@ import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
-import org.apache.druid.server.coordinator.UserCompactionStrategy;
+import org.apache.druid.server.coordinator.ClientCompactionRunnerInfo;
 import org.apache.druid.server.coordinator.compact.CompactionSegmentIterator;
 import org.apache.druid.server.coordinator.compact.CompactionSegmentSearchPolicy;
 import org.apache.druid.server.coordinator.compact.CompactionStatistics;
@@ -501,7 +501,7 @@ public class CompactSegments implements CoordinatorCustomDuty
           transformSpec,
           dropExisting,
           autoCompactionContext,
-          new UserCompactionStrategy(compactionEngine)
+          new ClientCompactionRunnerInfo(compactionEngine)
       );
 
       LOG.info(
@@ -655,7 +655,7 @@ public class CompactSegments implements CoordinatorCustomDuty
       @Nullable ClientCompactionTaskTransformSpec transformSpec,
       @Nullable Boolean dropExisting,
       @Nullable Map<String, Object> context,
-      @Nullable UserCompactionStrategy compactionStrategy
+      @Nullable ClientCompactionRunnerInfo compactionRunner
   )
   {
     Preconditions.checkArgument(!segments.isEmpty(), "Expect non-empty segments to compact");
@@ -684,7 +684,7 @@ public class CompactSegments implements CoordinatorCustomDuty
         metricsSpec,
         transformSpec,
         context,
-        compactionStrategy
+        compactionRunner
     );
     FutureUtils.getUnchecked(overlordClient.runTask(taskId, taskPayload), true);
     return taskId;

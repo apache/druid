@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.RangeSet;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -129,10 +130,11 @@ public class DataSegmentTest
             new DimensionsSpec(
                 DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "bar", "foo"))
             ),
-            ImmutableList.of(ImmutableMap.of("type", "count", "name", "count")),
+            Collections.emptyMap(), ImmutableList.of(ImmutableMap.of("type", "count", "name", "count")),
             ImmutableMap.of("filter", ImmutableMap.of("type", "selector", "dimension", "dim1", "value", "foo")),
             ImmutableMap.of(),
-            ImmutableMap.of()
+            ImmutableMap.of(),
+            CompactionEngine.NATIVE
         ),
         TEST_VERSION,
         1
@@ -194,10 +196,11 @@ public class DataSegmentTest
         new CompactionState(
             new HashedPartitionsSpec(100000, null, ImmutableList.of("dim1")),
             null,
-            null,
+            Collections.emptyMap(), null,
             null,
             ImmutableMap.of(),
-            ImmutableMap.of()
+            ImmutableMap.of(),
+            CompactionEngine.NATIVE
         ),
         TEST_VERSION,
         1
@@ -345,10 +348,11 @@ public class DataSegmentTest
     final CompactionState compactionState = new CompactionState(
         new DynamicPartitionsSpec(null, null),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "foo"))),
-        ImmutableList.of(ImmutableMap.of("type", "count", "name", "count")),
+        Collections.emptyMap(), ImmutableList.of(ImmutableMap.of("type", "count", "name", "count")),
         ImmutableMap.of("filter", ImmutableMap.of("type", "selector", "dimension", "dim1", "value", "foo")),
         Collections.singletonMap("test", "map"),
-        Collections.singletonMap("test2", "map2")
+        Collections.singletonMap("test2", "map2"),
+        CompactionEngine.NATIVE
     );
     final DataSegment segment1 = DataSegment.builder()
                                             .dataSource("foo")
@@ -387,20 +391,23 @@ public class DataSegmentTest
     final CompactionState compactionState = new CompactionState(
         dynamicPartitionsSpec,
         dimensionsSpec,
-        metricsSpec,
+        Collections.emptyMap(), metricsSpec,
         transformSpec,
         indexSpec,
-        granularitySpec
+        granularitySpec,
+        CompactionEngine.NATIVE
     );
 
     final Function<Set<DataSegment>, Set<DataSegment>> addCompactionStateFunction =
         CompactionState.addCompactionStateToSegments(
             dynamicPartitionsSpec,
             dimensionsSpec,
+            Collections.emptyMap(),
             metricsSpec,
             transformSpec,
             indexSpec,
-            granularitySpec
+            granularitySpec,
+            CompactionEngine.NATIVE
         );
 
     final DataSegment segment1 = DataSegment.builder()

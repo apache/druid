@@ -23,7 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.server.coordinator.UserCompactionStrategy;
+import org.apache.druid.server.coordinator.ClientCompactionRunnerInfo;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
@@ -47,7 +47,7 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
   private final AggregatorFactory[] metricsSpec;
   private final ClientCompactionTaskTransformSpec transformSpec;
   private final Map<String, Object> context;
-  private final UserCompactionStrategy compactionStrategy;
+  private final ClientCompactionRunnerInfo compactionRunner;
 
   @JsonCreator
   public ClientCompactionTaskQuery(
@@ -60,7 +60,7 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
       @JsonProperty("metricsSpec") AggregatorFactory[] metrics,
       @JsonProperty("transformSpec") ClientCompactionTaskTransformSpec transformSpec,
       @JsonProperty("context") Map<String, Object> context,
-      @JsonProperty("compactionStrategy") UserCompactionStrategy compactionStrategy
+      @JsonProperty("compactionRunner") ClientCompactionRunnerInfo compactionRunner
   )
   {
     this.id = Preconditions.checkNotNull(id, "id");
@@ -72,7 +72,7 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
     this.metricsSpec = metrics;
     this.transformSpec = transformSpec;
     this.context = context;
-    this.compactionStrategy = compactionStrategy;
+    this.compactionRunner = compactionRunner;
   }
 
   @JsonProperty
@@ -139,10 +139,10 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
     return context;
   }
 
-  @JsonProperty
-  public UserCompactionStrategy getCompactionStrategy()
+  @JsonProperty("compactionRunner")
+  public ClientCompactionRunnerInfo getClientCompactionRunnerInfo()
   {
-    return compactionStrategy;
+    return compactionRunner;
   }
 
   @Override
@@ -164,7 +164,7 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
            Arrays.equals(metricsSpec, that.metricsSpec) &&
            Objects.equals(transformSpec, that.transformSpec) &&
            Objects.equals(context, that.context) &&
-           Objects.equals(compactionStrategy, that.compactionStrategy);
+           Objects.equals(compactionRunner, that.compactionRunner);
   }
 
   @Override
@@ -179,7 +179,7 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
         dimensionsSpec,
         transformSpec,
         context,
-        compactionStrategy
+        compactionRunner
     );
     result = 31 * result + Arrays.hashCode(metricsSpec);
     return result;
@@ -198,7 +198,7 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
            ", metricsSpec=" + Arrays.toString(metricsSpec) +
            ", transformSpec=" + transformSpec +
            ", context=" + context +
-           ", compactionStrategy=" + compactionStrategy +
+           ", compactionRunner=" + compactionRunner +
            '}';
   }
 }

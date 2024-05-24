@@ -20,6 +20,7 @@
 package org.apache.druid.msq.indexing;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -33,10 +34,11 @@ import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexer.partitions.SecondaryPartitionType;
 import org.apache.druid.indexing.common.TaskToolbox;
-import org.apache.druid.indexing.common.task.CompactionStrategy;
+import org.apache.druid.indexing.common.task.CompactionRunner;
 import org.apache.druid.indexing.common.task.CompactionTask;
 import org.apache.druid.indexing.common.task.CurrentSubTaskHolder;
 import org.apache.druid.java.util.common.NonnullPair;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.AllGranularity;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -79,10 +81,10 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-public class MSQCompactionStrategy implements CompactionStrategy
+public class MSQCompactionRunner implements CompactionRunner
 {
-  private static final Logger log = new Logger(MSQCompactionStrategy.class);
-  public static final String TYPE = "MSQ";
+  private static final Logger log = new Logger(MSQCompactionRunner.class);
+  public static final String type = "MSQ";
   private static final Granularity DEFAULT_SEGMENT_GRANULARITY = Granularities.ALL;
 
   private final ObjectMapper jsonMapper;
@@ -91,36 +93,72 @@ public class MSQCompactionStrategy implements CompactionStrategy
   public static final String TIME_VIRTUAL_COLUMN = "vTime";
   public static final String TIME_COLUMN = ColumnHolder.TIME_COLUMN_NAME;
 
-  public MSQCompactionStrategy(@JacksonInject ObjectMapper jsonMapper, @JacksonInject Injector injector)
+  @JsonIgnore
+  private final CurrentSubTaskHolder currentSubTaskHolder = new CurrentSubTaskHolder(
+      (taskObject, config) -> {
+        final MSQControllerTask msqControllerTask = (MSQControllerTask) taskObject;
+        msqControllerTask.stopGracefully(config);
+      });
+
+
+  public MSQCompactionRunner(@JacksonInject ObjectMapper jsonMapper, @JacksonInject Injector injector)
   {
     this.jsonMapper = jsonMapper;
     this.injector = injector;
   }
 
   @Override
+  public Pair<Boolean, String> supportsCompactionConfig(
+      CompactionTask compactionTask
+  )
+  {
+    QueryContext compactionTaskContext = new QueryContext(compactionTask.getContext());
+
+    // These checks cannot be included in compaction config validation as context param keys are unknown outside MSQ.
+    if (!MultiStageQueryContext.isFinalizeAggregations(compactionTaskContext)) {
+      return Pair.of(false, StringUtils.format(
+          "Config[%s] cannot be set to false for auto-compaction with MSQ engine.",
+          MultiStageQueryContext.CTX_FINALIZE_AGGREGATIONS
+      ));
+    }
+    if (MultiStageQueryContext.getAssignmentStrategy(compactionTaskContext) == WorkerAssignmentStrategy.AUTO) {
+      return Pair.of(
+          false,
+          StringUtils.format("Config[%s] cannot be set to value[%s] for auto-compaction with MSQ engine.",
+                             MultiStageQueryContext.CTX_TASK_ASSIGNMENT_STRATEGY,
+                             WorkerAssignmentStrategy.AUTO
+          )
+      );
+    }
+    if (compactionTask.getTuningConfig() != null) {
+      PartitionsSpec partitionsSpec = compactionTask.getTuningConfig().getPartitionsSpec();
+      if (!(partitionsSpec instanceof DynamicPartitionsSpec
+            || partitionsSpec instanceof DimensionRangePartitionsSpec)) {
+        return Pair.of(false, "PartitionsSpec not among DynamicPartitionSpec or DimensionRangePartitionsSpec");
+      }
+    }
+    return Pair.of(true, null);
+  }
+
+  @Override
   @JsonProperty("TYPE")
   public String getType()
   {
-    return TYPE;
+    return type;
   }
 
   @Override
   public CurrentSubTaskHolder getCurrentSubTaskHolder()
   {
-    return new CurrentSubTaskHolder(
-        (taskObject, config) -> {
-          final MSQControllerTask msqControllerTask = (MSQControllerTask) taskObject;
-          msqControllerTask.stopGracefully(config);
-        }
-    );
+    return currentSubTaskHolder;
   }
 
   @Override
   public TaskStatus runCompactionTasks(
       CompactionTask compactionTask,
-      TaskToolbox taskToolbox,
-      List<NonnullPair<Interval, DataSchema>> intervalDataSchemas
-  ) throws JsonProcessingException
+      List<NonnullPair<Interval, DataSchema>> intervalDataSchemas,
+      TaskToolbox taskToolbox
+  ) throws Exception
   {
     List<MSQControllerTask> msqControllerTasks = compactionToMSQTasks(compactionTask, intervalDataSchemas);
 
@@ -133,7 +171,7 @@ public class MSQCompactionStrategy implements CompactionStrategy
     return runSubtasks(
         msqControllerTasks,
         taskToolbox,
-        compactionTask.getCurrentSubTaskHolder(),
+        currentSubTaskHolder,
         compactionTask.getId()
     );
   }
@@ -144,23 +182,7 @@ public class MSQCompactionStrategy implements CompactionStrategy
   ) throws JsonProcessingException
   {
     List<MSQControllerTask> msqControllerTasks = new ArrayList<>();
-    QueryContext compactionTaskContext = new QueryContext(compactionTask.getContext());
 
-    // These checks cannot be included in compaction config validation as context param keys are unknown outside MSQ.
-    if (!MultiStageQueryContext.isFinalizeAggregations(compactionTaskContext)) {
-      throw InvalidInput.exception(
-          "Config[%s] cannot be set to false for auto-compaction with MSQ engine.",
-          MultiStageQueryContext.CTX_FINALIZE_AGGREGATIONS,
-          MultiStageQueryContext.isFinalizeAggregations(compactionTaskContext)
-      );
-    }
-    if (MultiStageQueryContext.getAssignmentStrategy(compactionTaskContext) == WorkerAssignmentStrategy.AUTO) {
-      throw InvalidInput.exception(
-          "Config[%s] cannot be set to value[%s] for auto-compaction with MSQ engine.",
-          MultiStageQueryContext.CTX_TASK_ASSIGNMENT_STRATEGY,
-          WorkerAssignmentStrategy.AUTO
-      );
-    }
 
     for (NonnullPair<Interval, DataSchema> intervalDataSchema : intervalDataSchemas) {
       Query<?> query;
@@ -172,6 +194,7 @@ public class MSQCompactionStrategy implements CompactionStrategy
       } else {
         query = buildGroupByQuery(compactionTask, interval, dataSchema);
       }
+      QueryContext compactionTaskContext = new QueryContext(compactionTask.getContext());
 
       MSQSpec msqSpec = MSQSpec.builder()
                                .query(query)

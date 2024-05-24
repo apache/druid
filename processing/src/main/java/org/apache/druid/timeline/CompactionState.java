@@ -22,8 +22,11 @@ package org.apache.druid.timeline;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -58,15 +61,20 @@ public class CompactionState
   // org.apache.druid.query.aggregation.AggregatorFactory cannot be used here because it's in the 'processing' module which
   // has a dependency on the 'core' module where this class is.
   private final List<Object> metricsSpec;
+  private final CompactionEngine engine;
+
+  private final Map<String, AggregatorFactory> dimensionToAggregatoryFactoryMap;
 
   @JsonCreator
   public CompactionState(
       @JsonProperty("partitionsSpec") PartitionsSpec partitionsSpec,
       @JsonProperty("dimensionsSpec") DimensionsSpec dimensionsSpec,
+      @JsonProperty("dimensionToAggregatoryFactoryMap") Map<String, AggregatorFactory> dimensionToAggregatoryFactoryMap,
       @JsonProperty("metricsSpec") List<Object> metricsSpec,
       @JsonProperty("transformSpec") Map<String, Object> transformSpec,
       @JsonProperty("indexSpec") Map<String, Object> indexSpec,
-      @JsonProperty("granularitySpec") Map<String, Object> granularitySpec
+      @JsonProperty("granularitySpec") Map<String, Object> granularitySpec,
+      @JsonProperty("engine") CompactionEngine engine
   )
   {
     this.partitionsSpec = partitionsSpec;
@@ -75,6 +83,8 @@ public class CompactionState
     this.transformSpec = transformSpec;
     this.indexSpec = indexSpec;
     this.granularitySpec = granularitySpec;
+    this.engine = engine;
+    this.dimensionToAggregatoryFactoryMap = dimensionToAggregatoryFactoryMap;
   }
 
   @JsonProperty
@@ -111,6 +121,18 @@ public class CompactionState
   public Map<String, Object> getGranularitySpec()
   {
     return granularitySpec;
+  }
+
+  @JsonProperty
+  public CompactionEngine getEngine()
+  {
+    return engine;
+  }
+
+  @JsonProperty
+  public Map<String, AggregatorFactory> getDimensionToAggregatoryFactoryMap()
+  {
+    return dimensionToAggregatoryFactoryMap;
   }
 
   @Override
@@ -160,19 +182,23 @@ public class CompactionState
   public static Function<Set<DataSegment>, Set<DataSegment>> addCompactionStateToSegments(
       PartitionsSpec partitionsSpec,
       DimensionsSpec dimensionsSpec,
+      Map<String, AggregatorFactory> dimensionToAggregatoryFactoryMap,
       List<Object> metricsSpec,
       Map<String, Object> transformSpec,
       Map<String, Object> indexSpec,
-      Map<String, Object> granularitySpec
+      Map<String, Object> granularitySpec,
+      CompactionEngine engine
   )
   {
     CompactionState compactionState = new CompactionState(
         partitionsSpec,
         dimensionsSpec,
+        dimensionToAggregatoryFactoryMap,
         metricsSpec,
         transformSpec,
         indexSpec,
-        granularitySpec
+        granularitySpec,
+        engine
     );
 
     return segments -> segments

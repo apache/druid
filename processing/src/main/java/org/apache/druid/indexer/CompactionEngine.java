@@ -24,7 +24,7 @@ import org.apache.druid.java.util.common.StringUtils;
 
 /**
  * Encapsulates the Engine to be used for a compaction task.
- * Should be synchronized with the subtypes for {@link org.apache.druid.indexing.common.task.CompactionStrategy}.
+ * Should be kept in sync with the subtypes for {@link org.apache.druid.indexing.common.task.CompactionRunner}.
  */
 public enum CompactionEngine
 {
@@ -34,9 +34,6 @@ public enum CompactionEngine
   @JsonCreator
   public static CompactionEngine fromString(String name)
   {
-    if (name == null) {
-      return null;
-    }
-    return valueOf(StringUtils.toUpperCase(name));
+    return name == null ? null : valueOf(StringUtils.toUpperCase(name));
   }
 }

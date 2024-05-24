@@ -64,7 +64,7 @@ import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
-import org.apache.druid.server.coordinator.UserCompactionStrategy;
+import org.apache.druid.server.coordinator.ClientCompactionRunnerInfo;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.joda.time.Duration;
@@ -130,7 +130,7 @@ public class ClientCompactionTaskQuerySerdeTest
         new AggregatorFactory[] {new CountAggregatorFactory("cnt")},
         new ClientCompactionTaskTransformSpec(new SelectorDimFilter("dim1", "foo", null)),
         ImmutableMap.of("key", "value"),
-        new UserCompactionStrategy(CompactionEngine.NATIVE)
+        new ClientCompactionRunnerInfo(CompactionEngine.NATIVE)
     );
 
     final byte[] json = mapper.writeValueAsBytes(query);
@@ -237,8 +237,8 @@ public class ClientCompactionTaskQuerySerdeTest
         task.getMetricsSpec()
     );
     Assert.assertEquals(
-        query.getCompactionStrategy().getType().toString(),
-        task.getCompactionStrategy().getType().toString()
+        query.getClientCompactionRunnerInfo().getType().toString(),
+        task.getCompactionRunner().getType().toString()
     );
   }
 
@@ -248,7 +248,6 @@ public class ClientCompactionTaskQuerySerdeTest
     final ObjectMapper mapper = setupInjectablesInObjectMapper(new DefaultObjectMapper());
     final CompactionTask.Builder builder = new CompactionTask.Builder(
         "datasource",
-        new SegmentCacheManagerFactory(mapper),
         new RetryPolicyFactory(new RetryPolicyConfig())
     );
     final CompactionTask task = builder
@@ -306,7 +305,9 @@ public class ClientCompactionTaskQuerySerdeTest
         )
         .metricsSpec(new AggregatorFactory[] {new CountAggregatorFactory("cnt")})
         .transformSpec(new ClientCompactionTaskTransformSpec(new SelectorDimFilter("dim1", "foo", null)))
-        .compactionStrategy(new NativeCompactionStrategy())
+        .compactionRunner(new NativeCompactionRunner(
+            new SegmentCacheManagerFactory(new TestUtils().getTestObjectMapper())
+        ))
         .build();
 
     final ClientCompactionTaskQuery expected = new ClientCompactionTaskQuery(
@@ -354,7 +355,7 @@ public class ClientCompactionTaskQuerySerdeTest
         new AggregatorFactory[] {new CountAggregatorFactory("cnt")},
         new ClientCompactionTaskTransformSpec(new SelectorDimFilter("dim1", "foo", null)),
         new HashMap<>(),
-        new UserCompactionStrategy(CompactionEngine.NATIVE)
+        new ClientCompactionRunnerInfo(CompactionEngine.NATIVE)
     );
 
     final byte[] json = mapper.writeValueAsBytes(task);

@@ -21,38 +21,47 @@ package org.apache.druid.indexing.common.task;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.java.util.common.NonnullPair;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.server.coordinator.ClientCompactionRunnerInfo;
 import org.joda.time.Interval;
 
 import java.util.List;
 
 /**
  * Strategy to be used for executing a compaction task.
- * Should be synchronized with {@link org.apache.druid.server.coordinator.UserCompactionStrategy}
+ * Should be synchronized with {@link ClientCompactionRunnerInfo}
  */
 @JsonTypeInfo(
     use = JsonTypeInfo.Id.NAME,
     include = JsonTypeInfo.As.EXISTING_PROPERTY,
-    property = CompactionStrategy.TYPE_PROPERTY,
+    property = CompactionRunner.TYPE_PROPERTY,
     visible = true)
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = NativeCompactionStrategy.TYPE, value = NativeCompactionStrategy.class)
+    @JsonSubTypes.Type(name = NativeCompactionRunner.type, value = NativeCompactionRunner.class)
 })
-public interface CompactionStrategy
+public interface CompactionRunner
 {
-  String TYPE_PROPERTY = "TYPE";
+  String TYPE_PROPERTY = "type";
 
   TaskStatus runCompactionTasks(
       CompactionTask compactionTask,
-      TaskToolbox taskToolbox,
-      List<NonnullPair<Interval, DataSchema>> dataSchemas
-  ) throws JsonProcessingException;
+      List<NonnullPair<Interval, DataSchema>> dataSchemas,
+      TaskToolbox taskToolbox
+  ) throws Exception;
 
   CurrentSubTaskHolder getCurrentSubTaskHolder();
+
+  /**
+   * Checks if the provided compaction config is supported by the runner.
+   * @param compactionTask
+   * @return Pair of (supported) boolean and a reason string. Reason string is null if supported is true.
+   *
+   */
+  Pair<Boolean, String> supportsCompactionConfig(CompactionTask compactionTask);
 
   String getType();
 }

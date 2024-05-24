@@ -29,6 +29,7 @@ import org.apache.druid.data.input.impl.DoubleDimensionSchema;
 import org.apache.druid.data.input.impl.FloatDimensionSchema;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
+import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
@@ -1917,10 +1918,11 @@ public class MSQReplaceTest extends MSQTestBase
     return new CompactionState(
         partitionsSpec,
         dimensionsSpec,
-        metricsSpec,
+        Collections.emptyMap(), metricsSpec,
         null,
         indexSpec.asMap(objectMapper),
-        granularitySpec.asMap(objectMapper)
+        granularitySpec.asMap(objectMapper),
+        CompactionEngine.NATIVE
     );
 
   }

@@ -69,7 +69,7 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.task.CompactionTask.Builder;
-import org.apache.druid.indexing.common.task.CompactionTask.PartitionConfigurationManager;
+import org.apache.druid.indexing.common.task.NativeCompactionRunner.PartitionConfigurationManager;
 import org.apache.druid.indexing.common.task.CompactionTask.SegmentProvider;
 import org.apache.druid.indexing.common.task.IndexTask.IndexTuningConfig;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexIOConfig;
@@ -399,7 +399,6 @@ public class CompactionTaskTest
   {
     final Builder builder = new Builder(
         DATA_SOURCE,
-        segmentCacheManagerFactory,
         RETRY_POLICY_FACTORY
     );
     builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
@@ -409,7 +408,6 @@ public class CompactionTaskTest
 
     final Builder builder2 = new Builder(
         DATA_SOURCE,
-        segmentCacheManagerFactory,
         RETRY_POLICY_FACTORY
     );
     builder2.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
@@ -427,7 +425,6 @@ public class CompactionTaskTest
   {
     final Builder builder = new Builder(
         DATA_SOURCE,
-        segmentCacheManagerFactory,
         RETRY_POLICY_FACTORY
     );
     builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
@@ -448,7 +445,6 @@ public class CompactionTaskTest
   {
     final Builder builder = new Builder(
         DATA_SOURCE,
-        segmentCacheManagerFactory,
         RETRY_POLICY_FACTORY
     );
     builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
@@ -479,7 +475,6 @@ public class CompactionTaskTest
         new ClientCompactionTaskTransformSpec(new SelectorDimFilter("dim1", "foo", null));
     final Builder builder = new Builder(
         DATA_SOURCE,
-        segmentCacheManagerFactory,
         RETRY_POLICY_FACTORY
     );
     builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
@@ -498,7 +493,6 @@ public class CompactionTaskTest
     AggregatorFactory[] aggregatorFactories = new AggregatorFactory[]{new CountAggregatorFactory("cnt")};
     final Builder builder = new Builder(
         DATA_SOURCE,
-        segmentCacheManagerFactory,
         RETRY_POLICY_FACTORY
     );
     builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
@@ -516,7 +510,6 @@ public class CompactionTaskTest
   {
     final Builder builder = new Builder(
         DATA_SOURCE,
-        segmentCacheManagerFactory,
         RETRY_POLICY_FACTORY
     );
     builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
@@ -545,7 +538,6 @@ public class CompactionTaskTest
   {
     final Builder builder = new Builder(
         DATA_SOURCE,
-        segmentCacheManagerFactory,
         RETRY_POLICY_FACTORY
     );
     builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
@@ -561,7 +553,6 @@ public class CompactionTaskTest
   {
     final Builder builder = new Builder(
         DATA_SOURCE,
-        segmentCacheManagerFactory,
         RETRY_POLICY_FACTORY
     );
     final CompactionTask task = builder
@@ -582,7 +573,6 @@ public class CompactionTaskTest
   {
     final Builder builder = new Builder(
         DATA_SOURCE,
-        segmentCacheManagerFactory,
         RETRY_POLICY_FACTORY
     );
     final CompactionTask task = builder
@@ -601,7 +591,6 @@ public class CompactionTaskTest
   {
     final Builder builder = new Builder(
         DATA_SOURCE,
-        segmentCacheManagerFactory,
         RETRY_POLICY_FACTORY
     );
 
@@ -684,7 +673,6 @@ public class CompactionTaskTest
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        segmentCacheManagerFactory,
         RETRY_POLICY_FACTORY
     );
 
@@ -705,7 +693,6 @@ public class CompactionTaskTest
   {
     final Builder builder = new Builder(
         DATA_SOURCE,
-        segmentCacheManagerFactory,
         RETRY_POLICY_FACTORY
     );
     final CompactionTask task = builder
@@ -966,7 +953,7 @@ public class CompactionTaskTest
         METRIC_BUILDER
     );
 
-    final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionStrategy.createIngestionSpecs(
+    final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
         dataSchemasForIntervals,
         toolbox,
         new CompactionIOConfig(null, false, null),
@@ -1048,7 +1035,7 @@ public class CompactionTaskTest
         METRIC_BUILDER
     );
 
-    final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionStrategy.createIngestionSpecs(
+    final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
         dataSchemasForIntervals,
         toolbox,
         new CompactionIOConfig(null, false, null),
@@ -1131,7 +1118,7 @@ public class CompactionTaskTest
         METRIC_BUILDER
     );
 
-    final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionStrategy.createIngestionSpecs(
+    final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
         dataSchemasForIntervals,
         toolbox,
         new CompactionIOConfig(null, false, null),
@@ -1214,7 +1201,7 @@ public class CompactionTaskTest
         METRIC_BUILDER
     );
 
-    final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionStrategy.createIngestionSpecs(
+    final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
         dataSchemasForIntervals,
         toolbox,
         new CompactionIOConfig(null, false, null),
@@ -1285,7 +1272,7 @@ public class CompactionTaskTest
         METRIC_BUILDER
     );
 
-    final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionStrategy.createIngestionSpecs(
+    final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
         dataSchemasForIntervals,
         toolbox,
         new CompactionIOConfig(null, false, null),
@@ -1336,7 +1323,7 @@ public class CompactionTaskTest
         METRIC_BUILDER
     );
 
-    final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionStrategy.createIngestionSpecs(
+    final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
         dataSchemasForIntervals,
         toolbox,
         new CompactionIOConfig(null, false, null),
@@ -1380,7 +1367,7 @@ public class CompactionTaskTest
         METRIC_BUILDER
     );
 
-    final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionStrategy.createIngestionSpecs(
+    final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
         dataSchemasForIntervals,
         toolbox,
         new CompactionIOConfig(null, false, null),
@@ -1431,7 +1418,7 @@ public class CompactionTaskTest
         METRIC_BUILDER
     );
 
-    NativeCompactionStrategy.createIngestionSpecs(
+    NativeCompactionRunner.createIngestionSpecs(
         dataSchemasForIntervals,
         toolbox,
         new CompactionIOConfig(null, false, null),
@@ -1462,7 +1449,7 @@ public class CompactionTaskTest
         METRIC_BUILDER
     );
 
-    NativeCompactionStrategy.createIngestionSpecs(
+    NativeCompactionRunner.createIngestionSpecs(
         dataSchemasForIntervals,
         toolbox,
         new CompactionIOConfig(null, false, null),
@@ -1480,7 +1467,6 @@ public class CompactionTaskTest
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        segmentCacheManagerFactory,
         RETRY_POLICY_FACTORY
     );
 
@@ -1505,7 +1491,7 @@ public class CompactionTaskTest
         METRIC_BUILDER
     );
 
-    final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionStrategy.createIngestionSpecs(
+    final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
         dataSchemasForIntervals,
         toolbox,
         new CompactionIOConfig(null, false, null),
@@ -1549,7 +1535,7 @@ public class CompactionTaskTest
         new ClientCompactionTaskGranularitySpec(null, new PeriodGranularity(Period.months(3), null, null), null),
         METRIC_BUILDER
     );
-    final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionStrategy.createIngestionSpecs(
+    final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
         dataSchemasForIntervals,
         toolbox,
         new CompactionIOConfig(null, false, null),
@@ -1596,7 +1582,7 @@ public class CompactionTaskTest
         METRIC_BUILDER
     );
 
-    final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionStrategy.createIngestionSpecs(
+    final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
         dataSchemasForIntervals,
         toolbox,
         new CompactionIOConfig(null, false, null),
@@ -1644,7 +1630,7 @@ public class CompactionTaskTest
         METRIC_BUILDER
     );
 
-    final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionStrategy.createIngestionSpecs(
+    final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
         dataSchemasForIntervals,
         toolbox,
         new CompactionIOConfig(null, false, null),
@@ -1690,7 +1676,7 @@ public class CompactionTaskTest
         METRIC_BUILDER
     );
 
-    final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionStrategy.createIngestionSpecs(
+    final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
         dataSchemasForIntervals,
         toolbox,
         new CompactionIOConfig(null, false, null),
@@ -1736,7 +1722,7 @@ public class CompactionTaskTest
         METRIC_BUILDER
     );
 
-    final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionStrategy.createIngestionSpecs(
+    final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
         dataSchemasForIntervals,
         toolbox,
         new CompactionIOConfig(null, false, null),
@@ -1767,7 +1753,7 @@ public class CompactionTaskTest
         METRIC_BUILDER
     );
 
-    final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionStrategy.createIngestionSpecs(
+    final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
         dataSchemasForIntervals,
         toolbox,
         new CompactionIOConfig(null, false, null),

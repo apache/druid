@@ -63,6 +63,7 @@ import org.apache.druid.frame.processor.FrameProcessorExecutor;
 import org.apache.druid.frame.util.DurableStorageUtils;
 import org.apache.druid.frame.write.InvalidFieldException;
 import org.apache.druid.frame.write.InvalidNullByteException;
+import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
@@ -1769,37 +1770,40 @@ public class ControllerImpl implements Controller
                                                  );
 
       if (!segments.isEmpty() && storeCompactionState) {
-        if (!(task.getQuerySpec().getDestination() instanceof DataSourceMSQDestination)) {
-          throw new MSQException(
-              UnknownFault.forMessage(
-                  StringUtils.format(
-                      "Query[%s] cannot store compaction state in segments as destination[%s] not a datasource.",
-                      queryDef.getQueryId(),
-                      task.getQuerySpec().getDestination().getClass()
-                  )));
-        }
-
-        DataSourceMSQDestination destination = (DataSourceMSQDestination) task.getQuerySpec().getDestination();
-        if (!destination.isReplaceTimeChunks()) {
-          // Store compaction state only for replace queries.
+        if (!MSQControllerTask.isIngestion(task.getQuerySpec())) {
           log.warn(
-              "storeCompactionState flag set for a non-REPLACE query [%s]. Ignoring the flag for now.",
-              queryDef.getQueryId()
+              "Query[%s] cannot store compaction state in segments as destination[%s] not a datasource.",
+              queryDef.getQueryId(),
+              task.getQuerySpec().getDestination().getClass()
           );
         } else {
-          DataSchema dataSchema = ((SegmentGeneratorFrameProcessorFactory) queryKernel
-              .getStageDefinition(finalStageId).getProcessorFactory()).getDataSchema();
+          DataSourceMSQDestination destination = (DataSourceMSQDestination) task.getQuerySpec().getDestination();
+          if (!destination.isReplaceTimeChunks()) {
+            // Store compaction state only for replace queries.
+            log.warn(
+                "storeCompactionState flag set for a non-REPLACE query [%s]. Ignoring the flag for now.",
+                queryDef.getQueryId()
+            );
+          } else {
+            DataSchema dataSchema = ((SegmentGeneratorFrameProcessorFactory) queryKernel
+                .getStageDefinition(finalStageId).getProcessorFactory()).getDataSchema();
 
-          ShardSpec shardSpec = segments.stream().findFirst().get().getShardSpec();
+            ShardSpec shardSpec = segments.stream().findFirst().get().getShardSpec();
 
-          Function<Set<DataSegment>, Set<DataSegment>> compactionStateAnnotateFunction = addCompactionStateToSegments(
-              task(),
-              context.jsonMapper(),
-              dataSchema,
-              shardSpec,
-              queryDef.getQueryId()
-          );
-          segments = compactionStateAnnotateFunction.apply(segments);
+            Map<String, AggregatorFactory> dimensionToAggregatoryFactoryMap =
+                ((SegmentGeneratorFrameProcessorFactory) queryKernel
+                .getStageDefinition(finalStageId).getProcessorFactory()).getDimensionToAggregatorFactoryMap();
+
+            Function<Set<DataSegment>, Set<DataSegment>> compactionStateAnnotateFunction = addCompactionStateToSegments(
+                task(),
+                context.jsonMapper(),
+                dataSchema,
+                dimensionToAggregatoryFactoryMap,
+                shardSpec,
+                queryDef.getQueryId()
+            );
+            segments = compactionStateAnnotateFunction.apply(segments);
+          }
         }
       }
       log.info("Query [%s] publishing %d segments.", queryDef.getQueryId(), segments.size());
@@ -1830,6 +1834,7 @@ public class ControllerImpl implements Controller
       MSQControllerTask task,
       ObjectMapper jsonMapper,
       DataSchema dataSchema,
+      Map<String, AggregatorFactory> dimensionToAggregatorFactoryMap,
       ShardSpec shardSpec,
       String queryId
   )
@@ -1869,48 +1874,31 @@ public class ControllerImpl implements Controller
         ((DataSourceMSQDestination) task.getQuerySpec().getDestination()).getReplaceTimeChunks()
     );
 
+    DimensionsSpec dimensionsSpec = dataSchema.getDimensionsSpec();
     Map<String, Object> transformSpec = TransformSpec.NONE.equals(dataSchema.getTransformSpec())
                                         ? null
                                         : new ClientCompactionTaskTransformSpec(
                                             dataSchema.getTransformSpec().getFilter()
                                         ).asMap(jsonMapper);
+    List<Object> metricsSpec = dataSchema.getAggregators() == null
+                               ? null
+                               : jsonMapper.convertValue(
+                                   dataSchema.getAggregators(), new TypeReference<List<Object>>()
+                                   {
+                                   });
 
-
-    DimensionsSpec dimensionsSpec;
-    List<Object> metricsSpec;
-
-    if (task.getQuerySpec().getQuery() instanceof GroupByQuery) {
-      GroupByQuery groupByQuery = (GroupByQuery) task.getQuerySpec().getQuery();
-
-
-      dimensionsSpec = new DimensionsSpec(groupByQuery.getDimensions()
-                                                      .stream()
-                                                      .map(dimensionSpec -> DimensionSchema.getDefaultSchemaForBuiltInType(
-                                                          dimensionSpec.getOutputName(),
-                                                          dimensionSpec.getOutputType()
-                                                      ))
-                                                      .collect(
-                                                          Collectors.toList()));
-      metricsSpec = jsonMapper.convertValue(
-          groupByQuery.getAggregatorSpecs(), new TypeReference<List<Object>>()
-          {
-          });
-    } else {
-      dimensionsSpec = new DimensionsSpec(dataSchema.getDimensionsSpec().getDimensions());
-      metricsSpec = Collections.emptyList();
-    }
 
     IndexSpec indexSpec = tuningConfig.getIndexSpec();
-
     log.info("Query[%s] storing compaction state in segments.", queryId);
-
     return CompactionState.addCompactionStateToSegments(
         partitionSpec,
         dimensionsSpec,
+        dimensionToAggregatorFactoryMap,
         metricsSpec,
         transformSpec,
         indexSpec.asMap(jsonMapper),
-        granularitySpec.asMap(jsonMapper)
+        granularitySpec.asMap(jsonMapper),
+        CompactionEngine.MSQ
     );
   }
 
@@ -2030,9 +2018,20 @@ public class ControllerImpl implements Controller
         }
       }
 
+      // Map to track the aggregator factories of dimensions that have been created from metrics due to context flag
+      // finalizeAggregations=true.
+      final Map<String, AggregatorFactory> dimensionToAggregatoryFactoryMap = new HashMap<>();
+
       // Then, add a segment-generation stage.
       final DataSchema dataSchema =
-          generateDataSchema(querySpec, querySignature, queryClusterBy, columnMappings, jsonMapper);
+          generateDataSchema(
+              querySpec,
+              querySignature,
+              queryClusterBy,
+              columnMappings,
+              jsonMapper,
+              dimensionToAggregatoryFactoryMap
+          );
 
       builder.add(
           StageDefinition.builder(queryDef.getNextStageNumber())
@@ -2042,13 +2041,14 @@ public class ControllerImpl implements Controller
                              new SegmentGeneratorFrameProcessorFactory(
                                  dataSchema,
                                  columnMappings,
-                                 tuningConfig
+                                 tuningConfig,
+                                 dimensionToAggregatoryFactoryMap
                              )
                          )
       );
 
       return builder.build();
-    } else if (querySpec.getDestination() instanceof TaskReportMSQDestination) {
+    }  else if (querySpec.getDestination() instanceof TaskReportMSQDestination) {
       return queryDef;
     } else if (querySpec.getDestination() instanceof DurableStorageMSQDestination) {
 
@@ -2118,7 +2118,8 @@ public class ControllerImpl implements Controller
       RowSignature querySignature,
       ClusterBy queryClusterBy,
       ColumnMappings columnMappings,
-      ObjectMapper jsonMapper
+      ObjectMapper jsonMapper,
+      Map<String, AggregatorFactory> dimensionToAggregatorFactoryMap
   )
   {
     final DataSourceMSQDestination destination = (DataSourceMSQDestination) querySpec.getDestination();
@@ -2131,7 +2132,8 @@ public class ControllerImpl implements Controller
             destination.getSegmentSortOrder(),
             columnMappings,
             isRollupQuery,
-            querySpec.getQuery()
+            querySpec.getQuery(),
+            dimensionToAggregatorFactoryMap
         );
 
     return new DataSchema(
@@ -2322,7 +2324,9 @@ public class ControllerImpl implements Controller
       final List<String> segmentSortOrder,
       final ColumnMappings columnMappings,
       final boolean isRollupQuery,
-      final Query<?> query
+      final Query<?> query,
+      final Map<String, AggregatorFactory> dimensionToAggregatoryFactoryMap
+
   )
   {
     // Log a warning unconditionally if arrayIngestMode is MVD, since the behaviour is incorrect, and is subject to
@@ -2366,22 +2370,25 @@ public class ControllerImpl implements Controller
 
     Map<String, AggregatorFactory> outputColumnAggregatorFactories = new HashMap<>();
 
-    if (isRollupQuery) {
-      // Populate aggregators from the native query when doing an ingest in rollup mode.
-      for (AggregatorFactory aggregatorFactory : ((GroupByQuery) query).getAggregatorSpecs()) {
-        for (final int outputColumn : columnMappings.getOutputColumnsForQueryColumn(aggregatorFactory.getName())) {
-          final String outputColumnName = columnMappings.getOutputColumnName(outputColumn);
-          if (outputColumnAggregatorFactories.containsKey(outputColumnName)) {
-            throw new ISE("There can only be one aggregation for column [%s].", outputColumn);
-          } else {
+    // Populate aggregators from the native query when doing an ingest in rollup mode.
+    for (AggregatorFactory aggregatorFactory : ((GroupByQuery) query).getAggregatorSpecs()) {
+      for (final int outputColumn : columnMappings.getOutputColumnsForQueryColumn(aggregatorFactory.getName())) {
+        final String outputColumnName = columnMappings.getOutputColumnName(outputColumn);
+        if (outputColumnAggregatorFactories.containsKey(outputColumnName)) {
+          throw new ISE("There can only be one aggregation for column [%s].", outputColumn);
+        } else {
+          if (isRollupQuery) {
             outputColumnAggregatorFactories.put(
                 outputColumnName,
                 aggregatorFactory.withName(outputColumnName).getCombiningFactory()
             );
+          } else {
+            dimensionToAggregatoryFactoryMap.put(outputColumnName, aggregatorFactory);
           }
         }
       }
     }
+
 
     // Each column can be of either time, dimension, aggregator. For this method. we can ignore the time column.
     // For non-complex columns, If the aggregator factory of the column is not available, we treat the column as
