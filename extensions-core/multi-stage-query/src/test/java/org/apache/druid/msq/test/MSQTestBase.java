@@ -54,7 +54,6 @@ import org.apache.druid.guice.ExpressionModule;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.IndexingServiceTuningConfigModule;
 import org.apache.druid.guice.JoinableFactoryModule;
-import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.NestedDataModule;
 import org.apache.druid.guice.SegmentWranglerModule;
 import org.apache.druid.guice.StartupInjectorBuilder;
@@ -87,7 +86,6 @@ import org.apache.druid.msq.exec.DataServerQueryHandler;
 import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
 import org.apache.druid.msq.exec.ResultsContext;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
-import org.apache.druid.msq.guice.MSQDurableStorageModule;
 import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
 import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.msq.guice.MSQSqlModule;
@@ -186,7 +184,6 @@ import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.sql.calcite.view.InProcessViewManager;
 import org.apache.druid.sql.guice.SqlBindings;
 import org.apache.druid.storage.StorageConfig;
-import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.StorageConnectorModule;
 import org.apache.druid.storage.StorageConnectorProvider;
 import org.apache.druid.storage.local.LocalFileStorageConnector;
@@ -207,7 +204,6 @@ import org.mockito.Mockito;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -473,18 +469,12 @@ public class MSQTestBase extends BaseCalciteQueryTest
                 .toProvider(Providers.of(null));
           // fault tolerance module
           try {
-            JsonConfigProvider.bind(
-                binder,
-                MSQDurableStorageModule.MSQ_INTERMEDIATE_STORAGE_PREFIX,
-                StorageConnectorProvider.class,
-                MultiStageQuery.class
-            );
             localFileStorageDir = newTempFolder("faultStorageDir");
             localFileStorageConnector = Mockito.spy(
                 new LocalFileStorageConnector(localFileStorageDir)
             );
-            binder.bind(Key.get(StorageConnector.class, MultiStageQuery.class))
-                  .toProvider(() -> localFileStorageConnector);
+            binder.bind(Key.get(StorageConnectorProvider.class, MultiStageQuery.class))
+                  .toInstance(tempDir -> localFileStorageConnector);
             binder.bind(StorageConfig.class).toInstance(new StorageConfig("/"));
           }
           catch (IOException e) {
