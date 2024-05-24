@@ -108,7 +108,7 @@ public class SegmentManagerTest
     final List<Future<Boolean>> futures = SEGMENTS.stream()
                                                   .map(
                                                       segment -> executor.submit(
-                                                          () -> segmentManager.loadSegment(segment, false, SegmentLazyLoadFailCallback.NOOP)
+                                                          () -> segmentManager.loadSegment(segment, false, SegmentLazyLoadFailCallback.NOOP, null)
                                                       )
                                                   )
                                                   .collect(Collectors.toList());
@@ -124,7 +124,7 @@ public class SegmentManagerTest
   public void testDropSegment() throws SegmentLoadingException, ExecutionException, InterruptedException, IOException
   {
     for (DataSegment eachSegment : SEGMENTS) {
-      Assert.assertTrue(segmentManager.loadSegment(eachSegment, false, SegmentLazyLoadFailCallback.NOOP));
+      Assert.assertTrue(segmentManager.loadSegment(eachSegment, false, SegmentLazyLoadFailCallback.NOOP, null));
     }
 
     final List<Future<Void>> futures = ImmutableList.of(SEGMENTS.get(0), SEGMENTS.get(2)).stream()
@@ -151,14 +151,14 @@ public class SegmentManagerTest
   public void testLoadDropSegment()
       throws SegmentLoadingException, ExecutionException, InterruptedException, IOException
   {
-    Assert.assertTrue(segmentManager.loadSegment(SEGMENTS.get(0), false, SegmentLazyLoadFailCallback.NOOP));
-    Assert.assertTrue(segmentManager.loadSegment(SEGMENTS.get(2), false, SegmentLazyLoadFailCallback.NOOP));
+    Assert.assertTrue(segmentManager.loadSegment(SEGMENTS.get(0), false, SegmentLazyLoadFailCallback.NOOP, null));
+    Assert.assertTrue(segmentManager.loadSegment(SEGMENTS.get(2), false, SegmentLazyLoadFailCallback.NOOP, null));
 
     final List<Future<Boolean>> loadFutures = ImmutableList.of(SEGMENTS.get(1), SEGMENTS.get(3), SEGMENTS.get(4))
                                                            .stream()
                                                            .map(
                                                                segment -> executor.submit(
-                                                                   () -> segmentManager.loadSegment(segment, false, SegmentLazyLoadFailCallback.NOOP)
+                                                                   () -> segmentManager.loadSegment(segment, false, SegmentLazyLoadFailCallback.NOOP, null)
                                                                )
                                                            )
                                                            .collect(Collectors.toList());
@@ -189,10 +189,10 @@ public class SegmentManagerTest
   public void testLoadDuplicatedSegmentsSequentially() throws SegmentLoadingException, IOException
   {
     for (DataSegment segment : SEGMENTS) {
-      Assert.assertTrue(segmentManager.loadSegment(segment, false, SegmentLazyLoadFailCallback.NOOP));
+      Assert.assertTrue(segmentManager.loadSegment(segment, false, SegmentLazyLoadFailCallback.NOOP, null));
     }
     // try to load an existing segment
-    Assert.assertFalse(segmentManager.loadSegment(SEGMENTS.get(0), false, SegmentLazyLoadFailCallback.NOOP));
+    Assert.assertFalse(segmentManager.loadSegment(SEGMENTS.get(0), false, SegmentLazyLoadFailCallback.NOOP, null));
 
     assertResult(SEGMENTS);
   }
@@ -205,7 +205,12 @@ public class SegmentManagerTest
                                                        .stream()
                                                        .map(
                                                            segment -> executor.submit(
-                                                               () -> segmentManager.loadSegment(segment, false, SegmentLazyLoadFailCallback.NOOP)
+                                                               () -> segmentManager.loadSegment(
+                                                                   segment,
+                                                                   false,
+                                                                   SegmentLazyLoadFailCallback.NOOP,
+                                                                   null
+                                                               )
                                                            )
                                                        )
                                                        .collect(Collectors.toList());
@@ -226,7 +231,7 @@ public class SegmentManagerTest
   @Test
   public void testNonExistingSegmentsSequentially() throws SegmentLoadingException, IOException
   {
-    Assert.assertTrue(segmentManager.loadSegment(SEGMENTS.get(0), false, SegmentLazyLoadFailCallback.NOOP));
+    Assert.assertTrue(segmentManager.loadSegment(SEGMENTS.get(0), false, SegmentLazyLoadFailCallback.NOOP, null));
 
     // try to drop a non-existing segment of different data source
     segmentManager.dropSegment(SEGMENTS.get(2));
@@ -239,7 +244,7 @@ public class SegmentManagerTest
   public void testNonExistingSegmentsInParallel()
       throws SegmentLoadingException, ExecutionException, InterruptedException, IOException
   {
-    segmentManager.loadSegment(SEGMENTS.get(0), false, SegmentLazyLoadFailCallback.NOOP);
+    segmentManager.loadSegment(SEGMENTS.get(0), false, SegmentLazyLoadFailCallback.NOOP, null);
     final List<Future<Void>> futures = ImmutableList.of(SEGMENTS.get(1), SEGMENTS.get(2))
                                                     .stream()
                                                     .map(
@@ -262,7 +267,7 @@ public class SegmentManagerTest
   @Test
   public void testRemoveEmptyTimeline() throws SegmentLoadingException, IOException
   {
-    segmentManager.loadSegment(SEGMENTS.get(0), false, SegmentLazyLoadFailCallback.NOOP);
+    segmentManager.loadSegment(SEGMENTS.get(0), false, SegmentLazyLoadFailCallback.NOOP, null);
     assertResult(ImmutableList.of(SEGMENTS.get(0)));
     Assert.assertEquals(1, segmentManager.getDataSources().size());
     segmentManager.dropSegment(SEGMENTS.get(0));
@@ -299,7 +304,7 @@ public class SegmentManagerTest
         10
     );
 
-    segmentManager.loadSegment(segment, false, SegmentLazyLoadFailCallback.NOOP);
+    segmentManager.loadSegment(segment, false, SegmentLazyLoadFailCallback.NOOP, null);
     assertResult(ImmutableList.of(segment));
 
     segmentManager.dropSegment(segment);

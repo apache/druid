@@ -196,27 +196,13 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     return started;
   }
 
-  private void bootstrapCachedSegments() throws IOException
-  {
-    final Stopwatch stopwatch = Stopwatch.createStarted();
-    final List<DataSegment> cachedSegments = segmentManager.getCachedSegments();
-    addSegments(
-        cachedSegments,
-        () -> {
-          log.info("Cache load of [%d] bootstrap segments completed.", cachedSegments.size());
-        }
-    );
-    stopwatch.stop();
-    log.info("Cache load of [%d] bootstrap segments took [%,dms]", cachedSegments.size(), stopwatch.millisElapsed());
-  }
-
   /**
-   * Load a single segment. If the segment is loaded successfully, this function simply returns. Otherwise, it will
-   * throw a SegmentLoadingException.
+   * Load a single segment. If the segment is loaded successfully, this function simply returns.
+   *
+   * @throws SegmentLoadingException if it fails to load the given segment
    */
   private void loadSegment(
       DataSegment segment,
-      DataSegmentChangeCallback callback,
       boolean lazy,
       @Nullable ExecutorService loadSegmentIntoPageCacheExec
   ) throws SegmentLoadingException
@@ -230,7 +216,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
       );
     }
     catch (Exception e) {
-      removeSegment(segment, callback, false);
+      removeSegment(segment, DataSegmentChangeCallback.NOOP, false);
       throw new SegmentLoadingException(e, "Exception loading segment[%s]", segment.getId());
     }
   }
@@ -268,7 +254,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
           segmentsToDelete.remove(segment);
         }
       }
-      loadSegment(segment, DataSegmentChangeCallback.NOOP, false, null);
+      loadSegment(segment, false, null);
       // announce segment even if the segment file already exists.
       try {
         announcer.announceSegment(segment);
@@ -294,12 +280,13 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
   }
 
   /**
-   * Bulk adding segments during bootstrap
-   * @param segments A collection of segments to add
-   * @param callback Segment loading callback
+   * Bulk loading of cached segments into page cache during bootstrap.
    */
-  private void addSegments(Collection<DataSegment> segments, final DataSegmentChangeCallback callback)
+  private void bootstrapCachedSegments() throws IOException
   {
+    final Stopwatch stopwatch = Stopwatch.createStarted();
+    final List<DataSegment> segments = segmentManager.getCachedSegments();
+
     // Start a temporary thread pool to load segments into page cache during bootstrap
     ExecutorService loadingExecutor = null;
     ExecutorService loadSegmentsIntoPageCacheOnBootstrapExec =
@@ -327,7 +314,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
                     numSegments,
                     segment.getId()
                 );
-                loadSegment(segment, callback, config.isLazyLoadOnStart(), loadSegmentsIntoPageCacheOnBootstrapExec);
+                loadSegment(segment, config.isLazyLoadOnStart(), loadSegmentsIntoPageCacheOnBootstrapExec);
                 try {
                   backgroundSegmentAnnouncer.announceSegment(segment);
                 }
@@ -369,7 +356,6 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
          .emit();
     }
     finally {
-      callback.execute();
       if (loadingExecutor != null) {
         loadingExecutor.shutdownNow();
       }
@@ -378,6 +364,8 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
         // thread pool so threads will exit after finishing the tasks
         loadSegmentsIntoPageCacheOnBootstrapExec.shutdown();
       }
+      stopwatch.stop();
+      log.info("Cache load of [%d] bootstrap segments took [%,d]ms.", segments.size(), stopwatch.millisElapsed());
     }
   }
 
@@ -416,7 +404,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
 
       if (scheduleDrop) {
         log.info(
-            "Completely removing segment[%s] in [%,dms].",
+            "Completely removing segment[%s] in [%,d]ms.",
             segment.getId(), config.getDropSegmentDelayMillis()
         );
         exec.schedule(
@@ -487,7 +475,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
             new DataSegmentChangeHandler()
             {
               @Override
-              public void addSegment(DataSegment segment, DataSegmentChangeCallback callback)
+              public void addSegment(DataSegment segment, @Nullable DataSegmentChangeCallback callback)
               {
                 requestStatuses.put(changeRequest, new AtomicReference<>(SegmentChangeStatus.PENDING));
                 exec.submit(
@@ -499,7 +487,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
               }
 
               @Override
-              public void removeSegment(DataSegment segment, DataSegmentChangeCallback callback)
+              public void removeSegment(DataSegment segment, @Nullable DataSegmentChangeCallback callback)
               {
                 requestStatuses.put(changeRequest, new AtomicReference<>(SegmentChangeStatus.PENDING));
                 SegmentLoadDropHandler.this.removeSegment(
@@ -521,7 +509,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     }
   }
 
-  private void updateRequestStatus(DataSegmentChangeRequest changeRequest, SegmentChangeStatus result)
+  private void updateRequestStatus(DataSegmentChangeRequest changeRequest, @Nullable SegmentChangeStatus result)
   {
     if (result == null) {
       result = SegmentChangeStatus.failed("Unknown reason. Check server logs.");

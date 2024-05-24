@@ -240,13 +240,6 @@ public class SegmentManager
                    .orElseThrow(() -> new ISE("Cannot handle datasource: %s", analysis.getBaseDataSource()));
   }
 
-  @VisibleForTesting
-  public boolean loadSegment(final DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback loadFailed)
-      throws SegmentLoadingException, IOException
-  {
-    return loadSegment(segment, lazy, loadFailed, null);
-  }
-
   /**
    * Load a single segment.
    *
@@ -340,7 +333,7 @@ public class SegmentManager
     return segment;
   }
 
-  public void dropSegment(final DataSegment segment)
+  public void dropSegment(final DataSegment segment) throws IOException
   {
     final String dataSource = segment.getDataSource();
 
@@ -397,6 +390,7 @@ public class SegmentManager
         }
     );
 
+    cacheManager.removeInfoFile(segment);
     cacheManager.cleanup(segment);
   }
 

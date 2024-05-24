@@ -47,10 +47,16 @@ public interface SegmentCacheManager
   List<DataSegment> getCachedSegments() throws IOException;
 
   /**
-   * Store a segment info file on disk for the supplied segment. This operation is idempotent when called
+   * Store a segment info file the supplied segment on disk. This operation is idempotent when called
    * multiple times for a given segment.
    */
   void storeInfoFile(DataSegment segment) throws IOException;
+
+  /**
+   * Remove the segment info file for the supplied segment from disk. If the file cannot be
+   * deleted, do nothing.
+   */
+  void removeInfoFile(DataSegment segment) throws IOException;
 
   /**
    * Returns a {@link ReferenceCountingSegment} that will be added by the {@link org.apache.druid.server.SegmentManager}
@@ -92,35 +98,22 @@ public interface SegmentCacheManager
    */
   File getSegmentFiles(DataSegment segment) throws SegmentLoadingException;
 
-  /**
-   * Tries to reserve the space for a segment on any location. When the space has been reserved,
-   * {@link #getSegmentFiles(DataSegment)} should download the segment on the reserved location or
-   * fail otherwise.
-   *
-   * This function is useful for custom extensions. Extensions can try to reserve the space first and
-   * if not successful, make some space by cleaning up other segments, etc. There is also improved
-   * concurrency for extensions with this function. Since reserve is a cheaper operation to invoke
-   * till the space has been reserved. Hence it can be put inside a lock if required by the extensions. getSegment
-   * can't be put inside a lock since it is a time-consuming operation, on account of downloading the files.
-   *
-   * @param segment - Segment to reserve
-   * @return True if enough space found to store the segment, false otherwise
-   */
-  /*
-   * We only return a boolean result instead of a pointer to
-   * {@link StorageLocation} since we don't want callers to operate on {@code StorageLocation} directly outside {@code SegmentLoader}.
-   * {@link SegmentLoader} operates on the {@code StorageLocation} objects in a thread-safe manner.
-   */
   boolean reserve(DataSegment segment);
 
   /**
-   * Reverts the effects of {@link #reserve(DataSegment)} (DataSegment)} by releasing the location reserved for this segment.
-   * Callers, that explicitly reserve the space via {@link #reserve(DataSegment)}, should use this method to release the space.
+   * Reverts the effects of {@link #reserve(DataSegment)} by releasing the location reserved for this segment.
+   * Callers that explicitly reserve the space via {@link #reserve(DataSegment)} should use this method to release the space.
    *
+   * <p>
    * Implementation can throw error if the space is being released but there is data present. Callers
-   * are supposed to ensure that any data is removed via {@link #cleanup(DataSegment)}
+   * are supposed to ensure that any data is removed via {@link #cleanup(DataSegment)}. Only return a boolean instead
+   * of a pointer to {@code StorageLocation} since we don't want callers to operate on {@code StorageLocation} directly
+   * outside this interface.
+   * </p>
+   *
    * @param segment - Segment to release the location for.
    * @return - True if any location was reserved and released, false otherwise.
+   *
    */
   boolean release(DataSegment segment);
 

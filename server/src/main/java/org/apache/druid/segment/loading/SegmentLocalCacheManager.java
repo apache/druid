@@ -218,6 +218,15 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   }
 
   @Override
+  public void removeInfoFile(DataSegment segment) throws IOException
+  {
+    final File segmentInfoCacheFile = new File(getInfoDir(), segment.getId().toString());
+    if (!segmentInfoCacheFile.delete()) {
+      log.warn("Unable to delete cache file[%s] for segment[%s].", segmentInfoCacheFile, segment.getId());
+    }
+  }
+
+  @Override
   public ReferenceCountingSegment getSegment(DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback loadFailed) throws SegmentLoadingException
   {
     final File segmentFiles = getSegmentFiles(segment);
@@ -238,15 +247,6 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     Segment segmentObject = factory.factorize(segment, segmentFiles, lazy, loadFailed);
 
     return ReferenceCountingSegment.wrapSegment(segmentObject, segment.getShardSpec());
-  }
-
-
-  private void removeInfoFile(DataSegment segment) throws IOException
-  {
-    final File segmentInfoCacheFile = new File(getInfoDir(), segment.getId().toString());
-    if (!segmentInfoCacheFile.delete()) {
-      log.warn("Unable to delete cache file[%s] for segment[%s].", segmentInfoCacheFile, segment.getId());
-    }
   }
 
   private File getInfoDir() throws IOException
@@ -485,7 +485,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     final ReferenceCountingLock lock = createOrGetLock(segment);
     synchronized (lock) {
       try {
-        // May be the segment was already loaded [This check is required to account for restart scenarios]
+        // Maybe the segment was already loaded. This check is required to account for restart scenarios.
         if (null != findStoragePathIfCached(segment)) {
           return true;
         }

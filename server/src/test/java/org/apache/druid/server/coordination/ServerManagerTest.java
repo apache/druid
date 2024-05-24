@@ -250,7 +250,7 @@ public class ServerManagerTest
   }
 
   @Test
-  public void testDelete1()
+  public void testDelete1() throws IOException
   {
     final String dataSouce = "test";
     final Interval interval = Intervals.of("2011-04-01/2011-04-02");
@@ -276,7 +276,7 @@ public class ServerManagerTest
   }
 
   @Test
-  public void testDelete2()
+  public void testDelete2() throws IOException
   {
     loadQueryable("test", "3", Intervals.of("2011-04-04/2011-04-05"));
 
@@ -731,7 +731,8 @@ public class ServerManagerTest
                 1L
             ),
             false,
-            SegmentLazyLoadFailCallback.NOOP
+            SegmentLazyLoadFailCallback.NOOP,
+            null
         ));
       } else {
         Assert.assertTrue(
@@ -748,7 +749,8 @@ public class ServerManagerTest
                     1L
                 ),
                 false,
-                SegmentLazyLoadFailCallback.NOOP
+                SegmentLazyLoadFailCallback.NOOP,
+                null
             )
         );
       }
@@ -758,7 +760,7 @@ public class ServerManagerTest
     }
   }
 
-  private void dropQueryable(String dataSource, String version, Interval interval)
+  private void dropQueryable(String dataSource, String version, Interval interval) throws IOException
   {
     segmentManager.dropSegment(
         new DataSegment(

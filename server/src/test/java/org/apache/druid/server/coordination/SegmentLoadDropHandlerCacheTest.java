@@ -209,6 +209,7 @@ public class SegmentLoadDropHandlerCacheTest
 
     loadDropHandler.stop();
     Assert.assertEquals(0, observedAnnouncedServerCount.get());
+    Assert.assertFalse(new File(storageLoc.getInfoDir(), expectedSegments.get(0).getId().toString()).exists());
   }
 
   private DataSegment makeSegment(String dataSource, String version)

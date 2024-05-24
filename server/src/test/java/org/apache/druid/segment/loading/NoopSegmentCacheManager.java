@@ -52,6 +52,12 @@ public class NoopSegmentCacheManager implements SegmentCacheManager
   }
 
   @Override
+  public void removeInfoFile(DataSegment segment)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
   public ReferenceCountingSegment getSegment(DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback loadFailed)
   {
     throw new UnsupportedOperationException();

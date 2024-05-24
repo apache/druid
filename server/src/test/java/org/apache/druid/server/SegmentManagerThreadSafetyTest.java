@@ -133,7 +133,7 @@ public class SegmentManagerThreadSafetyTest
     final DataSegment segment = createSegment("2019-01-01/2019-01-02");
     final List<Future> futures = IntStream
         .range(0, 16)
-        .mapToObj(i -> exec.submit(() -> segmentManager.loadSegment(segment, false, SegmentLazyLoadFailCallback.NOOP)))
+        .mapToObj(i -> exec.submit(() -> segmentManager.loadSegment(segment, false, SegmentLazyLoadFailCallback.NOOP, null)))
         .collect(Collectors.toList());
     for (Future future : futures) {
       future.get();
@@ -158,7 +158,7 @@ public class SegmentManagerThreadSafetyTest
         .mapToObj(i -> exec.submit(() -> {
           for (DataSegment segment : segments) {
             try {
-              segmentManager.loadSegment(segment, false, SegmentLazyLoadFailCallback.NOOP);
+              segmentManager.loadSegment(segment, false, SegmentLazyLoadFailCallback.NOOP, null);
             }
             catch (SegmentLoadingException | IOException e) {
               throw new RuntimeException(e);
