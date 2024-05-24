@@ -349,7 +349,7 @@ public class ServerManagerTest
 
     queryWaitYieldLatch.countDown();
 
-    Assert.assertTrue(factory.getAdapters().size() == 1);
+    Assert.assertEquals(1, factory.getAdapters().size());
 
     for (TestSegmentUtils.SegmentForTesting segment : factory.getAdapters()) {
       Assert.assertFalse(segment.isClosed());
@@ -713,7 +713,7 @@ public class ServerManagerTest
   {
     try {
       if ("testTombstone".equals(dataSource)) {
-        Assert.assertTrue(segmentManager.loadSegment(
+        segmentManager.loadSegment(
             new DataSegment(
                 dataSource,
                 interval,
@@ -729,26 +729,22 @@ public class ServerManagerTest
                 IndexIO.CURRENT_VERSION_ID,
                 1L
             ),
-            SegmentLazyLoadFailCallback.NOOP,
-            null
-        ));
+            SegmentLazyLoadFailCallback.NOOP
+        );
       } else {
-        Assert.assertTrue(
-            segmentManager.loadSegment(
-                new DataSegment(
-                    dataSource,
-                    interval,
-                    version,
-                    ImmutableMap.of("version", version, "interval", interval),
-                    Arrays.asList("dim1", "dim2", "dim3"),
-                    Arrays.asList("metric1", "metric2"),
-                    NoneShardSpec.instance(),
-                    IndexIO.CURRENT_VERSION_ID,
-                    1L
-                ),
-                SegmentLazyLoadFailCallback.NOOP,
-                null
-            )
+        segmentManager.loadSegment(
+            new DataSegment(
+                dataSource,
+                interval,
+                version,
+                ImmutableMap.of("version", version, "interval", interval),
+                Arrays.asList("dim1", "dim2", "dim3"),
+                Arrays.asList("metric1", "metric2"),
+                NoneShardSpec.instance(),
+                IndexIO.CURRENT_VERSION_ID,
+                1L
+            ),
+            SegmentLazyLoadFailCallback.NOOP
         );
       }
     }
@@ -779,8 +775,8 @@ public class ServerManagerTest
     private final CountDownLatch waitLatch;
     private final CountDownLatch waitYieldLatch;
     private final CountDownLatch notifyLatch;
-    private List<TestSegmentUtils.SegmentForTesting> adapters = new ArrayList<>();
-    private List<ReferenceCountingSegment> segmentReferences = new ArrayList<>();
+    private final List<TestSegmentUtils.SegmentForTesting> adapters = new ArrayList<>();
+    private final List<ReferenceCountingSegment> segmentReferences = new ArrayList<>();
 
 
     public MyQueryRunnerFactory(

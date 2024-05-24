@@ -51,7 +51,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -240,7 +239,10 @@ public class SegmentManager
                    .orElseThrow(() -> new ISE("Cannot handle datasource: %s", analysis.getBaseDataSource()));
   }
 
-  public boolean loadSegmentOnBootstrap(
+  /**
+   * Load a single segment on bootstrap. It uses
+   */
+  public void loadSegmentOnBootstrap(
       final DataSegment dataSegment,
       SegmentLazyLoadFailCallback loadFailed
   ) throws SegmentLoadingException, IOException
@@ -306,27 +308,19 @@ public class SegmentManager
     if (loadResult) {
       cacheManager.storeInfoFile(dataSegment);
     }
-    return loadResult;
   }
 
   /**
-   * Load a single segment.
+   * Load a single segment. If the segment was already loaded, it does nothing.
    *
    * @param segment segment to load
    * @param loadFailed callBack to execute when segment lazy load failed
-   * @param loadSegmentIntoPageCacheExec If null is specified, the default thread pool in segment loader to load
-   *                                     segments into page cache on download will be used. You can specify a dedicated
-   *                                     thread pool of larger capacity when this function is called during historical
-   *                                     process bootstrap to speed up initial loading.
-   *
-   * @return true if the segment was newly loaded, false if it was already loaded
    *
    * @throws SegmentLoadingException if the segment cannot be loaded
    */
-  public boolean loadSegment(
+  public void loadSegment(
       final DataSegment segment,
-      SegmentLazyLoadFailCallback loadFailed,
-      ExecutorService loadSegmentIntoPageCacheExec
+      SegmentLazyLoadFailCallback loadFailed
   ) throws SegmentLoadingException, IOException
   {
     final ReferenceCountingSegment adapter = getSegmentReference(segment, loadFailed);
@@ -377,11 +371,9 @@ public class SegmentManager
           return dataSourceState;
         }
     );
-    final boolean loadResult = resultSupplier.get();
-    if (loadResult) {
+    if (resultSupplier.get()) {
       cacheManager.storeInfoFile(segment);
     }
-    return loadResult;
   }
 
   private ReferenceCountingSegment getSegmentReference(
@@ -403,7 +395,7 @@ public class SegmentManager
     return segment;
   }
 
-  public void dropSegment(final DataSegment segment) throws IOException
+  public void dropSegment(final DataSegment segment)
   {
     final String dataSource = segment.getDataSource();
 
@@ -427,7 +419,6 @@ public class SegmentManager
                 segment.getShardSpec().createChunk(ReferenceCountingSegment.wrapSegment(null, shardSpec))
             );
             final ReferenceCountingSegment oldQueryable = (removed == null) ? null : removed.getObject();
-
 
             if (oldQueryable != null) {
               try (final Closer closer = Closer.create()) {

@@ -27,7 +27,6 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
 
 /**
  * A class to fetch segment files to local disk and manage the local cache.
@@ -56,7 +55,7 @@ public interface SegmentCacheManager
    * Remove the segment info file for the supplied segment from disk. If the file cannot be
    * deleted, do nothing.
    */
-  void removeInfoFile(DataSegment segment) throws IOException;
+  void removeInfoFile(DataSegment segment);
 
   /**
    * Returns a {@link ReferenceCountingSegment} that will be added by the {@link org.apache.druid.server.SegmentManager}

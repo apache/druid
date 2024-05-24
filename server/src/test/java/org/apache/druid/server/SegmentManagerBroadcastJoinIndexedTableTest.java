@@ -160,7 +160,7 @@ public class SegmentManagerBroadcastJoinIndexedTableTest extends InitializedNull
     IncrementalIndex data = TestIndex.makeRealtimeIndex("druid.sample.numeric.tsv");
     final String interval = "2011-01-12T00:00:00.000Z/2011-05-01T00:00:00.000Z";
     DataSegment segment = createSegment(data, interval, version);
-    Assert.assertTrue(segmentManager.loadSegment(segment, SegmentLazyLoadFailCallback.NOOP, null));
+    segmentManager.loadSegment(segment, SegmentLazyLoadFailCallback.NOOP);
 
     Assert.assertTrue(joinableFactory.isDirectlyJoinable(dataSource));
     Optional<Joinable> maybeJoinable = makeJoinable(dataSource);
@@ -209,8 +209,8 @@ public class SegmentManagerBroadcastJoinIndexedTableTest extends InitializedNull
     IncrementalIndex data2 = TestIndex.makeRealtimeIndex("druid.sample.numeric.tsv.bottom");
     DataSegment segment1 = createSegment(data, interval, version);
     DataSegment segment2 = createSegment(data2, interval2, version2);
-    Assert.assertTrue(segmentManager.loadSegment(segment1,  SegmentLazyLoadFailCallback.NOOP, null));
-    Assert.assertTrue(segmentManager.loadSegment(segment2,  SegmentLazyLoadFailCallback.NOOP, null));
+    segmentManager.loadSegment(segment1, SegmentLazyLoadFailCallback.NOOP);
+    segmentManager.loadSegment(segment2, SegmentLazyLoadFailCallback.NOOP);
 
     Assert.assertTrue(joinableFactory.isDirectlyJoinable(dataSource));
     Optional<Joinable> maybeJoinable = makeJoinable(dataSource);
@@ -272,7 +272,7 @@ public class SegmentManagerBroadcastJoinIndexedTableTest extends InitializedNull
     final String interval2 = "2011-01-12T00:00:00.000Z/2011-03-28T00:00:00.000Z";
     IncrementalIndex data = TestIndex.makeRealtimeIndex("druid.sample.numeric.tsv.bottom");
     IncrementalIndex data2 = TestIndex.makeRealtimeIndex("druid.sample.numeric.tsv.top");
-    Assert.assertTrue(segmentManager.loadSegment(createSegment(data, interval, version), SegmentLazyLoadFailCallback.NOOP, null));
+    segmentManager.loadSegment(createSegment(data, interval, version), SegmentLazyLoadFailCallback.NOOP);
     Assert.assertTrue(joinableFactory.isDirectlyJoinable(dataSource));
 
     Optional<Joinable> maybeJoinable = makeJoinable(dataSource);
@@ -294,7 +294,7 @@ public class SegmentManagerBroadcastJoinIndexedTableTest extends InitializedNull
     );
 
     // add another segment with smaller interval, only partially overshadows so there will be 2 segments in timeline
-    Assert.assertTrue(segmentManager.loadSegment(createSegment(data2, interval2, version2), SegmentLazyLoadFailCallback.NOOP, null));
+    segmentManager.loadSegment(createSegment(data2, interval2, version2), SegmentLazyLoadFailCallback.NOOP);
 
     expectedException.expect(ISE.class);
     expectedException.expectMessage(

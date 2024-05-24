@@ -196,29 +196,6 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     return started;
   }
 
-  /**
-   * Load a single segment. If the segment is loaded successfully, this function simply returns.
-   *
-   * @throws SegmentLoadingException if it fails to load the given segment
-   */
-  private void loadSegment(
-      DataSegment segment,
-      @Nullable ExecutorService loadSegmentIntoPageCacheExec
-  ) throws SegmentLoadingException
-  {
-    try {
-      segmentManager.loadSegment(
-          segment,
-          () -> this.removeSegment(segment, DataSegmentChangeCallback.NOOP, false),
-          loadSegmentIntoPageCacheExec
-      );
-    }
-    catch (Exception e) {
-      removeSegment(segment, DataSegmentChangeCallback.NOOP, false);
-      throw new SegmentLoadingException(e, "Exception loading segment[%s]", segment.getId());
-    }
-  }
-
   public Map<String, Long> getAverageNumOfRowsPerSegmentForDatasource()
   {
     return segmentManager.getAverageRowCountForDatasource();
@@ -252,7 +229,16 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
           segmentsToDelete.remove(segment);
         }
       }
-      loadSegment(segment, null);
+      try {
+        segmentManager.loadSegment(
+            segment,
+            () -> this.removeSegment(segment, DataSegmentChangeCallback.NOOP, false)
+        );
+      }
+      catch (Exception e) {
+        removeSegment(segment, DataSegmentChangeCallback.NOOP, false);
+        throw new SegmentLoadingException(e, "Exception loading segment[%s]", segment.getId());
+      }
       // announce segment even if the segment file already exists.
       try {
         announcer.announceSegment(segment);

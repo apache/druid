@@ -32,7 +32,6 @@ import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.loading.NoopSegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
-import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.segment.loading.TombstoneSegmentizerFactory;
 import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
@@ -51,7 +50,6 @@ import org.junit.rules.TemporaryFolder;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
-import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -154,7 +152,11 @@ public class SegmentLoadDropHandlerTest
       }
 
       @Override
-      public void announceSegmentSchemas(String taskId, SegmentSchemas segmentSchemas, SegmentSchemas segmentSchemasChange)
+      public void announceSegmentSchemas(
+          String taskId,
+          SegmentSchemas segmentSchemas,
+          SegmentSchemas segmentSchemasChange
+      )
       {
       }
 
@@ -547,11 +549,11 @@ public class SegmentLoadDropHandlerTest
   public void testProcessBatchDuplicateLoadRequestsWhenFirstRequestFailsSecondRequestShouldSucceed() throws Exception
   {
     final SegmentManager segmentManager = Mockito.mock(SegmentManager.class);
-    Mockito.when(segmentManager.loadSegment(ArgumentMatchers.any(),
-                                            ArgumentMatchers.any(),
-                                            ArgumentMatchers.any()))
-           .thenThrow(new RuntimeException("segment loading failure test"))
-           .thenReturn(true);
+    Mockito.doThrow(new RuntimeException("segment loading failure test"))
+           .doNothing()
+           .when(segmentManager)
+           .loadSegment(ArgumentMatchers.any(), ArgumentMatchers.any());
+
     segmentLoadDropHandler = new SegmentLoadDropHandler(
         segmentLoaderConfig,
         segmentAnnouncer,
@@ -592,8 +594,7 @@ public class SegmentLoadDropHandlerTest
   public void testProcessBatchLoadDropLoadSequenceForSameSegment() throws Exception
   {
     segmentManager = Mockito.mock(SegmentManager.class);
-    Mockito.doReturn(true).when(segmentManager).loadSegment(
-        ArgumentMatchers.any(),
+    Mockito.doNothing().when(segmentManager).loadSegment(
         ArgumentMatchers.any(),
         ArgumentMatchers.any()
     );
@@ -637,7 +638,6 @@ public class SegmentLoadDropHandlerTest
     // check invocations after a load-drop sequence
     Mockito.verify(segmentManager, Mockito.times(1)).loadSegment(
         ArgumentMatchers.any(),
-        ArgumentMatchers.any(),
         ArgumentMatchers.any()
     );
     Mockito.verify(segmentManager, Mockito.times(1))
@@ -656,7 +656,6 @@ public class SegmentLoadDropHandlerTest
     // check invocations - 1 more load has happened
     Mockito.verify(segmentManager, Mockito.times(2)).loadSegment(
         ArgumentMatchers.any(),
-        ArgumentMatchers.any(),
         ArgumentMatchers.any()
     );
     Mockito.verify(segmentManager, Mockito.times(1))
@@ -674,7 +673,6 @@ public class SegmentLoadDropHandlerTest
 
     // check invocations - the load segment counter should bump up
     Mockito.verify(segmentManager, Mockito.times(3)).loadSegment(
-        ArgumentMatchers.any(),
         ArgumentMatchers.any(),
         ArgumentMatchers.any()
     );
@@ -740,13 +738,6 @@ public class SegmentLoadDropHandlerTest
 
   private class LoadDropSegmentCacheManager extends NoopSegmentCacheManager
   {
-    private final List<DataSegment> cachedSegments = new ArrayList<>();
-
-    private void addCachedSegment(final DataSegment segment)
-    {
-      this.cachedSegments.add(segment);
-    }
-
     @Override
     public boolean canHandleSegments()
     {
@@ -756,11 +747,14 @@ public class SegmentLoadDropHandlerTest
     @Override
     public List<DataSegment> getCachedSegments()
     {
-      return this.cachedSegments;
+      return ImmutableList.of();
     }
 
     @Override
-    public ReferenceCountingSegment getSegment(final DataSegment segment, SegmentLazyLoadFailCallback SegmentLazyLoadFailCallback)
+    public ReferenceCountingSegment getSegment(
+        final DataSegment segment,
+        SegmentLazyLoadFailCallback SegmentLazyLoadFailCallback
+    )
     {
       if (segment.isTombstone()) {
         return ReferenceCountingSegment

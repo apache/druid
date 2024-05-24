@@ -26,7 +26,6 @@ import org.apache.druid.timeline.DataSegment;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
 
 /**
  * Test implementation of {@link SegmentCacheManager} which throws an

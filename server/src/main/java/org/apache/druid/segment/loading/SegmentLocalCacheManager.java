@@ -114,7 +114,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     this.locations = locations;
     this.strategy = strategy;
     this.indexIO = indexIO;
-    log.info("Using storage location strategy: [%s]", this.strategy.getClass().getSimpleName());
+    log.info("Using storage location strategy[%s]", this.strategy.getClass().getSimpleName());
 
     if (this.config.getNumThreadsToLoadSegmentsIntoPageCacheOnDownload() != 0) {
       loadSegmentsIntoPageCacheOnDownloadExec = Executors.newFixedThreadPool(
@@ -134,6 +134,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     }
   }
 
+  @Deprecated
   @VisibleForTesting
   SegmentLocalCacheManager(
       SegmentLoaderConfig config,
@@ -150,6 +151,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
    *
    * This ctor is mainly for test cases, including test cases in other modules
    */
+  @Deprecated
   public SegmentLocalCacheManager(
       SegmentLoaderConfig config,
       IndexIO indexIO,
@@ -180,6 +182,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       );
     }
     final File baseDir = getInfoDir();
+    FileUtils.mkdirp(baseDir);
 
     List<DataSegment> cachedSegments = new ArrayList<>();
     File[] segmentsToLoad = baseDir.listFiles();
@@ -221,14 +224,17 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   @Override
   public void storeInfoFile(DataSegment segment) throws IOException
   {
-    final File segmentInfoCacheFile = new File(getInfoDir(), segment.getId().toString());
+    final File infoDir = getInfoDir();
+    FileUtils.mkdirp(infoDir);
+
+    final File segmentInfoCacheFile = new File(infoDir, segment.getId().toString());
     if (!segmentInfoCacheFile.exists()) {
       jsonMapper.writeValue(segmentInfoCacheFile, segment);
     }
   }
 
   @Override
-  public void removeInfoFile(DataSegment segment) throws IOException
+  public void removeInfoFile(DataSegment segment)
   {
     final File segmentInfoCacheFile = new File(getInfoDir(), segment.getId().toString());
     if (!segmentInfoCacheFile.delete()) {
@@ -282,9 +288,9 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     return ReferenceCountingSegment.wrapSegment(segmentObject, segment.getShardSpec());
   }
 
-  private File getInfoDir() throws IOException
+  private File getInfoDir()
   {
-    File infoDir;
+    final File infoDir;
     if (config.getInfoDir() != null) {
       infoDir = config.getInfoDir();
     } else if (!config.getLocations().isEmpty()) {
@@ -297,8 +303,6 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
           .build("Could not determine infoDir. Make sure 'druid.segmentCache.infoDir' "
                  + "or 'druid.segmentCache.locations'is set correctly.");
     }
-
-    FileUtils.mkdirp(infoDir);
     return infoDir;
   }
 
