@@ -247,10 +247,11 @@ public class SegmentManager
    *                  when lazy loading is enabled.
    *
    * @throws SegmentLoadingException if the segment cannot be loaded
+   * @throws IOException if the segment info cannot be cached on disk
    */
   public void loadSegmentOnBootstrap(
       final DataSegment dataSegment,
-      SegmentLazyLoadFailCallback loadFailed
+      final SegmentLazyLoadFailCallback loadFailed
   ) throws SegmentLoadingException, IOException
   {
     final ReferenceCountingSegment segmentAdapter;
@@ -278,6 +279,7 @@ public class SegmentManager
    * @param dataSegment segment to load
    *
    * @throws SegmentLoadingException if the segment cannot be loaded
+   * @throws IOException if the segment info cannot be cached on disk
    */
   public void loadSegment(final DataSegment dataSegment) throws SegmentLoadingException, IOException
   {
@@ -323,7 +325,7 @@ public class SegmentManager
             log.warn("Told to load an adapter for segment[%s] that already exists", dataSegment.getId());
             resultSupplier.set(false);
           } else {
-            IndexedTable table = segmentAdapter.as(IndexedTable.class);
+            final IndexedTable table = segmentAdapter.as(IndexedTable.class);
             if (table != null) {
               if (dataSourceState.isEmpty() || dataSourceState.numSegments == dataSourceState.tablesLookup.size()) {
                 dataSourceState.tablesLookup.put(segmentAdapter.getId(), new ReferenceCountingIndexedTable(table));
@@ -338,8 +340,8 @@ public class SegmentManager
                 dataSegment.getVersion(),
                 dataSegment.getShardSpec().createChunk(segmentAdapter)
             );
-            StorageAdapter storageAdapter = segmentAdapter.asStorageAdapter();
-            long numOfRows = (dataSegment.isTombstone() || storageAdapter == null) ? 0 : storageAdapter.getNumRows();
+            final StorageAdapter storageAdapter = segmentAdapter.asStorageAdapter();
+            final long numOfRows = (dataSegment.isTombstone() || storageAdapter == null) ? 0 : storageAdapter.getNumRows();
             dataSourceState.addSegment(dataSegment, numOfRows);
 
             if (isBootstrap) {
@@ -391,7 +393,7 @@ public class SegmentManager
                 dataSourceState.removeSegment(segment, numOfRows);
 
                 closer.register(oldQueryable);
-                log.info("Attempting to close segment %s", segment.getId());
+                log.info("Attempting to close segment[%s]", segment.getId());
                 final ReferenceCountingIndexedTable oldTable = dataSourceState.tablesLookup.remove(segment.getId());
                 if (oldTable != null) {
                   closer.register(oldTable);
