@@ -40,9 +40,9 @@ import org.apache.druid.timeline.SegmentId;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -97,9 +97,6 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   private ExecutorService loadSegmentsIntoPageCacheOnDownloadExec = null;
   private ExecutorService loadSegmentsIntoPageCacheOnBootstrapExec = null;
 
-  // Note that we only create this via injection in historical and realtime nodes. Peons create these
-  // objects via SegmentCacheManagerFactory objects, so that they can store segments in task-specific
-  // directories rather than statically configured directories.
   @Inject
   public SegmentLocalCacheManager(
       List<StorageLocation> locations,
@@ -114,23 +111,26 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     this.locations = locations;
     this.strategy = strategy;
     this.indexIO = indexIO;
-    log.info("Using storage location strategy[%s]", this.strategy.getClass().getSimpleName());
 
-    if (this.config.getNumThreadsToLoadSegmentsIntoPageCacheOnDownload() != 0) {
-      loadSegmentsIntoPageCacheOnDownloadExec = Executors.newFixedThreadPool(
-          config.getNumThreadsToLoadSegmentsIntoPageCacheOnDownload(),
-          Execs.makeThreadFactory("LoadSegmentsIntoPageCacheOnDownload-%s"));
-      log.info("Size of thread pool to load segments into page cache on download [%d]",
-               config.getNumThreadsToLoadSegmentsIntoPageCacheOnDownload());
-    }
+    log.info("Using storage location strategy[%s].", this.strategy.getClass().getSimpleName());
+    log.info(
+        "Size of thread pools to load segments into page cache - on bootstrap: [%d], on download: [%d].",
+        config.getNumThreadsToLoadSegmentsIntoPageCacheOnBootstrap(),
+        config.getNumThreadsToLoadSegmentsIntoPageCacheOnDownload()
+    );
 
-    if (config.getNumThreadsToLoadSegmentsIntoPageCacheOnBootstrap() != 0) {
+    if (config.getNumThreadsToLoadSegmentsIntoPageCacheOnBootstrap() > 0) {
       loadSegmentsIntoPageCacheOnBootstrapExec = Execs.multiThreaded(
           config.getNumThreadsToLoadSegmentsIntoPageCacheOnBootstrap(),
           "Load-Segments-Into-Page-Cache-On-Bootstrap-%s"
       );
-      log.info("Size of thread pool to load segments into page cache on bootstrap [%d]",
-               config.getNumThreadsToLoadSegmentsIntoPageCacheOnBootstrap());
+    }
+
+    if (this.config.getNumThreadsToLoadSegmentsIntoPageCacheOnDownload() > 0) {
+      loadSegmentsIntoPageCacheOnDownloadExec = Executors.newFixedThreadPool(
+          config.getNumThreadsToLoadSegmentsIntoPageCacheOnDownload(),
+          Execs.makeThreadFactory("LoadSegmentsIntoPageCacheOnDownload-%s")
+      );
     }
   }
 
@@ -651,8 +651,8 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
             File[] children = localStorageDir.listFiles();
             if (children != null) {
               for (File child : children) {
-                try (InputStream in = new FileInputStream(child)) {
-                  IOUtils.copy(in, new NullOutputStream());
+                try (InputStream in = Files.newInputStream(child.toPath())) {
+                  IOUtils.copy(in, NullOutputStream.NULL_OUTPUT_STREAM);
                   log.info("Loaded [%s] into page cache.", child.getAbsolutePath());
                 }
                 catch (Exception e) {

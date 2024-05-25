@@ -53,6 +53,8 @@ public interface SegmentCacheManager
   /**
    * Remove the segment info file for the supplied segment from disk. If the file cannot be
    * deleted, do nothing.
+   *
+   * @see SegmentCacheManager#cleanup(DataSegment)
    */
   void removeInfoFile(DataSegment segment);
 
@@ -66,8 +68,9 @@ public interface SegmentCacheManager
    * segments that the custom implementations are creating. That way, custom implementations can know when the segment
    * is in use or not.
    * </p>
-   * @param segment - Segment to load
-   * @throws SegmentLoadingException - If there is an error in loading the segment
+   * @param segment Segment to get on each download after service bootstrap
+   * @throws SegmentLoadingException If there is an error in loading the segment
+   * @see SegmentCacheManager#getBootstrapSegment(DataSegment, SegmentLazyLoadFailCallback)
    */
   ReferenceCountingSegment getSegment(DataSegment segment) throws SegmentLoadingException;
 
@@ -75,11 +78,11 @@ public interface SegmentCacheManager
    * Similar to {@link #getSegment(DataSegment)}, this method returns a {@link ReferenceCountingSegment} that will be
    * added by the {@link org.apache.druid.server.SegmentManager} to the {@link org.apache.druid.timeline.VersionedIntervalTimeline}
    * during startup on data nodes.
-   * @param segment segment to bootstrap
-   * @param loadFailed callback to execute when segment lazy load failed. This applies only when
+   * @param segment Segment to retrieve during service bootstrap
+   * @param loadFailed Callback to execute when segment lazy load failed. This applies only when
    *                   {@code lazyLoadOnStart} is enabled
-   * @return
    * @throws SegmentLoadingException - If there is an error in loading the segment
+   * @see SegmentCacheManager#getSegment(DataSegment)
    */
   ReferenceCountingSegment getBootstrapSegment(
       DataSegment segment,
@@ -97,6 +100,24 @@ public interface SegmentCacheManager
    * @throws SegmentLoadingException if there is an error in downloading files
    */
   File getSegmentFiles(DataSegment segment) throws SegmentLoadingException;
+
+  /**
+   * Asynchronously load the supplied segment into the page cache on each download after the service finishes bootstrapping.
+   * Equivalent to `cat segment_files > /dev/null` to force loading the segment index files into page cache so that
+   * later when the segment is queried, they are already in page cache and only a minor page fault needs to be triggered
+   * instead of a major page fault to make the query latency more consistent.
+   *
+   * @see SegmentCacheManager#loadSegmentIntoPageCacheOnBootstrap(DataSegment)
+   */
+  void loadSegmentIntoPageCache(DataSegment segment);
+
+  /**
+   * Similar to {@link #loadSegmentIntoPageCache(DataSegment)}, but asynchronously load the supplied segment into the
+   * page cache during service bootstrap.
+   *
+   * @see SegmentCacheManager#loadSegmentIntoPageCache(DataSegment)
+   */
+  void loadSegmentIntoPageCacheOnBootstrap(DataSegment segment);
 
   boolean reserve(DataSegment segment);
 
@@ -118,26 +139,10 @@ public interface SegmentCacheManager
   boolean release(DataSegment segment);
 
   /**
-   * Cleanup the cache space used by the segment. It will not release the space if the space has been
-   * explicitly reserved via {@link #reserve(DataSegment)}
+   * Cleanup the segment files cache space used by the segment. It will not release the space if the
+   * space has been explicitly reserved via {@link #reserve(DataSegment)}.
+   *
+   * @see SegmentCacheManager#removeInfoFile(DataSegment)
    */
   void cleanup(DataSegment segment);
-
-  /**
-   * Asyncly load segment into page cache.
-   * Equivalent to `cat segment_files > /dev/null` to force loading the segment index files into page cache so that
-   * later when the segment is queried, they are already in page cache and only a minor page fault needs to be triggered
-   * instead of a major page fault to make the query latency more consistent.
-   *
-   * @param segment The segment to load its index files into page cache
-   */
-  void loadSegmentIntoPageCache(DataSegment segment);
-
-  /**
-   * Similar to {@link #loadSegmentIntoPageCache(DataSegment)}, asynchronously load a segment into the page
-   * cache using a bootstrap executor.
-   *
-   * @param segment The segment to load its index files into page cache during bootstrap
-   */
-  void loadSegmentIntoPageCacheOnBootstrap(DataSegment segment);
 }

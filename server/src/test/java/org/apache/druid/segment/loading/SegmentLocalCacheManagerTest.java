@@ -56,12 +56,12 @@ public class SegmentLocalCacheManagerTest
   @Rule
   public final TemporaryFolder tmpFolder = new TemporaryFolder();
 
-  private final ObjectMapper jsonMapper;
-
+  private ObjectMapper jsonMapper;
   private File localSegmentCacheFolder;
   private SegmentLocalCacheManager manager;
 
-  public SegmentLocalCacheManagerTest()
+  @Before
+  public void setUp() throws Exception
   {
     jsonMapper = TestHelper.makeJsonMapper();
     jsonMapper.registerSubtypes(new NamedType(LocalLoadSpec.class, "local"),
@@ -72,20 +72,19 @@ public class SegmentLocalCacheManagerTest
             new LocalDataSegmentPuller()
         )
     );
-  }
 
-  @Before
-  public void setUp() throws Exception
-  {
     EmittingLogger.registerEmitter(new NoopServiceEmitter());
     localSegmentCacheFolder = tmpFolder.newFolder("segment_cache_folder");
 
-    final List<StorageLocationConfig> locations = new ArrayList<>();
+    final List<StorageLocationConfig> locationConfigs = new ArrayList<>();
     final StorageLocationConfig locationConfig = new StorageLocationConfig(localSegmentCacheFolder, 10000000000L, null);
-    locations.add(locationConfig);
+    locationConfigs.add(locationConfig);
 
+    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig().withLocations(locationConfigs);
     manager = new SegmentLocalCacheManager(
-        new SegmentLoaderConfig().withLocations(locations),
+        loaderConfig.toStorageLocations(),
+        loaderConfig,
+        new LeastBytesUsedStorageLocationSelectorStrategy(loaderConfig.toStorageLocations()),
         TestIndex.INDEX_IO,
         jsonMapper
     );
@@ -147,6 +146,22 @@ public class SegmentLocalCacheManagerTest
   @Test
   public void testLoadSegmentInPageCache() throws IOException
   {
+    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig()
+    {
+      @Override
+      public int getNumThreadsToLoadSegmentsIntoPageCacheOnDownload()
+      {
+        return 1;
+      }
+    };
+    manager = new SegmentLocalCacheManager(
+        loaderConfig.toStorageLocations(),
+        loaderConfig,
+        new LeastBytesUsedStorageLocationSelectorStrategy(loaderConfig.toStorageLocations()),
+        TestIndex.INDEX_IO,
+        jsonMapper
+    );
+
     final DataSegment segment = dataSegmentWithInterval("2014-10-20T00:00:00Z/P1D");
     final File segmentFile = new File(
         localSegmentCacheFolder,
