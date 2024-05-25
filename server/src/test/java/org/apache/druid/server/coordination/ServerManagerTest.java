@@ -245,7 +245,7 @@ public class ServerManagerTest
   }
 
   @Test
-  public void testDelete1() throws IOException
+  public void testDelete1()
   {
     final String dataSouce = "test";
     final Interval interval = Intervals.of("2011-04-01/2011-04-02");
@@ -271,7 +271,7 @@ public class ServerManagerTest
   }
 
   @Test
-  public void testDelete2() throws IOException
+  public void testDelete2()
   {
     loadQueryable("test", "3", Intervals.of("2011-04-04/2011-04-05"));
 
