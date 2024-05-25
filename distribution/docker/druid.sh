@@ -138,8 +138,8 @@ then
     setKey _common druid.zk.service.host "${ZOOKEEPER}"
 fi
 
-DRUID_SET_HOST=${DRUID_SET_HOST:-1}
-if [ "${DRUID_SET_HOST}" = "1" ]
+DRUID_SET_HOST_IP=${DRUID_SET_HOST_IP:-0}
+if [ "${DRUID_SET_HOST_IP}" = "1" ]
 then
     setKey $SERVICE druid.host $(ip r get 1 | awk '{print $7;exit}')
 fi
@@ -171,6 +171,9 @@ if [ -n "$DRUID_MAXDIRECTMEMORYSIZE" ]; then setJavaKey ${SERVICE} -XX:MaxDirect
 # If a value is specified in both then JAVA_OPTS will take precedence when using OpenJDK
 # However this behavior is not part of the spec and is thus implementation specific
 JAVA_OPTS="$(cat $SERVICE_CONF_DIR/jvm.config | xargs) $JAVA_OPTS"
+
+# Specify node type used for log4j2.xml
+JAVA_OPTS="-Ddruid.node.type=$SERVICE $JAVA_OPTS"
 
 if [ -n "$DRUID_LOG_LEVEL" ]
 then

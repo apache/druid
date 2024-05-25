@@ -19,64 +19,42 @@
 
 package org.apache.druid.msq.exec;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.msq.counters.CounterSnapshots;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
 import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.msq.indexing.client.ControllerChatHandler;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
+import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.statistics.PartialKeyStatisticsInformation;
 
 import javax.annotation.Nullable;
 import java.util.List;
 
 /**
- * Interface for the controller of a multi-stage query.
+ * Interface for the controller of a multi-stage query. Each Controller is specific to a particular query.
+ *
+ * @see WorkerImpl the production implementation
  */
 public interface Controller
 {
   /**
-   * POJO for capturing the status of a controller task that is currently running.
-   */
-  class RunningControllerStatus
-  {
-    private final String id;
-
-    @JsonCreator
-    public RunningControllerStatus(String id)
-    {
-      this.id = id;
-    }
-
-    @JsonProperty("id")
-    public String getId()
-    {
-      return id;
-    }
-  }
-
-  /**
    * Unique task/query ID for the batch query run by this controller.
+   *
+   * Controller IDs must be globally unique. For tasks, this is the task ID from {@link MSQControllerTask#getId()}.
    */
-  String id();
-
-  /**
-   * The task which this controller runs.
-   */
-  MSQControllerTask task();
+  String queryId();
 
   /**
    * Runs the controller logic in the current thread. Surrounding classes provide the execution thread.
    */
-  TaskStatus run() throws Exception;
+  void run(QueryListener listener) throws Exception;
 
   /**
-   * Terminate the query DAG upon a cancellation request.
+   * Terminate the controller upon a cancellation request. Causes a concurrently-running {@link #run} method in
+   * a separate thread to cancel all outstanding work and exit.
    */
-  void stopGracefully();
+  void stop();
 
   // Worker-to-controller messages
 
@@ -84,13 +62,29 @@ public interface Controller
    * Accepts a {@link PartialKeyStatisticsInformation} and updates the controller key statistics information. If all key
    * statistics have been gathered, enqueues the task with the {@link WorkerSketchFetcher} to generate partiton boundaries.
    * This is intended to be called by the {@link ControllerChatHandler}.
+   *
+   * @see ControllerClient#postPartialKeyStatistics(StageId, int, PartialKeyStatisticsInformation)
    */
-  void updatePartialKeyStatisticsInformation(int stageNumber, int workerNumber, Object partialKeyStatisticsInformationObject);
+  void updatePartialKeyStatisticsInformation(
+      int stageNumber,
+      int workerNumber,
+      Object partialKeyStatisticsInformationObject
+  );
+
+  /**
+   * Sent by workers when they finish reading their input, in cases where they would not otherwise be calling
+   * {@link #updatePartialKeyStatisticsInformation(int, int, Object)}.
+   *
+   * @see ControllerClient#postDoneReadingInput(StageId, int)
+   */
+  void doneReadingInput(int stageNumber, int workerNumber);
 
   /**
    * System error reported by a subtask. Note that the errors are organized by
    * taskId, not by query/stage/worker, because system errors are associated
    * with a task rather than a specific query/stage/worker execution context.
+   *
+   * @see ControllerClient#postWorkerError(String, MSQErrorReport)
    */
   void workerError(MSQErrorReport errorReport);
 
@@ -98,16 +92,22 @@ public interface Controller
    * System warning reported by a subtask. Indicates that the worker has encountered a non-lethal error. Worker should
    * continue its execution in such a case. If the worker wants to report an error and stop its execution,
    * please use {@link Controller#workerError}
+   *
+   * @see ControllerClient#postWorkerWarning(List)
    */
   void workerWarning(List<MSQErrorReport> errorReports);
 
   /**
    * Periodic update of {@link CounterSnapshots} from subtasks.
+   *
+   * @see ControllerClient#postCounters(String, CounterSnapshotsTree)
    */
   void updateCounters(String taskId, CounterSnapshotsTree snapshotsTree);
 
   /**
    * Reports that results are ready for a subtask.
+   *
+   * @see ControllerClient#postResultsComplete(StageId, int, Object)
    */
   void resultsComplete(
       String queryId,

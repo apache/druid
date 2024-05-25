@@ -50,6 +50,7 @@ import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.sql.SqlStatementFactory;
+import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregationModule;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
@@ -70,10 +71,7 @@ import org.apache.druid.timeline.DataSegment;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
@@ -123,16 +121,6 @@ import java.util.Set;
  */
 public class SqlTestFramework
 {
-  /**
-   * Declares which {@link QueryComponentSupplier} must be used for the class.
-   */
-  @Retention(RetentionPolicy.RUNTIME)
-  @Target({ElementType.TYPE})
-  public @interface SqlTestFrameWorkModule
-  {
-    Class<? extends QueryComponentSupplier> value();
-  }
-
   /**
    * Interface to provide various framework components. Extend to customize,
    * use {@link StandardComponentSupplier} for the "standard" components.
@@ -191,6 +179,10 @@ public class SqlTestFramework
     void finalizeTestFramework(SqlTestFramework sqlTestFramework);
 
     PlannerComponentSupplier getPlannerComponentSupplier();
+    @Override
+    default void close() throws IOException
+    {
+    }
   }
 
   public interface PlannerComponentSupplier
@@ -413,6 +405,7 @@ public class SqlTestFramework
     private int mergeBufferCount;
     private CatalogResolver catalogResolver = CatalogResolver.NULL_RESOLVER;
     private List<Module> overrideModules = new ArrayList<>();
+    private SqlTestFrameworkConfig config;
 
     public Builder(QueryComponentSupplier componentSupplier)
     {
@@ -446,6 +439,12 @@ public class SqlTestFramework
     public SqlTestFramework build()
     {
       return new SqlTestFramework(this);
+    }
+
+    public Builder withConfig(SqlTestFrameworkConfig config)
+    {
+      this.config = config;
+      return this;
     }
   }
 
@@ -611,6 +610,7 @@ public class SqlTestFramework
         // test pulls in a module, then pull in that module, even though we are
         // not the Druid node to which the module is scoped.
         .ignoreLoadScopes()
+        .addModule(binder -> binder.bind(Closer.class).toInstance(resourceCloser))
         .addModule(new LookylooModule())
         .addModule(new SegmentWranglerModule())
         .addModule(new SqlAggregationModule())
@@ -700,5 +700,10 @@ public class SqlTestFramework
     catch (IOException e) {
       throw new RE(e);
     }
+  }
+
+  public URI getDruidTestURI()
+  {
+    return builder.config.getDruidTestURI();
   }
 }

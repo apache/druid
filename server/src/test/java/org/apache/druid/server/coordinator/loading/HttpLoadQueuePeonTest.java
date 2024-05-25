@@ -20,6 +20,7 @@
 package org.apache.druid.server.coordinator.loading;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.java.util.common.RE;
@@ -27,13 +28,14 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
-import org.apache.druid.server.ServerTestHelper;
+import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.coordination.DataSegmentChangeCallback;
 import org.apache.druid.server.coordination.DataSegmentChangeHandler;
 import org.apache.druid.server.coordination.DataSegmentChangeRequest;
-import org.apache.druid.server.coordination.SegmentLoadDropHandler;
+import org.apache.druid.server.coordination.DataSegmentChangeResponse;
+import org.apache.druid.server.coordination.SegmentChangeStatus;
 import org.apache.druid.server.coordinator.CreateDataSegments;
-import org.apache.druid.server.coordinator.TestDruidCoordinatorConfig;
+import org.apache.druid.server.coordinator.config.HttpLoadQueuePeonConfig;
 import org.apache.druid.server.coordinator.simulate.BlockingExecutorService;
 import org.apache.druid.server.coordinator.simulate.WrappingScheduledExecutorService;
 import org.apache.druid.timeline.DataSegment;
@@ -63,6 +65,7 @@ import java.util.stream.Collectors;
  */
 public class HttpLoadQueuePeonTest
 {
+  private static final ObjectMapper MAPPER = TestHelper.makeJsonMapper();
   private final List<DataSegment> segments =
       CreateDataSegments.ofDatasource("test")
                         .forIntervals(1, Granularities.DAY)
@@ -87,11 +90,9 @@ public class HttpLoadQueuePeonTest
 
     httpLoadQueuePeon = new HttpLoadQueuePeon(
         "http://dummy:4000",
-        ServerTestHelper.MAPPER,
+        MAPPER,
         httpClient,
-        new TestDruidCoordinatorConfig.Builder()
-            .withHttpLoadQueuePeonBatchSize(10)
-            .build(),
+        new HttpLoadQueuePeonConfig(null, null, 10),
         new WrappingScheduledExecutorService("HttpLoadQueuePeonTest-%s", processingExecutor, true),
         callbackExecutor
     );
@@ -315,23 +316,22 @@ public class HttpLoadQueuePeonTest
       httpResponse.setContent(ChannelBuffers.buffer(0));
       httpResponseHandler.handleResponse(httpResponse, null);
       try {
-        List<DataSegmentChangeRequest> changeRequests = ServerTestHelper.MAPPER.readValue(
+        List<DataSegmentChangeRequest> changeRequests = MAPPER.readValue(
             request.getContent().array(), new TypeReference<List<DataSegmentChangeRequest>>()
             {
             }
         );
 
-        List<SegmentLoadDropHandler.DataSegmentChangeRequestAndStatus> statuses = new ArrayList<>(changeRequests.size());
+        List<DataSegmentChangeResponse> statuses = new ArrayList<>(changeRequests.size());
         for (DataSegmentChangeRequest cr : changeRequests) {
           cr.go(this, null);
-          statuses.add(new SegmentLoadDropHandler.DataSegmentChangeRequestAndStatus(
-              cr,
-              SegmentLoadDropHandler.Status.SUCCESS
-          ));
+          statuses.add(
+              new DataSegmentChangeResponse(cr, SegmentChangeStatus.SUCCESS)
+          );
         }
-        return (ListenableFuture) Futures.immediateFuture(
+        return (ListenableFuture<Final>) Futures.immediateFuture(
             new ByteArrayInputStream(
-                ServerTestHelper.MAPPER
+                MAPPER
                     .writerWithType(HttpLoadQueuePeon.RESPONSE_ENTITY_TYPE_REF)
                     .writeValueAsBytes(statuses)
             )
