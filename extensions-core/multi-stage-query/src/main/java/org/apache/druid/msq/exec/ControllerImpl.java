@@ -1621,7 +1621,8 @@ public class ControllerImpl implements Controller
 
     GranularitySpec granularitySpec = new UniformGranularitySpec(
         segmentGranularity,
-        QueryContext.of(task.getContext()).getGranularity(DruidSqlInsert.SQL_INSERT_QUERY_GRANULARITY, jsonMapper),
+        QueryContext.of(querySpec.getQuery().getContext())
+                    .getGranularity(DruidSqlInsert.SQL_INSERT_QUERY_GRANULARITY, jsonMapper),
         dataSchema.getGranularitySpec().isRollup(),
         ((DataSourceMSQDestination) querySpec.getDestination()).getReplaceTimeChunks()
     );

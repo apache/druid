@@ -157,18 +157,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
   @JsonIgnore
   private final SegmentProvider segmentProvider;
   @JsonIgnore
-  private final PartitionConfigurationManager partitionConfigurationManager;
-
-  @JsonIgnore
-  private final SegmentCacheManagerFactory segmentCacheManagerFactory;
-
-  @JsonIgnore
-  private final CurrentSubTaskHolder currentSubTaskHolder = new CurrentSubTaskHolder(
-      (taskObject, config) -> {
-        final ParallelIndexSupervisorTask indexTask = (ParallelIndexSupervisorTask) taskObject;
-        indexTask.stopGracefully(config);
-      }
-  );
+  private final CurrentSubTaskHolder currentSubTaskHolder;
 
   @JsonCreator
   public CompactionTask(
@@ -238,6 +227,8 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     }
     this.tuningConfig = tuningConfig != null ? getTuningConfig(tuningConfig) : null;
     this.segmentProvider = new SegmentProvider(dataSource, this.ioConfig.getInputSpec());
+    this.compactionRunner = compactionRunner;
+    this.currentSubTaskHolder = compactionRunner.getCurrentSubTaskHolder();
 
     // Do not load any lookups in sub-tasks launched by compaction task, unless transformSpec is present.
     // If transformSpec is present, we will not modify the context so that the sub-tasks can make the
