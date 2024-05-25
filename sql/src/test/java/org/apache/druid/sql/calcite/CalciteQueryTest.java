@@ -604,12 +604,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testDiv()
   {
-    cannotVectorize();
-    final Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
-
     testQuery(
         "select cnt, m1, div(m1, 2), div(cnt+2, cnt+1) from foo",
-        context,
+        QUERY_CONTEXT_DEFAULT,
         ImmutableList.of(
             newScanQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
