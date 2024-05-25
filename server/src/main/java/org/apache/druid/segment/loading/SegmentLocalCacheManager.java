@@ -646,17 +646,17 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
               continue;
             }
 
-            log.info("Loading directory[%s] into page cache", localStorageDir);
+            log.info("Loading directory[%s] into page cache.", localStorageDir);
 
             File[] children = localStorageDir.listFiles();
             if (children != null) {
               for (File child : children) {
                 try (InputStream in = new FileInputStream(child)) {
                   IOUtils.copy(in, new NullOutputStream());
-                  log.info("Loaded [%s] into page cache", child.getAbsolutePath());
+                  log.info("Loaded [%s] into page cache.", child.getAbsolutePath());
                 }
                 catch (Exception e) {
-                  log.error("Failed to load [%s] into page cache, [%s]", child.getAbsolutePath(), e.getMessage());
+                  log.error(e, "Failed to load [%s] into page cache", child.getAbsolutePath());
                 }
               }
             }

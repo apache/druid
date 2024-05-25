@@ -747,7 +747,7 @@ public class ServerManagerTest
     }
   }
 
-  private void dropQueryable(String dataSource, String version, Interval interval) throws IOException
+  private void dropQueryable(String dataSource, String version, Interval interval)
   {
     segmentManager.dropSegment(
         new DataSegment(
