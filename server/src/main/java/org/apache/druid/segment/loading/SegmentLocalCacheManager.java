@@ -134,7 +134,6 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     }
   }
 
-  @Deprecated
   @VisibleForTesting
   SegmentLocalCacheManager(
       SegmentLoaderConfig config,
@@ -151,7 +150,6 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
    *
    * This ctor is mainly for test cases, including test cases in other modules
    */
-  @Deprecated
   public SegmentLocalCacheManager(
       SegmentLoaderConfig config,
       IndexIO indexIO,
@@ -243,23 +241,26 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   }
 
   @Override
-  public ReferenceCountingSegment getSegment(DataSegment segment) throws SegmentLoadingException
+  public ReferenceCountingSegment getSegment(final DataSegment dataSegment) throws SegmentLoadingException
   {
-    final File segmentFiles = getSegmentFiles(segment);
+    final File segmentFiles = getSegmentFiles(dataSegment);
     final SegmentizerFactory factory = getSegmentFactory(segmentFiles);
 
-    final Segment segmentObject = factory.factorize(segment, segmentFiles, false, SegmentLazyLoadFailCallback.NOOP);
-    return ReferenceCountingSegment.wrapSegment(segmentObject, segment.getShardSpec());
+    final Segment segment = factory.factorize(dataSegment, segmentFiles, false, SegmentLazyLoadFailCallback.NOOP);
+    return ReferenceCountingSegment.wrapSegment(segment, dataSegment.getShardSpec());
   }
 
   @Override
-  public ReferenceCountingSegment getBootstrapSegment(DataSegment segment, SegmentLazyLoadFailCallback loadFailed) throws SegmentLoadingException
+  public ReferenceCountingSegment getBootstrapSegment(
+      final DataSegment dataSegment,
+      final SegmentLazyLoadFailCallback loadFailed
+  ) throws SegmentLoadingException
   {
-    final File segmentFiles = getSegmentFiles(segment);
+    final File segmentFiles = getSegmentFiles(dataSegment);
     final SegmentizerFactory factory = getSegmentFactory(segmentFiles);
 
-    final Segment segmentObject = factory.factorize(segment, segmentFiles, config.isLazyLoadOnStart(), loadFailed);
-    return ReferenceCountingSegment.wrapSegment(segmentObject, segment.getShardSpec());
+    final Segment segment = factory.factorize(dataSegment, segmentFiles, config.isLazyLoadOnStart(), loadFailed);
+    return ReferenceCountingSegment.wrapSegment(segment, dataSegment.getShardSpec());
   }
 
   private SegmentizerFactory getSegmentFactory(final File segmentFiles) throws SegmentLoadingException
@@ -303,8 +304,11 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     return DataSegmentPusher.getDefaultStorageDir(segment, false);
   }
 
-  @Override
-  public boolean isSegmentCached(final DataSegment segment)
+  /**
+   * Checks whether a segment is already cached. It can return false even if {@link #reserve(DataSegment)}
+   * has been successful for a segment but is not downloaded yet.
+   */
+  boolean isSegmentCached(final DataSegment segment)
   {
     return findStoragePathIfCached(segment) != null;
   }
@@ -617,48 +621,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       return;
     }
 
-    loadSegmentsIntoPageCacheOnDownloadExec.submit(
-        () -> {
-          final ReferenceCountingLock lock = createOrGetLock(segment);
-          synchronized (lock) {
-            try {
-              for (StorageLocation location : locations) {
-                File localStorageDir = new File(location.getPath(), DataSegmentPusher.getDefaultStorageDir(segment, false));
-                if (localStorageDir.exists()) {
-                  File baseFile = location.getPath();
-                  if (localStorageDir.equals(baseFile)) {
-                    continue;
-                  }
-
-                  log.info("Loading directory[%s] into page cache", localStorageDir);
-
-                  File[] children = localStorageDir.listFiles();
-                  if (children != null) {
-                    for (File child : children) {
-                      InputStream in = null;
-                      try {
-                        in = new FileInputStream(child);
-                        IOUtils.copy(in, new NullOutputStream());
-
-                        log.info("Loaded [%s] into page cache", child.getAbsolutePath());
-                      }
-                      catch (Exception e) {
-                        log.error("Failed to load [%s] into page cache, [%s]", child.getAbsolutePath(), e.getMessage());
-                      }
-                      finally {
-                        IOUtils.closeQuietly(in);
-                      }
-                    }
-                  }
-                }
-              }
-            }
-            finally {
-              unlock(segment, lock);
-            }
-          }
-        }
-    );
+    loadSegmentsIntoPageCacheOnDownloadExec.submit(() -> loadSegmentIntoPageCacheInternal(segment));
   }
 
   @Override
@@ -667,48 +630,43 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     if (loadSegmentsIntoPageCacheOnBootstrapExec == null) {
       return;
     }
-    loadSegmentsIntoPageCacheOnBootstrapExec.submit(
-        () -> {
-          final ReferenceCountingLock lock = createOrGetLock(segment);
-          synchronized (lock) {
-            try {
-              for (StorageLocation location : locations) {
-                File localStorageDir = new File(location.getPath(), DataSegmentPusher.getDefaultStorageDir(segment, false));
-                if (localStorageDir.exists()) {
-                  File baseFile = location.getPath();
-                  if (localStorageDir.equals(baseFile)) {
-                    continue;
-                  }
+    loadSegmentsIntoPageCacheOnBootstrapExec.submit(() -> loadSegmentIntoPageCacheInternal(segment));
+  }
 
-                  log.info("Loading directory[%s] into page cache", localStorageDir);
+  private void loadSegmentIntoPageCacheInternal(DataSegment segment)
+  {
+    final ReferenceCountingLock lock = createOrGetLock(segment);
+    synchronized (lock) {
+      try {
+        for (StorageLocation location : locations) {
+          File localStorageDir = new File(location.getPath(), DataSegmentPusher.getDefaultStorageDir(segment, false));
+          if (localStorageDir.exists()) {
+            File baseFile = location.getPath();
+            if (localStorageDir.equals(baseFile)) {
+              continue;
+            }
 
-                  File[] children = localStorageDir.listFiles();
-                  if (children != null) {
-                    for (File child : children) {
-                      InputStream in = null;
-                      try {
-                        in = new FileInputStream(child);
-                        IOUtils.copy(in, new NullOutputStream());
+            log.info("Loading directory[%s] into page cache", localStorageDir);
 
-                        log.info("Loaded [%s] into page cache", child.getAbsolutePath());
-                      }
-                      catch (Exception e) {
-                        log.error("Failed to load [%s] into page cache, [%s]", child.getAbsolutePath(), e.getMessage());
-                      }
-                      finally {
-                        IOUtils.closeQuietly(in);
-                      }
-                    }
-                  }
+            File[] children = localStorageDir.listFiles();
+            if (children != null) {
+              for (File child : children) {
+                try (InputStream in = new FileInputStream(child)) {
+                  IOUtils.copy(in, new NullOutputStream());
+                  log.info("Loaded [%s] into page cache", child.getAbsolutePath());
+                }
+                catch (Exception e) {
+                  log.error("Failed to load [%s] into page cache, [%s]", child.getAbsolutePath(), e.getMessage());
                 }
               }
             }
-            finally {
-              unlock(segment, lock);
-            }
           }
         }
-    );
+      }
+      finally {
+        unlock(segment, lock);
+      }
+    }
   }
 
   private void cleanupCacheFiles(File baseFile, File cacheFile)
@@ -775,7 +733,6 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     );
   }
 
-  @VisibleForTesting
   private static class ReferenceCountingLock
   {
     private int numReferences;

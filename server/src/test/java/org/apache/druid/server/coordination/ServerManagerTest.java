@@ -144,16 +144,16 @@ public class ServerManagerTest
     )
     {
       @Override
-      public ReferenceCountingSegment getSegment(final DataSegment segment)
+      public ReferenceCountingSegment getSegment(final DataSegment dataSegment)
       {
-        if (segment.isTombstone()) {
+        if (dataSegment.isTombstone()) {
           return ReferenceCountingSegment
-              .wrapSegment(TombstoneSegmentizerFactory.segmentForTombstone(segment), segment.getShardSpec());
+              .wrapSegment(TombstoneSegmentizerFactory.segmentForTombstone(dataSegment), dataSegment.getShardSpec());
         } else {
           return ReferenceCountingSegment.wrapSegment(new TestSegmentUtils.SegmentForTesting(
-              MapUtils.getString(segment.getLoadSpec(), "version"),
-              (Interval) segment.getLoadSpec().get("interval")
-          ), segment.getShardSpec());
+              MapUtils.getString(dataSegment.getLoadSpec(), "version"),
+              (Interval) dataSegment.getLoadSpec().get("interval")
+          ), dataSegment.getShardSpec());
         }
       }
     };

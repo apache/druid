@@ -72,12 +72,6 @@ public class NoopSegmentCacheManager implements SegmentCacheManager
   }
 
   @Override
-  public boolean isSegmentCached(DataSegment segment)
-  {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
   public File getSegmentFiles(DataSegment segment)
   {
     throw new UnsupportedOperationException();

@@ -244,7 +244,7 @@ public class SegmentManager
    *
    * @param dataSegment segment to bootstrap
    * @param loadFailed callback to execute when segment lazy load failed. This applies only
-   *                  when lazy loading is enabled.
+   *                   when lazy loading is enabled.
    *
    * @throws SegmentLoadingException if the segment cannot be loaded
    * @throws IOException if the segment info cannot be cached on disk
@@ -254,10 +254,10 @@ public class SegmentManager
       final SegmentLazyLoadFailCallback loadFailed
   ) throws SegmentLoadingException, IOException
   {
-    final ReferenceCountingSegment segmentAdapter;
+    final ReferenceCountingSegment segment;
     try {
-      segmentAdapter = cacheManager.getBootstrapSegment(dataSegment, loadFailed);
-      if (segmentAdapter == null) {
+      segment = cacheManager.getBootstrapSegment(dataSegment, loadFailed);
+      if (segment == null) {
         throw new SegmentLoadingException(
             "No segment adapter found for bootstrap segment[%s] with loadSpec[%s].",
             dataSegment.getId(), dataSegment.getLoadSpec()
@@ -268,7 +268,7 @@ public class SegmentManager
       cacheManager.cleanup(dataSegment);
       throw e;
     }
-    loadSegment(dataSegment, segmentAdapter, true);
+    loadSegment(dataSegment, segment, true);
   }
 
   /**
@@ -283,12 +283,12 @@ public class SegmentManager
    */
   public void loadSegment(final DataSegment dataSegment) throws SegmentLoadingException, IOException
   {
-    final ReferenceCountingSegment segmentAdapter;
+    final ReferenceCountingSegment segment;
     try {
-      segmentAdapter = cacheManager.getSegment(dataSegment);
-      if (segmentAdapter == null) {
+      segment = cacheManager.getSegment(dataSegment);
+      if (segment == null) {
         throw new SegmentLoadingException(
-            "No segment adapter found for segment[%s] with loadSpec[%s].",
+            "No segment adapter found for dataSegment[%s] with loadSpec[%s].",
             dataSegment.getId(), dataSegment.getLoadSpec()
         );
       }
@@ -297,12 +297,12 @@ public class SegmentManager
       cacheManager.cleanup(dataSegment);
       throw e;
     }
-    loadSegment(dataSegment, segmentAdapter, false);
+    loadSegment(dataSegment, segment, false);
   }
 
   private void loadSegment(
       final DataSegment dataSegment,
-      final ReferenceCountingSegment segmentAdapter,
+      final ReferenceCountingSegment segment,
       final boolean isBootstrap
   ) throws IOException
   {
@@ -325,22 +325,22 @@ public class SegmentManager
             log.warn("Told to load an adapter for segment[%s] that already exists", dataSegment.getId());
             resultSupplier.set(false);
           } else {
-            final IndexedTable table = segmentAdapter.as(IndexedTable.class);
+            final IndexedTable table = segment.as(IndexedTable.class);
             if (table != null) {
               if (dataSourceState.isEmpty() || dataSourceState.numSegments == dataSourceState.tablesLookup.size()) {
-                dataSourceState.tablesLookup.put(segmentAdapter.getId(), new ReferenceCountingIndexedTable(table));
+                dataSourceState.tablesLookup.put(segment.getId(), new ReferenceCountingIndexedTable(table));
               } else {
-                log.error("Cannot load segmentAdapter[%s] with IndexedTable, no existing segments are joinable", segmentAdapter.getId());
+                log.error("Cannot load segment[%s] with IndexedTable, no existing segments are joinable", segment.getId());
               }
             } else if (dataSourceState.tablesLookup.size() > 0) {
-              log.error("Cannot load segmentAdapter[%s] without IndexedTable, all existing segments are joinable", segmentAdapter.getId());
+              log.error("Cannot load segment[%s] without IndexedTable, all existing segments are joinable", segment.getId());
             }
             loadedIntervals.add(
                 dataSegment.getInterval(),
                 dataSegment.getVersion(),
-                dataSegment.getShardSpec().createChunk(segmentAdapter)
+                dataSegment.getShardSpec().createChunk(segment)
             );
-            final StorageAdapter storageAdapter = segmentAdapter.asStorageAdapter();
+            final StorageAdapter storageAdapter = segment.asStorageAdapter();
             final long numOfRows = (dataSegment.isTombstone() || storageAdapter == null) ? 0 : storageAdapter.getNumRows();
             dataSourceState.addSegment(dataSegment, numOfRows);
 

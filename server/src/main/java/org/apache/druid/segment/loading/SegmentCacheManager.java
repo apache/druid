@@ -23,7 +23,6 @@ import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.timeline.DataSegment;
 
-import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
@@ -62,39 +61,30 @@ public interface SegmentCacheManager
    * to the {@link org.apache.druid.timeline.VersionedIntervalTimeline}. This method can be called multiple times
    * by the {@link org.apache.druid.server.SegmentManager} and implementation can either return same {@link ReferenceCountingSegment}
    * or a different {@link ReferenceCountingSegment}. Caller should not assume any particular behavior.
-   *
+   * <p>
    * Returning a {@code ReferenceCountingSegment} will let custom implementations keep track of reference count for
    * segments that the custom implementations are creating. That way, custom implementations can know when the segment
    * is in use or not.
+   * </p>
    * @param segment - Segment to load
-   * @param lazy - Whether column metadata de-serialization is to be deferred to access time. Setting this flag to true can speed up segment loading
-   * @param loadFailed - Callback to invoke if lazy loading fails during column access.
    * @throws SegmentLoadingException - If there is an error in loading the segment
    */
-  @Nullable
-  ReferenceCountingSegment getSegment(
-      DataSegment segment
-  ) throws SegmentLoadingException;
-
+  ReferenceCountingSegment getSegment(DataSegment segment) throws SegmentLoadingException;
 
   /**
-   *
-   * @param segment
-   * @param loadFailed
+   * Similar to {@link #getSegment(DataSegment)}, this method returns a {@link ReferenceCountingSegment} that will be
+   * added by the {@link org.apache.druid.server.SegmentManager} to the {@link org.apache.druid.timeline.VersionedIntervalTimeline}
+   * during startup on data nodes.
+   * @param segment segment to bootstrap
+   * @param loadFailed callback to execute when segment lazy load failed. This applies only when
+   *                   {@code lazyLoadOnStart} is enabled
    * @return
-   * @throws SegmentLoadingException
+   * @throws SegmentLoadingException - If there is an error in loading the segment
    */
-  @Nullable
   ReferenceCountingSegment getBootstrapSegment(
       DataSegment segment,
       SegmentLazyLoadFailCallback loadFailed
   ) throws SegmentLoadingException;
-
-  /**
-   * Checks whether a segment is already cached. It can return false even if {@link #reserve(DataSegment)}
-   * has been successful for a segment but is not downloaded yet.
-   */
-  boolean isSegmentCached(DataSegment segment);
 
   /**
    * This method fetches the files for the given segment if the segment is not downloaded already. It
@@ -144,7 +134,10 @@ public interface SegmentCacheManager
   void loadSegmentIntoPageCache(DataSegment segment);
 
   /**
+   * Similar to {@link #loadSegmentIntoPageCache(DataSegment)}, asynchronously load a segment into the page
+   * cache using a bootstrap executor.
    *
+   * @param segment The segment to load its index files into page cache during bootstrap
    */
   void loadSegmentIntoPageCacheOnBootstrap(DataSegment segment);
 }
