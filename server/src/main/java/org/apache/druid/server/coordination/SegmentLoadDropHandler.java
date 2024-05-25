@@ -237,6 +237,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
         throw new SegmentLoadingException(e, "Exception loading segment[%s]", segment.getId());
       }
       try {
+        // Announce segment even if the segment file already exists.
         announcer.announceSegment(segment);
       }
       catch (IOException e) {
