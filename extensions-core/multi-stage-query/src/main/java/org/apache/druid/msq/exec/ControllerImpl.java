@@ -220,6 +220,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -1773,8 +1774,9 @@ public class ControllerImpl implements Controller
       }
 
       // Map to track the aggregator factories of dimensions that have been created from metrics due to context flag
-      // finalizeAggregations=true.
-      final Map<String, AggregatorFactory> dimensionToAggregatoryFactoryMap = new HashMap<>();
+      // finalizeAggregations=true. Using LinkedHashMap to preserve order as metrics are compared as arrays
+      // in CompactionStatus.
+      final Map<String, AggregatorFactory> dimensionToAggregatoryFactoryMap = new LinkedHashMap<>();
 
       // Then, add a segment-generation stage.
       final DataSchema dataSchema =
@@ -2116,24 +2118,25 @@ public class ControllerImpl implements Controller
     Map<String, AggregatorFactory> outputColumnAggregatorFactories = new HashMap<>();
 
     // Populate aggregators from the native query when doing an ingest in rollup mode.
-    for (AggregatorFactory aggregatorFactory : ((GroupByQuery) query).getAggregatorSpecs()) {
-      for (final int outputColumn : columnMappings.getOutputColumnsForQueryColumn(aggregatorFactory.getName())) {
-        final String outputColumnName = columnMappings.getOutputColumnName(outputColumn);
-        if (outputColumnAggregatorFactories.containsKey(outputColumnName)) {
-          throw new ISE("There can only be one aggregation for column [%s].", outputColumn);
-        } else {
-          if (isRollupQuery) {
-            outputColumnAggregatorFactories.put(
-                outputColumnName,
-                aggregatorFactory.withName(outputColumnName).getCombiningFactory()
-            );
+    if (query instanceof GroupByQuery){
+      for (AggregatorFactory aggregatorFactory : ((GroupByQuery) query).getAggregatorSpecs()) {
+        for (final int outputColumn : columnMappings.getOutputColumnsForQueryColumn(aggregatorFactory.getName())) {
+          final String outputColumnName = columnMappings.getOutputColumnName(outputColumn);
+          if (outputColumnAggregatorFactories.containsKey(outputColumnName)) {
+            throw new ISE("There can only be one aggregation for column [%s].", outputColumn);
           } else {
-            dimensionToAggregatoryFactoryMap.put(outputColumnName, aggregatorFactory);
+            if (isRollupQuery) {
+              outputColumnAggregatorFactories.put(
+                  outputColumnName,
+                  aggregatorFactory.withName(outputColumnName).getCombiningFactory()
+              );
+            } else {
+              dimensionToAggregatoryFactoryMap.put(outputColumnName, aggregatorFactory);
+            }
           }
         }
       }
     }
-
 
     // Each column can be of either time, dimension, aggregator. For this method. we can ignore the time column.
     // For non-complex columns, If the aggregator factory of the column is not available, we treat the column as

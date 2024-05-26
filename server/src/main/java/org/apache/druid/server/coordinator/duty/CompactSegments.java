@@ -236,7 +236,7 @@ public class CompactSegments implements CoordinatorCustomDuty
     Granularity configuredSegmentGranularity = dataSourceCompactionConfig.getGranularitySpec()
                                                                          .getSegmentGranularity();
     Granularity taskSegmentGranularity = compactionTaskQuery.getGranularitySpec().getSegmentGranularity();
-    if (configuredSegmentGranularity.equals(taskSegmentGranularity)) {
+    if (configuredSegmentGranularity != null && configuredSegmentGranularity.equals(taskSegmentGranularity)) {
       return false;
     }
 

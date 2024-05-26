@@ -90,7 +90,7 @@ public class MSQCompactionRunner implements CompactionRunner
   private final ObjectMapper jsonMapper;
   private final Injector injector;
 
-  public static final String TIME_VIRTUAL_COLUMN = "vTime";
+  public static final String TIME_VIRTUAL_COLUMN = "__vTime";
   public static final String TIME_COLUMN = ColumnHolder.TIME_COLUMN_NAME;
 
   @JsonIgnore

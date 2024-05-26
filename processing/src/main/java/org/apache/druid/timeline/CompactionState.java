@@ -62,7 +62,6 @@ public class CompactionState
   // has a dependency on the 'core' module where this class is.
   private final List<Object> metricsSpec;
   private final CompactionEngine engine;
-
   private final Map<String, AggregatorFactory> dimensionToAggregatoryFactoryMap;
 
   @JsonCreator

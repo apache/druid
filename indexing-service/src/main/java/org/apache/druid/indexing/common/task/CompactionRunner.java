@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.common.task;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.indexer.TaskStatus;
@@ -35,11 +36,7 @@ import java.util.List;
  * Strategy to be used for executing a compaction task.
  * Should be synchronized with {@link ClientCompactionRunnerInfo}
  */
-@JsonTypeInfo(
-    use = JsonTypeInfo.Id.NAME,
-    include = JsonTypeInfo.As.EXISTING_PROPERTY,
-    property = CompactionRunner.TYPE_PROPERTY,
-    visible = true)
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = CompactionRunner.TYPE_PROPERTY)
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = NativeCompactionRunner.type, value = NativeCompactionRunner.class)
 })
