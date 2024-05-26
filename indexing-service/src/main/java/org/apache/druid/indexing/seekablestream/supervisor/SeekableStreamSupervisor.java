@@ -4436,7 +4436,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       final String type = spec.getType();
       Map<String, Object> metricTags = spec.getContextValue(DruidMetrics.TAGS);
 
-      if (taskLag != null) {
+      if (taskLag != null && ioConfig.getReplicas() > 1) {
         for (Entry<String, Long> entry : taskLag.entrySet()) {
           // we only emit this metric when the replica is lagging by more than 50 events.
           if (entry.getValue() >= 50) {
@@ -4447,7 +4447,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                     .setDimension(DruidMetrics.TASK_ID, entry.getKey())
                     .setDimensionIfNotNull(DruidMetrics.TAGS, metricTags)
                     .setMetric(
-                        StringUtils.format("ingest/%s/replica/lag", type),
+                        StringUtils.format("ingest/%s/replicaLag", type),
                         entry.getValue()
                     )
             );

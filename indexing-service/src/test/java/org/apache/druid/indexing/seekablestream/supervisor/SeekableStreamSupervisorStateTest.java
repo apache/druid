@@ -1243,7 +1243,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     emitter.verifyValue("ingest/test/maxLag/time", dimFilters, 20000L);
     emitter.verifyValue("ingest/test/avgLag/time", dimFilters, 15000L);
 
-    emitter.verifyEmitted("ingest/test/replica/lag", dimFilters, 2);
+    emitter.verifyEmitted("ingest/test/replicaLag", dimFilters, 2);
     verifyAll();
   }
 
@@ -1306,9 +1306,9 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     final Map<String, Object> dimFiltersTask1 = ImmutableMap.of("taskId", "Task1");
     final Map<String, Object> dimFiltersTask2 = ImmutableMap.of("taskId", "Task2");
-    emitter.verifyEmitted("ingest/test/replica/lag", 2);
-    emitter.verifyValue("ingest/test/replica/lag", dimFiltersTask1, 150L);
-    emitter.verifyValue("ingest/test/replica/lag", dimFiltersTask2, 350L);
+    emitter.verifyEmitted("ingest/test/replicaLag", 2);
+    emitter.verifyValue("ingest/test/replicaLag", dimFiltersTask1, 150L);
+    emitter.verifyValue("ingest/test/replicaLag", dimFiltersTask2, 350L);
     verifyAll();
   }
 
@@ -1444,7 +1444,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     emitter.verifyNotEmitted("ingest/test/lag/time");
     emitter.verifyNotEmitted("ingest/test/maxLag/time");
     emitter.verifyNotEmitted("ingest/test/avgLag/time");
-    emitter.verifyNotEmitted("ingest/test/replica/lag");
+    emitter.verifyNotEmitted("ingest/test/replicaLag");
 
     verifyAll();
   }
@@ -2168,7 +2168,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     EasyMock.expect(spec.getIoConfig()).andReturn(new SeekableStreamSupervisorIOConfig(
         "stream",
         new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false),
-        1,
+        2,
         1,
         new Period("PT1H"),
         new Period("PT1S"),
