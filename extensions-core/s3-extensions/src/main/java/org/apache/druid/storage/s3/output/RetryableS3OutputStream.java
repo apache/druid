@@ -32,7 +32,6 @@ import com.google.common.io.CountingOutputStream;
 import it.unimi.dsi.fastutil.io.FastBufferedOutputStream;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.RetryUtils;
-import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.storage.s3.S3Utils;
@@ -127,17 +126,19 @@ public class RetryableS3OutputStream extends OutputStream
   /**
    * Threadpool used for uploading the chunks asynchronously.
    */
-  private static final ExecutorService UPLOAD_EXECUTOR = Execs.multiThreaded(10, "UploadThreadPool-%d");
+  private final ExecutorService uploadExecutor;
 
   public RetryableS3OutputStream(
       S3OutputConfig config,
       ServerSideEncryptingAmazonS3 s3,
-      String s3Key
+      String s3Key,
+      ExecutorService executorService
   ) throws IOException
   {
     this.config = config;
     this.s3 = s3;
     this.s3Key = s3Key;
+    this.uploadExecutor = executorService;
 
     final InitiateMultipartUploadResult result;
     try {
@@ -184,7 +185,6 @@ public class RetryableS3OutputStream extends OutputStream
 
       while (remainingBytesToWrite > 0) {
         final int writtenBytes = writeToCurrentChunk(b, offsetToWrite, remainingBytesToWrite);
-
         if (currentChunk.length() >= chunkSize) {
           pushCurrentChunk();
           currentChunk = new Chunk(nextChunkId, new File(chunkStorePath, String.valueOf(nextChunkId++)));
@@ -216,7 +216,7 @@ public class RetryableS3OutputStream extends OutputStream
         SEMAPHORE.acquire(); // Acquire a permit from the semaphore
         pendingFiles.incrementAndGet();
 
-        UPLOAD_EXECUTOR.submit(() -> {
+        uploadExecutor.submit(() -> {
           try {
             uploadChunk(chunk);
           }

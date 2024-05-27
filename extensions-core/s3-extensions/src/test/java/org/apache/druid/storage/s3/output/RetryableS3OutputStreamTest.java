@@ -33,6 +33,7 @@ import com.amazonaws.services.s3.model.UploadPartResult;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.storage.s3.NoopServerSideEncryption;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 import org.easymock.EasyMock;
@@ -50,6 +51,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
 
 public class RetryableS3OutputStreamTest
@@ -63,9 +65,10 @@ public class RetryableS3OutputStreamTest
   private final TestAmazonS3 s3 = new TestAmazonS3(0);
   private final String path = "resultId";
 
-
   private S3OutputConfig config;
   private long chunkSize;
+
+  private final ExecutorService executorService = Execs.multiThreaded(10, "UploadThreadPool-%d");
 
   @Before
   public void setup() throws IOException
@@ -109,7 +112,8 @@ public class RetryableS3OutputStreamTest
     try (RetryableS3OutputStream out = new RetryableS3OutputStream(
         config,
         s3,
-        path
+        path,
+        executorService
     )) {
       for (int i = 0; i < 25; i++) {
         bb.clear();
@@ -130,7 +134,8 @@ public class RetryableS3OutputStreamTest
     try (RetryableS3OutputStream out = new RetryableS3OutputStream(
         config,
         s3,
-        path
+        path,
+        executorService
     )) {
       bb.clear();
       bb.putInt(1);
@@ -150,7 +155,8 @@ public class RetryableS3OutputStreamTest
     try (RetryableS3OutputStream out = new RetryableS3OutputStream(
         config,
         s3,
-        path
+        path,
+        executorService
     )) {
       for (int i = 0; i < 600; i++) {
         out.write(i);
@@ -171,7 +177,8 @@ public class RetryableS3OutputStreamTest
     try (RetryableS3OutputStream out = new RetryableS3OutputStream(
         config,
         s3,
-        path
+        path,
+        executorService
     )) {
       for (int i = 0; i < 25; i++) {
         bb.clear();
@@ -193,7 +200,8 @@ public class RetryableS3OutputStreamTest
     try (RetryableS3OutputStream out = new RetryableS3OutputStream(
         config,
         s3,
-        path
+        path,
+        executorService
     )) {
       for (int i = 0; i < 2; i++) {
         bb.clear();

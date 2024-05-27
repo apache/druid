@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.google.inject.name.Named;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.StorageConnectorProvider;
@@ -31,12 +32,17 @@ import org.apache.druid.storage.s3.S3StorageDruidModule;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 
 import java.io.File;
+import java.util.concurrent.ExecutorService;
 
 @JsonTypeName(S3StorageDruidModule.SCHEME)
 public class S3StorageConnectorProvider extends S3OutputConfig implements StorageConnectorProvider
 {
   @JacksonInject
   ServerSideEncryptingAmazonS3 s3;
+
+  @JacksonInject
+  @Named("S3UploadThreadPool")
+  ExecutorService executorService;
 
   @JsonCreator
   public S3StorageConnectorProvider(
@@ -53,6 +59,6 @@ public class S3StorageConnectorProvider extends S3OutputConfig implements Storag
   @Override
   public StorageConnector get()
   {
-    return new S3StorageConnector(this, s3);
+    return new S3StorageConnector(this, s3, executorService);
   }
 }

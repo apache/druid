@@ -34,6 +34,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Provides;
 import com.google.inject.multibindings.MapBinder;
+import com.google.inject.name.Named;
 import org.apache.commons.lang.StringUtils;
 import org.apache.druid.common.aws.AWSClientConfig;
 import org.apache.druid.common.aws.AWSEndpointConfig;
@@ -43,9 +44,11 @@ import org.apache.druid.guice.Binders;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.apache.druid.java.util.common.logger.Logger;
 
 import java.util.List;
+import java.util.concurrent.ExecutorService;
 
 /**
  *
@@ -181,5 +184,13 @@ public class S3StorageDruidModule implements DruidModule
   )
   {
     return Suppliers.memoize(serverSideEncryptingAmazonS3Builder::build);
+  }
+
+  @Provides
+  @LazySingleton
+  @Named("S3UploadThreadPool")
+  public ExecutorService getUploadPoolExecutorService(ScheduledExecutorFactory scheduledExecutorFactory)
+  {
+    return scheduledExecutorFactory.create(20, "UploadThreadPool-%d");
   }
 }

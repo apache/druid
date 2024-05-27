@@ -26,6 +26,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
+import com.google.inject.name.Named;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.data.input.s3.S3InputSource;
 import org.apache.druid.error.DruidException;
@@ -39,6 +40,7 @@ import javax.validation.constraints.NotNull;
 import java.io.File;
 import java.net.URI;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
 
 @JsonTypeName(S3ExportStorageProvider.TYPE_NAME)
 public class S3ExportStorageProvider implements ExportStorageProvider
@@ -55,6 +57,10 @@ public class S3ExportStorageProvider implements ExportStorageProvider
   S3ExportConfig s3ExportConfig;
   @JacksonInject
   ServerSideEncryptingAmazonS3 s3;
+
+  @JacksonInject
+  @Named("S3UploadThreadPool")
+  ExecutorService executorService;
 
   @JsonCreator
   public S3ExportStorageProvider(
@@ -90,7 +96,7 @@ public class S3ExportStorageProvider implements ExportStorageProvider
         s3ExportConfig.getChunkSize(),
         s3ExportConfig.getMaxRetry()
     );
-    return new S3StorageConnector(s3OutputConfig, s3);
+    return new S3StorageConnector(s3OutputConfig, s3, executorService);
   }
 
   @VisibleForTesting
