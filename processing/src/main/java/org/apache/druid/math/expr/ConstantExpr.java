@@ -21,7 +21,7 @@ package org.apache.druid.math.expr;
 
 import com.google.common.base.Preconditions;
 import com.google.errorprone.annotations.Immutable;
-import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.commons.lang3.StringEscapeUtils;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;

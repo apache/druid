@@ -1397,6 +1397,11 @@
                         <artifactId>rewrite-testing-frameworks</artifactId>
                         <version>2.6.0</version>
                     </dependency>
+                    <dependency>
+                        <groupId>org.openrewrite.recipe</groupId>
+                        <artifactId>rewrite-apache</artifactId>
+                        <version>1.2.2</version>
+                    </dependency>
                 </dependencies>
             </plugin>
             <plugin>

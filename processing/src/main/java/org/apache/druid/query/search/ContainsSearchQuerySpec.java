@@ -68,7 +68,7 @@ public class ContainsSearchQuerySpec implements SearchQuerySpec
     if (caseSensitive) {
       return dimVal.contains(value);
     }
-    return org.apache.commons.lang.StringUtils.containsIgnoreCase(dimVal, value);
+    return org.apache.commons.lang3.StringUtils.containsIgnoreCase(dimVal, value);
   }
 
   @Override
