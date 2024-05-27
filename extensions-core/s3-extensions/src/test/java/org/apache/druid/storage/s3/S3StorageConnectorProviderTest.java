@@ -31,6 +31,7 @@ import org.apache.druid.common.aws.AWSModule;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.StartupInjectorBuilder;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.StorageConnectorModule;
 import org.apache.druid.storage.StorageConnectorProvider;
@@ -42,6 +43,7 @@ import org.junit.Test;
 
 import java.io.File;
 import java.util.Properties;
+import java.util.concurrent.ExecutorService;
 
 public class S3StorageConnectorProviderTest
 {
@@ -146,6 +148,10 @@ public class S3StorageConnectorProviderTest
             .addValue(
                 ServerSideEncryptingAmazonS3.class,
                 new ServerSideEncryptingAmazonS3(null, new NoopServerSideEncryption())
+            )
+            .addValue(
+                ExecutorService.class,
+                Execs.multiThreaded(10, "UploadThreadPool-%d")
             ));
 
 
