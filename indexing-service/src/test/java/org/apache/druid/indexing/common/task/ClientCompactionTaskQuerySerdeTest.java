@@ -339,8 +339,8 @@ public class ClientCompactionTaskQuerySerdeTest
   {
     CompactionTask.Builder compactionTaskBuilder = new CompactionTask.Builder(
         "datasource",
-        new RetryPolicyFactory(new RetryPolicyConfig())
-    )
+        new RetryPolicyFactory(new RetryPolicyConfig()),
+        new NativeCompactionRunner(new SegmentCacheManagerFactory(new TestUtils().getTestObjectMapper())))
         .inputSpec(new CompactionIntervalSpec(Intervals.of("2019/2020"), "testSha256OfSortedSegmentIds"), true)
         .tuningConfig(
             new ParallelIndexTuningConfig(
@@ -387,10 +387,7 @@ public class ClientCompactionTaskQuerySerdeTest
         )
         .metricsSpec(METRICS_SPEC)
         .transformSpec(transformSpec)
-        .context(ImmutableMap.of("key", "value"))
-        .compactionRunner(new NativeCompactionRunner(
-            new SegmentCacheManagerFactory(new TestUtils().getTestObjectMapper())
-        ));
+        .context(ImmutableMap.of("key", "value"));
 
     return compactionTaskBuilder.build();
   }

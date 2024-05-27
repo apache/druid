@@ -283,7 +283,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        RETRY_POLICY_FACTORY
+        RETRY_POLICY_FACTORY,
+        new NativeCompactionRunner(getSegmentCacheManagerFactory())
     );
 
     final CompactionTask compactionTask = builder
@@ -350,7 +351,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        RETRY_POLICY_FACTORY
+        RETRY_POLICY_FACTORY,
+        new NativeCompactionRunner(getSegmentCacheManagerFactory())
     );
 
     final CompactionTask compactionTask = builder
@@ -450,7 +452,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        RETRY_POLICY_FACTORY
+        RETRY_POLICY_FACTORY,
+        new NativeCompactionRunner(getSegmentCacheManagerFactory())
     );
 
     final CompactionTask compactionTask1 = builder
@@ -544,7 +547,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        RETRY_POLICY_FACTORY
+        RETRY_POLICY_FACTORY,
+        new NativeCompactionRunner(getSegmentCacheManagerFactory())
     );
 
     final CompactionTask compactionTask = builder
@@ -655,7 +659,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        RETRY_POLICY_FACTORY
+        RETRY_POLICY_FACTORY,
+        new NativeCompactionRunner(getSegmentCacheManagerFactory())
     );
 
     // day segmentGranularity
@@ -724,7 +729,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        RETRY_POLICY_FACTORY
+        RETRY_POLICY_FACTORY,
+        new NativeCompactionRunner(getSegmentCacheManagerFactory())
     );
 
     final CompactionTask compactionTask1 = builder
@@ -758,7 +764,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        RETRY_POLICY_FACTORY
+        RETRY_POLICY_FACTORY,
+        new NativeCompactionRunner(getSegmentCacheManagerFactory())
     );
 
     // day segmentGranularity
@@ -802,7 +809,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        RETRY_POLICY_FACTORY
+        RETRY_POLICY_FACTORY,
+        new NativeCompactionRunner(getSegmentCacheManagerFactory())
     );
 
     // day segmentGranularity
@@ -862,7 +870,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        RETRY_POLICY_FACTORY
+        RETRY_POLICY_FACTORY,
+        new NativeCompactionRunner(getSegmentCacheManagerFactory())
     );
 
     // day segmentGranularity
@@ -928,7 +937,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        RETRY_POLICY_FACTORY
+        RETRY_POLICY_FACTORY,
+        new NativeCompactionRunner(getSegmentCacheManagerFactory())
     );
 
     // day segmentGranularity
@@ -996,7 +1006,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        RETRY_POLICY_FACTORY
+        RETRY_POLICY_FACTORY,
+        new NativeCompactionRunner(getSegmentCacheManagerFactory())
     );
 
     // day queryGranularity
@@ -1049,7 +1060,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        RETRY_POLICY_FACTORY
+        RETRY_POLICY_FACTORY,
+        new NativeCompactionRunner(getSegmentCacheManagerFactory())
     );
 
     // day segmentGranularity and day queryGranularity
@@ -1087,7 +1099,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        RETRY_POLICY_FACTORY
+        RETRY_POLICY_FACTORY,
+        new NativeCompactionRunner(getSegmentCacheManagerFactory())
     );
 
     final CompactionTask compactionTask1 = builder
@@ -1139,7 +1152,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        RETRY_POLICY_FACTORY
+        RETRY_POLICY_FACTORY,
+        new NativeCompactionRunner(getSegmentCacheManagerFactory())
     );
 
     final CompactionTask compactionTask = builder
@@ -1200,7 +1214,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        RETRY_POLICY_FACTORY
+        RETRY_POLICY_FACTORY,
+        new NativeCompactionRunner(getSegmentCacheManagerFactory())
     );
 
     // Setup partial compaction:
@@ -1355,7 +1370,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        RETRY_POLICY_FACTORY
+        RETRY_POLICY_FACTORY,
+        new NativeCompactionRunner(getSegmentCacheManagerFactory())
     );
 
     // Setup partial interval compaction:
@@ -1462,7 +1478,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        RETRY_POLICY_FACTORY
+        RETRY_POLICY_FACTORY,
+        new NativeCompactionRunner(getSegmentCacheManagerFactory())
     );
 
     final Interval partialInterval = Intervals.of("2014-01-01T01:00:00/2014-01-01T02:00:00");
@@ -1533,7 +1550,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        RETRY_POLICY_FACTORY
+        RETRY_POLICY_FACTORY,
+        new NativeCompactionRunner(getSegmentCacheManagerFactory())
     );
 
     final CompactionTask compactionTask = builder
@@ -1587,7 +1605,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        RETRY_POLICY_FACTORY
+        RETRY_POLICY_FACTORY,
+        new NativeCompactionRunner(getSegmentCacheManagerFactory())
     );
 
     final CompactionTask compactionTask = builder
@@ -1677,7 +1696,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        RETRY_POLICY_FACTORY
+        RETRY_POLICY_FACTORY,
+        new NativeCompactionRunner(getSegmentCacheManagerFactory())
     );
 
     final CompactionTask compactionTask = builder
@@ -1808,7 +1828,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        RETRY_POLICY_FACTORY
+        RETRY_POLICY_FACTORY,
+        new NativeCompactionRunner(getSegmentCacheManagerFactory())
     );
 
     final CompactionTask compactionTask = builder

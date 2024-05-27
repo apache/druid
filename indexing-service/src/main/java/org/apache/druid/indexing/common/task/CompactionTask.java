@@ -194,6 +194,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
             new Property<>("segments", segments)
         )
     );
+    Preconditions.checkNotNull(compactionRunner, "compactionRunner cannot be null");
     if (ioConfig != null) {
       this.ioConfig = ioConfig;
     } else if (interval != null) {
@@ -1048,11 +1049,13 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
 
     public Builder(
         String dataSource,
-        RetryPolicyFactory retryPolicyFactory
+        RetryPolicyFactory retryPolicyFactory,
+        CompactionRunner compactionRunner
     )
     {
       this.dataSource = dataSource;
       this.retryPolicyFactory = retryPolicyFactory;
+      this.compactionRunner = compactionRunner;
     }
 
     public Builder interval(Interval interval)

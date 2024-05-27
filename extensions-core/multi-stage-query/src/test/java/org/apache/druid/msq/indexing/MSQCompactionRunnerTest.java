@@ -33,6 +33,7 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexing.common.task.CompactionIntervalSpec;
 import org.apache.druid.indexing.common.task.CompactionTask;
+import org.apache.druid.indexing.common.task.NativeCompactionRunner;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.NonnullPair;
@@ -120,7 +121,8 @@ public class MSQCompactionRunnerTest
         new ClientCompactionTaskTransformSpec(dimFilter);
     final CompactionTask.Builder builder = new CompactionTask.Builder(
         DATA_SOURCE,
-        null
+        null,
+        new MSQCompactionRunner(JSON_MAPPER, null)
     );
     IndexSpec indexSpec = IndexSpec.builder()
                                    .withBitmapSerdeFactory(RoaringBitmapSerdeFactory.getInstance())
@@ -131,6 +133,7 @@ public class MSQCompactionRunnerTest
 
     Map<String, Object> context = new HashMap<>();
     context.put(MultiStageQueryContext.CTX_SORT_ORDER, JSON_MAPPER.writeValueAsString(SORT_ORDER_DIMENSIONS));
+    context.put(MultiStageQueryContext.CTX_MAX_NUM_TASKS, 2);
 
     builder
         .inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, null))
@@ -172,7 +175,7 @@ public class MSQCompactionRunnerTest
     MSQSpec actualMSQSpec = msqControllerTask.getQuerySpec();
     Assert.assertEquals(
         new MSQTuningConfig(
-            MultiStageQueryContext.DEFAULT_MAX_NUM_TASKS,
+            1,
             MultiStageQueryContext.DEFAULT_ROWS_IN_MEMORY,
             TARGET_ROWS_PER_SEGMENT,
             indexSpec
