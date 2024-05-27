@@ -125,89 +125,18 @@ public class Windowing
   {
     final Window window = Preconditions.checkNotNull(partialQuery.getWindow(), "window");
 
-    List<WindowComputationProcessor> windowGroupProcessors = new ArrayList<>();
-
+    final List<WindowComputationProcessor> windowGroupProcessors = new ArrayList<>();
     final List<String> windowOutputColumns = new ArrayList<>(sourceRowSignature.getColumnNames());
-    final String outputNamePrefix = Calcites.findUnusedPrefixForDigits("w", sourceRowSignature.getColumnNames());
-    int outputNameCounter = 0;
-
-    for (Window.Group windowGroup : window.groups) {
-      final WindowGroup group = new WindowGroup(window, windowGroup, sourceRowSignature);
-
-      // Add aggregations.
-      final List<AggregateCall> aggregateCalls = group.getAggregateCalls();
-
-      final List<Processor> processors = new ArrayList<>();
-      final List<AggregatorFactory> aggregations = new ArrayList<>();
-
-      for (AggregateCall aggregateCall : aggregateCalls) {
-        final String aggName = outputNamePrefix + outputNameCounter++;
-        windowOutputColumns.add(aggName);
-
-        ProcessorMaker maker = KNOWN_WINDOW_FNS.get(aggregateCall.getAggregation().getName());
-        if (maker == null) {
-
-          final Aggregation aggregation = GroupByRules.translateAggregateCall(
-              plannerContext,
-              sourceRowSignature,
-              virtualColumnRegistry,
-              rexBuilder,
-              InputAccessor.buildFor(
-                  window,
-                  partialQuery.getSelectProject(),
-                  sourceRowSignature),
-              Collections.emptyList(),
-              aggName,
-              aggregateCall,
-              false // Windowed aggregations don't currently finalize.  This means that sketches won't work as expected.
-          );
-
-          if (aggregation == null
-              || aggregation.getPostAggregator() != null
-              || aggregation.getAggregatorFactories().size() != 1) {
-            if (null == plannerContext.getPlanningError()) {
-              plannerContext.setPlanningError("Aggregation [%s] is not supported", aggregateCall);
-            }
-            throw new CannotBuildQueryException(window, aggregateCall);
-          }
-
-          aggregations.add(Iterables.getOnlyElement(aggregation.getAggregatorFactories()));
-        } else {
-          processors.add(
-              maker.make(
-                  new WindowAggregate(
-                      aggName,
-                      aggregateCall,
-                      sourceRowSignature,
-                      plannerContext,
-                      rexBuilder,
-                      partialQuery.getSelectProject(),
-                      window.constants,
-                      group
-                  )
-              )
-          );
-        }
-      }
-
-      if (!aggregations.isEmpty()) {
-        processors.add(
-            new WindowFramedAggregateProcessor(
-                group.getWindowFrame(),
-                aggregations.toArray(new AggregatorFactory[0])
-            )
-        );
-      }
-
-      if (processors.isEmpty()) {
-        throw new ISE("No processors from Window[%s], why was this code called?", window);
-      }
-
-      windowGroupProcessors.add(new WindowComputationProcessor(group, new WindowOperatorFactory(
-          processors.size() == 1 ?
-          processors.get(0) : new ComposingProcessor(processors.toArray(new Processor[0]))
-      )));
-    }
+    computeProcessorsAndOutputColumns(
+        partialQuery,
+        plannerContext,
+        sourceRowSignature,
+        rexBuilder,
+        virtualColumnRegistry,
+        window,
+        windowGroupProcessors,
+        windowOutputColumns
+    );
 
     // Track prior partition columns and sort columns group-to-group, so we only insert sorts and repartitions if
     // we really need to.
@@ -221,7 +150,10 @@ public class Windowing
       priorSortColumns = computeSortColumnsFromRelCollation(priorCollation, sourceRowSignature);
     }
 
-    windowGroupProcessors.sort(MOVE_EMPTY_GROUPS_FIRST);
+    // sort the processors to optimise the order of window operators
+    // currently we are moving the empty groups to the front
+    windowGroupProcessors.sort(WindowComputationProcessor.MOVE_EMPTY_GROUPS_FIRST);
+
     ArrayList<OperatorFactory> ops = new ArrayList<>();
     for (WindowComputationProcessor windowComputationProcessor : windowGroupProcessors) {
       final WindowGroup group = windowComputationProcessor.getGroup();
@@ -280,12 +212,103 @@ public class Windowing
   }
 
   /**
-   * A wrapper class which stores {@link WindowGroup}
-   * along with its computed {@link WindowOperatorFactory}
-   * <p>
-   * this allows us to sort the window groups in order to optimise the order of operators we would need to compute
-   * without losing the aggregate column name information (which is part of the computed WindowOperatorFactory)
+   * Computes the {@link WindowComputationProcessor} and output column name
+   * corresponding to each {@link org.apache.calcite.rel.core.Window.Group}
    */
+  private static void computeProcessorsAndOutputColumns(
+      final PartialDruidQuery partialQuery,
+      final PlannerContext plannerContext,
+      final RowSignature sourceRowSignature,
+      final RexBuilder rexBuilder,
+      final VirtualColumnRegistry virtualColumnRegistry,
+      Window window,
+      List<WindowComputationProcessor> windowGroupProcessors,
+      List<String> windowOutputColumns
+  )
+  {
+    final String outputNamePrefix = Calcites.findUnusedPrefixForDigits("w", sourceRowSignature.getColumnNames());
+    int outputNameCounter = 0;
+
+    for (Window.Group windowGroup : window.groups) {
+      final WindowGroup group = new WindowGroup(window, windowGroup, sourceRowSignature);
+
+      // Add aggregations.
+      final List<AggregateCall> aggregateCalls = group.getAggregateCalls();
+
+      final List<Processor> processors = new ArrayList<>();
+      final List<AggregatorFactory> aggregations = new ArrayList<>();
+
+      for (AggregateCall aggregateCall : aggregateCalls) {
+        final String aggName = outputNamePrefix + outputNameCounter++;
+        windowOutputColumns.add(aggName);
+
+        ProcessorMaker maker = KNOWN_WINDOW_FNS.get(aggregateCall.getAggregation().getName());
+        if (maker == null) {
+
+          final Aggregation aggregation = GroupByRules.translateAggregateCall(
+              plannerContext,
+              sourceRowSignature,
+              virtualColumnRegistry,
+              rexBuilder,
+              InputAccessor.buildFor(
+                  window,
+                  partialQuery.getSelectProject(),
+                  sourceRowSignature
+              ),
+              Collections.emptyList(),
+              aggName,
+              aggregateCall,
+              false // Windowed aggregations don't currently finalize.  This means that sketches won't work as expected.
+          );
+
+          if (aggregation == null
+              || aggregation.getPostAggregator() != null
+              || aggregation.getAggregatorFactories().size() != 1) {
+            if (null == plannerContext.getPlanningError()) {
+              plannerContext.setPlanningError("Aggregation [%s] is not supported", aggregateCall);
+            }
+            throw new CannotBuildQueryException(window, aggregateCall);
+          }
+
+          aggregations.add(Iterables.getOnlyElement(aggregation.getAggregatorFactories()));
+        } else {
+          processors.add(
+              maker.make(
+                  new WindowAggregate(
+                      aggName,
+                      aggregateCall,
+                      sourceRowSignature,
+                      plannerContext,
+                      rexBuilder,
+                      partialQuery.getSelectProject(),
+                      window.constants,
+                      group
+                  )
+              )
+          );
+        }
+      }
+
+      if (!aggregations.isEmpty()) {
+        processors.add(
+            new WindowFramedAggregateProcessor(
+                group.getWindowFrame(),
+                aggregations.toArray(new AggregatorFactory[0])
+            )
+        );
+      }
+
+      if (processors.isEmpty()) {
+        throw new ISE("No processors from Window[%s], why was this code called?", window);
+      }
+
+      windowGroupProcessors.add(new WindowComputationProcessor(group, new WindowOperatorFactory(
+          processors.size() == 1 ?
+          processors.get(0) : new ComposingProcessor(processors.toArray(new Processor[0]))
+      )));
+    }
+  }
+
   private static class WindowComputationProcessor
   {
     private final WindowGroup group;
@@ -306,6 +329,22 @@ public class Windowing
     {
       return processorOperatorFactory;
     }
+
+    /**
+     * Comparator to move the empty windows to the front
+     */
+    public static final Comparator<WindowComputationProcessor> MOVE_EMPTY_GROUPS_FIRST = (o1, o2) -> {
+      if (o1.getGroup().getPartitionColumns().isEmpty() && o2.getGroup().getPartitionColumns().isEmpty()) {
+        return 0;
+      }
+      if (o1.getGroup().getPartitionColumns().isEmpty()) {
+        return -1;
+      }
+      if (o2.getGroup().getPartitionColumns().isEmpty()) {
+        return 1;
+      }
+      return 0;
+    };
 
     @Override
     public boolean equals(Object o)
@@ -329,23 +368,6 @@ public class Windowing
       return Objects.hash(group, processorOperatorFactory);
     }
   }
-
-  /**
-   * Comparator on {@link WindowComputationProcessor}
-   * to move the empty windows to the front
-   */
-  private static final Comparator<WindowComputationProcessor> MOVE_EMPTY_GROUPS_FIRST = (o1, o2) -> {
-    if (o1.getGroup().getPartitionColumns().isEmpty() && o2.getGroup().getPartitionColumns().isEmpty()) {
-      return 0;
-    }
-    if (o1.getGroup().getPartitionColumns().isEmpty()) {
-      return -1;
-    }
-    if (o2.getGroup().getPartitionColumns().isEmpty()) {
-      return 1;
-    }
-    return 0;
-  };
 
   private final RowSignature signature;
 
