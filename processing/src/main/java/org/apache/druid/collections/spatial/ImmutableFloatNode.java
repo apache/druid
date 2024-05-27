@@ -70,10 +70,7 @@ public class ImmutableFloatNode implements ImmutableNode<float[]>
     this.numChildren = (short) (header & 0x7FFF);
     final int sizePosition = initialOffset + offsetFromInitial + HEADER_NUM_BYTES + 2 * numDims * Float.BYTES;
     int bitmapSize = data.getInt(sizePosition);
-    this.childrenOffset = initialOffset
-                          + offsetFromInitial
-                          + HEADER_NUM_BYTES
-                          + 2 * numDims * Float.BYTES
+    this.childrenOffset = sizePosition
                           + Integer.BYTES
                           + bitmapSize;
 
@@ -98,10 +95,7 @@ public class ImmutableFloatNode implements ImmutableNode<float[]>
     this.isLeaf = leaf;
     final int sizePosition = initialOffset + offsetFromInitial + HEADER_NUM_BYTES + 2 * numDims * Float.BYTES;
     int bitmapSize = data.getInt(sizePosition);
-    this.childrenOffset = initialOffset
-                          + offsetFromInitial
-                          + HEADER_NUM_BYTES
-                          + 2 * numDims * Float.BYTES
+    this.childrenOffset = sizePosition
                           + Integer.BYTES
                           + bitmapSize;
 
