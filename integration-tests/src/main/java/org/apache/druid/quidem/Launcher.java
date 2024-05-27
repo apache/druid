@@ -99,6 +99,8 @@ public class Launcher
       chk1();
       chkStatus();
 
+      System.out.println("-------------------booted up-------------------");
+
       lifecycle.join();
     } else {
 

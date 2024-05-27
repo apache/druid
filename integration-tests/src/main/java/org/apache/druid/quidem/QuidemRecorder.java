@@ -29,27 +29,22 @@ public class QuidemRecorder implements AutoCloseable, DruidHook
   {
     this.printStream = printStream;
     printStream.println("#started");
+    printStream.println("!connect druidtest:///");
     DruidHook.register(DruidHook.SQL, this);
-    DruidHook.register(DruidHook.RESULTSET, this);
   }
 
   @Override
   public void close()
   {
     DruidHook.unregister(DruidHook.SQL, this);
-    DruidHook.unregister(DruidHook.RESULTSET, this);
   }
 
   @Override
   public <T> void dispatch1(HookKey<T> key, T object)
   {
     if(DruidHook.SQL.equals(key)) {
-      printStream.println(object);
-      printStream.print(";");
-      return;
-    }
-    if (DruidHook.RESULTSET.equals(key)) {
-      printStream.println(object);
+      printStream.print(object);
+      printStream.println(";");
       printStream.println("!ok");
       return;
     }

@@ -66,7 +66,6 @@ public interface DruidHook
 
   public static final HookKey<RelNode> DRUID_PLAN = new HookKey<>("druidPlan", RelNode.class);
   public static final HookKey<String> SQL = new HookKey<>("sql", String.class);
-  public static final HookKey<String> RESULTSET = new HookKey<>("resultSet", String.class);
 
   <T> void dispatch1(HookKey<T> key, T object);
 

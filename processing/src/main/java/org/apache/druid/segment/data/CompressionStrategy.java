@@ -20,6 +20,7 @@
 package org.apache.druid.segment.data;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.github.luben.zstd.Zstd;
 import com.ning.compress.BufferRecycler;
