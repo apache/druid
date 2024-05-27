@@ -66,6 +66,7 @@ import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
@@ -96,6 +97,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   public static final String DATA_SOURCE_MIXED_2 = "nested_mix_2";
   public static final String DATA_SOURCE_ARRAYS = "arrays";
   public static final String DATA_SOURCE_ALL = "all_auto";
+  public static final String DATA_SOURCE_ALL_REALTIME = "all_auto_realtime";
 
   public static final List<ImmutableMap<String, Object>> RAW_ROWS = ImmutableList.of(
       ImmutableMap.<String, Object>builder()
@@ -334,6 +336,30 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       .inputTmpDir(tempDirProducer.newTempFolder())
                       .buildMMappedIndex();
 
+      final IncrementalIndex indexAllTypesAutoRealtime =
+          IndexBuilder.create()
+                      .tmpDir(tempDirProducer.newTempFolder())
+                      .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+                      .schema(
+                          new IncrementalIndexSchema.Builder()
+                              .withTimestampSpec(NestedDataTestUtils.AUTO_SCHEMA.getTimestampSpec())
+                              .withDimensionsSpec(NestedDataTestUtils.AUTO_SCHEMA.getDimensionsSpec())
+                              .withMetrics(
+                                  new CountAggregatorFactory("cnt")
+                              )
+                              .withRollup(false)
+                              .build()
+                      )
+                      .inputSource(
+                          ResourceInputSource.of(
+                              NestedDataTestUtils.class.getClassLoader(),
+                              NestedDataTestUtils.ALL_TYPES_TEST_DATA_FILE
+                          )
+                      )
+                      .inputFormat(TestDataBuilder.DEFAULT_JSON_INPUT_FORMAT)
+                      .inputTmpDir(tempDirProducer.newTempFolder())
+                      .buildIncrementalIndex();
+
 
       SpecificSegmentsQuerySegmentWalker walker = SpecificSegmentsQuerySegmentWalker.createWalker(injector, conglomerate);
       walker.add(
@@ -399,6 +425,15 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                      .size(0)
                      .build(),
           indexAllTypesAuto
+      ).add(
+          DataSegment.builder()
+                     .dataSource(DATA_SOURCE_ALL_REALTIME)
+                     .version("1")
+                     .interval(indexAllTypesAutoRealtime.getInterval())
+                     .shardSpec(new LinearShardSpec(1))
+                     .size(0)
+                     .build(),
+          indexAllTypesAutoRealtime
       );
 
       return walker;
@@ -7319,6 +7354,217 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                     .add("EXPR$0", ColumnType.DOUBLE)
                     .add("EXPR$1", ColumnType.DOUBLE)
                     .add("EXPR$2", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testGroupByAutoString()
+  {
+    final List<Object[]> expected;
+    if (NullHandling.sqlCompatible()) {
+      expected = ImmutableList.of(
+          new Object[]{null, 1L},
+          new Object[]{"", 1L},
+          new Object[]{"a", 1L},
+          new Object[]{"b", 1L},
+          new Object[]{"c", 1L},
+          new Object[]{"d", 1L},
+          new Object[]{"null", 1L}
+      );
+    } else {
+      expected = ImmutableList.of(
+          new Object[]{NullHandling.defaultStringValue(), 2L},
+          new Object[]{"a", 1L},
+          new Object[]{"b", 1L},
+          new Object[]{"c", 1L},
+          new Object[]{"d", 1L},
+          new Object[]{"null", 1L}
+      );
+    }
+    testQuery(
+        "SELECT "
+        + "str, "
+        + "SUM(cnt) "
+        + "FROM druid.all_auto GROUP BY 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(DATA_SOURCE_ALL)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("str", "d0")
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        expected,
+        RowSignature.builder()
+                    .add("str", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
+    );
+
+    cannotVectorize();
+    msqIncompatible();
+    testQuery(
+        "SELECT "
+        + "str, "
+        + "SUM(cnt) "
+        + "FROM druid.all_auto_realtime GROUP BY 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(DATA_SOURCE_ALL_REALTIME)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("str", "d0")
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        expected,
+        RowSignature.builder()
+                    .add("str", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testGroupByAutoLong()
+  {
+    final List<Object[]> expected = ImmutableList.of(
+        new Object[]{NullHandling.defaultLongValue(), 2L},
+        new Object[]{1L, 1L},
+        new Object[]{2L, 1L},
+        new Object[]{3L, 1L},
+        new Object[]{4L, 1L},
+        new Object[]{5L, 1L}
+    );
+    testQuery(
+        "SELECT "
+        + "long, "
+        + "SUM(cnt) "
+        + "FROM druid.all_auto GROUP BY 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(DATA_SOURCE_ALL)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("long", "d0", ColumnType.LONG)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        expected,
+        RowSignature.builder()
+                    .add("long", ColumnType.LONG)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
+    );
+
+    cannotVectorize();
+    msqIncompatible();
+    testQuery(
+        "SELECT "
+        + "long, "
+        + "SUM(cnt) "
+        + "FROM druid.all_auto_realtime GROUP BY 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(DATA_SOURCE_ALL_REALTIME)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("long", "d0", ColumnType.LONG)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        expected,
+        RowSignature.builder()
+                    .add("long", ColumnType.LONG)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testGroupByAutoDouble()
+  {
+    final List<Object[]> expected = ImmutableList.of(
+        new Object[]{NullHandling.defaultDoubleValue(), 2L},
+        new Object[]{1.0D, 1L},
+        new Object[]{2.0D, 1L},
+        new Object[]{3.3D, 1L},
+        new Object[]{4.4D, 1L},
+        new Object[]{5.9D, 1L}
+    );
+    testQuery(
+        "SELECT "
+        + "\"double\", "
+        + "SUM(cnt) "
+        + "FROM druid.all_auto GROUP BY 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(DATA_SOURCE_ALL)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("double", "d0", ColumnType.DOUBLE)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        expected,
+        RowSignature.builder()
+                    .add("double", ColumnType.DOUBLE)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
+    );
+
+    cannotVectorize();
+    msqIncompatible();
+    testQuery(
+        "SELECT "
+        + "\"double\", "
+        + "SUM(cnt) "
+        + "FROM druid.all_auto_realtime GROUP BY 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(DATA_SOURCE_ALL_REALTIME)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("double", "d0", ColumnType.DOUBLE)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        expected,
+        RowSignature.builder()
+                    .add("double", ColumnType.DOUBLE)
+                    .add("EXPR$1", ColumnType.LONG)
                     .build()
     );
   }
