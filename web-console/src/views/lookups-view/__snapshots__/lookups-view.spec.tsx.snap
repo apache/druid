@@ -25,7 +25,6 @@ exports[`LookupsView matches snapshot 1`] = `
           "Version",
           "Poll period",
           "Summary",
-          "Actions",
         ]
       }
       onChange={[Function]}
@@ -148,7 +147,7 @@ exports[`LookupsView matches snapshot 1`] = `
           "accessor": "id",
           "filterable": false,
           "id": "actions",
-          "show": true,
+          "sortable": false,
           "width": 70,
         },
       ]

@@ -181,8 +181,12 @@ public class DefaultLimitSpec implements LimitSpec
   {
     final List<DimensionSpec> dimensions = query.getDimensions();
 
-    // Can avoid re-sorting if the natural ordering is good enough.
-    boolean sortingNeeded = dimensions.size() < columns.size();
+    // Can avoid re-sorting if the natural ordering is good enough. Set sortingNeeded to true if we definitely must
+    // sort, due to query dimensions list being shorter than the sort columns list, or due to having subtotalsSpec
+    // (when subtotalsSpec is set, dimensions are not naturally sorted).
+    //
+    // If sortingNeeded is false here, we may set it to true later on in this method. False is just a starting point.
+    boolean sortingNeeded = dimensions.size() < columns.size() || query.getSubtotalsSpec() != null;
 
     final Set<String> aggAndPostAggNames = new HashSet<>();
     for (AggregatorFactory agg : query.getAggregatorSpecs()) {
@@ -474,16 +478,33 @@ public class DefaultLimitSpec implements LimitSpec
         throw new ISE("Cannot create comparator for array type %s.", columnType.toString());
       }
     }
+    final Comparator comparatorToUse;
+    if (arrayComparator != null) {
+      comparatorToUse = arrayComparator;
+    } else {
+      comparatorToUse = DimensionComparisonUtils.isNaturalComparator(columnType.getType(), stringComparator)
+                        ? columnType.getNullableStrategy()
+                        : stringComparator;
+    }
+
     return Ordering.from(
         Comparator.comparing(
             (ResultRow row) -> {
               if (columnType.isArray()) {
+                // Arrays have a specialized comparator, that applies the ordering per element. That will handle the casting
+                // and the comparison
+                return row.get(column);
+              } else if (DimensionComparisonUtils.isNaturalComparator(columnType.getType(), stringComparator)) {
+                // If the natural comparator is used, we can directly extract the dimension value, and the type strategy's comparison
+                // function will handle it, without casting
                 return row.get(column);
               } else {
+                // If the comparator is not natural, we will be using the string comparator, and we need to cast the dimension to string
+                // before comparison
                 return getDimensionValue(row, column);
               }
             },
-            Comparator.nullsFirst(arrayComparator == null ? stringComparator : arrayComparator)
+            Comparator.nullsFirst(comparatorToUse)
         )
     );
   }

@@ -38,6 +38,7 @@ import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.GlobalTableDataSource;
@@ -48,18 +49,22 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
-import org.apache.druid.query.aggregation.first.DoubleFirstAggregatorFactory;
-import org.apache.druid.query.aggregation.first.LongFirstAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.first.DoubleFirstAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.first.LongFirstAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.last.DoubleLastAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.last.FloatLastAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.last.LongLastAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
-import org.apache.druid.query.aggregation.last.DoubleLastAggregatorFactory;
-import org.apache.druid.query.aggregation.last.FloatLastAggregatorFactory;
-import org.apache.druid.query.aggregation.last.LongLastAggregatorFactory;
+import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.segment.IndexBuilder;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.SegmentWrangler;
+import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.Joinable;
@@ -78,11 +83,13 @@ import org.joda.time.DateTime;
 import org.joda.time.chrono.ISOChronology;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -602,47 +609,15 @@ public class TestDataBuilder
 
   public static QueryableIndex makeWikipediaIndex(File tmpDir)
   {
-    final List<DimensionSchema> dimensions = Arrays.asList(
-        new StringDimensionSchema("channel"),
-        new StringDimensionSchema("cityName"),
-        new StringDimensionSchema("comment"),
-        new StringDimensionSchema("countryIsoCode"),
-        new StringDimensionSchema("countryName"),
-        new StringDimensionSchema("isAnonymous"),
-        new StringDimensionSchema("isMinor"),
-        new StringDimensionSchema("isNew"),
-        new StringDimensionSchema("isRobot"),
-        new StringDimensionSchema("isUnpatrolled"),
-        new StringDimensionSchema("metroCode"),
-        new StringDimensionSchema("namespace"),
-        new StringDimensionSchema("page"),
-        new StringDimensionSchema("regionIsoCode"),
-        new StringDimensionSchema("regionName"),
-        new StringDimensionSchema("user"),
-        new LongDimensionSchema("delta"),
-        new LongDimensionSchema("added"),
-        new LongDimensionSchema("deleted")
-    );
-
-    return IndexBuilder
-        .create()
-        .tmpDir(new File(tmpDir, "wikipedia1"))
-        .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
-        .schema(new IncrementalIndexSchema.Builder()
-                    .withRollup(false)
-                    .withTimestampSpec(new TimestampSpec("time", null, null))
-                    .withDimensionsSpec(new DimensionsSpec(dimensions))
-                    .build()
-        )
-        .inputSource(
-            ResourceInputSource.of(
-                TestDataBuilder.class.getClassLoader(),
-                "calcite/tests/wikiticker-2015-09-12-sampled.json.gz"
-            )
-        )
-        .inputFormat(DEFAULT_JSON_INPUT_FORMAT)
-        .inputTmpDir(new File(tmpDir, "tmpWikipedia1"))
-        .buildMMappedIndex();
+    try {
+      final File directory = new File(tmpDir, StringUtils.format("wikipedia-index-%s", UUID.randomUUID()));
+      final IncrementalIndex index = TestIndex.makeWikipediaIncrementalIndex();
+      TestIndex.INDEX_MERGER.persist(index, directory, IndexSpec.DEFAULT, null);
+      return TestIndex.INDEX_IO.loadIndex(directory);
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   public static QueryableIndex makeWikipediaIndexWithAggregation(File tmpDir)
@@ -687,8 +662,8 @@ public class TestDataBuilder
         )
         .inputSource(
             ResourceInputSource.of(
-                TestDataBuilder.class.getClassLoader(),
-                "calcite/tests/wikiticker-2015-09-12-sampled.json.gz"
+                TestIndex.class.getClassLoader(),
+                "wikipedia/wikiticker-2015-09-12-sampled.json.gz"
             )
         )
         .inputFormat(DEFAULT_JSON_INPUT_FORMAT)
@@ -862,7 +837,8 @@ public class TestDataBuilder
         conglomerate,
         injector.getInstance(SegmentWrangler.class),
         joinableFactoryWrapper,
-        scheduler
+        scheduler,
+        injector.getInstance(GroupByQueryConfig.class)
     ).add(
         DataSegment.builder()
                    .dataSource(CalciteTests.DATASOURCE1)

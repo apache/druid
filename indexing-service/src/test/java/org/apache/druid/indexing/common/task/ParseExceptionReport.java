@@ -19,7 +19,7 @@
 
 package org.apache.druid.indexing.common.task;
 
-import org.apache.druid.indexing.common.IngestionStatsAndErrors;
+import org.apache.druid.indexer.report.IngestionStatsAndErrors;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;

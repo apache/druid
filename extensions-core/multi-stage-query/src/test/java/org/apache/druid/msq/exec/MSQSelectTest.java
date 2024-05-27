@@ -21,6 +21,7 @@ package org.apache.druid.msq.exec;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.JsonInputFormat;
@@ -70,6 +71,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
+import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.filtration.Filtration;
@@ -227,7 +229,9 @@ public class MSQSelectTest extends MSQTestBase
             new Object[]{1L, "1"},
             new Object[]{1L, "def"},
             new Object[]{1L, "abc"}
-        )).verifyResults();
+        ))
+        .setExpectedLookupLoadingSpec(LookupLoadingSpec.NONE)
+        .verifyResults();
   }
 
   @MethodSource("data")
@@ -742,6 +746,7 @@ public class MSQSelectTest extends MSQTestBase
                    .build())
         .setExpectedRowSignature(rowSignature)
         .setExpectedResultRows(ImmutableList.of(new Object[]{4L}))
+        .setExpectedLookupLoadingSpec(LookupLoadingSpec.loadOnly(ImmutableSet.of("lookyloo")))
         .verifyResults();
   }
 
@@ -808,6 +813,7 @@ public class MSQSelectTest extends MSQTestBase
                 new Object[]{"xabc", 1L}
             )
         )
+        .setExpectedLookupLoadingSpec(LookupLoadingSpec.loadOnly(ImmutableSet.of("lookyloo")))
         .verifyResults();
   }
 
@@ -2028,7 +2034,7 @@ public class MSQSelectTest extends MSQTestBase
         .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
             CoreMatchers.instanceOf(DruidException.class),
             ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                "SQL requires a group-by on a column of type COMPLEX<hyperUnique> that is unsupported"))
+                "SQL requires a group-by on a column with type [COMPLEX<hyperUnique>] that is unsupported."))
         ))
         .verifyExecutionError();
   }
@@ -2220,10 +2226,7 @@ public class MSQSelectTest extends MSQTestBase
   @ParameterizedTest(name = "{index}:with context {0}")
   public void testJoinUsesDifferentAlgorithm(String contextName, Map<String, Object> context)
   {
-
-
-
-    // This test asserts that the join algorithnm used is a different one from that supplied. In sqlCompatible() mode
+    // This test asserts that the join algorithm used is a different one from that supplied. In sqlCompatible() mode
     // the query gets planned differently, therefore we do use the sortMerge processor. Instead of having separate
     // handling, a similar test has been described in CalciteJoinQueryMSQTest, therefore we don't want to repeat that
     // here, hence ignoring in sqlCompatible() mode

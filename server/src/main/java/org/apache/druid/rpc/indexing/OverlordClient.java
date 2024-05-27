@@ -30,6 +30,7 @@ import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.metadata.LockFilterPolicy;
@@ -108,7 +109,6 @@ public interface OverlordClient
         dataSource,
         interval,
         versions,
-        false,
         null,
         maxSegmentsToKill,
         maxUsedStatusLastUpdatedTime
@@ -166,7 +166,7 @@ public interface OverlordClient
    * Returns a {@link org.apache.druid.rpc.HttpResponseException} with code
    * {@link javax.ws.rs.core.Response.Status#NOT_FOUND} if there is no report available for some reason.
    */
-  ListenableFuture<Map<String, Object>> taskReportAsMap(String taskId);
+  ListenableFuture<TaskReport.ReportMap> taskReportAsMap(String taskId);
 
   /**
    * Returns the payload for a task as an instance of {@link ClientTaskQuery}. This method only works for tasks

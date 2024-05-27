@@ -19,11 +19,9 @@
 
 package org.apache.druid.msq.indexing.client;
 
-import org.apache.druid.indexing.common.KillTaskReport;
-import org.apache.druid.indexing.common.TaskReport;
-import org.apache.druid.indexing.common.TaskToolbox;
+import org.apache.druid.indexer.report.KillTaskReport;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.msq.exec.Controller;
-import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.junit.Assert;
 import org.junit.Test;
@@ -35,28 +33,21 @@ import javax.ws.rs.core.Response;
 
 public class ControllerChatHandlerTest
 {
+  private static final String DATASOURCE = "wiki";
+
   @Test
   public void testHttpGetLiveReports()
   {
     final Controller controller = Mockito.mock(Controller.class);
 
     TaskReport.ReportMap reportMap = new TaskReport.ReportMap();
-    reportMap.put("killUnusedSegments", new KillTaskReport("kill_1", new KillTaskReport.Stats(1, 2, 3)));
+    reportMap.put("killUnusedSegments", new KillTaskReport("kill_1", new KillTaskReport.Stats(1, 2)));
 
     Mockito.when(controller.liveReports())
            .thenReturn(reportMap);
 
-    MSQControllerTask task = Mockito.mock(MSQControllerTask.class);
-    Mockito.when(task.getDataSource())
-           .thenReturn("wiki");
-    Mockito.when(controller.task())
-           .thenReturn(task);
-
-    TaskToolbox toolbox = Mockito.mock(TaskToolbox.class);
-    Mockito.when(toolbox.getAuthorizerMapper())
-           .thenReturn(new AuthorizerMapper(null));
-
-    ControllerChatHandler chatHandler = new ControllerChatHandler(toolbox, controller);
+    final AuthorizerMapper authorizerMapper = new AuthorizerMapper(null);
+    ControllerChatHandler chatHandler = new ControllerChatHandler(controller, DATASOURCE, authorizerMapper);
 
     HttpServletRequest httpRequest = Mockito.mock(HttpServletRequest.class);
     Mockito.when(httpRequest.getAttribute(ArgumentMatchers.anyString()))

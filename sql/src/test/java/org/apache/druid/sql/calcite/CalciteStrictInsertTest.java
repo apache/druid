@@ -20,6 +20,7 @@
 package org.apache.druid.sql.calcite;
 
 import org.apache.druid.error.DruidException;
+import org.apache.druid.sql.calcite.CalciteStrictInsertTest.StrictInsertComponentSupplier;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.CatalogResolver.NullCatalogResolver;
@@ -30,18 +31,27 @@ import org.junit.jupiter.api.Test;
  * to only work with existing datasources. The strict option is a config option which
  * we enable only for this one test.
  */
+@SqlTestFrameworkConfig.ComponentSupplier(StrictInsertComponentSupplier.class)
 public class CalciteStrictInsertTest extends CalciteIngestionDmlTest
 {
-  @Override
-  public CatalogResolver createCatalogResolver()
+  static class StrictInsertComponentSupplier extends IngestionDmlComponentSupplier
   {
-    return new NullCatalogResolver() {
-      @Override
-      public boolean ingestRequiresExistingTable()
-      {
-        return true;
-      }
-    };
+    public StrictInsertComponentSupplier(TempDirProducer tempFolderProducer)
+    {
+      super(tempFolderProducer);
+    }
+
+    @Override
+    public CatalogResolver createCatalogResolver()
+    {
+      return new NullCatalogResolver() {
+        @Override
+        public boolean ingestRequiresExistingTable()
+        {
+          return true;
+        }
+      };
+    }
   }
 
   @Test

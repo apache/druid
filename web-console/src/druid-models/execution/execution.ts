@@ -440,7 +440,10 @@ export class Execution {
     value.queryContext = queryContext;
     const parsedQuery = parseSqlQuery(sqlQuery);
     if (value.result && (parsedQuery || queryContext)) {
-      value.result = value.result.attachQuery({ context: queryContext }, parsedQuery);
+      value.result = value.result.attachQuery(
+        { ...this.nativeQuery, context: queryContext },
+        parsedQuery,
+      );
     }
 
     return new Execution(value);
@@ -463,7 +466,10 @@ export class Execution {
   public changeResult(result: QueryResult): Execution {
     return new Execution({
       ...this.valueOf(),
-      result: result.attachQuery({}, this.sqlQuery ? parseSqlQuery(this.sqlQuery) : undefined),
+      result: result.attachQuery(
+        this.nativeQuery,
+        this.sqlQuery ? parseSqlQuery(this.sqlQuery) : undefined,
+      ),
     });
   }
 
