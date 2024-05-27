@@ -32,7 +32,6 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
-import com.google.inject.Injector;
 import com.google.inject.Provides;
 import com.google.inject.multibindings.MapBinder;
 import com.google.inject.name.Named;
@@ -41,13 +40,13 @@ import org.apache.druid.common.aws.AWSClientConfig;
 import org.apache.druid.common.aws.AWSEndpointConfig;
 import org.apache.druid.common.aws.AWSProxyConfig;
 import org.apache.druid.data.SearchableVersionedDataFinder;
-import org.apache.druid.frame.processor.Bouncer;
 import org.apache.druid.guice.Binders;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.utils.RuntimeInfo;
 
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -191,9 +190,9 @@ public class S3StorageDruidModule implements DruidModule
   @Provides
   @LazySingleton
   @Named("S3UploadThreadPool")
-  public ExecutorService getUploadPoolExecutorService(ScheduledExecutorFactory scheduledExecutorFactory, final Injector injector)
+  public ExecutorService getUploadPoolExecutorService(ScheduledExecutorFactory scheduledExecutorFactory, RuntimeInfo runtimeInfo)
   {
-    int poolSize = Math.max(4, 3 * injector.getInstance(Bouncer.class).getMaxCount());
+    int poolSize = Math.max(4, 3 * runtimeInfo.getAvailableProcessors());
     return scheduledExecutorFactory.create(poolSize, "UploadThreadPool-%d");
   }
 }
