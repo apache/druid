@@ -22,11 +22,7 @@ package org.apache.druid.server.coordinator;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexer.CompactionEngine;
-import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
-import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
-import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.joda.time.Period;
 

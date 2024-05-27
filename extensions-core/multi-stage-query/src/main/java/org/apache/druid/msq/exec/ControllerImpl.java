@@ -2118,7 +2118,7 @@ public class ControllerImpl implements Controller
     Map<String, AggregatorFactory> outputColumnAggregatorFactories = new HashMap<>();
 
     // Populate aggregators from the native query when doing an ingest in rollup mode.
-    if (query instanceof GroupByQuery){
+    if (query instanceof GroupByQuery) {
       for (AggregatorFactory aggregatorFactory : ((GroupByQuery) query).getAggregatorSpecs()) {
         for (final int outputColumn : columnMappings.getOutputColumnsForQueryColumn(aggregatorFactory.getName())) {
           final String outputColumnName = columnMappings.getOutputColumnName(outputColumn);

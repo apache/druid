@@ -292,10 +292,6 @@ public class ClientCompactionTaskQuerySerdeTest
         query.getMetricsSpec(),
         task.getMetricsSpec()
     );
-    Assert.assertEquals(
-        query.getClientCompactionRunnerInfo().getType().toString(),
-        task.getCompactionRunner().getType().toString()
-    );
   }
 
   private ClientCompactionTaskQuery createCompactionTaskQuery(String id, ClientCompactionTaskTransformSpec transformSpec)

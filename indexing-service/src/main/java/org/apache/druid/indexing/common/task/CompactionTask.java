@@ -476,8 +476,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     Pair<Boolean, String> supportsCompactionConfig = compactionRunner.supportsCompactionConfig(this);
     if (!supportsCompactionConfig.lhs) {
       throw InvalidInput.exception(
-          "Compaction config for engine[%s] not supported[%s]",
-          compactionRunner.getType(),
+          "Compaction config not supported[%s].",
           supportsCompactionConfig.rhs
       );
     }

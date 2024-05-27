@@ -330,7 +330,9 @@ public class CompactionStatus
       if (CollectionUtils.isNullOrEmpty(metricSpecList)) {
         final Map<String, AggregatorFactory> dimensionToAggregatorFactoryMap =
             lastCompactionState.getDimensionToAggregatoryFactoryMap();
-        existingMetricsSpec = dimensionToAggregatorFactoryMap == null ? null: dimensionToAggregatorFactoryMap.values().toArray(new AggregatorFactory[0]);
+        existingMetricsSpec = dimensionToAggregatorFactoryMap == null
+                              ? null
+                              : dimensionToAggregatorFactoryMap.values().toArray(new AggregatorFactory[0]);
       } else {
         existingMetricsSpec = objectMapper.convertValue(metricSpecList, AggregatorFactory[].class);
       }

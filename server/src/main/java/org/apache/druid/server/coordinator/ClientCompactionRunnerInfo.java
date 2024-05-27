@@ -45,7 +45,6 @@ public class ClientCompactionRunnerInfo
     this.type = type;
   }
 
-//  @JsonProperty("type")
   @JsonProperty
   public CompactionEngine getType()
   {
@@ -136,8 +135,8 @@ public class ClientCompactionRunnerInfo
    * compaction config at the coordinator. The values used here should be kept in sync with those in
    * {@link org.apache.druid.msq.util.MultiStageQueryContext}
    */
-
-  private static class MSQContext {
+  private static class MSQContext
+  {
     public static final String CTX_FINALIZE_AGGREGATIONS = "finalizeAggregations";
     public static final String CTX_TASK_ASSIGNMENT_STRATEGY = "taskAssignment";
     public static final String TASK_ASSIGNMENT_STRATEGY_MAX = "MAX";

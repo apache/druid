@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.common.task;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.indexer.TaskStatus;
@@ -38,7 +37,7 @@ import java.util.List;
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = CompactionRunner.TYPE_PROPERTY)
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = NativeCompactionRunner.type, value = NativeCompactionRunner.class)
+    @JsonSubTypes.Type(name = "NATIVE", value = NativeCompactionRunner.class)
 })
 public interface CompactionRunner
 {
@@ -60,5 +59,4 @@ public interface CompactionRunner
    */
   Pair<Boolean, String> supportsCompactionConfig(CompactionTask compactionTask);
 
-  String getType();
 }

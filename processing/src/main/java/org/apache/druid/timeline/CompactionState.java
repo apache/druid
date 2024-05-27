@@ -26,7 +26,6 @@ import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;

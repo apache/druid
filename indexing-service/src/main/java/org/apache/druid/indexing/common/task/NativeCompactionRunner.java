@@ -58,7 +58,6 @@ import java.util.stream.IntStream;
 public class NativeCompactionRunner implements CompactionRunner
 {
   private static final Logger log = new Logger(NativeCompactionRunner.class);
-  public static final String type = "NATIVE";
   private static final boolean STORE_COMPACTION_STATE = true;
   @JsonIgnore
   private final SegmentCacheManagerFactory segmentCacheManagerFactory;
@@ -87,12 +86,6 @@ public class NativeCompactionRunner implements CompactionRunner
   )
   {
     return Pair.of(true, null);
-  }
-
-  @Override
-  public String getType()
-  {
-    return type;
   }
 
   /**

@@ -21,7 +21,6 @@ package org.apache.druid.msq.indexing;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
@@ -84,7 +83,6 @@ import java.util.stream.Collectors;
 public class MSQCompactionRunner implements CompactionRunner
 {
   private static final Logger log = new Logger(MSQCompactionRunner.class);
-  public static final String type = "MSQ";
   private static final Granularity DEFAULT_SEGMENT_GRANULARITY = Granularities.ALL;
 
   private final ObjectMapper jsonMapper;
@@ -134,17 +132,11 @@ public class MSQCompactionRunner implements CompactionRunner
       PartitionsSpec partitionsSpec = compactionTask.getTuningConfig().getPartitionsSpec();
       if (!(partitionsSpec instanceof DynamicPartitionsSpec
             || partitionsSpec instanceof DimensionRangePartitionsSpec)) {
-        return Pair.of(false, "PartitionsSpec not among DynamicPartitionSpec or DimensionRangePartitionsSpec");
+        return Pair.of(false, "PartitionsSpec not among DynamicPartitionSpec or DimensionRangePartitionsSpec "
+                              + "required with MSQ engine");
       }
     }
     return Pair.of(true, null);
-  }
-
-  @Override
-  @JsonProperty("TYPE")
-  public String getType()
-  {
-    return type;
   }
 
   @Override
