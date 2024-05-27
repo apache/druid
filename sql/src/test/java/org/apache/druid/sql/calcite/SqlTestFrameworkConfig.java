@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite;
 
+import com.google.common.base.CaseFormat;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.cache.CacheBuilder;
@@ -157,10 +158,10 @@ public class SqlTestFrameworkConfig
   }
 
   private static final Set<String> KNOWN_CONFIG_KEYS = ImmutableSet.<String>builder()
-      .add(NumMergeBuffers.class.getSimpleName())
-      .add(MinTopNThreshold.class.getSimpleName())
-      .add(ResultCache.class.getSimpleName())
-      .add(ComponentSupplier.class.getSimpleName())
+      .add(NumMergeBuffers.PROCESSOR.getConfigName())
+      .add(MinTopNThreshold.PROCESSOR.getConfigName())
+      .add(ResultCache.PROCESSOR.getConfigName())
+      .add(ComponentSupplier.PROCESSOR.getConfigName())
       .build();
 
   public final int numMergeBuffers;
@@ -405,10 +406,10 @@ public class SqlTestFrameworkConfig
     Map<String, String> map = new HashMap<>();
     SqlTestFrameworkConfig def = new SqlTestFrameworkConfig(Collections.emptyList());
     if (def.numMergeBuffers != numMergeBuffers) {
-      map.put("NumMergeBuffers", String.valueOf(numMergeBuffers));
+      map.put("numMergeBuffers", String.valueOf(numMergeBuffers));
     }
     if (def.minTopNThreshold != minTopNThreshold) {
-      map.put("MinTopNThreshold", String.valueOf(minTopNThreshold));
+      map.put("minTopNThreshold", String.valueOf(minTopNThreshold));
     }
     if (!equals(new SqlTestFrameworkConfig(map))) {
       throw new IAE("Can't reproduce config via map!");
@@ -423,6 +424,11 @@ public class SqlTestFrameworkConfig
     public ConfigOptionProcessor(Class<? extends Annotation> annotationClass)
     {
       this.annotationClass = annotationClass;
+    }
+
+    public final String getConfigName()
+    {
+      return CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_CAMEL, annotationClass.getSimpleName());
     }
 
     @SuppressWarnings("unchecked")
@@ -453,7 +459,7 @@ public class SqlTestFrameworkConfig
 
     public final T fromMap(Map<String, String> map) throws Exception
     {
-      String key = annotationClass.getSimpleName();
+      String key = getConfigName();
       String value = map.get(key);
       if (value == null) {
         return defaultValue();

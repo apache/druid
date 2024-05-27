@@ -20,7 +20,7 @@
 package org.apache.druid.sql.calcite.planner;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.QueryContexts;
 import org.joda.time.DateTimeZone;
@@ -431,6 +431,11 @@ public class PlannerConfig
     }
   }
 
+  /**
+   * Translates {@link PlannerConfig} settings into its equivalent QueryContext map.
+   *
+   * @throws DruidException if the translation is not possible.
+   */
   public Map<String, Object> getNonDefaultAsQueryContext()
   {
     Map<String, Object> overrides = new HashMap<>();
@@ -450,7 +455,11 @@ public class PlannerConfig
 
     PlannerConfig newConfig = PlannerConfig.builder().withOverrides(overrides).build();
     if (!equals(newConfig)) {
-      throw new IAE("Some configs are not handled in this method or not persistable as QueryContext keys!\nold: %s\nnew: %s", this, newConfig);
+      throw DruidException.defensive(
+          "Not all PlannerConfig options are not persistable as QueryContext keys!\nold: %s\nnew: %s",
+          this,
+          newConfig
+      );
     }
     return overrides;
   }

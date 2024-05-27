@@ -132,8 +132,9 @@ public class SqlTestFrameworkConfigTest
         IAE.class,
         () -> new SqlTestFrameworkConfig(configMap)
     );
+
     assertEquals(
-        "Invalid configuration key(s) specified [[nonExistent]]; valid options are [[NumMergeBuffers, MinTopNThreshold, ResultCache, ComponentSupplier]]",
+        "Invalid configuration key(s) specified [[nonExistent]]; valid options are [[numMergeBuffers, minTopNThreshold, resultCache, componentSupplier]]",
         e.getMessage()
     );
   }
