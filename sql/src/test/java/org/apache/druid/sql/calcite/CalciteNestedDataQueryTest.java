@@ -326,104 +326,104 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                     .inputTmpDir(newTempFolder())
                     .buildMMappedIndex();
 
-      final IncrementalIndex indexAllTypesAutoRealtime =
-          IndexBuilder.create()
-                      .tmpDir(newTempFolder())
-                      .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
-                      .schema(
-                          new IncrementalIndexSchema.Builder()
-                              .withTimestampSpec(NestedDataTestUtils.AUTO_SCHEMA.getTimestampSpec())
-                              .withDimensionsSpec(NestedDataTestUtils.AUTO_SCHEMA.getDimensionsSpec())
-                              .withMetrics(
-                                  new CountAggregatorFactory("cnt")
-                              )
-                              .withRollup(false)
-                              .build()
-                      )
-                      .inputSource(
-                          ResourceInputSource.of(
-                              NestedDataTestUtils.class.getClassLoader(),
-                              NestedDataTestUtils.ALL_TYPES_TEST_DATA_FILE
-                          )
-                      )
-                      .inputFormat(TestDataBuilder.DEFAULT_JSON_INPUT_FORMAT)
-                      .inputTmpDir(newTempFolder())
-                      .buildIncrementalIndex();
+    final IncrementalIndex indexAllTypesAutoRealtime =
+        IndexBuilder.create()
+                    .tmpDir(newTempFolder())
+                    .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+                    .schema(
+                        new IncrementalIndexSchema.Builder()
+                            .withTimestampSpec(NestedDataTestUtils.AUTO_SCHEMA.getTimestampSpec())
+                            .withDimensionsSpec(NestedDataTestUtils.AUTO_SCHEMA.getDimensionsSpec())
+                            .withMetrics(
+                                new CountAggregatorFactory("cnt")
+                            )
+                            .withRollup(false)
+                            .build()
+                    )
+                    .inputSource(
+                        ResourceInputSource.of(
+                            NestedDataTestUtils.class.getClassLoader(),
+                            NestedDataTestUtils.ALL_TYPES_TEST_DATA_FILE
+                        )
+                    )
+                    .inputFormat(TestDataBuilder.DEFAULT_JSON_INPUT_FORMAT)
+                    .inputTmpDir(newTempFolder())
+                    .buildIncrementalIndex();
 
-      SpecificSegmentsQuerySegmentWalker walker = SpecificSegmentsQuerySegmentWalker.createWalker(injector, conglomerate);
-      walker.add(
-          DataSegment.builder()
-                     .dataSource(DATA_SOURCE)
-                     .interval(index.getDataInterval())
-                     .version("1")
-                     .shardSpec(new LinearShardSpec(0))
-                     .size(0)
-                     .build(),
-          index
-      ).add(
-          DataSegment.builder()
-                     .dataSource(DATA_SOURCE_MIXED)
-                     .interval(indexMix11.getDataInterval())
-                     .version("1")
-                     .shardSpec(new LinearShardSpec(0))
-                     .size(0)
-                     .build(),
-          indexMix11
-      ).add(
-          DataSegment.builder()
-                     .dataSource(DATA_SOURCE_MIXED)
-                     .interval(indexMix12.getDataInterval())
-                     .version("1")
-                     .shardSpec(new LinearShardSpec(1))
-                     .size(0)
-                     .build(),
-          indexMix12
-      ).add(
-          DataSegment.builder()
-                     .dataSource(DATA_SOURCE_MIXED_2)
-                     .interval(indexMix21.getDataInterval())
-                     .version("1")
-                     .shardSpec(new LinearShardSpec(0))
-                     .size(0)
-                     .build(),
-          indexMix21
-      ).add(
-          DataSegment.builder()
-                     .dataSource(DATA_SOURCE_MIXED_2)
-                     .interval(index.getDataInterval())
-                     .version("1")
-                     .shardSpec(new LinearShardSpec(1))
-                     .size(0)
-                     .build(),
-          indexMix22
-      ).add(
-          DataSegment.builder()
-                     .dataSource(DATA_SOURCE_ARRAYS)
-                     .version("1")
-                     .interval(indexArrays.getDataInterval())
-                     .shardSpec(new LinearShardSpec(1))
-                     .size(0)
-                     .build(),
-          indexArrays
-      ).add(
-          DataSegment.builder()
-                     .dataSource(DATA_SOURCE_ALL)
-                     .version("1")
-                     .interval(indexAllTypesAuto.getDataInterval())
-                     .shardSpec(new LinearShardSpec(1))
-                     .size(0)
-                     .build(),
-          indexAllTypesAuto
-      ).add(
-          DataSegment.builder()
-                     .dataSource(DATA_SOURCE_ALL_REALTIME)
-                     .version("1")
-                     .interval(indexAllTypesAutoRealtime.getInterval())
-                     .shardSpec(new LinearShardSpec(1))
-                     .size(0)
-                     .build(),
-          indexAllTypesAutoRealtime
-      );
+    SpecificSegmentsQuerySegmentWalker walker = SpecificSegmentsQuerySegmentWalker.createWalker(injector, conglomerate);
+    walker.add(
+        DataSegment.builder()
+                   .dataSource(DATA_SOURCE)
+                   .interval(index.getDataInterval())
+                   .version("1")
+                   .shardSpec(new LinearShardSpec(0))
+                   .size(0)
+                   .build(),
+        index
+    ).add(
+        DataSegment.builder()
+                   .dataSource(DATA_SOURCE_MIXED)
+                   .interval(indexMix11.getDataInterval())
+                   .version("1")
+                   .shardSpec(new LinearShardSpec(0))
+                   .size(0)
+                   .build(),
+        indexMix11
+    ).add(
+        DataSegment.builder()
+                   .dataSource(DATA_SOURCE_MIXED)
+                   .interval(indexMix12.getDataInterval())
+                   .version("1")
+                   .shardSpec(new LinearShardSpec(1))
+                   .size(0)
+                   .build(),
+        indexMix12
+    ).add(
+        DataSegment.builder()
+                   .dataSource(DATA_SOURCE_MIXED_2)
+                   .interval(indexMix21.getDataInterval())
+                   .version("1")
+                   .shardSpec(new LinearShardSpec(0))
+                   .size(0)
+                   .build(),
+        indexMix21
+    ).add(
+        DataSegment.builder()
+                   .dataSource(DATA_SOURCE_MIXED_2)
+                   .interval(index.getDataInterval())
+                   .version("1")
+                   .shardSpec(new LinearShardSpec(1))
+                   .size(0)
+                   .build(),
+        indexMix22
+    ).add(
+        DataSegment.builder()
+                   .dataSource(DATA_SOURCE_ARRAYS)
+                   .version("1")
+                   .interval(indexArrays.getDataInterval())
+                   .shardSpec(new LinearShardSpec(1))
+                   .size(0)
+                   .build(),
+        indexArrays
+    ).add(
+        DataSegment.builder()
+                   .dataSource(DATA_SOURCE_ALL)
+                   .version("1")
+                   .interval(indexAllTypesAuto.getDataInterval())
+                   .shardSpec(new LinearShardSpec(1))
+                   .size(0)
+                   .build(),
+        indexAllTypesAuto
+    ).add(
+        DataSegment.builder()
+                   .dataSource(DATA_SOURCE_ALL_REALTIME)
+                   .version("1")
+                   .interval(indexAllTypesAutoRealtime.getInterval())
+                   .shardSpec(new LinearShardSpec(1))
+                   .size(0)
+                   .build(),
+        indexAllTypesAutoRealtime
+    );
 
     return walker;
   }
