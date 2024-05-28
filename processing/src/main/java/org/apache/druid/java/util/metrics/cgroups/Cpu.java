@@ -19,15 +19,24 @@
 
 package org.apache.druid.java.util.metrics.cgroups;
 
+import com.google.common.primitives.Longs;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.metrics.CgroupUtil;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.regex.Pattern;
 
 /**
  * Collect CPU share and quota information from cpu cgroup files.
  */
 public class Cpu
 {
+  private static final Logger LOG = new Logger(Cpu.class);
   private static final String CGROUP = "cpu";
-  private static final String CPUACCT_USAGE_FILE = "cpuacct.usage";
+  private static final String CPUACCT_STAT_FILE = "cpuacct.stat";
   private static final String CPU_SHARES_FILE = "cpu.shares";
   private static final String CPU_QUOTA_FILE = "cpu.cfs_quota_us";
   private static final String CPU_PERIOD_FILE = "cpu.cfs_period_us";
@@ -46,11 +55,37 @@ public class Cpu
    */
   public CpuMetrics snapshot()
   {
+    long userJiffies = -1L;
+    long systemJiffies = -1L;
+    try (final BufferedReader reader = Files.newBufferedReader(
+        Paths.get(cgroupDiscoverer.discover(CGROUP).toString(), CPUACCT_STAT_FILE)
+    )) {
+      for (String line = reader.readLine(); line != null; line = reader.readLine()) {
+        final String[] parts = line.split(Pattern.quote(" "));
+        if (parts.length != 2) {
+          // ignore
+          continue;
+        }
+        switch (parts[0]) {
+          case "user":
+            userJiffies = Longs.tryParse(parts[1]);
+            break;
+          case "system":
+            systemJiffies = Longs.tryParse(parts[1]);
+            break;
+        }
+      }
+    }
+    catch (IOException | RuntimeException ex) {
+      LOG.error(ex, "Unable to fetch memory snapshot");
+    }
+
+
     return new CpuMetrics(
         CgroupUtil.readLongValue(cgroupDiscoverer, CGROUP, CPU_SHARES_FILE, -1),
         CgroupUtil.readLongValue(cgroupDiscoverer, CGROUP, CPU_QUOTA_FILE, 0),
         CgroupUtil.readLongValue(cgroupDiscoverer, CGROUP, CPU_PERIOD_FILE, 0),
-        CgroupUtil.readLongValue(cgroupDiscoverer, CGROUP, CPUACCT_USAGE_FILE, -1)
+        systemJiffies, userJiffies
     );
   }
 
@@ -67,15 +102,19 @@ public class Cpu
     // bandwidth decisions
     private final long periodUs;
 
-    // Maps to cpuacct.uage - the total CPU time (in nanoseconds) consumed by all tasks in this cgroup
-    private final long usageNs;
+    // Maps to user value at cpuacct.stat
+    private final long userJiffies;
 
-    CpuMetrics(long shares, long quotaUs, long periodUs, long usageNs)
+    // Maps to system value at cpuacct.stat
+    private final long systemJiffies;
+
+    CpuMetrics(long shares, long quotaUs, long periodUs, long systemJiffis, long userJiffies)
     {
       this.shares = shares;
       this.quotaUs = quotaUs;
       this.periodUs = periodUs;
-      this.usageNs = usageNs;
+      this.userJiffies = userJiffies;
+      this.systemJiffies = systemJiffis;
     }
 
     public final long getShares()
@@ -93,9 +132,19 @@ public class Cpu
       return periodUs;
     }
 
-    public final long getUsageNs()
+    public long getUserJiffies()
     {
-      return usageNs;
+      return userJiffies;
+    }
+
+    public long getSystemJiffies()
+    {
+      return systemJiffies;
+    }
+
+    public long getTotalJiffies()
+    {
+      return userJiffies + systemJiffies;
     }
   }
 }

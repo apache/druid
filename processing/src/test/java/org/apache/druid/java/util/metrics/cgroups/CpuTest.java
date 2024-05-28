@@ -53,6 +53,7 @@ public class CpuTest
     TestUtils.copyOrReplaceResource("/cpu.cfs_quota_us", new File(cpuDir, "cpu.cfs_quota_us"));
     TestUtils.copyOrReplaceResource("/cpu.cfs_period_us", new File(cpuDir, "cpu.cfs_period_us"));
     TestUtils.copyOrReplaceResource("/cpuacct.usage", new File(cpuDir, "cpuacct.usage"));
+    TestUtils.copyOrReplaceResource("/cpuacct.stat", new File(cpuDir, "cpuacct.stat"));
   }
 
   @Test
@@ -65,7 +66,8 @@ public class CpuTest
     Assert.assertEquals(-1L, metric.getShares());
     Assert.assertEquals(0, metric.getQuotaUs());
     Assert.assertEquals(0, metric.getPeriodUs());
-    Assert.assertEquals(-1, metric.getUsageNs());
+    Assert.assertEquals(-1L, metric.getSystemJiffies());
+    Assert.assertEquals(-1L, metric.getUserJiffies());
   }
 
   @Test
@@ -76,6 +78,8 @@ public class CpuTest
     Assert.assertEquals(1024, snapshot.getShares());
     Assert.assertEquals(300000, snapshot.getQuotaUs());
     Assert.assertEquals(100000, snapshot.getPeriodUs());
-    Assert.assertEquals(5000000, snapshot.getUsageNs());
+    Assert.assertEquals(143871L, snapshot.getSystemJiffies());
+    Assert.assertEquals(251183L, snapshot.getUserJiffies());
+    Assert.assertEquals(395054L, snapshot.getTotalJiffies());
   }
 }
