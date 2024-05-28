@@ -26,30 +26,33 @@ import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig.ConfigurationInstance;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig.SqlTestFrameworkConfigStore;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
-import org.junit.Test;
-
-import java.io.IOException;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpRequest.BodyPublishers;
-import java.net.http.HttpResponse;
 import java.sql.SQLException;
-import static org.junit.Assert.assertNotEquals;
 
 public class Launcher
 {
   static final SqlTestFrameworkConfigStore CONFIG_STORE = new SqlTestFrameworkConfigStore();
-
   private static Logger log = new Logger(Launcher.class);
+  private final SqlTestFramework framework;
+  private final ConfigurationInstance configurationInstance;
+  private Lifecycle lifecycle;
 
-  @Test
-  public void runIt() throws Exception
+  public Launcher() throws Exception
   {
-    Launcher.main3(null);
+    configurationInstance = getConfigurationInstance();
+    framework = configurationInstance.framework;
   }
 
-  private static ConfigurationInstance getCI2() throws SQLException, Exception
+  public void start()
+  {
+    lifecycle = GuiceRunnable.initLifecycle(framework.injector(), log);
+  }
+
+  public void shutdown()
+  {
+    lifecycle.stop();
+  }
+
+  private static ConfigurationInstance getConfigurationInstance() throws SQLException, Exception
   {
     SqlTestFrameworkConfig config = SqlTestFrameworkConfig.fromURL("druidtest:///");
 
@@ -59,50 +62,4 @@ public class Launcher
     );
     return ci;
   }
-
-  private static void main3(Object object) throws Exception
-  {
-
-    SqlTestFramework framework = getCI2().framework;
-
-    Lifecycle lifecycle = GuiceRunnable.initLifecycle(framework.injector(), log);
-
-    chk1();
-    chkStatus();
-
-    System.out.println("-------------------booted up-------------------");
-
-    lifecycle.join();
-
-  }
-
-  private static void chk1() throws IOException, InterruptedException
-  {
-    HttpRequest request = HttpRequest.newBuilder()
-        .uri(URI.create("http://localhost:12345/druid/v2/sql"))
-        .header("Content-Type", "application/json")
-        .POST(BodyPublishers.ofString("{\"query\":\"Select * from foo\"}"))
-        .build();
-    System.out.println(request);
-    HttpClient hc = HttpClient.newHttpClient();
-    HttpResponse<String> a = hc.send(request, HttpResponse.BodyHandlers.ofString());
-    System.out.println(a);
-    assertNotEquals(400, a.statusCode());
-  }
-
-  private static void chkStatus() throws IOException, InterruptedException
-  {
-    HttpRequest request = HttpRequest.newBuilder()
-        .uri(URI.create("http://localhost:12345/status"))
-        .header("Content-Type", "application/json")
-        .GET()
-        .build();
-    System.out.println(request);
-    // request.
-    HttpClient hc = HttpClient.newHttpClient();
-    HttpResponse<String> a = hc.send(request, HttpResponse.BodyHandlers.ofString());
-    System.out.println(a);
-    assertNotEquals(400, a.statusCode());
-  }
-
 }
