@@ -600,8 +600,9 @@ public class SqlTestFramework
 
     @Provides
     @LazySingleton
-    ViewManager createViewManager() {
-return      componentSupplier.getPlannerComponentSupplier().createViewManager();
+    ViewManager createViewManager()
+    {
+      return componentSupplier.getPlannerComponentSupplier().createViewManager();
     }
 
     @Provides
@@ -626,9 +627,7 @@ return      componentSupplier.getPlannerComponentSupplier().createViewManager();
           builder.catalogResolver
       );
       return rootSchema;
-
     }
-
   }
 
   public static final DruidViewMacroFactory DRUID_VIEW_MACRO_FACTORY = new TestDruidViewMacroFactory();
