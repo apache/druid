@@ -20,6 +20,7 @@
 package org.apache.druid.k8s.overlord.taskadapter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import io.fabric8.kubernetes.api.model.EnvVar;
@@ -46,6 +47,7 @@ import org.apache.druid.k8s.overlord.common.Base64Compression;
 import org.apache.druid.k8s.overlord.common.DruidK8sConstants;
 import org.apache.druid.k8s.overlord.common.K8sTaskId;
 import org.apache.druid.k8s.overlord.common.KubernetesOverlordUtils;
+import org.apache.druid.k8s.overlord.execution.ExecutionConfig;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.tasklogs.TaskLogs;
 
@@ -92,6 +94,7 @@ public class PodTemplateTaskAdapter implements TaskAdapter
   private final ObjectMapper mapper;
   private final HashMap<String, PodTemplate> templates;
   private final TaskLogs taskLogs;
+  private final Supplier<ExecutionConfig> executionConfigRef;
 
   public PodTemplateTaskAdapter(
       KubernetesTaskRunnerConfig taskRunnerConfig,
@@ -99,7 +102,8 @@ public class PodTemplateTaskAdapter implements TaskAdapter
       DruidNode node,
       ObjectMapper mapper,
       Properties properties,
-      TaskLogs taskLogs
+      TaskLogs taskLogs,
+      Supplier<ExecutionConfig> executionConfigRef
   )
   {
     this.taskRunnerConfig = taskRunnerConfig;
@@ -108,6 +112,7 @@ public class PodTemplateTaskAdapter implements TaskAdapter
     this.mapper = mapper;
     this.templates = initializePodTemplates(properties);
     this.taskLogs = taskLogs;
+    this.executionConfigRef = executionConfigRef;
   }
 
   /**
@@ -126,7 +131,17 @@ public class PodTemplateTaskAdapter implements TaskAdapter
   @Override
   public Job fromTask(Task task) throws IOException
   {
-    PodTemplate podTemplate = templates.getOrDefault(task.getType(), templates.get("base"));
+    PodTemplate podTemplate = null;
+    ExecutionConfig executionConfig = executionConfigRef.get();
+    if (executionConfig != null && executionConfig.getBehaviorStrategy() != null) {
+      String category = executionConfig.getBehaviorStrategy().getTaskCategory(task);
+      if (category != null) {
+        podTemplate = templates.get(category);
+      }
+    }
+    if (podTemplate == null) {
+      podTemplate = templates.getOrDefault(task.getType(), templates.get("base"));
+    }
     if (podTemplate == null) {
       throw new ISE("Pod template spec not found for task type [%s]", task.getType());
     }

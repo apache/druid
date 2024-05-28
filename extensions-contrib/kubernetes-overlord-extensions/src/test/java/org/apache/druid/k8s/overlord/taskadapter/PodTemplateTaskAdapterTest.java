@@ -21,6 +21,7 @@ package org.apache.druid.k8s.overlord.taskadapter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
+import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import io.fabric8.kubernetes.api.model.PodTemplate;
 import io.fabric8.kubernetes.api.model.PodTemplateBuilder;
@@ -40,10 +41,10 @@ import org.apache.druid.k8s.overlord.common.Base64Compression;
 import org.apache.druid.k8s.overlord.common.DruidK8sConstants;
 import org.apache.druid.k8s.overlord.common.K8sTaskId;
 import org.apache.druid.k8s.overlord.common.K8sTestUtils;
+import org.apache.druid.k8s.overlord.execution.ExecutionConfig;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.tasklogs.TaskLogs;
 import org.easymock.EasyMock;
-import org.easymock.Mock;
 import org.junit.Assert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -71,7 +72,8 @@ public class PodTemplateTaskAdapterTest
   private TaskConfig taskConfig;
   private DruidNode node;
   private ObjectMapper mapper;
-  @Mock private TaskLogs taskLogs;
+  private TaskLogs taskLogs;
+  private Supplier<ExecutionConfig> executionConfigRef;
 
   @BeforeEach
   public void setup()
@@ -89,6 +91,9 @@ public class PodTemplateTaskAdapterTest
     );
     mapper = new TestUtils().getTestObjectMapper();
     podTemplateSpec = K8sTestUtils.fileToResource("basePodTemplate.yaml", PodTemplate.class);
+
+    taskLogs = EasyMock.createMock(TaskLogs.class);
+    executionConfigRef = EasyMock.createMock(Supplier.class);
   }
 
   @Test
@@ -103,7 +108,8 @@ public class PodTemplateTaskAdapterTest
         node,
         mapper,
         new Properties(),
-        taskLogs
+        taskLogs,
+        executionConfigRef
     ));
     Assert.assertEquals(exception.getMessage(), "Pod template task adapter requires a base pod template to be specified under druid.indexer.runner.k8s.podTemplate.base");
   }
@@ -125,7 +131,8 @@ public class PodTemplateTaskAdapterTest
         node,
         mapper,
         props,
-        taskLogs
+        taskLogs,
+        executionConfigRef
     ));
 
     Assert.assertTrue(exception.getMessage().contains("Failed to load pod template file for"));
@@ -147,7 +154,8 @@ public class PodTemplateTaskAdapterTest
         node,
         mapper,
         props,
-        taskLogs
+        taskLogs,
+        executionConfigRef
     );
 
     Task task = new NoopTask("id", "id", "datasource", 0, 0, null);
@@ -180,7 +188,8 @@ public class PodTemplateTaskAdapterTest
         ),
         mapper,
         props,
-        taskLogs
+        taskLogs,
+        executionConfigRef
     );
 
     Task task = new NoopTask("id", "id", "datasource", 0, 0, null);
@@ -207,7 +216,8 @@ public class PodTemplateTaskAdapterTest
         node,
         mapper,
         props,
-        taskLogs
+        taskLogs,
+        executionConfigRef
     ));
   }
 
@@ -227,7 +237,8 @@ public class PodTemplateTaskAdapterTest
         node,
         mapper,
         props,
-        taskLogs
+        taskLogs,
+        executionConfigRef
     );
 
     Task task = new NoopTask("id", "id", "datasource", 0, 0, null);
@@ -253,7 +264,8 @@ public class PodTemplateTaskAdapterTest
         node,
         mapper,
         props,
-        taskLogs
+        taskLogs,
+        executionConfigRef
     );
 
     Task task = new NoopTask(
@@ -286,7 +298,8 @@ public class PodTemplateTaskAdapterTest
         node,
         mapper,
         props,
-        taskLogs
+        taskLogs,
+        executionConfigRef
     );
 
     Job job = K8sTestUtils.fileToResource("baseJobWithoutAnnotations.yaml", Job.class);
@@ -309,7 +322,8 @@ public class PodTemplateTaskAdapterTest
         node,
         mapper,
         props,
-        taskLogs
+        taskLogs,
+        executionConfigRef
     );
     Job job = new JobBuilder()
         .editSpec().editTemplate().editMetadata()
@@ -333,7 +347,8 @@ public class PodTemplateTaskAdapterTest
         node,
         mapper,
         props,
-        taskLogs
+        taskLogs,
+        executionConfigRef
     );
     Job job = new JobBuilder()
         .editSpec().editTemplate().editMetadata()
@@ -357,7 +372,8 @@ public class PodTemplateTaskAdapterTest
         node,
         mapper,
         props,
-        taskLogs
+        taskLogs,
+        executionConfigRef
     );
     Job job = new JobBuilder()
         .editSpec().editTemplate().editMetadata()
@@ -383,7 +399,8 @@ public class PodTemplateTaskAdapterTest
         node,
         mapper,
         props,
-        taskLogs
+        taskLogs,
+        executionConfigRef
     );
 
     Job baseJob = K8sTestUtils.fileToResource("baseJobWithoutAnnotations.yaml", Job.class);
@@ -415,7 +432,8 @@ public class PodTemplateTaskAdapterTest
         node,
         mapper,
         props,
-        taskLogs
+        taskLogs,
+        executionConfigRef
     );
 
     Job job = K8sTestUtils.fileToResource("baseJob.yaml", Job.class);
@@ -446,7 +464,8 @@ public class PodTemplateTaskAdapterTest
         node,
         mapper,
         props,
-        mockTestLogs
+        mockTestLogs,
+        executionConfigRef
     );
 
     Job job = K8sTestUtils.fileToResource("expectedNoopJob.yaml", Job.class);
@@ -470,7 +489,8 @@ public class PodTemplateTaskAdapterTest
         node,
         mapper,
         props,
-        taskLogs
+        taskLogs,
+        executionConfigRef
     );
 
     Task task = new NoopTask(
@@ -504,7 +524,8 @@ public class PodTemplateTaskAdapterTest
         node,
         mapper,
         props,
-        taskLogs
+        taskLogs,
+        executionConfigRef
     );
 
     Task task = EasyMock.mock(Task.class);
@@ -552,7 +573,8 @@ public class PodTemplateTaskAdapterTest
           node,
           mapper,
           props,
-          taskLogs
+          taskLogs,
+          executionConfigRef
     );
 
     Task kafkaTask = new NoopTask("id", "id", "datasource", 0, 0, null) {

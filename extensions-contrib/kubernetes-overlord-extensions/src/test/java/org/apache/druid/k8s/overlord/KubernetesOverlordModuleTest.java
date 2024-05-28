@@ -19,10 +19,13 @@
 
 package org.apache.druid.k8s.overlord;
 
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.ProvisionException;
+import com.google.inject.TypeLiteral;
 import org.apache.druid.guice.ConfigModule;
 import org.apache.druid.guice.DruidGuiceExtensions;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
@@ -33,6 +36,7 @@ import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunnerFactory;
 import org.apache.druid.jackson.JacksonModule;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.k8s.overlord.execution.ExecutionConfig;
 import org.apache.druid.server.DruidNode;
 import org.easymock.EasyMockRunner;
 import org.easymock.Mock;
@@ -111,6 +115,10 @@ public class KubernetesOverlordModuleTest
               if (isWorkerTypeHttpRemote) {
                 binder.bind(HttpRemoteTaskRunnerFactory.class).toInstance(httpRemoteTaskRunnerFactory);
               }
+              binder.bind(
+                  new TypeLiteral<Supplier<ExecutionConfig>>()
+                  {
+                  }).toInstance(Suppliers.ofInstance(() -> null));
             },
             new ConfigModule(),
             new KubernetesOverlordModule()
