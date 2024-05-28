@@ -1600,6 +1600,12 @@ public class DruidQuery
       return null;
     }
 
+    if (outputRowSignature.size() == 0) {
+      // Should never do a scan query without any columns that we're interested in. This is probably a planner bug.
+      this.plannerContext.setPlanningError("Cannot convert to Scan query without any columns.");
+      return null;
+    }
+
     final Pair<DataSource, Filtration> dataSourceFiltrationPair = getFiltration(
         dataSource,
         filter,
