@@ -33,6 +33,8 @@
 # part of the calcite-core-<version>.jar under "codegen" directory.
 
 data: {
+  default: tdd("../default_config.fmpp")
+
   # Data declarations for this parser.
   #
   # Default declarations are in default_config.fmpp; if you do not include a
@@ -40,15 +42,66 @@ data: {
   # FMPP will use the declaration from default_config.fmpp.
   parser: {
     # Generated parser implementation package and class name.
-    package: "org.apache.calcite.sql.parser.impl",
-    class: "SqlParserImpl",
+    package: "org.apache.druid.sql.calcite.parser",
+    class: "DruidSqlParserImpl",
+
+    # List of additional classes and packages to import.
+    # Example. "org.apache.calcite.sql.*", "java.util.List".
+    imports: [
+      "java.util.List"
+      "org.apache.calcite.sql.SqlNode"
+      "org.apache.calcite.sql.SqlInsert"
+      "org.apache.calcite.sql.SqlNodeList"
+      "org.apache.calcite.sql.SqlBasicCall"
+      "org.apache.druid.java.util.common.granularity.Granularity"
+      "org.apache.druid.java.util.common.granularity.GranularityType"
+      "org.apache.druid.java.util.common.granularity.Granularities"
+      "org.apache.druid.sql.calcite.parser.DruidSqlInsert"
+      "org.apache.druid.sql.calcite.parser.DruidSqlParserUtils"
+      "org.apache.druid.sql.calcite.external.ExtendOperator"
+      "org.apache.druid.sql.calcite.external.ParameterizeOperator"
+      "org.apache.druid.sql.calcite.parser.ExternalDestinationSqlIdentifier"
+      "java.util.HashMap"
+    ]
+
+    # List of new keywords. Example: "DATABASES", "TABLES". If the keyword is not a reserved
+    # keyword add it to 'nonReservedKeywords' section.
+    keywords: [
+      "CLUSTERED"
+      "OVERWRITE"
+      "PARTITIONED"
+      "EXTERN"
+    ]
+
+    nonReservedKeywordsToAdd: [
+      "OVERWRITE"
+      "EXTERN"
+    ]
+
+    # List of methods for parsing custom SQL statements.
+    # Return type of method implementation should be 'SqlNode'.
+    # Example: SqlShowDatabases(), SqlShowTables().
+    statementParserMethods: [
+      "DruidSqlInsertEof()"
+      "DruidSqlExplain()"
+      "DruidSqlReplaceEof()"
+    ]
+
+    # List of methods for parsing custom data types.
+    # Return type of method implementation should be "SqlTypeNameSpec".
+    # Example: SqlParseTimeStampZ().
+    dataTypeParserMethods: [
+      "DruidType()"
+    ]
 
     # List of files in @includes directory that have parser method
     # implementations for parsing custom SQL statements, literals or types
     # given as part of "statementParserMethods", "literalParserMethods" or
     # "dataTypeParserMethods".
     implementationFiles: [
-      "parserImpls.ftl"
+      "common.ftl"
+      "explain.ftl"
+      "replace.ftl"
     ]
   }
 }
