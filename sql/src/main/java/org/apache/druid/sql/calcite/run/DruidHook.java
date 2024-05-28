@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.quidem;
+package org.apache.druid.sql.calcite.run;
 
 import org.apache.calcite.rel.RelNode;
 import java.io.Closeable;
