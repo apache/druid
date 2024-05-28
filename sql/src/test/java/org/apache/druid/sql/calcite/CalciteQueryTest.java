@@ -5105,7 +5105,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                ),
                                new FilteredAggregatorFactory(
                                    new LongSumAggregatorFactory("a1", "cnt"),
-                                   not(equality("dim1", "abc", ColumnType.STRING))
+                                   not(istrue(equality("dim1", "abc", ColumnType.STRING)))
                                ),
                                new FilteredAggregatorFactory(
                                    new LongSumAggregatorFactory("a2", "cnt"),
@@ -15050,7 +15050,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.AGGREGATE_REMOVE_NOT_FIRED, separateDefaultModeTest = true)
   @Test
   public void testSubqueryTypeMismatchWithLiterals()
   {
