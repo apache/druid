@@ -160,12 +160,13 @@ public class OverlordResourceTestClient
     }
   }
 
-  public void handoffTaskGroupEarly(
+  public StatusResponseHolder handoffTaskGroupEarly(
       String dataSource,
       String taskGroups
   )
   {
     try {
+      LOG.info("handing off %s %s", dataSource, taskGroups);
       StatusResponseHolder response = httpClient.go(
           new Request(HttpMethod.POST, new URL(StringUtils.format(
               "%ssupervisor/%s/taskGroups/handoff",
@@ -177,7 +178,9 @@ public class OverlordResourceTestClient
               ),
           StatusResponseHandler.getInstance()
       ).get();
-      LOG.debug("Handoff early response" + response.getContent());
+      LOG.info("Handoff early response code " + response.getStatus().getCode());
+      LOG.info("Handoff early response " + response.getContent());
+      return response;
     }
     catch (ISE e) {
       throw e;
