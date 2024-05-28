@@ -84,9 +84,8 @@
         <scala.library.version>2.13.14</scala.library.version>
         <avatica.version>1.23.0</avatica.version>
         <avro.version>1.11.3</avro.version>
-        <!-- When updating Calcite, also propagate updates to these files which we've copied and modified:
-             default_config.fmpp
-             sql/src/main/codegen/includes/*
+        <!--
+            The base calcite parser was copied into the project; when updating Calcite run dev/updgrade-calcite-parser to adopt upstream changes
           -->
         <calcite.version>1.35.0</calcite.version>
         <confluent.version>6.2.12</confluent.version>
