@@ -309,13 +309,7 @@ public final class DimensionHandlerUtils
   }
 
   @Nullable
-  public static Long convertObjectToLong(@Nullable Object valObj)
-  {
-    return convertObjectToLong(valObj, false);
-  }
-
-  @Nullable
-  public static Long convertObjectToLong(@Nullable Object valObj, boolean reportParseExceptions)
+  public static Long convertObjectToLong(@Nullable Object valObj, boolean reportParseExceptions, @Nullable String objectKey)
   {
     if (valObj == null) {
       return null;
@@ -330,16 +324,36 @@ public final class DimensionHandlerUtils
     } else if (valObj instanceof String) {
       Long ret = DimensionHandlerUtils.getExactLongFromDecimalString((String) valObj);
       if (reportParseExceptions && ret == null) {
+        if (objectKey !=  null) {
+          throw new ParseException((String) valObj, "could not convert value [%s] to long for dimension [%s]", valObj, objectKey);
+        }
         throw new ParseException((String) valObj, "could not convert value [%s] to long", valObj);
       }
       return ret;
     } else if (valObj instanceof List) {
+      if (objectKey != null) {
+        throw new ParseException(
+            valObj.getClass().toString(),
+            "Could not ingest value [%s] as long for dimension [%s]. A long column cannot have multiple values in the same row.",
+            valObj,
+            objectKey
+        );
+      }
       throw new ParseException(
           valObj.getClass().toString(),
           "Could not ingest value %s as long. A long column cannot have multiple values in the same row.",
           valObj
       );
     } else {
+      if (objectKey != null) {
+        throw new ParseException(
+            valObj.getClass().toString(),
+            "Could not convert value [%s] to long for dimesion [%s]. Invalid type: [%s]",
+            valObj,
+            objectKey,
+            valObj.getClass()
+        );
+      }
       throw new ParseException(
           valObj.getClass().toString(),
           "Could not convert value [%s] to long. Invalid type: [%s]",
@@ -347,6 +361,18 @@ public final class DimensionHandlerUtils
           valObj.getClass()
       );
     }
+  }
+
+  @Nullable
+  public static Long convertObjectToLong(@Nullable Object valObj)
+  {
+    return convertObjectToLong(valObj, false);
+  }
+
+  @Nullable
+  public static Long convertObjectToLong(@Nullable Object valObj, boolean reportParseExceptions)
+  {
+    return convertObjectToLong(valObj, reportParseExceptions, null);
   }
 
   @Nullable

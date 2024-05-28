@@ -29,6 +29,7 @@ import org.apache.druid.segment.data.CloseableIndexed;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexRowHolder;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
@@ -136,6 +137,15 @@ public interface DimensionIndexer<
       @Nullable Object dimValues,
       boolean reportParseExceptions
   );
+
+  default EncodedKeyComponent<EncodedKeyComponentType> processRowValsToUnsortedEncodedKeyComponent(
+      @Nullable Object dimValues,
+      boolean reportParseExceptions,
+      @Nullable String dimension
+      )
+  {
+    return processRowValsToUnsortedEncodedKeyComponent(dimValues, reportParseExceptions);
+  }
 
   /**
    * This method will be called while building an {@link IncrementalIndex} whenever a known dimension column (either
