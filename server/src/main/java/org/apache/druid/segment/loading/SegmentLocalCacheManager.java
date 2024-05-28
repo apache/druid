@@ -94,8 +94,8 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
 
   private final IndexIO indexIO;
 
-  private ExecutorService loadSegmentsIntoPageCacheOnDownloadExec = null;
-  private ExecutorService loadSegmentsIntoPageCacheOnBootstrapExec = null;
+  private ExecutorService bootstrapPageCacheExec = null;
+  private ExecutorService downloadPageCacheExec = null;
 
   @Inject
   public SegmentLocalCacheManager(
@@ -120,14 +120,14 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     );
 
     if (config.getNumThreadsToLoadSegmentsIntoPageCacheOnBootstrap() > 0) {
-      loadSegmentsIntoPageCacheOnBootstrapExec = Execs.multiThreaded(
+      bootstrapPageCacheExec = Execs.multiThreaded(
           config.getNumThreadsToLoadSegmentsIntoPageCacheOnBootstrap(),
           "Load-Segments-Into-Page-Cache-On-Bootstrap-%s"
       );
     }
 
     if (this.config.getNumThreadsToLoadSegmentsIntoPageCacheOnDownload() > 0) {
-      loadSegmentsIntoPageCacheOnDownloadExec = Executors.newFixedThreadPool(
+      downloadPageCacheExec = Executors.newFixedThreadPool(
           config.getNumThreadsToLoadSegmentsIntoPageCacheOnDownload(),
           Execs.makeThreadFactory("LoadSegmentsIntoPageCacheOnDownload-%s")
       );
@@ -617,20 +617,20 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   @Override
   public void loadSegmentIntoPageCache(DataSegment segment)
   {
-    if (loadSegmentsIntoPageCacheOnDownloadExec == null) {
+    if (downloadPageCacheExec == null) {
       return;
     }
 
-    loadSegmentsIntoPageCacheOnDownloadExec.submit(() -> loadSegmentIntoPageCacheInternal(segment));
+    downloadPageCacheExec.submit(() -> loadSegmentIntoPageCacheInternal(segment));
   }
 
   @Override
   public void loadSegmentIntoPageCacheOnBootstrap(DataSegment segment)
   {
-    if (loadSegmentsIntoPageCacheOnBootstrapExec == null) {
+    if (bootstrapPageCacheExec == null) {
       return;
     }
-    loadSegmentsIntoPageCacheOnBootstrapExec.submit(() -> loadSegmentIntoPageCacheInternal(segment));
+    bootstrapPageCacheExec.submit(() -> loadSegmentIntoPageCacheInternal(segment));
   }
 
   private void loadSegmentIntoPageCacheInternal(DataSegment segment)

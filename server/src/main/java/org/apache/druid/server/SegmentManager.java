@@ -51,6 +51,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -243,7 +244,7 @@ public class SegmentManager
    * Bootstrap load the supplied segment. If the segment was already loaded previously, this method does nothing.
    *
    * @param dataSegment segment to bootstrap
-   * @param loadFailed callback to execute when segment lazy load failed. This applies only
+   * @param loadFailed callback to execute when segment lazy load fails. This applies only
    *                   when lazy loading is enabled.
    *
    * @throws SegmentLoadingException if the segment cannot be loaded
@@ -268,7 +269,7 @@ public class SegmentManager
       cacheManager.cleanup(dataSegment);
       throw e;
     }
-    loadSegment(dataSegment, segment, true);
+    loadSegment(dataSegment, segment, cacheManager::loadSegmentIntoPageCacheOnBootstrap);
   }
 
   /**
@@ -297,13 +298,13 @@ public class SegmentManager
       cacheManager.cleanup(dataSegment);
       throw e;
     }
-    loadSegment(dataSegment, segment, false);
+    loadSegment(dataSegment, segment, cacheManager::loadSegmentIntoPageCache);
   }
 
   private void loadSegment(
       final DataSegment dataSegment,
       final ReferenceCountingSegment segment,
-      final boolean isBootstrap
+      final Consumer<DataSegment> cacheLoadFunction
   ) throws IOException
   {
     final SettableSupplier<Boolean> resultSupplier = new SettableSupplier<>();
@@ -344,11 +345,7 @@ public class SegmentManager
             final long numOfRows = (dataSegment.isTombstone() || storageAdapter == null) ? 0 : storageAdapter.getNumRows();
             dataSourceState.addSegment(dataSegment, numOfRows);
 
-            if (isBootstrap) {
-              cacheManager.loadSegmentIntoPageCacheOnBootstrap(dataSegment);
-            } else {
-              cacheManager.loadSegmentIntoPageCache(dataSegment);
-            }
+            cacheLoadFunction.accept(dataSegment);
             resultSupplier.set(true);
           }
 

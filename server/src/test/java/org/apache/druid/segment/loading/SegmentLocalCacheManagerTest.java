@@ -1027,7 +1027,7 @@ public class SegmentLocalCacheManagerTest
   }
 
   @Test
-  public void testGetSegmentWithTombstones() throws SegmentLoadingException
+  public void testGetTombstoneSegment() throws SegmentLoadingException
   {
     final Interval interval = Intervals.of("2014-01-01/2014-01-02");
     final DataSegment tombstone = DataSegment.builder()
