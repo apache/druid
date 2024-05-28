@@ -22,6 +22,7 @@ package org.apache.druid.storage.s3.output;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.logger.Logger;
 
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -29,10 +30,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  * It tracks the current number of chunks written to local disk concurrently and ensures that the
  * maximum number of chunks on disk does not exceed a specified limit at any given point in time.
  */
-public class S3UploadConfig
+public class S3UploadManager
 {
-  public static final String UPLOAD_THREADPOOL_NAMED_VALUE = "S3UploadThreadPool";
-
   /**
    * The maximum chunk size based on injected values for {@link S3OutputConfig} and {@link S3ExportConfig} used for computing maximum number of chunks to save on disk at any given point in time.
    * It is initialized to 5 MiB which is the minimum chunk size possible, denoted by {@link S3OutputConfig#S3_MULTIPART_UPLOAD_MIN_PART_SIZE_BYTES}.
@@ -48,9 +47,19 @@ public class S3UploadConfig
    * The maximum number of chunks that can be saved to local disk concurrently.
    * This value is recalculated when the chunk size is updated in {@link #updateChunkSizeIfGreater(long)}.
    */
-  private int maxConcurrentNumChunks = 100;
+  private final AtomicInteger maxConcurrentNumChunks = new AtomicInteger(100);
 
-  private static final Logger log = new Logger(S3UploadConfig.class);
+  /**
+   * Threadpool used for uploading the chunks asynchronously.
+   */
+  private final ExecutorService uploadExecutor;
+
+  private static final Logger log = new Logger(S3UploadManager.class);
+
+  public S3UploadManager(ExecutorService executorService)
+  {
+    this.uploadExecutor = executorService;
+  }
 
   /**
    * Increments the counter for the current number of chunks saved on disk.
@@ -85,7 +94,7 @@ public class S3UploadConfig
    */
   public int getMaxConcurrentNumChunks()
   {
-    return maxConcurrentNumChunks;
+    return maxConcurrentNumChunks.get();
   }
 
   /**
@@ -109,7 +118,16 @@ public class S3UploadConfig
    */
   private void recomputeMaxConcurrentNumChunks()
   {
-    maxConcurrentNumChunks = (int) (S3OutputConfig.S3_MULTIPART_UPLOAD_MAX_PART_SIZE_BYTES / chunkSize);
-    log.info("Recomputed maxConcurrentNumChunks: %d", maxConcurrentNumChunks);
+    maxConcurrentNumChunks.set((int) (S3OutputConfig.S3_MULTIPART_UPLOAD_MAX_PART_SIZE_BYTES / chunkSize));
+    log.info("Recomputed maxConcurrentNumChunks: %d", maxConcurrentNumChunks.get());
+  }
+
+  /**
+   * Submit the runnable to the {@link #uploadExecutor}.
+   * @param task
+   */
+  public void submitTask(Runnable task)
+  {
+    uploadExecutor.submit(task);
   }
 }

@@ -47,7 +47,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -117,14 +116,9 @@ public class RetryableS3OutputStream extends OutputStream
   private final Object fileLock = new Object();
 
   /**
-   * Threadpool used for uploading the chunks asynchronously.
-   */
-  private final ExecutorService uploadExecutor;
-
-  /**
    * Helper class for calculating maximum number of simultaneous chunks allowed on local disk.
    */
-  private final S3UploadConfig s3UploadConfig;
+  private final S3UploadManager uploadManager;
 
   /**
    * A lock to restrict the maximum number of chunks on disk at any given point in time.
@@ -135,15 +129,13 @@ public class RetryableS3OutputStream extends OutputStream
       S3OutputConfig config,
       ServerSideEncryptingAmazonS3 s3,
       String s3Key,
-      ExecutorService executorService,
-      S3UploadConfig s3UploadConfig
+      S3UploadManager uploadManager
   ) throws IOException
   {
     this.config = config;
     this.s3 = s3;
     this.s3Key = s3Key;
-    this.uploadExecutor = executorService;
-    this.s3UploadConfig = s3UploadConfig;
+    this.uploadManager = uploadManager;
 
     final InitiateMultipartUploadResult result;
     try {
@@ -185,7 +177,7 @@ public class RetryableS3OutputStream extends OutputStream
     }
 
     synchronized (maxChunksLock) {
-      while (s3UploadConfig.getCurrentNumChunks() > s3UploadConfig.getMaxConcurrentNumChunks()) {
+      while (uploadManager.getCurrentNumChunks() > uploadManager.getMaxConcurrentNumChunks()) {
         try {
           LOG.debug("Waiting for lock for writing further chunks to local disk.");
           maxChunksLock.wait();
@@ -230,10 +222,10 @@ public class RetryableS3OutputStream extends OutputStream
     currentChunk.close();
     final Chunk chunk = currentChunk;
     if (chunk.length() > 0) {
-      s3UploadConfig.incrementCurrentNumChunks();
+      uploadManager.incrementCurrentNumChunks();
       pendingFiles.incrementAndGet();
 
-      uploadExecutor.submit(() -> {
+      uploadManager.submitTask(() -> {
         try {
           uploadChunk(chunk);
         }
@@ -244,7 +236,7 @@ public class RetryableS3OutputStream extends OutputStream
         }
         finally {
           synchronized (maxChunksLock) {
-            s3UploadConfig.decrementCurrentNumChunks();
+            uploadManager.decrementCurrentNumChunks();
             maxChunksLock.notifyAll();
           }
           if (pendingFiles.decrementAndGet() == 0) {

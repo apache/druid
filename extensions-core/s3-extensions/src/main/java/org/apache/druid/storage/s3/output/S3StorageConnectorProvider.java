@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import com.google.inject.name.Named;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.StorageConnectorProvider;
@@ -32,7 +31,6 @@ import org.apache.druid.storage.s3.S3StorageDruidModule;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 
 import java.io.File;
-import java.util.concurrent.ExecutorService;
 
 @JsonTypeName(S3StorageDruidModule.SCHEME)
 public class S3StorageConnectorProvider extends S3OutputConfig implements StorageConnectorProvider
@@ -41,11 +39,7 @@ public class S3StorageConnectorProvider extends S3OutputConfig implements Storag
   ServerSideEncryptingAmazonS3 s3;
 
   @JacksonInject
-  @Named(S3UploadConfig.UPLOAD_THREADPOOL_NAMED_VALUE)
-  ExecutorService executorService;
-
-  @JacksonInject
-  S3UploadConfig s3UploadConfig;
+  S3UploadManager s3UploadManager;
 
   @JsonCreator
   public S3StorageConnectorProvider(
@@ -62,7 +56,7 @@ public class S3StorageConnectorProvider extends S3OutputConfig implements Storag
   @Override
   public StorageConnector get()
   {
-    s3UploadConfig.updateChunkSizeIfGreater(this.getChunkSize());
-    return new S3StorageConnector(this, s3, executorService, s3UploadConfig);
+    s3UploadManager.updateChunkSizeIfGreater(this.getChunkSize());
+    return new S3StorageConnector(this, s3, s3UploadManager);
   }
 }

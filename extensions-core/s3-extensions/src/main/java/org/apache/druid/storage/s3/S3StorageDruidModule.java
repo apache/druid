@@ -34,7 +34,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Provides;
 import com.google.inject.multibindings.MapBinder;
-import com.google.inject.name.Named;
 import org.apache.commons.lang.StringUtils;
 import org.apache.druid.common.aws.AWSClientConfig;
 import org.apache.druid.common.aws.AWSEndpointConfig;
@@ -46,11 +45,11 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.storage.s3.output.S3UploadConfig;
+import org.apache.druid.storage.s3.output.S3UploadManager;
 import org.apache.druid.utils.RuntimeInfo;
 
 import java.util.List;
-import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ScheduledExecutorService;
 
 /**
  *
@@ -190,17 +189,13 @@ public class S3StorageDruidModule implements DruidModule
 
   @Provides
   @LazySingleton
-  @Named(S3UploadConfig.UPLOAD_THREADPOOL_NAMED_VALUE)
-  public ExecutorService getUploadExecutorService(ScheduledExecutorFactory scheduledExecutorFactory, RuntimeInfo runtimeInfo)
+  public S3UploadManager getS3UploadManager(ScheduledExecutorFactory scheduledExecutorFactory, RuntimeInfo runtimeInfo)
   {
     int poolSize = Math.max(4, runtimeInfo.getAvailableProcessors());
-    return scheduledExecutorFactory.create(poolSize, "UploadThreadPool-%d");
-  }
-
-  @Provides
-  @LazySingleton
-  public S3UploadConfig getS3UploadConfig()
-  {
-    return new S3UploadConfig();
+    ScheduledExecutorService executorService = scheduledExecutorFactory.create(
+        poolSize,
+        "UploadThreadPool-%d"
+    );
+    return new S3UploadManager(executorService);
   }
 }

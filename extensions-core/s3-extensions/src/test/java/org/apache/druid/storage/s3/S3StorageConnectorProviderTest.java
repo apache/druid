@@ -38,13 +38,12 @@ import org.apache.druid.storage.StorageConnectorProvider;
 import org.apache.druid.storage.s3.output.S3StorageConnector;
 import org.apache.druid.storage.s3.output.S3StorageConnectorModule;
 import org.apache.druid.storage.s3.output.S3StorageConnectorProvider;
-import org.apache.druid.storage.s3.output.S3UploadConfig;
+import org.apache.druid.storage.s3.output.S3UploadManager;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.File;
 import java.util.Properties;
-import java.util.concurrent.ExecutorService;
 
 public class S3StorageConnectorProviderTest
 {
@@ -151,12 +150,8 @@ public class S3StorageConnectorProviderTest
                 new ServerSideEncryptingAmazonS3(null, new NoopServerSideEncryption())
             )
             .addValue(
-                ExecutorService.class,
-                Execs.singleThreaded("UploadThreadPool-%d")
-            )
-            .addValue(
-                S3UploadConfig.class,
-                new S3UploadConfig()
+                S3UploadManager.class,
+                new S3UploadManager(Execs.singleThreaded("UploadThreadPool-%d"))
             ));
 
 

@@ -51,7 +51,6 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
 
 public class RetryableS3OutputStreamTest
@@ -68,9 +67,7 @@ public class RetryableS3OutputStreamTest
   private S3OutputConfig config;
   private long chunkSize;
 
-  private final ExecutorService executorService = Execs.singleThreaded("UploadThreadPool-%d");
-
-  private final S3UploadConfig s3UploadConfig = new S3UploadConfig();
+  private final S3UploadManager s3UploadManager = new S3UploadManager(Execs.singleThreaded("UploadThreadPool-%d"));
 
   @Before
   public void setup() throws IOException
@@ -115,8 +112,7 @@ public class RetryableS3OutputStreamTest
         config,
         s3,
         path,
-        executorService,
-        s3UploadConfig
+        s3UploadManager
     )) {
       for (int i = 0; i < 25; i++) {
         bb.clear();
@@ -138,8 +134,7 @@ public class RetryableS3OutputStreamTest
         config,
         s3,
         path,
-        executorService,
-        s3UploadConfig
+        s3UploadManager
     )) {
       bb.clear();
       bb.putInt(1);
@@ -160,8 +155,7 @@ public class RetryableS3OutputStreamTest
         config,
         s3,
         path,
-        executorService,
-        s3UploadConfig
+        s3UploadManager
     )) {
       for (int i = 0; i < 600; i++) {
         out.write(i);
@@ -183,8 +177,7 @@ public class RetryableS3OutputStreamTest
         config,
         s3,
         path,
-        executorService,
-        s3UploadConfig
+        s3UploadManager
     )) {
       for (int i = 0; i < 25; i++) {
         bb.clear();
@@ -207,8 +200,7 @@ public class RetryableS3OutputStreamTest
         config,
         s3,
         path,
-        executorService,
-        s3UploadConfig
+        s3UploadManager
     )) {
       for (int i = 0; i < 2; i++) {
         bb.clear();

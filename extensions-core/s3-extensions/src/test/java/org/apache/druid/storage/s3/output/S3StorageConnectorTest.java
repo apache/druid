@@ -31,6 +31,7 @@ import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.s3.NoopServerSideEncryption;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
@@ -84,7 +85,7 @@ public class S3StorageConnectorTest
           null,
           null,
           true
-      ), service, null, new S3UploadConfig());
+      ), service, new S3UploadManager(Execs.singleThreaded("UploadThreadPool-%d")));
     }
     catch (IOException e) {
       throw new RuntimeException(e);
