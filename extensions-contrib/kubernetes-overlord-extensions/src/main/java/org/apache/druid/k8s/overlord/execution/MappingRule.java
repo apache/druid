@@ -26,8 +26,12 @@ import org.apache.druid.query.DruidMetrics;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
+/**
+ * Represents a rule that can evaluate whether a task satisfies a set of conditions.
+ */
 public class MappingRule
 {
   private List<Selector> selectors;
@@ -38,6 +42,12 @@ public class MappingRule
     this.selectors = selectors;
   }
 
+  /**
+   * Evaluates the specified task against all selectors, determining if any selector is satisfied by the task.
+   *
+   * @param task the task to evaluate
+   * @return true if any selector is satisfied, otherwise false
+   */
   public boolean evaluate(Task task)
   {
     return selectors.stream().anyMatch(selector -> selector.isSatisfied(task));
@@ -49,11 +59,47 @@ public class MappingRule
     return selectors;
   }
 
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    MappingRule that = (MappingRule) o;
+    return Objects.equals(selectors, that.selectors);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hashCode(selectors);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "MappingRule{" +
+           "selectors=" + selectors +
+           '}';
+  }
+
+  /**
+   * Represents a condition or set of conditions that can be used to evaluate whether a task meets specific criteria.
+   */
   static class Selector
   {
     private Map<String, Set<String>> cxtTagsConditions;
     private Map<String, Set<String>> taskFieldsConditions;
 
+    /**
+     * Creates a selector with specified conditions for context tags and task fields.
+     *
+     * @param cxtTagsConditions conditions on context tags
+     * @param taskFieldsConditions conditions on task fields
+     */
     @JsonCreator
     public Selector(
         @JsonProperty("context.tags") Map<String, Set<String>> cxtTagsConditions,
@@ -64,9 +110,15 @@ public class MappingRule
       this.taskFieldsConditions = taskFieldsConditions;
     }
 
+    /**
+     * Evaluates this selector against a given task.
+     *
+     * @param task the task to evaluate
+     * @return true if the task meets all the conditions specified by this selector, otherwise false
+     */
     public boolean isSatisfied(Task task)
     {
-      boolean tagsMatch = cxtTagsConditions.entrySet().stream().allMatch(entry -> {
+      boolean tagsMatch = cxtTagsConditions.entrySet().stream().anyMatch(entry -> {
         String expectedTag = entry.getKey();
         Set<String> expectedTagSet = entry.getValue();
         Map<String, Object> tags = task.getContextValue(DruidMetrics.TAGS);
@@ -78,19 +130,19 @@ public class MappingRule
         return tagValue == null ? false : expectedTagSet.contains((String) tagValue);
       });
 
-      if (!tagsMatch) {
-        return false;
+      if (tagsMatch) {
+        return true;
       }
 
-      return taskFieldsConditions.entrySet().stream().allMatch(entry -> {
+      return taskFieldsConditions.entrySet().stream().anyMatch(entry -> {
         String expectedField = entry.getKey();
-        Set<String> expectedFieldSet = entry.getValue();
+        Set<String> expectedValueSet = entry.getValue();
         if ("datasource".equalsIgnoreCase(expectedField)) {
-          return expectedFieldSet.contains(task.getDataSource());
+          return expectedValueSet.contains(task.getDataSource());
         }
 
         if ("type".equalsIgnoreCase(expectedField)) {
-          return expectedFieldSet.contains(task.getType());
+          return expectedValueSet.contains(task.getType());
         }
 
         return false;
@@ -107,6 +159,37 @@ public class MappingRule
     public Map<String, Set<String>> getTaskFieldsConditions()
     {
       return taskFieldsConditions;
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      Selector selector = (Selector) o;
+      return Objects.equals(cxtTagsConditions, selector.cxtTagsConditions) && Objects.equals(
+          taskFieldsConditions,
+          selector.taskFieldsConditions
+      );
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hash(cxtTagsConditions, taskFieldsConditions);
+    }
+
+    @Override
+    public String toString()
+    {
+      return "Selector{" +
+             "context.tags=" + cxtTagsConditions +
+             ", task=" + taskFieldsConditions +
+             '}';
     }
   }
 }

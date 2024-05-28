@@ -22,6 +22,11 @@ package org.apache.druid.k8s.overlord.execution;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
+/**
+ * Represents the configuration for task execution within a Kubernetes environment.
+ * This interface allows for dynamic configuration of task execution strategies based
+ * on specified behavior strategies.
+ */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = DefaultExecutionConfig.class)
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "default", value = DefaultExecutionConfig.class)
@@ -30,5 +35,9 @@ public interface ExecutionConfig
 {
   String CONFIG_KEY = "k8s.taskrunner.config";
 
+  /**
+   * Retrieves the execution behavior strategy associated with this configuration.
+   * @return the execution behavior strategy
+   */
   ExecutionBehaviorStrategy getBehaviorStrategy();
 }

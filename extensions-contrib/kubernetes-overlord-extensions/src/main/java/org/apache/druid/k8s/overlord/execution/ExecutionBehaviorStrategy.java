@@ -25,12 +25,23 @@ import org.apache.druid.indexing.common.task.Task;
 
 import javax.annotation.Nullable;
 
+/**
+ * Defines a strategy for determining the execution behavior of tasks based on specific conditions.
+ */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = DynamicTaskExecutionBehaviorStrategy.class)
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "default", value = DynamicTaskExecutionBehaviorStrategy.class)
 })
 public interface ExecutionBehaviorStrategy
 {
+  /**
+   * Determines the category of a task based on its properties. The identified category is used
+   * to map different Peon Pod templates, which allows for tailored resource allocation and management
+   * according to the task's requirements.
+   *
+   * @param task the task to evaluate
+   * @return the category of the task, or null if no category matches
+   */
   @Nullable
   String getTaskCategory(Task task);
 }

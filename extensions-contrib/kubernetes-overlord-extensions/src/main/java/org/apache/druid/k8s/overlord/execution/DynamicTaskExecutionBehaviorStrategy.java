@@ -27,10 +27,19 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 
+/**
+ * Implements {@link ExecutionBehaviorStrategy} by dynamically evaluating a series of mapping rules.
+ * Each rule corresponds to a potential task category.
+ */
 public class DynamicTaskExecutionBehaviorStrategy implements ExecutionBehaviorStrategy
 {
   private LinkedHashMap<String, MappingRule> categoryRuleMap;
 
+  /**
+   * Constructs a new strategy with a predefined map of category rules.
+   *
+   * @param categoryRuleMap a map linking categories to their respective {@link MappingRule}
+   */
   @JsonCreator
   public DynamicTaskExecutionBehaviorStrategy(
       @JsonProperty("categoryMap") LinkedHashMap<String, MappingRule> categoryRuleMap
@@ -39,13 +48,19 @@ public class DynamicTaskExecutionBehaviorStrategy implements ExecutionBehaviorSt
     this.categoryRuleMap = categoryRuleMap;
   }
 
+  /**
+   * Evaluates the provided task against the set mapping rules to determine its category.
+   *
+   * @param task the task to be categorized
+   * @return the category if a rule matches, otherwise null
+   */
   @Override
   public String getTaskCategory(Task task)
   {
     return categoryRuleMap.entrySet()
                           .stream()
-                          .filter(categoryEntry ->
-                                      categoryEntry.getValue().evaluate(task))
+                          .filter(categoryRule ->
+                                      categoryRule.getValue().evaluate(task))
                           .findFirst()
                           .map(Map.Entry::getKey)
                           .orElse(null);

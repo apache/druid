@@ -45,6 +45,12 @@ import javax.ws.rs.core.Response;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
+/**
+ * Resource that manages Kubernetes-specific execution configurations for running tasks.
+ *
+ * <p>This class handles the CRUD operations for execution configurations and provides
+ * endpoints to update, retrieve, and manage the history of these configurations.</p>
+ */
 @Path("/druid/indexer/v1/k8s/runner")
 public class KubernetesResource
 {

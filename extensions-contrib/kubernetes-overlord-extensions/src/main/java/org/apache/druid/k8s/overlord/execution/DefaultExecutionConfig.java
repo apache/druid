@@ -28,11 +28,6 @@ public class DefaultExecutionConfig implements ExecutionConfig
 {
   private final ExecutionBehaviorStrategy behaviorStrategy;
 
-  public static DefaultExecutionConfig defaultConfig()
-  {
-    return new DefaultExecutionConfig(new DynamicTaskExecutionBehaviorStrategy(null));
-  }
-
   @JsonCreator
   public DefaultExecutionConfig(
       @JsonProperty("behaviorStrategy") ExecutionBehaviorStrategy behaviorStrategy
