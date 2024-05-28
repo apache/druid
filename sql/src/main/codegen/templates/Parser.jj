@@ -1998,6 +1998,17 @@ SqlLiteral JoinType() :
     }
 }
 
+/*
+ * Druid note: this file is copied from core/src/main/codegen/templates/Parser.jj in Calcite 1.35.0, with changes to
+ * to add two elements of Druid syntax to the FROM clause:
+ *
+ * id [ (<args>) ]
+ *
+ * And
+ *
+ * TABLE(<fn>(<args>)) (<schema>)
+ *
+ */
 /**
  * Parses the FROM clause for a SELECT.
  *
@@ -2171,18 +2182,27 @@ SqlNode TableRef3(ExprContext exprContext, boolean lateral) :
 {
     final SqlIdentifier tableName;
     SqlNode tableRef;
+    List<SqlNode> paramList;
     final SqlIdentifier alias;
     final Span s;
     SqlNodeList args;
     final SqlNodeList columnAliasList;
     SqlUnnestOperator unnestOp = SqlStdOperatorTable.UNNEST;
+    SqlNodeList extendList = null;
 }
 {
     (
         LOOKAHEAD(2)
         tableName = CompoundTableIdentifier()
         ( tableRef = TableHints(tableName) | { tableRef = tableName; } )
-        [ tableRef = ExtendTable(tableRef) ]
+        // BEGIN: Druid-specific code
+        [
+            paramList = FunctionParameterList(ExprContext.ACCEPT_NONCURSOR)
+            {
+                tableRef = ParameterizeOperator.PARAM.createCall(tableRef, paramList);
+            }
+        ]
+        // END: Druid-specific code
         tableRef = Over(tableRef)
         [ tableRef = Snapshot(tableRef) ]
         [ tableRef = MatchRecognize(tableRef) ]
@@ -2207,6 +2227,16 @@ SqlNode TableRef3(ExprContext exprContext, boolean lateral) :
     |
         [ <LATERAL> { lateral = true; } ]
         tableRef = TableFunctionCall()
+        // BEGIN: Druid-specific code
+        [
+            [ <EXTEND> ]
+            extendList = ExtendList()
+            {
+                tableRef = ExtendOperator.EXTEND.createCall(
+                      Span.of(tableRef, extendList).pos(), tableRef, extendList);
+            }
+        ]
+        // END: Druid-specific code
         tableRef = addLateral(tableRef, lateral)
     |
         tableRef = ExtendedTableRef()
