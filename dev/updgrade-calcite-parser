@@ -44,7 +44,7 @@ git clone $PWD --reference $PWD --branch $BRANCH $REPO
 cd "$REPO"
 git checkout -b curr-changes
 
-mvn generate-sources -pl sql -Dcalcite.version=$CALCITE_OLD -Pskip-static-checks
+mvn -q generate-sources -pl sql -Dcalcite.version=$CALCITE_OLD -Pskip-static-checks
 cp -r sql/target/calcite-base-parser/codegen/./  sql/src/main/codegen/./
 git commit -m 'current reverse' -a
 git revert --no-edit HEAD
@@ -54,7 +54,7 @@ git branch base-changes curr-changes^
 git checkout base-changes
 git show|patch -p0 -R # undo temproarily to ensure maven runs
 
-mvn generate-sources -pl sql -Dcalcite.version=$CALCITE_NEW -Pskip-static-checks
+mvn -q generate-sources -pl sql -Dcalcite.version=$CALCITE_NEW -Pskip-static-checks
 cp -r sql/target/calcite-base-parser/codegen/./  sql/src/main/codegen/./
 
 git commit --allow-empty -m base-changes -a
