@@ -51,6 +51,7 @@ import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
+import org.junit.Assert;
 import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
@@ -89,8 +90,8 @@ public class TestSegmentUtils
       File factoryJson = new File(destDir, "factory.json");
       try {
         FileUtils.mkdirp(destDir);
-        segmentFile.createNewFile();
-        factoryJson.createNewFile();
+        Assert.assertTrue(segmentFile.createNewFile());
+        Assert.assertTrue(factoryJson.createNewFile());
       }
       catch (IOException e) {
         throw new SegmentLoadingException(
@@ -99,7 +100,6 @@ public class TestSegmentUtils
             destDir.getAbsolutePath()
         );
       }
-
       try {
         byte[] bytes = new byte[size];
         ThreadLocalRandom.current().nextBytes(bytes);

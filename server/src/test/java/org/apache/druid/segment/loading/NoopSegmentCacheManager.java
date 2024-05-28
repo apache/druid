@@ -23,7 +23,6 @@ import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.timeline.DataSegment;
 
-import javax.annotation.Nullable;
 import java.io.File;
 import java.util.List;
 
