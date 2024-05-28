@@ -58,7 +58,7 @@ public interface DruidHook
       if (getClass() != obj.getClass()) {
         return false;
       }
-      HookKey other = (HookKey) obj;
+      HookKey<?> other = (HookKey<?>) obj;
       return Objects.equals(label, other.label) && Objects.equals(type, other.type);
     }
 
@@ -67,7 +67,7 @@ public interface DruidHook
   public static final HookKey<RelNode> DRUID_PLAN = new HookKey<>("druidPlan", RelNode.class);
   public static final HookKey<String> SQL = new HookKey<>("sql", String.class);
 
-  <T> void dispatch1(HookKey<T> key, T object);
+  <T> void invoke(HookKey<T> key, T object);
 
   static Map<HookKey<?>, List<DruidHook>> GLOBAL = new HashMap<>();
 
@@ -99,7 +99,7 @@ public interface DruidHook
     List<DruidHook> hooks = GLOBAL.get(key);
     if (hooks != null) {
       for (DruidHook hook : hooks) {
-        hook.dispatch1(key, object);
+        hook.invoke(key, object);
       }
     }
   }

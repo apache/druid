@@ -40,9 +40,9 @@ public class QuidemRecorder implements AutoCloseable, DruidHook
   }
 
   @Override
-  public <T> void dispatch1(HookKey<T> key, T object)
+  public <T> void invoke(HookKey<T> key, T object)
   {
-    if(DruidHook.SQL.equals(key)) {
+    if (DruidHook.SQL.equals(key)) {
       printStream.print(object);
       printStream.println(";");
       printStream.println("!ok");

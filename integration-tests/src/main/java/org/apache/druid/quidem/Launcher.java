@@ -47,8 +47,6 @@ import static org.junit.Assert.assertNotEquals;
 
 public class Launcher
 {
-  public static final String URI_PREFIX = "druidtest://";
-  public static final String DEFAULT_URI = URI_PREFIX + "/";
   static final SqlTestFrameworkConfigStore CONFIG_STORE = new SqlTestFrameworkConfigStore();
 
   private static Logger log = new Logger(Launcher.class);
