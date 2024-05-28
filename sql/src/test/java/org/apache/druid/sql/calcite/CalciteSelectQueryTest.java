@@ -717,20 +717,11 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 .setInterval(querySegmentSpec(Filtration.eternity()))
                 .setGranularity(Granularities.ALL)
                 .setVirtualColumns(
-                    expressionVirtualColumn("v0", "strlen(\"dim1\")", ColumnType.LONG),
-                    // The two layers of CASTs here are unusual, they should really be collapsed into one
-                    expressionVirtualColumn(
-                        "v1",
-                        "CAST(CAST(strlen(\"dim1\"), 'STRING'), 'LONG')",
-                        ColumnType.LONG
-                    )
+                    expressionVirtualColumn("v0", "strlen(\"dim1\")", ColumnType.LONG)
                 )
                 .setDimensions(dimensions(new DefaultDimensionSpec("dim1", "d0")))
                 .setDimFilter(
-                    or(
-                        equality("v0", 3L, ColumnType.LONG),
-                        equality("v1", 3L, ColumnType.LONG)
-                    )
+                    equality("v0", 3L, ColumnType.LONG)
                 )
                 .setContext(QUERY_CONTEXT_DEFAULT)
                 .build()
