@@ -353,8 +353,17 @@
                   <version>${calcite.version}</version>
                   <type>jar</type>
                   <overWrite>true</overWrite>
-                  <outputDirectory>${project.build.directory}/calcite-base-parser</outputDirectory>
-                  <includes>codegen/**</includes>
+                  <outputDirectory>${project.build.directory}/</outputDirectory>
+                  <includes>**/Parser.jj</includes>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>org.apache.calcite</groupId>
+                  <artifactId>calcite-core</artifactId>
+                  <version>${calcite.version}</version>
+                  <type>jar</type>
+                  <overWrite>true</overWrite>
+                  <outputDirectory>${project.build.directory}/</outputDirectory>
+                  <includes>**/default_config.fmpp</includes>
                 </artifactItem>
               </artifactItems>
             </configuration>
@@ -362,10 +371,9 @@
         </executions>
       </plugin>
 
-
       <!-- Copy the templates present in the codegen directory of druid-sql containing custom SQL rules to
         ${project.build.directory}/codegen -->
-      <!-- <plugin>
+      <plugin>
         <artifactId>maven-resources-plugin</artifactId>
         <executions>
           <execution>
@@ -385,7 +393,7 @@
             </configuration>
           </execution>
         </executions>
-      </plugin> -->
+      </plugin>
 
       <!-- "Plugs in" the Calcite's Parser.jj with the variables present in config.fmpp. These contain the custom rules
         as well as the class to which the custom implementation will get generated -->
@@ -400,12 +408,9 @@
               <goal>generate</goal>
             </goals>
             <configuration>
-              <!-- <cfgFile>${project.build.directory}/codegen/config.fmpp</cfgFile>
+              <cfgFile>${project.build.directory}/codegen/config.fmpp</cfgFile>
               <outputDirectory>${project.build.directory}/generated-sources</outputDirectory>
-              <templateDirectory>${project.build.directory}/codegen/templates</templateDirectory> -->
-              <cfgFile>src/main/codegen/config.fmpp</cfgFile>
-              <outputDirectory>${project.build.directory}/generated-sources</outputDirectory>
-              <templateDirectory>src/main/codegen/templates</templateDirectory>
+              <templateDirectory>${project.build.directory}/codegen/templates</templateDirectory>
             </configuration>
           </execution>
         </executions>
@@ -441,7 +446,7 @@
            doesn't contain any hook for extension. For the custom changes done in
            extension, please check from.ftl file in sql module.
       -->
-      <!-- <plugin>
+      <plugin>
         <groupId>com.google.code.maven-replacer-plugin</groupId>
         <artifactId>replacer</artifactId>
         <version>1.5.3</version>
@@ -465,7 +470,7 @@
             </replacement>
           </replacements>
         </configuration>
-      </plugin> -->
+      </plugin>
 
       <!-- Adds the path of the generated parser to the build path -->
       <plugin>
