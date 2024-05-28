@@ -59,7 +59,7 @@ public class S3ExportStorageProvider implements ExportStorageProvider
   ServerSideEncryptingAmazonS3 s3;
 
   @JacksonInject
-  @Named("S3UploadThreadPool")
+  @Named(S3UploadConfig.UPLOAD_THREADPOOL_NAMED_VALUE)
   ExecutorService executorService;
 
   @JacksonInject

@@ -152,7 +152,7 @@ public class S3StorageConnectorProviderTest
             )
             .addValue(
                 ExecutorService.class,
-                Execs.multiThreaded(10, "UploadThreadPool-%d")
+                Execs.singleThreaded("UploadThreadPool-%d")
             )
             .addValue(
                 S3UploadConfig.class,

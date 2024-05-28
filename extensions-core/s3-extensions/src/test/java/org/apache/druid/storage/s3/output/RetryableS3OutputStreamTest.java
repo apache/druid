@@ -68,7 +68,7 @@ public class RetryableS3OutputStreamTest
   private S3OutputConfig config;
   private long chunkSize;
 
-  private final ExecutorService executorService = Execs.multiThreaded(10, "UploadThreadPool-%d");
+  private final ExecutorService executorService = Execs.singleThreaded("UploadThreadPool-%d");
 
   private final S3UploadConfig s3UploadConfig = new S3UploadConfig();
 

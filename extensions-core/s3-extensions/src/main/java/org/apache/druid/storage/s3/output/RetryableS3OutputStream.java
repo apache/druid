@@ -187,7 +187,7 @@ public class RetryableS3OutputStream extends OutputStream
     synchronized (maxChunksLock) {
       while (s3UploadConfig.getCurrentNumChunks() > s3UploadConfig.getMaxConcurrentNumChunks()) {
         try {
-          LOG.info("Waiting for lock for writing further chunks to local disk.");
+          LOG.debug("Waiting for lock for writing further chunks to local disk.");
           maxChunksLock.wait();
         }
         catch (InterruptedException e) {

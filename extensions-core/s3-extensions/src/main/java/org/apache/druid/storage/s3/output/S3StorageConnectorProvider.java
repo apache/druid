@@ -41,7 +41,7 @@ public class S3StorageConnectorProvider extends S3OutputConfig implements Storag
   ServerSideEncryptingAmazonS3 s3;
 
   @JacksonInject
-  @Named("S3UploadThreadPool")
+  @Named(S3UploadConfig.UPLOAD_THREADPOOL_NAMED_VALUE)
   ExecutorService executorService;
 
   @JacksonInject

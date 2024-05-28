@@ -190,10 +190,10 @@ public class S3StorageDruidModule implements DruidModule
 
   @Provides
   @LazySingleton
-  @Named("S3UploadThreadPool")
-  public ExecutorService getUploadPoolExecutorService(ScheduledExecutorFactory scheduledExecutorFactory, RuntimeInfo runtimeInfo)
+  @Named(S3UploadConfig.UPLOAD_THREADPOOL_NAMED_VALUE)
+  public ExecutorService getUploadExecutorService(ScheduledExecutorFactory scheduledExecutorFactory, RuntimeInfo runtimeInfo)
   {
-    int poolSize = Math.max(4, 3 * runtimeInfo.getAvailableProcessors());
+    int poolSize = Math.max(4, runtimeInfo.getAvailableProcessors());
     return scheduledExecutorFactory.create(poolSize, "UploadThreadPool-%d");
   }
 
