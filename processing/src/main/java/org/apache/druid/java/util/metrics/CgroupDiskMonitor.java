@@ -44,24 +44,23 @@ public class CgroupDiskMonitor extends FeedDefiningMonitor
   public boolean doMonitor(ServiceEmitter emitter)
   {
     Map<String, Disk.Metrics> snapshot = new Disk(cgroupDiscoverer).snapshot();
-    for (String disk : snapshot.keySet()) {
-      Disk.Metrics metrics = snapshot.get(disk);
+    for (Map.Entry<String, Disk.Metrics> entry : snapshot.entrySet()) {
       final Map<String, Long> stats = diff.to(
-          metrics.getDiskName(),
+          entry.getKey(),
           ImmutableMap.<String, Long>builder()
-                      .put("cgroup/disk/read/bytes", metrics.getReadBytes())
-                      .put("cgroup/disk/read/count", metrics.getReadCount())
-                      .put("cgroup/disk/write/bytes", metrics.getWriteBytes())
-                      .put("cgroup/disk/write/count", metrics.getWriteCount())
+                      .put("cgroup/disk/read/bytes", entry.getValue().getReadBytes())
+                      .put("cgroup/disk/read/count", entry.getValue().getReadCount())
+                      .put("cgroup/disk/write/bytes", entry.getValue().getWriteBytes())
+                      .put("cgroup/disk/write/count", entry.getValue().getWriteCount())
                       .build()
       );
 
       if (stats != null) {
         final ServiceMetricEvent.Builder builder = builder()
-            .setDimension("diskName", metrics.getDiskName());
+            .setDimension("diskName", entry.getValue().getDiskName());
         MonitorUtils.addDimensionsToBuilder(builder, dimensions);
-        for (Map.Entry<String, Long> entry : stats.entrySet()) {
-          emitter.emit(builder.setMetric(entry.getKey(), entry.getValue()));
+        for (Map.Entry<String, Long> stat : stats.entrySet()) {
+          emitter.emit(builder.setMetric(stat.getKey(), stat.getValue()));
         }
       }
     }
