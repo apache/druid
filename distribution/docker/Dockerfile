@@ -27,7 +27,7 @@ FROM --platform=linux/amd64 maven:3.8.6-jdk-11-slim as builder
 
 # Rebuild from source in this stage
 # This can be unset if the tarball was already built outside of Docker
-ARG BUILD_FROM_SOURCE="true"
+ARG BUILD_FROM_SOURCE="false"
 
 RUN export DEBIAN_FRONTEND=noninteractive \
     && apt-get -qq update \
@@ -75,8 +75,8 @@ COPY --from=busybox /bin/busybox /busybox/busybox
 RUN ["/busybox/busybox", "--install", "/bin"]
 
 
-RUN addgroup -S -g 1000 druid \
- && adduser -S -u 1000 -D -H -h /opt/druid -s /bin/sh -g '' -G druid druid
+RUN addgroup -S -g 1006 druid \
+ && adduser -S -u 1006 -D -H -h /opt/druid -s /bin/sh -g '' -G druid druid
 
 
 COPY --from=bash-static /bin/bash /bin/bash
