@@ -339,7 +339,7 @@ public class RetryableS3OutputStream extends OutputStream
     synchronized (fileLock) {
       while (pendingFiles.get() > 0) {
         try {
-          LOG.info("Waiting for lock for completing multipart task for uploadId [%s].", uploadId);
+          LOG.debug("Waiting for lock for completing multipart task for uploadId [%s].", uploadId);
           fileLock.wait();
         }
         catch (InterruptedException e) {

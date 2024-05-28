@@ -47,7 +47,7 @@ public class S3UploadManager
    * The maximum number of chunks that can be saved to local disk concurrently.
    * This value is recalculated when the chunk size is updated in {@link #updateChunkSizeIfGreater(long)}.
    */
-  private final AtomicInteger maxConcurrentNumChunks = new AtomicInteger(100);
+  private int maxConcurrentNumChunks = 100;
 
   /**
    * Threadpool used for uploading the chunks asynchronously.
@@ -94,7 +94,7 @@ public class S3UploadManager
    */
   public int getMaxConcurrentNumChunks()
   {
-    return maxConcurrentNumChunks.get();
+    return maxConcurrentNumChunks;
   }
 
   /**
@@ -116,10 +116,10 @@ public class S3UploadManager
    * The maximum allowed chunk size is {@link S3OutputConfig#S3_MULTIPART_UPLOAD_MAX_PART_SIZE_BYTES} which is quite big,
    * so we restrict the maximum disk space used to the same, at any given point in time.
    */
-  private void recomputeMaxConcurrentNumChunks()
+  private synchronized void recomputeMaxConcurrentNumChunks()
   {
-    maxConcurrentNumChunks.set((int) (S3OutputConfig.S3_MULTIPART_UPLOAD_MAX_PART_SIZE_BYTES / chunkSize));
-    log.info("Recomputed maxConcurrentNumChunks: %d", maxConcurrentNumChunks.get());
+    maxConcurrentNumChunks = (int) (S3OutputConfig.S3_MULTIPART_UPLOAD_MAX_PART_SIZE_BYTES / chunkSize);
+    log.info("Recomputed maxConcurrentNumChunks: %d", maxConcurrentNumChunks);
   }
 
   /**
