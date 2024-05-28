@@ -68,6 +68,7 @@
     "@blueprintjs/datetime2": "^0.9.35",
     "@blueprintjs/icons": "^4.16.0",
     "@blueprintjs/popover2": "^1.14.9",
+    "@blueprintjs/select": "^4.9.24",
     "@druid-toolkit/query": "^0.22.13",
     "@druid-toolkit/visuals-core": "^0.3.3",
     "@druid-toolkit/visuals-react": "^0.3.3",

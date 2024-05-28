@@ -203,6 +203,7 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
       capabilitiesBuilder.setDictionaryValuesSorted(true);
       capabilitiesBuilder.setDictionaryValuesUnique(true);
       builder.setType(logicalType);
+      builder.setHasNulls(hasNulls);
       builder.setNestedCommonFormatColumnSupplier(supplier);
       builder.setIndexSupplier(supplier, true, false);
       builder.setColumnFormat(new NestedCommonFormatColumn.Format(logicalType, capabilitiesBuilder.hasNulls().isTrue(), enforceLogicalType));
@@ -225,6 +226,7 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
       // technically, these columns are dictionary encoded, however they do not implement the DictionaryEncodedColumn
       // interface, so do not make the claim in the ColumnCapabilities
       builder.setType(logicalType);
+      builder.setHasNulls(hasNulls);
       builder.setNestedCommonFormatColumnSupplier(supplier);
       builder.setIndexSupplier(supplier, true, false);
       builder.setColumnFormat(new NestedCommonFormatColumn.Format(logicalType, capabilitiesBuilder.hasNulls().isTrue(), enforceLogicalType));
@@ -247,6 +249,7 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
       // technically, these columns are dictionary encoded, however they do not implement the DictionaryEncodedColumn
       // interface, so do not make the claim in the ColumnCapabilities
       builder.setType(logicalType);
+      builder.setHasNulls(hasNulls);
       builder.setNestedCommonFormatColumnSupplier(supplier);
       builder.setIndexSupplier(supplier, true, false);
       builder.setColumnFormat(new NestedCommonFormatColumn.Format(logicalType, capabilitiesBuilder.hasNulls().isTrue(), enforceLogicalType));
@@ -275,6 +278,7 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
         capabilitiesBuilder.setDictionaryValuesUnique(true);
       }
       builder.setType(logicalType);
+      builder.setHasNulls(hasNulls);
       builder.setNestedCommonFormatColumnSupplier(supplier);
       builder.setIndexSupplier(supplier, true, false);
       builder.setColumnFormat(new NestedCommonFormatColumn.Format(
@@ -306,6 +310,7 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
       ColumnType simpleType = supplier.getLogicalType();
       ColumnType logicalType = simpleType == null ? ColumnType.NESTED_DATA : simpleType;
       builder.setType(logicalType);
+      builder.setHasNulls(hasNulls);
       builder.setNestedCommonFormatColumnSupplier(supplier);
       // in default value mode, SQL planning by default uses selector filters for things like 'is null', which does
       // not work correctly for complex types (or arrays). so, only hook up this index in sql compatible mode so that

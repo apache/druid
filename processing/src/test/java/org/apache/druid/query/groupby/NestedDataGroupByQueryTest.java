@@ -622,6 +622,30 @@ public class NestedDataGroupByQueryTest extends InitializedNullHandlingTest
     );
   }
 
+  @Test
+  public void testGroupByRootAuto()
+  {
+    GroupByQuery groupQuery = GroupByQuery.builder()
+                                          .setDataSource("test_datasource")
+                                          .setGranularity(Granularities.ALL)
+                                          .setInterval(Intervals.ETERNITY)
+                                          .setDimensions(DefaultDimensionSpec.of("dim"))
+                                          .setAggregatorSpecs(new CountAggregatorFactory("count"))
+                                          .setContext(getContext())
+                                          .build();
+
+
+    runResults(
+        groupQuery,
+        ImmutableList.of(
+            new Object[]{"100", 2L},
+            new Object[]{"hello", 12L},
+            new Object[]{"world", 2L}
+        )
+    );
+  }
+
+
   private void runResults(
       GroupByQuery groupQuery,
       List<Object[]> expectedResults
