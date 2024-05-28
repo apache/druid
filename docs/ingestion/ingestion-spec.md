@@ -471,12 +471,27 @@ An example `ioConfig` to read JSON data is:
     ...
 }
 ```
-For more details, see the documentation provided by each [ingestion method](./index.md#ingestion-methods).
+
+For details, see the documentation provided by each [ingestion method](./index.md#ingestion-methods).
 
 ## `tuningConfig`
 
-You specify tuning properties in a `tuningConfig`, which goes at the top level of an ingestion spec.
-Some properties apply to all [ingestion methods](./index.md#ingestion-methods), but most are specific to each individual ingestion method. An example `tuningConfig` that sets all of the shared, common properties to their defaults is:
+You specify tuning properties in a `tuningConfig` object, which goes at the top level of an ingestion spec.
+Some properties apply to all [ingestion methods](./index.md#ingestion-methods), but most are specific to each individual ingestion method.
+
+The following table lists the common tuning properties shared among ingestion methods:
+
+|Field|Description|Default|
+|-----|-----------|-------|
+|type|Each ingestion method has its own tuning type code. You must specify the type code that matches your ingestion method. Common options are `index`, `hadoop`, `kafka`, and `kinesis`.||
+|maxRowsInMemory|The maximum number of records to store in memory before persisting to disk. Note that this is the number of rows post-rollup, and so it may not be equal to the number of input records. Ingested records will be persisted to disk when either `maxRowsInMemory` or `maxBytesInMemory` are reached (whichever happens first).|`1000000`|
+|maxBytesInMemory|The maximum aggregate size of records, in bytes, to store in the JVM heap before persisting. This is based on a rough estimate of memory usage. Ingested records will be persisted to disk when either `maxRowsInMemory` or `maxBytesInMemory` are reached (whichever happens first). `maxBytesInMemory` also includes heap usage of artifacts created from intermediary persists. This means that after every persist, the amount of `maxBytesInMemory` until the next persist will decrease. If the sum of bytes of all intermediary persisted artifacts exceeds `maxBytesInMemory` the task fails.<br /><br />Setting `maxBytesInMemory` to -1 disables this check, meaning Druid will rely entirely on `maxRowsInMemory` to control memory usage. Setting it to zero means the default value will be used (one-sixth of JVM heap size).<br /><br />Note that the estimate of memory usage is designed to be an overestimate, and can be especially high when using complex ingest-time aggregators, including sketches. If this causes your indexing workloads to persist to disk too often, you can set `maxBytesInMemory` to -1 and rely on `maxRowsInMemory` instead.|One-sixth of max JVM heap size|
+|skipBytesInMemoryOverheadCheck|The calculation of maxBytesInMemory takes into account overhead objects created during ingestion and each intermediate persist. Setting this to true can exclude the bytes of these overhead objects from maxBytesInMemory check.|false|
+|indexSpec|Defines segment storage format options to use at indexing time.|See [`indexSpec`](#indexspec) for more information.|
+|indexSpecForIntermediatePersists|Defines segment storage format options to use at indexing time for intermediate persisted temporary segments.|See [`indexSpec`](#indexspec) for more information.|
+|Other properties|Each ingestion method has its own list of additional tuning properties. See the documentation for each method for a full list: [Kafka indexing service](../ingestion/kafka-ingestion.md#tuning-configuration), [Kinesis indexing service](../ingestion/kinesis-ingestion.md#tuning-configuration), [Native batch](native-batch.md#tuningconfig), and [Hadoop-based](hadoop.md#tuningconfig).||
+
+The following example shows a `tuningConfig` object that sets all of the shared common properties to their defaults:
 
 ```plaintext
 "tuningConfig": {
@@ -493,16 +508,6 @@ Some properties apply to all [ingestion methods](./index.md#ingestion-methods), 
 }
 ```
 
-|Field|Description|Default|
-|-----|-----------|-------|
-|type|Each ingestion method has its own tuning type code. You must specify the type code that matches your ingestion method. Common options are `index`, `hadoop`, `kafka`, and `kinesis`.||
-|maxRowsInMemory|The maximum number of records to store in memory before persisting to disk. Note that this is the number of rows post-rollup, and so it may not be equal to the number of input records. Ingested records will be persisted to disk when either `maxRowsInMemory` or `maxBytesInMemory` are reached (whichever happens first).|`1000000`|
-|maxBytesInMemory|The maximum aggregate size of records, in bytes, to store in the JVM heap before persisting. This is based on a rough estimate of memory usage. Ingested records will be persisted to disk when either `maxRowsInMemory` or `maxBytesInMemory` are reached (whichever happens first). `maxBytesInMemory` also includes heap usage of artifacts created from intermediary persists. This means that after every persist, the amount of `maxBytesInMemory` until the next persist will decrease. If the sum of bytes of all intermediary persisted artifacts exceeds `maxBytesInMemory` the task fails.<br /><br />Setting `maxBytesInMemory` to -1 disables this check, meaning Druid will rely entirely on `maxRowsInMemory` to control memory usage. Setting it to zero means the default value will be used (one-sixth of JVM heap size).<br /><br />Note that the estimate of memory usage is designed to be an overestimate, and can be especially high when using complex ingest-time aggregators, including sketches. If this causes your indexing workloads to persist to disk too often, you can set `maxBytesInMemory` to -1 and rely on `maxRowsInMemory` instead.|One-sixth of max JVM heap size|
-|skipBytesInMemoryOverheadCheck|The calculation of maxBytesInMemory takes into account overhead objects created during ingestion and each intermediate persist. Setting this to true can exclude the bytes of these overhead objects from maxBytesInMemory check.|false|
-|indexSpec|Defines segment storage format options to use at indexing time.|See [`indexSpec`](#indexspec) for more information.|
-|indexSpecForIntermediatePersists|Defines segment storage format options to use at indexing time for intermediate persisted temporary segments.|See [`indexSpec`](#indexspec) for more information.|
-|Other properties|Each ingestion method has its own list of additional tuning properties. See the documentation for each method for a full list: [Kafka indexing service](../ingestion/kafka-ingestion.md#tuning-configuration), [Kinesis indexing service](../ingestion/kinesis-ingestion.md#tuning-configuration), [Native batch](native-batch.md#tuningconfig), and [Hadoop-based](hadoop.md#tuningconfig).||
-
 ### `indexSpec`
 
 The `indexSpec` object can include the following properties.
@@ -512,24 +517,31 @@ For information on defining an `indexSpec` in a query context, see [SQL-based in
 |-----|-----------|-------|
 |bitmap|Compression format for bitmap indexes. Should be a JSON object with `type` set to `roaring` or `concise`.|`{"type": "roaring"}`|
 |dimensionCompression|Compression format for dimension columns. One of `lz4`, `lzf`, `zstd`, or `uncompressed`.|`lz4`|
-|stringDictionaryEncoding|Encoding format for STRING value dictionaries used by STRING and [COMPLEX&lt;json&gt;](../querying/nested-columns.md) columns. To enable front coding, set `stringDictionaryEncoding.type` to `frontCoded`. Optionally, you can specify the `bucketSize` and `formatVersion` properties. `bucketSize` is the number of values to place in a bucket to perform delta encoding. `bucketSize` defaults to 4. You can set it to any power of 2 less than or equal to 128. You use `formatVersion` to specify older versions for backwards compatibility during rolling upgrades. Options are `0` and `1`. `formatVersion` defaults to `0`. See [Front coding](#front-coding) for more information.|`{"type":"utf8"}`|
+|stringDictionaryEncoding|Encoding format for string value dictionaries used by STRING and [COMPLEX&lt;json&gt;](../querying/nested-columns.md) columns. To enable front coding, set `stringDictionaryEncoding.type` to `frontCoded`. Optionally, you can specify the `bucketSize` and `formatVersion` properties. See [Front coding](#front-coding) for more information.|`{"type":"utf8"}`|
 |metricCompression|Compression format for primitive type metric columns. Options are `lz4`, `lzf`, `zstd`, `uncompressed`, or `none` (which is more efficient than `uncompressed`, but not supported by older versions of Druid).|`lz4`|
 |longEncoding|Encoding format for long-typed columns. Applies regardless of whether they are dimensions or metrics. Options are `auto` or `longs`. `auto` encodes the values using offset or lookup table depending on column cardinality, and store them with variable size. `longs` stores the value as-is with 8 bytes each.|`longs`|
 |jsonCompression|Compression format to use for nested column raw data. Options are `lz4`, `lzf`, `zstd`, or `uncompressed`.|`lz4`|
 
-##### Front coding
+#### Front coding
 
 :::info
-Front coding is an [experimental feature](../development/experimental.md) introduced in Druid 25.0.0.
+Front coding is an [experimental feature](../development/experimental.md) introduced in Druid 25.0.0. Druid versions preceding 25.0.0 can't read segments with front-coded dictionaries. To downgrade to an older version, you must either delete the segments containing front-coded dictionaries or re-ingest them with `stringDictionaryEncoding.type` set to `utf8`.
 :::
 
 Front coding is an incremental encoding strategy that lets you store STRING and [COMPLEX&lt;json&gt;](../querying/nested-columns.md) columns in Druid.
-With front coding enabled, Druid creates smaller UTF-8 encoded segments with very little performance cost.
+Front-coded dictionaries reduce storage and improve performance by optimizing for strings where the front part looks similar.
+
+With front coding enabled, Druid creates smaller UTF-8 encoded segments with minimal performance impact.
 It involves tracking the length of common prefixes of values so that only the suffix is stored.
-Druid divides values into buckets each with a fixed number of values. Because the buckets are fixed, Druid can quickly determine which bucket to store a dictionary ID in, without hindering its ability to perform a binary search.
+Druid groups values into buckets, each containing a fixed number of entries. Because the buckets are fixed, Druid can quickly determine the appropriate bucket for storing a dictionary ID, without affecting its ability to perform binary searches.
+
+Front coding is ideal for STRING columns where most of the front-part of the string is repeated, such as URLs. Most URLs start with `https://domain.xyz/`, and front coding is able to exploit this pattern for more optimal compression when storing such datasets.
+
+You can use front coding with all types of ingestion.
 
 To enable front coding, set `indexSpec.stringDictionaryEncoding.type` to `frontCoded`.
 You can specify the following optional properties:
+
 * `bucketSize`: Number of values to place in a bucket to perform delta encoding. Setting this property instructs indexing tasks to write segments using compressed dictionaries of the specified bucket size. You can set it to any power of 2 less than or equal to 128. `bucketSize` defaults to 4.
 * `formatVersion`: Specifies older versions for backwards compatibility during rolling upgrades. Valid options are `0` and `1`. `formatVersion` defaults to `0`.
 
@@ -538,31 +550,27 @@ For example:
 ```
 "indexSpec": {
   "stringDictionaryEncoding": {
-    “type”:”frontCoded”,
-    “bucketSize”: 4,
-    “formatVersion”:0
+    "type":"frontCoded",
+    "bucketSize": 4,
+    "formatVersion": 0
   }
 }
 ```
 
-A new `"formatVersion": 1` was introduced in Druid 26.0.0, offering typically faster read speeds and smaller storage sizes.
-When you upgrade from Druid 25.0.0 to Druid 26.0.0 while using front coding, the `formatVersion` defaults to `0` to keep writing out the older format. This default setting enables seamless downgrades to Druid 25.0.0 if needed.
-It is recommended to enable the new format in a staging environment and thoroughly test your use case before deploying it to production.
+Druid 26.0.0 introduced a new version of the front-coded dictionary, version 1, offering typically faster read speeds and smaller storage sizes.
+When you upgrade from Druid 25.0.0 to Druid 26.0.0 while using front coding, the `formatVersion` defaults to 0. This default setting enables seamless downgrades to Druid 25.0.0.
 
-:::caution
-By default, segments created with front coding enabled in Druid 26.0.0 are backwards compatible with Druid 25.0.0. Segments created with front coding in Druid 26.0.0 or 25.0.0 are not compatible with Druid versions older than 25.0.0.
-:::
-
-The following example shows how to set `stringDictionaryEncoding` using format version 1 with bucket size 16:
+To use the newer version, set the `formatVersion` property to 1:
 
 ```
 "indexSpec": {
   "stringDictionaryEncoding": {
-    “type”:”frontCoded”,
-    “bucketSize”: 16,
-    “formatVersion”:1
-  }
+    "type":"frontCoded",
+    "formatVersion": 1
+    }
 }
+
 ```
 
-You can use front coding with all types of ingestion.
+After upgrading to version 1, you can no longer downgrade to Druid 25.0.0 seamlessly.
+To downgrade to Druid 25.0.0, re-ingest your data with the `formatVersion` property set to 0.
