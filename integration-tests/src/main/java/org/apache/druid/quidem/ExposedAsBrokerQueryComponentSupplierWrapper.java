@@ -25,9 +25,11 @@ import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.inject.AbstractModule;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
+import com.google.inject.Provides;
 import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
 import org.apache.druid.cli.CliBroker;
@@ -41,6 +43,7 @@ import org.apache.druid.client.selector.ServerSelectorStrategy;
 import org.apache.druid.client.selector.TierSelectorStrategy;
 import org.apache.druid.curator.CuratorModule;
 import org.apache.druid.curator.discovery.DiscoveryModule;
+import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.guice.AnnouncerModule;
 import org.apache.druid.guice.BrokerProcessingModule;
 import org.apache.druid.guice.BrokerServiceModule;
@@ -68,6 +71,7 @@ import org.apache.druid.guice.StartupLoggingModule;
 import org.apache.druid.guice.StorageNodeModule;
 import org.apache.druid.guice.annotations.Client;
 import org.apache.druid.guice.annotations.EscalatedClient;
+import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.http.HttpClientModule;
 import org.apache.druid.guice.security.AuthenticatorModule;
 import org.apache.druid.guice.security.AuthorizerModule;
@@ -81,6 +85,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.metadata.storage.derby.DerbyMetadataStorageDruidModule;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
+import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.RetryQueryRunnerConfig;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.rpc.guice.ServiceClientModule;
@@ -88,6 +93,7 @@ import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumModule;
 import org.apache.druid.server.BrokerQueryResource;
 import org.apache.druid.server.ClientInfoResource;
+import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QuerySchedulerProvider;
@@ -113,7 +119,9 @@ import org.apache.druid.server.security.Escalator;
 import org.apache.druid.server.security.TLSCertificateCheckerModule;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
+import org.apache.druid.sql.calcite.run.NativeSqlEngine;
 import org.apache.druid.sql.calcite.run.SqlEngine;
+import org.apache.druid.sql.calcite.schema.BrokerSegmentMetadataCache;
 import org.apache.druid.sql.calcite.schema.DruidSchemaName;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
@@ -184,7 +192,7 @@ public class ExposedAsBrokerQueryComponentSupplierWrapper implements QueryCompon
     installForServerModules(builder);
 
     overrideModules.addAll(ExposedAsBrokerQueryComponentSupplierWrapper.brokerModules());
-    overrideModules.add(new DiscovertModule());
+    overrideModules.add(new BrokerTestModule());
     builder.add(QuidemCaptureModule.class);
 
   }
@@ -236,6 +244,52 @@ public class ExposedAsBrokerQueryComponentSupplierWrapper implements QueryCompon
   public PlannerComponentSupplier getPlannerComponentSupplier()
   {
     return delegate.getPlannerComponentSupplier();
+  }
+
+  public class BrokerTestModule extends AbstractModule
+  {
+    @Override
+    protected void configure()
+    {
+    }
+
+    @Provides
+    @LazySingleton
+    public BrokerSegmentMetadataCache provideCache()
+    {
+      return null;
+    }
+
+    @Provides
+    @LazySingleton
+    public Properties getProps()
+    {
+      Properties localProps = new Properties();
+      localProps.put("druid.enableTlsPort", "false");
+      localProps.put("druid.zk.service.enabled", "false");
+      localProps.put("druid.plaintextPort", "12345");
+      localProps.put("druid.host", "localhost");
+      localProps.put("druid.broker.segment.awaitInitializationOnStart", "false");
+      return localProps;
+    }
+
+    @Provides
+    @LazySingleton
+    public SqlEngine createMockSqlEngine(
+        final QuerySegmentWalker walker,
+        final QueryRunnerFactoryConglomerate conglomerate,
+        @Json ObjectMapper jsonMapper)
+    {
+      return new NativeSqlEngine(CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate), jsonMapper);
+    }
+
+    @Provides
+    @LazySingleton
+    DruidNodeDiscoveryProvider getDruidNodeDiscoveryProvider()
+    {
+      final DruidNode coordinatorNode = CalciteTests.mockCoordinatorNode();
+      return CalciteTests.mockDruidNodeDiscoveryProvider(coordinatorNode);
+    }
   }
 
   /**
