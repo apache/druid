@@ -25,7 +25,7 @@
     </Console>
   </Appenders>
   <Loggers>
-    <Root level="debug">
+    <Root level="info">
       <AppenderRef ref="Console"/>
     </Root>
     <Logger name="org.apache.druid.segment.metadata" level="debug" additivity="false">

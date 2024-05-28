@@ -33,7 +33,7 @@ import java.util.List;
  */
 public class BaseInjectorBuilder<T extends BaseInjectorBuilder<?>>
 {
-  protected final List<Module> modules = new ArrayList<>();
+  private final List<Module> modules = new ArrayList<>();
 
   @SuppressWarnings("unchecked")
   public T add(Module... modules)

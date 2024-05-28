@@ -341,20 +341,10 @@ public class SqlTestFrameworkConfig
   public static class ConfigurationInstance
   {
     public SqlTestFramework framework;
-    private SqlTestFrameworkConfig config;
-    private QueryComponentSupplier testHost;
 
     ConfigurationInstance(SqlTestFrameworkConfig config, QueryComponentSupplier testHost)
     {
-      this.config = config;
-      this.testHost = testHost;
-      SqlTestFramework framework1 = extracted();
-      framework=framework1;
-    }
-
-    //FIXME remove
-    public SqlTestFramework extracted(Module ...modules)
-    {
+      Module[] modules = {};
       SqlTestFramework.Builder builder = new SqlTestFramework.Builder(testHost)
           .withConfig(config)
           .catalogResolver(testHost.createCatalogResolver())
@@ -365,8 +355,7 @@ public class SqlTestFrameworkConfig
         builder.withOverrideModule(m);
       }
 
-      SqlTestFramework framework1 = builder.build();
-      return framework1;
+      framework = builder.build();
     }
 
     public ConfigurationInstance(
@@ -435,7 +424,7 @@ public class SqlTestFrameworkConfig
     catch (URISyntaxException e) {
       throw new SQLException("Can't decode URI", e);
     }
-  
+
     return new SqlTestFrameworkConfig(queryParams);
   }
 
