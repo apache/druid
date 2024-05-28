@@ -58,7 +58,7 @@ import java.util.stream.LongStream;
 @Fork(value = 1)
 @Warmup(iterations = 3)
 @Measurement(iterations = 5)
-public class BenchmarkSketchTest extends InitializedNullHandlingTest
+public class MsqSketchesBenchmark extends InitializedNullHandlingTest
 {
   private static final int MAX_BYTES = 1_000_000_000;
   private static final int MAX_BUCKETS = 10_000;
@@ -132,7 +132,7 @@ public class BenchmarkSketchTest extends InitializedNullHandlingTest
 
   private ClusterByStatisticsCollectorImpl makeCollector(final boolean aggregate)
   {
-    return (ClusterByStatisticsCollectorImpl) ClusterByStatisticsCollectorImpl.create(BenchmarkSketchTest.CLUSTER_BY_XYZ_BUCKET_BY_X, SIGNATURE, MAX_BYTES, MAX_BUCKETS, aggregate, false);
+    return (ClusterByStatisticsCollectorImpl) ClusterByStatisticsCollectorImpl.create(MsqSketchesBenchmark.CLUSTER_BY_XYZ_BUCKET_BY_X, SIGNATURE, MAX_BYTES, MAX_BUCKETS, aggregate, false);
   }
 
   private static RowKey createKey(final long numBuckets, final long keyNo)
@@ -141,6 +141,6 @@ public class BenchmarkSketchTest extends InitializedNullHandlingTest
     key[0] = keyNo % numBuckets;
     key[1] = keyNo % 5;
     key[2] = StringUtils.repeat("*", 67);
-    return KeyTestUtils.createKey(KeyTestUtils.createKeySignature(BenchmarkSketchTest.CLUSTER_BY_XYZ_BUCKET_BY_X.getColumns(), SIGNATURE), key);
+    return KeyTestUtils.createKey(KeyTestUtils.createKeySignature(MsqSketchesBenchmark.CLUSTER_BY_XYZ_BUCKET_BY_X.getColumns(), SIGNATURE), key);
   }
 }

@@ -28,8 +28,8 @@ import java.nio.ByteBuffer;
 /**
  * Format:
  * - 8 bytes: {@link QuantilesSketchKeyCollectorSnapshot#getAverageKeyLength()}
- * - 4 bytes: length of quantile sketch snapshot
- * - length bytes: the sketch snapshot
+ * - 4 bytes: length of quantile sketch snapshot (n)
+ * - n bytes: the sketch snapshot
  */
 public class QuantilesSnapshotSerializer extends KeyCollectorSnapshotSerializer
 {

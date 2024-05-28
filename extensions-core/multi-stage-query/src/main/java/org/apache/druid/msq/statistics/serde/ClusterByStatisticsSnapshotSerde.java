@@ -36,15 +36,17 @@ import java.util.Set;
  */
 public class ClusterByStatisticsSnapshotSerde
 {
+  private static final byte EMPTY_HEADER = 0x0;
+
   /**
    * Deserializes the {@link ClusterByStatisticsSnapshot} and writes it to the {@link OutputStream}.
    * <br>
    * Format:
-   * - 1 byte : Header byte
-   * - 4 bytes: Number of buckets
-   * - 4 bytes: Number of entries in {@link ClusterByStatisticsSnapshot#getHasMultipleValues()}
-   * - 4 * number of multivalue bucket bytes: List of integers
-   * - number of buckets * buckets, serailized by {@link #serializeBucket(OutputStream, ClusterByStatisticsSnapshot.Bucket)}
+   * - 1 byte : Header byte, used for holding version
+   * - 4 bytes: Number of buckets, N
+   * - 4 bytes: Number of multivalue entries in {@link ClusterByStatisticsSnapshot#getHasMultipleValues()}
+   * - 4 * number of multivalue entries bytes: List of integers
+   * - N buckets as byte arrays serialized by {@link #serializeBucket(OutputStream, ClusterByStatisticsSnapshot.Bucket)}
    */
   public static void serialize(OutputStream outputStream, ClusterByStatisticsSnapshot snapshot) throws IOException
   {
@@ -52,7 +54,7 @@ public class ClusterByStatisticsSnapshotSerde
     final Set<Integer> multipleValueBuckets = snapshot.getHasMultipleValues();
 
     // Write a header byte, to be used to contain any metadata in the future.
-    outputStream.write(0x0);
+    outputStream.write(EMPTY_HEADER);
 
     writeIntToStream(outputStream, buckets.size());
     ByteBuffer multivalueBuffer = ByteBuffer.allocate(Integer.BYTES + multipleValueBuckets.size())
@@ -83,7 +85,7 @@ public class ClusterByStatisticsSnapshotSerde
     final int mvSetSize = byteBuffer.getInt(position + MV_SET_SIZE_OFFSET);
 
     final Set<Integer> hasMultiValues = new HashSet<>();
-    for (int offset = position + MV_VALUES_OFFSET; offset < position + mvSetSize * Integer.BYTES; offset += Integer.BYTES) {
+    for (int offset = position + MV_VALUES_OFFSET; offset < position + MV_VALUES_OFFSET + mvSetSize * Integer.BYTES; offset += Integer.BYTES) {
       hasMultiValues.add(byteBuffer.getInt(offset));
     }
 
@@ -128,10 +130,13 @@ public class ClusterByStatisticsSnapshotSerde
     final KeyCollectorSnapshot snapshot = bucket.getKeyCollectorSnapshot();
     final byte[] serializedSnapshot = snapshot.getSerializer().serialize(snapshot);
 
-    final int length = Double.BYTES + 2 * Integer.BYTES + bucketKeyArray.length + serializedSnapshot.length;
+    final int length = Double.BYTES                 // Bytes retained
+                       + 2 * Integer.BYTES          // keyArray length and snapshot length
+                       + bucketKeyArray.length      // serialized key array
+                       + serializedSnapshot.length; // serialized snapshot
 
     outputStream.write(
-        ByteBuffer.allocate(Integer.BYTES + length)
+        ByteBuffer.allocate(Integer.BYTES + length) // Additionally, store length of the serialized array.
                   .putInt(length)
                   .putDouble(bytesRetained)
                   .putInt(bucketKeyArray.length)

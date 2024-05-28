@@ -25,12 +25,19 @@ import org.apache.druid.msq.statistics.KeyCollectorSnapshot;
 import java.nio.ByteBuffer;
 
 /**
- * Serializes a {@link ClusterByStatisticsSnapshot} into a byte[].
+ * Serializes a {@link ClusterByStatisticsSnapshot} into a byte array.
  */
 public abstract class KeyCollectorSnapshotSerializer
 {
+  /**
+   * The type of sketch which has been serialized. The value returned by type cannot be the same across
+   * various implementation.
+   */
   protected abstract byte getType();
 
+  /**
+   * Converts the key collector in the argument into a byte array representation.
+   */
   protected abstract byte[] serializeKeyCollector(KeyCollectorSnapshot collectorSnapshot);
 
   public byte[] serialize(KeyCollectorSnapshot collectorSnapshot)
@@ -38,7 +45,7 @@ public abstract class KeyCollectorSnapshotSerializer
     byte type = getType();
     byte[] value = serializeKeyCollector(collectorSnapshot);
 
-    return ByteBuffer.allocate(1 + value.length)
+    return ByteBuffer.allocate(Byte.BYTES + value.length)
                      .put(type)
                      .put(value)
                      .array();
