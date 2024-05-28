@@ -26,23 +26,15 @@ import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig.ConfigurationInstance;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig.SqlTestFrameworkConfigStore;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
-import org.apache.http.NameValuePair;
-import org.apache.http.client.utils.URLEncodedUtils;
 import org.junit.Test;
 
 import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse;
-import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import static org.junit.Assert.assertNotEquals;
 
 public class Launcher
@@ -50,24 +42,6 @@ public class Launcher
   static final SqlTestFrameworkConfigStore CONFIG_STORE = new SqlTestFrameworkConfigStore();
 
   private static Logger log = new Logger(Launcher.class);
-
-  public static SqlTestFrameworkConfig buildConfigfromURIParams(String url) throws SQLException
-  {
-    Map<String, String> queryParams;
-    queryParams = new HashMap<>();
-    try {
-      List<NameValuePair> params = URLEncodedUtils.parse(new URI(url), StandardCharsets.UTF_8);
-      for (NameValuePair pair : params) {
-        queryParams.put(pair.getName(), pair.getValue());
-      }
-      // possible caveat: duplicate entries overwrite earlier ones
-    }
-    catch (URISyntaxException e) {
-      throw new SQLException("Can't decode URI", e);
-    }
-
-    return new SqlTestFrameworkConfig(queryParams);
-  }
 
   @Test
   public void runIt() throws Exception
@@ -77,7 +51,7 @@ public class Launcher
 
   private static ConfigurationInstance getCI2() throws SQLException, Exception
   {
-    SqlTestFrameworkConfig config = buildConfigfromURIParams("druidtest:///");
+    SqlTestFrameworkConfig config = SqlTestFrameworkConfig.fromURL("druidtest:///");
 
     ConfigurationInstance ci = CONFIG_STORE.getConfigurationInstance(
         config,
@@ -91,18 +65,14 @@ public class Launcher
 
     SqlTestFramework framework = getCI2().framework;
 
-    if (true) {
-      Lifecycle lifecycle = GuiceRunnable.initLifecycle(framework.injector(), log);
+    Lifecycle lifecycle = GuiceRunnable.initLifecycle(framework.injector(), log);
 
-      chk1();
-      chkStatus();
+    chk1();
+    chkStatus();
 
-      System.out.println("-------------------booted up-------------------");
+    System.out.println("-------------------booted up-------------------");
 
-      lifecycle.join();
-    } else {
-
-    }
+    lifecycle.join();
 
   }
 

@@ -70,25 +70,17 @@ import org.apache.druid.sql.calcite.util.SqlTestFramework.Builder;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.PlannerComponentSupplier;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.QueryComponentSupplier;
 import org.apache.druid.sql.guice.SqlModule;
-import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URIBuilder;
-import org.apache.http.client.utils.URLEncodedUtils;
 import org.eclipse.jetty.server.Server;
 
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.Driver;
 import java.sql.DriverManager;
 import java.sql.DriverPropertyInfo;
 import java.sql.SQLException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.Properties;
 import java.util.logging.Logger;
 
@@ -114,7 +106,7 @@ public class DruidAvaticaTestDriver implements Driver
       return null;
     }
     try {
-      SqlTestFrameworkConfig config = buildConfigfromURIParams(url);
+      SqlTestFrameworkConfig config = SqlTestFrameworkConfig.fromURL(url);
 
       ConfigurationInstance ci = CONFIG_STORE.getConfigurationInstance(
           config,
@@ -347,24 +339,6 @@ public class DruidAvaticaTestDriver implements Driver
       }
     });
     return tempDir;
-  }
-
-  public static SqlTestFrameworkConfig buildConfigfromURIParams(String url) throws SQLException
-  {
-    Map<String, String> queryParams;
-    queryParams = new HashMap<>();
-    try {
-      List<NameValuePair> params = URLEncodedUtils.parse(new URI(url), StandardCharsets.UTF_8);
-      for (NameValuePair pair : params) {
-        queryParams.put(pair.getName(), pair.getValue());
-      }
-      // possible caveat: duplicate entries overwrite earlier ones
-    }
-    catch (URISyntaxException e) {
-      throw new SQLException("Can't decode URI", e);
-    }
-
-    return new SqlTestFrameworkConfig(queryParams);
   }
 
   private void register()

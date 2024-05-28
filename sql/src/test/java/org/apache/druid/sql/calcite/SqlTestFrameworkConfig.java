@@ -35,7 +35,9 @@ import org.apache.druid.sql.calcite.util.CacheTestHelperModule.ResultCacheMode;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.QueryComponentSupplier;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
+import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URIBuilder;
+import org.apache.http.client.utils.URLEncodedUtils;
 import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
@@ -53,6 +55,8 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -415,6 +419,24 @@ public class SqlTestFrameworkConfig
       throw new IAE("Can't reproduce config via map!");
     }
     return map;
+  }
+
+  public static SqlTestFrameworkConfig fromURL(String url) throws SQLException
+  {
+    Map<String, String> queryParams;
+    queryParams = new HashMap<>();
+    try {
+      List<NameValuePair> params = URLEncodedUtils.parse(new URI(url), StandardCharsets.UTF_8);
+      for (NameValuePair pair : params) {
+        queryParams.put(pair.getName(), pair.getValue());
+      }
+      // possible caveat: duplicate entries overwrite earlier ones
+    }
+    catch (URISyntaxException e) {
+      throw new SQLException("Can't decode URI", e);
+    }
+  
+    return new SqlTestFrameworkConfig(queryParams);
   }
 
   abstract static class ConfigOptionProcessor<T>
