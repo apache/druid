@@ -77,7 +77,7 @@ public class Disk
       }
     }
     catch (IOException | RuntimeException ex) {
-      LOG.error(ex, "Unable to fetch memory snapshot");
+      LOG.error(ex, "Unable to fetch disk snapshot");
     }
 
     try (final BufferedReader reader = Files.newBufferedReader(

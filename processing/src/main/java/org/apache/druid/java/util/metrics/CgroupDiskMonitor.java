@@ -24,6 +24,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.cgroups.CgroupDiscoverer;
 import org.apache.druid.java.util.metrics.cgroups.Disk;
+import org.apache.druid.java.util.metrics.cgroups.ProcSelfCgroupDiscoverer;
 
 import java.util.Map;
 
@@ -38,6 +39,21 @@ public class CgroupDiskMonitor extends FeedDefiningMonitor
     super(feed);
     this.cgroupDiscoverer = cgroupDiscoverer;
     this.dimensions = dimensions;
+  }
+
+  public CgroupDiskMonitor(final Map<String, String[]> dimensions, String feed)
+  {
+    this(new ProcSelfCgroupDiscoverer(), dimensions, feed);
+  }
+
+  public CgroupDiskMonitor(final Map<String, String[]> dimensions)
+  {
+    this(dimensions, DEFAULT_METRICS_FEED);
+  }
+
+  public CgroupDiskMonitor()
+  {
+    this(ImmutableMap.of());
   }
 
   @Override
