@@ -421,13 +421,20 @@ public class SegmentManager
     cacheManager.cleanup(segment);
   }
 
-  public List<DataSegment> getCachedSegments() throws IOException
-  {
-    return cacheManager.getCachedSegments();
-  }
-
+  /**
+   * Return whether the cache manager can handle segments or not.
+   */
   public boolean canHandleSegments()
   {
     return cacheManager.canHandleSegments();
+  }
+
+  /**
+   * Return a list of cached segments, if any. This should be called only when
+   * {@link #canHandleSegments()} is true.
+   */
+  public List<DataSegment> getCachedSegments() throws IOException
+  {
+    return cacheManager.getCachedSegments();
   }
 }

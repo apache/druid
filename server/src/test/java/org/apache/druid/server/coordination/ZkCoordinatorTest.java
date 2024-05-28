@@ -56,8 +56,6 @@ import java.util.concurrent.ScheduledExecutorService;
  */
 public class ZkCoordinatorTest extends CuratorTestBase
 {
-  private static final Logger log = new Logger(ZkCoordinatorTest.class);
-
   private final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
   private final DruidServerMetadata me = new DruidServerMetadata(
       "dummyServer",
@@ -76,10 +74,6 @@ public class ZkCoordinatorTest extends CuratorTestBase
       return "/druid";
     }
   };
-  private ZkCoordinator zkCoordinator;
-
-  private File infoDir;
-  private List<StorageLocationConfig> locations;
 
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -87,22 +81,6 @@ public class ZkCoordinatorTest extends CuratorTestBase
   @Before
   public void setUp() throws Exception
   {
-    try {
-      infoDir = temporaryFolder.newFolder();
-      log.info("Creating tmp test files in [%s]", infoDir);
-    }
-    catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-
-    locations = Collections.singletonList(
-        new StorageLocationConfig(
-            infoDir,
-            100L,
-            100d
-        )
-    );
-
     setupServerAndCurator();
     curator.start();
     curator.blockUntilConnected();
@@ -134,37 +112,7 @@ public class ZkCoordinatorTest extends CuratorTestBase
     CountDownLatch dropLatch = new CountDownLatch(1);
 
     SegmentLoadDropHandler segmentLoadDropHandler = new SegmentLoadDropHandler(
-        new SegmentLoaderConfig() {
-          @Override
-          public File getInfoDir()
-          {
-            return infoDir;
-          }
-
-          @Override
-          public int getNumLoadingThreads()
-          {
-            return 5;
-          }
-
-          @Override
-          public int getAnnounceIntervalMillis()
-          {
-            return 50;
-          }
-
-          @Override
-          public List<StorageLocationConfig> getLocations()
-          {
-            return locations;
-          }
-
-          @Override
-          public int getDropSegmentDelayMillis()
-          {
-            return 0;
-          }
-        },
+        new SegmentLoaderConfig(),
         EasyMock.createNiceMock(DataSegmentAnnouncer.class),
         EasyMock.createNiceMock(DataSegmentServerAnnouncer.class),
         EasyMock.createNiceMock(SegmentManager.class),
@@ -191,7 +139,7 @@ public class ZkCoordinatorTest extends CuratorTestBase
       }
     };
 
-    zkCoordinator = new ZkCoordinator(
+    ZkCoordinator zkCoordinator = new ZkCoordinator(
         segmentLoadDropHandler,
         jsonMapper,
         zkPaths,

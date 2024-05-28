@@ -114,10 +114,10 @@ public class SqlModuleTest
   private LookupExtractorFactoryContainerProvider lookupExtractorFactoryContainerProvider;
 
   @Mock
-  private SegmentCacheManager segmentCacheManager;
+  private JoinableFactory joinableFactory;
 
   @Mock
-  private JoinableFactory joinableFactory;
+  private SegmentCacheManager segmentCacheManager;
 
   private Injector injector;
 

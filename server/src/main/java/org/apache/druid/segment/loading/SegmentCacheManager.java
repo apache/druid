@@ -39,13 +39,13 @@ public interface SegmentCacheManager
   boolean canHandleSegments();
 
   /**
-   * Return the set of cached segments from local disk. This should be called only
+   * Return a list of cached segments from local disk, if any. This should be called only
    * when {@link #canHandleSegments()} is true.
    */
   List<DataSegment> getCachedSegments() throws IOException;
 
   /**
-   * Store a segment info file the supplied segment on disk. This operation is idempotent when called
+   * Store a segment info file for the supplied segment on disk. This operation is idempotent when called
    * multiple times for a given segment.
    */
   void storeInfoFile(DataSegment segment) throws IOException;

@@ -29,13 +29,17 @@ import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.hamcrest.MatcherAssert;
+import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -139,7 +143,6 @@ public class SegmentLocalCacheManagerTest
         "test_segment_loader/2014-10-20T00:00:00.000Z_2014-10-21T00:00:00.000Z/2015-05-27T03:38:35.683Z/0"
     );
     FileUtils.mkdirp(segmentFile);
-    // should not throw any exception
     manager.loadSegmentIntoPageCache(segment);
   }
 
@@ -168,7 +171,6 @@ public class SegmentLocalCacheManagerTest
         "test_segment_loader/2014-10-20T00:00:00.000Z_2014-10-21T00:00:00.000Z/2015-05-27T03:38:35.683Z/0"
     );
     FileUtils.mkdirp(segmentFile);
-    // should not throw any exception
     manager.loadSegmentIntoPageCache(segment);
   }
 
@@ -1023,5 +1025,35 @@ public class SegmentLocalCacheManagerTest
     manager.release(dataSegment);
     Assert.assertEquals(50L, firstLocation.availableSizeBytes());
     Assert.assertEquals(150L, secondLocation.availableSizeBytes());
+  }
+
+  @Test
+  public void testGetSegmentWithTombstones() throws SegmentLoadingException
+  {
+    final Interval interval = Intervals.of("2014-01-01/2014-01-02");
+    final DataSegment tombstone = DataSegment.builder()
+                                             .dataSource("foo")
+                                             .interval(interval)
+                                             .version("v1")
+                                             .loadSpec(ImmutableMap.of("type", "tombstone"))
+                                             .shardSpec(TombstoneShardSpec.INSTANCE)
+                                             .size(100)
+                                             .build();
+
+    final ReferenceCountingSegment segment = manager.getSegment(tombstone);
+
+    Assert.assertNotNull(segment.getId());
+    Assert.assertEquals(interval, segment.getDataInterval());
+    Assert.assertNotNull(segment.asStorageAdapter());
+    Assert.assertTrue(segment.asStorageAdapter().isFromTombstone());
+
+    final QueryableIndex queryableIndex = segment.asQueryableIndex();
+    Assert.assertEquals(interval, queryableIndex.getDataInterval());
+    Assert.assertThrows(UnsupportedOperationException.class, () -> queryableIndex.getMetadata());
+    Assert.assertThrows(UnsupportedOperationException.class, () -> queryableIndex.getNumRows());
+    Assert.assertThrows(UnsupportedOperationException.class, () -> queryableIndex.getAvailableDimensions());
+    Assert.assertThrows(UnsupportedOperationException.class, () -> queryableIndex.getBitmapFactoryForDimensions());
+    Assert.assertThrows(UnsupportedOperationException.class, () -> queryableIndex.getDimensionHandlers());
+    Assert.assertThrows(UnsupportedOperationException.class, () -> queryableIndex.getColumnHolder(null));
   }
 }
