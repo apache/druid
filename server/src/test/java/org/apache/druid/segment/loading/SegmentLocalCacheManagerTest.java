@@ -96,14 +96,26 @@ public class SegmentLocalCacheManagerTest
   @Test
   public void testCanHandleSegmentsWhenEmptyLocations()
   {
-    manager = new SegmentLocalCacheManager(new SegmentLoaderConfig(), TestIndex.INDEX_IO, jsonMapper);
+    manager = new SegmentLocalCacheManager(
+        ImmutableList.of(),
+        new SegmentLoaderConfig(),
+        new LeastBytesUsedStorageLocationSelectorStrategy(ImmutableList.of()),
+        TestIndex.INDEX_IO,
+        jsonMapper
+    );
     Assert.assertFalse(manager.canHandleSegments());
   }
 
   @Test
   public void testGetCachedSegmentsWhenCanHandleSegmentsIsFalse()
   {
-    manager = new SegmentLocalCacheManager(new SegmentLoaderConfig(), TestIndex.INDEX_IO, jsonMapper);
+    manager = new SegmentLocalCacheManager(
+        ImmutableList.of(),
+        new SegmentLoaderConfig(),
+        new LeastBytesUsedStorageLocationSelectorStrategy(ImmutableList.of()),
+        TestIndex.INDEX_IO,
+        jsonMapper
+    );
     MatcherAssert.assertThat(
         Assert.assertThrows(
             DruidException.class,
@@ -245,8 +257,12 @@ public class SegmentLocalCacheManagerTest
     final StorageLocationConfig locationConfig2 = new StorageLocationConfig(localStorageFolder2, 1000000000L, null);
     locations.add(locationConfig2);
 
+    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig().withLocations(locations);
+    final List<StorageLocation> storageLocations = loaderConfig.toStorageLocations();
     manager = new SegmentLocalCacheManager(
+        storageLocations,
         new SegmentLoaderConfig().withLocations(locations),
+        new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
         TestIndex.INDEX_IO,
         jsonMapper
     );
@@ -294,8 +310,12 @@ public class SegmentLocalCacheManagerTest
     final StorageLocationConfig locationConfig2 = new StorageLocationConfig(localStorageFolder2, 10000000L, null);
     locations.add(locationConfig2);
 
+    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig().withLocations(locations);
+    final List<StorageLocation> storageLocations = loaderConfig.toStorageLocations();
     manager = new SegmentLocalCacheManager(
+        storageLocations,
         new SegmentLoaderConfig().withLocations(locations),
+        new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
         TestIndex.INDEX_IO,
         jsonMapper
     );
@@ -345,8 +365,12 @@ public class SegmentLocalCacheManagerTest
     final StorageLocationConfig locationConfig2 = new StorageLocationConfig(localStorageFolder2, 10000000L, null);
     locations.add(locationConfig2);
 
+    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig().withLocations(locations);
+    final List<StorageLocation> storageLocations = loaderConfig.toStorageLocations();
     manager = new SegmentLocalCacheManager(
+        storageLocations,
         new SegmentLoaderConfig().withLocations(locations),
+        new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
         TestIndex.INDEX_IO,
         jsonMapper
     );
@@ -395,8 +419,12 @@ public class SegmentLocalCacheManagerTest
     final StorageLocationConfig locationConfig2 = new StorageLocationConfig(localStorageFolder2, 10L, null);
     locations.add(locationConfig2);
 
+    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig().withLocations(locations);
+    final List<StorageLocation> storageLocations = loaderConfig.toStorageLocations();
     manager = new SegmentLocalCacheManager(
+        storageLocations,
         new SegmentLoaderConfig().withLocations(locations),
+        new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
         TestIndex.INDEX_IO,
         jsonMapper
     );
@@ -641,10 +669,14 @@ public class SegmentLocalCacheManagerTest
     locations.add(locationConfig2);
     locations.add(locationConfig3);
 
+    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig().withLocations(locations);
+    final List<StorageLocation> storageLocations = loaderConfig.toStorageLocations();
     manager = new SegmentLocalCacheManager(
-      new SegmentLoaderConfig().withLocations(locations),
-      TestIndex.INDEX_IO,
-      jsonMapper
+        storageLocations,
+        new SegmentLoaderConfig().withLocations(locations),
+        new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
+        TestIndex.INDEX_IO,
+        jsonMapper
     );
     final File segmentSrcFolder = tmpFolder.newFolder("segmentSrcFolder");
 

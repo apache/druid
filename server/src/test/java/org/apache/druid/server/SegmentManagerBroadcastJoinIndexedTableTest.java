@@ -48,12 +48,14 @@ import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.Joinable;
 import org.apache.druid.segment.loading.BroadcastJoinableMMappedQueryableSegmentizerFactory;
 import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.segment.loading.LeastBytesUsedStorageLocationSelectorStrategy;
 import org.apache.druid.segment.loading.LocalDataSegmentPuller;
 import org.apache.druid.segment.loading.LocalLoadSpec;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.loading.SegmentLocalCacheManager;
 import org.apache.druid.segment.loading.SegmentizerFactory;
+import org.apache.druid.segment.loading.StorageLocation;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -124,17 +126,23 @@ public class SegmentManagerBroadcastJoinIndexedTableTest extends InitializedNull
     );
     segmentCacheDir = temporaryFolder.newFolder();
     segmentDeepStorageDir = temporaryFolder.newFolder();
+
+    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig()
+    {
+      @Override
+      public List<StorageLocationConfig> getLocations()
+      {
+        return Collections.singletonList(
+            new StorageLocationConfig(segmentCacheDir, null, null)
+        );
+      }
+    };
+    final List<StorageLocation> storageLocations = loaderConfig.toStorageLocations();
+
     segmentCacheManager = new SegmentLocalCacheManager(
-        new SegmentLoaderConfig()
-        {
-          @Override
-          public List<StorageLocationConfig> getLocations()
-          {
-            return Collections.singletonList(
-                new StorageLocationConfig(segmentCacheDir, null, null)
-            );
-          }
-        },
+        storageLocations,
+        loaderConfig,
+        new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
         TestIndex.INDEX_IO,
         objectMapper
     );

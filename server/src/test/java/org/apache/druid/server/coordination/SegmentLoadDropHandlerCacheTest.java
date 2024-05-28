@@ -87,7 +87,14 @@ public class SegmentLoadDropHandlerCacheTest
     objectMapper.registerSubtypes(TestSegmentUtils.TestLoadSpec.class);
     objectMapper.registerSubtypes(TestSegmentUtils.TestSegmentizerFactory.class);
 
-    SegmentCacheManager cacheManager = new SegmentLocalCacheManager(config, TestIndex.INDEX_IO, objectMapper);
+    final List<StorageLocation> storageLocations = config.toStorageLocations();
+    final SegmentCacheManager cacheManager = new SegmentLocalCacheManager(
+        storageLocations,
+        config,
+        new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
+        TestIndex.INDEX_IO,
+        objectMapper
+    );
     segmentManager = new SegmentManager(cacheManager);
     segmentAnnouncer = Mockito.mock(DataSegmentAnnouncer.class);
 

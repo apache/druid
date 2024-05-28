@@ -30,9 +30,11 @@ import org.apache.druid.query.TableDataSource;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
+import org.apache.druid.segment.loading.LeastBytesUsedStorageLocationSelectorStrategy;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.loading.SegmentLocalCacheManager;
+import org.apache.druid.segment.loading.StorageLocation;
 import org.apache.druid.server.SegmentManager.DataSourceState;
 import org.apache.druid.server.coordination.TestStorageLocation;
 import org.apache.druid.timeline.DataSegment;
@@ -89,9 +91,16 @@ public class SegmentManagerTest
     objectMapper.registerSubtypes(TestSegmentUtils.TestLoadSpec.class);
     objectMapper.registerSubtypes(TestSegmentUtils.TestSegmentizerFactory.class);
 
-    segmentManager = new SegmentManager(
-        new SegmentLocalCacheManager(config, TestIndex.INDEX_IO, objectMapper)
+    final List<StorageLocation> storageLocations = config.toStorageLocations();
+    final SegmentLocalCacheManager cacheManager = new SegmentLocalCacheManager(
+        storageLocations,
+        config,
+        new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
+        TestIndex.INDEX_IO,
+        objectMapper
     );
+
+    segmentManager = new SegmentManager(cacheManager);
     executor = Execs.multiThreaded(SEGMENTS.size(), "SegmentManagerTest-%d");
   }
 

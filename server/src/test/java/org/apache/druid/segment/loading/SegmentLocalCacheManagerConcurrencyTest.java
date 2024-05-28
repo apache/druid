@@ -94,8 +94,12 @@ public class SegmentLocalCacheManagerConcurrencyTest
     final StorageLocationConfig locationConfig = new StorageLocationConfig(localSegmentCacheFolder, 2000L, null);
     locations.add(locationConfig);
 
+    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig().withLocations(locations);
+    final List<StorageLocation> storageLocations = loaderConfig.toStorageLocations();
     manager = new SegmentLocalCacheManager(
+        storageLocations,
         new SegmentLoaderConfig().withLocations(locations),
+        new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
         TestIndex.INDEX_IO,
         jsonMapper
     );

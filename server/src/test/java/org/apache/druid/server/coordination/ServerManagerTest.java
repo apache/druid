@@ -78,9 +78,11 @@ import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.join.JoinableFactoryWrapperTest;
+import org.apache.druid.segment.loading.LeastBytesUsedStorageLocationSelectorStrategy;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.loading.SegmentLocalCacheManager;
+import org.apache.druid.segment.loading.StorageLocation;
 import org.apache.druid.segment.loading.TombstoneSegmentizerFactory;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.TestSegmentUtils;
@@ -133,12 +135,14 @@ public class ServerManagerTest
   @Before
   public void setUp() throws IOException
   {
-    TestStorageLocation storageLoc = new TestStorageLocation(temporaryFolder);
-    SegmentLoaderConfig config = new SegmentLoaderConfig()
+    final TestStorageLocation storageLoc = new TestStorageLocation(temporaryFolder);
+    final SegmentLoaderConfig config = new SegmentLoaderConfig()
         .withLocations(Collections.singletonList(storageLoc.toStorageLocationConfig(1000L, null)));
-
+    final List<StorageLocation> storageLocations = config.toStorageLocations();
     final SegmentLocalCacheManager localCacheManager = new SegmentLocalCacheManager(
+        storageLocations,
         config,
+        new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
         TestIndex.INDEX_IO,
         TestHelper.makeJsonMapper()
     )

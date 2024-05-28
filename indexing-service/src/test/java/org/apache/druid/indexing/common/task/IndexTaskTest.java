@@ -86,9 +86,11 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
+import org.apache.druid.segment.loading.LeastBytesUsedStorageLocationSelectorStrategy;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLocalCacheManager;
+import org.apache.druid.segment.loading.StorageLocation;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.segment.realtime.firehose.WindowedStorageAdapter;
 import org.apache.druid.segment.realtime.plumber.NoopSegmentHandoffNotifierFactory;
@@ -197,17 +199,21 @@ public class IndexTaskTest extends IngestionTestBase
   {
     final File cacheDir = temporaryFolder.newFolder();
     tmpDir = temporaryFolder.newFolder();
+    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig()
+    {
+      @Override
+      public List<StorageLocationConfig> getLocations()
+      {
+        return Collections.singletonList(
+            new StorageLocationConfig(cacheDir, null, null)
+        );
+      }
+    };
+    final List<StorageLocation> storageLocations = loaderConfig.toStorageLocations();
     segmentCacheManager = new SegmentLocalCacheManager(
-        new SegmentLoaderConfig()
-        {
-          @Override
-          public List<StorageLocationConfig> getLocations()
-          {
-            return Collections.singletonList(
-                new StorageLocationConfig(cacheDir, null, null)
-            );
-          }
-        },
+        storageLocations,
+        loaderConfig,
+        new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
         TestIndex.INDEX_IO,
         jsonMapper
     );
