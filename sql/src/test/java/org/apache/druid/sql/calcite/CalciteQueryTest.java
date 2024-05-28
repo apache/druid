@@ -9347,8 +9347,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                             )
                                             .setDimensions(
                                                 dimensions(
-                                                    new DefaultDimensionSpec("v0", "d0", ColumnType.LONG),
-                                                    new DefaultDimensionSpec("dim1", "d1", ColumnType.STRING)
+                                                    new DefaultDimensionSpec("dim1", "d0", ColumnType.STRING),
+                                                    new DefaultDimensionSpec("v0", "d1", ColumnType.LONG)
                                                 )
                                             )
                                             .setAggregatorSpecs(
@@ -9381,9 +9381,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 new FilteredAggregatorFactory(
                                     new CountAggregatorFactory("_a1"),
                                     and(
-                                        notNull("d1"),
+                                        notNull("d0"),
                                         equality("a1", 0L, ColumnType.LONG),
-                                        expressionFilter("\"d0\"")
+                                        expressionFilter("\"d1\"")
                                     )
                                 )
                             )
