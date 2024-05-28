@@ -20,17 +20,13 @@
 package org.apache.druid.quidem;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.AbstractModule;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
-import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
 import org.apache.druid.cli.CliBroker;
 import org.apache.druid.cli.QueryJettyServerInitializer;
@@ -83,7 +79,6 @@ import org.apache.druid.initialization.TombstoneDataStorageModule;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.metadata.storage.derby.DerbyMetadataStorageDruidModule;
-import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.RetryQueryRunnerConfig;
@@ -95,7 +90,6 @@ import org.apache.druid.server.BrokerQueryResource;
 import org.apache.druid.server.ClientInfoResource;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.QueryLifecycleFactory;
-import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QuerySchedulerProvider;
 import org.apache.druid.server.ResponseContextConfig;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
@@ -165,36 +159,11 @@ public class ExposedAsBrokerQueryComponentSupplierWrapper implements QueryCompon
   {
     delegate.configureGuice(builder);
 
-    builder.addModule(
-        binder -> {
-          binder.bindConstant().annotatedWith(Names.named("serviceName")).to("test");
-          binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
-          binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
-          binder.bind(AuthenticatorMapper.class).toInstance(CalciteTests.TEST_AUTHENTICATOR_MAPPER);
-          binder.bind(Escalator.class).toInstance(CalciteTests.TEST_AUTHENTICATOR_ESCALATOR);
-          binder.bind(RequestLogger.class).toInstance(new NoopRequestLogger());
-          binder.bind(String.class)
-              .annotatedWith(DruidSchemaName.class)
-              .toInstance(CalciteTests.DRUID_SCHEMA_NAME);
-          binder.bind(ServiceEmitter.class).to(NoopServiceEmitter.class);
-          binder.bind(QuerySchedulerProvider.class).in(LazySingleton.class);
-          binder.bind(QueryScheduler.class)
-              .toProvider(QuerySchedulerProvider.class)
-              .in(LazySingleton.class);
-          binder.bind(new TypeLiteral<Supplier<DefaultQueryConfig>>()
-          {
-          }).toInstance(Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of())));
-          binder.bind(CalciteRulesManager.class).toInstance(new CalciteRulesManager(ImmutableSet.of()));
-          binder.bind(CatalogResolver.class).toInstance(CatalogResolver.NULL_RESOLVER);
-        }
-    );
-
     installForServerModules(builder);
 
     overrideModules.addAll(ExposedAsBrokerQueryComponentSupplierWrapper.brokerModules());
     overrideModules.add(new BrokerTestModule());
     builder.add(QuidemCaptureModule.class);
-
   }
 
   @Override
@@ -251,6 +220,16 @@ public class ExposedAsBrokerQueryComponentSupplierWrapper implements QueryCompon
     @Override
     protected void configure()
     {
+      bind(AuthenticatorMapper.class).toInstance(CalciteTests.TEST_AUTHENTICATOR_MAPPER);
+      bind(Escalator.class).toInstance(CalciteTests.TEST_AUTHENTICATOR_ESCALATOR);
+      bind(RequestLogger.class).toInstance(new NoopRequestLogger());
+      bind(String.class)
+          .annotatedWith(DruidSchemaName.class)
+          .toInstance(CalciteTests.DRUID_SCHEMA_NAME);
+      bind(ServiceEmitter.class).to(NoopServiceEmitter.class);
+      bind(QuerySchedulerProvider.class).in(LazySingleton.class);
+      bind(CalciteRulesManager.class).toInstance(new CalciteRulesManager(ImmutableSet.of()));
+      bind(CatalogResolver.class).toInstance(CatalogResolver.NULL_RESOLVER);
     }
 
     @Provides
