@@ -29,6 +29,7 @@ import org.apache.druid.java.util.metrics.cgroups.Cpu;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Map;
 
@@ -55,7 +56,10 @@ public class CgroupCpuMonitor extends FeedDefiningMonitor
     this.dimensions = dimensions;
     try {
       Process process = Runtime.getRuntime().exec("getconf CLK_TCK");
-      userHz = Long.parseLong(new BufferedReader(new InputStreamReader(process.getInputStream())).readLine());
+      userHz = Long.parseLong(new BufferedReader(new InputStreamReader(
+          process.getInputStream(),
+          StandardCharsets.UTF_8
+      )).readLine());
     }
     catch (IOException | NumberFormatException e) {
       LOG.warn(e, "Error getting the USER_HZ value");
