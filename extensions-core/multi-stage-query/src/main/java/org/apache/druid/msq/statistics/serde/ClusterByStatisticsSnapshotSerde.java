@@ -23,6 +23,7 @@ import org.apache.druid.frame.key.RowKey;
 import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
 import org.apache.druid.msq.statistics.KeyCollectorSnapshot;
 
+import javax.validation.constraints.NotNull;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
@@ -48,7 +49,7 @@ public class ClusterByStatisticsSnapshotSerde
    * - 4 * number of multivalue entries bytes: List of integers
    * - N buckets as byte arrays serialized by {@link #serializeBucket(OutputStream, ClusterByStatisticsSnapshot.Bucket)}
    */
-  public static void serialize(OutputStream outputStream, ClusterByStatisticsSnapshot snapshot) throws IOException
+  public static void serialize(OutputStream outputStream, @NotNull ClusterByStatisticsSnapshot snapshot) throws IOException
   {
     final Map<Long, ClusterByStatisticsSnapshot.Bucket> buckets = snapshot.getBuckets();
     final Set<Integer> multipleValueBuckets = snapshot.getHasMultipleValues();
@@ -62,6 +63,7 @@ public class ClusterByStatisticsSnapshotSerde
     multipleValueBuckets.forEach(multivalueBuffer::putInt);
     outputStream.write(multivalueBuffer.array());
 
+    // Serialize the buckets
     for (Map.Entry<Long, ClusterByStatisticsSnapshot.Bucket> entry : buckets.entrySet()) {
       writeLongToStream(outputStream, entry.getKey());
       serializeBucket(outputStream, entry.getValue());
