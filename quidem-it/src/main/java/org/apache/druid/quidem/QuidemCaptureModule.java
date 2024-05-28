@@ -19,36 +19,16 @@
 
 package org.apache.druid.quidem;
 
-import org.apache.druid.sql.calcite.run.DruidHook;
+import com.google.inject.Binder;
+import com.google.inject.Module;
+import org.apache.druid.guice.Jerseys;
 
-import java.io.PrintStream;
-
-public class QuidemRecorder implements AutoCloseable, DruidHook
+public class QuidemCaptureModule implements Module
 {
-  private PrintStream printStream;
-
-  public QuidemRecorder(PrintStream printStream)
-  {
-    this.printStream = printStream;
-    printStream.println("#started");
-    printStream.println("!connect druidtest:///");
-    DruidHook.register(DruidHook.SQL, this);
-  }
 
   @Override
-  public void close()
+  public void configure(Binder binder)
   {
-    DruidHook.unregister(DruidHook.SQL, this);
-  }
-
-  @Override
-  public <T> void invoke(HookKey<T> key, T object)
-  {
-    if (DruidHook.SQL.equals(key)) {
-      printStream.print(object);
-      printStream.println(";");
-      printStream.println("!ok");
-      return;
-    }
+    Jerseys.addResource(binder, QuidemCaptureResource.class);
   }
 }

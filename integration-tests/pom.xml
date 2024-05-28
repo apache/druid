@@ -562,7 +562,22 @@
                     </execution>
                 </executions>
             </plugin>
-    </plugins>
+
+
+        <plugin>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>exec-maven-plugin</artifactId>
+          <configuration>
+            <executable>java</executable>
+            <arguments>
+              <argument>-classpath</argument>
+              <classpath/>
+              <argument>org.apache.druid.quidem.Launcher</argument>
+            </arguments>
+          </configuration>
+        </plugin>
+        
+        </plugins>
     </build>
 
     <profiles>

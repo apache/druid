@@ -72,7 +72,8 @@
     <properties>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
-        <java.version>8</java.version>
+<!-- UNDO THIS :D -->
+        <java.version>11</java.version>
         <project.build.resourceEncoding>UTF-8</project.build.resourceEncoding>
         <aether.version>0.9.0.M2</aether.version>
         <apache.curator.version>5.3.0</apache.curator.version>
@@ -243,6 +244,7 @@
         <module>integration-tests-ex/tools</module>
         <module>integration-tests-ex/image</module>
         <module>integration-tests-ex/cases</module>
+        <module>quidem-it</module>
     </modules>
 
     <repositories>

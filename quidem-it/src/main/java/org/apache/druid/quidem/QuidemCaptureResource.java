@@ -19,36 +19,48 @@
 
 package org.apache.druid.quidem;
 
-import org.apache.druid.sql.calcite.run.DruidHook;
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
+import javax.ws.rs.Produces;
+import javax.ws.rs.core.MediaType;
 
+import java.io.IOException;
 import java.io.PrintStream;
 
-public class QuidemRecorder implements AutoCloseable, DruidHook
+@Path("/quidem")
+public class QuidemCaptureResource
 {
-  private PrintStream printStream;
+  private QuidemRecorder recorder = null;
 
-  public QuidemRecorder(PrintStream printStream)
+  @GET
+  @Path("/")
+  @Produces(MediaType.TEXT_PLAIN)
+  public String getSome()
   {
-    this.printStream = printStream;
-    printStream.println("#started");
-    printStream.println("!connect druidtest:///");
-    DruidHook.register(DruidHook.SQL, this);
+    return "Asd";
   }
 
-  @Override
-  public void close()
+  @GET
+  @Path("/start")
+  @Produces(MediaType.TEXT_PLAIN)
+  public synchronized String getSome1() throws IOException
   {
-    DruidHook.unregister(DruidHook.SQL, this);
+    stopIfRunning();
+    start();
+    return recorder.toString();
   }
 
-  @Override
-  public <T> void invoke(HookKey<T> key, T object)
+  private void start() throws IOException
   {
-    if (DruidHook.SQL.equals(key)) {
-      printStream.print(object);
-      printStream.println(";");
-      printStream.println("!ok");
-      return;
+    recorder = new QuidemRecorder(new PrintStream("/tmp/new.iq"));
+  }
+
+  private void stopIfRunning()
+  {
+    if (recorder != null) {
+      recorder.close();
+      recorder = null;
     }
+
   }
 }
