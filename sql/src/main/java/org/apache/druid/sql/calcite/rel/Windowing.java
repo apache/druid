@@ -127,105 +127,7 @@ public class Windowing
 
     final List<WindowComputationProcessor> windowGroupProcessors = new ArrayList<>();
     final List<String> windowOutputColumns = new ArrayList<>(sourceRowSignature.getColumnNames());
-    computeProcessorsAndOutputColumns(
-        partialQuery,
-        plannerContext,
-        sourceRowSignature,
-        rexBuilder,
-        virtualColumnRegistry,
-        window,
-        windowGroupProcessors,
-        windowOutputColumns
-    );
 
-    // Track prior partition columns and sort columns group-to-group, so we only insert sorts and repartitions if
-    // we really need to.
-    List<String> priorPartitionColumns = null;
-    LinkedHashSet<ColumnWithDirection> priorSortColumns = new LinkedHashSet<>();
-
-    final RelCollation priorCollation = partialQuery.getScan().getTraitSet().getTrait(RelCollationTraitDef.INSTANCE);
-    if (priorCollation != null) {
-      // Populate initial priorSortColumns using collation of the input to the window operation. Allows us to skip
-      // the initial sort operator if the rows were already in the desired order.
-      priorSortColumns = computeSortColumnsFromRelCollation(priorCollation, sourceRowSignature);
-    }
-
-    // sort the processors to optimise the order of window operators
-    // currently we are moving the empty groups to the front
-    windowGroupProcessors.sort(WindowComputationProcessor.MOVE_EMPTY_GROUPS_FIRST);
-
-    ArrayList<OperatorFactory> ops = new ArrayList<>();
-    for (WindowComputationProcessor windowComputationProcessor : windowGroupProcessors) {
-      final WindowGroup group = windowComputationProcessor.getGroup();
-      final LinkedHashSet<ColumnWithDirection> sortColumns = new LinkedHashSet<>();
-      for (String partitionColumn : group.getPartitionColumns()) {
-        sortColumns.add(ColumnWithDirection.ascending(partitionColumn));
-      }
-      sortColumns.addAll(group.getOrdering());
-
-      // Add sorting and partitioning if needed.
-      if (!sortMatches(priorSortColumns, sortColumns)) {
-        // Sort order needs to change. Resort and repartition.
-        ops.add(new NaiveSortOperatorFactory(new ArrayList<>(sortColumns)));
-        ops.add(new NaivePartitioningOperatorFactory(group.getPartitionColumns()));
-        priorSortColumns = sortColumns;
-        priorPartitionColumns = group.getPartitionColumns();
-      } else if (!group.getPartitionColumns().equals(priorPartitionColumns)) {
-        // Sort order doesn't need to change, but partitioning does. Only repartition.
-        ops.add(new NaivePartitioningOperatorFactory(group.getPartitionColumns()));
-        priorPartitionColumns = group.getPartitionColumns();
-      }
-
-      ops.add(windowComputationProcessor.getProcessorOperatorFactory());
-    }
-
-    // Apply windowProject, if present.
-    if (partialQuery.getWindowProject() != null) {
-      // We know windowProject is a mapping due to the isMapping() check in DruidRules.
-      // check anyway as defensive programming.
-      Preconditions.checkArgument(partialQuery.getWindowProject().isMapping());
-      final Mappings.TargetMapping mapping = Preconditions.checkNotNull(
-          Project.getPartialMapping(
-              partialQuery.getWindowProject().getInput().getRowType().getFieldCount(),
-              partialQuery.getWindowProject().getProjects()
-          ),
-          "mapping for windowProject[%s]",
-          partialQuery.getWindowProject()
-      );
-
-      final List<String> windowProjectOutputColumns = new ArrayList<>();
-      for (int i = 0; i < mapping.size(); i++) {
-        windowProjectOutputColumns.add(windowOutputColumns.get(mapping.getSourceOpt(i)));
-      }
-
-      return new Windowing(
-          RowSignatures.fromRelDataType(windowProjectOutputColumns, partialQuery.getWindowProject().getRowType()),
-          ops
-      );
-    } else {
-      // No windowProject.
-      return new Windowing(
-          RowSignatures.fromRelDataType(windowOutputColumns, window.getRowType()),
-          ops
-      );
-    }
-  }
-
-  /**
-   * Computes the {@link WindowComputationProcessor} and output column name
-   * corresponding to each {@link org.apache.calcite.rel.core.Window.Group}
-   */
-  private static void computeProcessorsAndOutputColumns(
-      final PartialDruidQuery partialQuery,
-      final PlannerContext plannerContext,
-      final RowSignature sourceRowSignature,
-      final RexBuilder rexBuilder,
-      final VirtualColumnRegistry virtualColumnRegistry,
-      Window window,
-      List<WindowComputationProcessor> windowGroupProcessors,
-      List<String> windowOutputColumns
-  )
-  {
     final String outputNamePrefix = Calcites.findUnusedPrefixForDigits("w", sourceRowSignature.getColumnNames());
     int outputNameCounter = 0;
 
@@ -307,6 +209,92 @@ public class Windowing
           processors.get(0) : new ComposingProcessor(processors.toArray(new Processor[0]))
       )));
     }
+
+    List<OperatorFactory> ops = computeWindowOperations(partialQuery, sourceRowSignature, windowGroupProcessors);
+
+    // Apply windowProject, if present.
+    if (partialQuery.getWindowProject() != null) {
+      // We know windowProject is a mapping due to the isMapping() check in DruidRules.
+      // check anyway as defensive programming.
+      Preconditions.checkArgument(partialQuery.getWindowProject().isMapping());
+      final Mappings.TargetMapping mapping = Preconditions.checkNotNull(
+          Project.getPartialMapping(
+              partialQuery.getWindowProject().getInput().getRowType().getFieldCount(),
+              partialQuery.getWindowProject().getProjects()
+          ),
+          "mapping for windowProject[%s]",
+          partialQuery.getWindowProject()
+      );
+
+      final List<String> windowProjectOutputColumns = new ArrayList<>();
+      for (int i = 0; i < mapping.size(); i++) {
+        windowProjectOutputColumns.add(windowOutputColumns.get(mapping.getSourceOpt(i)));
+      }
+
+      return new Windowing(
+          RowSignatures.fromRelDataType(windowProjectOutputColumns, partialQuery.getWindowProject().getRowType()),
+          ops
+      );
+    } else {
+      // No windowProject.
+      return new Windowing(
+          RowSignatures.fromRelDataType(windowOutputColumns, window.getRowType()),
+          ops
+      );
+    }
+  }
+
+  /**
+   * Computes the list of operators that are to be applied in an optimised order
+   */
+  private static List<OperatorFactory> computeWindowOperations(
+      final PartialDruidQuery partialQuery,
+      final RowSignature sourceRowSignature,
+      List<WindowComputationProcessor> windowGroupProcessors
+  )
+  {
+    final List<OperatorFactory> ops = new ArrayList<>();
+    // Track prior partition columns and sort columns group-to-group, so we only insert sorts and repartitions if
+    // we really need to.
+    List<String> priorPartitionColumns = null;
+    LinkedHashSet<ColumnWithDirection> priorSortColumns = new LinkedHashSet<>();
+
+    final RelCollation priorCollation = partialQuery.getScan().getTraitSet().getTrait(RelCollationTraitDef.INSTANCE);
+    if (priorCollation != null) {
+      // Populate initial priorSortColumns using collation of the input to the window operation. Allows us to skip
+      // the initial sort operator if the rows were already in the desired order.
+      priorSortColumns = computeSortColumnsFromRelCollation(priorCollation, sourceRowSignature);
+    }
+
+    // sort the processors to optimise the order of window operators
+    // currently we are moving the empty groups to the front
+    windowGroupProcessors.sort(WindowComputationProcessor.MOVE_EMPTY_GROUPS_FIRST);
+
+    for (WindowComputationProcessor windowComputationProcessor : windowGroupProcessors) {
+      final WindowGroup group = windowComputationProcessor.getGroup();
+      final LinkedHashSet<ColumnWithDirection> sortColumns = new LinkedHashSet<>();
+      for (String partitionColumn : group.getPartitionColumns()) {
+        sortColumns.add(ColumnWithDirection.ascending(partitionColumn));
+      }
+      sortColumns.addAll(group.getOrdering());
+
+      // Add sorting and partitioning if needed.
+      if (!sortMatches(priorSortColumns, sortColumns)) {
+        // Sort order needs to change. Resort and repartition.
+        ops.add(new NaiveSortOperatorFactory(new ArrayList<>(sortColumns)));
+        ops.add(new NaivePartitioningOperatorFactory(group.getPartitionColumns()));
+        priorSortColumns = sortColumns;
+        priorPartitionColumns = group.getPartitionColumns();
+      } else if (!group.getPartitionColumns().equals(priorPartitionColumns)) {
+        // Sort order doesn't need to change, but partitioning does. Only repartition.
+        ops.add(new NaivePartitioningOperatorFactory(group.getPartitionColumns()));
+        priorPartitionColumns = group.getPartitionColumns();
+      }
+
+      ops.add(windowComputationProcessor.getProcessorOperatorFactory());
+    }
+
+    return ops;
   }
 
   private static class WindowComputationProcessor
