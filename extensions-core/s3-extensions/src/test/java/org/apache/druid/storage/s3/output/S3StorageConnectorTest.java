@@ -84,7 +84,7 @@ public class S3StorageConnectorTest
           null,
           null,
           true
-      ), service, null);
+      ), service, null, new S3UploadConfig());
     }
     catch (IOException e) {
       throw new RuntimeException(e);

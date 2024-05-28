@@ -44,6 +44,9 @@ public class S3StorageConnectorProvider extends S3OutputConfig implements Storag
   @Named("S3UploadThreadPool")
   ExecutorService executorService;
 
+  @JacksonInject
+  S3UploadConfig s3UploadConfig;
+
   @JsonCreator
   public S3StorageConnectorProvider(
       @JsonProperty(value = "bucket", required = true) String bucket,
@@ -59,6 +62,7 @@ public class S3StorageConnectorProvider extends S3OutputConfig implements Storag
   @Override
   public StorageConnector get()
   {
-    return new S3StorageConnector(this, s3, executorService);
+    s3UploadConfig.updateChunkSizeIfGreater(this.getChunkSize());
+    return new S3StorageConnector(this, s3, executorService, s3UploadConfig);
   }
 }

@@ -48,7 +48,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -118,27 +117,33 @@ public class RetryableS3OutputStream extends OutputStream
   private final Object fileLock = new Object();
 
   /**
-   * Semaphore to restrict the maximum number of simultaneous chunks on disk.
-   */
-  private static final int MAX_CONCURRENT_CHUNKS = 10;
-  private static final Semaphore SEMAPHORE = new Semaphore(MAX_CONCURRENT_CHUNKS);
-
-  /**
    * Threadpool used for uploading the chunks asynchronously.
    */
   private final ExecutorService uploadExecutor;
+
+  /**
+   * Helper class for calculating maximum number of simultaneous chunks allowed on local disk.
+   */
+  private final S3UploadConfig s3UploadConfig;
+
+  /**
+   * A lock to restrict the maximum number of chunks on disk at any given point in time.
+   */
+  private final Object maxChunksLock = new Object();
 
   public RetryableS3OutputStream(
       S3OutputConfig config,
       ServerSideEncryptingAmazonS3 s3,
       String s3Key,
-      ExecutorService executorService
+      ExecutorService executorService,
+      S3UploadConfig s3UploadConfig
   ) throws IOException
   {
     this.config = config;
     this.s3 = s3;
     this.s3Key = s3Key;
     this.uploadExecutor = executorService;
+    this.s3UploadConfig = s3UploadConfig;
 
     final InitiateMultipartUploadResult result;
     try {
@@ -179,6 +184,19 @@ public class RetryableS3OutputStream extends OutputStream
       return;
     }
 
+    synchronized (maxChunksLock) {
+      while (s3UploadConfig.getCurrentNumChunks() > s3UploadConfig.getMaxConcurrentNumChunks()) {
+        try {
+          LOG.info("Waiting for lock for writing further chunks to local disk.");
+          maxChunksLock.wait();
+        }
+        catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+          throw new RuntimeException(e);
+        }
+      }
+    }
+
     try {
       int offsetToWrite = off;
       int remainingBytesToWrite = len;
@@ -212,33 +230,30 @@ public class RetryableS3OutputStream extends OutputStream
     currentChunk.close();
     final Chunk chunk = currentChunk;
     if (chunk.length() > 0) {
-      try {
-        SEMAPHORE.acquire(); // Acquire a permit from the semaphore
-        pendingFiles.incrementAndGet();
+      s3UploadConfig.incrementCurrentNumChunks();
+      pendingFiles.incrementAndGet();
 
-        uploadExecutor.submit(() -> {
-          try {
-            uploadChunk(chunk);
+      uploadExecutor.submit(() -> {
+        try {
+          uploadChunk(chunk);
+        }
+        catch (Exception e) {
+          error = true;
+          LOG.error(e, e.getMessage());
+          throw new RuntimeException(e);
+        }
+        finally {
+          synchronized (maxChunksLock) {
+            s3UploadConfig.decrementCurrentNumChunks();
+            maxChunksLock.notifyAll();
           }
-          catch (Exception e) {
-            error = true;
-            LOG.error(e, e.getMessage());
-            throw new RuntimeException(e);
-          }
-          finally {
-            SEMAPHORE.release(); // Release the permit after upload is completed
-            if (pendingFiles.decrementAndGet() == 0) {
-              synchronized (fileLock) {
-                fileLock.notifyAll();
-              }
+          if (pendingFiles.decrementAndGet() == 0) {
+            synchronized (fileLock) {
+              fileLock.notifyAll();
             }
           }
-        });
-      }
-      catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-        throw new IOException(e);
-      }
+        }
+      });
     }
   }
 

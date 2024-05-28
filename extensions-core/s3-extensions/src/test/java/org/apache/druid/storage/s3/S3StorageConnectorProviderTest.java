@@ -38,6 +38,7 @@ import org.apache.druid.storage.StorageConnectorProvider;
 import org.apache.druid.storage.s3.output.S3StorageConnector;
 import org.apache.druid.storage.s3.output.S3StorageConnectorModule;
 import org.apache.druid.storage.s3.output.S3StorageConnectorProvider;
+import org.apache.druid.storage.s3.output.S3UploadConfig;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -152,6 +153,10 @@ public class S3StorageConnectorProviderTest
             .addValue(
                 ExecutorService.class,
                 Execs.multiThreaded(10, "UploadThreadPool-%d")
+            )
+            .addValue(
+                S3UploadConfig.class,
+                new S3UploadConfig()
             ));
 
 

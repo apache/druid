@@ -62,6 +62,9 @@ public class S3ExportStorageProvider implements ExportStorageProvider
   @Named("S3UploadThreadPool")
   ExecutorService executorService;
 
+  @JacksonInject
+  S3UploadConfig s3UploadConfig;
+
   @JsonCreator
   public S3ExportStorageProvider(
       @JsonProperty(value = "bucket", required = true) String bucket,
@@ -96,7 +99,8 @@ public class S3ExportStorageProvider implements ExportStorageProvider
         s3ExportConfig.getChunkSize(),
         s3ExportConfig.getMaxRetry()
     );
-    return new S3StorageConnector(s3OutputConfig, s3, executorService);
+    s3UploadConfig.updateChunkSizeIfGreater(s3ExportConfig.getChunkSize().getBytes());
+    return new S3StorageConnector(s3OutputConfig, s3, executorService, s3UploadConfig);
   }
 
   @VisibleForTesting

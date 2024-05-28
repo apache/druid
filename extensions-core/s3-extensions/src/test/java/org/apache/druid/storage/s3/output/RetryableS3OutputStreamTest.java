@@ -70,6 +70,8 @@ public class RetryableS3OutputStreamTest
 
   private final ExecutorService executorService = Execs.multiThreaded(10, "UploadThreadPool-%d");
 
+  private final S3UploadConfig s3UploadConfig = new S3UploadConfig();
+
   @Before
   public void setup() throws IOException
   {
@@ -113,7 +115,8 @@ public class RetryableS3OutputStreamTest
         config,
         s3,
         path,
-        executorService
+        executorService,
+        s3UploadConfig
     )) {
       for (int i = 0; i < 25; i++) {
         bb.clear();
@@ -135,7 +138,8 @@ public class RetryableS3OutputStreamTest
         config,
         s3,
         path,
-        executorService
+        executorService,
+        s3UploadConfig
     )) {
       bb.clear();
       bb.putInt(1);
@@ -156,7 +160,8 @@ public class RetryableS3OutputStreamTest
         config,
         s3,
         path,
-        executorService
+        executorService,
+        s3UploadConfig
     )) {
       for (int i = 0; i < 600; i++) {
         out.write(i);
@@ -178,7 +183,8 @@ public class RetryableS3OutputStreamTest
         config,
         s3,
         path,
-        executorService
+        executorService,
+        s3UploadConfig
     )) {
       for (int i = 0; i < 25; i++) {
         bb.clear();
@@ -201,7 +207,8 @@ public class RetryableS3OutputStreamTest
         config,
         s3,
         path,
-        executorService
+        executorService,
+        s3UploadConfig
     )) {
       for (int i = 0; i < 2; i++) {
         bb.clear();
