@@ -354,7 +354,14 @@
   "items":
   [
     "release-info/release-notes",
-    "release-info/upgrade-notes"
+    "release-info/upgrade-notes",
+    {
+      "type": "category",
+      "label": "Migration guides",
+      "items": [
+        "release-info/migr-front-coded-dict"
+      ]
+    }
   ]},
   "misc/papers-and-talks"
   ]
