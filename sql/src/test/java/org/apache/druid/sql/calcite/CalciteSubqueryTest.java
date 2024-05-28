@@ -29,6 +29,7 @@ import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.JoinDataSource;
+import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.ResourceLimitExceededException;
@@ -1121,7 +1122,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   public void testSingleValueDoubleAgg(String testName, Map<String, Object> queryContext)
   {
     cannotVectorize();
-    testQuery(
+    testQueryA(
         "SELECT count(*) FROM foo where m1 >= (select max(m1) - 3.5 from foo)",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
@@ -1174,12 +1175,26 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
     );
   }
 
+  public void testQueryA(
+      final String sql,
+      final List<Query<?>> expectedQueries,
+      final List<Object[]> expectedResults
+  )
+  {
+    testBuilder()
+        .sql(sql)
+        .expectedQueries(expectedQueries)
+        .expectedResults(expectedResults)
+        .run();
+  }
+
+
   @MethodSource("constructorFeeder")
   @ParameterizedTest(name = "{0}")
   public void testSingleValueLongAgg(String testName, Map<String, Object> queryContext)
   {
     cannotVectorize();
-    testQuery(
+    testQueryA(
         "SELECT count(*) FROM wikipedia where __time >= (select max(__time) - INTERVAL '10' MINUTE from wikipedia)",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
@@ -1240,7 +1255,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   public void testSingleValueStringAgg(String testName, Map<String, Object> queryContext)
   {
     cannotVectorize();
-    testQuery(
+    testQueryA(
         "SELECT  count(*) FROM wikipedia where channel = (select channel from wikipedia order by __time desc LIMIT 1 OFFSET 6)",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
