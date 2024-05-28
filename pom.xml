@@ -87,7 +87,7 @@
         <!--
             The base calcite parser was copied into the project; when updating Calcite run dev/updgrade-calcite-parser to adopt upstream changes
           -->
-        <calcite.version>1.37.0</calcite.version>
+        <calcite.version>1.35.0</calcite.version>
         <confluent.version>6.2.12</confluent.version>
         <datasketches.version>4.2.0</datasketches.version>
         <datasketches.memory.version>2.2.0</datasketches.memory.version>
