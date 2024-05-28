@@ -26,19 +26,22 @@ import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig.ConfigurationInstance;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig.SqlTestFrameworkConfigStore;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
-import java.sql.SQLException;
 
 public class Launcher
 {
-  static final SqlTestFrameworkConfigStore CONFIG_STORE = new SqlTestFrameworkConfigStore();
+  static final SqlTestFrameworkConfigStore CONFIG_STORE = new SqlTestFrameworkConfigStore(
+      x -> new ExposedAsBrokerQueryComponentSupplierWrapper(x)
+  );
+  private static final String QUIDEM_URI = "quidem.uri";
   private static Logger log = new Logger(Launcher.class);
   private final SqlTestFramework framework;
   private final ConfigurationInstance configurationInstance;
   private Lifecycle lifecycle;
 
-  public Launcher() throws Exception
+  public Launcher(String uri) throws Exception
   {
-    configurationInstance = getConfigurationInstance();
+    SqlTestFrameworkConfig config = SqlTestFrameworkConfig.fromURL(uri);
+    configurationInstance = CONFIG_STORE.getConfigurationInstance(config);
     framework = configurationInstance.framework;
   }
 
@@ -52,14 +55,12 @@ public class Launcher
     lifecycle.stop();
   }
 
-  private static ConfigurationInstance getConfigurationInstance() throws SQLException, Exception
+  public static void main(String[] args) throws Exception
   {
-    SqlTestFrameworkConfig config = SqlTestFrameworkConfig.fromURL("druidtest:///");
+    String quidemUri = System.getProperty(QUIDEM_URI, "druidtest:///");
 
-    ConfigurationInstance ci = CONFIG_STORE.getConfigurationInstance(
-        config,
-        x -> new ExposedAsBrokerQueryComponentSupplierWrapper(x)
-    );
-    return ci;
+    Launcher launcher = new Launcher(quidemUri );
+    launcher.start();
+    launcher.lifecycle.join();
   }
 }

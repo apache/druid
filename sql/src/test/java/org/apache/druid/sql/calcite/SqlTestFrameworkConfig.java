@@ -230,11 +230,18 @@ public class SqlTestFrameworkConfig
 
   public static class SqlTestFrameworkConfigStore implements Closeable
   {
+    private final Function<QueryComponentSupplier, QueryComponentSupplier> queryComponentSupplierWrapper;
+
+    public SqlTestFrameworkConfigStore(
+        Function<QueryComponentSupplier, QueryComponentSupplier> queryComponentSupplierWrapper)
+    {
+      this.queryComponentSupplierWrapper = queryComponentSupplierWrapper;
+    }
+
     Map<SqlTestFrameworkConfig, ConfigurationInstance> configMap = new HashMap<>();
 
     public ConfigurationInstance getConfigurationInstance(
-        SqlTestFrameworkConfig config,
-        Function<QueryComponentSupplier, QueryComponentSupplier> queryComponentSupplierWrapper) throws Exception
+        SqlTestFrameworkConfig config) throws Exception
     {
       ConfigurationInstance ret = configMap.get(config);
       if (!configMap.containsKey(config)) {
@@ -273,7 +280,7 @@ public class SqlTestFrameworkConfig
    */
   public static class Rule implements AfterAllCallback, BeforeEachCallback
   {
-    SqlTestFrameworkConfigStore configStore = new SqlTestFrameworkConfigStore();
+    SqlTestFrameworkConfigStore configStore = new SqlTestFrameworkConfigStore(Function.identity());
     private SqlTestFrameworkConfig config;
     private Method method;
     private String testName;
@@ -324,7 +331,7 @@ public class SqlTestFrameworkConfig
 
     public SqlTestFramework get() throws Exception
     {
-      return configStore.getConfigurationInstance(config, Function.identity()).framework;
+      return configStore.getConfigurationInstance(config).framework;
     }
 
     public <T extends Annotation> T getAnnotation(Class<T> annotationType)

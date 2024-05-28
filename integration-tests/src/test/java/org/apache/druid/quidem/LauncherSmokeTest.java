@@ -18,7 +18,6 @@
  */
 package org.apache.druid.quidem;
 
-import org.apache.druid.sql.calcite.SqlTestFrameworkConfig.SqlTestFrameworkConfigStore;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -33,14 +32,12 @@ import static org.testng.Assert.assertEquals;
 
 public class LauncherSmokeTest
 {
-  static final SqlTestFrameworkConfigStore CONFIG_STORE = new SqlTestFrameworkConfigStore();
-
   private static Launcher launcher;
 
   @BeforeClass
   public static void setUp() throws Exception
   {
-    launcher = new Launcher();
+    launcher = new Launcher("druidtest:///");
     launcher.start();
   }
 

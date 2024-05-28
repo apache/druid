@@ -93,7 +93,9 @@ public class DruidAvaticaTestDriver implements Driver
   public static final String URI_PREFIX = "druidtest://";
   public static final String DEFAULT_URI = URI_PREFIX + "/";
 
-  static final SqlTestFrameworkConfigStore CONFIG_STORE = new SqlTestFrameworkConfigStore();
+  static final SqlTestFrameworkConfigStore CONFIG_STORE = new SqlTestFrameworkConfigStore(
+      x -> new AvaticaBasedTestConnectionSupplier(x)
+  );
 
   public DruidAvaticaTestDriver()
   {
@@ -107,12 +109,7 @@ public class DruidAvaticaTestDriver implements Driver
     }
     try {
       SqlTestFrameworkConfig config = SqlTestFrameworkConfig.fromURL(url);
-
-      ConfigurationInstance ci = CONFIG_STORE.getConfigurationInstance(
-          config,
-          x -> new AvaticaBasedTestConnectionSupplier(x)
-      );
-
+      ConfigurationInstance ci = CONFIG_STORE.getConfigurationInstance(config);
       AvaticaJettyServer server = ci.framework.injector().getInstance(AvaticaJettyServer.class);
       return server.getConnection(info);
     }
