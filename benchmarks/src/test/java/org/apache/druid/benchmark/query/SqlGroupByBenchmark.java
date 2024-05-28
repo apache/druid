@@ -91,6 +91,7 @@ public class SqlGroupByBenchmark
     ExpressionProcessing.initializeForTests();
     NestedDataModule.registerHandlersAndSerde();
   }
+
   private static final Logger log = new Logger(SqlGroupByBenchmark.class);
 
   private static final DruidProcessingConfig PROCESSING_CONFIG = new DruidProcessingConfig()
