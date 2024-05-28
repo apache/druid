@@ -22,7 +22,7 @@
  * with some changes to allow a custom error message if an OVERWRITE clause is present.
  */
 // Using fully qualified name for Pair class, since Calcite also has a same class name being used in the Parser.jj
-SqlNode DruidSqlInsertEof() :
+SqlNode DruidSqlInsertEof1() :
 {
   SqlNode insertNode;
   final List<SqlLiteral> keywords = new ArrayList<SqlLiteral>();
@@ -111,3 +111,4 @@ SqlNode DruidSqlInsertEof() :
     return DruidSqlInsert.create(sqlInsert, partitionedBy, clusteredBy, exportFileFormat);
   }
 }
+//FIXME: remove this file
