@@ -103,7 +103,7 @@ public class S3UploadManager
    *
    * @param chunkSize the new chunk size to be set if it is greater than the current chunk size.
    */
-  public void updateChunkSizeIfGreater(long chunkSize)
+  public synchronized void updateChunkSizeIfGreater(long chunkSize)
   {
     if (this.chunkSize < chunkSize) {
       this.chunkSize = chunkSize;
@@ -116,7 +116,7 @@ public class S3UploadManager
    * The maximum allowed chunk size is {@link S3OutputConfig#S3_MULTIPART_UPLOAD_MAX_PART_SIZE_BYTES} which is quite big,
    * so we restrict the maximum disk space used to the same, at any given point in time.
    */
-  private synchronized void recomputeMaxConcurrentNumChunks()
+  private void recomputeMaxConcurrentNumChunks()
   {
     maxConcurrentNumChunks = (int) (S3OutputConfig.S3_MULTIPART_UPLOAD_MAX_PART_SIZE_BYTES / chunkSize);
     log.info("Recomputed maxConcurrentNumChunks: %d", maxConcurrentNumChunks);
