@@ -279,8 +279,6 @@ public class TestSegmentUtils
           return interval.getEnd();
         }
 
-        // stubs below this line not important for tests
-
         @Override
         public Indexed<String> getAvailableDimensions()
         {

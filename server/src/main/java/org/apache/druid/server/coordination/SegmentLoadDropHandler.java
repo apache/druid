@@ -286,11 +286,11 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
         loadingExecutor.submit(
             () -> {
               try {
+                log.info(
+                    "Loading segment[%d/%d][%s]",
+                    counter.incrementAndGet(), numSegments, segment.getId()
+                );
                 try {
-                  log.info(
-                      "Loading segment[%d/%d][%s]",
-                      counter.incrementAndGet(), numSegments, segment.getId()
-                  );
                   segmentManager.loadSegmentOnBootstrap(
                       segment,
                       () -> this.removeSegment(segment, DataSegmentChangeCallback.NOOP, false)
@@ -341,9 +341,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
          .emit();
     }
     finally {
-      if (loadingExecutor != null) {
-        loadingExecutor.shutdownNow();
-      }
+      loadingExecutor.shutdownNow();
       stopwatch.stop();
       log.info("Cache load of [%d] bootstrap segments took [%,d]ms.", segments.size(), stopwatch.millisElapsed());
     }

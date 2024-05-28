@@ -31,6 +31,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.ReferenceCountingSegment;
+import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -54,8 +55,6 @@ import java.util.List;
 
 public class SegmentLocalCacheManagerTest
 {
-  private static final EmittingLogger log = new EmittingLogger(SegmentLocalCacheManagerTest.class);
-
   @Rule
   public final TemporaryFolder tmpFolder = new TemporaryFolder();
 
@@ -1041,18 +1040,21 @@ public class SegmentLocalCacheManagerTest
 
     final ReferenceCountingSegment segment = manager.getSegment(tombstone);
 
-    Assert.assertNotNull(segment.getId());
+    Assert.assertEquals(tombstone.getId(), segment.getId());
     Assert.assertEquals(interval, segment.getDataInterval());
-    Assert.assertNotNull(segment.asStorageAdapter());
-    Assert.assertTrue(segment.asStorageAdapter().isFromTombstone());
+
+    final StorageAdapter storageAdapter = segment.asStorageAdapter();
+    Assert.assertNotNull(storageAdapter);
+    Assert.assertTrue(storageAdapter.isFromTombstone());
 
     final QueryableIndex queryableIndex = segment.asQueryableIndex();
+    Assert.assertNotNull(queryableIndex);
     Assert.assertEquals(interval, queryableIndex.getDataInterval());
-    Assert.assertThrows(UnsupportedOperationException.class, () -> queryableIndex.getMetadata());
-    Assert.assertThrows(UnsupportedOperationException.class, () -> queryableIndex.getNumRows());
-    Assert.assertThrows(UnsupportedOperationException.class, () -> queryableIndex.getAvailableDimensions());
-    Assert.assertThrows(UnsupportedOperationException.class, () -> queryableIndex.getBitmapFactoryForDimensions());
-    Assert.assertThrows(UnsupportedOperationException.class, () -> queryableIndex.getDimensionHandlers());
-    Assert.assertThrows(UnsupportedOperationException.class, () -> queryableIndex.getColumnHolder(null));
+    Assert.assertThrows(UnsupportedOperationException.class, queryableIndex::getMetadata);
+    Assert.assertThrows(UnsupportedOperationException.class, queryableIndex::getNumRows);
+    Assert.assertThrows(UnsupportedOperationException.class, queryableIndex::getAvailableDimensions);
+    Assert.assertThrows(UnsupportedOperationException.class, queryableIndex::getBitmapFactoryForDimensions);
+    Assert.assertThrows(UnsupportedOperationException.class, queryableIndex::getDimensionHandlers);
+    Assert.assertThrows(UnsupportedOperationException.class, () -> queryableIndex.getColumnHolder("foo"));
   }
 }

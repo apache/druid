@@ -94,8 +94,8 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
 
   private final IndexIO indexIO;
 
-  private ExecutorService bootstrapPageCacheExec = null;
-  private ExecutorService downloadPageCacheExec = null;
+  private ExecutorService loadOnBootstrapExec = null;
+  private ExecutorService loadOnDownloadExec = null;
 
   @Inject
   public SegmentLocalCacheManager(
@@ -120,14 +120,14 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     );
 
     if (config.getNumThreadsToLoadSegmentsIntoPageCacheOnBootstrap() > 0) {
-      bootstrapPageCacheExec = Execs.multiThreaded(
+      loadOnBootstrapExec = Execs.multiThreaded(
           config.getNumThreadsToLoadSegmentsIntoPageCacheOnBootstrap(),
           "Load-Segments-Into-Page-Cache-On-Bootstrap-%s"
       );
     }
 
     if (this.config.getNumThreadsToLoadSegmentsIntoPageCacheOnDownload() > 0) {
-      downloadPageCacheExec = Executors.newFixedThreadPool(
+      loadOnDownloadExec = Executors.newFixedThreadPool(
           config.getNumThreadsToLoadSegmentsIntoPageCacheOnDownload(),
           Execs.makeThreadFactory("LoadSegmentsIntoPageCacheOnDownload-%s")
       );
@@ -617,20 +617,20 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   @Override
   public void loadSegmentIntoPageCache(DataSegment segment)
   {
-    if (downloadPageCacheExec == null) {
+    if (loadOnDownloadExec == null) {
       return;
     }
 
-    downloadPageCacheExec.submit(() -> loadSegmentIntoPageCacheInternal(segment));
+    loadOnDownloadExec.submit(() -> loadSegmentIntoPageCacheInternal(segment));
   }
 
   @Override
   public void loadSegmentIntoPageCacheOnBootstrap(DataSegment segment)
   {
-    if (bootstrapPageCacheExec == null) {
+    if (loadOnBootstrapExec == null) {
       return;
     }
-    bootstrapPageCacheExec.submit(() -> loadSegmentIntoPageCacheInternal(segment));
+    loadOnBootstrapExec.submit(() -> loadSegmentIntoPageCacheInternal(segment));
   }
 
   private void loadSegmentIntoPageCacheInternal(DataSegment segment)
