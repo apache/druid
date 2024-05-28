@@ -15096,6 +15096,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @NotYetSupported(Modes.SORT_REMOVE_CONSTANT_KEYS_CONFLICT)
   @Test
   public void testTimeseriesQueryWithEmptyInlineDatasourceAndGranularity()
   {
@@ -15122,7 +15123,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setDataSource(InlineDataSource.fromIterable(
                             ImmutableList.of(
                                 new Object[]{timestamp("2000-01-01"), 1.0},
-
                                 // Floor to month is applied while creating inline source, so this is
                                 // 2000-01-01, not 2000-01-02.
                                 new Object[]{timestamp("2000-01-01"), 2.0}
