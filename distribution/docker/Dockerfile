@@ -17,7 +17,7 @@
 # under the License.
 #
 
-ARG JDK_VERSION=17
+ARG JDK_VERSION=8
 
 # The platform is explicitly specified as x64 to build the Druid distribution.
 # This is because it's not able to build the distribution on arm64 due to dependency problem of web-console. See: https://github.com/apache/druid/issues/13012
@@ -27,7 +27,7 @@ FROM --platform=linux/amd64 maven:3.8.6-jdk-11-slim as builder
 
 # Rebuild from source in this stage
 # This can be unset if the tarball was already built outside of Docker
-ARG BUILD_FROM_SOURCE="true"
+ARG BUILD_FROM_SOURCE="false"
 
 RUN export DEBIAN_FRONTEND=noninteractive \
     && apt-get -qq update \
@@ -66,17 +66,17 @@ RUN if [ "$TARGETARCH" = "arm64" ]; then \
     echo "Downloading bash-static from ${BASH_URL}" \
     && wget ${BASH_URL} -O /bin/bash
 
-FROM busybox:1.35.0-glibc as busybox
+FROM amd64/busybox:1.30.0-glibc as busybox
 
-FROM gcr.io/distroless/java$JDK_VERSION-debian12
+FROM gcr.io/distroless/java:$JDK_VERSION
 LABEL maintainer="Apache Druid Developers <dev@druid.apache.org>"
 
 COPY --from=busybox /bin/busybox /busybox/busybox
 RUN ["/busybox/busybox", "--install", "/bin"]
 
 
-RUN addgroup -S -g 1000 druid \
- && adduser -S -u 1000 -D -H -h /opt/druid -s /bin/sh -g '' -G druid druid
+RUN addgroup -S -g 1006 druid \
+ && adduser -S -u 1006 -D -H -h /opt/druid -s /bin/sh -g '' -G druid druid
 
 
 COPY --from=bash-static /bin/bash /bin/bash
