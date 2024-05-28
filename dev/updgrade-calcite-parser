@@ -27,7 +27,10 @@
 # merges the two branches to obtain the upgrade state
 #
 
-[ $# -ne 1 ] && echo -e "updates base parser sources.\n usage: $0 <new_calcite_version>" && exit 1
+[ $# -ne 2 ] && echo -e "updates base parser sources.\n usage: $0 <old_calcite_version> <new_calcite_version>" && exit 1
+
+CALCITE_OLD=$1
+CALCITE_NEW=$2
 
 set -e
 set -x
@@ -41,7 +44,7 @@ git clone $PWD --reference $PWD --branch $BRANCH $REPO
 cd "$REPO"
 git checkout -b curr-changes
 
-mvn generate-sources -pl sql -Pskip-static-checks
+mvn -q generate-sources -pl sql -Dcalcite.version=$CALCITE_OLD -Pskip-static-checks
 cp -r sql/target/calcite-base-parser/codegen/./  sql/src/main/codegen/./
 git commit -m 'current reverse' -a
 git revert --no-edit HEAD
@@ -51,7 +54,7 @@ git branch base-changes curr-changes^
 git checkout base-changes
 git show|patch -p0 -R # undo temproarily to ensure maven runs
 
-mvn generate-sources -pl sql -Dcalcite.version=$CALCITE_VERSION -Pskip-static-checks
+mvn -q generate-sources -pl sql -Dcalcite.version=$CALCITE_NEW -Pskip-static-checks
 cp -r sql/target/calcite-base-parser/codegen/./  sql/src/main/codegen/./
 
 git commit --allow-empty -m base-changes -a
