@@ -134,17 +134,6 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     }
   }
 
-  @VisibleForTesting
-  SegmentLocalCacheManager(
-      SegmentLoaderConfig config,
-      @Nonnull StorageLocationSelectorStrategy strategy,
-      IndexIO indexIO,
-      @Json ObjectMapper mapper
-  )
-  {
-    this(config.toStorageLocations(), config, strategy, indexIO, mapper);
-  }
-
   /**
    * creates instance with default storage location selector strategy
    *
