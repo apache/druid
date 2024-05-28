@@ -1,0 +1,41 @@
+#!/bin/bash
+
+set -e
+set -x
+
+BRANCH=`git name-rev --name-only HEAD`
+
+REPO=.git/calcite-upgrade
+rm -rf "$REPO"
+git clone $PWD --reference $PWD --branch $BRANCH $REPO
+
+cd "$REPO"
+git checkout -b curr-changes
+
+mvn generate-sources -pl sql -Pskip-static-checks
+cp -r sql/target/calcite-base-parser/codegen/./  sql/src/main/codegen/./
+git commit -m 'current reverse' -a
+git revert --no-edit HEAD
+# HEAD is now at the same as before; but parent are the base calcite changes
+
+git branch base-changes curr-changes^
+git checkout base-changes
+git show|patch -p0 -R # undo temproarily to ensure maven runs
+
+mvn generate-sources -pl sql -Dcalcite.version=1.36.0 -Pskip-static-checks
+cp -r sql/target/calcite-base-parser/codegen/./  sql/src/main/codegen/./
+
+git commit --allow-empty -m base-changes -a
+git checkout -b new-state
+git merge --no-edit curr-changes
+
+
+#find sql/src/main/codegen -type f | cut -d/ -f 4- | xargs -IX -n1 cp -f sql/target/calcite-base-parser/X sql/src/main/X
+
+echo ok
+cd -
+
+git remote remove calcite-upgrade &>/dev/null || echo -n
+git remote add -f calcite-upgrade "$REPO"
+
+
