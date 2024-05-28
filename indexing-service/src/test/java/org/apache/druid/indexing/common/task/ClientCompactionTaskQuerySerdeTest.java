@@ -339,8 +339,9 @@ public class ClientCompactionTaskQuerySerdeTest
   {
     CompactionTask.Builder compactionTaskBuilder = new CompactionTask.Builder(
         "datasource",
+        new SegmentCacheManagerFactory(new TestUtils().getTestObjectMapper()),
         new RetryPolicyFactory(new RetryPolicyConfig()),
-        new NativeCompactionRunner(new SegmentCacheManagerFactory(new TestUtils().getTestObjectMapper())))
+        null)
         .inputSpec(new CompactionIntervalSpec(Intervals.of("2019/2020"), "testSha256OfSortedSegmentIds"), true)
         .tuningConfig(
             new ParallelIndexTuningConfig(

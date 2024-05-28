@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.common.task;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -48,6 +49,7 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
+import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
@@ -175,7 +177,8 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       @JsonProperty("granularitySpec") @Nullable final ClientCompactionTaskGranularitySpec granularitySpec,
       @JsonProperty("tuningConfig") @Nullable final TuningConfig tuningConfig,
       @JsonProperty("context") @Nullable final Map<String, Object> context,
-      @JsonProperty("compactionRunner") final CompactionRunner compactionRunner
+      @JsonProperty("compactionRunner") final CompactionRunner compactionRunner,
+      @JacksonInject SegmentCacheManagerFactory segmentCacheManagerFactory
   )
   {
     super(
@@ -194,7 +197,6 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
             new Property<>("segments", segments)
         )
     );
-    Preconditions.checkNotNull(compactionRunner, "compactionRunner cannot be null");
     if (ioConfig != null) {
       this.ioConfig = ioConfig;
     } else if (interval != null) {
@@ -228,7 +230,9 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     }
     this.tuningConfig = tuningConfig != null ? getTuningConfig(tuningConfig) : null;
     this.segmentProvider = new SegmentProvider(dataSource, this.ioConfig.getInputSpec());
-    this.compactionRunner = compactionRunner;
+    this.compactionRunner = compactionRunner == null
+                            ? new NativeCompactionRunner(segmentCacheManagerFactory)
+                            : compactionRunner;
     this.currentSubTaskHolder = compactionRunner.getCurrentSubTaskHolder();
 
     // Do not load any lookups in sub-tasks launched by compaction task, unless transformSpec is present.
@@ -1028,6 +1032,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
   public static class Builder
   {
     private final String dataSource;
+    private final SegmentCacheManagerFactory segmentCacheManagerFactory;
     private final RetryPolicyFactory retryPolicyFactory;
 
     private CompactionIOConfig ioConfig;
@@ -1049,11 +1054,13 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
 
     public Builder(
         String dataSource,
+        SegmentCacheManagerFactory segmentCacheManagerFactory,
         RetryPolicyFactory retryPolicyFactory,
         CompactionRunner compactionRunner
     )
     {
       this.dataSource = dataSource;
+      this.segmentCacheManagerFactory =  segmentCacheManagerFactory;
       this.retryPolicyFactory = retryPolicyFactory;
       this.compactionRunner = compactionRunner;
     }
@@ -1151,7 +1158,8 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
           granularitySpec,
           tuningConfig,
           context,
-          compactionRunner
+          compactionRunner,
+          segmentCacheManagerFactory
       );
     }
   }

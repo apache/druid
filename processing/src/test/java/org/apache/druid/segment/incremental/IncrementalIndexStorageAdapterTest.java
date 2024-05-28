@@ -165,10 +165,10 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
 
       Assert.assertEquals(2, results.size());
 
-      ResultRow row = results.get(0);
+      ResultRow row = results.get(1);
       Assert.assertArrayEquals(new Object[]{NullHandling.defaultStringValue(), "bo", 1L}, row.getArray());
 
-      row = results.get(1);
+      row = results.get(0);
       Assert.assertArrayEquals(new Object[]{"hi", NullHandling.defaultStringValue(), 1L}, row.getArray());
     }
   }
