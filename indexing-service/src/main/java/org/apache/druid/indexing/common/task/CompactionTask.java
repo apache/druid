@@ -233,7 +233,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     this.compactionRunner = compactionRunner == null
                             ? new NativeCompactionRunner(segmentCacheManagerFactory)
                             : compactionRunner;
-    this.currentSubTaskHolder = compactionRunner.getCurrentSubTaskHolder();
+    this.currentSubTaskHolder = this.compactionRunner.getCurrentSubTaskHolder();
 
     // Do not load any lookups in sub-tasks launched by compaction task, unless transformSpec is present.
     // If transformSpec is present, we will not modify the context so that the sub-tasks can make the
