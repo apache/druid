@@ -155,7 +155,7 @@ public class DataSegmentTest
     Assert.assertEquals(ImmutableMap.of("type", "numbered", "partitionNum", 3, "partitions", 0), objectMap.get("shardSpec"));
     Assert.assertEquals(TEST_VERSION, objectMap.get("binaryVersion"));
     Assert.assertEquals(1, objectMap.get("size"));
-    Assert.assertEquals(7, ((Map) objectMap.get("lastCompactionState")).size());
+    Assert.assertEquals(8, ((Map) objectMap.get("lastCompactionState")).size());
 
     DataSegment deserializedSegment = MAPPER.readValue(MAPPER.writeValueAsString(segment), DataSegment.class);
 

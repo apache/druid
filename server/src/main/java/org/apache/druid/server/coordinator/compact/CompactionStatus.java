@@ -266,7 +266,8 @@ public class CompactionStatus
     private CompactionStatus rollupIsUpToDate()
     {
       // MSQ considers a query as rollup only if finalizeAggregations=false. Compaction can have that set to true.
-      if (configuredGranularitySpec == null || (configuredGranularitySpec.isRollup()
+      if (configuredGranularitySpec == null || (configuredGranularitySpec.isRollup() != null
+                                                && configuredGranularitySpec.isRollup()
                                                 && lastCompactionState.getEngine() == CompactionEngine.MSQ)) {
         return COMPLETE;
       } else {
