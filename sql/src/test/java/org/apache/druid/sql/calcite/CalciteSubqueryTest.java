@@ -29,7 +29,6 @@ import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.JoinDataSource;
-import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.ResourceLimitExceededException;
@@ -1071,91 +1070,50 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
     );
   }
 
-  public void testQueryA(
-      final String sql,
-      final List<Query<?>> expectedQueries,
-      final List<Object[]> expectedResults
-  )
-  {
-    testBuilder()
-        .sql(sql)
-        .expectedQueries(expectedQueries)
-        .expectedResults(expectedResults)
-        .run();
-  }
-
-
   @MethodSource("constructorFeeder")
   @ParameterizedTest(name = "{0}")
   public void testSingleValueFloatAgg(String testName, Map<String, Object> queryContext)
   {
     cannotVectorize();
-    testQueryA(
-        "SELECT count(*) FROM foo where m1 <= (select min(m1) + 4 from foo)",
-        ImmutableList.of(
-            Druids.newTimeseriesQueryBuilder()
-                  .dataSource(join(
-                      new TableDataSource(CalciteTests.DATASOURCE1),
-//                      new QueryDataSource(GroupByQuery.builder()
-//                                                      .setDataSource(
+    testBuilder()
+        .sql("SELECT count(*) FROM foo where m1 <= (select min(m1) + 4 from foo)")
+        .expectedQueries(
+            ImmutableList.of(
+                Druids.newTimeseriesQueryBuilder()
+                    .dataSource(
+                        join(
+                            new TableDataSource(CalciteTests.DATASOURCE1),
+                            new QueryDataSource(
+                                Druids.newTimeseriesQueryBuilder()
+                                    .dataSource(CalciteTests.DATASOURCE1)
+                                    .intervals(querySegmentSpec(Filtration.eternity()))
+                                    .granularity(Granularities.ALL)
+                                    .aggregators(new FloatMinAggregatorFactory("a0", "m1"))
+                                    .postAggregators(
+                                        expressionPostAgg("p0", "(\"a0\" + 4)", ColumnType.FLOAT)
+                                    )
 
-                                                          new QueryDataSource(
-                                                          Druids.newTimeseriesQueryBuilder()
-                                                                .dataSource(CalciteTests.DATASOURCE1)
-                                                                .intervals(querySegmentSpec(Filtration.eternity()))
-                                                                .granularity(Granularities.ALL)
-                                                                .aggregators(new FloatMinAggregatorFactory("a0", "m1"))
-                                                                .postAggregators(
-                                                                    expressionPostAgg("p0", "(\"a0\" + 4)", ColumnType.FLOAT)
-
-//                                                                  .setVirtualColumns(expressionVirtualColumn(
-//                                                                  "v0",
-//                                                                  "(\"a0\" + 4)",
-//                                                                  ColumnType.FLOAT
-//                                                              )
-
-                                                                    )
-
-                                                                .build()
-                                                      )
-//                                                          )
-//                                                      .setInterval(querySegmentSpec(Filtration.eternity()))
-//                                                      .setGranularity(Granularities.ALL)
-//                                                      .setVirtualColumns(expressionVirtualColumn(
-//                                                                             "v0",
-//                                                                             "(\"a0\" + 4)",
-//                                                                             ColumnType.FLOAT
-//                                                                         )
-//                                                      )
-//                                                      .setAggregatorSpecs(
-//                                                          aggregators(
-//                                                              new SingleValueAggregatorFactory(
-//                                                                  "_a0",
-//                                                                  "v0",
-//                                                                  ColumnType.FLOAT
-//                                                              )
-//                                                          )
-//                                                      )
-//                                                      .setLimitSpec(NoopLimitSpec.instance())
-//                                                      .setContext(QUERY_CONTEXT_DEFAULT)
-//                                                      .build()
-//                      )
-                      ,
-                      "j0.",
-                      "1",
-                      NullHandling.replaceWithDefault() ? JoinType.LEFT : JoinType.INNER
-                  ))
-                  .intervals(querySegmentSpec(Filtration.eternity()))
-                  .granularity(Granularities.ALL)
-                  .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .filters(expressionFilter("(\"m1\" <= \"j0._p0\")"))
-                  .context(QUERY_CONTEXT_DEFAULT)
-                  .build()
-        ),
-        ImmutableList.of(
-            new Object[]{5L}
+                                    .build()
+                            ),
+                            "j0.",
+                            "1",
+                            NullHandling.replaceWithDefault() ? JoinType.LEFT : JoinType.INNER
+                        )
+                    )
+                    .intervals(querySegmentSpec(Filtration.eternity()))
+                    .granularity(Granularities.ALL)
+                    .aggregators(aggregators(new CountAggregatorFactory("a0")))
+                    .filters(expressionFilter("(\"m1\" <= \"j0.p0\")"))
+                    .context(QUERY_CONTEXT_DEFAULT)
+                    .build()
+            )
         )
-    );
+        .expectedResults(
+            ImmutableList.of(
+                new Object[] {5L}
+            )
+        )
+        .run();
   }
 
   @MethodSource("constructorFeeder")
