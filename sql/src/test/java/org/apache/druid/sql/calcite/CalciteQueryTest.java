@@ -5075,7 +5075,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
               .granularity(Granularities.ALL)
               .context(QUERY_CONTEXT_DEFAULT);
     if (NullHandling.sqlCompatible()) {
-                      builder = builder.virtualColumns(
+      builder = builder.virtualColumns(
                           expressionVirtualColumn("v0", "substring(\"dim1\", 0, 1)", ColumnType.STRING),
                           expressionVirtualColumn(
                               "v1",
