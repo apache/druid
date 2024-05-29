@@ -23,21 +23,24 @@ description: How to migrate from legacy features to get the most from Druid upda
   ~ under the License.
   -->
 
-When we introduce new features and behaviors into Apache Druid, we make every effort to avoid breaking existing. However, sometimes there are either bugs or performance limitations with the old behaviors that are not possible to fix in a backward-compatible way. In these cases, we must introduce breaking changes for the future maintainability of Druid.
+In general, when we introuce new features and behaviors into Apache Druid, we make every effort to avoid breaking existing features when introducing new behaviors. However, sometimes there are either bugs or performance limitations with the old behaviors that are not possible to fix in a backward-compatible way. In these cases, we must introduce breaking changes for the future maintainability of Druid. 
 
-The guides in this section outline breaking changes introduced in Druid 25 and later. Each guide provides instructions to migrate from a feature to a comparable new feature that is better supported by the Druid community.
+The guides in this section outline breaking changes introduced in Druid 25 and later. Each guide provides instructions to migrate to new features.
+
+<!--
 
 ## Migrate to arrays from multi-value dimensions
 
-Druid now supports SQL-compliant array types. Whenever possible, you should use the array type over multi-value dimensions. See <!--[]()-->.
+Druid now supports SQL-compliant array types. Whenever possible, you should use the array type over multi-value dimensions. See []()>.
 
 ## Migrate to `maxSubqueryBytes` from `maxSubqueryRows`
 
-`maxSubqueryBytes` and `maxSubqueryRows` are guardrails to limit the amount of subquery data stored in the Java heap. `maxSubqueryBytes` is a better alternative to maxSubqueryRows because row-based limits  ignore the size of the individual rows. The values for `maxSubqueryRows` also doesn't take into account the size of the cluster, which is available with the `maxSubqueryBytes` automatic configuration. See <!--[]()-->.
+`maxSubqueryBytes` and `maxSubqueryRows` are guardrails to limit the amount of subquery data stored in the Java heap. `maxSubqueryBytes` is a better alternative to maxSubqueryRows because row-based limits  ignore the size of the individual rows. The values for `maxSubqueryRows` also doesn't take into account the size of the cluster, which is available with the `maxSubqueryBytes` automatic configuration. See []().
 
 ## Migrate to front coded dictionary encoding
 
-Druid encodes string columns into dictionaries for better compression. Front-coded dictionary encoding reduces storage and improves performance by optimizing for strings that share similar beginning substrings. See [Migration guide: front coded dictionaries](./migr-front-coded-dict).
+Druid encodes string columns into dictionaries for better compression. Front-coded dictionary encoding reduces storage and improves performance by optimizing for strings that share similar beginning substrings. See See []().
+-->
 
 
 
