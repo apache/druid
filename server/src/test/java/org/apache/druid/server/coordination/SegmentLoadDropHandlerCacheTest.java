@@ -66,7 +66,7 @@ public class SegmentLoadDropHandlerCacheTest
   private ObjectMapper objectMapper;
 
   @Before
-  public void setup() throws IOException
+  public void setup()
   {
     loaderConfig = new SegmentLoaderConfig()
     {

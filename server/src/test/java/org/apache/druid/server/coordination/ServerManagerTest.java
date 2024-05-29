@@ -135,7 +135,7 @@ public class ServerManagerTest
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   @Before
-  public void setUp() throws IOException
+  public void setUp()
   {
     final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig()
     {
