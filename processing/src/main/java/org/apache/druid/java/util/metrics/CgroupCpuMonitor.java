@@ -57,9 +57,12 @@ public class CgroupCpuMonitor extends FeedDefiningMonitor
     this.dimensions = dimensions;
     try {
       Process p = new ProcessBuilder("getconf", "CLK_TCK").start();
-      BufferedReader in = new BufferedReader(new InputStreamReader(p.getInputStream(), StandardCharsets.UTF_8));
-      String line = in.readLine().trim();
-      userHz = Long.valueOf(line);
+      try (BufferedReader in = new BufferedReader(new InputStreamReader(p.getInputStream(), StandardCharsets.UTF_8))) {
+        String line = in.readLine();
+        if (line != null) {
+          userHz = Long.valueOf(line.trim());
+        }
+      }
     }
     catch (IOException | NumberFormatException e) {
       LOG.warn(e, "Error getting the USER_HZ value");
