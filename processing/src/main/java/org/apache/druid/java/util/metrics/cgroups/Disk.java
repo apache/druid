@@ -19,7 +19,6 @@
 
 package org.apache.druid.java.util.metrics.cgroups;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.primitives.Longs;
 import org.apache.druid.java.util.common.logger.Logger;
 
@@ -130,16 +129,6 @@ public class Disk
           diskName = majorMinor;
         }
       }
-    }
-
-    @VisibleForTesting
-    public Metrics(String diskName, long readCount, long writeCount, long readBytes, long writeBytes)
-    {
-      this.diskName = diskName;
-      this.readCount = readCount;
-      this.writeCount = writeCount;
-      this.readBytes = readBytes;
-      this.writeBytes = writeBytes;
     }
 
     public long getReadCount()
