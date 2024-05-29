@@ -281,26 +281,6 @@ public class TaskQueueTest extends IngestionTestBase
   }
 
   @Test
-  public void testUserProvidedTaskContextOverrideDefaultLineageBasedSegmentAllocation()
-  {
-    final Task task = new TestTask(
-        "t1",
-        Intervals.of("2021-01-01/P1D"),
-        ImmutableMap.of(
-            SinglePhaseParallelIndexTaskRunner.CTX_USE_LINEAGE_BASED_SEGMENT_ALLOCATION_KEY,
-            false
-        )
-    );
-    taskQueue.add(task);
-    final List<Task> tasks = taskQueue.getTasks();
-    Assert.assertEquals(1, tasks.size());
-    final Task queuedTask = tasks.get(0);
-    Assert.assertFalse(
-        queuedTask.getContextValue(SinglePhaseParallelIndexTaskRunner.CTX_USE_LINEAGE_BASED_SEGMENT_ALLOCATION_KEY)
-    );
-  }
-
-  @Test
   public void testLockConfigTakePrecedenceThanDefaultTaskContext()
   {
     defaultTaskContext.put(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, false);

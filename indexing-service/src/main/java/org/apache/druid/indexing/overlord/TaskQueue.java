@@ -516,14 +516,13 @@ public class TaskQueue
     catch (JsonProcessingException ignored) {
     }
     if (payload != null && payload.length() > config.getMaxTaskPayloadSize()) {
-      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
-          .ofCategory(DruidException.Category.INVALID_INPUT)
-          .build(
-              "Task payload size was [%d] but max size is [%d]. " +
-                  "Reduce the size of the task or increase 'druid.indexer.queue.maxTaskPayloadSize'.",
-              payload.length(),
-              config.getMaxTaskPayloadSize()
-          );
+      log.warn("Received a task payload > [%d] with id [%s]. and datasource [%s]" +
+              " There may be downstream issues caused by managing this large payload." +
+              "Increase druid.indexer.queue.maxTaskPayloadSize to ignore this warning.",
+          config.getMaxTaskPayloadSize(),
+          task.getId(),
+          task.getDataSource()
+      );
     }
 
     // Set forceTimeChunkLock before adding task spec to taskStorage, so that we can see always consistent task spec.
