@@ -94,6 +94,7 @@ import org.junit.Test;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.net.URI;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -119,7 +120,7 @@ public class TaskQueueTest extends IngestionTestBase
 
     taskQueue = new TaskQueue(
         new TaskLockConfig(),
-        new TaskQueueConfig(3, null, null, null, null),
+        new TaskQueueConfig(3, null, null, null, null, null),
         new DefaultTaskConfig()
         {
           @Override
@@ -211,6 +212,40 @@ public class TaskQueueTest extends IngestionTestBase
     Assert.assertThrows(
         DruidException.class,
         () -> taskQueue.add(new TestTask("tx", Intervals.of("2021-01/P1M")))
+    );
+  }
+
+  @Test
+  public void testAddThrowsExceptionWhenPayloadIsTooLarge()
+  {
+    // 1 MB is not too large by default
+    char[] context = new char[1024 * 1024];
+    Arrays.fill(context, 'a');
+    taskQueue.add(
+        new TestTask(
+            "tx",
+            Intervals.of("2021-01/P1M"),
+            ImmutableMap.of(
+                "contextKey", new String(context)
+            )
+        )
+    );
+
+    // 100 MB is too large by default
+    char[] contextLarge = new char[100 * 1024 * 1024];
+    Arrays.fill(contextLarge, 'a');
+
+    Assert.assertThrows(
+        DruidException.class,
+        () -> taskQueue.add(
+            new TestTask(
+                "tx2",
+                Intervals.of("2021-01/P1M"),
+                ImmutableMap.of(
+                    "contextKey", new String(contextLarge)
+                )
+          )
+        )
     );
   }
 
@@ -336,7 +371,7 @@ public class TaskQueueTest extends IngestionTestBase
     EasyMock.replay(workerHolder);
     final TaskQueue taskQueue = new TaskQueue(
         new TaskLockConfig(),
-        new TaskQueueConfig(null, null, null, null, null),
+        new TaskQueueConfig(null, null, null, null, null, null),
         new DefaultTaskConfig(),
         getTaskStorage(),
         taskRunner,
@@ -424,7 +459,7 @@ public class TaskQueueTest extends IngestionTestBase
 
     final TaskQueue taskQueue = new TaskQueue(
         new TaskLockConfig(),
-        new TaskQueueConfig(null, null, null, null, null),
+        new TaskQueueConfig(null, null, null, null, null, null),
         new DefaultTaskConfig(),
         taskStorage,
         taskRunner,
@@ -469,7 +504,7 @@ public class TaskQueueTest extends IngestionTestBase
 
     final TaskQueue taskQueue = new TaskQueue(
         new TaskLockConfig(),
-        new TaskQueueConfig(null, null, null, null, null),
+        new TaskQueueConfig(null, null, null, null, null, null),
         new DefaultTaskConfig(),
         taskStorage,
         EasyMock.createMock(HttpRemoteTaskRunner.class),
