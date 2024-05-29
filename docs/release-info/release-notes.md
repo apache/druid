@@ -76,15 +76,15 @@ Additionally, it helps in reducing load on the metadata store.
 Druid now supports grouping on complex columns and nested arrays.
 This means that both native queries and the MSQ task engine can group on complex columns and nested arrays while returning results.
 
-Additionally, the MSQ task engine can rollup and sort on the supported complex columns, such as JSON columns, during ingestion.
+Additionally, the MSQ task engine can roll up and sort on the supported complex columns, such as JSON columns, during ingestion.
 
 [#16068](https://github.com/apache/druid/pull/16068)
 [#16322](https://github.com/apache/druid/pull/16322)
 
 ### Improved groupBy queries
 
-Before realtime segments are pushed to deep storage, they consist of spill files.
-Segment metrics such as `query/segment/time` now report on per spill file for a realtime segment, rather than for the entire segment.
+Before Druid pushes realtime segments to deep storage, the segments consist of spill files.
+Segment metrics such as `query/segment/time` now report on each spill file for a realtime segment, rather than for the entire segment.
 This change eliminates the need to materialize results on the heap, which improves the performance of groupBy queries.
 
 [#15757](https://github.com/apache/druid/pull/15757)
@@ -228,7 +228,7 @@ You can now ingest data from multiple storage accounts using the new `azureStora
 
 #### Added a new config to `AzureAccountConfig`
 
-The new config `storageAccountEndpointSuffix` lets you configure the endpoint suffix to use so that you can override the default and connect to other endpoints, such as Azure Government.
+The new config `storageAccountEndpointSuffix` lets you configure the endpoint suffix so that you can override the default and connect to other endpoints, such as Azure Government.
 
 [#16016](https://github.com/apache/druid/pull/16016)
 
