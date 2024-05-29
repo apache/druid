@@ -486,7 +486,6 @@ The `objects` property is:
 |bucket|Name of the Azure Blob Storage or Azure Data Lake container|None|yes|
 |path|The path where data is located.|None|yes|
 
-</details>
 
 ## HDFS input source
 
