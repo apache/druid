@@ -20,7 +20,6 @@
 package org.apache.druid.segment.loading;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import org.apache.druid.utils.JvmUtils;
 
@@ -141,16 +140,6 @@ public class SegmentLoaderConfig
     retVal.locations = Lists.newArrayList(locations);
     retVal.deleteOnRemove = this.deleteOnRemove;
     retVal.infoDir = this.infoDir;
-    return retVal;
-  }
-
-  @VisibleForTesting
-  public SegmentLoaderConfig withInfoDir(File infoDir)
-  {
-    SegmentLoaderConfig retVal = new SegmentLoaderConfig();
-    retVal.locations = this.locations;
-    retVal.deleteOnRemove = this.deleteOnRemove;
-    retVal.infoDir = infoDir;
     return retVal;
   }
 

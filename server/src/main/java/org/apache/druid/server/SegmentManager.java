@@ -241,7 +241,8 @@ public class SegmentManager
   }
 
   /**
-   * Bootstrap load the supplied segment. If the segment was already loaded previously, this method does nothing.
+   * Bootstrap load the supplied segment. If the segment was already loaded previously, this method does not reload
+   * the segment.
    *
    * @param dataSegment segment to bootstrap
    * @param loadFailed callback to execute when segment lazy load fails. This applies only
@@ -273,7 +274,7 @@ public class SegmentManager
   }
 
   /**
-   * Load the supplied segment. If the segment was already loaded previously, this method does nothing.
+   * Load the supplied segment. If the segment was already loaded previously, this method does not reload the segment.
    * Unlike {@link #loadSegmentOnBootstrap(DataSegment, SegmentLazyLoadFailCallback)} this method doesn't accept a lazy
    * load fail callback because it doesn't support lazy loading.
    *
@@ -304,7 +305,7 @@ public class SegmentManager
   private void loadSegment(
       final DataSegment dataSegment,
       final ReferenceCountingSegment segment,
-      final Consumer<DataSegment> cacheLoadFunction
+      final Consumer<DataSegment> pageCacheLoadFunction
   ) throws IOException
   {
     final SettableSupplier<Boolean> resultSupplier = new SettableSupplier<>();
@@ -345,7 +346,7 @@ public class SegmentManager
             final long numOfRows = (dataSegment.isTombstone() || storageAdapter == null) ? 0 : storageAdapter.getNumRows();
             dataSourceState.addSegment(dataSegment, numOfRows);
 
-            cacheLoadFunction.accept(dataSegment);
+            pageCacheLoadFunction.accept(dataSegment);
             resultSupplier.set(true);
           }
 

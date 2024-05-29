@@ -35,8 +35,8 @@ import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.loading.SegmentLocalCacheManager;
 import org.apache.druid.segment.loading.StorageLocation;
+import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.server.SegmentManager.DataSourceState;
-import org.apache.druid.server.coordination.TestStorageLocation;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.NumberedOverwriteShardSpec;
@@ -49,6 +49,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -78,23 +79,35 @@ public class SegmentManagerTest
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
-  private static final long MAX_SIZE = 1000L;
-
   @Before
   public void setup() throws IOException
   {
-    final TestStorageLocation storageLoc = new TestStorageLocation(temporaryFolder);
-    final SegmentLoaderConfig config = new SegmentLoaderConfig()
-        .withLocations(Collections.singletonList(storageLoc.toStorageLocationConfig(MAX_SIZE, null)));
+    final File segmentCacheDir = temporaryFolder.newFolder();
+    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig()
+    {
+      @Override
+      public File getInfoDir()
+      {
+        return segmentCacheDir;
+      }
+
+      @Override
+      public List<StorageLocationConfig> getLocations()
+      {
+        return Collections.singletonList(
+            new StorageLocationConfig(segmentCacheDir, null, null)
+        );
+      }
+    };
 
     final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
     objectMapper.registerSubtypes(TestSegmentUtils.TestLoadSpec.class);
     objectMapper.registerSubtypes(TestSegmentUtils.TestSegmentizerFactory.class);
 
-    final List<StorageLocation> storageLocations = config.toStorageLocations();
+    final List<StorageLocation> storageLocations = loaderConfig.toStorageLocations();
     final SegmentLocalCacheManager cacheManager = new SegmentLocalCacheManager(
         storageLocations,
-        config,
+        loaderConfig,
         new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
         TestIndex.INDEX_IO,
         objectMapper

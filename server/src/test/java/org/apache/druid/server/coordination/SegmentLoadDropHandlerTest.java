@@ -73,10 +73,6 @@ public class SegmentLoadDropHandlerTest
   private SegmentLoaderConfig segmentLoaderConfig;
   private ScheduledExecutorFactory scheduledExecutorFactory;
 
-  private File infoDir;
-  private List<StorageLocationConfig> locations;
-  private TestStorageLocation testStorageLocation;
-  
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
@@ -86,11 +82,7 @@ public class SegmentLoadDropHandlerTest
   @Before
   public void setUp() throws IOException
   {
-    testStorageLocation = new TestStorageLocation(temporaryFolder);
-    infoDir = testStorageLocation.getInfoDir();
-    locations = Collections.singletonList(
-        testStorageLocation.toStorageLocationConfig(100000L, null)
-    );
+    final File segmentCacheDir = temporaryFolder.newFolder();
 
     scheduledRunnable = new ArrayList<>();
     segmentAnnouncer = new TestDataSegmentAnnouncer();
@@ -100,7 +92,7 @@ public class SegmentLoadDropHandlerTest
       @Override
       public File getInfoDir()
       {
-        return testStorageLocation.getInfoDir();
+        return segmentCacheDir;
       }
 
       @Override
@@ -118,7 +110,9 @@ public class SegmentLoadDropHandlerTest
       @Override
       public List<StorageLocationConfig> getLocations()
       {
-        return locations;
+        return Collections.singletonList(
+            new StorageLocationConfig(segmentCacheDir, null, null)
+        );
       }
 
       @Override
@@ -269,11 +263,6 @@ public class SegmentLoadDropHandlerTest
       segments.add(makeSegment("test_two" + i, "1", Intervals.of("P1d/2011-04-02")));
     }
 
-    for (DataSegment segment : segments) {
-      testStorageLocation.writeSegmentInfoToCache(segment);
-    }
-    testStorageLocation.checkInfoCache(segments);
-
     final TestSegmentCacheManager cacheManager = new TestSegmentCacheManager(segments);
     final SegmentManager segmentManager = new SegmentManager(cacheManager);
     final SegmentLoadDropHandler handler = initSegmentLoadDropHandler(segmentManager);
@@ -300,12 +289,6 @@ public class SegmentLoadDropHandlerTest
 
     handler.stop();
 
-    for (DataSegment segment : segments) {
-      testStorageLocation.deleteSegmentInfoFromCache(segment);
-    }
-
-    Assert.assertEquals(0, infoDir.listFiles().length);
-    Assert.assertTrue(infoDir.delete());
     Assert.assertEquals(0, serverAnnouncer.observedCount.get());
   }
 
@@ -320,11 +303,6 @@ public class SegmentLoadDropHandlerTest
       segments.add(makeSegment("test_two" + i, "1", Intervals.of("P1d/2011-04-01")));
       segments.add(makeSegment("test_two" + i, "1", Intervals.of("P1d/2011-04-02")));
     }
-
-    for (DataSegment segment : segments) {
-      testStorageLocation.writeSegmentInfoToCache(segment);
-    }
-    testStorageLocation.checkInfoCache(segments);
 
     final TestSegmentCacheManager cacheManager = new TestSegmentCacheManager(segments);
     final SegmentManager segmentManager = new SegmentManager(cacheManager);
@@ -352,12 +330,6 @@ public class SegmentLoadDropHandlerTest
 
     handler.stop();
 
-    for (DataSegment segment : segments) {
-      testStorageLocation.deleteSegmentInfoFromCache(segment);
-    }
-
-    Assert.assertEquals(0, infoDir.listFiles().length);
-    Assert.assertTrue(infoDir.delete());
     Assert.assertEquals(0, serverAnnouncer.observedCount.get());
   }
 
@@ -455,12 +427,13 @@ public class SegmentLoadDropHandlerTest
     Mockito.doNothing().when(segmentManager).loadSegment(ArgumentMatchers.any());
     Mockito.doNothing().when(segmentManager).dropSegment(ArgumentMatchers.any());
 
+    final File storageDir = temporaryFolder.newFolder();
     final SegmentLoaderConfig noAnnouncerSegmentLoaderConfig = new SegmentLoaderConfig()
     {
       @Override
       public File getInfoDir()
       {
-        return testStorageLocation.getInfoDir();
+        return storageDir;
       }
 
       @Override
@@ -478,7 +451,9 @@ public class SegmentLoadDropHandlerTest
       @Override
       public List<StorageLocationConfig> getLocations()
       {
-        return locations;
+        return Collections.singletonList(
+            new StorageLocationConfig(storageDir, null, null)
+        );
       }
 
       @Override

@@ -114,7 +114,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
 
     log.info("Using storage location strategy[%s].", this.strategy.getClass().getSimpleName());
     log.info(
-        "Size of thread pools to load segments into page cache - on bootstrap: [%d], on download: [%d].",
+        "Number of threads to load segments into page cache - on bootstrap: [%d], on download: [%d].",
         config.getNumThreadsToLoadSegmentsIntoPageCacheOnBootstrap(),
         config.getNumThreadsToLoadSegmentsIntoPageCacheOnDownload()
     );
@@ -122,7 +122,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     if (config.getNumThreadsToLoadSegmentsIntoPageCacheOnBootstrap() > 0) {
       loadOnBootstrapExec = Execs.multiThreaded(
           config.getNumThreadsToLoadSegmentsIntoPageCacheOnBootstrap(),
-          "Load-Segments-Into-Page-Cache-On-Bootstrap-%s"
+          "Load-SegmentsIntoPageCacheOnBootstrap-%s"
       );
     }
 
@@ -151,13 +151,13 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     final File baseDir = getInfoDir();
     FileUtils.mkdirp(baseDir);
 
-    List<DataSegment> cachedSegments = new ArrayList<>();
-    File[] segmentsToLoad = baseDir.listFiles();
+    final List<DataSegment> cachedSegments = new ArrayList<>();
+    final File[] segmentsToLoad = baseDir.listFiles();
 
     int ignored = 0;
 
     for (int i = 0; i < segmentsToLoad.length; i++) {
-      File file = segmentsToLoad[i];
+      final File file = segmentsToLoad[i];
       log.info("Loading segment cache file [%d/%d][%s].", i + 1, segmentsToLoad.length, file);
       try {
         final DataSegment segment = jsonMapper.readValue(file, DataSegment.class);
@@ -192,8 +192,6 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   public void storeInfoFile(DataSegment segment) throws IOException
   {
     final File infoDir = getInfoDir();
-    FileUtils.mkdirp(infoDir);
-
     final File segmentInfoCacheFile = new File(infoDir, segment.getId().toString());
     if (!segmentInfoCacheFile.exists()) {
       jsonMapper.writeValue(segmentInfoCacheFile, segment);
@@ -599,6 +597,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     if (loadOnBootstrapExec == null) {
       return;
     }
+
     loadOnBootstrapExec.submit(() -> loadSegmentIntoPageCacheInternal(segment));
   }
 

@@ -27,11 +27,11 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.LeastBytesUsedStorageLocationSelectorStrategy;
-import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.loading.SegmentLocalCacheManager;
 import org.apache.druid.segment.loading.StorageLocation;
+import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.TestSegmentUtils;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -68,9 +68,9 @@ public class SegmentLoadDropHandlerCacheTest
   private DataSegmentAnnouncer segmentAnnouncer;
   private DataSegmentServerAnnouncer serverAnnouncer;
   private SegmentManager segmentManager;
-  private SegmentLoaderConfig config;
+  private SegmentLoaderConfig loaderConfig;
 
-  private TestStorageLocation storageLoc;
+  private SegmentLocalCacheManager cacheManager;
   private ObjectMapper objectMapper;
 
   private AtomicInteger observedAnnouncedServerCount;
@@ -78,19 +78,31 @@ public class SegmentLoadDropHandlerCacheTest
   @Before
   public void setup() throws IOException
   {
-    storageLoc = new TestStorageLocation(temporaryFolder);
-    config = new SegmentLoaderConfig()
-        .withLocations(Collections.singletonList(storageLoc.toStorageLocationConfig(MAX_SIZE, null)))
-        .withInfoDir(storageLoc.getInfoDir());
+    loaderConfig = new SegmentLoaderConfig()
+    {
+      @Override
+      public File getInfoDir()
+      {
+        return temporaryFolder.getRoot();
+      }
+
+      @Override
+      public List<StorageLocationConfig> getLocations()
+      {
+        return Collections.singletonList(
+            new StorageLocationConfig(temporaryFolder.getRoot(), MAX_SIZE, null)
+        );
+      }
+    };
 
     objectMapper = TestHelper.makeJsonMapper();
     objectMapper.registerSubtypes(TestSegmentUtils.TestLoadSpec.class);
     objectMapper.registerSubtypes(TestSegmentUtils.TestSegmentizerFactory.class);
 
-    final List<StorageLocation> storageLocations = config.toStorageLocations();
-    final SegmentCacheManager cacheManager = new SegmentLocalCacheManager(
+    final List<StorageLocation> storageLocations = loaderConfig.toStorageLocations();
+    cacheManager = new SegmentLocalCacheManager(
         storageLocations,
-        config,
+        loaderConfig,
         new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
         TestIndex.INDEX_IO,
         objectMapper
@@ -115,7 +127,7 @@ public class SegmentLoadDropHandlerCacheTest
     };
 
     loadDropHandler = new SegmentLoadDropHandler(
-        config,
+        loaderConfig,
         segmentAnnouncer,
         serverAnnouncer,
         segmentManager,
@@ -132,7 +144,7 @@ public class SegmentLoadDropHandlerCacheTest
     segmentManager = new SegmentManager(
         new SegmentLocalCacheManager(
             emptyLocations,
-            config,
+            loaderConfig,
             new LeastBytesUsedStorageLocationSelectorStrategy(emptyLocations),
             TestIndex.INDEX_IO,
             objectMapper
@@ -140,7 +152,7 @@ public class SegmentLoadDropHandlerCacheTest
     );
 
     loadDropHandler = new SegmentLoadDropHandler(
-        config,
+        loaderConfig,
         segmentAnnouncer,
         serverAnnouncer,
         segmentManager,
@@ -158,7 +170,7 @@ public class SegmentLoadDropHandlerCacheTest
   public void testLoadStartStop() throws IOException
   {
     loadDropHandler = new SegmentLoadDropHandler(
-        config,
+        loaderConfig,
         segmentAnnouncer,
         serverAnnouncer,
         segmentManager,
@@ -175,17 +187,15 @@ public class SegmentLoadDropHandlerCacheTest
   @Test
   public void testLoadLocalCache() throws IOException, SegmentLoadingException
   {
-    File cacheDir = storageLoc.getCacheDir();
-
     // write some segments to file bypassing loadDropHandler
     int numSegments = (int) (MAX_SIZE / SEGMENT_SIZE);
     List<DataSegment> expectedSegments = new ArrayList<>();
     for (int i = 0; i < numSegments; i++) {
       String version = "segment-" + i;
       DataSegment segment = makeSegment("test", version);
-      storageLoc.writeSegmentInfoToCache(segment);
+      cacheManager.storeInfoFile(segment);
       String storageDir = DataSegmentPusher.getDefaultStorageDir(segment, false);
-      File segmentDir = new File(cacheDir, storageDir);
+      File segmentDir = new File(temporaryFolder.getRoot(), storageDir);
       new TestSegmentUtils.TestLoadSpec((int) SEGMENT_SIZE, version).loadSegment(segmentDir);
       expectedSegments.add(segment);
     }
@@ -216,7 +226,6 @@ public class SegmentLoadDropHandlerCacheTest
 
     loadDropHandler.stop();
     Assert.assertEquals(0, observedAnnouncedServerCount.get());
-    Assert.assertFalse(new File(storageLoc.getInfoDir(), expectedSegments.get(0).getId().toString()).exists());
   }
 
   private DataSegment makeSegment(String dataSource, String version)

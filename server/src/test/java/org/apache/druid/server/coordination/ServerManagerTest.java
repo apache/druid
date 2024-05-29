@@ -83,6 +83,7 @@ import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.loading.SegmentLocalCacheManager;
 import org.apache.druid.segment.loading.StorageLocation;
+import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.segment.loading.TombstoneSegmentizerFactory;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.TestSegmentUtils;
@@ -102,6 +103,7 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -135,13 +137,27 @@ public class ServerManagerTest
   @Before
   public void setUp() throws IOException
   {
-    final TestStorageLocation storageLoc = new TestStorageLocation(temporaryFolder);
-    final SegmentLoaderConfig config = new SegmentLoaderConfig()
-        .withLocations(Collections.singletonList(storageLoc.toStorageLocationConfig(1000L, null)));
-    final List<StorageLocation> storageLocations = config.toStorageLocations();
+    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig()
+    {
+      @Override
+      public File getInfoDir()
+      {
+        return temporaryFolder.getRoot();
+      }
+
+      @Override
+      public List<StorageLocationConfig> getLocations()
+      {
+        return Collections.singletonList(
+            new StorageLocationConfig(temporaryFolder.getRoot(), null, null)
+        );
+      }
+    };
+
+    final List<StorageLocation> storageLocations = loaderConfig.toStorageLocations();
     final SegmentLocalCacheManager localCacheManager = new SegmentLocalCacheManager(
         storageLocations,
-        config,
+        loaderConfig,
         new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
         TestIndex.INDEX_IO,
         TestHelper.makeJsonMapper()

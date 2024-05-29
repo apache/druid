@@ -103,6 +103,12 @@ public class SegmentManagerThreadSafetyTest
     final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig()
     {
       @Override
+      public File getInfoDir()
+      {
+        return segmentCacheDir;
+      }
+
+      @Override
       public List<StorageLocationConfig> getLocations()
       {
         return Collections.singletonList(
