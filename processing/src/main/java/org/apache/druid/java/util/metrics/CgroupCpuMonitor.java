@@ -30,6 +30,7 @@ import org.apache.druid.java.util.metrics.cgroups.ProcSelfCgroupDiscoverer;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Map;
 
@@ -56,7 +57,7 @@ public class CgroupCpuMonitor extends FeedDefiningMonitor
     this.dimensions = dimensions;
     try {
       Process p = new ProcessBuilder("getconf", "CLK_TCK").start();
-      BufferedReader in = new BufferedReader(new InputStreamReader(p.getInputStream()));
+      BufferedReader in = new BufferedReader(new InputStreamReader(p.getInputStream(), StandardCharsets.UTF_8));
       String line = in.readLine().trim();
       userHz = Long.valueOf(line);
     }
