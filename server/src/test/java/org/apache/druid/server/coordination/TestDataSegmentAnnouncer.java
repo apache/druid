@@ -39,13 +39,13 @@ public class TestDataSegmentAnnouncer extends NoopDataSegmentAnnouncer
   @Override
   public void announceSegment(DataSegment segment)
   {
-    this.observedSegments.add(segment);
+    observedSegments.add(segment);
   }
 
   @Override
   public void unannounceSegment(DataSegment segment)
   {
-    this.observedSegments.remove(segment);
+    observedSegments.remove(segment);
   }
 
   @Override

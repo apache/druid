@@ -241,8 +241,8 @@ public class SegmentManager
   }
 
   /**
-   * Bootstrap load the supplied segment. If the segment was already loaded previously, this method does not reload
-   * the segment.
+   * Load the supplied segment into page cache on bootstrap. If the segment is already loaded, this method does not
+   * reload the segment into the page cache.
    *
    * @param dataSegment segment to bootstrap
    * @param loadFailed callback to execute when segment lazy load fails. This applies only
@@ -274,9 +274,10 @@ public class SegmentManager
   }
 
   /**
-   * Load the supplied segment. If the segment was already loaded previously, this method does not reload the segment.
-   * Unlike {@link #loadSegmentOnBootstrap(DataSegment, SegmentLazyLoadFailCallback)} this method doesn't accept a lazy
-   * load fail callback because it doesn't support lazy loading.
+   * Load the supplied segment into page cache. If the segment is already loaded, this method does not reload the
+   * segment into the page cache. This method should be called for non-bootstrapping flows. Unlike
+   * {@link #loadSegmentOnBootstrap(DataSegment, SegmentLazyLoadFailCallback)}, this method doesn't accept a lazy load
+   * fail callback because the segment is loaded immediately.
    *
    * @param dataSegment segment to load
    *
@@ -290,7 +291,7 @@ public class SegmentManager
       segment = cacheManager.getSegment(dataSegment);
       if (segment == null) {
         throw new SegmentLoadingException(
-            "No segment adapter found for dataSegment[%s] with loadSpec[%s].",
+            "No segment adapter found for segment[%s] with loadSpec[%s].",
             dataSegment.getId(), dataSegment.getLoadSpec()
         );
       }

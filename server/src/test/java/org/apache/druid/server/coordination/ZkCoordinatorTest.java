@@ -38,9 +38,7 @@ import org.apache.zookeeper.CreateMode;
 import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
 
 import java.util.Arrays;
 import java.util.concurrent.CountDownLatch;
@@ -68,9 +66,6 @@ public class ZkCoordinatorTest extends CuratorTestBase
       return "/druid";
     }
   };
-
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   @Before
   public void setUp() throws Exception

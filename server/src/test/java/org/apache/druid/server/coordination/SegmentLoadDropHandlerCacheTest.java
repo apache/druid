@@ -47,7 +47,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Similar to {@link SegmentLoadDropHandlerTest}. This class includes tests that cover the
@@ -59,16 +58,12 @@ public class SegmentLoadDropHandlerCacheTest
   private static final long SEGMENT_SIZE = 100L;
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
-  private SegmentLoadDropHandler loadDropHandler;
   private TestDataSegmentAnnouncer segmentAnnouncer;
-  private DataSegmentServerAnnouncer serverAnnouncer;
+  private TestDataServerAnnouncer serverAnnouncer;
   private SegmentManager segmentManager;
   private SegmentLoaderConfig loaderConfig;
-
   private SegmentLocalCacheManager cacheManager;
   private ObjectMapper objectMapper;
-
-  private AtomicInteger observedAnnouncedServerCount;
 
   @Before
   public void setup() throws IOException
@@ -104,31 +99,7 @@ public class SegmentLoadDropHandlerCacheTest
     );
     segmentManager = new SegmentManager(cacheManager);
     segmentAnnouncer = new TestDataSegmentAnnouncer();
-
-    observedAnnouncedServerCount = new AtomicInteger(0);
-    serverAnnouncer = new DataSegmentServerAnnouncer()
-    {
-      @Override
-      public void announce()
-      {
-        observedAnnouncedServerCount.incrementAndGet();
-      }
-
-      @Override
-      public void unannounce()
-      {
-        observedAnnouncedServerCount.decrementAndGet();
-      }
-    };
-
-    loadDropHandler = new SegmentLoadDropHandler(
-        loaderConfig,
-        segmentAnnouncer,
-        serverAnnouncer,
-        segmentManager,
-        new ServerTypeConfig(ServerType.HISTORICAL)
-    );
-
+    serverAnnouncer = new TestDataServerAnnouncer();
     EmittingLogger.registerEmitter(new NoopServiceEmitter());
   }
 
@@ -146,7 +117,7 @@ public class SegmentLoadDropHandlerCacheTest
         )
     );
 
-    loadDropHandler = new SegmentLoadDropHandler(
+    final SegmentLoadDropHandler loadDropHandler = new SegmentLoadDropHandler(
         loaderConfig,
         segmentAnnouncer,
         serverAnnouncer,
@@ -155,16 +126,16 @@ public class SegmentLoadDropHandlerCacheTest
     );
 
     loadDropHandler.start();
-    Assert.assertEquals(0, observedAnnouncedServerCount.get());
+    Assert.assertEquals(0, serverAnnouncer.getObservedCount());
 
     loadDropHandler.stop();
-    Assert.assertEquals(0, observedAnnouncedServerCount.get());
+    Assert.assertEquals(0, serverAnnouncer.getObservedCount());
   }
 
   @Test
   public void testLoadStartStop() throws IOException
   {
-    loadDropHandler = new SegmentLoadDropHandler(
+    final SegmentLoadDropHandler loadDropHandler = new SegmentLoadDropHandler(
         loaderConfig,
         segmentAnnouncer,
         serverAnnouncer,
@@ -173,10 +144,10 @@ public class SegmentLoadDropHandlerCacheTest
     );
 
     loadDropHandler.start();
-    Assert.assertEquals(1, observedAnnouncedServerCount.get());
+    Assert.assertEquals(1, serverAnnouncer.getObservedCount());
 
     loadDropHandler.stop();
-    Assert.assertEquals(0, observedAnnouncedServerCount.get());
+    Assert.assertEquals(0, serverAnnouncer.getObservedCount());
   }
 
   @Test
@@ -187,7 +158,7 @@ public class SegmentLoadDropHandlerCacheTest
     List<DataSegment> expectedSegments = new ArrayList<>();
     for (int i = 0; i < numSegments; i++) {
       String version = "segment-" + i;
-      DataSegment segment = makeSegment("test", version);
+      DataSegment segment = TestSegmentUtils.makeSegment("test", version, SEGMENT_SIZE);
       cacheManager.storeInfoFile(segment);
       String storageDir = DataSegmentPusher.getDefaultStorageDir(segment, false);
       File segmentDir = new File(temporaryFolder.getRoot(), storageDir);
@@ -195,15 +166,23 @@ public class SegmentLoadDropHandlerCacheTest
       expectedSegments.add(segment);
     }
 
+    final SegmentLoadDropHandler loadDropHandler = new SegmentLoadDropHandler(
+        loaderConfig,
+        segmentAnnouncer,
+        serverAnnouncer,
+        segmentManager,
+        new ServerTypeConfig(ServerType.HISTORICAL)
+    );
+
     // Start the load drop handler
     loadDropHandler.start();
-    Assert.assertEquals(1, observedAnnouncedServerCount.get());
+    Assert.assertEquals(1, serverAnnouncer.getObservedCount());
 
     // Verify the expected announcements
     Assert.assertTrue(segmentAnnouncer.getObservedSegments().containsAll(expectedSegments));
 
     // Make sure adding segments beyond allowed size fails
-    DataSegment newSegment = makeSegment("test", "new-segment");
+    DataSegment newSegment = TestSegmentUtils.makeSegment("test", "new-segment", SEGMENT_SIZE);
     loadDropHandler.addSegment(newSegment, null);
     Assert.assertFalse(segmentAnnouncer.getObservedSegments().contains(newSegment));
 
@@ -213,11 +192,6 @@ public class SegmentLoadDropHandlerCacheTest
     Assert.assertTrue(segmentAnnouncer.getObservedSegments().contains(newSegment));
 
     loadDropHandler.stop();
-    Assert.assertEquals(0, observedAnnouncedServerCount.get());
-  }
-
-  private DataSegment makeSegment(String dataSource, String version)
-  {
-    return TestSegmentUtils.makeSegment(dataSource, version, SEGMENT_SIZE);
+    Assert.assertEquals(0, serverAnnouncer.getObservedCount());
   }
 }

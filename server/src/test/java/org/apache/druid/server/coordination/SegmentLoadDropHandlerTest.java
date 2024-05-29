@@ -563,7 +563,7 @@ public class SegmentLoadDropHandlerTest
   }
 
   /**
-   * A local cache manager to test the bootstrapping and segment load/drop flow. It stubs only the necessary
+   * A local cache manager to test the bootstrapping and segment add/remove operations. It stubs only the necessary
    * methods to support these operations; any other method invoked will throw an exception from the base class,
    * {@link NoopSegmentCacheManager}.
    */
@@ -601,20 +601,20 @@ public class SegmentLoadDropHandlerTest
     @Override
     public List<DataSegment> getCachedSegments()
     {
-      return this.cachedSegments;
+      return cachedSegments;
     }
 
     @Override
     public ReferenceCountingSegment getBootstrapSegment(DataSegment segment, SegmentLazyLoadFailCallback loadFailed)
     {
-      this.observedBootstrapSegments.add(segment);
+      observedBootstrapSegments.add(segment);
       return getSegmentInternal(segment);
     }
 
     @Override
     public ReferenceCountingSegment getSegment(final DataSegment segment)
     {
-      this.observedSegments.add(segment);
+      observedSegments.add(segment);
       return getSegmentInternal(segment);
     }
 
@@ -636,13 +636,13 @@ public class SegmentLoadDropHandlerTest
     @Override
     public void loadSegmentIntoPageCache(DataSegment segment)
     {
-      this.observedSegmentsLoadedIntoPageCache.add(segment);
+      observedSegmentsLoadedIntoPageCache.add(segment);
     }
 
     @Override
     public void loadSegmentIntoPageCacheOnBootstrap(DataSegment segment)
     {
-      this.observedBootstrapSegmentsLoadedIntoPageCache.add(segment);
+      observedBootstrapSegmentsLoadedIntoPageCache.add(segment);
     }
 
     @Override
@@ -658,7 +658,7 @@ public class SegmentLoadDropHandlerTest
     @Override
     public void cleanup(DataSegment segment)
     {
-      this.observedSegmentsRemovedFromCache.add(segment);
+      observedSegmentsRemovedFromCache.add(segment);
     }
   }
 }
