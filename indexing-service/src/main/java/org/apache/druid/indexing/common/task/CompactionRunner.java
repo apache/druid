@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.java.util.common.NonnullPair;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.server.coordinator.ClientCompactionRunnerInfo;
 import org.joda.time.Interval;
@@ -53,10 +52,10 @@ public interface CompactionRunner
 
   /**
    * Checks if the provided compaction config is supported by the runner.
-   * @param compactionTask
-   * @return Pair of (supported) boolean and a reason string. Reason string is null if supported is true.
    *
+   * @param compactionTask
+   * @return Pair of (supported) boolean and a reason string. Reason string is empty if supported is true.
    */
-  Pair<Boolean, String> supportsCompactionConfig(CompactionTask compactionTask);
+  NonnullPair<Boolean, String> supportsCompactionSpec(CompactionTask compactionTask);
 
 }

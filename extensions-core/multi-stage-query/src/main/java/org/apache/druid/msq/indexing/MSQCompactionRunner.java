@@ -37,7 +37,6 @@ import org.apache.druid.indexing.common.task.CompactionRunner;
 import org.apache.druid.indexing.common.task.CompactionTask;
 import org.apache.druid.indexing.common.task.CurrentSubTaskHolder;
 import org.apache.druid.java.util.common.NonnullPair;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.AllGranularity;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -106,37 +105,57 @@ public class MSQCompactionRunner implements CompactionRunner
   }
 
   @Override
-  public Pair<Boolean, String> supportsCompactionConfig(
+  public NonnullPair<Boolean, String> supportsCompactionSpec(
       CompactionTask compactionTask
   )
   {
-    QueryContext compactionTaskContext = new QueryContext(compactionTask.getContext());
+    if (compactionTask.getTuningConfig() != null) {
+      PartitionsSpec partitionsSpec = compactionTask.getTuningConfig().getPartitionsSpec();
+      if (!(partitionsSpec instanceof DynamicPartitionsSpec
+            || partitionsSpec instanceof DimensionRangePartitionsSpec)) {
+        return new NonnullPair<>(false, StringUtils.format(
+            "Invalid partition spec type[%s] for MSQ compaction engine."
+            + " Type must be either DynamicPartitionsSpec or DynamicRangePartitionsSpec.",
+            partitionsSpec.getClass()
+        ));
+      }
+      if (partitionsSpec instanceof DynamicPartitionsSpec
+          && ((DynamicPartitionsSpec) partitionsSpec).getMaxTotalRows() != null) {
+        return new NonnullPair<>(false, StringUtils.format(
+            "maxTotalRows[%d] in DynamicPartitionsSpec not supported for MSQ compaction engine.",
+            ((DynamicPartitionsSpec) partitionsSpec).getMaxTotalRows()
+        ));
+      }
+    }
+    if (compactionTask.getMetricsSpec() != null
+        && compactionTask.getGranularitySpec() != null
+        && !compactionTask.getGranularitySpec()
+                          .isRollup()) {
+      return new NonnullPair<>(
+          false,
+          "rollup in granularitySpec must be set to True if metricsSpec is specifed "
+          + "for MSQ compaction engine."
+      );
+    }
 
-    // These checks cannot be included in compaction config validation as context param keys are unknown outside MSQ.
+    QueryContext compactionTaskContext = new QueryContext(compactionTask.getContext());
     if (!MultiStageQueryContext.isFinalizeAggregations(compactionTaskContext)) {
-      return Pair.of(false, StringUtils.format(
+      return new NonnullPair<>(false, StringUtils.format(
           "Config[%s] cannot be set to false for auto-compaction with MSQ engine.",
           MultiStageQueryContext.CTX_FINALIZE_AGGREGATIONS
       ));
     }
     if (MultiStageQueryContext.getAssignmentStrategy(compactionTaskContext) == WorkerAssignmentStrategy.AUTO) {
-      return Pair.of(
+      return new NonnullPair<>(
           false,
-          StringUtils.format("Config[%s] cannot be set to value[%s] for auto-compaction with MSQ engine.",
-                             MultiStageQueryContext.CTX_TASK_ASSIGNMENT_STRATEGY,
-                             WorkerAssignmentStrategy.AUTO
+          StringUtils.format(
+              "Config[%s] cannot be set to value[%s] for auto-compaction with MSQ engine.",
+              MultiStageQueryContext.CTX_TASK_ASSIGNMENT_STRATEGY,
+              WorkerAssignmentStrategy.AUTO
           )
       );
     }
-    if (compactionTask.getTuningConfig() != null) {
-      PartitionsSpec partitionsSpec = compactionTask.getTuningConfig().getPartitionsSpec();
-      if (!(partitionsSpec instanceof DynamicPartitionsSpec
-            || partitionsSpec instanceof DimensionRangePartitionsSpec)) {
-        return Pair.of(false, "PartitionsSpec not among DynamicPartitionSpec or DimensionRangePartitionsSpec "
-                              + "required with MSQ engine");
-      }
-    }
-    return Pair.of(true, null);
+    return new NonnullPair<>(true, "");
   }
 
   @Override
@@ -155,10 +174,11 @@ public class MSQCompactionRunner implements CompactionRunner
     List<MSQControllerTask> msqControllerTasks = compactionToMSQTasks(compactionTask, intervalDataSchemas);
 
     if (msqControllerTasks.isEmpty()) {
-      log.warn(
+      String msg = StringUtils.format(
           "Can't find segments from inputSpec[%s], nothing to do.",
           compactionTask.getIoConfig().getInputSpec()
       );
+      return TaskStatus.failure(compactionTask.getId(), msg);
     }
     return runSubtasks(
         msqControllerTasks,
@@ -174,7 +194,6 @@ public class MSQCompactionRunner implements CompactionRunner
   ) throws JsonProcessingException
   {
     List<MSQControllerTask> msqControllerTasks = new ArrayList<>();
-
 
     for (NonnullPair<Interval, DataSchema> intervalDataSchema : intervalDataSchemas) {
       Query<?> query;

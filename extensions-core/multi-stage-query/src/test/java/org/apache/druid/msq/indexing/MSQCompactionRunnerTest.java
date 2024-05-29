@@ -23,6 +23,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
 import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.DimensionSchema;
@@ -30,7 +32,11 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
+import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
+import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.task.CompactionIntervalSpec;
 import org.apache.druid.indexing.common.task.CompactionTask;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -60,6 +66,7 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -88,6 +95,7 @@ public class MSQCompactionRunnerTest
   private static final AggregatorFactory AGG1 = new CountAggregatorFactory("agg_0");
   private static final AggregatorFactory AGG2 = new LongSumAggregatorFactory("agg_1", "long_dim_1");
   private static List<AggregatorFactory> AGGREGATORS = ImmutableList.of(AGG1, AGG2);
+  private static final MSQCompactionRunner MSQ_COMPACTION_RUNNER = new MSQCompactionRunner(JSON_MAPPER, null);
 
   @BeforeClass
   public static void setupClass()
@@ -113,38 +121,157 @@ public class MSQCompactionRunnerTest
   }
 
   @Test
-  public void testCompactionToMSQTasks() throws JsonProcessingException
+  public void testHashPartitionsSpec() throws JsonProcessingException
+  {
+    CompactionTask compactionTask = createCompactionTask(
+        new HashedPartitionsSpec(3, null, ImmutableList.of("dummy")),
+        null,
+        Collections.emptyMap()
+    );
+    Assert.assertFalse(MSQ_COMPACTION_RUNNER.supportsCompactionSpec(compactionTask).lhs);
+  }
+
+  @Test
+  public void testDimensionRangePartitionsSpec() throws JsonProcessingException
+  {
+    CompactionTask compactionTask = createCompactionTask(
+        new DimensionRangePartitionsSpec(TARGET_ROWS_PER_SEGMENT, null, PARTITION_DIMENSIONS, false),
+        null,
+        Collections.emptyMap()
+    );
+    Assert.assertTrue(MSQ_COMPACTION_RUNNER.supportsCompactionSpec(compactionTask).lhs);
+  }
+
+  @Test
+  public void testInvalidDynamicPartitionsSpec() throws JsonProcessingException
+  {
+    CompactionTask compactionTask = createCompactionTask(
+        new DynamicPartitionsSpec(3, 3L),
+        null,
+        Collections.emptyMap()
+    );
+    Assert.assertFalse(MSQ_COMPACTION_RUNNER.supportsCompactionSpec(compactionTask).lhs);
+  }
+
+  @Test
+  public void testDynamicPartitionsSpec() throws JsonProcessingException
+  {
+    CompactionTask compactionTask = createCompactionTask(
+        new DynamicPartitionsSpec(3, null),
+        null,
+        Collections.emptyMap()
+    );
+    Assert.assertTrue(MSQ_COMPACTION_RUNNER.supportsCompactionSpec(compactionTask).lhs);
+  }
+
+  @Test
+  public void testWithWorkerStrategyAuto() throws JsonProcessingException
+  {
+    CompactionTask compactionTask = createCompactionTask(
+        new DynamicPartitionsSpec(3, null),
+        null,
+        ImmutableMap.of(MultiStageQueryContext.CTX_TASK_ASSIGNMENT_STRATEGY, WorkerAssignmentStrategy.AUTO.toString())
+    );
+    Assert.assertFalse(MSQ_COMPACTION_RUNNER.supportsCompactionSpec(compactionTask).lhs);
+  }
+
+  @Test
+  public void testWithFinalizeAggregationsFalse() throws JsonProcessingException
+  {
+    CompactionTask compactionTask = createCompactionTask(
+        new DynamicPartitionsSpec(3, null),
+        null,
+        ImmutableMap.of(MultiStageQueryContext.CTX_FINALIZE_AGGREGATIONS, false)
+    );
+    Assert.assertFalse(MSQ_COMPACTION_RUNNER.supportsCompactionSpec(compactionTask).lhs);
+  }
+
+  @Test
+  public void testRunCompactionTasksWithEmptyTaskList() throws Exception
+  {
+    CompactionTask compactionTask = createCompactionTask(null, null, Collections.emptyMap());
+    TaskStatus taskStatus = MSQ_COMPACTION_RUNNER.runCompactionTasks(compactionTask, Collections.emptyList(), null);
+    Assert.assertTrue(taskStatus.isFailure());
+  }
+
+  @Test
+  public void testMSQControllerTaskSpecWithScan() throws JsonProcessingException
   {
     DimFilter dimFilter = new SelectorDimFilter("dim1", "foo", null);
-    ClientCompactionTaskTransformSpec transformSpec =
-        new ClientCompactionTaskTransformSpec(dimFilter);
-    final CompactionTask.Builder builder = new CompactionTask.Builder(
-        DATA_SOURCE,
-        null,
-        null,
-        new MSQCompactionRunner(JSON_MAPPER, null)
+
+    CompactionTask taskCreatedWithTransformSpec = createCompactionTask(
+        new DimensionRangePartitionsSpec(TARGET_ROWS_PER_SEGMENT, null, PARTITION_DIMENSIONS, false),
+        dimFilter,
+        Collections.emptyMap()
     );
-    IndexSpec indexSpec = IndexSpec.builder()
-                                   .withBitmapSerdeFactory(RoaringBitmapSerdeFactory.getInstance())
-                                   .withDimensionCompression(CompressionStrategy.LZ4)
-                                   .withMetricCompression(CompressionStrategy.LZF)
-                                   .withLongEncoding(CompressionFactory.LongEncodingStrategy.LONGS)
-                                   .build();
 
-    Map<String, Object> context = new HashMap<>();
-    context.put(MultiStageQueryContext.CTX_SORT_ORDER, JSON_MAPPER.writeValueAsString(SORT_ORDER_DIMENSIONS));
-    context.put(MultiStageQueryContext.CTX_MAX_NUM_TASKS, 2);
+    DataSchema dataSchema = new DataSchema(
+        DATA_SOURCE,
+        new TimestampSpec(TIMESTAMP_COLUMN, null, null),
+        new DimensionsSpec(DIMENSIONS),
+        new AggregatorFactory[]{},
+        new UniformGranularitySpec(
+            SEGMENT_GRANULARITY.getDefaultGranularity(),
+            QUERY_GRANULARITY.getDefaultGranularity(),
+            Collections.singletonList(COMPACTION_INTERVAL)
+        ),
+        new TransformSpec(dimFilter, Collections.emptyList())
+    );
 
-    builder
-        .inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, null))
-        .tuningConfig(createTuningConfig(indexSpec))
-        .transformSpec(transformSpec)
-        .context(context);
 
-    final CompactionTask taskCreatedWithTransformSpec = builder.build();
+    List<MSQControllerTask> msqControllerTasks = MSQ_COMPACTION_RUNNER
+        .compactionToMSQTasks(
+            taskCreatedWithTransformSpec,
+            Collections.singletonList(new NonnullPair<>(
+                COMPACTION_INTERVAL,
+                dataSchema
+            ))
+        );
+
+    MSQControllerTask msqControllerTask = Iterables.getOnlyElement(msqControllerTasks);
+
+    MSQSpec actualMSQSpec = msqControllerTask.getQuerySpec();
+
     Assert.assertEquals(
-        transformSpec,
-        taskCreatedWithTransformSpec.getTransformSpec()
+        new MSQTuningConfig(
+            1,
+            MultiStageQueryContext.DEFAULT_ROWS_IN_MEMORY,
+            TARGET_ROWS_PER_SEGMENT,
+            createIndexSpec()
+        ),
+        actualMSQSpec.getTuningConfig()
+    );
+    Assert.assertEquals(
+        new DataSourceMSQDestination(
+            DATA_SOURCE,
+            SEGMENT_GRANULARITY.getDefaultGranularity(),
+            SORT_ORDER_DIMENSIONS,
+            Collections.singletonList(COMPACTION_INTERVAL)
+        ),
+        actualMSQSpec.getDestination()
+    );
+
+    Assert.assertEquals(dimFilter, actualMSQSpec.getQuery().getFilter());
+    Assert.assertEquals(
+        JSON_MAPPER.writeValueAsString(SEGMENT_GRANULARITY.toString()),
+        msqControllerTask.getContext().get(DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY)
+    );
+    Assert.assertEquals(
+        JSON_MAPPER.writeValueAsString(QUERY_GRANULARITY.toString()),
+        msqControllerTask.getContext().get(DruidSqlInsert.SQL_INSERT_QUERY_GRANULARITY)
+    );
+    Assert.assertEquals(WorkerAssignmentStrategy.MAX, actualMSQSpec.getAssignmentStrategy());
+  }
+
+  @Test
+  public void testMSQControllerTaskSpecWithAggregators() throws JsonProcessingException
+  {
+    DimFilter dimFilter = new SelectorDimFilter("dim1", "foo", null);
+
+    CompactionTask taskCreatedWithTransformSpec = createCompactionTask(
+        new DimensionRangePartitionsSpec(TARGET_ROWS_PER_SEGMENT, null, PARTITION_DIMENSIONS, false),
+        dimFilter,
+        Collections.emptyMap()
     );
 
     DataSchema dataSchema = new DataSchema(
@@ -160,7 +287,8 @@ public class MSQCompactionRunnerTest
         new TransformSpec(dimFilter, Collections.emptyList())
     );
 
-    List<MSQControllerTask> msqControllerTasks = new MSQCompactionRunner(JSON_MAPPER, null)
+
+    List<MSQControllerTask> msqControllerTasks = MSQ_COMPACTION_RUNNER
         .compactionToMSQTasks(
             taskCreatedWithTransformSpec,
             Collections.singletonList(new NonnullPair<>(
@@ -169,25 +297,28 @@ public class MSQCompactionRunnerTest
             ))
         );
 
-    Assert.assertEquals(1, msqControllerTasks.size());
+    MSQControllerTask msqControllerTask = Iterables.getOnlyElement(msqControllerTasks);
 
-    MSQControllerTask msqControllerTask = msqControllerTasks.get(0);
     MSQSpec actualMSQSpec = msqControllerTask.getQuerySpec();
+
     Assert.assertEquals(
         new MSQTuningConfig(
             1,
             MultiStageQueryContext.DEFAULT_ROWS_IN_MEMORY,
             TARGET_ROWS_PER_SEGMENT,
-            indexSpec
+            createIndexSpec()
         ),
         actualMSQSpec.getTuningConfig()
     );
-    Assert.assertEquals(new DataSourceMSQDestination(
-        DATA_SOURCE,
-        SEGMENT_GRANULARITY.getDefaultGranularity(),
-        SORT_ORDER_DIMENSIONS,
-        Collections.singletonList(COMPACTION_INTERVAL)
-    ), actualMSQSpec.getDestination());
+    Assert.assertEquals(
+        new DataSourceMSQDestination(
+            DATA_SOURCE,
+            SEGMENT_GRANULARITY.getDefaultGranularity(),
+            SORT_ORDER_DIMENSIONS,
+            Collections.singletonList(COMPACTION_INTERVAL)
+        ),
+        actualMSQSpec.getDestination()
+    );
 
     Assert.assertEquals(dimFilter, actualMSQSpec.getQuery().getFilter());
     Assert.assertEquals(
@@ -201,7 +332,44 @@ public class MSQCompactionRunnerTest
     Assert.assertEquals(WorkerAssignmentStrategy.MAX, actualMSQSpec.getAssignmentStrategy());
   }
 
-  private static CompactionTask.CompactionTuningConfig createTuningConfig(IndexSpec indexSpec)
+  private CompactionTask createCompactionTask(
+      @Nullable PartitionsSpec partitionsSpec,
+      DimFilter dimFilter,
+      Map<String, Object> contextParams
+  )
+      throws JsonProcessingException
+  {
+    ClientCompactionTaskTransformSpec transformSpec =
+        new ClientCompactionTaskTransformSpec(dimFilter);
+    final CompactionTask.Builder builder = new CompactionTask.Builder(
+        DATA_SOURCE,
+        null,
+        null,
+        new MSQCompactionRunner(JSON_MAPPER, null)
+    );
+    IndexSpec indexSpec = createIndexSpec();
+
+    Map<String, Object> context = new HashMap<>();
+    context.put(MultiStageQueryContext.CTX_SORT_ORDER, JSON_MAPPER.writeValueAsString(SORT_ORDER_DIMENSIONS));
+    context.put(MultiStageQueryContext.CTX_MAX_NUM_TASKS, 2);
+    context.putAll(contextParams);
+
+    builder
+        .inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, null))
+        .tuningConfig(createTuningConfig(
+            indexSpec,
+            partitionsSpec == null ? new DynamicPartitionsSpec(100, null) : partitionsSpec
+        ))
+        .transformSpec(transformSpec)
+        .context(context);
+
+    return builder.build();
+  }
+
+  private static CompactionTask.CompactionTuningConfig createTuningConfig(
+      IndexSpec indexSpec,
+      PartitionsSpec partitionsSpec
+  )
   {
     return new CompactionTask.CompactionTuningConfig(
         null,
@@ -213,11 +381,11 @@ public class MSQCompactionRunnerTest
         null,
         null,
         null,
-        new DimensionRangePartitionsSpec(TARGET_ROWS_PER_SEGMENT, null, PARTITION_DIMENSIONS, false),
+        partitionsSpec,
         indexSpec,
         null,
         null,
-        true,
+        !(partitionsSpec instanceof DynamicPartitionsSpec),
         false,
         5000L,
         null,
@@ -236,5 +404,15 @@ public class MSQCompactionRunnerTest
         null,
         null
     );
+  }
+
+  private static IndexSpec createIndexSpec()
+  {
+    return IndexSpec.builder()
+                    .withBitmapSerdeFactory(RoaringBitmapSerdeFactory.getInstance())
+                    .withDimensionCompression(CompressionStrategy.LZ4)
+                    .withMetricCompression(CompressionStrategy.LZF)
+                    .withLongEncoding(CompressionFactory.LongEncodingStrategy.LONGS)
+                    .build();
   }
 }

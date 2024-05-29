@@ -21,11 +21,12 @@ package org.apache.druid.server.coordinator;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
+import org.apache.druid.java.util.common.NonnullPair;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.QueryContext;
 
 import java.util.Objects;
@@ -52,14 +53,6 @@ public class ClientCompactionRunnerInfo
   }
 
   @Override
-  public String toString()
-  {
-    return "ClientCompactionRunnerInfo{" +
-           "type=" + type +
-           '}';
-  }
-
-  @Override
   public boolean equals(Object o)
   {
     if (this == o) {
@@ -78,56 +71,61 @@ public class ClientCompactionRunnerInfo
     return Objects.hash(type);
   }
 
-  public static void supportsCompactionConfig(DataSourceCompactionConfig newConfig, String engineSource)
+  public static NonnullPair<Boolean, String> supportsCompactionConfig(DataSourceCompactionConfig newConfig, String engineSource)
   {
     CompactionEngine compactionEngine = newConfig.getEngine();
     if (compactionEngine == CompactionEngine.MSQ) {
       if (newConfig.getTuningConfig() != null) {
         PartitionsSpec partitionsSpec = newConfig.getTuningConfig().getPartitionsSpec();
-
-        if (partitionsSpec != null && !(partitionsSpec instanceof DimensionRangePartitionsSpec
-                                        || partitionsSpec instanceof DynamicPartitionsSpec)) {
-          throw InvalidInput.exception(
+        if (!(partitionsSpec instanceof DimensionRangePartitionsSpec
+              || partitionsSpec instanceof DynamicPartitionsSpec)) {
+          return new NonnullPair<>(false, StringUtils.format(
               "Invalid partition spec type[%s] for MSQ compaction engine[%s]."
               + " Type must be either DynamicPartitionsSpec or DynamicRangePartitionsSpec.",
               partitionsSpec.getClass(),
               engineSource
+          )
           );
         }
         if (partitionsSpec instanceof DynamicPartitionsSpec
             && ((DynamicPartitionsSpec) partitionsSpec).getMaxTotalRows() != null) {
-          throw InvalidInput.exception(
+          return new NonnullPair<>(false, StringUtils.format(
               "maxTotalRows[%d] in DynamicPartitionsSpec not supported for MSQ compaction engine[%s].",
               ((DynamicPartitionsSpec) partitionsSpec).getMaxTotalRows(), engineSource
-          );
+          ));
         }
       }
+
       if (newConfig.getMetricsSpec() != null
           && newConfig.getGranularitySpec() != null
           && !newConfig.getGranularitySpec()
                        .isRollup()) {
-        throw InvalidInput.exception(
+        return new NonnullPair<>(false, StringUtils.format(
             "rollup in granularitySpec must be set to True if metricsSpec is specifed "
-            + "for MSQ compaction engine[%s].");
+            + "for MSQ compaction engine[%s].", engineSource));
       }
 
       QueryContext queryContext = QueryContext.of(newConfig.getTaskContext());
-      if (!queryContext.getBoolean(MSQContext.CTX_FINALIZE_AGGREGATIONS, true)) {
-        throw InvalidInput.exception(
-            "Config[%s] cannot be set to false for auto-compaction with MSQ engine.",
-            MSQContext.CTX_FINALIZE_AGGREGATIONS
-        );
 
+      if (!queryContext.getBoolean(MSQContext.CTX_FINALIZE_AGGREGATIONS, true)) {
+        return new NonnullPair<>(false, StringUtils.format(
+            "Config[%s] cannot be set to false for auto-compaction with MSQ engine[%s].",
+            MSQContext.CTX_FINALIZE_AGGREGATIONS,
+            engineSource
+        ));
       }
+
       if (queryContext.getString(MSQContext.CTX_TASK_ASSIGNMENT_STRATEGY, MSQContext.TASK_ASSIGNMENT_STRATEGY_MAX)
                       .equals(MSQContext.TASK_ASSIGNMENT_STRATEGY_AUTO)) {
-        throw InvalidInput.exception(
-            "Config[%s] cannot be set to value[%s] for auto-compaction with MSQ engine.",
+        return new NonnullPair<>(false, StringUtils.format(
+            "Config[%s] cannot be set to value[%s] for auto-compaction with MSQ engine[%s].",
             MSQContext.CTX_TASK_ASSIGNMENT_STRATEGY,
-            MSQContext.TASK_ASSIGNMENT_STRATEGY_AUTO
-        );
+            MSQContext.TASK_ASSIGNMENT_STRATEGY_AUTO,
+            engineSource
+        ));
       }
     }
+    return new NonnullPair<>(true, "");
   }
 
   /**
@@ -135,7 +133,7 @@ public class ClientCompactionRunnerInfo
    * compaction config at the coordinator. The values used here should be kept in sync with those in
    * {@link org.apache.druid.msq.util.MultiStageQueryContext}
    */
-  private static class MSQContext
+  public static class MSQContext
   {
     public static final String CTX_FINALIZE_AGGREGATIONS = "finalizeAggregations";
     public static final String CTX_TASK_ASSIGNMENT_STRATEGY = "taskAssignment";
