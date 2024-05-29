@@ -32,11 +32,13 @@ import org.apache.druid.msq.indexing.MSQWorkerTask;
 import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
+import org.apache.druid.msq.statistics.serde.ClusterByStatisticsSnapshotSerde;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
 import org.apache.druid.segment.realtime.firehose.ChatHandlers;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.utils.CloseableUtils;
 
+import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
@@ -185,11 +187,12 @@ public class WorkerChatHandler implements ChatHandler
 
   @POST
   @Path("/keyStatistics/{queryId}/{stageNumber}")
-  @Produces(MediaType.APPLICATION_JSON)
+  @Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_OCTET_STREAM})
   @Consumes(MediaType.APPLICATION_JSON)
   public Response httpFetchKeyStatistics(
       @PathParam("queryId") final String queryId,
       @PathParam("stageNumber") final int stageNumber,
+      @QueryParam("sketchEncoding") @Nullable final SketchEncoding sketchEncoding,
       @Context final HttpServletRequest req
   )
   {
@@ -198,9 +201,17 @@ public class WorkerChatHandler implements ChatHandler
     StageId stageId = new StageId(queryId, stageNumber);
     try {
       clusterByStatisticsSnapshot = worker.fetchStatisticsSnapshot(stageId);
-      return Response.status(Response.Status.ACCEPTED)
-                     .entity(clusterByStatisticsSnapshot)
-                     .build();
+      if (SketchEncoding.OCTET_STREAM.equals(sketchEncoding)) {
+        return Response.status(Response.Status.ACCEPTED)
+                       .type(MediaType.APPLICATION_OCTET_STREAM)
+                       .entity((StreamingOutput) output -> ClusterByStatisticsSnapshotSerde.serialize(output, clusterByStatisticsSnapshot))
+                       .build();
+      } else {
+        return Response.status(Response.Status.ACCEPTED)
+                       .type(MediaType.APPLICATION_JSON)
+                       .entity(clusterByStatisticsSnapshot)
+                       .build();
+      }
     }
     catch (Exception e) {
       String errorMessage = StringUtils.format(
@@ -217,12 +228,13 @@ public class WorkerChatHandler implements ChatHandler
 
   @POST
   @Path("/keyStatisticsForTimeChunk/{queryId}/{stageNumber}/{timeChunk}")
-  @Produces(MediaType.APPLICATION_JSON)
+  @Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_OCTET_STREAM})
   @Consumes(MediaType.APPLICATION_JSON)
   public Response httpFetchKeyStatisticsWithSnapshot(
       @PathParam("queryId") final String queryId,
       @PathParam("stageNumber") final int stageNumber,
       @PathParam("timeChunk") final long timeChunk,
+      @QueryParam("sketchEncoding") @Nullable final SketchEncoding sketchEncoding,
       @Context final HttpServletRequest req
   )
   {
@@ -231,9 +243,17 @@ public class WorkerChatHandler implements ChatHandler
     StageId stageId = new StageId(queryId, stageNumber);
     try {
       snapshotForTimeChunk = worker.fetchStatisticsSnapshotForTimeChunk(stageId, timeChunk);
-      return Response.status(Response.Status.ACCEPTED)
-                     .entity(snapshotForTimeChunk)
-                     .build();
+      if (SketchEncoding.OCTET_STREAM.equals(sketchEncoding)) {
+        return Response.status(Response.Status.ACCEPTED)
+                       .type(MediaType.APPLICATION_OCTET_STREAM)
+                       .entity((StreamingOutput) output -> ClusterByStatisticsSnapshotSerde.serialize(output, snapshotForTimeChunk))
+                       .build();
+      } else {
+        return Response.status(Response.Status.ACCEPTED)
+                       .type(MediaType.APPLICATION_JSON)
+                       .entity(snapshotForTimeChunk)
+                       .build();
+      }
     }
     catch (Exception e) {
       String errorMessage = StringUtils.format(
@@ -288,5 +308,21 @@ public class WorkerChatHandler implements ChatHandler
   {
     ChatHandlers.authorizationCheck(req, Action.WRITE, task.getDataSource(), toolbox.getAuthorizerMapper());
     return Response.status(Response.Status.OK).entity(worker.getCounters()).build();
+  }
+
+  /**
+   * Determines the encoding of key collectors returned by {@link #httpFetchKeyStatistics} and
+   * {@link #httpFetchKeyStatisticsWithSnapshot}.
+   */
+  public enum SketchEncoding
+  {
+    /**
+     * The key collector is encoded as a byte stream with {@link ClusterByStatisticsSnapshotSerde}.
+     */
+    OCTET_STREAM,
+    /**
+     * The key collector is encoded as json
+     */
+    JSON
   }
 }
