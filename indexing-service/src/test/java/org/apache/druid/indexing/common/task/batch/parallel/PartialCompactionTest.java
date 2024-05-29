@@ -33,7 +33,6 @@ import org.apache.druid.indexing.common.RetryPolicyConfig;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.task.CompactionTask;
 import org.apache.druid.indexing.common.task.CompactionTask.Builder;
-import org.apache.druid.indexing.common.task.NativeCompactionRunner;
 import org.apache.druid.indexing.common.task.SpecificSegmentsSpec;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
@@ -242,7 +241,8 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
   {
     return new Builder(
         DATASOURCE,
-        getSegmentCacheManagerFactory(), RETRY_POLICY_FACTORY,
+        getSegmentCacheManagerFactory(),
+        RETRY_POLICY_FACTORY,
        null
     );
   }

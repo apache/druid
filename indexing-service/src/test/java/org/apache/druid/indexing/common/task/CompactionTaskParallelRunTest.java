@@ -187,7 +187,8 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
       CompactionState expectedState = new CompactionState(
           new DynamicPartitionsSpec(null, Long.MAX_VALUE),
           new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
-          Collections.emptyMap(), ImmutableList.of(expectedLongSumMetric),
+          Collections.emptyMap(),
+          ImmutableList.of(expectedLongSumMetric),
           null,
           compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper()),
           getObjectMapper().readValue(
@@ -240,7 +241,8 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
       CompactionState expectedState = new CompactionState(
           new HashedPartitionsSpec(null, 3, null),
           new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
-          Collections.emptyMap(), ImmutableList.of(expectedLongSumMetric),
+          Collections.emptyMap(),
+          ImmutableList.of(expectedLongSumMetric),
           null,
           compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper()),
           getObjectMapper().readValue(
@@ -308,7 +310,8 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
       CompactionState expectedState = new CompactionState(
           new SingleDimensionPartitionsSpec(7, null, "dim", false),
           new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
-          Collections.emptyMap(), ImmutableList.of(expectedLongSumMetric),
+          Collections.emptyMap(),
+          ImmutableList.of(expectedLongSumMetric),
           null,
           compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper()),
           getObjectMapper().readValue(
@@ -371,7 +374,8 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
       CompactionState expectedState = new CompactionState(
           new SingleDimensionPartitionsSpec(7, null, "dim", false),
           new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
-          Collections.emptyMap(), ImmutableList.of(expectedLongSumMetric),
+          Collections.emptyMap(),
+          ImmutableList.of(expectedLongSumMetric),
           null,
           compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper()),
           getObjectMapper().readValue(
@@ -429,7 +433,8 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
       CompactionState expectedState = new CompactionState(
           new DimensionRangePartitionsSpec(7, null, Arrays.asList("dim1", "dim2"), false),
           new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
-          Collections.emptyMap(), ImmutableList.of(expectedLongSumMetric),
+          Collections.emptyMap(),
+          ImmutableList.of(expectedLongSumMetric),
           null,
           compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper()),
           getObjectMapper().readValue(
@@ -482,7 +487,8 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
       CompactionState expectedState = new CompactionState(
           new SingleDimensionPartitionsSpec(7, null, "dim", false),
           new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
-          Collections.emptyMap(), ImmutableList.of(expectedLongSumMetric),
+          Collections.emptyMap(),
+          ImmutableList.of(expectedLongSumMetric),
           null,
           compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper()),
           getObjectMapper().readValue(
@@ -626,7 +632,8 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
       CompactionState expectedState = new CompactionState(
           new DynamicPartitionsSpec(null, Long.MAX_VALUE),
           new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
-          Collections.emptyMap(), ImmutableList.of(expectedLongSumMetric),
+          Collections.emptyMap(),
+          ImmutableList.of(expectedLongSumMetric),
           getObjectMapper().readValue(
               getObjectMapper().writeValueAsString(compactionTask.getTransformSpec()),
               Map.class
@@ -691,7 +698,8 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
       CompactionState expectedState = new CompactionState(
           new DynamicPartitionsSpec(null, Long.MAX_VALUE),
           new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
-          Collections.emptyMap(), ImmutableList.of(expectedCountMetric, expectedLongSumMetric),
+          Collections.emptyMap(),
+          ImmutableList.of(expectedCountMetric, expectedLongSumMetric),
           getObjectMapper().readValue(
               getObjectMapper().writeValueAsString(compactionTask.getTransformSpec()),
               Map.class

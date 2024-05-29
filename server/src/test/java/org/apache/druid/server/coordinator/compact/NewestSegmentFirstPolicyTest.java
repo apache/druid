@@ -730,15 +730,31 @@ public class NewestSegmentFirstPolicyTest
             Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"),
             new Period("P1D"),
             null,
-            new CompactionState(partitionsSpec, null, Collections.emptyMap(), null, null, indexSpec, null,
-                                CompactionEngine.NATIVE)
+            new CompactionState(
+                partitionsSpec,
+                null,
+                Collections.emptyMap(),
+                null,
+                null,
+                indexSpec,
+                null,
+                CompactionEngine.NATIVE
+            )
         ),
         new SegmentGenerateSpec(
             Intervals.of("2017-10-02T00:00:00/2017-10-03T00:00:00"),
             new Period("P1D"),
             null,
-            new CompactionState(partitionsSpec, null, Collections.emptyMap(), null, null, indexSpec, null,
-                                CompactionEngine.NATIVE)
+            new CompactionState(
+                partitionsSpec,
+                null,
+                Collections.emptyMap(),
+                null,
+                null,
+                indexSpec,
+                null,
+                CompactionEngine.NATIVE
+            )
         )
     );
 
@@ -765,20 +781,30 @@ public class NewestSegmentFirstPolicyTest
             Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"),
             new Period("P1D"),
             null,
-            new CompactionState(partitionsSpec, null,
-                                Collections.emptyMap(),
-                                null, null, indexSpec, ImmutableMap.of("segmentGranularity", "day"),
-                                CompactionEngine.NATIVE
+            new CompactionState(
+                partitionsSpec,
+                null,
+                Collections.emptyMap(),
+                null,
+                null,
+                indexSpec,
+                ImmutableMap.of("segmentGranularity", "day"),
+                CompactionEngine.NATIVE
             )
         ),
         new SegmentGenerateSpec(
             Intervals.of("2017-10-02T00:00:00/2017-10-03T00:00:00"),
             new Period("P1D"),
             null,
-            new CompactionState(partitionsSpec, null,
-                                Collections.emptyMap(),
-                                null, null, indexSpec, ImmutableMap.of("segmentGranularity", "day"),
-                                CompactionEngine.NATIVE
+            new CompactionState(
+                partitionsSpec,
+                null,
+                Collections.emptyMap(),
+                null,
+                null,
+                indexSpec,
+                ImmutableMap.of("segmentGranularity", "day"),
+                CompactionEngine.NATIVE
             )
         )
     );
@@ -806,15 +832,31 @@ public class NewestSegmentFirstPolicyTest
             Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"),
             new Period("P1D"),
             null,
-            new CompactionState(partitionsSpec, null, Collections.emptyMap(), null, null, indexSpec, null,
-                                CompactionEngine.NATIVE)
+            new CompactionState(
+                partitionsSpec,
+                null,
+                Collections.emptyMap(),
+                null,
+                null,
+                indexSpec,
+                null,
+                CompactionEngine.NATIVE
+            )
         ),
         new SegmentGenerateSpec(
             Intervals.of("2017-10-02T00:00:00/2017-10-03T00:00:00"),
             new Period("P1D"),
             null,
-            new CompactionState(partitionsSpec, null, Collections.emptyMap(), null, null, indexSpec, null,
-                                CompactionEngine.NATIVE)
+            new CompactionState(
+                partitionsSpec,
+                null,
+                Collections.emptyMap(),
+                null,
+                null,
+                indexSpec,
+                null,
+                CompactionEngine.NATIVE
+            )
         )
     );
 
@@ -851,20 +893,30 @@ public class NewestSegmentFirstPolicyTest
             Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"),
             new Period("P1D"),
             null,
-            new CompactionState(partitionsSpec, null,
-                                Collections.emptyMap(),
-                                null, null, indexSpec, ImmutableMap.of("segmentGranularity", "day"),
-                                CompactionEngine.NATIVE
+            new CompactionState(
+                partitionsSpec,
+                null,
+                Collections.emptyMap(),
+                null,
+                null,
+                indexSpec,
+                ImmutableMap.of("segmentGranularity", "day"),
+                CompactionEngine.NATIVE
             )
         ),
         new SegmentGenerateSpec(
             Intervals.of("2017-10-02T00:00:00/2017-10-03T00:00:00"),
             new Period("P1D"),
             null,
-            new CompactionState(partitionsSpec, null,
-                                Collections.emptyMap(),
-                                null, null, indexSpec, ImmutableMap.of("segmentGranularity", "day"),
-                                CompactionEngine.NATIVE
+            new CompactionState(
+                partitionsSpec,
+                null,
+                Collections.emptyMap(),
+                null,
+                null,
+                indexSpec,
+                ImmutableMap.of("segmentGranularity", "day"),
+                CompactionEngine.NATIVE
             )
         )
     );
@@ -902,8 +954,16 @@ public class NewestSegmentFirstPolicyTest
             Intervals.of("2017-10-02T00:00:00/2017-10-03T00:00:00"),
             new Period("P1D"),
             null,
-            new CompactionState(partitionsSpec, null, Collections.emptyMap(), null, null, indexSpec, null,
-                                CompactionEngine.NATIVE)
+            new CompactionState(
+                partitionsSpec,
+                null,
+                Collections.emptyMap(),
+                null,
+                null,
+                indexSpec,
+                null,
+                CompactionEngine.NATIVE
+            )
         )
     );
 
@@ -955,8 +1015,16 @@ public class NewestSegmentFirstPolicyTest
             Intervals.of("2017-10-02T00:00:00/2017-10-03T00:00:00"),
             new Period("P1D"),
             null,
-            new CompactionState(partitionsSpec, null, Collections.emptyMap(), null, null, indexSpec, null,
-                                CompactionEngine.NATIVE)
+            new CompactionState(
+                partitionsSpec,
+                null,
+                Collections.emptyMap(),
+                null,
+                null,
+                indexSpec,
+                null,
+                CompactionEngine.NATIVE
+            )
         )
     );
 
@@ -1010,28 +1078,46 @@ public class NewestSegmentFirstPolicyTest
             Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"),
             new Period("P1D"),
             null,
-            new CompactionState(partitionsSpec, null,
-                                Collections.emptyMap(),
-                                null, null, indexSpec, ImmutableMap.of("rollup", "false"),
-                                CompactionEngine.NATIVE
+            new CompactionState(
+                partitionsSpec,
+                null,
+                Collections.emptyMap(),
+                null,
+                null,
+                indexSpec,
+                ImmutableMap.of("rollup", "false"),
+                CompactionEngine.NATIVE
             )
         ),
         new SegmentGenerateSpec(
             Intervals.of("2017-10-02T00:00:00/2017-10-03T00:00:00"),
             new Period("P1D"),
             null,
-            new CompactionState(partitionsSpec, null,
-                                Collections.emptyMap(),
-                                null, null, indexSpec, ImmutableMap.of("rollup", "true"),
-                                CompactionEngine.NATIVE
+            new CompactionState(
+                partitionsSpec,
+                null,
+                Collections.emptyMap(),
+                null,
+                null,
+                indexSpec,
+                ImmutableMap.of("rollup", "true"),
+                CompactionEngine.NATIVE
             )
         ),
         new SegmentGenerateSpec(
             Intervals.of("2017-10-03T00:00:00/2017-10-04T00:00:00"),
             new Period("P1D"),
             null,
-            new CompactionState(partitionsSpec, null, Collections.emptyMap(), null, null, indexSpec, ImmutableMap.of(),
-                                CompactionEngine.NATIVE)
+            new CompactionState(
+                partitionsSpec,
+                null,
+                Collections.emptyMap(),
+                null,
+                null,
+                indexSpec,
+                ImmutableMap.of(),
+                CompactionEngine.NATIVE
+            )
         )
     );
 
@@ -1079,28 +1165,46 @@ public class NewestSegmentFirstPolicyTest
             Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"),
             new Period("P1D"),
             null,
-            new CompactionState(partitionsSpec, null,
-                                Collections.emptyMap(),
-                                null, null, indexSpec, ImmutableMap.of("queryGranularity", "day"),
-                                CompactionEngine.NATIVE
+            new CompactionState(
+                partitionsSpec,
+                null,
+                Collections.emptyMap(),
+                null,
+                null,
+                indexSpec,
+                ImmutableMap.of("queryGranularity", "day"),
+                CompactionEngine.NATIVE
             )
         ),
         new SegmentGenerateSpec(
             Intervals.of("2017-10-02T00:00:00/2017-10-03T00:00:00"),
             new Period("P1D"),
             null,
-            new CompactionState(partitionsSpec, null,
-                                Collections.emptyMap(),
-                                null, null, indexSpec, ImmutableMap.of("queryGranularity", "minute"),
-                                CompactionEngine.NATIVE
+            new CompactionState(
+                partitionsSpec,
+                null,
+                Collections.emptyMap(),
+                null,
+                null,
+                indexSpec,
+                ImmutableMap.of("queryGranularity", "minute"),
+                CompactionEngine.NATIVE
             )
         ),
         new SegmentGenerateSpec(
             Intervals.of("2017-10-03T00:00:00/2017-10-04T00:00:00"),
             new Period("P1D"),
             null,
-            new CompactionState(partitionsSpec, null, Collections.emptyMap(), null, null, indexSpec, ImmutableMap.of(),
-                                CompactionEngine.NATIVE)
+            new CompactionState(
+                partitionsSpec,
+                null,
+                Collections.emptyMap(),
+                null,
+                null,
+                indexSpec,
+                ImmutableMap.of(),
+                CompactionEngine.NATIVE
+            )
         )
     );
 
@@ -1149,38 +1253,61 @@ public class NewestSegmentFirstPolicyTest
             Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"),
             new Period("P1D"),
             null,
-            new CompactionState(partitionsSpec, new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "foo"))),
-                                Collections.emptyMap(),
-                                null, null, indexSpec, null,
-                                CompactionEngine.NATIVE
+            new CompactionState(
+                partitionsSpec,
+                new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "foo"))),
+                Collections.emptyMap(),
+                null,
+                null,
+                indexSpec,
+                null,
+                CompactionEngine.NATIVE
             )
         ),
         new SegmentGenerateSpec(
             Intervals.of("2017-10-02T00:00:00/2017-10-03T00:00:00"),
             new Period("P1D"),
             null,
-            new CompactionState(partitionsSpec, new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("foo"))),
-                                Collections.emptyMap(),
-                                null, null, indexSpec, null,
-                                CompactionEngine.NATIVE
+            new CompactionState(
+                partitionsSpec,
+                new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("foo"))),
+                Collections.emptyMap(),
+                null,
+                null,
+                indexSpec,
+                null,
+                CompactionEngine.NATIVE
             )
         ),
         new SegmentGenerateSpec(
             Intervals.of("2017-10-03T00:00:00/2017-10-04T00:00:00"),
             new Period("P1D"),
             null,
-            new CompactionState(partitionsSpec, DimensionsSpec.EMPTY,
-                                Collections.emptyMap(),
-                                null, null, indexSpec, null,
-                                CompactionEngine.NATIVE
+            new CompactionState(
+                partitionsSpec,
+                DimensionsSpec.EMPTY,
+                Collections.emptyMap(),
+                null,
+                null,
+                indexSpec,
+                null,
+                CompactionEngine.NATIVE
             )
         ),
         new SegmentGenerateSpec(
             Intervals.of("2017-10-04T00:00:00/2017-10-05T00:00:00"),
             new Period("P1D"),
             null,
-            new CompactionState(partitionsSpec, null, Collections.emptyMap(), null, null, indexSpec, null,
-                                CompactionEngine.NATIVE)
+            new CompactionState(
+                partitionsSpec,
+                null,
+                Collections.emptyMap(),
+                null,
+                null,
+                indexSpec,
+                null,
+                CompactionEngine.NATIVE
+            )
         )
     );
 
@@ -1264,8 +1391,16 @@ public class NewestSegmentFirstPolicyTest
             new CompactionState(
                 partitionsSpec,
                 null,
-                Collections.emptyMap(), null,
-                mapper.readValue(mapper.writeValueAsString(new TransformSpec(new SelectorDimFilter("dim1", "foo", null), null)), new TypeReference<Map<String, Object>>() {}),
+                Collections.emptyMap(),
+                null,
+                mapper.readValue(
+                    mapper.writeValueAsString(
+                        new TransformSpec(
+                            new SelectorDimFilter("dim1", "foo", null),
+                            null
+                        )
+                    ),
+                    new TypeReference<Map<String, Object>>() {}),
                 indexSpec,
                 null,
                 CompactionEngine.NATIVE
@@ -1278,8 +1413,16 @@ public class NewestSegmentFirstPolicyTest
             new CompactionState(
                 partitionsSpec,
                 null,
-                Collections.emptyMap(), null,
-                mapper.readValue(mapper.writeValueAsString(new TransformSpec(new SelectorDimFilter("dim1", "bar", null), null)), new TypeReference<Map<String, Object>>() {}),
+                Collections.emptyMap(),
+                null,
+                mapper.readValue(
+                    mapper.writeValueAsString(
+                        new TransformSpec(
+                            new SelectorDimFilter("dim1", "bar", null),
+                            null
+                        )
+                    ),
+                    new TypeReference<Map<String, Object>>() {}),
                 indexSpec,
                 null,
                 CompactionEngine.NATIVE
@@ -1303,8 +1446,16 @@ public class NewestSegmentFirstPolicyTest
             Intervals.of("2017-10-04T00:00:00/2017-10-05T00:00:00"),
             new Period("P1D"),
             null,
-            new CompactionState(partitionsSpec, null, Collections.emptyMap(), null, null, indexSpec, null,
-                                CompactionEngine.NATIVE)
+            new CompactionState(
+                partitionsSpec,
+                null,
+                Collections.emptyMap(),
+                null,
+                null,
+                indexSpec,
+                null,
+                CompactionEngine.NATIVE
+            )
         )
     );
 
@@ -1422,7 +1573,8 @@ public class NewestSegmentFirstPolicyTest
             new CompactionState(
                 partitionsSpec,
                 null,
-                Collections.emptyMap(), mapper.convertValue(new AggregatorFactory[] {}, new TypeReference<List<Object>>() {}),
+                Collections.emptyMap(),
+                mapper.convertValue(new AggregatorFactory[] {}, new TypeReference<List<Object>>() {}),
                 null,
                 indexSpec,
                 null,
@@ -1433,8 +1585,16 @@ public class NewestSegmentFirstPolicyTest
             Intervals.of("2017-10-04T00:00:00/2017-10-05T00:00:00"),
             new Period("P1D"),
             null,
-            new CompactionState(partitionsSpec, null, Collections.emptyMap(), null, null, indexSpec, null,
-                                CompactionEngine.NATIVE)
+            new CompactionState(
+                partitionsSpec,
+                null,
+                Collections.emptyMap(),
+                null,
+                null,
+                indexSpec,
+                null,
+                CompactionEngine.NATIVE
+            )
         )
     );
 
@@ -1540,8 +1700,16 @@ public class NewestSegmentFirstPolicyTest
             Intervals.of("2017-10-02T00:00:00/2017-10-03T00:00:00"),
             new Period("P1D"),
             null,
-            new CompactionState(partitionsSpec, null, Collections.emptyMap(), null, null, newIndexSpecMap, null,
-                                CompactionEngine.NATIVE)
+            new CompactionState(
+                partitionsSpec,
+                null,
+                Collections.emptyMap(),
+                null,
+                null,
+                newIndexSpecMap,
+                null,
+                CompactionEngine.NATIVE
+            )
         )
     );
 
@@ -1591,7 +1759,8 @@ public class NewestSegmentFirstPolicyTest
             new CompactionState(
                 partitionsSpec,
                 null,
-                Collections.emptyMap(), null,
+                Collections.emptyMap(),
+                null,
                 null,
                 IndexSpec.DEFAULT.asMap(mapper),
                 null,

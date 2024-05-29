@@ -243,7 +243,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
     return new CompactionState(
         new DynamicPartitionsSpec(5000000, Long.MAX_VALUE),
         expectedDims,
-        Collections.emptyMap(), ImmutableList.of(expectedMetric),
+        Collections.emptyMap(),
+        ImmutableList.of(expectedMetric),
         null,
         IndexSpec.DEFAULT.asMap(mapper),
         mapper.readValue(
@@ -420,7 +421,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
         CompactionState expectedState = new CompactionState(
             new HashedPartitionsSpec(null, 3, null),
             new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
-            Collections.emptyMap(), ImmutableList.of(expectedLongSumMetric),
+            Collections.emptyMap(),
+            ImmutableList.of(expectedLongSumMetric),
             null,
             compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper()),
             getObjectMapper().readValue(
@@ -848,7 +850,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
     CompactionState expectedCompactionState = new CompactionState(
         new DynamicPartitionsSpec(5000000, Long.MAX_VALUE),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
-        Collections.emptyMap(), ImmutableList.of(expectedLongSumMetric),
+        Collections.emptyMap(),
+        ImmutableList.of(expectedLongSumMetric),
         getObjectMapper().readValue(getObjectMapper().writeValueAsString(compactionTask.getTransformSpec()), Map.class),
         IndexSpec.DEFAULT.asMap(mapper),
         mapper.readValue(
@@ -916,7 +919,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
     CompactionState expectedCompactionState = new CompactionState(
         new DynamicPartitionsSpec(5000000, Long.MAX_VALUE),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
-        Collections.emptyMap(), ImmutableList.of(expectedCountMetric, expectedLongSumMetric),
+        Collections.emptyMap(),
+        ImmutableList.of(expectedCountMetric, expectedLongSumMetric),
         getObjectMapper().readValue(getObjectMapper().writeValueAsString(compactionTask.getTransformSpec()), Map.class),
         IndexSpec.DEFAULT.asMap(mapper),
         mapper.readValue(

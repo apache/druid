@@ -1060,7 +1060,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     )
     {
       this.dataSource = dataSource;
-      this.segmentCacheManagerFactory =  segmentCacheManagerFactory;
+      this.segmentCacheManagerFactory = segmentCacheManagerFactory;
       this.retryPolicyFactory = retryPolicyFactory;
       this.compactionRunner = compactionRunner;
     }

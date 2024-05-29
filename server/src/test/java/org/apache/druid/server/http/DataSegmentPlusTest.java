@@ -90,7 +90,8 @@ public class DataSegmentPlusTest
                 new DimensionsSpec(
                     DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "bar", "foo"))
                 ),
-                Collections.emptyMap(), ImmutableList.of(ImmutableMap.of("type", "count", "name", "count")),
+                Collections.emptyMap(),
+                ImmutableList.of(ImmutableMap.of("type", "count", "name", "count")),
                 ImmutableMap.of("filter", ImmutableMap.of("type", "selector", "dimension", "dim1", "value", "foo")),
                 ImmutableMap.of(),
                 ImmutableMap.of(),
