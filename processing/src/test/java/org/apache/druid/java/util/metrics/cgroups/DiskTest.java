@@ -20,6 +20,7 @@
 package org.apache.druid.java.util.metrics.cgroups;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.FileUtils;
 import org.junit.Assert;
 import org.junit.Before;
@@ -69,11 +70,16 @@ public class DiskTest
   public void testSimpleSnapshot()
   {
     final Map<String, Disk.Metrics> stats = new Disk(discoverer).snapshot();
-    Assert.assertEquals(ImmutableMap.of(
-        "259:0",
-        new Disk.Metrics("259:0", 98L, 756L, 55000L, 6208512L),
-        "259:7",
-        new Disk.Metrics("259:7", 26L, 0L, 1773568L, 0L)
-    ), stats);
+    Assert.assertEquals(ImmutableSet.of("259:0", "259:7"), stats.keySet());
+
+    Assert.assertEquals(stats.get("259:0").getReadCount(), 98L);
+    Assert.assertEquals(stats.get("259:0").getWriteCount(), 756L);
+    Assert.assertEquals(stats.get("259:0").getReadBytes(), 55000L);
+    Assert.assertEquals(stats.get("259:0").getWriteBytes(), 6208512L);
+
+    Assert.assertEquals(stats.get("259:7").getReadCount(), 26L);
+    Assert.assertEquals(stats.get("259:7").getWriteCount(), 0L);
+    Assert.assertEquals(stats.get("259:7").getReadBytes(), 1773568L);
+    Assert.assertEquals(stats.get("259:7").getWriteBytes(), 0L);
   }
 }
