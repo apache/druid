@@ -30,14 +30,6 @@ For the full release notes for a specific version, see the [releases page](https
 
 ### Upgrade notes
 
-#### Azure input source schema
-
-The `azure` schema for ingesting from Azure has been deprecated. Use the new `azureStorage` schema instead. It provides additional functionality. For more information, see [Azure input source schema](#azure-input-source-schema).
-
-Additionally, the new config `storageAccountEndpointSuffix` lets you configure the endpoint suffix to use so that you can override the default and connect to other endpoints, such as Azure Government.
-
-[#15630](https://github.com/apache/druid/pull/15630) [#16016](https://github.com/apache/druid/pull/16016)
-
 #### Append JsonPath function
 
 The `append` function for JsonPath for ORC format now fails with an exception. Previously, it would run but not append anything.

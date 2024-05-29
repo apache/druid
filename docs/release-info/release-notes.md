@@ -24,7 +24,7 @@ title: "Release notes"
 
 <!--Replace {{DRUIDVERSION}} with the correct Druid version.-->
 
-Apache Druid 30.0.0 contains over $NUMBER_FEATURES new features, bug fixes, performance enhancements, documentation improvements, and additional test coverage from $NUMBER_OF_CONTRIBUTORS contributors.
+Apache Druid 30.0.0 contains over 407 new features, bug fixes, performance enhancements, documentation improvements, and additional test coverage from 50 contributors.
 
 <!--
 Replace {{MILESTONE}} with the correct milestone number. For example: https://github.com/apache/druid/issues?q=is%3Aclosed+milestone%3A28.0+sort%3Aupdated-desc+
@@ -57,18 +57,6 @@ For tips about how to write a good release note, see [Release notes](https://git
 
 This section contains important information about new and existing features.
 
-### Improved native queries
-
-Native queries can now group on supported complex columns and nested arrays.
-
-[#16068](https://github.com/apache/druid/pull/16068)
-
-Before realtime segments are pushed to deep storage, they consist of spill files.
-Segment metrics such as `query/segment/time` now report on per spill file for a realtime segment, rather than for the entire segment.
-This change eliminates the need to materialize results on the heap, which improves the performance of groupBy queries.
-
-[#15757](https://github.com/apache/druid/pull/15757)
-
 ### Concurrent append and replace improvements
 
 Streaming ingestion supervisors now support concurrent append, that is streaming tasks can run concurrently with a replace task (compaction or re-indexing) if it also happens to be using concurrent locks. Set the context parameter `useConcurrentLocks` to true to enable concurrent append.
@@ -82,6 +70,24 @@ This allows concurrent append and replace to upgrade only a minimal set of pendi
 Additionally, it helps in reducing load on the metadata store.
 
 [#16144](https://github.com/apache/druid/pull/16144)
+
+### Grouping on complex columns
+
+Druid now supports grouping on complex columns and nested arrays.
+This means that both native queries and the MSQ task engine can group on complex columns and nested arrays while returning results.
+
+Additionally, the MSQ task engine can rollup on supported complex dimensions, such as JSON columns, during ingestion.
+
+[#16068](https://github.com/apache/druid/pull/16068)
+[#16322](https://github.com/apache/druid/pull/16322)
+
+### Improved groupBy queries
+
+Before realtime segments are pushed to deep storage, they consist of spill files.
+Segment metrics such as `query/segment/time` now report on per spill file for a realtime segment, rather than for the entire segment.
+This change eliminates the need to materialize results on the heap, which improves the performance of groupBy queries.
+
+[#15757](https://github.com/apache/druid/pull/15757)
 
 ### Improved AND filter performance
 
@@ -191,7 +197,7 @@ This prevents the expression from blocking the flow.
   * Error state is lost if tab is switched twice
 
   [#16235](https://github.com/apache/druid/pull/16235)
-* The web console now suggests the `azureStorage` input type instead of the deprecated `azure` storage type [#15820](https://github.com/apache/druid/pull/15820)
+* The web console now suggests the `azureStorage` input type instead of the `azure` storage type [#15820](https://github.com/apache/druid/pull/15820)
 * The download query detail archive option is now more resilient when the detail archive is incomplete [#16071](https://github.com/apache/druid/pull/16071)
 * You can now set `maxCompactionTaskSlots` to zero to stop compaction tasks [#15877](https://github.com/apache/druid/pull/15877)
 
@@ -199,7 +205,7 @@ This prevents the expression from blocking the flow.
 
 #### Improved Azure input source
 
-You can now ingest data from multiple storage accounts using the new `azureStorage` input source schema instead of the now deprecated `azure` input source schema. For example:
+You can now ingest data from multiple storage accounts using the new `azureStorage` input source schema. For example:
 
 ```json
 ...
@@ -219,6 +225,12 @@ You can now ingest data from multiple storage accounts using the new `azureStora
 ```
 
 [#15630](https://github.com/apache/druid/pull/15630)
+
+#### Added a new config to `AzureAccountConfig`
+
+The new config `storageAccountEndpointSuffix` lets you configure the endpoint suffix to use so that you can override the default and connect to other endpoints, such as Azure Government.
+
+[#16016](https://github.com/apache/druid/pull/16016)
 
 #### Data management API improvements
 
@@ -268,13 +280,6 @@ Added a new experimental interface `TaskContextEnricher` to enrich context with 
 
 ### SQL-based ingestion
 
-#### Sorting on complex columns
-
-The MSQ task engine now supports sorting and grouping on complex columns.
-This change also allows the MSQ task engine to roll up on JSON columns.
-
-[#16322](https://github.com/apache/druid/pull/16322)
-
 #### Manifest files for MSQ task engine exports
 
 Export queries that use the MSQ task engine now also create a manifest file at the destination, which lists the files created by the query.
@@ -299,8 +304,7 @@ When set to `true`, Druid records the state of compaction for each segment in th
 
 #### Selective loading of lookups
 
-Druid now supports selective loading of lookups in the task layer.
-Also, `KillUnusedSegmentsTask` now returns an empty set of lookups to load.
+We have built the foundation of selective lookup loading. As part of enabling this, `KillUnusedSegmentsTask` doesn't load lookups.
 
 [#16328](https://github.com/apache/druid/pull/16328)
 
@@ -620,16 +624,6 @@ Improved performance of LDAP credentials validator by keeping password hashes in
 ## Upgrade notes and incompatible changes
 
 ### Upgrade notes
-
-#### Azure input source schema
-
-The `azure` schema for ingesting from Azure has been deprecated. Use the new `azureStorage` schema instead. It provides additional functionality. For more information, see [Azure input source schema](#azure-input-source-schema).
-
-[#15630](https://github.com/apache/druid/pull/15630)
-
-Additionally, the new config `storageAccountEndpointSuffix` lets you configure the endpoint suffix to use so that you can override the default and connect to other endpoints, such as Azure Government.
-
-[#16016](https://github.com/apache/druid/pull/16016)
 
 #### Append JsonPath function
 
