@@ -1,8 +1,8 @@
 ---
-id: tutorial-latest-by-any
-title: Query for latest values and deduplicated data
+id: tutorial-latest-by
+title: Query for latest values
 sidebar_label: Query for latest and deduplicated data
-description: How to use LATEST_BY or deltas for up-to-date values and ANY for deduplication.
+description: How to use LATEST_BY or deltas for up-to-date values
 ---
 
 <!--
@@ -26,9 +26,7 @@ description: How to use LATEST_BY or deltas for up-to-date values and ANY for de
 
 This tutorial describes strategies in Apache Druid for use cases that might be handled by UPSERT in other databases. You can use the LATEST_BY aggregation at query time or "deltas" for numeric dimensions at insert time.
 
-The tutorial also includes an example of the ANY aggregation to handle deduplication use cases. 
-
-The [Update data](./tutorial-update-data.md) tutorial demonstrates how to use batch operations to updadate data according to the timestamp, including UPSERT cases. However, with streaming data, you can potentially use LATEST_BY or deltas to satisfy requirements for updates.
+The [Update data](./tutorial-update-data.md) tutorial demonstrates how to use batch operations to updadate data according to the timestamp, including UPSERT cases. However, with streaming data, you can potentially use LATEST_BY or deltas to satisfy requirements otherwise handled with updates.
 
 ## Prerequisites
 
@@ -156,9 +154,9 @@ The results are as follows:
 |`2024-01-01T02:00:00.000Z`|`silly_monkey2`|25|
 |`2024-01-01T03:00:00.000Z`|`funny_bunny1`|10|
 
-You can set up a periodic batch ingestion job that reindexes modified data into a new datasource for direct querying without grouping to mitigate for the cost of these kinds of queries is to.
+You can set up a periodic batch ingestion job that reindexes modified data into a new datasource for direct querying without grouping to mitigate for the cost of these kinds of queries.
  
-Alternatively, you can perform ingestion-time aggregation and use the LATEST_BY aggregation at ingestion time to append updates with streaming ingestion into a rolled up datasource. Appending into a time chunk adds new segments and does not perfectly roll up data, so rows may be partial rather than complete rollups, and you may have multiple partially rolled up rows. In this case you still need to use GROUP BY query for correct querying of the rolled-up data source, you secan tune automatic compaction right to significantly reduce the number of stale rows and improve your performance
+Alternatively, you can perform ingestion-time aggregation using LATEST_BY and append updates with streaming ingestion into a rolled up datasource. Appending into a time chunk adds new segments and does not perfectly roll up data, so rows may be partial rather than complete rollups, and you may have multiple partially rolled up rows. In this case you still need to use GROUP BY query for correct querying of the rolled-up data source, you can tune automatic compaction right to significantly reduce the number of stale rows and improve your performance
 
 ## Use delta values and aggregation for updated values
 
@@ -213,13 +211,9 @@ FROM "delta_tutorial"
 GROUP BY 1,2
 ```
 
-## Use ANY for deduplication
-
-
 ## Learn more
 
 See the following topics for more information:
 
-* [Data updates](../data-management/update.md) for an overview of updating data in Druid.
-* [Load files with SQL-based ingestion](../tutorials/tutorial-msq-extern.md) for generating a query that references externally hosted data.
-* [Overwrite data with REPLACE](../multi-stage-query/concepts.md#overwrite-data-with-replace) for details on how the MSQ task engine executes SQL REPLACE queries.
+* [Update data](./tutorial-update-data.md) for a tutorial on updating data in Druid.
+* [Data updates](../data-management/update.md) for a general overview of updating data in Druid.
