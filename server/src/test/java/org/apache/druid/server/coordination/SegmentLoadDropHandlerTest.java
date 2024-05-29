@@ -61,7 +61,6 @@ import java.util.Set;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class SegmentLoadDropHandlerTest
 {
@@ -156,13 +155,13 @@ public class SegmentLoadDropHandlerTest
 
     handler.start();
 
-    Assert.assertEquals(1, serverAnnouncer.observedCount.get());
+    Assert.assertEquals(1, serverAnnouncer.getObservedCount());
 
     final DataSegment segment = makeSegment("test", "1", Intervals.of("P1d/2011-04-01"));
 
     handler.removeSegment(segment, DataSegmentChangeCallback.NOOP);
 
-    Assert.assertFalse(segmentAnnouncer.observedSegments.contains(segment));
+    Assert.assertFalse(segmentAnnouncer.getObservedSegments().contains(segment));
 
     handler.addSegment(segment, DataSegmentChangeCallback.NOOP);
 
@@ -177,14 +176,14 @@ public class SegmentLoadDropHandlerTest
     Assert.assertEquals(ImmutableList.of(), cacheManager.observedBootstrapSegments);
     Assert.assertEquals(ImmutableList.of(), cacheManager.observedBootstrapSegmentsLoadedIntoPageCache);
 
-    Assert.assertEquals(ImmutableList.of(segment), segmentAnnouncer.observedSegments);
+    Assert.assertEquals(ImmutableList.of(segment), segmentAnnouncer.getObservedSegments());
     Assert.assertFalse(
         "segment files shouldn't be deleted",
         cacheManager.observedSegmentsRemovedFromCache.contains(segment)
     );
 
     handler.stop();
-    Assert.assertEquals(0, serverAnnouncer.observedCount.get());
+    Assert.assertEquals(0, serverAnnouncer.getObservedCount());
   }
 
   /**
@@ -205,17 +204,17 @@ public class SegmentLoadDropHandlerTest
 
     handler.start();
 
-    Assert.assertEquals(1, serverAnnouncer.observedCount.get());
+    Assert.assertEquals(1, serverAnnouncer.getObservedCount());
 
     final DataSegment segment = makeSegment("test", "1", Intervals.of("P1d/2011-04-01"));
 
     handler.addSegment(segment, DataSegmentChangeCallback.NOOP);
 
-    Assert.assertTrue(segmentAnnouncer.observedSegments.contains(segment));
+    Assert.assertTrue(segmentAnnouncer.getObservedSegments().contains(segment));
 
     handler.removeSegment(segment, DataSegmentChangeCallback.NOOP);
 
-    Assert.assertFalse(segmentAnnouncer.observedSegments.contains(segment));
+    Assert.assertFalse(segmentAnnouncer.getObservedSegments().contains(segment));
 
     handler.addSegment(segment, DataSegmentChangeCallback.NOOP);
 
@@ -233,14 +232,14 @@ public class SegmentLoadDropHandlerTest
     Assert.assertEquals(ImmutableList.of(), cacheManager.observedBootstrapSegments);
     Assert.assertEquals(ImmutableList.of(), cacheManager.observedBootstrapSegmentsLoadedIntoPageCache);
 
-    Assert.assertTrue(segmentAnnouncer.observedSegments.contains(segment));
+    Assert.assertTrue(segmentAnnouncer.getObservedSegments().contains(segment));
     Assert.assertFalse(
         "segment files shouldn't be deleted",
         cacheManager.observedSegmentsRemovedFromCache.contains(segment)
     );
 
     handler.stop();
-    Assert.assertEquals(0, serverAnnouncer.observedCount.get());
+    Assert.assertEquals(0, serverAnnouncer.getObservedCount());
   }
 
   @Test
@@ -271,7 +270,7 @@ public class SegmentLoadDropHandlerTest
 
     handler.start();
 
-    Assert.assertEquals(1, serverAnnouncer.observedCount.get());
+    Assert.assertEquals(1, serverAnnouncer.getObservedCount());
     Assert.assertFalse(segmentManager.getDataSourceCounts().isEmpty());
 
     for (int i = 0; i < COUNT; ++i) {
@@ -279,7 +278,7 @@ public class SegmentLoadDropHandlerTest
       Assert.assertEquals(2L, segmentManager.getDataSourceCounts().get("test_two" + i).longValue());
     }
 
-    Assert.assertEquals(ImmutableList.copyOf(segments), segmentAnnouncer.observedSegments);
+    Assert.assertEquals(ImmutableList.copyOf(segments), segmentAnnouncer.getObservedSegments());
 
     final ImmutableList<DataSegment> expectedBootstrapSegments = ImmutableList.copyOf(segments);
     Assert.assertEquals(expectedBootstrapSegments, cacheManager.observedBootstrapSegments);
@@ -289,7 +288,7 @@ public class SegmentLoadDropHandlerTest
 
     handler.stop();
 
-    Assert.assertEquals(0, serverAnnouncer.observedCount.get());
+    Assert.assertEquals(0, serverAnnouncer.getObservedCount());
   }
 
   @Test
@@ -312,7 +311,7 @@ public class SegmentLoadDropHandlerTest
 
     handler.start();
 
-    Assert.assertEquals(1, serverAnnouncer.observedCount.get());
+    Assert.assertEquals(1, serverAnnouncer.getObservedCount());
     Assert.assertFalse(segmentManager.getDataSourceCounts().isEmpty());
 
     for (int i = 0; i < COUNT; ++i) {
@@ -320,7 +319,7 @@ public class SegmentLoadDropHandlerTest
       Assert.assertEquals(2L, segmentManager.getDataSourceCounts().get("test_two" + i).longValue());
     }
 
-    Assert.assertEquals(ImmutableList.copyOf(segments), segmentAnnouncer.observedSegments);
+    Assert.assertEquals(ImmutableList.copyOf(segments), segmentAnnouncer.getObservedSegments());
 
     final ImmutableList<DataSegment> expectedBootstrapSegments = ImmutableList.copyOf(segments);
     Assert.assertEquals(expectedBootstrapSegments, cacheManager.observedBootstrapSegments);
@@ -330,7 +329,7 @@ public class SegmentLoadDropHandlerTest
 
     handler.stop();
 
-    Assert.assertEquals(0, serverAnnouncer.observedCount.get());
+    Assert.assertEquals(0, serverAnnouncer.getObservedCount());
   }
 
   @Test(timeout = 60_000L)
@@ -342,7 +341,7 @@ public class SegmentLoadDropHandlerTest
 
     handler.start();
 
-    Assert.assertEquals(1, serverAnnouncer.observedCount.get());
+    Assert.assertEquals(1, serverAnnouncer.getObservedCount());
 
     DataSegment segment1 = makeSegment("batchtest1", "1", Intervals.of("P1d/2011-04-01"));
     DataSegment segment2 = makeSegment("batchtest2", "1", Intervals.of("P1d/2011-04-01"));
@@ -369,7 +368,7 @@ public class SegmentLoadDropHandlerTest
     result = handler.processBatch(ImmutableList.of(new SegmentChangeRequestLoad(segment1))).get();
     Assert.assertEquals(SegmentChangeStatus.SUCCESS, result.get(0).getStatus());
 
-    Assert.assertEquals(ImmutableList.of(segment1), segmentAnnouncer.observedSegments);
+    Assert.assertEquals(ImmutableList.of(segment1), segmentAnnouncer.getObservedSegments());
 
     final ImmutableList<DataSegment> expectedSegments = ImmutableList.of(segment1);
     Assert.assertEquals(expectedSegments, cacheManager.observedSegments);
@@ -378,7 +377,7 @@ public class SegmentLoadDropHandlerTest
     Assert.assertEquals(ImmutableList.of(), cacheManager.observedBootstrapSegmentsLoadedIntoPageCache);
 
     handler.stop();
-    Assert.assertEquals(0, serverAnnouncer.observedCount.get());
+    Assert.assertEquals(0, serverAnnouncer.getObservedCount());
   }
 
   @Test(timeout = 60_000L)
@@ -394,7 +393,7 @@ public class SegmentLoadDropHandlerTest
 
     handler.start();
 
-    Assert.assertEquals(1, serverAnnouncer.observedCount.get());
+    Assert.assertEquals(1, serverAnnouncer.getObservedCount());
 
     DataSegment segment1 = makeSegment("batchtest1", "1", Intervals.of("P1d/2011-04-01"));
     List<DataSegmentChangeRequest> batch = ImmutableList.of(new SegmentChangeRequestLoad(segment1));
@@ -406,7 +405,7 @@ public class SegmentLoadDropHandlerTest
     }
     List<DataSegmentChangeResponse> result = future.get();
     Assert.assertEquals(State.FAILED, result.get(0).getStatus().getState());
-    Assert.assertEquals(ImmutableList.of(), segmentAnnouncer.observedSegments);
+    Assert.assertEquals(ImmutableList.of(), segmentAnnouncer.getObservedSegments());
 
     future = handler.processBatch(batch);
     for (Runnable runnable : scheduledRunnable) {
@@ -414,10 +413,10 @@ public class SegmentLoadDropHandlerTest
     }
     result = future.get();
     Assert.assertEquals(State.SUCCESS, result.get(0).getStatus().getState());
-    Assert.assertEquals(ImmutableList.of(segment1, segment1), segmentAnnouncer.observedSegments);
+    Assert.assertEquals(ImmutableList.of(segment1, segment1), segmentAnnouncer.getObservedSegments());
 
     handler.stop();
-    Assert.assertEquals(0, serverAnnouncer.observedCount.get());
+    Assert.assertEquals(0, serverAnnouncer.getObservedCount());
   }
 
   @Test(timeout = 60_000L)
@@ -470,7 +469,7 @@ public class SegmentLoadDropHandlerTest
 
     handler.start();
 
-    Assert.assertEquals(1, serverAnnouncer.observedCount.get());
+    Assert.assertEquals(1, serverAnnouncer.getObservedCount());
 
     final DataSegment segment1 = makeSegment("batchtest1", "1", Intervals.of("P1d/2011-04-01"));
     List<DataSegmentChangeRequest> batch = ImmutableList.of(new SegmentChangeRequestLoad(segment1));
@@ -482,7 +481,7 @@ public class SegmentLoadDropHandlerTest
     }
     List<DataSegmentChangeResponse> result = future.get();
     Assert.assertEquals(State.SUCCESS, result.get(0).getStatus().getState());
-    Assert.assertEquals(ImmutableList.of(segment1), segmentAnnouncer.observedSegments);
+    Assert.assertEquals(ImmutableList.of(segment1), segmentAnnouncer.getObservedSegments());
     scheduledRunnable.clear();
 
     // Request 2: Drop the segment
@@ -493,8 +492,8 @@ public class SegmentLoadDropHandlerTest
     }
     result = future.get();
     Assert.assertEquals(State.SUCCESS, result.get(0).getStatus().getState());
-    Assert.assertEquals(ImmutableList.of(), segmentAnnouncer.observedSegments);
-    Assert.assertFalse(segmentAnnouncer.observedSegments.contains(segment1)); //
+    Assert.assertEquals(ImmutableList.of(), segmentAnnouncer.getObservedSegments());
+    Assert.assertFalse(segmentAnnouncer.getObservedSegments().contains(segment1)); //
     scheduledRunnable.clear();
 
     // check invocations after a load-drop sequence
@@ -511,7 +510,7 @@ public class SegmentLoadDropHandlerTest
     }
     result = future.get();
     Assert.assertEquals(State.SUCCESS, result.get(0).getStatus().getState());
-    Assert.assertEquals(ImmutableList.of(segment1), segmentAnnouncer.observedSegments);
+    Assert.assertEquals(ImmutableList.of(segment1), segmentAnnouncer.getObservedSegments());
     scheduledRunnable.clear();
 
     // check invocations - 1 more load has happened
@@ -528,7 +527,7 @@ public class SegmentLoadDropHandlerTest
     }
     result = future.get();
     Assert.assertEquals(State.SUCCESS, result.get(0).getStatus().getState());
-    Assert.assertEquals(ImmutableList.of(segment1, segment1), segmentAnnouncer.observedSegments);
+    Assert.assertEquals(ImmutableList.of(segment1, segment1), segmentAnnouncer.getObservedSegments());
     scheduledRunnable.clear();
 
     // check invocations - the load segment counter should bump up
@@ -538,7 +537,7 @@ public class SegmentLoadDropHandlerTest
            .dropSegment(ArgumentMatchers.any());
 
     handler.stop();
-    Assert.assertEquals(0, serverAnnouncer.observedCount.get());
+    Assert.assertEquals(0, serverAnnouncer.getObservedCount());
   }
 
   private SegmentLoadDropHandler initSegmentLoadDropHandler(SegmentManager segmentManager)
@@ -660,72 +659,6 @@ public class SegmentLoadDropHandlerTest
     public void cleanup(DataSegment segment)
     {
       this.observedSegmentsRemovedFromCache.add(segment);
-    }
-  }
-
-  /**
-   * A test data segment announcer that tracks the state of all segment announcements and unannouncements.
-   */
-  private static class TestDataSegmentAnnouncer extends NoopDataSegmentAnnouncer
-  {
-    private final List<DataSegment> observedSegments;
-
-    TestDataSegmentAnnouncer()
-    {
-      this.observedSegments = new ArrayList<>();
-    }
-
-    @Override
-    public void announceSegment(DataSegment segment)
-    {
-      this.observedSegments.add(segment);
-    }
-
-    @Override
-    public void unannounceSegment(DataSegment segment)
-    {
-      this.observedSegments.remove(segment);
-    }
-
-    @Override
-    public void announceSegments(Iterable<DataSegment> segments)
-    {
-      for (DataSegment segment : segments) {
-        this.observedSegments.add(segment);
-      }
-    }
-
-    @Override
-    public void unannounceSegments(Iterable<DataSegment> segments)
-    {
-      for (DataSegment segment : segments) {
-        observedSegments.remove(segment);
-      }
-    }
-  }
-
-  /**
-   * A test data server announcer that tracks the count of all announcements and unannouncements.
-   */
-  private static class TestDataServerAnnouncer implements DataSegmentServerAnnouncer
-  {
-    private final AtomicInteger observedCount;
-
-    TestDataServerAnnouncer()
-    {
-      this.observedCount = new AtomicInteger(0);
-    }
-
-    @Override
-    public void announce()
-    {
-      observedCount.incrementAndGet();
-    }
-
-    @Override
-    public void unannounce()
-    {
-      observedCount.decrementAndGet();
     }
   }
 }

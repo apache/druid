@@ -126,7 +126,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       );
     }
 
-    if (this.config.getNumThreadsToLoadSegmentsIntoPageCacheOnDownload() > 0) {
+    if (config.getNumThreadsToLoadSegmentsIntoPageCacheOnDownload() > 0) {
       loadOnDownloadExec = Executors.newFixedThreadPool(
           config.getNumThreadsToLoadSegmentsIntoPageCacheOnDownload(),
           Execs.makeThreadFactory("LoadSegmentsIntoPageCacheOnDownload-%s")
@@ -148,11 +148,11 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
           "canHandleSegments() is false. getCachedSegments() must be invoked only when canHandleSegments() returns true."
       );
     }
-    final File baseDir = getInfoDir();
-    FileUtils.mkdirp(baseDir);
+    final File infoDir = getEffectiveInfoDir();
+    FileUtils.mkdirp(infoDir);
 
     final List<DataSegment> cachedSegments = new ArrayList<>();
-    final File[] segmentsToLoad = baseDir.listFiles();
+    final File[] segmentsToLoad = infoDir.listFiles();
 
     int ignored = 0;
 
@@ -173,7 +173,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
         }
       }
       catch (Exception e) {
-        log.makeAlert(e, "Failed to load segment from segmentInfo file")
+        log.makeAlert(e, "Failed to load segment from segment cache file.")
            .addData("file", file)
            .emit();
       }
@@ -191,8 +191,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   @Override
   public void storeInfoFile(DataSegment segment) throws IOException
   {
-    final File infoDir = getInfoDir();
-    final File segmentInfoCacheFile = new File(infoDir, segment.getId().toString());
+    final File segmentInfoCacheFile = new File(getEffectiveInfoDir(), segment.getId().toString());
     if (!segmentInfoCacheFile.exists()) {
       jsonMapper.writeValue(segmentInfoCacheFile, segment);
     }
@@ -201,7 +200,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   @Override
   public void removeInfoFile(DataSegment segment)
   {
-    final File segmentInfoCacheFile = new File(getInfoDir(), segment.getId().toString());
+    final File segmentInfoCacheFile = new File(getEffectiveInfoDir(), segment.getId().toString());
     if (!segmentInfoCacheFile.delete()) {
       log.warn("Unable to delete cache file[%s] for segment[%s].", segmentInfoCacheFile, segment.getId());
     }
@@ -248,7 +247,19 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     return factory;
   }
 
-  private File getInfoDir()
+  /**
+   * Determines and returns the effective segment info directory based on the configuration settings.
+   * The directory is selected based on the following configurations injected into this class:
+   * <ul>
+   *   <li>{@link SegmentLoaderConfig#infoDir} - If this is set, it is used as the info directory.</li>
+   *   <li>{@link SegmentLoaderConfig#locations} - If the info directory is not set, the first location from this list is used.</li>
+   *   <li>List of {@link StorageLocation}s injected - If both the info directory and locations list are not set, the
+   *   first storage location is used.</li>
+   * </ul>
+   *
+   * @throws DruidException if none of the configurations are set, and the info directory cannot be determined.
+   */
+  private File getEffectiveInfoDir()
   {
     final File infoDir;
     if (config.getInfoDir() != null) {

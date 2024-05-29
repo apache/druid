@@ -41,18 +41,13 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Mockito;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import static org.mockito.ArgumentMatchers.any;
 
 /**
  * Similar to {@link SegmentLoadDropHandlerTest}. This class includes tests that cover the
@@ -65,7 +60,7 @@ public class SegmentLoadDropHandlerCacheTest
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
   private SegmentLoadDropHandler loadDropHandler;
-  private DataSegmentAnnouncer segmentAnnouncer;
+  private TestDataSegmentAnnouncer segmentAnnouncer;
   private DataSegmentServerAnnouncer serverAnnouncer;
   private SegmentManager segmentManager;
   private SegmentLoaderConfig loaderConfig;
@@ -108,7 +103,7 @@ public class SegmentLoadDropHandlerCacheTest
         objectMapper
     );
     segmentManager = new SegmentManager(cacheManager);
-    segmentAnnouncer = Mockito.mock(DataSegmentAnnouncer.class);
+    segmentAnnouncer = new TestDataSegmentAnnouncer();
 
     observedAnnouncedServerCount = new AtomicInteger(0);
     serverAnnouncer = new DataSegmentServerAnnouncer()
@@ -205,24 +200,17 @@ public class SegmentLoadDropHandlerCacheTest
     Assert.assertEquals(1, observedAnnouncedServerCount.get());
 
     // Verify the expected announcements
-    ArgumentCaptor<Iterable<DataSegment>> argCaptor = ArgumentCaptor.forClass(Iterable.class);
-    Mockito.verify(segmentAnnouncer).announceSegments(argCaptor.capture());
-    List<DataSegment> announcedSegments = new ArrayList<>();
-    argCaptor.getValue().forEach(announcedSegments::add);
-    announcedSegments.sort(Comparator.comparing(DataSegment::getVersion));
-    Assert.assertEquals(expectedSegments, announcedSegments);
+    Assert.assertTrue(segmentAnnouncer.getObservedSegments().containsAll(expectedSegments));
 
-    // make sure adding segments beyond allowed size fails
-    Mockito.reset(segmentAnnouncer);
+    // Make sure adding segments beyond allowed size fails
     DataSegment newSegment = makeSegment("test", "new-segment");
     loadDropHandler.addSegment(newSegment, null);
-    Mockito.verify(segmentAnnouncer, Mockito.never()).announceSegment(any());
-    Mockito.verify(segmentAnnouncer, Mockito.never()).announceSegments(any());
+    Assert.assertFalse(segmentAnnouncer.getObservedSegments().contains(newSegment));
 
-    // clearing some segment should allow for new segments
+    // Clearing some segment should allow for new segments
     loadDropHandler.removeSegment(expectedSegments.get(0), null, false);
     loadDropHandler.addSegment(newSegment, null);
-    Mockito.verify(segmentAnnouncer).announceSegment(newSegment);
+    Assert.assertTrue(segmentAnnouncer.getObservedSegments().contains(newSegment));
 
     loadDropHandler.stop();
     Assert.assertEquals(0, observedAnnouncedServerCount.get());
