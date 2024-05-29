@@ -57,6 +57,9 @@ public class Launcher
 
   public static void main(String[] args) throws Exception
   {
+    if(true) {
+      throw new RuntimeException("Asd");
+    }
     String quidemUri = System.getProperty(QUIDEM_URI, "druidtest:///");
 
     Launcher launcher = new Launcher(quidemUri );
