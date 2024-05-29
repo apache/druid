@@ -21,6 +21,7 @@ package org.apache.druid.segment.column;
 
 import it.unimi.dsi.fastutil.Hash;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.error.DruidException;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nullable;
@@ -152,5 +153,10 @@ public final class NullableTypeStrategy<T> implements Comparator<T>, Hash.Strate
       return b == null;
     }
     return b != null && delegate.equals(a, b);
+  }
+
+  public Class<?> complexDimensionType()
+  {
+    return delegate.complexDimensionType();
   }
 }

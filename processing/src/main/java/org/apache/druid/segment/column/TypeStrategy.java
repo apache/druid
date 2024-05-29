@@ -216,4 +216,9 @@ public interface TypeStrategy<T> extends Comparator<Object>, Hash.Strategy<T>
   {
     throw DruidException.defensive("Not implemented. Check groupable() first");
   }
+
+  default Class<?> complexDimensionType()
+  {
+    throw DruidException.defensive("Not implemented. It is only implemented for complex dimensions which are groupable()");
+  }
 }

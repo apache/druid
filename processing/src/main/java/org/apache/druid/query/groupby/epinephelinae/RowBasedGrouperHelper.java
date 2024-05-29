@@ -309,7 +309,8 @@ public class RowBasedGrouperHelper
         combining,
         includeTimestamp,
         columnSelectorFactory,
-        valueTypes
+        valueTypes,
+        spillMapper
     );
 
     final Predicate<ResultRow> rowPredicate;
@@ -509,14 +510,15 @@ public class RowBasedGrouperHelper
       final boolean combining,
       final boolean includeTimestamp,
       final ColumnSelectorFactory columnSelectorFactory,
-      final List<ColumnType> valueTypes
+      final List<ColumnType> valueTypes,
+      final ObjectMapper objectMapper
   )
   {
     final TimestampExtractFunction timestampExtractFn = includeTimestamp ?
                                                         makeTimestampExtractFunction(query, combining) :
                                                         null;
 
-    final Function<Object, Object>[] valueConvertFns = makeValueConvertFunctions(valueTypes);
+    final Function<Object, Object>[] valueConvertFns = makeValueConvertFunctions(valueTypes, objectMapper);
 
     if (!combining) {
       final Supplier<Object>[] inputRawSuppliers = getValueSuppliersForDimensions(
@@ -802,7 +804,8 @@ public class RowBasedGrouperHelper
 
   @SuppressWarnings("unchecked")
   private static Function<Object, Object>[] makeValueConvertFunctions(
-      final List<ColumnType> valueTypes
+      final List<ColumnType> valueTypes,
+      final ObjectMapper objectMapper
   )
   {
     final Function<Object, Object>[] functions = new Function[valueTypes.size()];
@@ -810,7 +813,12 @@ public class RowBasedGrouperHelper
       // Subquery post-aggs aren't added to the rowSignature (see rowSignatureFor() in GroupByQueryHelper) because
       // their types aren't known, so default to String handling.
       final ColumnType type = valueTypes.get(i) == null ? ColumnType.STRING : valueTypes.get(i);
-      functions[i] = input -> DimensionHandlerUtils.convertObjectToType(input, type);
+      if (type.is(ValueType.COMPLEX)) {
+        Class dimensionClass = type.getNullableStrategy().complexDimensionType();
+        functions[i] = input -> objectMapper.convertValue(input, dimensionClass);
+      } else {
+        functions[i] = input -> DimensionHandlerUtils.convertObjectToType(input, type);
+      }
     }
     return functions;
   }
