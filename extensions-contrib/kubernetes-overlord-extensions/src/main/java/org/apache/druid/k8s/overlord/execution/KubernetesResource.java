@@ -69,6 +69,13 @@ public class KubernetesResource
     this.auditManager = auditManager;
   }
 
+  /**
+   * Updates the Kubernetes execution configuration.
+   *
+   * @param executionConfig the new execution configuration to set
+   * @param req             the HTTP servlet request providing context for audit information
+   * @return a response indicating the success or failure of the update operation
+   */
   @POST
   @Path("/execution")
   @Consumes(MediaType.APPLICATION_JSON)
@@ -92,6 +99,13 @@ public class KubernetesResource
     }
   }
 
+  /**
+   * Retrieves the history of changes to the Kubernetes execution configuration.
+   *
+   * @param interval the time interval for fetching historical data (optional)
+   * @param count    the maximum number of historical entries to fetch (optional)
+   * @return a response containing a list of audit entries or an error message
+   */
   @GET
   @Path("/execution/history")
   @Produces(MediaType.APPLICATION_JSON)
@@ -125,6 +139,11 @@ public class KubernetesResource
     return Response.ok(executionEntryList).build();
   }
 
+  /**
+   * Retrieves the current execution configuration for tasks running in Kubernetes.
+   *
+   * @return a Response object containing the current execution configuration in JSON format.
+   */
   @GET
   @Path("/execution")
   @Produces(MediaType.APPLICATION_JSON)

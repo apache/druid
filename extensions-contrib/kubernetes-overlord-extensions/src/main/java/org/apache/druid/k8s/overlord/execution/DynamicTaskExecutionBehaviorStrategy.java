@@ -23,53 +23,45 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.indexing.common.task.Task;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.List;
 import java.util.Objects;
 
 /**
- * Implements {@link ExecutionBehaviorStrategy} by dynamically evaluating a series of mapping rules.
- * Each rule corresponds to a potential task category.
+ * Implements {@link ExecutionBehaviorStrategy} by dynamically evaluating a series of selectors.
+ * Each selector corresponds to a potential task category.
  */
 public class DynamicTaskExecutionBehaviorStrategy implements ExecutionBehaviorStrategy
 {
-  private LinkedHashMap<String, MappingRule> categoryRuleMap;
+  private List<Selector> categorySelectors;
 
-  /**
-   * Constructs a new strategy with a predefined map of category rules.
-   *
-   * @param categoryRuleMap a map linking categories to their respective {@link MappingRule}
-   */
   @JsonCreator
   public DynamicTaskExecutionBehaviorStrategy(
-      @JsonProperty("categoryMap") LinkedHashMap<String, MappingRule> categoryRuleMap
+      @JsonProperty("categorySelectors") List<Selector> categorySelectors
   )
   {
-    this.categoryRuleMap = categoryRuleMap;
+    this.categorySelectors = categorySelectors;
   }
 
   /**
-   * Evaluates the provided task against the set mapping rules to determine its category.
+   * Evaluates the provided task against the set selectors to determine its category.
    *
    * @param task the task to be categorized
-   * @return the category if a rule matches, otherwise null
+   * @return the category if a selector matches, otherwise null
    */
   @Override
   public String getTaskCategory(Task task)
   {
-    return categoryRuleMap.entrySet()
-                          .stream()
-                          .filter(categoryRule ->
-                                      categoryRule.getValue().evaluate(task))
-                          .findFirst()
-                          .map(Map.Entry::getKey)
-                          .orElse(null);
+    return categorySelectors.stream()
+                            .filter(selector -> selector.evaluate(task))
+                            .findFirst()
+                            .map(Selector::getName)
+                            .orElse(null);
   }
 
-  @JsonProperty("categoryMap")
-  public LinkedHashMap<String, MappingRule> getCategoryRuleMap()
+  @JsonProperty
+  public List<Selector> getCategorySelectors()
   {
-    return categoryRuleMap;
+    return categorySelectors;
   }
 
   @Override
@@ -82,20 +74,20 @@ public class DynamicTaskExecutionBehaviorStrategy implements ExecutionBehaviorSt
       return false;
     }
     DynamicTaskExecutionBehaviorStrategy that = (DynamicTaskExecutionBehaviorStrategy) o;
-    return Objects.equals(categoryRuleMap, that.categoryRuleMap);
+    return Objects.equals(categorySelectors, that.categorySelectors);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hashCode(categoryRuleMap);
+    return Objects.hashCode(categorySelectors);
   }
 
   @Override
   public String toString()
   {
     return "DynamicTaskExecutionBehaviorStrategy{" +
-           "categoryMap=" + categoryRuleMap +
+           "categorySelectors=" + categorySelectors +
            '}';
   }
 }
