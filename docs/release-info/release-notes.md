@@ -304,7 +304,7 @@ When set to `true`, Druid records the state of compaction for each segment in th
 
 #### Selective loading of lookups
 
-We have built the foundation of selective lookup loading. As part of enabling this, `KillUnusedSegmentsTask` doesn't load lookups.
+We have built the foundation of selective lookup loading. As part of this improvement, `KillUnusedSegmentsTask` no longer loads lookups.
 
 [#16328](https://github.com/apache/druid/pull/16328)
 
