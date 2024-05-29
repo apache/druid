@@ -34,6 +34,8 @@ import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
+import org.apache.druid.query.DruidProcessingConfigTest;
 import org.apache.druid.storage.s3.NoopServerSideEncryption;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 import org.easymock.EasyMock;
@@ -67,7 +69,7 @@ public class RetryableS3OutputStreamTest
   private S3OutputConfig config;
   private long chunkSize;
 
-  private final S3UploadManager s3UploadManager = new S3UploadManager(Execs.singleThreaded("UploadThreadPool-%d"));
+  private S3UploadManager s3UploadManager;
 
   @Before
   public void setup() throws IOException
@@ -101,6 +103,12 @@ public class RetryableS3OutputStreamTest
         return 2;
       }
     };
+
+    ScheduledExecutorFactory executorFactory = EasyMock.mock(ScheduledExecutorFactory.class);
+    EasyMock.expect(executorFactory.create(EasyMock.anyInt(), EasyMock.anyString()))
+           .andReturn(Execs.scheduledSingleThreaded("UploadThreadPool-%d"));
+    EasyMock.replay(executorFactory);
+    s3UploadManager = new S3UploadManager(executorFactory, new DruidProcessingConfigTest.MockRuntimeInfo(10, 0, 0));
   }
 
   @Test

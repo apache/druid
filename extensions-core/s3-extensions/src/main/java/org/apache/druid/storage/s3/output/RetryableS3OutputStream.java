@@ -177,7 +177,7 @@ public class RetryableS3OutputStream extends OutputStream
     }
 
     synchronized (maxChunksLock) {
-      while (uploadManager.getCurrentNumChunks() > uploadManager.getMaxConcurrentNumChunks()) {
+      while (uploadManager.getCurrentNumChunksOnDisk() > uploadManager.getMaxConcurrentNumChunks()) {
         try {
           LOG.debug("Waiting for lock for writing further chunks to local disk.");
           maxChunksLock.wait();
@@ -222,7 +222,7 @@ public class RetryableS3OutputStream extends OutputStream
     currentChunk.close();
     final Chunk chunk = currentChunk;
     if (chunk.length() > 0) {
-      uploadManager.incrementCurrentNumChunks();
+      uploadManager.incrementCurrentNumChunksOnDisk();
       pendingFiles.incrementAndGet();
 
       uploadManager.submitTask(() -> {
@@ -236,7 +236,7 @@ public class RetryableS3OutputStream extends OutputStream
         }
         finally {
           synchronized (maxChunksLock) {
-            uploadManager.decrementCurrentNumChunks();
+            uploadManager.decrementCurrentNumChunksOnDisk();
             maxChunksLock.notifyAll();
           }
           if (pendingFiles.decrementAndGet() == 0) {

@@ -20,19 +20,34 @@
 package org.apache.druid.storage.s3.output;
 
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
+import org.apache.druid.query.DruidProcessingConfigTest;
+import org.easymock.EasyMock;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
+
+import java.io.IOException;
 
 public class S3UploadManagerTest
 {
+  private S3UploadManager s3UploadManager;
 
-  S3UploadManager s3UploadManager = new S3UploadManager(Execs.singleThreaded("UploadThreadPool-%d"));
+  @Before
+  public void setup() throws IOException
+  {
+    ScheduledExecutorFactory executorFactory = EasyMock.mock(ScheduledExecutorFactory.class);
+    EasyMock.expect(executorFactory.create(EasyMock.anyInt(), EasyMock.anyString()))
+            .andReturn(Execs.scheduledSingleThreaded("UploadThreadPool-%d"));
+    EasyMock.replay(executorFactory);
+    s3UploadManager = new S3UploadManager(executorFactory, new DruidProcessingConfigTest.MockRuntimeInfo(10, 0, 0));
+  }
 
   @Test
   public void testDefault()
   {
     Assert.assertEquals(100, s3UploadManager.getMaxConcurrentNumChunks());
-    Assert.assertEquals(0, s3UploadManager.getCurrentNumChunks());
+    Assert.assertEquals(0, s3UploadManager.getCurrentNumChunksOnDisk());
   }
 
   @Test
@@ -41,11 +56,11 @@ public class S3UploadManagerTest
     // Verify that updating chunk size to a smaller or equal value doesn't change the maxConcurrentNumChunks.
     s3UploadManager.updateChunkSizeIfGreater(5L * 1024 * 1024L);
     Assert.assertEquals(100, s3UploadManager.getMaxConcurrentNumChunks());
-    Assert.assertEquals(0, s3UploadManager.getCurrentNumChunks());
+    Assert.assertEquals(0, s3UploadManager.getCurrentNumChunksOnDisk());
 
     // Verify that updating chunk size to a greater value changes the maxConcurrentNumChunks.
     s3UploadManager.updateChunkSizeIfGreater(5L * 1024 * 1024 * 1024L);
     Assert.assertEquals(1, s3UploadManager.getMaxConcurrentNumChunks());
-    Assert.assertEquals(0, s3UploadManager.getCurrentNumChunks());
+    Assert.assertEquals(0, s3UploadManager.getCurrentNumChunksOnDisk());
   }
 }

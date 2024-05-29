@@ -19,16 +19,19 @@
 
 package org.apache.druid.storage.s3.output;
 
+import com.google.inject.Inject;
 import org.apache.druid.java.util.common.HumanReadableBytes;
+import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.utils.RuntimeInfo;
 
-import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * This class manages the configuration for uploading files to S3 in chunks.
- * It tracks the current number of chunks written to local disk concurrently and ensures that the
- * maximum number of chunks on disk does not exceed a specified limit at any given point in time.
+ * It tracks the number of chunks currently present on local disk and ensures that
+ * it does not exceed a specified limit.
  */
 public class S3UploadManager
 {
@@ -38,10 +41,7 @@ public class S3UploadManager
    */
   private long chunkSize = new HumanReadableBytes("5MiB").getBytes();
 
-  /**
-   * An atomic counter to track the current number of chunks saved to local disk.
-   */
-  private final AtomicInteger currentNumChunks = new AtomicInteger(0);
+  private final AtomicInteger currentNumChunksOnDisk = new AtomicInteger(0);
 
   /**
    * The maximum number of chunks that can be saved to local disk concurrently.
@@ -49,32 +49,34 @@ public class S3UploadManager
    */
   private int maxConcurrentNumChunks = 100;
 
-  /**
-   * Threadpool used for uploading the chunks asynchronously.
-   */
-  private final ExecutorService uploadExecutor;
+  private final ScheduledExecutorService uploadExecutor;
 
   private static final Logger log = new Logger(S3UploadManager.class);
 
-  public S3UploadManager(ExecutorService executorService)
+  @Inject
+  public S3UploadManager(ScheduledExecutorFactory scheduledExecutorFactory, RuntimeInfo runtimeInfo)
   {
-    this.uploadExecutor = executorService;
+    int poolSize = Math.max(4, runtimeInfo.getAvailableProcessors());
+    this.uploadExecutor = scheduledExecutorFactory.create(
+        poolSize,
+        "UploadThreadPool-%d"
+    );
   }
 
   /**
    * Increments the counter for the current number of chunks saved on disk.
    */
-  public void incrementCurrentNumChunks()
+  public void incrementCurrentNumChunksOnDisk()
   {
-    currentNumChunks.incrementAndGet();
+    currentNumChunksOnDisk.incrementAndGet();
   }
 
   /**
    * Decrements the counter for the current number of chunks saved on disk.
    */
-  public void decrementCurrentNumChunks()
+  public void decrementCurrentNumChunksOnDisk()
   {
-    currentNumChunks.decrementAndGet();
+    currentNumChunksOnDisk.decrementAndGet();
   }
 
   /**
@@ -82,9 +84,9 @@ public class S3UploadManager
    *
    * @return the current number of chunks saved to local disk.
    */
-  public int getCurrentNumChunks()
+  public int getCurrentNumChunksOnDisk()
   {
-    return currentNumChunks.get();
+    return currentNumChunksOnDisk.get();
   }
 
   /**

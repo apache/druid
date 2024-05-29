@@ -43,13 +43,9 @@ import org.apache.druid.guice.Binders;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.initialization.DruidModule;
-import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.storage.s3.output.S3UploadManager;
-import org.apache.druid.utils.RuntimeInfo;
 
 import java.util.List;
-import java.util.concurrent.ScheduledExecutorService;
 
 /**
  *
@@ -185,17 +181,5 @@ public class S3StorageDruidModule implements DruidModule
   )
   {
     return Suppliers.memoize(serverSideEncryptingAmazonS3Builder::build);
-  }
-
-  @Provides
-  @LazySingleton
-  public S3UploadManager getS3UploadManager(ScheduledExecutorFactory scheduledExecutorFactory, RuntimeInfo runtimeInfo)
-  {
-    int poolSize = Math.max(4, runtimeInfo.getAvailableProcessors());
-    ScheduledExecutorService executorService = scheduledExecutorFactory.create(
-        poolSize,
-        "UploadThreadPool-%d"
-    );
-    return new S3UploadManager(executorService);
   }
 }

@@ -31,7 +31,8 @@ import org.apache.druid.common.aws.AWSModule;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.StartupInjectorBuilder;
-import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
+import org.apache.druid.query.DruidProcessingConfigTest;
 import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.StorageConnectorModule;
 import org.apache.druid.storage.StorageConnectorProvider;
@@ -39,6 +40,7 @@ import org.apache.druid.storage.s3.output.S3StorageConnector;
 import org.apache.druid.storage.s3.output.S3StorageConnectorModule;
 import org.apache.druid.storage.s3.output.S3StorageConnectorProvider;
 import org.apache.druid.storage.s3.output.S3UploadManager;
+import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -151,8 +153,9 @@ public class S3StorageConnectorProviderTest
             )
             .addValue(
                 S3UploadManager.class,
-                new S3UploadManager(Execs.singleThreaded("UploadThreadPool-%d"))
-            ));
+                new S3UploadManager(EasyMock.mock(ScheduledExecutorFactory.class), new DruidProcessingConfigTest.MockRuntimeInfo(10, 0, 0))
+            )
+    );
 
 
     StorageConnectorProvider storageConnectorProvider = injector.getInstance(Key.get(
