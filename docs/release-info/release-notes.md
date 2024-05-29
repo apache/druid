@@ -76,7 +76,7 @@ Additionally, it helps in reducing load on the metadata store.
 Druid now supports grouping on complex columns and nested arrays.
 This means that both native queries and the MSQ task engine can group on complex columns and nested arrays while returning results.
 
-Additionally, the MSQ task engine can rollup on supported complex dimensions, such as JSON columns, during ingestion.
+Additionally, the MSQ task engine can rollup and sort on the supported complex columns, such as JSON columns, during ingestion.
 
 [#16068](https://github.com/apache/druid/pull/16068)
 [#16322](https://github.com/apache/druid/pull/16322)
