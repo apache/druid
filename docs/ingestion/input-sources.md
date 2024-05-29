@@ -310,9 +310,7 @@ The Azure input source reads objects directly from Azure Blob store or Azure Dat
 specify objects as a list of file URI strings or prefixes. You can split the Azure input source for use with [Parallel task](./native-batch.md) indexing and each worker task reads one chunk of the split data.
 
 
-:::info
-The  old `azure` schema is deprecated. Update your specs to use the `azureStorage` schema described below instead.
-:::
+The `azureStorage` input source is a new version of the `azure` input source that allows you to specify which storage account files should be ingested from. It is recommended to update your specs that use the old `azure` schema to use the new `azureStorage` schema.
 
 Sample specs:
 
@@ -410,10 +408,8 @@ The `properties` property can be one of the following:
 |appRegistrationClientSecret|The client secret of the Azure App registration to authenticate as|None|Yes if `appRegistrationClientId` is provided|
 |tenantId|The tenant ID of the Azure App registration to authenticate as|None|Yes if `appRegistrationClientId` is provided|
 
-<details closed>
-  <summary>Show the deprecated 'azure' input source</summary>
 
-Note that the deprecated `azure` input source doesn't support specifying which storage account to ingest from. We recommend using the `azureStorage` instead.
+The  `azure` input source doesn't support specifying which storage account to ingest from. It is recommended to use the `azureStorage` input source instead.
 
 Sample specs:
 
