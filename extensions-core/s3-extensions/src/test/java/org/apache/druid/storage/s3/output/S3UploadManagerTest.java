@@ -27,14 +27,12 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.IOException;
-
 public class S3UploadManagerTest
 {
   private S3UploadManager s3UploadManager;
 
   @Before
-  public void setup() throws IOException
+  public void setup()
   {
     ScheduledExecutorFactory executorFactory = EasyMock.mock(ScheduledExecutorFactory.class);
     EasyMock.expect(executorFactory.create(EasyMock.anyInt(), EasyMock.anyString()))
