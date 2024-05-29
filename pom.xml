@@ -2188,6 +2188,7 @@
                                 <exclude>**/.classpath</exclude> <!-- Eclipse -->
                                 <exclude>**/.project</exclude> <!-- Eclipse -->
                                 <exclude>**/*.iq</exclude> <!-- quidem testfiles -->
+                                <exclude>**/*.iq.out</exclude> <!-- quidem testfiles -->
                             </excludes>
                         </configuration>
                     </plugin>
