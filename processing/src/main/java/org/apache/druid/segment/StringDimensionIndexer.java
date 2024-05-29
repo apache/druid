@@ -155,7 +155,7 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
   /**
    * Estimates size of the given key component.
    * <p>
-   * Deprecated method. Use {@link #processRowValsToUnsortedEncodedKeyComponent(Object, boolean)}
+   * Deprecated method. Use {@link #processRowValsToUnsortedEncodedKeyComponent(Object, boolean, String)}
    * and {@link EncodedKeyComponent#getEffectiveSizeBytes()}.
    */
   public long estimateEncodedKeyComponentSize(int[] keys)

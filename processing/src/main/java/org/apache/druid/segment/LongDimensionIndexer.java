@@ -49,7 +49,7 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
   }
 
   @Override
-  public EncodedKeyComponent<Long> processRowValsToUnsortedEncodedKeyComponent(@Nullable Object dimValues, boolean reportParseExceptions, String dimension)
+  public EncodedKeyComponent<Long> processRowValsToUnsortedEncodedKeyComponent(@Nullable Object dimValues, boolean reportParseExceptions, @Nullable String dimension)
   {
     Long l = DimensionHandlerUtils.convertObjectToLong(dimValues, reportParseExceptions, dimension);
     if (l == null) {

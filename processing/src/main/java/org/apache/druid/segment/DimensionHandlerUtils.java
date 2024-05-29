@@ -348,7 +348,7 @@ public final class DimensionHandlerUtils
       if (objectKey != null) {
         throw new ParseException(
             valObj.getClass().toString(),
-            "Could not convert value [%s] to long for dimesion [%s]. Invalid type: [%s]",
+            "Could not convert value [%s] to long for dimension [%s]. Invalid type: [%s]",
             valObj,
             objectKey,
             valObj.getClass()
@@ -373,6 +373,11 @@ public final class DimensionHandlerUtils
   public static Long convertObjectToLong(@Nullable Object valObj, boolean reportParseExceptions)
   {
     return convertObjectToLong(valObj, reportParseExceptions, null);
+  }
+
+  @Nullable
+  public static Long convertObjectToLong(Object value, String fieldName) {
+    return convertObjectToLong(value, false, fieldName);
   }
 
   @Nullable

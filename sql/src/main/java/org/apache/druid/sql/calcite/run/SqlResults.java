@@ -114,7 +114,7 @@ public class SqlResults
       }
     } else if (sqlTypeName == SqlTypeName.BIGINT) {
       try {
-        coercedValue = DimensionHandlerUtils.convertObjectToLong(value);
+        coercedValue = DimensionHandlerUtils.convertObjectToLong(value, fieldName);
       }
       catch (Exception e) {
         throw cannotCoerce(value, sqlTypeName, fieldName);
