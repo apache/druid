@@ -23,7 +23,7 @@ description: How to migrate from legacy features to get the most from Druid upda
   ~ under the License.
   -->
 
-In general, when we introuce new features and behaviors into Apache Druid, we make every effort to avoid breaking existing features when introducing new behaviors. However, sometimes there are either bugs or performance limitations with the old behaviors that are not possible to fix in a backward-compatible way. In these cases, we must introduce breaking changes for the future maintainability of Druid. 
+In general, when we introduce new features and behaviors into Apache Druid, we make every effort to avoid breaking existing features when introducing new behaviors. However, sometimes there are either bugs or performance limitations with the old behaviors that are not possible to fix in a backward-compatible way. In these cases, we must introduce breaking changes for the future maintainability of Druid. 
 
 The guides in this section outline breaking changes introduced in Druid 25 and later. Each guide provides instructions to migrate to new features.
 
