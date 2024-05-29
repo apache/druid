@@ -50,10 +50,4 @@ public abstract class NumericArrayFieldReader implements FieldReader
     final byte firstByte = memory.getByte(position);
     return firstByte == NumericArrayFieldWriter.NULL_ROW;
   }
-
-  @Override
-  public boolean isComparable()
-  {
-    return true;
-  }
 }

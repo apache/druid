@@ -31,12 +31,13 @@ import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.indexer.IngestionState;
-import org.apache.druid.indexing.common.IngestionStatsAndErrors;
-import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
+import org.apache.druid.indexer.report.IngestionStatsAndErrors;
+import org.apache.druid.indexer.report.IngestionStatsAndErrorsTaskReport;
+import org.apache.druid.indexer.report.TaskContextReport;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
-import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
@@ -58,7 +59,6 @@ import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.Stopwatch;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
@@ -68,6 +68,7 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifier;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
@@ -432,16 +433,21 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
   protected TaskAction<SegmentPublishResult> buildPublishAction(
       Set<DataSegment> segmentsToBeOverwritten,
       Set<DataSegment> segmentsToPublish,
+      SegmentSchemaMapping segmentSchemaMapping,
       TaskLockType lockType
   )
   {
     switch (lockType) {
       case REPLACE:
-        return SegmentTransactionalReplaceAction.create(segmentsToPublish);
+        return SegmentTransactionalReplaceAction.create(segmentsToPublish, segmentSchemaMapping);
       case APPEND:
-        return SegmentTransactionalAppendAction.forSegments(segmentsToPublish);
+        return SegmentTransactionalAppendAction.forSegments(segmentsToPublish, segmentSchemaMapping);
       default:
-        return SegmentTransactionalInsertAction.overwriteAction(segmentsToBeOverwritten, segmentsToPublish);
+        return SegmentTransactionalInsertAction.overwriteAction(
+            segmentsToBeOverwritten,
+            segmentsToPublish,
+            segmentSchemaMapping
+        );
     }
   }
 
@@ -481,9 +487,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       if (lock == null) {
         return false;
       }
-      if (lock.isRevoked()) {
-        throw new ISE(StringUtils.format("Lock for interval [%s] was revoked.", cur));
-      }
+      lock.assertNotRevoked();
       locksAcquired++;
       intervalToLockVersion.put(cur, lock.getVersion());
     }
@@ -607,7 +611,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     return tuningConfig.isForceGuaranteedRollup();
   }
 
-  public static Function<Set<DataSegment>, Set<DataSegment>> compactionStateAnnotateFunction(
+  public static Function<Set<DataSegment>, Set<DataSegment>> addCompactionStateToSegments(
       boolean storeCompactionState,
       TaskToolbox toolbox,
       IngestionSpec ingestionSpec
@@ -628,7 +632,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
                                  ? null
                                  : toolbox.getJsonMapper().convertValue(ingestionSpec.getDataSchema().getAggregators(), new TypeReference<List<Object>>() {});
 
-      final CompactionState compactionState = new CompactionState(
+      return CompactionState.addCompactionStateToSegments(
           tuningConfig.getPartitionsSpec(),
           dimensionsSpec,
           metricsSpec,
@@ -636,10 +640,6 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
           tuningConfig.getIndexSpec().asMap(toolbox.getJsonMapper()),
           granularitySpec.asMap(toolbox.getJsonMapper())
       );
-      return segments -> segments
-          .stream()
-          .map(s -> s.withLastCompactionState(compactionState))
-          .collect(Collectors.toSet());
     } else {
       return Function.identity();
     }
@@ -828,9 +828,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
             "Cannot acquire a lock for interval[%s]",
             interval
         );
-        if (lock.isRevoked()) {
-          throw new ISE(StringUtils.format("Lock for interval [%s] was revoked.", interval));
-        }
+        lock.assertNotRevoked();
         version = lock.getVersion();
       } else {
         version = existingLockVersion;
@@ -923,7 +921,8 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
                 null,
                 null
             )
-        )
+        ),
+        new TaskContextReport(getId(), getContext())
     );
   }
 
@@ -952,7 +951,8 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
                 segmentsRead,
                 segmentsPublished
             )
-        )
+        ),
+        new TaskContextReport(getId(), getContext())
     );
   }
 

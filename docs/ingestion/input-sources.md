@@ -300,19 +300,16 @@ Google Cloud Storage object:
 |path|The path where data is located.|None|yes|
 |systemFields|JSON array of system fields to return as part of input rows. Possible values: `__file_uri` (Google Cloud Storage URI starting with `gs://`), `__file_bucket` (GCS bucket), and `__file_path` (GCS key).|None|no|
 
-## Azure input source
+## Azure input source 
 
 :::info
  You need to include the [`druid-azure-extensions`](../development/extensions-core/azure.md) as an extension to use the Azure input source.
 :::
 
-The Azure input source reads objects directly from Azure Blob store or Azure Data Lake sources. You can
+The Azure input source (that uses the type `azureStorage`) reads objects directly from Azure Blob store or Azure Data Lake sources. You can
 specify objects as a list of file URI strings or prefixes. You can split the Azure input source for use with [Parallel task](./native-batch.md) indexing and each worker task reads one chunk of the split data.
 
-
-:::info
-The  old `azure` schema is deprecated. Update your specs to use the `azureStorage` schema described below instead.
-:::
+The `azureStorage` input source is a new schema for Azure input sources that allows you to specify which storage account files should be ingested from. We recommend that you update any specs that use the old `azure` schema to use the new `azureStorage` schema. The new schema provides more functionality than the older `azure` schema. 
 
 Sample specs:
 
@@ -410,10 +407,10 @@ The `properties` property can be one of the following:
 |appRegistrationClientSecret|The client secret of the Azure App registration to authenticate as|None|Yes if `appRegistrationClientId` is provided|
 |tenantId|The tenant ID of the Azure App registration to authenticate as|None|Yes if `appRegistrationClientId` is provided|
 
-<details closed>
-  <summary>Show the deprecated 'azure' input source</summary>
 
-Note that the deprecated `azure` input source doesn't support specifying which storage account to ingest from. We recommend using the `azureStorage` instead.
+#### `azure` input source
+
+The Azure input source that uses the type `azure` is an older version of the Azure input type and is not recommended. It doesn't support specifying which storage account to ingest from. We recommend using the [`azureStorage` input source schema](#azure-input-source) instead since it provides more functionality.
 
 Sample specs:
 
@@ -490,7 +487,6 @@ The `objects` property is:
 |bucket|Name of the Azure Blob Storage or Azure Data Lake container|None|yes|
 |path|The path where data is located.|None|yes|
 
-</details>
 
 ## HDFS input source
 
@@ -1141,7 +1137,86 @@ To use the Delta Lake input source, load the extension [`druid-deltalake-extensi
 You can use the Delta input source to read data stored in a Delta Lake table. For a given table, the input source scans
 the latest snapshot from the configured table. Druid ingests the underlying delta files from the table.
 
-The following is a sample spec:
+ | Property|Description|Required|
+|---------|-----------|--------|
+| type|Set this value to `delta`.|yes|
+| tablePath|The location of the Delta table.|yes|
+| filter|The JSON Object that filters data files within a snapshot.|no|
+
+### Delta filter object
+
+You can use these filters to filter out data files from a snapshot, reducing the number of files Druid has to ingest from
+a Delta table. This input source provides the following filters: `and`, `or`, `not`, `=`, `>`, `>=`, `<`, `<=`.
+
+When a filter is applied on non-partitioned columns, the filtering is best-effort as the Delta Kernel solely relies
+on statistics collected when the non-partitioned table is created. In this scenario, this Druid connector may ingest
+data that doesn't match the filter. To guarantee that the Delta Kernel prunes out unnecessary column values, only use
+filters on partitioned columns.
+
+
+`and` filter:
+
+| Property | Description                                                                                                                                                   | Required |
+|----------|---------------------------------------------------------------------------------------------------------------------------------------------------------------|----------|
+| type     | Set this value to `and`.                                                                                                                                      | yes      |
+| filters  | List of Delta filter predicates that get evaluated using logical AND where both conditions need to be true. `and` filter requires two filter predicates.      | yes      |
+
+`or` filter:
+
+| Property | Description                                                                                                                                                     | Required |
+|----------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------|----------|
+| type     | Set this value to `or`.                                                                                                                                         | yes      |
+| filters  | List of Delta filter predicates that get evaluated using logical OR where only one condition needs to be true. `or` filter requires two filter predicates.      | yes      |
+
+`not` filter:
+
+| Property | Description                                                                                                   | Required |
+|----------|---------------------------------------------------------------------------------------------------------------|----------|
+| type     | Set this value to `not`.                                                                                      | yes      |
+| filter   | The Delta filter predicate that gets evaluated using logical NOT. `not` filter requires one filter predicate. | yes      |
+
+`=` filter:
+
+| Property | Description                              | Required |
+|----------|------------------------------------------|----------|
+| type     | Set this value to `=`.                   | yes      |
+| column   | The table column to apply the filter on. | yes      |
+| value    | The value to use in the filter.          | yes      |
+
+`>` filter:
+
+| Property | Description                              | Required |
+|----------|------------------------------------------|----------|
+| type     | Set this value to `>`.                   | yes      |
+| column   | The table column to apply the filter on. | yes      |
+| value    | The value to use in the filter.          | yes      |
+
+`>=` filter:
+
+| Property | Description                              | Required |
+|----------|------------------------------------------|----------|
+| type     | Set this value to `>=`.                  | yes      |
+| column   | The table column to apply the filter on. | yes      |
+| value    | The value to use in the filter.          | yes      |
+
+`<` filter:
+
+| Property | Description                              | Required |
+|----------|------------------------------------------|----------|
+| type     | Set this value to `<`.                   | Yes      |
+| column   | The table column to apply the filter on. | Yes      |
+| value    | The value to use in the filter.          | Yes      |
+
+`<=` filter:
+
+| Property | Description                              | Required |
+|----------|------------------------------------------|----------|
+| type     | Set this value to `<=`.                  | yes      |
+| column   | The table column to apply the filter on. | yes      |
+| value    | The value to use in the filter.          | yes      |
+
+
+The following is a sample spec to read all records from the Delta table `/delta-table/foo`:
 
 ```json
 ...
@@ -1149,14 +1224,35 @@ The following is a sample spec:
       "type": "index_parallel",
       "inputSource": {
         "type": "delta",
-        "tablePath": "/delta-table/directory"
+        "tablePath": "/delta-table/foo"
       },
     }
-}
 ```
 
-| Property|Description|Required|
-|---------|-----------|--------|
-| type|Set this value to `delta`.|yes|
-| tablePath|The location of the Delta table.|yes|
+The following is a sample spec to read records from the Delta table `/delta-table/foo` to select records where `name = 'Employee4' and age >= 30`:
 
+```json
+...
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "delta",
+        "tablePath": "/delta-table/foo",
+        "filter": {
+          "type": "and",
+          "filters": [
+            {
+             "type": "=",
+             "column": "name",
+             "value": "Employee4"
+            },
+            {
+              "type": ">=",
+              "column": "age",
+              "value": "30"
+            }
+          ]
+        }
+      },
+    }
+```

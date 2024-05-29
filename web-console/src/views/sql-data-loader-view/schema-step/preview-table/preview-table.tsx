@@ -103,7 +103,7 @@ export const PreviewTable = React.memo(function PreviewTable(props: PreviewTable
     );
   }
 
-  const numericColumnBraces = getNumericColumnBraces(queryResult);
+  const numericColumnBraces = getNumericColumnBraces(queryResult, undefined, undefined);
   return (
     <div className="preview-table">
       <ReactTable

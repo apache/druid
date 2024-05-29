@@ -26,7 +26,8 @@ import com.google.inject.Inject;
 import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatusPlus;
-import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
+import org.apache.druid.indexer.report.IngestionStatsAndErrorsTaskReport;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.overlord.http.TaskPayloadResponse;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
 import org.apache.druid.java.util.common.ISE;
@@ -159,6 +160,36 @@ public class OverlordResourceTestClient
     }
   }
 
+  public StatusResponseHolder handoffTaskGroupEarly(
+      String dataSource,
+      String taskGroups
+  )
+  {
+    try {
+      LOG.info("handing off %s %s", dataSource, taskGroups);
+      StatusResponseHolder response = httpClient.go(
+          new Request(HttpMethod.POST, new URL(StringUtils.format(
+              "%ssupervisor/%s/taskGroups/handoff",
+              getIndexerURL(),
+              StringUtils.urlEncode(dataSource)
+          ))).setContent(
+                  "application/json",
+                  StringUtils.toUtf8(taskGroups)
+              ),
+          StatusResponseHandler.getInstance()
+      ).get();
+      LOG.info("Handoff early response code " + response.getStatus().getCode());
+      LOG.info("Handoff early response " + response.getContent());
+      return response;
+    }
+    catch (ISE e) {
+      throw e;
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
   public List<TaskResponseObject> getAllTasks()
   {
     return getTasks("tasks");
@@ -262,15 +293,16 @@ public class OverlordResourceTestClient
 
   public String getTaskErrorMessage(String taskId)
   {
-    return getTaskReport(taskId).get(IngestionStatsAndErrorsTaskReport.REPORT_KEY)
-                                .getPayload().getErrorMsg();
+    return ((IngestionStatsAndErrorsTaskReport) getTaskReport(taskId).get(IngestionStatsAndErrorsTaskReport.REPORT_KEY))
+        .getPayload().getErrorMsg();
   }
 
   public RowIngestionMetersTotals getTaskStats(String taskId)
   {
     try {
-      Object buildSegment = getTaskReport(taskId).get(IngestionStatsAndErrorsTaskReport.REPORT_KEY)
-                                                 .getPayload().getRowStats().get("buildSegments");
+      Object buildSegment = ((IngestionStatsAndErrorsTaskReport) getTaskReport(taskId).get(
+          IngestionStatsAndErrorsTaskReport.REPORT_KEY))
+          .getPayload().getRowStats().get("buildSegments");
       return jsonMapper.convertValue(buildSegment, RowIngestionMetersTotals.class);
     }
     catch (Exception e) {
@@ -278,7 +310,7 @@ public class OverlordResourceTestClient
     }
   }
 
-  public Map<String, IngestionStatsAndErrorsTaskReport> getTaskReport(String taskId)
+  public TaskReport.ReportMap getTaskReport(String taskId)
   {
     try {
       StatusResponseHolder response = makeRequest(
@@ -291,9 +323,7 @@ public class OverlordResourceTestClient
       );
       return jsonMapper.readValue(
           response.getContent(),
-          new TypeReference<Map<String, IngestionStatsAndErrorsTaskReport>>()
-          {
-          }
+          TaskReport.ReportMap.class
       );
     }
     catch (ISE e) {

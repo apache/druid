@@ -125,7 +125,6 @@ public class MSQWorkerTask extends AbstractTask
     return ImmutableSet.of();
   }
 
-
   @Override
   public boolean isReady(final TaskActionClient taskActionClient)
   {

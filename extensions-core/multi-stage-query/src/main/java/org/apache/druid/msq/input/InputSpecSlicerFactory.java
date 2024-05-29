@@ -20,6 +20,7 @@
 package org.apache.druid.msq.input;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import org.apache.druid.msq.exec.OutputChannelMode;
 import org.apache.druid.msq.input.stage.ReadablePartitions;
 import org.apache.druid.msq.input.stage.StageInputSpecSlicer;
 
@@ -32,5 +33,8 @@ import org.apache.druid.msq.input.stage.StageInputSpecSlicer;
  */
 public interface InputSpecSlicerFactory
 {
-  InputSpecSlicer makeSlicer(Int2ObjectMap<ReadablePartitions> stagePartitionsMap);
+  InputSpecSlicer makeSlicer(
+      Int2ObjectMap<ReadablePartitions> stagePartitionsMap,
+      Int2ObjectMap<OutputChannelMode> stageOutputChannelModeMap
+  );
 }

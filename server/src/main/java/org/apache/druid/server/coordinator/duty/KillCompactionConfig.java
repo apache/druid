@@ -29,10 +29,9 @@ import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
-import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
+import org.apache.druid.server.coordinator.config.MetadataCleanupConfig;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.joda.time.DateTime;
-import org.joda.time.Duration;
 
 import java.util.Map;
 import java.util.Set;
@@ -54,20 +53,12 @@ public class KillCompactionConfig extends MetadataCleanupDuty
   private final CoordinatorConfigManager configManager;
 
   public KillCompactionConfig(
-      DruidCoordinatorConfig config,
+      MetadataCleanupConfig config,
       SegmentsMetadataManager sqlSegmentsMetadataManager,
       CoordinatorConfigManager configManager
   )
   {
-    super(
-        "compaction configs",
-        "druid.coordinator.kill.compaction",
-        config.isCompactionKillEnabled(),
-        config.getCoordinatorCompactionKillPeriod(),
-        Duration.millis(1), // Retain duration is ignored
-        Stats.Kill.COMPACTION_CONFIGS,
-        config
-    );
+    super("compaction configs", config, Stats.Kill.COMPACTION_CONFIGS);
     this.sqlSegmentsMetadataManager = sqlSegmentsMetadataManager;
     this.configManager = configManager;
   }

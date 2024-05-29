@@ -33,7 +33,6 @@ import org.apache.druid.query.ColumnSelectorPlus;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.aggregation.AggregatorAdapters;
 import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.query.dimension.ColumnSelectorStrategyFactory;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -41,23 +40,13 @@ import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryMetrics;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.groupby.ResultRow;
-import org.apache.druid.query.groupby.epinephelinae.column.ArrayDoubleGroupByColumnSelectorStrategy;
-import org.apache.druid.query.groupby.epinephelinae.column.ArrayLongGroupByColumnSelectorStrategy;
-import org.apache.druid.query.groupby.epinephelinae.column.ArrayStringGroupByColumnSelectorStrategy;
-import org.apache.druid.query.groupby.epinephelinae.column.DictionaryBuildingStringGroupByColumnSelectorStrategy;
-import org.apache.druid.query.groupby.epinephelinae.column.DoubleGroupByColumnSelectorStrategy;
-import org.apache.druid.query.groupby.epinephelinae.column.FloatGroupByColumnSelectorStrategy;
 import org.apache.druid.query.groupby.epinephelinae.column.GroupByColumnSelectorPlus;
 import org.apache.druid.query.groupby.epinephelinae.column.GroupByColumnSelectorStrategy;
-import org.apache.druid.query.groupby.epinephelinae.column.LongGroupByColumnSelectorStrategy;
-import org.apache.druid.query.groupby.epinephelinae.column.NullableNumericGroupByColumnSelectorStrategy;
-import org.apache.druid.query.groupby.epinephelinae.column.StringGroupByColumnSelectorStrategy;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
-import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.DimensionSelector;
@@ -88,11 +77,14 @@ import java.util.stream.Stream;
  * Used for non-vectorized processing by
  * {@link GroupingEngine#process(GroupByQuery, StorageAdapter, GroupByQueryMetrics)}.
  *
+ * This code runs on data servers, like Historicals and Peons, and also Brokers, if they operate on local datasources like
+ * inlined data wherein the broker needs to process some portion of data like the data server
+ *
  * @see org.apache.druid.query.groupby.epinephelinae.vector.VectorGroupByEngine for vectorized version of this class
  */
 public class GroupByQueryEngine
 {
-  private static final GroupByStrategyFactory STRATEGY_FACTORY = new GroupByStrategyFactory();
+  private static final GroupByColumnSelectorStrategyFactory STRATEGY_FACTORY = new GroupByColumnSelectorStrategyFactory();
 
   private GroupByQueryEngine()
   {
@@ -142,7 +134,7 @@ public class GroupByQueryEngine
                       curPos,
                       query.getResultRowDimensionStart() + i
                   );
-                  curPos += dims[i].getColumnSelectorStrategy().getGroupingKeySize();
+                  curPos += dims[i].getColumnSelectorStrategy().getGroupingKeySizeBytes();
                 }
 
                 final int cardinalityForArrayAggregation = GroupingEngine.getCardinalityForArrayAggregation(
@@ -237,57 +229,6 @@ public class GroupByQueryEngine
                          && !columnCapabilities.isArray()
                      );
             });
-  }
-
-  private static class GroupByStrategyFactory implements ColumnSelectorStrategyFactory<GroupByColumnSelectorStrategy>
-  {
-    @Override
-    public GroupByColumnSelectorStrategy makeColumnSelectorStrategy(
-        ColumnCapabilities capabilities,
-        ColumnValueSelector selector
-    )
-    {
-      switch (capabilities.getType()) {
-        case STRING:
-          DimensionSelector dimSelector = (DimensionSelector) selector;
-          if (dimSelector.getValueCardinality() >= 0) {
-            return new StringGroupByColumnSelectorStrategy(dimSelector::lookupName, capabilities);
-          } else {
-            return new DictionaryBuildingStringGroupByColumnSelectorStrategy();
-          }
-        case LONG:
-          return makeNullableNumericStrategy(new LongGroupByColumnSelectorStrategy());
-        case FLOAT:
-          return makeNullableNumericStrategy(new FloatGroupByColumnSelectorStrategy());
-        case DOUBLE:
-          return makeNullableNumericStrategy(new DoubleGroupByColumnSelectorStrategy());
-        case ARRAY:
-          switch (capabilities.getElementType().getType()) {
-            case LONG:
-              return new ArrayLongGroupByColumnSelectorStrategy();
-            case STRING:
-              return new ArrayStringGroupByColumnSelectorStrategy();
-            case DOUBLE:
-              return new ArrayDoubleGroupByColumnSelectorStrategy();
-            case FLOAT:
-              // Array<Float> not supported in expressions, ingestion
-            default:
-              throw new IAE("Cannot create query type helper from invalid type [%s]", capabilities.asTypeString());
-
-          }
-        default:
-          throw new IAE("Cannot create query type helper from invalid type [%s]", capabilities.asTypeString());
-      }
-    }
-
-    private GroupByColumnSelectorStrategy makeNullableNumericStrategy(GroupByColumnSelectorStrategy delegate)
-    {
-      if (NullHandling.sqlCompatible()) {
-        return new NullableNumericGroupByColumnSelectorStrategy(delegate);
-      } else {
-        return delegate;
-      }
-    }
   }
 
   private abstract static class GroupByEngineIterator<KeyType> implements Iterator<ResultRow>, Closeable
@@ -843,7 +784,7 @@ public class GroupByQueryEngine
       this.dims = dims;
       int keySize = 0;
       for (GroupByColumnSelectorPlus selectorPlus : dims) {
-        keySize += selectorPlus.getColumnSelectorStrategy().getGroupingKeySize();
+        keySize += selectorPlus.getColumnSelectorStrategy().getGroupingKeySizeBytes();
       }
       this.keySize = keySize;
 

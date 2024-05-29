@@ -44,7 +44,7 @@ For additional properties based on your query type or use case, see [available n
 
 ### URL
 
-<code class="postAPI">POST</code> <code>/druid/v2/</code>
+`POST` `/druid/v2`
 
 ### Query parameters
 
@@ -148,7 +148,7 @@ Content-Length: 336
 #### Example response: `topN`
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
 [
@@ -277,7 +277,7 @@ Content-Length: 817
 #### Example response: `groupBy`
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
 ```json
 [
@@ -301,9 +301,10 @@ Retrieves an array that contains objects with segment information, including the
 
 ### URL
 
-<code class="postAPI">POST</code> <code>/druid/v2/candidates/</code>
+`POST` `/druid/v2/candidates`
 
 ### Query parameters
+
 * `pretty` (optional)
   *  Druid returns the response in a pretty-printed format using indentation and line breaks.
 
@@ -330,6 +331,7 @@ Retrieves an array that contains objects with segment information, including the
     "host": "The host on which the error occurred."
 }
 ```
+
 For more information on possible error messages, see [query execution failures](../querying/querying.md#query-execution-failures).
 
 </TabItem>
@@ -404,7 +406,7 @@ Content-Length: 336
 ### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
 [

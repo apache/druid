@@ -36,7 +36,7 @@ In this document, `http://SERVICE_IP:SERVICE_PORT` is a placeholder for the serv
 
 All services support the following endpoints.
 
-You can use each endpoint with the ports for each type of service.  The following table contains port addresses for a local configuration:
+You can use each endpoint with the ports for each type of service. The following table contains port addresses for a local configuration:
 
 |Service|Port address|
 | ------ | ------------ |
@@ -55,7 +55,7 @@ Modify the host and port for the endpoint to match the service to query. Refer t
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/status</code>
+`GET` `/status`
 
 #### Responses
 
@@ -99,7 +99,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
   {
@@ -207,7 +207,7 @@ Additional checks for readiness should use the [Historical segment readiness](#g
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/status/health</code>
+`GET` `/status/health`
 
 #### Responses
 
@@ -249,7 +249,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
   true
@@ -266,7 +266,7 @@ Modify the host and port for the endpoint to match the service to query. Refer t
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/status/properties</code>
+`GET` `/status/properties`
 
 #### Responses
 
@@ -308,7 +308,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
   {
@@ -409,7 +409,6 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 </details>
 
-
 ### Get node discovery status and cluster integration confirmation
 
 Retrieves a JSON map of the form `{"selfDiscovered": true/false}`, indicating whether the node has received a confirmation from the central node discovery mechanism (currently ZooKeeper) of the Druid cluster that the node has been added to the cluster.
@@ -419,7 +418,7 @@ For nodes that use Zookeeper segment discovery, a response of `{"selfDiscovered"
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/status/selfDiscovered/status</code>
+`GET` `/status/selfDiscovered/status`
 
 #### Responses
 
@@ -461,7 +460,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
   {
@@ -479,7 +478,7 @@ Use this endpoint for monitoring checks that are unable to examine the response 
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/status/selfDiscovered</code>
+`GET` `/status/selfDiscovered`
 
 #### Responses
 
@@ -538,7 +537,7 @@ Retrieves the address of the current leader Coordinator of the cluster. If any r
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/coordinator/v1/leader</code>
+`GET` `/druid/coordinator/v1/leader`
 
 #### Responses
 
@@ -582,7 +581,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
   http://localhost:8081
@@ -598,7 +597,7 @@ Use this endpoint as a load balancer status check when you only want the active 
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/coordinator/v1/isLeader</code>
+`GET` `/druid/coordinator/v1/isLeader`
 
 #### Responses
 
@@ -650,7 +649,7 @@ Host: http://COORDINATOR_IP:COORDINATOR_PORT
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
   {
@@ -668,7 +667,7 @@ Retrieves the address of the current leader Overlord of the cluster. In a cluste
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/indexer/v1/leader</code>
+`GET` `/druid/indexer/v1/leader`
 
 #### Responses
 
@@ -712,7 +711,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
   http://localhost:8081
@@ -729,7 +728,7 @@ Use this endpoint as a load balancer status check when you only want the active 
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/indexer/v1/isLeader</code>
+`GET` `/druid/indexer/v1/isLeader`
 
 #### Responses
 
@@ -781,7 +780,7 @@ Host: http://OVERLORD_IP:OVERLORD_PORT
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
   {
@@ -800,7 +799,7 @@ Retrieves the enabled state of the MiddleManager. Returns JSON object keyed by t
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/worker/v1/enabled</code>
+`GET` `/druid/worker/v1/enabled`
 
 #### Responses
 
@@ -844,7 +843,7 @@ Host: http://MIDDLEMANAGER_IP:MIDDLEMANAGER_PORT
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
   {
@@ -860,7 +859,7 @@ Retrieves a list of active tasks being run on MiddleManager. Returns JSON list o
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/worker/v1/tasks</code>
+`GET` `/druid/worker/v1/tasks`
 
 #### Responses
 
@@ -904,7 +903,7 @@ Host: http://MIDDLEMANAGER_IP:MIDDLEMANAGER_PORT
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
   [
@@ -921,16 +920,16 @@ Retrieves task log output stream by task ID. For normal usage, you should use th
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/worker/v1/task/:taskId/log</code>
+`GET` `/druid/worker/v1/task/{taskId}/log`
 
 ### Shut down running task
 
-Shuts down a running task by ID. For normal usage, you should use the `/druid/indexer/v1/task/:taskId/shutdown`
+Shuts down a running task by ID. For normal usage, you should use the `/druid/indexer/v1/task/{taskId}/shutdown`
 [Tasks API](./tasks-api.md) endpoint instead.
 
 #### URL
 
-<code class="postAPI">POST</code> <code>/druid/worker/v1/task/:taskId/shutdown</code>
+`POST` `/druid/worker/v1/task/{taskId}/shutdown`
 
 #### Responses
 <Tabs>
@@ -975,7 +974,7 @@ Host: http://MIDDLEMANAGER_IP:MIDDLEMANAGER_PORT
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
   {
@@ -992,7 +991,7 @@ keyed by the combined `druid.host` and `druid.port`.
 
 #### URL
 
-<code class="postAPI">POST</code> <code>/druid/worker/v1/disable</code>
+`POST` `/druid/worker/v1/disable`
 
 #### Responses
 
@@ -1034,7 +1033,7 @@ Host: http://MIDDLEMANAGER_IP:MIDDLEMANAGER_PORT
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
   {
@@ -1046,12 +1045,11 @@ Host: http://MIDDLEMANAGER_IP:MIDDLEMANAGER_PORT
 
 ### Enable MiddleManager
 
-Enables a MiddleManager, allowing it to accept new tasks again if it was previously disabled. Returns a JSON  object
-keyed by the combined `druid.host` and `druid.port`.
+Enables a MiddleManager, allowing it to accept new tasks again if it was previously disabled. Returns a JSON object keyed by the combined `druid.host` and `druid.port`.
 
 #### URL
 
-<code class="postAPI">POST</code> <code>/druid/worker/v1/enable</code>
+`POST` `/druid/worker/v1/enable`
 
 #### Responses
 
@@ -1093,7 +1091,7 @@ Host: http://MIDDLEMANAGER_IP:MIDDLEMANAGER_PORT
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
   {
@@ -1113,7 +1111,7 @@ Use this endpoint to know when a Broker service is ready to accept queries after
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/historical/v1/loadstatus</code>
+`GET` `/druid/historical/v1/loadstatus`
 
 #### Responses
 
@@ -1155,7 +1153,7 @@ Host: http://HISTORICAL_IP:HISTORICAL_PORT
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
   {
@@ -1171,7 +1169,7 @@ Retrieves a status code to indicate if all segments in the local cache have been
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/historical/v1/readiness</code>
+`GET` `/druid/historical/v1/readiness`
 
 #### Responses
 
@@ -1230,7 +1228,7 @@ Retrieves a flag indicating if the Broker knows about all segments in the cluste
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/broker/v1/loadstatus</code>
+`GET` `/druid/broker/v1/loadstatus`
 
 #### Responses
 
@@ -1272,7 +1270,7 @@ Host: http://<BROKER_IP>:<BROKER_PORT>
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
   {
@@ -1288,7 +1286,7 @@ Retrieves a status code to indicate Broker readiness. Readiness signifies the Br
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/broker/v1/readiness</code>
+`GET` `/druid/broker/v1/readiness`
 
 #### Responses
 
@@ -1338,5 +1336,3 @@ Host: http://BROKER_IP:BROKER_PORT
 #### Sample response
 
 A successful response to this endpoint results in an empty response body.
-
-

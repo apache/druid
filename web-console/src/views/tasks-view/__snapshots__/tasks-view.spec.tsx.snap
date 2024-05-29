@@ -81,7 +81,6 @@ exports[`TasksView matches snapshot 1`] = `
           "Created time",
           "Duration",
           "Location",
-          "Actions",
         ]
       }
       onChange={[Function]}
@@ -217,7 +216,7 @@ exports[`TasksView matches snapshot 1`] = `
           "accessor": "task_id",
           "filterable": false,
           "id": "actions",
-          "show": true,
+          "sortable": false,
           "width": 70,
         },
       ]

@@ -217,11 +217,11 @@ public class MSQWindowTest extends MSQTestBase
                     .add("w1", ColumnType.DOUBLE)
                     .build(),
         ImmutableList.of(
+            new NaivePartitioningOperatorFactory(ImmutableList.of()),
+            new WindowOperatorFactory(proc1),
             new NaiveSortOperatorFactory(ImmutableList.of(ColumnWithDirection.ascending("d0"))),
             new NaivePartitioningOperatorFactory(ImmutableList.of("d0")),
-            new WindowOperatorFactory(proc),
-            new NaivePartitioningOperatorFactory(ImmutableList.of()),
-            new WindowOperatorFactory(proc1)
+            new WindowOperatorFactory(proc)
         ),
         null
     );
@@ -245,12 +245,12 @@ public class MSQWindowTest extends MSQTestBase
                                    .build())
         .setExpectedRowSignature(rowSignature)
         .setExpectedResultRows(ImmutableList.of(
-            new Object[]{1.0f, 1.0, 1.0, 1.0},
-            new Object[]{2.0f, 2.0, 2.0, 2.0},
-            new Object[]{3.0f, 3.0, 3.0, 3.0},
-            new Object[]{4.0f, 4.0, 4.0, 4.0},
-            new Object[]{5.0f, 5.0, 5.0, 5.0},
-            new Object[]{6.0f, 6.0, 6.0, 6.0}
+            new Object[]{1.0f, 1.0, 1.0, 21.0},
+            new Object[]{2.0f, 2.0, 2.0, 21.0},
+            new Object[]{3.0f, 3.0, 3.0, 21.0},
+            new Object[]{4.0f, 4.0, 4.0, 21.0},
+            new Object[]{5.0f, 5.0, 5.0, 21.0},
+            new Object[]{6.0f, 6.0, 6.0, 21.0}
         ))
         .setQueryContext(context)
         .setExpectedCountersForStageWorkerChannel(
@@ -1718,6 +1718,38 @@ public class MSQWindowTest extends MSQTestBase
                              new Object[]{978307200000L, 4.0f, 21.0},
                              new Object[]{978393600000L, 5.0f, 21.0},
                              new Object[]{978480000000L, 6.0f, 21.0}
+                         )
+                     )
+                     .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo", Intervals.ETERNITY, "test", 0)))
+                     .verifyResults();
+  }
+
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testSimpleWindowWithDuplicateSelectNode(String contextName, Map<String, Object> context)
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("m1", ColumnType.FLOAT)
+                                            .add("cc", ColumnType.DOUBLE)
+                                            .add("cc_dup", ColumnType.DOUBLE)
+                                            .build();
+
+    testIngestQuery().setSql(" REPLACE INTO foo OVERWRITE ALL\n"
+                             + "select __time, m1,SUM(m1) OVER() cc,SUM(m1) OVER() cc_dup from foo\n"
+                             + "PARTITIONED BY ALL CLUSTERED BY m1")
+                     .setExpectedDataSource("foo")
+                     .setExpectedRowSignature(rowSignature)
+                     .setQueryContext(context)
+                     .setExpectedDestinationIntervals(Intervals.ONLY_ETERNITY)
+                     .setExpectedResultRows(
+                         ImmutableList.of(
+                             new Object[]{946684800000L, 1.0f, 21.0, 21.0},
+                             new Object[]{946771200000L, 2.0f, 21.0, 21.0},
+                             new Object[]{946857600000L, 3.0f, 21.0, 21.0},
+                             new Object[]{978307200000L, 4.0f, 21.0, 21.0},
+                             new Object[]{978393600000L, 5.0f, 21.0, 21.0},
+                             new Object[]{978480000000L, 6.0f, 21.0, 21.0}
                          )
                      )
                      .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo", Intervals.ETERNITY, "test", 0)))
