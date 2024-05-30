@@ -85,21 +85,6 @@ public class AzureStorageAccountInputSourceTest extends EasyMockSupport
       null
   );
 
-  static {
-    try {
-      PREFIX_URI = new URI(AzureStorageAccountInputSource.SCHEME
-                           + "://"
-                           + STORAGE_ACCOUNT
-                           + "/"
-                           + CONTAINER
-                           + "/"
-                           + BLOB_NAME);
-    }
-    catch (Exception e) {
-      throw new RuntimeException(e);
-    }
-  }
-
   private final List<URI> EMPTY_URIS = ImmutableList.of();
   private final List<URI> EMPTY_PREFIXES = ImmutableList.of();
   private final List<CloudObjectLocation> EMPTY_OBJECTS = ImmutableList.of();
@@ -113,6 +98,17 @@ public class AzureStorageAccountInputSourceTest extends EasyMockSupport
   private AzureEntity azureEntity1;
   private CloudBlobHolder cloudBlobDruid1;
   private AzureCloudBlobIterable azureCloudBlobIterable;
+
+  static {
+    try {
+      PREFIX_URI = new URI(
+          AzureStorageAccountInputSource.SCHEME + "://" + STORAGE_ACCOUNT + "/" + CONTAINER + "/" + BLOB_NAME
+      );
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
 
   @BeforeEach
   public void setup()
@@ -135,6 +131,7 @@ public class AzureStorageAccountInputSourceTest extends EasyMockSupport
   {
     replayAll();
 
+    //noinspection ResultOfObjectAllocationIgnored
     assertThrows(
         IllegalArgumentException.class,
         () -> new AzureStorageAccountInputSource(
@@ -353,13 +350,13 @@ public class AzureStorageAccountInputSourceTest extends EasyMockSupport
     String azureStorageAccountInputSourceString = azureInputSource.toString();
 
     assertEquals("AzureStorageAccountInputSource{"
-                            + "uris=[], "
-                            + "prefixes=[azureStorage://STORAGE_ACCOUNT/CONTAINER/blob], "
-                            + "objects=[], "
-                            + "objectGlob=null, "
-                            + "azureStorageAccountInputSourceConfig=" + azureStorageAccountInputSourceConfig + ", "
-                            + "systemFields=[__file_uri, __file_bucket, __file_path]"
-                            + "}", azureStorageAccountInputSourceString);
+                 + "uris=[], "
+                 + "prefixes=[azureStorage://STORAGE_ACCOUNT/CONTAINER/blob], "
+                 + "objects=[], "
+                 + "objectGlob=null, "
+                 + "azureStorageAccountInputSourceConfig=" + azureStorageAccountInputSourceConfig + ", "
+                 + "systemFields=[__file_uri, __file_bucket, __file_path]"
+                 + "}", azureStorageAccountInputSourceString);
   }
 
   @Test
@@ -420,28 +417,29 @@ public class AzureStorageAccountInputSourceTest extends EasyMockSupport
   @Test
   public void abidesEqualsContract()
   {
-    EqualsVerifier.forClass(AzureStorageAccountInputSource.class)
-                  .usingGetClass()
-                  .withPrefabValues(Logger.class, new Logger(AzureStorage.class), new Logger(AzureStorage.class))
-                  .withPrefabValues(
-                      BlobContainerClient.class,
-                      new BlobContainerClientBuilder().buildClient(),
-                      new BlobContainerClientBuilder().buildClient()
-                  )
-                  .withPrefabValues(
-                      AzureIngestClientFactory.class,
-                      new AzureIngestClientFactory(null, null),
-                      new AzureIngestClientFactory(null, null)
-                  )
-                  .withIgnoredFields("entityFactory")
-                  .withIgnoredFields("azureCloudBlobIterableFactory")
-                  .withNonnullFields("inputDataConfig")
-                  .withNonnullFields("objectGlob")
-                  .withNonnullFields("scheme")
-                  .withNonnullFields("azureStorageAccountInputSourceConfig")
-                  .withNonnullFields("azureAccountConfig")
-                  .withNonnullFields("azureIngestClientFactory")
-                  .verify();
+    EqualsVerifier
+        .forClass(AzureStorageAccountInputSource.class)
+        .usingGetClass()
+        .withPrefabValues(Logger.class, new Logger(AzureStorage.class), new Logger(AzureStorage.class))
+        .withPrefabValues(
+            BlobContainerClient.class,
+            new BlobContainerClientBuilder().buildClient(),
+            new BlobContainerClientBuilder().buildClient()
+        )
+        .withPrefabValues(
+            AzureIngestClientFactory.class,
+            new AzureIngestClientFactory(null, null),
+            new AzureIngestClientFactory(null, null)
+        )
+        .withIgnoredFields("entityFactory")
+        .withIgnoredFields("azureCloudBlobIterableFactory")
+        .withNonnullFields("inputDataConfig")
+        .withNonnullFields("objectGlob")
+        .withNonnullFields("scheme")
+        .withNonnullFields("azureStorageAccountInputSourceConfig")
+        .withNonnullFields("azureAccountConfig")
+        .withNonnullFields("azureIngestClientFactory")
+        .verify();
   }
 
   @Test

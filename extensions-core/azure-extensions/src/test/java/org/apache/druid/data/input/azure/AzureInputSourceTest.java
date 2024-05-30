@@ -371,18 +371,23 @@ public class AzureInputSourceTest extends EasyMockSupport
   @Test
   public void abidesEqualsContract()
   {
-    EqualsVerifier.forClass(AzureInputSource.class)
-                  .usingGetClass()
-                  .withPrefabValues(Logger.class, new Logger(AzureStorage.class), new Logger(AzureStorage.class))
-                  .withPrefabValues(BlobContainerClient.class, new BlobContainerClientBuilder().buildClient(), new BlobContainerClientBuilder().buildClient())
-                  .withPrefabValues(AzureStorage.class, new AzureStorage(null, null), new AzureStorage(null, null))
-                  .withNonnullFields("storage")
-                  .withNonnullFields("entityFactory")
-                  .withNonnullFields("azureCloudBlobIterableFactory")
-                  .withNonnullFields("inputDataConfig")
-                  .withNonnullFields("objectGlob")
-                  .withNonnullFields("scheme")
-                  .verify();
+    EqualsVerifier
+        .forClass(AzureInputSource.class)
+        .usingGetClass()
+        .withPrefabValues(Logger.class, new Logger(AzureStorage.class), new Logger(AzureStorage.class))
+        .withPrefabValues(
+            BlobContainerClient.class,
+            new BlobContainerClientBuilder().buildClient(),
+            new BlobContainerClientBuilder().buildClient()
+        )
+        .withPrefabValues(AzureStorage.class, new AzureStorage(null, null), new AzureStorage(null, null))
+        .withNonnullFields("storage")
+        .withNonnullFields("entityFactory")
+        .withNonnullFields("azureCloudBlobIterableFactory")
+        .withNonnullFields("inputDataConfig")
+        .withNonnullFields("objectGlob")
+        .withNonnullFields("scheme")
+        .verify();
   }
 
   @AfterEach

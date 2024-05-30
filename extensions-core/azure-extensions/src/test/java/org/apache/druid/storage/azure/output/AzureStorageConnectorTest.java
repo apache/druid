@@ -183,10 +183,13 @@ public class AzureStorageConnectorTest
     EasyMock.replay(azureStorage);
     storageConnector.deleteFiles(ImmutableList.of(TEST_FILE + "_1.part", TEST_FILE + "_2.part"));
     assertEquals(CONTAINER, containerCapture.getValue());
-    assertEquals(ImmutableList.of(
-        PREFIX + "/" + TEST_FILE + "_1.part",
-        PREFIX + "/" + TEST_FILE + "_2.part"
-    ), Lists.newArrayList(pathsCapture.getValue()));
+    assertEquals(
+        ImmutableList.of(
+            PREFIX + "/" + TEST_FILE + "_1.part",
+            PREFIX + "/" + TEST_FILE + "_2.part"
+        ),
+        Lists.newArrayList(pathsCapture.getValue())
+    );
     EasyMock.reset(azureStorage);
   }
 
