@@ -60,9 +60,7 @@ public class TaskQueueConfig
     this.startDelay = defaultDuration(startDelay, "PT1M");
     this.restartDelay = defaultDuration(restartDelay, "PT30S");
     this.storageSyncRate = defaultDuration(storageSyncRate, "PT1M");
-
-    // 60 MB default limit since 64 MB is the default max_allowed_packet size in MySQL 8+
-    this.maxTaskPayloadSize = Configs.valueOrDefault(maxTaskPayloadSize, 60 * 1024 * 1024);
+    this.maxTaskPayloadSize = maxTaskPayloadSize;
   }
 
   public int getMaxSize()

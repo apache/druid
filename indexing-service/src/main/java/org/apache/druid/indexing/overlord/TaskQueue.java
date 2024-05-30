@@ -98,6 +98,9 @@ public class TaskQueue
   private static final long MANAGEMENT_WAIT_TIMEOUT_NANOS = TimeUnit.SECONDS.toNanos(60);
   private static final long MIN_WAIT_TIME_MS = 100;
 
+  // 60 MB warning threshold since 64 MB is the default max_allowed_packet size in MySQL 8+
+  private static final long TASK_SIZE_WARNING_THRESHOLD = 1024 * 1024 * 60;
+
   // Task ID -> Task, for tasks that are active in some way (submitted, running, or finished and to-be-cleaned-up).
   @GuardedBy("giant")
   private final LinkedHashMap<String, Task> tasks = new LinkedHashMap<>();
@@ -509,20 +512,30 @@ public class TaskQueue
       throw EntryAlreadyExists.exception("Task[%s] already exists", task.getId());
     }
 
-    String payload = null;
     try {
-      payload = passwordRedactingMapper.writeValueAsString(task);
+      String payload = passwordRedactingMapper.writeValueAsString(task);
+      if (payload.length() > TASK_SIZE_WARNING_THRESHOLD) {
+        log.warn("Received a task payload > [%d] with id [%s]. and datasource [%s]" +
+                " There may be downstream issues caused by managing this large payload." +
+                "Set druid.indexer.queue.maxTaskPayloadSize to reject tasks above a certain size.",
+            config.getMaxTaskPayloadSize(),
+            task.getId(),
+            task.getDataSource()
+        );
+      }
+
+      if (config.getMaxTaskPayloadSize() != null && config.getMaxTaskPayloadSize() < payload.length()) {
+        throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+            .ofCategory(DruidException.Category.INVALID_INPUT)
+            .build(
+                "Task payload size was [%d] but max size is [%d]. " +
+                    "Reduce the size of the task or increase 'druid.indexer.queue.maxTaskPayloadSize'.",
+                payload.length(),
+                config.getMaxTaskPayloadSize()
+            );
+      }
     }
     catch (JsonProcessingException ignored) {
-    }
-    if (payload != null && payload.length() > config.getMaxTaskPayloadSize()) {
-      log.warn("Received a task payload > [%d] with id [%s]. and datasource [%s]" +
-              " There may be downstream issues caused by managing this large payload." +
-              "Increase druid.indexer.queue.maxTaskPayloadSize to ignore this warning.",
-          config.getMaxTaskPayloadSize(),
-          task.getId(),
-          task.getDataSource()
-      );
     }
 
     // Set forceTimeChunkLock before adding task spec to taskStorage, so that we can see always consistent task spec.

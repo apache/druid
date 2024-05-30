@@ -216,6 +216,73 @@ public class TaskQueueTest extends IngestionTestBase
   }
 
   @Test
+  public void testAddThrowsExceptionWhenPayloadIsTooLarge()
+  {
+    Long maxPayloadSize = 1024L * 1024L * 10L;
+    TaskQueue maxPayloadTaskQueue = new TaskQueue(
+        new TaskLockConfig(),
+        new TaskQueueConfig(3, null, null, null, null, maxPayloadSize),
+        new DefaultTaskConfig()
+        {
+          @Override
+          public Map<String, Object> getContext()
+          {
+            return defaultTaskContext;
+          }
+        },
+        getTaskStorage(),
+        new SimpleTaskRunner(),
+        actionClientFactory,
+        getLockbox(),
+        serviceEmitter,
+        getObjectMapper(),
+        new NoopTaskContextEnricher()
+    );
+    maxPayloadTaskQueue.setActive();
+
+    // 1 MB is not too large
+    char[] context = new char[1024 * 1024];
+    Arrays.fill(context, 'a');
+    maxPayloadTaskQueue.add(
+        new TestTask(
+            "tx",
+            Intervals.of("2021-01/P1M"),
+            ImmutableMap.of(
+                "contextKey", new String(context)
+            )
+        )
+    );
+
+    // 100 MB is too large
+    char[] contextLarge = new char[100 * 1024 * 1024];
+    Arrays.fill(contextLarge, 'a');
+
+    Assert.assertThrows(
+        DruidException.class,
+        () -> maxPayloadTaskQueue.add(
+            new TestTask(
+                "tx2",
+                Intervals.of("2021-01/P1M"),
+                ImmutableMap.of(
+                    "contextKey", new String(contextLarge)
+                )
+            )
+        )
+    );
+
+    // If no limit is set, don't throw anything
+    taskQueue.add(
+        new TestTask(
+            "tx3",
+            Intervals.of("2021-01/P1M"),
+            ImmutableMap.of(
+                "contextKey", new String(contextLarge)
+            )
+        )
+    );
+  }
+
+  @Test
   public void testAddedTaskUsesLineageBasedSegmentAllocationByDefault()
   {
     final Task task = new TestTask("t1", Intervals.of("2021-01-01/P1D"));
