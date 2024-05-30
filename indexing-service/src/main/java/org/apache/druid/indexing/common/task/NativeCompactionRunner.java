@@ -84,7 +84,7 @@ public class NativeCompactionRunner implements CompactionRunner
       CompactionTask compactionTask
   )
   {
-    return new NonnullPair<>(true, null);
+    return new NonnullPair<>(true, "");
   }
 
   /**

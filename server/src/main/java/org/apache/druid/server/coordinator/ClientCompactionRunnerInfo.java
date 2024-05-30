@@ -71,6 +71,12 @@ public class ClientCompactionRunnerInfo
     return Objects.hash(type);
   }
 
+  /**
+   * Checks if the provided compaction config is supported by the runner
+   * @param newConfig The updated compaction config
+   * @param engineSource String indicating the source of compaction engine.
+   * @return Pair of support boolean and reason string. The reason string is empty if support boolean is True.
+   */
   public static NonnullPair<Boolean, String> supportsCompactionConfig(DataSourceCompactionConfig newConfig, String engineSource)
   {
     CompactionEngine compactionEngine = newConfig.getEngine();
