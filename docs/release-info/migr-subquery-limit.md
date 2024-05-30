@@ -23,29 +23,34 @@ sidebar_label: Subquery limit
   ~ under the License.
 -->
 
+Druid now allows you to set a byte-based limit on subquery size, to prevent brokers from running out of memory when handling large subqueries. 
+Druid uses subqueries as joins as well as in common table expressions, such as WITH.
+
+The byte-based subquery limit overrides Druid's row-based subquery limit.
+
 :::info
-The byte-based subquery limit is an [experimental feature](../development/experimental.md) introduced in Druid 30.0.0.
+We recommend that you move towards using byte-based limits starting in Druid 30.0.
 :::
 
-Druid now allows you to set a byte-based limit on subquery size, to prevent brokers from running out of memory when handling large subqueries. Druid uses subqueries as joins as well as in common table expressions, such as WITH.
-
-The byte-based subquery limit works in conjunction with Druid's row-based subquery limit.
+For queries that generate a large number of rows (5 million or more), we recommend that you don't use `maxSubqueryBytes` from the outset. 
+You can increase `maxSubqueryRows` and then configure the byte-based limit if you find that Druid needs it to process the query.
 
 ## Row-based subquery limit
 
-Druid uses the `maxSubqueryRows` property to limit the number of rows Druid returns in a subquery. Because this is a row-based limit, it doesn't restrict the overall size of the returned data.
+Druid uses the `maxSubqueryRows` property to limit the number of rows Druid returns in a subquery. 
+Because this is a row-based limit, it doesn't restrict the overall size of the returned data.
 
 The `maxSubqueryRows` property is set to 100,000 by default.
 
 ## Enable a byte-based subquery limit
 
-Set the optional property `maxSubqueryBytes` to set a maximum number of returned bytes. This property takes precedence over `maxSubqueryRows`.
+Set the optional property `maxSubqueryBytes` to set a maximum number of returned bytes. 
+This property takes precedence over `maxSubqueryRows`.
 
 ## Usage considerations
 
-You can set both `maxSubqueryRows` and `maxSubqueryBytes` at cluster level and override them in individual queries.
-
-For queries that generate a large number of subqueries, we recommend that you don't use `maxSubqueryBytes` from the outset. You can increase `maxSubqueryRows` and then configure the byte-based limit if you find that Druid needs it to process the query.
+You can set both `maxSubqueryRows` and `maxSubqueryBytes` at cluster level and override them in individual queries. 
+See [Overriding default query context values](../configuration#overriding-default-query-context-values) for more information.
 
 ## Learn more
 
