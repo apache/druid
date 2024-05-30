@@ -210,8 +210,10 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
         AzureDataSegmentKiller.class,
         killer.getKillers().get(AzureStorageDruidModule.SCHEME).get().getClass()
     );
-    assertSame(killer.getKillers().get(AzureStorageDruidModule.SCHEME).get(),
-                          killer.getKillers().get(AzureStorageDruidModule.SCHEME).get());
+    assertSame(
+        killer.getKillers().get(AzureStorageDruidModule.SCHEME).get(),
+        killer.getKillers().get(AzureStorageDruidModule.SCHEME).get()
+    );
   }
 
   @ParameterizedTest

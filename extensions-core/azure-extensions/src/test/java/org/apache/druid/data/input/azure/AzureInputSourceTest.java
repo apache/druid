@@ -290,8 +290,10 @@ public class AzureInputSourceTest extends EasyMockSupport
     );
 
     String actualToString = azureInputSource.toString();
-    assertEquals("AzureInputSource{uris=[], prefixes=[azure://container/blob], objects=[], objectGlob=null}",
-                            actualToString);
+    assertEquals(
+        "AzureInputSource{uris=[], prefixes=[azure://container/blob], objects=[], objectGlob=null}",
+        actualToString
+    );
   }
 
   @Test
@@ -311,13 +313,16 @@ public class AzureInputSourceTest extends EasyMockSupport
     );
 
     String actualToString = azureInputSource.toString();
-    assertEquals("AzureInputSource{"
-                        + "uris=[], "
-                        + "prefixes=[azure://container/blob], "
-                        + "objects=[], "
-                        + "objectGlob=null, "
-                        + "systemFields=[__file_uri, __file_bucket, __file_path]"
-                        + "}", actualToString);
+    assertEquals(
+        "AzureInputSource{"
+        + "uris=[], "
+        + "prefixes=[azure://container/blob], "
+        + "objects=[], "
+        + "objectGlob=null, "
+        + "systemFields=[__file_uri, __file_bucket, __file_path]"
+        + "}",
+        actualToString
+    );
   }
 
   @Test
@@ -341,7 +346,7 @@ public class AzureInputSourceTest extends EasyMockSupport
   @Test
   public void test_systemFields()
   {
-    final AzureInputSource azureInputSource = (AzureInputSource) new AzureInputSource(
+    final AzureInputSource azureInputSource = new AzureInputSource(
         storage,
         entityFactory,
         azureCloudBlobIterableFactory,
@@ -353,8 +358,10 @@ public class AzureInputSourceTest extends EasyMockSupport
         new SystemFields(EnumSet.of(SystemField.URI, SystemField.BUCKET, SystemField.PATH))
     );
 
-    assertEquals(EnumSet.of(SystemField.URI, SystemField.BUCKET, SystemField.PATH),
-                            azureInputSource.getConfiguredSystemFields());
+    assertEquals(
+        EnumSet.of(SystemField.URI, SystemField.BUCKET, SystemField.PATH),
+        azureInputSource.getConfiguredSystemFields()
+    );
 
     final AzureEntity entity = new AzureEntity(
         new CloudObjectLocation("foo", "bar"),

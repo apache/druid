@@ -99,8 +99,12 @@ public class AzureIngestClientFactoryTest extends EasyMockSupport
     assertNotNull(storageSharedKeyCredential);
 
     // Azure doesn't let us look at the key in the StorageSharedKeyCredential so make sure the authorization header generated is what we expect.
-    assertEquals(new StorageSharedKeyCredential(ACCOUNT, KEY).generateAuthorizationHeader(new URL("http://druid.com"), "POST", ImmutableMap.of()),
-                            storageSharedKeyCredential.generateAuthorizationHeader(new URL("http://druid.com"), "POST", ImmutableMap.of()));
+    assertEquals(
+        new StorageSharedKeyCredential(ACCOUNT, KEY)
+            .generateAuthorizationHeader(new URL("http://druid.com"), "POST", ImmutableMap.of()),
+        storageSharedKeyCredential
+            .generateAuthorizationHeader(new URL("http://druid.com"), "POST", ImmutableMap.of())
+    );
   }
 
   @Test

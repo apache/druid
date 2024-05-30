@@ -56,6 +56,7 @@ import java.nio.file.Paths;
 import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -219,8 +220,9 @@ public class AzureStorageAccountInputSourceTest extends EasyMockSupport
         new MaxSizeSplitHintSpec(null, 1)
     );
 
-    List<List<CloudObjectLocation>> actualCloudLocationList = cloudObjectStream.map(InputSplit::get)
-                                                                               .collect(Collectors.toList());
+    List<List<CloudObjectLocation>> actualCloudLocationList = cloudObjectStream
+        .map(InputSplit::get)
+        .collect(Collectors.toList());
     verifyAll();
     assertEquals(expectedCloudLocations, actualCloudLocationList);
   }
@@ -274,8 +276,9 @@ public class AzureStorageAccountInputSourceTest extends EasyMockSupport
         new MaxSizeSplitHintSpec(null, 1)
     );
 
-    List<List<CloudObjectLocation>> actualCloudLocationList = cloudObjectStream.map(InputSplit::get)
-                                                                               .collect(Collectors.toList());
+    List<List<CloudObjectLocation>> actualCloudLocationList = cloudObjectStream
+        .map(InputSplit::get)
+        .collect(Collectors.toList());
     verifyAll();
     assertEquals(expectedCloudLocations, actualCloudLocationList);
   }
@@ -308,25 +311,26 @@ public class AzureStorageAccountInputSourceTest extends EasyMockSupport
   @Test
   public void test_toString_returnsExpectedString()
   {
-    List<URI> prefixes = ImmutableList.of(PREFIX_URI);
     final AzureStorageAccountInputSource azureInputSource = new AzureStorageAccountInputSource(
         entityFactory,
         azureCloudBlobIterableFactory,
         inputDataConfig,
         azureAccountConfig,
         EMPTY_URIS,
-        prefixes,
+        ImmutableList.of(PREFIX_URI),
         EMPTY_OBJECTS,
         null,
         azureStorageAccountInputSourceConfig,
         null
     );
-    String azureStorageAccountInputSourceString = azureInputSource.toString();
+
     assertEquals(
-        "AzureStorageAccountInputSource{uris=[], prefixes=[azureStorage://STORAGE_ACCOUNT/CONTAINER/blob], objects=[], objectGlob=null, azureStorageAccountInputSourceConfig="
-        + azureStorageAccountInputSourceConfig
-        + "}",
-        azureStorageAccountInputSourceString
+        String.format(
+            Locale.ENGLISH,
+            "AzureStorageAccountInputSource{uris=[], prefixes=[azureStorage://STORAGE_ACCOUNT/CONTAINER/blob], objects=[], objectGlob=null, azureStorageAccountInputSourceConfig=%s}",
+            azureStorageAccountInputSourceConfig
+        ),
+        azureInputSource.toString()
     );
   }
 
@@ -349,14 +353,17 @@ public class AzureStorageAccountInputSourceTest extends EasyMockSupport
 
     String azureStorageAccountInputSourceString = azureInputSource.toString();
 
-    assertEquals("AzureStorageAccountInputSource{"
-                 + "uris=[], "
-                 + "prefixes=[azureStorage://STORAGE_ACCOUNT/CONTAINER/blob], "
-                 + "objects=[], "
-                 + "objectGlob=null, "
-                 + "azureStorageAccountInputSourceConfig=" + azureStorageAccountInputSourceConfig + ", "
-                 + "systemFields=[__file_uri, __file_bucket, __file_path]"
-                 + "}", azureStorageAccountInputSourceString);
+    assertEquals(
+        "AzureStorageAccountInputSource{"
+        + "uris=[], "
+        + "prefixes=[azureStorage://STORAGE_ACCOUNT/CONTAINER/blob], "
+        + "objects=[], "
+        + "objectGlob=null, "
+        + "azureStorageAccountInputSourceConfig=" + azureStorageAccountInputSourceConfig + ", "
+        + "systemFields=[__file_uri, __file_bucket, __file_path]"
+        + "}",
+        azureStorageAccountInputSourceString
+    );
   }
 
   @Test
