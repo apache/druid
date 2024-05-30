@@ -511,32 +511,7 @@ public class TaskQueue
     if (taskStorage.getTask(task.getId()).isPresent()) {
       throw EntryAlreadyExists.exception("Task[%s] already exists", task.getId());
     }
-
-    try {
-      String payload = passwordRedactingMapper.writeValueAsString(task);
-      if (payload.length() > TASK_SIZE_WARNING_THRESHOLD) {
-        log.warn("Received a task payload > [%d] with id [%s]. and datasource [%s]" +
-                " There may be downstream issues caused by managing this large payload." +
-                "Set druid.indexer.queue.maxTaskPayloadSize to reject tasks above a certain size.",
-            config.getMaxTaskPayloadSize(),
-            task.getId(),
-            task.getDataSource()
-        );
-      }
-
-      if (config.getMaxTaskPayloadSize() != null && config.getMaxTaskPayloadSize() < payload.length()) {
-        throw DruidException.forPersona(DruidException.Persona.OPERATOR)
-            .ofCategory(DruidException.Category.INVALID_INPUT)
-            .build(
-                "Task payload size was [%d] but max size is [%d]. " +
-                    "Reduce the size of the task or increase 'druid.indexer.queue.maxTaskPayloadSize'.",
-                payload.length(),
-                config.getMaxTaskPayloadSize()
-            );
-      }
-    }
-    catch (JsonProcessingException ignored) {
-    }
+    validateTaskPayload(task);
 
     // Set forceTimeChunkLock before adding task spec to taskStorage, so that we can see always consistent task spec.
     task.addToContextIfAbsent(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, lockConfig.isForceTimeChunkLock());
@@ -1045,6 +1020,39 @@ public class TaskQueue
     }
     finally {
       giant.unlock();
+    }
+  }
+
+  void validateTaskPayload(Task task)
+  {
+    try {
+      String payload = passwordRedactingMapper.writeValueAsString(task);
+      if (payload.length() > TASK_SIZE_WARNING_THRESHOLD) {
+        log.warn("Received a large task payload [%s] with id [%s] and datasource [%s]" +
+                " There may be downstream issues caused by managing this large payload." +
+                "Set druid.indexer.queue.maxTaskPayloadSize to reject tasks above a certain size.",
+            payload.length(),
+            task.getId(),
+            task.getDataSource()
+        );
+      }
+
+      if (config.getMaxTaskPayloadSize() != null && config.getMaxTaskPayloadSize().getBytesInInt() < payload.length()) {
+        throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+            .ofCategory(DruidException.Category.INVALID_INPUT)
+            .build(
+                "Task payload size was [%d] but max size is [%d]. " +
+                    "Reduce the size of the task or increase 'druid.indexer.queue.maxTaskPayloadSize'.",
+                payload.length(),
+                config.getMaxTaskPayloadSize()
+            );
+      }
+    }
+    catch (JsonProcessingException e) {
+      throw DruidException.defensive(
+          "Failed to parse task payload for validation",
+          e
+      );
     }
   }
 }

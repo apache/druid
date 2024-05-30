@@ -1125,7 +1125,7 @@ These Overlord static configurations can be defined in the `overlord/runtime.pro
 |`druid.indexer.queue.startDelay`|Sleep this long before starting Overlord queue management. This can be useful to give a cluster time to re-orient itself (for example, after a widespread network issue).|`PT1M`|
 |`druid.indexer.queue.restartDelay`|Sleep this long when Overlord queue management throws an exception before trying again.|`PT30S`|
 |`druid.indexer.queue.storageSyncRate`|Sync Overlord state this often with an underlying task persistence mechanism.|`PT1M`|
-|`druid.indexer.queue.maxTaskPayloadSize`|Maximum size in bytes of a single task payload.|`62914560`|
+|`druid.indexer.queue.maxTaskPayloadSize`|Maximum size in bytes of a single task payload.|`64 MiB`|
 
 The following configs only apply if the Overlord is running in remote mode. For a description of local vs. remote mode, see [Overlord service](../design/overlord.md).
 

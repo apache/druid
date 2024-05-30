@@ -71,6 +71,7 @@ import org.apache.druid.indexing.worker.TaskAnnouncement;
 import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -218,7 +219,7 @@ public class TaskQueueTest extends IngestionTestBase
   @Test
   public void testAddThrowsExceptionWhenPayloadIsTooLarge()
   {
-    Long maxPayloadSize = 1024L * 1024L * 10L;
+    HumanReadableBytes maxPayloadSize = HumanReadableBytes.valueOf(10 * 1024 * 1024);
     TaskQueue maxPayloadTaskQueue = new TaskQueue(
         new TaskLockConfig(),
         new TaskQueueConfig(3, null, null, null, null, maxPayloadSize),

@@ -22,8 +22,11 @@ package org.apache.druid.indexing.overlord.config;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.common.config.Configs;
+import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.joda.time.Duration;
 import org.joda.time.Period;
+
+import javax.annotation.Nullable;
 
 public class TaskQueueConfig
 {
@@ -43,7 +46,7 @@ public class TaskQueueConfig
   private int taskCompleteHandlerNumThreads;
 
   @JsonProperty
-  private Long maxTaskPayloadSize;
+  private HumanReadableBytes maxTaskPayloadSize;
 
   @JsonCreator
   public TaskQueueConfig(
@@ -52,7 +55,7 @@ public class TaskQueueConfig
       @JsonProperty("restartDelay") final Period restartDelay,
       @JsonProperty("storageSyncRate") final Period storageSyncRate,
       @JsonProperty("taskCompleteHandlerNumThreads") final Integer taskCompleteHandlerNumThreads,
-      @JsonProperty("maxTaskPayloadSize") final Long maxTaskPayloadSize
+      @JsonProperty("maxTaskPayloadSize") @Nullable final HumanReadableBytes maxTaskPayloadSize
   )
   {
     this.maxSize = Configs.valueOrDefault(maxSize, Integer.MAX_VALUE);
@@ -88,7 +91,7 @@ public class TaskQueueConfig
     return storageSyncRate;
   }
 
-  public Long getMaxTaskPayloadSize()
+  public HumanReadableBytes getMaxTaskPayloadSize()
   {
     return maxTaskPayloadSize;
   }
