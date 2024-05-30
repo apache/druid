@@ -25,11 +25,8 @@ import org.joda.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Thread-safe wrapper over {@link com.google.common.base.Stopwatch}.
- * <p>
- * Thread safety has been limited to the start/stop methods for now as they are
- * the only ones that can throw an exception in an illegal state and are thus
- * vulnerable to race conditions.
+ * Wrapper over {@link com.google.common.base.Stopwatch} to provide some utility
+ * methods such as {@link #millisElapsed()}, {@link #restart()}, {@link #hasElapsed(Duration)}.
  */
 public class Stopwatch
 {
@@ -55,17 +52,17 @@ public class Stopwatch
     this.delegate = delegate;
   }
 
-  public synchronized void start()
+  public void start()
   {
     delegate.start();
   }
 
-  public synchronized void stop()
+  public void stop()
   {
     delegate.stop();
   }
 
-  public synchronized void reset()
+  public void reset()
   {
     delegate.reset();
   }
@@ -73,12 +70,12 @@ public class Stopwatch
   /**
    * Invokes {@code reset().start()} on the underlying {@link com.google.common.base.Stopwatch}.
    */
-  public synchronized void restart()
+  public void restart()
   {
     delegate.reset().start();
   }
 
-  public synchronized boolean isRunning()
+  public boolean isRunning()
   {
     return delegate.isRunning();
   }

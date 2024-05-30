@@ -300,19 +300,16 @@ Google Cloud Storage object:
 |path|The path where data is located.|None|yes|
 |systemFields|JSON array of system fields to return as part of input rows. Possible values: `__file_uri` (Google Cloud Storage URI starting with `gs://`), `__file_bucket` (GCS bucket), and `__file_path` (GCS key).|None|no|
 
-## Azure input source
+## Azure input source 
 
 :::info
  You need to include the [`druid-azure-extensions`](../development/extensions-core/azure.md) as an extension to use the Azure input source.
 :::
 
-The Azure input source reads objects directly from Azure Blob store or Azure Data Lake sources. You can
+The Azure input source (that uses the type `azureStorage`) reads objects directly from Azure Blob store or Azure Data Lake sources. You can
 specify objects as a list of file URI strings or prefixes. You can split the Azure input source for use with [Parallel task](./native-batch.md) indexing and each worker task reads one chunk of the split data.
 
-
-:::info
-The  old `azure` schema is deprecated. Update your specs to use the `azureStorage` schema described below instead.
-:::
+The `azureStorage` input source is a new schema for Azure input sources that allows you to specify which storage account files should be ingested from. We recommend that you update any specs that use the old `azure` schema to use the new `azureStorage` schema. The new schema provides more functionality than the older `azure` schema. 
 
 Sample specs:
 
@@ -410,10 +407,10 @@ The `properties` property can be one of the following:
 |appRegistrationClientSecret|The client secret of the Azure App registration to authenticate as|None|Yes if `appRegistrationClientId` is provided|
 |tenantId|The tenant ID of the Azure App registration to authenticate as|None|Yes if `appRegistrationClientId` is provided|
 
-<details closed>
-  <summary>Show the deprecated 'azure' input source</summary>
 
-Note that the deprecated `azure` input source doesn't support specifying which storage account to ingest from. We recommend using the `azureStorage` instead.
+#### `azure` input source
+
+The Azure input source that uses the type `azure` is an older version of the Azure input type and is not recommended. It doesn't support specifying which storage account to ingest from. We recommend using the [`azureStorage` input source schema](#azure-input-source) instead since it provides more functionality.
 
 Sample specs:
 
@@ -490,7 +487,6 @@ The `objects` property is:
 |bucket|Name of the Azure Blob Storage or Azure Data Lake container|None|yes|
 |path|The path where data is located.|None|yes|
 
-</details>
 
 ## HDFS input source
 
