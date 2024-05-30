@@ -50,6 +50,7 @@ import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.sql.SqlStatementFactory;
+import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregationModule;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
@@ -70,6 +71,7 @@ import org.apache.druid.timeline.DataSegment;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
@@ -403,6 +405,7 @@ public class SqlTestFramework
     private int mergeBufferCount;
     private CatalogResolver catalogResolver = CatalogResolver.NULL_RESOLVER;
     private List<Module> overrideModules = new ArrayList<>();
+    private SqlTestFrameworkConfig config;
 
     public Builder(QueryComponentSupplier componentSupplier)
     {
@@ -436,6 +439,12 @@ public class SqlTestFramework
     public SqlTestFramework build()
     {
       return new SqlTestFramework(this);
+    }
+
+    public Builder withConfig(SqlTestFrameworkConfig config)
+    {
+      this.config = config;
+      return this;
     }
   }
 
@@ -691,5 +700,10 @@ public class SqlTestFramework
     catch (IOException e) {
       throw new RE(e);
     }
+  }
+
+  public URI getDruidTestURI()
+  {
+    return builder.config.getDruidTestURI();
   }
 }

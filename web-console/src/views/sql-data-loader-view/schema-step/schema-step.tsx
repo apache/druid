@@ -79,7 +79,7 @@ import {
   filterMap,
   oneOf,
   queryDruidSql,
-  sampleDataToQuery,
+  queryResultToValuesQuery,
   tickIcon,
   timeFormatToSql,
   wait,
@@ -479,7 +479,7 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
 
   const sampleDataQuery = useMemo(() => {
     if (!sampleState.data) return;
-    return sampleDataToQuery(sampleState.data);
+    return queryResultToValuesQuery(sampleState.data);
   }, [sampleState.data]);
 
   const previewQueryString = useLastDefined(
