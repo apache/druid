@@ -97,10 +97,8 @@ public abstract class IcebergCatalog
       if (snapshotTime != null) {
         tableScan = tableScan.asOfTime(snapshotTime.getMillis());
       }
-      //Default case sensitivity is true for Iceberg TableScanContext
-      if (!isCaseSensitive()) {
-        tableScan = tableScan.caseSensitive(isCaseSensitive());
-      }
+
+      tableScan = tableScan.caseSensitive(isCaseSensitive());
       CloseableIterable<FileScanTask> tasks = tableScan.planFiles();
       CloseableIterable.transform(tasks, FileScanTask::file)
                        .forEach(dataFile -> dataFilePaths.add(dataFile.path().toString()));
