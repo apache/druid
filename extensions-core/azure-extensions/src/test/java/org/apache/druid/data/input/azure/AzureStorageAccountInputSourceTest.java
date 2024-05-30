@@ -388,7 +388,7 @@ public class AzureStorageAccountInputSourceTest extends EasyMockSupport
   @Test
   public void test_systemFields()
   {
-    final AzureStorageAccountInputSource azureInputSource = (AzureStorageAccountInputSource) new AzureStorageAccountInputSource(
+    final AzureStorageAccountInputSource azureInputSource = new AzureStorageAccountInputSource(
         entityFactory,
         azureCloudBlobIterableFactory,
         inputDataConfig,
