@@ -29,13 +29,12 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.storage.azure.blob.CloudBlobHolder;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.net.URI;
@@ -43,6 +42,10 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class AzureDataSegmentKillerTest extends EasyMockSupport
 {
@@ -70,7 +73,7 @@ public class AzureDataSegmentKillerTest extends EasyMockSupport
       ImmutableMap.of("containerName", CONTAINER_NAME, "blobPath", BLOB_PATH),
       null,
       null,
-      NoneShardSpec.instance(),
+      new LinearShardSpec(0),
       0,
       1
   );
@@ -82,7 +85,7 @@ public class AzureDataSegmentKillerTest extends EasyMockSupport
       ImmutableMap.of("containerName", CONTAINER_NAME, "blobPath", BLOB_PATH_2),
       null,
       null,
-      NoneShardSpec.instance(),
+      new LinearShardSpec(0),
       0,
       1
   );
@@ -93,7 +96,7 @@ public class AzureDataSegmentKillerTest extends EasyMockSupport
   private AzureStorage azureStorage;
   private AzureCloudBlobIterableFactory azureCloudBlobIterableFactory;
 
-  @Before
+  @BeforeEach
   public void before()
   {
     segmentConfig = createMock(AzureDataSegmentConfig.class);
@@ -121,27 +124,35 @@ public class AzureDataSegmentKillerTest extends EasyMockSupport
     verifyAll();
   }
 
-  @Test(expected = SegmentLoadingException.class)
+  @Test
   public void test_kill_StorageExceptionExtendedErrorInformationNull_throwsException()
-      throws SegmentLoadingException, BlobStorageException
   {
+    String dirPath = Paths.get(BLOB_PATH).getParent().toString();
 
-    common_test_kill_StorageExceptionExtendedError_throwsException();
+    EasyMock.expect(azureStorage.emptyCloudBlobDirectory(CONTAINER_NAME, dirPath)).andThrow(
+        new BlobStorageException(
+            "",
+            null,
+            null
+        )
+    );
+
+    replayAll();
+
+    assertThrows(
+        SegmentLoadingException.class,
+        () -> {
+          AzureDataSegmentKiller killer = new AzureDataSegmentKiller(segmentConfig, inputDataConfig, accountConfig, azureStorage, azureCloudBlobIterableFactory);
+          killer.kill(DATA_SEGMENT);
+        }
+    );
+
+    verifyAll();
   }
 
-  @Test(expected = SegmentLoadingException.class)
-  public void test_kill_StorageExceptionExtendedErrorInformationNotNull_throwsException()
-      throws SegmentLoadingException, BlobStorageException
-  {
-
-    common_test_kill_StorageExceptionExtendedError_throwsException();
-  }
-
-  @Test(expected = RuntimeException.class)
+  @Test
   public void test_kill_runtimeException_throwsException()
-      throws SegmentLoadingException, BlobStorageException
   {
-
     String dirPath = Paths.get(BLOB_PATH).getParent().toString();
 
     EasyMock.expect(azureStorage.emptyCloudBlobDirectory(CONTAINER_NAME, dirPath)).andThrow(
@@ -152,9 +163,13 @@ public class AzureDataSegmentKillerTest extends EasyMockSupport
 
     replayAll();
 
-    AzureDataSegmentKiller killer = new AzureDataSegmentKiller(segmentConfig, inputDataConfig, accountConfig, azureStorage, azureCloudBlobIterableFactory);
-
-    killer.kill(DATA_SEGMENT);
+    assertThrows(
+        RuntimeException.class,
+        () -> {
+          AzureDataSegmentKiller killer = new AzureDataSegmentKiller(segmentConfig, inputDataConfig, accountConfig, azureStorage, azureCloudBlobIterableFactory);
+          killer.kill(DATA_SEGMENT);
+        }
+    );
 
     verifyAll();
   }
@@ -182,7 +197,7 @@ public class AzureDataSegmentKillerTest extends EasyMockSupport
       thrownISEException = true;
     }
 
-    Assert.assertTrue(thrownISEException);
+    assertTrue(thrownISEException);
     EasyMock.verify(segmentConfig, inputDataConfig, accountConfig, azureStorage, azureCloudBlobIterableFactory);
   }
 
@@ -268,7 +283,7 @@ public class AzureDataSegmentKillerTest extends EasyMockSupport
       ioExceptionThrown = true;
     }
 
-    Assert.assertTrue(ioExceptionThrown);
+    assertTrue(ioExceptionThrown);
 
     EasyMock.verify(
         segmentConfig,
@@ -279,28 +294,6 @@ public class AzureDataSegmentKillerTest extends EasyMockSupport
         azureCloudBlobIterableFactory,
         azureStorage
     );
-  }
-
-  private void common_test_kill_StorageExceptionExtendedError_throwsException()
-      throws SegmentLoadingException, BlobStorageException
-  {
-    String dirPath = Paths.get(BLOB_PATH).getParent().toString();
-
-    EasyMock.expect(azureStorage.emptyCloudBlobDirectory(CONTAINER_NAME, dirPath)).andThrow(
-        new BlobStorageException(
-            "",
-            null,
-            null
-        )
-    );
-
-    replayAll();
-
-    AzureDataSegmentKiller killer = new AzureDataSegmentKiller(segmentConfig, inputDataConfig, accountConfig, azureStorage, azureCloudBlobIterableFactory);
-
-    killer.kill(DATA_SEGMENT);
-
-    verifyAll();
   }
 
   @Test
@@ -321,42 +314,55 @@ public class AzureDataSegmentKillerTest extends EasyMockSupport
 
     verifyAll();
 
-    Assert.assertEquals(
-        ImmutableSet.of(BLOB_PATH, BLOB_PATH_2),
-        new HashSet<>(deletedFilesCapture.getValue())
-    );
+    assertEquals(ImmutableSet.of(BLOB_PATH, BLOB_PATH_2), new HashSet<>(deletedFilesCapture.getValue()));
   }
 
-  @Test(expected = RuntimeException.class)
+  @Test
   public void test_killBatch_runtimeException()
-      throws SegmentLoadingException, BlobStorageException
   {
-
     EasyMock.expect(azureStorage.batchDeleteFiles(CONTAINER_NAME, ImmutableList.of(BLOB_PATH, BLOB_PATH_2), null))
             .andThrow(new RuntimeException(""));
 
     replayAll();
 
-    AzureDataSegmentKiller killer = new AzureDataSegmentKiller(segmentConfig, inputDataConfig, accountConfig, azureStorage, azureCloudBlobIterableFactory);
-
-    killer.kill(ImmutableList.of(DATA_SEGMENT, DATA_SEGMENT_2));
+    assertThrows(
+        RuntimeException.class,
+        () -> {
+          AzureDataSegmentKiller killer = new AzureDataSegmentKiller(
+              segmentConfig,
+              inputDataConfig,
+              accountConfig,
+              azureStorage,
+              azureCloudBlobIterableFactory
+          );
+          killer.kill(ImmutableList.of(DATA_SEGMENT, DATA_SEGMENT_2));
+        }
+    );
 
     verifyAll();
   }
 
-  @Test(expected = SegmentLoadingException.class)
+  @Test
   public void test_killBatch_SegmentLoadingExceptionOnError()
-          throws SegmentLoadingException, BlobStorageException
   {
-
     EasyMock.expect(azureStorage.batchDeleteFiles(CONTAINER_NAME, ImmutableList.of(BLOB_PATH, BLOB_PATH_2), null))
             .andReturn(false);
 
     replayAll();
 
-    AzureDataSegmentKiller killer = new AzureDataSegmentKiller(segmentConfig, inputDataConfig, accountConfig, azureStorage, azureCloudBlobIterableFactory);
-
-    killer.kill(ImmutableList.of(DATA_SEGMENT, DATA_SEGMENT_2));
+    assertThrows(
+        SegmentLoadingException.class,
+        () -> {
+          AzureDataSegmentKiller killer = new AzureDataSegmentKiller(
+              segmentConfig,
+              inputDataConfig,
+              accountConfig,
+              azureStorage,
+              azureCloudBlobIterableFactory
+          );
+          killer.kill(ImmutableList.of(DATA_SEGMENT, DATA_SEGMENT_2));
+        }
+    );
 
     verifyAll();
   }
@@ -364,7 +370,6 @@ public class AzureDataSegmentKillerTest extends EasyMockSupport
   @Test
   public void killBatch_emptyList() throws SegmentLoadingException, BlobStorageException
   {
-
     AzureDataSegmentKiller killer = new AzureDataSegmentKiller(segmentConfig, inputDataConfig, accountConfig, azureStorage, azureCloudBlobIterableFactory);
     killer.kill(ImmutableList.of());
   }
@@ -372,7 +377,6 @@ public class AzureDataSegmentKillerTest extends EasyMockSupport
   @Test
   public void killBatch_singleSegment() throws SegmentLoadingException, BlobStorageException
   {
-
     List<String> deletedFiles = new ArrayList<>();
     final String dirPath = Paths.get(BLOB_PATH).getParent().toString();
 

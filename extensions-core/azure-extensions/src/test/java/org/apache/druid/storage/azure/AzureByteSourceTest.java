@@ -23,10 +23,12 @@ import com.azure.core.http.HttpResponse;
 import com.azure.storage.blob.models.BlobStorageException;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.io.InputStream;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class AzureByteSourceTest extends EasyMockSupport
 {
@@ -71,8 +73,8 @@ public class AzureByteSourceTest extends EasyMockSupport
     verifyAll();
   }
 
-  @Test(expected = IOException.class)
-  public void openStreamWithRecoverableErrorTest() throws BlobStorageException, IOException
+  @Test
+  public void openStreamWithRecoverableErrorTest() throws BlobStorageException
   {
     final String containerName = "container";
     final String blobPath = "/path/to/file";
@@ -92,7 +94,7 @@ public class AzureByteSourceTest extends EasyMockSupport
 
     AzureByteSource byteSource = new AzureByteSource(azureStorage, containerName, blobPath);
 
-    byteSource.openStream();
+    assertThrows(IOException.class, byteSource::openStream);
 
     verifyAll();
   }
