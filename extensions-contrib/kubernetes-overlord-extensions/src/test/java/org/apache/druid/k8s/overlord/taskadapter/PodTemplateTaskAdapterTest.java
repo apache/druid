@@ -41,6 +41,8 @@ import org.apache.druid.k8s.overlord.common.Base64Compression;
 import org.apache.druid.k8s.overlord.common.DruidK8sConstants;
 import org.apache.druid.k8s.overlord.common.K8sTaskId;
 import org.apache.druid.k8s.overlord.common.K8sTestUtils;
+import org.apache.druid.k8s.overlord.execution.DefaultExecutionConfig;
+import org.apache.druid.k8s.overlord.execution.DynamicTaskExecutionBehaviorStrategy;
 import org.apache.druid.k8s.overlord.execution.ExecutionConfig;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.tasklogs.TaskLogs;
@@ -93,7 +95,7 @@ public class PodTemplateTaskAdapterTest
     podTemplateSpec = K8sTestUtils.fileToResource("basePodTemplate.yaml", PodTemplate.class);
 
     taskLogs = EasyMock.createMock(TaskLogs.class);
-    executionConfigRef = EasyMock.createMock(Supplier.class);
+    executionConfigRef = () -> new DefaultExecutionConfig(new DynamicTaskExecutionBehaviorStrategy(null));
   }
 
   @Test

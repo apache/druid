@@ -51,6 +51,10 @@ public class DynamicTaskExecutionBehaviorStrategy implements ExecutionBehaviorSt
   @Override
   public String getTaskCategory(Task task)
   {
+    if (categorySelectors == null) {
+      return null;
+    }
+
     return categorySelectors.stream()
                             .filter(selector -> selector.evaluate(task))
                             .findFirst()

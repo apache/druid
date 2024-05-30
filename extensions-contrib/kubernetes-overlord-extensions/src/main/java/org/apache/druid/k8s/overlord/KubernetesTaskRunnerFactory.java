@@ -97,7 +97,8 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
         druidKubernetesClient,
         kubernetesTaskRunnerConfig.getNamespace(),
         kubernetesTaskRunnerConfig.isDebugJobs(),
-        emitter
+        emitter,
+        executionConfigRef
     );
 
     runner = new KubernetesTaskRunner(

@@ -20,6 +20,7 @@
 package org.apache.druid.k8s.overlord.common;
 
 import com.google.common.base.Optional;
+import com.google.common.base.Supplier;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodBuilder;
 import io.fabric8.kubernetes.api.model.PodListBuilder;
@@ -33,6 +34,9 @@ import io.fabric8.kubernetes.client.server.mock.KubernetesMockServer;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
+import org.apache.druid.k8s.overlord.execution.DefaultExecutionConfig;
+import org.apache.druid.k8s.overlord.execution.DynamicTaskExecutionBehaviorStrategy;
+import org.apache.druid.k8s.overlord.execution.ExecutionConfig;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -57,13 +61,15 @@ public class KubernetesPeonClientTest
   private KubernetesClientApi clientApi;
   private KubernetesPeonClient instance;
   private StubServiceEmitter serviceEmitter;
+  private Supplier<ExecutionConfig> executionConfigRef;
 
   @BeforeEach
   public void setup()
   {
     clientApi = new TestKubernetesClient(this.client);
     serviceEmitter = new StubServiceEmitter("service", "host");
-    instance = new KubernetesPeonClient(clientApi, NAMESPACE, false, serviceEmitter);
+    executionConfigRef = () -> new DefaultExecutionConfig(new DynamicTaskExecutionBehaviorStrategy(null));
+    instance = new KubernetesPeonClient(clientApi, NAMESPACE, false, serviceEmitter, executionConfigRef);
   }
 
   @Test
@@ -237,7 +243,8 @@ public class KubernetesPeonClientTest
         new TestKubernetesClient(this.client),
         NAMESPACE,
         true,
-        serviceEmitter
+        serviceEmitter,
+        executionConfigRef
     );
 
     Job job = new JobBuilder()
@@ -262,7 +269,8 @@ public class KubernetesPeonClientTest
         new TestKubernetesClient(this.client),
         NAMESPACE,
         true,
-        serviceEmitter
+        serviceEmitter,
+        executionConfigRef
     );
 
     Assertions.assertTrue(instance.deletePeonJob(new K8sTaskId(ID)));

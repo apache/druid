@@ -65,35 +65,42 @@ public class Selector
    */
   public boolean evaluate(Task task)
   {
-    boolean tagsMatch = cxtTagsConditions.entrySet().stream().allMatch(entry -> {
-      String tagKey = entry.getKey();
-      Set<String> tagValues = entry.getValue();
-      Map<String, Object> tags = task.getContextValue(DruidMetrics.TAGS);
-      if (tags == null || tags.isEmpty()) {
-        return false;
-      }
-      Object tagValue = tags.get(tagKey);
+    boolean tagsMatch = true;
+    if (cxtTagsConditions != null) {
+      tagsMatch = cxtTagsConditions.entrySet().stream().allMatch(entry -> {
+        String tagKey = entry.getKey();
+        Set<String> tagValues = entry.getValue();
+        Map<String, Object> tags = task.getContextValue(DruidMetrics.TAGS);
+        if (tags == null || tags.isEmpty()) {
+          return false;
+        }
+        Object tagValue = tags.get(tagKey);
 
-      return tagValue == null ? false : tagValues.contains((String) tagValue);
-    });
+        return tagValue == null ? false : tagValues.contains((String) tagValue);
+      });
+    }
 
     if (!tagsMatch) {
       return false;
     }
 
-    return taskFieldsConditions.entrySet().stream().allMatch(entry -> {
-      String fieldKey = entry.getKey();
-      Set<String> fieldValues = entry.getValue();
-      if ("datasource".equalsIgnoreCase(fieldKey)) {
-        return fieldValues.contains(task.getDataSource());
-      }
+    if (taskFieldsConditions != null) {
+      return taskFieldsConditions.entrySet().stream().allMatch(entry -> {
+        String fieldKey = entry.getKey();
+        Set<String> fieldValues = entry.getValue();
+        if ("datasource".equalsIgnoreCase(fieldKey)) {
+          return fieldValues.contains(task.getDataSource());
+        }
 
-      if ("type".equalsIgnoreCase(fieldKey)) {
-        return fieldValues.contains(task.getType());
-      }
+        if ("type".equalsIgnoreCase(fieldKey)) {
+          return fieldValues.contains(task.getType());
+        }
 
-      return false;
-    });
+        return false;
+      });
+    }
+
+    return true;
   }
 
   @JsonProperty

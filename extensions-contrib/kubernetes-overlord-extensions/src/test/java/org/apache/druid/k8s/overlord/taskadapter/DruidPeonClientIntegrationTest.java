@@ -43,6 +43,8 @@ import org.apache.druid.k8s.overlord.common.KubernetesClientApi;
 import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
 import org.apache.druid.k8s.overlord.common.PeonCommandContext;
 import org.apache.druid.k8s.overlord.common.PeonPhase;
+import org.apache.druid.k8s.overlord.execution.DefaultExecutionConfig;
+import org.apache.druid.k8s.overlord.execution.DynamicTaskExecutionBehaviorStrategy;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.log.StartupLoggingConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -91,7 +93,13 @@ public class DruidPeonClientIntegrationTest
         new NamedType(IndexTask.IndexTuningConfig.class, "index")
     );
     k8sClient = new DruidKubernetesClient();
-    peonClient = new KubernetesPeonClient(k8sClient, "default", false, new NoopServiceEmitter());
+    peonClient = new KubernetesPeonClient(
+        k8sClient,
+        "default",
+        false,
+        new NoopServiceEmitter(),
+        () -> new DefaultExecutionConfig(new DynamicTaskExecutionBehaviorStrategy(null))
+    );
     druidNode = new DruidNode(
         "test",
         null,

@@ -21,6 +21,7 @@ package org.apache.druid.k8s.overlord.execution;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 
 import java.util.Objects;
 
@@ -33,6 +34,7 @@ public class DefaultExecutionConfig implements ExecutionConfig
       @JsonProperty("behaviorStrategy") ExecutionBehaviorStrategy behaviorStrategy
   )
   {
+    Preconditions.checkNotNull(behaviorStrategy);
     this.behaviorStrategy = behaviorStrategy;
   }
 

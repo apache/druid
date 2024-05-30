@@ -21,6 +21,7 @@ package org.apache.druid.k8s.overlord.common;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
+import com.google.common.base.Supplier;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.client.KubernetesClient;
@@ -31,6 +32,7 @@ import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.k8s.overlord.execution.ExecutionConfig;
 
 import java.io.InputStream;
 import java.sql.Timestamp;
@@ -47,18 +49,21 @@ public class KubernetesPeonClient
   private final String namespace;
   private final boolean debugJobs;
   private final ServiceEmitter emitter;
+  private final Supplier<ExecutionConfig> executionConfigRef;
 
   public KubernetesPeonClient(
       KubernetesClientApi clientApi,
       String namespace,
       boolean debugJobs,
-      ServiceEmitter emitter
+      ServiceEmitter emitter,
+      Supplier<ExecutionConfig> executionConfigRef
   )
   {
     this.clientApi = clientApi;
     this.namespace = namespace;
     this.debugJobs = debugJobs;
     this.emitter = emitter;
+    this.executionConfigRef = executionConfigRef;
   }
 
   public Pod launchPeonJobAndWaitForStart(Job job, Task task, long howLong, TimeUnit timeUnit) throws IllegalStateException
@@ -274,6 +279,10 @@ public class KubernetesPeonClient
   {
     ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
     IndexTaskUtils.setTaskDimensions(metricBuilder, task);
+    metricBuilder.setDimensionIfNotNull(
+        "category",
+        executionConfigRef.get().getBehaviorStrategy().getTaskCategory(task)
+    );
     emitter.emit(metricBuilder.setMetric(metric, durationMs));
   }
 }
