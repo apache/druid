@@ -37,6 +37,8 @@ import org.apache.druid.java.util.http.client.response.BytesFullResponseHandler;
 import org.apache.druid.java.util.http.client.response.BytesFullResponseHolder;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
 import org.apache.druid.msq.exec.WorkerClient;
+import org.apache.druid.msq.indexing.client.SketchResponseHandler;
+import org.apache.druid.msq.indexing.client.WorkerChatHandler;
 import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
@@ -92,17 +94,15 @@ public abstract class BaseWorkerClientImpl implements WorkerClient
   )
   {
     String path = StringUtils.format(
-        "/keyStatistics/%s/%d",
+        "/keyStatistics/%s/%d?sketchEncoding=%s",
         StringUtils.urlEncode(stageId.getQueryId()),
-        stageId.getStageNumber()
+        stageId.getStageNumber(),
+        WorkerChatHandler.SketchEncoding.OCTET_STREAM
     );
 
-    return FutureUtils.transform(
-        getClient(workerId).asyncRequest(
-            new RequestBuilder(HttpMethod.POST, path).header(HttpHeaders.ACCEPT, contentType),
-            new BytesFullResponseHandler()
-        ),
-        holder -> deserialize(holder, new TypeReference<ClusterByStatisticsSnapshot>() {})
+    return getClient(workerId).asyncRequest(
+        new RequestBuilder(HttpMethod.POST, path),
+        new SketchResponseHandler(objectMapper)
     );
   }
 
@@ -114,18 +114,16 @@ public abstract class BaseWorkerClientImpl implements WorkerClient
   )
   {
     String path = StringUtils.format(
-        "/keyStatisticsForTimeChunk/%s/%d/%d",
+        "/keyStatisticsForTimeChunk/%s/%d/%d?sketchEncoding=%s",
         StringUtils.urlEncode(stageId.getQueryId()),
         stageId.getStageNumber(),
-        timeChunk
+        timeChunk,
+        WorkerChatHandler.SketchEncoding.OCTET_STREAM
     );
 
-    return FutureUtils.transform(
-        getClient(workerId).asyncRequest(
-            new RequestBuilder(HttpMethod.POST, path).header(HttpHeaders.ACCEPT, contentType),
-            new BytesFullResponseHandler()
-        ),
-        holder -> deserialize(holder, new TypeReference<ClusterByStatisticsSnapshot>() {})
+    return getClient(workerId).asyncRequest(
+        new RequestBuilder(HttpMethod.POST, path),
+        new SketchResponseHandler(objectMapper)
     );
   }
 
@@ -150,7 +148,7 @@ public abstract class BaseWorkerClientImpl implements WorkerClient
   }
 
   /**
-   * Client-side method for {@link org.apache.druid.msq.indexing.client.WorkerChatHandler#httpPostCleanupStage}.
+   * Client-side method for {@link WorkerChatHandler#httpPostCleanupStage}.
    */
   @Override
   public ListenableFuture<Void> postCleanupStage(

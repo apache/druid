@@ -92,7 +92,7 @@ public class WorkerChatHandlerTest
     WorkerChatHandler chatHandler = new WorkerChatHandler(toolbox, worker);
     Assert.assertEquals(
         ClusterByStatisticsSnapshot.empty(),
-        chatHandler.httpFetchKeyStatistics(TEST_STAGE.getQueryId(), TEST_STAGE.getStageNumber(), req)
+        chatHandler.httpFetchKeyStatistics(TEST_STAGE.getQueryId(), TEST_STAGE.getStageNumber(), null, req)
                    .getEntity()
     );
   }
@@ -103,7 +103,7 @@ public class WorkerChatHandlerTest
     WorkerChatHandler chatHandler = new WorkerChatHandler(toolbox, worker);
     Assert.assertEquals(
         Response.Status.BAD_REQUEST.getStatusCode(),
-        chatHandler.httpFetchKeyStatistics("123", 2, req)
+        chatHandler.httpFetchKeyStatistics("123", 2, null, req)
                    .getStatus()
     );
   }
@@ -114,7 +114,7 @@ public class WorkerChatHandlerTest
     WorkerChatHandler chatHandler = new WorkerChatHandler(toolbox, worker);
     Assert.assertEquals(
         ClusterByStatisticsSnapshot.empty(),
-        chatHandler.httpFetchKeyStatisticsWithSnapshot(TEST_STAGE.getQueryId(), TEST_STAGE.getStageNumber(), 1, req)
+        chatHandler.httpFetchKeyStatisticsWithSnapshot(TEST_STAGE.getQueryId(), TEST_STAGE.getStageNumber(), 1, null, req)
                    .getEntity()
     );
   }
@@ -125,7 +125,7 @@ public class WorkerChatHandlerTest
     WorkerChatHandler chatHandler = new WorkerChatHandler(toolbox, worker);
     Assert.assertEquals(
         Response.Status.BAD_REQUEST.getStatusCode(),
-        chatHandler.httpFetchKeyStatisticsWithSnapshot("123", 2, 1, req)
+        chatHandler.httpFetchKeyStatisticsWithSnapshot("123", 2, 1, null, req)
                    .getStatus()
     );
   }
