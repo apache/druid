@@ -31,7 +31,7 @@ import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
+import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.query.DruidProcessingConfigTest;
 import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.s3.NoopServerSideEncryption;
@@ -49,6 +49,7 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -86,7 +87,10 @@ public class S3StorageConnectorTest
           null,
           null,
           true
-      ), service, new S3UploadManager(EasyMock.mock(ScheduledExecutorFactory.class), new DruidProcessingConfigTest.MockRuntimeInfo(10, 0, 0)));
+      ), service, new S3UploadManager(
+          new S3OutputConfig("bucket", "prefix", EasyMock.mock(File.class), new HumanReadableBytes("5MiB"), 1),
+          new S3ExportConfig("tempDir", new HumanReadableBytes("5MiB"), 1, null),
+          new DruidProcessingConfigTest.MockRuntimeInfo(10, 0, 0)));
     }
     catch (IOException e) {
       throw new RuntimeException(e);

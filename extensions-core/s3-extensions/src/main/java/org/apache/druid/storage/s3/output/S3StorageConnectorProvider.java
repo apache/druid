@@ -56,7 +56,6 @@ public class S3StorageConnectorProvider extends S3OutputConfig implements Storag
   @Override
   public StorageConnector get()
   {
-    s3UploadManager.updateChunkSizeIfGreater(this.getChunkSize());
     return new S3StorageConnector(this, s3, s3UploadManager);
   }
 }

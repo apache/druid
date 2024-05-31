@@ -93,7 +93,6 @@ public class S3ExportStorageProvider implements ExportStorageProvider
         s3ExportConfig.getChunkSize(),
         s3ExportConfig.getMaxRetry()
     );
-    s3UploadManager.updateChunkSizeIfGreater(s3ExportConfig.getChunkSize().getBytes());
     return new S3StorageConnector(s3OutputConfig, s3, s3UploadManager);
   }
 

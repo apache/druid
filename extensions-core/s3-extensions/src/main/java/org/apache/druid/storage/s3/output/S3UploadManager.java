@@ -19,117 +19,101 @@
 
 package org.apache.druid.storage.s3.output;
 
+import com.amazonaws.services.s3.model.UploadPartRequest;
+import com.amazonaws.services.s3.model.UploadPartResult;
 import com.google.inject.Inject;
-import org.apache.druid.java.util.common.HumanReadableBytes;
-import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
+import org.apache.druid.guice.ManageLifecycle;
+import org.apache.druid.java.util.common.RetryUtils;
+import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
+import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.storage.s3.S3Utils;
+import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 import org.apache.druid.utils.RuntimeInfo;
 
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.io.File;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 
 /**
  * This class manages the configuration for uploading files to S3 in chunks.
  * It tracks the number of chunks currently present on local disk and ensures that
  * it does not exceed a specified limit.
  */
+@ManageLifecycle
 public class S3UploadManager
 {
-  /**
-   * The maximum chunk size based on injected values for {@link S3OutputConfig} and {@link S3ExportConfig} used for computing maximum number of chunks to save on disk at any given point in time.
-   * It is initialized to 5 MiB which is the minimum chunk size possible, denoted by {@link S3OutputConfig#S3_MULTIPART_UPLOAD_MIN_PART_SIZE_BYTES}.
-   */
-  private long chunkSize = new HumanReadableBytes("5MiB").getBytes();
-
-  private final AtomicInteger currentNumChunksOnDisk = new AtomicInteger(0);
-
-  /**
-   * The maximum number of chunks that can be saved to local disk concurrently.
-   * This value is recalculated when the chunk size is updated in {@link #updateChunkSizeIfGreater(long)}.
-   */
-  private int maxConcurrentNumChunks = 100;
-
-  private final ScheduledExecutorService uploadExecutor;
+  private final ExecutorService uploadExecutor;
 
   private static final Logger log = new Logger(S3UploadManager.class);
 
   @Inject
-  public S3UploadManager(ScheduledExecutorFactory scheduledExecutorFactory, RuntimeInfo runtimeInfo)
+  public S3UploadManager(S3OutputConfig s3OutputConfig, S3ExportConfig s3ExportConfig, RuntimeInfo runtimeInfo)
   {
     int poolSize = Math.max(4, runtimeInfo.getAvailableProcessors());
-    this.uploadExecutor = scheduledExecutorFactory.create(
-        poolSize,
-        "UploadThreadPool-%d"
-    );
+    int maxNumConcurrentChunks = 10;
+    this.uploadExecutor = Execs.newBlockingThreaded("UploadThreadPool-%d", poolSize, maxNumConcurrentChunks);
   }
 
-  /**
-   * Increments the counter for the current number of chunks saved on disk.
-   */
-  public void incrementCurrentNumChunksOnDisk()
+  public Future<UploadPartResult> queueChunkForUpload(ServerSideEncryptingAmazonS3 s3Client, String key, int chunkNumber, File chunkFile, String uploadId, S3OutputConfig config)
   {
-    currentNumChunksOnDisk.incrementAndGet();
+    return uploadExecutor.submit(() -> RetryUtils.retry(
+        () -> {
+          log.info("Uploading chunk [%d] for uploadId [%s].", chunkNumber, uploadId);
+          UploadPartResult uploadPartResult = uploadPartIfPossible(
+              s3Client,
+              uploadId,
+              config.getBucket(),
+              key,
+              chunkNumber,
+              chunkFile
+          );
+          if (!chunkFile.delete()) {
+            log.warn("Failed to delete chunk [%s]", chunkFile.getAbsolutePath());
+          }
+          return uploadPartResult;
+        },
+        S3Utils.S3RETRY,
+        config.getMaxRetry()
+    ));
   }
 
-  /**
-   * Decrements the counter for the current number of chunks saved on disk.
-   */
-  public void decrementCurrentNumChunksOnDisk()
+  private UploadPartResult uploadPartIfPossible(
+      ServerSideEncryptingAmazonS3 s3Client,
+      String uploadId,
+      String bucket,
+      String key,
+      int chunkNumber,
+      File chunkFile
+  )
   {
-    currentNumChunksOnDisk.decrementAndGet();
-  }
+    final UploadPartRequest uploadPartRequest = new UploadPartRequest()
+        .withUploadId(uploadId)
+        .withBucketName(bucket)
+        .withKey(key)
+        .withFile(chunkFile)
+        .withPartNumber(chunkNumber)
+        .withPartSize(chunkFile.length());
 
-  /**
-   * Gets the current number of chunks saved to local disk.
-   *
-   * @return the current number of chunks saved to local disk.
-   */
-  public int getCurrentNumChunksOnDisk()
-  {
-    return currentNumChunksOnDisk.get();
-  }
-
-  /**
-   * Gets the maximum number of concurrent chunks that can be saved to local disk.
-   *
-   * @return the maximum number of concurrent chunks that can be saved to local disk.
-   */
-  public int getMaxConcurrentNumChunks()
-  {
-    return maxConcurrentNumChunks;
-  }
-
-  /**
-   * Updates the chunk size if the provided size is greater than the current chunk size.
-   * Recomputes the maximum number of concurrent chunks that can be saved to local disk based on the new chunk size.
-   *
-   * @param chunkSize the new chunk size to be set if it is greater than the current chunk size.
-   */
-  public synchronized void updateChunkSizeIfGreater(long chunkSize)
-  {
-    if (this.chunkSize < chunkSize) {
-      this.chunkSize = chunkSize;
-      recomputeMaxConcurrentNumChunks();
+    if (log.isDebugEnabled()) {
+      log.debug("Pushing chunk [%s] to bucket[%s] and key[%s].", chunkNumber, bucket, key);
     }
+    return s3Client.uploadPart(uploadPartRequest);
   }
 
-  /**
-   * Recomputes the maximum number of concurrent chunks that can be saved to local disk based on the current chunk size.
-   * The maximum allowed chunk size is {@link S3OutputConfig#S3_MULTIPART_UPLOAD_MAX_PART_SIZE_BYTES} which is quite big,
-   * so we restrict the maximum disk space used to the same, at any given point in time.
-   */
-  private void recomputeMaxConcurrentNumChunks()
+  @LifecycleStart
+  public void start()
   {
-    maxConcurrentNumChunks = (int) (S3OutputConfig.S3_MULTIPART_UPLOAD_MAX_PART_SIZE_BYTES / chunkSize);
-    log.info("Recomputed maxConcurrentNumChunks: %d", maxConcurrentNumChunks);
+    // No state startup required
   }
 
-  /**
-   * Submit the runnable to the {@link #uploadExecutor}.
-   * @param task
-   */
-  public void submitTask(Runnable task)
+  @LifecycleStop
+  public void stop()
   {
-    uploadExecutor.submit(task);
+    log.debug("Stopping S3UploadManager");
+    uploadExecutor.shutdown();
+    log.debug("Stopped S3UploadManager");
   }
+
 }

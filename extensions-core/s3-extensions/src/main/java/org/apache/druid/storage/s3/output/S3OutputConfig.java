@@ -65,6 +65,10 @@ public class S3OutputConfig
     this(bucket, prefix, tempDir, chunkSize, maxRetry, true);
   }
 
+  public S3OutputConfig()
+  {
+  }
+
   @VisibleForTesting
   protected S3OutputConfig(
       String bucket,
