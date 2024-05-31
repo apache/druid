@@ -35,6 +35,7 @@ import org.apache.druid.annotations.SuppressFBWarnings;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.EntryAlreadyExists;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
@@ -1023,32 +1024,31 @@ public class TaskQueue
     }
   }
 
-  void validateTaskPayload(Task task)
+  private void validateTaskPayload(Task task)
   {
     try {
       String payload = passwordRedactingMapper.writeValueAsString(task);
-      if (payload.length() > TASK_SIZE_WARNING_THRESHOLD) {
-        log.warn("Received a large task payload [%s] with id [%s] and datasource [%s]" +
-                " There may be downstream issues caused by managing this large payload." +
-                "Set druid.indexer.queue.maxTaskPayloadSize to reject tasks above a certain size.",
-            payload.length(),
-            task.getId(),
-            task.getDataSource()
-        );
-      }
-
       if (config.getMaxTaskPayloadSize() != null && config.getMaxTaskPayloadSize().getBytesInInt() < payload.length()) {
         throw InvalidInput.exception(
                 "Task[%s] has payload of size[%d] but max allowed size is [%d]. " +
                     "Reduce the size of the task payload or increase 'druid.indexer.queue.maxTaskPayloadSize'.",
                 task.getId(), payload.length(), config.getMaxTaskPayloadSize()
             );
+      } else if (payload.length() > TASK_SIZE_WARNING_THRESHOLD) {
+        log.warn(
+            "Task[%s] of datasource[%s] has payload size[%d] larger than the recommended maximum[%d]. " +
+                "Large task payloads may cause stability issues in the Overlord and may fail while persisting to the metadata store.",
+            task.getId(),
+            task.getDataSource(),
+            payload.length(),
+            TASK_SIZE_WARNING_THRESHOLD
+        );
       }
     }
     catch (JsonProcessingException e) {
+      log.error(e, "Failed to parse task payload for validation");
       throw DruidException.defensive(
-          "Failed to parse task payload for validation",
-          e
+          "Failed to parse task payload for validation"
       );
     }
   }

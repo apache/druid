@@ -219,10 +219,10 @@ public class TaskQueueTest extends IngestionTestBase
   @Test
   public void testAddThrowsExceptionWhenPayloadIsTooLarge()
   {
-    HumanReadableBytes maxPayloadSize = HumanReadableBytes.valueOf(10 * 1024 * 1024);
+    HumanReadableBytes maxPayloadSize10Mib = HumanReadableBytes.valueOf(10 * 1024 * 1024);
     TaskQueue maxPayloadTaskQueue = new TaskQueue(
         new TaskLockConfig(),
-        new TaskQueueConfig(3, null, null, null, null, maxPayloadSize),
+        new TaskQueueConfig(3, null, null, null, null, maxPayloadSize10Mib),
         new DefaultTaskConfig()
         {
           @Override
