@@ -354,7 +354,18 @@
   "items":
   [
     "release-info/release-notes",
-    "release-info/upgrade-notes"
+    "release-info/upgrade-notes",
+    {
+      "type": "category",
+      "label": "Migration guides",
+      "link": {
+        "type": "doc",
+        "id": "release-info/migration-guide"
+      },
+      "items": [
+        "release-info/migr-subquery-limit"
+      ]
+    }
   ]},
   "misc/papers-and-talks"
   ]
