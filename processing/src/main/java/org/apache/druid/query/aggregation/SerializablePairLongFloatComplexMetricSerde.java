@@ -19,9 +19,13 @@
 
 package org.apache.druid.query.aggregation;
 
+import it.unimi.dsi.fastutil.Hash;
 import org.apache.druid.collections.SerializablePair;
 import org.apache.druid.segment.GenericColumnSerializer;
 import org.apache.druid.segment.column.ColumnBuilder;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.ObjectStrategyComplexTypeStrategy;
+import org.apache.druid.segment.column.TypeStrategy;
 import org.apache.druid.segment.data.ObjectStrategy;
 import org.apache.druid.segment.serde.cell.NativeClearedByteBufferProvider;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
@@ -106,5 +110,29 @@ public class SerializablePairLongFloatComplexMetricSerde extends AbstractSeriali
         return SERDE.serialize(inPair);
       }
     };
+  }
+
+  @Override
+  public TypeStrategy<SerializablePairLongFloat> getTypeStrategy()
+  {
+    return new ObjectStrategyComplexTypeStrategy<>(
+        getObjectStrategy(),
+        ColumnType.ofComplex(getTypeName()),
+        new Hash.Strategy<SerializablePairLongFloat>()
+        {
+          @Override
+          public int hashCode(SerializablePairLongFloat o)
+          {
+            return o.hashCode();
+          }
+
+          @Override
+          public boolean equals(SerializablePairLongFloat a, SerializablePairLongFloat b)
+          {
+            return a.equals(b);
+          }
+        },
+        SerializablePairLongFloat.class
+    );
   }
 }

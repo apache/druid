@@ -456,12 +456,6 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
   {
     final boolean resultAsArray = query.context().getBoolean(GroupByQueryConfig.CTX_KEY_ARRAY_RESULT_ROWS, false);
 
-//    if (resultAsArray && !queryConfig.isIntermediateResultAsMapCompat()) {
-//      // We can assume ResultRow are serialized and deserialized as arrays. No need for special decoration,
-//      // and we can save the overhead of making a copy of the ObjectMapper.
-//      return objectMapper;
-//    }
-
     // Serializer that writes array- or map-based rows as appropriate, based on the "resultAsArray" setting.
     final JsonSerializer<ResultRow> serializer = new JsonSerializer<ResultRow>()
     {

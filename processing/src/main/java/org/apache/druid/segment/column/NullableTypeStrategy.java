@@ -21,7 +21,6 @@ package org.apache.druid.segment.column;
 
 import it.unimi.dsi.fastutil.Hash;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.error.DruidException;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nullable;
