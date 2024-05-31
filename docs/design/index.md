@@ -30,9 +30,9 @@ Common application areas for Druid include:
 
 |Use Case|Description|
 |-----------------|-------------------|
-|Clickstream analytics |Analyzing user behavior on websites and mobile applications to understand navigation patterns, popular content, and user engagement|
-|Network telemetry analytics|Monitoring and analyzing network traffic and performance metrics to optimize network efficiency, identify bottlenecks, and ensure quality of service|
-|Server metrics storage|Collecting and storing performance metrics such as CPU usage, memory usage, disk I/O, and network activity to monitor server health and optimize resource allocation|
+|Clickstream analytics |Analyze user behavior on websites and mobile applications to understand navigation patterns, popular content, and user engagement|
+|Network telemetry analytics|Monitor and analyze network traffic and performance metrics to optimize network efficiency, identify bottlenecks, and ensure quality of service|
+|Server metrics storage|Collect and store performance metrics such as CPU usage, memory usage, disk I/O, and network activity to monitor server health and optimize resource allocation|
 |Supply chain analytics|Use data from various stages of the supply chain to optimize inventory management, streamline logistics, forecast demand, and improve overall operational efficiency|
 |Application performance metrics|Monitor and analyze the performance of software applications to identify areas for improvement, troubleshoot issues, and ensure optimal user experience|
 |Digital marketing/advertising analytics|Track and analyze the effectiveness of digital marketing campaigns and advertising efforts across various channels, such as social media, search engines, and display ads|
@@ -101,4 +101,4 @@ taking a long time to complete.
 ## Learn more
 - Try the Druid [Quickstart](../tutorials/index.md).
 - Learn more about Druid components in [Design](../design/architecture.md).
-- Read about new features and other details of [Druid Releases](https://github.com/apache/druid/releases).
+- Read about new features and improvements in [Druid Releases](https://github.com/apache/druid/releases).
