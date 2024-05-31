@@ -1038,7 +1038,7 @@ public class TaskQueue
         log.warn(
             "Task[%s] of datasource[%s] has payload size[%d] larger than the recommended maximum[%d]. " +
                 "Large task payloads may cause stability issues in the Overlord and may fail while persisting to the metadata store." +
-                "These large payloads will be rejected by the overlord in the future.",
+                "Such tasks may be rejected by the Overlord in future Druid versions.",
             task.getId(),
             task.getDataSource(),
             payload.length(),
