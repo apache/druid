@@ -81,6 +81,14 @@ Additionally, the MSQ task engine can roll up and sort on the supported complex 
 [#16068](https://github.com/apache/druid/pull/16068)
 [#16322](https://github.com/apache/druid/pull/16322)
 
+#### Removed ZooKeeper-based segment loading
+
+ZooKeeper-based segment loading is being removed due to known issues.
+It has been deprecated for several releases.
+Recent improvements to the Druid Coordinator have significantly enhanced performance with HTTP-based segment loading.
+
+[#15705](https://github.com/apache/druid/pull/15705)
+
 ### Improved groupBy queries
 
 Before Druid pushes realtime segments to deep storage, the segments consist of spill files.
@@ -675,8 +683,9 @@ If you are upgrading from 29.0.0, this is an incompatible change.
 
 #### Removed ZooKeeper-based segment loading
 
-ZooKeeper-based segment loading is being removed as it is known to have issues and has been deprecated for several releases.
-The recent improvements made to the Druid Coordinator are also known to work much better with HTTP-based segment loading.
+ZooKeeper-based segment loading is being removed due to known issues.
+It has been deprecated for several releases.
+Recent improvements to the Druid Coordinator have significantly enhanced performance with HTTP-based segment loading.
 
 [#15705](https://github.com/apache/druid/pull/15705)
 
