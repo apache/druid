@@ -21,6 +21,7 @@ package org.apache.druid.timeline;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
@@ -81,7 +82,7 @@ public class CompactionState
     this.transformSpec = transformSpec;
     this.indexSpec = indexSpec;
     this.granularitySpec = granularitySpec;
-    this.engine = engine;
+    this.engine = Configs.valueOrDefault(engine, CompactionEngine.NATIVE);
     this.dimensionToAggregatoryFactoryMap = dimensionToAggregatoryFactoryMap;
   }
 

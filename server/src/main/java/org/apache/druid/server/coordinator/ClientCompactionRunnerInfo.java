@@ -53,6 +53,14 @@ public class ClientCompactionRunnerInfo
   }
 
   @Override
+  public String toString()
+  {
+    return "ClientCompactionRunnerInfo{" +
+           "type=" + type +
+           '}';
+  }
+
+  @Override
   public boolean equals(Object o)
   {
     if (this == o) {

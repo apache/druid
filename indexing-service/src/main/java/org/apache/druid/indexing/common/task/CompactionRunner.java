@@ -36,7 +36,7 @@ import java.util.List;
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = CompactionRunner.TYPE_PROPERTY)
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "NATIVE", value = NativeCompactionRunner.class)
+    @JsonSubTypes.Type(name = "native", value = NativeCompactionRunner.class)
 })
 public interface CompactionRunner
 {

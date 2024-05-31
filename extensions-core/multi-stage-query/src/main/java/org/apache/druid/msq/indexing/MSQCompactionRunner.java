@@ -133,7 +133,7 @@ public class MSQCompactionRunner implements CompactionRunner
                           .isRollup()) {
       return new NonnullPair<>(
           false,
-          "rollup in granularitySpec must be set to True if metricsSpec is specifed "
+          "rollup in granularitySpec must be set to true if metricsSpec is specifed "
           + "for MSQ compaction engine."
       );
     }

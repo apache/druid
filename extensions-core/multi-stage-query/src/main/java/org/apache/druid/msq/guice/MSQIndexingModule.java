@@ -192,7 +192,7 @@ public class MSQIndexingModule implements DruidModule
         NilInputSource.class
     );
 
-    module.registerSubtypes(new NamedType(MSQCompactionRunner.class, "MSQ"));
+    module.registerSubtypes(new NamedType(MSQCompactionRunner.class, "msq"));
 
     FAULT_CLASSES.forEach(module::registerSubtypes);
     module.addSerializer(new CounterSnapshotsSerializer());

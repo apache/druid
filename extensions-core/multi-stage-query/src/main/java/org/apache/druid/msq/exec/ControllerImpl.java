@@ -1516,7 +1516,7 @@ public class ControllerImpl implements Controller
         if (!destination.isReplaceTimeChunks()) {
           // Store compaction state only for replace queries.
           log.warn(
-              "storeCompactionState flag set for a non-REPLACE query[%s]. Ignoring the flag for now.",
+              "Ignoring storeCompactionState flag since it is set for a non-REPLACE query[%s].",
               queryDef.getQueryId()
           );
         } else {

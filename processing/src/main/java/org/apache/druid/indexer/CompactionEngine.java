@@ -20,7 +20,10 @@
 package org.apache.druid.indexer;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
 import org.apache.druid.java.util.common.StringUtils;
+
+import javax.annotation.Nullable;
 
 /**
  * Encapsulates the Engine to be used for a compaction task.
@@ -28,11 +31,19 @@ import org.apache.druid.java.util.common.StringUtils;
  */
 public enum CompactionEngine
 {
+  // Using uppercase constants since "native" is a reserved keyword.
   NATIVE,
   MSQ;
 
+  @Override
+  @JsonValue
+  public String toString()
+  {
+    return this.name().toLowerCase();
+  }
+
   @JsonCreator
-  public static CompactionEngine fromString(String name)
+  public static CompactionEngine fromString(@Nullable String name)
   {
     return name == null ? null : valueOf(StringUtils.toUpperCase(name));
   }
