@@ -1038,13 +1038,10 @@ public class TaskQueue
       }
 
       if (config.getMaxTaskPayloadSize() != null && config.getMaxTaskPayloadSize().getBytesInInt() < payload.length()) {
-        throw DruidException.forPersona(DruidException.Persona.OPERATOR)
-            .ofCategory(DruidException.Category.INVALID_INPUT)
-            .build(
-                "Task payload size was [%d] but max size is [%d]. " +
-                    "Reduce the size of the task or increase 'druid.indexer.queue.maxTaskPayloadSize'.",
-                payload.length(),
-                config.getMaxTaskPayloadSize()
+        throw InvalidInput.exception(
+                "Task[%s] has payload of size[%d] but max allowed size is [%d]. " +
+                    "Reduce the size of the task payload or increase 'druid.indexer.queue.maxTaskPayloadSize'.",
+                task.getId(), payload.length(), config.getMaxTaskPayloadSize()
             );
       }
     }
