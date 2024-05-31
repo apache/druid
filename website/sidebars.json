@@ -363,7 +363,8 @@
         "id": "release-info/migration-guide"
       },
       "items": [
-        "release-info/migr-front-coded-dict"
+        "release-info/migr-front-coded-dict",
+        "release-info/migr-subquery-limit"
       ]
     }
   ]},
