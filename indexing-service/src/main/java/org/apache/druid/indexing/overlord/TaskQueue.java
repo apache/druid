@@ -1037,7 +1037,8 @@ public class TaskQueue
       } else if (payload.length() > TASK_SIZE_WARNING_THRESHOLD) {
         log.warn(
             "Task[%s] of datasource[%s] has payload size[%d] larger than the recommended maximum[%d]. " +
-                "Large task payloads may cause stability issues in the Overlord and may fail while persisting to the metadata store.",
+                "Large task payloads may cause stability issues in the Overlord and may fail while persisting to the metadata store." +
+                "These large payloads will be rejected by the overlord in the future.",
             task.getId(),
             task.getDataSource(),
             payload.length(),
