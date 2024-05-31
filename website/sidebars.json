@@ -358,8 +358,13 @@
     {
       "type": "category",
       "label": "Migration guides",
+      "link": {
+        "type": "doc",
+        "id": "release-info/migration-guide"
+      },
       "items": [
         "release-info/migr-front-coded-dict",
+        "release-info/migr-subquery-limit",
         "release-info/migr-mvd-array"
       ]
     }

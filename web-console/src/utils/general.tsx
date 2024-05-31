@@ -89,6 +89,10 @@ export function addOrUpdate<T>(xs: readonly T[], x: T, keyFn: (x: T) => string |
 
 // ----------------------------
 
+export function caseInsensitiveEquals(str1: string | undefined, str2: string | undefined): boolean {
+  return str1?.toLowerCase() === str2?.toLowerCase();
+}
+
 export function caseInsensitiveContains(testString: string, searchString: string): boolean {
   if (!searchString) return true;
   return testString.toLowerCase().includes(searchString.toLowerCase());

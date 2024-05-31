@@ -277,6 +277,7 @@ backpressure
 base64
 big-endian
 bigint
+blkio
 blobstore
 Boolean
 boolean
@@ -531,6 +532,7 @@ subqueries
 subquery
 subsecond
 substring
+substrings
 subtask
 subtasks
 supervisorTaskId
