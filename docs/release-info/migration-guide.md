@@ -27,16 +27,14 @@ In general, when we introduce new features and behaviors into Apache Druid, we m
 
 The guides in this section outline breaking changes introduced in Druid 25 and later. Each guide provides instructions to migrate to new features.
 
-<!--
 
 ## Migrate to arrays from multi-value dimensions
 
-Druid now supports SQL-compliant array types. Whenever possible, you should use the array type over multi-value dimensions. See []()>.
+Druid now supports SQL-compliant array types. Whenever possible, you should use the array type over multi-value dimensions. See [Migration guide: MVDs to arrays](migr-mvd-array.md).
 
 ## Migrate to `maxSubqueryBytes` from `maxSubqueryRows`
 
-`maxSubqueryBytes` and `maxSubqueryRows` are guardrails to limit the amount of subquery data stored in the Java heap. `maxSubqueryBytes` is a better alternative to maxSubqueryRows because row-based limits  ignore the size of the individual rows. The values for `maxSubqueryRows` also doesn't take into account the size of the cluster, which is available with the `maxSubqueryBytes` automatic configuration. See []().
--->
+`maxSubqueryBytes` and `maxSubqueryRows` are guardrails to limit the amount of subquery data stored in the Java heap. `maxSubqueryBytes` is a better alternative to maxSubqueryRows because row-based limits  ignore the size of the individual rows. The values for `maxSubqueryRows` also doesn't take into account the size of the cluster, which is available with the `maxSubqueryBytes` automatic configuration. See [Migration guide: Subquery limit](migr-subquery-limit.md).
 
 ## Migrate to front-coded dictionary encoding
 
