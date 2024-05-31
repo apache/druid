@@ -166,6 +166,8 @@ Alternatively, you can perform ingestion-time aggregation using LATEST_BY and ap
 
 Instead of appending the latest total value in your events, you could log the change in value with each event and use the aggregator you usually use. This method may allow you to avoid a level of aggregation and grouping in your queries.
 
+Typically, for most applications, all you need to do is to send the event data directly to Druid without pre-processing. For example, when you are sending impression count to Druid, don't send the total impression count since yesterday, send just the recent impression count to Druid. And you can aggregate the total in Druid during query. Druid is very fast on adding up a lot of rows, so this might be counterintuitive to people who are familiar with batching or pre-aggregating data.
+
 For example, consider a datasource with a measure column `y` that you aggregate with SUM, grouped by by another dimension `x`. If you want to update the value of `y` for `x` from 3 to 2, then insert -1 for `y`. This way the aggregation SUM(`y`) is correct for any queries grouped by `x`. This may offer a significant performance advantage but the trade off is that the aggregation has to always be a SUM.
 
 In other cases, the updates to the data may already be deltas to the original, and so the data engineering required to append the updates would be simple. Another simplification here is that you don't need the update timestamp. Just as before, the same mitigations as the previous case apply to improve performance with autocompaction and rollup at ingestion time.
