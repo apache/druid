@@ -46,7 +46,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * requesting the ticket is first in the queue, and the bouncer gets a ticket back from the previous holders.
  * <p>
  * This class is designed to be used by {@link FrameProcessorExecutor#runAllFully} to limit the number of outstanding processors.
- * This class's design must be assessed before using it for any other purpose.
+ * The callback's to the ticket's future handed out by the bouncer execute within the bouncer's lock, which can deteriorate the
+ * performance if the callback is computationally intensive. This class's design must be assessed before using it for
+ * any other purpose.
  */
 public class Bouncer
 {
@@ -158,7 +160,6 @@ public class Bouncer
           if (nextFuture.set(new Ticket())) {
             return;
           }
-
         }
       }
     }
