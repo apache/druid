@@ -553,11 +553,13 @@ You can specify the following optional properties:
 For example:
 
 ```
-"indexSpec": {
-  "stringDictionaryEncoding": {
-    "type":"frontCoded",
-    "bucketSize": 4,
-    "formatVersion": 0
+"tuningConfig": {
+  "indexSpec": {
+    "stringDictionaryEncoding": {
+      "type":"frontCoded",
+      "bucketSize": 4,
+      "formatVersion": 0
+    }
   }
 }
 ```

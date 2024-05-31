@@ -39,7 +39,7 @@ Druid now supports SQL-compliant array types. Whenever possible, you should use 
 
 ## Migrate to front coded dictionary encoding
 
-Druid encodes string columns into dictionaries for better compression. Front-coded dictionary encoding reduces storage and improves performance by optimizing for strings that share similar beginning substrings. See See []().
+Druid encodes string columns into dictionaries for better compression. Front-coded dictionary encoding reduces storage and improves performance by optimizing for strings that share similar beginning substrings. See [Migration guide: front-coded dictionaries](migr-front-coded-dict.md) for more information.
 -->
 
 

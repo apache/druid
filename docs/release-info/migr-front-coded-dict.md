@@ -49,11 +49,13 @@ You can specify the following optional properties:
 For example:
 
 ```
-"indexSpec": {
-  "stringDictionaryEncoding": {
-    "type":"frontCoded",
-    "bucketSize": 4,
-    "formatVersion": 0
+"tuningConfig": {
+  "indexSpec": {
+    "stringDictionaryEncoding": {
+      "type":"frontCoded",
+      "bucketSize": 4,
+      "formatVersion": 0
+    }
   }
 }
 ```
@@ -67,12 +69,14 @@ This default enables seamless downgrades to Druid 25.0.0.
 To use the newer version, set the `formatVersion` property to 1:
 
 ```
-"indexSpec": {
-  "stringDictionaryEncoding": {
-    "type":"frontCoded",
-    "bucketSize": 4,
-    "formatVersion": 1
+"tuningConfig": {
+  "indexSpec": {
+    "stringDictionaryEncoding": {
+      "type":"frontCoded",
+      "bucketSize": 4,
+      "formatVersion": 1
     }
+  }
 }
 ```
 
