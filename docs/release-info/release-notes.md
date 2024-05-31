@@ -53,7 +53,7 @@ If your release note contains images, put the images in the release-info/assets 
 For tips about how to write a good release note, see [Release notes](https://github.com/apache/druid/blob/master/CONTRIBUTING.md#release-notes).
 -->
 
-## Upcoming deprecations
+## Upcoming removals
 
 As part of the continued improvements to Druid, we are deprecating certain features and behaviors in favor of newer iterations that offer more robust features and are more aligned with standard ANSI SQL. Many of these new features have been the default for new deployments for several releases.
 
