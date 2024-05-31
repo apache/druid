@@ -37,9 +37,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
 /**
- * This class manages the configuration for uploading files to S3 in chunks.
- * It tracks the number of chunks currently present on local disk and ensures that
- * it does not exceed a specified limit.
+ * This class manages uploading files to S3 in chunks, while ensuring that the
+ * number of chunks currently present on local disk does not exceed a specific limit.
  */
 @ManageLifecycle
 public class S3UploadManager
