@@ -21,6 +21,7 @@ package org.apache.druid.msq.statistics;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.msq.statistics.serde.KeyCollectorSnapshotSerializer;
 
 /**
  * Marker interface for deserialization.
@@ -33,4 +34,5 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 })
 public interface KeyCollectorSnapshot
 {
+  KeyCollectorSnapshotSerializer getSerializer();
 }

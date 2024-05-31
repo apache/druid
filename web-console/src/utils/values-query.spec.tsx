@@ -18,26 +18,32 @@
 
 import { QueryResult, sane } from '@druid-toolkit/query';
 
-import { sampleDataToQuery } from './sample-query';
+import { queryResultToValuesQuery } from './values-query';
 
-describe('sample-query', () => {
+describe('queryResultToValuesQuery', () => {
   it('works', () => {
     const result = QueryResult.fromRawResult(
       [
-        ['__time', 'host', 'service', 'msg'],
-        ['LONG', 'STRING', 'STRING', 'COMPLEX<json>'],
-        ['TIMESTAMP', 'VARCHAR', 'VARCHAR', 'OTHER'],
+        ['__time', 'host', 'service', 'msg', 'language', 'nums', 'nulls'],
+        ['LONG', 'STRING', 'STRING', 'COMPLEX<json>', 'ARRAY<STRING>', 'ARRAY<LONG>', 'STRING'],
+        ['TIMESTAMP', 'VARCHAR', 'VARCHAR', 'OTHER', 'ARRAY', 'ARRAY', 'VARCHAR'],
         [
           '2022-02-01T00:00:00.000Z',
           'brokerA.internal',
           'broker',
           '{"type":"sys","swap/free":1223334,"swap/max":3223334}',
+          ['es', 'es-419'],
+          [1],
+          null,
         ],
         [
           '2022-02-01T00:00:00.000Z',
           'brokerA.internal',
           'broker',
           '{"type":"query","time":1223,"bytes":2434234}',
+          ['en', 'es', 'es-419'],
+          [2, 3],
+          null,
         ],
       ],
       false,
@@ -46,17 +52,20 @@ describe('sample-query', () => {
       true,
     );
 
-    expect(sampleDataToQuery(result).toString()).toEqual(sane`
+    expect(queryResultToValuesQuery(result).toString()).toEqual(sane`
       SELECT
-        CAST("c0" AS TIMESTAMP) AS "__time",
-        CAST("c1" AS VARCHAR) AS "host",
-        CAST("c2" AS VARCHAR) AS "service",
-        PARSE_JSON("c3") AS "msg"
+        CAST("c1" AS TIMESTAMP) AS "__time",
+        CAST("c2" AS VARCHAR) AS "host",
+        CAST("c3" AS VARCHAR) AS "service",
+        PARSE_JSON("c4") AS "msg",
+        STRING_TO_ARRAY("c5", '<#>') AS "language",
+        CAST(STRING_TO_ARRAY("c6", '<#>') AS BIGINT ARRAY) AS "nums",
+        CAST(NULL AS VARCHAR) AS "nulls"
       FROM (
         VALUES
-        ('2022-02-01T00:00:00.000Z', 'brokerA.internal', 'broker', '"{\\"type\\":\\"sys\\",\\"swap/free\\":1223334,\\"swap/max\\":3223334}"'),
-        ('2022-02-01T00:00:00.000Z', 'brokerA.internal', 'broker', '"{\\"type\\":\\"query\\",\\"time\\":1223,\\"bytes\\":2434234}"')
-      ) AS "t" ("c0", "c1", "c2", "c3")
+        ('2022-02-01T00:00:00.000Z', 'brokerA.internal', 'broker', '{"type":"sys","swap/free":1223334,"swap/max":3223334}', 'es<#>es-419', '1', NULL),
+        ('2022-02-01T00:00:00.000Z', 'brokerA.internal', 'broker', '{"type":"query","time":1223,"bytes":2434234}', 'en<#>es<#>es-419', '2<#>3', NULL)
+      ) AS "t" ("c1", "c2", "c3", "c4", "c5", "c6", "c7")
     `);
   });
 });

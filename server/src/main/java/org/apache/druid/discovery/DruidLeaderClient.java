@@ -67,9 +67,9 @@ public class DruidLeaderClient
 
   private final String leaderRequestPath;
 
-  private LifecycleLock lifecycleLock = new LifecycleLock();
+  private final LifecycleLock lifecycleLock = new LifecycleLock();
   private DruidNodeDiscovery druidNodeDiscovery;
-  private AtomicReference<String> currentKnownLeader = new AtomicReference<>();
+  private final AtomicReference<String> currentKnownLeader = new AtomicReference<>();
 
   public DruidLeaderClient(
       HttpClient httpClient,
