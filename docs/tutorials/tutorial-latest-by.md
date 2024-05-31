@@ -154,7 +154,11 @@ The results are as follows:
 |`2024-01-01T02:00:00.000Z`|`silly_monkey2`|25|
 |`2024-01-01T03:00:00.000Z`|`funny_bunny1`|10|
 
-You can set up a periodic batch ingestion job that reindexes modified data into a new datasource for direct querying without grouping to mitigate for the cost of these kinds of queries.
+LATEST_BY() is an aggregation function. While it's very efficient if there are not a lot of update rows matching the dimension (e.g. "user_id"), it does scan all matching rows with the same dimension. This means, for any permutation of dimensions where there are a lot of updates (e.g. the user has played the game a million times), and a lot of the updates are not coming in timely order, Druid will be forced to process all rows matching the user_id to find the row with max timestamp to give you the latest data. 
+
+You can think about this where if updates constitute 1-5% of your data, you'll get good query performance, if updates constitute 50%+ of your data, your queries will be slow.
+
+To mitigate this, you can set up a periodic batch ingestion job that reindexes modified data into a new datasource for direct querying without grouping to reduce for the cost of these kinds of queries by essentially pre-computing the latest value and store them. Though your view of latest data will not be up to date until the next refresh happens.
  
 Alternatively, you can perform ingestion-time aggregation using LATEST_BY and append updates with streaming ingestion into a rolled up datasource. Appending into a time chunk adds new segments and does not perfectly roll up data, so rows may be partial rather than complete rollups, and you may have multiple partially rolled up rows. In this case you still need to use GROUP BY query for correct querying of the rolled-up data source, you can tune automatic compaction right to significantly reduce the number of stale rows and improve your performance
 
