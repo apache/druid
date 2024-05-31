@@ -24,6 +24,7 @@ import com.azure.core.http.policy.BearerTokenAuthenticationPolicy;
 import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.common.StorageSharedKeyCredential;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -31,7 +32,6 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -204,7 +204,7 @@ public class AzureClientFactoryTest
     );
 
     final CountDownLatch latch = new CountDownLatch(threads);
-    ExecutorService executorService = Executors.newFixedThreadPool(threads);
+    ExecutorService executorService = Execs.multiThreaded(threads, "azure-client-fetcher-%d");
     final AtomicReference<Exception> failureExecption = new AtomicReference<>();
     for (int i = 0; i < threads; i++) {
       final int retry = i % 2;
