@@ -170,7 +170,7 @@ Typically, for most applications, all you need to do is to send the event data d
 
 For example, consider a datasource with a measure column `y` that you aggregate with SUM, grouped by by another dimension `x`. If you want to update the value of `y` for `x` from 3 to 2, then insert -1 for `y`. This way the aggregation SUM(`y`) is correct for any queries grouped by `x`. This may offer a significant performance advantage but the trade off is that the aggregation has to always be a SUM.
 
-In other cases, the updates to the data may already be deltas to the original, and so the data engineering required to append the updates would be simple. Another simplification here is that you don't need the update timestamp. Just as before, the same mitigations as the previous case apply to improve performance with autocompaction and rollup at ingestion time.
+In other cases, the updates to the data may already be deltas to the original, and so the data engineering required to append the updates would be simple. Just as before, the same mitigations as the previous case apply to improve performance with automatic compaction and rollup at ingestion time.
 
 For example, consider the following table of events that log the change in point total for a user:
 
