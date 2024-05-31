@@ -29,6 +29,11 @@ import org.junit.Test;
 
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class AzureClientFactoryTest
 {
@@ -172,5 +177,52 @@ public class AzureClientFactoryTest
     azureClientFactory = new AzureClientFactory(config);
     BlobServiceClient blobServiceClient = azureClientFactory.getBlobServiceClient(null, ACCOUNT);
     Assert.assertEquals(expectedAccountUrl.toString(), blobServiceClient.getAccountUrl());
+  }
+
+  @Test
+  public void test_concurrent_azureClientFactory_gets() throws Exception
+  {
+    for (int i = 0; i < 10; i++) {
+      concurrentAzureClientFactoryGets();
+    }
+  }
+
+  private void concurrentAzureClientFactoryGets() throws Exception
+  {
+    final int threads = 100;
+    String endpointSuffix = "core.nonDefault.windows.net";
+    String storageAccountEndpointSuffix = "ABC123.blob.storage.azure.net";
+    AzureAccountConfig config = new AzureAccountConfig();
+    config.setKey("key");
+    config.setEndpointSuffix(endpointSuffix);
+    config.setStorageAccountEndpointSuffix(storageAccountEndpointSuffix);
+    final AzureClientFactory localAzureClientFactory = new AzureClientFactory(config);
+    final URL expectedAccountUrl = new URL(
+        AzureAccountConfig.DEFAULT_PROTOCOL,
+        ACCOUNT + "." + storageAccountEndpointSuffix,
+        ""
+    );
+
+    final CountDownLatch latch = new CountDownLatch(threads);
+    ExecutorService executorService = Executors.newFixedThreadPool(threads);
+    final AtomicReference<Exception> failureExecption = new AtomicReference<>();
+    for (int i = 0; i < threads; i++) {
+      final int retry = i % 2;
+      executorService.submit(() -> {
+        try {
+          latch.countDown();
+          latch.await();
+          BlobServiceClient blobServiceClient = localAzureClientFactory.getBlobServiceClient(retry, ACCOUNT);
+          Assert.assertEquals(expectedAccountUrl.toString(), blobServiceClient.getAccountUrl());
+        }
+        catch (Exception e) {
+          failureExecption.compareAndSet(null, e);
+        }
+      });
+    }
+    executorService.awaitTermination(1000, TimeUnit.MICROSECONDS);
+    if (failureExecption.get() != null) {
+      throw failureExecption.get();
+    }
   }
 }
