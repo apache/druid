@@ -363,6 +363,7 @@
         "id": "release-info/migration-guide"
       },
       "items": [
+        "release-info/migr-subquery-limit"
       ]
     }
   ]},
