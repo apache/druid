@@ -917,7 +917,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
 
     List<String> expectedMessages = Arrays.asList(
         "Timestamp[null] is unparseable! Event: {dim1=foo, met1=2.0, __fail__=x}",
-        "could not convert value [notnumber] to long",
+        "could not convert value [notnumber] to long for dimension [dimLong]",
         "Unable to parse value[foo] for field[met1]",
         "Timestamp[null] is unparseable! Event: null"
     );
@@ -1008,7 +1008,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
 
     List<String> expectedMessages = ImmutableList.of(
         "Timestamp[null] is unparseable! Event: {dim1=foo, met1=2.0, __fail__=x}",
-        "could not convert value [notnumber] to long",
+        "could not convert value [notnumber] to long for dimension [dimLong]",
         "Unable to parse value[foo] for field[met1]",
         "Timestamp[null] is unparseable! Event: null"
     );

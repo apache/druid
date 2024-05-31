@@ -28,6 +28,7 @@ import org.apache.druid.data.input.impl.DimensionSchema.MultiValueHandling;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.math.expr.Evals;
 import org.apache.druid.query.ColumnSelectorPlus;
@@ -309,7 +310,11 @@ public final class DimensionHandlerUtils
   }
 
   @Nullable
-  public static Long convertObjectToLong(@Nullable Object valObj, boolean reportParseExceptions, @Nullable String objectKey)
+  public static Long convertObjectToLong(
+      @Nullable Object valObj,
+      boolean reportParseExceptions,
+      @Nullable String objectKey
+  )
   {
     if (valObj == null) {
       return null;
@@ -324,41 +329,45 @@ public final class DimensionHandlerUtils
     } else if (valObj instanceof String) {
       Long ret = DimensionHandlerUtils.getExactLongFromDecimalString((String) valObj);
       if (reportParseExceptions && ret == null) {
-        if (objectKey !=  null) {
-          throw new ParseException((String) valObj, "could not convert value [%s] to long for dimension [%s]", valObj, objectKey);
-        }
-        throw new ParseException((String) valObj, "could not convert value [%s] to long", valObj);
+        final String message = (objectKey != null) ? StringUtils.nonStrictFormat(
+            "could not convert value [%s] to long for dimension [%s]",
+            valObj,
+            objectKey
+        ) : StringUtils.nonStrictFormat(
+            "could not convert value [%s] to long",
+            valObj
+        );
+        throw new ParseException((String) valObj, message);
       }
       return ret;
     } else if (valObj instanceof List) {
-      if (objectKey != null) {
-        throw new ParseException(
-            valObj.getClass().toString(),
-            "Could not ingest value [%s] as long for dimension [%s]. A long column cannot have multiple values in the same row.",
-            valObj,
-            objectKey
-        );
-      }
-      throw new ParseException(
-          valObj.getClass().toString(),
+      final String message = (objectKey != null) ? StringUtils.nonStrictFormat(
+          "Could not ingest value [%s] as long for dimension [%s]. A long column cannot have multiple values in the same row.",
+          valObj,
+          objectKey
+      ) : StringUtils.nonStrictFormat(
           "Could not ingest value %s as long. A long column cannot have multiple values in the same row.",
           valObj
       );
-    } else {
-      if (objectKey != null) {
-        throw new ParseException(
-            valObj.getClass().toString(),
-            "Could not convert value [%s] to long for dimension [%s]. Invalid type: [%s]",
-            valObj,
-            objectKey,
-            valObj.getClass()
-        );
-      }
       throw new ParseException(
+          valObj.getClass().toString(),
+          message
+      );
+    } else {
+      final String message = (objectKey != null) ? StringUtils.nonStrictFormat(
+          "Could not convert value [%s] to long for dimension [%s]. Invalid type: [%s]",
+          valObj,
+          objectKey,
+          valObj.getClass()
+      ) : StringUtils.nonStrictFormat(
           valObj.getClass().toString(),
           "Could not convert value [%s] to long. Invalid type: [%s]",
           valObj,
           valObj.getClass()
+      );
+      throw new ParseException(
+          valObj.getClass().toString(),
+          message
       );
     }
   }
@@ -376,7 +385,8 @@ public final class DimensionHandlerUtils
   }
 
   @Nullable
-  public static Long convertObjectToLong(Object value, String fieldName) {
+  public static Long convertObjectToLong(Object value, String fieldName)
+  {
     return convertObjectToLong(value, false, fieldName);
   }
 
