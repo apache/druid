@@ -49,17 +49,17 @@ public class AzureStorageConnector extends ChunkingStorageConnector<AzureInputRa
 
   private final AzureOutputConfig config;
   private final AzureStorage azureStorage;
-  private final File tempFile;
+  private final File tempDir;
 
   public AzureStorageConnector(
       final AzureOutputConfig config,
       final AzureStorage azureStorage,
-      final File tempFile
+      final File tempDir
   )
   {
     this.config = config;
     this.azureStorage = azureStorage;
-    this.tempFile = tempFile;
+    this.tempDir = tempDir;
   }
 
   @Override
@@ -77,7 +77,7 @@ public class AzureStorageConnector extends ChunkingStorageConnector<AzureInputRa
   public ChunkingStorageConnectorParameters<AzureInputRange> buildInputParams(String path, long from, long size)
   {
     ChunkingStorageConnectorParameters.Builder<AzureInputRange> parameters = new ChunkingStorageConnectorParameters.Builder<>();
-    parameters.tempDir(tempFile);
+    parameters.tempDir(tempDir);
     parameters.maxRetry(config.getMaxRetry());
     parameters.cloudStoragePath(objectPath(path));
     parameters.retryCondition(AzureUtils.AZURE_RETRY);
