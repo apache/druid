@@ -19,28 +19,22 @@
 
 package org.apache.druid.query.topn;
 
-import com.google.common.base.Preconditions;
 import com.google.common.base.Predicates;
 import org.apache.druid.collections.NonBlockingPool;
-import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.extraction.ExtractionFn;
-import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.SegmentMissingException;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.segment.filter.Filters;
-import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.util.List;
 
 /**
  */
@@ -72,27 +66,11 @@ public class TopNQueryEngine
       );
     }
 
-    final List<Interval> queryIntervals = query.getQuerySegmentSpec().getIntervals();
-    final Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getDimensionsFilter()));
-    final Granularity granularity = query.getGranularity();
     final TopNMapFn mapFn = getMapFn(query, adapter, queryMetrics);
-
-    Preconditions.checkArgument(
-        queryIntervals.size() == 1,
-        "Can only handle a single interval, got[%s]",
-        queryIntervals
-    );
 
     return Sequences.filter(
         Sequences.map(
-            adapter.makeCursors(
-                filter,
-                queryIntervals.get(0),
-                query.getVirtualColumns(),
-                granularity,
-                query.isDescending(),
-                queryMetrics
-            ),
+            adapter.asCursorMaker(query.asCursorBuildSpec(queryMetrics)).makeCursors(),
             input -> {
               if (queryMetrics != null) {
                 queryMetrics.cursor(input);

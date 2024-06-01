@@ -21,10 +21,13 @@ package org.apache.druid.segment;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
-import com.google.common.base.Preconditions;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import org.apache.druid.collections.bitmap.BitmapFactory;
+import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -34,7 +37,9 @@ import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.DefaultBitmapResultFactory;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryMetrics;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.FilterBundle;
 import org.apache.druid.query.filter.ValueMatcher;
@@ -57,61 +62,98 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.io.Closeable;
 import java.io.IOException;
+import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
-public class QueryableIndexCursorSequenceBuilder
+public class QueryableIndexCursorMaker implements CursorMaker
 {
-  private static final Logger log = new Logger(QueryableIndexCursorSequenceBuilder.class);
+  private static final Logger log = new Logger(QueryableIndexCursorMaker.class);
   private final QueryableIndex index;
   private final Interval interval;
+  private final Granularity gran;
   private final VirtualColumns virtualColumns;
+
+  @Nullable
+  private final List<AggregatorFactory> aggregatorFactories;
   @Nullable
   private final Filter filter;
   @Nullable
   private final QueryMetrics<? extends Query> metrics;
-  private final long minDataTimestamp;
-  private final long maxDataTimestamp;
   private final boolean descending;
+  private final QueryContext queryContext;
+  private final int vectorSize;
+  private final Supplier<CursorResources> resourcesSupplier;
 
-  public QueryableIndexCursorSequenceBuilder(
+  public QueryableIndexCursorMaker(
       QueryableIndex index,
-      Interval interval,
-      VirtualColumns virtualColumns,
-      @Nullable Filter filter,
-      @Nullable QueryMetrics<? extends Query> metrics,
-      long minDataTimestamp,
-      long maxDataTimestamp,
-      boolean descending
+      CursorBuildSpec cursorBuildSpec
   )
   {
     this.index = index;
-    this.interval = interval;
-    this.virtualColumns = virtualColumns;
-    this.filter = filter;
-    this.metrics = metrics;
-    this.minDataTimestamp = minDataTimestamp;
-    this.maxDataTimestamp = maxDataTimestamp;
-    this.descending = descending;
+    this.interval = cursorBuildSpec.getInterval();
+    this.gran = cursorBuildSpec.getGranularity();
+    this.virtualColumns = cursorBuildSpec.getVirtualColumns();
+    this.aggregatorFactories = cursorBuildSpec.getAggregators();
+    this.filter = cursorBuildSpec.getFilter();
+    this.descending = cursorBuildSpec.isDescending();
+    this.queryContext = cursorBuildSpec.getQueryContext();
+    this.vectorSize = cursorBuildSpec.getQueryContext().getVectorSize();
+    this.metrics = cursorBuildSpec.getQueryMetrics();
+    this.resourcesSupplier = Suppliers.memoize(CursorResources::new);
   }
 
-  public Sequence<Cursor> build(final Granularity gran)
+  @Override
+  public boolean canVectorize()
   {
-    final Closer closer = Closer.create();
+    final ColumnInspector inspector = virtualColumns.wrapInspector(index);
+    if (!virtualColumns.isEmpty()) {
+      if (!queryContext.getVectorizeVirtualColumns().shouldVectorize(virtualColumns.canVectorize(inspector))) {
+        return false;
+      }
+    }
+    if (aggregatorFactories != null) {
+      for (AggregatorFactory factory : aggregatorFactories) {
+        if (!factory.canVectorize(inspector)) {
+          return false;
+        }
+      }
+    }
 
-    // Column caches shared amongst all cursors in this sequence.
-    final ColumnCache columnCache = new ColumnCache(index, closer);
+    final CursorResources resources = resourcesSupplier.get();
+    try {
+      final FilterBundle filterBundle = resources.filterBundle;
+      if (filterBundle != null) {
+        if (!filterBundle.canVectorizeMatcher()) {
+          return false;
+        }
+      }
 
+      // vector cursors can't iterate backwards yet
+      return !descending;
+    }
+    catch (ISE rethrow) {
+      throw CloseableUtils.closeInCatch(rethrow, resources);
+    }
+  }
+
+  @Override
+  public Sequence<Cursor> makeCursors()
+  {
+    if (metrics != null) {
+      metrics.vectorized(false);
+    }
     final Offset baseOffset;
 
-    final ColumnSelectorColumnIndexSelector bitmapIndexSelector = new ColumnSelectorColumnIndexSelector(
-        index.getBitmapFactoryForDimensions(),
-        virtualColumns,
-        columnCache
-    );
-
-    final int numRows = index.getNumRows();
-    final FilterBundle filterBundle = makeFilterBundle(bitmapIndexSelector, numRows);
+    final CursorResources resources = resourcesSupplier.get();
+    final FilterBundle filterBundle = resources.filterBundle;
+    final int numRows = resources.numRows;
+    final long minDataTimestamp = resources.minDataTimestamp;
+    final long maxDataTimestamp = resources.maxDataTimestamp;
+    final NumericColumn timestamps = resources.timestamps;
+    final ColumnCache columnCache = resources.columnCache;
 
     // filterBundle will only be null if the filter itself is null, otherwise check to see if the filter
     // can use an index
@@ -121,123 +163,121 @@ public class QueryableIndexCursorSequenceBuilder
       baseOffset = BitmapOffset.of(filterBundle.getIndex().getBitmap(), descending, index.getNumRows());
     }
 
-    final NumericColumn timestamps = (NumericColumn) columnCache.getColumn(ColumnHolder.TIME_COLUMN_NAME);
-
     Iterable<Interval> iterable = gran.getIterable(interval);
     if (descending) {
       iterable = Lists.reverse(ImmutableList.copyOf(iterable));
     }
 
-    return Sequences.withBaggage(
-        Sequences.map(
-            Sequences.simple(iterable),
-            new Function<Interval, Cursor>()
-            {
-              @Override
-              public Cursor apply(final Interval inputInterval)
-              {
-                final long timeStart = Math.max(interval.getStartMillis(), inputInterval.getStartMillis());
-                final long timeEnd = Math.min(
-                    interval.getEndMillis(),
-                    gran.increment(inputInterval.getStartMillis())
-                );
+    return Sequences.filter(
+        Sequences.withBaggage(
+            Sequences.map(
+                Sequences.simple(iterable),
+                new Function<Interval, Cursor>()
+                {
+                  @Override
+                  public Cursor apply(final Interval inputInterval)
+                  {
+                    final long timeStart = Math.max(interval.getStartMillis(), inputInterval.getStartMillis());
+                    final long timeEnd = Math.min(
+                        interval.getEndMillis(),
+                        gran.increment(inputInterval.getStartMillis())
+                    );
 
-                if (descending) {
-                  for (; baseOffset.withinBounds(); baseOffset.increment()) {
-                    if (timestamps.getLongSingleValueRow(baseOffset.getOffset()) < timeEnd) {
-                      break;
+                    if (descending) {
+                      for (; baseOffset.withinBounds(); baseOffset.increment()) {
+                        if (timestamps.getLongSingleValueRow(baseOffset.getOffset()) < timeEnd) {
+                          break;
+                        }
+                      }
+                    } else {
+                      for (; baseOffset.withinBounds(); baseOffset.increment()) {
+                        if (timestamps.getLongSingleValueRow(baseOffset.getOffset()) >= timeStart) {
+                          break;
+                        }
+                      }
                     }
-                  }
-                } else {
-                  for (; baseOffset.withinBounds(); baseOffset.increment()) {
-                    if (timestamps.getLongSingleValueRow(baseOffset.getOffset()) >= timeStart) {
-                      break;
+
+                    final Offset offset = descending ?
+                                          new DescendingTimestampCheckingOffset(
+                                              baseOffset,
+                                              timestamps,
+                                              timeStart,
+                                              minDataTimestamp >= timeStart
+                                          ) :
+                                          new AscendingTimestampCheckingOffset(
+                                              baseOffset,
+                                              timestamps,
+                                              timeEnd,
+                                              maxDataTimestamp < timeEnd
+                                          );
+
+
+                    final Offset baseCursorOffset = offset.clone();
+                    final ColumnSelectorFactory columnSelectorFactory = new QueryableIndexColumnSelectorFactory(
+                        virtualColumns,
+                        descending,
+                        baseCursorOffset.getBaseReadableOffset(),
+                        columnCache
+                    );
+                    final DateTime myBucket = gran.toDateTime(inputInterval.getStartMillis());
+                    // filterBundle will only be null if the filter itself is null, otherwise check to see if the filter
+                    // needs to use a value matcher
+                    if (filterBundle != null && filterBundle.getMatcherBundle() != null) {
+                      final ValueMatcher matcher = filterBundle.getMatcherBundle()
+                                                               .valueMatcher(
+                                                                   columnSelectorFactory,
+                                                                   baseCursorOffset,
+                                                                   descending
+                                                               );
+                      final FilteredOffset filteredOffset = new FilteredOffset(baseCursorOffset, matcher);
+                      return new QueryableIndexCursor(filteredOffset, columnSelectorFactory, myBucket);
+                    } else {
+                      return new QueryableIndexCursor(baseCursorOffset, columnSelectorFactory, myBucket);
                     }
                   }
                 }
-
-                final Offset offset = descending ?
-                                      new DescendingTimestampCheckingOffset(
-                                          baseOffset,
-                                          timestamps,
-                                          timeStart,
-                                          minDataTimestamp >= timeStart
-                                      ) :
-                                      new AscendingTimestampCheckingOffset(
-                                          baseOffset,
-                                          timestamps,
-                                          timeEnd,
-                                          maxDataTimestamp < timeEnd
-                                      );
-
-
-                final Offset baseCursorOffset = offset.clone();
-                final ColumnSelectorFactory columnSelectorFactory = new QueryableIndexColumnSelectorFactory(
-                    virtualColumns,
-                    descending,
-                    baseCursorOffset.getBaseReadableOffset(),
-                    columnCache
-                );
-                final DateTime myBucket = gran.toDateTime(inputInterval.getStartMillis());
-                // filterBundle will only be null if the filter itself is null, otherwise check to see if the filter
-                // needs to use a value matcher
-                if (filterBundle != null && filterBundle.getMatcherBundle() != null) {
-                  final ValueMatcher matcher = filterBundle.getMatcherBundle()
-                                                           .valueMatcher(
-                                                               columnSelectorFactory,
-                                                               baseCursorOffset,
-                                                               descending
-                                                           );
-                  final FilteredOffset filteredOffset = new FilteredOffset(baseCursorOffset, matcher);
-                  return new QueryableIndexCursor(filteredOffset, columnSelectorFactory, myBucket);
-                } else {
-                  return new QueryableIndexCursor(baseCursorOffset, columnSelectorFactory, myBucket);
-                }
-              }
-            }
+            ),
+            resources
         ),
-        closer
+        Objects::nonNull
     );
   }
 
-  public VectorCursor buildVectorized(final int vectorSize)
+  @Nullable
+  @Override
+  public VectorCursor makeVectorCursor()
   {
-    // Sanity check - matches QueryableIndexStorageAdapter.canVectorize
-    Preconditions.checkState(!descending, "!descending");
-
-    final Closer closer = Closer.create();
-    final ColumnCache columnCache = new ColumnCache(index, closer);
-
+    final CursorResources resources = resourcesSupplier.get();
+    final FilterBundle filterBundle = resources.filterBundle;
+    final long minDataTimestamp = resources.minDataTimestamp;
+    final long maxDataTimestamp = resources.maxDataTimestamp;
+    final NumericColumn timestamps = resources.timestamps;
+    final ColumnCache columnCache = resources.columnCache;
     // Wrap the remainder of cursor setup in a try, so if an error is encountered while setting it up, we don't
     // leak columns in the ColumnCache.
+
     try {
-      final ColumnSelectorColumnIndexSelector bitmapIndexSelector = new ColumnSelectorColumnIndexSelector(
-          index.getBitmapFactoryForDimensions(),
-          virtualColumns,
-          columnCache
-      );
 
-      final int numRows = index.getNumRows();
-      final FilterBundle filterBundle = makeFilterBundle(bitmapIndexSelector, numRows);
+      // sanity check
+      if (!canVectorize()) {
+        cleanup();
+        throw new IllegalStateException("canVectorize()");
+      }
+      if (metrics != null) {
+        metrics.vectorized(true);
+      }
 
-      NumericColumn timestamps = null;
 
       final int startOffset;
       final int endOffset;
 
       if (interval.getStartMillis() > minDataTimestamp) {
-        timestamps = (NumericColumn) columnCache.getColumn(ColumnHolder.TIME_COLUMN_NAME);
-
         startOffset = timeSearch(timestamps, interval.getStartMillis(), 0, index.getNumRows());
       } else {
         startOffset = 0;
       }
 
       if (interval.getEndMillis() <= maxDataTimestamp) {
-        if (timestamps == null) {
-          timestamps = (NumericColumn) columnCache.getColumn(ColumnHolder.TIME_COLUMN_NAME);
-        }
-
         endOffset = timeSearch(timestamps, interval.getEndMillis(), startOffset, index.getNumRows());
       } else {
         endOffset = index.getNumRows();
@@ -271,14 +311,30 @@ public class QueryableIndexCursorSequenceBuilder
             columnCache,
             filteredOffset
         );
-        return new QueryableIndexVectorCursor(filteredColumnSelectorFactory, filteredOffset, vectorSize, closer);
+        return new QueryableIndexVectorCursor(
+            filteredColumnSelectorFactory,
+            filteredOffset,
+            vectorSize,
+            resources
+        );
       } else {
-        return new QueryableIndexVectorCursor(baseColumnSelectorFactory, baseOffset, vectorSize, closer);
+        return new QueryableIndexVectorCursor(
+            baseColumnSelectorFactory,
+            baseOffset,
+            vectorSize,
+            resources
+        );
       }
     }
     catch (Throwable t) {
-      throw CloseableUtils.closeAndWrapInCatch(t, closer);
+      throw CloseableUtils.closeAndWrapInCatch(t, resources);
     }
+  }
+
+  @Override
+  public void cleanup()
+  {
+    CloseableUtils.closeAndWrapExceptions(resourcesSupplier.get());
   }
 
   @Nullable
@@ -391,7 +447,7 @@ public class QueryableIndexCursorSequenceBuilder
 
   private static class QueryableIndexVectorCursor implements VectorCursor
   {
-    private final Closer closer;
+    private final Closeable closer;
     private final int vectorSize;
     private final VectorOffset offset;
     private final VectorColumnSelectorFactory columnSelectorFactory;
@@ -400,7 +456,7 @@ public class QueryableIndexCursorSequenceBuilder
         final VectorColumnSelectorFactory vectorColumnSelectorFactory,
         final VectorOffset offset,
         final int vectorSize,
-        final Closer closer
+        final Closeable closer
     )
     {
       this.columnSelectorFactory = vectorColumnSelectorFactory;
@@ -495,7 +551,7 @@ public class QueryableIndexCursorSequenceBuilder
       cursorOffset.increment();
       // Must call BaseQuery.checkInterrupted() after cursorOffset.increment(), not before, because
       // FilteredOffset.increment() is a potentially long, not an "instant" operation (unlike to all other subclasses
-      // of Offset) and it returns early on interruption, leaving itself in an illegal state. We should not let
+      // of Offset) and it returns early on interruption, leaving itself in an illegal  We should not let
       // aggregators, etc. access this illegal state and throw a QueryInterruptedException by calling
       // BaseQuery.checkInterrupted().
       BaseQuery.checkInterrupted();
@@ -666,6 +722,45 @@ public class QueryableIndexCursorSequenceBuilder
     public Offset clone()
     {
       return new DescendingTimestampCheckingOffset(baseOffset.clone(), timestamps, timeLimit, allWithinThreshold);
+    }
+  }
+
+  private final class CursorResources implements Closeable
+  {
+    private final Closer closer;
+    private final long minDataTimestamp;
+    private final long maxDataTimestamp;
+    private final int numRows;
+    @Nullable
+    private final FilterBundle filterBundle;
+    private final NumericColumn timestamps;
+    private final ColumnCache columnCache;
+
+    private CursorResources()
+    {
+      this.closer = Closer.create();
+      this.columnCache = new ColumnCache(index, closer);
+      final ColumnSelectorColumnIndexSelector bitmapIndexSelector = new ColumnSelectorColumnIndexSelector(
+          index.getBitmapFactoryForDimensions(),
+          virtualColumns,
+          columnCache
+      );
+      try {
+        this.numRows = index.getNumRows();
+        this.filterBundle = makeFilterBundle(bitmapIndexSelector, numRows);
+        this.timestamps = (NumericColumn) columnCache.getColumn(ColumnHolder.TIME_COLUMN_NAME);
+        this.minDataTimestamp = DateTimes.utc(timestamps.getLongSingleValueRow(0)).getMillis();
+        this.maxDataTimestamp = DateTimes.utc(timestamps.getLongSingleValueRow(timestamps.length() - 1)).getMillis();
+      }
+      catch (Throwable t) {
+        throw CloseableUtils.closeAndWrapInCatch(t, closer);
+      }
+    }
+
+    @Override
+    public void close() throws IOException
+    {
+      closer.close();
     }
   }
 }

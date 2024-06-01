@@ -20,11 +20,8 @@
 package org.apache.druid.segment;
 
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.column.BaseColumn;
@@ -43,7 +40,6 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.LinkedHashSet;
-import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -179,18 +175,32 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   }
 
   @Override
+  public CursorMaker asCursorMaker(CursorBuildSpec spec)
+  {
+    final Interval actualInterval = computeCursorInterval(spec.getGranularity(), spec.getInterval());
+
+    if (actualInterval == null) {
+      return CursorMaker.EMPTY;
+    }
+
+    return new QueryableIndexCursorMaker(
+        index,
+        CursorBuildSpec.builder(spec).setInterval(actualInterval).build()
+    );
+  }
+
+  @Override
   public boolean canVectorize(
       @Nullable final Filter filter,
       final VirtualColumns virtualColumns,
       final boolean descending
   )
   {
+    // todo (clint):
+    // this uses the old-school canVectorize implementation instead of delegating to the CursorMaker, because
+    // the cursor maker expects to make cursors one way or another, and so opens stuff, so need to fix some tests
     if (filter != null) {
-      // ideally we would allow stuff to vectorize if we can build indexes even if the value matcher cannot be
-      // vectorized, this used to be true in fact, but changes to filter partitioning (FilterBundle) have caused
-      // the only way to know this to be building the bitmaps since BitmapColumnIndex can return null.
-      // this will be changed in a future refactor of cursor building, at which point this method can just return
-      // true if !descending...
+
       final boolean filterCanVectorize = filter.canVectorizeMatcher(this);
 
       if (!filterCanVectorize) {
@@ -213,29 +223,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
       @Nullable final QueryMetrics<?> queryMetrics
   )
   {
-    if (!canVectorize(filter, virtualColumns, descending)) {
-      throw new ISE("Cannot vectorize. Check 'canVectorize' before calling 'makeVectorCursor'.");
-    }
-
-    if (queryMetrics != null) {
-      queryMetrics.vectorized(true);
-    }
-
-    final Interval actualInterval = computeCursorInterval(Granularities.ALL, interval);
-
-    if (actualInterval == null) {
-      return null;
-    }
-    return new QueryableIndexCursorSequenceBuilder(
-        index,
-        actualInterval,
-        virtualColumns,
-        filter,
-        queryMetrics,
-        getMinTime().getMillis(),
-        getMaxTime().getMillis(),
-        descending
-    ).buildVectorized(vectorSize > 0 ? vectorSize : DEFAULT_VECTOR_SIZE);
+    return delegateMakeVectorCursorToMaker(filter, interval, virtualColumns, descending, vectorSize, queryMetrics);
   }
 
   @Override
@@ -248,29 +236,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
       @Nullable QueryMetrics<?> queryMetrics
   )
   {
-    if (queryMetrics != null) {
-      queryMetrics.vectorized(false);
-    }
-
-    final Interval actualInterval = computeCursorInterval(gran, interval);
-
-    if (actualInterval == null) {
-      return Sequences.empty();
-    }
-
-    return Sequences.filter(
-        new QueryableIndexCursorSequenceBuilder(
-            index,
-            actualInterval,
-            virtualColumns,
-            filter,
-            queryMetrics,
-            getMinTime().getMillis(),
-            getMaxTime().getMillis(),
-            descending
-        ).build(gran),
-        Objects::nonNull
-    );
+    return delegateMakeCursorToMaker(filter, interval, virtualColumns, gran, descending, queryMetrics);
   }
 
   @Override

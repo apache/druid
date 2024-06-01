@@ -90,6 +90,67 @@ public class UnnestStorageAdapter implements StorageAdapter
   }
 
   @Override
+  public CursorMaker asCursorMaker(CursorBuildSpec spec)
+  {
+    final String input = getUnnestInputIfDirectAccess(unnestColumn);
+    final Pair<Filter, Filter> filterPair = computeBaseAndPostUnnestFilters(
+        spec.getFilter(),
+        unnestFilter != null ? unnestFilter.toFilter() : null,
+        spec.getVirtualColumns(),
+        input,
+        input == null ? null : spec.getVirtualColumns().getColumnCapabilitiesWithFallback(baseAdapter, input)
+    );
+    final CursorBuildSpec unnestBuildSpec = CursorBuildSpec.builder(spec)
+                                                           .setFilter(filterPair.lhs)
+                                                           .setVirtualColumns(
+                                                               VirtualColumns.create(
+                                                                   Collections.singletonList(unnestColumn)
+                                                               )
+                                                           )
+                                                           .build();
+    return new CursorMaker()
+    {
+      @Override
+      public Sequence<Cursor> makeCursors()
+      {
+        final Sequence<Cursor> baseCursorSequence = baseAdapter.asCursorMaker(unnestBuildSpec).makeCursors();
+        return Sequences.map(
+            baseCursorSequence,
+            cursor -> {
+              Objects.requireNonNull(cursor);
+              final ColumnCapabilities capabilities = unnestColumn.capabilities(
+                  cursor.getColumnSelectorFactory(),
+                  unnestColumn.getOutputName()
+              );
+              final Cursor unnestCursor;
+
+              if (useDimensionCursor(capabilities)) {
+                unnestCursor = new UnnestDimensionCursor(
+                    cursor,
+                    cursor.getColumnSelectorFactory(),
+                    unnestColumn,
+                    outputColumnName
+                );
+              } else {
+                unnestCursor = new UnnestColumnValueSelectorCursor(
+                    cursor,
+                    cursor.getColumnSelectorFactory(),
+                    unnestColumn,
+                    outputColumnName
+                );
+              }
+              return PostJoinCursor.wrap(
+                  unnestCursor,
+                  spec.getVirtualColumns(),
+                  filterPair.rhs
+              );
+            }
+        );
+      }
+    };
+  }
+
+  @Override
   public Sequence<Cursor> makeCursors(
       @Nullable Filter filter,
       Interval interval,
@@ -99,56 +160,15 @@ public class UnnestStorageAdapter implements StorageAdapter
       @Nullable QueryMetrics<?> queryMetrics
   )
   {
-    final String inputColumn = getUnnestInputIfDirectAccess(unnestColumn);
-    final Pair<Filter, Filter> filterPair = computeBaseAndPostUnnestFilters(
-        filter,
-        unnestFilter != null ? unnestFilter.toFilter() : null,
-        virtualColumns,
-        inputColumn,
-        inputColumn == null ? null : virtualColumns.getColumnCapabilitiesWithFallback(baseAdapter, inputColumn)
-    );
-
-    final Sequence<Cursor> baseCursorSequence = baseAdapter.makeCursors(
-        filterPair.lhs,
-        interval,
-        VirtualColumns.create(Collections.singletonList(unnestColumn)),
-        gran,
-        descending,
-        queryMetrics
-    );
-
-    return Sequences.map(
-        baseCursorSequence,
-        cursor -> {
-          Objects.requireNonNull(cursor);
-          final ColumnCapabilities capabilities = unnestColumn.capabilities(
-              cursor.getColumnSelectorFactory(),
-              unnestColumn.getOutputName()
-          );
-          final Cursor unnestCursor;
-
-          if (useDimensionCursor(capabilities)) {
-            unnestCursor = new UnnestDimensionCursor(
-                cursor,
-                cursor.getColumnSelectorFactory(),
-                unnestColumn,
-                outputColumnName
-            );
-          } else {
-            unnestCursor = new UnnestColumnValueSelectorCursor(
-                cursor,
-                cursor.getColumnSelectorFactory(),
-                unnestColumn,
-                outputColumnName
-            );
-          }
-          return PostJoinCursor.wrap(
-              unnestCursor,
-              virtualColumns,
-              filterPair.rhs
-          );
-        }
-    );
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                     .setFilter(filter)
+                                                     .setInterval(interval)
+                                                     .setGranularity(gran)
+                                                     .setVirtualColumns(virtualColumns)
+                                                     .isDescending(descending)
+                                                     .setQueryMetrics(queryMetrics)
+                                                     .build();
+    return asCursorMaker(buildSpec).makeCursors();
   }
 
   @Override

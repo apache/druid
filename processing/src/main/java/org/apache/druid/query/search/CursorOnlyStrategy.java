@@ -85,15 +85,7 @@ public class CursorOnlyStrategy extends SearchStrategy
     public Object2IntRBTreeMap<SearchHit> execute(final int limit)
     {
       final StorageAdapter adapter = segment.asStorageAdapter();
-
-      final Sequence<Cursor> cursors = adapter.makeCursors(
-          filter,
-          interval,
-          query.getVirtualColumns(),
-          query.getGranularity(),
-          query.isDescending(),
-          null
-      );
+      final Sequence<Cursor> cursors = adapter.asCursorMaker(query.asCursorBuildSpec(null)).makeCursors();
 
       final Object2IntRBTreeMap<SearchHit> retVal = new Object2IntRBTreeMap<>(query.getSort().getComparator());
       retVal.defaultReturnValue(0);

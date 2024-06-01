@@ -37,7 +37,7 @@ import org.apache.druid.query.rowsandcols.column.ColumnAccessor;
 import org.apache.druid.segment.ArrayListSegment;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
-import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.TypeStrategy;
@@ -250,16 +250,16 @@ public class RowsAndColumnsDecoratorTest extends SemanticTestBase
           },
           siggy
       );
+      final CursorBuildSpec.CursorBuildSpecBuilder builder = CursorBuildSpec.builder()
+                                                                            .setFilter(filter)
+                                                                            .setGranularity(Granularities.ALL);
+      if (interval != null) {
+        builder.setInterval(interval);
+      }
       final Sequence<Cursor> cursors = seggy
           .asStorageAdapter()
-          .makeCursors(
-              filter,
-              interval == null ? Intervals.ETERNITY : interval,
-              VirtualColumns.EMPTY,
-              Granularities.ALL,
-              false,
-              null
-          );
+          .asCursorMaker(builder.build())
+          .makeCursors();
 
       vals = cursors.accumulate(
           new ArrayList<>(),

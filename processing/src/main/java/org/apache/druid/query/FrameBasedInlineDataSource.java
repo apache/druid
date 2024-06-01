@@ -24,15 +24,14 @@ import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.segment.FrameStorageAdapter;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.SegmentReference;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.RowSignature;
 
 import java.util.Collections;
@@ -89,8 +88,9 @@ public class FrameBasedInlineDataSource implements DataSource
                        Frame frame = frameSignaturePair.getFrame();
                        RowSignature frameSignature = frameSignaturePair.getRowSignature();
                        FrameReader frameReader = FrameReader.create(frameSignature);
-                       return new FrameStorageAdapter(frame, frameReader, Intervals.ETERNITY)
-                           .makeCursors(null, Intervals.ETERNITY, VirtualColumns.EMPTY, Granularities.ALL, false, null);
+                       return new FrameStorageAdapter(frame, frameReader, Intervals.ETERNITY).asCursorMaker(
+                           CursorBuildSpec.FULL_SCAN
+                       ).makeCursors();
                      }
                  );
 

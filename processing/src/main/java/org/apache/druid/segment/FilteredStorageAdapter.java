@@ -45,6 +45,24 @@ public class FilteredStorageAdapter implements StorageAdapter
   }
 
   @Override
+  public CursorMaker asCursorMaker(CursorBuildSpec spec)
+  {
+    final CursorBuildSpec.CursorBuildSpecBuilder buildSpecBuilder = CursorBuildSpec.builder(spec);
+    final Filter newFilter;
+    if (spec.getFilter() == null) {
+      if (filterOnDataSource != null) {
+        newFilter = filterOnDataSource.toFilter();
+      } else {
+        newFilter = null;
+      }
+    } else {
+      newFilter = new AndFilter(ImmutableList.of(spec.getFilter(), filterOnDataSource.toFilter()));
+    }
+    buildSpecBuilder.setFilter(newFilter);
+    return baseStorageAdapter.asCursorMaker(buildSpecBuilder.build());
+  }
+
+  @Override
   public Sequence<Cursor> makeCursors(
       @Nullable Filter filter,
       Interval interval,
@@ -54,17 +72,7 @@ public class FilteredStorageAdapter implements StorageAdapter
       @Nullable QueryMetrics<?> queryMetrics
   )
   {
-    final Filter andFilter;
-    if (filter == null) {
-      if (filterOnDataSource != null) {
-        andFilter = filterOnDataSource.toFilter();
-      } else {
-        andFilter = null;
-      }
-    } else {
-      andFilter = new AndFilter(ImmutableList.of(filter, filterOnDataSource.toFilter()));
-    }
-    return baseStorageAdapter.makeCursors(andFilter, interval, virtualColumns, gran, descending, queryMetrics);
+    return delegateMakeCursorToMaker(filter, interval, virtualColumns, gran, descending, queryMetrics);
   }
 
   @Override

@@ -63,7 +63,6 @@ import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
-import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.groupby.epinephelinae.BufferArrayGrouper;
 import org.apache.druid.query.groupby.epinephelinae.GroupByMergingQueryRunner;
 import org.apache.druid.query.groupby.epinephelinae.GroupByQueryEngine;
@@ -74,6 +73,9 @@ import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.LimitSpec;
 import org.apache.druid.query.groupby.orderby.NoopLimitSpec;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
+import org.apache.druid.segment.ColumnInspector;
+import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorMaker;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
@@ -81,7 +83,6 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.join.filter.AllNullColumnSelectorFactory;
 import org.apache.druid.utils.CloseableUtils;
 import org.joda.time.DateTime;
@@ -495,38 +496,39 @@ public class GroupingEngine
                                       ? null
                                       : DateTimes.utc(Long.parseLong(fudgeTimestampString));
 
-      final Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getFilter()));
-      final Interval interval = Iterables.getOnlyElement(query.getIntervals());
+      // group by specific vectorization check:
 
-      final boolean doVectorize = query.context().getVectorize().shouldVectorize(
-          VectorGroupByEngine.canVectorize(query, storageAdapter, filter)
+      final CursorBuildSpec buildSpec = query.asCursorBuildSpec(groupByQueryMetrics);
+      final CursorMaker cursorMaker = storageAdapter.asCursorMaker(buildSpec);
+
+      final ColumnInspector inspector = query.getVirtualColumns().wrapInspector(storageAdapter);
+      final boolean canVectorize = cursorMaker.canVectorize() &&
+                                   VectorGroupByEngine.canVectorizeDimensions(inspector, query.getDimensions());
+      final boolean shouldVectorize = query.context().getVectorize().shouldVectorize(
+          canVectorize,
+          cursorMaker::cleanup
       );
-
       final Sequence<ResultRow> result;
-
-      if (doVectorize) {
+      if (shouldVectorize) {
         result = VectorGroupByEngine.process(
             query,
             storageAdapter,
+            cursorMaker,
             bufferHolder.get(),
             fudgeTimestamp,
-            filter,
-            interval,
+            buildSpec.getInterval(),
             querySpecificConfig,
-            processingConfig,
-            groupByQueryMetrics
+            processingConfig
         );
       } else {
         result = GroupByQueryEngine.process(
             query,
             storageAdapter,
+            cursorMaker,
             bufferHolder.get(),
             fudgeTimestamp,
             querySpecificConfig,
-            processingConfig,
-            filter,
-            interval,
-            groupByQueryMetrics
+            processingConfig
         );
       }
 

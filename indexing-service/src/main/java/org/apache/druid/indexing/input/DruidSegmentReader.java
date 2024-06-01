@@ -48,10 +48,10 @@ import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnProcessorFactory;
 import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.IndexedInts;
@@ -123,15 +123,13 @@ public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String,
         ),
         intervalFilter
     );
+    final CursorBuildSpec cursorBuildSpec = CursorBuildSpec.builder()
+                                                           .setFilter(Filters.toFilter(dimFilter))
+                                                           .setInterval(storageAdapter.getInterval())
+                                                           .setGranularity(Granularities.ALL)
+                                                           .build();
 
-    final Sequence<Cursor> cursors = storageAdapter.getAdapter().makeCursors(
-        Filters.toFilter(dimFilter),
-        storageAdapter.getInterval(),
-        VirtualColumns.EMPTY,
-        Granularities.ALL,
-        false,
-        null
-    );
+    final Sequence<Cursor> cursors = storageAdapter.getAdapter().asCursorMaker(cursorBuildSpec).makeCursors();
 
     // Retain order of columns from the original segments. Useful for preserving dimension order if we're in
     // schemaless mode.

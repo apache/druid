@@ -20,6 +20,7 @@
 package org.apache.druid.frame.segment;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.testutil.FrameTestUtil;
 import org.apache.druid.java.util.common.Intervals;
@@ -28,12 +29,16 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.extraction.TimeFormatExtractionFn;
 import org.apache.druid.query.extraction.UpperExtractionFn;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorMaker;
 import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.StorageAdapter;
@@ -244,6 +249,11 @@ public class FrameStorageAdapterTest
     private StorageAdapter queryableAdapter;
     private FrameSegment frameSegment;
     private StorageAdapter frameAdapter;
+    private final QueryContext queryContext = QueryContext.of(
+        ImmutableMap.of(QueryContexts.VECTOR_SIZE_KEY, VECTOR_SIZE)
+    );
+
+    private CursorBuildSpec buildSpec;
 
     public CursorTests(
         FrameType frameType,
@@ -258,6 +268,15 @@ public class FrameStorageAdapterTest
       this.interval = interval;
       this.virtualColumns = virtualColumns;
       this.descending = descending;
+      this.buildSpec = CursorBuildSpec.builder()
+                                      .setFilter(this.filter)
+                                      .setInterval(this.interval)
+                                      // Frames only support Granularities.ALL: no point testing the others.
+                                      .setGranularity(Granularities.ALL)
+                                      .setVirtualColumns(this.virtualColumns)
+                                      .isDescending(this.descending)
+                                      .setQueryContext(queryContext)
+                                      .build();
     }
 
     @Parameterized.Parameters(name = "frameType = {0}, "
@@ -347,17 +366,7 @@ public class FrameStorageAdapterTest
     @Test
     public void test_makeCursors()
     {
-      assertCursorsMatch(
-          adapter ->
-              adapter.makeCursors(
-                  filter,
-                  interval,
-                  virtualColumns,
-                  Granularities.ALL, // Frames only support Granularities.ALL: no point testing the others.
-                  descending,
-                  null
-              )
-      );
+      assertCursorsMatch(adapter -> adapter.asCursorMaker(buildSpec).makeCursors());
     }
 
     @Test
@@ -365,17 +374,7 @@ public class FrameStorageAdapterTest
     {
       Assume.assumeTrue(frameAdapter.canVectorize(filter, virtualColumns, descending));
 
-      assertVectorCursorsMatch(
-          adapter ->
-              adapter.makeVectorCursor(
-                  filter,
-                  interval,
-                  virtualColumns,
-                  descending,
-                  VECTOR_SIZE,
-                  null
-              )
-      );
+      assertVectorCursorsMatch(adapter -> adapter.asCursorMaker(buildSpec));
     }
 
     private void assertCursorsMatch(final Function<StorageAdapter, Sequence<Cursor>> call)
@@ -389,13 +388,15 @@ public class FrameStorageAdapterTest
       FrameTestUtil.assertRowsEqual(queryableRows, frameRows);
     }
 
-    private void assertVectorCursorsMatch(final Function<StorageAdapter, VectorCursor> call)
+    private void assertVectorCursorsMatch(final Function<StorageAdapter, CursorMaker> call)
     {
+      final CursorMaker maker = call.apply(queryableAdapter);
       final RowSignature signature = frameAdapter.getRowSignature();
       final Sequence<List<Object>> queryableRows =
-          FrameTestUtil.readRowsFromVectorCursor(call.apply(queryableAdapter), signature);
+          FrameTestUtil.readRowsFromVectorCursor(maker.makeVectorCursor(), signature);
+      final CursorMaker frameMaker = call.apply(frameAdapter);
       final Sequence<List<Object>> frameRows =
-          FrameTestUtil.readRowsFromVectorCursor(advanceAndReset(call.apply(frameAdapter)), signature);
+          FrameTestUtil.readRowsFromVectorCursor(advanceAndReset(frameMaker.makeVectorCursor()), signature);
       FrameTestUtil.assertRowsEqual(queryableRows, frameRows);
     }
 

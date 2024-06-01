@@ -19,15 +19,17 @@
 
 package org.apache.druid.query.aggregation.datasketches.util;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import org.apache.druid.hll.HyperLogLogCollector;
-import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.ColumnProcessors;
+import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.TestIndex;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.vector.VectorCursor;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.hamcrest.CoreMatchers;
@@ -169,14 +171,14 @@ public class ToObjectVectorColumnProcessorFactoryTest extends InitializedNullHan
 
   private VectorCursor makeCursor()
   {
-    return adapter.makeVectorCursor(
-        null,
-        Intervals.ETERNITY,
-        VirtualColumns.EMPTY,
-        false,
-        3, /* vector size */
-        null
-    );
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                     .setQueryContext(
+                                                         QueryContext.of(
+                                                             ImmutableMap.of(QueryContexts.VECTOR_SIZE_KEY, 3)
+                                                         )
+                                                     )
+                                                     .build();
+    return adapter.asCursorMaker(buildSpec).makeVectorCursor();
   }
 
   private List<Object> readColumn(final String column, final int limit)

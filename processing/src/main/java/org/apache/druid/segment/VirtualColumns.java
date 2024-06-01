@@ -30,7 +30,6 @@ import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.Cacheable;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.query.Query;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.ColumnIndexSelector;
@@ -48,7 +47,6 @@ import org.apache.druid.segment.virtual.VirtualizedColumnInspector;
 import org.apache.druid.segment.virtual.VirtualizedColumnSelectorFactory;
 
 import javax.annotation.Nullable;
-
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -123,15 +121,6 @@ public class VirtualColumns implements Cacheable
   public static VirtualColumns nullToEmpty(@Nullable VirtualColumns virtualColumns)
   {
     return virtualColumns == null ? EMPTY : virtualColumns;
-  }
-
-  public static boolean shouldVectorize(Query<?> query, VirtualColumns virtualColumns, ColumnInspector inspector)
-  {
-    if (virtualColumns.getVirtualColumns().length > 0) {
-      return query.context().getVectorizeVirtualColumns().shouldVectorize(virtualColumns.canVectorize(inspector));
-    } else {
-      return true;
-    }
   }
 
   private VirtualColumns(

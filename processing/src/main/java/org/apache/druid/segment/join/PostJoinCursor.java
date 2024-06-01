@@ -24,14 +24,15 @@ import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.VirtualColumns;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 
 /**
- * A Cursor decorator used by {@link HashJoinSegmentStorageAdapter#makeCursors} to add post-join virtual columns
- * and filters.
+ * A Cursor decorator used by {@link HashJoinSegmentStorageAdapter#asCursorMaker(CursorBuildSpec)} to add post-join
+ * virtual columns and filters.
  */
 public class PostJoinCursor implements Cursor
 {

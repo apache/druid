@@ -37,8 +37,8 @@ import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.DimensionSelector;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.filter.Filters;
@@ -79,14 +79,16 @@ public class IngestSegmentFirehose implements Firehose
               {
                 return Sequences.concat(
                     Sequences.map(
-                        adapter.getAdapter().makeCursors(
-                            Filters.toFilter(dimFilter),
-                            adapter.getInterval(),
-                            VirtualColumns.EMPTY,
-                            Granularities.ALL,
-                            false,
-                            null
-                        ), new Function<Cursor, Sequence<InputRow>>()
+                        adapter.getAdapter()
+                               .asCursorMaker(
+                                   CursorBuildSpec.builder()
+                                                  .setFilter(Filters.toFilter(dimFilter))
+                                                  .setInterval(adapter.getInterval())
+                                                  .setGranularity(Granularities.ALL)
+                                                  .build()
+                               )
+                               .makeCursors()
+                        , new Function<Cursor, Sequence<InputRow>>()
                         {
                           @Nullable
                           @Override

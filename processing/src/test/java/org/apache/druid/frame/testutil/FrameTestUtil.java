@@ -41,6 +41,7 @@ import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
@@ -158,7 +159,12 @@ public class FrameTestUtil
         final Object expectedValue = expected.get(i);
         final Object actualValue = actual.get(i);
 
-        if (!Objects.deepEquals(expectedValue, actualValue)) {
+        if (expectedValue instanceof List && actualValue instanceof Object[]) {
+          if (!Objects.deepEquals(expectedValue, Arrays.asList((Object[]) actualValue))) {
+            ok = false;
+            break;
+          }
+        } else if (!Objects.deepEquals(expectedValue, actualValue)) {
           ok = false;
           break;
         }
@@ -218,7 +224,7 @@ public class FrameTestUtil
 
   /**
    * Reads a sequence of rows from a frame channel using a non-vectorized cursor from
-   * {@link FrameStorageAdapter#makeCursors}.
+   * {@link FrameStorageAdapter#asCursorMaker(CursorBuildSpec)}.
    *
    * @param channel     the channel
    * @param frameReader reader for this channel
@@ -232,7 +238,8 @@ public class FrameTestUtil
         .flatMap(
             frame ->
                 new FrameStorageAdapter(frame, frameReader, Intervals.ETERNITY)
-                    .makeCursors(null, Intervals.ETERNITY, VirtualColumns.EMPTY, Granularities.ALL, false, null)
+                    .asCursorMaker(CursorBuildSpec.FULL_SCAN)
+                    .makeCursors()
                     .flatMap(cursor -> readRowsFromCursor(cursor, frameReader.signature()))
         );
   }
@@ -283,7 +290,12 @@ public class FrameTestUtil
       virtualColumns = VirtualColumns.EMPTY;
     }
 
-    return adapter.makeCursors(null, Intervals.ETERNITY, virtualColumns, Granularities.ALL, false, null)
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                     .setGranularity(Granularities.ALL)
+                                                     .setVirtualColumns(virtualColumns)
+                                                     .build();
+    return adapter.asCursorMaker(buildSpec)
+                  .makeCursors()
                   .map(cursor -> {
                     if (populateRowNumber) {
                       return new RowNumberUpdatingCursor(cursor, rowNumberVirtualColumn);

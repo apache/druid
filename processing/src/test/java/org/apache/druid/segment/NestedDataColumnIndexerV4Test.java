@@ -26,7 +26,6 @@ import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.guice.NestedDataModule;
-import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -148,14 +147,8 @@ public class NestedDataColumnIndexerV4Test extends InitializedNullHandlingTest
     index.add(makeInputRow(minTimestamp + 5, false, STRING_COL, null));
 
     IncrementalIndexStorageAdapter storageAdapter = new IncrementalIndexStorageAdapter(index);
-    Sequence<Cursor> cursorSequence = storageAdapter.makeCursors(
-        null,
-        Intervals.ETERNITY,
-        VirtualColumns.EMPTY,
-        Granularities.NONE,
-        false,
-        null
-    );
+
+    Sequence<Cursor> cursorSequence = storageAdapter.asCursorMaker(CursorBuildSpec.builder().build()).makeCursors();
     final DimensionSpec dimensionSpec = new DefaultDimensionSpec(STRING_COL, STRING_COL, ColumnType.STRING);
     List<Cursor> cursorList = cursorSequence.toList();
     ColumnSelectorFactory columnSelectorFactory = cursorList.get(0).getColumnSelectorFactory();
@@ -213,14 +206,7 @@ public class NestedDataColumnIndexerV4Test extends InitializedNullHandlingTest
     index.add(makeInputRow(minTimestamp + 5, false, LONG_COL, null));
 
     IncrementalIndexStorageAdapter storageAdapter = new IncrementalIndexStorageAdapter(index);
-    Sequence<Cursor> cursorSequence = storageAdapter.makeCursors(
-        null,
-        Intervals.ETERNITY,
-        VirtualColumns.EMPTY,
-        Granularities.NONE,
-        false,
-        null
-    );
+    Sequence<Cursor> cursorSequence = storageAdapter.asCursorMaker(CursorBuildSpec.builder().build()).makeCursors();
     final DimensionSpec dimensionSpec = new DefaultDimensionSpec(LONG_COL, LONG_COL, ColumnType.LONG);
     List<Cursor> cursorList = cursorSequence.toList();
     ColumnSelectorFactory columnSelectorFactory = cursorList.get(0).getColumnSelectorFactory();
@@ -308,14 +294,7 @@ public class NestedDataColumnIndexerV4Test extends InitializedNullHandlingTest
     index.add(makeInputRow(minTimestamp + 5, false, DOUBLE_COL, null));
 
     IncrementalIndexStorageAdapter storageAdapter = new IncrementalIndexStorageAdapter(index);
-    Sequence<Cursor> cursorSequence = storageAdapter.makeCursors(
-        null,
-        Intervals.ETERNITY,
-        VirtualColumns.EMPTY,
-        Granularities.NONE,
-        false,
-        null
-    );
+    Sequence<Cursor> cursorSequence = storageAdapter.asCursorMaker(CursorBuildSpec.builder().build()).makeCursors();
     final DimensionSpec dimensionSpec = new DefaultDimensionSpec(DOUBLE_COL, DOUBLE_COL, ColumnType.DOUBLE);
     List<Cursor> cursorList = cursorSequence.toList();
     ColumnSelectorFactory columnSelectorFactory = cursorList.get(0).getColumnSelectorFactory();
@@ -403,14 +382,7 @@ public class NestedDataColumnIndexerV4Test extends InitializedNullHandlingTest
     index.add(makeInputRow(minTimestamp + 5, false, STRING_ARRAY_COL, null));
 
     IncrementalIndexStorageAdapter storageAdapter = new IncrementalIndexStorageAdapter(index);
-    Sequence<Cursor> cursorSequence = storageAdapter.makeCursors(
-        null,
-        Intervals.ETERNITY,
-        VirtualColumns.EMPTY,
-        Granularities.NONE,
-        false,
-        null
-    );
+    Sequence<Cursor> cursorSequence = storageAdapter.asCursorMaker(CursorBuildSpec.builder().build()).makeCursors();
     final DimensionSpec dimensionSpec = new DefaultDimensionSpec(STRING_ARRAY_COL, STRING_ARRAY_COL, ColumnType.STRING);
     List<Cursor> cursorList = cursorSequence.toList();
     ColumnSelectorFactory columnSelectorFactory = cursorList.get(0).getColumnSelectorFactory();
@@ -468,14 +440,7 @@ public class NestedDataColumnIndexerV4Test extends InitializedNullHandlingTest
     index.add(makeInputRow(minTimestamp + 5, false, VARIANT_COL, null));
 
     IncrementalIndexStorageAdapter storageAdapter = new IncrementalIndexStorageAdapter(index);
-    Sequence<Cursor> cursorSequence = storageAdapter.makeCursors(
-        null,
-        Intervals.ETERNITY,
-        VirtualColumns.EMPTY,
-        Granularities.NONE,
-        false,
-        null
-    );
+    Sequence<Cursor> cursorSequence = storageAdapter.asCursorMaker(CursorBuildSpec.builder().build()).makeCursors();
     final DimensionSpec dimensionSpec = new DefaultDimensionSpec(VARIANT_COL, VARIANT_COL, ColumnType.STRING);
     List<Cursor> cursorList = cursorSequence.toList();
     ColumnSelectorFactory columnSelectorFactory = cursorList.get(0).getColumnSelectorFactory();
@@ -525,14 +490,7 @@ public class NestedDataColumnIndexerV4Test extends InitializedNullHandlingTest
     index.add(makeInputRow(minTimestamp + 5, false, NESTED_COL, null));
 
     IncrementalIndexStorageAdapter storageAdapter = new IncrementalIndexStorageAdapter(index);
-    Sequence<Cursor> cursorSequence = storageAdapter.makeCursors(
-        null,
-        Intervals.ETERNITY,
-        VirtualColumns.EMPTY,
-        Granularities.NONE,
-        false,
-        null
-    );
+    Sequence<Cursor> cursorSequence = storageAdapter.asCursorMaker(CursorBuildSpec.builder().build()).makeCursors();
     final DimensionSpec dimensionSpec = new DefaultDimensionSpec(NESTED_COL, NESTED_COL, ColumnType.STRING);
     List<Cursor> cursorList = cursorSequence.toList();
     ColumnSelectorFactory columnSelectorFactory = cursorList.get(0).getColumnSelectorFactory();

@@ -58,9 +58,10 @@ import org.apache.druid.query.topn.TopNResultValue;
 import org.apache.druid.segment.CloserRule;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorMaker;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.StorageAdapter;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.filter.SelectorFilter;
@@ -147,18 +148,16 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
                                              .addAggregator(new LongSumAggregatorFactory("cnt", "cnt"))
                                              .addOrderByColumn("billy")
                                              .build();
-      final Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getFilter()));
-      final Interval interval = Iterables.getOnlyElement(query.getIntervals());
+      final IncrementalIndexStorageAdapter adapter = new IncrementalIndexStorageAdapter(index);
+      final CursorMaker maker = adapter.asCursorMaker(query.asCursorBuildSpec(null));
       final Sequence<ResultRow> rows = GroupByQueryEngine.process(
           query,
-          new IncrementalIndexStorageAdapter(index),
+          adapter,
+          maker,
           processingBuffer.get(),
           null,
           new GroupByQueryConfig(),
-          new DruidProcessingConfig(),
-          filter,
-          interval,
-          null
+          new DruidProcessingConfig()
       );
 
       final List<ResultRow> results = rows.toList();
@@ -223,18 +222,16 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
                                              )
                                              .addOrderByColumn("billy")
                                              .build();
-      final Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getFilter()));
-      final Interval interval = Iterables.getOnlyElement(query.getIntervals());
+      final IncrementalIndexStorageAdapter adapter = new IncrementalIndexStorageAdapter(index);
+      final CursorMaker maker = adapter.asCursorMaker(query.asCursorBuildSpec(null));
       final Sequence<ResultRow> rows = GroupByQueryEngine.process(
           query,
-          new IncrementalIndexStorageAdapter(index),
+          adapter,
+          maker,
           processingBuffer.get(),
           null,
           new GroupByQueryConfig(),
-          new DruidProcessingConfig(),
-          filter,
-          interval,
-          null
+          new DruidProcessingConfig()
       );
 
       final List<ResultRow> results = rows.toList();
@@ -278,14 +275,12 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
     IncrementalIndexStorageAdapter adapter = new IncrementalIndexStorageAdapter(index);
 
     for (boolean descending : Arrays.asList(false, true)) {
-      Sequence<Cursor> cursorSequence = adapter.makeCursors(
-          new SelectorFilter("sally", "bo"),
-          interval,
-          VirtualColumns.EMPTY,
-          Granularities.NONE,
-          descending,
-          null
-      );
+      final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                       .setFilter(new SelectorFilter("sally", "bo"))
+                                                       .setInterval(interval)
+                                                       .isDescending(descending)
+                                                       .build();
+      Sequence<Cursor> cursorSequence = adapter.asCursorMaker(buildSpec).makeCursors();
 
       Cursor cursor = cursorSequence.limit(1).toList().get(0);
       DimensionSelector dimSelector;
@@ -391,19 +386,16 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
                                              .addAggregator(new LongSumAggregatorFactory("cnt", "cnt"))
                                              .setDimFilter(DimFilters.dimEquals("sally", (String) null))
                                              .build();
-      final Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getFilter()));
-      final Interval interval = Iterables.getOnlyElement(query.getIntervals());
-
+      final IncrementalIndexStorageAdapter adapter = new IncrementalIndexStorageAdapter(index);
+      final CursorMaker maker = adapter.asCursorMaker(query.asCursorBuildSpec(null));
       final Sequence<ResultRow> rows = GroupByQueryEngine.process(
           query,
-          new IncrementalIndexStorageAdapter(index),
+          adapter,
+          maker,
           processingBuffer.get(),
           null,
           new GroupByQueryConfig(),
-          new DruidProcessingConfig(),
-          filter,
-          interval,
-          null
+          new DruidProcessingConfig()
       );
 
       final List<ResultRow> results = rows.toList();
@@ -433,14 +425,11 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
 
     final StorageAdapter sa = new IncrementalIndexStorageAdapter(index);
 
-    Sequence<Cursor> cursors = sa.makeCursors(
-        null,
-        Intervals.utc(timestamp - 60_000, timestamp + 60_000),
-        VirtualColumns.EMPTY,
-        Granularities.ALL,
-        false,
-        null
-    );
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                     .setInterval(Intervals.utc(timestamp - 60_000, timestamp + 60_000))
+                                                     .setGranularity(Granularities.ALL)
+                                                     .build();
+    Sequence<Cursor> cursors = sa.asCursorMaker(buildSpec).makeCursors();
     final AtomicInteger assertCursorsNotEmpty = new AtomicInteger(0);
 
     cursors
@@ -497,14 +486,12 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
 
     final StorageAdapter sa = new IncrementalIndexStorageAdapter(index);
 
-    Sequence<Cursor> cursors = sa.makeCursors(
-        new DictionaryRaceTestFilter(index, timestamp),
-        Intervals.utc(timestamp - 60_000, timestamp + 60_000),
-        VirtualColumns.EMPTY,
-        Granularities.ALL,
-        false,
-        null
-    );
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                     .setFilter(new DictionaryRaceTestFilter(index, timestamp))
+                                                     .setInterval(Intervals.utc(timestamp - 60_000, timestamp + 60_000))
+                                                     .setGranularity(Granularities.ALL)
+                                                     .build();
+    Sequence<Cursor> cursors = sa.asCursorMaker(buildSpec).makeCursors();
     final AtomicInteger assertCursorsNotEmpty = new AtomicInteger(0);
 
     cursors
@@ -548,14 +535,11 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
 
     final StorageAdapter sa = new IncrementalIndexStorageAdapter(index);
 
-    Sequence<Cursor> cursors = sa.makeCursors(
-        null,
-        Intervals.utc(timestamp - 60_000, timestamp + 60_000),
-        VirtualColumns.EMPTY,
-        Granularities.ALL,
-        false,
-        null
-    );
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                     .setInterval(Intervals.utc(timestamp - 60_000, timestamp + 60_000))
+                                                     .setGranularity(Granularities.ALL)
+                                                     .build();
+    Sequence<Cursor> cursors = sa.asCursorMaker(buildSpec).makeCursors();
     final AtomicInteger assertCursorsNotEmpty = new AtomicInteger(0);
 
     cursors

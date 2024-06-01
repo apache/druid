@@ -71,13 +71,13 @@ import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.SimpleAscendingOffset;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
@@ -281,14 +281,16 @@ public class DumpSegment extends GuiceRunnable
     final List<String> columnNames = getColumnsToInclude(index);
     final DimFilter filter = filterJson != null ? objectMapper.readValue(filterJson, DimFilter.class) : null;
 
-    final Sequence<Cursor> cursors = adapter.makeCursors(
-        Filters.toFilter(filter),
-        index.getDataInterval().withChronology(ISOChronology.getInstanceUTC()),
-        VirtualColumns.EMPTY,
-        Granularities.ALL,
-        false,
-        null
-    );
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                     .setFilter(Filters.toFilter(filter))
+                                                     .setInterval(
+                                                         index.getDataInterval()
+                                                              .withChronology(ISOChronology.getInstanceUTC())
+                                                     )
+                                                     .setGranularity(Granularities.ALL)
+                                                     .build();
+
+    final Sequence<Cursor> cursors = adapter.asCursorMaker(buildSpec).makeCursors();
 
     withOutputStream(
         new Function<OutputStream, Object>()

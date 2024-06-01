@@ -35,7 +35,9 @@ import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorFactory;
+import org.apache.druid.segment.CursorMaker;
 import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.SimpleDescendingOffset;
 import org.apache.druid.segment.SimpleSettableOffset;
@@ -71,6 +73,46 @@ public class FrameCursorFactory implements CursorFactory
   }
 
   @Override
+  public CursorMaker asCursorMaker(CursorBuildSpec spec)
+  {
+    if (!Granularities.ALL.equals(spec.getGranularity())) {
+      // Not currently needed for the intended use cases of frame-based cursors.
+      throw new UOE("Granularity [%s] not supported", spec.getGranularity());
+    }
+    return () -> {
+      final Filter filterToUse = FrameCursorUtils.buildFilter(spec.getFilter(), spec.getInterval());
+
+      final SimpleSettableOffset baseOffset = spec.isDescending()
+                                              ? new SimpleDescendingOffset(frame.numRows())
+                                              : new SimpleAscendingOffset(frame.numRows());
+
+      final SimpleSettableOffset offset;
+
+      final ColumnSelectorFactory columnSelectorFactory =
+          spec.getVirtualColumns().wrap(
+              new FrameColumnSelectorFactory(
+                  frame,
+                  frameReader.signature(),
+                  fieldReaders,
+                  new CursorFrameRowPointer(frame, baseOffset)
+              )
+          );
+
+      if (filterToUse == null) {
+        offset = baseOffset;
+      } else {
+        offset = new FrameFilteredOffset(baseOffset, columnSelectorFactory, filterToUse);
+      }
+
+      final FrameCursor cursor = new FrameCursor(offset, columnSelectorFactory);
+
+      // Note: if anything closeable is ever added to this Sequence, make sure to update FrameProcessors.makeCursor.
+      // Currently, it assumes that closing the Sequence does nothing.
+      return Sequences.simple(Collections.singletonList(cursor));
+    };
+  }
+
+  @Override
   public Sequence<Cursor> makeCursors(
       @Nullable Filter filter,
       Interval interval,
@@ -80,49 +122,6 @@ public class FrameCursorFactory implements CursorFactory
       @Nullable QueryMetrics<?> queryMetrics
   )
   {
-    if (Granularities.ALL.equals(gran)) {
-      final Cursor cursor = makeGranularityAllCursor(filter, interval, virtualColumns, descending);
-
-      // Note: if anything closeable is ever added to this Sequence, make sure to update FrameProcessors.makeCursor.
-      // Currently, it assumes that closing the Sequence does nothing.
-      return Sequences.simple(Collections.singletonList(cursor));
-    } else {
-      // Not currently needed for the intended use cases of frame-based cursors.
-      throw new UOE("Granularity [%s] not supported", gran);
-    }
-  }
-
-  private Cursor makeGranularityAllCursor(
-      @Nullable final Filter filter,
-      final Interval interval,
-      final VirtualColumns virtualColumns,
-      final boolean descending
-  )
-  {
-    final Filter filterToUse = FrameCursorUtils.buildFilter(filter, interval);
-
-    final SimpleSettableOffset baseOffset = descending
-                              ? new SimpleDescendingOffset(frame.numRows())
-                              : new SimpleAscendingOffset(frame.numRows());
-
-    final SimpleSettableOffset offset;
-
-    final ColumnSelectorFactory columnSelectorFactory =
-        virtualColumns.wrap(
-            new FrameColumnSelectorFactory(
-                frame,
-                frameReader.signature(),
-                fieldReaders,
-                new CursorFrameRowPointer(frame, baseOffset)
-            )
-        );
-
-    if (filterToUse == null) {
-      offset = baseOffset;
-    } else {
-      offset = new FrameFilteredOffset(baseOffset, columnSelectorFactory, filterToUse);
-    }
-
-    return new FrameCursor(offset, columnSelectorFactory);
+    return delegateMakeCursorToMaker(filter, interval, virtualColumns, gran, descending, queryMetrics);
   }
 }

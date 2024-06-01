@@ -34,7 +34,6 @@ import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.aggregation.AggregatorAdapters;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.dimension.DimensionSpec;
-import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryMetrics;
@@ -48,6 +47,7 @@ import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorMaker;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.StorageAdapter;
@@ -56,7 +56,6 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.joda.time.DateTime;
-import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
@@ -94,23 +93,14 @@ public class GroupByQueryEngine
   public static Sequence<ResultRow> process(
       final GroupByQuery query,
       final StorageAdapter storageAdapter,
+      final CursorMaker cursorMaker,
       final ByteBuffer processingBuffer,
       @Nullable final DateTime fudgeTimestamp,
       final GroupByQueryConfig querySpecificConfig,
-      final DruidProcessingConfig processingConfig,
-      @Nullable final Filter filter,
-      final Interval interval,
-      @Nullable final GroupByQueryMetrics groupByQueryMetrics
+      final DruidProcessingConfig processingConfig
   )
   {
-    final Sequence<Cursor> cursors = storageAdapter.makeCursors(
-        filter,
-        interval,
-        query.getVirtualColumns(),
-        query.getGranularity(),
-        false,
-        groupByQueryMetrics
-    );
+    final Sequence<Cursor> cursors = cursorMaker.makeCursors();
 
     return cursors.flatMap(
         cursor -> new BaseSequence<>(

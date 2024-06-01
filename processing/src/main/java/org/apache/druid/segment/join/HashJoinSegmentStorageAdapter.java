@@ -20,7 +20,6 @@
 package org.apache.druid.segment.join;
 
 import com.google.common.collect.Lists;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -28,6 +27,8 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorMaker;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumn;
@@ -220,6 +221,105 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
   }
 
   @Override
+  public CursorMaker asCursorMaker(CursorBuildSpec spec)
+  {
+    final CursorBuildSpec.CursorBuildSpecBuilder cursorBuildSpecBuilder =
+        CursorBuildSpec.builder()
+                       .setInterval(spec.getInterval())
+                       .setGranularity(spec.getGranularity())
+                       .isDescending(spec.isDescending())
+                       .setColumns(baseAdapter.getRowSignature().getColumnNames())
+                       .setQueryMetrics(spec.getQueryMetrics());
+
+    final Filter combinedFilter = baseFilterAnd(spec.getFilter());
+
+    if (clauses.isEmpty()) {
+      // HashJoinEngine isn't vectorized yet.
+      // However, we can still vectorize if there are no clauses, since that means all we need to do is apply
+      // a base filter. That's easy enough!
+      final CursorBuildSpec newSpec = cursorBuildSpecBuilder.setFilter(combinedFilter)
+                                                            .setVirtualColumns(spec.getVirtualColumns())
+                                                            .build();
+      return baseAdapter.asCursorMaker(newSpec);
+    }
+    return new CursorMaker()
+    {
+
+      @Override
+      public Sequence<Cursor> makeCursors()
+      {
+        // Filter pre-analysis key implied by the call to "makeCursors". We need to sanity-check that it matches
+        // the actual pre-analysis that was done. Note: we can't infer a rewrite config from the "makeCursors" call (it
+        // requires access to the query context) so we'll need to skip sanity-checking it, by re-using the one present
+        // in the cached key.)
+        final JoinFilterPreAnalysisKey keyIn =
+            new JoinFilterPreAnalysisKey(
+                joinFilterPreAnalysis.getKey().getRewriteConfig(),
+                clauses,
+                spec.getVirtualColumns(),
+                combinedFilter
+            );
+
+        final JoinFilterPreAnalysisKey keyCached = joinFilterPreAnalysis.getKey();
+        final JoinFilterSplit joinFilterSplit;
+
+        if (keyIn.equals(keyCached)) {
+          // Common case: key used during filter pre-analysis (keyCached) matches key implied by makeCursors call (keyIn).
+          joinFilterSplit = JoinFilterAnalyzer.splitFilter(joinFilterPreAnalysis, baseFilter);
+        } else {
+          // Less common case: key differs. Re-analyze the filter. This case can happen when an unnest datasource is
+          // layered on top of a join datasource.
+          joinFilterSplit = JoinFilterAnalyzer.splitFilter(
+              JoinFilterAnalyzer.computeJoinFilterPreAnalysis(keyIn),
+              baseFilter
+          );
+        }
+
+        final List<VirtualColumn> preJoinVirtualColumns = new ArrayList<>();
+        final List<VirtualColumn> postJoinVirtualColumns = new ArrayList<>();
+
+        determineBaseColumnsWithPreAndPostJoinVirtualColumns(
+            spec.getVirtualColumns(),
+            preJoinVirtualColumns,
+            postJoinVirtualColumns
+        );
+
+        // We merge the filter on base table specified by the user and filter on the base table that is pushed from
+        // the join
+        preJoinVirtualColumns.addAll(joinFilterSplit.getPushDownVirtualColumns());
+
+        if (joinFilterSplit.getBaseTableFilter().isPresent()) {
+          cursorBuildSpecBuilder.setFilter(joinFilterSplit.getBaseTableFilter().get());
+        }
+        cursorBuildSpecBuilder.setVirtualColumns(VirtualColumns.create(preJoinVirtualColumns));
+
+        final Sequence<Cursor> baseCursorSequence = baseAdapter.asCursorMaker(cursorBuildSpecBuilder.build())
+                                                               .makeCursors();
+
+        Closer joinablesCloser = Closer.create();
+
+        return Sequences.<Cursor, Cursor>map(
+            baseCursorSequence,
+            cursor -> {
+              assert cursor != null;
+              Cursor retVal = cursor;
+
+              for (JoinableClause clause : clauses) {
+                retVal = HashJoinEngine.makeJoinCursor(retVal, clause, spec.isDescending(), joinablesCloser);
+              }
+
+              return PostJoinCursor.wrap(
+                  retVal,
+                  VirtualColumns.create(postJoinVirtualColumns),
+                  joinFilterSplit.getJoinTableFilter().orElse(null)
+              );
+            }
+        ).withBaggage(joinablesCloser);
+      }
+    };
+  }
+
+  @Override
   public boolean canVectorize(@Nullable Filter filter, VirtualColumns virtualColumns, boolean descending)
   {
     // HashJoinEngine isn't vectorized yet.
@@ -239,21 +339,14 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
       @Nullable QueryMetrics<?> queryMetrics
   )
   {
-    if (!canVectorize(filter, virtualColumns, descending)) {
-      throw new ISE("Cannot vectorize. Check 'canVectorize' before calling 'makeVectorCursor'.");
-    }
-
-    // Should have been checked by canVectorize.
-    assert clauses.isEmpty();
-
-    return baseAdapter.makeVectorCursor(
-        baseFilterAnd(filter),
-        interval,
-        virtualColumns,
-        descending,
-        vectorSize,
-        queryMetrics
-    );
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                     .setFilter(filter)
+                                                     .setInterval(interval)
+                                                     .setVirtualColumns(virtualColumns)
+                                                     .isDescending(descending)
+                                                     .setQueryMetrics(queryMetrics)
+                                                     .build();
+    return asCursorMaker(buildSpec).makeVectorCursor();
   }
 
   @Override
@@ -266,86 +359,16 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
       @Nullable final QueryMetrics<?> queryMetrics
   )
   {
-    final Filter combinedFilter = baseFilterAnd(filter);
 
-    if (clauses.isEmpty()) {
-      return baseAdapter.makeCursors(
-          combinedFilter,
-          interval,
-          virtualColumns,
-          gran,
-          descending,
-          queryMetrics
-      );
-    }
-
-    // Filter pre-analysis key implied by the call to "makeCursors". We need to sanity-check that it matches
-    // the actual pre-analysis that was done. Note: we can't infer a rewrite config from the "makeCursors" call (it
-    // requires access to the query context) so we'll need to skip sanity-checking it, by re-using the one present
-    // in the cached key.)
-    final JoinFilterPreAnalysisKey keyIn =
-        new JoinFilterPreAnalysisKey(
-            joinFilterPreAnalysis.getKey().getRewriteConfig(),
-            clauses,
-            virtualColumns,
-            combinedFilter
-        );
-
-    final JoinFilterPreAnalysisKey keyCached = joinFilterPreAnalysis.getKey();
-    final JoinFilterSplit joinFilterSplit;
-
-    if (keyIn.equals(keyCached)) {
-      // Common case: key used during filter pre-analysis (keyCached) matches key implied by makeCursors call (keyIn).
-      joinFilterSplit = JoinFilterAnalyzer.splitFilter(joinFilterPreAnalysis, baseFilter);
-    } else {
-      // Less common case: key differs. Re-analyze the filter. This case can happen when an unnest datasource is
-      // layered on top of a join datasource.
-      joinFilterSplit = JoinFilterAnalyzer.splitFilter(
-          JoinFilterAnalyzer.computeJoinFilterPreAnalysis(keyIn),
-          baseFilter
-      );
-    }
-
-    final List<VirtualColumn> preJoinVirtualColumns = new ArrayList<>();
-    final List<VirtualColumn> postJoinVirtualColumns = new ArrayList<>();
-
-    determineBaseColumnsWithPreAndPostJoinVirtualColumns(
-        virtualColumns,
-        preJoinVirtualColumns,
-        postJoinVirtualColumns
-    );
-
-    // We merge the filter on base table specified by the user and filter on the base table that is pushed from
-    // the join
-    preJoinVirtualColumns.addAll(joinFilterSplit.getPushDownVirtualColumns());
-
-    final Sequence<Cursor> baseCursorSequence = baseAdapter.makeCursors(
-        joinFilterSplit.getBaseTableFilter().isPresent() ? joinFilterSplit.getBaseTableFilter().get() : null,
-        interval,
-        VirtualColumns.create(preJoinVirtualColumns),
-        gran,
-        descending,
-        queryMetrics
-    );
-
-    Closer joinablesCloser = Closer.create();
-    return Sequences.<Cursor, Cursor>map(
-        baseCursorSequence,
-        cursor -> {
-          assert cursor != null;
-          Cursor retVal = cursor;
-
-          for (JoinableClause clause : clauses) {
-            retVal = HashJoinEngine.makeJoinCursor(retVal, clause, descending, joinablesCloser);
-          }
-
-          return PostJoinCursor.wrap(
-              retVal,
-              VirtualColumns.create(postJoinVirtualColumns),
-              joinFilterSplit.getJoinTableFilter().orElse(null)
-          );
-        }
-    ).withBaggage(joinablesCloser);
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                     .setFilter(filter)
+                                                     .setInterval(interval)
+                                                     .setGranularity(gran)
+                                                     .setVirtualColumns(virtualColumns)
+                                                     .isDescending(descending)
+                                                     .setQueryMetrics(queryMetrics)
+                                                     .build();
+    return asCursorMaker(buildSpec).makeCursors();
   }
 
   /**

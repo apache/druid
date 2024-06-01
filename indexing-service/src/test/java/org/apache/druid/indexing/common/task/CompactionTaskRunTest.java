@@ -75,11 +75,11 @@ import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.DataSegmentsWithSchemas;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.join.NoopJoinableFactory;
@@ -1753,14 +1753,13 @@ public class CompactionTaskRunTest extends IngestionTestBase
           new QueryableIndexStorageAdapter(testUtils.getTestIndexIO().loadIndex(segmentFile)),
           segment.getInterval()
       );
-      final Sequence<Cursor> cursorSequence = adapter.getAdapter().makeCursors(
-          null,
-          segment.getInterval(),
-          VirtualColumns.EMPTY,
-          Granularities.ALL,
-          false,
-          null
-      );
+      final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                       .setGranularity(Granularities.ALL)
+                                                       .setInterval(segment.getInterval())
+                                                       .build();
+      final Sequence<Cursor> cursorSequence = adapter.getAdapter()
+                                                     .asCursorMaker(buildSpec)
+                                                     .makeCursors();
 
       cursorSequence.accumulate(rowsFromSegment, (accumulated, cursor) -> {
         cursor.reset();
@@ -1888,14 +1887,13 @@ public class CompactionTaskRunTest extends IngestionTestBase
           new QueryableIndexStorageAdapter(testUtils.getTestIndexIO().loadIndex(segmentFile)),
           segment.getInterval()
       );
-      final Sequence<Cursor> cursorSequence = adapter.getAdapter().makeCursors(
-          null,
-          segment.getInterval(),
-          VirtualColumns.EMPTY,
-          Granularities.ALL,
-          false,
-          null
-      );
+      final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                       .setGranularity(Granularities.ALL)
+                                                       .setInterval(segment.getInterval())
+                                                       .build();
+      final Sequence<Cursor> cursorSequence = adapter.getAdapter()
+                                                     .asCursorMaker(buildSpec)
+                                                     .makeCursors();
 
       cursorSequence.accumulate(rowsFromSegment, (accumulated, cursor) -> {
         cursor.reset();
@@ -2118,14 +2116,13 @@ public class CompactionTaskRunTest extends IngestionTestBase
           new QueryableIndexStorageAdapter(testUtils.getTestIndexIO().loadIndex(segmentFile)),
           segment.getInterval()
       );
-      final Sequence<Cursor> cursorSequence = adapter.getAdapter().makeCursors(
-          null,
-          segment.getInterval(),
-          VirtualColumns.EMPTY,
-          Granularities.ALL,
-          false,
-          null
-      );
+      final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                       .setGranularity(Granularities.ALL)
+                                                       .setInterval(segment.getInterval())
+                                                       .build();
+      final Sequence<Cursor> cursorSequence = adapter.getAdapter()
+                                                     .asCursorMaker(buildSpec)
+                                                     .makeCursors();
 
       cursorSequence.accumulate(rowsFromSegment, (accumulated, cursor) -> {
         cursor.reset();

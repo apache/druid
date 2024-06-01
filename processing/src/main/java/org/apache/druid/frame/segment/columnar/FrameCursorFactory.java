@@ -37,7 +37,9 @@ import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.segment.ColumnCache;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorFactory;
+import org.apache.druid.segment.CursorMaker;
 import org.apache.druid.segment.QueryableIndexColumnSelectorFactory;
 import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.SimpleDescendingOffset;
@@ -81,6 +83,90 @@ public class FrameCursorFactory implements CursorFactory
   }
 
   @Override
+  public CursorMaker asCursorMaker(CursorBuildSpec spec)
+  {
+    return new CursorMaker()
+    {
+      @Override
+      public boolean canVectorize()
+      {
+        return (spec.getFilter() == null || spec.getFilter().canVectorizeMatcher(signature))
+               && spec.getVirtualColumns().canVectorize(signature)
+               && !spec.isDescending();
+      }
+
+      @Override
+      public Sequence<Cursor> makeCursors()
+      {
+        final FrameQueryableIndex index = new FrameQueryableIndex(frame, signature, columnReaders);
+
+        if (Granularities.ALL.equals(spec.getGranularity())) {
+          final Closer closer = Closer.create();
+          final Cursor cursor = makeGranularityAllCursor(
+              new ColumnCache(index, closer),
+              frame.numRows(),
+              spec.getFilter(),
+              spec.getInterval(),
+              spec.getVirtualColumns(),
+              spec.isDescending()
+          );
+
+          return Sequences.simple(Collections.singletonList(cursor)).withBaggage(closer);
+        } else {
+          // Not currently needed for the intended use cases of frame-based cursors.
+          throw new UOE("Granularity [%s] not supported", spec.getGranularity());
+        }
+      }
+
+      @Nullable
+      @Override
+      public VectorCursor makeVectorCursor()
+      {
+        if (!canVectorize()) {
+          throw new ISE("Cannot vectorize. Check 'canVectorize' before calling 'makeVectorCursor'.");
+        }
+
+        final Closer closer = Closer.create();
+        final FrameQueryableIndex index = new FrameQueryableIndex(frame, signature, columnReaders);
+        final Filter filterToUse = FrameCursorUtils.buildFilter(spec.getFilter(), spec.getInterval());
+        final VectorOffset baseOffset = new NoFilterVectorOffset(
+            spec.getQueryContext().getVectorSize(),
+            0,
+            frame.numRows()
+        );
+        final ColumnCache columnCache = new ColumnCache(index, closer);
+
+        // baseColumnSelectorFactory using baseOffset is the column selector for filtering.
+        final VectorColumnSelectorFactory baseColumnSelectorFactory = new QueryableIndexVectorColumnSelectorFactory(
+            index,
+            baseOffset,
+            columnCache,
+            spec.getVirtualColumns()
+        );
+
+        if (filterToUse == null) {
+          return new FrameVectorCursor(baseOffset, baseColumnSelectorFactory, closer);
+        } else {
+          final VectorValueMatcher matcher = filterToUse.makeVectorMatcher(baseColumnSelectorFactory);
+          final FilteredVectorOffset filteredOffset = FilteredVectorOffset.create(
+              baseOffset,
+              matcher
+          );
+
+          final VectorColumnSelectorFactory filteredColumnSelectorFactory = new QueryableIndexVectorColumnSelectorFactory(
+              index,
+              filteredOffset,
+              columnCache,
+              spec.getVirtualColumns()
+          );
+
+          return new FrameVectorCursor(filteredOffset, filteredColumnSelectorFactory, closer);
+        }
+      }
+    };
+  }
+
+  @Override
   public boolean canVectorize(@Nullable Filter filter, VirtualColumns virtualColumns, boolean descending)
   {
     return (filter == null || filter.canVectorizeMatcher(signature))
@@ -98,24 +184,7 @@ public class FrameCursorFactory implements CursorFactory
       @Nullable QueryMetrics<?> queryMetrics
   )
   {
-    final FrameQueryableIndex index = new FrameQueryableIndex(frame, signature, columnReaders);
-
-    if (Granularities.ALL.equals(gran)) {
-      final Closer closer = Closer.create();
-      final Cursor cursor = makeGranularityAllCursor(
-          new ColumnCache(index, closer),
-          frame.numRows(),
-          filter,
-          interval,
-          virtualColumns,
-          descending
-      );
-
-      return Sequences.simple(Collections.singletonList(cursor)).withBaggage(closer);
-    } else {
-      // Not currently needed for the intended use cases of frame-based cursors.
-      throw new UOE("Granularity [%s] not supported", gran);
-    }
+    return delegateMakeCursorToMaker(filter, interval, virtualColumns, gran, descending, queryMetrics);
   }
 
   @Nullable
@@ -129,42 +198,7 @@ public class FrameCursorFactory implements CursorFactory
       @Nullable QueryMetrics<?> queryMetrics
   )
   {
-    if (!canVectorize(filter, virtualColumns, descending)) {
-      throw new ISE("Cannot vectorize. Check 'canVectorize' before calling 'makeVectorCursor'.");
-    }
-
-    final Closer closer = Closer.create();
-    final FrameQueryableIndex index = new FrameQueryableIndex(frame, signature, columnReaders);
-    final Filter filterToUse = FrameCursorUtils.buildFilter(filter, interval);
-    final VectorOffset baseOffset = new NoFilterVectorOffset(vectorSize, 0, frame.numRows());
-    final ColumnCache columnCache = new ColumnCache(index, closer);
-
-    // baseColumnSelectorFactory using baseOffset is the column selector for filtering.
-    final VectorColumnSelectorFactory baseColumnSelectorFactory = new QueryableIndexVectorColumnSelectorFactory(
-        index,
-        baseOffset,
-        columnCache,
-        virtualColumns
-    );
-
-    if (filterToUse == null) {
-      return new FrameVectorCursor(baseOffset, baseColumnSelectorFactory, closer);
-    } else {
-      final VectorValueMatcher matcher = filterToUse.makeVectorMatcher(baseColumnSelectorFactory);
-      final FilteredVectorOffset filteredOffset = FilteredVectorOffset.create(
-          baseOffset,
-          matcher
-      );
-
-      final VectorColumnSelectorFactory filteredColumnSelectorFactory = new QueryableIndexVectorColumnSelectorFactory(
-          index,
-          filteredOffset,
-          columnCache,
-          virtualColumns
-      );
-
-      return new FrameVectorCursor(filteredOffset, filteredColumnSelectorFactory, closer);
-    }
+    return delegateMakeVectorCursorToMaker(filter, interval, virtualColumns, descending, vectorSize, queryMetrics);
   }
 
   private static Cursor makeGranularityAllCursor(

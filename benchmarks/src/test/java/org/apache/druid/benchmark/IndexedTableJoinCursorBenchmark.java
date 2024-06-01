@@ -37,6 +37,7 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
@@ -233,14 +234,7 @@ public class IndexedTableJoinCursorBenchmark
 
   private Sequence<Cursor> makeCursors()
   {
-    return hashJoinSegment.asStorageAdapter().makeCursors(
-        null,
-        Intervals.ETERNITY,
-        VirtualColumns.EMPTY,
-        Granularities.ALL,
-        false,
-        null
-    );
+    return hashJoinSegment.asStorageAdapter().asCursorMaker(CursorBuildSpec.FULL_SCAN).makeCursors();
   }
 
 

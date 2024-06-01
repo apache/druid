@@ -44,7 +44,6 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.Unit;
-import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.Yielder;
@@ -62,7 +61,6 @@ import org.apache.druid.msq.querykit.BaseLeafFrameProcessor;
 import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.IterableRowsCursorHelper;
-import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.scan.ScanResultValue;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
@@ -77,9 +75,7 @@ import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.timeline.SegmentId;
-import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
@@ -445,18 +441,6 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
       );
     }
 
-    final List<Interval> intervals = query.getQuerySegmentSpec().getIntervals();
-    Preconditions.checkArgument(intervals.size() == 1, "Can only handle a single interval, got[%s]", intervals);
-
-    final Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getFilter()));
-
-    return adapter.makeCursors(
-        filter,
-        intervals.get(0),
-        query.getVirtualColumns(),
-        Granularities.ALL,
-        ScanQuery.Order.DESCENDING.equals(query.getTimeOrder()),
-        null
-    );
+    return adapter.asCursorMaker(query.asCursorBuildSpec(null)).makeCursors();
   }
 }

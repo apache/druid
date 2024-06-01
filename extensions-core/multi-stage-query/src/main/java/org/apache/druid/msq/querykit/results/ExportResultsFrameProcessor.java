@@ -33,14 +33,13 @@ import org.apache.druid.frame.processor.ReturnOrAwait;
 import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.segment.FrameStorageAdapter;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.util.SequenceUtils;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
-import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.ColumnMapping;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
@@ -145,8 +144,8 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
   private void exportFrame(final Frame frame)
   {
     final Sequence<Cursor> cursorSequence =
-        new FrameStorageAdapter(frame, frameReader, Intervals.ETERNITY)
-            .makeCursors(null, Intervals.ETERNITY, VirtualColumns.EMPTY, Granularities.ALL, false, null);
+        new FrameStorageAdapter(frame, frameReader, Intervals.ETERNITY).asCursorMaker(CursorBuildSpec.FULL_SCAN)
+                                                                       .makeCursors();
 
     SequenceUtils.forEach(
         cursorSequence,

@@ -20,21 +20,18 @@
 package org.apache.druid.frame;
 
 import com.google.common.collect.Iterables;
-import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
-import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorMaker;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.ObjectColumnSelector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
@@ -42,7 +39,6 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.joda.time.DateTime;
-import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 
@@ -57,28 +53,12 @@ public class TestArrayStorageAdapter extends QueryableIndexStorageAdapter
   }
 
   @Override
-  public boolean canVectorize(
-      @Nullable Filter filter,
-      VirtualColumns virtualColumns,
-      boolean descending
-  )
+  public CursorMaker asCursorMaker(CursorBuildSpec spec)
   {
-    return false;
+    final CursorMaker delegate = super.asCursorMaker(spec);
+    return () -> delegate.makeCursors().map(DecoratedCursor::new);
   }
 
-  @Override
-  public Sequence<Cursor> makeCursors(
-      @Nullable final Filter filter,
-      final Interval interval,
-      final VirtualColumns virtualColumns,
-      final Granularity gran,
-      final boolean descending,
-      @Nullable final QueryMetrics<?> queryMetrics
-  )
-  {
-    return super.makeCursors(filter, interval, virtualColumns, gran, descending, queryMetrics)
-                .map(DecoratedCursor::new);
-  }
 
   @Override
   public RowSignature getRowSignature()

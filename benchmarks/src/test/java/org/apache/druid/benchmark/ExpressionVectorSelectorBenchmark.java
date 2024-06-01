@@ -33,6 +33,8 @@ import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.segment.ColumnCache;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorMaker;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
@@ -150,15 +152,14 @@ public class ExpressionVectorSelectorBenchmark
             )
         )
     );
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                     .setInterval(index.getDataInterval())
+                                                     .setGranularity(Granularities.ALL)
+                                                     .setVirtualColumns(virtualColumns)
+                                                     .build();
+    final CursorMaker cursorMaker = new QueryableIndexStorageAdapter(index).asCursorMaker(buildSpec);
     if (vectorize) {
-      VectorCursor cursor = new QueryableIndexStorageAdapter(index).makeVectorCursor(
-          null,
-          index.getDataInterval(),
-          virtualColumns,
-          false,
-          512,
-          null
-      );
+      VectorCursor cursor = cursorMaker.makeVectorCursor();
       if (outputType.isNumeric()) {
         VectorValueSelector selector = cursor.getColumnSelectorFactory().makeValueSelector("v");
         if (outputType.is(ExprType.DOUBLE)) {
@@ -177,15 +178,7 @@ public class ExpressionVectorSelectorBenchmark
         closer.register(cursor);
       }
     } else {
-      Sequence<Cursor> cursors = new QueryableIndexStorageAdapter(index).makeCursors(
-          null,
-          index.getDataInterval(),
-          virtualColumns,
-          Granularities.ALL,
-          false,
-          null
-      );
-
+      final Sequence<Cursor> cursors = cursorMaker.makeCursors();
       int rowCount = cursors
           .map(cursor -> {
             final ColumnValueSelector selector = cursor.getColumnSelectorFactory().makeColumnValueSelector("v");

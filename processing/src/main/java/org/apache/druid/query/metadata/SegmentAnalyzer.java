@@ -31,11 +31,11 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.metadata.metadata.ColumnAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.StorageAdapter;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -57,6 +57,7 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -276,16 +277,12 @@ public class SegmentAnalyzer
     if (analyzingSize()) {
       final DateTime start = storageAdapter.getMinTime();
       final DateTime end = storageAdapter.getMaxTime();
-
-      final Sequence<Cursor> cursors =
-          storageAdapter.makeCursors(
-              null,
-              new Interval(start, end),
-              VirtualColumns.EMPTY,
-              Granularities.ALL,
-              false,
-              null
-          );
+      final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                       .setColumns(Collections.singletonList(columnName))
+                                                       .setInterval(new Interval(start, end))
+                                                       .setGranularity(Granularities.ALL)
+                                                       .build();
+      final Sequence<Cursor> cursors = storageAdapter.asCursorMaker(buildSpec).makeCursors();
 
       size = cursors.accumulate(
           0L,

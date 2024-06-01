@@ -31,6 +31,7 @@ import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnCache;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexColumnSelectorFactory;
@@ -113,15 +114,15 @@ public class BroadcastSegmentIndexedTable implements IndexedTable
       indexBuilders.add(m);
     }
 
-    // sort of like the dump segment tool, but build key column indexes when reading the segment
-    final Sequence<Cursor> cursors = adapter.makeCursors(
-        null,
-        queryableIndex.getDataInterval().withChronology(ISOChronology.getInstanceUTC()),
-        VirtualColumns.EMPTY,
-        Granularities.ALL,
-        false,
-        null
-    );
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                     .setInterval(
+                                                         queryableIndex.getDataInterval()
+                                                                       .withChronology(ISOChronology.getInstanceUTC())
+                                                     )
+                                                     .setGranularity(Granularities.ALL)
+                                                     .setColumns(keyColumnNames)
+                                                     .build();
+    final Sequence<Cursor> cursors = adapter.asCursorMaker(buildSpec).makeCursors();
 
     final Sequence<Integer> sequence = Sequences.map(
         cursors,

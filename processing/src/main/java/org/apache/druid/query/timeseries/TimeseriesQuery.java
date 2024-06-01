@@ -25,6 +25,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
@@ -32,13 +34,17 @@ import org.apache.druid.query.Druids;
 import org.apache.druid.query.PerSegmentQueryOptimizationContext;
 import org.apache.druid.query.Queries;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec.LimitJsonIncludeFilter;
 import org.apache.druid.query.spec.QuerySegmentSpec;
+import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.filter.Filters;
+import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -177,6 +183,31 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
         Collections.emptyList(),
         aggregatorSpecs,
         Collections.emptyList()
+    );
+  }
+
+
+  @Override
+  public CursorBuildSpec asCursorBuildSpec(@Nullable QueryMetrics<?> queryMetrics)
+  {
+    final Set<String> columns = getRequiredColumns();
+    final List<Interval> intervals = getIntervals();
+    if (intervals.size() > 1) {
+      throw DruidException.defensive(
+          "This method can only be called after query is reduced to a single segment interval, got [%s]",
+          intervals
+      );
+    }
+    return new CursorBuildSpec(
+        Filters.convertToCNFFromQueryContext(this, Filters.toFilter(getFilter())),
+        Iterables.getOnlyElement(intervals),
+        getGranularity(),
+        columns == null ? Collections.emptyList() : new ArrayList<>(columns),
+        getVirtualColumns(),
+        getAggregatorSpecs(),
+        context(),
+        isDescending(),
+        queryMetrics
     );
   }
 

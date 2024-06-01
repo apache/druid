@@ -26,16 +26,14 @@ import org.apache.druid.frame.write.FrameWriter;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.frame.write.FrameWriters;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.rowsandcols.column.Column;
 import org.apache.druid.query.rowsandcols.concrete.ColumnBasedFrameRowsAndColumns;
 import org.apache.druid.segment.CloseableShapeshifter;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.StorageAdapter;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nonnull;
@@ -99,14 +97,7 @@ public class StorageAdapterRowsAndColumns implements CloseableShapeshifter, Rows
   @Nonnull
   private static RowsAndColumns materialize(StorageAdapter as)
   {
-    final Sequence<Cursor> cursors = as.makeCursors(
-        null,
-        Intervals.ETERNITY,
-        VirtualColumns.EMPTY,
-        Granularities.ALL,
-        false,
-        null
-    );
+    final Sequence<Cursor> cursors = as.asCursorMaker(CursorBuildSpec.FULL_SCAN).makeCursors();
 
     RowSignature rowSignature = as.getRowSignature();
 

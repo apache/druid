@@ -31,10 +31,9 @@ import org.apache.druid.frame.segment.FrameStorageAdapter;
 import org.apache.druid.frame.testutil.FrameSequenceBuilder;
 import org.apache.druid.frame.testutil.FrameTestUtil;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.TestIndex;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
@@ -129,28 +128,22 @@ public abstract class OutputChannelFactoryTest extends InitializedNullHandlingTe
     readableFrameChannel.close();
 
     // build list of rows from written and read data to verify
-    List<List<Object>> writtenData = adapter.makeCursors(
-        null,
-        Intervals.ETERNITY,
-        VirtualColumns.EMPTY,
-        Granularities.ALL,
-        false,
-        null
-    ).flatMap(cursor -> FrameTestUtil.readRowsFromCursor(cursor, adapter.getRowSignature())).toList();
+    List<List<Object>> writtenData =
+        adapter.asCursorMaker(CursorBuildSpec.FULL_SCAN)
+               .makeCursors()
+               .flatMap(cursor -> FrameTestUtil.readRowsFromCursor(cursor, adapter.getRowSignature()))
+               .toList();
 
     FrameStorageAdapter frameStorageAdapter = new FrameStorageAdapter(
         readbackFrame,
         FrameReader.create(adapter.getRowSignature()),
         Intervals.ETERNITY
     );
-    List<List<Object>> readData = frameStorageAdapter.makeCursors(
-        null,
-        Intervals.ETERNITY,
-        VirtualColumns.EMPTY,
-        Granularities.ALL,
-        false,
-        null
-    ).flatMap(cursor -> FrameTestUtil.readRowsFromCursor(cursor, adapter.getRowSignature())).toList();
+    List<List<Object>> readData =
+        adapter.asCursorMaker(CursorBuildSpec.FULL_SCAN)
+               .makeCursors()
+               .flatMap(cursor -> FrameTestUtil.readRowsFromCursor(cursor, adapter.getRowSignature()))
+               .toList();
 
     Assert.assertEquals("Read rows count is different from written rows count", writtenData.size(), readData.size());
     Assert.assertEquals("Read data is different from written data", writtenData, readData);

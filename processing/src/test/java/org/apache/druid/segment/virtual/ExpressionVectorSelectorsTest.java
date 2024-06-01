@@ -31,6 +31,7 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.DeprecatedQueryableIndexColumnSelector;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
@@ -229,14 +230,12 @@ public class ExpressionVectorSelectorsTest extends InitializedNullHandlingTest
         )
     );
     final QueryableIndexStorageAdapter storageAdapter = new QueryableIndexStorageAdapter(index);
-    VectorCursor cursor = storageAdapter.makeVectorCursor(
-        null,
-        index.getDataInterval(),
-        virtualColumns,
-        false,
-        512,
-        null
-    );
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                     .setInterval(index.getDataInterval())
+                                                     .setGranularity(Granularities.ALL)
+                                                     .setVirtualColumns(virtualColumns)
+                                                     .build();
+    final VectorCursor cursor = storageAdapter.asCursorMaker(buildSpec).makeVectorCursor();
 
     ColumnCapabilities capabilities = virtualColumns.getColumnCapabilitiesWithFallback(storageAdapter, "v");
 
@@ -299,14 +298,7 @@ public class ExpressionVectorSelectorsTest extends InitializedNullHandlingTest
     }
     closer.register(cursor);
 
-    Sequence<Cursor> cursors = new QueryableIndexStorageAdapter(index).makeCursors(
-        null,
-        index.getDataInterval(),
-        virtualColumns,
-        Granularities.ALL,
-        false,
-        null
-    );
+    Sequence<Cursor> cursors = new QueryableIndexStorageAdapter(index).asCursorMaker(buildSpec).makeCursors();
 
     int rowCountCursor = cursors
         .map(nonVectorized -> {
