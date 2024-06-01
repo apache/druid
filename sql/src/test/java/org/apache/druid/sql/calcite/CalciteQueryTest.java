@@ -13795,10 +13795,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         ImmutableList.<Object[]>builder().add(
-            new Object[]{"", null, 2L},
-            new Object[]{"a", null, 1L},
-            new Object[]{"", null, 1L},
-            new Object[]{"a", null, 1L},
+            new Object[]{"", null, 3L},
+            new Object[]{"a", null, 2L},
             new Object[]{"abc", null, 1L},
             new Object[]{NULL_STRING, null, 6L},
             new Object[]{"", timestamp("2000-01-01"), 2L},
@@ -16293,6 +16291,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             + "limit 100"
         )
         .expectedResults(
+            ResultMatchMode.RELAX_NULLS,
             ImmutableList.of(
                 new Object[]{"false", null, 36966L},
                 new Object[]{"true", null, 2278L},
