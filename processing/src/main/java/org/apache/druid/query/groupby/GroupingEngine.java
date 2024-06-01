@@ -695,7 +695,7 @@ public class GroupingEngine
         aggsAndPostAggs = getAggregatorAndPostAggregatorNames(baseSubtotalQuery);
 
         DefaultLimitSpec limitSpec = (DefaultLimitSpec) baseSubtotalQuery.getLimitSpec();
-        if (!limitSpec.getColumns().isEmpty()) {
+        if (!limitSpec.getColumns().isEmpty() && limitSpec.isLimited()) {
           Map<String, String> dimToOutputNames = baseSubtotalQuery.getDimensions()
                                                                   .stream()
                                                                   .collect(Collectors.toMap(
