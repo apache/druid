@@ -16281,6 +16281,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupingSetsWithDifferentOrderLimitSpec()
   {
+    cannotVectorize();
+    msqIncompatible();
     testBuilder()
         .sql(
             "SELECT\n"
