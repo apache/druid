@@ -205,7 +205,7 @@ public class AzureClientFactoryTest
 
     final CountDownLatch latch = new CountDownLatch(threads);
     ExecutorService executorService = Execs.multiThreaded(threads, "azure-client-fetcher-%d");
-    final AtomicReference<Exception> failureExecption = new AtomicReference<>();
+    final AtomicReference<Exception> failureException = new AtomicReference<>();
     for (int i = 0; i < threads; i++) {
       final int retry = i % 2;
       executorService.submit(() -> {
@@ -216,13 +216,13 @@ public class AzureClientFactoryTest
           Assert.assertEquals(expectedAccountUrl.toString(), blobServiceClient.getAccountUrl());
         }
         catch (Exception e) {
-          failureExecption.compareAndSet(null, e);
+          failureException.compareAndSet(null, e);
         }
       });
     }
     executorService.awaitTermination(1000, TimeUnit.MICROSECONDS);
-    if (failureExecption.get() != null) {
-      throw failureExecption.get();
+    if (failureException.get() != null) {
+      throw failureException.get();
     }
   }
 }
