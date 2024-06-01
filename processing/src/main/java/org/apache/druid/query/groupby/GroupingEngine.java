@@ -686,13 +686,27 @@ public class GroupingEngine
           processingConfig.intermediateComputeSizeBytes()
       );
 
-      List<String> queryDimNames = baseSubtotalQuery.getDimensions().stream().map(DimensionSpec::getOutputName)
+      List<String> queryDimNamesInOrder = baseSubtotalQuery.getDimensions().stream().map(DimensionSpec::getOutputName)
                                                     .collect(Collectors.toList());
 
       // Only needed to make LimitSpec.filterColumns(..) call later in case base query has a non default LimitSpec.
       Set<String> aggsAndPostAggs = null;
       if (!(baseSubtotalQuery.getLimitSpec() instanceof NoopLimitSpec)) {
         aggsAndPostAggs = getAggregatorAndPostAggregatorNames(baseSubtotalQuery);
+
+        DefaultLimitSpec limitSpec = (DefaultLimitSpec) baseSubtotalQuery.getLimitSpec();
+        if (!limitSpec.getColumns().isEmpty()) {
+          Map<String, String> dimToOutputNames = baseSubtotalQuery.getDimensions()
+                                                                  .stream()
+                                                                  .collect(Collectors.toMap(
+                                                                      DimensionSpec::getDimension,
+                                                                      DimensionSpec::getOutputName
+                                                                  ));
+          queryDimNamesInOrder = limitSpec.getColumns()
+                                          .stream()
+                                          .map(spec -> dimToOutputNames.get(spec.getDimension()))
+                                          .collect(Collectors.toList());
+        }
       }
 
       List<List<String>> subtotals = query.getSubtotalsSpec();
@@ -724,7 +738,7 @@ public class GroupingEngine
             .withLimitSpec(subtotalQueryLimitSpec);
 
         final GroupByRowProcessor.ResultSupplier resultSupplierOneFinal = resultSupplierOne;
-        if (Utils.isPrefix(subtotalSpec, queryDimNames)) {
+        if (Utils.isPrefix(subtotalSpec, queryDimNamesInOrder)) {
           // Since subtotalSpec is a prefix of base query dimensions, so results from base query are also sorted
           // by subtotalSpec as needed by stream merging.
           subtotalsResults.add(
