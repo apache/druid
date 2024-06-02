@@ -3183,39 +3183,32 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
           final DateTime earliestTaskStart = computeEarliestTaskStartTime(group);
           final Duration runDuration = Duration.millis(DateTimes.nowUtc().getMillis() - earliestTaskStart.getMillis());
-          if (stopTasksEarly) {
+          if (stopTasksEarly || group.getHandoffEarly()) {
+            // If shutdownEarly has been set, stop tasks irrespective of stopTaskCount
             log.info(
                 "Stopping taskGroup[%d] early after running for duration[%s].",
                 groupId, runDuration
             );
             futureGroupIds.add(groupId);
             futures.add(checkpointTaskGroup(group, true));
-          } else if (group.getHandoffEarly()) {
-            // If shutdownEarly has been set, stop tasks irrespective of stopTaskCount
-            log.info(
-                "Stopping taskGroup[%d] after running for duration[%s] as early handoff has been requested.",
-                groupId, runDuration
-            );
-            futureGroupIds.add(groupId);
-            futures.add(checkpointTaskGroup(group, true));
-            stoppedTasks.getAndIncrement();
-          } else {
-            if (earliestTaskStart.plus(ioConfig.getTaskDuration()).isBeforeNow()) {
-              // if this task has run longer than the configured duration
-              // as long as the pending task groups are less than the configured stop task count.
-              if (pendingCompletionTaskGroups.values()
-                                             .stream()
-                                             .mapToInt(CopyOnWriteArrayList::size)
-                                             .sum() + stoppedTasks.get()
-                  < ioConfig.getMaxAllowedStops()) {
-                log.info(
-                    "Stopping taskGroup[%d] as it has already run for duration[%s], configured task duration[%s].",
-                    groupId, runDuration, ioConfig.getTaskDuration()
-                );
-                futureGroupIds.add(groupId);
-                futures.add(checkpointTaskGroup(group, true));
-                stoppedTasks.getAndIncrement();
-              }
+            if (group.getHandoffEarly()) {
+              stoppedTasks.getAndIncrement();
+            }
+          } else if (earliestTaskStart.plus(ioConfig.getTaskDuration()).isBeforeNow()) {
+            // if this task has run longer than the configured duration
+            // as long as the pending task groups are less than the configured stop task count.
+            if (pendingCompletionTaskGroups.values()
+                                           .stream()
+                                           .mapToInt(CopyOnWriteArrayList::size)
+                                           .sum() + stoppedTasks.get()
+                < ioConfig.getMaxAllowedStops()) {
+              log.info(
+                  "Stopping taskGroup[%d] as it has already run for duration[%s], configured task duration[%s].",
+                  groupId, runDuration, ioConfig.getTaskDuration()
+              );
+              futureGroupIds.add(groupId);
+              futures.add(checkpointTaskGroup(group, true));
+              stoppedTasks.getAndIncrement();
             }
           }
         });
