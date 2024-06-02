@@ -36,7 +36,7 @@ import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -48,7 +48,7 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
 
   private final LifecycleLock lifecycleLock = new LifecycleLock();
 
-  private final String selfId;
+  private final DruidNode self;
   private final CuratorFramework curator;
   private final String latchPath;
 
@@ -56,7 +56,6 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
 
   private DruidLeaderSelector.Listener listener = null;
   private final AtomicReference<LeaderLatch> leaderLatch = new AtomicReference<>();
-  private final AtomicInteger latchIdCounter = new AtomicInteger(0);
 
   private volatile boolean leader = false;
   private volatile int term = 0;
@@ -64,7 +63,7 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
   public CuratorDruidLeaderSelector(CuratorFramework curator, @Self DruidNode self, String latchPath)
   {
     this.curator = curator;
-    this.selfId = self.getServiceScheme() + "://" + self.getHostAndPortToUse();
+    this.self = self;
     this.latchPath = latchPath;
 
     // Creating a LeaderLatch here allows us to query for the current leader. We will not be considered for leadership
@@ -75,13 +74,12 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
 
   private LeaderLatch createNewLeaderLatch()
   {
-    return new LeaderLatch(curator, latchPath, selfId);
+    return new LeaderLatch(curator, latchPath, self.getServiceScheme() + "://" + self.getHostAndPortToUse());
   }
 
   private LeaderLatch createNewLeaderLatchWithListener()
   {
     final LeaderLatch newLeaderLatch = createNewLeaderLatch();
-    final int latchId = latchIdCounter.incrementAndGet();
 
     newLeaderLatch.addListener(
         new LeaderLatchListener()
@@ -90,14 +88,9 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
           public void isLeader()
           {
             try {
-              if (newLeaderLatch.getState() == LeaderLatch.State.CLOSED) {
-                log.warn("[%s][%d] Ignoring request to become leader as latch is already closed.", selfId, latchId);
+              if (leader) {
+                log.warn("I'm being asked to become leader. But I am already the leader. Ignored event.");
                 return;
-              } else if (leader) {
-                log.warn("[%s][%d] I'm being asked to become leader. But I am already the leader. Ignored event.", selfId, latchId);
-                return;
-              } else {
-                log.info("[%s][%d] I am now the leader. Latch state[%s]", selfId, latchId, newLeaderLatch.getState());
               }
 
               leader = true;
@@ -105,8 +98,26 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
               listener.becomeLeader();
             }
             catch (Exception ex) {
-              log.makeAlert(ex, "[%s] listener becomeLeader() failed. Unable to become leader", selfId).emit();
-              giveUpLeadershipAndRecreateLatch(-1);
+              log.makeAlert(ex, "listener becomeLeader() failed. Unable to become leader").emit();
+
+              // give others a chance to become leader.
+              CloseableUtils.closeAndSuppressExceptions(
+                  createNewLeaderLatchWithListener(),
+                  e -> log.warn("Could not close old leader latch; continuing with new one anyway.")
+              );
+
+              leader = false;
+              try {
+                //Small delay before starting the latch so that others waiting are chosen to become leader.
+                Thread.sleep(ThreadLocalRandom.current().nextInt(1000, 5000));
+                leaderLatch.get().start();
+              }
+              catch (Exception e) {
+                // If an exception gets thrown out here, then the node will zombie out 'cause it won't be looking for
+                // the latch anymore.  I don't believe it's actually possible for an Exception to throw out here, but
+                // Curator likes to have "throws Exception" on methods so it might happen...
+                log.makeAlert(e, "I am a zombie").emit();
+              }
             }
           }
 
@@ -115,19 +126,15 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
           {
             try {
               if (!leader) {
-                log.warn("[%s][%d] I'm being asked to stop being leader. But I am not the leader. Ignored event.", selfId, latchId);
+                log.warn("I'm being asked to stop being leader. But I am not the leader. Ignored event.");
                 return;
-              } else {
-                log.info("[%s][%d] Giving up leadership", selfId, latchId);
               }
 
               leader = false;
               listener.stopBeingLeader();
-
-              giveUpLeadershipAndRecreateLatch(latchId);
             }
             catch (Exception ex) {
-              log.makeAlert(ex, "[%s] listener.stopBeingLeader() failed. Unable to stopBeingLeader", selfId).emit();
+              log.makeAlert(ex, "listener.stopBeingLeader() failed. Unable to stopBeingLeader").emit();
             }
           }
         },
@@ -135,33 +142,6 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
     );
 
     return leaderLatch.getAndSet(newLeaderLatch);
-  }
-
-  /**
-   * Recreates the leader latch and allows other nodes to become leader.
-   */
-  private void giveUpLeadershipAndRecreateLatch(int latchId)
-  {
-    // give others a chance to become leader.
-    log.info("[%s][%d] Recreating leader latch to allow other nodes to become leader.", selfId, latchId);
-    final LeaderLatch oldLatch = createNewLeaderLatchWithListener();
-    CloseableUtils.closeAndSuppressExceptions(
-        oldLatch,
-        e -> log.warn("[%s] Could not close old leader latch; continuing with new one anyway.", selfId)
-    );
-
-    leader = false;
-    try {
-      // Small delay before starting the latch so that others waiting are chosen to become leader.
-      Thread.sleep(20000);
-      log.info("[%s][%d] Now starting the latch", selfId, latchId);
-      leaderLatch.get().start();
-    }
-    catch (Exception e) {
-      // An exception can be caught here if interrupted while sleeping or if start() fails.
-      // If that happens, the node will zombie out as it won't be looking for the latch anymore.
-      log.makeAlert(e, "[%s] I am a zombie", selfId).emit();
-    }
   }
 
   @Nullable
