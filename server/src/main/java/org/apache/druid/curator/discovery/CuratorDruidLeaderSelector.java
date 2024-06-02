@@ -220,7 +220,9 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
     listenerExecutor.shutdownNow();
   }
 
-  // Method to handle connection state changes
+  /**
+   * Handles connection state changes. Recreates the leader latch if connection to zookeeper is lost.
+   */
   private void handleConnectionStateChanged(CuratorFramework client, ConnectionState newState)
   {
     switch (newState) {
