@@ -124,6 +124,7 @@ public class RowBasedGrouperHelper
       final DruidProcessingConfig processingConfig,
       final Supplier<ByteBuffer> bufferSupplier,
       final LimitedTemporaryStorage temporaryStorage,
+      final ObjectMapper jsonMapper,
       final ObjectMapper spillMapper,
       final int mergeBufferSize
   )
@@ -137,6 +138,7 @@ public class RowBasedGrouperHelper
         null,
         SINGLE_THREAD_CONCURRENCY_HINT,
         temporaryStorage,
+        jsonMapper,
         spillMapper,
         null,
         UNKNOWN_THREAD_PRIORITY,
@@ -186,6 +188,7 @@ public class RowBasedGrouperHelper
       @Nullable final ReferenceCountingResourceHolder<ByteBuffer> combineBufferHolder,
       final int concurrencyHint,
       final LimitedTemporaryStorage temporaryStorage,
+      final ObjectMapper jsonMapper,
       final ObjectMapper spillMapper,
       @Nullable final ListeningExecutorService grouperSorter,
       final int priority,
@@ -310,7 +313,7 @@ public class RowBasedGrouperHelper
         includeTimestamp,
         columnSelectorFactory,
         valueTypes,
-        spillMapper
+        jsonMapper
     );
 
     final Predicate<ResultRow> rowPredicate;

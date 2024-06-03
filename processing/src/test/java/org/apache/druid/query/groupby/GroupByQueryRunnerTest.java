@@ -356,8 +356,8 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         configSupplier,
         bufferPools.getProcessingPool(),
         groupByResourcesReservationPool,
-        TestHelper.makeJsonMapper(),
         mapper,
+        TestHelper.makeSmileMapper(),
         QueryRunnerTestHelper.NOOP_QUERYWATCHER
     );
     final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(

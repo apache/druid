@@ -91,6 +91,7 @@ public class GroupByRowProcessor
       final GroupByQueryConfig config,
       final DruidProcessingConfig processingConfig,
       final GroupByQueryResources resource,
+      final ObjectMapper jsonMapper,
       final ObjectMapper spillMapper,
       final String processingTmpDir,
       final int mergeBufferSize
@@ -127,6 +128,7 @@ public class GroupByRowProcessor
           }
         },
         temporaryStorage,
+        jsonMapper,
         spillMapper,
         mergeBufferSize
     );
