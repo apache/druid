@@ -19,11 +19,13 @@
 
 package org.apache.druid.k8s.overlord.execution;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.query.DruidMetrics;
+import org.apache.druid.segment.TestHelper;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -78,12 +80,57 @@ public class SelectorTest
   }
 
   @Test
+  public void shouldReturnFalseWhenSomeTagsDoNotMatch()
+  {
+    String dataSource = "my_table";
+    Map<String, Set<String>> cxtTagsConditions = new HashMap<>();
+    cxtTagsConditions.put("nonexistentTag", Sets.newHashSet("nonexistentTagValue"));
+    cxtTagsConditions.put("tag1", Sets.newHashSet("tag1value"));
+
+    Map<String, Set<String>> taskFieldsConditions = new HashMap<>();
+    taskFieldsConditions.put("datasource", Sets.newHashSet(dataSource));
+
+    Task task = NoopTask.forDatasource(dataSource);
+    task.addToContext(DruidMetrics.TAGS, ImmutableMap.of("tag1", "tag1value"));
+
+    Selector selector = new Selector(
+        "TestSelector",
+        cxtTagsConditions,
+        taskFieldsConditions
+    );
+
+    Assert.assertFalse(selector.evaluate(task));
+  }
+
+  @Test
   public void shouldReturnFalseWhenTaskFieldsDoNotMatch()
   {
     Map<String, Set<String>> cxtTagsConditions = new HashMap<>();
     cxtTagsConditions.put("tag1", Sets.newHashSet("tag1value"));
 
     Map<String, Set<String>> taskFieldsConditions = new HashMap<>();
+    taskFieldsConditions.put("datasource", Sets.newHashSet("my_table"));
+
+    Task task = NoopTask.forDatasource("another_table");
+    task.addToContext(DruidMetrics.TAGS, ImmutableMap.of("tag1", "tag1value"));
+
+    Selector selector = new Selector(
+        "TestSelector",
+        cxtTagsConditions,
+        taskFieldsConditions
+    );
+
+    Assert.assertFalse(selector.evaluate(task));
+  }
+
+  @Test
+  public void shouldReturnFalseWhenSomeTaskFieldsDoNotMatch()
+  {
+    Map<String, Set<String>> cxtTagsConditions = new HashMap<>();
+    cxtTagsConditions.put("tag1", Sets.newHashSet("tag1value"));
+
+    Map<String, Set<String>> taskFieldsConditions = new HashMap<>();
+    taskFieldsConditions.put("type", Sets.newHashSet(NoopTask.TYPE));
     taskFieldsConditions.put("datasource", Sets.newHashSet("my_table"));
 
     Task task = NoopTask.forDatasource("another_table");
@@ -111,5 +158,28 @@ public class SelectorTest
     );
 
     Assert.assertTrue(selector.evaluate(task));
+  }
+
+  @Test
+  public void testSerde() throws Exception
+  {
+    final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
+    Map<String, Set<String>> cxtTagsConditions = new HashMap<>();
+    cxtTagsConditions.put("tag1", Sets.newHashSet("tag1value"));
+
+    Map<String, Set<String>> taskFieldsConditions = new HashMap<>();
+    taskFieldsConditions.put("type", Sets.newHashSet(NoopTask.TYPE));
+
+    Selector selector = new Selector(
+        "TestSelector",
+        cxtTagsConditions,
+        taskFieldsConditions
+    );
+
+    Selector selector2 = objectMapper.readValue(
+        objectMapper.writeValueAsBytes(selector),
+        Selector.class
+    );
+    Assert.assertEquals(selector, selector2);
   }
 }

@@ -19,14 +19,20 @@
 
 package org.apache.druid.k8s.overlord.execution;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.segment.TestHelper;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 public class DynamicTaskExecutionBehaviorStrategyTest
 {
@@ -68,6 +74,32 @@ public class DynamicTaskExecutionBehaviorStrategyTest
     Task task = NoopTask.create();
     Assert.assertEquals("match", strategy.getTaskCategory(task)
     );
+  }
+
+  @Test
+  public void testSerde() throws Exception
+  {
+    final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
+    Map<String, Set<String>> cxtTagsConditions = new HashMap<>();
+    cxtTagsConditions.put("tag1", Sets.newHashSet("tag1value"));
+
+    Map<String, Set<String>> taskFieldsConditions = new HashMap<>();
+    taskFieldsConditions.put("type", Sets.newHashSet(NoopTask.TYPE));
+
+    Selector selector = new Selector(
+        "TestSelector",
+        cxtTagsConditions,
+        taskFieldsConditions
+    );
+
+    DynamicTaskExecutionBehaviorStrategy strategy = new DynamicTaskExecutionBehaviorStrategy(Collections.singletonList(
+        selector));
+
+    DynamicTaskExecutionBehaviorStrategy strategy2 = objectMapper.readValue(
+        objectMapper.writeValueAsBytes(strategy),
+        DynamicTaskExecutionBehaviorStrategy.class
+    );
+    Assert.assertEquals(strategy, strategy2);
   }
 
   static class MockSelector extends Selector

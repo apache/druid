@@ -140,10 +140,7 @@ public class PodTemplateTaskAdapter implements TaskAdapter
       behaviorStrategy = executionConfig.getBehaviorStrategy();
     }
     String category = behaviorStrategy.getTaskCategory(task);
-    PodTemplate podTemplate = templates.getOrDefault(
-        category != null ? category : task.getType(),
-        templates.get("base")
-    );
+    PodTemplate podTemplate = templates.getOrDefault(category, templates.get("base"));
 
     if (podTemplate == null) {
       throw new ISE("Pod template spec not found for task type [%s]", task.getType());

@@ -30,7 +30,7 @@ public class ExecutionConfigTest
   private final ObjectMapper jsonMapper = new DefaultObjectMapper();
 
   @Test
-  public void testDeserializeExecutionConfig() throws JsonProcessingException
+  public void testSerde() throws JsonProcessingException
   {
     String json = "{\n"
                   + "  \"type\": \"default\",\n"
