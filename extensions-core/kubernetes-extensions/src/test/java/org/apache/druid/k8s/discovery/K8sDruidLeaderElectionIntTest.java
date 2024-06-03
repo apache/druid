@@ -35,8 +35,8 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * This is not a UT, but very helpful when making changes to ensure things work with real K8S Api Server.
- * It is ignored in the build but checked in the reporitory for running manually by devs.
+ * This test is ignored in the CI pipeline but is used for verifying changes manually.
+ * It requires a live K8s API Server for running.
  */
 @Ignore("Needs K8S API Server")
 public class K8sDruidLeaderElectionIntTest
@@ -53,8 +53,16 @@ public class K8sDruidLeaderElectionIntTest
       null
   );
 
-  private final K8sDiscoveryConfig discoveryConfig = new K8sDiscoveryConfig("druid-cluster", null, null, "default", "default",
-                                                                            Duration.millis(10_000), Duration.millis(7_000), Duration.millis(3_000));
+  private final K8sDiscoveryConfig discoveryConfig = new K8sDiscoveryConfig(
+      "druid-cluster",
+      null,
+      null,
+      "default",
+      "default",
+      Duration.millis(10_000),
+      Duration.millis(7_000),
+      Duration.millis(3_000)
+  );
 
   private final ApiClient k8sApiClient;
 
@@ -70,7 +78,12 @@ public class K8sDruidLeaderElectionIntTest
   @Test(timeout = 60000L)
   public void test_becomeLeader_exception() throws Exception
   {
-    K8sDruidLeaderSelector leaderSelector = new K8sDruidLeaderSelector(testNode1.getDruidNode(), lockResourceName, discoveryConfig.getCoordinatorLeaderElectionConfigMapNamespace(), discoveryConfig, new DefaultK8sLeaderElectorFactory(k8sApiClient, discoveryConfig));
+    K8sDruidLeaderSelector leaderSelector = new K8sDruidLeaderSelector(
+        testNode1.getDruidNode(),
+        lockResourceName,
+        discoveryConfig.getCoordinatorLeaderElectionConfigMapNamespace(),
+        new DefaultK8sLeaderElectorFactory(k8sApiClient, discoveryConfig)
+    );
 
     CountDownLatch becomeLeaderLatch = new CountDownLatch(1);
     CountDownLatch stopBeingLeaderLatch = new CountDownLatch(1);
@@ -108,7 +121,12 @@ public class K8sDruidLeaderElectionIntTest
   @Test(timeout = 60000L)
   public void test_leaderCandidate_stopped() throws Exception
   {
-    K8sDruidLeaderSelector leaderSelector = new K8sDruidLeaderSelector(testNode1.getDruidNode(), lockResourceName, discoveryConfig.getCoordinatorLeaderElectionConfigMapNamespace(), discoveryConfig, new DefaultK8sLeaderElectorFactory(k8sApiClient, discoveryConfig));
+    K8sDruidLeaderSelector leaderSelector = new K8sDruidLeaderSelector(
+        testNode1.getDruidNode(),
+        lockResourceName,
+        discoveryConfig.getCoordinatorLeaderElectionConfigMapNamespace(),
+        new DefaultK8sLeaderElectorFactory(k8sApiClient, discoveryConfig)
+    );
 
     CountDownLatch becomeLeaderLatch = new CountDownLatch(1);
     CountDownLatch stopBeingLeaderLatch = new CountDownLatch(1);
@@ -143,7 +161,12 @@ public class K8sDruidLeaderElectionIntTest
     stopBeingLeaderLatch.await();
     Assert.assertFalse(failed.get());
 
-    leaderSelector = new K8sDruidLeaderSelector(testNode2.getDruidNode(), lockResourceName, discoveryConfig.getCoordinatorLeaderElectionConfigMapNamespace(), discoveryConfig, new DefaultK8sLeaderElectorFactory(k8sApiClient, discoveryConfig));
+    leaderSelector = new K8sDruidLeaderSelector(
+        testNode2.getDruidNode(),
+        lockResourceName,
+        discoveryConfig.getCoordinatorLeaderElectionConfigMapNamespace(),
+        new DefaultK8sLeaderElectorFactory(k8sApiClient, discoveryConfig)
+    );
 
     CountDownLatch becomeLeaderLatch2 = new CountDownLatch(1);
 

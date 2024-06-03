@@ -88,17 +88,20 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
           public void isLeader()
           {
             try {
+              log.info("Kashif: calling isLeader on latch[%s]", newLeaderLatch);
               if (leader) {
                 log.warn("I'm being asked to become leader. But I am already the leader. Ignored event.");
                 return;
               }
 
-              leader = true;
               term++;
               listener.becomeLeader();
+              leader = true;
             }
             catch (Exception ex) {
-              log.makeAlert(ex, "listener becomeLeader() failed. Unable to become leader").emit();
+              leader = false;
+              log.makeAlert(ex, "listener.becomeLeader() failed for latch[%s]. Unable to become leader", newLeaderLatch)
+                 .emit();
 
               // give others a chance to become leader.
               CloseableUtils.closeAndSuppressExceptions(
@@ -106,7 +109,6 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
                   e -> log.warn("Could not close old leader latch; continuing with new one anyway.")
               );
 
-              leader = false;
               try {
                 //Small delay before starting the latch so that others waiting are chosen to become leader.
                 Thread.sleep(ThreadLocalRandom.current().nextInt(1000, 5000));
@@ -150,6 +152,7 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
   {
     try {
       final LeaderLatch latch = leaderLatch.get();
+      log.info("Kashif: Checking latch[%s]", latch);
 
       Participant participant = latch.getLeader();
       if (participant.isLeader()) {

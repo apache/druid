@@ -31,11 +31,10 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
-/**
- */
 public class CuratorDruidLeaderSelectorTest extends CuratorTestBase
 {
   private static final Logger logger = new Logger(CuratorDruidLeaderSelectorTest.class);
@@ -47,21 +46,23 @@ public class CuratorDruidLeaderSelectorTest extends CuratorTestBase
     setupServerAndCurator();
   }
 
+  @After
+  public void tearDown()
+  {
+    tearDownServerAndCurator();
+  }
+
   @Test(timeout = 60_000L)
   public void testSimple() throws Exception
   {
     curator.start();
     curator.blockUntilConnected();
 
-    AtomicReference<String> currLeader = new AtomicReference<>();
+    final AtomicReference<DruidNode> currLeader = new AtomicReference<>();
+    final String latchPath = "/testLatchPath";
 
-    String latchPath = "/testlatchPath";
-
-    CuratorDruidLeaderSelector leaderSelector1 = new CuratorDruidLeaderSelector(
-        curator,
-        new DruidNode("s1", "h1", false, 8080, null, true, false),
-        latchPath
-    );
+    final DruidNode node1 = new DruidNode("service", "h1", false, 8080, null, true, false);
+    final CuratorDruidLeaderSelector leaderSelector1 = new CuratorDruidLeaderSelector(curator, node1, latchPath);
     leaderSelector1.registerListener(
         new DruidLeaderSelector.Listener()
         {
@@ -69,7 +70,7 @@ public class CuratorDruidLeaderSelectorTest extends CuratorTestBase
           public void becomeLeader()
           {
             logger.info("listener1.becomeLeader().");
-            currLeader.set("h1:8080");
+            currLeader.set(node1);
             throw new RuntimeException("I am Rogue.");
           }
 
@@ -82,22 +83,25 @@ public class CuratorDruidLeaderSelectorTest extends CuratorTestBase
         }
     );
 
-    while (!"h1:8080".equals(currLeader.get())) {
+    // Wait until node1 has become leader
+    while (!node1.equals(currLeader.get())) {
       logger.info("current leader = [%s]", currLeader.get());
       Thread.sleep(100);
     }
 
+    Assert.assertFalse(leaderSelector1.isLeader());
+    Assert.assertNull(leaderSelector1.getCurrentLeader());
     Assert.assertTrue(leaderSelector1.localTerm() >= 1);
 
-    CuratorDruidLeaderSelector leaderSelector2 = new CuratorDruidLeaderSelector(
-        curator,
-        new DruidNode("s2", "h2", false, 8080, null, true, false),
-        latchPath
-    );
+    logger.info("Creating node2 leader selector");
+    final DruidNode node2 = new DruidNode("service", "h2", false, 8080, null, true, false);
+    final CuratorDruidLeaderSelector leaderSelector2 = new CuratorDruidLeaderSelector(curator, node2, latchPath);
+
+    logger.info("Registering node2 listener");
     leaderSelector2.registerListener(
         new DruidLeaderSelector.Listener()
         {
-          private AtomicInteger attemptCount = new AtomicInteger(0);
+          private final AtomicInteger attemptCount = new AtomicInteger(0);
 
           @Override
           public void becomeLeader()
@@ -108,7 +112,7 @@ public class CuratorDruidLeaderSelectorTest extends CuratorTestBase
               throw new RuntimeException("will become leader on next attempt.");
             }
 
-            currLeader.set("h2:8080");
+            currLeader.set(node2);
           }
 
           @Override
@@ -120,8 +124,10 @@ public class CuratorDruidLeaderSelectorTest extends CuratorTestBase
         }
     );
 
-    while (!"h2:8080".equals(currLeader.get())) {
-      logger.info("current leader = [%s]", currLeader.get());
+    // TODO: Why should node2 become leader at all?
+    // Wait until node2 has become leader
+    while (!node2.equals(currLeader.get())) {
+      logger.info("current leader = [%s]", currLeader.get().getHostAndPortToUse());
       Thread.sleep(100);
     }
 
@@ -129,11 +135,8 @@ public class CuratorDruidLeaderSelectorTest extends CuratorTestBase
     Assert.assertEquals("http://h2:8080", leaderSelector1.getCurrentLeader());
     Assert.assertEquals(2, leaderSelector2.localTerm());
 
-    CuratorDruidLeaderSelector leaderSelector3 = new CuratorDruidLeaderSelector(
-        curator,
-        new DruidNode("s3", "h3", false, 8080, null, true, false),
-        latchPath
-    );
+    final DruidNode node3 = new DruidNode("service", "h3", false, 8080, null, true, false);
+    final CuratorDruidLeaderSelector leaderSelector3 = new CuratorDruidLeaderSelector(curator, node3, latchPath);
     leaderSelector3.registerListener(
         new DruidLeaderSelector.Listener()
         {
@@ -141,7 +144,7 @@ public class CuratorDruidLeaderSelectorTest extends CuratorTestBase
           public void becomeLeader()
           {
             logger.info("listener3.becomeLeader().");
-            currLeader.set("h3:8080");
+            currLeader.set(node3);
           }
 
           @Override
@@ -152,9 +155,11 @@ public class CuratorDruidLeaderSelectorTest extends CuratorTestBase
         }
     );
 
+    // TODO: if we don't unregister 2, will 3 never become leader?
+    //  Why should 1 not become leader again?
     leaderSelector2.unregisterListener();
-    while (!"h3:8080".equals(currLeader.get())) {
-      logger.info("current leader = [%s]", currLeader.get());
+    while (!node3.equals(currLeader.get())) {
+      logger.info("current leader = [%s]", currLeader.get().getHostAndPortToUse());
       Thread.sleep(100);
     }
 
@@ -163,9 +168,49 @@ public class CuratorDruidLeaderSelectorTest extends CuratorTestBase
     Assert.assertEquals(1, leaderSelector3.localTerm());
   }
 
-  @After
-  public void tearDown()
+  @Test
+  public void testDoesNotBecomeLeaderIfListenerFails() throws InterruptedException
   {
-    tearDownServerAndCurator();
+    curator.start();
+    curator.blockUntilConnected();
+
+    final String latchPath = "/testLatchPath";
+
+    final DruidNode node1 = new DruidNode("service", "h1", false, 8080, null, true, false);
+    final CuratorDruidLeaderSelector leaderSelector1 = new CuratorDruidLeaderSelector(curator, node1, latchPath);
+
+    final CountDownLatch listenerBecomeLeaderInvoked = new CountDownLatch(1);
+    leaderSelector1.registerListener(
+        new DruidLeaderSelector.Listener()
+        {
+          @Override
+          public void becomeLeader()
+          {
+            listenerBecomeLeaderInvoked.countDown();
+            throw new RuntimeException("Cannot become leader");
+          }
+
+          @Override
+          public void stopBeingLeader()
+          {
+            throw new RuntimeException("Cannot stop being leader.");
+          }
+        }
+    );
+
+    // Wait until listener has been called
+    listenerBecomeLeaderInvoked.await();
+
+    logger.info("Kashif: going to do the verifications now");
+    Assert.assertFalse(leaderSelector1.isLeader());
+    Assert.assertNull(leaderSelector1.getCurrentLeader());
+    Assert.assertTrue(leaderSelector1.localTerm() >= 1);
   }
+
+  @Test
+  public void testRecreatesLatchIfListenerFails()
+  {
+
+  }
+
 }
