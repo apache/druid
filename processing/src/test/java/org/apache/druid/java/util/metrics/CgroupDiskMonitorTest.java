@@ -21,7 +21,6 @@ package org.apache.druid.java.util.metrics;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.FileUtils;
-import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.metrics.cgroups.CgroupDiscoverer;
 import org.apache.druid.java.util.metrics.cgroups.ProcCgroupDiscoverer;
 import org.apache.druid.java.util.metrics.cgroups.TestUtils;
@@ -29,21 +28,19 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.List;
 
-public class CgroupMemoryMonitorTest
+public class CgroupDiskMonitorTest
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
   private File procDir;
   private File cgroupDir;
+  private File servicedFile;
+  private File serviceBytesFile;
   private CgroupDiscoverer discoverer;
 
   @Before
@@ -53,25 +50,36 @@ public class CgroupMemoryMonitorTest
     procDir = temporaryFolder.newFolder();
     discoverer = new ProcCgroupDiscoverer(procDir.toPath());
     TestUtils.setUpCgroups(procDir, cgroupDir);
-    final File memoryDir = new File(
+    final File blkioDir = new File(
         cgroupDir,
-        "memory/system.slice/some.service"
+        "blkio/system.slice/some.service/"
     );
 
-    FileUtils.mkdirp(memoryDir);
-    TestUtils.copyResource("/memory.stat", new File(memoryDir, "memory.stat"));
-    TestUtils.copyResource("/memory.numa_stat", new File(memoryDir, "memory.numa_stat"));
-    TestUtils.copyResource("/memory.usage_in_bytes", new File(memoryDir, "memory.usage_in_bytes"));
-    TestUtils.copyResource("/memory.limit_in_bytes", new File(memoryDir, "memory.limit_in_bytes"));
+    FileUtils.mkdirp(blkioDir);
+    servicedFile = new File(blkioDir, "blkio.throttle.io_serviced");
+    serviceBytesFile = new File(blkioDir, "blkio.throttle.io_service_bytes");
+    TestUtils.copyResource("/blkio.throttle.io_service_bytes", serviceBytesFile);
+    TestUtils.copyResource("/blkio.throttle.io_serviced", servicedFile);
   }
 
   @Test
-  public void testMonitor()
+  public void testMonitor() throws IOException
   {
-    final CgroupMemoryMonitor monitor = new CgroupMemoryMonitor(discoverer, ImmutableMap.of(), "some_feed");
+    final CgroupDiskMonitor monitor = new CgroupDiskMonitor(discoverer, ImmutableMap.of(), "some_feed");
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     Assert.assertTrue(monitor.doMonitor(emitter));
-    final List<Event> actualEvents = emitter.getEvents();
-    Assert.assertEquals(46, actualEvents.size());
+    Assert.assertEquals(0, emitter.getEvents().size());
+
+    TestUtils.copyOrReplaceResource("/blkio.throttle.io_service_bytes-2", serviceBytesFile);
+    TestUtils.copyOrReplaceResource("/blkio.throttle.io_serviced-2", servicedFile);
+
+    Assert.assertTrue(monitor.doMonitor(emitter));
+    Assert.assertEquals(8, emitter.getEvents().size());
+    Assert.assertTrue(
+        emitter
+            .getEvents()
+            .stream()
+            .map(e -> e.toMap().get("value"))
+            .allMatch(val -> Long.valueOf(10).equals(val)));
   }
 }

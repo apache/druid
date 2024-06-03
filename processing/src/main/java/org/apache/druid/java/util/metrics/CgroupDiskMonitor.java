@@ -20,38 +20,38 @@
 package org.apache.druid.java.util.metrics;
 
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.cgroups.CgroupDiscoverer;
-import org.apache.druid.java.util.metrics.cgroups.Memory;
+import org.apache.druid.java.util.metrics.cgroups.Disk;
 import org.apache.druid.java.util.metrics.cgroups.ProcSelfCgroupDiscoverer;
 
 import java.util.Map;
 
-public class CgroupMemoryMonitor extends FeedDefiningMonitor
+public class CgroupDiskMonitor extends FeedDefiningMonitor
 {
   final CgroupDiscoverer cgroupDiscoverer;
   final Map<String, String[]> dimensions;
+  private final KeyedDiff diff = new KeyedDiff();
 
-  public CgroupMemoryMonitor(CgroupDiscoverer cgroupDiscoverer, final Map<String, String[]> dimensions, String feed)
+  public CgroupDiskMonitor(CgroupDiscoverer cgroupDiscoverer, final Map<String, String[]> dimensions, String feed)
   {
     super(feed);
     this.cgroupDiscoverer = cgroupDiscoverer;
     this.dimensions = dimensions;
   }
 
-  public CgroupMemoryMonitor(final Map<String, String[]> dimensions, String feed)
+  public CgroupDiskMonitor(final Map<String, String[]> dimensions, String feed)
   {
     this(new ProcSelfCgroupDiscoverer(), dimensions, feed);
   }
 
-  public CgroupMemoryMonitor(final Map<String, String[]> dimensions)
+  public CgroupDiskMonitor(final Map<String, String[]> dimensions)
   {
     this(dimensions, DEFAULT_METRICS_FEED);
   }
 
-  public CgroupMemoryMonitor()
+  public CgroupDiskMonitor()
   {
     this(ImmutableMap.of());
   }
@@ -59,22 +59,27 @@ public class CgroupMemoryMonitor extends FeedDefiningMonitor
   @Override
   public boolean doMonitor(ServiceEmitter emitter)
   {
-    final Memory memory = new Memory(cgroupDiscoverer);
-    final Memory.MemoryStat stat = memory.snapshot();
-    final ServiceMetricEvent.Builder builder = builder();
-    MonitorUtils.addDimensionsToBuilder(builder, dimensions);
-    emitter.emit(builder.setMetric("cgroup/memory/usage/bytes", stat.getUsage()));
-    emitter.emit(builder.setMetric("cgroup/memory/limit/bytes", stat.getLimit()));
+    Map<String, Disk.Metrics> snapshot = new Disk(cgroupDiscoverer).snapshot();
+    for (Map.Entry<String, Disk.Metrics> entry : snapshot.entrySet()) {
+      final Map<String, Long> stats = diff.to(
+          entry.getKey(),
+          ImmutableMap.<String, Long>builder()
+                      .put("cgroup/disk/read/bytes", entry.getValue().getReadBytes())
+                      .put("cgroup/disk/read/count", entry.getValue().getReadCount())
+                      .put("cgroup/disk/write/bytes", entry.getValue().getWriteBytes())
+                      .put("cgroup/disk/write/count", entry.getValue().getWriteCount())
+                      .build()
+      );
 
-    stat.getMemoryStats().forEach((key, value) -> {
-      // See https://www.kernel.org/doc/Documentation/cgroup-v1/memory.txt
-      // There are inconsistent units for these. Most are bytes.
-      emitter.emit(builder.setMetric(StringUtils.format("cgroup/memory/%s", key), value));
-    });
-    stat.getNumaMemoryStats().forEach((key, value) -> {
-      builder().setDimension("numaZone", Long.toString(key));
-      value.forEach((k, v) -> emitter.emit(builder.setMetric(StringUtils.format("cgroup/memory_numa/%s/pages", k), v)));
-    });
+      if (stats != null) {
+        final ServiceMetricEvent.Builder builder = builder()
+            .setDimension("diskName", entry.getValue().getDiskName());
+        MonitorUtils.addDimensionsToBuilder(builder, dimensions);
+        for (Map.Entry<String, Long> stat : stats.entrySet()) {
+          emitter.emit(builder.setMetric(stat.getKey(), stat.getValue()));
+        }
+      }
+    }
     return true;
   }
 }

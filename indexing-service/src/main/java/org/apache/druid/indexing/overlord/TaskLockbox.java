@@ -657,7 +657,7 @@ public class TaskLockbox
         }
 
       } else {
-        log.info("Task[%s] already present in TaskLock[%s]", task.getId(), posseToUse.getTaskLock().getGroupId());
+        log.debug("Task[%s] already present in TaskLock[%s].", task.getId(), posseToUse.getTaskLock().getGroupId());
       }
       return posseToUse;
     }
