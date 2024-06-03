@@ -171,12 +171,14 @@ public class AzureDataSegmentPullerTest extends EasyMockSupport
 
     assertFalse(tempPath.toFile().exists());
     verifyAll();
-
-    assertFalse(tempPath.toFile().exists());
-    verifyAll();
   }
 
-  private static File createZipTempFile(final Path tempPath, String entry, String entryValue) throws IOException
+  @SuppressWarnings("SameParameterValue")
+  private static File createZipTempFile(
+      final Path tempPath,
+      final String entry,
+      final String entryValue
+  ) throws IOException
   {
     final File zipFile = Files.createFile(tempPath.resolve("index.zip")).toFile();
 
