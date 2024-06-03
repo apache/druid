@@ -294,7 +294,7 @@ public class AzureCloudBlobIteratorTest extends EasyMockSupport
         MAX_LISTING_LENGTH
     );
 
-    assertThrows(NoSuchElementException.class, () -> azureCloudBlobIterator.next());
+    assertThrows(NoSuchElementException.class, azureCloudBlobIterator::next);
   }
 
   @Test
@@ -314,6 +314,7 @@ public class AzureCloudBlobIteratorTest extends EasyMockSupport
 
     replayAll();
 
+    //noinspection ResultOfObjectAllocationIgnored
     assertThrows(
         RE.class,
         () -> new AzureCloudBlobIterator(
@@ -343,6 +344,7 @@ public class AzureCloudBlobIteratorTest extends EasyMockSupport
 
     replayAll();
 
+    //noinspection ResultOfObjectAllocationIgnored
     assertThrows(
         RE.class,
         () -> new AzureCloudBlobIterator(

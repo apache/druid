@@ -86,7 +86,6 @@ public class AzureEntityTest extends EasyMockSupport
     assertEquals(ENTITY_URI, actualUri);
 
     verifyAll();
-
   }
 
   @Test
@@ -102,11 +101,12 @@ public class AzureEntityTest extends EasyMockSupport
         byteSourceFactory
     );
 
-    assertEquals(URI.create(AzureStorageAccountInputSource.SCHEME + "://" + STORAGE_ACCOUNT_NAME + "/" + CONTAINER_NAME + "/" + BLOB_NAME),
-                            azureEntity.getUri());
+    assertEquals(
+        URI.create(AzureStorageAccountInputSource.SCHEME + "://" + STORAGE_ACCOUNT_NAME + "/" + CONTAINER_NAME + "/" + BLOB_NAME),
+        azureEntity.getUri()
+    );
 
     verifyAll();
-
   }
 
   @Test
@@ -189,6 +189,7 @@ public class AzureEntityTest extends EasyMockSupport
 
     verifyAll();
   }
+
   @Test
   public void test_getRetryCondition_returnsExpectedRetryCondition()
   {

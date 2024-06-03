@@ -46,7 +46,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class AzureStorageConnectorTest
 {
-
   private static final String CONTAINER = "CONTAINER";
   private static final String PREFIX = "P/R/E/F/I/X";
   public static final String TEST_FILE = "test.csv";
@@ -62,7 +61,6 @@ public class AzureStorageConnectorTest
         azureStorage
     );
   }
-
 
   @Test
   public void testPathExistsSuccess() throws BlobStorageException, IOException

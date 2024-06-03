@@ -82,13 +82,8 @@ public class AzureByteSourceTest extends EasyMockSupport
     HttpResponse httpResponse = createMock(HttpResponse.class);
     EasyMock.expect(httpResponse.getStatusCode()).andReturn(500).anyTimes();
     EasyMock.replay(httpResponse);
-    EasyMock.expect(azureStorage.getBlockBlobInputStream(NO_OFFSET, containerName, blobPath)).andThrow(
-        new BlobStorageException(
-            "",
-            httpResponse,
-            null
-        )
-    );
+    EasyMock.expect(azureStorage.getBlockBlobInputStream(NO_OFFSET, containerName, blobPath))
+            .andThrow(new BlobStorageException("", httpResponse, null));
 
     EasyMock.replay(azureStorage);
 

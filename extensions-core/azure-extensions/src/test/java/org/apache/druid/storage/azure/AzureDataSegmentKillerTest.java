@@ -129,13 +129,8 @@ public class AzureDataSegmentKillerTest extends EasyMockSupport
   {
     String dirPath = Paths.get(BLOB_PATH).getParent().toString();
 
-    EasyMock.expect(azureStorage.emptyCloudBlobDirectory(CONTAINER_NAME, dirPath)).andThrow(
-        new BlobStorageException(
-            "",
-            null,
-            null
-        )
-    );
+    EasyMock.expect(azureStorage.emptyCloudBlobDirectory(CONTAINER_NAME, dirPath))
+            .andThrow(new BlobStorageException("", null, null));
 
     replayAll();
 

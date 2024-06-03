@@ -204,13 +204,13 @@ public class AzureTaskLogsTest extends EasyMockSupport
     final String blobPath = PREFIX + "/" + TASK_ID + "/log";
     EasyMock.expect(azureStorage.getBlockBlobExists(CONTAINER, blobPath)).andReturn(true);
     EasyMock.expect(azureStorage.getBlockBlobLength(CONTAINER, blobPath)).andReturn((long) testLog.length());
-    EasyMock.expect(azureStorage.getBlockBlobInputStream(CONTAINER, blobPath)).andReturn(
-        new ByteArrayInputStream(testLog.getBytes(StandardCharsets.UTF_8)));
-
+    EasyMock.expect(azureStorage.getBlockBlobInputStream(CONTAINER, blobPath))
+            .andReturn(new ByteArrayInputStream(testLog.getBytes(StandardCharsets.UTF_8)));
 
     replayAll();
 
     final Optional<InputStream> stream = azureTaskLogs.streamTaskLog(TASK_ID, 0);
+    assertTrue(stream.isPresent());
 
     final StringWriter writer = new StringWriter();
     IOUtils.copy(stream.get(), writer, "UTF-8");
@@ -230,10 +230,10 @@ public class AzureTaskLogsTest extends EasyMockSupport
     EasyMock.expect(azureStorage.getBlockBlobInputStream(CONTAINER, blobPath)).andReturn(
         new ByteArrayInputStream(testLog.getBytes(StandardCharsets.UTF_8)));
 
-
     replayAll();
 
     final Optional<InputStream> stream = azureTaskLogs.streamTaskLog(TASK_ID, 5);
+    assertTrue(stream.isPresent());
 
     final StringWriter writer = new StringWriter();
     IOUtils.copy(stream.get(), writer, "UTF-8");
@@ -250,13 +250,13 @@ public class AzureTaskLogsTest extends EasyMockSupport
     final String blobPath = PREFIX + "/" + TASK_ID + "/log";
     EasyMock.expect(azureStorage.getBlockBlobExists(CONTAINER, blobPath)).andReturn(true);
     EasyMock.expect(azureStorage.getBlockBlobLength(CONTAINER, blobPath)).andReturn((long) testLog.length());
-    EasyMock.expect(azureStorage.getBlockBlobInputStream(CONTAINER, blobPath)).andReturn(
-        new ByteArrayInputStream(StringUtils.toUtf8(testLog)));
-
+    EasyMock.expect(azureStorage.getBlockBlobInputStream(CONTAINER, blobPath))
+            .andReturn(new ByteArrayInputStream(StringUtils.toUtf8(testLog)));
 
     replayAll();
 
     final Optional<InputStream> stream = azureTaskLogs.streamTaskLog(TASK_ID, -3);
+    assertTrue(stream.isPresent());
 
     final StringWriter writer = new StringWriter();
     IOUtils.copy(stream.get(), writer, "UTF-8");
@@ -280,6 +280,7 @@ public class AzureTaskLogsTest extends EasyMockSupport
     replayAll();
 
     final Optional<InputStream> stream = azureTaskLogs.streamTaskReports(TASK_ID);
+    assertTrue(stream.isPresent());
 
     final StringWriter writer = new StringWriter();
     IOUtils.copy(stream.get(), writer, "UTF-8");
@@ -351,12 +352,13 @@ public class AzureTaskLogsTest extends EasyMockSupport
     final String blobPath = PREFIX + "/" + TASK_ID + "/status.json";
     EasyMock.expect(azureStorage.getBlockBlobExists(CONTAINER, blobPath)).andReturn(true);
     EasyMock.expect(azureStorage.getBlockBlobLength(CONTAINER, blobPath)).andReturn((long) taskStatus.length());
-    EasyMock.expect(azureStorage.getBlockBlobInputStream(CONTAINER, blobPath)).andReturn(
-        new ByteArrayInputStream(taskStatus.getBytes(StandardCharsets.UTF_8)));
+    EasyMock.expect(azureStorage.getBlockBlobInputStream(CONTAINER, blobPath))
+            .andReturn(new ByteArrayInputStream(taskStatus.getBytes(StandardCharsets.UTF_8)));
 
     replayAll();
 
     final Optional<InputStream> stream = azureTaskLogs.streamTaskStatus(TASK_ID);
+    assertTrue(stream.isPresent());
 
     final StringWriter writer = new StringWriter();
     IOUtils.copy(stream.get(), writer, "UTF-8");
@@ -435,6 +437,7 @@ public class AzureTaskLogsTest extends EasyMockSupport
     replayAll();
 
     final Optional<InputStream> stream = azureTaskLogs.streamTaskPayload(TASK_ID);
+    assertTrue(stream.isPresent());
 
     final StringWriter writer = new StringWriter();
     IOUtils.copy(stream.get(), writer, "UTF-8");
@@ -694,14 +697,6 @@ public class AzureTaskLogsTest extends EasyMockSupport
         azureStorage
     );
   }
-
-  /*
-  @Test (expected = UnsupportedOperationException.class)
-  public void test_killOlderThan_throwsUnsupportedOperationException() throws IOException
-  {
-    azureTaskLogs.killOlderThan(0);
-  }
-   */
 
   @AfterEach
   public void cleanup()
