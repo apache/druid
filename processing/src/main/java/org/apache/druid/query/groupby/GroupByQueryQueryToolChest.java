@@ -33,7 +33,6 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
-import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import org.apache.druid.data.input.Row;
@@ -108,7 +107,6 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
   };
 
   private final GroupingEngine groupingEngine;
-  private final GroupByQueryConfig queryConfig;
   private final GroupByQueryMetricsFactory queryMetricsFactory;
   private final GroupByResourcesReservationPool groupByResourcesReservationPool;
 
@@ -120,7 +118,6 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
   {
     this(
         groupingEngine,
-        GroupByQueryConfig::new,
         DefaultGroupByQueryMetricsFactory.instance(),
         groupByResourcesReservationPool
     );
@@ -129,13 +126,11 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
   @Inject
   public GroupByQueryQueryToolChest(
       GroupingEngine groupingEngine,
-      Supplier<GroupByQueryConfig> queryConfigSupplier,
       GroupByQueryMetricsFactory queryMetricsFactory,
       @Merging GroupByResourcesReservationPool groupByResourcesReservationPool
   )
   {
     this.groupingEngine = groupingEngine;
-    this.queryConfig = queryConfigSupplier.get();
     this.queryMetricsFactory = queryMetricsFactory;
     this.groupByResourcesReservationPool = groupByResourcesReservationPool;
   }

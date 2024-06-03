@@ -658,19 +658,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
         .build();
 
-    final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(
-        null,
-        () -> new GroupByQueryConfig()
-        {
-          @Override
-          public boolean isIntermediateResultAsMapCompat()
-          {
-            return true;
-          }
-        },
-        null,
-        null
-    );
+    final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(null, null, null);
 
     final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
     final ObjectMapper arraysObjectMapper = toolChest.decorateObjectMapper(
