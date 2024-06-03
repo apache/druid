@@ -51,8 +51,22 @@ public class S3UploadManager
   public S3UploadManager(S3OutputConfig s3OutputConfig, S3ExportConfig s3ExportConfig, RuntimeInfo runtimeInfo)
   {
     int poolSize = Math.max(4, runtimeInfo.getAvailableProcessors());
-    int maxNumConcurrentChunks = 10;
+    int maxNumConcurrentChunks = computeMaxNumConcurrentChunks(s3OutputConfig, s3ExportConfig);
     this.uploadExecutor = Execs.newBlockingThreaded("UploadThreadPool-%d", poolSize, maxNumConcurrentChunks);
+    log.info("Creating executor service for S3 multipart upload with pool size [%d] and work queue capacity [%d]", poolSize, maxNumConcurrentChunks);
+  }
+
+  private int computeMaxNumConcurrentChunks(S3OutputConfig s3OutputConfig, S3ExportConfig s3ExportConfig)
+  {
+    long chunkSize = S3OutputConfig.S3_MULTIPART_UPLOAD_MIN_PART_SIZE_BYTES;
+    if (s3OutputConfig != null && s3OutputConfig.getChunkSize() != null) {
+      chunkSize = Math.max(chunkSize, s3OutputConfig.getChunkSize());
+    }
+    if (s3ExportConfig != null && s3ExportConfig.getChunkSize() != null) {
+      chunkSize = Math.max(chunkSize, s3ExportConfig.getChunkSize().getBytes());
+    }
+
+    return (int) (S3OutputConfig.S3_MULTIPART_UPLOAD_MAX_PART_SIZE_BYTES / chunkSize);
   }
 
   public Future<UploadPartResult> queueChunkForUpload(ServerSideEncryptingAmazonS3 s3Client, String key, int chunkNumber, File chunkFile, String uploadId, S3OutputConfig config)
