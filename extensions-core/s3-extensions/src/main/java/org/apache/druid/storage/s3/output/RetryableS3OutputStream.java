@@ -47,7 +47,6 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * A retryable output stream for s3. How it works is:
@@ -87,7 +86,6 @@ public class RetryableS3OutputStream extends OutputStream
 
   private Chunk currentChunk;
   private int nextChunkId = 1; // multipart upload requires partNumber to be in the range between 1 and 10000
-  private final AtomicInteger numChunksPushed = new AtomicInteger(0);
 
   /**
    * A flag indicating whether there was an upload error.
@@ -103,7 +101,7 @@ public class RetryableS3OutputStream extends OutputStream
 
   /**
    * A list of futures to allow us to wait for completion of all uploadPart() calls
-   * before hitting {@link #completeMultipartUpload()}.
+   * before hitting {@link ServerSideEncryptingAmazonS3#completeMultipartUpload(CompleteMultipartUploadRequest)}.
    */
   private final List<Future<UploadPartResult>> futures = new ArrayList<>();
 
@@ -218,7 +216,7 @@ public class RetryableS3OutputStream extends OutputStream
       long totalChunkSize = (currentChunk.id - 1) * chunkSize + currentChunk.length();
       LOG.info(
           "Pushed total [%d] parts containing [%d] bytes in [%d]ms.",
-          numChunksPushed.get(),
+          futures.size(),
           totalChunkSize,
           pushStopwatch.elapsed(TimeUnit.MILLISECONDS)
       );
@@ -237,10 +235,7 @@ public class RetryableS3OutputStream extends OutputStream
     for (Future<UploadPartResult> future : futures) {
       try {
         UploadPartResult result = future.get();
-        synchronized (pushResults) {
-          pushResults.add(result.getPartETag());
-        }
-        numChunksPushed.incrementAndGet();
+        pushResults.add(result.getPartETag());
       }
       catch (Exception e) {
         error = true;
@@ -285,7 +280,7 @@ public class RetryableS3OutputStream extends OutputStream
 
   private boolean isAllPushSucceeded()
   {
-    return !error && !pushResults.isEmpty() && numChunksPushed.get() == pushResults.size();
+    return !error && !pushResults.isEmpty() && futures.size() == pushResults.size();
   }
 
   private static class Chunk implements Closeable
