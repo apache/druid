@@ -519,7 +519,12 @@ public class JoinAndLookupBenchmark
   public void lookupVirtualColumnStringKey(Blackhole blackhole)
   {
     final Sequence<Cursor> cursors = hashJoinLookupStringKeySegment.asStorageAdapter()
-                                                                   .asCursorMaker(CursorBuildSpec.FULL_SCAN)
+                                                                   .asCursorMaker(
+                                                                       CursorBuildSpec.builder()
+                                                                                      .setVirtualColumns(lookupVirtualColumns)
+                                                                                      .setGranularity(Granularities.ALL)
+                                                                                      .build()
+                                                                   )
                                                                    .makeCursors();
 
     blackhole.consume(getLastValue(cursors, LOOKUP_COUNTRY_CODE_TO_NAME));
@@ -536,6 +541,7 @@ public class JoinAndLookupBenchmark
                                                                        CursorBuildSpec.builder()
                                                                                       .setGranularity(Granularities.ALL)
                                                                                       .setFilter(filter)
+                                                                                      .setVirtualColumns(lookupVirtualColumns)
                                                                                       .build()
                                                                    )
                                                                    .makeCursors();
@@ -549,7 +555,12 @@ public class JoinAndLookupBenchmark
   public void lookupVirtualColumnLongKey(Blackhole blackhole)
   {
     final Sequence<Cursor> cursors = baseSegment.asStorageAdapter()
-                                                .asCursorMaker(CursorBuildSpec.FULL_SCAN)
+                                                .asCursorMaker(
+                                                    CursorBuildSpec.builder()
+                                                                   .setVirtualColumns(lookupVirtualColumns)
+                                                                   .setGranularity(Granularities.ALL)
+                                                                   .build()
+                                                )
                                                 .makeCursors();
 
     blackhole.consume(getLastValue(cursors, LOOKUP_COUNTRY_NUMBER_TO_NAME));
@@ -565,6 +576,7 @@ public class JoinAndLookupBenchmark
                                                 .asCursorMaker(
                                                     CursorBuildSpec.builder()
                                                                    .setGranularity(Granularities.ALL)
+                                                                   .setVirtualColumns(lookupVirtualColumns)
                                                                    .setFilter(filter)
                                                                    .build()
                                                 )

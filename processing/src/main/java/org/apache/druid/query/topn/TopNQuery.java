@@ -195,17 +195,17 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
           intervals
       );
     }
-    return new CursorBuildSpec(
-        Filters.convertToCNFFromQueryContext(this, Filters.toFilter(getFilter())),
-        Iterables.getOnlyElement(intervals),
-        getGranularity(),
-        columns == null ? Collections.emptyList() : new ArrayList<>(columns),
-        getVirtualColumns(),
-        getAggregatorSpecs(),
-        context(),
-        isDescending(),
-        queryMetrics
-    );
+    return CursorBuildSpec.builder()
+                          .setInterval(Iterables.getOnlyElement(intervals))
+                          .setGranularity(getGranularity())
+                          .setFilter(Filters.convertToCNFFromQueryContext(this, Filters.toFilter(getFilter())))
+                          .setColumns(columns == null ? Collections.emptyList() : new ArrayList<>(columns))
+                          .setVirtualColumns(getVirtualColumns())
+                          .setAggregators(getAggregatorSpecs())
+                          .setQueryContext(context())
+                          .isDescending(isDescending())
+                          .setQueryMetrics(queryMetrics)
+                          .build();
   }
 
   public void initTopNAlgorithmSelector(TopNAlgorithmSelector selector)

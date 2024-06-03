@@ -24,13 +24,11 @@ import it.unimi.dsi.fastutil.objects.Object2IntRBTreeMap;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.ColumnSelectorPlus;
 import org.apache.druid.query.dimension.DimensionSpec;
-import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.search.SearchQueryRunner.SearchColumnSelectorStrategy;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.StorageAdapter;
-import org.joda.time.Interval;
 
 import java.util.List;
 
@@ -56,29 +54,19 @@ public class CursorOnlyStrategy extends SearchStrategy
     return ImmutableList.of(new CursorBasedExecutor(
         query,
         segment,
-        filter,
-        interval,
         dimensionSpecs
     ));
   }
 
   public static class CursorBasedExecutor extends SearchQueryExecutor
   {
-
-    protected Filter filter;
-    protected Interval interval;
-
     public CursorBasedExecutor(
         SearchQuery query,
         Segment segment,
-        Filter filter,
-        Interval interval, List<DimensionSpec> dimensionSpecs
+        List<DimensionSpec> dimensionSpecs
     )
     {
       super(query, segment, dimensionSpecs);
-
-      this.filter = filter;
-      this.interval = interval;
     }
 
     @Override

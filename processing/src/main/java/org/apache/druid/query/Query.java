@@ -51,7 +51,6 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -288,16 +287,15 @@ public interface Query<T>
           intervals
       );
     }
-    return new CursorBuildSpec(
-        Filters.convertToCNFFromQueryContext(this, Filters.toFilter(getFilter())),
-        Iterables.getOnlyElement(intervals),
-        getGranularity(),
-        columns == null ? Collections.emptyList() : new ArrayList<>(columns),
-        getVirtualColumns(),
-        Collections.emptyList(),
-        context(),
-        isDescending(),
-        queryMetrics
-    );
+    return CursorBuildSpec.builder()
+                          .setInterval(Iterables.getOnlyElement(intervals))
+                          .setGranularity(getGranularity())
+                          .setFilter(Filters.convertToCNFFromQueryContext(this, Filters.toFilter(getFilter())))
+                          .setColumns(columns == null ? null : new ArrayList<>(columns))
+                          .setVirtualColumns(getVirtualColumns())
+                          .setQueryContext(context())
+                          .isDescending(isDescending())
+                          .setQueryMetrics(queryMetrics)
+                          .build();
   }
 }

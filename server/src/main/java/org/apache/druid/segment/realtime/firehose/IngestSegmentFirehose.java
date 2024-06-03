@@ -87,8 +87,8 @@ public class IngestSegmentFirehose implements Firehose
                                                   .setGranularity(Granularities.ALL)
                                                   .build()
                                )
-                               .makeCursors()
-                        , new Function<Cursor, Sequence<InputRow>>()
+                               .makeCursors(),
+                        new Function<Cursor, Sequence<InputRow>>()
                         {
                           @Nullable
                           @Override

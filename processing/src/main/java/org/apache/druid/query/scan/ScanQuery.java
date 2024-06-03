@@ -514,17 +514,16 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
           intervals
       );
     }
-    return new CursorBuildSpec(
-        Filters.convertToCNFFromQueryContext(this, Filters.toFilter(getFilter())),
-        Iterables.getOnlyElement(intervals),
-        getGranularity(),
-        columns == null ? Collections.emptyList() : new ArrayList<>(columns),
-        getVirtualColumns(),
-        Collections.emptyList(),
-        context(),
-        isDescending() || Order.DESCENDING.equals(timeOrder),
-        queryMetrics
-    );
+    return CursorBuildSpec.builder()
+                          .setInterval(Iterables.getOnlyElement(intervals))
+                          .setGranularity(getGranularity())
+                          .setFilter(Filters.convertToCNFFromQueryContext(this, Filters.toFilter(getFilter())))
+                          .setColumns(columns == null ? null : new ArrayList<>(columns))
+                          .setVirtualColumns(getVirtualColumns())
+                          .setQueryContext(context())
+                          .isDescending(isDescending() || Order.DESCENDING.equals(timeOrder))
+                          .setQueryMetrics(queryMetrics)
+                          .build();
   }
 
   public ScanQuery withOffset(final long newOffset)

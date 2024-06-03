@@ -116,6 +116,44 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testDumpRows() throws Exception
+  {
+    Injector injector = Mockito.mock(Injector.class);
+    ObjectMapper mapper = TestHelper.makeJsonMapper();
+    mapper.registerModules(NestedDataModule.getJacksonModulesList());
+    mapper.setInjectableValues(
+        new InjectableValues.Std()
+            .addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)
+            .addValue(ObjectMapper.class.getName(), mapper)
+            .addValue(DefaultColumnFormatConfig.class, new DefaultColumnFormatConfig(null))
+    );
+    Mockito.when(injector.getInstance(Key.get(ObjectMapper.class, Json.class))).thenReturn(mapper);
+    Mockito.when(injector.getInstance(DefaultColumnFormatConfig.class)).thenReturn(new DefaultColumnFormatConfig(null));
+
+    List<Segment> segments = createSegments(tempFolder, closer);
+    QueryableIndex queryableIndex = segments.get(0).asQueryableIndex();
+
+    File outputFile = tempFolder.newFile();
+
+    DumpSegment.runDump(
+        injector,
+        outputFile.getPath(),
+        queryableIndex,
+        DumpSegment.getColumnsToInclude(queryableIndex, Collections.emptyList()),
+        null,
+        false
+    );
+    final byte[] fileBytes = Files.readAllBytes(outputFile.toPath());
+    final String output = StringUtils.fromUtf8(fileBytes);
+    final String expected = "{\"__time\":1609459200000,\"count\":1,\"nest\":{\"x\":200,\"y\":2.2}}\n"
+                            + "{\"__time\":1609459200000,\"count\":1,\"nest\":{\"x\":400,\"y\":1.1,\"z\":\"a\"}}\n"
+                            + "{\"__time\":1609459200000,\"count\":1,\"nest\":{\"x\":200,\"z\":\"b\"}}\n"
+                            + "{\"__time\":1609459200000,\"count\":1,\"nest\":{\"x\":100,\"y\":1.1,\"z\":\"a\"}}\n"
+                            + "{\"__time\":1609459200000,\"count\":1,\"nest\":{\"y\":3.3,\"z\":\"b\"}}\n";
+    Assert.assertEquals(expected, output);
+  }
+
+  @Test
   public void testDumpBitmap() throws IOException
   {
     Injector injector = Mockito.mock(Injector.class);
