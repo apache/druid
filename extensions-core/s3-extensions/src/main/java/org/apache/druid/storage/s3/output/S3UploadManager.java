@@ -53,9 +53,19 @@ public class S3UploadManager
     int poolSize = Math.max(4, runtimeInfo.getAvailableProcessors());
     int maxNumConcurrentChunks = computeMaxNumConcurrentChunks(s3OutputConfig, s3ExportConfig);
     this.uploadExecutor = Execs.newBlockingThreaded("UploadThreadPool-%d", poolSize, maxNumConcurrentChunks);
-    log.info("Creating executor service for S3 multipart upload with pool size [%d] and work queue capacity [%d]", poolSize, maxNumConcurrentChunks);
+    log.info("Initialized executor service for S3 multipart upload with pool size [%d] and work queue capacity [%d]",
+             poolSize, maxNumConcurrentChunks);
   }
 
+  /**
+   * Computes the maximum number of concurrent chunks for an S3 multipart upload.
+   * We want to determine the maximum number of concurrent chunks on disk based on the maximum value of chunkSize
+   * between the 2 configs: S3OutputConfig and S3ExportConfig.
+   *
+   * @param s3OutputConfig  The S3 output configuration, which may specify a custom chunk size.
+   * @param s3ExportConfig  The S3 export configuration, which may also specify a custom chunk size.
+   * @return The maximum number of concurrent chunks.
+   */
   private int computeMaxNumConcurrentChunks(S3OutputConfig s3OutputConfig, S3ExportConfig s3ExportConfig)
   {
     long chunkSize = S3OutputConfig.S3_MULTIPART_UPLOAD_MIN_PART_SIZE_BYTES;
@@ -69,6 +79,9 @@ public class S3UploadManager
     return (int) (S3OutputConfig.S3_MULTIPART_UPLOAD_MAX_PART_SIZE_BYTES / chunkSize);
   }
 
+  /**
+   * Queues a chunk of a file for upload to S3 as part of a multipart upload.
+   */
   public Future<UploadPartResult> queueChunkForUpload(ServerSideEncryptingAmazonS3 s3Client, String key, int chunkNumber, File chunkFile, String uploadId, S3OutputConfig config)
   {
     return uploadExecutor.submit(() -> RetryUtils.retry(
