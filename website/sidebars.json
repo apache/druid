@@ -185,7 +185,16 @@
         "items": [
           "querying/datasource",
           "querying/joins",
-          "querying/lookups",
+          {"type": "category",
+          "label": "Lookups",
+           "link": {
+           "type": "doc",
+           "id": "querying/lookups"
+           },
+           "items":[
+            "querying/lookups-cached-global",
+            "querying/kafka-extraction-namespace"
+           ]},
           "querying/multi-value-dimensions",
           "querying/arrays",
           "querying/nested-columns",
