@@ -1061,20 +1061,22 @@ The catalog object supports `local` and `hive` catalog types.
 
 The following table lists the properties of a `local` catalog:
 
-|Property|Description|Required|
-|--------|-----------|---------|
-|type|Set this value to `local`.|yes|
-|warehousePath|The location of the warehouse associated with the catalog|yes|
-|catalogProperties|Map of any additional properties that needs to be attached to the catalog|no|
+|Property|Description|Default|Required|
+|--------|-----------|-------|---------|
+|type|Set this value to `local`.|None|yes|
+|warehousePath|The location of the warehouse associated with the catalog.|None|yes|
+|catalogProperties|Map of any additional properties that needs to be attached to the catalog.|None|no|
+|caseSensitive|Toggle case sensitivity for column names during Iceberg table reads.|true|no|
 
 The following table lists the properties of a `hive` catalog:
 
-|Property|Description|Required|
-|--------|-----------|---------|
-|type|Set this value to `hive`.|yes|
-|warehousePath|The location of the warehouse associated with the catalog|yes|
-|catalogUri|The URI associated with the hive catalog|yes|
-|catalogProperties|Map of any additional properties that needs to be attached to the catalog|no|
+|Property|Description|Default|Required|
+|--------|-----------|-------|---------|
+|type|Set this value to `hive`.|None|yes|
+|warehousePath|The location of the warehouse associated with the catalog.|None|yes|
+|catalogUri|The URI associated with the hive catalog.|None|yes|
+|catalogProperties|Map of any additional properties that needs to be attached to the catalog.|None|no|
+|caseSensitive|Toggle case sensitivity for column names during Iceberg table reads.|true|no|
 
 ### Iceberg filter object
 
