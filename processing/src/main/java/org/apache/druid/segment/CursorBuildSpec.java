@@ -33,7 +33,7 @@ import java.util.List;
 
 public class CursorBuildSpec
 {
-  public static CursorBuildSpec FULL_SCAN = CursorBuildSpec.builder().setGranularity(Granularities.ALL).build();
+  public static final CursorBuildSpec FULL_SCAN = CursorBuildSpec.builder().setGranularity(Granularities.ALL).build();
 
   public static CursorBuildSpecBuilder builder()
   {
