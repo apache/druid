@@ -80,11 +80,23 @@ public class SegmentSchemaCacheTest
     Assert.assertTrue(schema.isPresent());
     Assert.assertEquals(expected, schema.get());
 
-    cache.resetTemporaryPublishedMetadataQueryResultOnDBPoll();
+    // simulate call after segment polling
 
-    Assert.assertFalse(cache.isSchemaCached(id));
+    ImmutableMap.Builder<SegmentId, SegmentMetadata> segmentMetadataBuilder = ImmutableMap.builder();
+    segmentMetadataBuilder.put(id, new SegmentMetadata(5L, "fp"));
+
+    ImmutableMap.Builder<String, SchemaPayload> schemaPayloadBuilder = ImmutableMap.builder();
+    schemaPayloadBuilder.put("fp", new SchemaPayload(rowSignature));
+
+    SegmentSchemaCache.FinalizedSegmentSchemaInfo finalizedSegmentSchemaInfo =
+        new SegmentSchemaCache.FinalizedSegmentSchemaInfo(segmentMetadataBuilder.build(), schemaPayloadBuilder.build());
+
+    cache.updateFinalizedSegmentSchema(finalizedSegmentSchemaInfo);
+
+    Assert.assertNull(cache.getTemporaryPublishedMetadataQueryResults(id));
+    Assert.assertTrue(cache.isSchemaCached(id));
     schema = cache.getSchemaForSegment(id);
-    Assert.assertFalse(schema.isPresent());
+    Assert.assertTrue(schema.isPresent());
   }
 
   @Test

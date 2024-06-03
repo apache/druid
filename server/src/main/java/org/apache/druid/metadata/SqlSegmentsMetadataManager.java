@@ -1177,7 +1177,6 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
                     })
                 .list();
 
-          segmentSchemaCache.resetTemporaryPublishedMetadataQueryResultOnDBPoll();
           return null;
         });
 
