@@ -137,7 +137,9 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   @Override
   public boolean canHandleSegments()
   {
-    return !(locations == null || locations.isEmpty());
+    final boolean isLocationsValid = !(locations == null || locations.isEmpty());
+    final boolean isLocationsConfigValid = !(config.getLocations() == null || config.getLocations().isEmpty());
+    return isLocationsValid || isLocationsConfigValid;
   }
 
   @Override
@@ -248,11 +250,11 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   }
 
   /**
-   * Determines and returns the effective segment info directory based on the configuration settings.
+   * Returns the effective segment info directory based on the configuration settings.
    * The directory is selected based on the following configurations injected into this class:
    * <ul>
-   *   <li>{@link SegmentLoaderConfig#infoDir} - If this is set, it is used as the info directory.</li>
-   *   <li>{@link SegmentLoaderConfig#locations} - If the info directory is not set, the first location from this list is used.</li>
+   *   <li>{@link SegmentLoaderConfig#getInfoDir()} - If {@code infoDir} is set, it is used as the info directory.</li>
+   *   <li>{@link SegmentLoaderConfig#getLocations()} - If the info directory is not set, the first location from this list is used.</li>
    *   <li>List of {@link StorageLocation}s injected - If both the info directory and locations list are not set, the
    *   first storage location is used.</li>
    * </ul>
@@ -272,7 +274,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       throw DruidException.forPersona(DruidException.Persona.OPERATOR)
           .ofCategory(DruidException.Category.NOT_FOUND)
           .build("Could not determine infoDir. Make sure 'druid.segmentCache.infoDir' "
-                 + "or 'druid.segmentCache.locations'is set correctly.");
+                 + "or 'druid.segmentCache.locations' is set correctly.");
     }
     return infoDir;
   }
@@ -612,7 +614,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     loadOnBootstrapExec.submit(() -> loadSegmentIntoPageCacheInternal(segment));
   }
 
-  private void loadSegmentIntoPageCacheInternal(DataSegment segment)
+  void loadSegmentIntoPageCacheInternal(DataSegment segment)
   {
     final ReferenceCountingLock lock = createOrGetLock(segment);
     synchronized (lock) {

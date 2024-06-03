@@ -171,8 +171,9 @@ public class ServerManagerTest
               .wrapSegment(TombstoneSegmentizerFactory.segmentForTombstone(dataSegment), dataSegment.getShardSpec());
         } else {
           return ReferenceCountingSegment.wrapSegment(new TestSegmentUtils.SegmentForTesting(
-              MapUtils.getString(dataSegment.getLoadSpec(), "version"),
-              (Interval) dataSegment.getLoadSpec().get("interval")
+              dataSegment.getDataSource(),
+              (Interval) dataSegment.getLoadSpec().get("interval"),
+              MapUtils.getString(dataSegment.getLoadSpec(), "version")
           ), dataSegment.getShardSpec());
         }
       }

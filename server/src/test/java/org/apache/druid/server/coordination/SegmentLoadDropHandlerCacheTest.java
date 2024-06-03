@@ -110,7 +110,7 @@ public class SegmentLoadDropHandlerCacheTest
     segmentManager = new SegmentManager(
         new SegmentLocalCacheManager(
             emptyLocations,
-            loaderConfig,
+            new SegmentLoaderConfig(),
             new LeastBytesUsedStorageLocationSelectorStrategy(emptyLocations),
             TestIndex.INDEX_IO,
             objectMapper
@@ -118,7 +118,7 @@ public class SegmentLoadDropHandlerCacheTest
     );
 
     final SegmentLoadDropHandler loadDropHandler = new SegmentLoadDropHandler(
-        loaderConfig,
+        new SegmentLoaderConfig(),
         segmentAnnouncer,
         serverAnnouncer,
         segmentManager,

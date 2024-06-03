@@ -52,7 +52,6 @@ import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
-import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -128,12 +127,13 @@ public class TestSegmentUtils
         SegmentLazyLoadFailCallback loadFailed
     )
     {
-      return Mockito.mock(Segment.class);
+      return new SegmentForTesting(segment.getDataSource(), segment.getInterval(), segment.getVersion());
     }
   }
 
   public static class SegmentForTesting implements Segment
   {
+    private final String datasource;
     private final String version;
     private final Interval interval;
     private final Object lock = new Object();
@@ -197,8 +197,9 @@ public class TestSegmentUtils
       }
     };
 
-    public SegmentForTesting(String version, Interval interval)
+    public SegmentForTesting(String datasource, Interval interval, String version)
     {
+      this.datasource = datasource;
       this.version = version;
       this.interval = interval;
     }
@@ -216,7 +217,7 @@ public class TestSegmentUtils
     @Override
     public SegmentId getId()
     {
-      return SegmentId.dummy(version);
+      return SegmentId.of(datasource, interval, version, 0);
     }
 
     public boolean isClosed()

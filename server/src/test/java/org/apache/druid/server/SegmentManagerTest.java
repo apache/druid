@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.segment.ReferenceCountingSegment;
+import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.loading.LeastBytesUsedStorageLocationSelectorStrategy;
@@ -133,6 +134,32 @@ public class SegmentManagerTest
                                                       )
                                                   )
                                                   .collect(Collectors.toList());
+
+    for (Future<Void> loadFuture : loadFutures) {
+      loadFuture.get();
+    }
+
+    assertResult(SEGMENTS);
+  }
+
+  @Test
+  public void testLoadBootstrapSegment() throws ExecutionException, InterruptedException
+  {
+    final List<Future<Void>> loadFutures = SEGMENTS.stream()
+                                                   .map(
+                                                       segment -> executor.submit(
+                                                           () -> {
+                                                             try {
+                                                               segmentManager.loadSegmentOnBootstrap(segment, SegmentLazyLoadFailCallback.NOOP);
+                                                             }
+                                                             catch (IOException | SegmentLoadingException e) {
+                                                               throw new RuntimeException(e);
+                                                             }
+                                                             return (Void) null;
+                                                           }
+                                                       )
+                                                   )
+                                                   .collect(Collectors.toList());
 
     for (Future<Void> loadFuture : loadFutures) {
       loadFuture.get();
@@ -351,9 +378,11 @@ public class SegmentManagerTest
           segment.getVersion(),
           segment.getShardSpec().createChunk(
               ReferenceCountingSegment.wrapSegment(
-                  ReferenceCountingSegment.wrapSegment(new TestSegmentUtils.SegmentForTesting(
-                      MapUtils.getString(segment.getLoadSpec(), "version"),
-                      (Interval) segment.getLoadSpec().get("interval")
+                  ReferenceCountingSegment.wrapSegment(
+                      new TestSegmentUtils.SegmentForTesting(
+                          segment.getDataSource(),
+                          (Interval) segment.getLoadSpec().get("interval"),
+                          MapUtils.getString(segment.getLoadSpec(), "version")
                   ), segment.getShardSpec()),
                   segment.getShardSpec()
               )

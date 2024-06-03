@@ -626,8 +626,9 @@ public class SegmentLoadDropHandlerTest
       } else {
         return ReferenceCountingSegment.wrapSegment(
             new TestSegmentUtils.SegmentForTesting(
-                MapUtils.getString(segment.getLoadSpec(), "version"),
-                (Interval) segment.getLoadSpec().get("interval")
+                segment.getDataSource(),
+                (Interval) segment.getLoadSpec().get("interval"),
+                MapUtils.getString(segment.getLoadSpec(), "version")
             ), segment.getShardSpec()
         );
       }
