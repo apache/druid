@@ -20,10 +20,12 @@
 package org.apache.druid.sql.calcite.planner;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.QueryContexts;
 import org.joda.time.DateTimeZone;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
@@ -427,5 +429,38 @@ public class PlannerConfig
       config.nativeQuerySqlPlanningMode = nativeQuerySqlPlanningMode;
       return config;
     }
+  }
+
+  /**
+   * Translates {@link PlannerConfig} settings into its equivalent QueryContext map.
+   *
+   * @throws DruidException if the translation is not possible.
+   */
+  public Map<String, Object> getNonDefaultAsQueryContext()
+  {
+    Map<String, Object> overrides = new HashMap<>();
+    PlannerConfig def = new PlannerConfig();
+    if (def.useApproximateCountDistinct != useApproximateCountDistinct) {
+      overrides.put(
+          CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT,
+          String.valueOf(useApproximateCountDistinct)
+      );
+    }
+    if (def.useGroupingSetForExactDistinct != useGroupingSetForExactDistinct) {
+      overrides.put(
+          CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT,
+          String.valueOf(useGroupingSetForExactDistinct)
+      );
+    }
+
+    PlannerConfig newConfig = PlannerConfig.builder().withOverrides(overrides).build();
+    if (!equals(newConfig)) {
+      throw DruidException.defensive(
+          "Not all PlannerConfig options are not persistable as QueryContext keys!\nold: %s\nnew: %s",
+          this,
+          newConfig
+      );
+    }
+    return overrides;
   }
 }
