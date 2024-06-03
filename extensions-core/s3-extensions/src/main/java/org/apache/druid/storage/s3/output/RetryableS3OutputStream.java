@@ -243,7 +243,9 @@ public class RetryableS3OutputStream extends OutputStream
         numChunksPushed.incrementAndGet();
       }
       catch (Exception e) {
-        throw new RuntimeException("Error while waiting for upload to complete", e);
+        error = true;
+        LOG.error(e, "Error in uploading part for upload ID [%s]", uploadId);
+        break;
       }
     }
 
