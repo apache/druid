@@ -34,25 +34,25 @@ import java.util.Set;
  */
 public class Selector
 {
-  private final String name;
+  private final String selectionKey;
   private final Map<String, Set<String>> cxtTagsConditions;
   private final Map<String, Set<String>> taskFieldsConditions;
 
   /**
    * Creates a selector with specified conditions for context tags and task fields.
    *
-   * @param name                 the identifier representing the outcome when a task matches the conditions
+   * @param selectionKey         the identifier representing the outcome when a task matches the conditions
    * @param cxtTagsConditions    conditions on context tags
    * @param taskFieldsConditions conditions on task fields
    */
   @JsonCreator
   public Selector(
-      @JsonProperty("name") String name,
+      @JsonProperty("selectionKey") String selectionKey,
       @JsonProperty("context.tags") Map<String, Set<String>> cxtTagsConditions,
       @JsonProperty("task") Map<String, Set<String>> taskFieldsConditions
   )
   {
-    this.name = name;
+    this.selectionKey = selectionKey;
     this.cxtTagsConditions = cxtTagsConditions;
     this.taskFieldsConditions = taskFieldsConditions;
   }
@@ -104,9 +104,9 @@ public class Selector
   }
 
   @JsonProperty
-  public String getName()
+  public String getSelectionKey()
   {
-    return name;
+    return selectionKey;
   }
 
   @JsonProperty("context.tags")
@@ -131,7 +131,7 @@ public class Selector
       return false;
     }
     Selector selector = (Selector) o;
-    return Objects.equals(name, selector.name) && Objects.equals(
+    return Objects.equals(selectionKey, selector.selectionKey) && Objects.equals(
         cxtTagsConditions,
         selector.cxtTagsConditions
     ) && Objects.equals(taskFieldsConditions, selector.taskFieldsConditions);
@@ -140,14 +140,14 @@ public class Selector
   @Override
   public int hashCode()
   {
-    return Objects.hash(name, cxtTagsConditions, taskFieldsConditions);
+    return Objects.hash(selectionKey, cxtTagsConditions, taskFieldsConditions);
   }
 
   @Override
   public String toString()
   {
     return "Selector{" +
-           "name=" + name +
+           "selectionKey=" + selectionKey +
            ", context.tags=" + cxtTagsConditions +
            ", task=" + taskFieldsConditions +
            '}';

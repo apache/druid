@@ -34,6 +34,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 public interface ExecutionConfig
 {
   String CONFIG_KEY = "k8s.taskrunner.config";
+  ExecutionBehaviorStrategy DEFAULT_STRATEGY = new DefaultExecutionBehaviorStrategy();
 
   /**
    * Retrieves the execution behavior strategy associated with this configuration.

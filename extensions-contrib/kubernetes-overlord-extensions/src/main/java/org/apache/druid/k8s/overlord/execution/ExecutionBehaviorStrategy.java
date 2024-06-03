@@ -28,9 +28,10 @@ import javax.annotation.Nullable;
 /**
  * Defines a strategy for determining the execution behavior of tasks based on specific conditions.
  */
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = DynamicTaskExecutionBehaviorStrategy.class)
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = DefaultExecutionBehaviorStrategy.class)
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "default", value = DynamicTaskExecutionBehaviorStrategy.class)
+    @JsonSubTypes.Type(name = "default", value = DefaultExecutionBehaviorStrategy.class),
+    @JsonSubTypes.Type(name = "dynamicTask", value = DynamicTaskExecutionBehaviorStrategy.class),
 })
 public interface ExecutionBehaviorStrategy
 {

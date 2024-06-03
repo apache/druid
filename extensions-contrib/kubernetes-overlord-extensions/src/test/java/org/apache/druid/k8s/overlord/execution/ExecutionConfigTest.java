@@ -35,35 +35,46 @@ public class ExecutionConfigTest
     String json = "{\n"
                   + "  \"type\": \"default\",\n"
                   + "  \"behaviorStrategy\": {\n"
-                  + "    \"type\": \"default\",\n"
-                  + "    \"categorySelectors\": [\n"
-                  + "      {\n"
-                  + "        \"name\": \"low-throughput\",\n"
-                  + "        \"context.tags\": {\n"
-                  + "          \"billingCategory\": [\n"
-                  + "            \"streaming_ingestion\"\n"
-                  + "          ]\n"
-                  + "        },\n"
-                  + "        \"task\": {\n"
-                  + "          \"datasource\": [\n"
-                  + "            \"wikipedia\"\n"
-                  + "          ]\n"
-                  + "        }\n"
-                  + "      },\n"
-                  + "      {\n"
-                  + "        \"name\": \"medium-throughput\",\n"
-                  + "        \"task\": {\n"
-                  + "          \"type\": [\n"
-                  + "            \"async_query\"\n"
-                  + "          ]\n"
-                  + "        }\n"
-                  + "      }\n"
-                  + "    ]\n"
+                  + "    \"type\": \"default\"\n"
                   + "  }\n"
                   + "}";
 
     ExecutionConfig deserialized = jsonMapper.readValue(json, ExecutionConfig.class);
     ExecutionBehaviorStrategy behaviorStrategy = deserialized.getBehaviorStrategy();
+    Assert.assertTrue(behaviorStrategy instanceof DefaultExecutionBehaviorStrategy);
+
+    json = "{\n"
+           + "  \"type\": \"default\",\n"
+           + "  \"behaviorStrategy\": {\n"
+           + "    \"type\": \"dynamicTask\",\n"
+           + "    \"categorySelectors\": [\n"
+           + "      {\n"
+           + "        \"selectionKey\": \"low-throughput\",\n"
+           + "        \"context.tags\": {\n"
+           + "          \"billingCategory\": [\n"
+           + "            \"streaming_ingestion\"\n"
+           + "          ]\n"
+           + "        },\n"
+           + "        \"task\": {\n"
+           + "          \"datasource\": [\n"
+           + "            \"wikipedia\"\n"
+           + "          ]\n"
+           + "        }\n"
+           + "      },\n"
+           + "      {\n"
+           + "        \"selectionKey\": \"medium-throughput\",\n"
+           + "        \"task\": {\n"
+           + "          \"type\": [\n"
+           + "            \"async_query\"\n"
+           + "          ]\n"
+           + "        }\n"
+           + "      }\n"
+           + "    ]\n"
+           + "  }\n"
+           + "}";
+
+    deserialized = jsonMapper.readValue(json, ExecutionConfig.class);
+    behaviorStrategy = deserialized.getBehaviorStrategy();
     Assert.assertTrue(behaviorStrategy instanceof DynamicTaskExecutionBehaviorStrategy);
   }
 }

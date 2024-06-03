@@ -58,7 +58,7 @@ public class DynamicTaskExecutionBehaviorStrategy implements ExecutionBehaviorSt
     return categorySelectors.stream()
                             .filter(selector -> selector.evaluate(task))
                             .findFirst()
-                            .map(Selector::getName)
+                            .map(Selector::getSelectionKey)
                             .orElse(null);
   }
 

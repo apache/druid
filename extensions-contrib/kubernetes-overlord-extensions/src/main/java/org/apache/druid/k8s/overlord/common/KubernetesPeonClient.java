@@ -279,10 +279,14 @@ public class KubernetesPeonClient
   {
     ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
     IndexTaskUtils.setTaskDimensions(metricBuilder, task);
-    metricBuilder.setDimensionIfNotNull(
-        "category",
-        executionConfigRef.get().getBehaviorStrategy().getTaskCategory(task)
-    );
+    ExecutionConfig executionConfig = executionConfigRef.get();
+    if (executionConfig != null && executionConfig.getBehaviorStrategy() != null) {
+      metricBuilder.setDimensionIfNotNull(
+          "category",
+          executionConfig.getBehaviorStrategy().getTaskCategory(task)
+      );
+    }
+
     emitter.emit(metricBuilder.setMetric(metric, durationMs));
   }
 }

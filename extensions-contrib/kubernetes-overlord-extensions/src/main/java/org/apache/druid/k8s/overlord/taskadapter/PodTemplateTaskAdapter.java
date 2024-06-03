@@ -47,6 +47,7 @@ import org.apache.druid.k8s.overlord.common.Base64Compression;
 import org.apache.druid.k8s.overlord.common.DruidK8sConstants;
 import org.apache.druid.k8s.overlord.common.K8sTaskId;
 import org.apache.druid.k8s.overlord.common.KubernetesOverlordUtils;
+import org.apache.druid.k8s.overlord.execution.ExecutionBehaviorStrategy;
 import org.apache.druid.k8s.overlord.execution.ExecutionConfig;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.tasklogs.TaskLogs;
@@ -131,17 +132,19 @@ public class PodTemplateTaskAdapter implements TaskAdapter
   @Override
   public Job fromTask(Task task) throws IOException
   {
-    PodTemplate podTemplate = null;
+    ExecutionBehaviorStrategy behaviorStrategy;
     ExecutionConfig executionConfig = executionConfigRef.get();
-    if (executionConfig != null && executionConfig.getBehaviorStrategy() != null) {
-      String category = executionConfig.getBehaviorStrategy().getTaskCategory(task);
-      if (category != null) {
-        podTemplate = templates.get(category);
-      }
+    if (executionConfig == null || executionConfig.getBehaviorStrategy() == null) {
+      behaviorStrategy = ExecutionConfig.DEFAULT_STRATEGY;
+    } else {
+      behaviorStrategy = executionConfig.getBehaviorStrategy();
     }
-    if (podTemplate == null) {
-      podTemplate = templates.getOrDefault(task.getType(), templates.get("base"));
-    }
+    String category = behaviorStrategy.getTaskCategory(task);
+    PodTemplate podTemplate = templates.getOrDefault(
+        category != null ? category : task.getType(),
+        templates.get("base")
+    );
+
     if (podTemplate == null) {
       throw new ISE("Pod template spec not found for task type [%s]", task.getType());
     }
@@ -167,7 +170,9 @@ public class PodTemplateTaskAdapter implements TaskAdapter
         .endTemplate()
         .withActiveDeadlineSeconds(taskRunnerConfig.getTaskTimeout().toStandardDuration().getStandardSeconds())
         .withBackoffLimit(0)  // druid does not support an external system retrying failed tasks
-        .withTtlSecondsAfterFinished((int) taskRunnerConfig.getTaskCleanupDelay().toStandardDuration().getStandardSeconds())
+        .withTtlSecondsAfterFinished((int) taskRunnerConfig.getTaskCleanupDelay()
+                                                           .toStandardDuration()
+                                                           .getStandardSeconds())
         .endSpec()
         .build();
   }
