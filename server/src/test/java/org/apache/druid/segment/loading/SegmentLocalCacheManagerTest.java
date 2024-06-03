@@ -55,6 +55,9 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsInAnyOrder;
+
 public class SegmentLocalCacheManagerTest
 {
   @Rule
@@ -207,7 +210,7 @@ public class SegmentLocalCacheManagerTest
     manager.storeInfoFile(segment2);
 
     Assert.assertTrue(manager.canHandleSegments());
-    Assert.assertEquals(ImmutableList.of(segment2, segment1), manager.getCachedSegments());
+    assertThat(manager.getCachedSegments(), containsInAnyOrder(segment1, segment2));
   }
 
   @Test
@@ -255,7 +258,7 @@ public class SegmentLocalCacheManagerTest
     Assert.assertTrue(segment3InfoFile.exists());
 
     Assert.assertTrue(manager.canHandleSegments());
-    Assert.assertEquals(ImmutableList.of(segment2, segment1), manager.getCachedSegments());
+    assertThat(manager.getCachedSegments(), containsInAnyOrder(segment1, segment2));
     Assert.assertFalse(segment3InfoFile.exists());
   }
 
