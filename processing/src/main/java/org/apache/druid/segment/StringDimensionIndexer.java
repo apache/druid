@@ -83,7 +83,7 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
   public EncodedKeyComponent<int[]> processRowValsToUnsortedEncodedKeyComponent(@Nullable Object dimValues, boolean reportParseExceptions)
   {
     final int[] encodedDimensionValues;
-    volatile boolean dictionaryChanged = false;
+    boolean dictionaryChanged = false;
     final long oldDictSizeInBytes = useMaxMemoryEstimates ? 0 : dimLookup.sizeInBytes();
 
     // expressions which operate on multi-value string inputs as arrays might spit out arrays, coerce to list
