@@ -93,7 +93,6 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
 
     if (dimValues == null) {
       final int nullId = dimLookup.getId(null);
-      encodedDimensionValues = nullId == DimensionDictionary.ABSENT_VALUE_ID ? new int[]{dimLookup.add(null)} : new int[]{nullId};
       if (nullId == DimensionDictionary.ABSENT_VALUE_ID) {
         encodedDimensionValues = new int[]{dimLookup.add(null)};
         dictionaryChanged = true;
