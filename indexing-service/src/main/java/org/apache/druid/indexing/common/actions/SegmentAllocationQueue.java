@@ -268,7 +268,7 @@ public class SegmentAllocationQueue
       catch (Throwable t) {
         currentBatch.failPendingRequests(t);
         processed = true;
-        log.error(t, "Error while processing batch[%s]", currentBatch.key);
+        log.error(t, "Error while processing batch[%s].", currentBatch.key);
       }
 
       // Requeue if not fully processed yet
