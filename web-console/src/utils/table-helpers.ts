@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import type { QueryResult } from '@druid-toolkit/query';
+import type { QueryResult, SqlExpression } from '@druid-toolkit/query';
 import { C } from '@druid-toolkit/query';
 import type { Filter } from 'react-table';
 
@@ -35,6 +35,7 @@ export function changePage(pagination: Pagination, page: number): Pagination {
 export interface ColumnHint {
   displayName?: string;
   group?: string;
+  expressionForWhere?: SqlExpression;
   formatter?: (x: any) => string;
 }
 
