@@ -206,60 +206,6 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     return segmentManager.getRowCountDistribution();
   }
 
-  @Override
-  public void addSegment(DataSegment segment, @Nullable DataSegmentChangeCallback callback)
-  {
-    SegmentChangeStatus result = null;
-    try {
-      log.info("Loading segment[%s]", segment.getId());
-      /*
-         The lock below is used to prevent a race condition when the scheduled runnable in removeSegment() starts,
-         and if (segmentsToDelete.remove(segment)) returns true, in which case historical will start deleting segment
-         files. At that point, it's possible that right after the "if" check, addSegment() is called and actually loads
-         the segment, which makes dropping segment and downloading segment happen at the same time.
-       */
-      if (segmentsToDelete.contains(segment)) {
-        /*
-           Both contains(segment) and remove(segment) can be moved inside the synchronized block. However, in that case,
-           each time when addSegment() is called, it has to wait for the lock in order to make progress, which will make
-           things slow. Given that in most cases segmentsToDelete.contains(segment) returns false, it will save a lot of
-           cost of acquiring lock by doing the "contains" check outside the synchronized block.
-         */
-        synchronized (segmentDeleteLock) {
-          segmentsToDelete.remove(segment);
-        }
-      }
-      try {
-        segmentManager.loadSegment(segment);
-      }
-      catch (Exception e) {
-        removeSegment(segment, DataSegmentChangeCallback.NOOP, false);
-        throw new SegmentLoadingException(e, "Exception loading segment[%s]", segment.getId());
-      }
-      try {
-        // Announce segment even if the segment file already exists.
-        announcer.announceSegment(segment);
-      }
-      catch (IOException e) {
-        throw new SegmentLoadingException(e, "Failed to announce segment[%s]", segment.getId());
-      }
-
-      result = SegmentChangeStatus.SUCCESS;
-    }
-    catch (Throwable e) {
-      log.makeAlert(e, "Failed to load segment")
-         .addData("segment", segment)
-         .emit();
-      result = SegmentChangeStatus.failed(e.toString());
-    }
-    finally {
-      updateRequestStatus(new SegmentChangeRequestLoad(segment), result);
-      if (null != callback) {
-        callback.execute();
-      }
-    }
-  }
-
   /**
    * Bulk loading of cached segments into page cache during bootstrap.
    */
@@ -343,7 +289,64 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     finally {
       loadingExecutor.shutdownNow();
       stopwatch.stop();
+      // At this stage, all tasks have been submitted, send a shutdown command to cleanup any resources alloted
+      // for the bootstrapping function.
+      segmentManager.shutdownBootstrap();
       log.info("Cache load of [%d] bootstrap segments took [%,d]ms.", segments.size(), stopwatch.millisElapsed());
+    }
+  }
+
+  @Override
+  public void addSegment(DataSegment segment, @Nullable DataSegmentChangeCallback callback)
+  {
+    SegmentChangeStatus result = null;
+    try {
+      log.info("Loading segment[%s]", segment.getId());
+      /*
+         The lock below is used to prevent a race condition when the scheduled runnable in removeSegment() starts,
+         and if (segmentsToDelete.remove(segment)) returns true, in which case historical will start deleting segment
+         files. At that point, it's possible that right after the "if" check, addSegment() is called and actually loads
+         the segment, which makes dropping segment and downloading segment happen at the same time.
+       */
+      if (segmentsToDelete.contains(segment)) {
+        /*
+           Both contains(segment) and remove(segment) can be moved inside the synchronized block. However, in that case,
+           each time when addSegment() is called, it has to wait for the lock in order to make progress, which will make
+           things slow. Given that in most cases segmentsToDelete.contains(segment) returns false, it will save a lot of
+           cost of acquiring lock by doing the "contains" check outside the synchronized block.
+         */
+        synchronized (segmentDeleteLock) {
+          segmentsToDelete.remove(segment);
+        }
+      }
+      try {
+        segmentManager.loadSegment(segment);
+      }
+      catch (Exception e) {
+        removeSegment(segment, DataSegmentChangeCallback.NOOP, false);
+        throw new SegmentLoadingException(e, "Exception loading segment[%s]", segment.getId());
+      }
+      try {
+        // Announce segment even if the segment file already exists.
+        announcer.announceSegment(segment);
+      }
+      catch (IOException e) {
+        throw new SegmentLoadingException(e, "Failed to announce segment[%s]", segment.getId());
+      }
+
+      result = SegmentChangeStatus.SUCCESS;
+    }
+    catch (Throwable e) {
+      log.makeAlert(e, "Failed to load segment")
+         .addData("segment", segment)
+         .emit();
+      result = SegmentChangeStatus.failed(e.toString());
+    }
+    finally {
+      updateRequestStatus(new SegmentChangeRequestLoad(segment), result);
+      if (null != callback) {
+        callback.execute();
+      }
     }
   }
 

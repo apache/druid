@@ -436,4 +436,13 @@ public class SegmentManager
   {
     return cacheManager.getCachedSegments();
   }
+
+  /**
+   * Shutdown the bootstrap executor to save resources.
+   * This should be called after loading bootstrap segments into the page cache.
+   */
+  public void shutdownBootstrap()
+  {
+    cacheManager.shutdownBootstrap();
+  }
 }

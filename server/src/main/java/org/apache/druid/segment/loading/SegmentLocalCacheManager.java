@@ -646,8 +646,18 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       }
       finally {
         unlock(segment, lock);
+        log.info("loadOnDownload for segment[%s] complete!.", segment.getId());
       }
     }
+  }
+
+  @Override
+  public void shutdownBootstrap()
+  {
+    if (loadOnBootstrapExec == null) {
+      return;
+    }
+    loadOnBootstrapExec.shutdown();
   }
 
   private void cleanupCacheFiles(File baseFile, File cacheFile)

@@ -119,6 +119,12 @@ public interface SegmentCacheManager
    */
   void loadSegmentIntoPageCacheOnBootstrap(DataSegment segment);
 
+  /**
+   * Shutdown any previously set up bootstrap executor to save resources.
+   * This should be called after loading bootstrap segments into the page cache.
+   */
+  void shutdownBootstrap();
+
   boolean reserve(DataSegment segment);
 
   /**

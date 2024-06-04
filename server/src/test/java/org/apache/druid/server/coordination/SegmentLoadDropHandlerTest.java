@@ -61,6 +61,7 @@ import java.util.Set;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class SegmentLoadDropHandlerTest
 {
@@ -289,6 +290,7 @@ public class SegmentLoadDropHandlerTest
     handler.stop();
 
     Assert.assertEquals(0, serverAnnouncer.getObservedCount());
+    Assert.assertEquals(1, cacheManager.observedShutdownBootstrapCount.get());
   }
 
   @Test
@@ -330,6 +332,7 @@ public class SegmentLoadDropHandlerTest
     handler.stop();
 
     Assert.assertEquals(0, serverAnnouncer.getObservedCount());
+    Assert.assertEquals(1, cacheManager.observedShutdownBootstrapCount.get());
   }
 
   @Test(timeout = 60_000L)
@@ -576,6 +579,7 @@ public class SegmentLoadDropHandlerTest
     private final List<DataSegment> observedSegments;
     private final List<DataSegment> observedSegmentsLoadedIntoPageCache;
     private final List<DataSegment> observedSegmentsRemovedFromCache;
+    private final AtomicInteger observedShutdownBootstrapCount;
 
     TestSegmentCacheManager()
     {
@@ -590,6 +594,7 @@ public class SegmentLoadDropHandlerTest
       this.observedSegments = new ArrayList<>();
       this.observedSegmentsLoadedIntoPageCache = new ArrayList<>();
       this.observedSegmentsRemovedFromCache = new ArrayList<>();
+      this.observedShutdownBootstrapCount = new AtomicInteger(0);;
     }
 
     @Override
@@ -644,6 +649,12 @@ public class SegmentLoadDropHandlerTest
     public void loadSegmentIntoPageCacheOnBootstrap(DataSegment segment)
     {
       observedBootstrapSegmentsLoadedIntoPageCache.add(segment);
+    }
+
+    @Override
+    public void shutdownBootstrap()
+    {
+      observedShutdownBootstrapCount.incrementAndGet();
     }
 
     @Override
