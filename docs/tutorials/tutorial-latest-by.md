@@ -40,10 +40,12 @@ Sometimes, you want to read the latest value of one dimension or measure in rela
 
 ```sql
 SELECT dimension,
-       LATEST_BY(changed_dimension, update_timestamp)
+       LATEST_BY(changed_dimension, updated_timestamp)
 FROM my_table
 GROUP BY 1
 ```
+
+In this example `update_timestamp` represents the reference timestamp to use to evalute the "latest" value. This could be `__time` or another timestamp.
 
 For example, consider the following table of events that log the total number of points for a user:
 
@@ -101,9 +103,9 @@ In the example, the values increase each time, but this method works even if the
 
 You can use this query shape as a subquery for additional processing. However, if there are many values for `user_id`, the query can be expensive.
 
-If you want to track the latest value at different times within a larger time frame, you need an additional timestamp to record update times. This allows Druid to track the latest version. Consider the following data that represents points for various users updated within an hour time frame:
+If you want to track the latest value at different times within a larger granualarity time frame, you need an additional timestamp to record update times. This allows Druid to track the latest version. Consider the following data that represents points for various users updated within an hour time frame. `__time` is hour granularity, but `updated_timestamp` is minute granularity:
 
-| `__time` | `update_time` | `user_id`| `total_points`|
+| `__time` | `updated_timestamp` | `user_id`| `points`|
 | --- | --- | --- | --- |
 | `2024-01-01T01:00:00.000Z`| `2024-01-01T01:00:00.000Z`|`funny_bunny1`| 10 |
 |`2024-01-01T01:00:00.000Z`| `2024-01-01T01:05:00.000Z`|`funny_bunny1`| 30 |
@@ -158,9 +160,9 @@ The results are as follows:
 |`2024-01-01T02:00:00.000Z`|`silly_monkey2`|25|
 |`2024-01-01T03:00:00.000Z`|`funny_bunny1`|10|
 
-LATEST_BY() is an aggregation function. While it's very efficient when there are not many update rows matching a dimension, such as `user_id`, it scans all matching rows with the same dimension. For dimensions with numerous updates, such as when a user plays a game a million times, and the updates don't arrive in a timely order, Druid processes all rows matching the `user_id` to find the row with max timestamp to provide the latest data. 
+LATEST_BY is an aggregation function. While it's very efficient when there are not many update rows matching a dimension, such as `user_id`, it scans all matching rows with the same dimension. For dimensions with numerous updates, such as when a user plays a game a million times, and the updates don't arrive in a timely order, Druid processes all rows matching the `user_id` to find the row with the max timestamp to provide the latest data. 
 
-For instance, if updates constitute 1-5% of your data, you'll get good query performance, if updates constitute 50%+ of your data, your queries will be slow.
+For instance, if updates constitute 1-5% of your data, you'll get good query performance. If updates constitute 50 percent or more of your data, your queries will be slow.
 
 To mitigate this, you can set up a periodic batch ingestion job that re-indexes modified data into a new datasource for direct querying without grouping to reduce the cost of these queries by pre-computing and storing the latest values. Note that your view of the latest data will not be up to date until the next refresh happens.
  
@@ -170,9 +172,9 @@ Alternatively, you can perform ingestion-time aggregation using LATEST_BY and ap
 
 Instead of appending the latest total value in your events, you can log the change in value with each event and use the aggregator you usually use. This method may allow you to avoid a level of aggregation and grouping in your queries.
 
-For most applications, you can send the event data directly to Druid without pre-processing. For example, when sending impression count to Druid, don't send the total impression count since yesterday, send just the recent impression count. You can then aggregate the total in Druid during query. Druid is optimized for adding up a lot of rows, so this might be counterintuitive to people who are familiar with batching or pre-aggregating data.
+For most applications, you can send the event data directly to Druid without pre-processing. For example, when sending impression counts to Druid, don't send the total impression count since yesterday, send just the recent impression count. You can then aggregate the total in Druid during query. Druid is optimized for adding up a lot of rows, so this might be counterintuitive to people who are familiar with batching or pre-aggregating data.
 
-For example, consider a datasource with a measure column `y` that you aggregate with SUM, grouped by another dimension `x`. If you want to update the value of `y` for `x` from 3 to 2, then insert -1 for `y`. This way the aggregation SUM(`y`) is correct for any queries grouped by `x`. This may offer a significant performance advantage but the trade off is that the aggregation has to always be a SUM.
+For example, consider a datasource with a measure column `y` that you aggregate with SUM, grouped by another dimension `x`. If you want to update the value of `y` from 3 to 2, then insert -1 for `y`. This way the aggregation `SUM(y)` is correct for any queries grouped by `x`. This may offer a significant performance advantage but the trade off is that the aggregation has to always be a SUM.
 
 In other cases, the updates to the data may already be deltas to the original, and so the data engineering required to append the updates would be simple. The same performance impact mitigation applies as in the previous example: use rollup at ingestion time combined with ongoing automatic compaction.
 
@@ -206,7 +208,7 @@ WITH "ext" AS (
 SELECT
   TIME_PARSE("timestamp") AS "__time",
   "user_id",
-  "points"
+  "points" AS "delta"
 FROM "ext"
 PARTITIONED BY DAY
 ```
@@ -218,7 +220,7 @@ The following query returns the same points per hour as the second LATEST_BY exa
 ```sql
 SELECT FLOOR("__time" TO HOUR) as "hour_time",
        "user_id",
-       SUM("points") AS "latest_points_hour"
+       SUM("delta") AS "latest_points_hour"
 FROM "delta_tutorial"
 GROUP BY 1,2
 ```
