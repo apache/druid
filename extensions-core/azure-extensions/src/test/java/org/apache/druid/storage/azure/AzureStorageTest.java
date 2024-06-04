@@ -71,7 +71,7 @@ public class AzureStorageTest
   }
 
   @Test
-  public void testListDir_retriable() throws BlobStorageException
+  public void testListBlobs_retriable() throws BlobStorageException
   {
     BlobItem blobItem = new BlobItem().setName(BLOB_NAME).setProperties(new BlobItemProperties().setContentLength(10L));
     SettableSupplier<PagedResponse<BlobItem>> supplier = new SettableSupplier<>();
@@ -86,11 +86,14 @@ public class AzureStorageTest
     final Integer maxAttempts = 3;
     Mockito.doReturn(blobServiceClient).when(azureClientFactory).getBlobServiceClient(maxAttempts, STORAGE_ACCOUNT);
 
-    assertEquals(ImmutableList.of(BLOB_NAME), azureStorage.listDir(CONTAINER, "", maxAttempts));
+    assertEquals(
+        ImmutableList.of(BLOB_NAME),
+        azureStorage.listBlobs(CONTAINER, "", null, maxAttempts)
+    );
   }
 
   @Test
-  public void testListDir_nullMaxAttempts() throws BlobStorageException
+  public void testListBlobs_nullMaxAttempts() throws BlobStorageException
   {
     BlobItem blobItem = new BlobItem().setName(BLOB_NAME).setProperties(new BlobItemProperties().setContentLength(10L));
     SettableSupplier<PagedResponse<BlobItem>> supplier = new SettableSupplier<>();
@@ -103,7 +106,10 @@ public class AzureStorageTest
     Mockito.doReturn(blobContainerClient).when(blobServiceClient).getBlobContainerClient(CONTAINER);
     Mockito.doReturn(blobServiceClient).when(azureClientFactory).getBlobServiceClient(null, STORAGE_ACCOUNT);
 
-    assertEquals(ImmutableList.of(BLOB_NAME), azureStorage.listDir(CONTAINER, "", null));
+    assertEquals(
+        ImmutableList.of(BLOB_NAME),
+        azureStorage.listBlobs(CONTAINER, "", null, null)
+    );
   }
 
   @Test

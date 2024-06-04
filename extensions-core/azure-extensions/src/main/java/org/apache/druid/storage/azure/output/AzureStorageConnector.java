@@ -196,7 +196,7 @@ public class AzureStorageConnector extends ChunkingStorageConnector<AzureInputRa
     final String prefixBasePath = objectPath(dirName);
     List<String> paths;
     try {
-      paths = azureStorage.listDir(config.getContainer(), prefixBasePath, config.getMaxRetry());
+      paths = azureStorage.listBlobs(config.getContainer(), prefixBasePath, null, config.getMaxRetry());
     }
     catch (BlobStorageException e) {
       throw new IOException(e);
