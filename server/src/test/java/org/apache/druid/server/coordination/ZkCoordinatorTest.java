@@ -25,13 +25,10 @@ import org.apache.curator.utils.ZKPaths;
 import org.apache.druid.curator.CuratorTestBase;
 import org.apache.druid.guice.ServerTypeConfig;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
-import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -41,15 +38,9 @@ import org.apache.zookeeper.CreateMode;
 import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
 
-import java.io.File;
-import java.io.IOException;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -57,8 +48,6 @@ import java.util.concurrent.ScheduledExecutorService;
  */
 public class ZkCoordinatorTest extends CuratorTestBase
 {
-  private static final Logger log = new Logger(ZkCoordinatorTest.class);
-
   private final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
   private final DruidServerMetadata me = new DruidServerMetadata(
       "dummyServer",
@@ -77,33 +66,10 @@ public class ZkCoordinatorTest extends CuratorTestBase
       return "/druid";
     }
   };
-  private ZkCoordinator zkCoordinator;
-
-  private File infoDir;
-  private List<StorageLocationConfig> locations;
-
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   @Before
   public void setUp() throws Exception
   {
-    try {
-      infoDir = temporaryFolder.newFolder();
-      log.info("Creating tmp test files in [%s]", infoDir);
-    }
-    catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-
-    locations = Collections.singletonList(
-        new StorageLocationConfig(
-            infoDir,
-            100L,
-            100d
-        )
-    );
-
     setupServerAndCurator();
     curator.start();
     curator.blockUntilConnected();
@@ -135,42 +101,10 @@ public class ZkCoordinatorTest extends CuratorTestBase
     CountDownLatch dropLatch = new CountDownLatch(1);
 
     SegmentLoadDropHandler segmentLoadDropHandler = new SegmentLoadDropHandler(
-        jsonMapper,
-        new SegmentLoaderConfig() {
-          @Override
-          public File getInfoDir()
-          {
-            return infoDir;
-          }
-
-          @Override
-          public int getNumLoadingThreads()
-          {
-            return 5;
-          }
-
-          @Override
-          public int getAnnounceIntervalMillis()
-          {
-            return 50;
-          }
-
-          @Override
-          public List<StorageLocationConfig> getLocations()
-          {
-            return locations;
-          }
-
-          @Override
-          public int getDropSegmentDelayMillis()
-          {
-            return 0;
-          }
-        },
+        new SegmentLoaderConfig(),
         EasyMock.createNiceMock(DataSegmentAnnouncer.class),
         EasyMock.createNiceMock(DataSegmentServerAnnouncer.class),
         EasyMock.createNiceMock(SegmentManager.class),
-        EasyMock.createNiceMock(SegmentCacheManager.class),
         EasyMock.createNiceMock(ScheduledExecutorService.class),
         new ServerTypeConfig(ServerType.HISTORICAL)
     )
@@ -194,7 +128,7 @@ public class ZkCoordinatorTest extends CuratorTestBase
       }
     };
 
-    zkCoordinator = new ZkCoordinator(
+    ZkCoordinator zkCoordinator = new ZkCoordinator(
         segmentLoadDropHandler,
         jsonMapper,
         zkPaths,
