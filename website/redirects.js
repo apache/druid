@@ -148,8 +148,11 @@ const Redirects=[
     "to": "/docs/latest/querying/scan-query"
   },
   {
-    "from": "/docs/latest/development/extensions-core/namespaced-lookup.html",
-    "to": "/docs/latest/development/extensions-core/lookups-cached-global"
+    "from": [
+      "/docs/latest/development/extensions-core/namespaced-lookup.html",
+      "/docs/latest/development/extensions-core/lookups-cached-global"
+    ],
+    "to": "/docs/latest/querying/lookups-cached-global"
   },
   {
     "from": "/docs/latest/development/indexer.html",
