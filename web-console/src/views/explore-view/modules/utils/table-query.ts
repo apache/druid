@@ -16,11 +16,8 @@
  * limitations under the License.
  */
 
-import type { SqlExpression } from '@druid-toolkit/query';
+import type { SqlAlias, SqlExpression, SqlOrderByExpression, SqlTable } from '@druid-toolkit/query';
 import {
-  type SqlAlias,
-  type SqlOrderByExpression,
-  type SqlTable,
   C,
   F,
   SqlCase,
