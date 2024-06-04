@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.ServerTypeConfig;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.MapUtils;
@@ -565,6 +566,48 @@ public class SegmentLoadDropHandlerTest
     Assert.assertEquals(State.SUCCESS, result.get(0).getStatus().getState());
 
     segmentLoadDropHandler.stop();
+  }
+
+  @Test(timeout = 60_000L)
+  public void testProcessBatchWithDefaultNoStorageLocations() throws Exception
+  {
+    SegmentLoadDropHandler handler = new SegmentLoadDropHandler(
+        jsonMapper,
+        new SegmentLoaderConfig(),
+        announcer,
+        Mockito.mock(DataSegmentServerAnnouncer.class),
+        segmentManager,
+        segmentCacheManager,
+        scheduledExecutorFactory.create(5, "SegmentLoadDropHandlerTest-[%d]"),
+        new ServerTypeConfig(ServerType.HISTORICAL)
+    );
+
+    handler.start();
+
+    final DataSegment segment = makeSegment("test", "1", Intervals.of("P1d/2011-04-01"));
+
+    List<DataSegmentChangeRequest> batch = ImmutableList.of(new SegmentChangeRequestLoad(segment));
+
+    ListenableFuture<List<DataSegmentChangeResponse>> future = handler.processBatch(batch);
+
+    for (Runnable runnable : scheduledRunnable) {
+      runnable.run();
+    }
+
+    List<DataSegmentChangeResponse> result = future.get();
+    Assert.assertEquals(1, result.size());
+
+    SegmentChangeStatus expectedFailedStatus = SegmentChangeStatus.failed(
+        DruidException.forPersona(DruidException.Persona.OPERATOR)
+                      .ofCategory(DruidException.Category.NOT_FOUND)
+                      .build("storage locations are empty. At least one storage path must be specified "
+                             + "in 'druid.segmentCache.locations'.")
+                      .toString()
+    );
+    Assert.assertEquals(expectedFailedStatus, result.get(0).getStatus());
+    Assert.assertFalse(segmentsAnnouncedByMe.contains(segment));
+
+    handler.stop();
   }
 
   @Test(timeout = 60_000L)

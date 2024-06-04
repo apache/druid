@@ -21,9 +21,10 @@ package org.apache.druid.server.coordination;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Preconditions;
+import org.apache.druid.error.DruidException;
 
 import javax.annotation.Nullable;
+import java.util.Objects;
 
 /**
  * Contains {@link State} of a {@link DataSegmentChangeRequest} and failure
@@ -54,7 +55,10 @@ public class SegmentChangeStatus
       @JsonProperty("failureCause") @Nullable String failureCause
   )
   {
-    this.state = Preconditions.checkNotNull(state, "state must be non-null");
+    if (state == null) {
+      throw DruidException.defensive("state must be non-null");
+    }
+    this.state = state;
     this.failureCause = failureCause;
   }
 
@@ -69,6 +73,25 @@ public class SegmentChangeStatus
   public String getFailureCause()
   {
     return failureCause;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    SegmentChangeStatus that = (SegmentChangeStatus) o;
+    return state == that.state && Objects.equals(failureCause, that.failureCause);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(state, failureCause);
   }
 
   @Override

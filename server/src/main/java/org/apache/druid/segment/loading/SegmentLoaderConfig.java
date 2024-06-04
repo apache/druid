@@ -22,6 +22,7 @@ package org.apache.druid.segment.loading;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.utils.JvmUtils;
 
 import java.io.File;
@@ -120,7 +121,14 @@ public class SegmentLoaderConfig
   public File getInfoDir()
   {
     if (infoDir == null) {
-      infoDir = new File(locations.get(0).getPath(), "info_dir");
+      if (locations.isEmpty()) {
+        throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+            .ofCategory(DruidException.Category.NOT_FOUND)
+            .build("storage locations are empty. At least one storage path must be specified "
+                   + "in 'druid.segmentCache.locations'.");
+      } else {
+        infoDir = new File(locations.get(0).getPath(), "info_dir");
+      }
     }
     return infoDir;
   }
