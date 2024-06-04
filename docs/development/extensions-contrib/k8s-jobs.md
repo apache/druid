@@ -265,7 +265,7 @@ We define two categories in the configuration—`low-throughput` and `medium-thr
   }
 }
 ```
-Task specific pod templates can be specified as the runtime property `druid.indexer.runner.k8s.podTemplate.{category}: /path/to/taskSpecificPodSpec.yaml` where {category} is the matched selectionKey of the behaviorStrategy i.e `low-throughput`.
+Task specific pod templates can be specified as the runtime property `druid.indexer.runner.k8s.podTemplate.{category}: /path/to/taskSpecificPodSpec.yaml` where {category} is the matched `selectionKey` of the `behaviorStrategy` i.e low-throughput.
 
 Similar to Overlord dynamic configuration, the following API endpoints are defined to retrieve and manage dynamic configurations of Pod Template Selection config:
 
