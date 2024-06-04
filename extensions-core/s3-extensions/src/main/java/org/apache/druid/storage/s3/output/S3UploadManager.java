@@ -21,6 +21,7 @@ package org.apache.druid.storage.s3.output;
 
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.java.util.common.RetryUtils;
@@ -52,7 +53,7 @@ public class S3UploadManager
   {
     int poolSize = Math.max(4, runtimeInfo.getAvailableProcessors());
     int maxNumConcurrentChunks = computeMaxNumConcurrentChunks(s3OutputConfig, s3ExportConfig);
-    this.uploadExecutor = Execs.newBlockingThreaded("UploadThreadPool-%d", poolSize, maxNumConcurrentChunks);
+    this.uploadExecutor = createExecutorService(poolSize, maxNumConcurrentChunks);
     log.info("Initialized executor service for S3 multipart upload with pool size [%d] and work queue capacity [%d]",
              poolSize, maxNumConcurrentChunks);
   }
@@ -66,7 +67,8 @@ public class S3UploadManager
    * @param s3ExportConfig  The S3 export configuration, which may also specify a custom chunk size.
    * @return The maximum number of concurrent chunks.
    */
-  private int computeMaxNumConcurrentChunks(S3OutputConfig s3OutputConfig, S3ExportConfig s3ExportConfig)
+  @VisibleForTesting
+  int computeMaxNumConcurrentChunks(S3OutputConfig s3OutputConfig, S3ExportConfig s3ExportConfig)
   {
     long chunkSize = S3OutputConfig.S3_MULTIPART_UPLOAD_MIN_PART_SIZE_BYTES;
     if (s3OutputConfig != null && s3OutputConfig.getChunkSize() != null) {
@@ -105,7 +107,8 @@ public class S3UploadManager
     ));
   }
 
-  private UploadPartResult uploadPartIfPossible(
+  @VisibleForTesting
+  UploadPartResult uploadPartIfPossible(
       ServerSideEncryptingAmazonS3 s3Client,
       String uploadId,
       String bucket,
@@ -126,6 +129,12 @@ public class S3UploadManager
       log.debug("Pushing chunk [%s] to bucket[%s] and key[%s].", chunkNumber, bucket, key);
     }
     return s3Client.uploadPart(uploadPartRequest);
+  }
+
+  @VisibleForTesting
+  ExecutorService createExecutorService(int poolSize, int maxNumConcurrentChunks)
+  {
+    return Execs.newBlockingThreaded("UploadThreadPool-%d", poolSize, maxNumConcurrentChunks);
   }
 
   @LifecycleStart

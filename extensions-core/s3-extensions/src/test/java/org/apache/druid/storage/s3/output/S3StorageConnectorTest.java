@@ -49,7 +49,6 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -80,15 +79,16 @@ public class S3StorageConnectorTest
   public void setup()
   {
     try {
-      storageConnector = new S3StorageConnector(new S3OutputConfig(
+      S3OutputConfig s3OutputConfig = new S3OutputConfig(
           BUCKET,
           PREFIX,
           temporaryFolder.newFolder(),
           null,
           null,
           true
-      ), service, new S3UploadManager(
-          new S3OutputConfig("bucket", "prefix", EasyMock.mock(File.class), new HumanReadableBytes("5MiB"), 1),
+      );
+      storageConnector = new S3StorageConnector(s3OutputConfig, service, new S3UploadManager(
+          s3OutputConfig,
           new S3ExportConfig("tempDir", new HumanReadableBytes("5MiB"), 1, null),
           new DruidProcessingConfigTest.MockRuntimeInfo(10, 0, 0)));
     }

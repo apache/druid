@@ -71,7 +71,7 @@ public class AzureStorageConnectorProviderTest
   {
 
     final Properties properties = new Properties();
-    properties.setProperty(CUSTOM_NAMESPACE + ".type", "s3");
+    properties.setProperty(CUSTOM_NAMESPACE + ".type", "azure");
     properties.setProperty(CUSTOM_NAMESPACE + ".container", "container");
     properties.setProperty(CUSTOM_NAMESPACE + ".tempDir", "/tmp");
     assertThrows(
