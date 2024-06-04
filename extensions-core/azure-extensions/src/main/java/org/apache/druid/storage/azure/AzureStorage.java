@@ -148,10 +148,15 @@ public class AzureStorage
     return getOrCreateBlobContainerClient(containerName).getBlobClient(Utility.urlEncode(blobPath)).getBlockBlobClient();
   }
 
-  public long getBlockBlobLength(final String containerName, final String blobPath)
-      throws BlobStorageException
+  public long getBlockBlobLength(final String containerName, final String blobPath) throws BlobStorageException
   {
-    return getBlockBlobReferenceWithAttributes(containerName, blobPath).getProperties().getBlobSize();
+    return azureClientFactory
+        .getBlobServiceClient(null, defaultStorageAccount)
+        .getBlobContainerClient(containerName)
+        .getBlobClient(Utility.urlEncode(blobPath))
+        .getBlockBlobClient()
+        .getProperties()
+        .getBlobSize();
   }
 
   public InputStream getBlockBlobInputStream(final String containerName, final String blobPath)
