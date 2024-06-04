@@ -217,6 +217,66 @@ data:
         druid.peon.mode=remote
         druid.indexer.task.encapsulatedTask=true
 ```
+#### Dynamic Pod Template Selection Config
+The Dynamic Pod Template Selection feature enhances the K8s extension by enabling more flexible and dynamic selection of pod templates based on task properties. This process is governed by the `ExecutionBehaviorStrategy`. Below are the two strategies implemented:
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`DefaultExecutionBehaviorStrategy`| This strategy categorizes tasks based on their type for execution purposes, implementing the existing behavior that maps pod templates according to task type. | true |
+|`DynamicTaskExecutionBehaviorStrategy`| This strategy dynamically evaluates a series of selectors, with each selector corresponding to a potential task category.| false |
+
+`DynamicTaskExecutionBehaviorStrategy`, the strategy implementing this new feature, is based on conditional selectors that match against task properties. Conditions are specified in the dynamic config, and the selection process uses these conditions to determine the category of a task based on context tags and task fields. The identified category is then used to map to different Peon Pod templates, allowing tailored resource allocation and management according to the task’s requirements.
+
+Example Configuration:
+
+We define two categories in the configuration—`low-throughput` and `medium-throughput`—each associated with specific task conditions.
+
+- Low Throughput Category: Tasks that have a context tag `billingCategory=streaming_ingestion` and a datasource of `wikipedia` will be classified under the `low-throughput` category. This classification directs such tasks to utilize a predefined pod template optimized for low throughput requirements.
+
+- Medium Throughput Category: If a task does not meet the low-throughput criteria, the system will then evaluate it against the next selector. In this example, if the task type is index_kafka, it will fall into the `medium-throughput` category.
+```
+{
+  "type": "default",
+  "behaviorStrategy": {
+    "type": "dynamicTask",
+    "categorySelectors": [
+      {
+        "selectionKey": "low-throughput",
+        "context.tags": {
+          "billingCategory": [
+            "streaming_ingestion"
+          ]
+        },
+        "task": {
+          "datasource": [
+            "wikipedia"
+          ]
+        }
+      },
+      {
+        "selectionKey": "medium-throughput",
+        "task": {
+          "type": [
+            "index_kafka"
+          ]
+        }
+      }
+    ]
+  }
+}
+```
+Task specific pod templates can be specified as the runtime property `druid.indexer.runner.k8s.podTemplate.{category}: /path/to/taskSpecificPodSpec.yaml` where {category} is the matched selectionKey of the behaviorStrategy i.e `low-throughput`.
+
+Similar to Overlord dynamic configuration, the following API endpoints are defined to retrieve and manage dynamic configurations of Pod Template Selection config:
+
+- Get dynamic configuration:
+`POST` `/druid/indexer/v1/k8s/runner/execution`
+
+- Update dynamic configuration:
+`GET` `/druid/indexer/v1/k8s/runner/execution`
+
+- Get dynamic configuration history:
+`GET` `/druid/indexer/v1/k8s/runner/execution/history`
 
 ### Properties
 |Property| Possible Values | Description                                                                                                                                                                                                                                      |Default|required|
@@ -242,7 +302,7 @@ data:
 
 |Metric|Description|Dimensions|Normal value|
 |------|-----------|----------|------------|
-| `k8s/peon/startup/time` | Metric indicating the milliseconds for peon pod to startup. | `dataSource`, `taskId`, `taskType`, `groupId`, `taskStatus`, `tags` |Varies|
+| `k8s/peon/startup/time` | Metric indicating the milliseconds for peon pod to startup. | `dataSource`, `taskId`, `taskType`, `groupId`, `taskStatus`, `tags`, `category` |Varies|
 
 ### Gotchas
 

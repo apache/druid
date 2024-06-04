@@ -42,6 +42,18 @@ public class DefaultExecutionBehaviorStrategy implements ExecutionBehaviorStrate
   }
 
   @Override
+  public boolean equals(Object o)
+  {
+    return o instanceof DefaultExecutionBehaviorStrategy;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return 1; // Any constant will work here
+  }
+
+  @Override
   public String toString()
   {
     return "DefaultExecutionBehaviorStrategy{" +
