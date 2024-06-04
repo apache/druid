@@ -65,6 +65,7 @@ public class AzureStorage
   private static final Logger LOG = new Logger(AzureStorage.class);
 
   private final AzureClientFactory azureClientFactory;
+  @Nullable
   private final String defaultStorageAccount;
 
   public AzureStorage(
