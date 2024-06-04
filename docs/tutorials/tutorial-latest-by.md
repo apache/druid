@@ -49,7 +49,7 @@ In this example `update_timestamp` represents the reference timestamp to use to 
 
 For example, consider the following table of events that log the total number of points for a user:
 
-| `__time` |  `user_id`| `total_points`|
+| `__time` |  `user_id`| `points`|
 | --- | --- | --- |
 | `2024-01-01T01:00:00.000Z`|`funny_bunny1`| 10 |
 | `2024-01-01T01:05:00.000Z`|`funny_bunny1`| 30 |
@@ -162,7 +162,7 @@ The results are as follows:
 
 LATEST_BY is an aggregation function. While it's very efficient when there are not many update rows matching a dimension, such as `user_id`, it scans all matching rows with the same dimension. For dimensions with numerous updates, such as when a user plays a game a million times, and the updates don't arrive in a timely order, Druid processes all rows matching the `user_id` to find the row with the max timestamp to provide the latest data. 
 
-For instance, if updates constitute 1-5% of your data, you'll get good query performance. If updates constitute 50 percent or more of your data, your queries will be slow.
+For instance, if updates constitute 1-5 percent of your data, you'll get good query performance. If updates constitute 50 percent or more of your data, your queries will be slow.
 
 To mitigate this, you can set up a periodic batch ingestion job that re-indexes modified data into a new datasource for direct querying without grouping to reduce the cost of these queries by pre-computing and storing the latest values. Note that your view of the latest data will not be up to date until the next refresh happens.
  
