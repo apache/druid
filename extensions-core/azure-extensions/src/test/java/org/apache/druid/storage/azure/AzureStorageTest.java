@@ -81,7 +81,7 @@ public class AzureStorageTest
         ArgumentMatchers.any(),
         ArgumentMatchers.any()
     );
-    Mockito.doReturn(blobContainerClient).when(blobServiceClient).createBlobContainerIfNotExists(CONTAINER);
+    Mockito.doReturn(blobContainerClient).when(blobServiceClient).getBlobContainerClient(CONTAINER);
 
     final Integer maxAttempts = 3;
     Mockito.doReturn(blobServiceClient).when(azureClientFactory).getBlobServiceClient(maxAttempts, STORAGE_ACCOUNT);
@@ -100,7 +100,7 @@ public class AzureStorageTest
         ArgumentMatchers.any(),
         ArgumentMatchers.any()
     );
-    Mockito.doReturn(blobContainerClient).when(blobServiceClient).createBlobContainerIfNotExists(CONTAINER);
+    Mockito.doReturn(blobContainerClient).when(blobServiceClient).getBlobContainerClient(CONTAINER);
     Mockito.doReturn(blobServiceClient).when(azureClientFactory).getBlobServiceClient(null, STORAGE_ACCOUNT);
 
     assertEquals(ImmutableList.of(BLOB_NAME), azureStorage.listDir(CONTAINER, "", null));
@@ -118,7 +118,7 @@ public class AzureStorageTest
         ArgumentMatchers.any(),
         ArgumentMatchers.any()
     );
-    Mockito.doReturn(blobContainerClient).when(blobServiceClient).createBlobContainerIfNotExists(CONTAINER);
+    Mockito.doReturn(blobContainerClient).when(blobServiceClient).getBlobContainerClient(CONTAINER);
     Mockito.doReturn(blobServiceClient).when(azureClientFactory).getBlobServiceClient(3, storageAccountCustom);
 
     azureStorage.listBlobsWithPrefixInContainerSegmented(
@@ -143,7 +143,7 @@ public class AzureStorageTest
     ArgumentCaptor<List<String>> captor = ArgumentCaptor.forClass(List.class);
 
     Mockito.doReturn(containerUrl).when(blobContainerClient).getBlobContainerUrl();
-    Mockito.doReturn(blobContainerClient).when(blobServiceClient).createBlobContainerIfNotExists(CONTAINER);
+    Mockito.doReturn(blobContainerClient).when(blobServiceClient).getBlobContainerClient(CONTAINER);
     Mockito.doReturn(blobServiceClient).when(azureClientFactory).getBlobServiceClient(null, STORAGE_ACCOUNT);
     Mockito.doReturn(blobBatchClient).when(azureClientFactory).getBlobBatchClient(blobContainerClient);
     Mockito.doReturn(pagedIterable).when(blobBatchClient).deleteBlobs(
@@ -167,7 +167,7 @@ public class AzureStorageTest
     ArgumentCaptor<List<String>> captor = ArgumentCaptor.forClass(List.class);
 
     Mockito.doReturn(containerUrl).when(blobContainerClient).getBlobContainerUrl();
-    Mockito.doReturn(blobContainerClient).when(blobServiceClient).createBlobContainerIfNotExists(CONTAINER);
+    Mockito.doReturn(blobContainerClient).when(blobServiceClient).getBlobContainerClient(CONTAINER);
     Mockito.doReturn(blobServiceClient).when(azureClientFactory).getBlobServiceClient(null, STORAGE_ACCOUNT);
     Mockito.doReturn(blobBatchClient).when(azureClientFactory).getBlobBatchClient(blobContainerClient);
     Mockito.doThrow(new RuntimeException()).when(blobBatchClient).deleteBlobs(
@@ -192,7 +192,7 @@ public class AzureStorageTest
     ArgumentCaptor<List<String>> captor = ArgumentCaptor.forClass(List.class);
 
     Mockito.doReturn(containerUrl).when(blobContainerClient).getBlobContainerUrl();
-    Mockito.doReturn(blobContainerClient).when(blobServiceClient).createBlobContainerIfNotExists(CONTAINER);
+    Mockito.doReturn(blobContainerClient).when(blobServiceClient).getBlobContainerClient(CONTAINER);
     Mockito.doReturn(blobServiceClient).when(azureClientFactory).getBlobServiceClient(null, STORAGE_ACCOUNT);
     Mockito.doReturn(blobBatchClient).when(azureClientFactory).getBlobBatchClient(blobContainerClient);
     Mockito.doReturn(pagedIterable).when(blobBatchClient).deleteBlobs(

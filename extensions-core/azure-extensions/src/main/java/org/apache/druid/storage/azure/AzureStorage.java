@@ -21,7 +21,6 @@ package org.apache.druid.storage.azure;
 
 import com.azure.core.http.rest.PagedIterable;
 import com.azure.storage.blob.BlobContainerClient;
-import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.blob.batch.BlobBatchClient;
 import com.azure.storage.blob.batch.BlobBatchStorageException;
 import com.azure.storage.blob.models.BlobItem;
@@ -65,40 +64,63 @@ public class AzureStorage
   private static final Logger LOG = new Logger(AzureStorage.class);
 
   private final AzureClientFactory azureClientFactory;
-  @Nullable
-  private final String defaultStorageAccount;
+  @Nullable private final String defaultStorageAccount;
 
   public AzureStorage(
-      AzureClientFactory azureClientFactory,
-      @Nullable String defaultStorageAccount
+      final AzureClientFactory azureClientFactory,
+      @Nullable final String defaultStorageAccount
   )
   {
     this.azureClientFactory = azureClientFactory;
     this.defaultStorageAccount = defaultStorageAccount;
   }
 
+  /**
+   * See {@link AzureStorage#emptyCloudBlobDirectory(String, String, Integer)} for details.
+   */
   public List<String> emptyCloudBlobDirectory(final String containerName, final String virtualDirPath)
       throws BlobStorageException
   {
     return emptyCloudBlobDirectory(containerName, virtualDirPath, null);
   }
 
-  public List<String> emptyCloudBlobDirectory(final String containerName, final String virtualDirPath, final Integer maxAttempts)
-      throws BlobStorageException
+  /**
+   * Delete all blobs under the given prefix.
+   *
+   * @param containerName The storage container name.
+   * @param prefix        The Azure storage prefix to delete blobs for.
+   *                      If null, deletes all blobs in the storage container.
+   * @param maxAttempts   Number of attempts to retry in case an API call fails.
+   *                      If null, defaults to the `druid.azure.maxTries` config value.
+   *
+   * @return The list of blobs deleted.
+   */
+  public List<String> emptyCloudBlobDirectory(
+      final String containerName,
+      @Nullable final String prefix,
+      @Nullable final Integer maxAttempts
+  ) throws BlobStorageException
   {
-    List<String> deletedFiles = new ArrayList<>();
-    BlobContainerClient blobContainerClient = getOrCreateBlobContainerClient(containerName, maxAttempts);
+    final BlobContainerClient blobContainerClient = azureClientFactory
+        .getBlobServiceClient(maxAttempts, defaultStorageAccount)
+        .getBlobContainerClient(containerName);
 
     // https://learn.microsoft.com/en-us/azure/storage/blobs/storage-blobs-list The new client uses flat listing by default.
-    PagedIterable<BlobItem> blobItems = blobContainerClient.listBlobs(new ListBlobsOptions().setPrefix(virtualDirPath), Duration.ofMillis(DELTA_BACKOFF_MS));
+    PagedIterable<BlobItem> blobItems = blobContainerClient.listBlobs(
+        new ListBlobsOptions().setPrefix(prefix),
+        Duration.ofMillis(DELTA_BACKOFF_MS)
+    );
 
-    blobItems.iterableByPage().forEach(page -> {
-      page.getElements().forEach(blob -> {
-        if (blobContainerClient.getBlobClient(blob.getName()).deleteIfExists()) {
-          deletedFiles.add(blob.getName());
-        }
-      });
-    });
+    List<String> deletedFiles = new ArrayList<>();
+    blobItems.iterableByPage().forEach(
+        page -> page.getElements().forEach(
+            blob -> {
+              if (blobContainerClient.getBlobClient(blob.getName()).deleteIfExists()) {
+                deletedFiles.add(blob.getName());
+              }
+            }
+        )
+    );
 
     if (deletedFiles.isEmpty()) {
       LOG.warn("No files were deleted on the following Azure path: [%s]", prefix);
@@ -107,16 +129,34 @@ public class AzureStorage
     return deletedFiles;
   }
 
-  public void uploadBlockBlob(final File file, final String containerName, final String blobPath, final Integer maxAttempts)
-      throws IOException, BlobStorageException
+  /**
+   * Creates a new blob, or updates the content of an existing blob.
+   *
+   * @param file          The file to write to the blob.
+   * @param containerName The storage container name.
+   * @param blobPath      The blob path to write the file to.
+   * @param maxAttempts   Number of attempts to retry in case an API call fails.
+   *                      If null, defaults to the `druid.azure.maxTries` config value.
+   */
+  public void uploadBlockBlob(
+      final File file,
+      final String containerName,
+      final String blobPath,
+      @Nullable final Integer maxAttempts
+  ) throws IOException, BlobStorageException
   {
-    BlobContainerClient blobContainerClient = getOrCreateBlobContainerClient(containerName, maxAttempts);
+    final BlobContainerClient blobContainerClient = azureClientFactory
+        .getBlobServiceClient(maxAttempts, defaultStorageAccount)
+        .createBlobContainerIfNotExists(containerName);
 
     try (FileInputStream stream = new FileInputStream(file)) {
-      // By default this creates a Block blob, no need to use a specific Block blob client.
-      // We also need to urlEncode the path to handle special characters.
-      // Set overwrite to true to keep behavior more similar to s3Client.putObject
-      blobContainerClient.getBlobClient(Utility.urlEncode(blobPath)).upload(stream, file.length(), true);
+      blobContainerClient
+          // Creates a blob by default, no need to use a specific blob client.
+          // We also need to urlEncode the path to handle special characters.
+          .getBlobClient(Utility.urlEncode(blobPath))
+
+          // Set overwrite to true to keep behavior more similar to s3Client.putObject.
+          .upload(stream, file.length(), true);
     }
   }
 
@@ -124,27 +164,25 @@ public class AzureStorage
       final String containerName,
       final String blobPath,
       @Nullable final Integer streamWriteSizeBytes,
-      Integer maxAttempts
+      @Nullable final Integer maxAttempts
   ) throws BlobStorageException
   {
-    BlobContainerClient blobContainerClient = getOrCreateBlobContainerClient(containerName, maxAttempts);
-    BlockBlobClient blockBlobClient = blobContainerClient.getBlobClient(Utility.urlEncode(blobPath)).getBlockBlobClient();
+    final BlockBlobClient blockBlobClient = azureClientFactory
+        .getBlobServiceClient(maxAttempts, defaultStorageAccount)
+        .createBlobContainerIfNotExists(containerName)
+        .getBlobClient(Utility.urlEncode(blobPath))
+        .getBlockBlobClient();
 
     if (blockBlobClient.exists()) {
       throw new RE("Reference already exists");
     }
+
     BlockBlobOutputStreamOptions options = new BlockBlobOutputStreamOptions();
     if (streamWriteSizeBytes != null) {
       options.setParallelTransferOptions(new ParallelTransferOptions().setBlockSizeLong(streamWriteSizeBytes.longValue()));
     }
-    return blockBlobClient.getBlobOutputStream(options);
-  }
 
-  // There's no need to download attributes with the new azure clients, they will get fetched as needed.
-  public BlockBlobClient getBlockBlobReferenceWithAttributes(final String containerName, final String blobPath)
-      throws BlobStorageException
-  {
-    return getOrCreateBlobContainerClient(containerName).getBlobClient(Utility.urlEncode(blobPath)).getBlockBlobClient();
+    return blockBlobClient.getBlobOutputStream(options);
   }
 
   public long getBlockBlobLength(final String containerName, final String blobPath) throws BlobStorageException
@@ -164,23 +202,35 @@ public class AzureStorage
     return getBlockBlobInputStream(0L, containerName, blobPath);
   }
 
-  public InputStream getBlockBlobInputStream(long offset, final String containerName, final String blobPath)
+  public InputStream getBlockBlobInputStream(final long offset, final String containerName, final String blobPath)
       throws BlobStorageException
   {
     return getBlockBlobInputStream(offset, null, containerName, blobPath);
   }
 
-  public InputStream getBlockBlobInputStream(long offset, Long length, final String containerName, final String blobPath)
-      throws BlobStorageException
+  public InputStream getBlockBlobInputStream(
+      final long offset,
+      @Nullable final Long length,
+      final String containerName,
+      final String blobPath
+  ) throws BlobStorageException
   {
     return getBlockBlobInputStream(offset, length, containerName, blobPath, null);
   }
 
-  public InputStream getBlockBlobInputStream(long offset, Long length, final String containerName, final String blobPath, Integer maxAttempts)
-      throws BlobStorageException
+  public InputStream getBlockBlobInputStream(
+      final long offset,
+      @Nullable final Long length,
+      final String containerName,
+      final String blobPath,
+      @Nullable final Integer maxAttempts
+  ) throws BlobStorageException
   {
-    BlobContainerClient blobContainerClient = getOrCreateBlobContainerClient(containerName, maxAttempts);
-    return blobContainerClient.getBlobClient(Utility.urlEncode(blobPath)).openInputStream(new BlobInputStreamOptions().setRange(new BlobRange(offset, length)));
+    return azureClientFactory
+        .getBlobServiceClient(maxAttempts, defaultStorageAccount)
+        .getBlobContainerClient(containerName)
+        .getBlobClient(Utility.urlEncode(blobPath))
+        .openInputStream(new BlobInputStreamOptions().setRange(new BlobRange(offset, length)));
   }
 
   /**
@@ -189,36 +239,37 @@ public class AzureStorage
    * @param containerName The name of the container from which files will be deleted.
    * @param paths         An iterable of file paths to be deleted.
    * @param maxAttempts   (Optional) The maximum number of attempts to delete each file.
-   *                     If null, the system default number of attempts will be used.
+   *                      If null, the system default number of attempts will be used.
+   *
    * @return true if all files were successfully deleted; false otherwise.
    */
-  public boolean batchDeleteFiles(String containerName, Iterable<String> paths, @Nullable Integer maxAttempts)
-      throws BlobBatchStorageException
+  public boolean batchDeleteFiles(
+      final String containerName,
+      final Iterable<String> paths,
+      @Nullable final Integer maxAttempts
+  ) throws BlobBatchStorageException
   {
-    BlobContainerClient blobContainerClient = getOrCreateBlobContainerClient(containerName, maxAttempts);
+    BlobContainerClient blobContainerClient = azureClientFactory
+        .getBlobServiceClient(maxAttempts, defaultStorageAccount)
+        .getBlobContainerClient(containerName);
+
     BlobBatchClient blobBatchClient = azureClientFactory.getBlobBatchClient(blobContainerClient);
-    List<String> blobUris = Streams.stream(paths).map(path -> blobContainerClient.getBlobContainerUrl() + "/" + path).collect(Collectors.toList());
+    List<String> blobUris = Streams.stream(paths)
+                                   .map(path -> blobContainerClient.getBlobContainerUrl() + "/" + path)
+                                   .collect(Collectors.toList());
+
     boolean hadException = false;
-    List<List<String>> keysChunks = Lists.partition(
-            blobUris,
-            MAX_MULTI_OBJECT_DELETE_SIZE
-    );
+    List<List<String>> keysChunks = Lists.partition(blobUris, MAX_MULTI_OBJECT_DELETE_SIZE);
     for (List<String> chunkOfKeys : keysChunks) {
       try {
-        LOG.info(
-            "Removing from container [%s] the following files: [%s]",
-            containerName,
-            chunkOfKeys
-        );
+        LOG.info("Removing from container [%s] the following files: [%s]", containerName, chunkOfKeys);
+
         // We have to call forEach on the response because this is the only way azure batch will throw an exception on a operation failure.
-        blobBatchClient.deleteBlobs(
-                chunkOfKeys,
-                DeleteSnapshotsOptionType.INCLUDE
-        ).forEach(response ->
-                      LOG.debug("Deleting blob with URL %s completed with status code %d%n",
-                                response.getRequest().getUrl(), response.getStatusCode()
-                      )
-        );
+        blobBatchClient.deleteBlobs(chunkOfKeys, DeleteSnapshotsOptionType.INCLUDE).forEach(response -> LOG.debug(
+            "Deleting blob with URL %s completed with status code %d%n",
+            response.getRequest().getUrl(),
+            response.getStatusCode()
+        ));
       }
       catch (BlobStorageException | BlobBatchStorageException e) {
         hadException = true;
@@ -239,79 +290,68 @@ public class AzureStorage
         );
       }
     }
+
     return !hadException;
   }
 
-  public List<String> listDir(final String containerName, final String virtualDirPath, final Integer maxAttempts)
+  public List<String> listDir(
+      final String containerName,
+      final String virtualDirPath,
+      @Nullable final Integer maxAttempts
+  )
       throws BlobStorageException
   {
-    List<String> files = new ArrayList<>();
-    BlobContainerClient blobContainerClient = getOrCreateBlobContainerClient(containerName, maxAttempts);
+    final BlobContainerClient blobContainerClient = azureClientFactory
+        .getBlobServiceClient(maxAttempts, defaultStorageAccount)
+        .getBlobContainerClient(containerName);
 
-    PagedIterable<BlobItem> blobItems = blobContainerClient.listBlobs(
+    final PagedIterable<BlobItem> blobItems = blobContainerClient.listBlobs(
         new ListBlobsOptions().setPrefix(virtualDirPath),
         Duration.ofMillis(DELTA_BACKOFF_MS)
     );
 
+    final List<String> files = new ArrayList<>();
     blobItems.iterableByPage().forEach(page -> page.getElements().forEach(blob -> files.add(blob.getName())));
 
     return files;
   }
 
-  public boolean getBlockBlobExists(String container, String blobPath) throws BlobStorageException
+  public boolean getBlockBlobExists(final String container, final String blobPath) throws BlobStorageException
   {
     return getBlockBlobExists(container, blobPath, null);
   }
 
-
-  public boolean getBlockBlobExists(String container, String blobPath, Integer maxAttempts)
+  public boolean getBlockBlobExists(
+      final String container,
+      final String blobPath,
+      @Nullable final Integer maxAttempts
+  )
       throws BlobStorageException
   {
-    return getOrCreateBlobContainerClient(container, maxAttempts).getBlobClient(Utility.urlEncode(blobPath)).exists();
-  }
-
-  @VisibleForTesting
-  BlobServiceClient getBlobServiceClient(Integer maxAttempts)
-  {
-    return azureClientFactory.getBlobServiceClient(maxAttempts, defaultStorageAccount);
-  }
-
-  @VisibleForTesting
-  BlobServiceClient getBlobServiceClient(String storageAccount, Integer maxAttempts)
-  {
-    return azureClientFactory.getBlobServiceClient(maxAttempts, storageAccount);
+    return azureClientFactory
+        .getBlobServiceClient(maxAttempts, defaultStorageAccount)
+        .getBlobContainerClient(container)
+        .getBlobClient(Utility.urlEncode(blobPath))
+        .exists();
   }
 
   // This method is used in AzureCloudBlobIterator in a method where one azureStorage instance might need to list from multiple
   // storage accounts, so storageAccount is a valid parameter.
   @VisibleForTesting
-  PagedIterable<BlobItem> listBlobsWithPrefixInContainerSegmented(
+  public PagedIterable<BlobItem> listBlobsWithPrefixInContainerSegmented(
       final String storageAccount,
       final String containerName,
       final String prefix,
-      int maxResults,
-      Integer maxAttempts
+      final int maxResults,
+      @Nullable final Integer maxAttempts
   ) throws BlobStorageException
   {
-    BlobContainerClient blobContainerClient = getOrCreateBlobContainerClient(storageAccount, containerName, maxAttempts);
-    return blobContainerClient.listBlobs(
-        new ListBlobsOptions().setPrefix(prefix).setMaxResultsPerPage(maxResults),
-        Duration.ofMillis(DELTA_BACKOFF_MS)
-    );
-  }
-
-  private BlobContainerClient getOrCreateBlobContainerClient(final String containerName)
-  {
-    return getBlobServiceClient(null).createBlobContainerIfNotExists(containerName);
-  }
-
-  private BlobContainerClient getOrCreateBlobContainerClient(final String containerName, final Integer maxRetries)
-  {
-    return getBlobServiceClient(maxRetries).createBlobContainerIfNotExists(containerName);
-  }
-
-  private BlobContainerClient getOrCreateBlobContainerClient(final String storageAccount, final String containerName, final Integer maxRetries)
-  {
-    return getBlobServiceClient(storageAccount, maxRetries).createBlobContainerIfNotExists(containerName);
+    return azureClientFactory
+        .getBlobServiceClient(maxAttempts, storageAccount)
+        .getBlobContainerClient(containerName)
+        .listBlobs(
+            new ListBlobsOptions().setPrefix(prefix).setMaxResultsPerPage(maxResults),
+            Duration.ofMillis(DELTA_BACKOFF_MS)
+        );
   }
 }
