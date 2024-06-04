@@ -90,13 +90,12 @@ FROM latest_by_tutorial1
 GROUP BY 1
 ```
 
-<details>
-<summary> View the results</summary>
+The results are as follows:
+
 |`user_id`|`total_points`|
 | --- | --- |
 |`silly_monkey2`| 55 |
 |`funny_bunny1`| 40 |
-</details>
 
 In the example, the values increase each time, but this method works even if the values fluctuate.
 
