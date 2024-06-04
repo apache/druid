@@ -28,25 +28,22 @@ public class AutoCompactionSnapshotTest
   public void testAutoCompactionSnapshotBuilder()
   {
     final String expectedDataSource = "data";
-    final AutoCompactionSnapshot.AutoCompactionScheduleStatus expectedStatus = AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING;
-    AutoCompactionSnapshot.Builder builder = new AutoCompactionSnapshot.Builder(expectedDataSource, expectedStatus);
+    final AutoCompactionSnapshot.Builder builder = AutoCompactionSnapshot.builder(expectedDataSource);
 
     // Increment every stats twice
     for (int i = 0; i < 2; i++) {
-      builder.incrementIntervalCountSkipped(13);
-      builder.incrementBytesSkipped(13);
-      builder.incrementSegmentCountSkipped(13);
-
-      builder.incrementIntervalCountCompacted(13);
-      builder.incrementBytesCompacted(13);
-      builder.incrementSegmentCountCompacted(13);
-
-      builder.incrementIntervalCountAwaitingCompaction(13);
-      builder.incrementBytesAwaitingCompaction(13);
-      builder.incrementSegmentCountAwaitingCompaction(13);
+      builder.incrementIntervalCountSkipped(13)
+             .incrementBytesSkipped(13)
+             .incrementSegmentCountSkipped(13)
+             .incrementIntervalCountCompacted(13)
+             .incrementBytesCompacted(13)
+             .incrementSegmentCountCompacted(13)
+             .incrementIntervalCountAwaitingCompaction(13)
+             .incrementBytesAwaitingCompaction(13)
+             .incrementSegmentCountAwaitingCompaction(13);
     }
 
-    AutoCompactionSnapshot actual = builder.build();
+    final AutoCompactionSnapshot actual = builder.build();
 
     Assert.assertNotNull(actual);
     Assert.assertEquals(26, actual.getSegmentCountSkipped());

@@ -627,7 +627,7 @@ the [HTTP input source](../ingestion/input-sources.md#http-input-source).
 
 You can use the following properties to specify permissible JDBC options for:
 - [SQL input source](../ingestion/input-sources.md#sql-input-source)
-- [globally cached JDBC lookups](../development/extensions-core/lookups-cached-global.md#jdbc-lookup)
+- [globally cached JDBC lookups](../querying/lookups-cached-global.md#jdbc-lookup)
 - [JDBC Data Fetcher for per-lookup caching](../development/extensions-core/druid-lookups.md#data-fetcher-layer).
 
 These properties do not apply to metadata storage connections.
@@ -1126,6 +1126,7 @@ These Overlord static configurations can be defined in the `overlord/runtime.pro
 |`druid.indexer.queue.startDelay`|Sleep this long before starting Overlord queue management. This can be useful to give a cluster time to re-orient itself (for example, after a widespread network issue).|`PT1M`|
 |`druid.indexer.queue.restartDelay`|Sleep this long when Overlord queue management throws an exception before trying again.|`PT30S`|
 |`druid.indexer.queue.storageSyncRate`|Sync Overlord state this often with an underlying task persistence mechanism.|`PT1M`|
+|`druid.indexer.queue.maxTaskPayloadSize`|Maximum allowed size in bytes of a single task payload accepted by the Overlord.|none (allow all task payload sizes)|
 
 The following configs only apply if the Overlord is running in remote mode. For a description of local vs. remote mode, see [Overlord service](../design/overlord.md).
 

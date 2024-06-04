@@ -36,13 +36,8 @@ Druid now supports SQL-compliant array types. Whenever possible, you should use 
 ## Migrate to `maxSubqueryBytes` from `maxSubqueryRows`
 
 `maxSubqueryBytes` and `maxSubqueryRows` are guardrails to limit the amount of subquery data stored in the Java heap. `maxSubqueryBytes` is a better alternative to maxSubqueryRows because row-based limits  ignore the size of the individual rows. The values for `maxSubqueryRows` also doesn't take into account the size of the cluster, which is available with the `maxSubqueryBytes` automatic configuration. See []().
-
-## Migrate to front coded dictionary encoding
-
-Druid encodes string columns into dictionaries for better compression. Front-coded dictionary encoding reduces storage and improves performance by optimizing for strings that share similar beginning substrings. See See []().
 -->
 
+## Migrate to front-coded dictionary encoding
 
-
-
-
+Druid encodes string columns into dictionaries for better compression. Front-coded dictionary encoding reduces storage and improves performance by optimizing for strings that share similar beginning substrings. See [Migration guide: front-coded dictionaries](migr-front-coded-dict.md) for more information.
