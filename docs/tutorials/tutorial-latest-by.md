@@ -103,7 +103,7 @@ In the example, the values increase each time, but this method works even if the
 
 You can use this query shape as a subquery for additional processing. However, if there are many values for `user_id`, the query can be expensive.
 
-If you want to track the latest value at different times within a larger granualarity time frame, you need an additional timestamp to record update times. This allows Druid to track the latest version. Consider the following data that represents points for various users updated within an hour time frame. `__time` is hour granularity, but `updated_timestamp` is minute granularity:
+If you want to track the latest value at different times within a larger granularity time frame, you need an additional timestamp to record update times. This allows Druid to track the latest version. Consider the following data that represents points for various users updated within an hour time frame. `__time` is hour granularity, but `updated_timestamp` is minute granularity:
 
 | `__time` | `updated_timestamp` | `user_id`| `points`|
 | --- | --- | --- | --- |
