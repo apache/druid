@@ -501,8 +501,16 @@
                     <arguments>
                     <argument>-classpath</argument>
                     <classpath/>
+                    <argument>-Dquidem.uri=Xa</argument>
                     <argument>org.apache.druid.quidem.Launcher</argument>
                     </arguments>
+                <systemProperties>
+                  <projectProperties />
+                        <systemProperty>
+              <key>quidem.uri</key>
+              <value>myvalue</value>
+            </systemProperty>
+                </systemProperties>
                 </configuration>
             </plugin>
         </plugins>

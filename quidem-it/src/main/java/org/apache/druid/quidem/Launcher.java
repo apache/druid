@@ -27,6 +27,8 @@ import org.apache.druid.sql.calcite.SqlTestFrameworkConfig.ConfigurationInstance
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig.SqlTestFrameworkConfigStore;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
 
+import java.util.Properties;
+
 public class Launcher
 {
   static final SqlTestFrameworkConfigStore CONFIG_STORE = new SqlTestFrameworkConfigStore(
@@ -57,11 +59,20 @@ public class Launcher
 
   public static void main(String[] args) throws Exception
   {
+    try {
     String quidemUri = System.getProperty(QUIDEM_URI, "druidtest:///");
+    Properties p = System.getProperties();
+    for ( Object string : p.keySet()) {
+      log.info("[%s] -> %s", string, p.get(string));
+    }
     log.info("Starting Quidem with URI[%s]", quidemUri);
 
     Launcher launcher = new Launcher(quidemUri);
     launcher.start();
     launcher.lifecycle.join();
+    } catch (Exception e) {
+      e.printStackTrace();
+
+    }
   }
 }
