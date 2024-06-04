@@ -627,7 +627,7 @@ the [HTTP input source](../ingestion/input-sources.md#http-input-source).
 
 You can use the following properties to specify permissible JDBC options for:
 - [SQL input source](../ingestion/input-sources.md#sql-input-source)
-- [globally cached JDBC lookups](../development/extensions-core/lookups-cached-global.md#jdbc-lookup)
+- [globally cached JDBC lookups](../querying/lookups-cached-global.md#jdbc-lookup)
 - [JDBC Data Fetcher for per-lookup caching](../development/extensions-core/druid-lookups.md#data-fetcher-layer).
 
 These properties do not apply to metadata storage connections.
