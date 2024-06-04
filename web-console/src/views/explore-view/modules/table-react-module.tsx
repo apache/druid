@@ -31,7 +31,7 @@ import { getInitQuery } from '../utils';
 
 import { GenericOutputTable } from './components';
 import type { QueryAndHints } from './utils/table-query';
-import { makeTableQueryAndHints, TOP_VALUES_K } from './utils/table-query';
+import { DEFAULT_TOP_VALUES_K, makeTableQueryAndHints } from './utils/table-query';
 
 import './table-react-module.scss';
 
@@ -92,6 +92,15 @@ export default typedVisualModule({
         label: 'Pivot column',
       },
     },
+    maxPivotValues: {
+      type: 'number',
+      default: 10,
+      min: 2,
+      max: 100,
+      control: {
+        visible: ({ params }) => Boolean(params.pivotColumn),
+      },
+    },
     metrics: {
       type: 'aggregates',
       default: [{ expression: SqlFunction.count(), name: 'Count', sqlType: 'BIGINT' }],
@@ -147,7 +156,7 @@ export default typedVisualModule({
       options: ['always', 'never'],
       default: 'always',
       control: {
-        label: `Restrict to top ${formatInteger(TOP_VALUES_K)} values when...`,
+        label: `Restrict to top ${formatInteger(DEFAULT_TOP_VALUES_K)} values when...`,
         visible: ({ params }) =>
           Boolean((params.compares || []).length && params.compareStrategy !== 'filtered'),
       },
@@ -201,16 +210,15 @@ function TableModule(props: TableModuleProps) {
   const pivotValueQuery = useMemo(() => {
     const pivotColumn: ExpressionMeta = parameterValues.pivotColumn;
     const metrics: ExpressionMeta[] = parameterValues.metrics;
+    const maxPivotValues = parameterValues.maxPivotValues || 10;
     if (!pivotColumn) return;
 
     return getInitQuery(table, where)
       .addSelect(pivotColumn.expression.as('v'), { addToGroupBy: 'end' })
       .changeOrderByExpression(
-        metrics.length
-          ? metrics[0].expression.toOrderByExpression('DESC')
-          : F.count().toOrderByExpression('DESC'),
+        (metrics.length ? metrics[0].expression : F.count()).toOrderByExpression('DESC'),
       )
-      .changeLimitValue(20);
+      .changeLimitValue(maxPivotValues);
   }, [table, where, parameterValues]);
 
   const [pivotValueState] = useQueryManager({

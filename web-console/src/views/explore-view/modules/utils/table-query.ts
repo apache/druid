@@ -78,7 +78,7 @@ const KNOWN_AGGREGATIONS = [
 const DRUID_DEFAULT_TOTAL_SUB_QUERY_LIMIT = 100000;
 
 const TOP_VALUES_NAME = 'top_values';
-export const TOP_VALUES_K = 5000;
+export const DEFAULT_TOP_VALUES_K = 5000;
 
 function coalesce0(ex: SqlExpression) {
   return F('COALESCE', ex, SqlLiteral.ZERO);
@@ -254,13 +254,77 @@ function addPivotValuesToMetrics(
   }
 }
 
-function addDefaultMetricIfNeesed(
+function addDefaultMetricIfNeeded(
   metrics: ExpressionMeta[],
   splitColumns: ExpressionMeta[],
   showColumns: ExpressionMeta[],
 ): ExpressionMeta[] {
   if (splitColumns.length || showColumns.length || metrics.length) return metrics;
   return [{ expression: SqlFunction.COUNT_STAR, name: 'Count' }];
+}
+
+function makeCompareAggregatorsAndAddHints(
+  metricName: string,
+  compare: Compare,
+  compareTypes: CompareType[],
+  mainMetric: SqlExpression,
+  prevMetric: SqlExpression,
+  columnHints: Map<string, ColumnHint>,
+): SqlExpression[] {
+  const group = `${compare} comparison`;
+  const diff = mainMetric.subtract(prevMetric);
+
+  const ret: SqlExpression[] = [];
+
+  if (compareTypes.includes('value')) {
+    const valueName = makeCompareMetricName(metricName, compare, 'value');
+    columnHints.set(valueName, {
+      group,
+      displayName: `${metricName} (value)`,
+    });
+    ret.push(prevMetric.as(valueName));
+  }
+
+  if (compareTypes.includes('delta')) {
+    const deltaName = makeCompareMetricName(metricName, compare, 'delta');
+    columnHints.set(deltaName, {
+      group,
+      displayName: `${metricName} (delta)`,
+      formatter: forceSignInNumberFormatter(formatNumber),
+    });
+    ret.push(diff.as(deltaName));
+  }
+
+  if (compareTypes.includes('absDelta')) {
+    const absDeltaName = makeCompareMetricName(metricName, compare, 'absDelta');
+    columnHints.set(absDeltaName, {
+      group,
+      displayName: `${metricName} (abs. delta)`,
+    });
+    ret.push(F('ABS', diff).as(absDeltaName));
+  }
+
+  if (compareTypes.includes('percent')) {
+    const percentName = makeCompareMetricName(metricName, compare, 'percent');
+    columnHints.set(percentName, {
+      group,
+      displayName: `${metricName} (%)`,
+      formatter: forceSignInNumberFormatter(formatPercent),
+    });
+    ret.push(doubleSafeDivide0(diff, prevMetric).as(percentName));
+  }
+
+  if (compareTypes.includes('absPercent')) {
+    const absPercentName = makeCompareMetricName(metricName, compare, 'absPercent');
+    columnHints.set(absPercentName, {
+      group,
+      displayName: `${metricName} (abs. %)`,
+      formatter: formatPercent,
+    });
+    ret.push(F('ABS', doubleSafeDivide0(diff, prevMetric)).as(absPercentName));
+  }
+
+  return ret;
 }
 
 export interface QueryAndHints {
@@ -289,6 +353,7 @@ export interface MakeTableQueryAndHintsOptions {
   // Druid config / version related
   totalSubQueryLimit?: number;
   useGroupingToOrderSubQueries?: boolean;
+  topValuesK?: number;
 }
 export function makeTableQueryAndHints(options: MakeTableQueryAndHintsOptions): QueryAndHints {
   const table = options.table;
@@ -297,7 +362,7 @@ export function makeTableQueryAndHints(options: MakeTableQueryAndHintsOptions): 
   const timeBucket = options.timeBucket || 'PT1H';
   const showColumns = options.showColumns;
   const multipleValueMode = options.multipleValueMode || 'null';
-  const metrics = addDefaultMetricIfNeesed(
+  const metrics = addDefaultMetricIfNeeded(
     addPivotValuesToMetrics(options.metrics, options.pivotColumn, options.pivotValues),
     splitColumns,
     showColumns,
@@ -311,6 +376,7 @@ export function makeTableQueryAndHints(options: MakeTableQueryAndHintsOptions): 
 
   const totalSubQueryLimit = options.totalSubQueryLimit || DRUID_DEFAULT_TOTAL_SUB_QUERY_LIMIT;
   const useGroupingToOrderSubQueries = Boolean(options.useGroupingToOrderSubQueries);
+  const topValuesK = options.topValuesK || DEFAULT_TOP_VALUES_K;
 
   if (splitColumns.length + showColumns.length + metrics.length === 0) {
     throw new Error('nothing to show');
@@ -356,6 +422,7 @@ export function makeTableQueryAndHints(options: MakeTableQueryAndHintsOptions): 
         orderBy,
         totalSubQueryLimit,
         useGroupingToOrderSubQueries,
+        topValuesK,
       });
     }
   } else {
@@ -462,6 +529,7 @@ interface MakeJoinCompareTableQueryAndHintsOptions {
   orderBy: SqlOrderByExpression | undefined;
   totalSubQueryLimit: number;
   useGroupingToOrderSubQueries: boolean;
+  topValuesK: number;
 }
 
 function makeJoinCompareTableQueryAndHints(
@@ -482,6 +550,7 @@ function makeJoinCompareTableQueryAndHints(
     orderBy,
     totalSubQueryLimit,
     useGroupingToOrderSubQueries,
+    topValuesK,
   } = options;
 
   let decodedOrderBy = decodeTableOrderBy(orderBy, true, splitColumns, showColumns, metrics);
@@ -527,7 +596,7 @@ function makeJoinCompareTableQueryAndHints(
               .getUnderlyingExpression()
               .toOrderByExpression('DESC'),
           )
-          .changeLimitValue(TOP_VALUES_K)
+          .changeLimitValue(topValuesK)
       : undefined;
 
   const safeSubQueryLimit = Math.floor(totalSubQueryLimit / (compares.length + 1));
@@ -636,8 +705,6 @@ function makeJoinCompareTableQueryAndHints(
       ),
       ...compares.flatMap(compare => {
         return metrics.flatMap(metric => {
-          const group = `${compare} comparison`;
-
           const metricName = metric.name;
 
           const mainMetric = main
@@ -650,59 +717,14 @@ function makeJoinCompareTableQueryAndHints(
             .applyIf(useGroupingToOrderSubQueries, anyValue)
             .apply(coalesce0);
 
-          const diff = mainMetric.subtract(prevMetric);
-
-          const ret: SqlExpression[] = [];
-
-          if (compareTypes.includes('value')) {
-            const valueName = makeCompareMetricName(metricName, compare, 'value');
-            columnHints.set(valueName, {
-              group,
-              displayName: `${metricName} (value)`,
-            });
-            ret.push(prevMetric.as(valueName));
-          }
-
-          if (compareTypes.includes('delta')) {
-            const deltaName = makeCompareMetricName(metricName, compare, 'delta');
-            columnHints.set(deltaName, {
-              group,
-              displayName: `${metricName} (delta)`,
-              formatter: forceSignInNumberFormatter(formatNumber),
-            });
-            ret.push(diff.as(deltaName));
-          }
-
-          if (compareTypes.includes('absDelta')) {
-            const absDeltaName = makeCompareMetricName(metricName, compare, 'absDelta');
-            columnHints.set(absDeltaName, {
-              group,
-              displayName: `${metricName} (abs. delta)`,
-            });
-            ret.push(F('ABS', diff).as(absDeltaName));
-          }
-
-          if (compareTypes.includes('percent')) {
-            const percentName = makeCompareMetricName(metricName, compare, 'percent');
-            columnHints.set(percentName, {
-              group,
-              displayName: `${metricName} (%)`,
-              formatter: forceSignInNumberFormatter(formatPercent),
-            });
-            ret.push(doubleSafeDivide0(diff, prevMetric).as(percentName));
-          }
-
-          if (compareTypes.includes('absPercent')) {
-            const absPercentName = makeCompareMetricName(metricName, compare, 'absPercent');
-            columnHints.set(absPercentName, {
-              group,
-              displayName: `${metricName} (abs. %)`,
-              formatter: formatPercent,
-            });
-            ret.push(F('ABS', doubleSafeDivide0(diff, prevMetric)).as(absPercentName));
-          }
-
-          return ret;
+          return makeCompareAggregatorsAndAddHints(
+            metricName,
+            compare,
+            compareTypes,
+            mainMetric,
+            prevMetric,
+            columnHints,
+          );
         });
       }),
     ])
@@ -813,8 +835,6 @@ function makeFilteredCompareTableQueryAndHints(
     .applyForEach(
       compares.flatMap((compare, compareIndex) => {
         return metrics.flatMap(metric => {
-          const group = `${compare} comparison`;
-
           const metricName = metric.name;
 
           const mainMetric = metric.expression
@@ -825,59 +845,14 @@ function makeFilteredCompareTableQueryAndHints(
             .addFilterToAggregations(perCompareWhereParts[compareIndex], KNOWN_AGGREGATIONS)
             .apply(coalesce0);
 
-          const diff = mainMetric.subtract(prevMetric);
-
-          const ret: SqlExpression[] = [];
-
-          if (compareTypes.includes('value')) {
-            const valueName = makeCompareMetricName(metricName, compare, 'value');
-            columnHints.set(valueName, {
-              group,
-              displayName: `${metricName} (value)`,
-            });
-            ret.push(prevMetric.as(valueName));
-          }
-
-          if (compareTypes.includes('delta')) {
-            const deltaName = makeCompareMetricName(metricName, compare, 'delta');
-            columnHints.set(deltaName, {
-              group,
-              displayName: `${metricName} (delta)`,
-              formatter: forceSignInNumberFormatter(formatNumber),
-            });
-            ret.push(diff.as(deltaName));
-          }
-
-          if (compareTypes.includes('absDelta')) {
-            const absDeltaName = makeCompareMetricName(metricName, compare, 'absDelta');
-            columnHints.set(absDeltaName, {
-              group,
-              displayName: `${metricName} (abs. delta)`,
-            });
-            ret.push(F('ABS', diff).as(absDeltaName));
-          }
-
-          if (compareTypes.includes('percent')) {
-            const percentName = makeCompareMetricName(metricName, compare, 'percent');
-            columnHints.set(percentName, {
-              group,
-              displayName: `${metricName} (%)`,
-              formatter: forceSignInNumberFormatter(formatPercent),
-            });
-            ret.push(doubleSafeDivide0(diff, prevMetric).as(percentName));
-          }
-
-          if (compareTypes.includes('absPercent')) {
-            const absPercentName = makeCompareMetricName(metricName, compare, 'absPercent');
-            columnHints.set(absPercentName, {
-              group,
-              displayName: `${metricName} (abs. %)`,
-              formatter: formatPercent,
-            });
-            ret.push(F('ABS', doubleSafeDivide0(diff, prevMetric)).as(absPercentName));
-          }
-
-          return ret;
+          return makeCompareAggregatorsAndAddHints(
+            metricName,
+            compare,
+            compareTypes,
+            mainMetric,
+            prevMetric,
+            columnHints,
+          );
         });
       }),
       (q, ex) => q.addSelect(ex),
