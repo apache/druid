@@ -26,7 +26,7 @@ description: How to use LATEST_BY or deltas for up-to-date values
 
 This tutorial describes strategies in Apache Druid for use cases that might be handled by UPSERT in other databases. You can use the LATEST_BY aggregation at query time or "deltas" for numeric dimensions at insert time.
 
-The [Update data](./tutorial-update-data.md) tutorial demonstrates how to use batch operations to updadate data according to the timestamp, including UPSERT cases. However, with streaming data, you can potentially use LATEST_BY or deltas to satisfy requirements otherwise handled with updates.
+The [Update data](./tutorial-update-data.md) tutorial demonstrates how to use batch operations to update data according to the timestamp, including UPSERT cases. However, with streaming data, you can potentially use LATEST_BY or deltas to satisfy requirements otherwise handled with updates.
 
 ## Prerequisites
 
@@ -36,7 +36,7 @@ You should be familiar with data querying in Druid. If you haven't already, go t
 
 ## Use LATEST_BY to retrieve updated values
 
-Sometimes you want to read the latest value of one dimension or measure as it relates to another dimension. In a transactional database, you might maintain dimension or measure using UPSERT, but in Druid you can append all updates or changes during ingestion. The LATEST_BY function lets you get the most recent value for the dimension with the following type of query:
+Sometimes, you want to read the latest value of one dimension or measure in relation to another dimension. In a transactional database, you might maintain dimensions or measures using UPSERT, but in Druid you can append all updates or changes during ingestion. The LATEST_BY function lets you get the most recent value for the dimension with the following type of query:
 
 ```sql
 SELECT dimension,
@@ -45,7 +45,7 @@ FROM my_table
 GROUP BY 1
 ```
 
-For example, consider the following table of events that log the total number of points over for a user:
+For example, consider the following table of events that log the total number of points for a user:
 
 | `__time` |  `user_id`| `total_points`|
 | --- | --- | --- |
@@ -79,7 +79,7 @@ PARTITIONED BY DAY
 ```
 </details>
 
-The following query gives us most recent `points` value for each `user_id`:
+Run the following query to retrieve the most recent `points` value for each `user_id`:
 
 ```sql
 SELECT user_id,
@@ -88,18 +88,24 @@ FROM latest_by_tutorial1
 GROUP BY 1
 ```
 
-Returns
+<details>
+<summary> View the results</summary>
+|`user_id`|`total_points`|
+| --- | --- |
+|`silly_monkey2`| 55 |
+|`funny_bunny1`| 40 |
+</details>
 
 |  `user_id`| `total_points`|
 | --- | --- |
 |`silly_monkey2`| 55 |
 |`funny_bunny1`| 40 |
 
-In the example, the values increase each time, but this method works even if the values fluctuate up and down.
+In the example, the values increase each time, but this method works even if the values fluctuate.
 
-You can use this query shape as a subquery to do additional processing. However, if there a lot of values for `user_id`, the query can be expensive.
+You can use this query shape as a subquery for additional processing. However, if there are many values for `user_id`, the query can be expensive.
 
-If your want the to track the latest value for different times within a larger time frame, you need an additional timestamp to record update times so Druid can track the latest version. Consider the following data that represents points for various users updated within an hour time frame:
+If you want to track the latest value at different times within a larger time frame, you need an additional timestamp to record update times. This allows Druid to track the latest version. Consider the following data that represents points for various users updated within an hour time frame:
 
 | `__time` | `update_time` | `user_id`| `total_points`|
 | --- | --- | --- | --- |
@@ -135,7 +141,7 @@ PARTITIONED BY DAY
 </details>
 
 
-The following query demonstrates how to query for the latest points value by user for each hour:
+Run the following query to retrieve the latest points value by user for each hour:
 
 ```sql
 SELECT FLOOR("__time" TO HOUR) AS "hour_time",
@@ -154,21 +160,21 @@ The results are as follows:
 |`2024-01-01T02:00:00.000Z`|`silly_monkey2`|25|
 |`2024-01-01T03:00:00.000Z`|`funny_bunny1`|10|
 
-LATEST_BY() is an aggregation function. While it's very efficient if there are not a lot of update rows matching the dimension (e.g. "user_id"), it does scan all matching rows with the same dimension. This means, for any permutation of dimensions where there are a lot of updates (e.g. the user has played the game a million times), and a lot of the updates are not coming in timely order, Druid will be forced to process all rows matching the user_id to find the row with max timestamp to give you the latest data. 
+LATEST_BY() is an aggregation function. While it's very efficient when there are not many update rows matching a dimension, such as `user_id`, it scans all matching rows with the same dimension. For dimensions with numerous updates, such as when a user plays a game a million times, and the updates don't arrive in a timely order, Druid processes all rows matching the `user_id` to find the row with max timestamp to provide the latest data. 
 
-You can think about this where if updates constitute 1-5% of your data, you'll get good query performance, if updates constitute 50%+ of your data, your queries will be slow.
+For instance, if updates constitute 1-5% of your data, you'll get good query performance, if updates constitute 50%+ of your data, your queries will be slow.
 
-To mitigate this, you can set up a periodic batch ingestion job that reindexes modified data into a new datasource for direct querying without grouping to reduce for the cost of these kinds of queries by essentially pre-computing the latest value and store them. Though your view of latest data will not be up to date until the next refresh happens.
+To mitigate this, you can set up a periodic batch ingestion job that reindexes modified data into a new datasource for direct querying without grouping to reduce the cost of these queries by pre-computing and storing the latest values. Note that your view of the latest data will not be up to date until the next refresh happens.
  
-Alternatively, you can perform ingestion-time aggregation using LATEST_BY and append updates with streaming ingestion into a rolled up datasource. Appending into a time chunk adds new segments and does not perfectly roll up data, so rows may be partial rather than complete rollups, and you may have multiple partially rolled up rows. In this case you still need to use GROUP BY query for correct querying of the rolled-up data source, you can tune automatic compaction right to significantly reduce the number of stale rows and improve your performance
+Alternatively, you can perform ingestion-time aggregation using LATEST_BY and append updates with streaming ingestion into a rolled up datasource. Appending into a time chunk adds new segments and does not perfectly roll up data, so rows may be partial rather than complete rollups, and you may have multiple partially rolled up rows. In this case, you still need to use the GROUP BY query for correct querying of the rolled up data source. You can tune automatic compaction to significantly reduce the number of stale rows and improve your performance.
 
 ## Use delta values and aggregation for updated values
 
-Instead of appending the latest total value in your events, you could log the change in value with each event and use the aggregator you usually use. This method may allow you to avoid a level of aggregation and grouping in your queries.
+Instead of appending the latest total value in your events, you can log the change in value with each event and use the aggregator you usually use. This method may allow you to avoid a level of aggregation and grouping in your queries.
 
-Typically, for most applications, all you need to do is to send the event data directly to Druid without pre-processing. For example, when you are sending impression count to Druid, don't send the total impression count since yesterday, send just the recent impression count to Druid. And you can aggregate the total in Druid during query. Druid is very fast on adding up a lot of rows, so this might be counterintuitive to people who are familiar with batching or pre-aggregating data.
+For most applications, you can send the event data directly to Druid without pre-processing. For example, when sending impression count to Druid, don't send the total impression count since yesterday, send just the recent impression count. You can then aggregate the total in Druid during query. Druid is optimized for adding up a lot of rows, so this might be counterintuitive to people who are familiar with batching or pre-aggregating data.
 
-For example, consider a datasource with a measure column `y` that you aggregate with SUM, grouped by by another dimension `x`. If you want to update the value of `y` for `x` from 3 to 2, then insert -1 for `y`. This way the aggregation SUM(`y`) is correct for any queries grouped by `x`. This may offer a significant performance advantage but the trade off is that the aggregation has to always be a SUM.
+For example, consider a datasource with a measure column `y` that you aggregate with SUM, grouped by another dimension `x`. If you want to update the value of `y` for `x` from 3 to 2, then insert -1 for `y`. This way the aggregation SUM(`y`) is correct for any queries grouped by `x`. This may offer a significant performance advantage but the trade off is that the aggregation has to always be a SUM.
 
 In other cases, the updates to the data may already be deltas to the original, and so the data engineering required to append the updates would be simple. Just as before, the same mitigations as the previous case apply to improve performance with automatic compaction and rollup at ingestion time.
 
@@ -222,4 +228,4 @@ GROUP BY 1,2
 See the following topics for more information:
 
 * [Update data](./tutorial-update-data.md) for a tutorial on updating data in Druid.
-* [Data updates](../data-management/update.md) for a general overview of updating data in Druid.
+* [Data updates](../data-management/update.md) for an overview of updating data in Druid.
