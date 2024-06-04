@@ -45,7 +45,7 @@ FROM my_table
 GROUP BY 1
 ```
 
-In this example `update_timestamp` represents the reference timestamp to use to evalute the "latest" value. This could be `__time` or another timestamp.
+In this example `update_timestamp` represents the reference timestamp to use to evaluate the "latest" value. This could be `__time` or another timestamp.
 
 For example, consider the following table of events that log the total number of points for a user:
 
