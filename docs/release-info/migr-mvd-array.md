@@ -56,11 +56,12 @@ Querying an array column returns different results than when querying a MVD colu
 
 ## How to ingest data as arrays
 
-To store data as arrays, do one of the following in an ingestion job:
+You can ingest arrays in Druid as follows:
 
-* For classic batch and streaming ingestion, specify the column's data type in [`dimensionSpec`](../ingestion/ingestion-spec.md#dimensionsspec) as `array`.
+* For native batch and streaming ingestion, configure the dimensions in [`dimensionsSpec`](../ingestion/ingestion-spec.md#dimensionsspec).
+Within `dimensionsSpec`, set `"useSchemaDiscovery": true`, and use `dimensions` to list the array inputs with type `auto`.  
+For an example, see [Ingesting arrays: Native batch and streaming ingestion](../querying/arrays.md#native-batch-and-streaming-ingestion).
 
-* When you use [schema auto discovery](../ingestion/schema-design.md#type-aware-schema-discovery), Druid automatically ingests arrays as array types. Set `"useSchemaDiscovery": true` in the `dimensionSpec`.
-
-* For [SQL-based batch ingestion](../multi-stage-query/index.md), write a query that generates arrays, and set the context parameter `"arrayIngestMode": "array"`.
+* For SQL-based batch ingestion, include the [query context parameter](../multi-stage-query/reference.md#context-parameters) `"arrayIngestMode": "array"` and reference the relevant array type (`VARCHAR ARRAY`, `BIGINT ARRAY`, or `DOUBLE ARRAY`) in the column descriptors.  
+For examples, see [Ingesting arrays: SQL-based ingestion](../querying/arrays.md#sql-based-ingestion).
 
