@@ -273,8 +273,7 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   @Override
   public QueryMetrics<QueryType> reportBackPressureTime(long timeNs)
   {
-    // Don't emit by default.
-    return this;
+    return reportMillisTimeMetric("query/node/backpressure", timeNs);
   }
 
   @Override
