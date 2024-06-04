@@ -40,4 +40,4 @@ Druid encodes string columns into dictionaries for better compression. Front-cod
 
 ## Migrate to `maxSubqueryBytes` from `maxSubqueryRows`
 
-Druid allows you to set a byte-based limit on subquery size to prevent brokers from running out of memory when handling large subqueries. The byte-based subquery limit overrides Druid's row-based subquery limit. We recommend that you move towards using byte-based limits starting in Druid 30.0. See [Migration guide: subquery limit](migr-subquery-limit.md) for more information.
+Druid allows you to set a byte-based limit on subquery size to prevent Brokers from running out of memory when handling large subqueries. The byte-based subquery limit overrides Druid's row-based subquery limit. We recommend that you move towards using byte-based limits starting in Druid 30.0. See [Migration guide: subquery limit](migr-subquery-limit.md) for more information.
