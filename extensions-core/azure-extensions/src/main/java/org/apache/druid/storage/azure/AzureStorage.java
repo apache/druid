@@ -56,11 +56,10 @@ import java.util.stream.Collectors;
  */
 public class AzureStorage
 {
-
   // Default value from Azure library
   private static final int DELTA_BACKOFF_MS = 30_000;
 
-  // https://learn.microsoft.com/en-us/rest/api/storageservices/blob-batch?tabs=microsoft-entra-id
+  // https://learn.microsoft.com/en-us/rest/api/storageservices/blob-batch#request-body
   private static final Integer MAX_MULTI_OBJECT_DELETE_SIZE = 256;
 
 
