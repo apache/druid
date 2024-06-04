@@ -692,4 +692,9 @@
     <cve>CVE-2023-50386</cve>
     <cve>CVE-2023-50292</cve>
   </suppress>
+  <suppress>
+    <!-- Used by orc-extensions as a transitive dependency.
+     TODO: There is no workaround, and the dependency cannot be upgraded till https://github.com/apache/orc has a new release. -->
+    <cve>CVE-2024-36114</cve>
+  </suppress>
 </suppressions>
