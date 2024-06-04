@@ -38,7 +38,7 @@ For specific query differences between arrays and MVDs, see [Query differences b
 | SQL compliance | Behaves like standard SQL arrays with SQL-compliant behavior | Does not behave like standard SQL arrays; requires special SQL functions |
 | Ingestion | <ul><li>JSON arrays are ingested as Druid arrays</li><li>Managed through the query context parameter `arrayIngestMode` in SQL-based ingestion (supported options: `array`, `mvd`, `none`). Note that if you set this mode to `none`, Druid raises an exception if you try to store any type of array.</li></ul> | <ul><li>JSON arrays are ingested as multi-value dimensions</li><li>Managed using functions like [ARRAY_TO_MV](../querying/sql-functions.md#array_to_mv) in SQL-based ingestion</li></ul> |
 | Filtering and grouping | <ul><li>Filters and groupings match the entire array value</li><li>Can be used as GROUP BY keys, grouping based on the entire array value</li></ul> | <ul><li>Filters match any value within the array</li><li>Grouping generates a group for each individual value, similar to an implicit UNNEST</li></ul> |
-| Conversion | Convert an MVD to an array using [MV_TO_ARRAY](../querying/sql-multivalue-string-functions.md) | Convert an array to an MVD using [ARRAY_TO_MV](../querying/sql-functions.md#array_to_mv) |
+| Conversion | Convert an MVD to an array using [MV_TO_ARRAY](../querying/sql-functions.md#mv_to_array) | Convert an array to an MVD using [ARRAY_TO_MV](../querying/sql-functions.md#array_to_mv) |
 
 ### Query differences between arrays and MVDs
 
