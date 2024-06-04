@@ -225,15 +225,15 @@ The Dynamic Pod Template Selection feature enhances the K8s extension by enablin
 |`DefaultExecutionBehaviorStrategy`| This strategy categorizes tasks based on their type for execution purposes, implementing the existing behavior that maps pod templates according to task type. | true |
 |`DynamicTaskExecutionBehaviorStrategy`| This strategy dynamically evaluates a series of selectors, with each selector corresponding to a potential task category.| false |
 
-`DynamicTaskExecutionBehaviorStrategy`, the strategy implementing this new feature, is based on conditional selectors that match against task properties. Conditions are specified in the dynamic config, and the selection process uses these conditions to determine the category of a task based on context tags and task fields. The identified category is then used to map to different Peon Pod templates, allowing tailored resource allocation and management according to the task’s requirements.
+`DynamicTaskExecutionBehaviorStrategy`, the strategy implementing this new feature, is based on conditional selectors `categorySelectors` that match against task properties. These selectors are ordered in the dynamic configuration, with the first selector given the highest priority during the evaluation process. This means that the selection process uses these ordered conditions to determine a task’s category based on context tags and task fields. The first matching condition immediately determines the category, thereby prioritizing certain configurations over others. Once a category is identified, it is used to map to different Peon Pod templates, enabling tailored resource allocation and management that aligns with the specific requirements of each task.
 
 Example Configuration:
 
-We define two categories in the configuration—`low-throughput` and `medium-throughput`—each associated with specific task conditions.
+We define two categories in the configuration—`low-throughput` and `medium-throughput`—each associated with specific task conditions and arranged in a priority order.
 
-- Low Throughput Category: Tasks that have a context tag `billingCategory=streaming_ingestion` and a datasource of `wikipedia` will be classified under the `low-throughput` category. This classification directs such tasks to utilize a predefined pod template optimized for low throughput requirements.
+- Low Throughput Category: This is the first category evaluated and has the highest priority. Tasks that have a context tag `billingCategory=streaming_ingestion` and a datasource of `wikipedia` will be classified under the `low-throughput` category. This classification directs such tasks to utilize a predefined pod template optimized for low throughput requirements.
 
-- Medium Throughput Category: If a task does not meet the low-throughput criteria, the system will then evaluate it against the next selector. In this example, if the task type is index_kafka, it will fall into the `medium-throughput` category.
+- Medium Throughput Category: If a task does not meet the low-throughput criteria, the system will then evaluate it against the next selector in order. In this example, if the task type is index_kafka, it will fall into the `medium-throughput` category.
 ```
 {
   "type": "default",
