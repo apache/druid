@@ -25,7 +25,7 @@ sidebar_label: MVDs to arrays
 
 
 Druid now supports SQL-compliant [arrays](../querying/arrays.md), and we recommend that people use arrays over [multi-value dimensions](../querying/multi-value-dimensions.md) (MVDs) whenever possible.
-Use arrays for new projects and complex use cases involving multiple data types. Use MVDs for specific use cases, such as arrays of strings.
+Use arrays for new projects and complex use cases involving multiple data types. Use MVDs for specific use cases, such as operating directly on individual elements like regular strings. If your operations involve complete arrays of values, including the ordering of values within a row, use arrays over MVDs.
 
 ## Comparison between arrays and MVDs
 
@@ -36,7 +36,7 @@ For specific query differences between arrays and MVDs, see [Query differences b
 |---|---|---|
 | Data types | Supports VARCHAR, BIGINT, and DOUBLE types (ARRAY<STRING\>, ARRAY<LONG\>, ARRAY<DOUBLE\>) | Only supports arrays of strings (VARCHAR) |
 | SQL compliance | Behaves like standard SQL arrays with SQL-compliant behavior | Does not behave like standard SQL arrays; requires special SQL functions |
-| Ingestion | <ul><li>Can be ingested using native batch or streaming ingestion methods</li><li>JSON arrays are ingested as Druid arrays</li><li>Managed through the query context parameter `arrayIngestMode` in SQL-based ingestion (supported options: `array`, `mvd`, `none`). Note that if you set this mode to `none`, Druid raises an exception if you try to store any type of array.</li></ul> | <ul><li>Typically ingested from fields with an array of values</li><li>JSON arrays are ingested as multi-value dimensions</li><li>Managed using functions like [ARRAY_TO_MV](../querying/sql-functions.md#array_to_mv) in SQL-based ingestion</li></ul> |
+| Ingestion | <ul><li>JSON arrays are ingested as Druid arrays</li><li>Managed through the query context parameter `arrayIngestMode` in SQL-based ingestion (supported options: `array`, `mvd`, `none`). Note that if you set this mode to `none`, Druid raises an exception if you try to store any type of array.</li></ul> | <ul><li>JSON arrays are ingested as multi-value dimensions</li><li>Managed using functions like [ARRAY_TO_MV](../querying/sql-functions.md#array_to_mv) in SQL-based ingestion</li></ul> |
 | Filtering and grouping | <ul><li>Filters and groupings match the entire array value</li><li>Can be used as GROUP BY keys, grouping based on the entire array value</li></ul> | <ul><li>Filters match any value within the array</li><li>Grouping generates a group for each individual value, similar to an implicit UNNEST</li></ul> |
 | Conversion | Convert an MVD to an array using [MV_TO_ARRAY](../querying/sql-multivalue-string-functions.md) | Convert an array to an MVD using [ARRAY_TO_MV](../querying/sql-functions.md#array_to_mv) |
 
@@ -50,8 +50,6 @@ Querying an array column returns different results than when querying a MVD colu
 | Null filter | Matches rows where the entire array value is null | Matches rows where the array is empty (considered as null) but does not match arrays with empty (`“”`) values |
 | Range filter | Use [ARRAY_OVERLAP](../querying/sql-functions.md#array_overlap) | Not directly supported |
 | Contains filter | Use [ARRAY_CONTAINS](../querying/sql-functions.md#array_contains)| Use WHERE filter |
-| Logical expression filters | Behaves like standard ANSI SQL on the entire array value, such as AND, OR, NOT. For example, `WHERE arrayLong = ARRAY[1,2,3] OR arrayLong = ARRAY[4,5,6]` | Matches a row if any value within the array matches the logical condition. For example, `WHERE tags = 't1' OR tags = 't3'` |
-| Column comparison filter | Use [ARRAY_OVERLAP](../querying/sql-functions.md#array_overlap) | Matches when the dimensions have any overlapping values. For example, `WHERE tags IN ('t1', 't2')` |
 | Behavior with SQL constructs | Follows standard SQL behavior with array functions like [ARRAY_CONTAINS](../querying/sql-functions.md#array_contains), [ARRAY_OVERLAP](../querying/sql-functions.md#array_overlap) | Requires special SQL functions like [MV_FILTER_ONLY](../querying/sql-functions.md#mv_filter_none), [MV_FILTER_NONE](../querying/sql-functions.md#mv_filter_only) for precise filtering |
 | Group by entire array | Groups the entire array as a single value | Not supported |
 | Group by individual values | Use [UNNEST](../querying/sql.md#unnest) to group by individual array elements | Automatically unnests groups by each individual value in the array |
