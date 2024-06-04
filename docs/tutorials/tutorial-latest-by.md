@@ -98,11 +98,6 @@ GROUP BY 1
 |`funny_bunny1`| 40 |
 </details>
 
-|  `user_id`| `total_points`|
-| --- | --- |
-|`silly_monkey2`| 55 |
-|`funny_bunny1`| 40 |
-
 In the example, the values increase each time, but this method works even if the values fluctuate.
 
 You can use this query shape as a subquery for additional processing. However, if there are many values for `user_id`, the query can be expensive.
@@ -121,7 +116,7 @@ If you want to track the latest value at different times within a larger time fr
 <details>
 <summary>Insert sample data</summary>
 
-Open a new tab the **Query** view and run the following query to insert sample data:
+Open a new tab in the **Query** view and run the following query to insert sample data:
 
 ```sql
 REPLACE INTO "latest_by_tutorial2" OVERWRITE ALL
