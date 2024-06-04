@@ -17,14 +17,37 @@
  * under the License.
  */
 
-package org.apache.druid.java.util.common.concurrent;
+package org.apache.druid.server.coordination;
 
-import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.atomic.AtomicInteger;
 
-public interface ScheduledExecutorFactory
+/**
+ * A test data server announcer that tracks the count of all announcements and unannouncements.
+ * The counter is incremented and decremented on each announce and unannounce respectively.
+ */
+public class TestDataServerAnnouncer implements DataSegmentServerAnnouncer
 {
-  ScheduledExecutorService create(
-      @SuppressWarnings("unused") /* intellij-inspect bug with lambda usages */ int corePoolSize,
-      String nameFormat
-  );
+  private final AtomicInteger observedCount;
+
+  TestDataServerAnnouncer()
+  {
+    this.observedCount = new AtomicInteger(0);
+  }
+
+  @Override
+  public void announce()
+  {
+    observedCount.incrementAndGet();
+  }
+
+  @Override
+  public void unannounce()
+  {
+    observedCount.decrementAndGet();
+  }
+
+  public int getObservedCount()
+  {
+    return observedCount.get();
+  }
 }
