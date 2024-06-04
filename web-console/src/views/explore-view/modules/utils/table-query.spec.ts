@@ -464,7 +464,7 @@ describe('table-query', () => {
             context: { sqlOuterLimit: 500 },
           });
         } catch (e) {
-          console.log(`Failed on: ${e.message}`);
+          console.log(`Failed on: ${e.message.replace(/\n|\r/g, '')}`);
           console.log(query.toString());
           if (STOP_ON_FIRST_FAILURE) {
             throw e;
