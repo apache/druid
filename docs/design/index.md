@@ -30,7 +30,7 @@ Common application areas for Druid include:
 
 |Use Case|Description|
 |-----------------|-------------------|
-|Clickstream analytics |Analyze user behavior on websites and mobile applications to understand navigation patterns, popular content, and user engagement|
+|Clickstream analytics|Analyze user behavior on websites and mobile applications to understand navigation patterns, popular content, and user engagement|
 |Network telemetry analytics|Monitor and analyze network traffic and performance metrics to optimize network efficiency, identify bottlenecks, and ensure quality of service|
 |Server metrics storage|Collect and store performance metrics such as CPU usage, memory usage, disk I/O, and network activity to monitor server health and optimize resource allocation|
 |Supply chain analytics|Use data from various stages of the supply chain to optimize inventory management, streamline logistics, forecast demand, and improve overall operational efficiency|
