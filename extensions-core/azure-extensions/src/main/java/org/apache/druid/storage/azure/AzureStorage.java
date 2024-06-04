@@ -62,8 +62,7 @@ public class AzureStorage
   // https://learn.microsoft.com/en-us/rest/api/storageservices/blob-batch#request-body
   private static final Integer MAX_MULTI_OBJECT_DELETE_SIZE = 256;
 
-
-  private static final Logger log = new Logger(AzureStorage.class);
+  private static final Logger LOG = new Logger(AzureStorage.class);
 
   private final AzureClientFactory azureClientFactory;
   private final String defaultStorageAccount;
@@ -101,7 +100,7 @@ public class AzureStorage
     });
 
     if (deletedFiles.isEmpty()) {
-      log.warn("No files were deleted on the following Azure path: [%s]", virtualDirPath);
+      LOG.warn("No files were deleted on the following Azure path: [%s]", prefix);
     }
 
     return deletedFiles;
@@ -205,34 +204,37 @@ public class AzureStorage
     );
     for (List<String> chunkOfKeys : keysChunks) {
       try {
-        log.info(
-                "Removing from container [%s] the following files: [%s]",
-                containerName,
-                chunkOfKeys
+        LOG.info(
+            "Removing from container [%s] the following files: [%s]",
+            containerName,
+            chunkOfKeys
         );
         // We have to call forEach on the response because this is the only way azure batch will throw an exception on a operation failure.
         blobBatchClient.deleteBlobs(
                 chunkOfKeys,
                 DeleteSnapshotsOptionType.INCLUDE
         ).forEach(response ->
-                log.debug("Deleting blob with URL %s completed with status code %d%n",
-                        response.getRequest().getUrl(), response.getStatusCode())
+                      LOG.debug("Deleting blob with URL %s completed with status code %d%n",
+                                response.getRequest().getUrl(), response.getStatusCode()
+                      )
         );
       }
       catch (BlobStorageException | BlobBatchStorageException e) {
         hadException = true;
-        log.noStackTrace().warn(e,
-                "Unable to delete from container [%s], the following keys [%s]",
-                containerName,
-                chunkOfKeys
+        LOG.noStackTrace().warn(
+            e,
+            "Unable to delete from container [%s], the following keys [%s]",
+            containerName,
+            chunkOfKeys
         );
       }
       catch (Exception e) {
         hadException = true;
-        log.noStackTrace().warn(e,
-                "Unexpected exception occurred when deleting from container [%s], the following keys [%s]",
-                containerName,
-                chunkOfKeys
+        LOG.noStackTrace().warn(
+            e,
+            "Unexpected exception occurred when deleting from container [%s], the following keys [%s]",
+            containerName,
+            chunkOfKeys
         );
       }
     }
