@@ -594,7 +594,7 @@ public class SegmentLoadDropHandlerTest
       this.observedSegments = new ArrayList<>();
       this.observedSegmentsLoadedIntoPageCache = new ArrayList<>();
       this.observedSegmentsRemovedFromCache = new ArrayList<>();
-      this.observedShutdownBootstrapCount = new AtomicInteger(0);;
+      this.observedShutdownBootstrapCount = new AtomicInteger(0);
     }
 
     @Override

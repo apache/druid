@@ -646,7 +646,6 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       }
       finally {
         unlock(segment, lock);
-        log.info("loadOnDownload for segment[%s] complete!.", segment.getId());
       }
     }
   }
