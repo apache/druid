@@ -1,8 +1,8 @@
 ---
 id: tutorial-latest-by
 title: Query for latest values
-sidebar_label: Query for latest and deduplicated data
-description: How to use LATEST_BY or deltas for up-to-date values
+sidebar_label: Query for latest data
+description: How to use LATEST_BY or deltas for up-to-date values.
 ---
 
 <!--
@@ -58,6 +58,8 @@ For example, consider the following table of events that log the total number of
 
 <details>
 <summary>Insert sample data</summary>
+
+In the Druid web console, navigate to the **Query** view and run the following query to insert sample data:
 
 ```sql
 REPLACE INTO "latest_by_tutorial1" OVERWRITE ALL
@@ -119,6 +121,8 @@ If you want to track the latest value at different times within a larger time fr
 <details>
 <summary>Insert sample data</summary>
 
+Open a new tab the **Query** view and run the following query to insert sample data:
+
 ```sql
 REPLACE INTO "latest_by_tutorial2" OVERWRITE ALL
 WITH "ext" AS (
@@ -164,7 +168,7 @@ LATEST_BY() is an aggregation function. While it's very efficient when there are
 
 For instance, if updates constitute 1-5% of your data, you'll get good query performance, if updates constitute 50%+ of your data, your queries will be slow.
 
-To mitigate this, you can set up a periodic batch ingestion job that reindexes modified data into a new datasource for direct querying without grouping to reduce the cost of these queries by pre-computing and storing the latest values. Note that your view of the latest data will not be up to date until the next refresh happens.
+To mitigate this, you can set up a periodic batch ingestion job that re-indexes modified data into a new datasource for direct querying without grouping to reduce the cost of these queries by pre-computing and storing the latest values. Note that your view of the latest data will not be up to date until the next refresh happens.
  
 Alternatively, you can perform ingestion-time aggregation using LATEST_BY and append updates with streaming ingestion into a rolled up datasource. Appending into a time chunk adds new segments and does not perfectly roll up data, so rows may be partial rather than complete rollups, and you may have multiple partially rolled up rows. In this case, you still need to use the GROUP BY query for correct querying of the rolled up data source. You can tune automatic compaction to significantly reduce the number of stale rows and improve your performance.
 
@@ -176,9 +180,9 @@ For most applications, you can send the event data directly to Druid without pre
 
 For example, consider a datasource with a measure column `y` that you aggregate with SUM, grouped by another dimension `x`. If you want to update the value of `y` for `x` from 3 to 2, then insert -1 for `y`. This way the aggregation SUM(`y`) is correct for any queries grouped by `x`. This may offer a significant performance advantage but the trade off is that the aggregation has to always be a SUM.
 
-In other cases, the updates to the data may already be deltas to the original, and so the data engineering required to append the updates would be simple. Just as before, the same mitigations as the previous case apply to improve performance with automatic compaction and rollup at ingestion time.
+In other cases, the updates to the data may already be deltas to the original, and so the data engineering required to append the updates would be simple. The same performance impact mitigation applies as in the previous example: use rollup at ingestion time combined with ongoing automatic compaction.
 
-For example, consider the following table of events that log the change in point total for a user:
+For example, consider the following table of events that logs the number of points gained or lost for a user during a period of time:
 
 | `__time` |  `user_id`| `delta`|
 | --- | --- | --- |
@@ -191,6 +195,8 @@ For example, consider the following table of events that log the change in point
 
 <details>
 <summary>Insert sample data</summary>
+
+Open a new tab in the **Query** view and run the following query to insert sample data:
 
 ```sql
 REPLACE INTO "delta_tutorial" OVERWRITE ALL
