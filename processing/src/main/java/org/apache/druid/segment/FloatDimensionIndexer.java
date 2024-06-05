@@ -53,6 +53,16 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
   }
 
   @Override
+  public EncodedKeyComponent<Float> processRowValsToUnsortedEncodedKeyComponent(@Nullable Object dimValues, boolean reportParseExceptions, @Nullable String dimension)
+  {
+    Float l = DimensionHandlerUtils.convertObjectToFloat(dimValues, reportParseExceptions, dimension);
+    if (l == null) {
+      hasNulls = NullHandling.sqlCompatible();
+    }
+    return new EncodedKeyComponent<>(l, Long.BYTES);
+  }
+
+  @Override
   public void setSparseIndexed()
   {
     hasNulls = NullHandling.sqlCompatible();

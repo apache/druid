@@ -399,35 +399,67 @@ public final class DimensionHandlerUtils
   @Nullable
   public static Float convertObjectToFloat(@Nullable Object valObj, boolean reportParseExceptions)
   {
-    if (valObj == null) {
-      return null;
-    }
+    return convertObjectToFloat(valObj, reportParseExceptions, null);
+  }
 
-    if (valObj instanceof Float) {
-      return (Float) valObj;
-    } else if (valObj instanceof Number) {
-      return ((Number) valObj).floatValue();
-    } else if (valObj instanceof String) {
-      Float ret = Floats.tryParse((String) valObj);
-      if (reportParseExceptions && ret == null) {
-        throw new ParseException((String) valObj, "could not convert value [%s] to float", valObj);
+  @Nullable
+  public static Float convertObjectToFloat(@Nullable Object valObj, boolean reportParseExceptions, @Nullable String objectKey)
+  {
+    {
+      if (valObj == null) {
+        return null;
       }
-      return ret;
-    } else if (valObj instanceof List) {
-      throw new ParseException(
-          valObj.getClass().toString(),
-          "Could not ingest value %s as float. A float column cannot have multiple values in the same row.",
-          valObj
-      );
-    } else {
-      throw new ParseException(
-          valObj.getClass().toString(),
-          "Could not convert value [%s] to float. Invalid type: [%s]",
-          valObj,
-          valObj.getClass()
-      );
+
+      if (valObj instanceof Float) {
+        return (Float) valObj;
+      } else if (valObj instanceof Number) {
+        return ((Number) valObj).floatValue();
+      } else if (valObj instanceof String) {
+        Float ret = Floats.tryParse((String) valObj);
+        if (reportParseExceptions && ret == null) {
+          final String message = (objectKey != null) ? StringUtils.nonStrictFormat(
+              "could not convert value [%s] to float for dimension [%s]",
+              valObj,
+              objectKey
+          ) : StringUtils.nonStrictFormat(
+              "could not convert value [%s] to float",
+              valObj
+          );
+          throw new ParseException((String) valObj, message);
+        }
+        return ret;
+      } else if (valObj instanceof List) {
+        final String message = (objectKey != null) ? StringUtils.nonStrictFormat(
+            "Could not ingest value %s as float for dimension [%s]. A float column cannot have multiple values in the same row.",
+            valObj,
+            objectKey
+        ) : StringUtils.nonStrictFormat(
+            "Could not ingest value %s as float. A float column cannot have multiple values in the same row.",
+            valObj
+        );
+        throw new ParseException(
+            valObj.getClass().toString(),
+            message
+        );
+      } else {
+        final String message = (objectKey != null) ? StringUtils.nonStrictFormat(
+            "Could not convert value [%s] to float for dimension [%s]. Invalid type: [%s]",
+            valObj,
+            objectKey,
+            valObj.getClass()
+        ) : StringUtils.nonStrictFormat(
+            "Could not convert value [%s] to float. Invalid type: [%s]",
+            valObj,
+            valObj.getClass()
+        );
+        throw new ParseException(
+            valObj.getClass().toString(),
+            message
+        );
+      }
     }
   }
+
 
   @Nullable
   public static Object convertObjectToType(
