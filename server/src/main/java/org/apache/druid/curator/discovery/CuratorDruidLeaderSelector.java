@@ -48,7 +48,7 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
 
   private final LifecycleLock lifecycleLock = new LifecycleLock();
 
-  private final DruidNode self;
+  private final String selfId;
   private final CuratorFramework curator;
   private final String latchPath;
 
@@ -63,7 +63,7 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
   public CuratorDruidLeaderSelector(CuratorFramework curator, @Self DruidNode self, String latchPath)
   {
     this.curator = curator;
-    this.self = self;
+    this.selfId = self.getServiceScheme() + "://" + self.getHostAndPortToUse();
     this.latchPath = latchPath;
 
     // Creating a LeaderLatch here allows us to query for the current leader. We will not be considered for leadership
@@ -74,7 +74,7 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
 
   private LeaderLatch createNewLeaderLatch()
   {
-    return new LeaderLatch(curator, latchPath, self.getServiceScheme() + "://" + self.getHostAndPortToUse());
+    return new LeaderLatch(curator, latchPath, selfId);
   }
 
   private LeaderLatch createNewLeaderLatchWithListener()
@@ -88,7 +88,6 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
           public void isLeader()
           {
             try {
-              log.info("Kashif: calling isLeader on latch[%s]", newLeaderLatch);
               if (leader) {
                 log.warn("I'm being asked to become leader. But I am already the leader. Ignored event.");
                 return;
@@ -152,10 +151,13 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
   {
     try {
       final LeaderLatch latch = leaderLatch.get();
-      log.info("Kashif: Checking latch[%s]", latch);
 
       Participant participant = latch.getLeader();
-      if (participant.isLeader()) {
+      if (!leader && selfId.equals(participant.getId())) {
+        // Handle race condition where listener.becomeLeader() failed
+        // and getCurrentLeader() is called before leaderLatch has been recreated
+        return null;
+      } else if (participant.isLeader()) {
         return participant.getId();
       }
 

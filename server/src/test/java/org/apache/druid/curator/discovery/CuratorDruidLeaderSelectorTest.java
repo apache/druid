@@ -62,7 +62,8 @@ public class CuratorDruidLeaderSelectorTest extends CuratorTestBase
     final String latchPath = "/testLatchPath";
 
     final DruidNode node1 = new DruidNode("service", "h1", false, 8080, null, true, false);
-    final CuratorDruidLeaderSelector leaderSelector1 = new CuratorDruidLeaderSelector(curator, node1, latchPath);
+    final CuratorDruidLeaderSelector leaderSelector1
+        = new CuratorDruidLeaderSelector(curator, node1, latchPath);
     leaderSelector1.registerListener(
         new DruidLeaderSelector.Listener()
         {
@@ -95,7 +96,8 @@ public class CuratorDruidLeaderSelectorTest extends CuratorTestBase
 
     logger.info("Creating node2 leader selector");
     final DruidNode node2 = new DruidNode("service", "h2", false, 8080, null, true, false);
-    final CuratorDruidLeaderSelector leaderSelector2 = new CuratorDruidLeaderSelector(curator, node2, latchPath);
+    final CuratorDruidLeaderSelector leaderSelector2
+        = new CuratorDruidLeaderSelector(curator, node2, latchPath);
 
     logger.info("Registering node2 listener");
     leaderSelector2.registerListener(
@@ -136,7 +138,8 @@ public class CuratorDruidLeaderSelectorTest extends CuratorTestBase
     Assert.assertEquals(2, leaderSelector2.localTerm());
 
     final DruidNode node3 = new DruidNode("service", "h3", false, 8080, null, true, false);
-    final CuratorDruidLeaderSelector leaderSelector3 = new CuratorDruidLeaderSelector(curator, node3, latchPath);
+    final CuratorDruidLeaderSelector leaderSelector3
+        = new CuratorDruidLeaderSelector(curator, node3, latchPath);
     leaderSelector3.registerListener(
         new DruidLeaderSelector.Listener()
         {
@@ -177,16 +180,17 @@ public class CuratorDruidLeaderSelectorTest extends CuratorTestBase
     final String latchPath = "/testLatchPath";
 
     final DruidNode node1 = new DruidNode("service", "h1", false, 8080, null, true, false);
-    final CuratorDruidLeaderSelector leaderSelector1 = new CuratorDruidLeaderSelector(curator, node1, latchPath);
+    final CuratorDruidLeaderSelector leaderSelector
+        = new CuratorDruidLeaderSelector(curator, node1, latchPath);
 
-    final CountDownLatch listenerBecomeLeaderInvoked = new CountDownLatch(1);
-    leaderSelector1.registerListener(
+    final CountDownLatch listenerInvoked = new CountDownLatch(1);
+    leaderSelector.registerListener(
         new DruidLeaderSelector.Listener()
         {
           @Override
           public void becomeLeader()
           {
-            listenerBecomeLeaderInvoked.countDown();
+            listenerInvoked.countDown();
             throw new RuntimeException("Cannot become leader");
           }
 
@@ -198,17 +202,15 @@ public class CuratorDruidLeaderSelectorTest extends CuratorTestBase
         }
     );
 
-    // Wait until listener has been called
-    listenerBecomeLeaderInvoked.await();
+    listenerInvoked.await();
 
-    logger.info("Kashif: going to do the verifications now");
-    Assert.assertFalse(leaderSelector1.isLeader());
-    Assert.assertNull(leaderSelector1.getCurrentLeader());
-    Assert.assertTrue(leaderSelector1.localTerm() >= 1);
+    Assert.assertFalse(leaderSelector.isLeader());
+    Assert.assertNull(leaderSelector.getCurrentLeader());
+    Assert.assertTrue(leaderSelector.localTerm() >= 1);
   }
 
   @Test
-  public void testRecreatesLatchIfListenerFails()
+  public void testDoubleLeadersWhenSessionExpiresJustAfterReconnect()
   {
 
   }
