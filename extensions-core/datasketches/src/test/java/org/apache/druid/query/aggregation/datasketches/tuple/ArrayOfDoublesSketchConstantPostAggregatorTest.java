@@ -89,8 +89,10 @@ public class ArrayOfDoublesSketchConstantPostAggregatorTest
   public void testEqualsAndHashCode()
   {
     EqualsVerifier.forClass(ArrayOfDoublesSketchConstantPostAggregator.class)
-        .usingGetClass()
-        .verify();
+                  .usingGetClass()
+                  .withNonnullFields("name")
+                  .withIgnoredFields("sketchValue")
+                  .verify();
   }
 }
 
