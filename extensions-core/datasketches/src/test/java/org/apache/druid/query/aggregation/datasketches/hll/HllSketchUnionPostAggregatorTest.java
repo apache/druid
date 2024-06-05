@@ -24,6 +24,7 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.datasketches.hll.TgtHllType;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.aggregation.PostAggregator;
+import org.apache.druid.query.aggregation.datasketches.kll.KllSketchModule;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.junit.Assert;
 import org.junit.Test;
@@ -45,9 +46,10 @@ public class HllSketchUnionPostAggregatorTest
         TgtHllType.HLL_8.name()
     );
     DefaultObjectMapper mapper = new DefaultObjectMapper();
-    HllSketchUnionPostAggregator andBackAgain = mapper.readValue(
+    mapper.registerModules(new HllSketchModule().getJacksonModules());
+    PostAggregator andBackAgain = mapper.readValue(
         mapper.writeValueAsString(there),
-        HllSketchUnionPostAggregator.class
+        PostAggregator.class
     );
 
     Assert.assertEquals(there, andBackAgain);

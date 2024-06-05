@@ -92,6 +92,7 @@ public class ArrayOfDoublesSketchConstantPostAggregator extends ArrayOfDoublesSk
     return "ArrayOfDoublesSketchConstantPostAggregator{name='" + this.getName() + "', value='" + value + "'}";
   }
 
+  @JsonProperty("value")
   private String getRawSketchValue()
   {
     return value;

@@ -28,6 +28,7 @@ import org.apache.druid.query.Druids;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.TestDoubleColumnSelectorImpl;
+import org.apache.druid.query.aggregation.datasketches.tuple.ArrayOfDoublesSketchModule;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
@@ -55,9 +56,10 @@ public class DoublesSketchToQuantilesPostAggregatorTest
         new double[] {0, 0.5, 1}
     );
     DefaultObjectMapper mapper = new DefaultObjectMapper();
-    DoublesSketchToQuantilesPostAggregator andBackAgain = mapper.readValue(
+    mapper.registerModules(new DoublesSketchModule().getJacksonModules());
+    PostAggregator andBackAgain = mapper.readValue(
         mapper.writeValueAsString(there),
-        DoublesSketchToQuantilesPostAggregator.class
+        PostAggregator.class
     );
 
     Assert.assertEquals(there, andBackAgain);

@@ -19,7 +19,9 @@
 
 package org.apache.druid.query.aggregation.datasketches.tuple;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.junit.Assert;
@@ -28,7 +30,6 @@ import org.junit.Test;
 
 public class ArrayOfDoublesSketchConstantPostAggregatorTest
 {
-
   @Test
   public void testSketchValue()
   {
@@ -64,6 +65,24 @@ public class ArrayOfDoublesSketchConstantPostAggregatorTest
     );
 
     Assert.assertEquals(Comparators.alwaysEqual(), postAgg.getComparator());
+  }
+
+  @Test
+  public void testSerde() throws JsonProcessingException
+  {
+    final PostAggregator there = new ArrayOfDoublesSketchConstantPostAggregator(
+        "p",
+        "AQEJAwgBzJP/////////fwIAAAAAAAAAzT6NGdX0aWUOJvS5EIhpLwAAAAAAAAAAAAAAAAAAAAA="
+    );
+    DefaultObjectMapper mapper = new DefaultObjectMapper();
+    mapper.registerModules(new ArrayOfDoublesSketchModule().getJacksonModules());
+    PostAggregator andBackAgain = mapper.readValue(
+        mapper.writeValueAsString(there),
+        PostAggregator.class
+    );
+
+    Assert.assertEquals(there, andBackAgain);
+    Assert.assertArrayEquals(there.getCacheKey(), andBackAgain.getCacheKey());
   }
 
   @Test

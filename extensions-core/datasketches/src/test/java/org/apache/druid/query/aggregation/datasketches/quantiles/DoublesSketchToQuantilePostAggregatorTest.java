@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.aggregation.PostAggregator;
+import org.apache.druid.query.aggregation.datasketches.tuple.ArrayOfDoublesSketchModule;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.junit.Assert;
 import org.junit.Test;
@@ -38,9 +39,10 @@ public class DoublesSketchToQuantilePostAggregatorTest
         0.5
     );
     DefaultObjectMapper mapper = new DefaultObjectMapper();
-    DoublesSketchToQuantilePostAggregator andBackAgain = mapper.readValue(
+    mapper.registerModules(new DoublesSketchModule().getJacksonModules());
+    PostAggregator andBackAgain = mapper.readValue(
         mapper.writeValueAsString(there),
-        DoublesSketchToQuantilePostAggregator.class
+        PostAggregator.class
     );
 
     Assert.assertEquals(there, andBackAgain);

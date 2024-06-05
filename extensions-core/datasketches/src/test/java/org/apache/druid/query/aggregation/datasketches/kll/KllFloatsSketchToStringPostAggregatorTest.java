@@ -24,6 +24,7 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.aggregation.PostAggregator;
+import org.apache.druid.query.aggregation.datasketches.theta.SketchModule;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -43,9 +44,10 @@ public class KllFloatsSketchToStringPostAggregatorTest
         new FieldAccessPostAggregator("field1", "sketch")
     );
     DefaultObjectMapper mapper = new DefaultObjectMapper();
-    KllFloatsSketchToStringPostAggregator andBackAgain = mapper.readValue(
+    mapper.registerModules(new KllSketchModule().getJacksonModules());
+    PostAggregator andBackAgain = mapper.readValue(
         mapper.writeValueAsString(there),
-        KllFloatsSketchToStringPostAggregator.class
+        PostAggregator.class
     );
 
     Assert.assertEquals(there, andBackAgain);
