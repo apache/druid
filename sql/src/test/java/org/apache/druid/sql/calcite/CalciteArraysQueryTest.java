@@ -4090,7 +4090,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   public void testUnnestArrayColumnsStringThenFunction()
   {
     // Regresson test for https://github.com/apache/druid/issues/16543.
-    cannotVectorize();
     testQuery(
         "SELECT a || '.txt' FROM druid.arrays, UNNEST(arrayString) as unnested (a)",
         QUERY_CONTEXT_UNNEST,
