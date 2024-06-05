@@ -84,7 +84,6 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
   private final PartialSegmentMergeIOConfig ioConfig;
   private final int numAttempts;
   private final String subtaskSpecId;
-  private final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
   private final FingerprintGenerator fingerprintGenerator;
 
   PartialSegmentMergeTask(
@@ -99,8 +98,7 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
       ParallelIndexTuningConfig tuningConfig,
       final int numAttempts, // zero-based counting
       final Map<String, Object> context,
-      final ObjectMapper mapper,
-      @Nullable final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
+      final ObjectMapper mapper
   )
   {
     super(
@@ -120,7 +118,6 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
     this.subtaskSpecId = subtaskSpecId;
     this.ioConfig = ioConfig;
     this.numAttempts = numAttempts;
-    this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
     this.fingerprintGenerator = new FingerprintGenerator(mapper);
   }
 
@@ -315,7 +312,7 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
         long pushFinishTime = System.nanoTime();
         pushedSegments.add(segment);
 
-        if (isCentralizedSchemaEnabled()) {
+        if (toolbox.getCentralizedTableSchemaConfig().isEnabled()) {
           SchemaPayloadPlus schemaPayloadPlus =
               TaskSegmentSchemaUtil.getSegmentSchema(mergedFileAndDimensionNames.lhs, toolbox.getIndexIO());
           segmentSchemaMapping.addSchema(
@@ -341,15 +338,10 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
         );
       }
     }
-    if (isCentralizedSchemaEnabled()) {
+    if (toolbox.getCentralizedTableSchemaConfig().isEnabled()) {
       LOG.info("SegmentSchema for the pushed segments is [%s]", segmentSchemaMapping);
     }
     return new DataSegmentsWithSchemas(pushedSegments, segmentSchemaMapping.isNonEmpty() ? segmentSchemaMapping : null);
-  }
-
-  private boolean isCentralizedSchemaEnabled()
-  {
-    return centralizedDatasourceSchemaConfig != null && centralizedDatasourceSchemaConfig.isEnabled();
   }
 
   private static Pair<File, List<String>> mergeSegmentsInSamePartition(

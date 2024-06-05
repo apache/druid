@@ -442,8 +442,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
         ioConfigs,
         ingestionSchema.getTuningConfig(),
         getContext(),
-        toolbox.getJsonMapper(),
-        toolbox.getCentralizedTableSchemaConfig()
+        toolbox.getJsonMapper()
     );
   }
 

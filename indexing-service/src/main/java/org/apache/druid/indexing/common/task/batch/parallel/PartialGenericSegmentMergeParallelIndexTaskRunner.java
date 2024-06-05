@@ -24,7 +24,6 @@ import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 
 import java.util.Iterator;
 import java.util.List;
@@ -40,7 +39,6 @@ class PartialGenericSegmentMergeParallelIndexTaskRunner
 
   private final DataSchema dataSchema;
   private final List<PartialSegmentMergeIOConfig> mergeIOConfigs;
-  private final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
   private final ObjectMapper mapper;
 
   PartialGenericSegmentMergeParallelIndexTaskRunner(
@@ -52,15 +50,13 @@ class PartialGenericSegmentMergeParallelIndexTaskRunner
       List<PartialSegmentMergeIOConfig> mergeIOConfigs,
       ParallelIndexTuningConfig tuningConfig,
       Map<String, Object> context,
-      ObjectMapper mapper,
-      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
+      ObjectMapper mapper
   )
   {
     super(toolbox, taskId, groupId, baseSubtaskSpecName, tuningConfig, context);
 
     this.dataSchema = dataSchema;
     this.mergeIOConfigs = mergeIOConfigs;
-    this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
     this.mapper = mapper;
   }
 
@@ -111,7 +107,6 @@ class PartialGenericSegmentMergeParallelIndexTaskRunner
             numAttempts,
             ingestionSpec,
             getContext(),
-            centralizedDatasourceSchemaConfig,
             mapper
         );
       }

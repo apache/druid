@@ -22,7 +22,6 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.hamcrest.Matchers;
 import org.junit.Assert;
 import org.junit.Before;
@@ -105,7 +104,6 @@ public class PartialGenericSegmentMergeTaskTest extends AbstractParallelIndexSup
         ParallelIndexTestingFactory.NUM_ATTEMPTS,
         ingestionSpec,
         ParallelIndexTestingFactory.CONTEXT,
-        CentralizedDatasourceSchemaConfig.create(),
         null
     );
   }
@@ -144,7 +142,6 @@ public class PartialGenericSegmentMergeTaskTest extends AbstractParallelIndexSup
                 .build()
         ),
         ParallelIndexTestingFactory.CONTEXT,
-        CentralizedDatasourceSchemaConfig.create(),
         null
     );
   }

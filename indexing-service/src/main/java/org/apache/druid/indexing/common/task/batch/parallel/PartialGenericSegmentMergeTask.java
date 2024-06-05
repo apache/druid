@@ -31,7 +31,6 @@ import com.google.common.collect.Table;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.timeline.partition.BuildingShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
@@ -53,8 +52,6 @@ public class PartialGenericSegmentMergeTask extends PartialSegmentMergeTask<Buil
   private final PartialSegmentMergeIngestionSpec ingestionSchema;
   private final Table<Interval, Integer, BuildingShardSpec<?>> intervalAndIntegerToShardSpec;
 
-  private final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
-
   @JsonCreator
   public PartialGenericSegmentMergeTask(
       // id shouldn't be null except when this task is created by ParallelIndexSupervisorTask
@@ -67,7 +64,6 @@ public class PartialGenericSegmentMergeTask extends PartialSegmentMergeTask<Buil
       @JsonProperty("numAttempts") final int numAttempts, // zero-based counting
       @JsonProperty("spec") final PartialSegmentMergeIngestionSpec ingestionSchema,
       @JsonProperty("context") final Map<String, Object> context,
-      @JsonProperty("centralizedDatasourceSchemaConfig") @Nullable CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig,
       @JacksonInject ObjectMapper mapper
   )
   {
@@ -82,11 +78,9 @@ public class PartialGenericSegmentMergeTask extends PartialSegmentMergeTask<Buil
         ingestionSchema.getTuningConfig(),
         numAttempts,
         context,
-        mapper,
-        centralizedDatasourceSchemaConfig
+        mapper
     );
 
-    this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
     this.ingestionSchema = ingestionSchema;
     this.intervalAndIntegerToShardSpec = createIntervalAndIntegerToShardSpec(
         ingestionSchema.getIOConfig().getPartitionLocations()
@@ -125,13 +119,6 @@ public class PartialGenericSegmentMergeTask extends PartialSegmentMergeTask<Buil
   private PartialSegmentMergeIngestionSpec getIngestionSchema()
   {
     return ingestionSchema;
-  }
-
-  @Nullable
-  @JsonProperty("centralizedDatasourceSchemaConfig")
-  private CentralizedDatasourceSchemaConfig getCentralizedDatasourceSchemaConfig()
-  {
-    return centralizedDatasourceSchemaConfig;
   }
 
   @Override
