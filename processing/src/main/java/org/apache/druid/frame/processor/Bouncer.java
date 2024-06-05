@@ -35,7 +35,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * <p>
  * The class performs the work of a "bouncer", limiting the number of threads that can concurrently access the guarded
  * critical sections by the bouncer. The bouncer is initialized with the max number of threads that can enter the
- * gaurded section(s) at a time.
+ * guarded section(s) at a time.
  * <p>
  * The entering thread must ask for a {@link #ticket()} from the bouncer. The bouncer provides a future that resolves
  * with the ticket when it becomes available:
