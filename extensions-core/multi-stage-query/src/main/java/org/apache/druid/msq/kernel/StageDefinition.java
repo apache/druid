@@ -345,7 +345,7 @@ public class StageDefinition
         signature,
         maxRetainedBytes,
         Limits.MAX_PARTITION_BUCKETS,
-        shuffleSpec.doesAggregate(),
+        ((GlobalSortShuffleSpec) shuffleSpec).doesAggregate(),
         shuffleCheckHasMultipleValues
     );
   }

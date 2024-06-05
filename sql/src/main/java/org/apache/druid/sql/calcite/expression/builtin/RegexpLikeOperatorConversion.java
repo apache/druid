@@ -46,7 +46,7 @@ public class RegexpLikeOperatorConversion implements SqlOperatorConversion
       .operandTypes(SqlTypeFamily.CHARACTER, SqlTypeFamily.CHARACTER)
       .requiredOperandCount(2)
       .literalOperands(1)
-      .returnTypeNonNull(SqlTypeName.BOOLEAN)
+      .returnTypeCascadeNullable(SqlTypeName.BOOLEAN)
       .functionCategory(SqlFunctionCategory.STRING)
       .build();
 

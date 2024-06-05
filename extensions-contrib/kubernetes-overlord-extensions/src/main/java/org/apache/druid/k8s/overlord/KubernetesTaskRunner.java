@@ -263,11 +263,14 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
       return;
     }
 
+    workItem.shutdown();
+    if (!workItem.getResult().isDone()) {
+      return;
+    }
     synchronized (tasks) {
       tasks.remove(taskid);
     }
-
-    workItem.shutdown();
+    
   }
 
   @Override

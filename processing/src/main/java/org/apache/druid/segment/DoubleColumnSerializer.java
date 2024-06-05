@@ -72,7 +72,8 @@ public class DoubleColumnSerializer implements GenericColumnSerializer<Object>
         segmentWriteOutMedium,
         StringUtils.format("%s.double_column", filenameBase),
         byteOrder,
-        compression
+        compression,
+        segmentWriteOutMedium.getCloser()
     );
     writer.open();
   }

@@ -73,7 +73,7 @@ public class GoogleStorageConnector extends ChunkingStorageConnector<GoogleInput
     catch (IOException e) {
       throw new RE(
           e,
-          StringUtils.format("Cannot create tempDir : [%s] for google storage connector", config.getTempDir())
+          StringUtils.format("Cannot create tempDir [%s] for google storage connector", config.getTempDir())
       );
     }
   }
@@ -95,7 +95,7 @@ public class GoogleStorageConnector extends ChunkingStorageConnector<GoogleInput
   {
     try {
       final String fullPath = objectPath(path);
-      log.debug("Deleting file at bucket: [%s], path: [%s]", config.getBucket(), fullPath);
+      log.debug("Deleting file at bucket [%s] and path [%s].", config.getBucket(), fullPath);
 
       GoogleUtils.retryGoogleCloudStorageOperation(
           () -> {
@@ -105,7 +105,7 @@ public class GoogleStorageConnector extends ChunkingStorageConnector<GoogleInput
       );
     }
     catch (Exception e) {
-      log.error("Error occurred while deleting file at path [%s]. Error: [%s]", path, e.getMessage());
+      log.error("Failed to delete object at bucket [%s] and path [%s].", config.getBucket(), path);
       throw new IOException(e);
     }
   }
@@ -113,7 +113,17 @@ public class GoogleStorageConnector extends ChunkingStorageConnector<GoogleInput
   @Override
   public void deleteFiles(Iterable<String> paths) throws IOException
   {
-    storage.batchDelete(config.getBucket(), Iterables.transform(paths, this::objectPath));
+    try {
+      GoogleUtils.retryGoogleCloudStorageOperation(() -> {
+        storage.batchDelete(config.getBucket(), Iterables.transform(paths, this::objectPath));
+        return null;
+      });
+    }
+    catch (Exception e) {
+      log.error("Failed to delete object(s) at bucket [%s].", config.getBucket());
+      throw new IOException(e);
+    }
+
   }
 
   @Override
@@ -127,10 +137,19 @@ public class GoogleStorageConnector extends ChunkingStorageConnector<GoogleInput
         inputDataConfig.getMaxListingLength()
     );
 
-    storage.batchDelete(
-        config.getBucket(),
-        () -> Iterators.transform(storageObjects, GoogleStorageObjectMetadata::getName)
-    );
+    try {
+      GoogleUtils.retryGoogleCloudStorageOperation(() -> {
+        storage.batchDelete(
+            config.getBucket(),
+            () -> Iterators.transform(storageObjects, GoogleStorageObjectMetadata::getName)
+        );
+        return null;
+      });
+    }
+    catch (Exception e) {
+      log.error("Failed to delete object(s) at bucket [%s] and prefix [%s].", config.getBucket(), fullPath);
+      throw new IOException(e);
+    }
   }
 
   @Override

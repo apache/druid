@@ -47,6 +47,7 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.runtime.Hook;
 import org.apache.calcite.schema.ScannableTable;
 import org.apache.calcite.sql.SqlExplain;
 import org.apache.calcite.sql.SqlNode;
@@ -71,6 +72,7 @@ import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.rel.DruidRel;
 import org.apache.druid.sql.calcite.rel.DruidUnionRel;
 import org.apache.druid.sql.calcite.rel.logical.DruidLogicalConvention;
+import org.apache.druid.sql.calcite.rel.logical.DruidLogicalNode;
 import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.run.QueryMaker;
 import org.apache.druid.sql.calcite.table.DruidTable;
@@ -153,6 +155,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
     isPrepared = true;
     SqlNode validatedQueryNode = validatedQueryNode();
     rootQueryRel = handlerContext.planner().rel(validatedQueryNode);
+    Hook.CONVERTED.run(rootQueryRel.rel);
     handlerContext.hook().captureQueryRel(rootQueryRel);
     final RelDataTypeFactory typeFactory = rootQueryRel.rel.getCluster().getTypeFactory();
     final SqlValidator validator = handlerContext.planner().getValidator();
@@ -560,8 +563,9 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
                  .plus(DruidLogicalConvention.instance()),
           newRoot
       );
+      Hook.JAVA_PLAN.run(newRoot);
 
-      DruidQueryGenerator generator = new DruidQueryGenerator(plannerContext, newRoot, rexBuilder);
+      DruidQueryGenerator generator = new DruidQueryGenerator(plannerContext, (DruidLogicalNode) newRoot, rexBuilder);
       DruidQuery baseQuery = generator.buildQuery();
       try {
         log.info(
@@ -584,7 +588,11 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
                  .plus(rootQueryRel.collation),
           parameterized
       );
+
       handlerContext.hook().captureDruidRel(druidRel);
+
+      Hook.JAVA_PLAN.run(druidRel);
+
       if (explain != null) {
         return planExplanation(possiblyLimitedRoot, druidRel, true);
       } else {

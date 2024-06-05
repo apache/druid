@@ -40,10 +40,10 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
-import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
-import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
+import org.apache.druid.indexer.report.IngestionStatsAndErrors;
+import org.apache.druid.indexer.report.IngestionStatsAndErrorsTaskReport;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.TaskLockType;
-import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
@@ -52,6 +52,7 @@ import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.IndexTask.IndexIngestionSpec;
 import org.apache.druid.indexing.common.task.IndexTask.IndexTuningConfig;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
+import org.apache.druid.indexing.common.task.PendingSegmentAllocatingTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.Tasks;
@@ -65,6 +66,7 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.indexing.OverlordClient;
+import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.incremental.RowIngestionMetersTotals;
@@ -72,6 +74,7 @@ import org.apache.druid.segment.incremental.SimpleRowIngestionMeters;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
@@ -131,7 +134,8 @@ import java.util.stream.Collectors;
  *
  * @see ParallelIndexTaskRunner
  */
-public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implements ChatHandler
+public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
+    implements ChatHandler, PendingSegmentAllocatingTask
 {
   public static final String TYPE = "index_parallel";
 
@@ -202,7 +206,10 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   private volatile Pair<Map<String, Object>, Map<String, Object>> indexGenerateRowStats;
 
   private IngestionState ingestionState;
-
+  private TaskReport.ReportMap completionReports;
+  private Long segmentsRead;
+  private Long segmentsPublished;
+  private final boolean isCompactionTask;
 
   @JsonCreator
   public ParallelIndexSupervisorTask(
@@ -213,7 +220,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       @JsonProperty("context") Map<String, Object> context
   )
   {
-    this(id, groupId, taskResource, ingestionSchema, null, context);
+    this(id, groupId, taskResource, ingestionSchema, null, context, false);
   }
 
   public ParallelIndexSupervisorTask(
@@ -222,7 +229,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       TaskResource taskResource,
       ParallelIndexIngestionSpec ingestionSchema,
       @Nullable String baseSubtaskSpecName,
-      Map<String, Object> context
+      Map<String, Object> context,
+      boolean isCompactionTask
   )
   {
     super(
@@ -259,6 +267,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
     awaitSegmentAvailabilityTimeoutMillis = ingestionSchema.getTuningConfig().getAwaitSegmentAvailabilityTimeoutMillis();
     this.ingestionState = IngestionState.NOT_STARTED;
+    this.isCompactionTask = isCompactionTask;
   }
 
   private static void checkPartitionsSpecForForceGuaranteedRollup(PartitionsSpec partitionsSpec)
@@ -290,6 +299,13 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
                                .map(i -> new ResourceAction(new Resource(i, ResourceType.EXTERNAL), Action.READ))
                                .collect(Collectors.toSet()) :
            ImmutableSet.of();
+  }
+
+  @Nullable
+  @JsonIgnore
+  public TaskReport.ReportMap getCompletionReports()
+  {
+    return completionReports;
   }
 
   @JsonProperty("spec")
@@ -343,7 +359,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         getGroupId(),
         baseSubtaskSpecName,
         ingestionSchema,
-        getContext()
+        getContext(),
+        toolbox.getCentralizedTableSchemaConfig()
     );
   }
 
@@ -424,7 +441,9 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         ingestionSchema.getDataSchema(),
         ioConfigs,
         ingestionSchema.getTuningConfig(),
-        getContext()
+        getContext(),
+        toolbox.getJsonMapper(),
+        toolbox.getCentralizedTableSchemaConfig()
     );
   }
 
@@ -461,6 +480,12 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         getIngestionMode(),
         getIngestionSchema().getTuningConfig()
     );
+  }
+
+  @Override
+  public String getTaskAllocatorId()
+  {
+    return getGroupId();
   }
 
   @Nullable
@@ -516,12 +541,11 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     try {
 
       initializeSubTaskCleaner();
+      this.toolbox = toolbox;
 
       if (isParallelMode()) {
         // emit metric for parallel batch ingestion mode:
         emitMetric(toolbox.getEmitter(), "ingest/count", 1);
-
-        this.toolbox = toolbox;
 
         if (isGuaranteedRollup(
             getIngestionMode(),
@@ -633,6 +657,14 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     if (state.isSuccess()) {
       //noinspection ConstantConditions
       publishSegments(toolbox, parallelSinglePhaseRunner.getReports());
+      if (isCompactionTask) {
+        // Populate segmentsRead only for compaction tasks
+        segmentsRead = parallelSinglePhaseRunner.getReports()
+                                                .values()
+                                                .stream()
+                                                .mapToLong(report -> report.getOldSegments().size()).sum();
+      }
+
       if (awaitSegmentAvailabilityTimeoutMillis > 0) {
         waitForSegmentAvailability(parallelSinglePhaseRunner.getReports());
       }
@@ -651,10 +683,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       }
       taskStatus = TaskStatus.failure(getId(), errorMessage);
     }
-    toolbox.getTaskReportFileWriter().write(
-        getId(),
-        getTaskCompletionReports(taskStatus, segmentAvailabilityConfirmationCompleted)
-    );
+    updateAndWriteCompletionReports(taskStatus);
     return taskStatus;
   }
 
@@ -821,10 +850,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       taskStatus = TaskStatus.failure(getId(), errMsg);
     }
 
-    toolbox.getTaskReportFileWriter().write(
-        getId(),
-        getTaskCompletionReports(taskStatus, segmentAvailabilityConfirmationCompleted)
-    );
+    updateAndWriteCompletionReports(taskStatus);
     return taskStatus;
   }
 
@@ -921,10 +947,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       taskStatus = TaskStatus.failure(getId(), errMsg);
     }
 
-    toolbox.getTaskReportFileWriter().write(
-        getId(),
-        getTaskCompletionReports(taskStatus, segmentAvailabilityConfirmationCompleted)
-    );
+    updateAndWriteCompletionReports(taskStatus);
     return taskStatus;
   }
 
@@ -1128,22 +1151,26 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   {
     final Set<DataSegment> oldSegments = new HashSet<>();
     final Set<DataSegment> newSegments = new HashSet<>();
+    final SegmentSchemaMapping segmentSchemaMapping = new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
+
     reportsMap
         .values()
         .forEach(report -> {
           oldSegments.addAll(report.getOldSegments());
           newSegments.addAll(report.getNewSegments());
+          if (report.getSegmentSchemaMapping() != null) {
+            segmentSchemaMapping.merge(report.getSegmentSchemaMapping());
+          }
         });
     final boolean storeCompactionState = getContextValue(
         Tasks.STORE_COMPACTION_STATE_KEY,
         Tasks.DEFAULT_STORE_COMPACTION_STATE
     );
-    final Function<Set<DataSegment>, Set<DataSegment>> annotateFunction = compactionStateAnnotateFunction(
+    final Function<Set<DataSegment>, Set<DataSegment>> annotateFunction = addCompactionStateToSegments(
         storeCompactionState,
         toolbox,
         ingestionSchema
     );
-
 
     Set<DataSegment> tombStones = Collections.emptySet();
     if (getIngestionMode() == IngestionMode.REPLACE) {
@@ -1170,16 +1197,16 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
     final TaskLockType taskLockType = getTaskLockHelper().getLockTypeToUse();
     final TransactionalSegmentPublisher publisher =
-        (segmentsToBeOverwritten, segmentsToPublish, commitMetadata) -> toolbox.getTaskActionClient().submit(
-            buildPublishAction(segmentsToBeOverwritten, segmentsToPublish, taskLockType)
+        (segmentsToBeOverwritten, segmentsToPublish, commitMetadata, map) -> toolbox.getTaskActionClient().submit(
+            buildPublishAction(segmentsToBeOverwritten, segmentsToPublish, map, taskLockType)
         );
 
     final boolean published =
         newSegments.isEmpty()
-        || publisher.publishSegments(oldSegments, newSegments, annotateFunction, null).isSuccess();
+        || publisher.publishSegments(oldSegments, newSegments, annotateFunction, null, segmentSchemaMapping).isSuccess();
 
     if (published) {
-      LOG.info("Published [%d] segments", newSegments.size());
+      LOG.info("Published [%d] segments & [%d] schemas", newSegments.size(), segmentSchemaMapping.getSchemaCount());
 
       // segment metrics:
       emitMetric(toolbox.getEmitter(), "ingest/tombstones/count", tombStones.size());
@@ -1188,6 +1215,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     } else {
       throw new ISE("Failed to publish segments");
     }
+
+    segmentsPublished = (long) newSegments.size();
   }
 
   private TaskStatus runSequential(TaskToolbox toolbox) throws Exception
@@ -1211,7 +1240,10 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
     if (currentSubTaskHolder.setTask(sequentialIndexTask)
         && sequentialIndexTask.isReady(toolbox.getTaskActionClient())) {
-      return sequentialIndexTask.run(toolbox);
+      TaskStatus status = sequentialIndexTask.run(toolbox);
+      completionReports = sequentialIndexTask.getCompletionReports();
+      writeCompletionReports();
+      return status;
     } else {
       String msg = "Task was asked to stop. Finish as failed";
       LOG.info(msg);
@@ -1221,30 +1253,40 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
   /**
    * Generate an IngestionStatsAndErrorsTaskReport for the task.
-   *
-   * @param taskStatus {@link TaskStatus}
-   * @param segmentAvailabilityConfirmed Whether or not the segments were confirmed to be available for query when
-   *                                     when the task completed.
-   * @return
    */
-  private Map<String, TaskReport> getTaskCompletionReports(TaskStatus taskStatus, boolean segmentAvailabilityConfirmed)
+  private TaskReport.ReportMap getTaskCompletionReports(TaskStatus taskStatus)
   {
-    Pair<Map<String, Object>, Map<String, Object>> rowStatsAndUnparseableEvents =
-        doGetRowStatsAndUnparseableEvents("true", true);
-    return TaskReport.buildTaskReports(
-        new IngestionStatsAndErrorsTaskReport(
-            getId(),
-            new IngestionStatsAndErrorsTaskReportData(
-                IngestionState.COMPLETED,
-                rowStatsAndUnparseableEvents.rhs,
-                rowStatsAndUnparseableEvents.lhs,
-                taskStatus.getErrorMsg(),
-                segmentAvailabilityConfirmed,
-                segmentAvailabilityWaitTimeMs,
-                Collections.emptyMap()
-            )
-        )
+    return buildIngestionStatsReport(
+        IngestionState.COMPLETED,
+        taskStatus.getErrorMsg(),
+        segmentsRead,
+        segmentsPublished
     );
+  }
+
+  @Override
+  protected Map<String, Object> getTaskCompletionRowStats()
+  {
+    return doGetRowStatsAndUnparseableEvents(true, false).lhs;
+  }
+
+  @Override
+  protected Map<String, Object> getTaskCompletionUnparseableEvents()
+  {
+    return doGetRowStatsAndUnparseableEvents(true, true).rhs;
+  }
+
+  private void updateAndWriteCompletionReports(TaskStatus status)
+  {
+    completionReports = getTaskCompletionReports(status);
+    writeCompletionReports();
+  }
+
+  private void writeCompletionReports()
+  {
+    if (!isCompactionTask) {
+      toolbox.getTaskReportFileWriter().write(getId(), completionReports);
+    }
   }
 
   private static IndexTuningConfig convertToIndexTuningConfig(ParallelIndexTuningConfig tuningConfig)
@@ -1576,13 +1618,15 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     // Get stats from completed tasks
     Map<String, PushedSegmentsReport> completedSubtaskReports = parallelSinglePhaseRunner.getReports();
     for (PushedSegmentsReport pushedSegmentsReport : completedSubtaskReports.values()) {
-      Map<String, TaskReport> taskReport = pushedSegmentsReport.getTaskReport();
+      TaskReport.ReportMap taskReport = pushedSegmentsReport.getTaskReport();
       if (taskReport == null || taskReport.isEmpty()) {
-        LOG.warn("Got an empty task report from subtask: " + pushedSegmentsReport.getTaskId());
+        LOG.warn("Received an empty report from subtask[%s]" + pushedSegmentsReport.getTaskId());
         continue;
       }
-      RowIngestionMetersTotals rowIngestionMetersTotals =
-          getBuildSegmentsStatsFromTaskReport(taskReport, includeUnparseable, unparseableEvents);
+      RowIngestionMetersTotals rowIngestionMetersTotals = getBuildSegmentsStatsFromTaskReport(
+          taskReport,
+          includeUnparseable ? unparseableEvents : null
+      );
 
       buildSegmentsRowStats.addRowIngestionMetersTotals(rowIngestionMetersTotals);
     }
@@ -1612,16 +1656,24 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
       final SimpleRowIngestionMeters buildSegmentsRowStats = new SimpleRowIngestionMeters();
       final List<ParseExceptionReport> unparseableEvents = new ArrayList<>();
+      long totalSegmentsRead = 0L;
       for (GeneratedPartitionsReport generatedPartitionsReport : completedSubtaskReports.values()) {
-        Map<String, TaskReport> taskReport = generatedPartitionsReport.getTaskReport();
+        TaskReport.ReportMap taskReport = generatedPartitionsReport.getTaskReport();
         if (taskReport == null || taskReport.isEmpty()) {
-          LOG.warn("Got an empty task report from subtask: " + generatedPartitionsReport.getTaskId());
+          LOG.warn("Received an empty report from subtask[%s]", generatedPartitionsReport.getTaskId());
           continue;
         }
         RowIngestionMetersTotals rowStatsForCompletedTask =
-            getBuildSegmentsStatsFromTaskReport(taskReport, true, unparseableEvents);
+            getBuildSegmentsStatsFromTaskReport(taskReport, unparseableEvents);
 
         buildSegmentsRowStats.addRowIngestionMetersTotals(rowStatsForCompletedTask);
+
+        Long segmentsReadFromPartition = ((IngestionStatsAndErrorsTaskReport)
+            taskReport.get(IngestionStatsAndErrorsTaskReport.REPORT_KEY)
+        ).getPayload().getSegmentsRead();
+        if (segmentsReadFromPartition != null) {
+          totalSegmentsRead += segmentsReadFromPartition;
+        }
       }
 
       RowIngestionMetersTotals rowStatsForRunningTasks = getRowStatsAndUnparseableEventsForRunningTasks(
@@ -1630,6 +1682,9 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
           includeUnparseable
       );
       buildSegmentsRowStats.addRowIngestionMetersTotals(rowStatsForRunningTasks);
+      if (totalSegmentsRead > 0) {
+        segmentsRead = totalSegmentsRead;
+      }
 
       return createStatsAndErrorsReport(buildSegmentsRowStats.getTotals(), unparseableEvents);
     }
@@ -1644,21 +1699,24 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     final SimpleRowIngestionMeters buildSegmentsRowStats = new SimpleRowIngestionMeters();
     for (String runningTaskId : runningTaskIds) {
       try {
-        final Map<String, Object> report = getTaskReport(toolbox.getOverlordClient(), runningTaskId);
+        final TaskReport.ReportMap report = getTaskReport(toolbox.getOverlordClient(), runningTaskId);
 
         if (report == null || report.isEmpty()) {
           // task does not have a running report yet
           continue;
         }
 
-        Map<String, Object> ingestionStatsAndErrors = (Map<String, Object>) report.get("ingestionStatsAndErrors");
-        Map<String, Object> payload = (Map<String, Object>) ingestionStatsAndErrors.get("payload");
-        Map<String, Object> rowStats = (Map<String, Object>) payload.get("rowStats");
+        final IngestionStatsAndErrorsTaskReport ingestionStatsReport
+            = (IngestionStatsAndErrorsTaskReport) report.get(IngestionStatsAndErrorsTaskReport.REPORT_KEY);
+
+        final IngestionStatsAndErrors payload = ingestionStatsReport.getPayload();
+
+        Map<String, Object> rowStats = payload.getRowStats();
         Map<String, Object> totals = (Map<String, Object>) rowStats.get("totals");
         Map<String, Object> buildSegments = (Map<String, Object>) totals.get(RowIngestionMeters.BUILD_SEGMENTS);
 
         if (includeUnparseable) {
-          Map<String, Object> taskUnparseableEvents = (Map<String, Object>) payload.get("unparseableEvents");
+          Map<String, Object> taskUnparseableEvents = payload.getUnparseableEvents();
           List<ParseExceptionReport> buildSegmentsUnparseableEvents = (List<ParseExceptionReport>)
               taskUnparseableEvents.get(RowIngestionMeters.BUILD_SEGMENTS);
           unparseableEvents.addAll(buildSegmentsUnparseableEvents);
@@ -1687,27 +1745,27 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   }
 
   private RowIngestionMetersTotals getBuildSegmentsStatsFromTaskReport(
-      Map<String, TaskReport> taskReport,
-      boolean includeUnparseable,
-      List<ParseExceptionReport> unparseableEvents)
+      TaskReport.ReportMap taskReport,
+      List<ParseExceptionReport> unparseableEvents
+  )
   {
-    IngestionStatsAndErrorsTaskReport ingestionStatsAndErrorsReport = (IngestionStatsAndErrorsTaskReport) taskReport.get(
-        IngestionStatsAndErrorsTaskReport.REPORT_KEY);
-    IngestionStatsAndErrorsTaskReportData reportData =
-        (IngestionStatsAndErrorsTaskReportData) ingestionStatsAndErrorsReport.getPayload();
+    IngestionStatsAndErrorsTaskReport ingestionStatsAndErrorsReport = (IngestionStatsAndErrorsTaskReport)
+        taskReport.get(IngestionStatsAndErrorsTaskReport.REPORT_KEY);
+    IngestionStatsAndErrors reportData = ingestionStatsAndErrorsReport.getPayload();
     RowIngestionMetersTotals totals = getTotalsFromBuildSegmentsRowStats(
         reportData.getRowStats().get(RowIngestionMeters.BUILD_SEGMENTS)
     );
-    if (includeUnparseable) {
-      List<ParseExceptionReport> taskUnparsebleEvents = (List<ParseExceptionReport>) reportData.getUnparseableEvents()
-                                                                    .get(RowIngestionMeters.BUILD_SEGMENTS);
-      unparseableEvents.addAll(taskUnparsebleEvents);
+    if (unparseableEvents != null) {
+      unparseableEvents.addAll(
+          (List<ParseExceptionReport>)
+              reportData.getUnparseableEvents().get(RowIngestionMeters.BUILD_SEGMENTS)
+      );
     }
     return totals;
   }
 
   private Pair<Map<String, Object>, Map<String, Object>> doGetRowStatsAndUnparseableEvents(
-      String full,
+      boolean isFullReport,
       boolean includeUnparseable
   )
   {
@@ -1737,7 +1795,18 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       }
     } else {
       IndexTask currentSequentialTask = (IndexTask) currentRunner;
-      return Pair.of(currentSequentialTask.doGetRowStats(full), currentSequentialTask.doGetUnparseableEvents(full));
+      return Pair.of(
+          currentSequentialTask.doGetRowStats(isFullReport),
+          currentSequentialTask.doGetUnparseableEvents(isFullReport)
+      );
+    }
+  }
+
+  @Override
+  public void cleanUp(TaskToolbox toolbox, @Nullable TaskStatus taskStatus) throws Exception
+  {
+    if (!isCompactionTask) {
+      super.cleanUp(toolbox, taskStatus);
     }
   }
 
@@ -1750,40 +1819,31 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   )
   {
     IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
-    return Response.ok(doGetRowStatsAndUnparseableEvents(full, false).lhs).build();
+    return Response.ok(doGetRowStatsAndUnparseableEvents(full != null, false).lhs).build();
   }
 
   @VisibleForTesting
-  public Map<String, Object> doGetLiveReports(String full)
+  TaskReport.ReportMap doGetLiveReports(boolean isFullReport)
   {
-    Map<String, Object> returnMap = new HashMap<>();
-    Map<String, Object> ingestionStatsAndErrors = new HashMap<>();
-    Map<String, Object> payload = new HashMap<>();
-
     Pair<Map<String, Object>, Map<String, Object>> rowStatsAndUnparsebleEvents =
-        doGetRowStatsAndUnparseableEvents(full, true);
+        doGetRowStatsAndUnparseableEvents(isFullReport, true);
 
     // use the sequential task's ingestion state if we were running that mode
     IngestionState ingestionStateForReport;
     if (isParallelMode()) {
       ingestionStateForReport = ingestionState;
     } else {
-      IndexTask currentSequentialTask = (IndexTask) currentSubTaskHolder.getTask();
+      IndexTask currentSequentialTask = currentSubTaskHolder.getTask();
       ingestionStateForReport = currentSequentialTask == null
                                 ? ingestionState
                                 : currentSequentialTask.getIngestionState();
     }
 
-    payload.put("ingestionState", ingestionStateForReport);
-    payload.put("unparseableEvents", rowStatsAndUnparsebleEvents.rhs);
-    payload.put("rowStats", rowStatsAndUnparsebleEvents.lhs);
-
-    ingestionStatsAndErrors.put("taskId", getId());
-    ingestionStatsAndErrors.put("payload", payload);
-    ingestionStatsAndErrors.put("type", "ingestionStatsAndErrors");
-
-    returnMap.put("ingestionStatsAndErrors", ingestionStatsAndErrors);
-    return returnMap;
+    return buildLiveIngestionStatsReport(
+        ingestionStateForReport,
+        rowStatsAndUnparsebleEvents.rhs,
+        rowStatsAndUnparsebleEvents.lhs
+    );
   }
 
   @GET
@@ -1796,7 +1856,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   {
     IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
 
-    return Response.ok(doGetLiveReports(full)).build();
+    return Response.ok(doGetLiveReports(full != null)).build();
   }
 
   /**
@@ -1805,7 +1865,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
    */
   @Nullable
   @VisibleForTesting
-  static Map<String, Object> getTaskReport(final OverlordClient overlordClient, final String taskId)
+  static TaskReport.ReportMap getTaskReport(final OverlordClient overlordClient, final String taskId)
       throws InterruptedException, ExecutionException
   {
     try {
@@ -1819,6 +1879,12 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         throw e;
       }
     }
+  }
+
+  @VisibleForTesting
+  public void setToolbox(TaskToolbox toolbox)
+  {
+    this.toolbox = toolbox;
   }
 
   /**

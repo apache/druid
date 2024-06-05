@@ -28,6 +28,8 @@ import { TableActionDialog } from '../table-action-dialog/table-action-dialog';
 
 import { SupervisorStatisticsTable } from './supervisor-statistics-table/supervisor-statistics-table';
 
+type SupervisorTableActionDialogTab = 'status' | 'stats' | 'spec' | 'history';
+
 interface SupervisorTableActionDialogProps {
   supervisorId: string;
   actions: BasicAction[];
@@ -38,7 +40,7 @@ export const SupervisorTableActionDialog = React.memo(function SupervisorTableAc
   props: SupervisorTableActionDialogProps,
 ) {
   const { supervisorId, actions, onClose } = props;
-  const [activeTab, setActiveTab] = useState('status');
+  const [activeTab, setActiveTab] = useState<SupervisorTableActionDialogTab>('status');
 
   const supervisorTableSideButtonMetadata: SideButtonMetaData[] = [
     {
@@ -49,15 +51,15 @@ export const SupervisorTableActionDialog = React.memo(function SupervisorTableAc
     },
     {
       icon: 'chart',
-      text: 'Statistics',
+      text: 'Task stats',
       active: activeTab === 'stats',
       onClick: () => setActiveTab('stats'),
     },
     {
       icon: 'align-left',
-      text: 'Payload',
-      active: activeTab === 'payload',
-      onClick: () => setActiveTab('payload'),
+      text: 'Spec',
+      active: activeTab === 'spec',
+      onClick: () => setActiveTab('spec'),
     },
     {
       icon: 'history',
@@ -88,7 +90,7 @@ export const SupervisorTableActionDialog = React.memo(function SupervisorTableAc
           downloadFilename={`supervisor-stats-${supervisorId}.json`}
         />
       )}
-      {activeTab === 'payload' && (
+      {activeTab === 'spec' && (
         <ShowJson
           endpoint={supervisorEndpointBase}
           transform={x => cleanSpec(x, true)}

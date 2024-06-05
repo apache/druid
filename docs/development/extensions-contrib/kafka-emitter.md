@@ -47,6 +47,7 @@ All the configuration parameters for the Kafka emitter are under `druid.emitter.
 | `druid.emitter.kafka.producer.config`              | JSON configuration to set additional properties to Kafka producer.                                                                        | no        | none                  |
 | `druid.emitter.kafka.clusterName`                  | Optional value to specify the name of your Druid cluster. It can help make groups in your monitoring environment.                         | no        | none                  |
 | `druid.emitter.kafka.extra.dimensions` | Optional JSON configuration to specify a map of extra string dimensions for the events emitted. These can help make groups in your monitoring environment. | no | none |
+| `druid.emitter.kafka.producer.hiddenProperties`    | JSON configuration to specify sensitive Kafka producer properties such as username and password.  This property accepts a [DynamicConfigProvider](../../operations/dynamic-config-provider.md) implementation. | no | none |
 
 ### Example
 
@@ -59,5 +60,6 @@ druid.emitter.kafka.request.topic=druid-request-logs
 druid.emitter.kafka.segmentMetadata.topic=druid-segment-metadata 
 druid.emitter.kafka.producer.config={"max.block.ms":10000}
 druid.emitter.kafka.extra.dimensions={"region":"us-east-1","environment":"preProd"}
+druid.emitter.kafka.producer.hiddenProperties={"config":{"sasl.jaas.config": "org.apache.kafka.common.security.plain.PlainLoginModule required username=\\"KV...NI\\" password=\\"gA3...n6a/\\";"}}
 ```
 

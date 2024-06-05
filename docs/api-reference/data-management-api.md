@@ -62,7 +62,7 @@ Note that this endpoint returns an HTTP `200 OK` response code even if the segme
 
 #### URL
 
-<code class="deleteAPI">DELETE</code> <code>/druid/coordinator/v1/datasources/:datasource/segments/:segmentId</code>
+`DELETE` `/druid/coordinator/v1/datasources/{datasource}/segments/{segmentId}`
 
 #### Header
 
@@ -119,7 +119,7 @@ Accept: application/json, text/plain
 #### Sample response
 
 <details>
-  <summary>Show sample response</summary>
+  <summary>View the response</summary>
 
 ```json
 {
@@ -134,7 +134,7 @@ Marks the state of a segment as used, using the segment ID.
 
 #### URL
 
-<code class="postAPI">POST</code> <code>/druid/coordinator/v1/datasources/segments/:segmentId</code>
+`POST` `/druid/coordinator/v1/datasources/segments/{segmentId}`
 
 #### Header
 
@@ -191,7 +191,7 @@ Accept: application/json, text/plain
 #### Sample response
 
 <details>
-  <summary>Show sample response</summary>
+  <summary>View the response</summary>
 
 ```json
 {
@@ -206,20 +206,22 @@ Marks the state of a group of segments as unused, using an array of segment IDs 
 Pass the array of segment IDs or interval as a JSON object in the request body.
 
 For the interval, specify the start and end times as ISO 8601 strings to identify segments inclusive of the start time and exclusive of the end time.
-Druid only updates the segments completely contained within the specified interval; partially overlapping segments are not affected.
+Optionally, specify an array of segment versions with interval. Druid updates only the segments completely contained
+within the specified interval that match the optional list of versions; partially overlapping segments are not affected.
 
 #### URL
 
-<code class="postAPI">POST</code> <code>/druid/coordinator/v1/datasources/:datasource/markUnused</code>
+`POST` `/druid/coordinator/v1/datasources/{datasource}/markUnused`
 
 #### Request body
 
-The group of segments is sent as a JSON request payload that accepts one of the following properties:
+The group of segments is sent as a JSON request payload that accepts the following properties:
 
-|Property|Description|Example|
-|----------|-------------|---------|
-|`interval`|ISO 8601 segments interval.|`"2015-09-12T03:00:00.000Z/2015-09-12T05:00:00.000Z"`|
-|`segmentIds`|Array of segment IDs.|`["segmentId1", "segmentId2"]`|
+|Property|Description|Required|Example|
+|----------|-------------|---------|---------|
+|`interval`|ISO 8601 segments interval.|Yes, if `segmentIds` is not specified.|`"2015-09-12T03:00:00.000Z/2015-09-12T05:00:00.000Z"`|
+|`segmentIds`|List of segment IDs.|Yes, if `interval` is not specified.|`["segmentId1", "segmentId2"]`|
+|`versions`|List of segment versions. Must be provided with `interval`.|No.|`["2024-03-14T16:00:04.086Z", ""2024-03-12T16:00:04.086Z"]`|
 
 #### Responses
 
@@ -291,7 +293,7 @@ Content-Length: 230
 #### Sample response
 
 <details>
-  <summary>Show sample response</summary>
+  <summary>View the response</summary>
 
 ```json
 {
@@ -306,20 +308,22 @@ Marks the state of a group of segments as used, using an array of segment IDs or
 Pass the array of segment IDs or interval as a JSON object in the request body.
 
 For the interval, specify the start and end times as ISO 8601 strings to identify segments inclusive of the start time and exclusive of the end time.
-Druid only updates the segments completely contained within the specified interval; partially overlapping segments are not affected.
+Optionally, specify an array of segment versions with interval. Druid updates only the segments completely contained
+within the specified interval that match the optional list of versions; partially overlapping segments are not affected.
 
 #### URL
 
-<code class="postAPI">POST</code> <code>/druid/coordinator/v1/datasources/:datasource/markUsed</code>
+`POST` `/druid/coordinator/v1/datasources/{datasource}/markUsed`
 
 #### Request body
 
-The group of segments is sent as a JSON request payload that accepts one of the following properties:
+The group of segments is sent as a JSON request payload that accepts the following properties:
 
-|Property|Description|Example|
-|----------|-------------|---------|
-|`interval`| ISO 8601 segments interval.|`"2015-09-12T03:00:00.000Z/2015-09-12T05:00:00.000Z"`|
-|`segmentIds`|Array of segment IDs.|`["segmentId1", "segmentId2"]`|
+|Property|Description|Required|Example|
+|----------|-------------|---------|---------|
+|`interval`|ISO 8601 segments interval.|Yes, if `segmentIds` is not specified.|`"2015-09-12T03:00:00.000Z/2015-09-12T05:00:00.000Z"`|
+|`segmentIds`|List of segment IDs.|Yes, if `interval` is not specified.|`["segmentId1", "segmentId2"]`|
+|`versions`|List of segment versions. Must be provided with `interval`.|No.|`["2024-03-14T16:00:04.086Z", ""2024-03-12T16:00:04.086Z"]`|
 
 #### Responses
 
@@ -391,7 +395,7 @@ Content-Length: 230
 #### Sample response
 
 <details>
-  <summary>Show sample response</summary>
+  <summary>View the response</summary>
 
 ```json
 {
@@ -409,7 +413,7 @@ Note that this endpoint returns an HTTP `200 OK` response code even if the datas
 
 #### URL
 
-<code class="deleteAPI">DELETE</code> <code>/druid/coordinator/v1/datasources/:datasource</code>
+`DELETE` `/druid/coordinator/v1/datasources/{datasource}`
 
 #### Responses
 
@@ -451,7 +455,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 #### Sample response
 
 <details>
-  <summary>Show sample response</summary>
+  <summary>View the response</summary>
 
 ```json
 {
@@ -469,7 +473,7 @@ Note that this endpoint returns an HTTP `200 OK` response code even if the datas
 
 #### URL
 
-<code class="postAPI">POST</code> <code>/druid/coordinator/v1/datasources/:datasource</code>
+`POST` `/druid/coordinator/v1/datasources/{datasource}`
 
 #### Header
 
@@ -479,6 +483,7 @@ The following headers are required for this request:
 Content-Type: application/json
 Accept: application/json, text/plain
 ```
+
 #### Responses
 
 <Tabs>
@@ -526,7 +531,7 @@ Accept: application/json, text/plain
 #### Sample response
 
 <details>
-  <summary>Show sample response</summary>
+  <summary>View the response</summary>
 
 ```json
 {
@@ -543,11 +548,11 @@ The DELETE endpoint sends a [kill task](../ingestion/tasks.md) for a given inter
 
 Note that this endpoint returns an HTTP `200 OK` response code even if the datasource doesn't exist.
 
-This endpoint supersedes the deprecated endpoint: `DELETE /druid/coordinator/v1/datasources/:datasource?kill=true&interval=:interval`
+This endpoint supersedes the deprecated endpoint: `DELETE /druid/coordinator/v1/datasources/{datasource}?kill=true&interval={interval}`
 
 #### URL
 
-<code class="deleteAPI">DELETE</code> <code>/druid/coordinator/v1/datasources/:datasource/intervals/:interval</code>
+`DELETE` `/druid/coordinator/v1/datasources/{datasource}/intervals/{interval}`
 
 #### Responses
 

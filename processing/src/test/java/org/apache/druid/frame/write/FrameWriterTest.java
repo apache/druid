@@ -37,6 +37,7 @@ import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.segment.FrameSegment;
 import org.apache.druid.frame.segment.FrameStorageAdapter;
 import org.apache.druid.frame.testutil.FrameTestUtil;
+import org.apache.druid.guice.NestedDataModule;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RE;
@@ -88,6 +89,12 @@ import java.util.stream.Collectors;
 @RunWith(Parameterized.class)
 public class FrameWriterTest extends InitializedNullHandlingTest
 {
+
+  static {
+    ComplexMetrics.registerSerde(HyperUniquesSerde.TYPE_NAME, new HyperUniquesSerde());
+    NestedDataModule.registerHandlersAndSerde();
+  }
+
   private static final int DEFAULT_ALLOCATOR_CAPACITY = 1_000_000;
 
   @Nullable
@@ -272,11 +279,15 @@ public class FrameWriterTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void test_complex()
+  public void test_complex_hll()
   {
-    // Complex types can't be sorted, so skip the sortedness tests.
-    Assume.assumeThat(sortedness, CoreMatchers.is(KeyOrder.NONE));
-    testWithDataset(FrameWriterTestData.TEST_COMPLEX);
+    testWithDataset(FrameWriterTestData.TEST_COMPLEX_HLL);
+  }
+
+  @Test
+  public void test_complex_nested()
+  {
+    testWithDataset(FrameWriterTestData.TEST_COMPLEX_NESTED);
   }
 
   @Test
@@ -332,26 +343,12 @@ public class FrameWriterTest extends InitializedNullHandlingTest
     // Test all possible arrangements of two different types.
     for (final FrameWriterTestData.Dataset<?> dataset1 : FrameWriterTestData.DATASETS) {
       for (final FrameWriterTestData.Dataset<?> dataset2 : FrameWriterTestData.DATASETS) {
-        if (dataset1.getType().isArray() && dataset1.getType().getElementType().isNumeric()
-            || dataset2.getType().isArray() && dataset2.getType().getElementType().isNumeric()) {
-          if (inputFrameType == FrameType.COLUMNAR || outputFrameType == FrameType.COLUMNAR) {
-            // Skip the check if any of the dataset is a numerical array and any of the input or the output frame type
-            // is COLUMNAR.
-            continue;
-          }
-        }
         final RowSignature signature = makeSignature(Arrays.asList(dataset1, dataset2));
         final Sequence<List<Object>> rowSequence = unsortAndMakeRows(Arrays.asList(dataset1, dataset2));
 
-        // Sort by all columns up to the first COMPLEX one. (Can't sort by COMPLEX.)
         final List<String> sortColumns = new ArrayList<>();
-        if (!dataset1.getType().is(ValueType.COMPLEX)) {
-          sortColumns.add(signature.getColumnName(0));
-
-          if (!dataset2.getType().is(ValueType.COMPLEX)) {
-            sortColumns.add(signature.getColumnName(1));
-          }
-        }
+        sortColumns.add(signature.getColumnName(0));
+        sortColumns.add(signature.getColumnName(1));
 
         try {
           final Pair<Frame, Integer> writeResult = writeFrame(rowSequence, signature, sortColumns);
@@ -384,14 +381,9 @@ public class FrameWriterTest extends InitializedNullHandlingTest
     final Sequence<List<Object>> rowSequence = unsortAndMakeRows(FrameWriterTestData.DATASETS);
     final int totalRows = rowSequence.toList().size();
 
-    // Sort by all columns up to the first COMPLEX one. (Can't sort by COMPLEX.)
     final List<String> sortColumns = new ArrayList<>();
     for (int i = 0; i < signature.size(); i++) {
-      if (signature.getColumnType(i).get().is(ValueType.COMPLEX)) {
-        break;
-      } else {
-        sortColumns.add(signature.getColumnName(i));
-      }
+      sortColumns.add(signature.getColumnName(i));
     }
 
     final ByteBuffer allocatorMemory = ByteBuffer.wrap(new byte[DEFAULT_ALLOCATOR_CAPACITY]);
@@ -473,7 +465,7 @@ public class FrameWriterTest extends InitializedNullHandlingTest
     }
 
     final RowSignature keySignature = KeyTestUtils.createKeySignature(keyColumns, signature);
-    final Comparator<RowKey> keyComparator = RowKeyComparator.create(keyColumns);
+    final Comparator<RowKey> keyComparator = RowKeyComparator.create(keyColumns, signature);
 
     return Sequences.sort(
         rows,
@@ -514,10 +506,7 @@ public class FrameWriterTest extends InitializedNullHandlingTest
       return Collections.emptyList();
     } else {
       return sortColumnNames.stream()
-                            .map(
-                                columnName ->
-                                    new KeyColumn(columnName, sortedness)
-                            )
+                            .map(columnName -> new KeyColumn(columnName, sortedness))
                             .collect(Collectors.toList());
     }
   }

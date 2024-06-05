@@ -52,6 +52,7 @@ import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.server.QueryResponse;
+import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.sql.calcite.parser.DruidSqlIngest;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.parser.DruidSqlReplace;
@@ -241,7 +242,7 @@ public class MSQTaskQueryMaker implements QueryMaker
       );
 
       final DataSourceMSQDestination dataSourceMSQDestination = new DataSourceMSQDestination(
-          targetDataSource.getType(),
+          targetDataSource.getDestinationName(),
           segmentGranularityObject,
           segmentSortOrder,
           replaceTimeChunks
@@ -281,6 +282,14 @@ public class MSQTaskQueryMaker implements QueryMaker
                .tuningConfig(new MSQTuningConfig(maxNumWorkers, maxRowsInMemory, rowsPerSegment, indexSpec))
                .build();
 
+    MSQTaskQueryMakerUtils.validateRealtimeReindex(querySpec);
+
+    final Map<String, Object> context = new HashMap<>();
+    context.put(LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE, plannerContext.getLookupLoadingSpec().getMode());
+    if (plannerContext.getLookupLoadingSpec().getMode() == LookupLoadingSpec.Mode.ONLY_REQUIRED) {
+      context.put(LookupLoadingSpec.CTX_LOOKUPS_TO_LOAD, plannerContext.getLookupLoadingSpec().getLookupsToLoad());
+    }
+
     final MSQControllerTask controllerTask = new MSQControllerTask(
         taskId,
         querySpec.withOverriddenContext(nativeQueryContext),
@@ -289,7 +298,7 @@ public class MSQTaskQueryMaker implements QueryMaker
         SqlResults.Context.fromPlannerContext(plannerContext),
         sqlTypeNames,
         columnTypeList,
-        null
+        context
     );
 
     FutureUtils.getUnchecked(overlordClient.runTask(taskId, controllerTask), true);

@@ -61,7 +61,7 @@ public class KubernetesPeonClient
     this.emitter = emitter;
   }
 
-  public Pod launchPeonJobAndWaitForStart(Job job, Task task, long howLong, TimeUnit timeUnit)
+  public Pod launchPeonJobAndWaitForStart(Job job, Task task, long howLong, TimeUnit timeUnit) throws IllegalStateException
   {
     long start = System.currentTimeMillis();
     // launch job
@@ -74,12 +74,15 @@ public class KubernetesPeonClient
       Pod result = client.pods().inNamespace(namespace).withName(mainPod.getMetadata().getName())
                          .waitUntilCondition(pod -> {
                            if (pod == null) {
-                             return false;
+                             return true;
                            }
                            return pod.getStatus() != null && pod.getStatus().getPodIP() != null;
                          }, howLong, timeUnit);
+      
+      if (result == null) {
+        throw new IllegalStateException("K8s pod for the task [%s] appeared and disappeared. It can happen if the task was canceled");
+      }
       long duration = System.currentTimeMillis() - start;
-      log.info("Took task %s %d ms for pod to startup", jobName, duration);
       emitK8sPodMetrics(task, "k8s/peon/startup/time", duration);
       return result;
     });

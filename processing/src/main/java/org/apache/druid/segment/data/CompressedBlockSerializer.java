@@ -20,6 +20,7 @@
 package org.apache.druid.segment.data;
 
 import org.apache.druid.io.Channels;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.segment.CompressedPools;
 import org.apache.druid.segment.serde.MetaSerdeHelper;
@@ -60,18 +61,16 @@ public class CompressedBlockSerializer implements Serializer
 
   public CompressedBlockSerializer(
       SegmentWriteOutMedium segmentWriteOutMedium,
-
       CompressionStrategy compression,
-      int blockSize
+      int blockSize,
+      Closer closer
   )
   {
     this.segmentWriteOutMedium = segmentWriteOutMedium;
     this.compression = compression;
     this.compressor = compression.getCompressor();
-    this.uncompressedDataBuffer = compressor.allocateInBuffer(blockSize, segmentWriteOutMedium.getCloser())
-                                            .order(ByteOrder.nativeOrder());
-    this.compressedDataBuffer = compressor.allocateOutBuffer(blockSize, segmentWriteOutMedium.getCloser())
-                                          .order(ByteOrder.nativeOrder());
+    this.uncompressedDataBuffer = compressor.allocateInBuffer(blockSize, closer).order(ByteOrder.nativeOrder());
+    this.compressedDataBuffer = compressor.allocateOutBuffer(blockSize, closer).order(ByteOrder.nativeOrder());
   }
 
   public void open() throws IOException

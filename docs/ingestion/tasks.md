@@ -53,7 +53,7 @@ The reporting feature is supported by [native batch tasks](native-batch.md), the
 After a task completes, if it supports reports, its report can be retrieved at:
 
 ```
-http://<OVERLORD-HOST>:<OVERLORD-PORT>/druid/indexer/v1/task/<task-id>/reports
+http://<OVERLORD-HOST>:<OVERLORD-PORT>/druid/indexer/v1/task/{taskId}/reports
 ```
 
 An example output is shown below:
@@ -89,9 +89,69 @@ An example output is shown below:
       "errorMsg": null
     },
     "type": "ingestionStatsAndErrors"
+  },
+  "taskContext": {
+    "type": "taskContext",
+    "taskId": "compact_twitter_2018-09-24T18:24:23.920Z",
+    "payload": {
+      "forceTimeChunkLock": true,
+      "useLineageBasedSegmentAllocation": true
+    }
   }
 }
 ```
+
+Compaction tasks can generate multiple sets of segment output reports based on how the input interval is split. So the overall report contains mappings from each split to each report.
+Example report could be:
+
+```json
+{
+  "ingestionStatsAndErrors_0": {
+    "taskId": "compact_twitter_2018-09-24T18:24:23.920Z",
+    "payload": {
+      "ingestionState": "COMPLETED",
+      "unparseableEvents": {},
+      "rowStats": {
+        "buildSegments": {
+          "processed": 5390324,
+          "processedBytes": 5109573212,
+          "processedWithError": 0,
+          "thrownAway": 0,
+          "unparseable": 0
+        }
+      },
+      "segmentAvailabilityConfirmed": false,
+      "segmentAvailabilityWaitTimeMs": 0,
+      "recordsProcessed": null,
+      "errorMsg": null
+    },
+    "type": "ingestionStatsAndErrors"
+  },
+  "ingestionStatsAndErrors_1": {
+   "taskId": "compact_twitter_2018-09-25T18:24:23.920Z",
+   "payload": {
+    "ingestionState": "COMPLETED",
+    "unparseableEvents": {},
+    "rowStats": {
+     "buildSegments": {
+      "processed": 12345,
+      "processedBytes": 132456789,
+      "processedWithError": 0,
+      "thrownAway": 0,
+      "unparseable": 0
+     }
+    },
+    "segmentAvailabilityConfirmed": false,
+    "segmentAvailabilityWaitTimeMs": 0,
+    "recordsProcessed": null,
+    "errorMsg": null
+   },
+   "type": "ingestionStatsAndErrors"
+  }
+}
+```
+
+
 
 #### Segment Availability Fields
 
@@ -103,12 +163,20 @@ For some task types, the indexing task can wait for the newly ingested segments 
 |`segmentAvailabilityWaitTimeMs`|Milliseconds waited by the ingestion task for the newly ingested segments to be available for query after completing ingestion was completed.|
 |`recordsProcessed`| Partitions that were processed by an ingestion task and includes count of records processed from each partition.|
 
+
+#### Compaction task segment info fields
+
+|Field|Description|
+|---|---|
+|`segmentsRead`|Number of segments read by compaction task.|
+|`segmentsPublished`|Number of segments published by compaction task.|
+
 ### Live report
 
 When a task is running, a live report containing ingestion state, unparseable events and moving average for number of events processed for 1 min, 5 min, 15 min time window can be retrieved at:
 
 ```
-http://<OVERLORD-HOST>:<OVERLORD-PORT>/druid/indexer/v1/task/<task-id>/reports
+http://<OVERLORD-HOST>:<OVERLORD-PORT>/druid/indexer/v1/task/{taskId}/reports
 ```
 
 An example output is shown below:
@@ -195,7 +263,7 @@ The [native batch task](native-batch.md), the Hadoop batch task, and Kafka and K
 The live report can be accessed with a GET to the following URL on a Peon running a task:
 
 ```
-http://<middlemanager-host>:<worker-port>/druid/worker/v1/chat/<task-id>/rowStats
+http://<middlemanager-host>:<worker-port>/druid/worker/v1/chat/{taskId}/rowStats
 ```
 
 An example report is shown below. The `movingAverages` section contains 1 minute, 5 minute, and 15 minute moving averages of increases to the four row counters, which have the same definitions as those in the completion report. The `totals` section shows the current totals.
@@ -242,7 +310,7 @@ An example report is shown below. The `movingAverages` section contains 1 minute
 For the Kafka Indexing Service, a GET to the following Overlord API will retrieve live row stat reports from each task being managed by the supervisor and provide a combined report.
 
 ```
-http://<OVERLORD-HOST>:<OVERLORD-PORT>/druid/indexer/v1/supervisor/<supervisor-id>/stats
+http://<OVERLORD-HOST>:<OVERLORD-PORT>/druid/indexer/v1/supervisor/{supervisorId}/stats
 ```
 
 ### Unparseable events
@@ -250,7 +318,7 @@ http://<OVERLORD-HOST>:<OVERLORD-PORT>/druid/indexer/v1/supervisor/<supervisor-i
 Lists of recently-encountered unparseable events can be retrieved from a running task with a GET to the following Peon API:
 
 ```
-http://<middlemanager-host>:<worker-port>/druid/worker/v1/chat/<task-id>/unparseableEvents
+http://<middlemanager-host>:<worker-port>/druid/worker/v1/chat/{taskId}/unparseableEvents
 ```
 
 Note that this functionality is not supported by all task types. Currently, it is only supported by the

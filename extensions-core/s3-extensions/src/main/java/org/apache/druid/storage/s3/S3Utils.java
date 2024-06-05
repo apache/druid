@@ -65,6 +65,11 @@ public class S3Utils
   private static final Joiner JOINER = Joiner.on("/").skipNulls();
   private static final Logger log = new Logger(S3Utils.class);
 
+  /**
+   * Error for calling putObject with an entity over 5GB in size.
+   */
+  public static final String ERROR_ENTITY_TOO_LARGE = "EntityTooLarge";
+
   public static final Predicate<Throwable> S3RETRY = new Predicate<Throwable>()
   {
     @Override
@@ -87,6 +92,10 @@ public class S3Utils
       } else if (e instanceof SdkClientException && e.getMessage().contains("Unable to execute HTTP request")) {
         // This is likely due to a temporary DNS issue and can be retried.
         return true;
+      } else if (e instanceof SdkClientException && e.getMessage().contains("Unable to find a region via the region provider chain")) {
+        // This can happen sometimes when AWS isn't able to obtain the credentials for some service:
+        // https://github.com/aws/aws-sdk-java/issues/2285
+        return true;
       } else if (e instanceof AmazonClientException) {
         return AWSClientUtil.isClientExceptionRecoverable((AmazonClientException) e);
       } else {
@@ -96,8 +105,8 @@ public class S3Utils
   };
 
   /**
-   * Retries S3 operations that fail due to io-related exceptions. Service-level exceptions (access denied, file not
-   * found, etc) are not retried.
+   * Retries S3 operations that fail intermittently (due to io-related exceptions, during obtaining credentials, etc).
+   * Service-level exceptions (access denied, file not found, etc) are not retried.
    */
   public static <T> T retryS3Operation(Task<T> f) throws Exception
   {
@@ -105,12 +114,25 @@ public class S3Utils
   }
 
   /**
-   * Retries S3 operations that fail due to io-related exceptions. Service-level exceptions (access denied, file not
-   * found, etc) are not retried. Also provide a way to set maxRetries that can be useful, i.e. for testing.
+   * Retries S3 operations that fail intermittently (due to io-related exceptions, during obtaining credentials, etc).
+   * Service-level exceptions (access denied, file not found, etc) are not retried.
+   * Also provide a way to set maxRetries that can be useful, i.e. for testing.
    */
   public static <T> T retryS3Operation(Task<T> f, int maxRetries) throws Exception
   {
     return RetryUtils.retry(f, S3RETRY, maxRetries);
+  }
+
+  @Nullable
+  public static String getS3ErrorCode(final Throwable e)
+  {
+    if (e == null) {
+      return null;
+    } else if (e instanceof AmazonS3Exception) {
+      return ((AmazonS3Exception) e).getErrorCode();
+    } else {
+      return getS3ErrorCode(e.getCause());
+    }
   }
 
   static boolean isObjectInBucketIgnoringPermission(
@@ -234,11 +256,11 @@ public class S3Utils
   /**
    * Delete the files from S3 in a specified bucket, matching a specified prefix and filter
    *
-   * @param s3Client s3 client
-   * @param maxListingLength  maximum number of keys to fetch and delete at a time
-   * @param bucket   s3 bucket
-   * @param prefix   the file prefix
-   * @param filter   function which returns true if the prefix file found should be deleted and false otherwise.
+   * @param s3Client         s3 client
+   * @param maxListingLength maximum number of keys to fetch and delete at a time
+   * @param bucket           s3 bucket
+   * @param prefix           the file prefix
+   * @param filter           function which returns true if the prefix file found should be deleted and false otherwise.
    *
    * @throws Exception in case of errors
    */
@@ -299,7 +321,9 @@ public class S3Utils
       throws Exception
   {
     if (keysToDelete != null && log.isDebugEnabled()) {
-      List<String> keys = keysToDelete.stream().map(DeleteObjectsRequest.KeyVersion::getKey).collect(Collectors.toList());
+      List<String> keys = keysToDelete.stream()
+                                      .map(DeleteObjectsRequest.KeyVersion::getKey)
+                                      .collect(Collectors.toList());
       log.debug("Deleting keys from bucket: [%s], keys: [%s]", bucket, keys);
     }
     DeleteObjectsRequest deleteRequest = new DeleteObjectsRequest(bucket).withKeys(keysToDelete);

@@ -18,6 +18,7 @@
 
 import type {
   QueryParameter,
+  QueryPayload,
   SqlClusteredByClause,
   SqlExpression,
   SqlPartitionedByClause,
@@ -35,7 +36,7 @@ import * as JSONBig from 'json-bigint-native';
 import { v4 as uuidv4 } from 'uuid';
 
 import type { RowColumn } from '../../utils';
-import { deleteKeys } from '../../utils';
+import { caseInsensitiveEquals, deleteKeys } from '../../utils';
 import type { DruidEngine } from '../druid-engine/druid-engine';
 import { validDruidEngine } from '../druid-engine/druid-engine';
 import type { LastExecution } from '../execution/execution';
@@ -94,6 +95,8 @@ export class WorkbenchQuery {
     partitionedByHint: string | undefined,
     arrayMode: ArrayMode,
   ): WorkbenchQuery {
+    const queryContext: QueryContext = {};
+    if (arrayMode === 'arrays') queryContext.arrayIngestMode = 'array';
     return new WorkbenchQuery({
       queryString: ingestQueryPatternToQuery(
         externalConfigToIngestQueryPattern(
@@ -103,9 +106,7 @@ export class WorkbenchQuery {
           arrayMode,
         ),
       ).toString(),
-      queryContext: {
-        arrayIngestMode: 'array',
-      },
+      queryContext,
     });
   }
 
@@ -446,7 +447,7 @@ export class WorkbenchQuery {
 
   public getApiQuery(makeQueryId: () => string = uuidv4): {
     engine: DruidEngine;
-    query: Record<string, any>;
+    query: QueryPayload;
     prefixLines: number;
     cancelQueryId?: string;
   } {
@@ -478,7 +479,7 @@ export class WorkbenchQuery {
       };
     }
 
-    let apiQuery: Record<string, any> = {};
+    let apiQuery: QueryPayload;
     if (this.isJsonLike()) {
       try {
         apiQuery = Hjson.parse(queryString);
@@ -511,7 +512,11 @@ export class WorkbenchQuery {
     }
 
     const ingestQuery = this.isIngestQuery();
-    if (!unlimited && !ingestQuery && queryContext.selectDestination !== 'durableStorage') {
+    if (
+      !unlimited &&
+      !ingestQuery &&
+      !caseInsensitiveEquals(queryContext.selectDestination, 'durableStorage')
+    ) {
       apiQuery.context ||= {};
       apiQuery.context.sqlOuterLimit = 1001;
     }

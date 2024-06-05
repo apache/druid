@@ -23,7 +23,8 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.annotations.SubclassesMustOverrideEqualsAndHashCode;
 import org.apache.druid.collections.spatial.ImmutableNode;
-import org.apache.druid.collections.spatial.ImmutablePoint;
+
+import javax.annotation.Nullable;
 
 /**
  */
@@ -34,17 +35,25 @@ import org.apache.druid.collections.spatial.ImmutablePoint;
     @JsonSubTypes.Type(name = "polygon", value = PolygonBound.class)
 })
 @SubclassesMustOverrideEqualsAndHashCode
-public interface Bound
+public interface Bound<TCoordinateArray, TPoint extends ImmutableNode<TCoordinateArray>>
 {
   int getLimit();
 
   int getNumDims();
 
-  boolean overlaps(ImmutableNode node);
+  boolean overlaps(ImmutableNode<TCoordinateArray> node);
 
-  boolean contains(float[] coords);
+  boolean contains(TCoordinateArray coords);
 
-  Iterable<ImmutablePoint> filter(Iterable<ImmutablePoint> points);
+  /***
+   * containsObj is mainly used to create object matechers on top custom/extensible spatial column,
+   * it receives it as object and corresponding implementations need to logic to unpack the objects and invoke contains
+   * @param input Takes an object spatial column as input
+   * @return boolean value if it falls within given bound
+   */
+  boolean containsObj(@Nullable Object input);
+
+  Iterable<TPoint> filter(Iterable<TPoint> points);
 
   byte[] getCacheKey();
 }

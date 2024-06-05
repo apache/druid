@@ -30,8 +30,8 @@ import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DruidNodeAnnouncer;
 import org.apache.druid.discovery.LookupNodeService;
+import org.apache.druid.indexer.report.TaskReportFileWriter;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
-import org.apache.druid.indexing.common.TaskReportFileWriter;
 import org.apache.druid.indexing.common.TaskToolboxFactory;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.config.TaskConfig;
@@ -48,6 +48,7 @@ import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9Factory;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.join.JoinableFactory;
@@ -140,7 +141,7 @@ public class TestTaskToolboxFactory extends TaskToolboxFactory
     private Provider<MonitorScheduler> monitorSchedulerProvider;
     private ObjectMapper jsonMapper = TestHelper.JSON_MAPPER;
     private IndexIO indexIO = TestHelper.getTestIndexIO();
-    private SegmentCacheManagerFactory segmentCacheManagerFactory = new SegmentCacheManagerFactory(jsonMapper);
+    private SegmentCacheManagerFactory segmentCacheManagerFactory = new SegmentCacheManagerFactory(TestIndex.INDEX_IO, jsonMapper);
     private Cache cache;
     private CacheConfig cacheConfig;
     private CachePopulatorStats cachePopulatorStats;
@@ -391,9 +392,10 @@ public class TestTaskToolboxFactory extends TaskToolboxFactory
       return this;
     }
 
-    public void setCentralizedTableSchemaConfig(CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig)
+    public Builder setCentralizedTableSchemaConfig(CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig)
     {
       this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
+      return this;
     }
   }
 }

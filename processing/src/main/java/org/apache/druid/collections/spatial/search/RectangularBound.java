@@ -24,16 +24,19 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
+import org.apache.druid.collections.spatial.ImmutableFloatPoint;
 import org.apache.druid.collections.spatial.ImmutableNode;
-import org.apache.druid.collections.spatial.ImmutablePoint;
+import org.apache.druid.segment.incremental.SpatialDimensionRowTransformer;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Objects;
 
 /**
+ *
  */
-public class RectangularBound implements Bound
+public class RectangularBound implements Bound<float[], ImmutableFloatPoint>
 {
   private static final byte CACHE_TYPE_ID = 0x0;
 
@@ -92,7 +95,7 @@ public class RectangularBound implements Bound
   }
 
   @Override
-  public boolean overlaps(ImmutableNode node)
+  public boolean overlaps(ImmutableNode<float[]> node)
   {
     final float[] nodeMinCoords = node.getMinCoordinates();
     final float[] nodeMaxCoords = node.getMaxCoordinates();
@@ -119,14 +122,27 @@ public class RectangularBound implements Bound
   }
 
   @Override
-  public Iterable<ImmutablePoint> filter(Iterable<ImmutablePoint> points)
+  public boolean containsObj(@Nullable Object input)
+  {
+    if (input instanceof String) {
+      final float[] coordinate = SpatialDimensionRowTransformer.decode((String) input);
+      if (coordinate == null) {
+        return false;
+      }
+      return contains(coordinate);
+    }
+    return false;
+  }
+
+  @Override
+  public Iterable<ImmutableFloatPoint> filter(Iterable<ImmutableFloatPoint> points)
   {
     return Iterables.filter(
         points,
-        new Predicate<ImmutablePoint>()
+        new Predicate<ImmutableFloatPoint>()
         {
           @Override
-          public boolean apply(ImmutablePoint immutablePoint)
+          public boolean apply(ImmutableFloatPoint immutablePoint)
           {
             return contains(immutablePoint.getCoords());
           }

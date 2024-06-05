@@ -21,6 +21,7 @@
 1M
 100MiB
 32-bit
+4MiB
 500MiB
 64-bit
 ACL
@@ -39,6 +40,7 @@ Authorizer
 Avatica
 Avro
 Azul
+AzureDNSZone
 BCP
 Base64
 Base64-encoded
@@ -51,12 +53,15 @@ CORS
 CNF
 CPUs
 CSVs
+CentralizedDatasourceSchema
 Ceph
 CloudWatch
 ColumnDescriptor
 Corretto
 CLI
+CUME_DIST
 DDL
+DENSE_RANK
 DML
 DNS
 DRUIDVERSION
@@ -93,6 +98,7 @@ ETL
 Elasticsearch
 Enums
 FirehoseFactory
+FIRST_VALUE
 FlattenSpec
 Float.NEGATIVE_INFINITY
 Float.NEGATIVE_INFINITY.
@@ -117,6 +123,7 @@ IANA
 IcebergFilter
 IcebergInputSource
 IETF
+IoT
 IP
 IPv4
 IPv6
@@ -235,6 +242,7 @@ TopN
 TopNs
 UI
 UIs
+UPSERT
 URI
 URIs
 uris
@@ -270,6 +278,7 @@ backpressure
 base64
 big-endian
 bigint
+blkio
 blobstore
 Boolean
 boolean
@@ -350,6 +359,8 @@ https
 idempotency
 i.e.
 influxdb
+influencer
+influencers
 ingestions
 ingestionSpec
 injective
@@ -415,6 +426,7 @@ nonfinalized
 non-null
 non-nullable
 noop
+NTILE
 numerics
 numShards
 parameterize
@@ -426,6 +438,7 @@ partitioner
 partitionFunction
 partitionsSpec
 pathParts
+PERCENT_RANK
 performant
 plaintext
 pluggable
@@ -488,6 +501,7 @@ repo
 requireSSL
 rollup
 rollups
+ROW_NUMBER
 rsync
 runtime
 schemas
@@ -521,6 +535,7 @@ subqueries
 subquery
 subsecond
 substring
+substrings
 subtask
 subtasks
 supervisorTaskId
@@ -563,6 +578,7 @@ useFilterCNF
 useJqSyntax
 useJsonNodeReader
 useSSL
+upsert
 uptime
 uris
 urls
@@ -1498,6 +1514,7 @@ array_overlap
 array_prepend
 array_slice
 array_to_string
+scalar_in_array
 asin
 atan
 atan2
@@ -1645,6 +1662,7 @@ EventReceiverFirehose
 EventReceiverFirehoseMonitor
 Filesystem
 JVMMonitor
+jvmVersion
 QueryCountStatsMonitor
 RealtimeMetricsMonitor
 Sys
@@ -2155,6 +2173,9 @@ jackson-jq
 missingValue
 skipBytesInMemoryOverheadCheck
 spatialDimensions
+radiusUnit
+euclidean
+kilometers
 useFieldDiscovery
 4CPU
 cityName

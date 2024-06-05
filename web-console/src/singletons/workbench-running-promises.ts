@@ -21,24 +21,25 @@ import type { QueryResult } from '@druid-toolkit/query';
 export interface WorkbenchRunningPromise {
   promise: Promise<QueryResult>;
   prefixLines: number;
+  startTime: Date;
 }
 
 export class WorkbenchRunningPromises {
-  private static readonly promises: Record<string, WorkbenchRunningPromise> = {};
+  private static readonly promises = new Map<string, WorkbenchRunningPromise>();
 
   static isWorkbenchRunningPromise(x: any): x is WorkbenchRunningPromise {
     return Boolean(x.promise);
   }
 
   static storePromise(id: string, promise: WorkbenchRunningPromise): void {
-    WorkbenchRunningPromises.promises[id] = promise;
+    WorkbenchRunningPromises.promises.set(id, promise);
   }
 
   static getPromise(id: string): WorkbenchRunningPromise | undefined {
-    return WorkbenchRunningPromises.promises[id];
+    return WorkbenchRunningPromises.promises.get(id);
   }
 
   static deletePromise(id: string): void {
-    delete WorkbenchRunningPromises.promises[id];
+    WorkbenchRunningPromises.promises.delete(id);
   }
 }

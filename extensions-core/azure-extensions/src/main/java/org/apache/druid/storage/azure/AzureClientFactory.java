@@ -32,11 +32,11 @@ import org.apache.druid.java.util.common.Pair;
 
 import javax.annotation.Nullable;
 import java.time.Duration;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Factory class for generating BlobServiceClient objects.
+ * Factory class for generating BlobServiceClient objects used for deep storage.
  */
 public class AzureClientFactory
 {
@@ -47,7 +47,7 @@ public class AzureClientFactory
   public AzureClientFactory(AzureAccountConfig config)
   {
     this.config = config;
-    this.cachedBlobServiceClients = new HashMap<>();
+    this.cachedBlobServiceClients = new ConcurrentHashMap<>();
   }
 
   // It's okay to store clients in a map here because all the configs for specifying azure retries are static, and there are only 2 of them.

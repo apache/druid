@@ -219,8 +219,8 @@ public class VectorGroupByEngine
                 return false;
               }
 
-              if (dimension.getOutputType().isArray()) {
-                // group by on arrays is not currently supported in the vector processing engine
+              if (!dimension.getOutputType().isPrimitive()) {
+                // group by on arrays and complex types is not currently supported in the vector processing engine
                 return false;
               }
 

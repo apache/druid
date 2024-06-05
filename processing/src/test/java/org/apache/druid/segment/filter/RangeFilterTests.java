@@ -50,7 +50,6 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
-import org.junit.experimental.runners.Enclosed;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -59,7 +58,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-@RunWith(Enclosed.class)
 public class RangeFilterTests
 {
   @RunWith(Parameterized.class)
@@ -895,6 +893,21 @@ public class RangeFilterTests
           NullHandling.replaceWithDefault() && canTestNumericNullsAsDefaultValues
           ? ImmutableList.of("0", "3", "7")
           : ImmutableList.of("0")
+      );
+
+      assertFilterMatches(
+          new RangeFilter(
+              "vd0-nvl-2",
+              ColumnType.DOUBLE,
+              0.0,
+              null,
+              true,
+              false,
+              null
+          ),
+          NullHandling.replaceWithDefault()
+          ? ImmutableList.of("1", "3", "4", "5", "6")
+          : ImmutableList.of("1", "2", "3", "4", "5", "6", "7")
       );
 
       if (NullHandling.sqlCompatible() || canTestNumericNullsAsDefaultValues) {

@@ -186,7 +186,8 @@ public class CompressedVariableSizeBlobColumnTest
     final CompressionStrategy compressionStrategy = CompressionStrategy.LZ4;
     CompressedLongsSerializer serializer = new CompressedLongsSerializer(
         writeOutMedium,
-        compressionStrategy
+        compressionStrategy,
+        writeOutMedium.getCloser()
     );
     serializer.open();
 
@@ -204,6 +205,7 @@ public class CompressedVariableSizeBlobColumnTest
     serializer.writeTo(writer, smoosher);
     writer.close();
     smoosher.close();
+    writeOutMedium.close();
     SmooshedFileMapper fileMapper = SmooshedFileMapper.load(tmpFile);
 
     ByteBuffer base = fileMapper.mapFile(fileNameBase);

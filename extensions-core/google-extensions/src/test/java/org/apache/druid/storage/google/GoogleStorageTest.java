@@ -19,17 +19,23 @@
 
 package org.apache.druid.storage.google;
 
+import com.google.api.client.http.AbstractInputStreamContent;
 import com.google.api.gax.paging.Page;
 import com.google.cloud.storage.Blob;
 import com.google.cloud.storage.BlobId;
+import com.google.cloud.storage.BlobInfo;
 import com.google.cloud.storage.Storage;
+import com.google.cloud.storage.StorageException;
 import com.google.common.collect.ImmutableList;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -50,6 +56,8 @@ public class GoogleStorageTest
   static final String PATH = "/path";
   static final long SIZE = 100;
   static final OffsetDateTime UPDATE_TIME = OffsetDateTime.MIN;
+  private static final Exception STORAGE_EXCEPTION = new StorageException(404, "Runtime Storage Exception");
+
 
   @Before
   public void setUp()
@@ -62,31 +70,72 @@ public class GoogleStorageTest
   }
 
   @Test
-  public void testDeleteSuccess() throws IOException
+  public void testInsertDefaultBufferSize() throws IOException
+  {
+    final ByteArrayInputStream inputStream = new ByteArrayInputStream(new byte[0]);
+    final Capture<InputStream> inputStreamCapture = Capture.newInstance();
+    final AbstractInputStreamContent httpContent = EasyMock.createMock(AbstractInputStreamContent.class);
+    EasyMock.expect(httpContent.getInputStream()).andReturn(inputStream);
+    EasyMock.expect(
+        mockStorage.createFrom(
+            EasyMock.eq(BlobInfo.newBuilder(BlobId.of(BUCKET, PATH)).build()),
+            EasyMock.capture(inputStreamCapture)
+        )
+    ).andReturn(blob);
+    EasyMock.replay(httpContent, mockStorage, blob);
+    googleStorage.insert(BUCKET, PATH, httpContent, null);
+    EasyMock.verify(httpContent, mockStorage, blob);
+  }
+
+  @Test
+  public void testInsertCustomBufferSize() throws IOException
+  {
+    final int bufferSize = 100;
+    final ByteArrayInputStream inputStream = new ByteArrayInputStream(new byte[0]);
+    final Capture<InputStream> inputStreamCapture = Capture.newInstance();
+    final AbstractInputStreamContent httpContent = EasyMock.createMock(AbstractInputStreamContent.class);
+    EasyMock.expect(httpContent.getInputStream()).andReturn(inputStream);
+    EasyMock.expect(
+        mockStorage.createFrom(
+            EasyMock.eq(BlobInfo.newBuilder(BlobId.of(BUCKET, PATH)).build()),
+            EasyMock.capture(inputStreamCapture),
+            EasyMock.eq(bufferSize)
+        )
+    ).andReturn(blob);
+    EasyMock.replay(httpContent, mockStorage, blob);
+    googleStorage.insert(BUCKET, PATH, httpContent, bufferSize);
+    EasyMock.verify(httpContent, mockStorage, blob);
+  }
+
+  @Test
+  public void testDeleteSuccess()
   {
     EasyMock.expect(mockStorage.delete(EasyMock.eq(BUCKET), EasyMock.eq(PATH))).andReturn(true);
     EasyMock.replay(mockStorage);
     googleStorage.delete(BUCKET, PATH);
+    EasyMock.verify(mockStorage);
+  }
+
+  @Test
+  public void testDeleteFileNotFound()
+  {
+    EasyMock.expect(mockStorage.delete(EasyMock.eq(BUCKET), EasyMock.eq(PATH))).andReturn(false);
+    EasyMock.replay(mockStorage);
+    googleStorage.delete(BUCKET, PATH);
+    EasyMock.verify(mockStorage);
   }
 
   @Test
   public void testDeleteFailure()
   {
-    EasyMock.expect(mockStorage.delete(EasyMock.eq(BUCKET), EasyMock.eq(PATH))).andReturn(false);
+    EasyMock.expect(mockStorage.delete(EasyMock.eq(BUCKET), EasyMock.eq(PATH))).andThrow(STORAGE_EXCEPTION);
     EasyMock.replay(mockStorage);
-    boolean thrownIOException = false;
-    try {
-      googleStorage.delete(BUCKET, PATH);
-
-    }
-    catch (IOException e) {
-      thrownIOException = true;
-    }
-    assertTrue(thrownIOException);
+    Assert.assertThrows(StorageException.class, () -> googleStorage.delete(BUCKET, PATH));
+    EasyMock.verify(mockStorage);
   }
 
   @Test
-  public void testBatchDeleteSuccess() throws IOException
+  public void testBatchDeleteSuccess()
   {
     List<String> paths = ImmutableList.of("/path1", "/path2");
     final Capture<Iterable<BlobId>> pathIterable = Capture.newInstance();
@@ -103,6 +152,29 @@ public class GoogleStorageTest
     assertTrue(paths.size() == recordedPaths.size() && paths.containsAll(recordedPaths) && recordedPaths.containsAll(
         paths));
     assertEquals(BUCKET, recordedBlobIds.get(0).getBucket());
+    EasyMock.verify(mockStorage);
+  }
+
+  @Test
+  public void testBatchDeleteFileNotFound()
+  {
+    List<String> paths = ImmutableList.of("/path1", "/path2");
+    final Capture<Iterable<BlobId>> pathIterable = Capture.newInstance();
+    EasyMock.expect(mockStorage.delete(EasyMock.capture(pathIterable))).andReturn(ImmutableList.of(true, false));
+    EasyMock.replay(mockStorage);
+
+    googleStorage.batchDelete(BUCKET, paths);
+
+    List<BlobId> recordedBlobIds = new ArrayList<>();
+    pathIterable.getValue().iterator().forEachRemaining(recordedBlobIds::add);
+
+    List<String> recordedPaths = recordedBlobIds.stream().map(BlobId::getName).collect(Collectors.toList());
+
+    assertTrue(paths.size() == recordedPaths.size());
+    assertTrue(paths.containsAll(recordedPaths));
+    assertTrue(recordedPaths.containsAll(paths));
+    assertEquals(BUCKET, recordedBlobIds.get(0).getBucket());
+    EasyMock.verify(mockStorage);
   }
 
   @Test
@@ -110,21 +182,14 @@ public class GoogleStorageTest
   {
     List<String> paths = ImmutableList.of("/path1", "/path2");
     EasyMock.expect(mockStorage.delete((Iterable<BlobId>) EasyMock.anyObject()))
-            .andReturn(ImmutableList.of(false, true));
+            .andThrow(STORAGE_EXCEPTION);
     EasyMock.replay(mockStorage);
-    boolean thrownIOException = false;
-    try {
-      googleStorage.batchDelete(BUCKET, paths);
-
-    }
-    catch (IOException e) {
-      thrownIOException = true;
-    }
-    assertTrue(thrownIOException);
+    Assert.assertThrows(StorageException.class, () -> googleStorage.batchDelete(BUCKET, paths));
+    EasyMock.verify(mockStorage);
   }
 
   @Test
-  public void testGetMetadata() throws IOException
+  public void testGetMetadataMatch() throws IOException
   {
     EasyMock.expect(mockStorage.get(
         EasyMock.eq(BUCKET),
@@ -140,8 +205,12 @@ public class GoogleStorageTest
     EasyMock.replay(mockStorage, blob);
 
     GoogleStorageObjectMetadata objectMetadata = googleStorage.getMetadata(BUCKET, PATH);
-    assertEquals(objectMetadata, new GoogleStorageObjectMetadata(BUCKET, PATH, SIZE, UPDATE_TIME.toEpochSecond()));
+    assertEquals(
+        objectMetadata,
+        new GoogleStorageObjectMetadata(BUCKET, PATH, SIZE, UPDATE_TIME.toEpochSecond() * 1000)
+    );
 
+    EasyMock.verify(mockStorage);
   }
 
   @Test
@@ -150,6 +219,7 @@ public class GoogleStorageTest
     EasyMock.expect(mockStorage.get(EasyMock.eq(BUCKET), EasyMock.eq(PATH))).andReturn(blob);
     EasyMock.replay(mockStorage);
     assertTrue(googleStorage.exists(BUCKET, PATH));
+    EasyMock.verify(mockStorage);
   }
 
   @Test
@@ -158,6 +228,7 @@ public class GoogleStorageTest
     EasyMock.expect(mockStorage.get(EasyMock.eq(BUCKET), EasyMock.eq(PATH))).andReturn(null);
     EasyMock.replay(mockStorage);
     assertFalse(googleStorage.exists(BUCKET, PATH));
+    EasyMock.verify(mockStorage);
   }
 
   @Test
@@ -176,23 +247,25 @@ public class GoogleStorageTest
     long size = googleStorage.size(BUCKET, PATH);
 
     assertEquals(size, SIZE);
+    EasyMock.verify(mockStorage, blob);
   }
 
   @Test
   public void testVersion() throws IOException
   {
-    final String version = "7";
+    final String etag = "abcd";
     EasyMock.expect(mockStorage.get(
         EasyMock.eq(BUCKET),
         EasyMock.eq(PATH),
         EasyMock.anyObject(Storage.BlobGetOption.class)
     )).andReturn(blob);
 
-    EasyMock.expect(blob.getGeneratedId()).andReturn(version);
+    EasyMock.expect(blob.getEtag()).andReturn(etag);
 
     EasyMock.replay(mockStorage, blob);
 
-    assertEquals(version, googleStorage.version(BUCKET, PATH));
+    assertEquals(etag, googleStorage.version(BUCKET, PATH));
+    EasyMock.verify(mockStorage, blob);
   }
 
   @Test
@@ -243,13 +316,13 @@ public class GoogleStorageTest
         bucket1,
         path1,
         size1,
-        updateTime1.toEpochSecond()
+        updateTime1.toEpochSecond() * 1000
     );
     GoogleStorageObjectMetadata objectMetadata2 = new GoogleStorageObjectMetadata(
         bucket2,
         path2,
         size2,
-        updateTime2.toEpochSecond()
+        updateTime2.toEpochSecond() * 1000
     );
 
     GoogleStorageObjectPage objectPage = googleStorage.list(BUCKET, PATH, null, null);
@@ -257,5 +330,7 @@ public class GoogleStorageTest
     assertEquals(objectPage.getObjectList().get(0), objectMetadata1);
     assertEquals(objectPage.getObjectList().get(1), objectMetadata2);
     assertEquals(objectPage.getNextPageToken(), nextPageToken);
+
+    EasyMock.verify(mockStorage, blobPage, blob1, blob2);
   }
 }

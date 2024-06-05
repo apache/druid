@@ -36,6 +36,12 @@ public interface GlobalSortShuffleSpec extends ShuffleSpec
   boolean mustGatherResultKeyStatistics();
 
   /**
+   * Whether the {@link ClusterByStatisticsCollector} for this stage collects keys in aggregating mode or
+   * non-aggregating mode.
+   */
+  boolean doesAggregate();
+
+  /**
    * Generates a set of partitions based on the provided statistics.
    *
    * Only valid if {@link #kind()} is {@link ShuffleKind#GLOBAL_SORT}. Otherwise, throws {@link IllegalStateException}.

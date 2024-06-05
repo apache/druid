@@ -97,7 +97,10 @@ public class DataSegmentPlusTest
             1
         ),
         createdDate,
-        usedStatusLastUpdatedDate
+        usedStatusLastUpdatedDate,
+        null,
+        null,
+        null
     );
 
     final Map<String, Object> objectMap = MAPPER.readValue(
@@ -105,7 +108,7 @@ public class DataSegmentPlusTest
         JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     );
 
-    Assert.assertEquals(3, objectMap.size());
+    Assert.assertEquals(6, objectMap.size());
     final Map<String, Object> segmentObjectMap = MAPPER.readValue(
         MAPPER.writeValueAsString(segmentPlus.getDataSegment()),
         JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
