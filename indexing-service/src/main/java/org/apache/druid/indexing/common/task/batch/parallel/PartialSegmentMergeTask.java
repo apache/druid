@@ -59,7 +59,6 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.joda.time.Interval;
 
-import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -73,6 +72,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import javax.annotation.Nullable;
 
 /**
  * Base class for creating task that merges partial segments created by {@link PartialSegmentGenerateTask}.
@@ -100,7 +100,7 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
       final int numAttempts, // zero-based counting
       final Map<String, Object> context,
       final ObjectMapper mapper,
-      final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
+      @Nullable final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
     super(
@@ -315,7 +315,7 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
         long pushFinishTime = System.nanoTime();
         pushedSegments.add(segment);
 
-        if (centralizedDatasourceSchemaConfig.isEnabled()) {
+        if (isCentralizedSchemaEnabled()) {
           SchemaPayloadPlus schemaPayloadPlus =
               TaskSegmentSchemaUtil.getSegmentSchema(mergedFileAndDimensionNames.lhs, toolbox.getIndexIO());
           segmentSchemaMapping.addSchema(
@@ -341,10 +341,15 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
         );
       }
     }
-    if (centralizedDatasourceSchemaConfig.isEnabled()) {
+    if (isCentralizedSchemaEnabled()) {
       LOG.info("SegmentSchema for the pushed segments is [%s]", segmentSchemaMapping);
     }
     return new DataSegmentsWithSchemas(pushedSegments, segmentSchemaMapping.isNonEmpty() ? segmentSchemaMapping : null);
+  }
+
+  private boolean isCentralizedSchemaEnabled()
+  {
+    return centralizedDatasourceSchemaConfig != null && centralizedDatasourceSchemaConfig.isEnabled();
   }
 
   private static Pair<File, List<String>> mergeSegmentsInSamePartition(

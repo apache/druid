@@ -67,7 +67,7 @@ public class PartialGenericSegmentMergeTask extends PartialSegmentMergeTask<Buil
       @JsonProperty("numAttempts") final int numAttempts, // zero-based counting
       @JsonProperty("spec") final PartialSegmentMergeIngestionSpec ingestionSchema,
       @JsonProperty("context") final Map<String, Object> context,
-      @JsonProperty("centralizedDatasourceSchemaConfig") CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig,
+      @JsonProperty("centralizedDatasourceSchemaConfig") @Nullable CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig,
       @JacksonInject ObjectMapper mapper
   )
   {
@@ -127,6 +127,7 @@ public class PartialGenericSegmentMergeTask extends PartialSegmentMergeTask<Buil
     return ingestionSchema;
   }
 
+  @Nullable
   @JsonProperty("centralizedDatasourceSchemaConfig")
   private CentralizedDatasourceSchemaConfig getCentralizedDatasourceSchemaConfig()
   {
