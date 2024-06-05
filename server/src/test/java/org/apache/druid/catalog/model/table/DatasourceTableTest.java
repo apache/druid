@@ -20,6 +20,7 @@
 package org.apache.druid.catalog.model.table;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.catalog.CatalogTest;
@@ -117,6 +118,28 @@ public class DatasourceTableTest
   }
 
   @Test
+  public void testSpecWithClusterKeyProp()
+  {
+    {
+      TableSpec spec = new TableSpec(
+          DatasourceDefn.TABLE_TYPE,
+          ImmutableMap.of(DatasourceDefn.CLUSTER_KEYS_PROPERTY, ImmutableList.of(new ClusterKeySpec("clusterKeyA", true))),
+          null
+      );
+      expectValidationFails(spec);
+    }
+
+    {
+      TableSpec spec = new TableSpec(
+          DatasourceDefn.TABLE_TYPE,
+          ImmutableMap.of(DatasourceDefn.CLUSTER_KEYS_PROPERTY, ImmutableList.of(new ClusterKeySpec("clusterKeyA", false))),
+          null
+      );
+      expectValidationSucceeds(spec);
+    }
+  }
+
+  @Test
   public void testAllProperties()
   {
     Map<String, Object> props = ImmutableMap.<String, Object>builder()
@@ -125,6 +148,7 @@ public class DatasourceTableTest
         .put(DatasourceDefn.TARGET_SEGMENT_ROWS_PROPERTY, 1_000_000)
         .put(DatasourceDefn.HIDDEN_COLUMNS_PROPERTY, Arrays.asList("foo", "bar"))
         .put(DatasourceDefn.SEALED_PROPERTY, true)
+        .put(DatasourceDefn.CLUSTER_KEYS_PROPERTY, ImmutableList.of(new ClusterKeySpec("clusterKeyA", false)))
         .build();
 
     TableSpec spec = new TableSpec(DatasourceDefn.TABLE_TYPE, props, null);
@@ -132,6 +156,7 @@ public class DatasourceTableTest
     assertEquals("P1D", facade.segmentGranularityString());
     assertEquals(1_000_000, (int) facade.targetSegmentRows());
     assertEquals(Arrays.asList("foo", "bar"), facade.hiddenColumns());
+    assertEquals(Collections.singletonList(new ClusterKeySpec("clusterKeyA", false)), facade.clusterKeys());
     assertTrue(facade.isSealed());
   }
 

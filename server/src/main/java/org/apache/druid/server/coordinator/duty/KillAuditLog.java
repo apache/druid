@@ -20,7 +20,7 @@
 package org.apache.druid.server.coordinator.duty;
 
 import org.apache.druid.audit.AuditManager;
-import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
+import org.apache.druid.server.coordinator.config.MetadataCleanupConfig;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.joda.time.DateTime;
 
@@ -28,17 +28,9 @@ public class KillAuditLog extends MetadataCleanupDuty
 {
   private final AuditManager auditManager;
 
-  public KillAuditLog(DruidCoordinatorConfig config, AuditManager auditManager)
+  public KillAuditLog(MetadataCleanupConfig config, AuditManager auditManager)
   {
-    super(
-        "audit logs",
-        "druid.coordinator.kill.audit",
-        config.isAuditKillEnabled(),
-        config.getCoordinatorAuditKillPeriod(),
-        config.getCoordinatorAuditKillDurationToRetain(),
-        Stats.Kill.AUDIT_LOGS,
-        config
-    );
+    super("audit logs", config, Stats.Kill.AUDIT_LOGS);
     this.auditManager = auditManager;
   }
 

@@ -24,10 +24,13 @@ import org.apache.druid.indexer.report.SingleFileTaskReportFileWriter;
 import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexer.report.TaskReportFileWriter;
 import org.apache.druid.java.util.common.FileUtils;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
 
 import java.io.File;
-import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.file.Files;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -42,25 +45,28 @@ public class MultipleFileTaskReportFileWriter implements TaskReportFileWriter
   @Override
   public void write(String taskId, TaskReport.ReportMap reports)
   {
-    final File reportsFile = taskReportFiles.get(taskId);
-    if (reportsFile == null) {
-      log.error("Could not find report file for task[%s]", taskId);
-      return;
-    }
-
-    try {
-      final File reportsFileParent = reportsFile.getParentFile();
-      if (reportsFileParent != null) {
-        FileUtils.mkdirp(reportsFileParent);
-      }
-
-      try (final FileOutputStream outputStream = new FileOutputStream(reportsFile)) {
-        SingleFileTaskReportFileWriter.writeReportToStream(objectMapper, outputStream, reports);
-      }
+    try (final OutputStream outputStream = openReportOutputStream(taskId)) {
+      SingleFileTaskReportFileWriter.writeReportToStream(objectMapper, outputStream, reports);
     }
     catch (Exception e) {
       log.error(e, "Encountered exception in write().");
     }
+  }
+
+  @Override
+  public OutputStream openReportOutputStream(String taskId) throws IOException
+  {
+    final File reportsFile = taskReportFiles.get(taskId);
+    if (reportsFile == null) {
+      throw new ISE("Could not find report file for task[%s]", taskId);
+    }
+
+    final File reportsFileParent = reportsFile.getParentFile();
+    if (reportsFileParent != null) {
+      FileUtils.mkdirp(reportsFileParent);
+    }
+
+    return Files.newOutputStream(reportsFile.toPath());
   }
 
   @Override

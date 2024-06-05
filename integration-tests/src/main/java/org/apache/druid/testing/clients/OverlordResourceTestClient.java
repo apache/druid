@@ -160,6 +160,36 @@ public class OverlordResourceTestClient
     }
   }
 
+  public StatusResponseHolder handoffTaskGroupEarly(
+      String dataSource,
+      String taskGroups
+  )
+  {
+    try {
+      LOG.info("handing off %s %s", dataSource, taskGroups);
+      StatusResponseHolder response = httpClient.go(
+          new Request(HttpMethod.POST, new URL(StringUtils.format(
+              "%ssupervisor/%s/taskGroups/handoff",
+              getIndexerURL(),
+              StringUtils.urlEncode(dataSource)
+          ))).setContent(
+                  "application/json",
+                  StringUtils.toUtf8(taskGroups)
+              ),
+          StatusResponseHandler.getInstance()
+      ).get();
+      LOG.info("Handoff early response code " + response.getStatus().getCode());
+      LOG.info("Handoff early response " + response.getContent());
+      return response;
+    }
+    catch (ISE e) {
+      throw e;
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
   public List<TaskResponseObject> getAllTasks()
   {
     return getTasks("tasks");

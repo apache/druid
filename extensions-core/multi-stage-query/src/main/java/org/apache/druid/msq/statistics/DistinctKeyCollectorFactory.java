@@ -23,6 +23,7 @@ import it.unimi.dsi.fastutil.objects.Object2LongRBTreeMap;
 import org.apache.druid.collections.SerializablePair;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.RowKey;
+import org.apache.druid.segment.column.RowSignature;
 
 import java.util.Comparator;
 import java.util.stream.Collectors;
@@ -36,9 +37,9 @@ public class DistinctKeyCollectorFactory implements KeyCollectorFactory<Distinct
     this.comparator = comparator;
   }
 
-  static DistinctKeyCollectorFactory create(final ClusterBy clusterBy)
+  static DistinctKeyCollectorFactory create(final ClusterBy clusterBy, RowSignature rowSignature)
   {
-    return new DistinctKeyCollectorFactory(clusterBy.keyComparator());
+    return new DistinctKeyCollectorFactory(clusterBy.keyComparator(rowSignature));
   }
 
   @Override

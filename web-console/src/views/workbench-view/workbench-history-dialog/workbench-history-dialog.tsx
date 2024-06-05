@@ -78,7 +78,7 @@ export const WorkbenchHistoryDialog = React.memo(function WorkbenchHistoryDialog
           theme="solarized_dark"
           className="query-string"
           name="ace-editor"
-          fontSize={13}
+          fontSize={12}
           width="100%"
           showGutter
           showPrintMargin={false}

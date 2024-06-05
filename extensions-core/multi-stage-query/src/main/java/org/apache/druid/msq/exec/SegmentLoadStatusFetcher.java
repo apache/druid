@@ -104,7 +104,7 @@ public class SegmentLoadStatusFetcher implements AutoCloseable
   public SegmentLoadStatusFetcher(
       BrokerClient brokerClient,
       ObjectMapper objectMapper,
-      String taskId,
+      String queryId,
       String datasource,
       Set<DataSegment> dataSegments,
       boolean doWait
@@ -128,7 +128,9 @@ public class SegmentLoadStatusFetcher implements AutoCloseable
         totalSegmentsGenerated
     ));
     this.doWait = doWait;
-    this.executorService = MoreExecutors.listeningDecorator(Execs.singleThreaded(taskId + "-segment-load-waiter-%d"));
+    this.executorService = MoreExecutors.listeningDecorator(
+        Execs.singleThreaded(StringUtils.encodeForFormat(queryId) + "-segment-load-waiter-%d")
+    );
   }
 
   /**

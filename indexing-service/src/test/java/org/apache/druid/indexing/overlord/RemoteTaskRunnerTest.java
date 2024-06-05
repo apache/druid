@@ -1164,7 +1164,7 @@ public class RemoteTaskRunnerTest
 
     Assert.assertEquals(
         SegmentTransactionalAppendAction.class,
-        task.testBuildPublishAction(
+        task.buildPublishActionForTest(
             Collections.emptySet(),
             Collections.emptySet(),
             null,
@@ -1174,7 +1174,7 @@ public class RemoteTaskRunnerTest
 
     Assert.assertEquals(
         SegmentTransactionalReplaceAction.class,
-        task.testBuildPublishAction(
+        task.buildPublishActionForTest(
             Collections.emptySet(),
             Collections.emptySet(),
             null,
@@ -1184,7 +1184,7 @@ public class RemoteTaskRunnerTest
 
     Assert.assertEquals(
         SegmentTransactionalInsertAction.class,
-        task.testBuildPublishAction(
+        task.buildPublishActionForTest(
             Collections.emptySet(),
             Collections.emptySet(),
             null,

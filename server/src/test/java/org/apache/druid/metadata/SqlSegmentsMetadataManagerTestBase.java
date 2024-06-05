@@ -22,16 +22,12 @@ package org.apache.druid.metadata;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.metadata.SegmentSchemaCache;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
-import org.joda.time.DateTime;
-
-import java.io.IOException;
 
 public class SqlSegmentsMetadataManagerTestBase
 {
@@ -83,31 +79,4 @@ public class SqlSegmentsMetadataManagerTestBase
       "wikipedia/index/y=2012/m=01/d=05/2012-01-06T22:19:12.565Z/0/index.zip",
       0
   );
-
-  protected void publish(DataSegment segment, boolean used) throws IOException
-  {
-    publish(segment, used, DateTimes.nowUtc());
-  }
-
-  protected void publish(DataSegment segment, boolean used, DateTime usedFlagLastUpdated) throws IOException
-  {
-    boolean partitioned = !(segment.getShardSpec() instanceof NoneShardSpec);
-
-    String usedFlagLastUpdatedStr = null;
-    if (null != usedFlagLastUpdated) {
-      usedFlagLastUpdatedStr = usedFlagLastUpdated.toString();
-    }
-    publisher.publishSegment(
-        segment.getId().toString(),
-        segment.getDataSource(),
-        DateTimes.nowUtc().toString(),
-        segment.getInterval().getStart().toString(),
-        segment.getInterval().getEnd().toString(),
-        partitioned,
-        segment.getVersion(),
-        used,
-        jsonMapper.writeValueAsBytes(segment),
-        usedFlagLastUpdatedStr
-    );
-  }
 }

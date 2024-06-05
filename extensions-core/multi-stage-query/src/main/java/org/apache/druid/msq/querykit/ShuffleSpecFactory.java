@@ -20,6 +20,7 @@
 package org.apache.druid.msq.querykit;
 
 import org.apache.druid.frame.key.ClusterBy;
+import org.apache.druid.msq.kernel.GlobalSortShuffleSpec;
 import org.apache.druid.msq.kernel.ShuffleSpec;
 
 /**
@@ -29,7 +30,7 @@ public interface ShuffleSpecFactory
 {
   /**
    * Build a {@link ShuffleSpec} for given {@link ClusterBy}. The {@code aggregate} flag is used to populate
-   * {@link ShuffleSpec#doesAggregate()}.
+   * {@link GlobalSortShuffleSpec#doesAggregate()}.
    */
   ShuffleSpec build(ClusterBy clusterBy, boolean aggregate);
 }

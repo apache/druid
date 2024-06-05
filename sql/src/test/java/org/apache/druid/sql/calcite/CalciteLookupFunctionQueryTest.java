@@ -170,6 +170,30 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testFilterScalarInArrayLookupOfConcat()
+  {
+    cannotVectorize();
+
+    testQuery(
+        buildFilterTestSql("SCALAR_IN_ARRAY(LOOKUP(CONCAT(dim1, 'a', dim2), 'lookyloo'), ARRAY['xa', 'xabc'])"),
+        QUERY_CONTEXT,
+        buildFilterTestExpectedQuery(
+            or(
+                and(
+                    equality("dim1", "", ColumnType.STRING),
+                    equality("dim2", "", ColumnType.STRING)
+                ),
+                and(
+                    equality("dim1", "", ColumnType.STRING),
+                    equality("dim2", "bc", ColumnType.STRING)
+                )
+            )
+        ),
+        ImmutableList.of()
+    );
+  }
+
+  @Test
   public void testFilterConcatOfLookup()
   {
     cannotVectorize();
@@ -373,6 +397,40 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
     testQuery(
         buildFilterTestSql("LOOKUP(dim1, 'lookyloo') IN ('xabc', 'x6', 'nonexistent')"),
         QUERY_CONTEXT,
+        buildFilterTestExpectedQuery(in("dim1", Arrays.asList("6", "abc"))),
+        ImmutableList.of(new Object[]{"xabc", 1L})
+    );
+  }
+
+  @Test
+  public void testFilterScalarInArray()
+  {
+    cannotVectorize();
+
+    testQuery(
+        buildFilterTestSql("SCALAR_IN_ARRAY(LOOKUP(dim1, 'lookyloo'), ARRAY['xabc', 'x6', 'nonexistent'])"),
+        QUERY_CONTEXT,
+        buildFilterTestExpectedQuery(in("dim1", Arrays.asList("6", "abc"))),
+        ImmutableList.of(new Object[]{"xabc", 1L})
+    );
+  }
+
+  @Test
+  public void testFilterInOverScalarInArrayThreshold()
+  {
+    cannotVectorize();
+
+    // Set inFunctionThreshold = 1 to cause the IN to be converted to SCALAR_IN_ARRAY.
+    final ImmutableMap<String, Object> queryContext =
+        ImmutableMap.<String, Object>builder()
+                    .putAll(QUERY_CONTEXT_DEFAULT)
+                    .put(PlannerContext.CTX_SQL_REVERSE_LOOKUP, true)
+                    .put(QueryContexts.IN_FUNCTION_THRESHOLD, 1)
+                    .build();
+
+    testQuery(
+        buildFilterTestSql("LOOKUP(dim1, 'lookyloo') IN ('xabc', 'x6', 'nonexistent')"),
+        queryContext,
         buildFilterTestExpectedQuery(in("dim1", Arrays.asList("6", "abc"))),
         ImmutableList.of(new Object[]{"xabc", 1L})
     );
@@ -1752,7 +1810,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @SqlTestFrameworkConfig(numMergeBuffers = 3)
+  @SqlTestFrameworkConfig.NumMergeBuffers(3)
   @Test
   public void testExactCountDistinct()
   {

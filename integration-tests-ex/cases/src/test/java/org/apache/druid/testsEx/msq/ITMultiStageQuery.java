@@ -26,7 +26,6 @@ import org.apache.druid.indexer.report.TaskContextReport;
 import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.msq.indexing.report.MSQResultsReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
@@ -253,13 +252,10 @@ public class ITMultiStageQuery
         "Results report for the task id is empty"
     );
 
-    Yielder<Object[]> yielder = resultsReport.getResultYielder();
     List<List<Object>> actualResults = new ArrayList<>();
 
-    while (!yielder.isDone()) {
-      Object[] row = yielder.get();
+    for (final Object[] row : resultsReport.getResults()) {
       actualResults.add(Arrays.asList(row));
-      yielder = yielder.next(null);
     }
 
     ImmutableList<ImmutableList<Object>> expectedResults = ImmutableList.of(

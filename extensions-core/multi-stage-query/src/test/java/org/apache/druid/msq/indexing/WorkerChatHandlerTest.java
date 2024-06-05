@@ -22,9 +22,8 @@ package org.apache.druid.msq.indexing;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.frame.key.ClusterByPartitions;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexer.report.TaskReport;
-import org.apache.druid.indexer.report.TaskReportFileWriter;
 import org.apache.druid.indexing.common.TaskToolbox;
+import org.apache.druid.indexing.common.task.NoopTestTaskReportFileWriter;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
@@ -83,22 +82,7 @@ public class WorkerChatHandlerTest
     toolbox = builder.authorizerMapper(CalciteTests.TEST_AUTHORIZER_MAPPER)
                      .indexIO(indexIO)
                      .indexMergerV9(indexMerger)
-                     .taskReportFileWriter(
-                         new TaskReportFileWriter()
-                         {
-                           @Override
-                           public void write(String taskId, TaskReport.ReportMap reports)
-                           {
-
-                           }
-
-                           @Override
-                           public void setObjectMapper(ObjectMapper objectMapper)
-                           {
-
-                           }
-                         }
-                     )
+                     .taskReportFileWriter(new NoopTestTaskReportFileWriter())
                      .build();
   }
 
@@ -108,7 +92,7 @@ public class WorkerChatHandlerTest
     WorkerChatHandler chatHandler = new WorkerChatHandler(toolbox, worker);
     Assert.assertEquals(
         ClusterByStatisticsSnapshot.empty(),
-        chatHandler.httpFetchKeyStatistics(TEST_STAGE.getQueryId(), TEST_STAGE.getStageNumber(), req)
+        chatHandler.httpFetchKeyStatistics(TEST_STAGE.getQueryId(), TEST_STAGE.getStageNumber(), null, req)
                    .getEntity()
     );
   }
@@ -119,7 +103,7 @@ public class WorkerChatHandlerTest
     WorkerChatHandler chatHandler = new WorkerChatHandler(toolbox, worker);
     Assert.assertEquals(
         Response.Status.BAD_REQUEST.getStatusCode(),
-        chatHandler.httpFetchKeyStatistics("123", 2, req)
+        chatHandler.httpFetchKeyStatistics("123", 2, null, req)
                    .getStatus()
     );
   }
@@ -130,7 +114,7 @@ public class WorkerChatHandlerTest
     WorkerChatHandler chatHandler = new WorkerChatHandler(toolbox, worker);
     Assert.assertEquals(
         ClusterByStatisticsSnapshot.empty(),
-        chatHandler.httpFetchKeyStatisticsWithSnapshot(TEST_STAGE.getQueryId(), TEST_STAGE.getStageNumber(), 1, req)
+        chatHandler.httpFetchKeyStatisticsWithSnapshot(TEST_STAGE.getQueryId(), TEST_STAGE.getStageNumber(), 1, null, req)
                    .getEntity()
     );
   }
@@ -141,7 +125,7 @@ public class WorkerChatHandlerTest
     WorkerChatHandler chatHandler = new WorkerChatHandler(toolbox, worker);
     Assert.assertEquals(
         Response.Status.BAD_REQUEST.getStatusCode(),
-        chatHandler.httpFetchKeyStatisticsWithSnapshot("123", 2, 1, req)
+        chatHandler.httpFetchKeyStatisticsWithSnapshot("123", 2, 1, null, req)
                    .getStatus()
     );
   }

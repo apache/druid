@@ -74,7 +74,7 @@ public class HistoricalMetricsMonitorTest extends EasyMockSupport
     final String tier = "tier";
 
     EasyMock.expect(druidServerConfig.getMaxSize()).andReturn(maxSize).once();
-    EasyMock.expect(segmentLoadDropMgr.getPendingDeleteSnapshot()).andReturn(ImmutableList.of(dataSegment)).once();
+    EasyMock.expect(segmentLoadDropMgr.getSegmentsToDelete()).andReturn(ImmutableList.of(dataSegment)).once();
     EasyMock.expect(druidServerConfig.getTier()).andReturn(tier).once();
     EasyMock.expect(druidServerConfig.getPriority()).andReturn(priority).once();
     EasyMock.expect(segmentManager.getDataSourceSizes()).andReturn(ImmutableMap.of(dataSource, size));

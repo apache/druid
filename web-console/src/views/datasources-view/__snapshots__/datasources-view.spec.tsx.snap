@@ -81,7 +81,6 @@ exports[`DatasourcesView matches snapshot 1`] = `
           "% Compacted",
           "Left to be compacted",
           "Retention",
-          "Actions",
         ]
       }
       onChange={[Function]}
@@ -338,7 +337,7 @@ exports[`DatasourcesView matches snapshot 1`] = `
           "accessor": "datasource",
           "filterable": false,
           "id": "actions",
-          "show": true,
+          "sortable": false,
           "width": 70,
         },
       ]

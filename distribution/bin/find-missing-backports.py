@@ -67,6 +67,7 @@ def find_next_url(links):
 if len(sys.argv) != 5:
   sys.stderr.write('usage: program <github-username> <previous-release-branch> <current-release-branch> <milestone-number>\n')
   sys.stderr.write("  e.g., program myusername 0.17.0 0.18.0 30")
+  sys.stderr.write("  e.g., The milestone number for Druid 30 is 56, since the milestone has the url https://github.com/apache/druid/milestone/56\n")
   sys.stderr.write("  It is also necessary to set a GIT_TOKEN environment variable containing a personal access token.")
   sys.exit(1)
 

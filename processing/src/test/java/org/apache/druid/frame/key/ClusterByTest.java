@@ -22,6 +22,8 @@ package org.apache.druid.frame.key;
 import com.google.common.collect.ImmutableList;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.java.util.common.guava.Comparators;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -37,21 +39,30 @@ public class ClusterByTest
         new KeyColumn("y", KeyOrder.ASCENDING)
     );
 
+    final RowSignature rowSignature = RowSignature.builder()
+                                                  .add("x", ColumnType.LONG)
+                                                  .add("y", ColumnType.LONG)
+                                                  .build();
+
     Assert.assertEquals(
-        RowKeyComparator.create(keyColumns),
-        new ClusterBy(keyColumns, 1).keyComparator()
+        RowKeyComparator.create(keyColumns, rowSignature),
+        new ClusterBy(keyColumns, 1).keyComparator(rowSignature)
     );
   }
 
   @Test
   public void test_bucketComparator_noKey()
   {
-    Assert.assertSame(Comparators.alwaysEqual(), ClusterBy.none().bucketComparator());
+    Assert.assertSame(Comparators.alwaysEqual(), ClusterBy.none().bucketComparator(RowSignature.empty()));
   }
 
   @Test
   public void test_bucketComparator_noBucketKey()
   {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("x", ColumnType.LONG)
+                                            .add("y", ColumnType.LONG)
+                                            .build();
     Assert.assertSame(
         Comparators.alwaysEqual(),
         new ClusterBy(
@@ -60,22 +71,30 @@ public class ClusterByTest
                 new KeyColumn("y", KeyOrder.ASCENDING)
             ),
             0
-        ).bucketComparator()
+        ).bucketComparator(rowSignature)
     );
   }
 
   @Test
   public void test_bucketComparator_withBucketKey()
   {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("x", ColumnType.LONG)
+                                            .add("y", ColumnType.LONG)
+                                            .build();
     Assert.assertEquals(
-        RowKeyComparator.create(ImmutableList.of(new KeyColumn("x", KeyOrder.ASCENDING))),
+        RowKeyComparator.create(
+            ImmutableList.of(new KeyColumn("x", KeyOrder.ASCENDING)),
+            rowSignature
+
+        ),
         new ClusterBy(
             ImmutableList.of(
                 new KeyColumn("x", KeyOrder.ASCENDING),
                 new KeyColumn("y", KeyOrder.ASCENDING)
             ),
             1
-        ).bucketComparator()
+        ).bucketComparator(rowSignature)
     );
   }
 

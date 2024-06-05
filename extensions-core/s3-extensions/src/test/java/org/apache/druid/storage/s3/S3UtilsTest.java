@@ -19,6 +19,7 @@
 
 package org.apache.druid.storage.s3;
 
+import com.amazonaws.SdkClientException;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import org.junit.Assert;
 import org.junit.Test;
@@ -105,6 +106,27 @@ public class S3UtilsTest
             },
             maxRetries
         )
+    );
+    Assert.assertEquals(maxRetries, count.get());
+  }
+
+  @Test
+  public void testRetryWithSdkClientException() throws Exception
+  {
+    final int maxRetries = 3;
+    final AtomicInteger count = new AtomicInteger();
+    S3Utils.retryS3Operation(
+        () -> {
+          if (count.incrementAndGet() >= maxRetries) {
+            return "hey";
+          } else {
+            throw new SdkClientException(
+                "Unable to find a region via the region provider chain. "
+                + "Must provide an explicit region in the builder or setup environment to supply a region."
+            );
+          }
+        },
+        maxRetries
     );
     Assert.assertEquals(maxRetries, count.get());
   }

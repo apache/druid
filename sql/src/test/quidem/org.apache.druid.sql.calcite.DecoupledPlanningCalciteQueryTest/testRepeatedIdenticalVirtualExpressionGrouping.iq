@@ -1,0 +1,71 @@
+# testRepeatedIdenticalVirtualExpressionGrouping case-crc:c6ee44b6
+# quidem testcase reason: IMPROVED_PLAN
+!set debug true
+!set defaultTimeout 300000
+!set maxScatterGatherBytes 9223372036854775807
+!set plannerStrategy DECOUPLED
+!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set sqlQueryId dummy
+!set outputformat mysql
+!use druidtest:///
+SELECT 
+	CASE dim1 WHEN NULL THEN FALSE ELSE TRUE END AS col_a,
+	CASE dim2 WHEN NULL THEN FALSE ELSE TRUE END AS col_b
+FROM foo
+GROUP BY 1, 2;
++-------+-------+
+| col_a | col_b |
++-------+-------+
+| true  | true  |
++-------+-------+
+(1 row)
+
+!ok
+LogicalProject(col_a=[$0], col_b=[true])
+  LogicalAggregate(group=[{0}])
+    LogicalProject(col_a=[true])
+      LogicalTableScan(table=[[druid, foo]])
+
+!logicalPlan
+DruidProject(col_a=[$0], col_b=[true], druid=[logical])
+  DruidAggregate(group=[{0}], druid=[logical])
+    DruidProject(col_a=[true], druid=[logical])
+      DruidTableScan(table=[[druid, foo]], druid=[logical])
+
+!druidPlan
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "1",
+    "outputType" : "LONG"
+  } ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "v0",
+    "outputName" : "d0",
+    "outputType" : "LONG"
+  } ],
+  "postAggregations" : [ {
+    "type" : "expression",
+    "name" : "p0",
+    "expression" : "1",
+    "outputType" : "LONG"
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  }
+}
+!nativePlan

@@ -90,12 +90,13 @@ public interface StorageConnector
 
   /**
    * Open an {@link OutputStream} for writing data to the path in the underlying storage system.
-   * Most implementations prepend the input path with a basePath.
+   * Most implementations prepend the input path with a basePath. If an object exists at the path,
+   * the existing object will be overwritten by the write operation.
    * Callers are adivised to namespace there files as there might be race conditions.
    * The caller should take care of closing the stream when done or in case of error.
    *
-   * @param path
-   * @return
+   * @param path to write
+   * @return OutputStream to the path
    * @throws IOException
    */
   OutputStream write(String path) throws IOException;

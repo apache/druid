@@ -69,8 +69,8 @@ public class KeyColumn
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    KeyColumn that = (KeyColumn) o;
-    return order == that.order && Objects.equals(columnName, that.columnName);
+    KeyColumn keyColumn = (KeyColumn) o;
+    return Objects.equals(columnName, keyColumn.columnName) && order == keyColumn.order;
   }
 
   @Override

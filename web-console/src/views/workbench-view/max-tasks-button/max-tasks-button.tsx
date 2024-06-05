@@ -53,10 +53,15 @@ export const MaxTasksButton = function MaxTasksButton(props: MaxTasksButtonProps
   const maxNumTasks = getMaxNumTasks(queryContext);
   const taskAssigment = getTaskAssigment(queryContext);
 
-  const fullClusterCapacity = `${clusterCapacity} (full cluster capacity)`;
+  const fullClusterCapacity =
+    typeof clusterCapacity === 'number'
+      ? `${formatInteger(clusterCapacity)} (full cluster capacity)`
+      : undefined;
+
   const shownMaxNumTaskOptions = clusterCapacity
     ? MAX_NUM_TASK_OPTIONS.filter(_ => _ <= clusterCapacity)
     : MAX_NUM_TASK_OPTIONS;
+
   return (
     <>
       <Popover2
@@ -65,7 +70,7 @@ export const MaxTasksButton = function MaxTasksButton(props: MaxTasksButtonProps
         content={
           <Menu>
             <MenuDivider title="Maximum number of tasks to launch" />
-            {Boolean(clusterCapacity) && (
+            {Boolean(fullClusterCapacity) && (
               <MenuItem
                 icon={tickIcon(typeof maxNumTasks === 'undefined')}
                 text={fullClusterCapacity}
@@ -115,7 +120,7 @@ export const MaxTasksButton = function MaxTasksButton(props: MaxTasksButtonProps
               ? clusterCapacity
                 ? fullClusterCapacity
                 : 2
-              : maxNumTasks
+              : formatInteger(maxNumTasks)
           }`}
           rightIcon={IconNames.CARET_DOWN}
         />

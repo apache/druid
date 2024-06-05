@@ -22,8 +22,9 @@ package org.apache.druid.storage.azure;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class AzureAccountConfigTest
 {
@@ -35,8 +36,8 @@ public class AzureAccountConfigTest
   {
     AzureAccountConfig config = new AzureAccountConfig();
     AzureAccountConfig configSerde = MAPPER.readValue("{}", AzureAccountConfig.class);
-    Assert.assertEquals(configSerde, config);
-    Assert.assertEquals(AzureUtils.AZURE_STORAGE_HOST_ADDRESS, config.getBlobStorageEndpoint());
+    assertEquals(configSerde, config);
+    assertEquals(AzureUtils.AZURE_STORAGE_HOST_ADDRESS, config.getBlobStorageEndpoint());
   }
 
   @Test
@@ -51,8 +52,8 @@ public class AzureAccountConfigTest
         + "\"endpointSuffix\": \"" + endpointSuffix + "\""
         + "}",
         AzureAccountConfig.class);
-    Assert.assertEquals(configSerde, config);
-    Assert.assertEquals(AzureUtils.BLOB + "." + endpointSuffix, config.getBlobStorageEndpoint());
+    assertEquals(configSerde, config);
+    assertEquals(AzureUtils.BLOB + "." + endpointSuffix, config.getBlobStorageEndpoint());
   }
 
   @Test
@@ -70,8 +71,8 @@ public class AzureAccountConfigTest
         + " \"storageAccountEndpointSuffix\": \"" + storageAccountEndpointSuffix + "\""
         + "}",
         AzureAccountConfig.class);
-    Assert.assertEquals(configSerde, config);
-    Assert.assertEquals(AzureUtils.BLOB + "." + endpointSuffix, config.getBlobStorageEndpoint());
+    assertEquals(configSerde, config);
+    assertEquals(AzureUtils.BLOB + "." + endpointSuffix, config.getBlobStorageEndpoint());
   }
 
   @Test
@@ -86,8 +87,8 @@ public class AzureAccountConfigTest
         + "\"storageAccountEndpointSuffix\": \"" + storageAccountEndpointSuffix + "\""
         + "}",
         AzureAccountConfig.class);
-    Assert.assertEquals(configSerde, config);
-    Assert.assertEquals(storageAccountEndpointSuffix, config.getBlobStorageEndpoint());
+    assertEquals(configSerde, config);
+    assertEquals(storageAccountEndpointSuffix, config.getBlobStorageEndpoint());
   }
 
   @Test
@@ -102,7 +103,7 @@ public class AzureAccountConfigTest
         + "\"managedIdentityClientId\": \"" + managedIdentityClientId + "\""
         + "}",
         AzureAccountConfig.class);
-    Assert.assertEquals(configSerde, config);
-    Assert.assertEquals("blah", config.getManagedIdentityClientId());
+    assertEquals(configSerde, config);
+    assertEquals("blah", config.getManagedIdentityClientId());
   }
 }

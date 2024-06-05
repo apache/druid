@@ -116,7 +116,7 @@ public class TestIndexTask extends IndexTask
     return status;
   }
 
-  public TaskAction<SegmentPublishResult> testBuildPublishAction(
+  public TaskAction<SegmentPublishResult> buildPublishActionForTest(
       Set<DataSegment> segmentsToBeOverwritten,
       Set<DataSegment> segmentsToPublish,
       SegmentSchemaMapping segmentSchemaMapping,

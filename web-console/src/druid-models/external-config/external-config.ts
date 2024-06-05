@@ -131,7 +131,7 @@ export function externalConfigToInitDimensions(
   timeExpression: SqlExpression | undefined,
   arrayMode: ArrayMode,
 ): SqlExpression[] {
-  return (timeExpression ? [timeExpression.as('__time')] : [])
+  return (timeExpression ? [timeExpression.setAlias('__time')] : [])
     .concat(
       filterMap(config.signature, columnDeclaration => {
         const columnName = columnDeclaration.getColumnName();

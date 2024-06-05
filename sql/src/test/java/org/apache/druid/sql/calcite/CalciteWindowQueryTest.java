@@ -234,22 +234,48 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testEmptyWindowInSubquery()
+  {
+    testBuilder()
+        .sql(
+            "select c from (\n"
+            + "  select channel, row_number() over () as c\n"
+            + "  from wikipedia\n"
+            + "  group by channel\n"
+            + ") LIMIT 5"
+        )
+        .queryContext(ImmutableMap.of(
+            PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
+            QueryContexts.ENABLE_DEBUG, true,
+            QueryContexts.WINDOWING_STRICT_VALIDATION, false
+        ))
+        .expectedResults(ImmutableList.of(
+            new Object[]{1L},
+            new Object[]{2L},
+            new Object[]{3L},
+            new Object[]{4L},
+            new Object[]{5L}
+        ))
+        .run();
+  }
+
+  @Test
   public void testWindow()
   {
     testBuilder()
-            .sql("SELECT\n" +
-                    "(rank() over (order by count(*) desc)),\n" +
-                    "(rank() over (order by count(*) desc))\n" +
-                    "FROM \"wikipedia\"")
-            .queryContext(ImmutableMap.of(
-                    PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
-                    QueryContexts.ENABLE_DEBUG, true,
-                    QueryContexts.WINDOWING_STRICT_VALIDATION, false
-            ))
-            .expectedResults(ImmutableList.of(
-                    new Object[]{1L, 1L}
-            ))
-            .run();
+        .sql("SELECT\n" +
+             "(rank() over (order by count(*) desc)),\n" +
+             "(rank() over (order by count(*) desc))\n" +
+             "FROM \"wikipedia\"")
+        .queryContext(ImmutableMap.of(
+            PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
+            QueryContexts.ENABLE_DEBUG, true,
+            QueryContexts.WINDOWING_STRICT_VALIDATION, false
+        ))
+        .expectedResults(ImmutableList.of(
+            new Object[]{1L, 1L}
+        ))
+        .run();
   }
 
   private WindowOperatorQuery getWindowOperatorQuery(List<Query<?>> queries)

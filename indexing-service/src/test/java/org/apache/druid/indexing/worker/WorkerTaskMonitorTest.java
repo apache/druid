@@ -51,6 +51,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9Factory;
+import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
@@ -187,7 +188,7 @@ public class WorkerTaskMonitorTest
                 null,
                 NoopJoinableFactory.INSTANCE,
                 null,
-                new SegmentCacheManagerFactory(jsonMapper),
+                new SegmentCacheManagerFactory(TestIndex.INDEX_IO, jsonMapper),
                 jsonMapper,
                 indexIO,
                 null,

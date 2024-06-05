@@ -42,12 +42,14 @@ public class HiveIcebergCatalogTest
         warehouseDir.getPath(),
         "hdfs://testuri",
         new HashMap<>(),
+        true,
         mapper,
         new Configuration()
     );
     HiveIcebergCatalog hiveCatalogNullProps = new HiveIcebergCatalog(
         warehouseDir.getPath(),
         "hdfs://testuri",
+        null,
         null,
         mapper,
         new Configuration()
@@ -68,6 +70,7 @@ public class HiveIcebergCatalogTest
         warehouseDir.getPath(),
         "hdfs://testuri",
         catalogMap,
+        null,
         mapper,
         new Configuration()
     );

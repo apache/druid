@@ -35,6 +35,7 @@ import org.apache.druid.server.coordination.BatchDataSegmentAnnouncer;
 import org.apache.druid.server.coordination.ChangeRequestHistory;
 import org.apache.druid.server.coordination.ChangeRequestsSnapshot;
 import org.apache.druid.server.coordination.DataSegmentChangeRequest;
+import org.apache.druid.server.coordination.DataSegmentChangeResponse;
 import org.apache.druid.server.coordination.SegmentLoadDropHandler;
 import org.apache.druid.server.coordinator.loading.HttpLoadQueuePeon;
 import org.apache.druid.server.http.security.StateResourceFilter;
@@ -250,7 +251,7 @@ public class SegmentListerResource
     }
 
     final ResponseContext context = createContext(req.getHeader("Accept"));
-    final ListenableFuture<List<SegmentLoadDropHandler.DataSegmentChangeRequestAndStatus>> future =
+    final ListenableFuture<List<DataSegmentChangeResponse>> future =
         loadDropRequestHandler.processBatch(changeRequestList);
 
     final AsyncContext asyncContext = req.startAsync();
@@ -286,10 +287,10 @@ public class SegmentListerResource
 
     Futures.addCallback(
         future,
-        new FutureCallback<List<SegmentLoadDropHandler.DataSegmentChangeRequestAndStatus>>()
+        new FutureCallback<List<DataSegmentChangeResponse>>()
         {
           @Override
-          public void onSuccess(List<SegmentLoadDropHandler.DataSegmentChangeRequestAndStatus> result)
+          public void onSuccess(List<DataSegmentChangeResponse> result)
           {
             try {
               HttpServletResponse response = (HttpServletResponse) asyncContext.getResponse();

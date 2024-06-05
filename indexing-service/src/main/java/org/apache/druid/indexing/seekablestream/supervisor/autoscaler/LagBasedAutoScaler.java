@@ -21,6 +21,8 @@ package org.apache.druid.indexing.seekablestream.supervisor.autoscaler;
 
 import org.apache.commons.collections4.queue.CircularFifoQueue;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
+import org.apache.druid.indexing.overlord.supervisor.autoscaler.AggregateFunction;
+import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.java.util.common.StringUtils;
@@ -154,8 +156,17 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
       LOCK.lock();
       try {
         if (!spec.isSuspended()) {
-          long lag = supervisor.computeLagForAutoScaler();
-          lagMetricsQueue.offer(lag > 0 ? lag : 0L);
+          LagStats lagStats = supervisor.computeLagStats();
+
+          if (lagStats != null) {
+            AggregateFunction aggregate = lagBasedAutoScalerConfig.getLagAggregate() == null ?
+                                          lagStats.getAggregateForScaling() :
+                                          lagBasedAutoScalerConfig.getLagAggregate();
+            long lag = lagStats.getMetric(aggregate);
+            lagMetricsQueue.offer(lag > 0 ? lag : 0L);
+          } else {
+            lagMetricsQueue.offer(0L);
+          }
           log.debug("Current lags for dataSource[%s] are [%s].", dataSource, lagMetricsQueue);
         } else {
           log.warn("[%s] supervisor is suspended, skipping lag collection", dataSource);

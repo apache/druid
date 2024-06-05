@@ -42,13 +42,20 @@ an explanation.
 ./it.sh image
 ```
 
+Note: If you are running it on Apple Silicon processors, you would also need to uncomment all occurrences of `platform: linux/x86_64` in [dependencies.yaml](https://github.com/apache/druid/blob/master/integration-tests-ex/cases/cluster/Common/dependencies.yaml).
+
 ### Run an IT from the Command Line
 
 ```bash
 ./it.sh test <category>
 ```
 
-Where `<category>` is one of the test categories.
+Where `<category>` is one of the test categories. You can see the list of test categories at [`src/test/java/org/apache/druid/testsEx/categories`](https://github.com/apache/druid/tree/master/integration-tests-ex/cases/src/test/java/org/apache/druid/testsEx/categories). The corresponding test classes are also annotated with `@Category` like `@Category(HighAvailability.class)`.
+
+For example, a sample command for running IT for `@Category(HighAvailability.class)` would be:
+```bash
+./it.sh test HighAvailability
+```
 
 ### Run an IT from the IDE
 

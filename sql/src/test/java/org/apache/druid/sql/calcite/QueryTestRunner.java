@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableSortedMap;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.sql.SqlExplainFormat;
@@ -34,6 +35,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.quidem.DruidQTestInfo;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.DirectStatement;
@@ -56,6 +58,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
@@ -149,6 +152,26 @@ public class QueryTestRunner
     public QueryResults(
         final Map<String, Object> queryContext,
         final String vectorizeOption,
+        final RowSignature rowSignature,
+        final List<Object[]> results,
+        final List<Query<?>> recordedQueries,
+        final PlannerCaptureHook capture
+    )
+    {
+      this.queryContext = queryContext;
+      this.vectorizeOption = vectorizeOption;
+      this.sqlSignature = null;
+      this.signature = rowSignature;
+      this.results = results;
+      this.recordedQueries = recordedQueries;
+      this.resourceActions = null;
+      this.exception = null;
+      this.capture = capture;
+    }
+
+    public QueryResults(
+        final Map<String, Object> queryContext,
+        final String vectorizeOption,
         final RuntimeException exception
     )
     {
@@ -163,9 +186,9 @@ public class QueryTestRunner
       this.sqlSignature = null;
     }
 
-    public QueryResults withResults(List<Object[]> newResults)
+    public QueryResults withSignatureAndResults(final RowSignature rowSignature, final List<Object[]> newResults)
     {
-      return new QueryResults(queryContext, vectorizeOption, sqlSignature, newResults, recordedQueries, capture);
+      return new QueryResults(queryContext, vectorizeOption, rowSignature, newResults, recordedQueries, capture);
     }
   }
 
@@ -637,6 +660,31 @@ public class QueryTestRunner
   public QueryTestRunner(QueryTestBuilder builder)
   {
     QueryTestConfig config = builder.config;
+    DruidQTestInfo iqTestInfo = config.getQTestInfo();
+    if (iqTestInfo != null) {
+      QTestCase qt = new QTestCase(iqTestInfo);
+      Map<String, Object> queryContext = ImmutableSortedMap.<String, Object>naturalOrder()
+          .putAll(builder.getQueryContext())
+          .putAll(builder.plannerConfig.getNonDefaultAsQueryContext())
+          .build();
+      for (Entry<String, Object> entry : queryContext.entrySet()) {
+        qt.println(StringUtils.format("!set %s %s", entry.getKey(), entry.getValue()));
+      }
+      qt.println("!set outputformat mysql");
+      qt.println("!use " + builder.config.queryFramework().getDruidTestURI());
+
+      qt.println(builder.sql + ";");
+      if (builder.expectedResults != null) {
+        qt.println("!ok");
+      }
+      qt.println("!logicalPlan");
+      qt.println("!druidPlan");
+      if (builder.expectedQueries != null) {
+        qt.println("!nativePlan");
+      }
+      runSteps.add(qt.toRunner());
+      return;
+    }
     if (builder.expectedResultsVerifier == null && builder.expectedResults != null) {
       builder.expectedResultsVerifier = config.defaultResultsVerifier(
           builder.expectedResults,

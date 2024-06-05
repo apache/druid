@@ -133,7 +133,7 @@ public class ServerManager implements QuerySegmentWalker
     if (maybeTimeline.isPresent()) {
       timeline = maybeTimeline.get();
     } else {
-      // Even though we didn't find a timeline for the query datasource, we simply returns a noopQueryRunner
+      // Even though we didn't find a timeline for the query datasource, we simply return a NoopQueryRunner
       // instead of reporting missing intervals because the query intervals are a filter rather than something
       // we must find.
       return new NoopQueryRunner<>();

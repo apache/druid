@@ -492,10 +492,11 @@ public interface IndexerMetadataStorageCoordinator
 
   /**
    * Delete pending segment for a give task group after all the tasks belonging to it have completed.
+   * @param datasource datasource of the task
    * @param taskAllocatorId task id / task group / replica group for an appending task
    * @return number of pending segments deleted from the metadata store
    */
-  int deletePendingSegmentsForTaskAllocatorId(String taskAllocatorId);
+  int deletePendingSegmentsForTaskAllocatorId(String datasource, String taskAllocatorId);
 
   /**
    * Fetches all the pending segments of the datasource that overlap with a given interval.

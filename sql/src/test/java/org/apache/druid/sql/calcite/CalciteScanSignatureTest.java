@@ -37,7 +37,6 @@ import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.run.QueryMaker;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.sql.destination.IngestDestination;
 import org.junit.jupiter.api.Test;
@@ -45,7 +44,7 @@ import org.junit.jupiter.api.Test;
 import java.util.HashMap;
 import java.util.Map;
 
-@SqlTestFramework.SqlTestFrameWorkModule(ScanSignatureComponentSupplier.class)
+@SqlTestFrameworkConfig.ComponentSupplier(ScanSignatureComponentSupplier.class)
 public class CalciteScanSignatureTest extends BaseCalciteQueryTest
 {
   @Test

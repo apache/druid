@@ -141,7 +141,6 @@ import java.util.stream.Collectors;
 
 public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, PendingSegmentAllocatingTask
 {
-
   public static final HashFunction HASH_FUNCTION = Hashing.murmur3_128();
 
   public static final String TYPE = "index";

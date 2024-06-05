@@ -118,6 +118,17 @@ public class FloatAnyAggregationTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testComparatorWithTypeMismatch()
+  {
+    Long n1 = 3L;
+    Float n2 = 4.0f;
+    Comparator comparator = floatAnyAggFactory.getComparator();
+    Assert.assertEquals(0, comparator.compare(n1, n1));
+    Assert.assertEquals(-1, comparator.compare(n1, n2));
+    Assert.assertEquals(1, comparator.compare(n2, n1));
+  }
+
+  @Test
   public void testFloatAnyCombiningAggregator()
   {
     Aggregator agg = combiningAggFactory.factorize(colSelectorFactory);

@@ -24,6 +24,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
+import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexLiteral;
@@ -48,6 +49,7 @@ import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
@@ -82,7 +84,7 @@ public class SearchOperatorConversion implements SqlOperatorConversion
         plannerContext,
         rowSignature,
         virtualColumnRegistry,
-        expandSearch((RexCall) rexNode, REX_BUILDER)
+        expandSearch((RexCall) rexNode, REX_BUILDER, plannerContext.queryContext().getInFunctionThreshold())
     );
   }
 
@@ -97,7 +99,7 @@ public class SearchOperatorConversion implements SqlOperatorConversion
     return Expressions.toDruidExpression(
         plannerContext,
         rowSignature,
-        expandSearch((RexCall) rexNode, REX_BUILDER)
+        expandSearch((RexCall) rexNode, REX_BUILDER, plannerContext.queryContext().getInFunctionExprThreshold())
     );
   }
 
@@ -111,7 +113,8 @@ public class SearchOperatorConversion implements SqlOperatorConversion
    */
   public static RexNode expandSearch(
       final RexCall call,
-      final RexBuilder rexBuilder
+      final RexBuilder rexBuilder,
+      final int scalarInArrayThreshold
   )
   {
     final RexNode arg = call.operands.get(0);
@@ -139,13 +142,10 @@ public class SearchOperatorConversion implements SqlOperatorConversion
       notInPoints = getPoints(complement);
       notInRexNode = makeIn(
           arg,
-          ImmutableList.copyOf(
-              Iterables.transform(
-                  notInPoints,
-                  point -> rexBuilder.makeLiteral(point, sargRex.getType(), true, true)
-              )
-          ),
+          notInPoints,
+          sargRex.getType(),
           true,
+          notInPoints.size() >= scalarInArrayThreshold,
           rexBuilder
       );
     }
@@ -155,13 +155,10 @@ public class SearchOperatorConversion implements SqlOperatorConversion
         sarg.pointCount == 0 ? Collections.emptyList() : (List<Comparable>) getPoints(sarg.rangeSet);
     final RexNode inRexNode = makeIn(
         arg,
-        ImmutableList.copyOf(
-            Iterables.transform(
-                inPoints,
-                point -> rexBuilder.makeLiteral(point, sargRex.getType(), true, true)
-            )
-        ),
+        inPoints,
+        sargRex.getType(),
         false,
+        inPoints.size() >= scalarInArrayThreshold,
         rexBuilder
     );
     if (inRexNode != null) {
@@ -225,14 +222,36 @@ public class SearchOperatorConversion implements SqlOperatorConversion
     return retVal;
   }
 
+  /**
+   * Make an IN condition for an "arg" matching certain "points", as in "arg IN (points)".
+   *
+   * @param arg              lhs of the IN
+   * @param pointObjects     rhs of the IN. Must match the "pointType"
+   * @param pointType        type of "pointObjects"
+   * @param negate           true for NOT IN, false for IN
+   * @param useScalarInArray if true, use {@link ScalarInArrayOperatorConversion#SQL_FUNCTION} when there is more
+   *                         than one point; if false, use a stack of ORs
+   * @param rexBuilder       rex builder
+   *
+   * @return SQL rex nodes equivalent to the IN filter, or null if "pointObjects" is empty
+   */
   @Nullable
   public static RexNode makeIn(
       final RexNode arg,
-      final List<RexNode> points,
+      final Collection<? extends Comparable> pointObjects,
+      final RelDataType pointType,
       final boolean negate,
+      final boolean useScalarInArray,
       final RexBuilder rexBuilder
   )
   {
+    final List<RexNode> points = ImmutableList.copyOf(
+        Iterables.transform(
+            pointObjects,
+            point -> rexBuilder.makeLiteral(point, pointType, false, false)
+        )
+    );
+
     if (points.isEmpty()) {
       return null;
     } else if (points.size() == 1) {
@@ -244,22 +263,33 @@ public class SearchOperatorConversion implements SqlOperatorConversion
         return rexBuilder.makeCall(negate ? SqlStdOperatorTable.NOT_EQUALS : SqlStdOperatorTable.EQUALS, arg, point);
       }
     } else {
-      // x = a || x = b || x = c ...
-      RexNode retVal = rexBuilder.makeCall(
-          SqlStdOperatorTable.OR,
-          ImmutableList.copyOf(
-              Iterables.transform(
-                  points,
-                  point -> {
-                    if (RexUtil.isNullLiteral(point, true)) {
-                      return rexBuilder.makeCall(SqlStdOperatorTable.IS_NULL, arg);
-                    } else {
-                      return rexBuilder.makeCall(SqlStdOperatorTable.EQUALS, arg, point);
+      RexNode retVal;
+
+      if (useScalarInArray) {
+        // SCALAR_IN_ARRAY(x, ARRAY[a, b, c])
+        retVal = rexBuilder.makeCall(
+            ScalarInArrayOperatorConversion.SQL_FUNCTION,
+            arg,
+            rexBuilder.makeCall(SqlStdOperatorTable.ARRAY_VALUE_CONSTRUCTOR, points)
+        );
+      } else {
+        // x = a || x = b || x = c ...
+        retVal = rexBuilder.makeCall(
+            SqlStdOperatorTable.OR,
+            ImmutableList.copyOf(
+                Iterables.transform(
+                    points,
+                    point -> {
+                      if (RexUtil.isNullLiteral(point, true)) {
+                        return rexBuilder.makeCall(SqlStdOperatorTable.IS_NULL, arg);
+                      } else {
+                        return rexBuilder.makeCall(SqlStdOperatorTable.EQUALS, arg, point);
+                      }
                     }
-                  }
-              )
-          )
-      );
+                )
+            )
+        );
+      }
 
       if (negate) {
         retVal = rexBuilder.makeCall(SqlStdOperatorTable.NOT, retVal);

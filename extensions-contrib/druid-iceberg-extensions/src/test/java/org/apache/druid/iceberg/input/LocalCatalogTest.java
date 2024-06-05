@@ -36,7 +36,7 @@ public class LocalCatalogTest
   {
     final File warehouseDir = FileUtils.createTempDir();
     DefaultObjectMapper mapper = new DefaultObjectMapper();
-    LocalCatalog before = new LocalCatalog(warehouseDir.getPath(), new HashMap<>());
+    LocalCatalog before = new LocalCatalog(warehouseDir.getPath(), new HashMap<>(), true);
     LocalCatalog after = mapper.readValue(
         mapper.writeValueAsString(before), LocalCatalog.class);
     Assert.assertEquals(before, after);

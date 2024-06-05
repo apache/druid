@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.util.concurrent.Futures;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.msq.indexing.MSQWorkerTaskLauncher;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.kernel.controller.ControllerQueryKernel;
@@ -44,7 +43,6 @@ import java.util.concurrent.TimeUnit;
 
 import static org.easymock.EasyMock.mock;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
@@ -56,7 +54,7 @@ public class WorkerSketchFetcherTest
   private CompleteKeyStatisticsInformation completeKeyStatisticsInformation;
 
   @Mock
-  private MSQWorkerTaskLauncher workerTaskLauncher;
+  private WorkerManager workerManager;
 
   @Mock
   private ControllerQueryKernel kernel;
@@ -82,7 +80,10 @@ public class WorkerSketchFetcherTest
     doReturn(ImmutableSortedMap.of(123L, ImmutableSet.of(1, 2))).when(completeKeyStatisticsInformation)
                                                                 .getTimeSegmentVsWorkerMap();
 
-    doReturn(true).when(workerTaskLauncher).isTaskLatest(any());
+    doReturn(0).when(workerManager).getWorkerNumber(TASK_0);
+    doReturn(1).when(workerManager).getWorkerNumber(TASK_1);
+    doReturn(2).when(workerManager).getWorkerNumber(TASK_2);
+    doReturn(true).when(workerManager).isWorkerActive(any());
   }
 
   @After
@@ -100,13 +101,13 @@ public class WorkerSketchFetcherTest
 
     final CountDownLatch latch = new CountDownLatch(TASK_IDS.size());
 
-    target = spy(new WorkerSketchFetcher(workerClient, workerTaskLauncher, true));
+    target = spy(new WorkerSketchFetcher(workerClient, workerManager, true));
 
     // When fetching snapshots, return a mock and add it to queue
     doAnswer(invocation -> {
       ClusterByStatisticsSnapshot snapshot = mock(ClusterByStatisticsSnapshot.class);
       return Futures.immediateFuture(snapshot);
-    }).when(workerClient).fetchClusterByStatisticsSnapshot(any(), any(), anyInt());
+    }).when(workerClient).fetchClusterByStatisticsSnapshot(any(), any());
 
     target.inMemoryFullSketchMerging((kernelConsumer) -> {
       kernelConsumer.accept(kernel);
@@ -123,13 +124,13 @@ public class WorkerSketchFetcherTest
     doReturn(true).when(completeKeyStatisticsInformation).isComplete();
     final CountDownLatch latch = new CountDownLatch(TASK_IDS.size());
 
-    target = spy(new WorkerSketchFetcher(workerClient, workerTaskLauncher, true));
+    target = spy(new WorkerSketchFetcher(workerClient, workerManager, true));
 
     // When fetching snapshots, return a mock and add it to queue
     doAnswer(invocation -> {
       ClusterByStatisticsSnapshot snapshot = mock(ClusterByStatisticsSnapshot.class);
       return Futures.immediateFuture(snapshot);
-    }).when(workerClient).fetchClusterByStatisticsSnapshotForTimeChunk(any(), any(), anyInt(), anyLong());
+    }).when(workerClient).fetchClusterByStatisticsSnapshotForTimeChunk(any(), any(), anyLong());
 
     target.sequentialTimeChunkMerging(
         (kernelConsumer) -> {
@@ -151,7 +152,7 @@ public class WorkerSketchFetcherTest
   {
 
     doReturn(false).when(completeKeyStatisticsInformation).isComplete();
-    target = spy(new WorkerSketchFetcher(workerClient, workerTaskLauncher, true));
+    target = spy(new WorkerSketchFetcher(workerClient, workerManager, true));
     Assert.assertThrows(ISE.class, () -> target.sequentialTimeChunkMerging(
         (ignore) -> {},
         completeKeyStatisticsInformation,
@@ -166,7 +167,7 @@ public class WorkerSketchFetcherTest
   {
     final CountDownLatch latch = new CountDownLatch(TASK_IDS.size());
 
-    target = spy(new WorkerSketchFetcher(workerClient, workerTaskLauncher, true));
+    target = spy(new WorkerSketchFetcher(workerClient, workerManager, true));
 
     workersWithFailedFetchParallel(ImmutableSet.of(TASK_1));
 
@@ -185,8 +186,8 @@ public class WorkerSketchFetcherTest
         })
     );
 
-    Assert.assertTrue(latch.await(5, TimeUnit.SECONDS));
-    Assert.assertTrue(retryLatch.await(5, TimeUnit.SECONDS));
+    Assert.assertTrue(latch.await(500, TimeUnit.SECONDS));
+    Assert.assertTrue(retryLatch.await(500, TimeUnit.SECONDS));
   }
 
   @Test
@@ -195,7 +196,7 @@ public class WorkerSketchFetcherTest
     doReturn(true).when(completeKeyStatisticsInformation).isComplete();
     final CountDownLatch latch = new CountDownLatch(TASK_IDS.size());
 
-    target = spy(new WorkerSketchFetcher(workerClient, workerTaskLauncher, true));
+    target = spy(new WorkerSketchFetcher(workerClient, workerManager, true));
 
     workersWithFailedFetchSequential(ImmutableSet.of(TASK_1));
     CountDownLatch retryLatch = new CountDownLatch(1);
@@ -222,7 +223,7 @@ public class WorkerSketchFetcherTest
   public void test_InMemoryRetryDisabled_multipleFailures() throws InterruptedException
   {
 
-    target = spy(new WorkerSketchFetcher(workerClient, workerTaskLauncher, false));
+    target = spy(new WorkerSketchFetcher(workerClient, workerManager, false));
 
     workersWithFailedFetchParallel(ImmutableSet.of(TASK_1, TASK_0));
 
@@ -251,7 +252,7 @@ public class WorkerSketchFetcherTest
   public void test_InMemoryRetryDisabled_singleFailure() throws InterruptedException
   {
 
-    target = spy(new WorkerSketchFetcher(workerClient, workerTaskLauncher, false));
+    target = spy(new WorkerSketchFetcher(workerClient, workerManager, false));
 
     workersWithFailedFetchParallel(ImmutableSet.of(TASK_1));
 
@@ -282,7 +283,7 @@ public class WorkerSketchFetcherTest
   {
 
     doReturn(true).when(completeKeyStatisticsInformation).isComplete();
-    target = spy(new WorkerSketchFetcher(workerClient, workerTaskLauncher, false));
+    target = spy(new WorkerSketchFetcher(workerClient, workerManager, false));
 
     workersWithFailedFetchSequential(ImmutableSet.of(TASK_1, TASK_0));
 
@@ -314,7 +315,7 @@ public class WorkerSketchFetcherTest
   public void test_SequentialRetryDisabled_singleFailure() throws InterruptedException
   {
     doReturn(true).when(completeKeyStatisticsInformation).isComplete();
-    target = spy(new WorkerSketchFetcher(workerClient, workerTaskLauncher, false));
+    target = spy(new WorkerSketchFetcher(workerClient, workerManager, false));
 
     workersWithFailedFetchSequential(ImmutableSet.of(TASK_1));
 
@@ -351,7 +352,7 @@ public class WorkerSketchFetcherTest
         return Futures.immediateFailedFuture(new Exception("Task fetch failed :" + invocation.getArgument(0)));
       }
       return Futures.immediateFuture(snapshot);
-    }).when(workerClient).fetchClusterByStatisticsSnapshotForTimeChunk(any(), any(), anyInt(), anyLong());
+    }).when(workerClient).fetchClusterByStatisticsSnapshotForTimeChunk(any(), any(), anyLong());
   }
 
   private void workersWithFailedFetchParallel(Set<String> failedTasks)
@@ -362,7 +363,7 @@ public class WorkerSketchFetcherTest
         return Futures.immediateFailedFuture(new Exception("Task fetch failed :" + invocation.getArgument(0)));
       }
       return Futures.immediateFuture(snapshot);
-    }).when(workerClient).fetchClusterByStatisticsSnapshot(any(), any(), anyInt());
+    }).when(workerClient).fetchClusterByStatisticsSnapshot(any(), any());
   }
 
 }

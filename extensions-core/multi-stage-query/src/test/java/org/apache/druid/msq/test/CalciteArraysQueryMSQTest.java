@@ -31,14 +31,14 @@ import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.sql.calcite.CalciteArraysQueryTest;
 import org.apache.druid.sql.calcite.QueryTestBuilder;
+import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.run.SqlEngine;
-import org.apache.druid.sql.calcite.util.SqlTestFramework;
 
 /**
  * Runs {@link CalciteArraysQueryTest} but with MSQ engine
  */
-@SqlTestFramework.SqlTestFrameWorkModule(ArraysQueryMSQComponentSupplier.class)
+@SqlTestFrameworkConfig.ComponentSupplier(ArraysQueryMSQComponentSupplier.class)
 public class CalciteArraysQueryMSQTest extends CalciteArraysQueryTest
 {
   public static class ArraysQueryMSQComponentSupplier extends ArraysComponentSupplier

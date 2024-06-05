@@ -474,6 +474,16 @@ public class WorkerMemoryParameters
   }
 
   /**
+   * Computes the amount of memory needed to read a single partition from a given number of workers.
+   */
+  static long memoryNeededForInputChannels(final int numInputWorkers)
+  {
+    // Workers that read sorted inputs must open all channels at once to do an N-way merge. Calculate memory needs.
+    // Requirement: one input frame per worker, one buffered output frame.
+    return (long) STANDARD_FRAME_SIZE * (numInputWorkers + 1);
+  }
+
+  /**
    * Maximum number of workers that may exist in the current JVM.
    */
   private static int computeNumWorkersInJvm(final Injector injector)
@@ -561,13 +571,6 @@ public class WorkerMemoryParameters
     // Currently, we only add the partition stats overhead since it will be the single largest overhead per worker.
     final long estimateStatOverHeadPerWorker = PARTITION_STATS_MEMORY_MAX_BYTES;
     return estimatedTotalBundleMemory + (estimateStatOverHeadPerWorker * numWorkersInJvm);
-  }
-
-  private static long memoryNeededForInputChannels(final int numInputWorkers)
-  {
-    // Workers that read sorted inputs must open all channels at once to do an N-way merge. Calculate memory needs.
-    // Requirement: one input frame per worker, one buffered output frame.
-    return (long) STANDARD_FRAME_SIZE * (numInputWorkers + 1);
   }
 
   private static long memoryNeededForHashPartitioning(final int numOutputPartitions)

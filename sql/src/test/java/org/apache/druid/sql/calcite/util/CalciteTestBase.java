@@ -73,7 +73,6 @@ public abstract class CalciteTestBase
     casetempPath = FileUtils.createTempDirInLocation(rootTempPath, methodName).toPath();
   }
 
-
   public File newTempFolder()
   {
     return newTempFolder(null);

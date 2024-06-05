@@ -131,7 +131,7 @@ export const ExplainDialog = React.memo(function ExplainDialog(props: ExplainDia
             theme="solarized_dark"
             className="query-string"
             name="ace-editor"
-            fontSize={13}
+            fontSize={12}
             width="100%"
             height="100%"
             showGutter

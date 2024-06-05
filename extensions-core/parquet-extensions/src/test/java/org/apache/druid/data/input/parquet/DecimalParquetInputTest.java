@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.indexer.HadoopDruidIndexerConfig;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -54,9 +55,8 @@ public class DecimalParquetInputTest extends BaseParquetInputTest
   public void testReadParquetDecimalFixedLen() throws IOException, InterruptedException
   {
     // parquet-avro does not correctly convert decimal types
-    if (parserType.equals(ParquetExtensionsModule.PARQUET_AVRO_INPUT_PARSER_TYPE)) {
-      return;
-    }
+    Assume.assumeFalse(parserType.equals(ParquetExtensionsModule.PARQUET_AVRO_INPUT_PARSER_TYPE));
+
     HadoopDruidIndexerConfig config = transformHadoopDruidIndexerConfig(
         "example/decimals/dec_in_fix_len.json",
         parserType,
@@ -101,9 +101,8 @@ public class DecimalParquetInputTest extends BaseParquetInputTest
   public void testReadParquetDecimali32() throws IOException, InterruptedException
   {
     // parquet-avro does not correctly convert decimal types
-    if (parserType.equals(ParquetExtensionsModule.PARQUET_AVRO_INPUT_PARSER_TYPE)) {
-      return;
-    }
+    Assume.assumeFalse(parserType.equals(ParquetExtensionsModule.PARQUET_AVRO_INPUT_PARSER_TYPE));
+
     HadoopDruidIndexerConfig config = transformHadoopDruidIndexerConfig(
         "example/decimals/dec_in_i32.json",
         parserType,
@@ -148,9 +147,8 @@ public class DecimalParquetInputTest extends BaseParquetInputTest
   public void testReadParquetDecimali64() throws IOException, InterruptedException
   {
     // parquet-avro does not correctly convert decimal types
-    if (parserType.equals(ParquetExtensionsModule.PARQUET_AVRO_INPUT_PARSER_TYPE)) {
-      return;
-    }
+    Assume.assumeFalse(parserType.equals(ParquetExtensionsModule.PARQUET_AVRO_INPUT_PARSER_TYPE));
+
     HadoopDruidIndexerConfig config = transformHadoopDruidIndexerConfig(
         "example/decimals/dec_in_i64.json",
         parserType,

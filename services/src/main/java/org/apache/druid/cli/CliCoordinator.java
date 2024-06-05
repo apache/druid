@@ -35,7 +35,6 @@ import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.MapBinder;
 import com.google.inject.name.Names;
 import com.google.inject.util.Providers;
-import org.apache.curator.framework.CuratorFramework;
 import org.apache.druid.client.CoordinatorSegmentWatcherConfig;
 import org.apache.druid.client.CoordinatorServerView;
 import org.apache.druid.client.DirectDruidClientFactory;
@@ -44,7 +43,6 @@ import org.apache.druid.client.InternalQueryConfig;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.discovery.NodeRole;
-import org.apache.druid.guice.ConfigProvider;
 import org.apache.druid.guice.DruidBinders;
 import org.apache.druid.guice.Jerseys;
 import org.apache.druid.guice.JsonConfigProvider;
@@ -101,12 +99,16 @@ import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QuerySchedulerProvider;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.DruidCoordinator;
-import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.MetadataManager;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategyFactory;
 import org.apache.druid.server.coordinator.balancer.CachingCostBalancerStrategyConfig;
 import org.apache.druid.server.coordinator.compact.CompactionSegmentSearchPolicy;
 import org.apache.druid.server.coordinator.compact.NewestSegmentFirstPolicy;
+import org.apache.druid.server.coordinator.config.CoordinatorKillConfigs;
+import org.apache.druid.server.coordinator.config.CoordinatorPeriodConfig;
+import org.apache.druid.server.coordinator.config.CoordinatorRunConfig;
+import org.apache.druid.server.coordinator.config.DruidCoordinatorConfig;
+import org.apache.druid.server.coordinator.config.HttpLoadQueuePeonConfig;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDuty;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroup;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroups;
@@ -127,7 +129,6 @@ import org.apache.druid.server.http.RulesResource;
 import org.apache.druid.server.http.SelfDiscoveryResource;
 import org.apache.druid.server.http.ServersResource;
 import org.apache.druid.server.http.TiersResource;
-import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManagerConfig;
@@ -211,13 +212,15 @@ public class CliCoordinator extends ServerRunnable
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8081);
             binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(8281);
 
-            ConfigProvider.bind(binder, DruidCoordinatorConfig.class);
-
             binder.bind(MetadataStorage.class).toProvider(MetadataStorageProvider.class);
 
             JsonConfigProvider.bind(binder, SegmentsMetadataManagerConfig.CONFIG_PREFIX, SegmentsMetadataManagerConfig.class);
             JsonConfigProvider.bind(binder, "druid.manager.rules", MetadataRuleManagerConfig.class);
             JsonConfigProvider.bind(binder, "druid.manager.lookups", LookupCoordinatorManagerConfig.class);
+            JsonConfigProvider.bind(binder, "druid.coordinator", CoordinatorRunConfig.class);
+            JsonConfigProvider.bind(binder, "druid.coordinator.kill", CoordinatorKillConfigs.class);
+            JsonConfigProvider.bind(binder, "druid.coordinator.period", CoordinatorPeriodConfig.class);
+            JsonConfigProvider.bind(binder, "druid.coordinator.loadqueuepeon.http", HttpLoadQueuePeonConfig.class);
             JsonConfigProvider.bind(binder, "druid.coordinator.balancer", BalancerStrategyFactory.class);
             JsonConfigProvider.bind(binder, "druid.coordinator.segment", CoordinatorSegmentWatcherConfig.class);
             JsonConfigProvider.bind(
@@ -226,6 +229,7 @@ public class CliCoordinator extends ServerRunnable
                 CachingCostBalancerStrategyConfig.class
             );
             JsonConfigProvider.bind(binder, "druid.coordinator.segmentMetadataCache", SegmentMetadataCacheConfig.class);
+            binder.bind(DruidCoordinatorConfig.class);
 
             binder.bind(RedirectFilter.class).in(LazySingleton.class);
             if (beOverlord) {
@@ -319,34 +323,21 @@ public class CliCoordinator extends ServerRunnable
           @Provides
           @LazySingleton
           public LoadQueueTaskMaster getLoadQueueTaskMaster(
-              Provider<CuratorFramework> curatorFrameworkProvider,
               ObjectMapper jsonMapper,
               ScheduledExecutorFactory factory,
               DruidCoordinatorConfig config,
               @EscalatedGlobal HttpClient httpClient,
-              ZkPathsConfig zkPaths,
               Lifecycle lifecycle
           )
           {
-            boolean useHttpLoadQueuePeon = "http".equalsIgnoreCase(config.getLoadQueuePeonType());
-            ExecutorService callBackExec;
-            if (useHttpLoadQueuePeon) {
-              callBackExec = Execs.singleThreaded("LoadQueuePeon-callbackexec--%d");
-            } else {
-              callBackExec = Execs.multiThreaded(
-                  config.getNumCuratorCallBackThreads(),
-                  "LoadQueuePeon-callbackexec--%d"
-              );
-            }
+            final ExecutorService callBackExec = Execs.singleThreaded("LoadQueuePeon-callbackexec--%d");
             ExecutorServices.manageLifecycle(lifecycle, callBackExec);
             return new LoadQueueTaskMaster(
-                curatorFrameworkProvider,
                 jsonMapper,
                 factory.create(1, "Master-PeonExec--%d"),
                 callBackExec,
-                config,
-                httpClient,
-                zkPaths
+                config.getHttpLoadQueuePeonConfig(),
+                httpClient
             );
           }
         }

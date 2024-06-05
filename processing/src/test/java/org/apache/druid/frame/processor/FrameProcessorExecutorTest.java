@@ -398,7 +398,7 @@ public class FrameProcessorExecutorTest
     public final TemporaryFolder temporaryFolder = new TemporaryFolder();
     public final int numThreads;
 
-    FrameProcessorExecutor exec;
+    protected FrameProcessorExecutor exec;
 
     public BaseFrameProcessorExecutorTestSuite(int numThreads)
     {

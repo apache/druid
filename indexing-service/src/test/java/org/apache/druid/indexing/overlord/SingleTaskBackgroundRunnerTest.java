@@ -45,6 +45,7 @@ import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.scan.ScanResultValue;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
+import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.NoopDataSegmentArchiver;
 import org.apache.druid.segment.loading.NoopDataSegmentKiller;
@@ -114,7 +115,7 @@ public class SingleTaskBackgroundRunnerTest
         null,
         NoopJoinableFactory.INSTANCE,
         null,
-        new SegmentCacheManagerFactory(utils.getTestObjectMapper()),
+        new SegmentCacheManagerFactory(TestIndex.INDEX_IO, utils.getTestObjectMapper()),
         utils.getTestObjectMapper(),
         utils.getTestIndexIO(),
         null,

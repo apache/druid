@@ -118,6 +118,17 @@ public class DoubleAnyAggregationTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testComparatorWithTypeMismatch()
+  {
+    Long n1 = 3L;
+    Double n2 = 4.0;
+    Comparator comparator = doubleAnyAggFactory.getComparator();
+    Assert.assertEquals(0, comparator.compare(n1, n1));
+    Assert.assertEquals(-1, comparator.compare(n1, n2));
+    Assert.assertEquals(1, comparator.compare(n2, n1));
+  }
+
+  @Test
   public void testDoubleAnyCombiningAggregator()
   {
     Aggregator agg = combiningAggFactory.factorize(colSelectorFactory);

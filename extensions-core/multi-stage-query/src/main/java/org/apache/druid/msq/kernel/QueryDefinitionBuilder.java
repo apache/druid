@@ -19,12 +19,10 @@
 
 package org.apache.druid.msq.kernel;
 
-import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.ISE;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -32,20 +30,15 @@ import java.util.stream.Collectors;
  */
 public class QueryDefinitionBuilder
 {
-  private String queryId = UUID.randomUUID().toString();
+  private final String queryId;
   private final List<StageDefinitionBuilder> stageBuilders = new ArrayList<>();
 
   /**
-   * Package-private: callers should use {@link QueryDefinition#builder()}.
+   * Package-private: callers should use {@link QueryDefinition#builder(String)}.
    */
-  QueryDefinitionBuilder()
+  QueryDefinitionBuilder(final String queryId)
   {
-  }
-
-  public QueryDefinitionBuilder queryId(final String queryId)
-  {
-    this.queryId = Preconditions.checkNotNull(queryId, "queryId");
-    return this;
+    this.queryId = queryId;
   }
 
   public QueryDefinitionBuilder add(final StageDefinitionBuilder stageBuilder)

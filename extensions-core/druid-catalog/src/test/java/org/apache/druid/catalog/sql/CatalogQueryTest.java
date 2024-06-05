@@ -31,6 +31,7 @@ import org.apache.druid.catalog.sync.MetadataCatalog;
 import org.apache.druid.metadata.TestDerbyConnector.DerbyConnectorRule5;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.SqlSchema;
+import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
@@ -44,7 +45,7 @@ import java.util.Collections;
 
 import static org.junit.Assert.fail;
 
-@SqlTestFramework.SqlTestFrameWorkModule(CatalogQueryComponentSupplier.class)
+@SqlTestFrameworkConfig.ComponentSupplier(CatalogQueryComponentSupplier.class)
 public class CatalogQueryTest extends BaseCalciteQueryTest
 {
   @RegisterExtension

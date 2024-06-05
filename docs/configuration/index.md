@@ -160,7 +160,6 @@ Druid interacts with ZooKeeper through a set of standard path configurations. We
 |`druid.zk.paths.propertiesPath`|ZooKeeper properties path.|`${druid.zk.paths.base}/properties`|
 |`druid.zk.paths.announcementsPath`|Druid service announcement path.|`${druid.zk.paths.base}/announcements`|
 |`druid.zk.paths.liveSegmentsPath`|Current path for where Druid services announce their segments.|`${druid.zk.paths.base}/segments`|
-|`druid.zk.paths.loadQueuePath`|Entries here cause Historical services to load and drop segments.|`${druid.zk.paths.base}/loadQueue`|
 |`druid.zk.paths.coordinatorPath`|Used by the Coordinator for leader election.|`${druid.zk.paths.base}/coordinator`|
 |`druid.zk.paths.servedSegmentsPath`|Deprecated. Legacy path for where Druid services announce their segments.|`${druid.zk.paths.base}/servedSegments`|
 
@@ -280,7 +279,7 @@ The `file` request logger stores daily request logs on disk.
 |--------|-----------|-------|
 |`druid.request.logging.dir`|Historical, Realtime, and Broker services maintain request logs of all of the requests they get (interaction is via POST, so normal request logs don’t generally capture information about the actual query), this specifies the directory to store the request logs in|none|
 |`druid.request.logging.filePattern`|[Joda datetime format](http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat.html) for each file|"yyyy-MM-dd'.log'"|
-| `druid.request.logging.durationToRetain`| Period to retain the request logs on disk. The period should be at least longer than `P1D`.| none
+| `druid.request.logging.durationToRetain`| Period to retain the request logs on disk. The period should be at least longer than `P1D`.| none|
 
 The format of request logs is TSV, one line per requests, with five fields: timestamp, remote\_addr, native\_query, query\_context, sql\_query.
 
@@ -395,6 +394,7 @@ Metric monitoring is an essential part of Druid operations. The following monito
 |`org.apache.druid.java.util.metrics.JvmThreadsMonitor`|Reports Thread statistics in the JVM, like numbers of total, daemon, started, died threads.|
 |`org.apache.druid.java.util.metrics.CgroupCpuMonitor`|Reports CPU shares and quotas as per the `cpu` cgroup.|
 |`org.apache.druid.java.util.metrics.CgroupCpuSetMonitor`|Reports CPU core/HT and memory node allocations as per the `cpuset` cgroup.|
+|`org.apache.druid.java.util.metrics.CgroupDiskMonitor`|Reports disk statistic as per the blkio cgroup.|
 |`org.apache.druid.java.util.metrics.CgroupMemoryMonitor`|Reports memory statistic as per the memory cgroup.|
 |`org.apache.druid.server.metrics.EventReceiverFirehoseMonitor`|Reports how many events have been queued in the EventReceiverFirehose.|
 |`org.apache.druid.server.metrics.HistoricalMetricsMonitor`|Reports statistics on Historical services. Available only on Historical services.|
@@ -582,6 +582,23 @@ This deep storage is used to interface with Cassandra. You must load the `druid-
 |`druid.storage.keyspace`|Cassandra key space.|none|
 
 
+#### Centralized datasource schema
+
+Centralized datasource schema is an [experimental feature](../development/experimental.md) to centralized datasource schema building within the Coordinator.
+Traditionally, the datasource schema is built in the Brokers by combining schema for all the available segments of a datasource.
+Brokers issue segment metadata query to data nodes and tasks to fetch segment schema.
+In the new arrangement, tasks publish segment schema along with segment metadata to the database and schema for realtime segments is periodically pushed to the Coordinator in the segment announcement flow.
+This enables Coordinator to cache segment schemas and build datasource schema by combining segment schema.
+Brokers query the datasource schema from the Coordinator, while retaining the ability to build table schema if the
+need arises.
+
+|Property|Description|Default|Required|
+|-----|-----------|-------|--------|
+|`druid.centralizedDatasourceSchema.enabled`|Boolean flag for enabling datasource schema building in the Coordinator, this should be specified in the common runtime properties.|false|No.|
+|`druid.indexer.fork.property.druid.centralizedDatasourceSchema.enabled`| This config should be set when CentralizedDatasourceSchema feature is enabled. This should be specified in the MiddleManager runtime properties.|false|No.|
+
+For, stale schema cleanup configs, refer to properties with the prefix `druid.coordinator.kill.segmentSchema` in [Metadata Management](#metadata-management).
+
 ### Ingestion security configuration
 
 #### HDFS input source
@@ -610,16 +627,16 @@ the [HTTP input source](../ingestion/input-sources.md#http-input-source).
 
 You can use the following properties to specify permissible JDBC options for:
 - [SQL input source](../ingestion/input-sources.md#sql-input-source)
-- [globally cached JDBC lookups](../development/extensions-core/lookups-cached-global.md#jdbc-lookup)
+- [globally cached JDBC lookups](../querying/lookups-cached-global.md#jdbc-lookup)
 - [JDBC Data Fetcher for per-lookup caching](../development/extensions-core/druid-lookups.md#data-fetcher-layer).
 
 These properties do not apply to metadata storage connections.
 
-|Property|Possible values|Description|Default|
-|--------|---------------|-----------|-------|
-|`druid.access.jdbc.enforceAllowedProperties`|Boolean|When true, Druid applies `druid.access.jdbc.allowedProperties` to JDBC connections starting with `jdbc:postgresql:`, `jdbc:mysql:`, or `jdbc:mariadb:`. When false, Druid allows any kind of JDBC connections without JDBC property validation. This config is for backward compatibility especially during upgrades since enforcing allow list can break existing ingestion jobs or lookups based on JDBC. This config is deprecated and will be removed in a future release.|true|
-|`druid.access.jdbc.allowedProperties`|List of JDBC properties|Defines a list of allowed JDBC properties. Druid always enforces the list for all JDBC connections starting with `jdbc:postgresql:`, `jdbc:mysql:`, and `jdbc:mariadb:` if `druid.access.jdbc.enforceAllowedProperties` is set to true.<br/><br/>This option is tested against MySQL connector 5.1.49, MariaDB connector 2.7.4, and PostgreSQL connector 42.2.14. Other connector versions might not work.|`["useSSL", "requireSSL", "ssl", "sslmode"]`|
-|`druid.access.jdbc.allowUnknownJdbcUrlFormat`|Boolean|When false, Druid only accepts JDBC connections starting with `jdbc:postgresql:` or `jdbc:mysql:`. When true, Druid allows JDBC connections to any kind of database, but only enforces `druid.access.jdbc.allowedProperties` for PostgreSQL and MySQL/MariaDB.|true|
+|Property|Possible values| Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |Default|
+|--------|---------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------|
+|`druid.access.jdbc.enforceAllowedProperties`|Boolean| When true, Druid applies `druid.access.jdbc.allowedProperties` to JDBC connections starting with `jdbc:postgresql:`, `jdbc:mysql:`, or `jdbc:mariadb:`. When false, Druid allows any kind of JDBC connections without JDBC property validation. This config is for backward compatibility especially during upgrades since enforcing allow list can break existing ingestion jobs or lookups based on JDBC. This config is deprecated and will be removed in a future release. |true|
+|`druid.access.jdbc.allowedProperties`|List of JDBC properties| Defines a list of allowed JDBC properties. Druid always enforces the list for all JDBC connections starting with `jdbc:postgresql:`, `jdbc:mysql:`, and `jdbc:mariadb:` if `druid.access.jdbc.enforceAllowedProperties` is set to true.<br/><br/>This option is tested against MySQL connector 8.2.0, MariaDB connector 2.7.4, and PostgreSQL connector 42.2.14. Other connector versions might not work.                                                                           |`["useSSL", "requireSSL", "ssl", "sslmode"]`|
+|`druid.access.jdbc.allowUnknownJdbcUrlFormat`|Boolean| When false, Druid only accepts JDBC connections starting with `jdbc:postgresql:` or `jdbc:mysql:`. When true, Druid allows JDBC connections to any kind of database, but only enforces `druid.access.jdbc.allowedProperties` for PostgreSQL and MySQL/MariaDB.                                                                                                                                                                                                                 |true|
 
 ### Task logging
 
@@ -875,10 +892,10 @@ These Coordinator static configurations can be defined in the `coordinator/runti
 |`druid.coordinator.kill.maxSegments`|The number of unused segments to kill per kill task. This number must be greater than 0. This only applies when `druid.coordinator.kill.on=true`.|100|
 |`druid.coordinator.balancer.strategy`|Specify the type of balancing strategy for the Coordinator to use to distribute segments among the Historical services. `cachingCost` is logically equivalent to `cost` but is more CPU-efficient on large clusters. `diskNormalized` weights the costs according to the servers' disk usage ratios - there are known issues with this strategy distributing segments unevenly across the cluster. `random` distributes segments among services randomly.|`cost`|
 |`druid.coordinator.balancer.cachingCost.awaitInitialization`|Whether to wait for segment view initialization before creating the `cachingCost` balancing strategy. This property is enabled only when `druid.coordinator.balancer.strategy` is `cachingCost`. If set to true, the Coordinator will not start to assign segments, until the segment view is initialized. If set to false, the Coordinator will fallback to use the `cost` balancing strategy only if the segment view is not initialized yet. It may take much time to wait for the initialization since the `cachingCost` balancing strategy involves much computing to build itself.|false|
-|`druid.coordinator.loadqueuepeon.repeatDelay`|The start and repeat delay for the `loadqueuepeon`, which manages the load and drop of segments.|`PT0.050S` (50 ms)|
+|`druid.coordinator.loadqueuepeon.http.repeatDelay`|The start and repeat delay (in milliseconds) for the load queue peon, which manages the load/drop queue of segments for any server.|1 minute|
+|`druid.coordinator.loadqueuepeon.http.batchSize`|Number of segment load/drop requests to batch in one HTTP request. Note that it must be smaller than `druid.segmentCache.numLoadingThreads` config on Historical service.|1|
 |`druid.coordinator.asOverlord.enabled`|Boolean value for whether this Coordinator service should act like an Overlord as well. This configuration allows users to simplify a Druid cluster by not having to deploy any standalone Overlord services. If set to true, then Overlord console is available at `http://coordinator-host:port/console.html` and be sure to set `druid.coordinator.asOverlord.overlordService` also.|false|
 |`druid.coordinator.asOverlord.overlordService`| Required, if `druid.coordinator.asOverlord.enabled` is `true`. This must be same value as `druid.service` on standalone Overlord services and `druid.selectors.indexing.serviceName` on Middle Managers.|NULL|
-|`druid.centralizedDatasourceSchema.enabled`|Boolean flag for enabling datasource schema building on the Coordinator. Note, when using MiddleManager to launch task, set `druid.indexer.fork.property.druid.centralizedDatasourceSchema.enabled` in MiddleManager runtime config. |false|
 
 ##### Metadata management
 
@@ -899,20 +916,16 @@ These Coordinator static configurations can be defined in the `coordinator/runti
 |`druid.coordinator.kill.datasource.on`| Boolean value for whether to enable automatic deletion of datasource metadata (Note: datasource metadata only exists for datasource created from supervisor). If set to true, Coordinator will periodically remove datasource metadata of terminated supervisor from the datasource table in metadata storage.  | No | True|
 |`druid.coordinator.kill.datasource.period`| How often to do automatic deletion of datasource metadata in [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) duration format. Value must be equal to or greater than  `druid.coordinator.period.metadataStoreManagementPeriod`. Only applies if `druid.coordinator.kill.datasource.on` is set to true.| No| `P1D`|
 |`druid.coordinator.kill.datasource.durationToRetain`| Duration of datasource metadata to be retained from created time in [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) duration format. Only applies if `druid.coordinator.kill.datasource.on` is set to true.| Yes if `druid.coordinator.kill.datasource.on` is set to true.| `P90D`|
+|`druid.coordinator.kill.segmentSchema.on`| Boolean value for whether to enable automatic deletion of unused segment schemas. If set to true, Coordinator will periodically identify segment schemas which are not referenced by any used segment and mark them as unused. At a later point, these unused schemas are deleted. Only applies if [Centralized Datasource schema](#centralized-datasource-schema) feature is enabled. | No | True|
+|`druid.coordinator.kill.segmentSchema.period`| How often to do automatic deletion of segment schemas in [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) duration format. Value must be equal to or greater than `druid.coordinator.period.metadataStoreManagementPeriod`. Only applies if `druid.coordinator.kill.segmentSchema.on` is set to true.| No| `P1D`|
+|`druid.coordinator.kill.segmentSchema.durationToRetain`| Duration of segment schemas to be retained from the time it was marked as unused in [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) duration format. Only applies if `druid.coordinator.kill.segmentSchema.on` is set to true.| Yes, if `druid.coordinator.kill.segmentSchema.on` is set to true.| `P90D`|
 
 ##### Segment management
 
 |Property|Possible values|Description|Default|
 |--------|---------------|-----------|-------|
 |`druid.serverview.type`|batch or http|Segment discovery method to use. "http" enables discovering segments using HTTP instead of ZooKeeper.|http|
-|`druid.coordinator.loadqueuepeon.type`|curator or http|Implementation to use to assign segment loads and drops to historicals. Curator-based implementation is now deprecated, so you should transition to using HTTP-based segment assignments.|http|
 |`druid.coordinator.segment.awaitInitializationOnStart`|true or false|Whether the Coordinator will wait for its view of segments to fully initialize before starting up. If set to 'true', the Coordinator's HTTP server will not start up, and the Coordinator will not announce itself as available, until the server view is initialized.|true|
-
-###### Additional config when "http" loadqueuepeon is used
-
-|Property|Description|Default|
-|--------|-----------|-------|
-|`druid.coordinator.loadqueuepeon.http.batchSize`|Number of segment load/drop requests to batch in one HTTP request. Note that it must be smaller than `druid.segmentCache.numLoadingThreads` config on Historical service.|1|
 
 ##### Metadata retrieval
 
@@ -1113,6 +1126,7 @@ These Overlord static configurations can be defined in the `overlord/runtime.pro
 |`druid.indexer.queue.startDelay`|Sleep this long before starting Overlord queue management. This can be useful to give a cluster time to re-orient itself (for example, after a widespread network issue).|`PT1M`|
 |`druid.indexer.queue.restartDelay`|Sleep this long when Overlord queue management throws an exception before trying again.|`PT30S`|
 |`druid.indexer.queue.storageSyncRate`|Sync Overlord state this often with an underlying task persistence mechanism.|`PT1M`|
+|`druid.indexer.queue.maxTaskPayloadSize`|Maximum allowed size in bytes of a single task payload accepted by the Overlord.|none (allow all task payload sizes)|
 
 The following configs only apply if the Overlord is running in remote mode. For a description of local vs. remote mode, see [Overlord service](../design/overlord.md).
 
@@ -1435,7 +1449,7 @@ MiddleManagers pass their configurations down to their child peons. The MiddleMa
 |`druid.worker.baseTaskDirs`|List of base temporary working directories, one of which is assigned per task in a round-robin fashion. This property can be used to allow usage of multiple disks for indexing. This property is recommended in place of and takes precedence over `${druid.indexer.task.baseTaskDir}`.  If this configuration is not set, `${druid.indexer.task.baseTaskDir}` is used. For example, `druid.worker.baseTaskDirs=[\"PATH1\",\"PATH2\",...]`.|null|
 |`druid.worker.baseTaskDirSize`|The total amount of bytes that can be used by tasks on any single task dir. This value is treated symmetrically across all directories, that is, if this is 500 GB and there are 3 `baseTaskDirs`, then each of those task directories is assumed to allow for 500 GB to be used and a total of 1.5 TB will potentially be available across all tasks. The actual amount of memory assigned to each task is discussed in [Configuring task storage sizes](../ingestion/tasks.md#configuring-task-storage-sizes)|`Long.MAX_VALUE`|
 |`druid.worker.category`|A string to name the category that the MiddleManager node belongs to.|`_default_worker_category`|
-|`druid.indexer.fork.property.druid.centralizedDatasourceSchema.enabled`| This config should be set when CentralizedDatasourceSchema feature is enabled. |false| 
+|`druid.indexer.fork.property.druid.centralizedDatasourceSchema.enabled`| This config should be set when [Centralized Datasource Schema](#centralized-datasource-schema) feature is enabled. |false| 
 
 #### Peon processing
 
@@ -1653,7 +1667,6 @@ These Historical configurations can be defined in the `historical/runtime.proper
 |`druid.segmentCache.numLoadingThreads`|How many segments to drop or load concurrently from deep storage. Note that the work of loading segments involves downloading segments from deep storage, decompressing them and loading them to a memory mapped location. So the work is not all I/O Bound. Depending on CPU and network load, one could possibly increase this config to a higher value.|max(1,Number of cores / 6)|
 |`druid.segmentCache.numBootstrapThreads`|How many segments to load concurrently during historical startup.|`druid.segmentCache.numLoadingThreads`|
 |`druid.segmentCache.lazyLoadOnStart`|Whether or not to load segment columns metadata lazily during historical startup. When set to true, Historical startup time will be dramatically improved by deferring segment loading until the first time that segment takes part in a query, which will incur this cost instead.|false|
-|`druid.coordinator.loadqueuepeon.curator.numCallbackThreads`|Number of threads for executing callback actions associated with loading or dropping of segments. One might want to increase this number when noticing clusters are lagging behind w.r.t. balancing segments across historical nodes.|2|
 |`druid.segmentCache.numThreadsToLoadSegmentsIntoPageCacheOnDownload`|Number of threads to asynchronously read segment index files into null output stream on each new segment download after the Historical service finishes bootstrapping. Recommended to set to 1 or 2 or leave unspecified to disable. See also `druid.segmentCache.numThreadsToLoadSegmentsIntoPageCacheOnBootstrap`|0|
 |`druid.segmentCache.numThreadsToLoadSegmentsIntoPageCacheOnBootstrap`|Number of threads to asynchronously read segment index files into null output stream during Historical service bootstrap. This thread pool is terminated after Historical service finishes bootstrapping. Recommended to set to half of available cores. If left unspecified, `druid.segmentCache.numThreadsToLoadSegmentsIntoPageCacheOnDownload` will be used. If both configs are unspecified, this feature is disabled. Preemptively loading segments into page cache helps in the sense that later when a segment is queried, it's already in page cache and only a minor page fault needs to be triggered instead of a more costly major page fault to make the query latency more consistent. Note that loading segment into page cache just does a blind loading of segment index files and will evict any existing segments from page cache at the discretion of operating system when the total segment size on local disk is larger than the page cache usable in the RAM, which roughly equals to total available RAM in the host - druid process memory including both heap and direct memory allocated - memory used by other non druid processes on the host, so it is the user's responsibility to ensure the host has enough RAM to host all the segments to avoid random evictions to fully leverage this feature.|`druid.segmentCache.numThreadsToLoadSegmentsIntoPageCacheOnDownload`|
 

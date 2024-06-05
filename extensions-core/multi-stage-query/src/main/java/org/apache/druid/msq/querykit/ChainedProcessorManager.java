@@ -111,7 +111,7 @@ public class ChainedProcessorManager<A, B, R> implements ProcessorManager<Object
     );
   }
 
-  private synchronized void checkFirstProcessorComplete()
+  private void checkFirstProcessorComplete()
   {
     if (first == null && (firstProcessorResult.size() == firstProcessorCount.get())) {
       restFuture.set(restFactory.apply(firstProcessorResult));

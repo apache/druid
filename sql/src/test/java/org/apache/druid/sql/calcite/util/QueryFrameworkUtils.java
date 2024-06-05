@@ -38,7 +38,7 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.segment.join.JoinableFactory;
-import org.apache.druid.segment.loading.SegmentLoader;
+import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.QueryStackTests;
@@ -219,7 +219,7 @@ public class QueryFrameworkUtils
         new NoopServiceEmitter(),
         new PhysicalDatasourceMetadataFactory(
             createDefaultJoinableFactory(injector),
-            new SegmentManager(EasyMock.createMock(SegmentLoader.class))
+            new SegmentManager(EasyMock.createMock(SegmentCacheManager.class))
             {
               @Override
               public Set<String> getDataSourceNames()

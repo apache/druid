@@ -19,6 +19,7 @@
 
 package org.apache.druid.msq.kernel.controller;
 
+import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -28,6 +29,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.msq.exec.Limits;
+import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
 import org.apache.druid.msq.indexing.error.MSQFault;
 import org.apache.druid.msq.indexing.error.UnknownFault;
 import org.apache.druid.msq.input.InputSpecSlicerFactory;
@@ -47,15 +49,28 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 public class BaseControllerQueryKernelTest extends InitializedNullHandlingTest
 {
   public static final UnknownFault RETRIABLE_FAULT = UnknownFault.forMessage("");
 
-  public ControllerQueryKernelTester testControllerQueryKernel(int numWorkers)
+  public ControllerQueryKernelTester testControllerQueryKernel()
   {
-    return new ControllerQueryKernelTester(numWorkers);
+    return testControllerQueryKernel(ControllerQueryKernelConfig.Builder::build);
+  }
+
+  public ControllerQueryKernelTester testControllerQueryKernel(
+      final Function<ControllerQueryKernelConfig.Builder, ControllerQueryKernelConfig> configFn
+  )
+  {
+    return new ControllerQueryKernelTester(
+        configFn.apply(
+            ControllerQueryKernelConfig
+                .builder()
+                .maxRetainedPartitionSketchBytes(100_000_000)
+                .destination(TaskReportMSQDestination.instance())
+        )
+    );
   }
 
   /**
@@ -69,33 +84,28 @@ public class BaseControllerQueryKernelTest extends InitializedNullHandlingTest
     private boolean initialized = false;
     private QueryDefinition queryDefinition = null;
     private ControllerQueryKernel controllerQueryKernel = null;
-    private InputSpecSlicerFactory inputSlicerFactory =
-        stagePartitionsMap ->
+    private final InputSpecSlicerFactory inputSlicerFactory =
+        (stagePartitionsMap, stageOutputChannelModeMap) ->
             new MapInputSpecSlicer(
                 ImmutableMap.of(
-                    StageInputSpec.class, new StageInputSpecSlicer(stagePartitionsMap),
+                    StageInputSpec.class, new StageInputSpecSlicer(stagePartitionsMap, stageOutputChannelModeMap),
                     ControllerTestInputSpec.class, new ControllerTestInputSpecSlicer()
                 )
             );
-    private final int numWorkers;
+    private final ControllerQueryKernelConfig config;
     Set<Integer> setupStages = new HashSet<>();
 
-    private ControllerQueryKernelTester(int numWorkers)
+    private ControllerQueryKernelTester(ControllerQueryKernelConfig config)
     {
-      this.numWorkers = numWorkers;
+      this.config = config;
     }
 
     public ControllerQueryKernelTester queryDefinition(QueryDefinition queryDefinition)
     {
       this.queryDefinition = Preconditions.checkNotNull(queryDefinition);
-      this.controllerQueryKernel = new ControllerQueryKernel(
-          queryDefinition,
-          100_000_000,
-          true
-      );
+      this.controllerQueryKernel = new ControllerQueryKernel(queryDefinition, config);
       return this;
     }
-
 
     public ControllerQueryKernelTester setupStage(
         int stageNumber,
@@ -275,11 +285,17 @@ public class BaseControllerQueryKernelTest extends InitializedNullHandlingTest
     {
       StageId stageId = new StageId(queryDefinition.getQueryId(), stageNumber);
       Preconditions.checkArgument(initialized);
-      IntStream.range(0, queryDefinition.getStageDefinition(stageId).getMaxWorkerCount())
-               .forEach(n -> controllerQueryKernel.workOrdersSentForWorker(stageId, n));
-
+      controllerQueryKernel.getWorkerInputsForStage(stageId).workers()
+                           .forEach(n -> controllerQueryKernel.workOrdersSentForWorker(stageId, n));
     }
 
+    public void doneReadingInput(int stageNumber)
+    {
+      StageId stageId = new StageId(queryDefinition.getQueryId(), stageNumber);
+      Preconditions.checkArgument(initialized);
+      controllerQueryKernel.getWorkerInputsForStage(stageId).workers()
+                           .forEach(n -> controllerQueryKernel.setDoneReadingInputForStageAndWorker(stageId, n));
+    }
 
     public void finishStage(int stageNumber)
     {
@@ -353,20 +369,25 @@ public class BaseControllerQueryKernelTest extends InitializedNullHandlingTest
     public void assertStagePhase(int stageNumber, ControllerStagePhase expectedControllerStagePhase)
     {
       Preconditions.checkArgument(initialized);
-      ControllerStageTracker controllerStageTracker = Preconditions.checkNotNull(
-          controllerQueryKernel.getControllerStageKernel(stageNumber),
+      ControllerStageTracker controllerStageKernel = Preconditions.checkNotNull(
+          controllerQueryKernel.getControllerStageTracker(stageNumber),
           StringUtils.format("Stage kernel for stage number %d is not initialized yet", stageNumber)
       );
-      if (controllerStageTracker.getPhase() != expectedControllerStagePhase) {
+      if (controllerStageKernel.getPhase() != expectedControllerStagePhase) {
         throw new ISE(
             StringUtils.format(
                 "Stage kernel for stage number %d is in %s phase which is different from the expected phase %s",
                 stageNumber,
-                controllerStageTracker.getPhase(),
+                controllerStageKernel.getPhase(),
                 expectedControllerStagePhase
             )
         );
       }
+    }
+
+    public ControllerQueryKernelConfig getConfig()
+    {
+      return config;
     }
 
     /**

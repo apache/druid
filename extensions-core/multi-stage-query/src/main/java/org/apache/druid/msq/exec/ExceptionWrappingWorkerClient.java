@@ -60,25 +60,23 @@ public class ExceptionWrappingWorkerClient implements WorkerClient
   @Override
   public ListenableFuture<ClusterByStatisticsSnapshot> fetchClusterByStatisticsSnapshot(
       String workerTaskId,
-      String queryId,
-      int stageNumber
+      StageId stageId
   )
   {
-    return wrap(workerTaskId, client, c -> c.fetchClusterByStatisticsSnapshot(workerTaskId, queryId, stageNumber));
+    return wrap(workerTaskId, client, c -> c.fetchClusterByStatisticsSnapshot(workerTaskId, stageId));
   }
 
   @Override
   public ListenableFuture<ClusterByStatisticsSnapshot> fetchClusterByStatisticsSnapshotForTimeChunk(
       String workerTaskId,
-      String queryId,
-      int stageNumber,
+      StageId stageId,
       long timeChunk
   )
   {
     return wrap(
         workerTaskId,
         client,
-        c -> c.fetchClusterByStatisticsSnapshotForTimeChunk(workerTaskId, queryId, stageNumber, timeChunk)
+        c -> c.fetchClusterByStatisticsSnapshotForTimeChunk(workerTaskId, stageId, timeChunk)
     );
   }
 

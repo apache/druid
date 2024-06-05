@@ -290,7 +290,7 @@ public class SuperSorterTest
           maxBytesPerFrame
       ) : new FileOutputChannelFactory(tempFolder, maxBytesPerFrame, null);
       final RowKeyReader keyReader = clusterBy.keyReader(signature);
-      final Comparator<RowKey> keyComparator = clusterBy.keyComparator();
+      final Comparator<RowKey> keyComparator = clusterBy.keyComparator(signature);
       final SettableFuture<ClusterByPartitions> clusterByPartitionsFuture = SettableFuture.create();
       final SuperSorterProgressTracker superSorterProgressTracker = new SuperSorterProgressTracker();
 

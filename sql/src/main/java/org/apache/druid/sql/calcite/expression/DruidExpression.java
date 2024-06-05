@@ -26,6 +26,9 @@ import com.google.common.io.BaseEncoding;
 import com.google.common.primitives.Chars;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.druid.math.expr.Expr;
+import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
@@ -178,6 +181,19 @@ public class DruidExpression
         Collections.emptyList(),
         null
     );
+  }
+
+  /**
+   * Create a literal expression from an {@link ExprEval}.
+   */
+  public static DruidExpression ofLiteral(final DruidLiteral literal)
+  {
+    if (literal.type() != null && literal.type().is(ExprType.STRING)) {
+      return ofStringLiteral((String) literal.value());
+    } else {
+      final ColumnType evalColumnType = literal.type() != null ? ExpressionType.toColumnType(literal.type()) : null;
+      return ofLiteral(evalColumnType, ExprEval.ofType(literal.type(), literal.value()).toExpr().stringify());
+    }
   }
 
   public static DruidExpression ofStringLiteral(final String s)

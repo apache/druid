@@ -73,7 +73,7 @@ public class TaskReportSerdeTest
   @Test
   public void testSerdeOfKillTaskReport() throws Exception
   {
-    KillTaskReport originalReport = new KillTaskReport("taskId", new KillTaskReport.Stats(1, 2, 3));
+    KillTaskReport originalReport = new KillTaskReport("taskId", new KillTaskReport.Stats(1, 2));
     String reportJson = jsonMapper.writeValueAsString(originalReport);
     TaskReport deserialized = jsonMapper.readValue(reportJson, TaskReport.class);
 
@@ -81,6 +81,7 @@ public class TaskReportSerdeTest
 
     KillTaskReport deserializedReport = (KillTaskReport) deserialized;
     Assert.assertEquals(originalReport, deserializedReport);
+    Assert.assertEquals(originalReport.hashCode(), deserializedReport.hashCode());
   }
 
   @Test

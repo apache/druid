@@ -54,7 +54,6 @@ public class DruidJoinRule extends ConverterRule
       // reject the query in case the anaysis detected any issues
       throw InvalidSqlInput.exception(analysis.errorStr);
     }
-
     return new DruidJoin(
         join.getCluster(),
         newTrait,
@@ -67,7 +66,7 @@ public class DruidJoinRule extends ConverterRule
             join.getRight(),
             DruidLogicalConvention.instance()
         ),
-        join.getCondition(),
+        analysis.getConditionWithUnsupportedSubConditionsIgnored(join.getCluster().getRexBuilder()),
         join.getVariablesSet(),
         join.getJoinType()
     );

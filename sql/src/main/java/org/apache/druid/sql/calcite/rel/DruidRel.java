@@ -19,14 +19,19 @@
 
 package org.apache.druid.sql.calcite.rel;
 
+import com.google.common.collect.Iterables;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelTraitSet;
+import org.apache.calcite.plan.volcano.RelSubset;
 import org.apache.calcite.rel.AbstractRelNode;
+import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.RelShuttleImpl;
 import org.apache.calcite.rel.RelWriter;
 import org.apache.druid.server.QueryResponse;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 import javax.annotation.Nullable;
+
 import java.util.Set;
 
 public abstract class DruidRel<T extends DruidRel<?>> extends AbstractRelNode
@@ -122,4 +127,31 @@ public abstract class DruidRel<T extends DruidRel<?>> extends AbstractRelNode
    * Get the set of names of table datasources read by this DruidRel
    */
   public abstract Set<String> getDataSourceNames();
+
+  public final RelNode unwrapLogicalPlan()
+  {
+    return accept(new LogicalPlanUnwrapperShuttle());
+  }
+
+  private static class LogicalPlanUnwrapperShuttle extends RelShuttleImpl
+  {
+    @Override
+    public RelNode visit(RelNode other)
+    {
+      return super.visit(visitNode(other));
+    }
+
+    private RelNode visitNode(RelNode other)
+    {
+      if (other instanceof RelSubset) {
+        final RelSubset subset = (RelSubset) other;
+        return visitNode(Iterables.getFirst(subset.getRels(), null));
+      }
+      if (other instanceof DruidRel<?>) {
+        DruidRel<?> druidRel = (DruidRel<?>) other;
+        return druidRel.getPartialDruidQuery().leafRel();
+      }
+      return other;
+    }
+  }
 }

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, ButtonGroup, Intent, Label, MenuItem } from '@blueprintjs/core';
+import { Button, ButtonGroup, Intent, Label, MenuItem, Tag } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 import type { Filter } from 'react-table';
@@ -65,7 +65,6 @@ const taskTableColumns: string[] = [
   'Created time',
   'Duration',
   'Location',
-  ACTION_COLUMN_LABEL,
 ];
 
 interface TaskQueryResultRow {
@@ -310,7 +309,9 @@ ORDER BY
           this.taskQueryManager.rerunLastQuery();
         }}
       >
-        <p>{`Are you sure you want to kill task '${killTaskId}'?`}</p>
+        <p>
+          Are you sure you want to kill task <Tag minimal>{killTaskId}</Tag>?
+        </p>
       </AsyncActionDialog>
     );
   }
@@ -494,6 +495,7 @@ ORDER BY
             accessor: 'task_id',
             width: ACTION_COLUMN_WIDTH,
             filterable: false,
+            sortable: false,
             Cell: row => {
               if (row.aggregated) return '';
               const id = row.value;
@@ -507,7 +509,6 @@ ORDER BY
               );
             },
             Aggregated: () => '',
-            show: visibleColumns.shown(ACTION_COLUMN_LABEL),
           },
         ]}
       />

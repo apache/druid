@@ -61,6 +61,8 @@ public class CgroupMemoryMonitorTest
     FileUtils.mkdirp(memoryDir);
     TestUtils.copyResource("/memory.stat", new File(memoryDir, "memory.stat"));
     TestUtils.copyResource("/memory.numa_stat", new File(memoryDir, "memory.numa_stat"));
+    TestUtils.copyResource("/memory.usage_in_bytes", new File(memoryDir, "memory.usage_in_bytes"));
+    TestUtils.copyResource("/memory.limit_in_bytes", new File(memoryDir, "memory.limit_in_bytes"));
   }
 
   @Test
@@ -70,6 +72,6 @@ public class CgroupMemoryMonitorTest
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     Assert.assertTrue(monitor.doMonitor(emitter));
     final List<Event> actualEvents = emitter.getEvents();
-    Assert.assertEquals(44, actualEvents.size());
+    Assert.assertEquals(46, actualEvents.size());
   }
 }

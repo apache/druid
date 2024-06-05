@@ -26,6 +26,7 @@ import org.junit.Assert;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 
 public class TestUtils
 {
@@ -65,7 +66,7 @@ public class TestUtils
 
   public static void copyOrReplaceResource(String resource, File out) throws IOException
   {
-    Files.copy(TestUtils.class.getResourceAsStream(resource), out.toPath());
+    Files.copy(TestUtils.class.getResourceAsStream(resource), out.toPath(), StandardCopyOption.REPLACE_EXISTING);
     Assert.assertTrue(out.exists());
     Assert.assertNotEquals(0, out.length());
   }

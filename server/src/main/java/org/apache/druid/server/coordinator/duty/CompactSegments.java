@@ -376,17 +376,16 @@ public class CompactSegments implements CoordinatorCustomDuty
       // As these segments will be compacted, we will aggregate the statistic to the Compacted statistics
       AutoCompactionSnapshot.Builder snapshotBuilder = currentRunAutoCompactionSnapshotBuilders.computeIfAbsent(
           dataSourceName,
-          k -> new AutoCompactionSnapshot.Builder(k, AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING)
+          AutoCompactionSnapshot::builder
       );
-      snapshotBuilder.incrementBytesCompacted(
-          segmentsToCompact.stream().mapToLong(DataSegment::getSize).sum()
-      );
-      snapshotBuilder.incrementIntervalCountCompacted(
-          segmentsToCompact.stream()
-                           .map(DataSegment::getInterval)
-                           .distinct().count()
-      );
-      snapshotBuilder.incrementSegmentCountCompacted(segmentsToCompact.size());
+      snapshotBuilder
+          .incrementBytesCompacted(
+              segmentsToCompact.stream().mapToLong(DataSegment::getSize).sum()
+          )
+          .incrementIntervalCountCompacted(
+              segmentsToCompact.stream().map(DataSegment::getInterval).distinct().count()
+          )
+          .incrementSegmentCountCompacted(segmentsToCompact.size());
 
       final DataSourceCompactionConfig config = compactionConfigs.get(dataSourceName);
 
@@ -519,20 +518,16 @@ public class CompactSegments implements CoordinatorCustomDuty
         final String dataSourceName = segmentsToCompact.get(0).getDataSource();
         AutoCompactionSnapshot.Builder snapshotBuilder = currentRunAutoCompactionSnapshotBuilders.computeIfAbsent(
             dataSourceName,
-            k -> new AutoCompactionSnapshot.Builder(k, AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING)
+            AutoCompactionSnapshot::builder
         );
-        snapshotBuilder.incrementBytesAwaitingCompaction(
-            segmentsToCompact.stream()
-                             .mapToLong(DataSegment::getSize)
-                             .sum()
-        );
-        snapshotBuilder.incrementIntervalCountAwaitingCompaction(
-            segmentsToCompact.stream()
-                             .map(DataSegment::getInterval)
-                             .distinct()
-                             .count()
-        );
-        snapshotBuilder.incrementSegmentCountAwaitingCompaction(segmentsToCompact.size());
+        snapshotBuilder
+            .incrementBytesAwaitingCompaction(
+                segmentsToCompact.stream().mapToLong(DataSegment::getSize).sum()
+            )
+            .incrementIntervalCountAwaitingCompaction(
+                segmentsToCompact.stream().map(DataSegment::getInterval).distinct().count()
+            )
+            .incrementSegmentCountAwaitingCompaction(segmentsToCompact.size());
       }
     }
 
@@ -543,7 +538,7 @@ public class CompactSegments implements CoordinatorCustomDuty
       final CompactionStatistics dataSourceCompactedStatistics = compactionStatisticsEntry.getValue();
       AutoCompactionSnapshot.Builder builder = currentRunAutoCompactionSnapshotBuilders.computeIfAbsent(
           dataSource,
-          k -> new AutoCompactionSnapshot.Builder(k, AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING)
+          AutoCompactionSnapshot::builder
       );
       builder.incrementBytesCompacted(dataSourceCompactedStatistics.getTotalBytes());
       builder.incrementSegmentCountCompacted(dataSourceCompactedStatistics.getNumSegments());
@@ -557,11 +552,11 @@ public class CompactSegments implements CoordinatorCustomDuty
       final CompactionStatistics dataSourceSkippedStatistics = compactionStatisticsEntry.getValue();
       AutoCompactionSnapshot.Builder builder = currentRunAutoCompactionSnapshotBuilders.computeIfAbsent(
           dataSource,
-          k -> new AutoCompactionSnapshot.Builder(k, AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING)
+          AutoCompactionSnapshot::builder
       );
-      builder.incrementBytesSkipped(dataSourceSkippedStatistics.getTotalBytes());
-      builder.incrementSegmentCountSkipped(dataSourceSkippedStatistics.getNumSegments());
-      builder.incrementIntervalCountSkipped(dataSourceSkippedStatistics.getNumIntervals());
+      builder.incrementBytesSkipped(dataSourceSkippedStatistics.getTotalBytes())
+             .incrementSegmentCountSkipped(dataSourceSkippedStatistics.getNumSegments())
+             .incrementIntervalCountSkipped(dataSourceSkippedStatistics.getNumIntervals());
     }
 
     final Map<String, AutoCompactionSnapshot> currentAutoCompactionSnapshotPerDataSource = new HashMap<>();

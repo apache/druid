@@ -25,9 +25,15 @@ import { MenuCheckbox } from '../menu-checkbox/menu-checkbox';
 
 import './table-column-selector.scss';
 
+export type TableColumnSelectorColumn = string | { text: string; label: string };
+
+function getColumnName(c: TableColumnSelectorColumn) {
+  return typeof c === 'string' ? c : c.text;
+}
+
 interface TableColumnSelectorProps {
-  columns: string[];
-  onChange: (column: string) => void;
+  columns: TableColumnSelectorColumn[];
+  onChange: (columnName: string) => void;
   onClose?: (added: number) => void;
   tableColumnsHidden: string[];
 }
@@ -38,23 +44,28 @@ export const TableColumnSelector = React.memo(function TableColumnSelector(
   const { columns, onChange, onClose, tableColumnsHidden } = props;
   const [added, setAdded] = useState(0);
 
-  const isColumnShown = (column: string) => !tableColumnsHidden.includes(column);
+  const isColumnShown = (column: TableColumnSelectorColumn) =>
+    !tableColumnsHidden.includes(getColumnName(column));
 
   const checkboxes = (
     <Menu className="table-column-selector-menu">
-      {columns.map(column => (
-        <MenuCheckbox
-          text={column}
-          key={column}
-          checked={isColumnShown(column)}
-          onChange={() => {
-            if (!isColumnShown(column)) {
-              setAdded(added + 1);
-            }
-            onChange(column);
-          }}
-        />
-      ))}
+      {columns.map(column => {
+        const columnName = getColumnName(column);
+        return (
+          <MenuCheckbox
+            text={columnName}
+            label={typeof column === 'string' ? undefined : column.label}
+            key={columnName}
+            checked={isColumnShown(column)}
+            onChange={() => {
+              if (!isColumnShown(column)) {
+                setAdded(added + 1);
+              }
+              onChange(columnName);
+            }}
+          />
+        );
+      })}
     </Menu>
   );
 

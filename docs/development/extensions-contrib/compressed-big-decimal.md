@@ -34,7 +34,7 @@ Compressed big decimal is an absolute number based complex type based on big dec
 2. Accuracy: Provides greater level of accuracy in decimal arithmetic
 
 ## Operations
-To use this extension, make sure to [load](../../configuration/extensions.md#loading-extensions) `compressed-big-decimal` to your config file.
+To use this extension, make sure to [load](../../configuration/extensions.md#loading-extensions) `druid-compressed-bigdecimal` to your config file.
 
 ## Configuration
 There are currently no configuration properties specific to Compressed Big Decimal

@@ -20,6 +20,7 @@
 package org.apache.druid.math.expr;
 
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.filter.DruidDoublePredicate;
 import org.apache.druid.query.filter.DruidFloatPredicate;
 import org.apache.druid.query.filter.DruidLongPredicate;
@@ -75,8 +76,32 @@ public class ExpressionPredicateIndexSupplier implements ColumnIndexSupplier
     @Override
     public BitmapColumnIndex forPredicate(DruidPredicateFactory matcherFactory)
     {
-      final java.util.function.Function<Object, ExprEval<?>> evalFunction =
-          inputValue -> expr.eval(InputBindings.forInputSupplier(inputColumn, inputType, () -> inputValue));
+      final java.util.function.Function<Object, ExprEval<?>> evalFunction;
+
+      if (NullHandling.sqlCompatible()) {
+        evalFunction =
+            inputValue -> expr.eval(InputBindings.forInputSupplier(inputColumn, inputType, () -> inputValue));
+      } else {
+        switch (inputType.getType()) {
+          case LONG:
+            evalFunction =
+                inputValue -> expr.eval(
+                    InputBindings.forInputSupplier(inputColumn, inputType, () -> inputValue == null ? 0L : inputValue)
+                );
+            break;
+
+          case DOUBLE:
+            evalFunction =
+                inputValue -> expr.eval(
+                    InputBindings.forInputSupplier(inputColumn, inputType, () -> inputValue == null ? 0.0 : inputValue)
+                );
+            break;
+
+          default:
+            evalFunction =
+                inputValue -> expr.eval(InputBindings.forInputSupplier(inputColumn, inputType, () -> inputValue));
+        }
+      }
 
       return new DictionaryScanningBitmapIndex(inputColumnIndexes.getCardinality())
       {

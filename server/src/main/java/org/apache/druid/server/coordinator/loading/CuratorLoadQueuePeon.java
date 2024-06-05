@@ -28,13 +28,13 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordination.SegmentChangeRequestNoop;
 import org.apache.druid.server.coordinator.DruidCoordinator;
-import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.data.Stat;
+import org.joda.time.Duration;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -47,6 +47,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Use {@link HttpLoadQueuePeon} instead.
@@ -72,10 +73,10 @@ public class CuratorLoadQueuePeon implements LoadQueuePeon
    * with loading or dropping segments.
    */
   private final ExecutorService callBackExecutor;
-  private final DruidCoordinatorConfig config;
+  private final Duration loadTimeout;
 
   private final AtomicLong queuedSize = new AtomicLong(0);
-  private final CoordinatorRunStats stats = new CoordinatorRunStats();
+  private final AtomicReference<CoordinatorRunStats> stats = new AtomicReference<>(new CoordinatorRunStats());
 
   /**
    * Needs to be thread safe since it can be concurrently accessed via
@@ -116,7 +117,7 @@ public class CuratorLoadQueuePeon implements LoadQueuePeon
       ObjectMapper jsonMapper,
       ScheduledExecutorService processingExecutor,
       ExecutorService callbackExecutor,
-      DruidCoordinatorConfig config
+      Duration loadTimeout
   )
   {
     this.curator = curator;
@@ -124,7 +125,7 @@ public class CuratorLoadQueuePeon implements LoadQueuePeon
     this.jsonMapper = jsonMapper;
     this.callBackExecutor = callbackExecutor;
     this.processingExecutor = processingExecutor;
-    this.config = config;
+    this.loadTimeout = loadTimeout;
   }
 
   @JsonProperty
@@ -172,7 +173,7 @@ public class CuratorLoadQueuePeon implements LoadQueuePeon
   @Override
   public CoordinatorRunStats getAndResetStats()
   {
-    return stats.getSnapshotAndReset();
+    return stats.getAndSet(new CoordinatorRunStats());
   }
 
   @Override
@@ -309,7 +310,7 @@ public class CuratorLoadQueuePeon implements LoadQueuePeon
               failAssign(segmentHolder, false, e);
             }
           },
-          config.getLoadTimeoutDelay().getMillis(),
+          loadTimeout.getMillis(),
           TimeUnit.MILLISECONDS
       );
     }
@@ -360,7 +361,7 @@ public class CuratorLoadQueuePeon implements LoadQueuePeon
 
     timedOutSegments.clear();
     queuedSize.set(0L);
-    stats.clear();
+    stats.get().clear();
   }
 
   private void onZkNodeDeleted(SegmentHolder segmentHolder, String path)
@@ -388,7 +389,7 @@ public class CuratorLoadQueuePeon implements LoadQueuePeon
     if (e != null) {
       log.error(e, "Server[%s], throwable caught when submitting [%s].", basePath, segmentHolder);
     }
-    stats.add(Stats.SegmentQueue.FAILED_ACTIONS, 1);
+    stats.get().add(Stats.SegmentQueue.FAILED_ACTIONS, 1);
 
     if (handleTimeout) {
       // Avoid removing the segment entry from the load/drop list in case config.getLoadTimeoutDelay() expires.

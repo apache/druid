@@ -22,8 +22,11 @@ package org.apache.druid.indexing.overlord.config;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.common.config.Configs;
+import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.joda.time.Duration;
 import org.joda.time.Period;
+
+import javax.annotation.Nullable;
 
 public class TaskQueueConfig
 {
@@ -42,13 +45,17 @@ public class TaskQueueConfig
   @JsonProperty
   private int taskCompleteHandlerNumThreads;
 
+  @JsonProperty
+  private HumanReadableBytes maxTaskPayloadSize;
+
   @JsonCreator
   public TaskQueueConfig(
       @JsonProperty("maxSize") final Integer maxSize,
       @JsonProperty("startDelay") final Period startDelay,
       @JsonProperty("restartDelay") final Period restartDelay,
       @JsonProperty("storageSyncRate") final Period storageSyncRate,
-      @JsonProperty("taskCompleteHandlerNumThreads") final Integer taskCompleteHandlerNumThreads
+      @JsonProperty("taskCompleteHandlerNumThreads") final Integer taskCompleteHandlerNumThreads,
+      @JsonProperty("maxTaskPayloadSize") @Nullable final HumanReadableBytes maxTaskPayloadSize
   )
   {
     this.maxSize = Configs.valueOrDefault(maxSize, Integer.MAX_VALUE);
@@ -56,6 +63,7 @@ public class TaskQueueConfig
     this.startDelay = defaultDuration(startDelay, "PT1M");
     this.restartDelay = defaultDuration(restartDelay, "PT30S");
     this.storageSyncRate = defaultDuration(storageSyncRate, "PT1M");
+    this.maxTaskPayloadSize = maxTaskPayloadSize;
   }
 
   public int getMaxSize()
@@ -81,6 +89,11 @@ public class TaskQueueConfig
   public Duration getStorageSyncRate()
   {
     return storageSyncRate;
+  }
+
+  public HumanReadableBytes getMaxTaskPayloadSize()
+  {
+    return maxTaskPayloadSize;
   }
 
   private static Duration defaultDuration(final Period period, final String theDefault)

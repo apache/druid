@@ -43,6 +43,7 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeSystem;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexExecutor;
+import org.apache.calcite.runtime.Hook;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlOperatorTable;
@@ -234,6 +235,7 @@ public class CalcitePlanner implements Planner, ViewExpander
   @Override
   public SqlNode validate(SqlNode sqlNode) throws ValidationException
   {
+    Hook.PARSE_TREE.run(new Object[] {null, sqlNode});
     ensure(CalcitePlanner.State.STATE_3_PARSED);
     this.validator = createSqlValidator(createCatalogReader());
     try {

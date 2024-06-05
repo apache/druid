@@ -20,6 +20,7 @@
 package org.apache.druid.msq.statistics;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
@@ -39,7 +40,7 @@ public class ClusterByStatisticsSnapshot
   private final Set<Integer> hasMultipleValues;
 
   @JsonCreator
-  ClusterByStatisticsSnapshot(
+  public ClusterByStatisticsSnapshot(
       @JsonProperty("buckets") final Map<Long, Bucket> buckets,
       @JsonProperty("hasMultipleValues") @Nullable final Set<Integer> hasMultipleValues
   )
@@ -54,7 +55,7 @@ public class ClusterByStatisticsSnapshot
   }
 
   @JsonProperty("buckets")
-  Map<Long, Bucket> getBuckets()
+  public Map<Long, Bucket> getBuckets()
   {
     return buckets;
   }
@@ -70,7 +71,7 @@ public class ClusterByStatisticsSnapshot
 
   @JsonProperty("hasMultipleValues")
   @JsonInclude(JsonInclude.Include.NON_EMPTY)
-  Set<Integer> getHasMultipleValues()
+  public Set<Integer> getHasMultipleValues()
   {
     return hasMultipleValues;
   }
@@ -103,14 +104,14 @@ public class ClusterByStatisticsSnapshot
     return Objects.hash(buckets, hasMultipleValues);
   }
 
-  static class Bucket
+  public static class Bucket
   {
     private final RowKey bucketKey;
     private final double bytesRetained;
     private final KeyCollectorSnapshot keyCollectorSnapshot;
 
     @JsonCreator
-    Bucket(
+    public Bucket(
         @JsonProperty("bucketKey") RowKey bucketKey,
         @JsonProperty("data") KeyCollectorSnapshot keyCollectorSnapshot,
         @JsonProperty("bytesRetained") double bytesRetained
@@ -125,6 +126,12 @@ public class ClusterByStatisticsSnapshot
     public RowKey getBucketKey()
     {
       return bucketKey;
+    }
+
+    @JsonIgnore
+    public double getBytesRetained()
+    {
+      return bytesRetained;
     }
 
     @JsonProperty("data")

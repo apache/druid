@@ -51,14 +51,12 @@ import org.apache.druid.query.scan.ScanResultValue;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.DataSegmentsWithSchemas;
 import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.SegmentLazyLoadFailCallback;
+import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.loading.SegmentCacheManager;
-import org.apache.druid.segment.loading.SegmentLoader;
 import org.apache.druid.segment.loading.SegmentLoadingException;
-import org.apache.druid.segment.loading.SegmentLocalCacheLoader;
 import org.apache.druid.segment.loading.TombstoneLoadSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
@@ -305,11 +303,10 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
 
   private Segment loadSegment(DataSegment dataSegment, File tempSegmentDir)
   {
-    final SegmentCacheManager cacheManager = new SegmentCacheManagerFactory(getObjectMapper())
+    final SegmentCacheManager cacheManager = new SegmentCacheManagerFactory(TestIndex.INDEX_IO, getObjectMapper())
         .manufacturate(tempSegmentDir);
-    final SegmentLoader loader = new SegmentLocalCacheLoader(cacheManager, getIndexIO(), getObjectMapper());
     try {
-      return loader.getSegment(dataSegment, false, SegmentLazyLoadFailCallback.NOOP);
+      return cacheManager.getSegment(dataSegment);
     }
     catch (SegmentLoadingException e) {
       throw new RuntimeException(e);

@@ -142,6 +142,8 @@ public class GroupingEngine
    * {@link GroupByMergingQueryRunner} for a particular query. The resources are to be acquired once throughout the
    * execution of the query, or need to be re-acquired (if needed). Users must ensure that throughout the execution,
    * a query already holding the resources shouldn't request for more resources, because that can cause deadlocks.
+   * <p>
+   * This method throws an exception if it is not able to allocate sufficient resources required for the query to succeed
    */
   public static GroupByQueryResources prepareResource(
       GroupByQuery query,

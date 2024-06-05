@@ -18,6 +18,7 @@
 
 import {
   arrangeWithPrefixSuffix,
+  caseInsensitiveEquals,
   formatBytes,
   formatBytesCompact,
   formatInteger,
@@ -194,6 +195,16 @@ describe('general', () => {
         row: 2,
         column: 7,
       });
+    });
+  });
+
+  describe('caseInsensitiveEquals', () => {
+    it('works', () => {
+      expect(caseInsensitiveEquals(undefined, undefined)).toEqual(true);
+      expect(caseInsensitiveEquals(undefined, 'x')).toEqual(false);
+      expect(caseInsensitiveEquals('x', undefined)).toEqual(false);
+      expect(caseInsensitiveEquals('x', 'X')).toEqual(true);
+      expect(caseInsensitiveEquals(undefined, '')).toEqual(false);
     });
   });
 });

@@ -57,7 +57,10 @@ export const FLATTEN_FIELD_FIELDS: Field<FlattenField>[] = [
     info: (
       <>
         Specify a flatten{' '}
-        <ExternalLink href={`${getLink('DOCS')}/ingestion/flatten-json`}>expression</ExternalLink>.
+        <ExternalLink href={`${getLink('DOCS')}/ingestion/data-formats#flattenspec`}>
+          expression
+        </ExternalLink>
+        .
       </>
     ),
   },

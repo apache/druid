@@ -67,12 +67,12 @@ Depending on the size of the results you're expecting, saving the final results 
 
 By default, Druid saves the final results for queries from deep storage to task reports. Generally, this is acceptable for smaller result sets but may lead to timeouts for larger result sets. 
 
-When you run a query, include the context parameter `selectDestination` and set it to `DURABLESTORAGE`:
+When you run a query, include the context parameter `selectDestination` and set it to `durableStorage`:
 
 ```json
     "context":{
         ...
-        "selectDestination": "DURABLESTORAGE"
+        "selectDestination": "durableStorage"
     }
 ```
 

@@ -27,26 +27,27 @@ import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
 
+import java.io.Closeable;
 import java.io.IOException;
 
 /**
- * Client for multi-stage query workers. Used by the controller task.
+ * Client for {@link Worker}. Each instance is scoped to a single query, and can communicate with all workers for
+ * that particular query.
  */
-public interface WorkerClient extends AutoCloseable
+public interface WorkerClient extends Closeable
 {
   /**
    * Worker's client method to add a {@link WorkOrder} to the worker to work on
    */
-  ListenableFuture<Void> postWorkOrder(String workerTaskId, WorkOrder workOrder);
+  ListenableFuture<Void> postWorkOrder(String workerId, WorkOrder workOrder);
 
   /**
    * Fetches the {@link ClusterByStatisticsSnapshot} from a worker. This is intended to be used by the
    * {@link WorkerSketchFetcher} under PARALLEL or AUTO modes.
    */
   ListenableFuture<ClusterByStatisticsSnapshot> fetchClusterByStatisticsSnapshot(
-      String workerTaskId,
-      String queryId,
-      int stageNumber
+      String workerId,
+      StageId stageId
   );
 
   /**
@@ -54,9 +55,8 @@ public interface WorkerClient extends AutoCloseable
    * This is intended to be used by the {@link WorkerSketchFetcher} under SEQUENTIAL or AUTO modes.
    */
   ListenableFuture<ClusterByStatisticsSnapshot> fetchClusterByStatisticsSnapshotForTimeChunk(
-      String workerTaskId,
-      String queryId,
-      int stageNumber,
+      String workerId,
+      StageId stageId,
       long timeChunk
   );
 
@@ -65,28 +65,26 @@ public interface WorkerClient extends AutoCloseable
    * controller after collating the result statistics from all the workers processing the query
    */
   ListenableFuture<Void> postResultPartitionBoundaries(
-      String workerTaskId,
+      String workerId,
       StageId stageId,
       ClusterByPartitions partitionBoundaries
   );
 
   /**
-   * Worker's client method to inform that the work has been done, and it can initiate cleanup and shutdown
-   * @param workerTaskId
+   * Fetches counters from a worker.
    */
-  ListenableFuture<Void> postFinish(String workerTaskId);
-
-  /**
-   * Fetches all the counters gathered by that worker
-   * @param workerTaskId
-   */
-  ListenableFuture<CounterSnapshotsTree> getCounters(String workerTaskId);
+  ListenableFuture<CounterSnapshotsTree> getCounters(String workerId);
 
   /**
    * Worker's client method that informs it that the results and resources for the given stage are no longer required
    * and that they can be cleaned up
    */
-  ListenableFuture<Void> postCleanupStage(String workerTaskId, StageId stageId);
+  ListenableFuture<Void> postCleanupStage(String workerId, StageId stageId);
+
+  /**
+   * Worker's client method to inform that the work has been done, and it can initiate cleanup and shutdown.
+   */
+  ListenableFuture<Void> postFinish(String workerId);
 
   /**
    * Fetch some data from a worker and add it to the provided channel. The exact amount of data is determined
@@ -96,13 +94,16 @@ public interface WorkerClient extends AutoCloseable
    * kind of unrecoverable exception).
    */
   ListenableFuture<Boolean> fetchChannelData(
-      String workerTaskId,
+      String workerId,
       StageId stageId,
       int partitionNumber,
       long offset,
       ReadableByteChunksFrameChannel channel
   );
 
+  /**
+   * Close this client and release resources.
+   */
   @Override
   void close() throws IOException;
 }

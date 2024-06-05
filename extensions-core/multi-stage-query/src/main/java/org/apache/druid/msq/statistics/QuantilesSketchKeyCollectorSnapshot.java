@@ -22,6 +22,8 @@ package org.apache.druid.msq.statistics;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import org.apache.druid.msq.statistics.serde.KeyCollectorSnapshotSerializer;
+import org.apache.druid.msq.statistics.serde.QuantilesSnapshotSerializer;
 
 import java.util.Objects;
 
@@ -70,5 +72,20 @@ public class QuantilesSketchKeyCollectorSnapshot implements KeyCollectorSnapshot
   public int hashCode()
   {
     return Objects.hash(encodedSketch, averageKeyLength);
+  }
+
+  @Override
+  public KeyCollectorSnapshotSerializer getSerializer()
+  {
+    return new QuantilesSnapshotSerializer();
+  }
+
+  @Override
+  public String toString()
+  {
+    return "QuantilesSketchKeyCollectorSnapshot{" +
+           "encodedSketch='" + encodedSketch + '\'' +
+           ", averageKeyLength=" + averageKeyLength +
+           '}';
   }
 }

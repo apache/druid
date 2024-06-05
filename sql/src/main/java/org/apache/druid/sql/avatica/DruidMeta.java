@@ -752,7 +752,7 @@ public class DruidMeta extends MetaImpl
   }
 
   @VisibleForTesting
-  void closeAllConnections()
+  public void closeAllConnections()
   {
     for (String connectionId : ImmutableSet.copyOf(connections.keySet())) {
       closeConnection(new ConnectionHandle(connectionId));

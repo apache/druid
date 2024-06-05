@@ -31,7 +31,7 @@ public class PushedSegmentsReportTest
   {
     TaskReport.ReportMap map1 = new TaskReport.ReportMap();
     TaskReport.ReportMap map2 = new TaskReport.ReportMap();
-    map2.put("killTaskReport", new KillTaskReport("taskId", new KillTaskReport.Stats(1, 2, 3)));
+    map2.put("killTaskReport", new KillTaskReport("taskId", new KillTaskReport.Stats(1, 2)));
 
     EqualsVerifier.forClass(PushedSegmentsReport.class)
                   .usingGetClass()

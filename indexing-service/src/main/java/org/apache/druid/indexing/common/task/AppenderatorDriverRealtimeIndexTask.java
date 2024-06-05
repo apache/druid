@@ -122,6 +122,7 @@ import java.util.concurrent.TimeoutException;
 public class AppenderatorDriverRealtimeIndexTask extends AbstractTask
     implements ChatHandler, PendingSegmentAllocatingTask
 {
+  public static final String TYPE = "index_realtime_appenderator";
   private static final String CTX_KEY_LOOKUP_TIER = "lookupTier";
 
   private static final EmittingLogger log = new EmittingLogger(RealtimeIndexTask.class);
@@ -217,7 +218,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask
   @Override
   public String getType()
   {
-    return "index_realtime_appenderator";
+    return TYPE;
   }
 
   @Override

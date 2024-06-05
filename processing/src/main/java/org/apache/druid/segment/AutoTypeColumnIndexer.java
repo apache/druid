@@ -281,7 +281,7 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
   @Override
   public int getCardinality()
   {
-    return globalDictionary.getCardinality();
+    return DimensionDictionarySelector.CARDINALITY_UNKNOWN;
   }
 
   @Override

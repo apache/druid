@@ -34,11 +34,14 @@ import org.apache.druid.storage.StorageConnectorProvider;
 import org.apache.druid.storage.azure.AzureStorage;
 import org.apache.druid.storage.azure.AzureStorageDruidModule;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.Properties;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class AzureStorageConnectorProviderTest
 {
@@ -55,11 +58,12 @@ public class AzureStorageConnectorProviderTest
     properties.setProperty(CUSTOM_NAMESPACE + ".tempDir", "/tmp");
     StorageConnectorProvider s3StorageConnectorProvider = getStorageConnectorProvider(properties);
 
-    Assert.assertTrue(s3StorageConnectorProvider instanceof AzureStorageConnectorProvider);
-    Assert.assertTrue(s3StorageConnectorProvider.get() instanceof AzureStorageConnector);
-    Assert.assertEquals("container", ((AzureStorageConnectorProvider) s3StorageConnectorProvider).getContainer());
-    Assert.assertEquals("prefix", ((AzureStorageConnectorProvider) s3StorageConnectorProvider).getPrefix());
-    Assert.assertEquals(new File("/tmp"), ((AzureStorageConnectorProvider) s3StorageConnectorProvider).getTempDir());
+    assertInstanceOf(AzureStorageConnectorProvider.class, s3StorageConnectorProvider);
+    assertInstanceOf(AzureStorageConnector.class, s3StorageConnectorProvider.get());
+    assertEquals("container", ((AzureStorageConnectorProvider) s3StorageConnectorProvider).getContainer());
+    assertEquals("prefix", ((AzureStorageConnectorProvider) s3StorageConnectorProvider).getPrefix());
+    assertEquals(new File("/tmp"),
+                            ((AzureStorageConnectorProvider) s3StorageConnectorProvider).getTempDir());
 
   }
 
@@ -71,10 +75,10 @@ public class AzureStorageConnectorProviderTest
     properties.setProperty(CUSTOM_NAMESPACE + ".type", "s3");
     properties.setProperty(CUSTOM_NAMESPACE + ".container", "container");
     properties.setProperty(CUSTOM_NAMESPACE + ".tempDir", "/tmp");
-    Assert.assertThrows(
-        "Missing required creator property 'prefix'",
+    assertThrows(
         ProvisionException.class,
-        () -> getStorageConnectorProvider(properties)
+        () -> getStorageConnectorProvider(properties),
+        "Missing required creator property 'prefix'"
     );
   }
 
@@ -87,10 +91,10 @@ public class AzureStorageConnectorProviderTest
     properties.setProperty(CUSTOM_NAMESPACE + ".type", "azure");
     properties.setProperty(CUSTOM_NAMESPACE + ".prefix", "prefix");
     properties.setProperty(CUSTOM_NAMESPACE + ".tempDir", "/tmp");
-    Assert.assertThrows(
-        "Missing required creator property 'container'",
+    assertThrows(
         ProvisionException.class,
-        () -> getStorageConnectorProvider(properties)
+        () -> getStorageConnectorProvider(properties),
+        "Missing required creator property 'container'"
     );
   }
 
@@ -103,10 +107,10 @@ public class AzureStorageConnectorProviderTest
     properties.setProperty(CUSTOM_NAMESPACE + ".container", "container");
     properties.setProperty(CUSTOM_NAMESPACE + ".prefix", "prefix");
 
-    Assert.assertThrows(
-        "Missing required creator property 'tempDir'",
+    assertThrows(
         ProvisionException.class,
-        () -> getStorageConnectorProvider(properties)
+        () -> getStorageConnectorProvider(properties),
+        "Missing required creator property 'tempDir'"
     );
   }
 

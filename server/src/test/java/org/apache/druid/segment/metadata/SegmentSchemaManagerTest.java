@@ -28,7 +28,7 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.query.aggregation.first.LongFirstAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.first.LongFirstAggregatorFactory;
 import org.apache.druid.segment.SchemaPayload;
 import org.apache.druid.segment.SchemaPayloadPlus;
 import org.apache.druid.segment.TestHelper;

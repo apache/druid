@@ -28,7 +28,8 @@ import {
 } from '@blueprintjs/core';
 import React, { useState } from 'react';
 
-import { type FormJsonTabs, FormJsonSelector, JsonInput, Loader } from '../../components';
+import type { FormJsonTabs } from '../../components';
+import { FormJsonSelector, JsonInput, Loader } from '../../components';
 import { FancyNumericInput } from '../../components/fancy-numeric-input/fancy-numeric-input';
 import type { SupervisorOffsetMap, SupervisorStatus } from '../../druid-models';
 import { useQueryManager } from '../../hooks';

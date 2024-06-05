@@ -895,6 +895,21 @@ public class RangeFilterTests
           : ImmutableList.of("0")
       );
 
+      assertFilterMatches(
+          new RangeFilter(
+              "vd0-nvl-2",
+              ColumnType.DOUBLE,
+              0.0,
+              null,
+              true,
+              false,
+              null
+          ),
+          NullHandling.replaceWithDefault()
+          ? ImmutableList.of("1", "3", "4", "5", "6")
+          : ImmutableList.of("1", "2", "3", "4", "5", "6", "7")
+      );
+
       if (NullHandling.sqlCompatible() || canTestNumericNullsAsDefaultValues) {
         // these fail in default value mode that cannot be tested as numeric default values becuase of type
         // mismatch for subtract operation

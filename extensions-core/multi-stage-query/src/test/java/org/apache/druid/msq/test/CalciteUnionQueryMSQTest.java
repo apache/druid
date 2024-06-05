@@ -40,11 +40,11 @@ import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.CalciteUnionQueryTest;
 import org.apache.druid.sql.calcite.QueryTestBuilder;
+import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -52,7 +52,7 @@ import org.junit.jupiter.api.Test;
 /**
  * Runs {@link CalciteUnionQueryTest} but with MSQ engine
  */
-@SqlTestFramework.SqlTestFrameWorkModule(CalciteUnionQueryMSQTest.UnionQueryMSQComponentSupplier.class)
+@SqlTestFrameworkConfig.ComponentSupplier(CalciteUnionQueryMSQTest.UnionQueryMSQComponentSupplier.class)
 public class CalciteUnionQueryMSQTest extends CalciteUnionQueryTest
 {
 

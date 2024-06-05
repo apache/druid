@@ -65,6 +65,7 @@ import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.topn.DimensionTopNMetricSpec;
 import org.apache.druid.query.topn.TopNQueryBuilder;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinType;
@@ -72,7 +73,6 @@ import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.sql.calcite.CalciteArraysQueryTest.ArraysComponentSupplier;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.sql.http.SqlParameter;
 import org.junit.Assert;
@@ -86,7 +86,7 @@ import java.util.Map;
 /**
  * Tests for array functions and array types
  */
-@SqlTestFramework.SqlTestFrameWorkModule(ArraysComponentSupplier.class)
+@SqlTestFrameworkConfig.ComponentSupplier(ArraysComponentSupplier.class)
 public class CalciteArraysQueryTest extends BaseCalciteQueryTest
 {
   private static final Map<String, Object> QUERY_CONTEXT_UNNEST =
@@ -1353,69 +1353,128 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testScalarInArrayFilter()
   {
-    msqIncompatible();
     testQuery(
-            "SELECT dim2 FROM druid.numfoo WHERE SCALAR_IN_ARRAY(dim2, ARRAY['a', 'd']) LIMIT 5",
-            ImmutableList.of(
-                    newScanQueryBuilder()
-                            .dataSource(CalciteTests.DATASOURCE3)
-                            .intervals(querySegmentSpec(Filtration.eternity()))
-                            .filters(
-                                    new ExpressionDimFilter("scalar_in_array(\"dim2\",array('a','d'))", ExprMacroTable.nil())
-                            )
-                            .columns("dim2")
-                            .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                            .limit(5)
-                            .context(QUERY_CONTEXT_DEFAULT)
-                            .build()
-            ),
-            ImmutableList.of(
-                    new Object[]{"a"},
-                    new Object[]{"a"}
-            )
+        "SELECT dim2 FROM druid.numfoo\n"
+        + "WHERE\n"
+        + "  SCALAR_IN_ARRAY(dim2, ARRAY['a', 'd'])\n"
+        + "  OR SCALAR_IN_ARRAY(SUBSTRING(dim1, 1, 1), ARRAY[NULL, 'foo', 'bar'])\n"
+        + "  OR SCALAR_IN_ARRAY(cnt * 2, ARRAY[3])\n",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(
+                    VirtualColumns.create(
+                        NullHandling.sqlCompatible()
+                        ? ImmutableList.of(
+                            expressionVirtualColumn("v0", "substring(\"dim1\", 0, 1)", ColumnType.STRING),
+                            expressionVirtualColumn("v1", "(\"cnt\" * 2)", ColumnType.LONG)
+                        )
+                        : ImmutableList.of(
+                            expressionVirtualColumn("v0", "(\"cnt\" * 2)", ColumnType.LONG)
+                        )
+                    )
+                )
+                .filters(
+                    NullHandling.sqlCompatible()
+                    ? or(
+                        in("dim2", Arrays.asList("a", "d")),
+                        in("v0", Arrays.asList(null, "foo", "bar")),
+                        in("v1", ColumnType.LONG, Collections.singletonList(3L))
+                    )
+                    : or(
+                        in("dim2", Arrays.asList("a", "d")),
+                        in("dim1", Arrays.asList(null, "foo", "bar"), new SubstringDimExtractionFn(0, 1)),
+                        in("v0", ColumnType.LONG, Collections.singletonList(3L))
+                    )
+                )
+                .columns("dim2")
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"a"},
+            new Object[]{"a"}
+        )
+    );
+  }
+
+  @Test
+  public void testNotScalarInArrayFilter()
+  {
+    testQuery(
+        "SELECT dim2 FROM druid.numfoo\n"
+        + "WHERE NOT SCALAR_IN_ARRAY(dim2, ARRAY['a', 'd'])\n",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .filters(not(in("dim2", Arrays.asList("a", "d"))))
+                .columns("dim2")
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        NullHandling.sqlCompatible()
+        ? ImmutableList.of(
+            new Object[]{""},
+            new Object[]{"abc"}
+        )
+        : ImmutableList.of(
+            new Object[]{""},
+            new Object[]{""},
+            new Object[]{"abc"},
+            new Object[]{""}
+        )
     );
   }
 
   @Test
   public void testArrayScalarInFilter_MVD()
   {
-    msqIncompatible();
-    testBuilder()
-            .sql(
-                    "SELECT dim3, (CASE WHEN scalar_in_array(dim3, Array['a', 'b', 'd']) THEN 'abd' ELSE 'not abd' END) " +
-                            "FROM druid.numfoo"
-            )
-            .expectedQueries(
-                    ImmutableList.of(
-                            newScanQueryBuilder()
-                                    .dataSource(CalciteTests.DATASOURCE3)
-                                    .intervals(querySegmentSpec(Filtration.eternity()))
-                                    .virtualColumns(
-                                            new ExpressionVirtualColumn(
-                                                    "v0",
-                                                    "case_searched(scalar_in_array(\"dim3\",array('a','b','d')),'abd','not abd')",
-                                                    ColumnType.STRING,
-                                                    ExprMacroTable.nil()
-                                            )
-                                    )
-                                    .columns("dim3", "v0")
-                                    .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                                    .context(QUERY_CONTEXT_DEFAULT)
-                                    .build()
-                    )
-            )
-            .expectedResults(ResultMatchMode.RELAX_NULLS,
-                    ImmutableList.of(
-                            new Object[]{"[\"a\",\"b\"]", "[\"abd\",\"abd\"]"},
-                            new Object[]{"[\"b\",\"c\"]", "[\"abd\",\"not abd\"]"},
-                            new Object[]{"d", "abd"},
-                            new Object[]{"", "not abd"},
-                            new Object[]{null, "not abd"},
-                            new Object[]{null, "not abd"}
-                    )
-            )
-            .run();
+    // In the fifth row, dim3 is an empty list. The Scan query in MSQ reads this with makeDimensionSelector, whereas
+    // the Scan query in native reads this makeColumnValueSelector. Behavior of those selectors is inconsistent.
+    // The DimensionSelector returns an empty list; the ColumnValueSelector returns a list containing a single null.
+    final String expectedValueForEmptyMvd =
+        queryFramework().engine().name().equals("msq-task")
+        ? NullHandling.defaultStringValue()
+        : "not abd";
 
+    testBuilder()
+        .sql(
+            "SELECT dim3, (CASE WHEN scalar_in_array(dim3, Array['a', 'b', 'd']) THEN 'abd' ELSE 'not abd' END) " +
+            "FROM druid.numfoo"
+        )
+        .expectedQueries(
+            ImmutableList.of(
+                newScanQueryBuilder()
+                    .dataSource(CalciteTests.DATASOURCE3)
+                    .intervals(querySegmentSpec(Filtration.eternity()))
+                    .virtualColumns(
+                        expressionVirtualColumn(
+                            "v0",
+                            "case_searched(scalar_in_array(\"dim3\",array('a','b','d')),'abd','not abd')",
+                            ColumnType.STRING
+                        )
+                    )
+                    .columns("dim3", "v0")
+                    .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                    .context(QUERY_CONTEXT_DEFAULT)
+                    .build()
+            )
+        )
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{"[\"a\",\"b\"]", "[\"abd\",\"abd\"]"},
+                new Object[]{"[\"b\",\"c\"]", "[\"abd\",\"not abd\"]"},
+                new Object[]{"d", "abd"},
+                new Object[]{"", "not abd"},
+                new Object[]{NullHandling.defaultStringValue(), expectedValueForEmptyMvd},
+                new Object[]{NullHandling.defaultStringValue(), "not abd"}
+            )
+        )
+        .run();
   }
 
   @Test
@@ -3502,7 +3561,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @SqlTestFrameworkConfig(numMergeBuffers = 3)
+  @SqlTestFrameworkConfig.NumMergeBuffers(3)
   @Test
   public void testArrayAggGroupByArrayAggOfLongsFromSubquery()
   {
@@ -3575,7 +3634,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @SqlTestFrameworkConfig(numMergeBuffers = 3)
+  @SqlTestFrameworkConfig.NumMergeBuffers(3)
   @Test
   public void testArrayAggGroupByArrayAggOfStringsFromSubquery()
   {
@@ -3641,7 +3700,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @SqlTestFrameworkConfig(numMergeBuffers = 3)
+  @SqlTestFrameworkConfig.NumMergeBuffers(3)
   @Test
   public void testArrayAggGroupByArrayAggOfDoubleFromSubquery()
   {

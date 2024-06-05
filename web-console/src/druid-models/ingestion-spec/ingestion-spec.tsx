@@ -56,7 +56,11 @@ import { summarizeIndexSpec } from '../index-spec/index-spec';
 import type { InputFormat } from '../input-format/input-format';
 import { issueWithInputFormat } from '../input-format/input-format';
 import type { InputSource } from '../input-source/input-source';
-import { FILTER_SUGGESTIONS, issueWithInputSource } from '../input-source/input-source';
+import {
+  FILTER_SUGGESTIONS,
+  issueWithInputSource,
+  OBJECT_GLOB_SUGGESTIONS,
+} from '../input-source/input-source';
 import type { MetricSpec } from '../metric-spec/metric-spec';
 import {
   getMetricSpecOutputType,
@@ -584,21 +588,29 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
     ),
   };
 
-  const inputSourceFilter: Field<IoConfig> = {
-    name: 'inputSource.filter',
-    label: 'File filter',
+  const inputSourceObjectGlob: Field<IoConfig> = {
+    name: 'inputSource.objectGlob',
+    label: 'Object glob',
     type: 'string',
-    suggestions: FILTER_SUGGESTIONS,
-    placeholder: '*',
+    suggestions: OBJECT_GLOB_SUGGESTIONS,
+    placeholder: '(all files)',
     info: (
-      <p>
-        A wildcard filter for files. See{' '}
-        <ExternalLink href="https://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/filefilter/WildcardFileFilter.html">
-          here
-        </ExternalLink>{' '}
-        for format information. Files matching the filter criteria are considered for ingestion.
-        Files not matching the filter criteria are ignored.
-      </p>
+      <>
+        <p>A glob for the object part of the URI.</p>
+        <p>
+          The glob must match the entire object part, not just the filename. For example, the glob
+          <Code>*.json</Code> does not match <Code>/bar/file.json</Code>, because and the{' '}
+          <Code>*</Code> does not match the slash. To match all objects ending in <Code>.json</Code>
+          , use <Code>**.json</Code> instead.
+        </p>
+        <p>
+          For more information, refer to the documentation for{' '}
+          <ExternalLink href="https://docs.oracle.com/javase/8/docs/api/java/nio/file/FileSystem.html#getPathMatcher-java.lang.String-">
+            FileSystem#getPathMatcher
+          </ExternalLink>
+          .
+        </p>
+      </>
     ),
   };
 
@@ -781,7 +793,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
             </>
           ),
         },
-        inputSourceFilter,
+        inputSourceObjectGlob,
         {
           name: 'inputSource.properties.accessKeyId.type',
           label: 'Access key ID type',
@@ -944,7 +956,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
             </>
           ),
         },
-        inputSourceFilter,
+        inputSourceObjectGlob,
         {
           name: 'inputSource.properties.sharedAccessStorageToken',
           label: 'Shared Access Storage Token',
@@ -1018,7 +1030,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
             </>
           ),
         },
-        inputSourceFilter,
+        inputSourceObjectGlob,
       ];
 
     case 'index_parallel:delta':
@@ -1030,6 +1042,27 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           type: 'string',
           placeholder: '/path/to/deltaTable',
           required: true,
+          info: (
+            <>
+              <p>A full path to the Delta Lake table.</p>
+            </>
+          ),
+        },
+        {
+          name: 'inputSource.filter',
+          label: 'Delta filter',
+          type: 'json',
+          defaultValue: {},
+          info: (
+            <>
+              <ExternalLink
+                href={`${getLink('DOCS')}/ingestion/input-sources/#delta-filter-object`}
+              >
+                filter
+              </ExternalLink>
+              <p>A Delta filter json object to filter Delta Lake scan files.</p>
+            </>
+          ),
         },
       ];
 

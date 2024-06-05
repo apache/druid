@@ -21,6 +21,7 @@ package org.apache.druid.msq.exec;
 
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
+import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.statistics.PartialKeyStatisticsInformation;
 
@@ -42,6 +43,21 @@ public interface ControllerClient extends AutoCloseable
       int workerNumber,
       PartialKeyStatisticsInformation partialKeyStatisticsInformation
   ) throws IOException;
+
+  /**
+   * Client side method to tell the controller that a particular stage and worker is done reading its input.
+   *
+   * The main purpose of this call is to let the controller know when it can stop running the input stage. This helps
+   * execution roll smoothly from stage to stage during pipelined execution. For backwards-compatibility reasons
+   * (this is a newer method, only really useful when pipelining), this call should be skipped if the query is not
+   * pipelining stages.
+   *
+   * Only used when {@link StageDefinition#doesSortDuringShuffle()} and *not*
+   * {@link StageDefinition#mustGatherResultKeyStatistics()}. When the stage gathers result key statistics, workers
+   * call {@link #postPartialKeyStatistics(StageId, int, PartialKeyStatisticsInformation)} instead, which has the same
+   * effect of telling the controller that the worker is done reading its input.
+   */
+  void postDoneReadingInput(StageId stageId, int workerNumber) throws IOException;
 
   /**
    * Client-side method to update the controller with counters for a particular stage and worker. The controller uses

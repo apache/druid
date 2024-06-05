@@ -18,7 +18,7 @@
 import os
 
 import argparse
-import delta
+from delta import *
 import pyspark
 from pyspark.sql.types import StructType, StructField, ShortType, StringType, TimestampType, LongType, IntegerType, DoubleType, FloatType, DateType, BooleanType
 from datetime import datetime, timedelta
@@ -34,7 +34,7 @@ def config_spark_with_delta_lake():
             "org.apache.spark.sql.delta.catalog.DeltaCatalog",
         )
     )
-    spark = delta.configure_spark_with_delta_pip(builder).getOrCreate()
+    spark = configure_spark_with_delta_pip(builder).getOrCreate()
     spark.sparkContext.setLogLevel("ERROR")
     return spark
 
@@ -94,28 +94,33 @@ def main():
     parser = argparse.ArgumentParser(description="Script to write a Delta Lake table.",
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-    parser.add_argument('--save_mode', choices=('append', 'overwrite'), default="overwrite",
+    parser.add_argument('--save_path', default=None, required=True, help="Save path for Delta table")
+    parser.add_argument('--save_mode', choices=('append', 'overwrite'), default="append",
                         help="Specify write mode (append/overwrite)")
-    parser.add_argument('--save_path', default=os.path.join(os.getcwd(), "employee-delta-table"),
-                        help="Save path for Delta table")
-    parser.add_argument('--num_records', type=int, default=10,
-                        help="Specify number of Delta records to write")
+    parser.add_argument('--partitioned_by', choices=("date", "name"), default=None,
+                        help="Column to partition the Delta table")
+    parser.add_argument('--num_records', type=int, default=5, help="Specify number of Delta records to write")
 
     args = parser.parse_args()
 
     save_mode = args.save_mode
     save_path = args.save_path
     num_records = args.num_records
+    partitioned_by = args.partitioned_by
 
     spark = config_spark_with_delta_lake()
 
     data, schema = create_dataset(num_records=num_records)
     df = spark.createDataFrame(data, schema=schema)
-    df.write.format("delta").mode(save_mode).save(save_path)
+    if not partitioned_by:
+        df.write.format("delta").mode(save_mode).save(save_path)
+    else:
+        df.write.format("delta").partitionBy("name").mode(save_mode).save(save_path)
 
     df.show()
 
-    print(f"Generated Delta records to {save_path} in {save_mode} mode with {num_records} records.")
+    print(f"Generated Delta table records partitioned by {partitioned_by} in {save_path} in {save_mode} mode"
+          f" with {num_records} records.")
 
 
 if __name__ == "__main__":

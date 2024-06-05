@@ -19,19 +19,23 @@
 
 package org.apache.druid.msq.kernel;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
+import org.apache.druid.java.util.common.IAE;
+
 public enum ShuffleKind
 {
   /**
    * Put all data in a single partition, with no sorting and no statistics gathering.
    */
-  MIX(false, false),
+  MIX("mix", false, false),
 
   /**
    * Partition using hash codes, with no sorting.
    *
    * This kind of shuffle supports pipelining: producer and consumer stages can run at the same time.
    */
-  HASH(true, false),
+  HASH("hash", true, false),
 
   /**
    * Partition using hash codes, with each partition internally sorted.
@@ -42,7 +46,7 @@ public enum ShuffleKind
    * Due to the need to sort outputs, this shuffle mechanism cannot be pipelined. Producer stages must finish before
    * consumer stages can run.
    */
-  HASH_LOCAL_SORT(true, true),
+  HASH_LOCAL_SORT("hashLocalSort", true, true),
 
   /**
    * Partition using a distributed global sort.
@@ -58,15 +62,29 @@ public enum ShuffleKind
    * Due to the need to sort outputs, this shuffle mechanism cannot be pipelined. Producer stages must finish before
    * consumer stages can run.
    */
-  GLOBAL_SORT(false, true);
+  GLOBAL_SORT("globalSort", false, true);
 
+  private final String name;
   private final boolean hash;
   private final boolean sort;
 
-  ShuffleKind(boolean hash, boolean sort)
+  ShuffleKind(String name, boolean hash, boolean sort)
   {
+    this.name = name;
     this.hash = hash;
     this.sort = sort;
+  }
+
+  @JsonCreator
+  public static ShuffleKind fromString(final String s)
+  {
+    for (final ShuffleKind kind : values()) {
+      if (kind.toString().equals(s)) {
+        return kind;
+      }
+    }
+
+    throw new IAE("No such shuffleKind[%s]", s);
   }
 
   /**
@@ -83,5 +101,12 @@ public enum ShuffleKind
   public boolean isSort()
   {
     return sort;
+  }
+
+  @Override
+  @JsonValue
+  public String toString()
+  {
+    return name;
   }
 }

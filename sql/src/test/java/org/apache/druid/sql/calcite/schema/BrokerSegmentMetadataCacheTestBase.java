@@ -27,7 +27,7 @@ import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.Joinable;
 import org.apache.druid.segment.join.JoinableFactory;
-import org.apache.druid.segment.loading.SegmentLoader;
+import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.metadata.SegmentMetadataCacheTestBase;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
@@ -58,7 +58,7 @@ public class BrokerSegmentMetadataCacheTestBase extends SegmentMetadataCacheTest
     segmentDataSourceNames = Sets.newConcurrentHashSet();
     joinableDataSourceNames = Sets.newConcurrentHashSet();
 
-    segmentManager = new SegmentManager(EasyMock.createMock(SegmentLoader.class))
+    segmentManager = new SegmentManager(EasyMock.createMock(SegmentCacheManager.class))
     {
       @Override
       public Set<String> getDataSourceNames()

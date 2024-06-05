@@ -32,6 +32,7 @@ public class TaskResponseObject
   private final DateTime createdTime;
   private final DateTime queueInsertionTime;
   private final TaskState status;
+  private final Long duration;
 
   @JsonCreator
   private TaskResponseObject(
@@ -39,7 +40,8 @@ public class TaskResponseObject
       @JsonProperty("type") String type,
       @JsonProperty("createdTime") DateTime createdTime,
       @JsonProperty("queueInsertionTime") DateTime queueInsertionTime,
-      @JsonProperty("status") TaskState status
+      @JsonProperty("status") TaskState status,
+      @JsonProperty("duration") Long duration
   )
   {
     this.id = id;
@@ -47,6 +49,7 @@ public class TaskResponseObject
     this.createdTime = createdTime;
     this.queueInsertionTime = queueInsertionTime;
     this.status = status;
+    this.duration = duration;
   }
 
   @JsonProperty
@@ -77,5 +80,11 @@ public class TaskResponseObject
   public TaskState getStatus()
   {
     return status;
+  }
+
+  @JsonProperty
+  public Long getDuration()
+  {
+    return duration;
   }
 }

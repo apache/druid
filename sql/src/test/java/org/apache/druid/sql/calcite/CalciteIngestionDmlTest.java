@@ -65,7 +65,6 @@ import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.apache.druid.sql.calcite.util.SqlTestFramework.SqlTestFrameWorkModule;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.sql.guice.SqlBindings;
 import org.apache.druid.sql.http.SqlParameter;
@@ -90,7 +89,7 @@ import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 
-@SqlTestFrameWorkModule(IngestionDmlComponentSupplier.class)
+@SqlTestFrameworkConfig.ComponentSupplier(IngestionDmlComponentSupplier.class)
 public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
 {
   protected static final Map<String, Object> DEFAULT_CONTEXT =

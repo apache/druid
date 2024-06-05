@@ -100,7 +100,8 @@ public abstract class TimeArithmeticOperatorConversion implements SqlOperatorCon
                   expression ->
                     rightRexNode.isA(SqlKind.LITERAL) ?
                     StringUtils.format("'P%sM'", RexLiteral.value(rightRexNode)) :
-                    StringUtils.format("concat('P', %s, 'M')", expression)
+                    StringUtils.format("concat('P', %s, 'M')", expression),
+                  ColumnType.STRING
               ),
               DruidExpression.ofLiteral(ColumnType.LONG, DruidExpression.longLiteral(direction > 0 ? 1 : -1)),
               DruidExpression.ofStringLiteral(plannerContext.getTimeZone().getID())

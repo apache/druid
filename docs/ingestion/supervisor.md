@@ -96,6 +96,7 @@ The following table outlines the configuration properties related to the `lagBas
 |`scaleActionPeriodMillis`|The frequency in milliseconds to check if a scale action is triggered.|No|60000|
 |`scaleInStep`|The number of tasks to reduce at once when scaling down.|No|1|
 |`scaleOutStep`|The number of tasks to add at once when scaling out.|No|2|
+|`lagAggregate`|The aggregate function used to compute the lag metric for scaling decisions. Possible values are `MAX`, `SUM` and `AVERAGE`. |No|`SUM`|
 
 The following example shows a supervisor spec with `lagBased` autoscaler:
 

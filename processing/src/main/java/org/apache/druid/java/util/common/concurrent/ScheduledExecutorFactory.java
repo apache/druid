@@ -23,5 +23,8 @@ import java.util.concurrent.ScheduledExecutorService;
 
 public interface ScheduledExecutorFactory
 {
-  ScheduledExecutorService create(int corePoolSize, String nameFormat);
+  ScheduledExecutorService create(
+      @SuppressWarnings("unused") /* intellij-inspect bug with lambda usages */ int corePoolSize,
+      String nameFormat
+  );
 }

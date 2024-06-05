@@ -1,7 +1,7 @@
 ---
 id: tutorial-sketches-theta
 title: Approximations with Theta sketches
-sidebar_label: Theta sketches
+sidebar_label: Theta sketches tutorial
 ---
 
 <!--

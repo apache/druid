@@ -127,6 +127,7 @@ import org.apache.druid.segment.IndexMergerV9Factory;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifier;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.indexing.DataSchema;
@@ -646,7 +647,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         DirectQueryProcessingPool.INSTANCE, // query executor service
         NoopJoinableFactory.INSTANCE,
         () -> monitorScheduler, // monitor scheduler
-        new SegmentCacheManagerFactory(new DefaultObjectMapper()),
+        new SegmentCacheManagerFactory(TestIndex.INDEX_IO, new DefaultObjectMapper()),
         MAPPER,
         INDEX_IO,
         MapCache.create(0),
@@ -939,7 +940,6 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
             Intervals.of("2011-04-01/P4D"),
             null,
             null,
-            false,
             null,
             null,
             null
@@ -1038,7 +1038,6 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
             Intervals.of("2011-04-01/P4D"),
             null,
             null,
-            false,
             null,
             maxSegmentsToKill,
             null

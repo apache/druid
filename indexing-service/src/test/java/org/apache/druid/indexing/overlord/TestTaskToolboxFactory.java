@@ -48,6 +48,7 @@ import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9Factory;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.join.JoinableFactory;
@@ -140,7 +141,7 @@ public class TestTaskToolboxFactory extends TaskToolboxFactory
     private Provider<MonitorScheduler> monitorSchedulerProvider;
     private ObjectMapper jsonMapper = TestHelper.JSON_MAPPER;
     private IndexIO indexIO = TestHelper.getTestIndexIO();
-    private SegmentCacheManagerFactory segmentCacheManagerFactory = new SegmentCacheManagerFactory(jsonMapper);
+    private SegmentCacheManagerFactory segmentCacheManagerFactory = new SegmentCacheManagerFactory(TestIndex.INDEX_IO, jsonMapper);
     private Cache cache;
     private CacheConfig cacheConfig;
     private CachePopulatorStats cachePopulatorStats;

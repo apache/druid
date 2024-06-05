@@ -75,37 +75,6 @@ public class CoordinatorRunStatsTest
   }
 
   @Test
-  public void testGetSnapshotAndReset()
-  {
-    stats.add(Stat.ERROR_1, 1);
-    stats.add(Stat.INFO_1, 3);
-    stats.add(Stat.ERROR_1, Key.TIER_1, 5);
-    stats.add(Stat.ERROR_1, Key.DUTY_1, 7);
-
-    final CoordinatorRunStats firstFlush = stats.getSnapshotAndReset();
-    Assert.assertEquals(1, firstFlush.get(Stat.ERROR_1));
-    Assert.assertEquals(3, firstFlush.get(Stat.INFO_1));
-    Assert.assertEquals(5, firstFlush.get(Stat.ERROR_1, Key.TIER_1));
-    Assert.assertEquals(7, firstFlush.get(Stat.ERROR_1, Key.DUTY_1));
-
-    Assert.assertEquals(0, stats.rowCount());
-
-    stats.add(Stat.ERROR_1, 7);
-    stats.add(Stat.ERROR_1, Key.TIER_1, 5);
-    stats.add(Stat.INFO_1, Key.DUTY_1, 3);
-    stats.add(Stat.INFO_2, Key.TIER_1, 1);
-
-    final CoordinatorRunStats secondFlush = stats.getSnapshotAndReset();
-
-    Assert.assertEquals(7, secondFlush.get(Stat.ERROR_1));
-    Assert.assertEquals(5, secondFlush.get(Stat.ERROR_1, Key.TIER_1));
-    Assert.assertEquals(3, secondFlush.get(Stat.INFO_1, Key.DUTY_1));
-    Assert.assertEquals(1, secondFlush.get(Stat.INFO_2, Key.TIER_1));
-
-    Assert.assertEquals(0, stats.rowCount());
-  }
-
-  @Test
   public void testUpdateMax()
   {
     stats.updateMax(Stat.ERROR_1, Key.TIER_1, 2);

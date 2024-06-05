@@ -68,7 +68,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * The schema is merged with any existing schema for the segment and the cache is updated.
  * Corresponding datasource is marked for refresh.</li>
  * <li>The refresh mechanism is significantly different from the other implementation,
- * <ul><li>SMQ is executed only for those non-realtime segments for which the schema is not cached.</li>
+ * <ul><li>Metadata query is executed only for those non-realtime segments for which the schema is not cached.</li>
  * <li>Datasources marked for refresh are then rebuilt.</li></ul>
  * </li>
  */
@@ -265,7 +265,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
                     log.debug("Publishing segment schema. SegmentId [%s], RowSignature [%s], numRows [%d]", segmentId, rowSignature, numRows);
                     Map<String, AggregatorFactory> aggregators = analysis.getAggregators();
                     // cache the signature
-                    segmentSchemaCache.addInTransitSMQResult(segmentId, rowSignature, aggregators, numRows);
+                    segmentSchemaCache.addTemporaryMetadataQueryResult(segmentId, rowSignature, aggregators, numRows);
                     // queue the schema for publishing to the DB
                     segmentSchemaBackfillQueue.add(segmentId, rowSignature, aggregators, numRows);
                     added.set(true);

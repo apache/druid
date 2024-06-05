@@ -1590,7 +1590,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     schema.onLeaderStart();
     schema.awaitInitialization();
 
-    // verify SMQ is not executed, since the schema is already cached
+    // verify metadata query is not executed, since the schema is already cached
     Assert.assertEquals(0, refreshCount.get());
 
     // verify that datasource schema is built

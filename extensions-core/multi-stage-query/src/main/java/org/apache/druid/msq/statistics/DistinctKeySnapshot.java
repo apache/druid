@@ -26,6 +26,8 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import org.apache.druid.collections.SerializablePair;
 import org.apache.druid.frame.key.RowKey;
+import org.apache.druid.msq.statistics.serde.DistinctSnapshotSerializer;
+import org.apache.druid.msq.statistics.serde.KeyCollectorSnapshotSerializer;
 
 import java.util.HashMap;
 import java.util.List;
@@ -40,7 +42,7 @@ public class DistinctKeySnapshot implements KeyCollectorSnapshot
   private final int spaceReductionFactor;
 
   @JsonCreator
-  DistinctKeySnapshot(
+  public DistinctKeySnapshot(
       @JsonProperty("keys") final List<SerializablePair<RowKey, Long>> keys,
       @JsonProperty("spaceReductionFactor") final int spaceReductionFactor
   )
@@ -93,5 +95,11 @@ public class DistinctKeySnapshot implements KeyCollectorSnapshot
   {
     // Not expected to be called in production, so it's OK that this calls getKeysAsMap() each time.
     return Objects.hash(getKeysAsMap(), spaceReductionFactor);
+  }
+
+  @Override
+  public KeyCollectorSnapshotSerializer getSerializer()
+  {
+    return new DistinctSnapshotSerializer();
   }
 }

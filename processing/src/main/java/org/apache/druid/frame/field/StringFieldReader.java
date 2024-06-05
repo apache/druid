@@ -123,12 +123,6 @@ public class StringFieldReader implements FieldReader
     }
   }
 
-  @Override
-  public boolean isComparable()
-  {
-    return true;
-  }
-
   /**
    * Selector that reads a value from a location pointed to by {@link ReadableFieldPointer}.
    */
