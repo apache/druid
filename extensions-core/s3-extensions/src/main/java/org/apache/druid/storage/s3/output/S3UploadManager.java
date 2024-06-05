@@ -134,7 +134,7 @@ public class S3UploadManager
   @VisibleForTesting
   ExecutorService createExecutorService(int poolSize, int maxNumConcurrentChunks)
   {
-    return Execs.newBlockingThreaded("UploadThreadPool-%d", poolSize, maxNumConcurrentChunks);
+    return Execs.newBlockingThreaded("S3UploadThreadPool-%d", poolSize, maxNumConcurrentChunks);
   }
 
   @LifecycleStart
@@ -146,9 +146,9 @@ public class S3UploadManager
   @LifecycleStop
   public void stop()
   {
-    log.debug("Stopping S3UploadManager");
+    log.info("Stopping S3UploadManager");
     uploadExecutor.shutdown();
-    log.debug("Stopped S3UploadManager");
+    log.info("Stopped S3UploadManager");
   }
 
 }
