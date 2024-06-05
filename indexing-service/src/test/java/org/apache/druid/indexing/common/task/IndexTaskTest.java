@@ -75,11 +75,7 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.SegmentSchemaMapping;
-<<<<<<< HEAD
-=======
 import org.apache.druid.segment.TestIndex;
-import org.apache.druid.segment.VirtualColumns;
->>>>>>> upstream/master
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.CompressionStrategy;
