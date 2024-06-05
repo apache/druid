@@ -194,7 +194,7 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void test_group_of_unnest_adapters_column_capabilities()
+  public void test_unnest_adapter_column_capabilities()
   {
     String colName = "multi-string1";
     List<String> columnsInTable = Arrays.asList(
@@ -220,7 +220,14 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
       Assert.assertEquals(capabilities.getType(), valueTypes.get(i));
     }
     assertColumnReadsIdentifier(adapter.getUnnestColumn(), colName);
-
+    Assert.assertEquals(
+        adapter.getColumnCapabilities(OUTPUT_COLUMN_NAME).isDictionaryEncoded(),
+        ColumnCapabilities.Capable.TRUE // passed through from dict-encoded input
+    );
+    Assert.assertEquals(
+        adapter.getColumnCapabilities(OUTPUT_COLUMN_NAME).hasMultipleValues(),
+        ColumnCapabilities.Capable.FALSE
+    );
   }
 
   @Test
