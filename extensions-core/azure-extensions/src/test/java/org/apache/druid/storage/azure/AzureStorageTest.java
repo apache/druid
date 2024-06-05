@@ -33,10 +33,13 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.common.guava.SettableSupplier;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
+import org.mockito.Mock;
 import org.mockito.Mockito;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.io.File;
 import java.io.IOException;
@@ -50,19 +53,27 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-
-// Using Mockito for the whole test class since azure classes (e.g. BlobContainerClient) are final and can't be mocked with EasyMock
+/**
+ * Using Mockito for the whole test class since Azure classes (e.g. BlobContainerClient) are final
+ * and can't be mocked with EasyMock.
+ */
+@ExtendWith(MockitoExtension.class)
 public class AzureStorageTest
 {
-  AzureStorage azureStorage;
-  BlobClient blobClient = Mockito.mock(BlobClient.class);
-  BlobServiceClient blobServiceClient = Mockito.mock(BlobServiceClient.class);
-  BlobContainerClient blobContainerClient = Mockito.mock(BlobContainerClient.class);
-  AzureClientFactory azureClientFactory = Mockito.mock(AzureClientFactory.class);
-
   private final String STORAGE_ACCOUNT = "storageAccount";
   private final String CONTAINER = "container";
   private final String BLOB_NAME = "blobName";
+
+  private AzureStorage azureStorage;
+
+  @Mock
+  private BlobClient blobClient;
+  @Mock
+  private BlobServiceClient blobServiceClient;
+  @Mock
+  private BlobContainerClient blobContainerClient;
+  @Mock
+  private AzureClientFactory azureClientFactory;
 
   @BeforeEach
   public void setup() throws BlobStorageException
@@ -177,7 +188,7 @@ public class AzureStorageTest
     Mockito.doReturn(blobServiceClient).when(azureClientFactory).getBlobServiceClient(null, STORAGE_ACCOUNT);
     Mockito.doReturn(blobBatchClient).when(azureClientFactory).getBlobBatchClient(blobContainerClient);
     Mockito.doThrow(new RuntimeException()).when(blobBatchClient).deleteBlobs(
-            captor.capture(), ArgumentMatchers.eq(DeleteSnapshotsOptionType.INCLUDE)
+        captor.capture(), ArgumentMatchers.eq(DeleteSnapshotsOptionType.INCLUDE)
     );
 
     boolean deleteSuccessful = azureStorage.batchDeleteFiles(CONTAINER, ImmutableList.of(BLOB_NAME), null);
@@ -202,7 +213,7 @@ public class AzureStorageTest
     Mockito.doReturn(blobServiceClient).when(azureClientFactory).getBlobServiceClient(null, STORAGE_ACCOUNT);
     Mockito.doReturn(blobBatchClient).when(azureClientFactory).getBlobBatchClient(blobContainerClient);
     Mockito.doReturn(pagedIterable).when(blobBatchClient).deleteBlobs(
-            captor.capture(), ArgumentMatchers.eq(DeleteSnapshotsOptionType.INCLUDE)
+        captor.capture(), ArgumentMatchers.eq(DeleteSnapshotsOptionType.INCLUDE)
     );
 
 
