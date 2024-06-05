@@ -25,6 +25,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.druid.frame.key.RowKey;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.msq.statistics.serde.DelegateOrMinSerializer;
+import org.apache.druid.msq.statistics.serde.KeyCollectorSnapshotSerializer;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
@@ -86,5 +88,20 @@ public class DelegateOrMinKeyCollectorSnapshot<T extends KeyCollectorSnapshot> i
   public int hashCode()
   {
     return Objects.hash(snapshot, minKey);
+  }
+
+  @Override
+  public KeyCollectorSnapshotSerializer getSerializer()
+  {
+    return new DelegateOrMinSerializer();
+  }
+
+  @Override
+  public String toString()
+  {
+    return "DelegateOrMinKeyCollectorSnapshot{" +
+           "snapshot=" + snapshot +
+           ", minKey=" + minKey +
+           '}';
   }
 }
