@@ -68,6 +68,7 @@ public class NestedDataColumnIndexerV4Test extends InitializedNullHandlingTest
   public void testKeySizeEstimation()
   {
     NestedDataColumnIndexerV4 indexer = new NestedDataColumnIndexerV4();
+    Assert.assertEquals(DimensionDictionarySelector.CARDINALITY_UNKNOWN, indexer.getCardinality());
     int baseCardinality = NullHandling.sqlCompatible() ? 0 : 2;
     Assert.assertEquals(baseCardinality, indexer.globalDictionary.getCardinality());
 
@@ -133,6 +134,7 @@ public class NestedDataColumnIndexerV4Test extends InitializedNullHandlingTest
       Assert.assertEquals(48, key.getEffectiveSizeBytes());
       Assert.assertEquals(baseCardinality + 7, indexer.globalDictionary.getCardinality());
     }
+    Assert.assertEquals(DimensionDictionarySelector.CARDINALITY_UNKNOWN, indexer.getCardinality());
   }
 
   @Test
