@@ -24,7 +24,6 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.datasketches.hll.TgtHllType;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.aggregation.PostAggregator;
-import org.apache.druid.query.aggregation.datasketches.kll.KllSketchModule;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.junit.Assert;
 import org.junit.Test;
