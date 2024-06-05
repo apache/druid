@@ -29,6 +29,7 @@ import com.azure.storage.blob.models.BlobItem;
 import com.azure.storage.blob.models.BlobItemProperties;
 import com.azure.storage.blob.models.BlobStorageException;
 import com.azure.storage.blob.models.DeleteSnapshotsOptionType;
+import com.azure.storage.blob.specialized.BlockBlobClient;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.common.guava.SettableSupplier;
 import org.junit.jupiter.api.BeforeEach;
@@ -51,6 +52,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -67,18 +69,45 @@ public class AzureStorageTest
   private AzureStorage azureStorage;
 
   @Mock
-  private BlobClient blobClient;
+  private AzureClientFactory azureClientFactory;
   @Mock
-  private BlobServiceClient blobServiceClient;
+  private BlockBlobClient blockBlobClient;
+  @Mock
+  private BlobClient blobClient;
   @Mock
   private BlobContainerClient blobContainerClient;
   @Mock
-  private AzureClientFactory azureClientFactory;
+  private BlobServiceClient blobServiceClient;
+
 
   @BeforeEach
   public void setup() throws BlobStorageException
   {
     azureStorage = new AzureStorage(azureClientFactory, STORAGE_ACCOUNT);
+  }
+
+  @Test
+  public void testGetBlockBlockOutputStream_blockSizeOutOfBoundsException()
+  {
+    Mockito.doReturn(blobContainerClient).when(blobServiceClient).createBlobContainerIfNotExists(CONTAINER);
+    Mockito.doReturn(blobServiceClient).when(azureClientFactory).getBlobServiceClient(null, STORAGE_ACCOUNT);
+    Mockito.doReturn(blobClient).when(blobContainerClient).getBlobClient(BLOB_NAME);
+    Mockito.doReturn(blockBlobClient).when(blobClient).getBlockBlobClient();
+
+    final IllegalArgumentException exception = assertThrows(
+        IllegalArgumentException.class,
+        () -> azureStorage.getBlockBlobOutputStream(
+            CONTAINER,
+            BLOB_NAME,
+            -1,
+            null
+        )
+    );
+
+    assertEquals(
+        "The value of the parameter 'blockSize' should be between 1 and 4194304000.",
+        exception.getMessage()
+    );
   }
 
   @Test
