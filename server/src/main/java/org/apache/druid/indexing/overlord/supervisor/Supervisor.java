@@ -93,4 +93,14 @@ public interface Supervisor
   LagStats computeLagStats();
 
   int getActiveTaskGroupsCount();
+
+  /**
+   * Marks the given task groups as ready for segment hand-off irrespective of the task run times.
+   * In the subsequent run, the supervisor initiates segment publish and hand-off for these task groups and rolls over their tasks.
+   * taskGroupIds that are not valid or not actively reading are simply ignored.
+   */
+  default void handoffTaskGroupsEarly(List<Integer> taskGroupIds)
+  {
+    throw new UnsupportedOperationException("Supervisor does not have the feature to handoff task groups early implemented");
+  }
 }

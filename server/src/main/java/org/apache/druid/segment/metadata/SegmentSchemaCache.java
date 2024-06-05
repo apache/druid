@@ -173,13 +173,15 @@ public class SegmentSchemaCache
    * After, metadata query result is published to the DB, it is removed from temporaryMetadataQueryResults
    * and added to temporaryPublishedMetadataQueryResults.
    */
-  public void markInMetadataQueryResultPublished(SegmentId segmentId)
+  public void markMetadataQueryResultPublished(SegmentId segmentId)
   {
-    if (!temporaryMetadataQueryResults.containsKey(segmentId)) {
+    SchemaPayloadPlus temporaryMetadataQueryResult = temporaryMetadataQueryResults.get(segmentId);
+    if (temporaryMetadataQueryResult == null) {
       log.error("SegmentId [%s] not found in temporaryMetadataQueryResults map.", segmentId);
+    } else {
+      temporaryPublishedMetadataQueryResults.put(segmentId, temporaryMetadataQueryResult);
     }
 
-    temporaryPublishedMetadataQueryResults.put(segmentId, temporaryMetadataQueryResults.get(segmentId));
     temporaryMetadataQueryResults.remove(segmentId);
   }
 

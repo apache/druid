@@ -109,7 +109,6 @@ public interface OverlordClient
         dataSource,
         interval,
         versions,
-        false,
         null,
         maxSegmentsToKill,
         maxUsedStatusLastUpdatedTime
