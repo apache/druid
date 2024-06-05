@@ -40,4 +40,9 @@ public interface LookupExtractorFactoryContainerProvider
    * Returns a lookup container for the provided lookupName, if it exists.
    */
   Optional<LookupExtractorFactoryContainer> get(String lookupName);
+
+  /**
+   * Returns the canonical lookup name from a lookup name.
+   */
+  String getCanonicalLookupName(String lookupName);
 }
