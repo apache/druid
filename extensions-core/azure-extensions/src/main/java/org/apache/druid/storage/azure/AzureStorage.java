@@ -50,7 +50,13 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * Abstracts the Azure storage layer. Makes direct calls to Azure file system.
+ * Abstracts the Azure storage layer, wrapping the Azure Java SDK.
+ * <p>
+ * When using a service client ({@link com.azure.storage.blob.BlobServiceClient}, methods that rely on a container to
+ * exist should use {@link com.azure.storage.blob.BlobServiceClient#getBlobContainerClient}.
+ * <p>
+ * If a method relies on a container to be created if it doesn't exist, call
+ * {@link com.azure.storage.blob.BlobServiceClient#createBlobContainerIfNotExists(String)}.
  */
 public class AzureStorage
 {
