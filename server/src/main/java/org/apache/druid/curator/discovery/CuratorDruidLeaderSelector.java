@@ -71,8 +71,6 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
     // election until LeaderLatch.start() is called in registerListener(). This allows clients to observe the current
     // leader without being involved in the election.
     this.leaderLatch.set(createNewLeaderLatch());
-
-    curator.getConnectionStateListenable().addListener(this::handleConnectionStateChanged);
   }
 
   private LeaderLatch createNewLeaderLatch()
@@ -91,6 +89,11 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
           public void isLeader()
           {
             try {
+              if (newLeaderLatch.getState().equals(LeaderLatch.State.CLOSED)) {
+                log.warn("I'm being asked to become leader, but the latch is CLOSED. Ignored event.");
+                return;
+              }
+
               if (leader) {
                 log.warn("I'm being asked to become leader. But I am already the leader. Ignored event.");
                 return;
@@ -103,24 +106,7 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
             catch (Exception ex) {
               log.makeAlert(ex, "listener becomeLeader() failed. Unable to become leader").emit();
 
-              // give others a chance to become leader.
-              CloseableUtils.closeAndSuppressExceptions(
-                  createNewLeaderLatchWithListener(),
-                  e -> log.warn("Could not close old leader latch; continuing with new one anyway.")
-              );
-
-              leader = false;
-              try {
-                //Small delay before starting the latch so that others waiting are chosen to become leader.
-                Thread.sleep(ThreadLocalRandom.current().nextInt(1000, 5000));
-                leaderLatch.get().start();
-              }
-              catch (Exception e) {
-                // If an exception gets thrown out here, then the node will zombie out 'cause it won't be looking for
-                // the latch anymore.  I don't believe it's actually possible for an Exception to throw out here, but
-                // Curator likes to have "throws Exception" on methods so it might happen...
-                log.makeAlert(e, "I am a zombie").emit();
-              }
+              recreateLeaderLatch();
             }
           }
 
@@ -218,23 +204,6 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
 
     CloseableUtils.closeAndSuppressExceptions(leaderLatch.get(), e -> log.warn(e, "Failed to close LeaderLatch."));
     listenerExecutor.shutdownNow();
-  }
-
-  // Method to handle connection state changes
-  private void handleConnectionStateChanged(CuratorFramework client, ConnectionState newState)
-  {
-    switch (newState) {
-      case SUSPENDED:
-      case LOST:
-        recreateLeaderLatch();
-        break;
-      case RECONNECTED:
-        // Connection reestablished, no action needed here
-        break;
-      default:
-        // Do nothing for other states
-        break;
-    }
   }
 
   private void recreateLeaderLatch()
