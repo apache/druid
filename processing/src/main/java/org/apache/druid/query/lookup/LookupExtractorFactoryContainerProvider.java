@@ -42,7 +42,7 @@ public interface LookupExtractorFactoryContainerProvider
   Optional<LookupExtractorFactoryContainer> get(String lookupName);
 
   /**
-   * Returns the canonical lookup name from a lookup name.
+   * Returns the canonical lookup name from a given lookup name, if special syntax exists.
    */
   String getCanonicalLookupName(String lookupName);
 }
