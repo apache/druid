@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.Min;
+import javax.validation.constraints.NotNull;
 import java.util.Objects;
 
 /**
@@ -41,6 +42,7 @@ public class AzureAccountConfig
   private int maxTries = DEFAULT_MAX_TRIES;
 
   @JsonProperty
+  @NotNull
   private String account;
 
   @JsonProperty
