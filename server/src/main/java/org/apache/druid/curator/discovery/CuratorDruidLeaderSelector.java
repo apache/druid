@@ -24,7 +24,6 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.leader.LeaderLatch;
 import org.apache.curator.framework.recipes.leader.LeaderLatchListener;
 import org.apache.curator.framework.recipes.leader.Participant;
-import org.apache.curator.framework.state.ConnectionState;
 import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.guice.annotations.Self;
