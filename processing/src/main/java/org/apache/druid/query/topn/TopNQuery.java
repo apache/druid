@@ -177,9 +177,8 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
     return Queries.computeRequiredColumns(
         virtualColumns,
         dimFilter,
-        Collections.singletonList(dimensionSpec),
-        aggregatorSpecs,
-        Collections.emptyList()
+        Collections.singletonList(dimensionSpec.getDimension()),
+        aggregatorSpecs
     );
   }
 
@@ -187,7 +186,6 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
   @Override
   public CursorBuildSpec asCursorBuildSpec(@Nullable QueryMetrics<?> queryMetrics)
   {
-    final Set<String> columns = getRequiredColumns();
     final List<Interval> intervals = getIntervals();
     if (intervals.size() > 1) {
       throw DruidException.defensive(
@@ -199,7 +197,7 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
                           .setInterval(Iterables.getOnlyElement(intervals))
                           .setGranularity(getGranularity())
                           .setFilter(Filters.convertToCNFFromQueryContext(this, Filters.toFilter(getFilter())))
-                          .setColumns(columns == null ? Collections.emptyList() : new ArrayList<>(columns))
+                          .setGroupingColumns(Collections.singletonList(dimensionSpec.getDimension()))
                           .setVirtualColumns(getVirtualColumns())
                           .setAggregators(getAggregatorSpecs())
                           .setQueryContext(context())

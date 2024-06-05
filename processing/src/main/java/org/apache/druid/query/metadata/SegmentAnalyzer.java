@@ -57,7 +57,6 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
-import java.util.Collections;
 import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -278,7 +277,6 @@ public class SegmentAnalyzer
       final DateTime start = storageAdapter.getMinTime();
       final DateTime end = storageAdapter.getMaxTime();
       final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
-                                                       .setColumns(Collections.singletonList(columnName))
                                                        .setInterval(new Interval(start, end))
                                                        .setGranularity(Granularities.ALL)
                                                        .build();

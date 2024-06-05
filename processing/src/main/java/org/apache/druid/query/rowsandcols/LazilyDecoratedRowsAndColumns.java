@@ -29,7 +29,6 @@ import org.apache.druid.frame.write.FrameWriter;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.frame.write.FrameWriters;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -209,10 +208,8 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
   private Pair<byte[], RowSignature> materializeStorageAdapter(StorageAdapter as)
   {
     final Collection<String> cols;
-    final List<String> cursorColumns;
     if (viewableColumns != null) {
       cols = viewableColumns;
-      cursorColumns = new ArrayList<>(viewableColumns);
     } else {
       if (virtualColumns == null) {
         cols = base.getColumnNames();
@@ -222,16 +219,17 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
                             .addAll(virtualColumns.getColumnNames())
                             .build();
       }
-      cursorColumns = new ArrayList<>(base.getColumnNames());
     }
-    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
-                                                     .setFilter(filter)
-                                                     .setInterval(interval == null ? Intervals.ETERNITY : interval)
-                                                     .setGranularity(Granularities.ALL)
-                                                     .setColumns(cursorColumns)
-                                                     .setVirtualColumns(virtualColumns == null ? VirtualColumns.EMPTY : virtualColumns)
-                                                     .build();
-    final Sequence<Cursor> cursors = as.asCursorMaker(buildSpec).makeCursors();
+    final CursorBuildSpec.CursorBuildSpecBuilder builder = CursorBuildSpec.builder()
+                                                                          .setFilter(filter)
+                                                                          .setGranularity(Granularities.ALL);
+    if (interval != null) {
+      builder.setInterval(interval);
+    }
+    if (virtualColumns != null) {
+      builder.setVirtualColumns(virtualColumns);
+    }
+    final Sequence<Cursor> cursors = as.asCursorMaker(builder.build()).makeCursors();
 
     AtomicReference<RowSignature> siggy = new AtomicReference<>(null);
 

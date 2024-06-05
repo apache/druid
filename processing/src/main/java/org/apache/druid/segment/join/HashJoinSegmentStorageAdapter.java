@@ -228,7 +228,6 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
                        .setInterval(spec.getInterval())
                        .setGranularity(spec.getGranularity())
                        .isDescending(spec.isDescending())
-                       .setColumns(baseAdapter.getRowSignature().getColumnNames())
                        .setQueryMetrics(spec.getQueryMetrics());
 
     final Filter combinedFilter = baseFilterAnd(spec.getFilter());

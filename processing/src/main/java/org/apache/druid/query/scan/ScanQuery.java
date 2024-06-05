@@ -54,7 +54,6 @@ import org.apache.druid.segment.filter.Filters;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -496,9 +495,8 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
       return Queries.computeRequiredColumns(
           virtualColumns,
           dimFilter,
-          Collections.emptyList(),
-          Collections.emptyList(),
-          columns
+          columns,
+          Collections.emptyList()
       );
     }
   }
@@ -506,7 +504,6 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
   @Override
   public CursorBuildSpec asCursorBuildSpec(@Nullable QueryMetrics<?> queryMetrics)
   {
-    final Set<String> columns = getRequiredColumns();
     final List<Interval> intervals = getIntervals();
     if (intervals.size() > 1) {
       throw DruidException.defensive(
@@ -518,7 +515,6 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
                           .setInterval(Iterables.getOnlyElement(intervals))
                           .setGranularity(getGranularity())
                           .setFilter(Filters.convertToCNFFromQueryContext(this, Filters.toFilter(getFilter())))
-                          .setColumns(columns == null ? null : new ArrayList<>(columns))
                           .setVirtualColumns(getVirtualColumns())
                           .setQueryContext(context())
                           .isDescending(isDescending() || Order.DESCENDING.equals(timeOrder))

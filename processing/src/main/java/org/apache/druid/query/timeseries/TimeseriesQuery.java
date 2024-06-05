@@ -181,8 +181,7 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
         virtualColumns,
         dimFilter,
         Collections.emptyList(),
-        aggregatorSpecs,
-        Collections.emptyList()
+        aggregatorSpecs
     );
   }
 
@@ -190,7 +189,6 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
   @Override
   public CursorBuildSpec asCursorBuildSpec(@Nullable QueryMetrics<?> queryMetrics)
   {
-    final Set<String> columns = getRequiredColumns();
     final List<Interval> intervals = getIntervals();
     if (intervals.size() > 1) {
       throw DruidException.defensive(
@@ -202,7 +200,6 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
                           .setInterval(Iterables.getOnlyElement(intervals))
                           .setGranularity(getGranularity())
                           .setFilter(Filters.convertToCNFFromQueryContext(this, Filters.toFilter(getFilter())))
-                          .setColumns(columns == null ? Collections.emptyList() : new ArrayList<>(columns))
                           .setVirtualColumns(getVirtualColumns())
                           .setAggregators(getAggregatorSpecs())
                           .setQueryContext(context())

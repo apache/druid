@@ -50,7 +50,6 @@ import org.joda.time.Duration;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -279,7 +278,6 @@ public interface Query<T>
 
   default CursorBuildSpec asCursorBuildSpec(@Nullable QueryMetrics<?> queryMetrics)
   {
-    final Set<String> columns = getRequiredColumns();
     final List<Interval> intervals = getIntervals();
     if (intervals.size() > 1) {
       throw DruidException.defensive(
@@ -291,7 +289,6 @@ public interface Query<T>
                           .setInterval(Iterables.getOnlyElement(intervals))
                           .setGranularity(getGranularity())
                           .setFilter(Filters.convertToCNFFromQueryContext(this, Filters.toFilter(getFilter())))
-                          .setColumns(columns == null ? null : new ArrayList<>(columns))
                           .setVirtualColumns(getVirtualColumns())
                           .setQueryContext(context())
                           .isDescending(isDescending())

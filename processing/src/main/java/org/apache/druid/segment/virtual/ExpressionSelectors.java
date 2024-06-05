@@ -211,7 +211,7 @@ public class ExpressionSelectors
             !ColumnHolder.TIME_COLUMN_NAME.equals(column), // __time doesn't need an LRU cache since it is sorted.
             rowIdSupplier
         );
-      } else if (inputType.is(ValueType.STRING)) {
+      } else if (inputType.is(ValueType.STRING) && plan.is(ExpressionPlan.Trait.SINGLE_INPUT_MAPPABLE)) {
         return new SingleStringInputCachingExpressionColumnValueSelector(
             columnSelectorFactory.makeDimensionSelector(new DefaultDimensionSpec(column, column, ColumnType.STRING)),
             plan.getExpression(),

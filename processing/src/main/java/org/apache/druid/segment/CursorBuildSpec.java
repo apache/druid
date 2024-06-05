@@ -50,7 +50,7 @@ public class CursorBuildSpec
   private final Interval interval;
   private final Granularity granularity;
   @Nullable
-  private final List<String> columns;
+  private final List<String> groupingColumns;
   private final VirtualColumns virtualColumns;
   @Nullable
   private final List<AggregatorFactory> aggregators;
@@ -65,7 +65,7 @@ public class CursorBuildSpec
       @Nullable Filter filter,
       Interval interval,
       Granularity granularity,
-      @Nullable List<String> columns,
+      @Nullable List<String> groupingColumns,
       VirtualColumns virtualColumns,
       @Nullable List<AggregatorFactory> aggregators,
       QueryContext queryContext,
@@ -76,7 +76,7 @@ public class CursorBuildSpec
     this.filter = filter;
     this.interval = interval;
     this.granularity = granularity;
-    this.columns = columns;
+    this.groupingColumns = groupingColumns;
     this.virtualColumns = virtualColumns;
     this.aggregators = aggregators;
     this.descending = descending;
@@ -101,9 +101,9 @@ public class CursorBuildSpec
   }
 
   @Nullable
-  public List<String> getColumns()
+  public List<String> getGroupingColumns()
   {
-    return columns;
+    return groupingColumns;
   }
 
   public VirtualColumns getVirtualColumns()
@@ -111,6 +111,7 @@ public class CursorBuildSpec
     return virtualColumns;
   }
 
+  @Nullable
   public List<AggregatorFactory> getAggregators()
   {
     return aggregators;
@@ -140,7 +141,7 @@ public class CursorBuildSpec
     private Granularity granularity = Granularities.NONE;
 
     @Nullable
-    private List<String> columns = null;
+    private List<String> groupingColumns = null;
     private VirtualColumns virtualColumns = VirtualColumns.EMPTY;
     @Nullable
     private List<AggregatorFactory> aggregators = null;
@@ -150,17 +151,17 @@ public class CursorBuildSpec
     @Nullable
     private QueryMetrics<?> queryMetrics;
 
-    public CursorBuildSpecBuilder()
+    private CursorBuildSpecBuilder()
     {
-
+      //
     }
 
-    public CursorBuildSpecBuilder(CursorBuildSpec buildSpec)
+    private CursorBuildSpecBuilder(CursorBuildSpec buildSpec)
     {
       this.filter = buildSpec.filter;
       this.interval = buildSpec.interval;
       this.granularity = buildSpec.granularity;
-      this.columns = buildSpec.columns;
+      this.groupingColumns = buildSpec.groupingColumns;
       this.virtualColumns = buildSpec.virtualColumns;
       this.aggregators = buildSpec.aggregators;
       this.descending = buildSpec.descending;
@@ -186,9 +187,9 @@ public class CursorBuildSpec
       return this;
     }
 
-    public CursorBuildSpecBuilder setColumns(@Nullable List<String> columns)
+    public CursorBuildSpecBuilder setGroupingColumns(@Nullable List<String> columns)
     {
-      this.columns = columns;
+      this.groupingColumns = columns;
       return this;
     }
 
@@ -228,7 +229,7 @@ public class CursorBuildSpec
           filter,
           interval,
           granularity,
-          columns,
+          groupingColumns,
           virtualColumns,
           aggregators,
           queryContext,

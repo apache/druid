@@ -79,7 +79,6 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
@@ -114,6 +113,8 @@ public class GroupByQuery extends BaseQuery<ResultRow>
   @Nullable
   private final DimFilter dimFilter;
   private final List<DimensionSpec> dimensions;
+  private final List<String> groupingColumns;
+
   private final List<AggregatorFactory> aggregatorSpecs;
   private final List<PostAggregator> postAggregatorSpecs;
   @Nullable
@@ -211,8 +212,10 @@ public class GroupByQuery extends BaseQuery<ResultRow>
     this.virtualColumns = VirtualColumns.nullToEmpty(virtualColumns);
     this.dimFilter = dimFilter;
     this.dimensions = dimensions == null ? ImmutableList.of() : dimensions;
+    this.groupingColumns = new ArrayList<>();
     for (DimensionSpec spec : this.dimensions) {
       Preconditions.checkArgument(spec != null, "dimensions has null DimensionSpec");
+      groupingColumns.add(spec.getDimension());
     }
 
     this.aggregatorSpecs = aggregatorSpecs == null ? ImmutableList.of() : aggregatorSpecs;
@@ -837,16 +840,14 @@ public class GroupByQuery extends BaseQuery<ResultRow>
     return Queries.computeRequiredColumns(
         virtualColumns,
         dimFilter,
-        dimensions,
-        aggregatorSpecs,
-        Collections.emptyList()
+        groupingColumns,
+        aggregatorSpecs
     );
   }
 
   @Override
   public CursorBuildSpec asCursorBuildSpec(@Nullable QueryMetrics<?> queryMetrics)
   {
-    final Set<String> columns = getRequiredColumns();
     final List<Interval> intervals = getIntervals();
     if (intervals.size() > 1) {
       throw DruidException.defensive(
@@ -858,7 +859,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
                           .setInterval(Iterables.getOnlyElement(intervals))
                           .setGranularity(getGranularity())
                           .setFilter(Filters.convertToCNFFromQueryContext(this, Filters.toFilter(getFilter())))
-                          .setColumns(columns == null ? Collections.emptyList() : new ArrayList<>(columns))
+                          .setGroupingColumns(groupingColumns)
                           .setVirtualColumns(getVirtualColumns())
                           .setAggregators(getAggregatorSpecs())
                           .setQueryContext(context())

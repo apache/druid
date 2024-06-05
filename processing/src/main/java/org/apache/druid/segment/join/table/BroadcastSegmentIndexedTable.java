@@ -120,7 +120,6 @@ public class BroadcastSegmentIndexedTable implements IndexedTable
                                                                        .withChronology(ISOChronology.getInstanceUTC())
                                                      )
                                                      .setGranularity(Granularities.ALL)
-                                                     .setColumns(keyColumnNames)
                                                      .build();
     final Sequence<Cursor> cursors = adapter.asCursorMaker(buildSpec).makeCursors();
 
