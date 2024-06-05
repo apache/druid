@@ -466,7 +466,8 @@ public final class DimensionHandlerUtils
       final TypeSignature<ValueType> type,
       final boolean reportParseExceptions,
       @Nullable final String fieldName
-  ) {
+  )
+  {
     Preconditions.checkNotNull(type, "type");
 
     switch (type.getType()) {
