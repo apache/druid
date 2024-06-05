@@ -17,15 +17,37 @@
  * under the License.
  */
 
-package org.apache.druid.storage.azure;
+package org.apache.druid.server.coordination;
 
-import org.apache.druid.data.input.impl.CloudObjectLocation;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Interface for converting between from some object, T,  and a {@link CloudObjectLocation} object
- * @param <T> The object to convert to a {@link CloudObjectLocation} object
+ * A test data server announcer that tracks the count of all announcements and unannouncements.
+ * The counter is incremented and decremented on each announce and unannounce respectively.
  */
-public interface ICloudSpecificObjectToCloudObjectLocationConverter<T>
+public class TestDataServerAnnouncer implements DataSegmentServerAnnouncer
 {
-  CloudObjectLocation createCloudObjectLocation(T cloudSpecificImpl);
+  private final AtomicInteger observedCount;
+
+  TestDataServerAnnouncer()
+  {
+    this.observedCount = new AtomicInteger(0);
+  }
+
+  @Override
+  public void announce()
+  {
+    observedCount.incrementAndGet();
+  }
+
+  @Override
+  public void unannounce()
+  {
+    observedCount.decrementAndGet();
+  }
+
+  public int getObservedCount()
+  {
+    return observedCount.get();
+  }
 }

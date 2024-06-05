@@ -26,7 +26,6 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
-
 import java.io.File;
 import java.util.HashSet;
 import java.util.Set;
