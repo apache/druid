@@ -32,6 +32,11 @@
   <module name="NewlineAtEndOfFile"/>
   <module name="FileTabCharacter"/>
 
+  <module name="RegexpMultiline">
+    <property name="format" value="(?s:(\r\n|\r).*)"/>
+    <property name="message" value="CRLF and CR line endings are prohibited, but this file uses them."/>
+  </module>
+
   <!-- Added as per the issue #7384 - Prohibit @author tags in Javadoc -->
   <module name="RegexpSingleline">
     <property name="format" value="^\s*\*\s*@author" />
