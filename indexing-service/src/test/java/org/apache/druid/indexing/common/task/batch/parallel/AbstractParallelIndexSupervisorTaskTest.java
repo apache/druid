@@ -85,6 +85,7 @@ import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.expression.LookupEnabledTestExprMacroTable;
 import org.apache.druid.segment.DataSegmentsWithSchemas;
 import org.apache.druid.segment.IndexIO;
+import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.incremental.RowIngestionMetersTotals;
@@ -691,7 +692,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
             .addValue(AppenderatorsManager.class, TestUtils.APPENDERATORS_MANAGER)
             .addValue(LocalDataSegmentPuller.class, new LocalDataSegmentPuller())
             .addValue(CoordinatorClient.class, coordinatorClient)
-            .addValue(SegmentCacheManagerFactory.class, new SegmentCacheManagerFactory(objectMapper))
+            .addValue(SegmentCacheManagerFactory.class, new SegmentCacheManagerFactory(TestIndex.INDEX_IO, objectMapper))
             .addValue(RetryPolicyFactory.class, new RetryPolicyFactory(new RetryPolicyConfig()))
             .addValue(TaskConfig.class, taskConfig)
     );

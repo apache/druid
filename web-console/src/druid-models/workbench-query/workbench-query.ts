@@ -36,7 +36,7 @@ import * as JSONBig from 'json-bigint-native';
 import { v4 as uuidv4 } from 'uuid';
 
 import type { RowColumn } from '../../utils';
-import { deleteKeys } from '../../utils';
+import { caseInsensitiveEquals, deleteKeys } from '../../utils';
 import type { DruidEngine } from '../druid-engine/druid-engine';
 import { validDruidEngine } from '../druid-engine/druid-engine';
 import type { LastExecution } from '../execution/execution';
@@ -512,7 +512,11 @@ export class WorkbenchQuery {
     }
 
     const ingestQuery = this.isIngestQuery();
-    if (!unlimited && !ingestQuery && queryContext.selectDestination !== 'durableStorage') {
+    if (
+      !unlimited &&
+      !ingestQuery &&
+      !caseInsensitiveEquals(queryContext.selectDestination, 'durableStorage')
+    ) {
       apiQuery.context ||= {};
       apiQuery.context.sqlOuterLimit = 1001;
     }
