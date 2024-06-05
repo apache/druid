@@ -6711,14 +6711,16 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         )
         .expectedResults(
             ImmutableList.of(
-                new Object[]{null, 2L, 2L},
+                // with NullHandling.replaceWithDefault; isNull is not handled
+                // so COALESCE may never see `null`
+                new Object[]{null, 2L, NullHandling.sqlCompatible() ? 2L : 0L},
                 new Object[]{3L, 1L, 3L},
                 new Object[]{4L, 1L, 4L},
                 new Object[]{3L, 4L, 3L},
                 new Object[]{4L, 4L, 4L},
                 new Object[]{1L, 5L, 1L},
                 new Object[]{2L, 5L, 2L},
-                new Object[]{null, 5L, 5L}
+                new Object[]{null, 5L, NullHandling.sqlCompatible() ? 2L : 0L}
             )
         )
         .expectedSignature(

@@ -3907,6 +3907,23 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testSimpleCoalesce()
+  {
+    cannotVectorize();
+
+    testBuilder()
+    .sql("SELECT dim2,dim1,COALESCE(dim2, dim1) FROM druid.foo where dim1 = '2' or dim1 = 'xxx'\n")
+    .expectedResults(NullHandling.replaceWithDefault() ?
+            ImmutableList.of(
+                new Object[]{"", "2", "2"}
+            ) :
+            ImmutableList.of(
+                new Object[]{"", "2", ""}
+            ))
+    .run();
+  }
+
+  @Test
   public void testCoalesceColumnsFilter()
   {
     // Cannot vectorize due to virtual columns.
