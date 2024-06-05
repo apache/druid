@@ -4093,6 +4093,54 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testUnnestArrayColumnsStringThenFunction()
+  {
+    // Regresson test for https://github.com/apache/druid/issues/16543.
+    cannotVectorize();
+    testQuery(
+        "SELECT a || '.txt' FROM druid.arrays, UNNEST(arrayString) as unnested (a)",
+        QUERY_CONTEXT_UNNEST,
+        ImmutableList.of(
+            newScanQueryBuilder()
+                  .dataSource(UnnestDataSource.create(
+                      new TableDataSource(CalciteTests.ARRAYS_DATASOURCE),
+                      expressionVirtualColumn("j0.unnest", "\"arrayString\"", ColumnType.STRING_ARRAY),
+                      null
+                  ))
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .virtualColumns(expressionVirtualColumn("v0", "concat(\"j0.unnest\",'.txt')", ColumnType.STRING))
+                  .context(QUERY_CONTEXT_UNNEST)
+                  .columns(ImmutableList.of("v0"))
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"d.txt"},
+            new Object[]{"e.txt"},
+            new Object[]{"a.txt"},
+            new Object[]{"b.txt"},
+            new Object[]{"a.txt"},
+            new Object[]{"b.txt"},
+            new Object[]{"b.txt"},
+            new Object[]{"c.txt"},
+            new Object[]{"a.txt"},
+            new Object[]{"b.txt"},
+            new Object[]{"c.txt"},
+            new Object[]{"d.txt"},
+            new Object[]{"e.txt"},
+            new Object[]{"a.txt"},
+            new Object[]{"b.txt"},
+            new Object[]{"a.txt"},
+            new Object[]{"b.txt"},
+            new Object[]{"b.txt"},
+            new Object[]{"c.txt"},
+            new Object[]{"a.txt"},
+            new Object[]{"b.txt"},
+            new Object[]{"c.txt"}
+        )
+    );
+  }
+
+  @Test
   public void testUnnestArrayColumnsStringNulls()
   {
     cannotVectorize();
