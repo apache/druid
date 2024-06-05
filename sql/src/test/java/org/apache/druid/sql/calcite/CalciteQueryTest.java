@@ -1747,6 +1747,18 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testOrderByEarliestFloatSubQuery()
+  {
+    testBuilder()
+        .sql(
+            "select dim1,e "
+            + "from (SELECT dim1, EARLIEST(f1) e FROM druid.numfoo GROUP BY 1 ORDER BY 2 LIMIT 10) t "
+            + "order by 1 limit 2"
+        )
+        .run();
+  }
+
+  @Test
   public void testOrderByEarliestFloat()
   {
     List<Object[]> expected;
