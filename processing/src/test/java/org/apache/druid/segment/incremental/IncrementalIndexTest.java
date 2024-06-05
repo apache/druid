@@ -219,7 +219,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
         result.getParseException().getInput()
     );
     Assert.assertEquals(
-        "Found unparseable columns in row: [{string=A, float=aaa, long=20, double=21.0}], exceptions: [could not convert value [aaa] to float]",
+        "Found unparseable columns in row: [{string=A, float=aaa, long=20, double=21.0}], exceptions: [could not convert value [aaa] to float for dimension [float]]",
         result.getParseException().getMessage()
     );
 
@@ -292,7 +292,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
         result.getParseException().getInput()
     );
     Assert.assertEquals(
-        "Found unparseable columns in row: [{string=A, float=[10.0, 5.0], long=20, double=21.0}], exceptions: [Could not ingest value [10.0, 5.0] as float. A float column cannot have multiple values in the same row.]",
+        "Found unparseable columns in row: [{string=A, float=[10.0, 5.0], long=20, double=21.0}], exceptions: [Could not ingest value [10.0, 5.0] as float for dimension [float]. A float column cannot have multiple values in the same row.]",
         result.getParseException().getMessage()
     );
 
