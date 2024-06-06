@@ -73,8 +73,8 @@ public class FingerprintGenerator
     catch (IOException e) {
       log.error(
           e,
-          "Exception generating fingerprint for payload [%s], datasource [%s], version [%s].",
-          schemaPayload, dataSource, version
+          "Exception generating schema fingerprint (version[%d]) for datasource[%s], payload[%s].",
+          version, dataSource, schemaPayload
       );
       throw DruidException.defensive(
           "Could not generate schema fingerprint (version[%d]) for datasource[%s].",
