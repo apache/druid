@@ -27,6 +27,7 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.NoopInputRowParser;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.Druids;
@@ -61,7 +62,6 @@ import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
-import org.joda.time.DateTimeZone;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -735,7 +735,7 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
   {
     List<String> dimensions = Collections.singletonList("d");
     int n = 10;
-    DateTime startOfDay = DateTime.now(DateTimeZone.UTC).withTimeAtStartOfDay();
+    DateTime startOfDay = DateTimes.of("2000-01-01");
     List<InputRow> inputRows = new ArrayList<>(n);
     for (int i = 1; i <= n; i++) {
       String val = String.valueOf(i * 1.0d);
