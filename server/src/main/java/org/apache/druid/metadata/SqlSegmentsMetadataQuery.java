@@ -65,8 +65,8 @@ public class SqlSegmentsMetadataQuery
 
   /**
    * Maximum number of intervals to consider for a batch.
-   * This is similar to {@link IndexerSQLMetadataStorageCoordinator#MAX_NUM_SEGMENTS_TO_ANNOUNCE_AT_ONCE}, but imposed
-   * on the intervals size.
+   * This is similar to {@link IndexerSQLMetadataStorageCoordinator#SEGMENT_INSERT_BATCH_SIZE},
+   * but imposed on the intervals size.
    */
   private static final int MAX_INTERVALS_PER_BATCH = 100;
 
