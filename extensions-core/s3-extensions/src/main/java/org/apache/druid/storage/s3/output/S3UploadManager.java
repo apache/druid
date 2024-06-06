@@ -89,7 +89,7 @@ public class S3UploadManager
   {
     return uploadExecutor.submit(() -> RetryUtils.retry(
         () -> {
-          log.info("Uploading chunk [%d] for uploadId [%s].", chunkNumber, uploadId);
+          log.debug("Uploading chunk [%d] for uploadId [%s].", chunkNumber, uploadId);
           UploadPartResult uploadPartResult = uploadPartIfPossible(
               s3Client,
               uploadId,
