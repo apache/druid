@@ -35,10 +35,10 @@ import java.util.Set;
 
 /**
  * Result of an operation that attempts to publish segments. Indicates the set of segments actually published
- * and whether or not the transaction was a success.
- *
+ * and whether the transaction was a success.
+ * <p>
  * If "success" is false then the segments set will be empty.
- *
+ * <p>
  * It's possible for the segments set to be empty even if "success" is true, since the segments set only
  * includes segments actually published as part of the transaction. The requested segments could have been
  * published by a different transaction (e.g. in the case of replica sets) and this one would still succeed.
@@ -50,6 +50,8 @@ public class SegmentPublishResult
   @Nullable
   private final String errorMsg;
   @Nullable
+  private final List<DataSegment> upgradedAppendSegments;
+  @Nullable
   private final List<PendingSegmentRecord> upgradedPendingSegments;
 
   public static SegmentPublishResult ok(Set<DataSegment> segments)
@@ -57,9 +59,13 @@ public class SegmentPublishResult
     return new SegmentPublishResult(segments, true, null);
   }
 
-  public static SegmentPublishResult ok(Set<DataSegment> segments, List<PendingSegmentRecord> upgradedPendingSegments)
+  public static SegmentPublishResult ok(
+      Set<DataSegment> segments,
+      List<DataSegment> upgradedAppendSegments,
+      List<PendingSegmentRecord> upgradedPendingSegments
+  )
   {
-    return new SegmentPublishResult(segments, true, null, upgradedPendingSegments);
+    return new SegmentPublishResult(segments, true, null, upgradedAppendSegments, upgradedPendingSegments);
   }
 
   public static SegmentPublishResult fail(String errorMsg)
@@ -74,26 +80,32 @@ public class SegmentPublishResult
       @JsonProperty("errorMsg") @Nullable String errorMsg
   )
   {
-    this(segments, success, errorMsg, null);
+    this(segments, success, errorMsg, null, null);
   }
 
   private SegmentPublishResult(
       Set<DataSegment> segments,
       boolean success,
-       @Nullable String errorMsg,
-      List<PendingSegmentRecord> upgradedPendingSegments
+      @Nullable String errorMsg,
+      @Nullable List<DataSegment> upgradedAppendSegments,
+      @Nullable List<PendingSegmentRecord> upgradedPendingSegments
   )
   {
     this.segments = Preconditions.checkNotNull(segments, "segments");
     this.success = success;
     this.errorMsg = errorMsg;
+    this.upgradedAppendSegments = upgradedAppendSegments;
     this.upgradedPendingSegments = upgradedPendingSegments;
 
     if (!success) {
-      Preconditions.checkArgument(segments.isEmpty(), "segments must be empty for unsuccessful publishes");
+      Preconditions.checkArgument(segments.isEmpty(), "Segments must be empty for unsuccessful publish.");
       Preconditions.checkArgument(
           CollectionUtils.isNullOrEmpty(upgradedPendingSegments),
-          "upgraded pending segments must be null or empty for unsuccessful publishes"
+          "Upgraded pending segments must be null or empty for unsuccessful publish."
+      );
+      Preconditions.checkArgument(
+          CollectionUtils.isNullOrEmpty(upgradedAppendSegments),
+          "Upgraded append segments must be null or empty for unsuccessful publish."
       );
     }
   }
@@ -110,8 +122,8 @@ public class SegmentPublishResult
     return success;
   }
 
-  @JsonProperty
   @Nullable
+  @JsonProperty
   public String getErrorMsg()
   {
     return errorMsg;
@@ -121,6 +133,12 @@ public class SegmentPublishResult
   public List<PendingSegmentRecord> getUpgradedPendingSegments()
   {
     return upgradedPendingSegments;
+  }
+
+  @Nullable
+  public List<DataSegment> getUpgradedAppendSegments()
+  {
+    return upgradedAppendSegments;
   }
 
   @Override

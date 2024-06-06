@@ -30,14 +30,18 @@ import org.apache.druid.indexing.overlord.CriticalAction;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.metadata.ReplaceTaskLock;
 import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nullable;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -146,10 +150,8 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
     }
 
     IndexTaskUtils.emitSegmentPublishMetrics(publishResult, task, toolbox);
+    emitSegmentUpgradeMetrics(publishResult, task, toolbox);
 
-    // Upgrade any overlapping pending segments
-    // Do not perform upgrade in the same transaction as replace commit so that
-    // failure to upgrade pending segments does not affect success of the commit
     if (publishResult.isSuccess() && toolbox.getSupervisorManager() != null) {
       try {
         registerUpgradedPendingSegmentsOnSupervisor(task, toolbox, publishResult.getUpgradedPendingSegments());
@@ -160,6 +162,51 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
     }
 
     return publishResult;
+  }
+
+  private void emitSegmentUpgradeMetrics(SegmentPublishResult publishResult, Task task, TaskActionToolbox toolbox)
+  {
+    // Log and emit metric for number of upgraded append segments
+    final List<DataSegment> upgradedAppendSegments = publishResult.getUpgradedAppendSegments();
+    if (!CollectionUtils.isNullOrEmpty(upgradedAppendSegments)) {
+      final Map<String, Integer> versionToNumUpgradedSegments = new HashMap<>();
+      upgradedAppendSegments.forEach(
+          segment -> versionToNumUpgradedSegments.merge(segment.getId().getVersion(), 1, Integer::sum)
+      );
+      versionToNumUpgradedSegments.forEach(
+          (version, numUpgradedSegments) -> log.info(
+              "Task[%s] of datasource[%s] upgraded [%d] append segments to replace version[%s].",
+              task.getId(), task.getDataSource(), numUpgradedSegments, version
+          )
+      );
+
+      final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
+      IndexTaskUtils.setTaskDimensions(metricBuilder, task);
+      toolbox.getEmitter().emit(
+          metricBuilder.setMetric("segment/upgraded/count", upgradedAppendSegments.size())
+      );
+    }
+
+    // Log and emit metric for number of upgraded pending segments
+    final List<PendingSegmentRecord> upgradedPendingSegments = publishResult.getUpgradedPendingSegments();
+    if (!CollectionUtils.isNullOrEmpty(upgradedPendingSegments)) {
+      final Map<String, Integer> versionToNumUpgradedSegments = new HashMap<>();
+      upgradedPendingSegments.forEach(
+          segment -> versionToNumUpgradedSegments.merge(segment.getId().getVersion(), 1, Integer::sum)
+      );
+      versionToNumUpgradedSegments.forEach(
+          (version, numUpgradedSegments) -> log.info(
+              "Task[%s] of datasource[%s] upgraded [%d] pending segments to replace version[%s].",
+              task.getId(), task.getDataSource(), numUpgradedSegments, version
+          )
+      );
+
+      final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
+      IndexTaskUtils.setTaskDimensions(metricBuilder, task);
+      toolbox.getEmitter().emit(
+          metricBuilder.setMetric("segment/upgradedRealtime/count", upgradedPendingSegments.size())
+      );
+    }
   }
 
   /**
@@ -175,15 +222,17 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
     final Optional<String> activeSupervisorIdWithAppendLock =
         supervisorManager.getActiveSupervisorIdForDatasourceWithAppendLock(task.getDataSource());
 
-    if (!activeSupervisorIdWithAppendLock.isPresent()) {
+    if (!activeSupervisorIdWithAppendLock.isPresent() || upgradedPendingSegments == null) {
       return;
     }
 
+    final String supervisorId = activeSupervisorIdWithAppendLock.get();
+    log.info(
+        "Registering [%d] upgraded pending segments on supervisor[%s].",
+        upgradedPendingSegments.size(), supervisorId
+    );
     upgradedPendingSegments.forEach(
-        upgradedPendingSegment -> supervisorManager.registerUpgradedPendingSegmentOnSupervisor(
-            activeSupervisorIdWithAppendLock.get(),
-            upgradedPendingSegment
-        )
+        segment -> supervisorManager.registerUpgradedPendingSegmentOnSupervisor(supervisorId, segment)
     );
   }
 
