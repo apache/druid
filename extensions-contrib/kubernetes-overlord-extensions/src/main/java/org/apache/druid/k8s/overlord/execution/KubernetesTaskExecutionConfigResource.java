@@ -51,16 +51,16 @@ import java.util.concurrent.atomic.AtomicReference;
  * <p>This class handles the CRUD operations for execution configurations and provides
  * endpoints to update, retrieve, and manage the history of these configurations.</p>
  */
-@Path("/druid/indexer/v1/k8s/runner")
-public class KubernetesResource
+@Path("/druid/indexer/v1/k8s/taskRunner")
+public class KubernetesTaskExecutionConfigResource
 {
-  private static final Logger log = new Logger(KubernetesResource.class);
+  private static final Logger log = new Logger(KubernetesTaskExecutionConfigResource.class);
   private final JacksonConfigManager configManager;
   private final AuditManager auditManager;
-  private AtomicReference<ExecutionConfig> executionConfigRef = null;
+  private AtomicReference<KubernetesTaskRunnerDynamicConfig> dynamicConfigRef = null;
 
   @Inject
-  public KubernetesResource(
+  public KubernetesTaskExecutionConfigResource(
       final JacksonConfigManager configManager,
       final AuditManager auditManager
   )
@@ -72,26 +72,26 @@ public class KubernetesResource
   /**
    * Updates the Kubernetes execution configuration.
    *
-   * @param executionConfig the new execution configuration to set
+   * @param dynamicConfig the new execution configuration to set
    * @param req             the HTTP servlet request providing context for audit information
    * @return a response indicating the success or failure of the update operation
    */
   @POST
-  @Path("/execution")
+  @Path("/executionConfig")
   @Consumes(MediaType.APPLICATION_JSON)
   @ResourceFilters(ConfigResourceFilter.class)
   public Response setExecutionConfig(
-      final ExecutionConfig executionConfig,
+      final KubernetesTaskRunnerDynamicConfig dynamicConfig,
       @Context final HttpServletRequest req
   )
   {
     final ConfigManager.SetResult setResult = configManager.set(
-        ExecutionConfig.CONFIG_KEY,
-        executionConfig,
+        KubernetesTaskRunnerDynamicConfig.CONFIG_KEY,
+        dynamicConfig,
         AuthorizationUtils.buildAuditInfo(req)
     );
     if (setResult.isOk()) {
-      log.info("Updating K8s execution configs: %s", executionConfig);
+      log.info("Updating K8s execution configs: %s", dynamicConfig);
 
       return Response.ok().build();
     } else {
@@ -107,7 +107,7 @@ public class KubernetesResource
    * @return a response containing a list of audit entries or an error message
    */
   @GET
-  @Path("/execution/history")
+  @Path("/executionConfig/history")
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(ConfigResourceFilter.class)
   public Response getExecutionConfigHistory(
@@ -119,8 +119,8 @@ public class KubernetesResource
     if (theInterval == null && count != null) {
       try {
         List<AuditEntry> executionEntryList = auditManager.fetchAuditHistory(
-            ExecutionConfig.CONFIG_KEY,
-            ExecutionConfig.CONFIG_KEY,
+            KubernetesTaskRunnerDynamicConfig.CONFIG_KEY,
+            KubernetesTaskRunnerDynamicConfig.CONFIG_KEY,
             count
         );
         return Response.ok(executionEntryList).build();
@@ -132,8 +132,8 @@ public class KubernetesResource
       }
     }
     List<AuditEntry> executionEntryList = auditManager.fetchAuditHistory(
-        ExecutionConfig.CONFIG_KEY,
-        ExecutionConfig.CONFIG_KEY,
+        KubernetesTaskRunnerDynamicConfig.CONFIG_KEY,
+        KubernetesTaskRunnerDynamicConfig.CONFIG_KEY,
         theInterval
     );
     return Response.ok(executionEntryList).build();
@@ -145,15 +145,15 @@ public class KubernetesResource
    * @return a Response object containing the current execution configuration in JSON format.
    */
   @GET
-  @Path("/execution")
+  @Path("/executionConfig")
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(ConfigResourceFilter.class)
   public Response getExecutionConfig()
   {
-    if (executionConfigRef == null) {
-      executionConfigRef = configManager.watch(ExecutionConfig.CONFIG_KEY, ExecutionConfig.class);
+    if (dynamicConfigRef == null) {
+      dynamicConfigRef = configManager.watch(KubernetesTaskRunnerDynamicConfig.CONFIG_KEY, KubernetesTaskRunnerDynamicConfig.class);
     }
 
-    return Response.ok(executionConfigRef.get()).build();
+    return Response.ok(dynamicConfigRef.get()).build();
   }
 }

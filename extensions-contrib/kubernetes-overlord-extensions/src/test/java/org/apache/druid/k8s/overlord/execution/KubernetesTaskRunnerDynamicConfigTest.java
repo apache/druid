@@ -25,7 +25,7 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class ExecutionConfigTest
+public class KubernetesTaskRunnerDynamicConfigTest
 {
   private final ObjectMapper jsonMapper = new DefaultObjectMapper();
 
@@ -34,20 +34,20 @@ public class ExecutionConfigTest
   {
     String json = "{\n"
                   + "  \"type\": \"default\",\n"
-                  + "  \"behaviorStrategy\": {\n"
+                  + "  \"podTemplateSelectStrategy\": {\n"
                   + "    \"type\": \"default\"\n"
                   + "  }\n"
                   + "}";
 
-    ExecutionConfig deserialized = jsonMapper.readValue(json, ExecutionConfig.class);
-    ExecutionBehaviorStrategy behaviorStrategy = deserialized.getBehaviorStrategy();
-    Assert.assertTrue(behaviorStrategy instanceof DefaultExecutionBehaviorStrategy);
+    KubernetesTaskRunnerDynamicConfig deserialized = jsonMapper.readValue(json, KubernetesTaskRunnerDynamicConfig.class);
+    PodTemplateSelectStrategy behaviorStrategy = deserialized.getPodTemplateSelectStrategy();
+    Assert.assertTrue(behaviorStrategy instanceof TaskTypePodTemplateSelectStrategy);
 
     json = "{\n"
            + "  \"type\": \"default\",\n"
-           + "  \"behaviorStrategy\": {\n"
+           + "  \"podTemplateSelectStrategy\": {\n"
            + "    \"type\": \"dynamicTask\",\n"
-           + "    \"categorySelectors\": [\n"
+           + "    \"templateSelectors\": [\n"
            + "      {\n"
            + "        \"selectionKey\": \"low-throughput\",\n"
            + "        \"context.tags\": {\n"
@@ -73,8 +73,8 @@ public class ExecutionConfigTest
            + "  }\n"
            + "}";
 
-    deserialized = jsonMapper.readValue(json, ExecutionConfig.class);
-    behaviorStrategy = deserialized.getBehaviorStrategy();
-    Assert.assertTrue(behaviorStrategy instanceof DynamicTaskExecutionBehaviorStrategy);
+    deserialized = jsonMapper.readValue(json, KubernetesTaskRunnerDynamicConfig.class);
+    behaviorStrategy = deserialized.getPodTemplateSelectStrategy();
+    Assert.assertTrue(behaviorStrategy instanceof DynamicTaskPodTemplateSelectStrategy);
   }
 }

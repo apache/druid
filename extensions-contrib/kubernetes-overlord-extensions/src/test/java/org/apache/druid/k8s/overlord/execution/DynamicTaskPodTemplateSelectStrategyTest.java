@@ -20,13 +20,20 @@
 package org.apache.druid.k8s.overlord.execution;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import io.fabric8.kubernetes.api.model.PodTemplate;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.segment.TestHelper;
+import org.easymock.EasyMockRunner;
+import org.easymock.EasyMockSupport;
+import org.easymock.Mock;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -34,46 +41,64 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-public class DynamicTaskExecutionBehaviorStrategyTest
+@RunWith(EasyMockRunner.class)
+public class DynamicTaskPodTemplateSelectStrategyTest extends EasyMockSupport
 {
+  @Mock
+  private PodTemplate podTemplate;
+  private Map<String, PodTemplate> templates;
 
-  @Test
-  public void testGetTaskCategory_nullSelectors()
+  @Before
+  public void setup()
   {
-    DynamicTaskExecutionBehaviorStrategy strategy = new DynamicTaskExecutionBehaviorStrategy(null);
-    Task task = NoopTask.create();
-    Assert.assertNull(strategy.getTaskCategory(task));
+    templates = ImmutableMap.of(
+        "mock",
+        podTemplate,
+        "no_match",
+        podTemplate,
+        "match",
+        podTemplate,
+        "base",
+        podTemplate
+    );
   }
 
   @Test
-  public void testGetTaskCategory_emptySelectors()
+  public void testGetPodTemplate_ForTask_nullSelectorsFallbackToBaseTemplate()
+  {
+    DynamicTaskPodTemplateSelectStrategy strategy = new DynamicTaskPodTemplateSelectStrategy(null);
+    Task task = NoopTask.create();
+    Assert.assertEquals("base", strategy.getPodTemplateForTask(task, templates).lhs);
+  }
+
+  @Test
+  public void testGetPodTemplate_ForTask_emptySelectorsFallbackToBaseTemplate()
   {
     List<Selector> emptySelectors = Collections.emptyList();
-    DynamicTaskExecutionBehaviorStrategy strategy = new DynamicTaskExecutionBehaviorStrategy(emptySelectors);
+    DynamicTaskPodTemplateSelectStrategy strategy = new DynamicTaskPodTemplateSelectStrategy(emptySelectors);
     Task task = NoopTask.create();
-    Assert.assertNull(strategy.getTaskCategory(task));
+    Assert.assertEquals("base", strategy.getPodTemplateForTask(task, templates).lhs);
   }
 
   @Test
-  public void testGetTaskCategory_noMatchSelectors()
+  public void testGetPodTemplate_ForTask_noMatchSelectorsFallbackToBaseTemplate()
   {
     Selector noMatchSelector = new MockSelector(false, "mock");
     List<Selector> selectors = Collections.singletonList(noMatchSelector);
-    DynamicTaskExecutionBehaviorStrategy strategy = new DynamicTaskExecutionBehaviorStrategy(selectors);
+    DynamicTaskPodTemplateSelectStrategy strategy = new DynamicTaskPodTemplateSelectStrategy(selectors);
     Task task = NoopTask.create();
-    Assert.assertNull(strategy.getTaskCategory(task));
+    Assert.assertEquals("base", strategy.getPodTemplateForTask(task, templates).lhs);
   }
 
   @Test
-  public void testGetTaskCategory_withMatchSelectors()
+  public void testGetPodTemplate_ForTask_withMatchSelectors()
   {
     Selector noMatchSelector = new MockSelector(false, "no_match");
     Selector matchSelector = new MockSelector(true, "match");
     List<Selector> selectors = Lists.newArrayList(noMatchSelector, matchSelector);
-    DynamicTaskExecutionBehaviorStrategy strategy = new DynamicTaskExecutionBehaviorStrategy(selectors);
+    DynamicTaskPodTemplateSelectStrategy strategy = new DynamicTaskPodTemplateSelectStrategy(selectors);
     Task task = NoopTask.create();
-    Assert.assertEquals("match", strategy.getTaskCategory(task)
-    );
+    Assert.assertEquals("match", strategy.getPodTemplateForTask(task, templates).lhs);
   }
 
   @Test
@@ -92,12 +117,12 @@ public class DynamicTaskExecutionBehaviorStrategyTest
         taskFieldsConditions
     );
 
-    DynamicTaskExecutionBehaviorStrategy strategy = new DynamicTaskExecutionBehaviorStrategy(Collections.singletonList(
+    DynamicTaskPodTemplateSelectStrategy strategy = new DynamicTaskPodTemplateSelectStrategy(Collections.singletonList(
         selector));
 
-    DynamicTaskExecutionBehaviorStrategy strategy2 = objectMapper.readValue(
+    DynamicTaskPodTemplateSelectStrategy strategy2 = objectMapper.readValue(
         objectMapper.writeValueAsBytes(strategy),
-        DynamicTaskExecutionBehaviorStrategy.class
+        DynamicTaskPodTemplateSelectStrategy.class
     );
     Assert.assertEquals(strategy, strategy2);
   }

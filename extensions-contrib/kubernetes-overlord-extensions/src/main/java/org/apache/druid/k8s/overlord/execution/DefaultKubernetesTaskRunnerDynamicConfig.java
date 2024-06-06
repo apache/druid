@@ -25,24 +25,24 @@ import com.google.common.base.Preconditions;
 
 import java.util.Objects;
 
-public class DefaultExecutionConfig implements ExecutionConfig
+public class DefaultKubernetesTaskRunnerDynamicConfig implements KubernetesTaskRunnerDynamicConfig
 {
-  private final ExecutionBehaviorStrategy behaviorStrategy;
+  private final PodTemplateSelectStrategy podTemplateSelectStrategy;
 
   @JsonCreator
-  public DefaultExecutionConfig(
-      @JsonProperty("behaviorStrategy") ExecutionBehaviorStrategy behaviorStrategy
+  public DefaultKubernetesTaskRunnerDynamicConfig(
+      @JsonProperty("podTemplateSelectStrategy") PodTemplateSelectStrategy podTemplateSelectStrategy
   )
   {
-    Preconditions.checkNotNull(behaviorStrategy);
-    this.behaviorStrategy = behaviorStrategy;
+    Preconditions.checkNotNull(podTemplateSelectStrategy);
+    this.podTemplateSelectStrategy = podTemplateSelectStrategy;
   }
 
   @Override
   @JsonProperty
-  public ExecutionBehaviorStrategy getBehaviorStrategy()
+  public PodTemplateSelectStrategy getPodTemplateSelectStrategy()
   {
-    return behaviorStrategy;
+    return podTemplateSelectStrategy;
   }
 
   @Override
@@ -54,21 +54,21 @@ public class DefaultExecutionConfig implements ExecutionConfig
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    DefaultExecutionConfig that = (DefaultExecutionConfig) o;
-    return Objects.equals(behaviorStrategy, that.behaviorStrategy);
+    DefaultKubernetesTaskRunnerDynamicConfig that = (DefaultKubernetesTaskRunnerDynamicConfig) o;
+    return Objects.equals(podTemplateSelectStrategy, that.podTemplateSelectStrategy);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hashCode(behaviorStrategy);
+    return Objects.hashCode(podTemplateSelectStrategy);
   }
 
   @Override
   public String toString()
   {
-    return "DefaultExecutionConfig{" +
-           "behaviorStrategy=" + behaviorStrategy +
+    return "DefaultKubernetesTaskRunnerDynamicConfig{" +
+           "podTemplateSelectStrategy=" + podTemplateSelectStrategy +
            '}';
   }
 }

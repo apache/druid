@@ -20,31 +20,36 @@
 package org.apache.druid.k8s.overlord.execution;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import io.fabric8.kubernetes.api.model.PodTemplate;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.java.util.common.Pair;
+
+import java.util.Map;
 
 /**
- * This strategy defines how tasks are categorized based on their type for execution purposes.
+ * This strategy defines how task template is selected based on their type for execution purposes.
  *
- * This implementation categorizes tasks by simply returning the type of the task,
- * making it a straightforward, type-based categorization strategy.
+ * This implementation selects pod template by looking at the type of the task,
+ * making it a straightforward, type-based template selection strategy.
  */
-public class DefaultExecutionBehaviorStrategy implements ExecutionBehaviorStrategy
+public class TaskTypePodTemplateSelectStrategy implements PodTemplateSelectStrategy
 {
+
   @JsonCreator
-  public DefaultExecutionBehaviorStrategy()
+  public TaskTypePodTemplateSelectStrategy()
   {
   }
 
   @Override
-  public String getTaskCategory(Task task)
+  public Pair<String, PodTemplate> getPodTemplateForTask(Task task, Map<String, PodTemplate> templates)
   {
-    return task.getType();
+    return getTemplateOrDefault(task.getType(), templates);
   }
 
   @Override
   public boolean equals(Object o)
   {
-    return o instanceof DefaultExecutionBehaviorStrategy;
+    return o instanceof TaskTypePodTemplateSelectStrategy;
   }
 
   @Override
@@ -56,7 +61,7 @@ public class DefaultExecutionBehaviorStrategy implements ExecutionBehaviorStrate
   @Override
   public String toString()
   {
-    return "DefaultExecutionBehaviorStrategy{" +
+    return "TaskTypePodTemplateSelectStrategy{" +
            '}';
   }
 }

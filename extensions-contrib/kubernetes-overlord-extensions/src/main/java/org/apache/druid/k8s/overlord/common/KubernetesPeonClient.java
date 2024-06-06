@@ -21,7 +21,6 @@ package org.apache.druid.k8s.overlord.common;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
-import com.google.common.base.Supplier;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.client.KubernetesClient;
@@ -32,7 +31,6 @@ import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
-import org.apache.druid.k8s.overlord.execution.ExecutionConfig;
 
 import java.io.InputStream;
 import java.sql.Timestamp;
@@ -49,21 +47,18 @@ public class KubernetesPeonClient
   private final String namespace;
   private final boolean debugJobs;
   private final ServiceEmitter emitter;
-  private final Supplier<ExecutionConfig> executionConfigRef;
 
   public KubernetesPeonClient(
       KubernetesClientApi clientApi,
       String namespace,
       boolean debugJobs,
-      ServiceEmitter emitter,
-      Supplier<ExecutionConfig> executionConfigRef
+      ServiceEmitter emitter
   )
   {
     this.clientApi = clientApi;
     this.namespace = namespace;
     this.debugJobs = debugJobs;
     this.emitter = emitter;
-    this.executionConfigRef = executionConfigRef;
   }
 
   public Pod launchPeonJobAndWaitForStart(Job job, Task task, long howLong, TimeUnit timeUnit) throws IllegalStateException
@@ -88,7 +83,7 @@ public class KubernetesPeonClient
         throw new IllegalStateException("K8s pod for the task [%s] appeared and disappeared. It can happen if the task was canceled");
       }
       long duration = System.currentTimeMillis() - start;
-      emitK8sPodMetrics(task, "k8s/peon/startup/time", duration);
+      emitK8sPodMetrics(task, job, "k8s/peon/startup/time", duration);
       return result;
     });
   }
@@ -275,18 +270,16 @@ public class KubernetesPeonClient
     }
   }
 
-  private void emitK8sPodMetrics(Task task, String metric, long durationMs)
+  private void emitK8sPodMetrics(Task task, Job job, String metric, long durationMs)
   {
     ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
     IndexTaskUtils.setTaskDimensions(metricBuilder, task);
-    ExecutionConfig executionConfig = executionConfigRef.get();
-    if (executionConfig != null && executionConfig.getBehaviorStrategy() != null) {
+    if (job.getMetadata() != null && job.getMetadata().getAnnotations() != null) {
       metricBuilder.setDimensionIfNotNull(
-          "category",
-          executionConfig.getBehaviorStrategy().getTaskCategory(task)
+          "podTemplate",
+          job.getMetadata().getAnnotations().get(DruidK8sConstants.POD_TEMPLATE_KEY)
       );
     }
-
     emitter.emit(metricBuilder.setMetric(metric, durationMs));
   }
 }

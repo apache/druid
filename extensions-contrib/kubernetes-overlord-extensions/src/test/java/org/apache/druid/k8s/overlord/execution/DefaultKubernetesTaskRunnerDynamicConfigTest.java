@@ -24,28 +24,28 @@ import org.apache.druid.segment.TestHelper;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class DefaultExecutionConfigTest
+public class DefaultKubernetesTaskRunnerDynamicConfigTest
 {
 
   @Test
-  public void getBehaviorStrategyTest()
+  public void getPodTemplateSelectStrategyTest()
   {
-    ExecutionBehaviorStrategy strategy = new DefaultExecutionBehaviorStrategy();
-    DefaultExecutionConfig config = new DefaultExecutionConfig(strategy);
+    PodTemplateSelectStrategy strategy = new TaskTypePodTemplateSelectStrategy();
+    DefaultKubernetesTaskRunnerDynamicConfig config = new DefaultKubernetesTaskRunnerDynamicConfig(strategy);
 
-    Assert.assertEquals(strategy, config.getBehaviorStrategy());
+    Assert.assertEquals(strategy, config.getPodTemplateSelectStrategy());
   }
 
   @Test
   public void testSerde() throws Exception
   {
     final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
-    ExecutionBehaviorStrategy strategy = new DefaultExecutionBehaviorStrategy();
-    DefaultExecutionConfig config = new DefaultExecutionConfig(strategy);
+    PodTemplateSelectStrategy strategy = new TaskTypePodTemplateSelectStrategy();
+    DefaultKubernetesTaskRunnerDynamicConfig config = new DefaultKubernetesTaskRunnerDynamicConfig(strategy);
 
-    DefaultExecutionConfig config2 = objectMapper.readValue(
+    DefaultKubernetesTaskRunnerDynamicConfig config2 = objectMapper.readValue(
         objectMapper.writeValueAsBytes(config),
-        DefaultExecutionConfig.class
+        DefaultKubernetesTaskRunnerDynamicConfig.class
     );
     Assert.assertEquals(config, config2);
   }

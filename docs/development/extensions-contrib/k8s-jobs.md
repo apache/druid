@@ -218,28 +218,28 @@ data:
         druid.indexer.task.encapsulatedTask=true
 ```
 #### Dynamic Pod Template Selection Config
-The Dynamic Pod Template Selection feature enhances the K8s extension by enabling more flexible and dynamic selection of pod templates based on task properties. This process is governed by the `ExecutionBehaviorStrategy`. Below are the two strategies implemented:
+The Dynamic Pod Template Selection feature enhances the K8s extension by enabling more flexible and dynamic selection of pod templates based on task properties. This process is governed by the `PodTemplateSelectStrategy`. Below are the two strategies implemented:
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`DefaultExecutionBehaviorStrategy`| This strategy categorizes tasks based on their type for execution purposes, implementing the existing behavior that maps pod templates according to task type. | true |
-|`DynamicTaskExecutionBehaviorStrategy`| This strategy dynamically evaluates a series of selectors, with each selector corresponding to a potential task category.| false |
+|`TaskTypePodTemplateSelectStrategy`| This strategy selects pod templates based on task type for execution purposes, implementing the behavior that maps templates to specific task types. | true |
+|`DynamicTaskPodTemplateSelectStrategy`| This strategy dynamically evaluates a series of selectors, known as templateSelectors, which are aligned with potential task properties. | false |
 
-`DynamicTaskExecutionBehaviorStrategy`, the strategy implementing this new feature, is based on conditional selectors `categorySelectors` that match against task properties. These selectors are ordered in the dynamic configuration, with the first selector given the highest priority during the evaluation process. This means that the selection process uses these ordered conditions to determine a task’s category based on context tags and task fields. The first matching condition immediately determines the category, thereby prioritizing certain configurations over others. Once a category is identified, it is used to map to different Peon Pod templates, enabling tailored resource allocation and management that aligns with the specific requirements of each task.
+`DynamicTaskPodTemplateSelectStrategy`, the strategy implementing this new feature, is based on conditional selectors `templateSelectors` that match against task properties. These selectors are ordered in the dynamic configuration, with the first selector given the highest priority during the evaluation process. This means that the selection process uses these ordered conditions to determine a task’s Pod template based on context tags and task fields. The first matching condition immediately determines the Pod template, thereby prioritizing certain configurations over others.
 
 Example Configuration:
 
-We define two categories in the configuration—`low-throughput` and `medium-throughput`—each associated with specific task conditions and arranged in a priority order.
+We define two template keys in the configuration—`low-throughput` and `medium-throughput`—each associated with specific task conditions and arranged in a priority order.
 
-- Low Throughput Category: This is the first category evaluated and has the highest priority. Tasks that have a context tag `billingCategory=streaming_ingestion` and a datasource of `wikipedia` will be classified under the `low-throughput` category. This classification directs such tasks to utilize a predefined pod template optimized for low throughput requirements.
+- Low Throughput Template: This is the first template evaluated and has the highest priority. Tasks that have a context tag `billingCategory=streaming_ingestion` and a datasource of `wikipedia` will be classified under the `low-throughput` template. This classification directs such tasks to utilize a predefined pod template optimized for low throughput requirements.
 
-- Medium Throughput Category: If a task does not meet the low-throughput criteria, the system will then evaluate it against the next selector in order. In this example, if the task type is index_kafka, it will fall into the `medium-throughput` category.
+- Medium Throughput Template: If a task does not meet the low-throughput criteria, the system will then evaluate it against the next selector in order. In this example, if the task type is index_kafka, it will fall into the `medium-throughput` template.
 ```
 {
   "type": "default",
-  "behaviorStrategy": {
+  "podTemplateSelectStrategy": {
     "type": "dynamicTask",
-    "categorySelectors": [
+    "templateSelectors": [
       {
         "selectionKey": "low-throughput",
         "context.tags": {
@@ -265,18 +265,18 @@ We define two categories in the configuration—`low-throughput` and `medium-thr
   }
 }
 ```
-Task specific pod templates can be specified as the runtime property `druid.indexer.runner.k8s.podTemplate.{category}: /path/to/taskSpecificPodSpec.yaml` where {category} is the matched `selectionKey` of the `behaviorStrategy` i.e low-throughput.
+Task specific pod templates can be specified as the runtime property `druid.indexer.runner.k8s.podTemplate.{template}: /path/to/taskSpecificPodSpec.yaml` where {template} is the matched `selectionKey` of the `podTemplateSelectStrategy` i.e low-throughput.
 
 Similar to Overlord dynamic configuration, the following API endpoints are defined to retrieve and manage dynamic configurations of Pod Template Selection config:
 
 - Get dynamic configuration:
-`POST` `/druid/indexer/v1/k8s/runner/execution`
+`POST` `/druid/indexer/v1/k8s/taskRunner/executionConfig`
 
 - Update dynamic configuration:
-`GET` `/druid/indexer/v1/k8s/runner/execution`
+`GET` `/druid/indexer/v1/k8s/taskRunner/executionConfig`
 
 - Get dynamic configuration history:
-`GET` `/druid/indexer/v1/k8s/runner/execution/history`
+`GET` `/druid/indexer/v1/k8s/taskRunner/executionConfig/history`
 
 ### Properties
 |Property| Possible Values | Description                                                                                                                                                                                                                                      |Default|required|
@@ -302,7 +302,7 @@ Similar to Overlord dynamic configuration, the following API endpoints are defin
 
 |Metric|Description|Dimensions|Normal value|
 |------|-----------|----------|------------|
-| `k8s/peon/startup/time` | Metric indicating the milliseconds for peon pod to startup. | `dataSource`, `taskId`, `taskType`, `groupId`, `taskStatus`, `tags`, `category` |Varies|
+| `k8s/peon/startup/time` | Metric indicating the milliseconds for peon pod to startup. | `dataSource`, `taskId`, `taskType`, `groupId`, `taskStatus`, `tags`, `podTemplate` |Varies|
 
 ### Gotchas
 

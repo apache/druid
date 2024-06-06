@@ -27,18 +27,18 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
  * This interface allows for dynamic configuration of task execution strategies based
  * on specified behavior strategies.
  */
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = DefaultExecutionConfig.class)
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = DefaultKubernetesTaskRunnerDynamicConfig.class)
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "default", value = DefaultExecutionConfig.class)
+    @JsonSubTypes.Type(name = "default", value = DefaultKubernetesTaskRunnerDynamicConfig.class)
 })
-public interface ExecutionConfig
+public interface KubernetesTaskRunnerDynamicConfig
 {
   String CONFIG_KEY = "k8s.taskrunner.config";
-  ExecutionBehaviorStrategy DEFAULT_STRATEGY = new DefaultExecutionBehaviorStrategy();
+  PodTemplateSelectStrategy DEFAULT_STRATEGY = new TaskTypePodTemplateSelectStrategy();
 
   /**
    * Retrieves the execution behavior strategy associated with this configuration.
    * @return the execution behavior strategy
    */
-  ExecutionBehaviorStrategy getBehaviorStrategy();
+  PodTemplateSelectStrategy getPodTemplateSelectStrategy();
 }
