@@ -40,19 +40,69 @@ For specific query differences between arrays and MVDs, see [Query differences b
 | Filtering and grouping | <ul><li>Filters and groupings match the entire array value</li><li>Can be used as GROUP BY keys, grouping based on the entire array value</li></ul> | <ul><li>Filters match any value within the array</li><li>Grouping generates a group for each individual value, similar to an implicit UNNEST</li></ul> |
 | Conversion | Convert an MVD to an array using [MV_TO_ARRAY](../querying/sql-functions.md#mv_to_array) | Convert an array to an MVD using [ARRAY_TO_MV](../querying/sql-functions.md#array_to_mv) |
 
-### Query differences between arrays and MVDs
+## Query differences between arrays and MVDs
 
-Querying an array column returns different results than when querying a MVD column depending on the query type. Review the following table on the differences. Adjust your applications to handle the new output shapes.
+In SQL queries, Druid operates on arrays differently than MVDs.
+A value in an array column is treated as a single array entity (SQL ARRAY), whereas a value in an MVD column is treated as individual strings (SQL VARCHAR).
 
-| Query type | Array | MVD |
-|---|---|---|
-| Equality filter | Matches the entire array value | Matches if any value within the array matches the filter |
-| Null filter | Matches rows where the entire array value is null | Matches rows where the array is empty (considered as null) but does not match arrays with empty (`“”`) values |
-| Range filter | Use [ARRAY_OVERLAP](../querying/sql-functions.md#array_overlap) | Not directly supported |
-| Contains filter | Use [ARRAY_CONTAINS](../querying/sql-functions.md#array_contains)| Use WHERE filter |
-| Behavior with SQL constructs | Follows standard SQL behavior with array functions like [ARRAY_CONTAINS](../querying/sql-functions.md#array_contains), [ARRAY_OVERLAP](../querying/sql-functions.md#array_overlap) | Requires special SQL functions like [MV_FILTER_ONLY](../querying/sql-functions.md#mv_filter_none), [MV_FILTER_NONE](../querying/sql-functions.md#mv_filter_only) for precise filtering |
-| Group by entire array | Groups the entire array as a single value | Not supported |
-| Group by individual values | Use [UNNEST](../querying/sql.md#unnest) to group by individual array elements | Automatically unnests groups by each individual value in the array |
+For example, consider the same value, `['a', 'b', 'c']` ingested into an array column and an MVD column.
+In your query, you want to filter results by comparing some value with `['a', 'b', 'c']`.
+
+* For array columns, Druid only returns the row when an equality filter matches the entire array.  
+For example: `WHERE "array_column" = ARRAY['a', 'b', 'c']`.
+
+* For MVD columns, Druid returns the row when an equality filter matches any value of the MVD.  
+For example, any of the following filters returns the row for the query:  
+`WHERE "mvd_column" = 'a'`  
+`WHERE "mvd_column" = 'b'`  
+`WHERE "mvd_column" = 'c'`
+
+Note this difference between arrays and MVDs when you write queries that involve filtering or grouping.
+
+The following examples highlight analogous queries between arrays and MVDs.
+For more information and examples, see [Querying arrays](../querying/arrays.md#querying-arrays) and [Querying multi-value dimensions](../querying/multi-value-dimensions.md#querying-multi-value-dimensions).
+
+### Example: an element in array
+
+Filter rows that have a certain value in the array or MVD.
+
+#### Array
+
+```sql
+```
+
+#### MVD
+
+```sql
+```
+
+### Example: overlap of two arrays
+
+Filter rows for which the array or MVD overlaps a reference array.
+
+#### Array
+
+```sql
+```
+
+#### MVD
+
+```sql
+```
+
+### Example: group on individual elements
+
+Group results by individual array elements.
+
+#### Array
+
+```sql
+```
+
+#### MVD
+
+```sql
+```
 
 ## How to ingest data as arrays
 
