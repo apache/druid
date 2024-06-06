@@ -25,6 +25,7 @@ import com.google.common.hash.Hashing;
 import com.google.common.io.BaseEncoding;
 import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -71,13 +72,14 @@ public class FingerprintGenerator
     }
     catch (IOException e) {
       log.error(
-          "Exception generating fingerprint for payload [%s], datasource [%s], version [%s] with stacktrace [%s].",
-          schemaPayload,
-          dataSource,
-          version,
-          e
+          e,
+          "Exception generating fingerprint for payload [%s], datasource [%s], version [%s].",
+          schemaPayload, dataSource, version
       );
-      throw new RuntimeException(e);
+      throw DruidException.defensive(
+          "Could not generate schema fingerprint (version[%d]) for datasource[%s].",
+          dataSource, version
+      );
     }
   }
 }

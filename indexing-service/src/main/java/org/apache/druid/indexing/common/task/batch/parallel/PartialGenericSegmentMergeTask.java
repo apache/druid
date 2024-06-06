@@ -19,11 +19,9 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
-import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.ImmutableSet;
@@ -63,8 +61,7 @@ public class PartialGenericSegmentMergeTask extends PartialSegmentMergeTask<Buil
       @JsonProperty("subtaskSpecId") @Nullable final String subtaskSpecId,
       @JsonProperty("numAttempts") final int numAttempts, // zero-based counting
       @JsonProperty("spec") final PartialSegmentMergeIngestionSpec ingestionSchema,
-      @JsonProperty("context") final Map<String, Object> context,
-      @JacksonInject ObjectMapper mapper
+      @JsonProperty("context") final Map<String, Object> context
   )
   {
     super(
@@ -77,8 +74,7 @@ public class PartialGenericSegmentMergeTask extends PartialSegmentMergeTask<Buil
         ingestionSchema.getIOConfig(),
         ingestionSchema.getTuningConfig(),
         numAttempts,
-        context,
-        mapper
+        context
     );
 
     this.ingestionSchema = ingestionSchema;

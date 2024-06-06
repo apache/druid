@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.indexing.common.TaskToolbox;
@@ -39,7 +38,6 @@ class PartialGenericSegmentMergeParallelIndexTaskRunner
 
   private final DataSchema dataSchema;
   private final List<PartialSegmentMergeIOConfig> mergeIOConfigs;
-  private final ObjectMapper mapper;
 
   PartialGenericSegmentMergeParallelIndexTaskRunner(
       TaskToolbox toolbox,
@@ -49,15 +47,13 @@ class PartialGenericSegmentMergeParallelIndexTaskRunner
       DataSchema dataSchema,
       List<PartialSegmentMergeIOConfig> mergeIOConfigs,
       ParallelIndexTuningConfig tuningConfig,
-      Map<String, Object> context,
-      ObjectMapper mapper
+      Map<String, Object> context
   )
   {
     super(toolbox, taskId, groupId, baseSubtaskSpecName, tuningConfig, context);
 
     this.dataSchema = dataSchema;
     this.mergeIOConfigs = mergeIOConfigs;
-    this.mapper = mapper;
   }
 
   @Override
@@ -106,8 +102,7 @@ class PartialGenericSegmentMergeParallelIndexTaskRunner
             subtaskSpecId,
             numAttempts,
             ingestionSpec,
-            getContext(),
-            mapper
+            getContext()
         );
       }
     };

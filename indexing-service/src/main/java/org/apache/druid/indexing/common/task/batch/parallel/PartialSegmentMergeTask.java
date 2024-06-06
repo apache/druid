@@ -20,7 +20,6 @@
 package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.Maps;
@@ -84,7 +83,6 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
   private final PartialSegmentMergeIOConfig ioConfig;
   private final int numAttempts;
   private final String subtaskSpecId;
-  private final FingerprintGenerator fingerprintGenerator;
 
   PartialSegmentMergeTask(
       // id shouldn't be null except when this task is created by ParallelIndexSupervisorTask
@@ -97,8 +95,7 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
       PartialSegmentMergeIOConfig ioConfig,
       ParallelIndexTuningConfig tuningConfig,
       final int numAttempts, // zero-based counting
-      final Map<String, Object> context,
-      final ObjectMapper mapper
+      final Map<String, Object> context
   )
   {
     super(
@@ -118,7 +115,6 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
     this.subtaskSpecId = subtaskSpecId;
     this.ioConfig = ioConfig;
     this.numAttempts = numAttempts;
-    this.fingerprintGenerator = new FingerprintGenerator(mapper);
   }
 
   @JsonProperty
@@ -262,6 +258,7 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
     final Set<DataSegment> pushedSegments = new HashSet<>();
     final SegmentSchemaMapping segmentSchemaMapping = new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
 
+    final FingerprintGenerator fingerprintGenerator = new FingerprintGenerator(toolbox.getJsonMapper());
     for (Entry<Interval, Int2ObjectMap<List<File>>> entryPerInterval : intervalToUnzippedFiles.entrySet()) {
       final Interval interval = entryPerInterval.getKey();
       for (Int2ObjectMap.Entry<List<File>> entryPerBucketId : entryPerInterval.getValue().int2ObjectEntrySet()) {
