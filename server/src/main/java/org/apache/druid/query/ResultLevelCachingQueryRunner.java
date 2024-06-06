@@ -28,6 +28,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.CacheUtil;
 import org.apache.druid.client.cache.Cache;
+import org.apache.druid.client.cache.Cache.NamedKey;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -87,7 +88,8 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
   {
     if (useResultCache || populateResultCache) {
 
-      final byte[] cacheKey = strategy.computeResultLevelCacheKey(query);
+      final byte[] queryCacheKey = strategy.computeResultLevelCacheKey(query);
+      final Cache.NamedKey cacheKey = CacheUtil.computeResultLevelCacheKey(queryCacheKey);
       final byte[] cachedResultSet = fetchResultsFromResultLevelCache(cacheKey);
       String existingResultSetId = extractEtagFromResults(cachedResultSet);
 
@@ -166,11 +168,11 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
 
   @Nullable
   private byte[] fetchResultsFromResultLevelCache(
-      final byte[] queryCacheKey
+      final NamedKey cacheKey
   )
   {
-    if (useResultCache && queryCacheKey != null) {
-      return cache.get(CacheUtil.computeResultLevelCacheKey(queryCacheKey));
+    if (useResultCache && cacheKey != null) {
+      return cache.get(cacheKey);
     }
     return null;
   }
@@ -216,7 +218,7 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
   }
 
   private ResultLevelCachePopulator createResultLevelCachePopulator(
-      byte[] cacheKey,
+      NamedKey cacheKey,
       String resultSetId
   )
   {
@@ -224,7 +226,7 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
       ResultLevelCachePopulator resultLevelCachePopulator = new ResultLevelCachePopulator(
           cache,
           objectMapper,
-          CacheUtil.computeResultLevelCacheKey(cacheKey),
+          cacheKey,
           cacheConfig,
           true
       );
