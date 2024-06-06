@@ -403,6 +403,12 @@ public final class DimensionHandlerUtils
   }
 
   @Nullable
+  public static Float convertObjectToFloat(@Nullable Object valObj, @Nullable String fieldName)
+  {
+    return convertObjectToFloat(valObj, false, fieldName);
+  }
+
+  @Nullable
   public static Float convertObjectToFloat(@Nullable Object valObj, boolean reportParseExceptions, @Nullable String fieldName)
   {
     {
@@ -591,6 +597,12 @@ public final class DimensionHandlerUtils
   public static Double convertObjectToDouble(@Nullable Object valObj, boolean reportParseExceptions)
   {
     return convertObjectToDouble(valObj, reportParseExceptions, null);
+  }
+
+  @Nullable
+  public static Double convertObjectToDouble(@Nullable Object valObj, @Nullable String fieldName)
+  {
+    return convertObjectToDouble(valObj, false, fieldName);
   }
 
   @Nullable
