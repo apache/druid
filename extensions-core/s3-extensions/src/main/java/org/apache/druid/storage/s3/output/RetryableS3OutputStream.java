@@ -78,7 +78,6 @@ public class RetryableS3OutputStream extends OutputStream
   private final File chunkStorePath;
   private final long chunkSize;
 
-  private final List<PartETag> pushResults = new ArrayList<>();
   private final byte[] singularBuffer = new byte[1];
 
   // metric
@@ -189,15 +188,9 @@ public class RetryableS3OutputStream extends OutputStream
     currentChunk.close();
     final Chunk chunk = currentChunk;
     if (chunk.length() > 0) {
-      Future<UploadPartResult> uploadPartResultFuture = uploadManager.queueChunkForUpload(
-          s3,
-          s3Key,
-          chunk.id,
-          chunk.file,
-          uploadId,
-          config
+      futures.add(
+          uploadManager.queueChunkForUpload(s3, s3Key, chunk.id, chunk.file, uploadId, config)
       );
-      futures.add(uploadPartResultFuture);
     }
   }
 
@@ -212,6 +205,9 @@ public class RetryableS3OutputStream extends OutputStream
 
     // Closeables are closed in LIFO order
     closer.register(() -> {
+      org.apache.commons.io.FileUtils.forceDelete(chunkStorePath);
+      LOG.info("Deleted chunkStorePath[%s]", chunkStorePath);
+
       // This should be emitted as a metric
       long totalChunkSize = (currentChunk.id - 1) * chunkSize + currentChunk.length();
       LOG.info(
@@ -232,20 +228,24 @@ public class RetryableS3OutputStream extends OutputStream
 
   private void completeMultipartUpload()
   {
+    final List<PartETag> pushResults = new ArrayList<>();
     for (Future<UploadPartResult> future : futures) {
+      if (error) {
+        future.cancel(true);
+      }
       try {
-        UploadPartResult result = future.get();
+        UploadPartResult result = future.get(1, TimeUnit.HOURS);
         pushResults.add(result.getPartETag());
       }
       catch (Exception e) {
         error = true;
         LOG.error(e, "Error in uploading part for upload ID [%s]", uploadId);
-        break;
       }
     }
 
     try {
-      if (isAllPushSucceeded()) {
+      boolean isAllPushSucceeded = !error && !pushResults.isEmpty() && futures.size() == pushResults.size();
+      if (isAllPushSucceeded) {
         RetryUtils.retry(
             () -> s3.completeMultipartUpload(
                 new CompleteMultipartUploadRequest(config.getBucket(), s3Key, uploadId, pushResults)
@@ -267,20 +267,6 @@ public class RetryableS3OutputStream extends OutputStream
     catch (Exception e) {
       throw new RuntimeException(e);
     }
-    finally {
-      try {
-        org.apache.commons.io.FileUtils.forceDelete(chunkStorePath);
-        pushStopwatch.stop();
-      }
-      catch (IOException e) {
-        throw new RuntimeException(e);
-      }
-    }
-  }
-
-  private boolean isAllPushSucceeded()
-  {
-    return !error && !pushResults.isEmpty() && futures.size() == pushResults.size();
   }
 
   private static class Chunk implements Closeable

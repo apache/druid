@@ -90,36 +90,36 @@ public class S3UploadManagerTest
   }
 
   @Test
-  public void testComputeMaxNumConcurrentChunks()
+  public void testComputeMaxNumChunksOnDisk()
   {
-    int maxNumConcurrentChunks = s3UploadManager.computeMaxNumConcurrentChunks(s3OutputConfig, s3ExportConfig);
+    int maxNumConcurrentChunks = S3UploadManager.computeMaxNumChunksOnDisk(s3OutputConfig, s3ExportConfig);
     int expectedMaxNumConcurrentChunks = 25; // maxChunkSizePossible/200 MB
     assertEquals(expectedMaxNumConcurrentChunks, maxNumConcurrentChunks);
   }
 
   @Test
-  public void testComputeMaxNumConcurrentChunksWithNullOutputConfig()
+  public void testComputeMaxNumChunksOnDiskWithNullOutputConfig()
   {
     // Null S3OutputConfig
-    int maxNumConcurrentChunks = s3UploadManager.computeMaxNumConcurrentChunks(null, s3ExportConfig);
+    int maxNumConcurrentChunks = S3UploadManager.computeMaxNumChunksOnDisk(null, s3ExportConfig);
     int expectedMaxNumConcurrentChunks = 25; // maxChunkSizePossible / s3ExportConfig's chunk size
     assertEquals(expectedMaxNumConcurrentChunks, maxNumConcurrentChunks);
 
     // Null S3OutputConfig#getChunkSize()
-    maxNumConcurrentChunks = s3UploadManager.computeMaxNumConcurrentChunks(EasyMock.mock(S3OutputConfig.class), s3ExportConfig);
+    maxNumConcurrentChunks = S3UploadManager.computeMaxNumChunksOnDisk(EasyMock.mock(S3OutputConfig.class), s3ExportConfig);
     assertEquals(expectedMaxNumConcurrentChunks, maxNumConcurrentChunks);
   }
 
   @Test
-  public void testComputeMaxNumConcurrentChunksWithNullExportConfig()
+  public void testComputeMaxNumChunksOnDiskWithNullExportConfig()
   {
     // Null S3ExportConfig
-    int maxNumConcurrentChunks = s3UploadManager.computeMaxNumConcurrentChunks(s3OutputConfig, null);
+    int maxNumConcurrentChunks = S3UploadManager.computeMaxNumChunksOnDisk(s3OutputConfig, null);
     int expectedMaxNumConcurrentChunks = 51; // maxChunkSizePossible / s3OutputConfig's chunk size
     assertEquals(expectedMaxNumConcurrentChunks, maxNumConcurrentChunks);
 
     // Null S3ExportConfig#getChunkSize()
-    maxNumConcurrentChunks = s3UploadManager.computeMaxNumConcurrentChunks(s3OutputConfig, EasyMock.mock(S3ExportConfig.class));
+    maxNumConcurrentChunks = S3UploadManager.computeMaxNumChunksOnDisk(s3OutputConfig, EasyMock.mock(S3ExportConfig.class));
     assertEquals(expectedMaxNumConcurrentChunks, maxNumConcurrentChunks);
   }
 

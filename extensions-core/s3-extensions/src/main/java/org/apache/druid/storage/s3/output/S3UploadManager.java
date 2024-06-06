@@ -52,39 +52,40 @@ public class S3UploadManager
   public S3UploadManager(S3OutputConfig s3OutputConfig, S3ExportConfig s3ExportConfig, RuntimeInfo runtimeInfo)
   {
     int poolSize = Math.max(4, runtimeInfo.getAvailableProcessors());
-    int maxNumConcurrentChunks = computeMaxNumConcurrentChunks(s3OutputConfig, s3ExportConfig);
-    this.uploadExecutor = createExecutorService(poolSize, maxNumConcurrentChunks);
+    int maxNumChunksOnDisk = computeMaxNumChunksOnDisk(s3OutputConfig, s3ExportConfig);
+    this.uploadExecutor = createExecutorService(poolSize, maxNumChunksOnDisk);
     log.info("Initialized executor service for S3 multipart upload with pool size [%d] and work queue capacity [%d]",
-             poolSize, maxNumConcurrentChunks);
+             poolSize, maxNumChunksOnDisk);
   }
 
   /**
-   * Computes the maximum number of concurrent chunks for an S3 multipart upload.
-   * We want to determine the maximum number of concurrent chunks on disk based on the maximum value of chunkSize
-   * between the 2 configs: S3OutputConfig and S3ExportConfig.
-   *
-   * @param s3OutputConfig  The S3 output configuration, which may specify a custom chunk size.
-   * @param s3ExportConfig  The S3 export configuration, which may also specify a custom chunk size.
-   * @return The maximum number of concurrent chunks.
+   * Computes the maximum number of S3 upload chunks that can be kept on disk using the
+   * maximum chunk size specified in {@link S3OutputConfig} and {@link S3ExportConfig}.
    */
-  @VisibleForTesting
-  int computeMaxNumConcurrentChunks(S3OutputConfig s3OutputConfig, S3ExportConfig s3ExportConfig)
+  public static int computeMaxNumChunksOnDisk(S3OutputConfig s3OutputConfig, S3ExportConfig s3ExportConfig)
   {
-    long chunkSize = S3OutputConfig.S3_MULTIPART_UPLOAD_MIN_PART_SIZE_BYTES;
+    long maxChunkSize = S3OutputConfig.S3_MULTIPART_UPLOAD_MIN_PART_SIZE_BYTES;
     if (s3OutputConfig != null && s3OutputConfig.getChunkSize() != null) {
-      chunkSize = Math.max(chunkSize, s3OutputConfig.getChunkSize());
+      maxChunkSize = Math.max(maxChunkSize, s3OutputConfig.getChunkSize());
     }
     if (s3ExportConfig != null && s3ExportConfig.getChunkSize() != null) {
-      chunkSize = Math.max(chunkSize, s3ExportConfig.getChunkSize().getBytes());
+      maxChunkSize = Math.max(maxChunkSize, s3ExportConfig.getChunkSize().getBytes());
     }
 
-    return (int) (S3OutputConfig.S3_MULTIPART_UPLOAD_MAX_PART_SIZE_BYTES / chunkSize);
+    return (int) (S3OutputConfig.S3_MULTIPART_UPLOAD_MAX_PART_SIZE_BYTES / maxChunkSize);
   }
 
   /**
    * Queues a chunk of a file for upload to S3 as part of a multipart upload.
    */
-  public Future<UploadPartResult> queueChunkForUpload(ServerSideEncryptingAmazonS3 s3Client, String key, int chunkNumber, File chunkFile, String uploadId, S3OutputConfig config)
+  public Future<UploadPartResult> queueChunkForUpload(
+      ServerSideEncryptingAmazonS3 s3Client,
+      String key,
+      int chunkNumber,
+      File chunkFile,
+      String uploadId,
+      S3OutputConfig config
+  )
   {
     return uploadExecutor.submit(() -> RetryUtils.retry(
         () -> {
@@ -126,7 +127,7 @@ public class S3UploadManager
         .withPartSize(chunkFile.length());
 
     if (log.isDebugEnabled()) {
-      log.debug("Pushing chunk [%s] to bucket[%s] and key[%s].", chunkNumber, bucket, key);
+      log.debug("Pushing chunk[%s] to bucket[%s] and key[%s].", chunkNumber, bucket, key);
     }
     return s3Client.uploadPart(uploadPartRequest);
   }
@@ -146,9 +147,7 @@ public class S3UploadManager
   @LifecycleStop
   public void stop()
   {
-    log.info("Stopping S3UploadManager");
     uploadExecutor.shutdown();
-    log.info("Stopped S3UploadManager");
   }
 
 }

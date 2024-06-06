@@ -213,7 +213,6 @@ public class RetryableS3OutputStreamTest
         out.write(bb.array());
       }
 
-      // No exception is thrown in the main thread, since the upload now happens in a separate threadpool.
       bb.clear();
       bb.putInt(3);
       out.write(bb.array());
