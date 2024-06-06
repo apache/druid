@@ -59,7 +59,7 @@ For example, any of the following filters returns the row for the query:
 
 Note this difference between arrays and MVDs when you write queries that involve filtering or grouping.
 
-The following examples highlight analogous queries between arrays and MVDs.
+The following examples highlight a few analogous queries between arrays and MVDs.
 For more information and examples, see [Querying arrays](../querying/arrays.md#querying-arrays) and [Querying multi-value dimensions](../querying/multi-value-dimensions.md#querying-multi-value-dimensions).
 
 ### Example: an element in array
@@ -69,11 +69,17 @@ Filter rows that have a certain value in the array or MVD.
 #### Array
 
 ```sql
+SELECT *
+FROM "array_example"
+WHERE ARRAY_CONTAINS(tags, 't3')
 ```
 
 #### MVD
 
 ```sql
+SELECT *
+FROM "mvd_example"
+WHERE tags = 't3'
 ```
 
 ### Example: overlap of two arrays
@@ -83,25 +89,37 @@ Filter rows for which the array or MVD overlaps a reference array.
 #### Array
 
 ```sql
+SELECT *
+FROM "array_example"
+WHERE ARRAY_OVERLAP(tags, ARRAY['t1', 't7'])
 ```
 
 #### MVD
 
 ```sql
+SELECT *
+FROM "mvd_example"
+WHERE MV_OVERLAP(tags, ARRAY['t1', 't7'])
 ```
 
-### Example: group on individual elements
+### Example: group by array elements
 
 Group results by individual array elements.
 
 #### Array
 
 ```sql
+SELECT label, strings
+FROM "array_example" CROSS JOIN UNNEST(tags) as u(strings)
+GROUP BY 1, 2
 ```
 
 #### MVD
 
 ```sql
+SELECT label, tags
+FROM "mvd_example"
+GROUP BY 1, 2
 ```
 
 ## How to ingest data as arrays
