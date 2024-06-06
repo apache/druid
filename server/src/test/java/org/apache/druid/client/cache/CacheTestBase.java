@@ -30,7 +30,7 @@ public class CacheTestBase<T extends Cache>
   T cache;
 
   @Test
-  public void testKeyContainingNegativeBytest()
+  public void testKeyContainingNegativeBytes()
   {
     byte[] value = new byte[] {1, 0, -10, -55, 111};
     NamedKey key = CacheUtil.computeResultLevelCacheKey(new byte[] {1, 0, -10, 0});
