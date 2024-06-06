@@ -2140,7 +2140,6 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   public void testCacheKeyConsistency()
   {
     skipVectorize();
-
     // possibly pollute the cache
     // https://github.com/apache/druid/issues/16552
     testBuilder()

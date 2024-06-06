@@ -302,11 +302,8 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
 
     public void populateResults()
     {
-      CacheUtil.populateResultCache(
-          cache,
-          key,
-          Preconditions.checkNotNull(cacheObjectStream, "cacheObjectStream").toByteArray()
-      );
+      byte[] cachedResults = Preconditions.checkNotNull(cacheObjectStream, "cacheObjectStream").toByteArray();
+      cache.put(key, cachedResults);
     }
   }
 }

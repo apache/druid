@@ -64,15 +64,6 @@ public class CacheUtil
     return new Cache.NamedKey(RESULT_CACHE_NS, resultLevelCacheIdentifier);
   }
 
-  public static void populateResultCache(
-      Cache cache,
-      Cache.NamedKey key,
-      byte[] resultBytes
-  )
-  {
-    cache.put(key, resultBytes);
-  }
-
   public static Cache.NamedKey computeSegmentCacheKey(
       String segmentId,
       SegmentDescriptor descriptor,
