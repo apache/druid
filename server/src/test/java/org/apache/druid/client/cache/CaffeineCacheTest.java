@@ -25,6 +25,8 @@ import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.name.Names;
+import org.apache.druid.client.CacheUtil;
+import org.apache.druid.client.cache.Cache.NamedKey;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.JsonConfigurator;
@@ -44,12 +46,14 @@ import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.ForkJoinPool;
 
-public class CaffeineCacheTest
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+public class CaffeineCacheTest extends CacheTestBase<CaffeineCache>
 {
   private static final byte[] HI = StringUtils.toUtf8("hiiiiiiiiiiiiiiiiiii");
   private static final byte[] HO = StringUtils.toUtf8("hooooooooooooooooooo");
 
-  private CaffeineCache cache;
   private final CaffeineCacheConfig cacheConfig = new CaffeineCacheConfig()
   {
     @Override
@@ -63,6 +67,16 @@ public class CaffeineCacheTest
   public void setUp()
   {
     cache = CaffeineCache.create(cacheConfig);
+  }
+
+  @Test
+  public void testKeyContainingNegativeBytest()
+  {
+    byte[] value = new byte[] {1, 0, -10, -55, 111};
+    NamedKey key = CacheUtil.computeResultLevelCacheKey(new byte[] {1, 0, -10, 0});
+    cache.put(key, value);
+    assertArrayEquals(value, cache.get(key));
+    assertEquals(1, cache.getStats().getNumEntries());
   }
 
   @Test
