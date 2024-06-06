@@ -139,7 +139,7 @@ public class S3UploadManagerTest
   }
 
   @After
-  public void teardown() throws IOException
+  public void teardown()
   {
     s3UploadManager.stop();
   }
