@@ -22,21 +22,21 @@ package org.apache.druid.storage.s3.output;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
 import org.apache.druid.java.util.common.HumanReadableBytes;
-import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.query.DruidProcessingConfigTest;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 import org.apache.druid.utils.RuntimeInfo;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
-import java.util.concurrent.ExecutorService;
+import java.io.IOException;
 import java.util.concurrent.Future;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 public class S3UploadManagerTest
 {
@@ -44,25 +44,14 @@ public class S3UploadManagerTest
   private S3UploadManager s3UploadManager;
   private S3OutputConfig s3OutputConfig;
   private S3ExportConfig s3ExportConfig;
-  private static ExecutorService uploadExecutor;
 
   @Before
   public void setUp()
   {
-    s3OutputConfig = EasyMock.mock(S3OutputConfig.class);
-    s3ExportConfig = EasyMock.mock(S3ExportConfig.class);
-    final RuntimeInfo runtimeInfo = EasyMock.mock(RuntimeInfo.class);
-    uploadExecutor = Execs.singleThreaded("UploadThreadPool-%d");
-
-    EasyMock.expect(runtimeInfo.getAvailableProcessors()).andReturn(8).anyTimes();
-    EasyMock.expect(s3OutputConfig.getChunkSize()).andReturn(100L * 1024 * 1024).anyTimes(); // 100 MB
-    EasyMock.expect(s3OutputConfig.getMaxRetry()).andReturn(1).anyTimes();
-    EasyMock.expect(s3OutputConfig.getBucket()).andReturn("bucket").anyTimes();
-    EasyMock.expect(s3ExportConfig.getChunkSize()).andReturn(HumanReadableBytes.valueOf(200L * 1024 * 1024)).anyTimes(); // 200 MB
-
-    EasyMock.replay(runtimeInfo, s3OutputConfig, s3ExportConfig);
-
-    s3UploadManager = new TestS3UploadManager(s3OutputConfig, s3ExportConfig, runtimeInfo);
+    s3OutputConfig = new S3OutputConfig("bucket", "prefix", EasyMock.mock(File.class), new HumanReadableBytes("100MiB"), 1);
+    s3ExportConfig = new S3ExportConfig("tempDir", new HumanReadableBytes("200MiB"), 1, null);
+    final RuntimeInfo runtimeInfo = new DruidProcessingConfigTest.MockRuntimeInfo(8, 0, 0);
+    s3UploadManager = new S3UploadManager(s3OutputConfig, s3ExportConfig, runtimeInfo);
   }
 
   @Test
@@ -149,26 +138,9 @@ public class S3UploadManagerTest
     assertEquals(uploadPartResult, result);
   }
 
-  @Test
-  public void testStartAndStop()
+  @After
+  public void teardown() throws IOException
   {
-    s3UploadManager.start();
     s3UploadManager.stop();
-
-    assertTrue(uploadExecutor.isShutdown());
-  }
-
-  private static class TestS3UploadManager extends S3UploadManager
-  {
-    public TestS3UploadManager(S3OutputConfig s3OutputConfig, S3ExportConfig s3ExportConfig, RuntimeInfo runtimeInfo)
-    {
-      super(s3OutputConfig, s3ExportConfig, runtimeInfo);
-    }
-
-    @Override
-    ExecutorService createExecutorService(int poolSize, int maxNumConcurrentChunks)
-    {
-      return uploadExecutor;
-    }
   }
 }

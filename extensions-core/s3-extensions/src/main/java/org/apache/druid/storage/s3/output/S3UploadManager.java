@@ -89,7 +89,7 @@ public class S3UploadManager
   {
     return uploadExecutor.submit(() -> RetryUtils.retry(
         () -> {
-          log.debug("Uploading chunk [%d] for uploadId [%s].", chunkNumber, uploadId);
+          log.debug("Uploading chunk[%d] for uploadId[%s].", chunkNumber, uploadId);
           UploadPartResult uploadPartResult = uploadPartIfPossible(
               s3Client,
               uploadId,
@@ -132,8 +132,7 @@ public class S3UploadManager
     return s3Client.uploadPart(uploadPartRequest);
   }
 
-  @VisibleForTesting
-  ExecutorService createExecutorService(int poolSize, int maxNumConcurrentChunks)
+  private ExecutorService createExecutorService(int poolSize, int maxNumConcurrentChunks)
   {
     return Execs.newBlockingThreaded("S3UploadThreadPool-%d", poolSize, maxNumConcurrentChunks);
   }
