@@ -1634,7 +1634,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     List<String> expectedMessages = Arrays.asList(
         "Unable to parse value[notanumber] for field[met1]",
-        "could not convert value [notanumber] to float",
+        "could not convert value [notanumber] to float for dimension [dimFloat]",
         "could not convert value [notanumber] to long for dimension [dimLong]",
         "Unable to parse [] as the intermediateRow resulted in empty input row (Record: 1)",
         "Unable to parse row [unparseable] (Record: 1)",
