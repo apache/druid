@@ -78,8 +78,13 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
       @Nullable SegmentSchemaMapping segmentSchemaMapping
   )
   {
-    return new SegmentTransactionalInsertAction(segmentsToBeOverwritten, segmentsToPublish, null, null, null,
-                                                segmentSchemaMapping
+    return new SegmentTransactionalInsertAction(
+        segmentsToBeOverwritten,
+        segmentsToPublish,
+        null,
+        null,
+        null,
+        segmentSchemaMapping
     );
   }
 

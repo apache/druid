@@ -73,15 +73,16 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -89,9 +90,6 @@ public class TaskLockboxTest
 {
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derby = new TestDerbyConnector.DerbyConnectorRule();
-
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
 
   private ObjectMapper objectMapper;
   private TaskStorage taskStorage;
@@ -103,9 +101,6 @@ public class TaskLockboxTest
   private final int HIGH_PRIORITY = 15;
   private final int MEDIUM_PRIORITY = 10;
   private final int LOW_PRIORITY = 5;
-
-  @Rule
-  public final ExpectedException exception = ExpectedException.none();
 
   @Before
   public void setup()
@@ -185,14 +180,16 @@ public class TaskLockboxTest
   }
 
   @Test
-  public void testLockAfterTaskComplete() throws InterruptedException
+  public void testLockAfterTaskComplete()
   {
-    Task task = NoopTask.create();
-    exception.expect(ISE.class);
-    exception.expectMessage("Unable to grant lock to inactive Task");
+    final Task task = NoopTask.create();
     lockbox.add(task);
     lockbox.remove(task);
-    acquireTimeChunkLock(TaskLockType.EXCLUSIVE, task, Intervals.of("2015-01-01/2015-01-02"));
+    ISE exception = Assert.assertThrows(
+        ISE.class,
+        () -> acquireTimeChunkLock(TaskLockType.EXCLUSIVE, task, Intervals.of("2015-01-01/2015-01-02"))
+    );
+    Assert.assertTrue(exception.getMessage().contains("Unable to grant lock to inactive Task"));
   }
 
   @Test
@@ -310,12 +307,15 @@ public class TaskLockboxTest
   @Test
   public void testTryLockAfterTaskComplete()
   {
-    Task task = NoopTask.create();
-    exception.expect(ISE.class);
-    exception.expectMessage("Unable to grant lock to inactive Task");
+    final Task task = NoopTask.create();
     lockbox.add(task);
     lockbox.remove(task);
-    Assert.assertFalse(tryTimeChunkLock(TaskLockType.EXCLUSIVE, task, Intervals.of("2015-01-01/2015-01-02")).isOk());
+
+    ISE exception = Assert.assertThrows(
+        ISE.class,
+        () -> tryTimeChunkLock(TaskLockType.EXCLUSIVE, task, Intervals.of("2015-01-01/2015-01-02"))
+    );
+    Assert.assertTrue(exception.getMessage().contains("Unable to grant lock to inactive Task"));
   }
 
   @Test
@@ -758,23 +758,23 @@ public class TaskLockboxTest
         ).isOk()
     );
 
-    final List<TaskLockPosse> highLockPosses = lockbox.getOnlyTaskLockPosseContainingInterval(
+    final Optional<TaskLockPosse> highLockPosse = lockbox.getOnlyTaskLockPosseContainingInterval(
         highPriorityTask,
         Intervals.of("2018-12-16T09:00:00/2018-12-16T09:30:00")
     );
 
-    Assert.assertEquals(1, highLockPosses.size());
-    Assert.assertTrue(highLockPosses.get(0).containsTask(highPriorityTask));
-    Assert.assertFalse(highLockPosses.get(0).getTaskLock().isRevoked());
+    Assert.assertTrue(highLockPosse.isPresent());
+    Assert.assertTrue(highLockPosse.get().containsTask(highPriorityTask));
+    Assert.assertFalse(highLockPosse.get().getTaskLock().isRevoked());
 
-    final List<TaskLockPosse> lowLockPosses = lockbox.getOnlyTaskLockPosseContainingInterval(
+    final Optional<TaskLockPosse> lowLockPosse = lockbox.getOnlyTaskLockPosseContainingInterval(
         lowPriorityTask,
         Intervals.of("2018-12-16T09:00:00/2018-12-16T10:00:00")
     );
 
-    Assert.assertEquals(1, lowLockPosses.size());
-    Assert.assertTrue(lowLockPosses.get(0).containsTask(lowPriorityTask));
-    Assert.assertTrue(lowLockPosses.get(0).getTaskLock().isRevoked());
+    Assert.assertTrue(lowLockPosse.isPresent());
+    Assert.assertTrue(lowLockPosse.get().containsTask(lowPriorityTask));
+    Assert.assertTrue(lowLockPosse.get().getTaskLock().isRevoked());
   }
 
   @Test
@@ -1744,6 +1744,33 @@ public class TaskLockboxTest
   }
 
   @Test
+  public void testTimechunkLockTypeTransitionForSameTaskGroup()
+  {
+    Task task = NoopTask.create();
+    Task otherGroupTask = NoopTask.create();
+
+    // Create an exclusive lock
+    validator.expectLockCreated(TaskLockType.EXCLUSIVE, task, Intervals.of("2024/2025"));
+
+    // Verify that new locks are created for all other conflicting lock requests for the same interval and group
+    validator.expectLockCreated(TaskLockType.SHARED, task, Intervals.of("2024/2025"));
+    validator.expectLockCreated(TaskLockType.REPLACE, task, Intervals.of("2024/2025"));
+    validator.expectLockCreated(TaskLockType.APPEND, task, Intervals.of("2024/2025"));
+
+    // Conflicting locks for a different interval cannot be granted
+    validator.expectLockNotGranted(TaskLockType.EXCLUSIVE, task, Intervals.of("2023/2025"));
+    validator.expectLockNotGranted(TaskLockType.SHARED, task, Intervals.of("2023/2025"));
+    validator.expectLockNotGranted(TaskLockType.REPLACE, task, Intervals.of("2023/2025"));
+    validator.expectLockNotGranted(TaskLockType.APPEND, task, Intervals.of("2023/2025"));
+
+    // Locks must not be granted when the task group is different
+    validator.expectLockNotGranted(TaskLockType.EXCLUSIVE, otherGroupTask, Intervals.of("2024/2025"));
+    validator.expectLockNotGranted(TaskLockType.SHARED, otherGroupTask, Intervals.of("2024/2025"));
+    validator.expectLockNotGranted(TaskLockType.REPLACE, otherGroupTask, Intervals.of("2024/2025"));
+    validator.expectLockNotGranted(TaskLockType.APPEND, otherGroupTask, Intervals.of("2024/2025"));
+  }
+
+  @Test
   public void testGetLockedIntervalsForRevokedLocks()
   {
     // Acquire lock for a low priority task
@@ -1948,8 +1975,10 @@ public class TaskLockboxTest
     // Only the replaceTask should attempt a delete on the upgradeSegments table
     EasyMock.expect(coordinator.deleteUpgradeSegmentsForTask(replaceTask.getId())).andReturn(0).once();
     // Any task may attempt pending segment clean up
-    EasyMock.expect(coordinator.deletePendingSegmentsForTaskGroup(replaceTask.getId())).andReturn(0).once();
-    EasyMock.expect(coordinator.deletePendingSegmentsForTaskGroup(appendTask.getId())).andReturn(0).once();
+    EasyMock.expect(coordinator.deletePendingSegmentsForTaskAllocatorId(replaceTask.getDataSource(), replaceTask.getId()))
+            .andReturn(0).once();
+    EasyMock.expect(coordinator.deletePendingSegmentsForTaskAllocatorId(appendTask.getDataSource(), appendTask.getId()))
+            .andReturn(0).once();
     EasyMock.replay(coordinator);
 
     final TaskLockbox taskLockbox = new TaskLockbox(taskStorage, coordinator);
@@ -1975,7 +2004,7 @@ public class TaskLockboxTest
   private class TaskLockboxValidator
   {
 
-    private final List<Task> tasks;
+    private final Set<Task> tasks;
     private final TaskLockbox lockbox;
     private final TaskStorage taskStorage;
     private final Map<TaskLock, String> lockToTaskIdMap;
@@ -1983,9 +2012,17 @@ public class TaskLockboxTest
     TaskLockboxValidator(TaskLockbox lockbox, TaskStorage taskStorage)
     {
       lockToTaskIdMap = new HashMap<>();
-      tasks = new ArrayList<>();
+      tasks = new HashSet<>();
       this.lockbox = lockbox;
       this.taskStorage = taskStorage;
+    }
+
+    public TaskLock expectLockCreated(TaskLockType type, Task task, Interval interval)
+    {
+      final TaskLock lock = tryTaskLock(type, task, interval);
+      Assert.assertNotNull(lock);
+      Assert.assertFalse(lock.isRevoked());
+      return lock;
     }
 
     public TaskLock expectLockCreated(TaskLockType type, Interval interval, int priority)
@@ -1999,6 +2036,12 @@ public class TaskLockboxTest
     public void revokeLock(TaskLock lock)
     {
       lockbox.revokeLock(lockToTaskIdMap.get(lock), lock);
+    }
+
+    public void expectLockNotGranted(TaskLockType type, Task task, Interval interval)
+    {
+      final TaskLock lock = tryTaskLock(type, task, interval);
+      Assert.assertNull(lock);
     }
 
     public void expectLockNotGranted(TaskLockType type, Interval interval, int priority)
@@ -2029,17 +2072,22 @@ public class TaskLockboxTest
       }
     }
 
-    private TaskLock tryTaskLock(TaskLockType type, Interval interval, int priority)
+    private TaskLock tryTaskLock(TaskLockType type, Task task, Interval interval)
     {
-      final Task task = NoopTask.ofPriority(priority);
-      tasks.add(task);
-      lockbox.add(task);
-      taskStorage.insert(task, TaskStatus.running(task.getId()));
+      if (tasks.add(task)) {
+        lockbox.add(task);
+        taskStorage.insert(task, TaskStatus.running(task.getId()));
+      }
       TaskLock lock = tryTimeChunkLock(type, task, interval).getTaskLock();
       if (lock != null) {
         lockToTaskIdMap.put(lock, task.getId());
       }
       return lock;
+    }
+
+    private TaskLock tryTaskLock(TaskLockType type, Interval interval, int priority)
+    {
+      return tryTaskLock(type, NoopTask.ofPriority(priority), interval);
     }
 
     private Set<TaskLock> getAllActiveLocks()

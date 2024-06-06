@@ -356,13 +356,13 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
     }
   }
 
-  public void registerNewVersionOfPendingSegment(
+  public void registerUpgradedPendingSegment(
       SegmentIdWithShardSpec basePendingSegment,
-      SegmentIdWithShardSpec newSegmentVersion
+      SegmentIdWithShardSpec upgradedPendingSegment
   )
   {
     newIdToBasePendingSegment.put(
-        newSegmentVersion.asSegmentId().toDescriptor(),
+        upgradedPendingSegment.asSegmentId().toDescriptor(),
         basePendingSegment.asSegmentId().toDescriptor()
     );
   }

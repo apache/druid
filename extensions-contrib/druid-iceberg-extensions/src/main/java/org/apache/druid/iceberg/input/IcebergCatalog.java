@@ -50,6 +50,11 @@ public abstract class IcebergCatalog
 
   public abstract BaseMetastoreCatalog retrieveCatalog();
 
+  public boolean isCaseSensitive()
+  {
+    return true;
+  }
+
   /**
    * Extract the iceberg data files upto the latest snapshot associated with the table
    *
@@ -92,6 +97,8 @@ public abstract class IcebergCatalog
       if (snapshotTime != null) {
         tableScan = tableScan.asOfTime(snapshotTime.getMillis());
       }
+
+      tableScan = tableScan.caseSensitive(isCaseSensitive());
       CloseableIterable<FileScanTask> tasks = tableScan.planFiles();
       CloseableIterable.transform(tasks, FileScanTask::file)
                        .forEach(dataFile -> dataFilePaths.add(dataFile.path().toString()));

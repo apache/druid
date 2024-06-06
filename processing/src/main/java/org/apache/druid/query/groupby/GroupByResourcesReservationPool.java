@@ -28,6 +28,7 @@ import javax.annotation.Nullable;
 import javax.inject.Inject;
 import java.nio.ByteBuffer;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Reserves the {@link GroupByQueryResources} for a given group by query and maps them to the query's resource ID.
@@ -67,21 +68,25 @@ import java.util.concurrent.ConcurrentHashMap;
  * nested ones execute via an unoptimized way.
  * 3. There's some knowledge to the mergeResults that the query runner passed to it is the one created by the corresponding toolchest's
  * mergeRunners (which is the typical use case). This is encoded in the argument {@code willMergeRunner}, and is to be set by the callers.
- * The only production use case where this isn't true is when the broker is merging the results gathered from the historical)
+ * The only production use case where this isn't true is when the broker is merging the results gathered from the historical
  * <p>
  * TESTING
  * Unit tests mimic the broker-historical interaction in many places, which can lead to the code not working as intended because the assumptions don't hold.
  * In many test cases, there are two nested mergeResults calls, the outer call mimics what the broker does, while the inner one mimics what the historical does,
  * and the assumption (1) fails. Therefore, the testing code should assign a unique resource id b/w each mergeResults call, and also make sure that the top level mergeResults
  * would have willMergeRunner = false, since it's being called on top of a mergeResults's runner, while the inner one would have willMergeRunner = true because its being
- * called on actual runners (as it happens in the brokers, and the historicals)
+ * called on actual runners (as it happens in the brokers, and the historicals).
+ * <p>
+ * There is a test in GroupByResourcesReservationPoolTest that checks for deadlocks when the operations are interleaved in a
+ * certain maanner. It is ignored because it sleeps and can increase time when the test suite is run. Developers making any changes
+ * to this class, or a related class should manually verify that all the tests in the test class are running as expected.
  */
 public class GroupByResourcesReservationPool
 {
   /**
    * Map of query's resource id -> group by resources reserved for the query to execute
    */
-  final ConcurrentHashMap<QueryResourceId, GroupByQueryResources> pool = new ConcurrentHashMap<>();
+  final ConcurrentHashMap<QueryResourceId, AtomicReference<GroupByQueryResources>> pool = new ConcurrentHashMap<>();
 
   /**
    * Buffer pool from where the merge buffers are picked and reserved
@@ -104,19 +109,42 @@ public class GroupByResourcesReservationPool
   }
 
   /**
-   * Reserves appropriate resources, and maps it to the queryResourceId (usually the query's resource id) in the internal map
+   * Reserves appropriate resources, and maps it to the queryResourceId (usually the query's resource id) in the internal map.
+   * This is a blocking call, and can block up to the given query's timeout
    */
   public void reserve(QueryResourceId queryResourceId, GroupByQuery groupByQuery, boolean willMergeRunner)
   {
     if (queryResourceId == null) {
       throw DruidException.defensive("Query resource id must be populated");
     }
-    pool.compute(queryResourceId, (id, existingResource) -> {
-      if (existingResource != null) {
-        throw DruidException.defensive("Resource with the given identifier [%s] is already present", id);
-      }
-      return GroupingEngine.prepareResource(groupByQuery, mergeBufferPool, willMergeRunner, groupByQueryConfig);
-    });
+
+    // First check if the query resource id is present in the map, and if not, populate a dummy reference. This will
+    // block other threads from populating the map with the same query id, and is essentially same as reserving a spot in
+    // the map for the given query id. Since the actual allocation of the resource might take longer than expected, we
+    // do it out of the critical section, once we have "reserved" the spot
+    AtomicReference<GroupByQueryResources> reference = new AtomicReference<>(null);
+    AtomicReference<GroupByQueryResources> existingResource = pool.putIfAbsent(queryResourceId, reference);
+
+    // Multiple attempts made to allocate the query resource for a given resource id. Throw an exception
+    //noinspection VariableNotUsedInsideIf
+    if (existingResource != null) {
+      throw DruidException.defensive("Resource with the given identifier [%s] is already present", queryResourceId);
+    }
+
+    GroupByQueryResources resources;
+    try {
+      // We have reserved a spot in the map. Now begin the blocking call.
+      resources = GroupingEngine.prepareResource(groupByQuery, mergeBufferPool, willMergeRunner, groupByQueryConfig);
+    }
+    catch (Throwable t) {
+      // Unable to allocate the resources, perform cleanup and rethrow the exception
+      pool.remove(queryResourceId);
+      throw t;
+    }
+
+    // Resources have been allocated, spot has been reserved. The reference would ALWAYS refer to 'null'. Refer the
+    // allocated resources from it
+    reference.compareAndSet(null, resources);
   }
 
   /**
@@ -125,7 +153,19 @@ public class GroupByResourcesReservationPool
   @Nullable
   public GroupByQueryResources fetch(QueryResourceId queryResourceId)
   {
-    return pool.get(queryResourceId);
+    AtomicReference<GroupByQueryResources> resourcesReference = pool.get(queryResourceId);
+    if (resourcesReference == null) {
+      // There weren't any resources allocated corresponding to the provided resource id
+      return null;
+    }
+    GroupByQueryResources resource = resourcesReference.get();
+    if (resource == null) {
+      throw DruidException.defensive(
+          "Query id [%s] had a non-null reference in the resource reservation pool, but no resources were found",
+          queryResourceId
+      );
+    }
+    return resource;
   }
 
   /**
@@ -133,9 +173,17 @@ public class GroupByResourcesReservationPool
    */
   public void clean(QueryResourceId queryResourceId)
   {
-    GroupByQueryResources resources = pool.remove(queryResourceId);
-    if (resources != null) {
-      resources.close();
+    AtomicReference<GroupByQueryResources> resourcesReference = pool.remove(queryResourceId);
+    if (resourcesReference != null) {
+      GroupByQueryResources resource = resourcesReference.get();
+      // Reference should refer to a non-empty resource
+      if (resource == null) {
+        throw DruidException.defensive(
+            "Query id [%s] had a non-null reference in the resource reservation pool, but no resources were found",
+            queryResourceId
+        );
+      }
+      resource.close();
     }
   }
 }

@@ -1,0 +1,96 @@
+!set plannerStrategy DECOUPLED
+!use druidtest://?numMergeBuffers=3
+!set outputformat mysql
+
+select cityName, count(case when delta > 0 then channel end) as cnt, count(1) as aall
+from wikipedia
+where cityName in ('New York', 'Aarhus')
+group by 1
+order by 1;
++----------+-----+------+
+| cityName | cnt | aall |
++----------+-----+------+
+| Aarhus   |   0 |    1 |
+| New York |   7 |   13 |
++----------+-----+------+
+(2 rows)
+
+!ok
+LogicalSort(sort0=[$0], dir0=[ASC])
+  LogicalAggregate(group=[{0}], cnt=[COUNT($1)], aall=[COUNT()])
+    LogicalProject(cityName=[$2], $f1=[CASE(>($17, 0), $1, null:VARCHAR)])
+      LogicalFilter(condition=[OR(=($2, 'New York'), =($2, 'Aarhus'))])
+        LogicalTableScan(table=[[druid, wikipedia]])
+
+!convertedPlan
+LogicalSort(sort0=[$0], dir0=[ASC])
+  LogicalAggregate(group=[{0}], cnt=[COUNT($1) FILTER $2], aall=[COUNT()])
+    LogicalProject(cityName=[$2], channel=[$1], $f3=[IS TRUE(>($17, 0))])
+      LogicalFilter(condition=[SEARCH($2, Sarg['Aarhus':VARCHAR(8), 'New York':VARCHAR(8)]:VARCHAR(8))])
+        LogicalTableScan(table=[[druid, wikipedia]])
+
+!logicalPlan
+DruidAggregate(group=[{0}], cnt=[COUNT($1) FILTER $2], aall=[COUNT()], druid=[logical])
+  DruidProject(cityName=[$2], channel=[$1], $f3=[IS TRUE(>($17, 0))], druid=[logical])
+    DruidFilter(condition=[SEARCH($2, Sarg['Aarhus':VARCHAR(8), 'New York':VARCHAR(8)]:VARCHAR(8))])
+      DruidTableScan(table=[[druid, wikipedia]], druid=[logical])
+
+!druidPlan
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "wikipedia"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "filter" : {
+    "type" : "inType",
+    "column" : "cityName",
+    "matchValueType" : "STRING",
+    "sortedValues" : [ "Aarhus", "New York" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "cityName",
+    "outputName" : "d0",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "filtered",
+    "aggregator" : {
+      "type" : "count",
+      "name" : "a0"
+    },
+    "filter" : {
+      "type" : "and",
+      "fields" : [ {
+        "type" : "not",
+        "field" : {
+          "type" : "null",
+          "column" : "channel"
+        }
+      }, {
+        "type" : "range",
+        "column" : "delta",
+        "matchValueType" : "LONG",
+        "lower" : 0,
+        "lowerOpen" : true
+      } ]
+    },
+    "name" : "a0"
+  }, {
+    "type" : "count",
+    "name" : "a1"
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  }
+}
+!nativePlan
+

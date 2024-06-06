@@ -31,11 +31,9 @@ import com.azure.storage.blob.models.BlobStorageException;
 import com.azure.storage.blob.models.DeleteSnapshotsOptionType;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.common.guava.SettableSupplier;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
@@ -43,14 +41,19 @@ import org.mockito.Mockito;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 
 // Using Mockito for the whole test class since azure classes (e.g. BlobContainerClient) are final and can't be mocked with EasyMock
 public class AzureStorageTest
 {
-
   AzureStorage azureStorage;
   BlobClient blobClient = Mockito.mock(BlobClient.class);
   BlobServiceClient blobServiceClient = Mockito.mock(BlobServiceClient.class);
@@ -60,12 +63,8 @@ public class AzureStorageTest
   private final String STORAGE_ACCOUNT = "storageAccount";
   private final String CONTAINER = "container";
   private final String BLOB_NAME = "blobName";
-  private final Integer MAX_ATTEMPTS = 3;
 
-  @Rule
-  public TemporaryFolder tempFolder = new TemporaryFolder();
-
-  @Before
+  @BeforeEach
   public void setup() throws BlobStorageException
   {
     azureStorage = new AzureStorage(azureClientFactory, STORAGE_ACCOUNT);
@@ -83,9 +82,11 @@ public class AzureStorageTest
         ArgumentMatchers.any()
     );
     Mockito.doReturn(blobContainerClient).when(blobServiceClient).createBlobContainerIfNotExists(CONTAINER);
-    Mockito.doReturn(blobServiceClient).when(azureClientFactory).getBlobServiceClient(MAX_ATTEMPTS, STORAGE_ACCOUNT);
 
-    Assert.assertEquals(ImmutableList.of(BLOB_NAME), azureStorage.listDir(CONTAINER, "", MAX_ATTEMPTS));
+    final Integer maxAttempts = 3;
+    Mockito.doReturn(blobServiceClient).when(azureClientFactory).getBlobServiceClient(maxAttempts, STORAGE_ACCOUNT);
+
+    assertEquals(ImmutableList.of(BLOB_NAME), azureStorage.listDir(CONTAINER, "", maxAttempts));
   }
 
   @Test
@@ -102,7 +103,7 @@ public class AzureStorageTest
     Mockito.doReturn(blobContainerClient).when(blobServiceClient).createBlobContainerIfNotExists(CONTAINER);
     Mockito.doReturn(blobServiceClient).when(azureClientFactory).getBlobServiceClient(null, STORAGE_ACCOUNT);
 
-    Assert.assertEquals(ImmutableList.of(BLOB_NAME), azureStorage.listDir(CONTAINER, "", null));
+    assertEquals(ImmutableList.of(BLOB_NAME), azureStorage.listDir(CONTAINER, "", null));
   }
 
   @Test
@@ -150,8 +151,8 @@ public class AzureStorageTest
     );
 
     boolean deleteSuccessful = azureStorage.batchDeleteFiles(CONTAINER, ImmutableList.of(BLOB_NAME), null);
-    Assert.assertEquals(captor.getValue().get(0), containerUrl + "/" + BLOB_NAME);
-    Assert.assertTrue(deleteSuccessful);
+    assertEquals(captor.getValue().get(0), containerUrl + "/" + BLOB_NAME);
+    assertTrue(deleteSuccessful);
   }
 
   @Test
@@ -174,8 +175,8 @@ public class AzureStorageTest
     );
 
     boolean deleteSuccessful = azureStorage.batchDeleteFiles(CONTAINER, ImmutableList.of(BLOB_NAME), null);
-    Assert.assertEquals(captor.getValue().get(0), containerUrl + "/" + BLOB_NAME);
-    Assert.assertFalse(deleteSuccessful);
+    assertEquals(captor.getValue().get(0), containerUrl + "/" + BLOB_NAME);
+    assertFalse(deleteSuccessful);
   }
 
   @Test
@@ -207,15 +208,15 @@ public class AzureStorageTest
     boolean deleteSuccessful = azureStorage.batchDeleteFiles(CONTAINER, blobNameList, null);
 
     List<List<String>> deletedValues = captor.getAllValues();
-    Assert.assertEquals(deletedValues.get(0).size(), 256);
-    Assert.assertEquals(deletedValues.get(1).size(), 2);
-    Assert.assertTrue(deleteSuccessful);
+    assertEquals(deletedValues.get(0).size(), 256);
+    assertEquals(deletedValues.get(1).size(), 2);
+    assertTrue(deleteSuccessful);
   }
 
   @Test
-  public void testUploadBlob_usesOverwrite() throws BlobStorageException, IOException
+  public void testUploadBlob_usesOverwrite(@TempDir Path tempPath) throws BlobStorageException, IOException
   {
-    File tempFile = tempFolder.newFile("tempFile.txt");
+    final File tempFile = Files.createFile(tempPath.resolve("tempFile.txt")).toFile();
     String blobPath = "blob";
 
     ArgumentCaptor<InputStream> captor = ArgumentCaptor.forClass(InputStream.class);
@@ -229,7 +230,7 @@ public class AzureStorageTest
     azureStorage.uploadBlockBlob(tempFile, CONTAINER, blobPath, null);
 
     Mockito.verify(blobClient).upload(captor.capture(), captor2.capture(), overrideArgument.capture());
-    Assert.assertTrue(overrideArgument.getValue());
+    assertTrue(overrideArgument.getValue());
   }
 }
 

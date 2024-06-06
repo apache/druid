@@ -35,27 +35,32 @@ public class AutoCompactionSnapshot
   }
 
   @JsonProperty
-  private String dataSource;
+  private final String dataSource;
   @JsonProperty
-  private AutoCompactionScheduleStatus scheduleStatus;
+  private final AutoCompactionScheduleStatus scheduleStatus;
   @JsonProperty
-  private long bytesAwaitingCompaction;
+  private final long bytesAwaitingCompaction;
   @JsonProperty
-  private long bytesCompacted;
+  private final long bytesCompacted;
   @JsonProperty
-  private long bytesSkipped;
+  private final long bytesSkipped;
   @JsonProperty
-  private long segmentCountAwaitingCompaction;
+  private final long segmentCountAwaitingCompaction;
   @JsonProperty
-  private long segmentCountCompacted;
+  private final long segmentCountCompacted;
   @JsonProperty
-  private long segmentCountSkipped;
+  private final long segmentCountSkipped;
   @JsonProperty
-  private long intervalCountAwaitingCompaction;
+  private final long intervalCountAwaitingCompaction;
   @JsonProperty
-  private long intervalCountCompacted;
+  private final long intervalCountCompacted;
   @JsonProperty
-  private long intervalCountSkipped;
+  private final long intervalCountSkipped;
+
+  public static Builder builder(String dataSource)
+  {
+    return new Builder(dataSource, AutoCompactionScheduleStatus.RUNNING);
+  }
 
   @JsonCreator
   public AutoCompactionSnapshot(
@@ -185,8 +190,9 @@ public class AutoCompactionSnapshot
 
   public static class Builder
   {
-    private String dataSource;
-    private AutoCompactionScheduleStatus scheduleStatus;
+    private final String dataSource;
+    private final AutoCompactionScheduleStatus scheduleStatus;
+
     private long bytesAwaitingCompaction;
     private long bytesCompacted;
     private long bytesSkipped;
@@ -197,12 +203,18 @@ public class AutoCompactionSnapshot
     private long intervalCountCompacted;
     private long intervalCountSkipped;
 
-
-    public Builder(
+    private Builder(
         @NotNull String dataSource,
         @NotNull AutoCompactionScheduleStatus scheduleStatus
     )
     {
+      if (dataSource == null || dataSource.isEmpty()) {
+        throw new ISE("Invalid dataSource name");
+      }
+      if (scheduleStatus == null) {
+        throw new ISE("scheduleStatus cannot be null");
+      }
+
       this.dataSource = dataSource;
       this.scheduleStatus = scheduleStatus;
       this.bytesAwaitingCompaction = 0;
@@ -272,12 +284,6 @@ public class AutoCompactionSnapshot
 
     public AutoCompactionSnapshot build()
     {
-      if (dataSource == null || dataSource.isEmpty()) {
-        throw new ISE("Invalid dataSource name");
-      }
-      if (scheduleStatus == null) {
-        throw new ISE("scheduleStatus cannot be null");
-      }
       return new AutoCompactionSnapshot(
           dataSource,
           scheduleStatus,

@@ -55,9 +55,10 @@ public class KllDoublesSketchToCDFPostAggregatorTest
         new double[]{0.25, 0.75}
     );
     DefaultObjectMapper mapper = new DefaultObjectMapper();
-    KllDoublesSketchToCDFPostAggregator andBackAgain = mapper.readValue(
+    mapper.registerModules(new KllSketchModule().getJacksonModules());
+    PostAggregator andBackAgain = mapper.readValue(
         mapper.writeValueAsString(there),
-        KllDoublesSketchToCDFPostAggregator.class
+        PostAggregator.class
     );
 
     Assert.assertEquals(there, andBackAgain);

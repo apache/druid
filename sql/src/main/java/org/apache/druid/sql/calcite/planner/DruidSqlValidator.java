@@ -40,10 +40,12 @@ import org.apache.calcite.sql.SqlUpdate;
 import org.apache.calcite.sql.SqlUtil;
 import org.apache.calcite.sql.SqlWindow;
 import org.apache.calcite.sql.SqlWith;
+import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.type.SqlTypeUtil;
 import org.apache.calcite.sql.validate.IdentifierNamespace;
+import org.apache.calcite.sql.validate.SelectNamespace;
 import org.apache.calcite.sql.validate.SqlNonNullableAccessors;
 import org.apache.calcite.sql.validate.SqlValidatorException;
 import org.apache.calcite.sql.validate.SqlValidatorNamespace;
@@ -53,14 +55,17 @@ import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.Static;
 import org.apache.calcite.util.Util;
 import org.apache.druid.catalog.model.facade.DatasourceFacade;
+import org.apache.druid.catalog.model.table.ClusterKeySpec;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.sql.calcite.expression.builtin.ScalarInArrayOperatorConversion;
 import org.apache.druid.sql.calcite.parser.DruidSqlIngest;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.parser.DruidSqlParserUtils;
@@ -68,9 +73,11 @@ import org.apache.druid.sql.calcite.parser.ExternalDestinationSqlIdentifier;
 import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.table.DatasourceTable;
 import org.apache.druid.sql.calcite.table.RowSignatures;
+import org.apache.druid.utils.CollectionUtils;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -281,6 +288,37 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
     }
   }
 
+  @Override
+  protected SelectNamespace createSelectNamespace(
+      SqlSelect select,
+      SqlNode enclosingNode)
+  {
+    SqlNodeList catalogClustering = null;
+    if (enclosingNode instanceof DruidSqlIngest) {
+      // The target is a new or existing datasource.
+      // The target namespace is both the target table ID and the row type for that table.
+      final SqlValidatorNamespace targetNamespace = Objects.requireNonNull(
+          getNamespace(enclosingNode),
+          () -> "namespace for " + enclosingNode
+      );
+      final IdentifierNamespace insertNs = (IdentifierNamespace) targetNamespace;
+      SqlIdentifier identifier = insertNs.getId();
+      SqlValidatorTable catalogTable = getCatalogReader().getTable(identifier.names);
+      if (catalogTable != null) {
+        final DatasourceTable table = catalogTable.unwrap(DatasourceTable.class);
+
+        // An existing datasource may have metadata.
+        final DatasourceFacade tableMetadata = table == null
+            ? null
+            : table.effectiveMetadata().catalogMetadata();
+        catalogClustering = convertCatalogClustering(tableMetadata);
+      }
+      // Convert CLUSTERED BY, or the catalog equivalent, to an ORDER BY clause
+      rewriteClusteringToOrderBy(select, (DruidSqlIngest) enclosingNode, catalogClustering);
+    }
+    return super.createSelectNamespace(select, enclosingNode);
+  }
+
   /**
    * Validate the target table. Druid {@code INSERT/REPLACE} can create a new datasource,
    * or insert into an existing one. If the target exists, it must be a datasource. If it
@@ -350,6 +388,33 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
   }
 
   /**
+   * Clustering is a kind of ordering. We push the CLUSTERED BY clause into the source query as
+   * an ORDER BY clause. In an ideal world, clustering would be outside of SELECT: it is an operation
+   * applied after the data is selected. For now, we push it into the SELECT, then MSQ pulls it back
+   * out. This is unfortunate as errors will be attributed to ORDER BY, which the user did not
+   * actually specify (it is an error to do so.) However, with the current hybrid structure, it is
+   * not possible to add the ORDER by later: doing so requires access to the order by namespace
+   * which is not visible to subclasses.
+   */
+  private void rewriteClusteringToOrderBy(SqlNode source, DruidSqlIngest ingestNode, @Nullable SqlNodeList catalogClustering)
+  {
+    SqlNodeList clusteredBy = ingestNode.getClusteredBy();
+    if (clusteredBy == null || clusteredBy.getList().isEmpty()) {
+      if (catalogClustering == null || catalogClustering.getList().isEmpty()) {
+        return;
+      }
+      clusteredBy = catalogClustering;
+    }
+    while (source instanceof SqlWith) {
+      source = ((SqlWith) source).getOperandList().get(1);
+    }
+    final SqlSelect select = (SqlSelect) source;
+
+    DruidSqlParserUtils.validateClusteredByColumns(clusteredBy);
+    select.setOrderBy(clusteredBy);
+  }
+
+  /**
    * Gets the effective PARTITIONED BY granularity. Resolves the granularity from the granularity specified on the
    * ingest node, and on the table metadata as stored in catalog, if any. Mismatches between the 2 granularities are
    * allowed if both are specified. The granularity specified on the ingest node is taken to be the effective
@@ -389,12 +454,51 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
     }
 
     if (effectiveGranularity == null) {
+      SqlNode source = ingestNode.getSource();
+      while (source instanceof SqlWith) {
+        source = ((SqlWith) source).getOperandList().get(1);
+      }
+      final SqlSelect select = (SqlSelect) source;
+
+      if (select.getOrderList() != null) {
+        throw DruidSqlParserUtils.problemParsing(
+            "CLUSTERED BY found before PARTITIONED BY, CLUSTERED BY must come after the PARTITIONED BY clause"
+        );
+      }
       throw InvalidSqlInput.exception(
           "Operation [%s] requires a PARTITIONED BY to be explicitly defined, but none was found.",
           operationName);
     }
 
     return effectiveGranularity;
+  }
+
+  @Nullable
+  private SqlNodeList convertCatalogClustering(final DatasourceFacade tableMetadata)
+  {
+    if (tableMetadata == null) {
+      return null;
+    }
+    final List<ClusterKeySpec> keyCols = tableMetadata.clusterKeys();
+    if (CollectionUtils.isNullOrEmpty(keyCols)) {
+      return null;
+    }
+    final SqlNodeList keyNodes = new SqlNodeList(SqlParserPos.ZERO);
+    for (ClusterKeySpec keyCol : keyCols) {
+      final SqlIdentifier colIdent = new SqlIdentifier(
+          Collections.singletonList(keyCol.expr()),
+          null, SqlParserPos.ZERO,
+          Collections.singletonList(SqlParserPos.ZERO)
+      );
+      final SqlNode keyNode;
+      if (keyCol.desc()) {
+        keyNode = SqlStdOperatorTable.DESC.createCall(SqlParserPos.ZERO, colIdent);
+      } else {
+        keyNode = colIdent;
+      }
+      keyNodes.add(keyNode);
+    }
+    return keyNodes;
   }
 
   /**
@@ -430,9 +534,12 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
         );
       }
     }
-    if (tableMetadata == null) {
+    final boolean isCatalogValidationEnabled = plannerContext.queryContext().isCatalogValidationEnabled();
+    if (tableMetadata == null || !isCatalogValidationEnabled) {
       return sourceType;
     }
+
+    // disable sealed mode validation if catalog validation is disabled.
     final boolean isStrict = tableMetadata.isSealed();
     final List<Map.Entry<String, RelDataType>> fields = new ArrayList<>();
     for (RelDataTypeField sourceField : sourceFields) {
@@ -488,6 +595,8 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
     // matches above.
     final RelDataType targetType = typeFactory.createStructType(fields);
     final SqlValidatorTable target = insertNs.resolve().getTable();
+
+    // disable type checking if catalog validation is disabled.
     checkTypeAssignment(scope, target, sourceType, targetType, insert);
     return targetType;
   }
@@ -670,6 +779,59 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
       }
     }
     super.validateCall(call, scope);
+  }
+
+  @Override
+  protected SqlNode performUnconditionalRewrites(SqlNode node, final boolean underFrom)
+  {
+    if (node != null && (node.getKind() == SqlKind.IN || node.getKind() == SqlKind.NOT_IN)) {
+      final SqlNode rewritten = rewriteInToScalarInArrayIfNeeded((SqlCall) node, underFrom);
+      //noinspection ObjectEquality
+      if (rewritten != node) {
+        return rewritten;
+      }
+    }
+
+    return super.performUnconditionalRewrites(node, underFrom);
+  }
+
+  /**
+   * Rewrites "x IN (values)" to "SCALAR_IN_ARRAY(x, values)", if appropriate. Checks the form of the IN and checks
+   * the value of {@link QueryContext#getInFunctionThreshold()}.
+   *
+   * @param call      call to {@link SqlKind#IN} or {@link SqlKind#NOT_IN}
+   * @param underFrom underFrom arg from {@link #performUnconditionalRewrites(SqlNode, boolean)}, used for
+   *                  recursive calls
+   *
+   * @return rewritten call, or the original call if no rewrite was appropriate
+   */
+  private SqlNode rewriteInToScalarInArrayIfNeeded(final SqlCall call, final boolean underFrom)
+  {
+    if (call.getOperandList().size() == 2 && call.getOperandList().get(1) instanceof SqlNodeList) {
+      // expr IN (values)
+      final SqlNode exprNode = call.getOperandList().get(0);
+      final SqlNodeList valuesNode = (SqlNodeList) call.getOperandList().get(1);
+
+      // Confirm valuesNode is big enough to convert to SCALAR_IN_ARRAY, and references only nonnull literals.
+      // (Can't include NULL literals in the conversion, because SCALAR_IN_ARRAY matches NULLs as if they were regular
+      // values, whereas IN does not.)
+      if (valuesNode.size() > plannerContext.queryContext().getInFunctionThreshold()
+          && valuesNode.stream().allMatch(node -> node.getKind() == SqlKind.LITERAL && !SqlUtil.isNull(node))) {
+        final SqlCall newCall = ScalarInArrayOperatorConversion.SQL_FUNCTION.createCall(
+            call.getParserPosition(),
+            performUnconditionalRewrites(exprNode, underFrom),
+            SqlStdOperatorTable.ARRAY_VALUE_CONSTRUCTOR.createCall(valuesNode)
+        );
+
+        if (call.getKind() == SqlKind.NOT_IN) {
+          return SqlStdOperatorTable.NOT.createCall(call.getParserPosition(), newCall);
+        } else {
+          return newCall;
+        }
+      }
+    }
+
+    return call;
   }
 
   public static CalciteContextException buildCalciteContextException(String message, SqlNode call)

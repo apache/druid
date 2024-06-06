@@ -20,6 +20,7 @@
 package org.apache.druid.msq.test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -28,33 +29,47 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Injector;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.client.indexing.NoopOverlordClient;
+import org.apache.druid.client.indexing.TaskStatusResponse;
+import org.apache.druid.common.guava.FutureUtils;
+import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexer.report.TaskReport;
+import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerContext;
+import org.apache.druid.msq.exec.ControllerMemoryParameters;
 import org.apache.druid.msq.exec.Worker;
 import org.apache.druid.msq.exec.WorkerClient;
+import org.apache.druid.msq.exec.WorkerFailureListener;
 import org.apache.druid.msq.exec.WorkerImpl;
-import org.apache.druid.msq.exec.WorkerManagerClient;
+import org.apache.druid.msq.exec.WorkerManager;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.exec.WorkerStorageParameters;
+import org.apache.druid.msq.indexing.IndexerControllerContext;
+import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQWorkerTask;
+import org.apache.druid.msq.indexing.MSQWorkerTaskLauncher;
+import org.apache.druid.msq.input.InputSpecSlicer;
+import org.apache.druid.msq.input.table.TableInputSpecSlicer;
+import org.apache.druid.msq.kernel.QueryDefinition;
+import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.DruidNode;
-import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -72,7 +87,8 @@ public class MSQTestControllerContext implements ControllerContext
   private final ConcurrentMap<String, TaskStatus> statusMap = new ConcurrentHashMap<>();
   private final ListeningExecutorService executor = MoreExecutors.listeningDecorator(Execs.multiThreaded(
       NUM_WORKERS,
-      "MultiStageQuery-test-controller-client"));
+      "MultiStageQuery-test-controller-client"
+  ));
   private final CoordinatorClient coordinatorClient;
   private final DruidNode node = new DruidNode(
       "controller",
@@ -85,18 +101,18 @@ public class MSQTestControllerContext implements ControllerContext
   );
   private final Injector injector;
   private final ObjectMapper mapper;
-  private final ServiceEmitter emitter = new NoopServiceEmitter();
 
   private Controller controller;
-  private TaskReport.ReportMap report = null;
   private final WorkerMemoryParameters workerMemoryParameters;
+  private final QueryContext queryContext;
 
   public MSQTestControllerContext(
       ObjectMapper mapper,
       Injector injector,
       TaskActionClient taskActionClient,
       WorkerMemoryParameters workerMemoryParameters,
-      List<ImmutableSegmentLoadInfo> loadedSegments
+      List<ImmutableSegmentLoadInfo> loadedSegments,
+      QueryContext queryContext
   )
   {
     this.mapper = mapper;
@@ -105,8 +121,8 @@ public class MSQTestControllerContext implements ControllerContext
     coordinatorClient = Mockito.mock(CoordinatorClient.class);
 
     Mockito.when(coordinatorClient.fetchServerViewSegments(
-                    ArgumentMatchers.anyString(),
-                    ArgumentMatchers.any()
+                     ArgumentMatchers.anyString(),
+                     ArgumentMatchers.any()
                  )
     ).thenAnswer(invocation -> loadedSegments.stream()
                                              .filter(immutableSegmentLoadInfo ->
@@ -116,13 +132,15 @@ public class MSQTestControllerContext implements ControllerContext
                                              .collect(Collectors.toList())
     );
     this.workerMemoryParameters = workerMemoryParameters;
+    this.queryContext = queryContext;
   }
 
-  WorkerManagerClient workerManagerClient = new WorkerManagerClient()
+  OverlordClient overlordClient = new NoopOverlordClient()
   {
     @Override
-    public String run(String taskId, MSQWorkerTask task)
+    public ListenableFuture<Void> runTask(String taskId, Object taskObject)
     {
+      final MSQWorkerTask task = (MSQWorkerTask) taskObject;
       if (controller == null) {
         throw new ISE("Controller needs to be set using the register method");
       }
@@ -137,13 +155,26 @@ public class MSQTestControllerContext implements ControllerContext
 
       Worker worker = new WorkerImpl(
           task,
-          new MSQTestWorkerContext(inMemoryWorkers, controller, mapper, injector, workerMemoryParameters),
+          new MSQTestWorkerContext(
+              inMemoryWorkers,
+              controller,
+              mapper,
+              injector,
+              workerMemoryParameters
+          ),
           workerStorageParameters
       );
       inMemoryWorkers.put(task.getId(), worker);
       statusMap.put(task.getId(), TaskStatus.running(task.getId()));
 
-      ListenableFuture<TaskStatus> future = executor.submit(worker::run);
+      ListenableFuture<TaskStatus> future = executor.submit(() -> {
+        try {
+          return worker.run();
+        }
+        catch (Exception e) {
+          throw new RuntimeException(e);
+        }
+      });
 
       Futures.addCallback(future, new FutureCallback<TaskStatus>()
       {
@@ -161,11 +192,11 @@ public class MSQTestControllerContext implements ControllerContext
         }
       }, MoreExecutors.directExecutor());
 
-      return task.getId();
+      return Futures.immediateFuture(null);
     }
 
     @Override
-    public Map<String, TaskStatus> statuses(Set<String> taskIds)
+    public ListenableFuture<Map<String, TaskStatus>> taskStatuses(Set<String> taskIds)
     {
       Map<String, TaskStatus> result = new HashMap<>();
       for (String taskId : taskIds) {
@@ -188,40 +219,63 @@ public class MSQTestControllerContext implements ControllerContext
           }
         }
       }
-      return result;
+      return Futures.immediateFuture(result);
     }
 
     @Override
-    public TaskLocation location(String workerId)
+    public ListenableFuture<TaskStatusResponse> taskStatus(String taskId)
     {
-      final TaskStatus status = statusMap.get(workerId);
-      if (status != null && status.getStatusCode().equals(TaskState.RUNNING) && inMemoryWorkers.containsKey(workerId)) {
-        return TaskLocation.create("host-" + workerId, 1, -1);
+      final Map<String, TaskStatus> taskStatusMap =
+          FutureUtils.getUnchecked(taskStatuses(Collections.singleton(taskId)), true);
+
+      final TaskStatus taskStatus = taskStatusMap.get(taskId);
+      if (taskStatus == null) {
+        return Futures.immediateFuture(new TaskStatusResponse(taskId, null));
       } else {
-        return TaskLocation.unknown();
+        return Futures.immediateFuture(
+            new TaskStatusResponse(
+                taskId,
+                new TaskStatusPlus(
+                    taskStatus.getId(),
+                    null,
+                    null,
+                    DateTimes.utc(0),
+                    DateTimes.utc(0),
+                    taskStatus.getStatusCode(),
+                    taskStatus.getStatusCode(),
+                    taskStatus.getStatusCode().isRunnable() ? RunnerTaskState.RUNNING : RunnerTaskState.NONE,
+                    null,
+                    taskStatus.getStatusCode().isRunnable()
+                    ? TaskLocation.create("host-" + taskId, 1, -1)
+                    : TaskLocation.unknown(),
+                    null,
+                    taskStatus.getErrorMsg()
+                )
+            )
+        );
       }
     }
 
     @Override
-    public void cancel(String workerId)
+    public ListenableFuture<Void> cancelTask(String workerId)
     {
       final Worker worker = inMemoryWorkers.remove(workerId);
       if (worker != null) {
         worker.stopGracefully();
       }
-    }
-
-    @Override
-    public void close()
-    {
-      //do nothing
+      return Futures.immediateFuture(null);
     }
   };
 
   @Override
-  public ServiceEmitter emitter()
+  public ControllerQueryKernelConfig queryKernelConfig(MSQSpec querySpec, QueryDefinition queryDef)
   {
-    return emitter;
+    return IndexerControllerContext.makeQueryKernelConfig(querySpec, new ControllerMemoryParameters(100_000_000));
+  }
+
+  @Override
+  public void emitMetric(String metric, Number value)
+  {
   }
 
   @Override
@@ -243,21 +297,37 @@ public class MSQTestControllerContext implements ControllerContext
   }
 
   @Override
-  public CoordinatorClient coordinatorClient()
-  {
-    return coordinatorClient;
-  }
-
-  @Override
   public TaskActionClient taskActionClient()
   {
     return taskActionClient;
   }
 
   @Override
-  public WorkerManagerClient workerManager()
+  public InputSpecSlicer newTableInputSpecSlicer()
   {
-    return workerManagerClient;
+    return new TableInputSpecSlicer(
+        coordinatorClient,
+        taskActionClient,
+        MultiStageQueryContext.getSegmentSources(queryContext)
+    );
+  }
+
+  @Override
+  public WorkerManager newWorkerManager(
+      String queryId,
+      MSQSpec querySpec,
+      ControllerQueryKernelConfig queryKernelConfig,
+      WorkerFailureListener workerFailureListener
+  )
+  {
+    return new MSQWorkerTaskLauncher(
+        controller.queryId(),
+        "test-datasource",
+        overlordClient,
+        workerFailureListener,
+        IndexerControllerContext.makeTaskContext(querySpec, queryKernelConfig, ImmutableMap.of()),
+        0
+    );
   }
 
   @Override
@@ -267,21 +337,8 @@ public class MSQTestControllerContext implements ControllerContext
   }
 
   @Override
-  public WorkerClient taskClientFor(Controller controller)
+  public WorkerClient newWorkerClient()
   {
     return new MSQTestWorkerClient(inMemoryWorkers);
-  }
-
-  @Override
-  public void writeReports(String controllerTaskId, TaskReport.ReportMap taskReport)
-  {
-    if (controller != null && controller.id().equals(controllerTaskId)) {
-      report = taskReport;
-    }
-  }
-
-  public TaskReport.ReportMap getAllReports()
-  {
-    return report;
   }
 }

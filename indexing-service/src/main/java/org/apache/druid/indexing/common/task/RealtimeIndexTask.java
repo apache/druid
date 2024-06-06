@@ -42,7 +42,6 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TimeChunkLockAcquireAction;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -86,6 +85,7 @@ import java.util.concurrent.ThreadLocalRandom;
 @Deprecated
 public class RealtimeIndexTask extends AbstractTask
 {
+  public static final String TYPE = "index_realtime";
   public static final String CTX_KEY_LOOKUP_TIER = "lookupTier";
 
   private static final EmittingLogger log = new EmittingLogger(RealtimeIndexTask.class);
@@ -181,7 +181,7 @@ public class RealtimeIndexTask extends AbstractTask
   @Override
   public String getType()
   {
-    return "index_realtime";
+    return TYPE;
   }
 
   @Override
@@ -263,9 +263,7 @@ public class RealtimeIndexTask extends AbstractTask
             "Cannot acquire a lock for interval[%s]",
             segment.getInterval()
         );
-        if (lock.isRevoked()) {
-          throw new ISE(StringUtils.format("Lock for interval [%s] was revoked.", segment.getInterval()));
-        }
+        lock.assertNotRevoked();
         toolbox.getSegmentAnnouncer().announceSegment(segment);
       }
 
@@ -292,9 +290,7 @@ public class RealtimeIndexTask extends AbstractTask
               "Cannot acquire a lock for interval[%s]",
               segment.getInterval()
           );
-          if (lock.isRevoked()) {
-            throw new ISE(StringUtils.format("Lock for interval [%s] was revoked.", segment.getInterval()));
-          }
+          lock.assertNotRevoked();
         }
         toolbox.getSegmentAnnouncer().announceSegments(segments);
       }
@@ -346,9 +342,7 @@ public class RealtimeIndexTask extends AbstractTask
               "Cannot acquire a lock for interval[%s]",
               interval
           );
-          if (lock.isRevoked()) {
-            throw new ISE(StringUtils.format("Lock for interval [%s] was revoked.", interval));
-          }
+          lock.assertNotRevoked();
           return lock.getVersion();
         }
         catch (IOException e) {

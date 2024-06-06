@@ -41,6 +41,7 @@ import java.util.Set;
 
 public class MoveTask extends AbstractFixedIntervalTask
 {
+  public static final String TYPE = "move";
   private static final Logger log = new Logger(MoveTask.class);
 
   private final Map<String, Object> targetLoadSpec;
@@ -68,7 +69,7 @@ public class MoveTask extends AbstractFixedIntervalTask
   @Override
   public String getType()
   {
-    return "move";
+    return TYPE;
   }
 
   @Nonnull
