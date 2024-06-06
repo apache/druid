@@ -103,8 +103,7 @@ public class PartialGenericSegmentMergeTaskTest extends AbstractParallelIndexSup
         ParallelIndexTestingFactory.SUBTASK_SPEC_ID,
         ParallelIndexTestingFactory.NUM_ATTEMPTS,
         ingestionSpec,
-        ParallelIndexTestingFactory.CONTEXT,
-        null
+        ParallelIndexTestingFactory.CONTEXT
     );
   }
 
@@ -141,8 +140,7 @@ public class PartialGenericSegmentMergeTaskTest extends AbstractParallelIndexSup
                 .partitionsSpec(partitionsSpec)
                 .build()
         ),
-        ParallelIndexTestingFactory.CONTEXT,
-        null
+        ParallelIndexTestingFactory.CONTEXT
     );
   }
 

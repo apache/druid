@@ -1618,7 +1618,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
     for (PushedSegmentsReport pushedSegmentsReport : completedSubtaskReports.values()) {
       TaskReport.ReportMap taskReport = pushedSegmentsReport.getTaskReport();
       if (taskReport == null || taskReport.isEmpty()) {
-        LOG.warn("Received an empty report from subtask[%s]" + pushedSegmentsReport.getTaskId());
+        LOG.warn("Received an empty report from sub-task[%s].", pushedSegmentsReport.getTaskId());
         continue;
       }
       RowIngestionMetersTotals rowIngestionMetersTotals = getBuildSegmentsStatsFromTaskReport(
