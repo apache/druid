@@ -4226,9 +4226,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @NotYetSupported(Modes.JOIN_CONDITION_NOT_PUSHED_CONDITION)
   public void testSemiJoinWithOuterTimeExtractAggregateWithOrderBy()
   {
-    // Cannot vectorize due to virtual columns.
-    cannotVectorize();
-
     testQuery(
         "SELECT COUNT(DISTINCT dim1), EXTRACT(MONTH FROM __time) FROM druid.foo\n"
         + " WHERE dim2 IN (\n"
@@ -4699,7 +4696,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   {
     // Native JOIN operator cannot handle the condition, so a SQL JOIN with greater-than is translated into a
     // cross join with a filter.
-    cannotVectorize();
 
     // We don't handle non-equi join conditions for non-sql compatible mode.
     assumeFalse(NullHandling.replaceWithDefault());
@@ -4762,7 +4758,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   {
     // Native JOIN operator cannot handle the condition, so a SQL JOIN with greater-than is translated into a
     // cross join with a filter.
-    cannotVectorize();
 
     // We don't handle non-equi join conditions for non-sql compatible mode.
     assumeFalse(NullHandling.replaceWithDefault());

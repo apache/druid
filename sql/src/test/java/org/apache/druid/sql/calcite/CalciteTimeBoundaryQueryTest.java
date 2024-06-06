@@ -141,9 +141,6 @@ public class CalciteTimeBoundaryQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMinTimeQueryWithTimeAndExpressionFilters()
   {
-    // Cannot vectorize due to UPPER expression.
-    cannotVectorize();
-
     HashMap<String, Object> queryContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     queryContext.put(QueryContexts.TIME_BOUNDARY_PLANNING_KEY, true);
     testQuery(
@@ -200,9 +197,6 @@ public class CalciteTimeBoundaryQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMaxTimeQueryWithJoin()
   {
-    // Cannot vectorize due to JOIN.
-    cannotVectorize();
-
     HashMap<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     context.put(QueryContexts.TIME_BOUNDARY_PLANNING_KEY, true);
 

@@ -733,7 +733,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
           log.warn("Got analysis for segment [%s] we didn't ask for, ignoring.", analysis.getId());
         } else {
           final RowSignature rowSignature = analysisToRowSignature(analysis);
-          log.info("Segment[%s] has signature[%s].", segmentId, rowSignature);
+          log.debug("Segment[%s] has signature[%s].", segmentId, rowSignature);
 
           if (segmentMetadataQueryResultHandler(dataSource, segmentId, rowSignature, analysis)) {
             retVal.add(segmentId);
