@@ -29,19 +29,25 @@ import com.azure.storage.blob.models.BlobItem;
 import com.azure.storage.blob.models.BlobItemProperties;
 import com.azure.storage.blob.models.BlobStorageException;
 import com.azure.storage.blob.models.DeleteSnapshotsOptionType;
+import com.azure.storage.blob.specialized.BlockBlobAsyncClient;
 import com.azure.storage.blob.specialized.BlockBlobClient;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.common.guava.SettableSupplier;
+import org.apache.druid.java.util.common.RE;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -50,6 +56,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -79,15 +86,15 @@ public class AzureStorageTest
   @Mock
   private BlobServiceClient blobServiceClient;
 
-
   @BeforeEach
   public void setup() throws BlobStorageException
   {
     azureStorage = new AzureStorage(azureClientFactory, STORAGE_ACCOUNT);
   }
 
-  @Test
-  public void testGetBlockBlockOutputStream_blockSizeOutOfBoundsException()
+  @ParameterizedTest
+  @ValueSource(longs = {-1, BlockBlobAsyncClient.MAX_STAGE_BLOCK_BYTES_LONG + 1})
+  public void testGetBlockBlockOutputStream_blockSizeOutOfBoundsException(final long blockSize)
   {
     Mockito.doReturn(blobContainerClient).when(blobServiceClient).createBlobContainerIfNotExists(CONTAINER);
     Mockito.doReturn(blobServiceClient).when(azureClientFactory).getBlobServiceClient(null, STORAGE_ACCOUNT);
@@ -99,7 +106,7 @@ public class AzureStorageTest
         () -> azureStorage.getBlockBlobOutputStream(
             CONTAINER,
             BLOB_NAME,
-            -1,
+            blockSize,
             null
         )
     );
@@ -108,6 +115,49 @@ public class AzureStorageTest
         "The value of the parameter 'blockSize' should be between 1 and 4194304000.",
         exception.getMessage()
     );
+  }
+
+  @Test
+  public void testGetBlockBlockOutputStream_blobAlreadyExistsException()
+  {
+    Mockito.doReturn(blobContainerClient).when(blobServiceClient).createBlobContainerIfNotExists(CONTAINER);
+    Mockito.doReturn(blobServiceClient).when(azureClientFactory).getBlobServiceClient(null, STORAGE_ACCOUNT);
+    Mockito.doReturn(blobClient).when(blobContainerClient).getBlobClient(BLOB_NAME);
+    Mockito.doReturn(blockBlobClient).when(blobClient).getBlockBlobClient();
+    Mockito.doReturn(true).when(blockBlobClient).exists();
+
+    final RE exception = assertThrows(
+        RE.class,
+        () -> azureStorage.getBlockBlobOutputStream(
+            CONTAINER,
+            BLOB_NAME,
+            100L,
+            null
+        )
+    );
+
+    assertEquals(
+        "Reference already exists",
+        exception.getMessage()
+    );
+  }
+
+  @ParameterizedTest
+  @NullSource
+  @ValueSource(longs = {1, 100})
+  public void testGetBlockBlockOutputStream_success(@Nullable final Long blockSize)
+  {
+    Mockito.doReturn(blobContainerClient).when(blobServiceClient).createBlobContainerIfNotExists(CONTAINER);
+    Mockito.doReturn(blobServiceClient).when(azureClientFactory).getBlobServiceClient(null, STORAGE_ACCOUNT);
+    Mockito.doReturn(blobClient).when(blobContainerClient).getBlobClient(BLOB_NAME);
+    Mockito.doReturn(blockBlobClient).when(blobClient).getBlockBlobClient();
+
+    assertDoesNotThrow(() -> azureStorage.getBlockBlobOutputStream(
+        CONTAINER,
+        BLOB_NAME,
+        blockSize,
+        null
+    ));
   }
 
   @Test
