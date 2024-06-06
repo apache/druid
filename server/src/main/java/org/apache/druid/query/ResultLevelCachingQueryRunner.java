@@ -87,8 +87,8 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
   {
     if (useResultCache || populateResultCache) {
 
-      final String cacheKeyStr = StringUtils.fromUtf8(strategy.computeResultLevelCacheKey(query));
-      final byte[] cachedResultSet = fetchResultsFromResultLevelCache(cacheKeyStr);
+      final byte[] cacheKey = strategy.computeResultLevelCacheKey(query);
+      final byte[] cachedResultSet = fetchResultsFromResultLevelCache(cacheKey);
       String existingResultSetId = extractEtagFromResults(cachedResultSet);
 
       existingResultSetId = existingResultSetId == null ? "" : existingResultSetId;
@@ -107,7 +107,7 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
       } else {
         @Nullable
         ResultLevelCachePopulator resultLevelCachePopulator = createResultLevelCachePopulator(
-            cacheKeyStr,
+            cacheKey,
             newResultSetId
         );
         if (resultLevelCachePopulator == null) {
@@ -166,7 +166,7 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
 
   @Nullable
   private byte[] fetchResultsFromResultLevelCache(
-      final String queryCacheKey
+      final byte[] queryCacheKey
   )
   {
     if (useResultCache && queryCacheKey != null) {
@@ -216,7 +216,7 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
   }
 
   private ResultLevelCachePopulator createResultLevelCachePopulator(
-      String cacheKeyStr,
+      byte[] cacheKey,
       String resultSetId
   )
   {
@@ -224,7 +224,7 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
       ResultLevelCachePopulator resultLevelCachePopulator = new ResultLevelCachePopulator(
           cache,
           objectMapper,
-          CacheUtil.computeResultLevelCacheKey(cacheKeyStr),
+          CacheUtil.computeResultLevelCacheKey(cacheKey),
           cacheConfig,
           true
       );

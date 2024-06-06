@@ -49,6 +49,7 @@ import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.util.CacheTestHelperModule.ResultCacheMode;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -2132,5 +2133,29 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
 
         ),
         ImmutableList.of());
+  }
+
+  @SqlTestFrameworkConfig.ResultCache(ResultCacheMode.ENABLED)
+  @Test
+  public void testCacheKeyConsistency()
+  {
+    skipVectorize();
+
+    // possibly pollute the cache
+    // https://github.com/apache/druid/issues/16552
+    testBuilder()
+        .sql("select dim1,d1 from numfoo where d1 < 1.25 group by dim1,d1")
+        .run();
+
+    testBuilder()
+        .sql("select dim1,d1 from numfoo where d1 < 1.75 group by dim1,d1")
+        .expectedResults(
+            ImmutableList.of(
+                new Object[] {"", 1.0D},
+                new Object[] {"10.1", 1.7D},
+                new Object[] {"2", 0.0D}
+            )
+        )
+        .run();
   }
 }

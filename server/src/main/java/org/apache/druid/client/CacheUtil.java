@@ -34,6 +34,8 @@ import java.nio.ByteBuffer;
 
 public class CacheUtil
 {
+  private static final String RESULT_CACHE_NS = "ResultCacheNS";
+
   public enum ServerType
   {
     BROKER {
@@ -57,9 +59,9 @@ public class CacheUtil
     abstract boolean willMergeRunners();
   }
 
-  public static Cache.NamedKey computeResultLevelCacheKey(String resultLevelCacheIdentifier)
+  public static Cache.NamedKey computeResultLevelCacheKey(byte[] resultLevelCacheIdentifier)
   {
-    return new Cache.NamedKey(resultLevelCacheIdentifier, StringUtils.toUtf8(resultLevelCacheIdentifier));
+    return new Cache.NamedKey(RESULT_CACHE_NS, resultLevelCacheIdentifier);
   }
 
   public static void populateResultCache(

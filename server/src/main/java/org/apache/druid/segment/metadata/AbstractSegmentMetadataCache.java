@@ -908,8 +908,11 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
         // disable the parallel merge because we don't care about the merge and don't want to consume its resources
         QueryContexts.override(
             internalQueryConfig.getContext(),
-            QueryContexts.BROKER_PARALLEL_MERGE_KEY,
-            false
+            ImmutableMap.of(
+                QueryContexts.BROKER_PARALLEL_MERGE_KEY, false,
+                QueryContexts.USE_RESULT_LEVEL_CACHE_KEY, false,
+                QueryContexts.POPULATE_RESULT_LEVEL_CACHE_KEY, false
+            )
         ),
         fetchAggregatorsInSegmentMetadataQuery()
         ? EnumSet.of(SegmentMetadataQuery.AnalysisType.AGGREGATORS)
