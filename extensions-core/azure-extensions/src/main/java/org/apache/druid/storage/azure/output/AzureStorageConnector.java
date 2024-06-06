@@ -140,7 +140,7 @@ public class AzureStorageConnector extends ChunkingStorageConnector<AzureInputRa
       return azureStorage.getBlockBlobOutputStream(
           config.getContainer(),
           objectPath(path),
-          config.getChunkSize().getBytesInInt(),
+          config.getChunkSize().getBytes(),
           config.getMaxRetry()
       );
     }

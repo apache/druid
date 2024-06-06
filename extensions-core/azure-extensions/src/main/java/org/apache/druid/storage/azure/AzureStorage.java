@@ -151,7 +151,7 @@ public class AzureStorage
   public OutputStream getBlockBlobOutputStream(
       final String containerName,
       final String blobName,
-      @Nullable final Integer blockSize,
+      @Nullable final Long blockSize,
       @Nullable final Integer maxAttempts
   ) throws BlobStorageException
   {
@@ -161,13 +161,14 @@ public class AzureStorage
         .getBlobClient(Utility.urlEncode(blobName))
         .getBlockBlobClient();
 
+    // TODO based on the usage here, it might be better to overwrite the existing blob instead; that's what StorageConnector#write documents it does
     if (blockBlobClient.exists()) {
       throw new RE("Reference already exists");
     }
 
     final BlockBlobOutputStreamOptions options = new BlockBlobOutputStreamOptions();
     if (blockSize != null) {
-      options.setParallelTransferOptions(new ParallelTransferOptions().setBlockSizeLong(blockSize.longValue()));
+      options.setParallelTransferOptions(new ParallelTransferOptions().setBlockSizeLong(blockSize));
     }
 
     return blockBlobClient.getBlobOutputStream(options);
