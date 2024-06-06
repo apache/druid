@@ -2143,16 +2143,20 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
     // possibly pollute the cache
     // https://github.com/apache/druid/issues/16552
     testBuilder()
-        .sql("select dim1,d1 from numfoo where d1 < 1.25 group by dim1,d1")
+        .sql("select dim1,d1 from numfoo where 0.0 < d1 and d1 < 1.25 group by dim1,d1")
+        .expectedResults(
+            ImmutableList.of(
+                new Object[] {"", 1.0D}
+            )
+        )
         .run();
 
     testBuilder()
-        .sql("select dim1,d1 from numfoo where d1 < 1.75 group by dim1,d1")
+        .sql("select dim1,d1 from numfoo where 0.0 < d1 and d1 < 1.75 group by dim1,d1")
         .expectedResults(
             ImmutableList.of(
                 new Object[] {"", 1.0D},
-                new Object[] {"10.1", 1.7D},
-                new Object[] {"2", 0.0D}
+                new Object[] {"10.1", 1.7D}
             )
         )
         .run();
