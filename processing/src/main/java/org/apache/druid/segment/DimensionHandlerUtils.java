@@ -329,42 +329,57 @@ public final class DimensionHandlerUtils
     } else if (valObj instanceof String) {
       Long ret = DimensionHandlerUtils.getExactLongFromDecimalString((String) valObj);
       if (reportParseExceptions && ret == null) {
-        final String message = (objectKey != null) ? StringUtils.nonStrictFormat(
-            "could not convert value [%s] to long for dimension [%s]",
-            valObj,
-            objectKey
-        ) : StringUtils.nonStrictFormat(
-            "could not convert value [%s] to long",
-            valObj
-        );
+        final String message;
+        if (objectKey != null) {
+          message = StringUtils.nonStrictFormat(
+              "Could not convert value [%s] to long for dimension [%s].",
+              valObj,
+              objectKey
+          );
+        } else {
+          message = StringUtils.nonStrictFormat(
+              "Could not convert value [%s] to long.",
+              valObj
+          );
+        }
         throw new ParseException((String) valObj, message);
       }
       return ret;
     } else if (valObj instanceof List) {
-      final String message = (objectKey != null) ? StringUtils.nonStrictFormat(
-          "Could not ingest value [%s] as long for dimension [%s]. A long column cannot have multiple values in the same row.",
-          valObj,
-          objectKey
-      ) : StringUtils.nonStrictFormat(
-          "Could not ingest value %s as long. A long column cannot have multiple values in the same row.",
-          valObj
-      );
+      final String message;
+      if (objectKey != null) {
+        message = StringUtils.nonStrictFormat(
+            "Could not ingest value [%s] as long for dimension [%s]. A long column cannot have multiple values in the same row.",
+            valObj,
+            objectKey
+        );
+      } else {
+        message = StringUtils.nonStrictFormat(
+            "Could not ingest value [%s] as long. A long column cannot have multiple values in the same row.",
+            valObj
+        );
+      }
       throw new ParseException(
           valObj.getClass().toString(),
           message
       );
     } else {
-      final String message = (objectKey != null) ? StringUtils.nonStrictFormat(
-          "Could not convert value [%s] to long for dimension [%s]. Invalid type: [%s]",
-          valObj,
-          objectKey,
-          valObj.getClass()
-      ) : StringUtils.nonStrictFormat(
-          valObj.getClass().toString(),
-          "Could not convert value [%s] to long. Invalid type: [%s]",
-          valObj,
-          valObj.getClass()
-      );
+      final String message;
+      if (objectKey != null) {
+        message = StringUtils.nonStrictFormat(
+            "Could not convert value [%s] to long for dimension [%s]. Invalid type: [%s]",
+            valObj,
+            objectKey,
+            valObj.getClass()
+        );
+      } else {
+        message = StringUtils.nonStrictFormat(
+            valObj.getClass().toString(),
+            "Could not convert value [%s] to long. Invalid type: [%s]",
+            valObj,
+            valObj.getClass()
+        );
+      }
       throw new ParseException(
           valObj.getClass().toString(),
           message
@@ -423,41 +438,56 @@ public final class DimensionHandlerUtils
       } else if (valObj instanceof String) {
         Float ret = Floats.tryParse((String) valObj);
         if (reportParseExceptions && ret == null) {
-          final String message = (fieldName != null) ? StringUtils.nonStrictFormat(
-              "could not convert value [%s] to float for dimension [%s]",
-              valObj,
-              fieldName
-          ) : StringUtils.nonStrictFormat(
-              "could not convert value [%s] to float",
-              valObj
-          );
+          final String message;
+          if (fieldName != null) {
+            message = StringUtils.nonStrictFormat(
+                "Could not convert value [%s] to float for dimension [%s].",
+                valObj,
+                fieldName
+            );
+          } else {
+            message = StringUtils.nonStrictFormat(
+                "Could not convert value [%s] to float.",
+                valObj
+            );
+          }
           throw new ParseException((String) valObj, message);
         }
         return ret;
       } else if (valObj instanceof List) {
-        final String message = (fieldName != null) ? StringUtils.nonStrictFormat(
-            "Could not ingest value %s as float for dimension [%s]. A float column cannot have multiple values in the same row.",
-            valObj,
-            fieldName
-        ) : StringUtils.nonStrictFormat(
-            "Could not ingest value %s as float. A float column cannot have multiple values in the same row.",
-            valObj
-        );
+        final String message;
+        if (fieldName != null) {
+          message = StringUtils.nonStrictFormat(
+              "Could not ingest value [%s] as float for dimension [%s]. A float column cannot have multiple values in the same row.",
+              valObj,
+              fieldName
+          );
+        } else {
+          message = StringUtils.nonStrictFormat(
+              "Could not ingest value [%s] as float. A float column cannot have multiple values in the same row.",
+              valObj
+          );
+        }
         throw new ParseException(
             valObj.getClass().toString(),
             message
         );
       } else {
-        final String message = (fieldName != null) ? StringUtils.nonStrictFormat(
-            "Could not convert value [%s] to float for dimension [%s]. Invalid type: [%s]",
-            valObj,
-            fieldName,
-            valObj.getClass()
-        ) : StringUtils.nonStrictFormat(
-            "Could not convert value [%s] to float. Invalid type: [%s]",
-            valObj,
-            valObj.getClass()
-        );
+        final String message;
+        if (fieldName != null) {
+          message = StringUtils.nonStrictFormat(
+              "Could not convert value [%s] to float for dimension [%s]. Invalid type: [%s]",
+              valObj,
+              fieldName,
+              valObj.getClass()
+          );
+        } else {
+          message = StringUtils.nonStrictFormat(
+              "Could not convert value [%s] to float. Invalid type: [%s]",
+              valObj,
+              valObj.getClass()
+          );
+        }
         throw new ParseException(
             valObj.getClass().toString(),
             message
@@ -619,41 +649,56 @@ public final class DimensionHandlerUtils
     } else if (valObj instanceof String) {
       Double ret = Doubles.tryParse((String) valObj);
       if (reportParseExceptions && ret == null) {
-        final String message = (fieldName != null) ? StringUtils.nonStrictFormat(
-            "could not convert value [%s] to double for dimension [%s]",
-            valObj,
-            fieldName
-        ) : StringUtils.nonStrictFormat(
-            "could not convert value [%s] to double",
-            valObj
-        );
+        final String message;
+        if (fieldName != null) {
+          message = StringUtils.nonStrictFormat(
+              "Could not convert value [%s] to double for dimension [%s].",
+              valObj,
+              fieldName
+          );
+        } else {
+          message = StringUtils.nonStrictFormat(
+              "Could not convert value [%s] to double.",
+              valObj
+          );
+        }
         throw new ParseException((String) valObj, message);
       }
       return ret;
     } else if (valObj instanceof List) {
-      final String message = (fieldName != null) ? StringUtils.nonStrictFormat(
-          "Could not ingest value %s as double for dimension [%s]. A double column cannot have multiple values in the same row.",
-          valObj,
-          fieldName
-      ) : StringUtils.nonStrictFormat(
-          "Could not ingest value %s as double. A double column cannot have multiple values in the same row.",
-          valObj
-      );
+      final String message;
+      if (fieldName != null) {
+        message = StringUtils.nonStrictFormat(
+            "Could not ingest value [%s] as double for dimension [%s]. A double column cannot have multiple values in the same row.",
+            valObj,
+            fieldName
+        );
+      } else {
+        message = StringUtils.nonStrictFormat(
+            "Could not ingest value [%s] as double. A double column cannot have multiple values in the same row.",
+            valObj
+        );
+      }
 
       throw new ParseException(
           valObj.getClass().toString(),
           message
       );
     } else {
-      final String message = (fieldName != null) ? StringUtils.nonStrictFormat(
-          "Could not convert value [%s] to double for dimension [%s]. Invalid type: [%s]",
-          valObj,
-          fieldName,
-          valObj.getClass()
-      ) : StringUtils.nonStrictFormat(
-          "Could not convert value [%s] to double. Invalid type: [%s]",
-          valObj, valObj.getClass()
-      );
+      final String message;
+      if (fieldName != null) {
+        message = StringUtils.nonStrictFormat(
+            "Could not convert value [%s] to double for dimension [%s]. Invalid type: [%s]",
+            valObj,
+            fieldName,
+            valObj.getClass()
+        );
+      } else {
+        message = StringUtils.nonStrictFormat(
+            "Could not convert value [%s] to double. Invalid type: [%s]",
+            valObj, valObj.getClass()
+        );
+      }
       throw new ParseException(
           valObj.getClass().toString(),
           message
