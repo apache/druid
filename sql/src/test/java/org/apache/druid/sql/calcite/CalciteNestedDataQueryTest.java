@@ -7581,7 +7581,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{null},
+            new Object[]{NullHandling.defaultStringValue()},
             new Object[]{"\"hello\""},
             new Object[]{"2"},
             new Object[]{"{\"array\":[\"a\",\"b\"],\"n\":{\"x\":\"hello\"}}"},

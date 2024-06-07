@@ -947,8 +947,8 @@ public class ExpressionPlannerTest extends InitializedNullHandlingTest
     public TestMacroTable()
     {
       super(
-          ImmutableList.<ExprMacroTable.ExprMacro>builder().
-                       addAll(TestExprMacroTable.INSTANCE.getMacros())
+          ImmutableList.<ExprMacroTable.ExprMacro>builder()
+                       .addAll(TestExprMacroTable.INSTANCE.getMacros())
                        .add(new ExprMacroTable.ExprMacro()
                        {
                          @Override
