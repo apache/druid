@@ -82,9 +82,10 @@ FROM "mvd_example"
 WHERE tags = 't3'
 ```
 
-### Example: overlap of two arrays
+### Example: one or more elements in array
 
-Filter rows for which the array or MVD overlaps a reference array.
+Filter rows for which the array or MVD contains one or more elements.
+Notice that [ARRAY_OVERLAP](../querying/sql-functions.md#array_overlap) checks for any overlapping elements, whereas [ARRAY_CONTAINS](../querying/sql-functions.md#array_contains) in the previous example checks that all elements are included.
 
 #### Array
 
@@ -99,7 +100,7 @@ WHERE ARRAY_OVERLAP(tags, ARRAY['t1', 't7'])
 ```sql
 SELECT *
 FROM "mvd_example"
-WHERE MV_OVERLAP(tags, ARRAY['t1', 't7'])
+WHERE tags = 't1' OR tags = 't7'
 ```
 
 ### Example: group by array elements
