@@ -80,7 +80,7 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
       final String exportFilePath,
       final ColumnMappings columnMappings,
       final ResultsContext resultsContext
-      )
+  )
   {
     this.inputChannel = inputChannel;
     this.exportFormat = exportFormat;
