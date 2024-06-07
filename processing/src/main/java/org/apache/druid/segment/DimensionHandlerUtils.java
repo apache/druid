@@ -400,9 +400,9 @@ public final class DimensionHandlerUtils
   }
 
   @Nullable
-  public static Long convertObjectToLong(Object value, String fieldName)
+  public static Long convertObjectToLong(@Nullable Object valObj, String fieldName)
   {
-    return convertObjectToLong(value, false, fieldName);
+    return convertObjectToLong(valObj, false, fieldName);
   }
 
   @Nullable
