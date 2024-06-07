@@ -22,12 +22,14 @@ package org.apache.druid.segment;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.StampedLock;
+import org.apache.druid.java.util.common.Pair;
 
 /**
  * Buildable dictionary for some comparable type. Values are unsorted, or rather sorted in the order which they are
@@ -150,7 +152,8 @@ public abstract class DimensionDictionary<T extends Comparable<T>>
     return sizeInBytes.get();
   }
 
-  public int add(@Nullable T originalValue)
+  @Nonnull
+  public Pair<Integer, Boolean> add(@Nullable T originalValue)
   {
     if (originalValue == null) {
       return addNull();
@@ -161,7 +164,7 @@ public abstract class DimensionDictionary<T extends Comparable<T>>
       try {
         int existing = valueToId.getInt(originalValue);
         if (existing >= 0) {
-          return existing;
+          return Pair.of(existing, false);
         }
       }
       finally {
@@ -180,7 +183,7 @@ public abstract class DimensionDictionary<T extends Comparable<T>>
       final int index = idToValue.size();
       final int prev = valueToId.putIfAbsent(originalValue, index);
       if (prev >= 0) {
-        return prev;
+        return Pair.of(prev, false);
       }
 
       idToValue.add(originalValue);
@@ -188,17 +191,17 @@ public abstract class DimensionDictionary<T extends Comparable<T>>
 
       minValue = minValue == null || minValue.compareTo(originalValue) > 0 ? originalValue : minValue;
       maxValue = maxValue == null || maxValue.compareTo(originalValue) < 0 ? originalValue : maxValue;
-      return index;
+      return Pair.of(index, true);
     }
     finally {
       lock.unlockWrite(stamp);
     }
   }
 
-  private int addNull()
+  private Pair<Integer, Boolean> addNull()
   {
     if (idForNull != ABSENT_VALUE_ID) {
-      return idForNull;
+      return Pair.of(idForNull, false);
     }
 
     long stamp = lock.writeLock();
@@ -208,7 +211,7 @@ public abstract class DimensionDictionary<T extends Comparable<T>>
         idForNull = idToValue.size();
         idToValue.add(null);
       }
-      return idForNull;
+      return Pair.of(idForNull, true);
     }
     finally {
       lock.unlockWrite(stamp);
