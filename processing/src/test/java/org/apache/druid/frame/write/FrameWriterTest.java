@@ -582,7 +582,7 @@ public class FrameWriterTest extends InitializedNullHandlingTest
                            null,
                            (retVal, cursor) -> {
                              int numRows = 0;
-                             final FrameWriterFactory frameWriterFactory = FrameWriters.makeFrameWriterFactory(
+                             final FrameWriterFactory frameWriterFactory = FrameWriters.makeRowBasedFrameWriterFactory(
                                  outputFrameType,
                                  new SingleMemoryAllocatorFactory(allocator),
                                  signature,

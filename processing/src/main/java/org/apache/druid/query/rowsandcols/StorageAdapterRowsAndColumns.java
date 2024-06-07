@@ -119,8 +119,7 @@ public class StorageAdapterRowsAndColumns implements CloseableShapeshifter, Rows
 
       final ColumnSelectorFactory columnSelectorFactory = in.getColumnSelectorFactory();
 
-      final FrameWriterFactory frameWriterFactory = FrameWriters.makeFrameWriterFactory(
-          FrameType.COLUMNAR,
+      final FrameWriterFactory frameWriterFactory = FrameWriters.makeColumnBasedFrameWriterFactory(
           new ArenaMemoryAllocatorFactory(200 << 20), // 200 MB, because, why not?
           rowSignature,
           Collections.emptyList()

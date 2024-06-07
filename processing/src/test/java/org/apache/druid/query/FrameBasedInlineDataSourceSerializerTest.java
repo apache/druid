@@ -134,7 +134,7 @@ public class FrameBasedInlineDataSourceSerializerTest
     RowSignature modifiedRowSignature = FrameWriterUtils.replaceUnknownTypesWithNestedColumns(rowSignature);
     Sequence<Frame> frames = FrameCursorUtils.cursorToFramesSequence(
         cursor,
-        FrameWriters.makeFrameWriterFactory(
+        FrameWriters.makeRowBasedFrameWriterFactory(
             FrameType.ROW_BASED,
             new SingleMemoryAllocatorFactory(HeapMemoryAllocator.unlimited()),
             modifiedRowSignature,

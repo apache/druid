@@ -20,6 +20,7 @@
 package org.apache.druid.frame.write;
 
 import com.google.common.base.Preconditions;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.MemoryAllocatorFactory;
 import org.apache.druid.frame.key.KeyColumn;
@@ -54,21 +55,23 @@ public class FrameWriters
    * @param sortColumns      sort columns for the frames. If nonempty, {@link FrameSort#sort} is used to sort the
    *                         resulting frames.
    */
-  public static FrameWriterFactory makeFrameWriterFactory(
-      final FrameType frameType,
+  public static FrameWriterFactory makeRowBasedFrameWriterFactory(
+      final MemoryAllocatorFactory allocatorFactory,
+      final RowSignature signature,
+      final List<KeyColumn> sortColumns,
+      final boolean removeNullBytes
+  )
+  {
+    return new RowBasedFrameWriterFactory(allocatorFactory, signature, sortColumns, removeNullBytes);
+  }
+
+  public static FrameWriterFactory makeColumnBasedFrameWriterFactory(
       final MemoryAllocatorFactory allocatorFactory,
       final RowSignature signature,
       final List<KeyColumn> sortColumns
   )
   {
-    switch (Preconditions.checkNotNull(frameType, "frameType")) {
-      case COLUMNAR:
-        return new ColumnarFrameWriterFactory(allocatorFactory, signature, sortColumns);
-      case ROW_BASED:
-        return new RowBasedFrameWriterFactory(allocatorFactory, signature, sortColumns);
-      default:
-        throw new ISE("Unrecognized frame type [%s]", frameType);
-    }
+    return new ColumnarFrameWriterFactory(allocatorFactory, signature, sortColumns);
   }
 
   /**

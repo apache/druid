@@ -56,7 +56,8 @@ public class FieldWriters
   public static FieldWriter create(
       final ColumnSelectorFactory columnSelectorFactory,
       final String columnName,
-      final ColumnType columnType
+      final ColumnType columnType,
+      final boolean removeNullBytes
   )
   {
     if (columnType == null) {
@@ -74,7 +75,7 @@ public class FieldWriters
         return makeDoubleWriter(columnSelectorFactory, columnName);
 
       case STRING:
-        return makeStringWriter(columnSelectorFactory, columnName);
+        return makeStringWriter(columnSelectorFactory, columnName, removeNullBytes);
 
       case COMPLEX:
         return makeComplexWriter(columnSelectorFactory, columnName, columnType.getComplexTypeName());
@@ -124,11 +125,12 @@ public class FieldWriters
 
   private static FieldWriter makeStringWriter(
       final ColumnSelectorFactory selectorFactory,
-      final String columnName
+      final String columnName,
+      final boolean removeNullBytes
   )
   {
     final DimensionSelector selector = selectorFactory.makeDimensionSelector(DefaultDimensionSpec.of(columnName));
-    return new StringFieldWriter(selector);
+    return new StringFieldWriter(selector, removeNullBytes);
   }
 
   private static FieldWriter makeStringArrayWriter(

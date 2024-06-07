@@ -203,8 +203,7 @@ public class ScanResultValueFramesIterable implements Iterable<FrameSignaturePai
       // While calling populateCursor() repeatedly, currentRowSignature might change. Therefore we store the signature
       // with which we have written the frames
       final RowSignature writtenSignature = currentRowSignature;
-      FrameWriterFactory frameWriterFactory = FrameWriters.makeFrameWriterFactory(
-          FrameType.COLUMNAR,
+      FrameWriterFactory frameWriterFactory = FrameWriters.makeColumnBasedFrameWriterFactory(
           memoryAllocatorFactory,
           currentRowSignature,
           Collections.emptyList()

@@ -93,7 +93,7 @@ public class KeyTestUtils
         false
     );
 
-    final FrameWriterFactory writerFactory = FrameWriters.makeFrameWriterFactory(
+    final FrameWriterFactory writerFactory = FrameWriters.makeRowBasedFrameWriterFactory(
         FrameType.ROW_BASED,
         new SingleMemoryAllocatorFactory(HeapMemoryAllocator.unlimited()),
         keySignature,

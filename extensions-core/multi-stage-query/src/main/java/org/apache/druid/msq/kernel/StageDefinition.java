@@ -357,8 +357,7 @@ public class StageDefinition
    */
   public FrameWriterFactory createFrameWriterFactory(final MemoryAllocatorFactory memoryAllocatorFactory)
   {
-    return FrameWriters.makeFrameWriterFactory(
-        FrameType.ROW_BASED,
+    return FrameWriters.makeRowBasedFrameWriterFactory(
         memoryAllocatorFactory,
         signature,
 
@@ -366,6 +365,7 @@ public class StageDefinition
         // FrameChannelHashPartitioner is expected to be attached to the processor and do the sorting. We don't
         // want to double-sort.
         doesShuffle() && !shuffleSpec.kind().isHash() ? getClusterBy().getColumns() : Collections.emptyList()
+
     );
   }
 

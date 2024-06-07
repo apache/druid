@@ -21,6 +21,7 @@ package org.apache.druid.frame.write;
 
 import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.java.util.common.IAE;
@@ -244,16 +245,20 @@ public class FrameWriterUtils
   /**
    * Copies "len" bytes from {@code src.position()} to "dstPosition" in "memory". Does not update the position of src.
    *
-   * @throws InvalidNullByteException if "allowNullBytes" is false and a null byte is encountered
+   * @throws InvalidNullByteException if "ignoreNullBytes" is false and a null byte is encountered
    */
   public static void copyByteBufferToMemory(
       final ByteBuffer src,
       final WritableMemory dst,
       final long dstPosition,
       final int len,
-      final boolean allowNullBytes
+      final boolean ignoreNullBytes,
+      final boolean removeNullBytes
   )
   {
+    if (ignoreNullBytes && removeNullBytes) {
+      throw DruidException.defensive("Cannot ignore null bytes and remove them at the same time");
+    }
     if (src.remaining() < len) {
       throw new ISE("Insufficient source space available");
     }
@@ -262,21 +267,37 @@ public class FrameWriterUtils
     }
 
     final int srcEnd = src.position() + len;
-    long q = dstPosition;
 
-    for (int p = src.position(); p < srcEnd; p++, q++) {
-      final byte b = src.get(p);
-
-      if (!allowNullBytes && b == 0) {
-        ByteBuffer duplicate = src.duplicate();
-        duplicate.limit(srcEnd);
-        throw InvalidNullByteException.builder()
-                                      .value(StringUtils.fromUtf8(duplicate))
-                                      .position(p - src.position())
-                                      .build();
+    if (ignoreNullBytes) {
+      if (src.hasArray()) {
+        // Null bytes are ignored and the src buffer is backed by an array. Bulk copying to the destination would be the fastest
+        dst.putByteArray(dstPosition, src.array(), src.arrayOffset() + src.position(), len);
+      } else {
+        // Null bytes are ignored and the src buffer is not backed by an array. We can copy the byte buffer to the destination individually
+        long q = dstPosition;
+        for (int p = src.position(); p < srcEnd; p++, q++) {
+          final byte b = src.get(p);
+          dst.putByte(q, b);
+        }
       }
+    } else {
+      long q = dstPosition;
+      for (int p = src.position(); p < srcEnd; p++, q++) {
+        for (int p = src.position(); p < srcEnd; p++, q++) {
+          final byte b = src.get(p);
 
-      dst.putByte(q, b);
+          if (!ignoreNullBytes && b == 0) {
+            ByteBuffer duplicate = src.duplicate();
+            duplicate.limit(srcEnd);
+            throw InvalidNullByteException.builder()
+                                          .value(StringUtils.fromUtf8(duplicate))
+                                          .position(p - src.position())
+                                          .build();
+          }
+
+          dst.putByte(q, b);
+        }
+      }
     }
   }
 

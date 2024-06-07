@@ -1575,8 +1575,7 @@ public class WorkerImpl implements Worker
                 outputChannels.stream().map(OutputChannel::getWritableChannel).collect(Collectors.toList()),
                 kernel.getStageDefinition().getFrameReader(),
                 kernel.getStageDefinition().getClusterBy().getColumns().size(),
-                FrameWriters.makeFrameWriterFactory(
-                    FrameType.ROW_BASED,
+                FrameWriters.makeRowBasedFrameWriterFactory(
                     new ArenaMemoryAllocatorFactory(frameContext.memoryParameters().getStandardFrameSize()),
                     kernel.getStageDefinition().getSignature(),
                     kernel.getStageDefinition().getSortKey()

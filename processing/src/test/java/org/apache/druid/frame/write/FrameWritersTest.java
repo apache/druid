@@ -37,7 +37,7 @@ import org.junit.internal.matchers.ThrowableMessageMatcher;
 import java.util.Collections;
 
 /**
- * Tests {@link FrameWriters#makeFrameWriterFactory} ability to create factories. Largely doesn't test actual
+ * Tests {@link FrameWriters#makeRowBasedFrameWriterFactory} ability to create factories. Largely doesn't test actual
  * frame generation via the factories, since that is exercised well enough in other test suites.
  */
 public class FrameWritersTest extends InitializedNullHandlingTest
@@ -47,7 +47,7 @@ public class FrameWritersTest extends InitializedNullHandlingTest
   @Test
   public void test_rowBased()
   {
-    final FrameWriterFactory factory = FrameWriters.makeFrameWriterFactory(
+    final FrameWriterFactory factory = FrameWriters.makeRowBasedFrameWriterFactory(
         FrameType.ROW_BASED,
         new ArenaMemoryAllocatorFactory(ALLOCATOR_CAPACITY),
         RowSignature.builder().add("x", ColumnType.LONG).build(),
@@ -61,7 +61,7 @@ public class FrameWritersTest extends InitializedNullHandlingTest
   @Test
   public void test_columnar()
   {
-    final FrameWriterFactory factory = FrameWriters.makeFrameWriterFactory(
+    final FrameWriterFactory factory = FrameWriters.makeRowBasedFrameWriterFactory(
         FrameType.COLUMNAR,
         new ArenaMemoryAllocatorFactory(ALLOCATOR_CAPACITY),
         RowSignature.builder()
@@ -84,7 +84,7 @@ public class FrameWritersTest extends InitializedNullHandlingTest
   @Test
   public void test_columnar_unsupportedColumnType()
   {
-    final FrameWriterFactory factory = FrameWriters.makeFrameWriterFactory(
+    final FrameWriterFactory factory = FrameWriters.makeRowBasedFrameWriterFactory(
         FrameType.COLUMNAR,
         new ArenaMemoryAllocatorFactory(ALLOCATOR_CAPACITY),
         RowSignature.builder().add("x", ColumnType.ofArray(ColumnType.LONG_ARRAY)).build(),
@@ -106,7 +106,7 @@ public class FrameWritersTest extends InitializedNullHandlingTest
     final IllegalArgumentException e = Assert.assertThrows(
         IllegalArgumentException.class,
         () ->
-            FrameWriters.makeFrameWriterFactory(
+            FrameWriters.makeRowBasedFrameWriterFactory(
                 FrameType.ROW_BASED,
                 new ArenaMemoryAllocatorFactory(ALLOCATOR_CAPACITY),
                 RowSignature.builder().add("x", ColumnType.LONG).add("y", ColumnType.LONG).build(),
@@ -128,7 +128,7 @@ public class FrameWritersTest extends InitializedNullHandlingTest
     final IllegalArgumentException e = Assert.assertThrows(
         IllegalArgumentException.class,
         () ->
-            FrameWriters.makeFrameWriterFactory(
+            FrameWriters.makeRowBasedFrameWriterFactory(
                 FrameType.COLUMNAR,
                 new ArenaMemoryAllocatorFactory(ALLOCATOR_CAPACITY),
                 RowSignature.builder().add("x", ColumnType.LONG).build(),

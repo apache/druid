@@ -55,10 +55,12 @@ public class StringFieldWriter implements FieldWriter
   private static final byte NULL_ROW_SIZE = 2; // NULL_ROW + ROW_TERMINATOR
 
   private final DimensionSelector selector;
+  private final boolean removeNullBytes;
 
-  public StringFieldWriter(final DimensionSelector selector)
+  public StringFieldWriter(final DimensionSelector selector, final boolean removeNullbytes)
   {
     this.selector = selector;
+    this.removeNullBytes = removeNullbytes;
   }
 
   @Override
@@ -89,7 +91,8 @@ public class StringFieldWriter implements FieldWriter
       final WritableMemory memory,
       final long position,
       final long maxSize,
-      @Nullable final List<ByteBuffer> byteBuffers
+      @Nullable final List<ByteBuffer> byteBuffers,
+      final boolean removeNullBytes
   )
   {
     if (byteBuffers == null) {

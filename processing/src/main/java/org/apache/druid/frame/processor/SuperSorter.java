@@ -623,8 +623,8 @@ public class SuperSorter
               in,
               frameReader,
               writableChannel,
-              FrameWriters.makeFrameWriterFactory(
-                  FrameType.ROW_BASED, // Row-based frames are generally preferred as inputs to mergers
+              FrameWriters.makeRowBasedFrameWriterFactory(
+                  // Row-based frames are generally preferred as inputs to mergers
                   frameAllocatorFactory,
                   frameReader.signature(),
                   // No sortColumns, because FrameChannelMerger generates frames that are sorted all on its own

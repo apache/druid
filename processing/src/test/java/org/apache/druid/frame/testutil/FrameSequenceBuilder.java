@@ -120,7 +120,7 @@ public class FrameSequenceBuilder
   public Sequence<Frame> frames()
   {
     final FrameWriterFactory frameWriterFactory =
-        FrameWriters.makeFrameWriterFactory(
+        FrameWriters.makeRowBasedFrameWriterFactory(
             frameType,
             new SingleMemoryAllocatorFactory(allocator),
             signature(),

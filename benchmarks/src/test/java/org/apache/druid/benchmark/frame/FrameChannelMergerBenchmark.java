@@ -351,7 +351,7 @@ public class FrameChannelMergerBenchmark
         channels.stream().map(BlockingQueueFrameChannel::readable).collect(Collectors.toList()),
         frameReader,
         outputChannel.writable(),
-        FrameWriters.makeFrameWriterFactory(
+        FrameWriters.makeRowBasedFrameWriterFactory(
             FrameType.ROW_BASED,
             new ArenaMemoryAllocatorFactory(1_000_000),
             signature,

@@ -128,7 +128,7 @@ public class InputChannelsImpl implements InputChannels
           channels,
           stageDefinition.getFrameReader(),
           queueChannel.writable(),
-          FrameWriters.makeFrameWriterFactory(
+          FrameWriters.makeRowBasedFrameWriterFactory(
               FrameType.ROW_BASED,
               new SingleMemoryAllocatorFactory(allocatorMaker.get()),
               stageDefinition.getFrameReader().signature(),
