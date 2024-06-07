@@ -68,5 +68,6 @@ public class ApproximateHistogramDruidModule implements DruidModule
   {
     ComplexMetrics.registerSerde(ApproximateHistogramFoldingSerde.TYPE_NAME, new ApproximateHistogramFoldingSerde());
     ComplexMetrics.registerSerde(FixedBucketsHistogramAggregator.TYPE_NAME, new FixedBucketsHistogramSerde());
+    ComplexMetrics.registerSerde(Histogram.TYPE.getComplexTypeName(), new HistogramSerde2());
   }
 }

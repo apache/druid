@@ -38,6 +38,10 @@ import java.nio.ByteBuffer;
 
 public class ApproximateHistogramAggregatorTest extends InitializedNullHandlingTest
 {
+  static {
+    ApproximateHistogramDruidModule.registerSerde();
+  }
+
   private void aggregateBuffer(TestFloatColumnSelector selector, BufferAggregator agg, ByteBuffer buf, int position)
   {
     agg.aggregate(buf, position);
