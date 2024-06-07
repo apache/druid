@@ -277,6 +277,9 @@ public class ExpressionPlan
             // until query time
             return ColumnCapabilitiesImpl.copyOf(underlyingCapabilities)
                                          .setType(ColumnType.STRING)
+                                         // this is sad, but currently dictionary encodedness is tied to string
+                                         // selectors and sad stuff happens if the input type isn't string
+                                         .setDictionaryEncoded(underlyingCapabilities.is(ValueType.STRING))
                                          .setDictionaryValuesSorted(false)
                                          .setDictionaryValuesUnique(false)
                                          .setHasBitmapIndexes(false)
