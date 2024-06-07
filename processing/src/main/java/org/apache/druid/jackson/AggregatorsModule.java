@@ -110,7 +110,6 @@ public class AggregatorsModule extends SimpleModule
     ComplexMetrics.registerSerde(Histogram.TYPE.getComplexTypeName(), new HistogramSerde());
     ComplexMetrics.registerSerde(HistogramVisual.TYPE.getComplexTypeName(), new HistogramVisualSerde());
 
-
     setMixInAnnotation(AggregatorFactory.class, AggregatorFactoryMixin.class);
     setMixInAnnotation(PostAggregator.class, PostAggregatorMixin.class);
 
