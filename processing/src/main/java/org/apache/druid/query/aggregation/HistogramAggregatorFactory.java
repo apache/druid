@@ -37,10 +37,6 @@ import java.util.List;
 
 public class HistogramAggregatorFactory extends AggregatorFactory
 {
-  public static final ColumnType TYPE = ColumnType.ofComplex("histogram");
-  // todo: this isn't registered with serde, is it a lie? should we just report null as the type name? or register a serde?
-  public static final ColumnType TYPE_VISUAL = ColumnType.ofComplex("histogramVisual");
-
   private final String name;
   private final String fieldName;
   private final List<Float> breaksList;
@@ -204,7 +200,7 @@ public class HistogramAggregatorFactory extends AggregatorFactory
   @Override
   public ColumnType getIntermediateType()
   {
-    return TYPE;
+    return Histogram.TYPE;
   }
 
   /**
@@ -213,7 +209,7 @@ public class HistogramAggregatorFactory extends AggregatorFactory
   @Override
   public ColumnType getResultType()
   {
-    return TYPE_VISUAL;
+    return HistogramVisual.TYPE;
   }
 
   @Override

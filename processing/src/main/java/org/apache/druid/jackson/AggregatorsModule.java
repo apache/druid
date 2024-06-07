@@ -33,7 +33,11 @@ import org.apache.druid.query.aggregation.FloatMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatMinAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatSumAggregatorFactory;
 import org.apache.druid.query.aggregation.GroupingAggregatorFactory;
+import org.apache.druid.query.aggregation.Histogram;
 import org.apache.druid.query.aggregation.HistogramAggregatorFactory;
+import org.apache.druid.query.aggregation.HistogramSerde;
+import org.apache.druid.query.aggregation.HistogramVisual;
+import org.apache.druid.query.aggregation.HistogramVisualSerde;
 import org.apache.druid.query.aggregation.JavaScriptAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMinAggregatorFactory;
@@ -102,6 +106,10 @@ public class AggregatorsModule extends SimpleModule
         SerializablePairLongLongComplexMetricSerde.TYPE_NAME,
         new SerializablePairLongLongComplexMetricSerde()
     );
+
+    ComplexMetrics.registerSerde(Histogram.TYPE.getComplexTypeName(), new HistogramSerde());
+    ComplexMetrics.registerSerde(HistogramVisual.TYPE.getComplexTypeName(), new HistogramVisualSerde());
+
 
     setMixInAnnotation(AggregatorFactory.class, AggregatorFactoryMixin.class);
     setMixInAnnotation(PostAggregator.class, PostAggregatorMixin.class);

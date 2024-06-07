@@ -47,9 +47,9 @@ public class ApproximateHistogramFoldingSerde extends ComplexMetricSerde
   }
 
   @Override
-  public ComplexMetricExtractor getExtractor()
+  public ComplexMetricExtractor<ApproximateHistogram> getExtractor()
   {
-    return new ComplexMetricExtractor()
+    return new ComplexMetricExtractor<ApproximateHistogram>()
     {
       @Override
       public Class<ApproximateHistogram> extractedClass()

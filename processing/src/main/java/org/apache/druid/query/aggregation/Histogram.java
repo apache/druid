@@ -21,12 +21,15 @@ package org.apache.druid.query.aggregation;
 
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Preconditions;
+import org.apache.druid.segment.column.ColumnType;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
 public class Histogram
 {
+  public static final ColumnType TYPE = ColumnType.ofComplex("histogram");
+
   public float[] breaks;
   public long[] bins;
   public transient long count;
