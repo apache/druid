@@ -27,12 +27,10 @@ includes not only Druid itself but also all the dependencies of Druid, its `LICE
 As a result, the contents of those files are different and managed separately for source code and binary packages.
 Please read the sections below to understand how we manage the licenses and what to update when you want to add new dependencies.
 
-
 ### Licenses for source code packages
 
-The licenses for source code packages are maintained _manually_ in [the `LICENSE` file](https://github.com/apache/druid/blob/master/LICENSE). 
+The licenses for source code packages are maintained _manually_ in [the `LICENSE` file](https://github.com/apache/druid/blob/master/LICENSE).
 The notices can be found in [the `NOTICE` file`](https://github.com/apache/druid/blob/master/NOTICE) similarly.
-
 
 ### Licenses for binary packages
 
@@ -41,7 +39,6 @@ All licenses (for both source code and binary releases) should be registered in 
 [`generate-binary-license.py`](https://github.com/apache/druid/blob/master/distribution/bin/generate-binary-license.py)
 and [`generate-binary-notice.py`](https://github.com/apache/druid/blob/master/distribution/bin/generate-binary-notice.py)
 will generate the `LICENSE` and `NOTICE` files automatically based on the registry.
-
 
 ### Adding licenses
 
@@ -56,7 +53,7 @@ is adopted from Apache Calcite. This requires adding the following entries in th
 SOURCE/JAVA-CORE
     This product contains SQL query planning code adapted from Apache Calcite.
       * processing/src/main/java/org/apache/druid/segment/filter/cnf/CalciteCnfHelper.java
-``` 
+```
 
 If the project provides its own notice, the contents of the notice should be included in the `NOTICE` file of Druid.
 
@@ -91,11 +88,10 @@ source_paths:
   - processing/src/main/java/org/apache/druid/segment/filter/cnf/CalciteCnfHelper.java
 ```
 
-
 #### When you add a new library dependency into Druid
 
 This requires you to update the [the `licenses.yaml` file](https://github.com/apache/druid/blob/master/licenses.yaml).
-For example, to add `aws-java-sdk-core` as a new depdency, you need to add the following entry.
+For example, to add `aws-java-sdk-core` as a new dependency, you need to add the following entry.
 
 ```yaml
 name: AWS SDK for Java
