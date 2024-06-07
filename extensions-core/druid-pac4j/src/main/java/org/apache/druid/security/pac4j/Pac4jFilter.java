@@ -43,7 +43,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
-import java.util.Collection;
 
 public class Pac4jFilter implements Filter
 {
@@ -101,17 +100,9 @@ public class Pac4jFilter implements Filter
       UserProfile profile = (UserProfile) securityLogic.perform(
           context,
           sessionStore,
-          pac4jConfig,
-          (JEEContext ctx, Collection<UserProfile> profiles, Object... parameters) -> {
-            if (profiles.isEmpty()) {
-              LOGGER.warn("No profiles found after OIDC auth.");
-              return null;
-            } else {
-              return profiles.iterator().next();
-            }
-          },
+          pac4jConfig, null,
           JEEHttpActionAdapter.INSTANCE,
-          null, "none", null, null);
+          null, "none", null);
       // Changed the Authorizer from null to "none".
       // In the older version, if it is null, it simply grant access and returns authorized.
       // But in the newer pac4j version, it uses CsrfAuthorizer as default, And because of this, It was returning 403 in API calls.
