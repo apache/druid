@@ -37,9 +37,10 @@ public class HllSketchToStringPostAggregatorTest
         new FieldAccessPostAggregator("field1", "sketch")
     );
     DefaultObjectMapper mapper = new DefaultObjectMapper();
-    HllSketchToStringPostAggregator andBackAgain = mapper.readValue(
+    mapper.registerModules(new HllSketchModule().getJacksonModules());
+    PostAggregator andBackAgain = mapper.readValue(
         mapper.writeValueAsString(there),
-        HllSketchToStringPostAggregator.class
+        PostAggregator.class
     );
 
     Assert.assertEquals(there, andBackAgain);

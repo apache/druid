@@ -33,11 +33,12 @@ The guides in this section outline breaking changes introduced in Druid 25 and l
 
 Druid now supports SQL-compliant array types. Whenever possible, you should use the array type over multi-value dimensions. See []()>.
 
-## Migrate to `maxSubqueryBytes` from `maxSubqueryRows`
-
-`maxSubqueryBytes` and `maxSubqueryRows` are guardrails to limit the amount of subquery data stored in the Java heap. `maxSubqueryBytes` is a better alternative to maxSubqueryRows because row-based limits  ignore the size of the individual rows. The values for `maxSubqueryRows` also doesn't take into account the size of the cluster, which is available with the `maxSubqueryBytes` automatic configuration. See []().
 -->
 
 ## Migrate to front-coded dictionary encoding
 
 Druid encodes string columns into dictionaries for better compression. Front-coded dictionary encoding reduces storage and improves performance by optimizing for strings that share similar beginning substrings. See [Migration guide: front-coded dictionaries](migr-front-coded-dict.md) for more information.
+
+## Migrate to `maxSubqueryBytes` from `maxSubqueryRows`
+
+Druid allows you to set a byte-based limit on subquery size to prevent Brokers from running out of memory when handling large subqueries. The byte-based subquery limit overrides Druid's row-based subquery limit. We recommend that you move towards using byte-based limits starting in Druid 30.0. See [Migration guide: subquery limit](migr-subquery-limit.md) for more information.
