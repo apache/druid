@@ -281,6 +281,18 @@ export function formatMillions(n: NumberLike): string {
   return s + ' M';
 }
 
+export function forceSignInNumberFormatter(
+  formatter: (n: NumberLike) => string,
+): (n: NumberLike) => string {
+  return (n: NumberLike) => {
+    if (n > 0) {
+      return '+' + formatter(n);
+    } else {
+      return formatter(n);
+    }
+  };
+}
+
 function pad2(str: string | number): string {
   return ('00' + str).slice(-2);
 }

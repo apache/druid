@@ -542,7 +542,7 @@ You can use front coding with all types of ingestion.
 Before you enable front coding for your cluster, review the [Migration guide for front-coded dictionaries](../release-info/migr-front-coded-dict.md).
 It contains important information about compatibility with Druid versions preceding 25.0.0.
 
-To enable front coding, set `indexSpec.stringDictionaryEncoding.type` to `frontCoded` in the `tuningConfig` object of your [ingestion spec](../ingestion/ingestion-spec.md).
+To enable front coding, set `indexSpec.stringDictionaryEncoding.type` to `frontCoded` in the `tuningConfig` object of your ingestion spec.
 
 You can specify the following optional properties:
 
