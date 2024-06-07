@@ -582,7 +582,8 @@ public class ControllerImpl implements Controller
         queryId(),
         makeQueryControllerToolKit(),
         querySpec,
-        context.jsonMapper()
+        context.jsonMapper(),
+        resultsContext
     );
 
     if (log.isDebugEnabled()) {
@@ -1673,7 +1674,8 @@ public class ControllerImpl implements Controller
       final String queryId,
       @SuppressWarnings("rawtypes") final QueryKit toolKit,
       final MSQSpec querySpec,
-      final ObjectMapper jsonMapper
+      final ObjectMapper jsonMapper,
+      final ResultsContext resultsContext
   )
   {
     final MSQTuningConfig tuningConfig = querySpec.getTuningConfig();
@@ -1836,7 +1838,8 @@ public class ControllerImpl implements Controller
                                      queryId,
                                      exportStorageProvider,
                                      resultFormat,
-                                     columnMappings
+                                     columnMappings,
+                                     resultsContext
                                  ))
       );
       return builder.build();

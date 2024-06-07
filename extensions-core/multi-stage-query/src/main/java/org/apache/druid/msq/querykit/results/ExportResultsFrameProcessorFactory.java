@@ -36,6 +36,7 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.counters.CounterNames;
 import org.apache.druid.msq.counters.CounterTracker;
+import org.apache.druid.msq.exec.ResultsContext;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSliceReader;
 import org.apache.druid.msq.input.ReadableInput;
@@ -63,19 +64,22 @@ public class ExportResultsFrameProcessorFactory implements FrameProcessorFactory
   private final ExportStorageProvider exportStorageProvider;
   private final ResultFormat exportFormat;
   private final ColumnMappings columnMappings;
+  private final ResultsContext resultsContext;
 
   @JsonCreator
   public ExportResultsFrameProcessorFactory(
       @JsonProperty("queryId") String queryId,
       @JsonProperty("exportStorageProvider") ExportStorageProvider exportStorageProvider,
       @JsonProperty("exportFormat") ResultFormat exportFormat,
-      @JsonProperty("columnMappings") @Nullable ColumnMappings columnMappings
+      @JsonProperty("columnMappings") @Nullable ColumnMappings columnMappings,
+      @JsonProperty("resultsContext") @Nullable ResultsContext resultsContext
   )
   {
     this.queryId = queryId;
     this.exportStorageProvider = exportStorageProvider;
     this.exportFormat = exportFormat;
     this.columnMappings = columnMappings;
+    this.resultsContext = resultsContext;
   }
 
   @JsonProperty("queryId")
@@ -103,6 +107,14 @@ public class ExportResultsFrameProcessorFactory implements FrameProcessorFactory
   public ColumnMappings getColumnMappings()
   {
     return columnMappings;
+  }
+
+  @JsonProperty("resultsContext")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  @Nullable
+  public ResultsContext getResultsContext()
+  {
+    return resultsContext;
   }
 
   @Override
@@ -145,7 +157,8 @@ public class ExportResultsFrameProcessorFactory implements FrameProcessorFactory
             frameContext.jsonMapper(),
             channelCounter,
             getExportFilePath(queryId, workerNumber, readableInput.getStagePartition().getPartitionNumber(), exportFormat),
-            columnMappings
+            columnMappings,
+            resultsContext
         )
     );
 
