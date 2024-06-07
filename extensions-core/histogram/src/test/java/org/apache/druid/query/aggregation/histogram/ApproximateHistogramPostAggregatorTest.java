@@ -21,7 +21,6 @@ package org.apache.druid.query.aggregation.histogram;
 
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
-import org.apache.druid.query.aggregation.HistogramAggregatorFactory;
 import org.apache.druid.query.aggregation.TestFloatColumnSelector;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
@@ -95,9 +94,9 @@ public class ApproximateHistogramPostAggregatorTest extends InitializedNullHandl
         RowSignature.builder()
                     .addTimeColumn()
                     .add("approxHisto", null)
-                    .add("bucket", HistogramAggregatorFactory.TYPE)
-                    .add("equal", HistogramAggregatorFactory.TYPE)
-                    .add("custom", HistogramAggregatorFactory.TYPE)
+                    .add("bucket", Histogram.TYPE)
+                    .add("equal", Histogram.TYPE)
+                    .add("custom", Histogram.TYPE)
                     .add("min", ColumnType.DOUBLE)
                     .add("max", ColumnType.DOUBLE)
                     .add("quantile", ColumnType.FLOAT)

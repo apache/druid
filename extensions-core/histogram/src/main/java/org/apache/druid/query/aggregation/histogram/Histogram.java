@@ -20,11 +20,14 @@
 package org.apache.druid.query.aggregation.histogram;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.segment.column.ColumnType;
 
 import java.util.Arrays;
 
 public class Histogram
 {
+  public static final ColumnType TYPE = ColumnType.ofComplex("histogram2");
+
   double[] breaks;
   double[] counts;
 
@@ -32,7 +35,7 @@ public class Histogram
   {
     double[] retVal = new double[breaks.length];
     for (int i = 0; i < breaks.length; ++i) {
-      retVal[i] = (double) breaks[i];
+      retVal[i] = breaks[i];
     }
 
     this.breaks = retVal;

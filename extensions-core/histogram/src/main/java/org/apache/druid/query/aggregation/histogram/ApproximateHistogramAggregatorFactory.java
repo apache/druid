@@ -52,7 +52,7 @@ import java.util.Objects;
 @JsonTypeName("approxHistogram")
 public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
 {
-  public static final ColumnType TYPE = ColumnType.ofComplex("approximateHistogram");
+  public static final ColumnType TYPE = ApproximateHistogram.TYPE;
   protected final String name;
   protected final String fieldName;
 
@@ -322,7 +322,7 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
   @Override
   public ColumnType getResultType()
   {
-    return finalizeAsBase64Binary ? TYPE : HistogramAggregatorFactory.TYPE;
+    return finalizeAsBase64Binary ? ApproximateHistogram.TYPE : Histogram.TYPE;
   }
 
   @Override
