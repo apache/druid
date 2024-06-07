@@ -361,7 +361,8 @@ public class OverlordClientImplTest
     // Mock response for /druid/indexer/v1/totalWorkerCapacity
     final IndexingTotalWorkerCapacityInfo indexingTotalWorkerCapacityInfo = new IndexingTotalWorkerCapacityInfo(
         currentClusterCapacity,
-        maximumCapacityWithAutoScale
+        maximumCapacityWithAutoScale,
+        null
     );
 
     serviceClient.expectAndRespond(
@@ -382,7 +383,7 @@ public class OverlordClientImplTest
   {
     final List<IndexingWorkerInfo> workers = ImmutableList.of(
         new IndexingWorkerInfo(
-            new IndexingWorker("http", "localhost", "1.2.3.4", 3, "2"),
+            new IndexingWorker("http", "localhost", "1.2.3.4", 3, "2", ""),
             0,
             Collections.emptySet(),
             Collections.emptyList(),

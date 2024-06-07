@@ -24,10 +24,12 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.overlord.CategoryCapacityInfo;
 import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
 import org.apache.druid.indexing.overlord.config.WorkerTaskRunnerConfig;
 
 import javax.annotation.Nullable;
+import java.util.Collection;
 
 /**
  * The {@link org.apache.druid.indexing.overlord.RemoteTaskRunner} uses this class to select a worker to assign tasks to.
@@ -60,4 +62,12 @@ public interface WorkerSelectStrategy
       ImmutableMap<String, ImmutableWorkerInfo> zkWorkers,
       Task task
   );
+
+  @Nullable
+  default ImmutableMap<String, CategoryCapacityInfo> getWorkerCategoryCapacity(
+      Collection<ImmutableWorkerInfo> workers
+  )
+  {
+    return null;
+  }
 }

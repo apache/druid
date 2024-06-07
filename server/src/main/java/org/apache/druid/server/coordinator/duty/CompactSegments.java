@@ -320,10 +320,14 @@ public class CompactSegments implements CoordinatorCustomDuty
 
   private int getCompactionTaskCapacity(CoordinatorCompactionConfig dynamicConfig)
   {
-    int totalWorkerCapacity = CoordinatorDutyUtils.getTotalWorkerCapacity(overlordClient);
+    int totalWorkerCapacity = CoordinatorDutyUtils.getTotalWorkerCapacity(
+        overlordClient,
+        dynamicConfig.getCompactionTaskSlotRatio(),
+        "compact"
+    );
 
     return Math.min(
-        (int) (totalWorkerCapacity * dynamicConfig.getCompactionTaskSlotRatio()),
+        totalWorkerCapacity,
         dynamicConfig.getMaxCompactionTaskSlots()
     );
   }

@@ -783,12 +783,12 @@ public class KillUnusedSegmentsTest
 
     TestOverlordClient()
     {
-      capcityInfo = new IndexingTotalWorkerCapacityInfo(5, 10);
+      capcityInfo = new IndexingTotalWorkerCapacityInfo(5, 10, null);
     }
 
     TestOverlordClient(final int currentClusterCapacity, final int maxWorkerCapacity)
     {
-      capcityInfo = new IndexingTotalWorkerCapacityInfo(currentClusterCapacity, maxWorkerCapacity);
+      capcityInfo = new IndexingTotalWorkerCapacityInfo(currentClusterCapacity, maxWorkerCapacity, null);
     }
 
     static String getTaskId(final String idPrefix, final String dataSource, final Interval interval)
@@ -855,7 +855,7 @@ public class KillUnusedSegmentsTest
       return Futures.immediateFuture(
           ImmutableList.of(
               new IndexingWorkerInfo(
-                  new IndexingWorker("http", "localhost", "1.2.3.4", 3, "2"),
+                  new IndexingWorker("http", "localhost", "1.2.3.4", 3, "2", ""),
                   0,
                   Collections.emptySet(),
                   Collections.emptyList(),
