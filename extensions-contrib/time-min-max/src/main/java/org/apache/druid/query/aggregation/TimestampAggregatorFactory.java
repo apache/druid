@@ -37,7 +37,7 @@ import java.util.Objects;
 
 public abstract class TimestampAggregatorFactory extends AggregatorFactory
 {
-  public static final ColumnType FINALIZED_TYPE = ColumnType.ofComplex("dateTime");
+  public static final ColumnType FINALIZED_TYPE = DateTimeSerde.TYPE;
   final String name;
   @Nullable
   final String fieldName;

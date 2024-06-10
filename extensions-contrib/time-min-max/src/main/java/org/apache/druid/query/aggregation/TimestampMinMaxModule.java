@@ -22,8 +22,10 @@ package org.apache.druid.query.aggregation;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Binder;
 import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.segment.serde.ComplexMetrics;
 
 import java.util.Collections;
 import java.util.List;
@@ -45,6 +47,13 @@ public class TimestampMinMaxModule implements DruidModule
   @Override
   public void configure(Binder binder)
   {
+    registerSerde();
 
+  }
+
+  @VisibleForTesting
+  public static void registerSerde()
+  {
+    ComplexMetrics.registerSerde(DateTimeSerde.TYPE.getComplexTypeName(), new DateTimeSerde());
   }
 }
