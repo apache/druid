@@ -109,7 +109,7 @@ Now you're up to date, and you can make your changes.
 
    If you're adding a page, create a new Markdown file in the appropriate subdirectory. Then, copy the front matter and Apache license from an existing file. Update the `title` and `id` fields. Don't forget to add it to `website/sidebars.json` so that your new page shows up in the navigation.
 
-3. Test changes locally by building the site and navigating to your changes. In the `website` directory, run `docusaurus-start`. By default, this starts the site on `localhost:3000`. If port `3000` is already in use, it'll increment the port number from there.
+3. Test changes locally by building the site and navigating to your changes. In the `website` directory, run `npm run start`. By default, this starts the site on `localhost:3000`. If port `3000` is already in use, it'll increment the port number from there.
 
 4. Use the following commands to run the link and spellcheckers locally:
 
