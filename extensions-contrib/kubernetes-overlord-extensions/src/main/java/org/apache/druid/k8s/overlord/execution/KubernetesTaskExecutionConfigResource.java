@@ -51,7 +51,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * <p>This class handles the CRUD operations for execution configurations and provides
  * endpoints to update, retrieve, and manage the history of these configurations.</p>
  */
-@Path("/druid/indexer/v1/k8s/taskRunner/executionConfig")
+@Path("/druid/indexer/v1/k8s/taskrunner/executionconfig")
 public class KubernetesTaskExecutionConfigResource
 {
   private static final Logger log = new Logger(KubernetesTaskExecutionConfigResource.class);
