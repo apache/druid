@@ -86,9 +86,21 @@ public class TaskPropertiesPodTemplateSelectStrategyTest
   }
 
   @Test(expected = NullPointerException.class)
-  public void testExceptionThrownIfNoTemplateSelectors()
+  public void shouldThrowNullPointerExceptionWhenTemplateSelectorsAreNull()
   {
     new TaskPropertiesPodTemplateSelectStrategy(null);
+  }
+
+  @Test(expected = NullPointerException.class)
+  public void shouldThrowNullPointerExceptionWhenTemplateKeyIsNull()
+  {
+    new TaskPropertiesPodTemplateSelectStrategy.TemplateSelector(null, task -> false);
+  }
+
+  @Test(expected = NullPointerException.class)
+  public void shouldThrowNullPointerExceptionWhenMatcherIsNull()
+  {
+    new TaskPropertiesPodTemplateSelectStrategy.TemplateSelector("myTemplate", null);
   }
 
   @Test
