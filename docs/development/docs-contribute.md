@@ -76,7 +76,7 @@ Before you can contribute to the Druid docs for the first time, you must complet
 
    If you need to set your email, see the [GitHub instructions](https://docs.github.com/en/github-ae@latest/account-and-profile/setting-up-and-managing-your-github-user-account/managing-email-preferences/setting-your-commit-email-address#setting-your-commit-email-address-in-git).
 
-5. Install Docusaurus so that you can build the site locally. Run either `npm install` or `yarn install` in the `website` directory.
+6. Install Docusaurus so that you can build the site locally. Run either `npm install` or `yarn install` in the `website` directory.
 
 ## Contributing
 
@@ -109,9 +109,9 @@ Now you're up to date, and you can make your changes.
 
    If you're adding a page, create a new Markdown file in the appropriate subdirectory. Then, copy the front matter and Apache license from an existing file. Update the `title` and `id` fields. Don't forget to add it to `website/sidebars.json` so that your new page shows up in the navigation.
 
-4. Test changes locally by building the site and navigating to your changes. In the `website` directory, run `docusaurus-start`. By default, this starts the site on `localhost:3000`. If port `3000` is already in use, it'll increment the port number from there.
+3. Test changes locally by building the site and navigating to your changes. In the `website` directory, run `docusaurus-start`. By default, this starts the site on `localhost:3000`. If port `3000` is already in use, it'll increment the port number from there.
 
-5. Use the following commands to run the link and spellcheckers locally:
+4. Use the following commands to run the link and spellcheckers locally:
 
    ```bash
    cd website
