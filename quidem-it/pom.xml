@@ -501,15 +501,18 @@
                     <arguments>
                     <argument>-classpath</argument>
                     <classpath/>
-                    <argument>-Dquidem.uri=Xa</argument>
+                    <argument>-Dquidem.uriXXX=Xa</argument>
+                    <!-- <argument>-Xdebug</argument> -->
+                    <!-- <argument>-Xdebug</argument> -->
+                     <!-- <argument>-Xrunjdwp:server=y,transport=dt_socket,address=4000,suspend=y</argument> -->
                     <argument>org.apache.druid.quidem.Launcher</argument>
                     </arguments>
                 <systemProperties>
-                  <projectProperties />
+                    <projectProperties />
                         <systemProperty>
-              <key>quidem.uri</key>
-              <value>myvalue</value>
-            </systemProperty>
+                        <key>quidem.uri1</key>
+                        <value>myvalue</value>
+                    </systemProperty>
                 </systemProperties>
                 </configuration>
             </plugin>
