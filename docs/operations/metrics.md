@@ -281,7 +281,7 @@ If the JVM does not support CPU time measurement for the current thread, `ingest
 |`segment/moved/bytes`|Size in bytes of segments moved/archived via the Move Task.| `dataSource`, `taskId`, `taskType`, `groupId`, `interval`, `tags`|Varies|
 |`segment/nuked/bytes`|Size in bytes of segments deleted via the Kill Task.| `dataSource`, `taskId`, `taskType`, `groupId`, `interval`, `tags`|Varies|
 |`segment/upgraded/count`| Number of published segments upgraded by a replace task.|`dataSource`, `taskId`, `taskType`, `groupId`, `interval`, `tags`|Varies|
-| `segment/upgradedRealtime/count`| Number of realtime segments upgraded by a replace task.|`dataSource`, `taskId`, `taskType`, `groupId`, `interval`, `tags`|Varies|
+|`segment/upgradedRealtime/count`| Number of realtime segments upgraded by a replace task.|`dataSource`, `taskId`, `taskType`, `groupId`, `interval`, `tags`|Varies|
 |`task/success/count`|Number of successful tasks per emission period. This metric is only available if the `TaskCountStatsMonitor` module is included.| `dataSource`|Varies|
 |`task/failed/count`|Number of failed tasks per emission period. This metric is only available if the `TaskCountStatsMonitor` module is included.|`dataSource`|Varies|
 |`task/running/count`|Number of current running tasks. This metric is only available if the `TaskCountStatsMonitor` module is included.|`dataSource`|Varies|
