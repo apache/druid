@@ -56,7 +56,7 @@ public class ResultsContextSerdeTest
   private ObjectMapper objectMapper;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     final PlannerToolbox toolbox = new PlannerToolbox(
         CalciteTests.createOperatorTable(),
