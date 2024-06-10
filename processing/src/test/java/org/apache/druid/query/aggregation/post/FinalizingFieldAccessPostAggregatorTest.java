@@ -83,7 +83,6 @@ public class FinalizingFieldAccessPostAggregatorTest extends InitializedNullHand
   {
     String aggName = "biily";
     AggregatorFactory aggFactory = EasyMock.createMock(AggregatorFactory.class);
-    EasyMock.expect(aggFactory.getComparator()).andReturn(Comparators.naturalNullsFirst()).once();
     EasyMock.expect(aggFactory.finalizeComputation("test")).andReturn(3L).once();
     EasyMock.expect(aggFactory.getResultType()).andReturn(ColumnType.LONG).once();
     EasyMock.replay(aggFactory);

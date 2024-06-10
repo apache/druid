@@ -22,7 +22,8 @@ package org.apache.druid.query.aggregation.post;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Sets;
-import org.apache.druid.error.DruidException;
+import org.apache.commons.collections.comparators.NullComparator;
+import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
@@ -123,9 +124,12 @@ public class FinalizingFieldAccessPostAggregator implements PostAggregator
     if (aggregators != null && aggregators.containsKey(fieldName)) {
       theFinalizer = aggregators.get(fieldName)::finalizeComputation;
       finalizedType = aggregators.get(fieldName).getResultType();
-      theComparator = ColumnTypeFactory.getInstance().getTypeStrategy(finalizedType);
+      theComparator = new NullComparator(ColumnTypeFactory.getInstance().getTypeStrategy(finalizedType));
     } else {
-      throw DruidException.defensive("PostAggregator input column [%s] not found in aggregators!", fieldName);
+      // noinspection unchecked
+      theComparator = (Comparator) Comparators.naturalNullsFirst();
+      theFinalizer = Function.identity();
+      finalizedType = null;
     }
 
     return new FinalizingFieldAccessPostAggregator(
