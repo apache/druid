@@ -557,7 +557,7 @@ The below table shows some important configurations for S3. See [S3 Deep Storage
 |`druid.storage.bucket`|S3 bucket name.|none|
 |`druid.storage.baseKey`|S3 object key prefix for storage.|none|
 |`druid.storage.disableAcl`|Boolean flag for ACL. If this is set to `false`, the full control would be granted to the bucket owner. This may require to set additional permissions. See [S3 permissions settings](../development/extensions-core/s3.md#s3-permissions-settings).|false|
-|`druid.storage.archiveBucket`|S3 bucket name for archiving when running the *archive task*.|none|
+|`druid.storage.archiveBucket`|S3 bucket name for archiving when running the _archive task_.|none|
 |`druid.storage.archiveBaseKey`|S3 object key prefix for archiving.|none|
 |`druid.storage.sse.type`|Server-side encryption type. Should be one of `s3`, `kms`, and `custom`. See the below [Server-side encryption section](../development/extensions-core/s3.md#server-side-encryption) for more details.|None|
 |`druid.storage.sse.kms.keyId`|AWS KMS key ID. This is used only when `druid.storage.sse.type` is `kms` and can be empty to use the default key ID.|None|
@@ -957,7 +957,7 @@ The following table shows the dynamic configuration properties for the Coordinat
 |`killDataSourceWhitelist`|List of specific data sources for which kill tasks are sent if property `druid.coordinator.kill.on` is true. This can be a list of comma-separated data source names or a JSON array.|none|
 |`killTaskSlotRatio`|Ratio of total available task slots, including autoscaling if applicable that will be allowed for kill tasks. This value must be between 0 and 1. Only applicable for kill tasks that are spawned automatically by the coordinator's auto kill duty, which is enabled when `druid.coordinator.kill.on` is true.|0.1|
 |`maxKillTaskSlots`|Maximum number of tasks that will be allowed for kill tasks. This limit only applies for kill tasks that are spawned automatically by the coordinator's auto kill duty, which is enabled when `druid.coordinator.kill.on` is true.|`Integer.MAX_VALUE` - no limit|
-|`killPendingSegmentsSkipList`|List of data sources for which pendingSegments are *NOT* cleaned up if property `druid.coordinator.kill.pendingSegments.on` is true. This can be a list of comma-separated data sources or a JSON array.|none|
+|`killPendingSegmentsSkipList`|List of data sources for which pendingSegments are _NOT_ cleaned up if property `druid.coordinator.kill.pendingSegments.on` is true. This can be a list of comma-separated data sources or a JSON array.|none|
 |`maxSegmentsInNodeLoadingQueue`|The maximum number of segments allowed in the load queue of any given server. Use this parameter to load segments faster if, for example, the cluster contains slow-loading nodes or if there are too many segments to be replicated to a particular node (when faster loading is preferred to better segments distribution). The optimal value depends on the loading speed of segments, acceptable replication time and number of nodes.|500|
 |`useRoundRobinSegmentAssignment`|Boolean flag for whether segments should be assigned to Historical services in a round robin fashion. When disabled, segment assignment is done using the chosen balancer strategy. When enabled, this can speed up segment assignments leaving balancing to move the segments to their optimal locations (based on the balancer strategy) lazily.|true|
 |`decommissioningNodes`|List of Historical servers to decommission. Coordinator will not assign new segments to decommissioning servers, and segments will be moved away from them to be placed on non-decommissioning servers at the maximum rate specified by `maxSegmentsToMove`.|none|
@@ -1118,7 +1118,7 @@ These Overlord static configurations can be defined in the `overlord/runtime.pro
 |`druid.indexer.runner.type`|Indicates whether tasks should be run locally using `local` or in a distributed environment using `remote`. The recommended option is `httpRemote`, which is similar to `remote` but uses HTTP to interact with Middle Managers instead of ZooKeeper.|`httpRemote`|
 |`druid.indexer.storage.type`|Indicates whether incoming tasks should be stored locally (in heap) or in metadata storage. One of `local` or `metadata`. `local` is mainly for internal testing while `metadata` is recommended in production because storing incoming tasks in metadata storage allows for tasks to be resumed if the Overlord should fail.|`local`|
 |`druid.indexer.storage.recentlyFinishedThreshold`|Duration of time to store task results. Default is 24 hours. If you have hundreds of tasks running in a day, consider increasing this threshold.|`PT24H`|
-|`druid.indexer.tasklock.forceTimeChunkLock`|***Setting this to false is still experimental***<br/> If set, all tasks are enforced to use time chunk lock. If not set, each task automatically chooses a lock type to use. This configuration can be overwritten by setting `forceTimeChunkLock` in the [task context](../ingestion/tasks.md#context). See [Task Locking & Priority](../ingestion/tasks.md#context) for more details about locking in tasks.|true|
+|`druid.indexer.tasklock.forceTimeChunkLock`|**Setting this to false is still experimental**<br/> If set, all tasks are enforced to use time chunk lock. If not set, each task automatically chooses a lock type to use. This configuration can be overwritten by setting `forceTimeChunkLock` in the [task context](../ingestion/tasks.md#context). See [Task Locking & Priority](../ingestion/tasks.md#context) for more details about locking in tasks.|true|
 |`druid.indexer.tasklock.batchSegmentAllocation`| If set to true, Druid performs segment allocate actions in batches to improve throughput and reduce the average `task/action/run/time`. See [batching `segmentAllocate` actions](../ingestion/tasks.md#batching-segmentallocate-actions) for details.|true|
 |`druid.indexer.tasklock.batchAllocationWaitTime`|Number of milliseconds after Druid adds the first segment allocate action to a batch, until it executes the batch. Allows the batch to add more requests and improve the average segment allocation run time. This configuration takes effect only if `batchSegmentAllocation` is enabled.|0|
 |`druid.indexer.task.default.context`|Default task context that is applied to all tasks submitted to the Overlord. Any default in this config does not override neither the context values the user provides nor `druid.indexer.tasklock.forceTimeChunkLock`.|empty context|
@@ -1249,9 +1249,9 @@ A `javascript` option is also available but should only be used for prototyping 
 If an `affinityConfig` is provided (as part of `fillCapacity` and `equalDistribution` strategies) for a given task, the list of workers eligible to be assigned is determined as follows:
 
 - a non-affinity worker if no affinity is specified for that datasource. Any worker not listed in the `affinityConfig` is considered a non-affinity worker.
-- a non-affinity worker if preferred workers are not available and the affinity is *weak* i.e. `strong: false`.
+- a non-affinity worker if preferred workers are not available and the affinity is _weak_ i.e. `strong: false`.
 - a preferred worker listed in the `affinityConfig` for this datasource if it has available capacity
-- no worker if preferred workers are not available and affinity is *strong* i.e. `strong: true`. In this case, the task remains in "pending" state. The chosen provisioning strategy (e.g. `pendingTaskBased`) may then use the total number of pending tasks to determine if a new node should be provisioned.
+- no worker if preferred workers are not available and affinity is _strong_ i.e. `strong: true`. In this case, the task remains in "pending" state. The chosen provisioning strategy (e.g. `pendingTaskBased`) may then use the total number of pending tasks to determine if a new node should be provisioned.
 
 Note that every worker listed in the `affinityConfig` will only be used for the assigned datasources and no other.
 
@@ -1316,7 +1316,7 @@ Tasks are assigned to the worker with the most currently-running tasks. This is
 useful when you are auto-scaling MiddleManagers since it tends to pack some full and
 leave others empty. The empty ones can be safely terminated.
 
-Note that if `druid.indexer.runner.pendingTasksRunnerNumThreads` is set to *N* > 1, then this strategy will fill *N*
+Note that if `druid.indexer.runner.pendingTasksRunnerNumThreads` is set to _N_ > 1, then this strategy will fill _N_
 MiddleManagers up to capacity simultaneously, rather than a single MiddleManager.
 
 |Property|Description|Default|
@@ -1437,7 +1437,7 @@ MiddleManagers pass their configurations down to their child peons. The MiddleMa
 |`druid.indexer.runner.compressZnodes`|Indicates whether or not the MiddleManagers should compress Znodes.|true|
 |`druid.indexer.runner.classpath`|Java classpath for the peon.|`System.getProperty("java.class.path")`|
 |`druid.indexer.runner.javaCommand`|Command required to execute java.|java|
-|`druid.indexer.runner.javaOpts`|*DEPRECATED* A string of -X Java options to pass to the peon's JVM. Quotable parameters or parameters with spaces are encouraged to use javaOptsArray|`''`|
+|`druid.indexer.runner.javaOpts`|_DEPRECATED_ A string of -X Java options to pass to the peon's JVM. Quotable parameters or parameters with spaces are encouraged to use javaOptsArray|`''`|
 |`druid.indexer.runner.javaOptsArray`|A JSON array of strings to be passed in as options to the peon's JVM. This is additive to `druid.indexer.runner.javaOpts` and is recommended for properly handling arguments which contain quotes or spaces like `["-XX:OnOutOfMemoryError=kill -9 %p"]`|`[]`|
 |`druid.indexer.runner.maxZnodeBytes`|The maximum size Znode in bytes that can be created in ZooKeeper, should be in the range of [10KiB, 2GiB). [Human-readable format](human-readable-byte.md) is supported.|512KiB|
 |`druid.indexer.runner.startPort`|Starting port used for Peon services, should be greater than 1023 and less than 65536.|8100|
@@ -1532,7 +1532,7 @@ The following types of medium exist for the buffers:
 This type of medium may do unnecessary disk I/O and requires some disk space to be available.
 
 - **Off-heap memory** (`offHeapMemory`) creates buffers in off-heap memory of a JVM process that is running a task.
-This type of medium is preferred, but it may require to allow the JVM to have more off-heap memory, by changing `-XX:MaxDirectMemorySize` configuration. It is not yet understood how does the required off-heap memory size relates to the size of the segments being created. But definitely it doesn't make sense to add more extra off-heap memory, than the configured maximum *heap* size (`-Xmx`) for the same JVM.
+This type of medium is preferred, but it may require to allow the JVM to have more off-heap memory, by changing `-XX:MaxDirectMemorySize` configuration. It is not yet understood how does the required off-heap memory size relates to the size of the segments being created. But definitely it doesn't make sense to add more extra off-heap memory, than the configured maximum _heap_ size (`-Xmx`) for the same JVM.
 
 - **On-heap memory** (`onHeapMemory`) creates buffers using the allocated heap memory of the JVM process running a task. Using on-heap memory introduces garbage collection overhead and so is not recommended in most cases. This type of medium is most helpful for tasks run on external clusters where it may be difficult to allocate and work with direct memory effectively.
 
@@ -1806,7 +1806,7 @@ In this mode, queries are never assigned a lane, and the concurrent query count 
 
 ###### 'High/Low' laning strategy
 
-This laning strategy splits queries with a `priority` below zero into a `low` query lane, automatically. Queries with priority of zero (the default) or above are considered 'interactive'. The limit on `low` queries can be set to some desired percentage of the total capacity (or HTTP thread pool size), reserving capacity for interactive queries. Queries in the `low` lane are *not* guaranteed their capacity, which may be consumed by interactive queries, but may use up to this limit if total capacity is available.
+This laning strategy splits queries with a `priority` below zero into a `low` query lane, automatically. Queries with priority of zero (the default) or above are considered 'interactive'. The limit on `low` queries can be set to some desired percentage of the total capacity (or HTTP thread pool size), reserving capacity for interactive queries. Queries in the `low` lane are _not_ guaranteed their capacity, which may be consumed by interactive queries, but may use up to this limit if total capacity is available.
 
 If the `low` lane is specified in the [query context](../querying/query-context.md) `lane` parameter, this will override the computed lane.
 
@@ -1847,7 +1847,7 @@ This laning strategy is best suited for cases where one or more external applica
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.query.scheduler.laning.lanes.{name}`|Maximum percent or exact limit of queries that can concurrently run in the defined lanes. Any number of lanes may be defined like this. The lane names 'total' and 'default' are reserved for internal use.|No default, must define at least one lane with a limit above 0. If `druid.query.scheduler.laning.isLimitPercent` is set to `true`, values must be integers in the range of 1 to 100.|
-|`druid.query.scheduler.laning.isLimitPercent`|If set to `true`, the values set for `druid.query.scheduler.laning.lanes` will be treated as a percent of the smaller number of `druid.server.http.numThreads` or `druid.query.scheduler.numThreads`. Note that in this mode, these lane values across lanes are *not* required to add up to, and can exceed, 100%.|`false`|
+|`druid.query.scheduler.laning.isLimitPercent`|If set to `true`, the values set for `druid.query.scheduler.laning.lanes` will be treated as a percent of the smaller number of `druid.server.http.numThreads` or `druid.query.scheduler.numThreads`. Note that in this mode, these lane values across lanes are _not_ required to add up to, and can exceed, 100%.|`false`|
 
 ##### Server configuration
 
@@ -1906,8 +1906,8 @@ The broker uses processing configs for nested groupBy queries.
 |`druid.processing.fifo`|If the processing queue should treat tasks of equal priority in a FIFO manner|`true`|
 |`druid.processing.tmpDir`|Path where temporary files created while processing a query should be stored. If specified, this configuration takes priority over the default `java.io.tmpdir` path.|path represented by `java.io.tmpdir`|
 |`druid.processing.merge.useParallelMergePool`|Enable automatic parallel merging for Brokers on a dedicated async ForkJoinPool. If `false`, instead merges will be done serially on the `HTTP` thread pool.|`true`|
-|`druid.processing.merge.pool.parallelism`|Size of ForkJoinPool. Note that the default configuration assumes that the value returned by `Runtime.getRuntime().availableProcessors()` represents 2 hyper-threads per physical core, and multiplies this value by `0.75` in attempt to size `1.5` times the number of *physical* cores.|`Runtime.getRuntime().availableProcessors() * 0.75` (rounded up)|
-|`druid.processing.merge.pool.defaultMaxQueryParallelism`|Default maximum number of parallel merge tasks per query. Note that the default configuration assumes that the value returned by `Runtime.getRuntime().availableProcessors()` represents 2 hyper-threads per physical core, and multiplies this value by `0.5` in attempt to size to the number of *physical* cores.|`Runtime.getRuntime().availableProcessors() * 0.5` (rounded up)|
+|`druid.processing.merge.pool.parallelism`|Size of ForkJoinPool. Note that the default configuration assumes that the value returned by `Runtime.getRuntime().availableProcessors()` represents 2 hyper-threads per physical core, and multiplies this value by `0.75` in attempt to size `1.5` times the number of _physical_ cores.|`Runtime.getRuntime().availableProcessors() * 0.75` (rounded up)|
+|`druid.processing.merge.pool.defaultMaxQueryParallelism`|Default maximum number of parallel merge tasks per query. Note that the default configuration assumes that the value returned by `Runtime.getRuntime().availableProcessors()` represents 2 hyper-threads per physical core, and multiplies this value by `0.5` in attempt to size to the number of _physical_ cores.|`Runtime.getRuntime().availableProcessors() * 0.5` (rounded up)|
 |`druid.processing.merge.pool.awaitShutdownMillis`|Time to wait for merge ForkJoinPool tasks to complete before ungracefully stopping on process shutdown in milliseconds.|`60_000`|
 |`druid.processing.merge.task.targetRunTimeMillis`|Ideal run-time of each ForkJoinPool merge task, before forking off a new task to continue merging sequences.|100|
 |`druid.processing.merge.task.initialYieldNumRows`|Number of rows to yield per ForkJoinPool merge task, before forking off a new task to continue merging sequences.|16384|
