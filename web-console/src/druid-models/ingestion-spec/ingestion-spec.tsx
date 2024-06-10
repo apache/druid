@@ -233,6 +233,9 @@ export function getIngestionDocLink(spec: Partial<IngestionSpec>): string {
 
 export function getRequiredModule(ingestionType: IngestionComboTypeWithExtra): string | undefined {
   switch (ingestionType) {
+    case 'azure-event-hubs':
+      return 'druid-kafka-indexing-service';
+
     case 'index_parallel:s3':
       return 'druid-s3-extensions';
 
