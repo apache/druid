@@ -144,7 +144,7 @@ public class ExportResultsFrameProcessorFactory implements FrameProcessorFactory
       );
     }
 
-    ChannelCounters channelCounter = counters.channel(CounterNames.outputChannel());
+    final ChannelCounters channelCounter = counters.channel(CounterNames.outputChannel());
     final Sequence<ReadableInput> readableInputs =
         Sequences.simple(inputSliceReader.attach(0, slice, counters, warningPublisher));
 
@@ -158,7 +158,8 @@ public class ExportResultsFrameProcessorFactory implements FrameProcessorFactory
             channelCounter,
             getExportFilePath(queryId, workerNumber, readableInput.getStagePartition().getPartitionNumber(), exportFormat),
             columnMappings,
-            resultsContext
+            resultsContext,
+            readableInput.getStagePartition().getPartitionNumber()
         )
     );
 

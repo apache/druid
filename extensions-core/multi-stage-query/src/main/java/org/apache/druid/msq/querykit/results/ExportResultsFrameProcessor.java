@@ -67,6 +67,7 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
   private final Object2IntMap<String> outputColumnNameToFrameColumnNumberMap;
   private final RowSignature exportRowSignature;
   private final ResultsContext resultsContext;
+  private final int partitionNum;
 
   private volatile ResultFormat.Writer exportWriter;
 
@@ -79,7 +80,8 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
       final ChannelCounters channelCounter,
       final String exportFilePath,
       final ColumnMappings columnMappings,
-      final ResultsContext resultsContext
+      final ResultsContext resultsContext,
+      final int partitionNum
   )
   {
     this.inputChannel = inputChannel;
@@ -90,6 +92,7 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
     this.channelCounter = channelCounter;
     this.exportFilePath = exportFilePath;
     this.resultsContext = resultsContext;
+    this.partitionNum = partitionNum;
     this.outputColumnNameToFrameColumnNumberMap = new Object2IntOpenHashMap<>();
     final RowSignature inputRowSignature = frameReader.signature();
 
@@ -187,7 +190,7 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
                   );
                 }
               }
-              channelCounter.incrementRowCount();
+              channelCounter.incrementRowCount(partitionNum);
               exportWriter.writeRowEnd();
               cursor.advance();
             }
