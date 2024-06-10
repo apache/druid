@@ -56,6 +56,9 @@ public class S3ExportStorageProvider implements ExportStorageProvider
   @JacksonInject
   ServerSideEncryptingAmazonS3 s3;
 
+  @JacksonInject
+  S3UploadManager s3UploadManager;
+
   @JsonCreator
   public S3ExportStorageProvider(
       @JsonProperty(value = "bucket", required = true) String bucket,
@@ -83,7 +86,7 @@ public class S3ExportStorageProvider implements ExportStorageProvider
         s3ExportConfig.getChunkSize(),
         s3ExportConfig.getMaxRetry()
     );
-    return new S3StorageConnector(s3OutputConfig, s3, tempDir);
+    return new S3StorageConnector(s3OutputConfig, s3, tempDir, s3UploadManager);
   }
 
   @VisibleForTesting

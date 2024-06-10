@@ -25,10 +25,12 @@ import com.fasterxml.jackson.databind.exc.MismatchedInputException;
 import com.fasterxml.jackson.databind.exc.ValueInstantiationException;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.StringUtils;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class AzureOutputSerdeTest
 {
@@ -52,12 +54,9 @@ public class AzureOutputSerdeTest
         2
     );
 
-    Assert.assertEquals(
-        json,
-        MAPPER.writeValueAsString(azureOutputConfig)
-    );
+    assertEquals(json, MAPPER.writeValueAsString(azureOutputConfig));
 
-    Assert.assertEquals(azureOutputConfig, MAPPER.readValue(json, AzureOutputConfig.class));
+    assertEquals(azureOutputConfig, MAPPER.readValue(json, AzureOutputConfig.class));
   }
 
   @Test
@@ -68,7 +67,7 @@ public class AzureOutputSerdeTest
                                            + "  \"chunkSize\":104857600,\n"
                                            + "  \"maxRetry\": 2\n"
                                            + "}\n");
-    Assert.assertThrows(MismatchedInputException.class, () -> MAPPER.readValue(json, AzureOutputConfig.class));
+    assertThrows(MismatchedInputException.class, () -> MAPPER.readValue(json, AzureOutputConfig.class));
   }
 
   @Test
@@ -79,7 +78,7 @@ public class AzureOutputSerdeTest
                                            + "  \"chunkSize\":104857600,\n"
                                            + "  \"maxRetry\": 2\n"
                                            + "}\n");
-    Assert.assertThrows(MismatchedInputException.class, () -> MAPPER.readValue(json, AzureOutputConfig.class));
+    assertThrows(MismatchedInputException.class, () -> MAPPER.readValue(json, AzureOutputConfig.class));
   }
 
   @Test
@@ -96,7 +95,7 @@ public class AzureOutputSerdeTest
         null,
         null
     );
-    Assert.assertEquals(azureOutputConfig, MAPPER.readValue(json, AzureOutputConfig.class));
+    assertEquals(azureOutputConfig, MAPPER.readValue(json, AzureOutputConfig.class));
   }
 
 
@@ -110,7 +109,7 @@ public class AzureOutputSerdeTest
                                            + "  \"chunkSize\":104,\n"
                                            + "  \"maxRetry\": 2\n"
                                            + "}\n");
-    Assert.assertThrows(ValueInstantiationException.class, () -> MAPPER.readValue(json, AzureOutputConfig.class));
+    assertThrows(ValueInstantiationException.class, () -> MAPPER.readValue(json, AzureOutputConfig.class));
   }
 
   private static String jsonStringReadyForAssert(String input)

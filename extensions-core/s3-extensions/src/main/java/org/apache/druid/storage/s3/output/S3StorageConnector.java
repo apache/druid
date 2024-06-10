@@ -57,16 +57,18 @@ public class S3StorageConnector extends ChunkingStorageConnector<GetObjectReques
   private final S3OutputConfig config;
   private final ServerSideEncryptingAmazonS3 s3Client;
   private final File tempDir;
+  private final S3UploadManager s3UploadManager;
 
   private static final String DELIM = "/";
   private static final Joiner JOINER = Joiner.on(DELIM).skipNulls();
   private static final int MAX_NUMBER_OF_LISTINGS = 1000;
 
-  public S3StorageConnector(S3OutputConfig config, ServerSideEncryptingAmazonS3 serverSideEncryptingAmazonS3, File tempDir)
+  public S3StorageConnector(S3OutputConfig config, ServerSideEncryptingAmazonS3 serverSideEncryptingAmazonS3, File tempDir, S3UploadManager s3UploadManager)
   {
     this.config = config;
     this.s3Client = serverSideEncryptingAmazonS3;
     this.tempDir = tempDir;
+    this.s3UploadManager = s3UploadManager;
     Preconditions.checkNotNull(config, "config is null");
     Preconditions.checkNotNull(tempDir, "tempDir is null in s3 config");
     try {
@@ -156,7 +158,7 @@ public class S3StorageConnector extends ChunkingStorageConnector<GetObjectReques
   @Override
   public OutputStream write(String path) throws IOException
   {
-    return new RetryableS3OutputStream(config, s3Client, objectPath(path), tempDir);
+    return new RetryableS3OutputStream(config, s3Client, tempDir, objectPath(path), s3UploadManager);
   }
 
   @Override

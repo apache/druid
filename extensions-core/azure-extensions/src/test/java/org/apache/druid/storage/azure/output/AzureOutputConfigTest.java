@@ -22,8 +22,9 @@ package org.apache.druid.storage.azure.output;
 
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.HumanReadableBytes;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class AzureOutputConfigTest
 {
@@ -35,7 +36,9 @@ public class AzureOutputConfigTest
   public void testTooLargeChunkSize()
   {
     HumanReadableBytes chunkSize = new HumanReadableBytes("4001MiB");
-    Assert.assertThrows(
+
+    //noinspection ResultOfObjectAllocationIgnored
+    assertThrows(
         DruidException.class,
         () -> new AzureOutputConfig(CONTAINER, PREFIX, chunkSize, MAX_RETRY_COUNT)
     );

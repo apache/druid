@@ -33,11 +33,14 @@ import org.apache.druid.storage.StorageConnectorProvider;
 import org.apache.druid.storage.azure.AzureStorage;
 import org.apache.druid.storage.azure.AzureStorageDruidModule;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.Properties;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class AzureStorageConnectorProviderTest
 {
@@ -52,12 +55,12 @@ public class AzureStorageConnectorProviderTest
     properties.setProperty(CUSTOM_NAMESPACE + ".type", "azure");
     properties.setProperty(CUSTOM_NAMESPACE + ".container", "container");
     properties.setProperty(CUSTOM_NAMESPACE + ".prefix", "prefix");
-    StorageConnectorProvider s3StorageConnectorProvider = getStorageConnectorProvider(properties);
+    StorageConnectorProvider storageConnectorProvider = getStorageConnectorProvider(properties);
 
-    Assert.assertTrue(s3StorageConnectorProvider instanceof AzureStorageConnectorProvider);
-    Assert.assertTrue(s3StorageConnectorProvider.createStorageConnector(tempDir) instanceof AzureStorageConnector);
-    Assert.assertEquals("container", ((AzureStorageConnectorProvider) s3StorageConnectorProvider).getContainer());
-    Assert.assertEquals("prefix", ((AzureStorageConnectorProvider) s3StorageConnectorProvider).getPrefix());
+    assertInstanceOf(AzureStorageConnectorProvider.class, storageConnectorProvider);
+    assertInstanceOf(AzureStorageConnector.class, storageConnectorProvider.createStorageConnector(tempDir));
+    assertEquals("container", ((AzureStorageConnectorProvider) storageConnectorProvider).getContainer());
+    assertEquals("prefix", ((AzureStorageConnectorProvider) storageConnectorProvider).getPrefix());
   }
 
   @Test
@@ -65,12 +68,12 @@ public class AzureStorageConnectorProviderTest
   {
 
     final Properties properties = new Properties();
-    properties.setProperty(CUSTOM_NAMESPACE + ".type", "s3");
+    properties.setProperty(CUSTOM_NAMESPACE + ".type", "azure");
     properties.setProperty(CUSTOM_NAMESPACE + ".container", "container");
-    Assert.assertThrows(
-        "Missing required creator property 'prefix'",
+    assertThrows(
         ProvisionException.class,
-        () -> getStorageConnectorProvider(properties)
+        () -> getStorageConnectorProvider(properties),
+        "Missing required creator property 'prefix'"
     );
   }
 
@@ -82,10 +85,10 @@ public class AzureStorageConnectorProviderTest
     final Properties properties = new Properties();
     properties.setProperty(CUSTOM_NAMESPACE + ".type", "azure");
     properties.setProperty(CUSTOM_NAMESPACE + ".prefix", "prefix");
-    Assert.assertThrows(
-        "Missing required creator property 'container'",
+    assertThrows(
         ProvisionException.class,
-        () -> getStorageConnectorProvider(properties)
+        () -> getStorageConnectorProvider(properties),
+        "Missing required creator property 'container'"
     );
   }
 
