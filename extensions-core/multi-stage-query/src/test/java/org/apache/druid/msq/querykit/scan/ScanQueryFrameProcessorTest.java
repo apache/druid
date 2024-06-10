@@ -116,10 +116,10 @@ public class ScanQueryFrameProcessorTest extends InitializedNullHandlingTest
     // Limit output frames to 1 row to ensure we test edge cases
     final FrameWriterFactory frameWriterFactory = new LimitedFrameWriterFactory(
         FrameWriters.makeRowBasedFrameWriterFactory(
-            FrameType.ROW_BASED,
             new SingleMemoryAllocatorFactory(HeapMemoryAllocator.unlimited()),
             signature,
-            Collections.emptyList()
+            Collections.emptyList(),
+            false
         ),
         1
     );

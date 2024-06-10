@@ -21,7 +21,6 @@ package org.apache.druid.query.rowsandcols;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.frame.Frame;
-import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocatorFactory;
 import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.frame.key.KeyOrder;

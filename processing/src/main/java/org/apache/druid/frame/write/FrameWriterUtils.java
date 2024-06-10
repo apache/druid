@@ -283,10 +283,11 @@ public class FrameWriterUtils
     } else {
       long q = dstPosition;
       for (int p = src.position(); p < srcEnd; p++, q++) {
-        for (int p = src.position(); p < srcEnd; p++, q++) {
-          final byte b = src.get(p);
+        final byte b = src.get(p);
 
-          if (!ignoreNullBytes && b == 0) {
+        if (b == 0) {
+          if (!removeNullBytes) {
+            // Cannot ignore the null byte, but cannot remove them as well. Therefore, throw an error.
             ByteBuffer duplicate = src.duplicate();
             duplicate.limit(srcEnd);
             throw InvalidNullByteException.builder()
@@ -294,7 +295,7 @@ public class FrameWriterUtils
                                           .position(p - src.position())
                                           .build();
           }
-
+        } else {
           dst.putByte(q, b);
         }
       }

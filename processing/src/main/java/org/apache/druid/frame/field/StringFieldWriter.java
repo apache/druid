@@ -67,7 +67,7 @@ public class StringFieldWriter implements FieldWriter
   public long writeTo(final WritableMemory memory, final long position, final long maxSize)
   {
     final List<ByteBuffer> byteBuffers = FrameWriterUtils.getUtf8ByteBuffersFromStringSelector(selector, true);
-    return writeUtf8ByteBuffers(memory, position, maxSize, byteBuffers);
+    return writeUtf8ByteBuffers(memory, position, maxSize, byteBuffers, removeNullBytes);
   }
 
   @Override
@@ -128,7 +128,7 @@ public class StringFieldWriter implements FieldWriter
         written++;
 
         if (len > 0) {
-          FrameWriterUtils.copyByteBufferToMemory(utf8Datum, memory, position + written, len, false);
+          FrameWriterUtils.copyByteBufferToMemory(utf8Datum, memory, position + written, len, false, removeNullBytes);
           written += len;
         }
       }

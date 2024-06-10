@@ -59,7 +59,7 @@ public class StringArrayFieldWriterTest extends InitializedNullHandlingTest
   public void setUp()
   {
     memory = WritableMemory.allocate(1000);
-    fieldWriter = new StringArrayFieldWriter(selector);
+    fieldWriter = new StringArrayFieldWriter(selector, false);
   }
 
   @After

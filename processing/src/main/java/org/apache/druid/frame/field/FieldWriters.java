@@ -83,7 +83,7 @@ public class FieldWriters
       case ARRAY:
         switch (columnType.getElementType().getType()) {
           case STRING:
-            return makeStringArrayWriter(columnSelectorFactory, columnName);
+            return makeStringArrayWriter(columnSelectorFactory, columnName, removeNullBytes);
           case LONG:
             return makeLongArrayWriter(columnSelectorFactory, columnName);
           case FLOAT:
@@ -135,11 +135,12 @@ public class FieldWriters
 
   private static FieldWriter makeStringArrayWriter(
       final ColumnSelectorFactory selectorFactory,
-      final String columnName
+      final String columnName,
+      final boolean removeNullBytes
   )
   {
     final ColumnValueSelector<?> selector = selectorFactory.makeColumnValueSelector(columnName);
-    return new StringArrayFieldWriter(selector);
+    return new StringArrayFieldWriter(selector, removeNullBytes);
   }
 
   private static FieldWriter makeLongArrayWriter(

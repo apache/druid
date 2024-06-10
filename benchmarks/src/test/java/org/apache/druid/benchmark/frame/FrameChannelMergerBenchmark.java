@@ -352,10 +352,10 @@ public class FrameChannelMergerBenchmark
         frameReader,
         outputChannel.writable(),
         FrameWriters.makeRowBasedFrameWriterFactory(
-            FrameType.ROW_BASED,
             new ArenaMemoryAllocatorFactory(1_000_000),
             signature,
-            sortKey
+            sortKey,
+            false
         ),
         sortKey,
         null,

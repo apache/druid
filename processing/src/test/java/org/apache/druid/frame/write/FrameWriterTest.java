@@ -582,12 +582,21 @@ public class FrameWriterTest extends InitializedNullHandlingTest
                            null,
                            (retVal, cursor) -> {
                              int numRows = 0;
-                             final FrameWriterFactory frameWriterFactory = FrameWriters.makeRowBasedFrameWriterFactory(
-                                 outputFrameType,
-                                 new SingleMemoryAllocatorFactory(allocator),
-                                 signature,
-                                 keyColumns
-                             );
+                             final FrameWriterFactory frameWriterFactory;
+                             if (FrameType.ROW_BASED.equals(outputFrameType)) {
+                               frameWriterFactory = FrameWriters.makeRowBasedFrameWriterFactory(
+                                   new SingleMemoryAllocatorFactory(allocator),
+                                   signature,
+                                   keyColumns,
+                                   false
+                               );
+                             } else {
+                               frameWriterFactory = FrameWriters.makeColumnBasedFrameWriterFactory(
+                                   new SingleMemoryAllocatorFactory(allocator),
+                                   signature,
+                                   keyColumns
+                               );
+                             }
 
                              ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
 

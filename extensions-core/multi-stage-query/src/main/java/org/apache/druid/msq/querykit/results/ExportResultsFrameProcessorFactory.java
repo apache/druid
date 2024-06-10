@@ -116,7 +116,8 @@ public class ExportResultsFrameProcessorFactory implements FrameProcessorFactory
       FrameContext frameContext,
       int maxOutstandingProcessors,
       CounterTracker counters,
-      Consumer<Throwable> warningPublisher
+      Consumer<Throwable> warningPublisher,
+      boolean removeNullBytes
   )
   {
     final StageInputSlice slice = (StageInputSlice) CollectionUtils.getOnlyElement(

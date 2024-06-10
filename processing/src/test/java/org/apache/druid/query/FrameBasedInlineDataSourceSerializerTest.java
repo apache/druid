@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.frame.Frame;
-import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.HeapMemoryAllocator;
 import org.apache.druid.frame.allocation.SingleMemoryAllocatorFactory;
 import org.apache.druid.frame.segment.FrameCursorUtils;
@@ -135,10 +134,10 @@ public class FrameBasedInlineDataSourceSerializerTest
     Sequence<Frame> frames = FrameCursorUtils.cursorToFramesSequence(
         cursor,
         FrameWriters.makeRowBasedFrameWriterFactory(
-            FrameType.ROW_BASED,
             new SingleMemoryAllocatorFactory(HeapMemoryAllocator.unlimited()),
             modifiedRowSignature,
-            new ArrayList<>()
+            new ArrayList<>(),
+            false
         )
     );
     return new FrameBasedInlineDataSource(

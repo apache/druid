@@ -169,7 +169,8 @@ public abstract class StringFrameColumnWriter<T extends ColumnValueSelector> imp
             stringDataCursor.memory(),
             stringDataCursor.start() + lastStringLength,
             len,
-            true
+            true,
+            false
         );
       }
 
