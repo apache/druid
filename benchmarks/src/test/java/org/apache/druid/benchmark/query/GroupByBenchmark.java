@@ -92,7 +92,6 @@ import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
-import org.apache.druid.server.ResourceIdPopulatingQueryRunner;
 import org.apache.druid.timeline.SegmentId;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -434,8 +433,7 @@ public class GroupByBenchmark
     String queryName = schemaQuery[1];
 
     schemaInfo = GeneratorBasicSchemas.SCHEMA_MAP.get(schemaName);
-    query = (GroupByQuery) ResourceIdPopulatingQueryRunner.populateResourceId(SCHEMA_QUERY_MAP.get(schemaName)
-                                                                                              .get(queryName));
+    query = SCHEMA_QUERY_MAP.get(schemaName).get(queryName);
 
     generator = new DataGenerator(
         schemaInfo.getColumnSchemas(),
@@ -764,12 +762,12 @@ public class GroupByBenchmark
     //noinspection unchecked
     QueryRunner<ResultRow> theRunner = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
-            new SerializingQueryRunner(
-                toolChest.decorateObjectMapper(new DefaultObjectMapper(new SmileFactory(), null), query),
+            new SerializingQueryRunner<>(
+                new DefaultObjectMapper(new SmileFactory(), null),
                 ResultRow.class,
-                (queryPlus, responseContext) -> toolChest.mergeResults(
+                toolChest.mergeResults(
                     factory.mergeRunners(state.executorService, makeMultiRunners(state))
-                ).run(QueryPlus.wrap(ResourceIdPopulatingQueryRunner.populateResourceId(query)))
+                )
             )
         ),
         (QueryToolChest) toolChest

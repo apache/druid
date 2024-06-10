@@ -28,22 +28,21 @@ import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.context.ResponseContext;
-import org.apache.druid.query.groupby.ResultRow;
 
-public class SerializingQueryRunner implements QueryRunner<ResultRow>
+public class SerializingQueryRunner<T> implements QueryRunner<T>
 {
   static {
     NullHandling.initializeForTests();
   }
 
   private final ObjectMapper smileMapper;
-  private final QueryRunner<ResultRow> baseRunner;
-  private final Class<ResultRow> clazz;
+  private final QueryRunner<T> baseRunner;
+  private final Class<T> clazz;
 
   public SerializingQueryRunner(
       ObjectMapper smileMapper,
-      Class<ResultRow> clazz,
-      QueryRunner<ResultRow> baseRunner
+      Class<T> clazz,
+      QueryRunner<T> baseRunner
   )
   {
     this.smileMapper = smileMapper;
@@ -52,8 +51,8 @@ public class SerializingQueryRunner implements QueryRunner<ResultRow>
   }
 
   @Override
-  public Sequence<ResultRow> run(
-      final QueryPlus<ResultRow> queryPlus,
+  public Sequence<T> run(
+      final QueryPlus<T> queryPlus,
       final ResponseContext responseContext
   )
   {
@@ -61,7 +60,7 @@ public class SerializingQueryRunner implements QueryRunner<ResultRow>
         baseRunner.run(queryPlus, responseContext),
         input -> {
           try {
-            return JacksonUtils.readValue(smileMapper, smileMapper.writeValueAsBytes(input.getArray()), clazz);
+            return JacksonUtils.readValue(smileMapper, smileMapper.writeValueAsBytes(input), clazz);
           }
           catch (JsonProcessingException e) {
             throw new RuntimeException(e);
