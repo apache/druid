@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.fabric8.kubernetes.api.model.PodTemplate;
 import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.java.util.common.Pair;
 
 import java.util.Map;
 
@@ -33,7 +32,7 @@ import java.util.Map;
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = TaskTypePodTemplateSelectStrategy.class)
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "default", value = TaskTypePodTemplateSelectStrategy.class),
-    @JsonSubTypes.Type(name = "dynamicTask", value = DynamicTaskPodTemplateSelectStrategy.class),
+    @JsonSubTypes.Type(name = "taskProperties", value = TaskPropertiesPodTemplateSelectStrategy.class),
 })
 public interface PodTemplateSelectStrategy
 {
@@ -42,22 +41,8 @@ public interface PodTemplateSelectStrategy
    * allows for customized resource allocation and management tailored to the task's specific requirements.
    *
    * @param task The task for which the Pod template is determined.
-   * @return A key-value pair representing the selected Pod template. If no matching template is found,
+   * @return The selected Pod template. If no matching template is found,
    *         the method falls back to a base template.
    */
-  Pair<String, PodTemplate> getPodTemplateForTask(Task task, Map<String, PodTemplate> templates);
-
-  default Pair<String, PodTemplate> getTemplateOrDefault(String templateKey, Map<String, PodTemplate> templates)
-  {
-    if (templates == null) {
-      return null;
-    }
-
-    PodTemplate podTemplate = templates.get(templateKey);
-    if (podTemplate != null) {
-      return Pair.of(templateKey, podTemplate);
-    } else {
-      return Pair.of("base", templates.get("base"));
-    }
-  }
+  PodTemplate getPodTemplateForTask(Task task, Map<String, PodTemplate> templates);
 }

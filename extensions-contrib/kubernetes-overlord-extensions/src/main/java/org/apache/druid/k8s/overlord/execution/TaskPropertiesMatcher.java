@@ -28,41 +28,28 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-/**
- * Represents a condition-based selector that evaluates whether a given task meets specified criteria.
- * The selector uses conditions defined on context tags and task fields to determine if a task matches.
- */
-public class Selector
+public class TaskPropertiesMatcher implements Matcher
 {
-  private final String selectionKey;
   private final Map<String, Set<String>> cxtTagsConditions;
   private final Map<String, Set<String>> taskFieldsConditions;
 
   /**
-   * Creates a selector with specified conditions for context tags and task fields.
+   * Creates a matcher with specified conditions for context tags and task fields.
    *
-   * @param selectionKey         the identifier representing the outcome when a task matches the conditions
    * @param cxtTagsConditions    conditions on context tags
    * @param taskFieldsConditions conditions on task fields
    */
   @JsonCreator
-  public Selector(
-      @JsonProperty("selectionKey") String selectionKey,
+  public TaskPropertiesMatcher(
       @JsonProperty("context.tags") Map<String, Set<String>> cxtTagsConditions,
       @JsonProperty("task") Map<String, Set<String>> taskFieldsConditions
   )
   {
-    this.selectionKey = selectionKey;
     this.cxtTagsConditions = cxtTagsConditions;
     this.taskFieldsConditions = taskFieldsConditions;
   }
 
-  /**
-   * Evaluates this selector against a given task.
-   *
-   * @param task the task to evaluate
-   * @return true if the task meets all the conditions specified by this selector, otherwise false
-   */
+  @Override
   public boolean evaluate(Task task)
   {
     boolean tagsMatch = true;
@@ -103,12 +90,6 @@ public class Selector
     return true;
   }
 
-  @JsonProperty
-  public String getSelectionKey()
-  {
-    return selectionKey;
-  }
-
   @JsonProperty("context.tags")
   public Map<String, Set<String>> getCxtTagsConditions()
   {
@@ -130,25 +111,22 @@ public class Selector
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    Selector selector = (Selector) o;
-    return Objects.equals(selectionKey, selector.selectionKey) && Objects.equals(
-        cxtTagsConditions,
-        selector.cxtTagsConditions
-    ) && Objects.equals(taskFieldsConditions, selector.taskFieldsConditions);
+    TaskPropertiesMatcher matcher = (TaskPropertiesMatcher) o;
+    return Objects.equals(cxtTagsConditions, matcher.cxtTagsConditions
+    ) && Objects.equals(taskFieldsConditions, matcher.taskFieldsConditions);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(selectionKey, cxtTagsConditions, taskFieldsConditions);
+    return Objects.hash(cxtTagsConditions, taskFieldsConditions);
   }
 
   @Override
   public String toString()
   {
-    return "Selector{" +
-           "selectionKey=" + selectionKey +
-           ", context.tags=" + cxtTagsConditions +
+    return "TaskPropertiesMatcher{" +
+           "context.tags=" + cxtTagsConditions +
            ", task=" + taskFieldsConditions +
            '}';
   }

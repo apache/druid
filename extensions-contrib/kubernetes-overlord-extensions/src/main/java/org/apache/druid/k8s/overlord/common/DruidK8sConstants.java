@@ -43,6 +43,5 @@ public class DruidK8sConstants
   public static final String LABEL_KEY = "druid.k8s.peons";
   public static final String DRUID_LABEL_PREFIX = "druid.";
   public static final long MAX_ENV_VARIABLE_KBS = 130048; // 127 KB
-  public static final String POD_TEMPLATE_KEY = "template.key";
   static final Predicate<Throwable> IS_TRANSIENT = e -> e instanceof KubernetesResourceNotFoundException;
 }

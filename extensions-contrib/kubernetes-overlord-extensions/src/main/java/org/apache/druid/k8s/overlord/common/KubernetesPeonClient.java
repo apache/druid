@@ -83,7 +83,7 @@ public class KubernetesPeonClient
         throw new IllegalStateException("K8s pod for the task [%s] appeared and disappeared. It can happen if the task was canceled");
       }
       long duration = System.currentTimeMillis() - start;
-      emitK8sPodMetrics(task, job, "k8s/peon/startup/time", duration);
+      emitK8sPodMetrics(task, "k8s/peon/startup/time", duration);
       return result;
     });
   }
@@ -270,16 +270,10 @@ public class KubernetesPeonClient
     }
   }
 
-  private void emitK8sPodMetrics(Task task, Job job, String metric, long durationMs)
+  private void emitK8sPodMetrics(Task task, String metric, long durationMs)
   {
     ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
     IndexTaskUtils.setTaskDimensions(metricBuilder, task);
-    if (job.getMetadata() != null && job.getMetadata().getAnnotations() != null) {
-      metricBuilder.setDimensionIfNotNull(
-          "podTemplate",
-          job.getMetadata().getAnnotations().get(DruidK8sConstants.POD_TEMPLATE_KEY)
-      );
-    }
     emitter.emit(metricBuilder.setMetric(metric, durationMs));
   }
 }

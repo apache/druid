@@ -22,7 +22,6 @@ package org.apache.druid.k8s.overlord.execution;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import io.fabric8.kubernetes.api.model.PodTemplate;
 import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.java.util.common.Pair;
 
 import java.util.Map;
 
@@ -41,9 +40,9 @@ public class TaskTypePodTemplateSelectStrategy implements PodTemplateSelectStrat
   }
 
   @Override
-  public Pair<String, PodTemplate> getPodTemplateForTask(Task task, Map<String, PodTemplate> templates)
+  public PodTemplate getPodTemplateForTask(Task task, Map<String, PodTemplate> templates)
   {
-    return getTemplateOrDefault(task.getType(), templates);
+    return templates.getOrDefault(task.getType(), templates.get("base"));
   }
 
   @Override

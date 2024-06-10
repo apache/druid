@@ -42,9 +42,9 @@ import org.apache.druid.k8s.overlord.common.DruidK8sConstants;
 import org.apache.druid.k8s.overlord.common.K8sTaskId;
 import org.apache.druid.k8s.overlord.common.K8sTestUtils;
 import org.apache.druid.k8s.overlord.execution.DefaultKubernetesTaskRunnerDynamicConfig;
-import org.apache.druid.k8s.overlord.execution.DynamicTaskPodTemplateSelectStrategy;
 import org.apache.druid.k8s.overlord.execution.KubernetesTaskRunnerDynamicConfig;
-import org.apache.druid.k8s.overlord.execution.Selector;
+import org.apache.druid.k8s.overlord.execution.TaskPropertiesMatcher;
+import org.apache.druid.k8s.overlord.execution.TaskPropertiesPodTemplateSelectStrategy;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.tasklogs.TaskLogs;
 import org.easymock.EasyMock;
@@ -163,7 +163,7 @@ public class PodTemplateTaskAdapterTest
 
     Task task = new NoopTask("id", "id", "datasource", 0, 0, null);
     Job actual = adapter.fromTask(task);
-    Job expected = K8sTestUtils.fileToResource("expectedNoopJobBaseTemplate.yaml", Job.class);
+    Job expected = K8sTestUtils.fileToResource("expectedNoopJob.yaml", Job.class);
 
     assertJobSpecsEqual(actual, expected);
   }
@@ -617,11 +617,15 @@ public class PodTemplateTaskAdapterTest
     Properties props = new Properties();
     props.setProperty("druid.indexer.runner.k8s.podTemplate.base", baseTemplatePath.toString());
     props.setProperty("druid.indexer.runner.k8s.podTemplate.lowThroughput", lowThroughputTemplatePath.toString());
-    dynamicConfigRef = () -> new DefaultKubernetesTaskRunnerDynamicConfig(new DynamicTaskPodTemplateSelectStrategy(Collections.singletonList(
-        new Selector("lowThrougput", null, ImmutableMap.of(
-            "datasource",
-            Sets.newSet(dataSource)
-        )))));
+    dynamicConfigRef = () -> new DefaultKubernetesTaskRunnerDynamicConfig(new TaskPropertiesPodTemplateSelectStrategy(
+        Collections.singletonList(
+            new TaskPropertiesPodTemplateSelectStrategy.TemplateSelector(
+                "lowThrougput",
+                new TaskPropertiesMatcher(null, ImmutableMap.of(
+                    "datasource",
+                    Sets.newSet(dataSource)
+                ))
+            ))));
 
     PodTemplateTaskAdapter adapter = new PodTemplateTaskAdapter(
         taskRunnerConfig,

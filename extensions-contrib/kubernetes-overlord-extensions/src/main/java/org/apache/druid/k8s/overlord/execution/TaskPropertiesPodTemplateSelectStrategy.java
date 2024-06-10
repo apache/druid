@@ -1,0 +1,157 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+package org.apache.druid.k8s.overlord.execution;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
+import io.fabric8.kubernetes.api.model.PodTemplate;
+import org.apache.druid.indexing.common.task.Task;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+
+/**
+ * Implements {@link PodTemplateSelectStrategy} by dynamically evaluating a series of selectors.
+ * Each selector corresponds to a potential task template key.
+ */
+public class TaskPropertiesPodTemplateSelectStrategy implements PodTemplateSelectStrategy
+{
+  private List<TemplateSelector> templateSelectors;
+
+  @JsonCreator
+  public TaskPropertiesPodTemplateSelectStrategy(
+      @JsonProperty("templateSelectors") List<TemplateSelector> templateSelectors
+  )
+  {
+    Preconditions.checkNotNull(templateSelectors, "templateSelectors");
+    this.templateSelectors = templateSelectors;
+  }
+
+  /**
+   * Evaluates the provided task against the set selectors to determine its template.
+   *
+   * @param task the task to be checked
+   * @return the template if a selector matches, otherwise fallback to base template
+   */
+  @Override
+  public PodTemplate getPodTemplateForTask(Task task, Map<String, PodTemplate> templates)
+  {
+    String templateKey = templateSelectors.stream()
+                                          .filter(selector -> selector.getMatcher().evaluate(task))
+                                          .findFirst()
+                                          .map(TemplateSelector::getTemplateKey)
+                                          .orElse(null);
+
+    return templates.getOrDefault(templateKey, templates.get("base"));
+  }
+
+  @JsonProperty
+  public List<TemplateSelector> getTemplateSelectors()
+  {
+    return templateSelectors;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    TaskPropertiesPodTemplateSelectStrategy that = (TaskPropertiesPodTemplateSelectStrategy) o;
+    return Objects.equals(templateSelectors, that.templateSelectors);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hashCode(templateSelectors);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "DynamicTaskPodTemplateSelectStrategy{" +
+           "templateSelectors=" + templateSelectors +
+           '}';
+  }
+
+  public static class TemplateSelector
+  {
+    private final Matcher matcher;
+    private final String templateKey;
+
+    @JsonCreator
+    public TemplateSelector(
+        @JsonProperty("templateKey") String templateKey,
+        @JsonProperty("matcher") Matcher matcher
+    )
+    {
+      Preconditions.checkNotNull(templateKey, "templateKey");
+      Preconditions.checkNotNull(matcher, "matcher");
+      this.templateKey = templateKey;
+      this.matcher = matcher;
+    }
+
+    @JsonProperty
+    public String getTemplateKey()
+    {
+      return templateKey;
+    }
+
+    @JsonProperty
+    public Matcher getMatcher()
+    {
+      return matcher;
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      TemplateSelector that = (TemplateSelector) o;
+      return Objects.equals(matcher, that.matcher) && Objects.equals(templateKey, that.templateKey);
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hash(matcher, templateKey);
+    }
+
+    @Override
+    public String toString()
+    {
+      return "TemplateSelector{" +
+             "templateKey=" + templateKey +
+             ", matcher=" + matcher +
+             '}';
+    }
+  }
+}

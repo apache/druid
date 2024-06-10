@@ -13,7 +13,6 @@ metadata:
     task.type: "noop"
     task.group.id: "id"
     task.datasource: "datasource"
-    template.key: "base"
 spec:
   activeDeadlineSeconds: 14400
   backoffLimit: 0

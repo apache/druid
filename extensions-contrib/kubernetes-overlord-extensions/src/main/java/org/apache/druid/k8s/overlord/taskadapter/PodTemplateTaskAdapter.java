@@ -40,7 +40,6 @@ import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.k8s.overlord.KubernetesTaskRunnerConfig;
@@ -140,9 +139,9 @@ public class PodTemplateTaskAdapter implements TaskAdapter
       podTemplateSelectStrategy = dynamicConfig.getPodTemplateSelectStrategy();
     }
 
-    Pair<String, PodTemplate> podTemplatePair = podTemplateSelectStrategy.getPodTemplateForTask(task, templates);
+    PodTemplate podTemplate = podTemplateSelectStrategy.getPodTemplateForTask(task, templates);
 
-    if (podTemplatePair == null || podTemplatePair.rhs == null) {
+    if (podTemplate == null) {
       throw new ISE("Pod template spec not found for task type [%s]", task.getType());
     }
 
@@ -150,10 +149,10 @@ public class PodTemplateTaskAdapter implements TaskAdapter
         .withNewMetadata()
         .withName(new K8sTaskId(task).getK8sJobName())
         .addToLabels(getJobLabels(taskRunnerConfig, task))
-        .addToAnnotations(getJobAnnotations(taskRunnerConfig, task, podTemplatePair.lhs))
+        .addToAnnotations(getJobAnnotations(taskRunnerConfig, task))
         .endMetadata()
         .withNewSpec()
-        .withTemplate(podTemplatePair.rhs.getTemplate())
+        .withTemplate(podTemplate.getTemplate())
         .editTemplate()
         .editOrNewMetadata()
         .addToAnnotations(getPodTemplateAnnotations(task))
@@ -334,7 +333,7 @@ public class PodTemplateTaskAdapter implements TaskAdapter
         .build();
   }
 
-  private Map<String, String> getJobAnnotations(KubernetesTaskRunnerConfig config, Task task, String templateName)
+  private Map<String, String> getJobAnnotations(KubernetesTaskRunnerConfig config, Task task)
   {
     return ImmutableMap.<String, String>builder()
                        .putAll(config.getAnnotations())
@@ -342,7 +341,6 @@ public class PodTemplateTaskAdapter implements TaskAdapter
                        .put(DruidK8sConstants.TASK_TYPE, task.getType())
                        .put(DruidK8sConstants.TASK_GROUP_ID, task.getGroupId())
                        .put(DruidK8sConstants.TASK_DATASOURCE, task.getDataSource())
-                       .put(DruidK8sConstants.POD_TEMPLATE_KEY, templateName)
                        .build();
   }
 

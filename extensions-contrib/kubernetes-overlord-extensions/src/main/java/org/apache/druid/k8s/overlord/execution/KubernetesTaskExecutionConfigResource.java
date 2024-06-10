@@ -51,7 +51,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * <p>This class handles the CRUD operations for execution configurations and provides
  * endpoints to update, retrieve, and manage the history of these configurations.</p>
  */
-@Path("/druid/indexer/v1/k8s/taskRunner")
+@Path("/druid/indexer/v1/k8s/taskRunner/executionConfig")
 public class KubernetesTaskExecutionConfigResource
 {
   private static final Logger log = new Logger(KubernetesTaskExecutionConfigResource.class);
@@ -77,7 +77,6 @@ public class KubernetesTaskExecutionConfigResource
    * @return a response indicating the success or failure of the update operation
    */
   @POST
-  @Path("/executionConfig")
   @Consumes(MediaType.APPLICATION_JSON)
   @ResourceFilters(ConfigResourceFilter.class)
   public Response setExecutionConfig(
@@ -107,7 +106,7 @@ public class KubernetesTaskExecutionConfigResource
    * @return a response containing a list of audit entries or an error message
    */
   @GET
-  @Path("/executionConfig/history")
+  @Path("/history")
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(ConfigResourceFilter.class)
   public Response getExecutionConfigHistory(
@@ -145,7 +144,6 @@ public class KubernetesTaskExecutionConfigResource
    * @return a Response object containing the current execution configuration in JSON format.
    */
   @GET
-  @Path("/executionConfig")
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(ConfigResourceFilter.class)
   public Response getExecutionConfig()

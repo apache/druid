@@ -39,42 +39,52 @@ public class KubernetesTaskRunnerDynamicConfigTest
                   + "  }\n"
                   + "}";
 
-    KubernetesTaskRunnerDynamicConfig deserialized = jsonMapper.readValue(json, KubernetesTaskRunnerDynamicConfig.class);
-    PodTemplateSelectStrategy behaviorStrategy = deserialized.getPodTemplateSelectStrategy();
-    Assert.assertTrue(behaviorStrategy instanceof TaskTypePodTemplateSelectStrategy);
+    KubernetesTaskRunnerDynamicConfig deserialized = jsonMapper.readValue(
+        json,
+        KubernetesTaskRunnerDynamicConfig.class
+    );
+    PodTemplateSelectStrategy selectStrategy = deserialized.getPodTemplateSelectStrategy();
+    Assert.assertTrue(selectStrategy instanceof TaskTypePodTemplateSelectStrategy);
 
     json = "{\n"
-           + "  \"type\": \"default\",\n"
-           + "  \"podTemplateSelectStrategy\": {\n"
-           + "    \"type\": \"dynamicTask\",\n"
-           + "    \"templateSelectors\": [\n"
-           + "      {\n"
-           + "        \"selectionKey\": \"low-throughput\",\n"
-           + "        \"context.tags\": {\n"
-           + "          \"billingCategory\": [\n"
-           + "            \"streaming_ingestion\"\n"
-           + "          ]\n"
-           + "        },\n"
-           + "        \"task\": {\n"
-           + "          \"datasource\": [\n"
-           + "            \"wikipedia\"\n"
-           + "          ]\n"
-           + "        }\n"
-           + "      },\n"
-           + "      {\n"
-           + "        \"selectionKey\": \"medium-throughput\",\n"
-           + "        \"task\": {\n"
-           + "          \"type\": [\n"
-           + "            \"async_query\"\n"
-           + "          ]\n"
-           + "        }\n"
-           + "      }\n"
-           + "    ]\n"
-           + "  }\n"
+           + "   \"type\":\"default\",\n"
+           + "   \"podTemplateSelectStrategy\":{\n"
+           + "      \"type\":\"taskProperties\",\n"
+           + "      \"templateSelectors\":[\n"
+           + "         {\n"
+           + "            \"templateKey\":\"low-throughput\",\n"
+           + "            \"matcher\":{\n"
+           + "               \"type\":\"default\",\n"
+           + "               \"context.tags\":{\n"
+           + "                  \"billingCategory\":[\n"
+           + "                     \"streaming_ingestion\"\n"
+           + "                  ]\n"
+           + "               },\n"
+           + "               \"task\":{\n"
+           + "                  \"datasource\":[\n"
+           + "                     \"wikipedia\"\n"
+           + "                  ]\n"
+           + "               }\n"
+           + "            }\n"
+           + "         },\n"
+           + "         {\n"
+           + "            \"templateKey\":\"medium-throughput\",\n"
+           + "            \"matcher\":{\n"
+           + "               \"type\":\"default\",\n"
+           + "               \"task\":{\n"
+           + "                  \"type\":[\n"
+           + "                     \"index_kafka\"\n"
+           + "                  ]\n"
+           + "               }\n"
+           + "            }\n"
+           + "         }\n"
+           + "      ]\n"
+           + "   }\n"
            + "}";
 
     deserialized = jsonMapper.readValue(json, KubernetesTaskRunnerDynamicConfig.class);
-    behaviorStrategy = deserialized.getPodTemplateSelectStrategy();
-    Assert.assertTrue(behaviorStrategy instanceof DynamicTaskPodTemplateSelectStrategy);
+    selectStrategy = deserialized.getPodTemplateSelectStrategy();
+    Assert.assertTrue(selectStrategy instanceof TaskPropertiesPodTemplateSelectStrategy);
+    Assert.assertEquals(2, ((TaskPropertiesPodTemplateSelectStrategy) selectStrategy).getTemplateSelectors().size());
   }
 }
