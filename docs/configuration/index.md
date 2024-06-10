@@ -1299,7 +1299,7 @@ The following example shows tasks of type `index_kafka` that default to running 
       "strong": false,
       "categoryMap": {
         "index_kafka": {
-          "defaultCategory": "c1", 
+          "defaultCategory": "c1",
           "categoryAffinity": {
             "ds1": "c2"
           }
