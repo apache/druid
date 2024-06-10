@@ -303,10 +303,6 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
           bitmapSerdeFactory,
           byteOrder
       );
-      ColumnCapabilitiesImpl capabilitiesBuilder = builder.getCapabilitiesBuilder();
-      capabilitiesBuilder.setDictionaryEncoded(true);
-      capabilitiesBuilder.setDictionaryValuesSorted(true);
-      capabilitiesBuilder.setDictionaryValuesUnique(true);
       ColumnType simpleType = supplier.getLogicalType();
       ColumnType logicalType = simpleType == null ? ColumnType.NESTED_DATA : simpleType;
       builder.setType(logicalType);

@@ -192,7 +192,7 @@ exports[`SupervisorsView matches snapshot 1`] = `
           "accessor": "detailed_state",
           "id": "detailed_state",
           "show": true,
-          "width": 130,
+          "width": 150,
         },
         {
           "Cell": [Function],
@@ -374,11 +374,12 @@ exports[`SupervisorsView matches snapshot 1`] = `
     indexKey="_index"
     loading={false}
     loadingText="Loading..."
+    manual={true}
     multiSort={true}
     nestingLevelKey="_nestingLevel"
     nextText="Next"
     noDataText=""
-    ofText="of"
+    ofText=""
     onFetchData={[Function]}
     onFilteredChange={[Function]}
     originalKey="_original"
@@ -391,6 +392,7 @@ exports[`SupervisorsView matches snapshot 1`] = `
       ]
     }
     pageText="Page"
+    pages={10000000}
     pivotDefaults={{}}
     pivotIDKey="_pivotID"
     pivotValKey="_pivotVal"
@@ -399,9 +401,9 @@ exports[`SupervisorsView matches snapshot 1`] = `
     resolveData={[Function]}
     rowsSelectorText="rows per page"
     rowsText="rows"
-    showPageJump={true}
+    showPageJump={false}
     showPageSizeOptions={true}
-    showPagination={false}
+    showPagination={true}
     showPaginationBottom={true}
     showPaginationTop={false}
     sortable={true}

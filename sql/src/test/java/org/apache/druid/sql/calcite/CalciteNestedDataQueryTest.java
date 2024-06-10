@@ -7558,4 +7558,36 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                     .build()
     );
   }
+
+  @Test
+  public void testToJsonString()
+  {
+    testQuery(
+        "SELECT TO_JSON_STRING(nester) FROM druid.nested GROUP BY 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(DATA_SOURCE)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "d0", ColumnType.STRING)
+                            )
+                        )
+                        .setVirtualColumns(
+                            expressionVirtualColumn("v0", "to_json_string(\"nester\")", ColumnType.STRING)
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{NullHandling.defaultStringValue()},
+            new Object[]{"\"hello\""},
+            new Object[]{"2"},
+            new Object[]{"{\"array\":[\"a\",\"b\"],\"n\":{\"x\":\"hello\"}}"},
+            new Object[]{"{\"array\":[\"a\",\"b\"],\"n\":{\"x\":1}}"}
+        ),
+        RowSignature.builder().add("EXPR$0", ColumnType.STRING).build()
+    );
+  }
 }
