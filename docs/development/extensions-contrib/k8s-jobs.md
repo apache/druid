@@ -243,7 +243,7 @@ We define two template keys in the configuration—`low-throughput` and `medium-
          {
             "templateKey":"low-throughput",
             "matcher":{
-               "type":"default",
+               "type":"taskProperties",
                "context.tags":{
                   "billingCategory":[
                      "streaming_ingestion"
@@ -259,7 +259,7 @@ We define two template keys in the configuration—`low-throughput` and `medium-
          {
             "templateKey":"medium-throughput",
             "matcher":{
-               "type":"default",
+               "type":"taskProperties",
                "task":{
                   "type":[
                      "index_kafka"

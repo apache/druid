@@ -19,6 +19,7 @@
 
 package org.apache.druid.k8s.overlord.execution;
 
+import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.indexing.common.task.Task;
 
@@ -26,6 +27,9 @@ import org.apache.druid.indexing.common.task.Task;
  * Represents a condition-based matcher that evaluates whether a given task meets specified criteria.
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = TaskPropertiesMatcher.class)
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = "taskProperties", value = TaskPropertiesMatcher.class)
+})
 public interface Matcher
 {
   /**
