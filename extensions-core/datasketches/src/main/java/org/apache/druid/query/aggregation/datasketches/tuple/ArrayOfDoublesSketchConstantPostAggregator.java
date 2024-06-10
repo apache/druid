@@ -92,10 +92,7 @@ public class ArrayOfDoublesSketchConstantPostAggregator extends ArrayOfDoublesSk
     return "ArrayOfDoublesSketchConstantPostAggregator{name='" + this.getName() + "', value='" + value + "'}";
   }
 
-<<<<<<< HEAD
-=======
   @JsonProperty("value")
->>>>>>> apache/master
   private String getRawSketchValue()
   {
     return value;
@@ -110,30 +107,17 @@ public class ArrayOfDoublesSketchConstantPostAggregator extends ArrayOfDoublesSk
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-<<<<<<< HEAD
-    ArrayOfDoublesSketchConstantPostAggregator that = (ArrayOfDoublesSketchConstantPostAggregator) o;
-    if (!(Objects.equals(this.getName(), that.getName()) && Objects.equals(this.value, that.value)
-        && Objects.equals(this.getSketchValue(), that.getSketchValue()))) {
-      return false;
-    }
-    return true;
-=======
     if (!super.equals(o)) {
       return false;
     }
     ArrayOfDoublesSketchConstantPostAggregator that = (ArrayOfDoublesSketchConstantPostAggregator) o;
     return Objects.equals(value, that.value);
->>>>>>> apache/master
   }
 
   @Override
   public int hashCode()
   {
-<<<<<<< HEAD
-    return Objects.hash(super.hashCode(), value, sketchValue);
-=======
     return Objects.hash(super.hashCode(), value);
->>>>>>> apache/master
   }
 
   @Override
