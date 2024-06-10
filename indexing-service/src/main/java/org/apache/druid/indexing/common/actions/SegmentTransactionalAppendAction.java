@@ -45,7 +45,7 @@ import java.util.stream.Collectors;
 
 /**
  * Action used by an APPEND task to transactionally commit segments to the
- * metadata store for one or more intervals of a datasource. These segments are
+ * metadata store for one or more intervals of a datasource. These segments
  * do not overshadow pre-existing segments and are instead "appended" to them.
  * <p>
  * This action performs the following operations within a single transaction:
