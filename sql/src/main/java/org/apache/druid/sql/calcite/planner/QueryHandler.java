@@ -684,16 +684,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
                           .ofCategory(DruidException.Category.UNSUPPORTED)
                           .build(exception, "Unhandled Query Planning Failure, see broker logs for details");
     } else {
-      // Planning errors are more like hints: it isn't guaranteed that the planning error is actually what went wrong.
-      // For this reason, we consider these as targetting a more expert persona, i.e. the admin instead of the actual
-      // user.
-      throw DruidException.forPersona(DruidException.Persona.ADMIN)
-                          .ofCategory(DruidException.Category.INVALID_INPUT)
-                          .build(
-                              exception,
-                              "Query could not be planned. A possible reason is [%s]",
-                              errorMessage
-                          );
+      throw InvalidSqlInput.exception("Query could not be planned. A possible reason is [%s]", errorMessage);
     }
   }
 
