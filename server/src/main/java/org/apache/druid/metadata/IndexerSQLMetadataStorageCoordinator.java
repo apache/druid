@@ -1343,22 +1343,24 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     }
 
     final String dataSource = appendSegments.iterator().next().getDataSource();
-    final List<PendingSegmentRecord> segmentIdsForNewVersions = connector.retryTransaction(
+    final List<PendingSegmentRecord> pendingSegmentsForTask = connector.retryTransaction(
         (handle, transactionStatus)
             -> getPendingSegmentsForTaskAllocatorIdWithHandle(handle, dataSource, taskAllocatorId),
         0,
         SQLMetadataConnector.DEFAULT_MAX_TRIES
     );
 
-    // Create entries for all required versions of the append segments
-    final Set<DataSegment> allSegmentsToInsert = new HashSet<>(appendSegments);
+    // Identify append segments whose pending segment counterparts have been upgraded
     final Map<SegmentId, SegmentId> newVersionSegmentToParent = new HashMap<>();
+
     final Map<String, DataSegment> segmentIdMap = new HashMap<>();
     appendSegments.forEach(segment -> segmentIdMap.put(segment.getId().toString(), segment));
-    segmentIdsForNewVersions.forEach(
+
+    final Set<DataSegment> allSegmentsToInsert = new HashSet<>(appendSegments);
+    pendingSegmentsForTask.forEach(
         pendingSegment -> {
-          if (segmentIdMap.containsKey(pendingSegment.getUpgradedFromSegmentId())) {
-            final DataSegment oldSegment = segmentIdMap.get(pendingSegment.getUpgradedFromSegmentId());
+          final DataSegment oldSegment = segmentIdMap.get(pendingSegment.getUpgradedFromSegmentId());
+          if (oldSegment != null) {
             final SegmentId newVersionSegmentId = pendingSegment.getId().asSegmentId();
             newVersionSegmentToParent.put(newVersionSegmentId, oldSegment.getId());
             allSegmentsToInsert.add(
@@ -1401,17 +1403,16 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             insertIntoUpgradeSegmentsTable(handle, appendSegmentToReplaceLock);
 
             // Delete the pending segments to be committed in this transaction in batches of at most 100
-            final List<List<String>> pendingSegmentIdBatches = Lists.partition(
-                allSegmentsToInsert.stream()
-                                   .map(pendingSegment -> pendingSegment.getId().toString())
-                                   .collect(Collectors.toList()),
-                100
-            );
             int numDeletedPendingSegments = 0;
-            for (List<String> pendingSegmentIdBatch : pendingSegmentIdBatches) {
+            final List<String> insertSegmentIds =
+                allSegmentsToInsert.stream()
+                                   .map(DataSegment::getId)
+                                   .map(SegmentId::toString)
+                                   .collect(Collectors.toList());
+            for (List<String> pendingSegmentIdBatch : Lists.partition(insertSegmentIds, 100)) {
               numDeletedPendingSegments += deletePendingSegmentsById(handle, dataSource, pendingSegmentIdBatch);
             }
-            log.info("Deleted [%d] entries from pending segments table upon commit.", numDeletedPendingSegments);
+            log.info("Deleted [%d] pending segments table .", numDeletedPendingSegments);
 
             return SegmentPublishResult.ok(
                 insertSegments(

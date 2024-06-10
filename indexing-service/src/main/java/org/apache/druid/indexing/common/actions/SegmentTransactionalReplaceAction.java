@@ -46,30 +46,28 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * Replace segments in metadata storage. The segment versions must all be less than or equal to a lock held by
- * your task for the segment intervals.
- *
- * <pre>
- *  Pseudo code (for a single interval)
- *- For a replace lock held over an interval:
- *     transaction {
- *       commit input segments contained within interval
- *       upgrade ids in the upgradeSegments table corresponding to this task to the replace lock's version and commit them
- *       fetch payload, task_allocator_id for pending segments
- *       upgrade each such pending segment to the replace lock's version with the corresponding root segment
- *     }
- * For every pending segment with version == replace lock version:
- *    Fetch payload, group_id or the pending segment and relay them to the supervisor
- *    The supervisor relays the payloads to all the tasks with the corresponding group_id to serve realtime queries
- * </pre>
+ * Action used by a REPLACE task to transactionally commit segments to the
+ * metadata store for one or more intervals of a datasource, thereby overshadowing
+ * the pre-existing segments in those intervals.
+ * Each segment being committed must have a version less than or equal to the
+ * {@link org.apache.druid.indexing.common.TaskLockType#REPLACE} lock held by
+ * the task over the corresponding interval.
+ * <p>
+ * This action performs the following operations within a single transaction:
+ * <ul>
+ * <li>Commit the given REPLACE segments.</li>
+ * <li>Upgrade APPEND segments committed to an interval after it had been locked
+ * by this REPLACE task.</li>
+ * <li>Upgrade pending segments that overlap with any of the REPLACE segments.</li>
+ * </ul>
+ * After the transaction succeeds, the upgraded pending segments are registered
+ * on the real-time ingestion supervisor for this datasource (if any), which then
+ * relays the upgrade information to the corresponding real-time tasks.
  */
 public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPublishResult>
 {
   private static final Logger log = new Logger(SegmentTransactionalReplaceAction.class);
 
-  /**
-   * Set of segments to be inserted into metadata storage
-   */
   private final Set<DataSegment> segments;
 
   @Nullable
@@ -114,9 +112,6 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
     };
   }
 
-  /**
-   * Performs some sanity checks and publishes the given segments.
-   */
   @Override
   public SegmentPublishResult perform(Task task, TaskActionToolbox toolbox)
   {
@@ -166,16 +161,16 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
 
   private void emitSegmentUpgradeMetrics(SegmentPublishResult publishResult, Task task, TaskActionToolbox toolbox)
   {
-    // Log and emit metric for number of upgraded append segments
-    final List<DataSegment> upgradedAppendSegments = publishResult.getUpgradedAppendSegments();
-    if (!CollectionUtils.isNullOrEmpty(upgradedAppendSegments)) {
+    // Log and emit metric for number of upgraded segments
+    final List<DataSegment> upgradedSegments = publishResult.getUpgradedSegments();
+    if (!CollectionUtils.isNullOrEmpty(upgradedSegments)) {
       final Map<String, Integer> versionToNumUpgradedSegments = new HashMap<>();
-      upgradedAppendSegments.forEach(
+      upgradedSegments.forEach(
           segment -> versionToNumUpgradedSegments.merge(segment.getId().getVersion(), 1, Integer::sum)
       );
       versionToNumUpgradedSegments.forEach(
           (version, numUpgradedSegments) -> log.info(
-              "Task[%s] of datasource[%s] upgraded [%d] append segments to replace version[%s].",
+              "Task[%s] of datasource[%s] upgraded [%d] segments to replace version[%s].",
               task.getId(), task.getDataSource(), numUpgradedSegments, version
           )
       );
@@ -183,7 +178,7 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
       final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
       IndexTaskUtils.setTaskDimensions(metricBuilder, task);
       toolbox.getEmitter().emit(
-          metricBuilder.setMetric("segment/upgraded/count", upgradedAppendSegments.size())
+          metricBuilder.setMetric("segment/upgraded/count", upgradedSegments.size())
       );
     }
 
@@ -210,7 +205,7 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
   }
 
   /**
-   * Registers upgraded pending segments on the active supervisor, if any
+   * Registers upgraded pending segments on the active supervisor, if any.
    */
   private void registerUpgradedPendingSegmentsOnSupervisor(
       Task task,

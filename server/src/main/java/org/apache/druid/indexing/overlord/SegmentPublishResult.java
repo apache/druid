@@ -50,7 +50,7 @@ public class SegmentPublishResult
   @Nullable
   private final String errorMsg;
   @Nullable
-  private final List<DataSegment> upgradedAppendSegments;
+  private final List<DataSegment> upgradedSegments;
   @Nullable
   private final List<PendingSegmentRecord> upgradedPendingSegments;
 
@@ -87,14 +87,14 @@ public class SegmentPublishResult
       Set<DataSegment> segments,
       boolean success,
       @Nullable String errorMsg,
-      @Nullable List<DataSegment> upgradedAppendSegments,
+      @Nullable List<DataSegment> upgradedSegments,
       @Nullable List<PendingSegmentRecord> upgradedPendingSegments
   )
   {
     this.segments = Preconditions.checkNotNull(segments, "segments");
     this.success = success;
     this.errorMsg = errorMsg;
-    this.upgradedAppendSegments = upgradedAppendSegments;
+    this.upgradedSegments = upgradedSegments;
     this.upgradedPendingSegments = upgradedPendingSegments;
 
     if (!success) {
@@ -104,7 +104,7 @@ public class SegmentPublishResult
           "Upgraded pending segments must be null or empty for unsuccessful publish."
       );
       Preconditions.checkArgument(
-          CollectionUtils.isNullOrEmpty(upgradedAppendSegments),
+          CollectionUtils.isNullOrEmpty(upgradedSegments),
           "Upgraded append segments must be null or empty for unsuccessful publish."
       );
     }
@@ -136,9 +136,9 @@ public class SegmentPublishResult
   }
 
   @Nullable
-  public List<DataSegment> getUpgradedAppendSegments()
+  public List<DataSegment> getUpgradedSegments()
   {
-    return upgradedAppendSegments;
+    return upgradedSegments;
   }
 
   @Override

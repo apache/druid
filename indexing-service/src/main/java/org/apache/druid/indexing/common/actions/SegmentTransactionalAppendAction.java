@@ -44,20 +44,18 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- *
- * Append segments to metadata storage. The segment versions must all be less than or equal to a lock held by
- * your task for the segment intervals.
- *
- * <pre>
- * Pseudo code (for a single interval):
- * For an append lock held over an interval:
- *     transaction {
- *       commit input segments contained within interval
- *       if there is an active replace lock over the interval:
- *         add an entry for the inputSegment corresponding to the replace lock's task in the upgradeSegments table
- *       fetch pending segments with parent contained within the input segments, and commit them
- *     }
- * </pre>
+ * Action used by an APPEND task to transactionally commit segments to the
+ * metadata store for one or more intervals of a datasource. These segments are
+ * do not overshadow pre-existing segments and are instead "appended" to them.
+ * <p>
+ * This action performs the following operations within a single transaction:
+ * <ul>
+ * <li>Commit the given APPEND segments.</li>
+ * <li>Upgrade these APPEND segments if their pending segment counterparts have
+ * been upgraded.</li>
+ * <li>Mark the segments being committed to an interval locked by a REPLACE task
+ * as upgradable.</li>
+ * </ul>
  */
 public class SegmentTransactionalAppendAction implements TaskAction<SegmentPublishResult>
 {
@@ -144,8 +142,7 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
     if (!(task instanceof PendingSegmentAllocatingTask)) {
       throw DruidException.defensive(
           "Task[%s] of type[%s] cannot append segments as it does not implement PendingSegmentAllocatingTask.",
-          task.getId(),
-          task.getType()
+          task.getId(), task.getType()
       );
     }
     // Verify that all the locks are of expected type
