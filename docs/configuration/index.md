@@ -97,16 +97,16 @@ The properties under this section are common configurations that should be share
 
 There are four JVM parameters that we set on all of our services:
 
-- `-Duser.timezone=UTC`: This sets the default timezone of the JVM to UTC. We always set this and do not test with other default timezones, so local timezones might work, but they also might uncover weird and interesting bugs. To issue queries in a non-UTC timezone, see [query granularities](../querying/granularities.md#period-granularities)
-- `-Dfile.encoding=UTF-8` This is similar to timezone, we test assuming UTF-8. Local encodings might work, but they also might result in weird and interesting bugs.
-- `-Djava.io.tmpdir=<a path>` Various parts of Druid use temporary files to interact with the file system. These files can become quite large. This means that systems that have small `/tmp` directories can cause problems for Druid. Therefore, set the JVM tmp directory to a location with ample space.
+* `-Duser.timezone=UTC`: This sets the default timezone of the JVM to UTC. We always set this and do not test with other default timezones, so local timezones might work, but they also might uncover weird and interesting bugs. To issue queries in a non-UTC timezone, see [query granularities](../querying/granularities.md#period-granularities)
+* `-Dfile.encoding=UTF-8` This is similar to timezone, we test assuming UTF-8. Local encodings might work, but they also might result in weird and interesting bugs.
+* `-Djava.io.tmpdir=<a path>` Various parts of Druid use temporary files to interact with the file system. These files can become quite large. This means that systems that have small `/tmp` directories can cause problems for Druid. Therefore, set the JVM tmp directory to a location with ample space.
 
      Also consider the following when configuring the JVM tmp directory:
-  - The temp directory should not be volatile tmpfs.
-  - This directory should also have good read and write speed.
-  - Avoid NFS mount.
-  - The `org.apache.druid.java.util.metrics.SysMonitor` requires execute privileges on files in `java.io.tmpdir`. If you are using the system monitor, do not set `java.io.tmpdir` to `noexec`.
-- `-Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager` This allows log4j2 to handle logs for non-log4j2 components (like jetty) which use standard java logging.
+  * The temp directory should not be volatile tmpfs.
+  * This directory should also have good read and write speed.
+  * Avoid NFS mount.
+  * The `org.apache.druid.java.util.metrics.SysMonitor` requires execute privileges on files in `java.io.tmpdir`. If you are using the system monitor, do not set `java.io.tmpdir` to `noexec`.
+* `-Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager` This allows log4j2 to handle logs for non-log4j2 components (like jetty) which use standard java logging.
 
 ### Extensions
 
@@ -418,13 +418,13 @@ You can override cluster-wide configuration by amending the `runtime.properties`
 
 There are several emitters available:
 
-- `noop` (default) disables metric emission.
-- [`logging`](#logging-emitter-module) emits logs using Log4j2.
-- [`http`](#http-emitter-module) sends `POST` requests of JSON events.
-- [`parametrized`](#parametrized-http-emitter-module) operates like the `http` emitter but fine-tunes the recipient URL based on the event feed.
-- [`composing`](#composing-emitter-module) initializes multiple emitter modules.
-- [`graphite`](#graphite-emitter) emits metrics to a [Graphite](https://graphiteapp.org/) Carbon service.
-- [`switching`](#switching-emitter) initializes and emits to multiple emitter modules based on the event feed.
+* `noop` (default) disables metric emission.
+* [`logging`](#logging-emitter-module) emits logs using Log4j2.
+* [`http`](#http-emitter-module) sends `POST` requests of JSON events.
+* [`parametrized`](#parametrized-http-emitter-module) operates like the `http` emitter but fine-tunes the recipient URL based on the event feed.
+* [`composing`](#composing-emitter-module) initializes multiple emitter modules.
+* [`graphite`](#graphite-emitter) emits metrics to a [Graphite](https://graphiteapp.org/) Carbon service.
+* [`switching`](#switching-emitter) initializes and emits to multiple emitter modules based on the event feed.
 
 ##### Logging emitter module
 
@@ -474,9 +474,9 @@ The following properties allow the HTTP Emitter to use its own truststore config
 The parametrized emitter takes the same configs as the [`http` emitter](#http-emitter-module) using the prefix `druid.emitter.parametrized.httpEmitting.`.
 For example:
 
-- `druid.emitter.parametrized.httpEmitting.flushMillis`
-- `druid.emitter.parametrized.httpEmitting.flushCount`
-- `druid.emitter.parametrized.httpEmitting.ssl.trustStorePath`
+* `druid.emitter.parametrized.httpEmitting.flushMillis`
+* `druid.emitter.parametrized.httpEmitting.flushCount`
+* `druid.emitter.parametrized.httpEmitting.ssl.trustStorePath`
 
 Do not specify `recipientBaseUrl` with the parametrized emitter.
 Instead use `recipientBaseUrlPattern` described in the table below.
@@ -624,9 +624,9 @@ the [HTTP input source](../ingestion/input-sources.md#http-input-source).
 
 You can use the following properties to specify permissible JDBC options for:
 
-- [SQL input source](../ingestion/input-sources.md#sql-input-source)
-- [globally cached JDBC lookups](../querying/lookups-cached-global.md#jdbc-lookup)
-- [JDBC Data Fetcher for per-lookup caching](../development/extensions-core/druid-lookups.md#data-fetcher-layer).
+* [SQL input source](../ingestion/input-sources.md#sql-input-source)
+* [globally cached JDBC lookups](../querying/lookups-cached-global.md#jdbc-lookup)
+* [JDBC Data Fetcher for per-lookup caching](../development/extensions-core/druid-lookups.md#data-fetcher-layer).
 
 These properties do not apply to metadata storage connections.
 
@@ -719,9 +719,9 @@ You can configure Druid API error responses to hide internal information like th
 You can use an error response transform strategy to transform error responses from within Druid services to hide internal information.
 When you specify an error response transform strategy other than `none`, Druid transforms the error responses from Druid services as follows:
 
-- For any query API that fails in the Router service, Druid sets the fields `errorClass` and `host` to null. Druid applies the transformation strategy to the `errorMessage` field.
-- For any SQL query API that fails, for example `POST /druid/v2/sql/...`, Druid sets the fields `errorClass` and `host` to null. Druid applies the transformation strategy to the `errorMessage` field.
-- For any JDBC related exceptions, Druid will turn all checked exceptions into `QueryInterruptedException` otherwise druid will attempt to keep the exception as the same type. For example if the original exception isn't owned by Druid it will become `QueryInterruptedException`. Druid applies the transformation strategy to the `errorMessage` field.
+* For any query API that fails in the Router service, Druid sets the fields `errorClass` and `host` to null. Druid applies the transformation strategy to the `errorMessage` field.
+* For any SQL query API that fails, for example `POST /druid/v2/sql/...`, Druid sets the fields `errorClass` and `host` to null. Druid applies the transformation strategy to the `errorMessage` field.
+* For any JDBC related exceptions, Druid will turn all checked exceptions into `QueryInterruptedException` otherwise druid will attempt to keep the exception as the same type. For example if the original exception isn't owned by Druid it will become `QueryInterruptedException`. Druid applies the transformation strategy to the `errorMessage` field.
 
 ###### No error response transform strategy
 
@@ -1239,29 +1239,29 @@ either an `affinityConfig` or a `categorySpec`. Then, Druid assigns the task by 
 (`equalDistribution`) or to fill as many workers as possible to capacity (`fillCapacity`).
 There are 4 options for select strategies:
 
-- [`equalDistribution`](#equaldistribution)
-- [`equalDistributionWithCategorySpec`](#equaldistributionwithcategoryspec)
-- [`fillCapacity`](#fillcapacity)
-- [`fillCapacityWithCategorySpec`](#fillcapacitywithcategoryspec)
+* [`equalDistribution`](#equaldistribution)
+* [`equalDistributionWithCategorySpec`](#equaldistributionwithcategoryspec)
+* [`fillCapacity`](#fillcapacity)
+* [`fillCapacityWithCategorySpec`](#fillcapacitywithcategoryspec)
 
 A `javascript` option is also available but should only be used for prototyping new strategies.
 
 If an `affinityConfig` is provided (as part of `fillCapacity` and `equalDistribution` strategies) for a given task, the list of workers eligible to be assigned is determined as follows:
 
-- a non-affinity worker if no affinity is specified for that datasource. Any worker not listed in the `affinityConfig` is considered a non-affinity worker.
-- a non-affinity worker if preferred workers are not available and the affinity is _weak_ i.e. `strong: false`.
-- a preferred worker listed in the `affinityConfig` for this datasource if it has available capacity
-- no worker if preferred workers are not available and affinity is _strong_ i.e. `strong: true`. In this case, the task remains in "pending" state. The chosen provisioning strategy (e.g. `pendingTaskBased`) may then use the total number of pending tasks to determine if a new node should be provisioned.
+* a non-affinity worker if no affinity is specified for that datasource. Any worker not listed in the `affinityConfig` is considered a non-affinity worker.
+* a non-affinity worker if preferred workers are not available and the affinity is _weak_ i.e. `strong: false`.
+* a preferred worker listed in the `affinityConfig` for this datasource if it has available capacity
+* no worker if preferred workers are not available and affinity is _strong_ i.e. `strong: true`. In this case, the task remains in "pending" state. The chosen provisioning strategy (e.g. `pendingTaskBased`) may then use the total number of pending tasks to determine if a new node should be provisioned.
 
 Note that every worker listed in the `affinityConfig` will only be used for the assigned datasources and no other.
 
 If a `categorySpec` is provided (as part of `fillCapacityWithCategorySpec` and `equalDistributionWithCategorySpec` strategies), then a task of a given datasource may be assigned to:
 
-- any worker if no category config is given for task type
-- any worker if category config is given for task type but no category is given for datasource and there's no default category
-- a preferred worker (based on category config and category for datasource) if available
-- any worker if category config and category are given but no preferred worker is available and category config is `weak`
-- not assigned at all if preferred workers are not available and category config is `strong`
+* any worker if no category config is given for task type
+* any worker if category config is given for task type but no category is given for datasource and there's no default category
+* a preferred worker (based on category config and category for datasource) if available
+* any worker if category config and category are given but no preferred worker is available and category config is `weak`
+* not assigned at all if preferred workers are not available and category config is `strong`
 
 In both the cases, Druid determines the list of eligible workers and selects one depending on their load with the goal of either distributing the load equally or filling as few workers as possible.
 
@@ -1528,13 +1528,13 @@ If the Peon is running in remote mode, there must be an Overlord up and running.
 When new segments are created, Druid temporarily stores some preprocessed data in some buffers.
 The following types of medium exist for the buffers:
 
-- **Temporary files** (`tmpFile`) are stored under the task working directory (see `druid.worker.baseTaskDirs` configuration above) and thus share it's mounting properties. For example, they could be backed by HDD, SSD or memory (tmpfs).
+* **Temporary files** (`tmpFile`) are stored under the task working directory (see `druid.worker.baseTaskDirs` configuration above) and thus share it's mounting properties. For example, they could be backed by HDD, SSD or memory (tmpfs).
 This type of medium may do unnecessary disk I/O and requires some disk space to be available.
 
-- **Off-heap memory** (`offHeapMemory`) creates buffers in off-heap memory of a JVM process that is running a task.
+* **Off-heap memory** (`offHeapMemory`) creates buffers in off-heap memory of a JVM process that is running a task.
 This type of medium is preferred, but it may require to allow the JVM to have more off-heap memory, by changing `-XX:MaxDirectMemorySize` configuration. It is not yet understood how does the required off-heap memory size relates to the size of the segments being created. But definitely it doesn't make sense to add more extra off-heap memory, than the configured maximum _heap_ size (`-Xmx`) for the same JVM.
 
-- **On-heap memory** (`onHeapMemory`) creates buffers using the allocated heap memory of the JVM process running a task. Using on-heap memory introduces garbage collection overhead and so is not recommended in most cases. This type of medium is most helpful for tasks run on external clusters where it may be difficult to allocate and work with direct memory effectively.
+* **On-heap memory** (`onHeapMemory`) creates buffers using the allocated heap memory of the JVM process running a task. Using on-heap memory introduces garbage collection overhead and so is not recommended in most cases. This type of medium is most helpful for tasks run on external clusters where it may be difficult to allocate and work with direct memory effectively.
 
 For most types of tasks, `SegmentWriteOutMediumFactory` can be configured per-task (see [Tasks](../ingestion/tasks.md) for more information), but if it's not specified for a task, or it's not supported for a particular task type, then Druid uses the value from the following configuration:
 
@@ -1830,9 +1830,9 @@ Limiting the subquery by bytes is an experimental feature as it materializes the
 
 You can configure `maxSubqueryBytes` to the following values:
 
-- `disabled`: It is the default setting out of the box. It disables the subquery's from the byte based limit, and effectively disables this feature.
-- `auto`: Druid automatically decides the optimal byte based limit based upon the heap space available and the max number of concurrent queries.
-- A positive long value: User can manually specify the number of bytes that the results of the subqueries of a single query can occupy on the heap.
+* `disabled`: It is the default setting out of the box. It disables the subquery's from the byte based limit, and effectively disables this feature.
+* `auto`: Druid automatically decides the optimal byte based limit based upon the heap space available and the max number of concurrent queries.
+* A positive long value: User can manually specify the number of bytes that the results of the subqueries of a single query can occupy on the heap.
 
 Due to the conversion between the Java objects and the Frame's format, setting `maxSubqueryBytes` can become slow if the subquery starts generating
 rows in the order of magnitude of around 10 million and above. In those scenarios, disable the `maxSubqueryBytes` settings for such queries, assess the number of rows that the subqueries generate and override the `maxSubqueryRows` to appropriate value.
@@ -2060,9 +2060,9 @@ The following table shows the configuration options known to this module:
 
 The following are the possible values for `druid.cache.cacheExecutorFactory`, which controls how maintenance tasks are run:
 
-- `COMMON_FJP` (default) use the common ForkJoinPool. Should use with [JRE 8u60 or higher](https://github.com/apache/druid/pull/4810#issuecomment-329922810). Older versions of the JRE may have worse performance than newer JRE versions.
-- `SINGLE_THREAD` Use a single-threaded executor.
-- `SAME_THREAD` Cache maintenance is done eagerly.
+* `COMMON_FJP` (default) use the common ForkJoinPool. Should use with [JRE 8u60 or higher](https://github.com/apache/druid/pull/4810#issuecomment-329922810). Older versions of the JRE may have worse performance than newer JRE versions.
+* `SINGLE_THREAD` Use a single-threaded executor.
+* `SAME_THREAD` Cache maintenance is done eagerly.
 
 ##### Metrics
 
