@@ -22,7 +22,6 @@ title: "Creating extensions"
   ~ under the License.
   -->
 
-
 Druid uses a module system that allows for the addition of extensions at runtime.
 
 ## Writing your own extensions
@@ -73,7 +72,7 @@ The file that should exist in your jar is
 
 It should be a text file with a new-line delimited list of package-qualified classes that implement DruidModule like
 
-```
+```txt
 org.apache.druid.storage.cassandra.CassandraDruidModule
 ```
 
@@ -85,7 +84,7 @@ Check the `druid-azure-extensions`, `druid-google-extensions`, `druid-cassandra-
 
 The basic idea behind the extension is that you need to add bindings for your DataSegmentPusher and DataSegmentPuller objects.  The way to add them is something like (taken from HdfsStorageDruidModule)
 
-``` java
+```java
 Binders.dataSegmentPullerBinder(binder)
        .addBinding("hdfs")
        .to(HdfsDataSegmentPuller.class).in(LazySingleton.class);
@@ -115,17 +114,17 @@ It's recommended to use batch ingestion tasks to validate your implementation.
 The segment will be automatically rolled up to Historical note after ~20 seconds.
 In this way, you can validate both push (at realtime process) and pull (at Historical process) segments.
 
-* DataSegmentPusher
+#### DataSegmentPusher
 
 Wherever your data storage (cloud storage service, distributed file system, etc.) is, you should be able to see one new file: `index.zip` (`partitionNum_index.zip` for HDFS data storage) after your ingestion task ends.
 
-* DataSegmentPuller
+#### DataSegmentPuller
 
 After ~20 secs your ingestion task ends, you should be able to see your Historical process trying to load the new segment.
 
 The following example was retrieved from a Historical process configured to use Azure for deep storage:
 
-```
+```txt
 2015-04-14T02:42:33,450 INFO [ZkCoordinator-0] org.apache.druid.server.coordination.ZkCoordinator - New request[LOAD: dde_2015-01-02T00:00:00.000Z_2015-01-03T00:00:00
 .000Z_2015-04-14T02:41:09.484Z] with zNode[/druid/dev/loadQueue/192.168.33.104:8081/dde_2015-01-02T00:00:00.000Z_2015-01-03T00:00:00.000Z_2015-04-14T02:41:09.
 484Z].
@@ -142,7 +141,7 @@ T00:00:00.000Z/2015-04-14T02:41:09.484Z/0/index.zip] to [/opt/druid/zk_druid/dde
 2015-04-14T02:49:08,292 INFO [ZkCoordinator-0] org.apache.druid.server.coordination.ZkCoordinator - Completed request [LOAD: dde_2015-01-02T00:00:00.000Z_2015-01-03T00:00:00.000Z_2015-04-14T02:41:09.484Z]
 ```
 
-* DataSegmentKiller
+#### DataSegmentKiller
 
 The easiest way of testing the segment killing is marking a segment as not used and then starting a killing task in the [web console](../operations/web-console.md).
 
@@ -163,12 +162,12 @@ There is an example of this in the `druid-s3-extensions` module with the `S3Inpu
 
 Adding an InputSource is done almost entirely through the Jackson Modules instead of Guice. Specifically, note the implementation
 
-``` java
+```java
 @Override
 public List<? extends Module> getJacksonModules()
 {
   return ImmutableList.of(
-          new SimpleModule().registerSubtypes(new NamedType(S3InputSource.class, "s3"))
+      new SimpleModule().registerSubtypes(new NamedType(S3InputSource.class, "s3"))
   );
 }
 ```
@@ -183,7 +182,7 @@ Adding support for a new data format requires implementing two interfaces, i.e.,
 `InputFormat` is to define how your data is formatted. `InputEntityReader` is to define how to parse your data and convert into Druid `InputRow`.
 
 There is an example in the `druid-orc-extensions` module with the `OrcInputFormat` and `OrcReader`.
- 
+
 Adding an InputFormat is very similar to adding an InputSource. They operate purely through Jackson and thus should just be additions to the Jackson modules returned by your DruidModule.
 
 ### Adding Aggregators
@@ -204,7 +203,7 @@ Adding a new Query type requires the implementation of three interfaces.
 
 Registering these uses the same general strategy as a deep storage mechanism does.  You do something like
 
-``` java
+```java
 DruidBinders.queryToolChestBinder(binder)
             .addBinding(SegmentMetadataQuery.class)
             .to(SegmentMetadataQueryQueryToolChest.class);
@@ -230,7 +229,7 @@ You will need to implement `org.apache.druid.metadata.PasswordProvider` interfac
 thus make sure all the necessary information required for fetching each password is supplied during object instantiation.
 In your implementation of `org.apache.druid.initialization.DruidModule`, `getJacksonModules` should look something like this -
 
-``` java
+```java
     return ImmutableList.of(
         new SimpleModule("SomePasswordProviderModule")
             .registerSubtypes(
@@ -247,7 +246,7 @@ You will need to implement `org.apache.druid.metadata.DynamicConfigProvider` int
 thus make sure all the necessary information required for fetching all information is supplied during object instantiation.
 In your implementation of `org.apache.druid.initialization.DruidModule`, `getJacksonModules` should look something like this -
 
-``` java
+```java
     return ImmutableList.of(
         new SimpleModule("SomeDynamicConfigProviderModule")
             .registerSubtypes(
@@ -326,12 +325,13 @@ public class MyTransformModule implements DruidModule {
 
 ### Adding your own custom pluggable Coordinator Duty
 
-The coordinator periodically runs jobs, so-called `CoordinatorDuty` which include loading new segments, segment balancing, etc. 
+The coordinator periodically runs jobs, so-called `CoordinatorDuty` which include loading new segments, segment balancing, etc.
 Druid users can add custom pluggable coordinator duties, which are not part of Core Druid, without modifying any Core Druid classes.
 Users can do this by writing their own custom coordinator duty implementing the interface `CoordinatorCustomDuty` and setting the `JsonTypeName`.
 Next, users will need to register their custom coordinator as subtypes in their Module's `DruidModule#getJacksonModules()`.
 Once these steps are done, user will be able to load their custom coordinator duty using the following properties:
-```
+
+```properties
 druid.coordinator.dutyGroups=[<GROUP_NAME_1>, <GROUP_NAME_2>, ...]
 druid.coordinator.<GROUP_NAME_1>.duties=[<DUTY_NAME_MATCHING_JSON_TYPE_NAME_1>, <DUTY_NAME_MATCHING_JSON_TYPE_NAME_2>, ...]
 druid.coordinator.<GROUP_NAME_1>.period=<GROUP_NAME_1_RUN_PERIOD>
@@ -339,16 +339,17 @@ druid.coordinator.<GROUP_NAME_1>.period=<GROUP_NAME_1_RUN_PERIOD>
 druid.coordinator.<GROUP_NAME_1>.duty.<DUTY_NAME_MATCHING_JSON_TYPE_NAME_1>.<SOME_CONFIG_1_KEY>=<SOME_CONFIG_1_VALUE>
 druid.coordinator.<GROUP_NAME_1>.duty.<DUTY_NAME_MATCHING_JSON_TYPE_NAME_1>.<SOME_CONFIG_2_KEY>=<SOME_CONFIG_2_VALUE>
 ```
+
 In the new system for pluggable Coordinator duties, similar to what coordinator already does today, the duties can be grouped together.
-The duties will be grouped into multiple groups as per the elements in list `druid.coordinator.dutyGroups`. 
+The duties will be grouped into multiple groups as per the elements in list `druid.coordinator.dutyGroups`.
 All duties in the same group will have the same run period configured by `druid.coordinator.<GROUP_NAME>.period`.
-Currently, there is a single thread running the duties sequentially for each group. 
+Currently, there is a single thread running the duties sequentially for each group.
 
 For example, see `KillSupervisorsCustomDuty` for a custom coordinator duty implementation and the `custom-coordinator-duties`
 integration test group which loads `KillSupervisorsCustomDuty` using the configs set in `integration-tests/docker/environment-configs/test-groups/custom-coordinator-duties`.
 This config file adds the configs below to enable a custom coordinator duty.
 
-```
+```properties
 druid.coordinator.dutyGroups=["cleanupMetadata"]
 druid.coordinator.cleanupMetadata.duties=["killSupervisors"]
 druid.coordinator.cleanupMetadata.duty.killSupervisors.durationToRetain=PT0M
@@ -360,13 +361,15 @@ The custom coordinator duty `killSupervisors` also has a config called `duration
 
 ### Routing data through a HTTP proxy for your extension
 
-You can add the ability for the `HttpClient` of your extension to connect through an HTTP proxy. 
+You can add the ability for the `HttpClient` of your extension to connect through an HTTP proxy.
 
 To support proxy connection for your extension's HTTP client:
-1. Add `HttpClientProxyConfig` as a `@JsonProperty` to the HTTP config class of your extension. 
-2. In the extension's module class, add `HttpProxyConfig` config to `HttpClientConfig`. 
+
+1. Add `HttpClientProxyConfig` as a `@JsonProperty` to the HTTP config class of your extension.
+2. In the extension's module class, add `HttpProxyConfig` config to `HttpClientConfig`.
 For example, where `config` variable is the extension's HTTP config from step 1:
-```
+
+```java
 final HttpClientConfig.Builder builder = HttpClientConfig
     .builder()
     .withNumConnections(1)
@@ -387,7 +390,8 @@ there. In the end, you should see your extension underneath `distribution/target
 ### Managing dependencies
 
 Managing library collisions can be daunting for extensions which draw in commonly used libraries. Here is a list of group IDs for libraries that are suggested to be specified with a `provided` scope to prevent collision with versions used in druid:
-```
+
+```txt
 "org.apache.druid",
 "com.metamx.druid",
 "asm",
@@ -420,4 +424,5 @@ Managing library collisions can be daunting for extensions which draw in commonl
 "org.roaringbitmap",
 "net.java.dev.jets3t"
 ```
+
 See the documentation in `org.apache.druid.cli.PullDependencies` for more information.
