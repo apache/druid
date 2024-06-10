@@ -45,14 +45,18 @@ import org.apache.druid.sql.calcite.schema.ViewSchema;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.easymock.EasyMock;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Collections;
 
 public class ResultsContextSerdeTest
 {
-  @Test
-  public void testSerde() throws JsonProcessingException
+  private ResultsContext resultsContext;
+  private ObjectMapper objectMapper;
+
+  @Before
+  public void setUp() throws Exception
   {
     final PlannerToolbox toolbox = new PlannerToolbox(
         CalciteTests.createOperatorTable(),
@@ -78,20 +82,23 @@ public class ResultsContextSerdeTest
         EasyMock.createMock(QueryRunnerFactoryConglomerate.class)
     );
 
-    final PlannerContext plannerContext = PlannerContext.create(
+    PlannerContext plannerContext = PlannerContext.create(
         toolbox,
         "DUMMY",
         engine,
         Collections.emptyMap(),
         null
     );
-
-    ResultsContext resultsContext = new ResultsContext(
+    this.resultsContext = new ResultsContext(
         ImmutableList.of(SqlTypeName.DOUBLE, SqlTypeName.TIMESTAMP, SqlTypeName.VARCHAR),
         SqlResults.Context.fromPlannerContext(plannerContext)
     );
+    this.objectMapper = new DefaultObjectMapper();
+  }
 
-    ObjectMapper objectMapper = new DefaultObjectMapper();
+  @Test
+  public void testSerde() throws JsonProcessingException
+  {
     String s = objectMapper.writeValueAsString(resultsContext);
 
     ResultsContext deserialized = objectMapper.readValue(s, ResultsContext.class);
