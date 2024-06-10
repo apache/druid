@@ -38,9 +38,10 @@ public class KllFloatsSketchToQuantilePostAggregatorTest
         0.5
     );
     DefaultObjectMapper mapper = new DefaultObjectMapper();
-    KllFloatsSketchToQuantilePostAggregator andBackAgain = mapper.readValue(
+    mapper.registerModules(new KllSketchModule().getJacksonModules());
+    PostAggregator andBackAgain = mapper.readValue(
         mapper.writeValueAsString(there),
-        KllFloatsSketchToQuantilePostAggregator.class
+        PostAggregator.class
     );
 
     Assert.assertEquals(there, andBackAgain);

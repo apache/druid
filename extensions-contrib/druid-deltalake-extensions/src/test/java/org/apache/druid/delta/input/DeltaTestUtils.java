@@ -23,19 +23,19 @@ import io.delta.kernel.Scan;
 import io.delta.kernel.ScanBuilder;
 import io.delta.kernel.Snapshot;
 import io.delta.kernel.Table;
-import io.delta.kernel.TableNotFoundException;
-import io.delta.kernel.client.TableClient;
+import io.delta.kernel.engine.Engine;
+import io.delta.kernel.exceptions.TableNotFoundException;
 import io.delta.kernel.types.StructType;
 
 public class DeltaTestUtils
 {
-  public static Scan getScan(final TableClient tableClient, final String deltaTablePath) throws TableNotFoundException
+  public static Scan getScan(final Engine engine, final String deltaTablePath) throws TableNotFoundException
   {
-    final Table table = Table.forPath(tableClient, deltaTablePath);
-    final Snapshot snapshot = table.getLatestSnapshot(tableClient);
-    final StructType readSchema = snapshot.getSchema(tableClient);
-    final ScanBuilder scanBuilder = snapshot.getScanBuilder(tableClient)
-                                            .withReadSchema(tableClient, readSchema);
+    final Table table = Table.forPath(engine, deltaTablePath);
+    final Snapshot snapshot = table.getLatestSnapshot(engine);
+    final StructType readSchema = snapshot.getSchema(engine);
+    final ScanBuilder scanBuilder = snapshot.getScanBuilder(engine)
+                                            .withReadSchema(engine, readSchema);
     return scanBuilder.build();
   }
 }

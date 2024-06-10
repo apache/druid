@@ -123,6 +123,7 @@ IANA
 IcebergFilter
 IcebergInputSource
 IETF
+IoT
 IP
 IPv4
 IPv6
@@ -277,6 +278,7 @@ backpressure
 base64
 big-endian
 bigint
+blkio
 blobstore
 Boolean
 boolean
@@ -357,6 +359,8 @@ https
 idempotency
 i.e.
 influxdb
+influencer
+influencers
 ingestions
 ingestionSpec
 injective
@@ -531,6 +535,7 @@ subqueries
 subquery
 subsecond
 substring
+substrings
 subtask
 subtasks
 supervisorTaskId
