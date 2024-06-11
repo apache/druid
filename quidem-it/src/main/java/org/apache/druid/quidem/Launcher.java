@@ -59,10 +59,9 @@ public class Launcher
 
   public static void main(String[] args) throws Exception
   {
-    try {
     String quidemUri = System.getProperty(QUIDEM_URI, "druidtest:///");
     Properties p = System.getProperties();
-    for ( Object string : p.keySet()) {
+    for (Object string : p.keySet()) {
       log.info("[%s] -> %s", string, p.get(string));
     }
     log.info("Starting Quidem with URI[%s]", quidemUri);
@@ -70,9 +69,5 @@ public class Launcher
     Launcher launcher = new Launcher(quidemUri);
     launcher.start();
     launcher.lifecycle.join();
-    } catch (Exception e) {
-      e.printStackTrace();
-
-    }
   }
 }
