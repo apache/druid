@@ -31,7 +31,8 @@ ARG BUILD_FROM_SOURCE="false"
 
 RUN export DEBIAN_FRONTEND=noninteractive \
     && apt-get -qq update \
-    && apt-get -qq -y install --no-install-recommends python3 python3-yaml
+    && apt-get -qq -y install --no-install-recommends python3 python3-yaml \
+    && apt-get -qq -y install --no-install-recommends tini
 
 COPY . /src
 WORKDIR /src
@@ -78,8 +79,8 @@ RUN ["/busybox/busybox", "--install", "/bin"]
 RUN addgroup -S -g 1006 druid \
  && adduser -S -u 1006 -D -H -h /opt/druid -s /bin/sh -g '' -G druid druid
 
-
 COPY --from=bash-static /bin/bash /bin/bash
+COPY --from=builder /usr/bin/tini /usr/bin/tini
 RUN chmod 755 /bin/bash
 
 COPY --chown=druid:druid --from=builder /opt /opt
@@ -98,4 +99,4 @@ USER druid
 VOLUME /opt/druid/var
 WORKDIR /opt/druid
 
-ENTRYPOINT ["/druid.sh"]
+ENTRYPOINT ["/usr/bin/tini", "--", "/druid.sh"]
