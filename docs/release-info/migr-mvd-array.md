@@ -24,19 +24,19 @@ sidebar_label: MVDs to arrays
 -->
 
 
-Druid now supports SQL-compliant [arrays](../querying/arrays.md), and we recommend that people use arrays over [multi-value dimensions](../querying/multi-value-dimensions.md) (MVDs) whenever possible.
-Use arrays for new projects and complex use cases involving multiple data types. Use MVDs for specific use cases, such as operating directly on individual elements like regular strings. If your operations involve complete arrays of values, including the ordering of values within a row, use arrays over MVDs.
+Druid now supports SQL-compliant [arrays](../querying/arrays.md). We recommend using arrays over [multi-value dimensions](../querying/multi-value-dimensions.md) (MVDs) whenever possible.
+For new projects and complex use cases involving multiple data types, use arrays. Use MVDs for specific use cases, such as operating directly on individual elements like regular strings. If your operations involve entire arrays of values, including the ordering of values within a row, use arrays over MVDs.
 
 ## Comparison between arrays and MVDs
 
 The following table compares the general behavior between arrays and MVDs.
 For specific query differences between arrays and MVDs, see [Querying arrays and MVDs](#querying-arrays-and-mvds).
 
-|  | Arrays| Multi-value dimensions (MVDs) |
+|  | Arrays| MVDs |
 |---|---|---|
 | Data types | Supports VARCHAR, BIGINT, and DOUBLE types (ARRAY<STRING\>, ARRAY<LONG\>, ARRAY<DOUBLE\>) | Only supports arrays of strings (VARCHAR) |
 | SQL compliance | Behaves like standard SQL arrays with SQL-compliant behavior | Behaves like SQL VARCHAR rather than standard SQL arrays and requires special SQL functions to achieve array-like behavior. See the [examples](#examples). |
-| Ingestion | <ul><li>JSON arrays are ingested as Druid arrays</li><li>Managed through the query context parameter `arrayIngestMode` in SQL-based ingestion (supported options: `array`, `mvd`, `none`). Note that if you set this mode to `none`, Druid raises an exception if you try to store any type of array.</li></ul> | <ul><li>JSON arrays are ingested as multi-value dimensions</li><li>Managed using functions like [ARRAY_TO_MV](../querying/sql-functions.md#array_to_mv) in SQL-based ingestion</li></ul> |
+| Ingestion | <ul><li>JSON arrays are ingested as Druid arrays</li><li>Managed through the query context parameter `arrayIngestMode` in SQL-based ingestion. Supported options are `array`, `mvd`, and `none`. Note that if you set this mode to `none`, Druid raises an exception if you try to store any type of array.</li></ul> | <ul><li>JSON arrays are ingested as MVDs</li><li>Managed using functions like [ARRAY_TO_MV](../querying/sql-functions.md#array_to_mv) in SQL-based ingestion</li></ul> |
 | Filtering and grouping | <ul><li>Filters and groupings match the entire array value</li><li>Can be used as GROUP BY keys, grouping based on the entire array value</li><li>Use the [UNNEST operator](#group-by-array-elements) to group based on individual array elements</li></ul> | <ul><li>Filters match any value within the array</li><li>Grouping generates a group for each individual value, similar to an implicit UNNEST</li></ul> |
 | Conversion | Convert an MVD to an array using [MV_TO_ARRAY](../querying/sql-functions.md#mv_to_array) | Convert an array to an MVD using [ARRAY_TO_MV](../querying/sql-functions.md#array_to_mv) |
 
@@ -53,12 +53,13 @@ In your query, you want to filter results by comparing some value with `['a', 'b
 For example: `WHERE "array_column" = ARRAY['a', 'b', 'c']`.
 
 * For MVD columns, Druid returns the row when an equality filter matches any value of the MVD.  
-For example, any of the following filters returns the row for the query:  
+For example, any of the following filters return the row for the query:  
 `WHERE "mvd_column" = 'a'`  
 `WHERE "mvd_column" = 'b'`  
 `WHERE "mvd_column" = 'c'`
 
 Note this difference between arrays and MVDs when you write queries that involve filtering or grouping.
+
 When your query applies both filters and grouping, MVDs may return rows that don't seem to match the filter,
 since the grouping occurs after Druid performs the filter. For an example, see [Filter and group by array elements](#filter-and-group-by-array-elements).
 
@@ -110,7 +111,7 @@ WHERE tags = 't1' OR tags = 't7'
 
 ### Filter using array equality
 
-Filters rows for which the array or MVD is equivalent to a reference array.
+Filter rows for which the array or MVD is equivalent to a reference array.
 
 #### Array
 
@@ -130,7 +131,7 @@ WHERE MV_TO_ARRAY(tags) = ARRAY['t1', 't2', 't3']
 
 ### Group results by array
 
-Groups results by the array or MVD.
+Group results by the array or MVD.
 
 #### Array
 
@@ -218,7 +219,7 @@ The MVD query returns the following:
 ```
 
 The MVD results appear to show four extra rows for which `tags` does not equal `t3`.
-However, the rows match the filter based on Druid evaluates equalities for MVDs.
+However, the rows match the filter based on how Druid evaluates equalities for MVDs.
 
 For the equivalent query on MVDs, use the [MV_FILTER_ONLY](../querying/sql-functions.md#mv_filter_only) function:
 
@@ -241,5 +242,5 @@ For an example, see [Ingesting arrays: Native batch and streaming ingestion](../
 * For SQL-based batch ingestion, include the [query context parameter](../multi-stage-query/reference.md#context-parameters) `"arrayIngestMode": "array"` and reference the relevant array type (`VARCHAR ARRAY`, `BIGINT ARRAY`, or `DOUBLE ARRAY`) in the [EXTEND clause](../multi-stage-query/reference.md#extern-function) that lists the column names and data types.
 For examples, see [Ingesting arrays: SQL-based ingestion](../querying/arrays.md#sql-based-ingestion).
 
-   As a best practice, always use the ARRAY data type in your input schema. Then if you want to ingest MVDs, explicitly wrap the string array in [ARRAY_TO_MV](../querying/sql-functions.md#array_to_mv). For an example, see [Multi-value dimensions: SQL-based ingestion](/querying/multi-value-dimensions.md#sql-based-ingestion).
+   As a best practice, always use the ARRAY data type in your input schema. If you want to ingest MVDs, explicitly wrap the string array in [ARRAY_TO_MV](../querying/sql-functions.md#array_to_mv). For an example, see [Multi-value dimensions: SQL-based ingestion](/querying/multi-value-dimensions.md#sql-based-ingestion).
 
