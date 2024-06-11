@@ -353,7 +353,6 @@
         <dependency>
             <groupId>com.google.inject.extensions</groupId>
             <artifactId>guice-servlet</artifactId>
-            <version>${guice.version}</version>
         </dependency>
         <dependency>
             <groupId>io.confluent</groupId>
@@ -427,11 +426,11 @@
       <optional>true</optional>
     </dependency>
 
-    <dependency>
-      <groupId>org.easymock</groupId>
-      <artifactId>easymock</artifactId>
-      <scope>test</scope>
-    </dependency>
+        <dependency>
+        <groupId>org.easymock</groupId>
+        <artifactId>easymock</artifactId>
+        <scope>compile</scope>
+        </dependency>
 
 
         <!-- Tests -->
@@ -473,13 +472,15 @@
             <artifactId>datasketches-java</artifactId>
             <scope>runtime</scope>
         </dependency>
-            <dependency>
+    <dependency>
       <groupId>org.hamcrest</groupId>
       <artifactId>hamcrest-all</artifactId>
+      <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>org.hamcrest</groupId>
       <artifactId>hamcrest-core</artifactId>
+      <scope>compile</scope>
     </dependency>
 
     </dependencies>
