@@ -64,12 +64,12 @@ Configure where to store segments using the following properties:
 #### Configure authentication
 
 Authenticate access to Azure Blob Storage using one of the following methods:
+
 * [SAS token](https://learn.microsoft.com/en-us/azure/storage/common/storage-sas-overview)
 * [Shared Key](https://learn.microsoft.com/en-us/rest/api/storageservices/authorize-with-shared-key)
 * Default Azure credentials chain ([`DefaultAzureCredential`](https://learn.microsoft.com/en-us/java/api/overview/azure/identity-readme#defaultazurecredential)).
 
 Configure authentication using the following properties:
-:::
 
 | Property | Description | Default |
 |---|---|---|
