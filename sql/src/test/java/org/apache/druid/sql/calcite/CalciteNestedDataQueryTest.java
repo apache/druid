@@ -6714,7 +6714,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 new Object[]{4L, 4L, 4L},
                 new Object[]{1L, 5L, 1L},
                 new Object[]{2L, 5L, 2L},
-                new Object[]{null, 5L, NullHandling.sqlCompatible() ? 2L : 0L}
+                new Object[]{null, 5L, NullHandling.sqlCompatible() ? 5L : 0L}
             )
         )
         .expectedSignature(
