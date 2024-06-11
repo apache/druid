@@ -82,7 +82,7 @@ If your jar has this file, then when it is added to the classpath or as an exten
 
 Check the `druid-azure-extensions`, `druid-google-extensions`, `druid-cassandra-storage`, `druid-hdfs-storage` and `druid-s3-extensions` modules for examples of how to do this.
 
-The basic idea behind the extension is that you need to add bindings for your DataSegmentPusher and DataSegmentPuller objects.  The way to add them is something like (taken from HdfsStorageDruidModule)
+The basic idea behind the extension is that you need to add bindings for your [`DataSegmentPusher`](https://github.com/apache/druid/blob/master/processing/src/main/java/org/apache/druid/segment/loading/DataSegmentPusher.java) and [`URIDataPuller`](https://github.com/apache/druid/blob/master/processing/src/main/java/org/apache/druid/segment/loading/URIDataPuller.java) objects. The way to add them is something like (taken from HdfsStorageDruidModule)
 
 ```java
 Binders.dataSegmentPullerBinder(binder)
@@ -94,7 +94,7 @@ Binders.dataSegmentPusherBinder(binder)
        .to(HdfsDataSegmentPusher.class).in(LazySingleton.class);
 ```
 
-`Binders.dataSegment*Binder()` is a call provided by the druid-core jar which sets up a Guice multibind "MapBinder".  If that doesn't make sense, don't worry about it, just think of it as a magical incantation.
+`Binders.dataSegment*Binder()` is a call provided by the druid-core jar which sets up a Guice [multibind](https://github.com/google/guice/wiki/Multibindings) "MapBinder". If that doesn't make sense, don't worry about it; just think of it as a magical incantation.
 
 `addBinding("hdfs")` for the Puller binder creates a new handler for loadSpec objects of type "hdfs". For the Pusher binder it creates a new type value that you can specify for the `druid.storage.type` parameter.
 
@@ -102,9 +102,9 @@ Binders.dataSegmentPusherBinder(binder)
 
 In addition to DataSegmentPusher and DataSegmentPuller, you can also bind:
 
-* DataSegmentKiller: Removes segments, used as part of the Kill Task to delete unused segments, i.e. perform garbage collection of segments that are either superseded by newer versions or that have been dropped from the cluster.
-* DataSegmentMover: Allow migrating segments from one place to another, currently this is only used as part of the MoveTask to move unused segments to a different S3 bucket or prefix, typically to reduce storage costs of unused data (e.g. move to glacier or cheaper storage)
-* DataSegmentArchiver: Just a wrapper around Mover, but comes with a preconfigured target bucket/path, so it doesn't have to be specified at runtime as part of the ArchiveTask.
+* [`DataSegmentKiller`](https://github.com/apache/druid/blob/master/processing/src/main/java/org/apache/druid/segment/loading/DataSegmentKiller.java): Removes segments, used as part of the Kill Task to delete unused segments, i.e. perform garbage collection of segments that are either superseded by newer versions or that have been dropped from the cluster.
+* [`DataSegmentMover`](https://github.com/apache/druid/blob/master/processing/src/main/java/org/apache/druid/segment/loading/DataSegmentMover.java): Allow migrating segments from one place to another, currently this is only used as part of the MoveTask to move unused segments to a different S3 bucket or prefix, typically to reduce storage costs of unused data (e.g. move to glacier or cheaper storage)
+* [`DataSegmentArchiver`](https://github.com/apache/druid/blob/master/processing/src/main/java/org/apache/druid/segment/loading/DataSegmentArchiver.java): Just a wrapper around Mover, but comes with a preconfigured target bucket/path, so it doesn't have to be specified at runtime as part of the ArchiveTask.
 
 ### Validating your deep storage implementation
 
