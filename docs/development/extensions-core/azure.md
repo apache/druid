@@ -28,7 +28,7 @@ This extension allows you to do the following:
 
 * [Ingest data](#ingest-data-from-azure) from objects stored in Azure Blob Storage.
 * [Write segments](#store-segments-in-azure) to Azure Blob Storage for deep storage.
-* [Persist task logs](#persist-task-logs-in-azure) to Azure blob storage for long-term storage.
+* [Persist task logs](#persist-task-logs-in-azure) to Azure Blob Storage for long-term storage.
 
 :::info
 
