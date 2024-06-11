@@ -118,9 +118,9 @@ In this way, you can validate both push (at realtime process) and pull (at Histo
 
 Wherever your data storage (cloud storage service, distributed file system, etc.) is, you should be able to see one new file: `index.zip` (`partitionNum_index.zip` for HDFS data storage) after your ingestion task ends.
 
-#### DataSegmentPuller
+#### URIDataPuller
 
-After ~20 secs your ingestion task ends, you should be able to see your Historical process trying to load the new segment.
+After ~1 minute your ingestion task ends, you should be able to see your Historical process trying to load the new segment.
 
 The following example was retrieved from a Historical process configured to use Azure for deep storage:
 
