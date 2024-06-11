@@ -670,7 +670,7 @@ Store task logs in S3. Note that the `druid-s3-extensions` extension must be loa
 
 ##### Azure Blob Store task logs
 
-Store task logs in Azure Blob Store. Note that the `druid-azure-extensions` extension must be loaded, and that the same storage account (and authentication method) as the deep storage module is used (`druid.azure.account`).
+Store task logs in Azure Blob Store. To enable this feature, load the `druid-azure-extensions` extension, and configure deep storage for Azure. Druid uses the same authentication method configured for deep storage and stores task logs in the same storage account (set in `druid.azure.account`).
 
 See the [Azure extension documentation](../development/extensions-core/azure.md#persist-task-logs-in-azure) for details on the available configuration options.
 
