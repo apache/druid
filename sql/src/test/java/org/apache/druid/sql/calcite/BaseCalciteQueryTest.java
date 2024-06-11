@@ -664,7 +664,11 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   private DruidExceptionMatcher buildUnplannableExceptionMatcher()
   {
-    return new DruidExceptionMatcher(Persona.USER, Category.INVALID_INPUT, "invalidInput");
+    if (testBuilder().isDecoupledMode()) {
+      return new DruidExceptionMatcher(Persona.USER, Category.INVALID_INPUT, "invalidInput");
+    } else {
+      return new DruidExceptionMatcher(Persona.ADMIN, Category.INVALID_INPUT, "general");
+    }
   }
 
   /**
