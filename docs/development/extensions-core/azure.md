@@ -44,7 +44,7 @@ Ingest data using either [MSQ](../../multi-stage-query/index.md) or a native bat
 
 :::info
 
-To enable Azure for deep storage, explicitly enable it by setting `druid.storage.type=azure`.
+To use Azure for deep storage, set `druid.storage.type=azure`.
 
 :::
 
