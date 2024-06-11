@@ -61,7 +61,7 @@ Configure where to store segments using the following properties:
 | `druid.azure.protocol` | The protocol to use to connect to the Azure Storage account. Either `http` or `https`. | `https` |
 | `druid.azure.storageAccountEndpointSuffix` | The Storage account endpoint to use. Override the default value to connect to [Azure Government](https://learn.microsoft.com/en-us/azure/azure-government/documentation-government-get-started-connect-to-storage#getting-started-with-storage-api) or storage accounts with [Azure DNS zone endpoints](https://learn.microsoft.com/en-us/azure/storage/common/storage-account-overview#azure-dns-zone-endpoints-preview).<br/><br/>Do _not_ include the storage account name prefix in this config value.<br/><br/>Examples: `ABCD1234.blob.storage.azure.net`, `blob.core.usgovcloudapi.net`. | `blob.core.windows.net` |
 
-#### Configuration - Authentication
+#### Configure authentication
 
 The Azure extension currently supports authenticating with either an [SAS Token](https://learn.microsoft.com/en-us/azure/storage/common/storage-sas-overview), a [Shared Key](https://learn.microsoft.com/en-us/rest/api/storageservices/authorize-with-shared-key), or by using the default Azure credentials chain ([`DefaultAzureCredential`](https://learn.microsoft.com/en-us/java/api/overview/azure/identity-readme#defaultazurecredential)). Use the following configuration to use either of these options:
 
