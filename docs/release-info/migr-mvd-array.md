@@ -82,7 +82,7 @@ WHERE ARRAY_CONTAINS(tags, 't3')
 #### MVD
 
 ```sql
-SELECT label tags,
+SELECT label, tags
 FROM "mvd_example"
 WHERE tags = 't3'
 ```
