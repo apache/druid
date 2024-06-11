@@ -100,7 +100,7 @@ Binders.dataSegmentPusherBinder(binder)
 
 `to(...).in(...);` is normal Guice stuff.
 
-In addition to DataSegmentPusher and DataSegmentPuller, you can also bind:
+In addition to `DataSegmentPusher` and `URIDataPuller`, you can also bind:
 
 * [`DataSegmentKiller`](https://github.com/apache/druid/blob/master/processing/src/main/java/org/apache/druid/segment/loading/DataSegmentKiller.java): Removes segments, used as part of the Kill Task to delete unused segments, i.e. perform garbage collection of segments that are either superseded by newer versions or that have been dropped from the cluster.
 * [`DataSegmentMover`](https://github.com/apache/druid/blob/master/processing/src/main/java/org/apache/druid/segment/loading/DataSegmentMover.java): Allow migrating segments from one place to another, currently this is only used as part of the MoveTask to move unused segments to a different S3 bucket or prefix, typically to reduce storage costs of unused data (e.g. move to glacier or cheaper storage)
