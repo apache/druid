@@ -24,7 +24,7 @@ title: "Microsoft Azure"
 
 ## Azure extension
 
-This extension allows you to do three things:
+This extension allows you to do the following:
 
 * [Ingest data](#ingest-data-from-azure) from objects stored in Azure Blob Storage.
 * [Write segments](#store-segments-in-azure) to Azure Blob Storage for deep storage.
