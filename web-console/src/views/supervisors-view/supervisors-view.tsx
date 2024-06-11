@@ -45,6 +45,7 @@ import {
   SpecDialog,
   SupervisorTableActionDialog,
 } from '../../dialogs';
+import { SupervisorHandoffDialog } from '../../dialogs/supervisor-handoff-dialog/supervisor-handoff-dialog';
 import { SupervisorResetOffsetsDialog } from '../../dialogs/supervisor-reset-offsets-dialog/supervisor-reset-offsets-dialog';
 import type {
   IngestionSpec,
@@ -145,6 +146,7 @@ export interface SupervisorsViewState {
 
   resumeSupervisorId?: string;
   suspendSupervisorId?: string;
+  handoffSupervisorId?: string;
   resetOffsetsSupervisorInfo?: { id: string; type: string };
   resetSupervisorId?: string;
   terminateSupervisorId?: string;
@@ -426,15 +428,25 @@ export class SupervisorsView extends React.PureComponent<
         },
       );
     }
+
+    actions.push({
+      icon: supervisorSuspended ? IconNames.PLAY : IconNames.PAUSE,
+      title: supervisorSuspended ? 'Resume' : 'Suspend',
+      onAction: () =>
+        supervisorSuspended
+          ? this.setState({ resumeSupervisorId: id })
+          : this.setState({ suspendSupervisorId: id }),
+    });
+
+    if (!supervisorSuspended) {
+      actions.push({
+        icon: IconNames.AUTOMATIC_UPDATES,
+        title: 'Handoff early',
+        onAction: () => this.setState({ handoffSupervisorId: id }),
+      });
+    }
+
     actions.push(
-      {
-        icon: supervisorSuspended ? IconNames.PLAY : IconNames.PAUSE,
-        title: supervisorSuspended ? 'Resume' : 'Suspend',
-        onAction: () =>
-          supervisorSuspended
-            ? this.setState({ resumeSupervisorId: id })
-            : this.setState({ suspendSupervisorId: id }),
-      },
       {
         icon: IconNames.STEP_BACKWARD,
         title: `Set ${type === 'kinesis' ? 'sequence numbers' : 'offsets'}`,
@@ -517,6 +529,23 @@ export class SupervisorsView extends React.PureComponent<
           Are you sure you want to suspend supervisor <Tag minimal>{suspendSupervisorId}</Tag>?
         </p>
       </AsyncActionDialog>
+    );
+  }
+
+  renderHandoffSupervisorAction() {
+    const { handoffSupervisorId } = this.state;
+    if (!handoffSupervisorId) return;
+
+    return (
+      <SupervisorHandoffDialog
+        supervisorId={handoffSupervisorId}
+        onClose={() => {
+          this.setState({ handoffSupervisorId: undefined });
+        }}
+        onSuccess={() => {
+          this.supervisorQueryManager.rerunLastQuery();
+        }}
+      />
     );
   }
 
@@ -1061,6 +1090,7 @@ export class SupervisorsView extends React.PureComponent<
         {this.renderSupervisorTable()}
         {this.renderResumeSupervisorAction()}
         {this.renderSuspendSupervisorAction()}
+        {this.renderHandoffSupervisorAction()}
         {this.renderResetOffsetsSupervisorAction()}
         {this.renderResetSupervisorAction()}
         {this.renderTerminateSupervisorAction()}
