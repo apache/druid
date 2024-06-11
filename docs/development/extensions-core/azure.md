@@ -63,12 +63,12 @@ Configure where to store segments using the following properties:
 
 #### Configure authentication
 
-The Azure extension currently supports authenticating with either an [SAS Token](https://learn.microsoft.com/en-us/azure/storage/common/storage-sas-overview), a [Shared Key](https://learn.microsoft.com/en-us/rest/api/storageservices/authorize-with-shared-key), or by using the default Azure credentials chain ([`DefaultAzureCredential`](https://learn.microsoft.com/en-us/java/api/overview/azure/identity-readme#defaultazurecredential)). Use the following configuration to use either of these options:
+Authenticate access to Azure Blob Storage using one of the following methods:
+* [SAS token](https://learn.microsoft.com/en-us/azure/storage/common/storage-sas-overview)
+* [Shared Key](https://learn.microsoft.com/en-us/rest/api/storageservices/authorize-with-shared-key)
+* Default Azure credentials chain ([`DefaultAzureCredential`](https://learn.microsoft.com/en-us/java/api/overview/azure/identity-readme#defaultazurecredential)).
 
-:::info
-
-One authentication needs to be provided. Set one of `sharedAccessStorageToken`, `key` or `useAzureCredentialsChain`.
-
+Configure authentication using the following properties:
 :::
 
 | Property | Description | Default |
@@ -82,11 +82,11 @@ One authentication needs to be provided. Set one of `sharedAccessStorageToken`, 
 
 :::info
 
-To enable Azure for persisting task logs, explicitly enable it by setting `druid.indexer.logs.type=azure`.
+To persist task logs in Azure Blob Storage, set `druid.indexer.logs.type=azure`.
 
 :::
 
-Task logs are persisted using the account and authentication method configured for storing segments. Use the following configuration to setup where to store the task logs:
+Druid stores task logs using the storage account and authentication method configured for storing segments. Use the following configuration to set up where to store the task logs:
 
 | Property | Description | Default |
 |---|---|---|
