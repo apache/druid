@@ -93,4 +93,4 @@ Task logs are persisted using the account and authentication method configured f
 | `druid.indexer.logs.container` | The Azure Blob Store container to write logs to. | Must be set. |
 | `druid.indexer.logs.prefix` | The path to prepend to logs. | Must be set. |
 
-For configuration options regarding task retention, see the generic opions [here](../../configuration/index.md#log-retention-policy).
+For configuration options regarding task retention, see the generic options [here](../../configuration/index.md#log-retention-policy).
