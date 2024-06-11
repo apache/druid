@@ -50,7 +50,7 @@ To use Azure for deep storage, set `druid.storage.type=azure`.
 
 #### Configuration - Location
 
-Use the following configuration to setup the where to store segments:
+Configure where to store segments using the following properties:
 
 | Property | Description | Default |
 |---|---|---|
