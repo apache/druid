@@ -171,7 +171,7 @@ GROUP BY 1, 2
 ### Filter and group by array elements
 
 Filter rows that have a certain value, then group by elements in the array or MVD.
-This example illustrates that while the the results of filtering may match between arrays and MVDs,
+This example illustrates that while the results of filtering may match between arrays and MVDs,
 be aware that MVDs implicitly unnest their values so that results differ when you also apply a GROUP BY.
 
 For example, consider the queries from [Filter by an array element](#filter-by-an-array-element).
