@@ -27,7 +27,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-public interface DruidHook
+@FunctionalInterface
+
+public interface DruidHook<T>
 {
   static class HookKey<T>
   {
@@ -64,10 +66,12 @@ public interface DruidHook
 
   }
 
+  public static final HookKey<RelNode> CONVERTED_PLAN = new HookKey<>("converted", RelNode.class);
+  public static final HookKey<RelNode> LOGICAL_PLAN = new HookKey<>("logicalPlan", RelNode.class);
   public static final HookKey<RelNode> DRUID_PLAN = new HookKey<>("druidPlan", RelNode.class);
   public static final HookKey<String> SQL = new HookKey<>("sql", String.class);
 
-  <T> void invoke(HookKey<T> key, T object);
+  void invoke(HookKey<T> key, T object);
 
   static Map<HookKey<?>, List<DruidHook>> GLOBAL = new HashMap<>();
 
@@ -81,7 +85,7 @@ public interface DruidHook
     GLOBAL.get(key).remove(hook);
   }
 
-  public static Closeable withHook(HookKey<?> key, DruidHook hook)
+  public static <T> Closeable  withHook(HookKey<T> key, DruidHook<T> hook)
   {
     register(key, hook);
     return new Closeable()

@@ -23,7 +23,7 @@ import org.apache.druid.sql.calcite.run.DruidHook;
 
 import java.io.PrintStream;
 
-public class QuidemRecorder implements AutoCloseable, DruidHook
+public class QuidemRecorder implements AutoCloseable, DruidHook<String>
 {
   private PrintStream printStream;
 
@@ -42,10 +42,10 @@ public class QuidemRecorder implements AutoCloseable, DruidHook
   }
 
   @Override
-  public <T> void invoke(HookKey<T> key, T object)
+  public void invoke(HookKey<String> key, String query)
   {
     if (DruidHook.SQL.equals(key)) {
-      printStream.print(object);
+      printStream.print(query);
       printStream.println(";");
       printStream.println("!ok");
       return;
