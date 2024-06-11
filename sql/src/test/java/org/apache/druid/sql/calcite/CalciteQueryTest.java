@@ -2611,7 +2611,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testExactCountDistinctWithFilter()
   {
-    cannotVectorize();
     msqIncompatible();
     final String sqlQuery = "SELECT COUNT(DISTINCT foo.dim1) FILTER(WHERE foo.cnt = 1), SUM(foo.cnt) FROM druid.foo";
 
@@ -5030,12 +5029,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilteredAggregations()
   {
-//FIXME<<<<<<< HEAD
-    // cannot vectorize due to expression filter
-    cannotVectorize();
-
-//=======
-//>>>>>>> apache/master
     Druids.TimeseriesQueryBuilder builder =
         Druids.newTimeseriesQueryBuilder()
               .dataSource(CalciteTests.DATASOURCE1)
@@ -5220,7 +5213,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testCaseFilteredAggregationWithGroupBy()
   {
-    cannotVectorize();
     testQuery(
         "SELECT\n"
         + "  cnt,\n"
