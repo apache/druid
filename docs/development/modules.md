@@ -111,7 +111,7 @@ In addition to DataSegmentPusher and DataSegmentPuller, you can also bind:
 **WARNING!** This is not a formal procedure, but a collection of hints to validate if your new deep storage implementation is able do push, pull and kill segments.
 
 It's recommended to use batch ingestion tasks to validate your implementation.
-The segment will be automatically rolled up to Historical note after ~20 seconds.
+The segment will be automatically rolled up to a Historical node after ~1 minute.
 In this way, you can validate both push (at realtime process) and pull (at Historical process) segments.
 
 #### DataSegmentPusher
