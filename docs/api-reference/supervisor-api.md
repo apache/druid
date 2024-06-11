@@ -231,10 +231,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
                 "ioConfig": {
                     "topic": "social_media",
                     "inputFormat": {
-                        "type": "json",
-                        "keepNullColumns": false,
-                        "assumeNewlineDelimited": false,
-                        "useJsonNodeReader": false
+                        "type": "json"
                     },
                     "replicas": 1,
                     "taskCount": 1,
@@ -429,10 +426,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
             "ioConfig": {
                 "topic": "social_media",
                 "inputFormat": {
-                    "type": "json",
-                    "keepNullColumns": false,
-                    "assumeNewlineDelimited": false,
-                    "useJsonNodeReader": false
+                    "type": "json"
                 },
                 "replicas": 1,
                 "taskCount": 1,
@@ -537,10 +531,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
                 "ioConfig": {
                     "topic": "social_media",
                     "inputFormat": {
-                        "type": "json",
-                        "keepNullColumns": false,
-                        "assumeNewlineDelimited": false,
-                        "useJsonNodeReader": false
+                        "type": "json"
                     },
                     "replicas": 1,
                     "taskCount": 1,
@@ -735,10 +726,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
             "ioConfig": {
                 "topic": "social_media",
                 "inputFormat": {
-                    "type": "json",
-                    "keepNullColumns": false,
-                    "assumeNewlineDelimited": false,
-                    "useJsonNodeReader": false
+                    "type": "json"
                 },
                 "replicas": 1,
                 "taskCount": 1,
@@ -973,10 +961,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
         "ioConfig": {
             "topic": "social_media",
             "inputFormat": {
-                "type": "json",
-                "keepNullColumns": false,
-                "assumeNewlineDelimited": false,
-                "useJsonNodeReader": false
+                "type": "json"
             },
             "replicas": 1,
             "taskCount": 1,
@@ -1171,10 +1156,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
     "ioConfig": {
         "topic": "social_media",
         "inputFormat": {
-            "type": "json",
-            "keepNullColumns": false,
-            "assumeNewlineDelimited": false,
-            "useJsonNodeReader": false
+            "type": "json"
         },
         "replicas": 1,
         "taskCount": 1,
@@ -1610,10 +1592,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
                     "ioConfig": {
                         "topic": "social_media",
                         "inputFormat": {
-                            "type": "json",
-                            "keepNullColumns": false,
-                            "assumeNewlineDelimited": false,
-                            "useJsonNodeReader": false
+                            "type": "json"
                         },
                         "replicas": 1,
                         "taskCount": 1,
@@ -1808,10 +1787,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
                 "ioConfig": {
                     "topic": "social_media",
                     "inputFormat": {
-                        "type": "json",
-                        "keepNullColumns": false,
-                        "assumeNewlineDelimited": false,
-                        "useJsonNodeReader": false
+                        "type": "json"
                     },
                     "replicas": 1,
                     "taskCount": 1,
@@ -1978,10 +1954,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
                 "ioConfig": {
                     "topic": "social_media",
                     "inputFormat": {
-                        "type": "json",
-                        "keepNullColumns": false,
-                        "assumeNewlineDelimited": false,
-                        "useJsonNodeReader": false
+                        "type": "json"
                     },
                     "replicas": 1,
                     "taskCount": 1,
@@ -2176,10 +2149,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
             "ioConfig": {
                 "topic": "social_media",
                 "inputFormat": {
-                    "type": "json",
-                    "keepNullColumns": false,
-                    "assumeNewlineDelimited": false,
-                    "useJsonNodeReader": false
+                    "type": "json"
                 },
                 "replicas": 1,
                 "taskCount": 1,
@@ -2534,10 +2504,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
         "ioConfig": {
             "topic": "social_media",
             "inputFormat": {
-                "type": "json",
-                "keepNullColumns": false,
-                "assumeNewlineDelimited": false,
-                "useJsonNodeReader": false
+                "type": "json"
             },
             "replicas": 1,
             "taskCount": 1,
@@ -2732,10 +2699,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
     "ioConfig": {
         "topic": "social_media",
         "inputFormat": {
-            "type": "json",
-            "keepNullColumns": false,
-            "assumeNewlineDelimited": false,
-            "useJsonNodeReader": false
+            "type": "json"
         },
         "replicas": 1,
         "taskCount": 1,
@@ -2958,10 +2922,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
         "ioConfig": {
             "topic": "social_media",
             "inputFormat": {
-                "type": "json",
-                "keepNullColumns": false,
-                "assumeNewlineDelimited": false,
-                "useJsonNodeReader": false
+                "type": "json"
             },
             "replicas": 1,
             "taskCount": 1,
@@ -3156,10 +3117,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
     "ioConfig": {
         "topic": "social_media",
         "inputFormat": {
-            "type": "json",
-            "keepNullColumns": false,
-            "assumeNewlineDelimited": false,
-            "useJsonNodeReader": false
+            "type": "json"
         },
         "replicas": 1,
         "taskCount": 1,

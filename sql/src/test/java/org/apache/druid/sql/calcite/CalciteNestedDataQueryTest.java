@@ -1314,7 +1314,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestRootSingleTypeArrayStringNulls()
   {
-    cannotVectorize();
     testBuilder()
         .sql("SELECT strings FROM druid.arrays, UNNEST(arrayStringNulls) as u(strings)")
         .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
@@ -1372,7 +1371,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestRootSingleTypeArrayDoubleNulls()
   {
-    cannotVectorize();
     testBuilder()
         .sql("SELECT doubles FROM druid.arrays, UNNEST(arrayDoubleNulls) as u(doubles)")
         .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
@@ -2278,7 +2276,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByRootSingleTypeArrayLongElement()
   {
-    cannotVectorize();
     testBuilder()
         .sql(
             "SELECT "
@@ -2326,7 +2323,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByRootSingleTypeArrayLongElementFiltered()
   {
-    cannotVectorize();
     testBuilder()
         .sql(
             "SELECT "
@@ -2374,7 +2370,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByRootSingleTypeArrayLongElementDefault()
   {
-    cannotVectorize();
     testBuilder()
         .sql(
             "SELECT "
@@ -2690,7 +2685,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByPathSelectorFilterCoalesce()
   {
-    cannotVectorize();
     testQuery(
         "SELECT "
         + "JSON_VALUE(nest, '$.x'), "
@@ -6832,7 +6826,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testJsonQueryDynamicArg()
   {
-    cannotVectorize();
     testQuery(
         "SELECT JSON_PATHS(nester), JSON_QUERY(nester, ARRAY_OFFSET(JSON_PATHS(nester), 0))\n"
         + "FROM druid.nested",
@@ -6877,7 +6870,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testJsonQueryArrays()
   {
-    cannotVectorize();
     testBuilder()
         .sql("SELECT JSON_QUERY_ARRAY(arrayObject, '$') FROM druid.arrays")
         .queryContext(QUERY_CONTEXT_DEFAULT)
@@ -6931,7 +6923,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   {
     // Array complex JSON isn't supported
     msqIncompatible();
-    cannotVectorize();
     testBuilder()
         .sql("SELECT JSON_QUERY_ARRAY(arrayObject, '$.') FROM druid.arrays where arrayObject is null limit 1")
         .queryContext(QUERY_CONTEXT_DEFAULT)
@@ -6971,7 +6962,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestJsonQueryArrays()
   {
-    cannotVectorize();
     testBuilder()
         .sql("SELECT objects FROM druid.arrays, UNNEST(JSON_QUERY_ARRAY(arrayObject, '$')) as u(objects)")
         .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
@@ -7577,6 +7567,38 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                     .add("double", ColumnType.DOUBLE)
                     .add("EXPR$1", ColumnType.LONG)
                     .build()
+    );
+  }
+
+  @Test
+  public void testToJsonString()
+  {
+    testQuery(
+        "SELECT TO_JSON_STRING(nester) FROM druid.nested GROUP BY 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(DATA_SOURCE)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "d0", ColumnType.STRING)
+                            )
+                        )
+                        .setVirtualColumns(
+                            expressionVirtualColumn("v0", "to_json_string(\"nester\")", ColumnType.STRING)
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{NullHandling.defaultStringValue()},
+            new Object[]{"\"hello\""},
+            new Object[]{"2"},
+            new Object[]{"{\"array\":[\"a\",\"b\"],\"n\":{\"x\":\"hello\"}}"},
+            new Object[]{"{\"array\":[\"a\",\"b\"],\"n\":{\"x\":1}}"}
+        ),
+        RowSignature.builder().add("EXPR$0", ColumnType.STRING).build()
     );
   }
 }

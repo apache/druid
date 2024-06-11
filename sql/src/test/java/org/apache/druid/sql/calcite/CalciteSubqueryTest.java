@@ -102,9 +102,9 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testExactCountDistinctUsingSubqueryWithWhereToOuterFilter(String testName, Map<String, Object> queryContext)
   {
-    // Cannot vectorize topN operator.
-    cannotVectorize();
-
+    if (!queryContext.containsKey(QueryContexts.MAX_SUBQUERY_BYTES_KEY)) {
+      cannotVectorize();
+    }
     testQuery(
         "SELECT\n"
         + "  SUM(cnt),\n"
@@ -373,8 +373,9 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testGroupByWithPostAggregatorReferencingTimeFloorColumnOnTimeseries(String testName, Map<String, Object> queryContext)
   {
-    cannotVectorize();
-
+    if (!queryContext.containsKey(QueryContexts.MAX_SUBQUERY_BYTES_KEY)) {
+      cannotVectorize();
+    }
     testQuery(
         "SELECT TIME_FORMAT(\"date\", 'yyyy-MM'), SUM(x)\n"
         + "FROM (\n"
@@ -536,9 +537,9 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testMinMaxAvgDailyCountWithLimit(String testName, Map<String, Object> queryContext)
   {
-    // Cannot vectorize due to virtual columns.
-    cannotVectorize();
-
+    if (!queryContext.containsKey(QueryContexts.MAX_SUBQUERY_BYTES_KEY)) {
+      cannotVectorize();
+    }
     testQuery(
         "SELECT * FROM ("
         + "  SELECT max(cnt), min(cnt), avg(cnt), TIME_EXTRACT(max(t), 'EPOCH') last_time, count(1) num_days FROM (\n"
@@ -781,8 +782,9 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testUseTimeFloorInsteadOfGranularityOnJoinResult(String testName, Map<String, Object> queryContext)
   {
-    cannotVectorize();
-
+    if (!queryContext.containsKey(QueryContexts.MAX_SUBQUERY_BYTES_KEY)) {
+      cannotVectorize();
+    }
     testQuery(
         "WITH main AS (SELECT * FROM foo LIMIT 2)\n"
         + "SELECT TIME_FLOOR(__time, 'PT1H') AS \"time\", dim1, COUNT(*)\n"
@@ -901,9 +903,9 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testUsingSubqueryWithLimit(String testName, Map<String, Object> queryContext)
   {
-    // Cannot vectorize scan query.
-    cannotVectorize();
-
+    if (!queryContext.containsKey(QueryContexts.MAX_SUBQUERY_BYTES_KEY)) {
+      cannotVectorize();
+    }
     testQuery(
         "SELECT COUNT(*) AS cnt FROM ( SELECT * FROM druid.foo LIMIT 10 ) tmpA",
         queryContext,
@@ -986,8 +988,6 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testJoinWithSubqueries(String testName, Map<String, Object> queryContext)
   {
-    cannotVectorize();
-
     List<Object[]> results = new ArrayList<>(ImmutableList.of(
         new Object[]{"", NullHandling.defaultStringValue()},
         new Object[]{"10.1", NullHandling.defaultStringValue()},
