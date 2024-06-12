@@ -20,6 +20,7 @@
 package org.apache.druid.k8s.overlord.taskadapter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import io.fabric8.kubernetes.api.model.EnvVar;
@@ -46,6 +47,8 @@ import org.apache.druid.k8s.overlord.common.Base64Compression;
 import org.apache.druid.k8s.overlord.common.DruidK8sConstants;
 import org.apache.druid.k8s.overlord.common.K8sTaskId;
 import org.apache.druid.k8s.overlord.common.KubernetesOverlordUtils;
+import org.apache.druid.k8s.overlord.execution.KubernetesTaskRunnerDynamicConfig;
+import org.apache.druid.k8s.overlord.execution.PodTemplateSelectStrategy;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.tasklogs.TaskLogs;
 
@@ -83,7 +86,6 @@ public class PodTemplateTaskAdapter implements TaskAdapter
 
   private static final Logger log = new Logger(PodTemplateTaskAdapter.class);
 
-
   private static final String TASK_PROPERTY = IndexingServiceModuleHelper.INDEXER_RUNNER_PROPERTY_PREFIX + ".k8s.podTemplate.";
 
   private final KubernetesTaskRunnerConfig taskRunnerConfig;
@@ -92,6 +94,7 @@ public class PodTemplateTaskAdapter implements TaskAdapter
   private final ObjectMapper mapper;
   private final HashMap<String, PodTemplate> templates;
   private final TaskLogs taskLogs;
+  private final Supplier<KubernetesTaskRunnerDynamicConfig> dynamicConfigRef;
 
   public PodTemplateTaskAdapter(
       KubernetesTaskRunnerConfig taskRunnerConfig,
@@ -99,7 +102,8 @@ public class PodTemplateTaskAdapter implements TaskAdapter
       DruidNode node,
       ObjectMapper mapper,
       Properties properties,
-      TaskLogs taskLogs
+      TaskLogs taskLogs,
+      Supplier<KubernetesTaskRunnerDynamicConfig> dynamicConfigRef
   )
   {
     this.taskRunnerConfig = taskRunnerConfig;
@@ -108,6 +112,7 @@ public class PodTemplateTaskAdapter implements TaskAdapter
     this.mapper = mapper;
     this.templates = initializePodTemplates(properties);
     this.taskLogs = taskLogs;
+    this.dynamicConfigRef = dynamicConfigRef;
   }
 
   /**
@@ -126,7 +131,16 @@ public class PodTemplateTaskAdapter implements TaskAdapter
   @Override
   public Job fromTask(Task task) throws IOException
   {
-    PodTemplate podTemplate = templates.getOrDefault(task.getType(), templates.get("base"));
+    PodTemplateSelectStrategy podTemplateSelectStrategy;
+    KubernetesTaskRunnerDynamicConfig dynamicConfig = dynamicConfigRef.get();
+    if (dynamicConfig == null || dynamicConfig.getPodTemplateSelectStrategy() == null) {
+      podTemplateSelectStrategy = KubernetesTaskRunnerDynamicConfig.DEFAULT_STRATEGY;
+    } else {
+      podTemplateSelectStrategy = dynamicConfig.getPodTemplateSelectStrategy();
+    }
+
+    PodTemplate podTemplate = podTemplateSelectStrategy.getPodTemplateForTask(task, templates);
+
     if (podTemplate == null) {
       throw new ISE("Pod template spec not found for task type [%s]", task.getType());
     }
@@ -152,7 +166,9 @@ public class PodTemplateTaskAdapter implements TaskAdapter
         .endTemplate()
         .withActiveDeadlineSeconds(taskRunnerConfig.getTaskTimeout().toStandardDuration().getStandardSeconds())
         .withBackoffLimit(0)  // druid does not support an external system retrying failed tasks
-        .withTtlSecondsAfterFinished((int) taskRunnerConfig.getTaskCleanupDelay().toStandardDuration().getStandardSeconds())
+        .withTtlSecondsAfterFinished((int) taskRunnerConfig.getTaskCleanupDelay()
+                                                           .toStandardDuration()
+                                                           .getStandardSeconds())
         .endSpec()
         .build();
   }
@@ -320,12 +336,12 @@ public class PodTemplateTaskAdapter implements TaskAdapter
   private Map<String, String> getJobAnnotations(KubernetesTaskRunnerConfig config, Task task)
   {
     return ImmutableMap.<String, String>builder()
-        .putAll(config.getAnnotations())
-        .put(DruidK8sConstants.TASK_ID, task.getId())
-        .put(DruidK8sConstants.TASK_TYPE, task.getType())
-        .put(DruidK8sConstants.TASK_GROUP_ID, task.getGroupId())
-        .put(DruidK8sConstants.TASK_DATASOURCE, task.getDataSource())
-        .build();
+                       .putAll(config.getAnnotations())
+                       .put(DruidK8sConstants.TASK_ID, task.getId())
+                       .put(DruidK8sConstants.TASK_TYPE, task.getType())
+                       .put(DruidK8sConstants.TASK_GROUP_ID, task.getGroupId())
+                       .put(DruidK8sConstants.TASK_DATASOURCE, task.getDataSource())
+                       .build();
   }
 
   private String getDruidLabel(String baseLabel)
