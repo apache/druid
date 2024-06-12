@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { FormGroup, Tag } from '@blueprintjs/core';
+import { FormGroup, Intent, Tag } from '@blueprintjs/core';
 import React, { useState } from 'react';
 
 import { ArrayInput } from '../../components';
@@ -45,6 +45,7 @@ export function SupervisorHandoffDialog(props: SupervisorHandoffDialogProps) {
       confirmButtonText="Handoff supervisor"
       successText="Supervisor handoff has been inititated"
       failText="Could not initiate handoff for supervisor"
+      intent={Intent.PRIMARY}
       onClose={onClose}
       onSuccess={onSuccess}
     >
@@ -55,7 +56,7 @@ export function SupervisorHandoffDialog(props: SupervisorHandoffDialogProps) {
         <ArrayInput
           values={groupIds}
           onChange={v => setGroupIds(v || [])}
-          placeholder="1, 2, 3, ..."
+          placeholder="0, 1, 2, ..."
         />
       </FormGroup>
     </AsyncActionDialog>
