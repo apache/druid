@@ -88,7 +88,7 @@ public class IncrementalIndexAdapter implements IndexableAdapter
 
         // Add 'null' to the dimension's dictionary.
         if (dimIndex >= dims.length || dims[dimIndex] == null) {
-          accessor.indexer.processRowValsToUnsortedEncodedKeyComponent(null, true, dimension.getName());
+          accessor.indexer.processRowValsToUnsortedEncodedKeyComponent(null, true);
           continue;
         }
         final ColumnCapabilities capabilities = dimension.getCapabilities();

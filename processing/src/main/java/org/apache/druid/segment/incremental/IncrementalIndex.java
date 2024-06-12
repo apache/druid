@@ -608,7 +608,7 @@ public abstract class IncrementalIndex implements Iterable<Row>, Closeable, Colu
         Object dimsKey = null;
         try {
           final EncodedKeyComponent<?> encodedKeyComponent
-              = indexer.processRowValsToUnsortedEncodedKeyComponent(row.getRaw(dimension), true, dimension);
+              = indexer.processRowValsToUnsortedEncodedKeyComponent(row.getRaw(dimension), true);
           dimsKey = encodedKeyComponent.getComponent();
           dimsKeySize += encodedKeyComponent.getEffectiveSizeBytes();
         }

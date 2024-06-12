@@ -38,7 +38,6 @@ import java.util.Objects;
 
 public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, Double>
 {
-
   public static final Comparator<Double> DOUBLE_COMPARATOR = Comparators.naturalNullsFirst();
   private final String dimensionName;
   private volatile boolean hasNulls = false;
