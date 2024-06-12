@@ -1217,7 +1217,6 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testSingleValueStringAgg(String testName, Map<String, Object> queryContext)
   {
-    cannotVectorize();
     testBuilder()
         .sql(
             "SELECT count(*) FROM wikipedia where channel = (select channel from wikipedia order by __time desc LIMIT 1 OFFSET 6)"
