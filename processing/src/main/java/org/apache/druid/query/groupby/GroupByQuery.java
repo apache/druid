@@ -468,7 +468,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
   @Override
   public Ordering getResultOrdering()
   {
-    final Ordering<ResultRow> rowOrdering = getRowOrdering(false);
+    final Ordering<ResultRow> rowOrdering = getOrderingAndDimensions(false).getRowOrdering();
 
     return Ordering.from(
         (lhs, rhs) -> {
@@ -565,7 +565,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
    * limit/order spec (unlike non-push down case where the results always use the default natural ascending order),
    * so when merging these partial result streams, the merge needs to use the same ordering to get correct results.
    */
-  private Ordering<ResultRow> getRowOrderingForPushDown(
+  private OrderingAndDimensions getRowOrderingAndDimensionsForPushDown(
       final boolean granular,
       final DefaultLimitSpec limitSpec
   )
@@ -577,6 +577,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
     final List<Boolean> needsReverseList = new ArrayList<>();
     final List<ColumnType> dimensionTypes = new ArrayList<>();
     final List<StringComparator> comparators = new ArrayList<>();
+    final List<DimensionSpec> dimensionsInOrder = new ArrayList<>();
 
     for (OrderByColumnSpec orderSpec : limitSpec.getColumns()) {
       boolean needsReverse = orderSpec.getDirection() != OrderByColumnSpec.Direction.ASCENDING;
@@ -589,6 +590,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
         final ColumnType type = dimensions.get(dimIndex).getOutputType();
         dimensionTypes.add(type);
         comparators.add(orderSpec.getDimensionComparator());
+        dimensionsInOrder.add(dim);
       }
     }
 
@@ -599,13 +601,14 @@ public class GroupByQuery extends BaseQuery<ResultRow>
         final ColumnType type = dimensions.get(i).getOutputType();
         dimensionTypes.add(type);
         comparators.add(StringComparators.NATURAL);
+        dimensionsInOrder.add(dimensions.get(i));
       }
     }
 
     final Comparator<ResultRow> timeComparator = getTimeComparator(granular);
 
     if (timeComparator == null) {
-      return Ordering.from(
+      return new OrderingAndDimensions(Ordering.from(
           (lhs, rhs) -> compareDimsForLimitPushDown(
               orderedFieldNumbers,
               needsReverseList,
@@ -614,9 +617,9 @@ public class GroupByQuery extends BaseQuery<ResultRow>
               lhs,
               rhs
           )
-      );
+      ), dimensionsInOrder);
     } else if (sortByDimsFirst) {
-      return Ordering.from(
+      return new OrderingAndDimensions(Ordering.from(
           (lhs, rhs) -> {
             final int cmp = compareDimsForLimitPushDown(
                 orderedFieldNumbers,
@@ -632,9 +635,9 @@ public class GroupByQuery extends BaseQuery<ResultRow>
 
             return timeComparator.compare(lhs, rhs);
           }
-      );
+      ), dimensionsInOrder);
     } else {
-      return Ordering.from(
+      return new OrderingAndDimensions(Ordering.from(
           (lhs, rhs) -> {
             final int timeCompare = timeComparator.compare(lhs, rhs);
 
@@ -651,15 +654,15 @@ public class GroupByQuery extends BaseQuery<ResultRow>
                 rhs
             );
           }
-      );
+      ), dimensionsInOrder);
     }
   }
 
-  public Ordering<ResultRow> getRowOrdering(final boolean granular)
+  public OrderingAndDimensions getOrderingAndDimensions(final boolean granular)
   {
     if (isApplyLimitPushDown()) {
       if (!DefaultLimitSpec.sortingOrderHasNonGroupingFields((DefaultLimitSpec) limitSpec, dimensions)) {
-        return getRowOrderingForPushDown(granular, (DefaultLimitSpec) limitSpec);
+        return getRowOrderingAndDimensionsForPushDown(granular, (DefaultLimitSpec) limitSpec);
       }
     }
 
@@ -667,9 +670,9 @@ public class GroupByQuery extends BaseQuery<ResultRow>
     final Comparator<ResultRow> timeComparator = getTimeComparator(granular);
 
     if (timeComparator == null) {
-      return Ordering.from((lhs, rhs) -> compareDims(dimensions, lhs, rhs));
+      return new OrderingAndDimensions(Ordering.from((lhs, rhs) -> compareDims(dimensions, lhs, rhs)), dimensions);
     } else if (sortByDimsFirst) {
-      return Ordering.from(
+      return new OrderingAndDimensions(Ordering.from(
           (lhs, rhs) -> {
             final int cmp = compareDims(dimensions, lhs, rhs);
             if (cmp != 0) {
@@ -678,9 +681,9 @@ public class GroupByQuery extends BaseQuery<ResultRow>
 
             return timeComparator.compare(lhs, rhs);
           }
-      );
+      ), dimensions);
     } else {
-      return Ordering.from(
+      return new OrderingAndDimensions(Ordering.from(
           (lhs, rhs) -> {
             final int timeCompare = timeComparator.compare(lhs, rhs);
 
@@ -690,7 +693,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
 
             return compareDims(dimensions, lhs, rhs);
           }
-      );
+      ), dimensions);
     }
   }
 
@@ -921,6 +924,28 @@ public class GroupByQuery extends BaseQuery<ResultRow>
           "'%s' cannot be used as an output name for dimensions, aggregators, or post-aggregators.",
           ColumnHolder.TIME_COLUMN_NAME
       );
+    }
+  }
+
+  public static class OrderingAndDimensions
+  {
+    Ordering<ResultRow> rowOrdering;
+    List<DimensionSpec> dimensions;
+
+    public OrderingAndDimensions(Ordering<ResultRow> rowOrdering, List<DimensionSpec> dimensions)
+    {
+      this.rowOrdering = rowOrdering;
+      this.dimensions = dimensions;
+    }
+
+    public Ordering<ResultRow> getRowOrdering()
+    {
+      return rowOrdering;
+    }
+
+    public List<DimensionSpec> getDimensions()
+    {
+      return dimensions;
     }
   }
 

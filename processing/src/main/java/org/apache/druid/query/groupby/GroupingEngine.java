@@ -201,7 +201,7 @@ public class GroupingEngine
    */
   public Comparator<ResultRow> createResultComparator(Query<ResultRow> queryParam)
   {
-    return ((GroupByQuery) queryParam).getRowOrdering(true);
+    return ((GroupByQuery) queryParam).getOrderingAndDimensions(true).getRowOrdering();
   }
 
   /**
@@ -686,27 +686,16 @@ public class GroupingEngine
           processingConfig.intermediateComputeSizeBytes()
       );
 
-      List<String> queryDimNamesInOrder = baseSubtotalQuery.getDimensions().stream().map(DimensionSpec::getOutputName)
-                                                    .collect(Collectors.toList());
+      List<String> queryDimNamesInOrder = baseSubtotalQuery.getOrderingAndDimensions(false)
+                                                           .getDimensions()
+                                                           .stream()
+                                                           .map(DimensionSpec::getOutputName)
+                                                           .collect(Collectors.toList());
 
       // Only needed to make LimitSpec.filterColumns(..) call later in case base query has a non default LimitSpec.
       Set<String> aggsAndPostAggs = null;
       if (!(baseSubtotalQuery.getLimitSpec() instanceof NoopLimitSpec)) {
         aggsAndPostAggs = getAggregatorAndPostAggregatorNames(baseSubtotalQuery);
-
-        DefaultLimitSpec limitSpec = (DefaultLimitSpec) baseSubtotalQuery.getLimitSpec();
-        if (!limitSpec.getColumns().isEmpty() && limitSpec.isLimited()) {
-          Map<String, String> dimToOutputNames = baseSubtotalQuery.getDimensions()
-                                                                  .stream()
-                                                                  .collect(Collectors.toMap(
-                                                                      DimensionSpec::getDimension,
-                                                                      DimensionSpec::getOutputName
-                                                                  ));
-          queryDimNamesInOrder = limitSpec.getColumns()
-                                          .stream()
-                                          .map(spec -> dimToOutputNames.get(spec.getDimension()))
-                                          .collect(Collectors.toList());
-        }
       }
 
       List<List<String>> subtotals = query.getSubtotalsSpec();
