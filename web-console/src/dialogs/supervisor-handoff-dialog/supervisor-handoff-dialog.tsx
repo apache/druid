@@ -44,7 +44,7 @@ export function SupervisorHandoffDialog(props: SupervisorHandoffDialogProps) {
       }}
       confirmButtonText="Handoff supervisor"
       successText="Supervisor handoff has been initiated"
-      failText="Could not initiate handoff for supervisor"
+      failText="Could not initiate handoff for the supervisor"
       intent={Intent.PRIMARY}
       onClose={onClose}
       onSuccess={onSuccess}
