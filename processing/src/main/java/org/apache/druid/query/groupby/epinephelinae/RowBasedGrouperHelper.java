@@ -171,6 +171,8 @@ public class RowBasedGrouperHelper
    * @param combineBufferHolder holder of combine buffers. Unused if concurrencyHint = -1, and may be null in that case
    * @param concurrencyHint     -1 for single-threaded Grouper, >=1 for concurrent Grouper
    * @param temporaryStorage    temporary storage used for spilling from the Grouper
+   * @param jsonMapper          object mapper used to convert the complex dimensions from generic java objects to the
+   *                            specific class of the complex object
    * @param spillMapper         object mapper used for spilling from the Grouper
    * @param grouperSorter       executor service used for parallel combining. Unused if concurrencyHint = -1, and may
    *                            be null in that case
