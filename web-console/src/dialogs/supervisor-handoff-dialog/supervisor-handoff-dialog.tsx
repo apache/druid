@@ -50,7 +50,7 @@ export function SupervisorHandoffDialog(props: SupervisorHandoffDialogProps) {
       onSuccess={onSuccess}
     >
       <p>
-        Are you sure you want initiate handoff for the supervisor <Tag minimal>{supervisorId}</Tag>?
+        Are you sure you want to initiate handoff for the supervisor <Tag minimal>{supervisorId}</Tag>?
       </p>
       <FormGroup label="Task group IDs">
         <ArrayInput
