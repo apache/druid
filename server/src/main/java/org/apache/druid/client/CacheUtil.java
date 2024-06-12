@@ -34,7 +34,7 @@ import java.nio.ByteBuffer;
 
 public class CacheUtil
 {
-  private static final String RESULT_CACHE_NS = "ResultCacheNS";
+  private static final String RESULT_CACHE_NS = "RES";
 
   public enum ServerType
   {
