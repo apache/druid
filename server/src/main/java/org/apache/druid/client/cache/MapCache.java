@@ -45,7 +45,7 @@ public class MapCache implements Cache
   private final Map<ByteBuffer, byte[]> baseMap;
   private final ByteCountingLRUMap byteCountingLRUMap;
 
-  private final Map<ByteBuffer, byte[]> namespaceId;
+  private final Map<String, byte[]> namespaceId;
   private final AtomicInteger ids;
 
   private final Object clearLock = new Object();
@@ -83,7 +83,7 @@ public class MapCache implements Cache
   {
     final byte[] retVal;
     synchronized (clearLock) {
-      retVal = baseMap.get(computeKey(key));
+      retVal = baseMap.get(computeKey(getNamespaceId(key.namespace), key.key));
     }
     if (retVal == null) {
       missCount.incrementAndGet();
@@ -97,7 +97,7 @@ public class MapCache implements Cache
   public void put(NamedKey key, byte[] value)
   {
     synchronized (clearLock) {
-      baseMap.put(computeKey(key), value);
+      baseMap.put(computeKey(getNamespaceId(key.namespace), key.key), value);
     }
   }
 
@@ -115,7 +115,7 @@ public class MapCache implements Cache
   }
 
   @Override
-  public void close(byte[] namespace)
+  public void close(String namespace)
   {
     byte[] idBytes;
     synchronized (namespaceId) {
@@ -154,29 +154,23 @@ public class MapCache implements Cache
     namespaceId.clear();
   }
 
-  private byte[] getNamespaceId(final byte[] identifier)
+  private byte[] getNamespaceId(final String identifier)
   {
     synchronized (namespaceId) {
-      ByteBuffer key = ByteBuffer.wrap(identifier);
-      byte[] idBytes = namespaceId.get(key);
+      byte[] idBytes = namespaceId.get(identifier);
       if (idBytes != null) {
         return idBytes;
       }
 
       idBytes = Ints.toByteArray(ids.getAndIncrement());
-      namespaceId.put(key, idBytes);
+      namespaceId.put(identifier, idBytes);
       return idBytes;
     }
   }
 
-
-  private ByteBuffer computeKey(NamedKey key)
+  private ByteBuffer computeKey(byte[] idBytes, byte[] key)
   {
-    byte[] namespaceId2 = getNamespaceId(key.namespace);
-    final ByteBuffer retVal = ByteBuffer
-        .allocate(key.key.length + 4)
-        .put(namespaceId2)
-        .put(key.key);
+    final ByteBuffer retVal = ByteBuffer.allocate(key.length + 4).put(idBytes).put(key);
     retVal.rewind();
     return retVal;
   }

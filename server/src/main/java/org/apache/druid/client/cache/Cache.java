@@ -45,7 +45,7 @@ public interface Cache extends Closeable
    */
   Map<NamedKey, byte[]> getBulk(Iterable<NamedKey> keys);
 
-  void close(byte[] namespace);
+  void close(String namespace);
 
   CacheStats getStats();
 
@@ -59,16 +59,10 @@ public interface Cache extends Closeable
 
   class NamedKey
   {
-    public final byte[] namespace;
+    public final String namespace;
     public final byte[] key;
 
-    @Deprecated
     public NamedKey(String namespace, byte[] key)
-    {
-      this(StringUtils.toUtf8(namespace),key);
-    }
-
-    public NamedKey(byte[] namespace, byte[] key)
     {
       Preconditions.checkArgument(namespace != null, "namespace must not be null");
       Preconditions.checkArgument(key != null, "key must not be null");
@@ -78,9 +72,10 @@ public interface Cache extends Closeable
 
     public byte[] toByteArray()
     {
-      return ByteBuffer.allocate(Integer.BYTES + namespace.length + this.key.length)
-          .putInt(namespace.length)
-          .put(namespace)
+      final byte[] nsBytes = StringUtils.toUtf8(this.namespace);
+      return ByteBuffer.allocate(Integer.BYTES + nsBytes.length + this.key.length)
+          .putInt(nsBytes.length)
+          .put(nsBytes)
           .put(this.key).array();
     }
 
