@@ -188,8 +188,7 @@ public class SerializablePairLongStringComplexMetricSerde extends ComplexMetricS
           {
             return a.equals(b);
           }
-        },
-        SerializablePairLongString.class
+        }
     );
   }
 

@@ -156,6 +156,6 @@ public final class NullableTypeStrategy<T> implements Comparator<T>, Hash.Strate
 
   public Class<?> complexDimensionType()
   {
-    return delegate.complexDimensionType();
+    return delegate.getClazz();
   }
 }

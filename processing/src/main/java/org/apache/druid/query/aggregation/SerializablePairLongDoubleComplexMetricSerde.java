@@ -130,8 +130,7 @@ public class SerializablePairLongDoubleComplexMetricSerde extends AbstractSerial
           {
             return a.equals(b);
           }
-        },
-        SerializablePairLongDouble.class
+        }
     );
   }
 }

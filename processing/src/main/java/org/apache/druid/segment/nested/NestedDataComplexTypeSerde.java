@@ -179,8 +179,7 @@ public class NestedDataComplexTypeSerde extends ComplexMetricSerde
           {
             return StructuredData.wrap(a).compareTo(StructuredData.wrap(b)) == 0;
           }
-        },
-        StructuredData.class
+        }
     );
   }
 

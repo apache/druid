@@ -40,24 +40,24 @@ public class ObjectStrategyComplexTypeStrategy<T> implements TypeStrategy<T>
   @Nullable
   private final Hash.Strategy<T> hashStrategy;
   @Nullable
-  private final Class<?> complexDimensionType;
+  private final Class<?> clazz;
 
   public ObjectStrategyComplexTypeStrategy(ObjectStrategy<T> objectStrategy, TypeSignature<?> signature)
   {
-    this(objectStrategy, signature, null, null);
+    this(objectStrategy, signature, null);
   }
 
   public ObjectStrategyComplexTypeStrategy(
       ObjectStrategy<T> objectStrategy,
       TypeSignature<?> signature,
-      @Nullable final Hash.Strategy<T> hashStrategy,
-      @Nullable final Class<?> complexDimensionType
+      @Nullable final Hash.Strategy<T> hashStrategy
   )
   {
     this.objectStrategy = objectStrategy;
     this.typeSignature = signature;
     this.hashStrategy = hashStrategy;
-    this.complexDimensionType = complexDimensionType;
+    //noinspection VariableNotUsedInsideIf
+    this.clazz = hashStrategy == null ? null : objectStrategy.getClazz();
   }
 
   @Override
@@ -138,8 +138,11 @@ public class ObjectStrategyComplexTypeStrategy<T> implements TypeStrategy<T>
   }
 
   @Override
-  public Class<?> complexDimensionType()
+  public Class<?> getClazz()
   {
-    return complexDimensionType;
+    if (clazz == null) {
+      throw DruidException.defensive("hashStrategy not provided");
+    }
+    return clazz;
   }
 }

@@ -131,8 +131,7 @@ public class SerializablePairLongFloatComplexMetricSerde extends AbstractSeriali
           {
             return a.equals(b);
           }
-        },
-        SerializablePairLongFloat.class
+        }
     );
   }
 }
