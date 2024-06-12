@@ -196,9 +196,9 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
       final boolean descending
   )
   {
-    // todo (clint):
-    // this uses the old-school canVectorize implementation instead of delegating to the CursorMaker, because
-    // the cursor maker expects to make cursors one way or another, and so opens stuff, so need to fix some tests
+    // For safety, this uses the old-school canVectorize implementation instead of delegating to the CursorMaker,
+    // because QueryableIndexCursorMaker expects to make cursors one way or another and so opens stuff that must be
+    // cleaned if for some reason a cursor or vector cursor is not constructed
     if (filter != null) {
 
       final boolean filterCanVectorize = filter.canVectorizeMatcher(this);

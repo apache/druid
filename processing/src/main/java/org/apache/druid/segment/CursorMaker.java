@@ -28,17 +28,36 @@ import javax.annotation.Nullable;
 
 public interface CursorMaker
 {
-  default boolean canVectorize()
-  {
-    return false;
-  }
-
+  /**
+   * Create a {@link Sequence} of {@link Cursor} for use with non-vectorized query engines. Each {@link Cursor} of the
+   * sequence corresponds to a {@link org.apache.druid.java.util.common.granularity.Granularity} bucket determined by
+   * {@link CursorBuildSpec#getGranularity()}.
+   * <p>
+   * Consuming this {@link Sequence} will automatically close all resources associated with this {@link CursorMaker}
+   * so calling {@link #cleanup()} is not needed.
+   */
   Sequence<Cursor> makeCursors();
 
+  /**
+   * Create a {@link VectorCursor} for use with vectorized query engines.
+   * <p>
+   * Advancing this {@link VectorCursor} to the end or explicitly calling {@link VectorCursor#close()} will
+   * automatically close all resources associated with this {@link CursorMaker} so calling {@link #cleanup()} is not
+   * needed.
+   */
   @Nullable
   default VectorCursor makeVectorCursor()
   {
     throw new UOE("Cannot vectorize. Check 'canVectorize' before calling 'makeVectorCursor' on %s.", this.getClass().getName());
+  }
+
+  /**
+   * Returns true if this {@link CursorMaker} supports creating vectorized selectors. This operation may acquire
+   * underlying resources, so calling {@link #cleanup()} is necessary if no cursors are created and consumed.
+   */
+  default boolean canVectorize()
+  {
+    return false;
   }
 
   /**

@@ -160,15 +160,7 @@ public class UnnestStorageAdapter implements StorageAdapter
       @Nullable QueryMetrics<?> queryMetrics
   )
   {
-    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
-                                                     .setFilter(filter)
-                                                     .setInterval(interval)
-                                                     .setGranularity(gran)
-                                                     .setVirtualColumns(virtualColumns)
-                                                     .isDescending(descending)
-                                                     .setQueryMetrics(queryMetrics)
-                                                     .build();
-    return asCursorMaker(buildSpec).makeCursors();
+    return delegateMakeCursorToMaker(filter, interval, virtualColumns, gran, descending, queryMetrics);
   }
 
   @Override
