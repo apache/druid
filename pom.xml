@@ -85,7 +85,7 @@
         <avatica.version>1.25.0</avatica.version>
         <avro.version>1.11.3</avro.version>
         <!--
-            The base calcite parser was copied into the project; when updating Calcite run dev/updgrade-calcite-parser to adopt upstream changes
+            The base calcite parser was copied into the project; when updating Calcite run dev/upgrade-calcite-parser to adopt upstream changes
           -->
         <calcite.version>1.37.0</calcite.version>
         <confluent.version>6.2.12</confluent.version>
