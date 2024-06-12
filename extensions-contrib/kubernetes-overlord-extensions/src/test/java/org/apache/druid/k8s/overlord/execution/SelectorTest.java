@@ -33,7 +33,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-public class TaskPropertiesMatcherTest
+public class SelectorTest
 {
 
   @Test
@@ -43,18 +43,17 @@ public class TaskPropertiesMatcherTest
     Map<String, Set<String>> cxtTagsConditions = new HashMap<>();
     cxtTagsConditions.put("tag1", Sets.newHashSet("tag1value"));
 
-    Map<String, Set<String>> taskFieldsConditions = new HashMap<>();
-    taskFieldsConditions.put("datasource", Sets.newHashSet(dataSource));
-
     Task task = NoopTask.forDatasource(dataSource);
     task.addToContext(DruidMetrics.TAGS, ImmutableMap.of("tag1", "tag1value"));
 
-    TaskPropertiesMatcher matcher = new TaskPropertiesMatcher(
+    Selector selector = new Selector(
+        "TestSelector",
         cxtTagsConditions,
-        taskFieldsConditions
+        null,
+        Sets.newHashSet(dataSource)
     );
 
-    Assert.assertTrue(matcher.evaluate(task));
+    Assert.assertTrue(selector.evaluate(task));
   }
 
   @Test
@@ -64,17 +63,16 @@ public class TaskPropertiesMatcherTest
     Map<String, Set<String>> cxtTagsConditions = new HashMap<>();
     cxtTagsConditions.put("nonexistentTag", Sets.newHashSet("tag1value"));
 
-    Map<String, Set<String>> taskFieldsConditions = new HashMap<>();
-    taskFieldsConditions.put("datasource", Sets.newHashSet(dataSource));
-
     Task task = NoopTask.forDatasource(dataSource);
 
-    TaskPropertiesMatcher matcher = new TaskPropertiesMatcher(
+    Selector selector = new Selector(
+        "TestSelector",
         cxtTagsConditions,
-        taskFieldsConditions
+        null,
+        Sets.newHashSet(dataSource)
     );
 
-    Assert.assertFalse(matcher.evaluate(task));
+    Assert.assertFalse(selector.evaluate(task));
   }
 
   @Test
@@ -85,18 +83,17 @@ public class TaskPropertiesMatcherTest
     cxtTagsConditions.put("nonexistentTag", Sets.newHashSet("nonexistentTagValue"));
     cxtTagsConditions.put("tag1", Sets.newHashSet("tag1value"));
 
-    Map<String, Set<String>> taskFieldsConditions = new HashMap<>();
-    taskFieldsConditions.put("datasource", Sets.newHashSet(dataSource));
-
     Task task = NoopTask.forDatasource(dataSource);
     task.addToContext(DruidMetrics.TAGS, ImmutableMap.of("tag1", "tag1value"));
 
-    TaskPropertiesMatcher matcher = new TaskPropertiesMatcher(
+    Selector selector = new Selector(
+        "TestSelector",
         cxtTagsConditions,
-        taskFieldsConditions
+        null,
+        Sets.newHashSet(dataSource)
     );
 
-    Assert.assertFalse(matcher.evaluate(task));
+    Assert.assertFalse(selector.evaluate(task));
   }
 
   @Test
@@ -105,18 +102,17 @@ public class TaskPropertiesMatcherTest
     Map<String, Set<String>> cxtTagsConditions = new HashMap<>();
     cxtTagsConditions.put("tag1", Sets.newHashSet("tag1value"));
 
-    Map<String, Set<String>> taskFieldsConditions = new HashMap<>();
-    taskFieldsConditions.put("datasource", Sets.newHashSet("my_table"));
-
     Task task = NoopTask.forDatasource("another_table");
     task.addToContext(DruidMetrics.TAGS, ImmutableMap.of("tag1", "tag1value"));
 
-    TaskPropertiesMatcher matcher = new TaskPropertiesMatcher(
+    Selector selector = new Selector(
+        "TestSelector",
         cxtTagsConditions,
-        taskFieldsConditions
+        null,
+        Sets.newHashSet("my_table")
     );
 
-    Assert.assertFalse(matcher.evaluate(task));
+    Assert.assertFalse(selector.evaluate(task));
   }
 
   @Test
@@ -125,19 +121,17 @@ public class TaskPropertiesMatcherTest
     Map<String, Set<String>> cxtTagsConditions = new HashMap<>();
     cxtTagsConditions.put("tag1", Sets.newHashSet("tag1value"));
 
-    Map<String, Set<String>> taskFieldsConditions = new HashMap<>();
-    taskFieldsConditions.put("type", Sets.newHashSet(NoopTask.TYPE));
-    taskFieldsConditions.put("datasource", Sets.newHashSet("my_table"));
-
     Task task = NoopTask.forDatasource("another_table");
     task.addToContext(DruidMetrics.TAGS, ImmutableMap.of("tag1", "tag1value"));
 
-    TaskPropertiesMatcher matcher = new TaskPropertiesMatcher(
+    Selector selector = new Selector(
+        "TestSelector",
         cxtTagsConditions,
-        taskFieldsConditions
+        Sets.newHashSet(NoopTask.TYPE),
+        Sets.newHashSet("my_table")
     );
 
-    Assert.assertFalse(matcher.evaluate(task));
+    Assert.assertFalse(selector.evaluate(task));
   }
 
   @Test
@@ -146,12 +140,14 @@ public class TaskPropertiesMatcherTest
     Task task = NoopTask.forDatasource("my_table");
     task.addToContext(DruidMetrics.TAGS, ImmutableMap.of("tag1", "tag1value"));
 
-    TaskPropertiesMatcher matcher = new TaskPropertiesMatcher(
+    Selector selector = new Selector(
+        "TestSelector",
+        null,
         null,
         null
     );
 
-    Assert.assertTrue(matcher.evaluate(task));
+    Assert.assertTrue(selector.evaluate(task));
   }
 
   @Test
@@ -161,18 +157,17 @@ public class TaskPropertiesMatcherTest
     Map<String, Set<String>> cxtTagsConditions = new HashMap<>();
     cxtTagsConditions.put("tag1", Sets.newHashSet("tag1value"));
 
-    Map<String, Set<String>> taskFieldsConditions = new HashMap<>();
-    taskFieldsConditions.put("type", Sets.newHashSet(NoopTask.TYPE));
-
-    TaskPropertiesMatcher matcher = new TaskPropertiesMatcher(
+    Selector selector = new Selector(
+        "TestSelector",
         cxtTagsConditions,
-        taskFieldsConditions
+        Sets.newHashSet(NoopTask.TYPE),
+        Sets.newHashSet("my_table")
     );
 
-    TaskPropertiesMatcher matcher2 = objectMapper.readValue(
-        objectMapper.writeValueAsBytes(matcher),
-        TaskPropertiesMatcher.class
+    Selector selector2 = objectMapper.readValue(
+        objectMapper.writeValueAsBytes(selector),
+        Selector.class
     );
-    Assert.assertEquals(matcher, matcher2);
+    Assert.assertEquals(selector, selector2);
   }
 }

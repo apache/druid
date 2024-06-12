@@ -32,7 +32,7 @@ import java.util.Map;
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = TaskTypePodTemplateSelectStrategy.class)
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "default", value = TaskTypePodTemplateSelectStrategy.class),
-    @JsonSubTypes.Type(name = "taskProperties", value = TaskPropertiesPodTemplateSelectStrategy.class),
+    @JsonSubTypes.Type(name = "selectorBased", value = SelectorBasedPodTemplateSelectStrategy.class),
 })
 public interface PodTemplateSelectStrategy
 {

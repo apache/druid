@@ -223,9 +223,9 @@ The Dynamic Pod Template Selection feature enhances the K8s extension by enablin
 |Property|Description|Default|
 |--------|-----------|-------|
 |`TaskTypePodTemplateSelectStrategy`| This strategy selects pod templates based on task type for execution purposes, implementing the behavior that maps templates to specific task types. | true |
-|`TaskPropertiesPodTemplateSelectStrategy`| This strategy evaluates a series of selectors, known as `templateSelectors`, which are aligned with potential task properties. | false |
+|`SelectorBasedPodTemplateSelectStrategy`| This strategy evaluates a series of selectors, known as `selectors`, which are aligned with potential task properties. | false |
 
-`TaskPropertiesPodTemplateSelectStrategy`, the strategy implementing this new feature, is based on conditional selectors `templateSelectors` that match against task properties. These selectors are ordered in the dynamic configuration, with the first selector given the highest priority during the evaluation process. This means that the selection process uses these ordered conditions to determine a task’s Pod template based on context tags and task fields. The first matching condition immediately determines the Pod template, thereby prioritizing certain configurations over others.
+`SelectorBasedPodTemplateSelectStrategy`, the strategy implementing this new feature, is based on conditional `selectors` that match against top-level keys from the task payload. Currently, it supports matching based on task context tags, task type, and dataSource. These selectors are ordered in the dynamic configuration, with the first selector given the highest priority during the evaluation process. This means that the selection process uses these ordered conditions to determine a task’s Pod template. The first matching condition immediately determines the Pod template, thereby prioritizing certain configurations over others. If no selector matches, it will fall back to an optional `defaultKey` if configured; if there is still no match, it will use the `base` template.
 
 Example Configuration:
 
@@ -236,42 +236,29 @@ We define two template keys in the configuration—`low-throughput` and `medium-
 - Medium Throughput Template: If a task does not meet the low-throughput criteria, the system will then evaluate it against the next selector in order. In this example, if the task type is index_kafka, it will fall into the `medium-throughput` template.
 ```
 {
-   "type":"default",
-   "podTemplateSelectStrategy":{
-      "type":"taskProperties",
-      "templateSelectors":[
-         {
-            "templateKey":"low-throughput",
-            "matcher":{
-               "type":"taskProperties",
-               "context.tags":{
-                  "billingCategory":[
-                     "streaming_ingestion"
-                  ]
-               },
-               "task":{
-                  "datasource":[
-                     "wikipedia"
-                  ]
-               }
-            }
-         },
-         {
-            "templateKey":"medium-throughput",
-            "matcher":{
-               "type":"taskProperties",
-               "task":{
-                  "type":[
-                     "index_kafka"
-                  ]
-               }
-            }
-         }
-      ]
-   }
+  "type": "default",
+  "podTemplateSelectStrategy":
+  {
+    "type": "selectorBased",
+    "selectors": [
+      {
+        "selectionKey": "low-throughput",
+        "context.tags":
+        {
+          "billingCategory": ["streaming_ingestion"]
+        },
+        "dataSource": ["wikipedia"]
+      },
+      {
+        "selectionKey": "medium-throughput",
+        "type": ["index_kafka"]
+      }
+    ],
+    "defaultKey"" "base"
+  }
 }
 ```
-Task specific pod templates can be specified as the runtime property `druid.indexer.runner.k8s.podTemplate.{template}: /path/to/taskSpecificPodSpec.yaml` where {template} is the matched `templateKey` of the `podTemplateSelectStrategy` i.e low-throughput.
+Task specific pod templates can be specified as the runtime property `druid.indexer.runner.k8s.podTemplate.{template}: /path/to/taskSpecificPodSpec.yaml` where {template} is the matched `selectionKey` of the `podTemplateSelectStrategy` i.e low-throughput.
 
 Similar to Overlord dynamic configuration, the following API endpoints are defined to retrieve and manage dynamic configurations of Pod Template Selection config:
 

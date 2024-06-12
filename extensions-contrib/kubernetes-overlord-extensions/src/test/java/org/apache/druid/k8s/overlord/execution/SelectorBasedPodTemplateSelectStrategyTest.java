@@ -38,7 +38,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-public class TaskPropertiesPodTemplateSelectStrategyTest
+public class SelectorBasedPodTemplateSelectStrategyTest
 {
   private Map<String, PodTemplate> templates;
 
@@ -86,55 +86,53 @@ public class TaskPropertiesPodTemplateSelectStrategyTest
   }
 
   @Test(expected = NullPointerException.class)
-  public void shouldThrowNullPointerExceptionWhenTemplateSelectorsAreNull()
+  public void shouldThrowNullPointerExceptionWhenSelectorsAreNull()
   {
-    new TaskPropertiesPodTemplateSelectStrategy(null);
-  }
-
-  @Test(expected = NullPointerException.class)
-  public void shouldThrowNullPointerExceptionWhenTemplateKeyIsNull()
-  {
-    new TaskPropertiesPodTemplateSelectStrategy.TemplateSelector(null, task -> false);
-  }
-
-  @Test(expected = NullPointerException.class)
-  public void shouldThrowNullPointerExceptionWhenMatcherIsNull()
-  {
-    new TaskPropertiesPodTemplateSelectStrategy.TemplateSelector("myTemplate", null);
+    new SelectorBasedPodTemplateSelectStrategy(null, null);
   }
 
   @Test
   public void testGetPodTemplate_ForTask_emptySelectorsFallbackToBaseTemplate()
   {
-    List<TaskPropertiesPodTemplateSelectStrategy.TemplateSelector> emptySelectors = Collections.emptyList();
-    TaskPropertiesPodTemplateSelectStrategy strategy = new TaskPropertiesPodTemplateSelectStrategy(emptySelectors);
+    List<Selector> emptySelectors = Collections.emptyList();
+    SelectorBasedPodTemplateSelectStrategy strategy = new SelectorBasedPodTemplateSelectStrategy(emptySelectors, null);
     Task task = NoopTask.create();
     Assert.assertEquals("base", strategy.getPodTemplateForTask(task, templates).getMetadata().getName());
   }
 
   @Test
-  public void testGetPodTemplate_ForTask_noMatchSelectorsFallbackToBaseTemplate()
+  public void testGetPodTemplate_ForTask_noMatchSelectorsFallbackToBaseTemplateIfNullDefaultKey()
   {
-    TaskPropertiesPodTemplateSelectStrategy.TemplateSelector noMatchSelector = new MockTemplateSelector(false, "mock");
-    List<TaskPropertiesPodTemplateSelectStrategy.TemplateSelector> selectors = Collections.singletonList(noMatchSelector);
-    TaskPropertiesPodTemplateSelectStrategy strategy = new TaskPropertiesPodTemplateSelectStrategy(selectors);
+    Selector noMatchSelector = new MockSelector(false, "mock");
+    List<Selector> selectors = Collections.singletonList(noMatchSelector);
+    SelectorBasedPodTemplateSelectStrategy strategy = new SelectorBasedPodTemplateSelectStrategy(selectors, null);
     Task task = NoopTask.create();
     Assert.assertEquals("base", strategy.getPodTemplateForTask(task, templates).getMetadata().getName());
+  }
+
+  @Test
+  public void testGetPodTemplate_ForTask_noMatchSelectorsFallbackToDefaultKeyTemplate()
+  {
+    Selector noMatchSelector = new MockSelector(false, "mock");
+    List<Selector> selectors = Collections.singletonList(noMatchSelector);
+    SelectorBasedPodTemplateSelectStrategy strategy = new SelectorBasedPodTemplateSelectStrategy(selectors, "match");
+    Task task = NoopTask.create();
+    Assert.assertEquals("match", strategy.getPodTemplateForTask(task, templates).getMetadata().getName());
   }
 
   @Test
   public void testGetPodTemplate_ForTask_withMatchSelectors()
   {
-    TaskPropertiesPodTemplateSelectStrategy.TemplateSelector noMatchSelector = new MockTemplateSelector(
+    Selector noMatchSelector = new MockSelector(
         false,
         "no_match"
     );
-    TaskPropertiesPodTemplateSelectStrategy.TemplateSelector matchSelector = new MockTemplateSelector(true, "match");
-    List<TaskPropertiesPodTemplateSelectStrategy.TemplateSelector> selectors = Lists.newArrayList(
+    Selector matchSelector = new MockSelector(true, "match");
+    List<Selector> selectors = Lists.newArrayList(
         noMatchSelector,
         matchSelector
     );
-    TaskPropertiesPodTemplateSelectStrategy strategy = new TaskPropertiesPodTemplateSelectStrategy(selectors);
+    SelectorBasedPodTemplateSelectStrategy strategy = new SelectorBasedPodTemplateSelectStrategy(selectors, null);
     Task task = NoopTask.create();
     Assert.assertEquals("match", strategy.getPodTemplateForTask(task, templates).getMetadata().getName());
   }
@@ -146,29 +144,37 @@ public class TaskPropertiesPodTemplateSelectStrategyTest
     Map<String, Set<String>> cxtTagsConditions = new HashMap<>();
     cxtTagsConditions.put("tag1", Sets.newHashSet("tag1value"));
 
-    Map<String, Set<String>> taskFieldsConditions = new HashMap<>();
-    taskFieldsConditions.put("type", Sets.newHashSet(NoopTask.TYPE));
-
-    TaskPropertiesMatcher matcher = new TaskPropertiesMatcher(
+    Selector selector = new Selector(
+        "TestSelector",
         cxtTagsConditions,
-        taskFieldsConditions
+        Sets.newHashSet(NoopTask.TYPE),
+        Sets.newHashSet("my_table")
     );
 
-    TaskPropertiesPodTemplateSelectStrategy strategy = new TaskPropertiesPodTemplateSelectStrategy(Collections.singletonList(
-        new TaskPropertiesPodTemplateSelectStrategy.TemplateSelector("TestSelector", matcher)));
+    SelectorBasedPodTemplateSelectStrategy strategy = new SelectorBasedPodTemplateSelectStrategy(
+        Collections.singletonList(selector), "default");
 
-    TaskPropertiesPodTemplateSelectStrategy strategy2 = objectMapper.readValue(
+    SelectorBasedPodTemplateSelectStrategy strategy2 = objectMapper.readValue(
         objectMapper.writeValueAsBytes(strategy),
-        TaskPropertiesPodTemplateSelectStrategy.class
+        SelectorBasedPodTemplateSelectStrategy.class
     );
     Assert.assertEquals(strategy, strategy2);
   }
 
-  static class MockTemplateSelector extends TaskPropertiesPodTemplateSelectStrategy.TemplateSelector
+  static class MockSelector extends Selector
   {
-    MockTemplateSelector(boolean matches, String name)
+    private final boolean matches;
+
+    MockSelector(boolean matches, String name)
     {
-      super(name, task -> matches);
+      super(name, null, null, null);
+      this.matches = matches;
+    }
+
+    @Override
+    public boolean evaluate(final Task task)
+    {
+      return matches;
     }
   }
 }

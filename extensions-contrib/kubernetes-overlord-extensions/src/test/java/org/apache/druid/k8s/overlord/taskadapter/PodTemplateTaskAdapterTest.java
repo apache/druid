@@ -43,8 +43,8 @@ import org.apache.druid.k8s.overlord.common.K8sTaskId;
 import org.apache.druid.k8s.overlord.common.K8sTestUtils;
 import org.apache.druid.k8s.overlord.execution.DefaultKubernetesTaskRunnerDynamicConfig;
 import org.apache.druid.k8s.overlord.execution.KubernetesTaskRunnerDynamicConfig;
-import org.apache.druid.k8s.overlord.execution.TaskPropertiesMatcher;
-import org.apache.druid.k8s.overlord.execution.TaskPropertiesPodTemplateSelectStrategy;
+import org.apache.druid.k8s.overlord.execution.Selector;
+import org.apache.druid.k8s.overlord.execution.SelectorBasedPodTemplateSelectStrategy;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.tasklogs.TaskLogs;
 import org.easymock.EasyMock;
@@ -617,15 +617,10 @@ public class PodTemplateTaskAdapterTest
     Properties props = new Properties();
     props.setProperty("druid.indexer.runner.k8s.podTemplate.base", baseTemplatePath.toString());
     props.setProperty("druid.indexer.runner.k8s.podTemplate.lowThroughput", lowThroughputTemplatePath.toString());
-    dynamicConfigRef = () -> new DefaultKubernetesTaskRunnerDynamicConfig(new TaskPropertiesPodTemplateSelectStrategy(
+    dynamicConfigRef = () -> new DefaultKubernetesTaskRunnerDynamicConfig(new SelectorBasedPodTemplateSelectStrategy(
         Collections.singletonList(
-            new TaskPropertiesPodTemplateSelectStrategy.TemplateSelector(
-                "lowThrougput",
-                new TaskPropertiesMatcher(null, ImmutableMap.of(
-                    "datasource",
-                    Sets.newSet(dataSource)
-                ))
-            ))));
+            new Selector("lowThrougput", null, null, Sets.newSet(dataSource)
+            )), null));
 
     PodTemplateTaskAdapter adapter = new PodTemplateTaskAdapter(
         taskRunnerConfig,
