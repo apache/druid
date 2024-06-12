@@ -137,15 +137,6 @@ public interface DimensionIndexer<
       boolean reportParseExceptions
   );
 
-  default EncodedKeyComponent<EncodedKeyComponentType> processRowValsToUnsortedEncodedKeyComponent(
-      @Nullable Object dimValues,
-      boolean reportParseExceptions,
-      @Nullable String dimension
-  )
-  {
-    return processRowValsToUnsortedEncodedKeyComponent(dimValues, reportParseExceptions);
-  }
-
   /**
    * This method will be called while building an {@link IncrementalIndex} whenever a known dimension column (either
    * through an explicit schema on the ingestion spec, or auto-discovered while processing rows) is absent in any row
