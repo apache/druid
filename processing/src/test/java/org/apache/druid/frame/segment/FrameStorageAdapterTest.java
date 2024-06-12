@@ -56,7 +56,6 @@ import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
-import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -372,8 +371,6 @@ public class FrameStorageAdapterTest
     @Test
     public void test_makeVectorCursor()
     {
-      Assume.assumeTrue(frameAdapter.canVectorize(filter, virtualColumns, descending));
-
       assertVectorCursorsMatch(adapter -> adapter.asCursorMaker(buildSpec));
     }
 
@@ -391,13 +388,18 @@ public class FrameStorageAdapterTest
     private void assertVectorCursorsMatch(final Function<StorageAdapter, CursorMaker> call)
     {
       final CursorMaker maker = call.apply(queryableAdapter);
-      final RowSignature signature = frameAdapter.getRowSignature();
-      final Sequence<List<Object>> queryableRows =
-          FrameTestUtil.readRowsFromVectorCursor(maker.makeVectorCursor(), signature);
       final CursorMaker frameMaker = call.apply(frameAdapter);
-      final Sequence<List<Object>> frameRows =
-          FrameTestUtil.readRowsFromVectorCursor(advanceAndReset(frameMaker.makeVectorCursor()), signature);
-      FrameTestUtil.assertRowsEqual(queryableRows, frameRows);
+      if (frameMaker.canVectorize()) {
+        final RowSignature signature = frameAdapter.getRowSignature();
+        final Sequence<List<Object>> queryableRows =
+            FrameTestUtil.readRowsFromVectorCursor(maker.makeVectorCursor(), signature);
+        final Sequence<List<Object>> frameRows =
+            FrameTestUtil.readRowsFromVectorCursor(advanceAndReset(frameMaker.makeVectorCursor()), signature);
+        FrameTestUtil.assertRowsEqual(queryableRows, frameRows);
+      } else {
+        maker.cleanup();
+        frameMaker.cleanup();
+      }
     }
 
     /**

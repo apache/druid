@@ -159,12 +159,7 @@ public class FrameTestUtil
         final Object expectedValue = expected.get(i);
         final Object actualValue = actual.get(i);
 
-        if (expectedValue instanceof List && actualValue instanceof Object[]) {
-          if (!Objects.deepEquals(expectedValue, Arrays.asList((Object[]) actualValue))) {
-            ok = false;
-            break;
-          }
-        } else if (!Objects.deepEquals(expectedValue, actualValue)) {
+        if (!Objects.deepEquals(expectedValue, actualValue)) {
           ok = false;
           break;
         }
