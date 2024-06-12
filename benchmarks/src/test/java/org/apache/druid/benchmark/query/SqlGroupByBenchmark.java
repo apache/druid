@@ -29,6 +29,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
@@ -90,6 +91,8 @@ public class SqlGroupByBenchmark
     ExpressionProcessing.initializeForTests();
     NestedDataModule.registerHandlersAndSerde();
   }
+
+  private static final Logger log = new Logger(SqlGroupByBenchmark.class);
 
   private static final DruidProcessingConfig PROCESSING_CONFIG = new DruidProcessingConfig()
   {
@@ -349,12 +352,14 @@ public class SqlGroupByBenchmark
 
     try {
       SqlVectorizedExpressionSanityTest.sanityTestVectorizedSqlQueries(
+          engine,
           plannerFactory,
           sqlQuery(groupingDimension)
       );
+      log.info("non-vectorized and vectorized results match");
     }
-    catch (Throwable ignored) {
-      // the show must go on
+    catch (Throwable ex) {
+      log.warn(ex, "non-vectorized and vectorized results do not match");
     }
   }
 
