@@ -45,7 +45,7 @@ public interface Cache extends Closeable
    */
   Map<NamedKey, byte[]> getBulk(Iterable<NamedKey> keys);
 
-  void close(String namespace);
+  void close(byte[] namespace);
 
   CacheStats getStats();
 
