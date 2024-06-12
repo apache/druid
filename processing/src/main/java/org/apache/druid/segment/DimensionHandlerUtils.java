@@ -706,7 +706,6 @@ public final class DimensionHandlerUtils
     }
   }
 
-
   /**
    * Convert a string representing a decimal value to a long.
    * <p>
