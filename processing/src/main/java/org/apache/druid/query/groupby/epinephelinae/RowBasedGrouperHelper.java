@@ -124,7 +124,6 @@ public class RowBasedGrouperHelper
       final DruidProcessingConfig processingConfig,
       final Supplier<ByteBuffer> bufferSupplier,
       final LimitedTemporaryStorage temporaryStorage,
-      final ObjectMapper jsonMapper,
       final ObjectMapper spillMapper,
       final int mergeBufferSize
   )
@@ -138,7 +137,6 @@ public class RowBasedGrouperHelper
         null,
         SINGLE_THREAD_CONCURRENCY_HINT,
         temporaryStorage,
-        jsonMapper,
         spillMapper,
         null,
         UNKNOWN_THREAD_PRIORITY,
@@ -171,8 +169,6 @@ public class RowBasedGrouperHelper
    * @param combineBufferHolder holder of combine buffers. Unused if concurrencyHint = -1, and may be null in that case
    * @param concurrencyHint     -1 for single-threaded Grouper, >=1 for concurrent Grouper
    * @param temporaryStorage    temporary storage used for spilling from the Grouper
-   * @param jsonMapper          object mapper used to convert the complex dimensions from generic java objects to the
-   *                            specific class of the complex object
    * @param spillMapper         object mapper used for spilling from the Grouper
    * @param grouperSorter       executor service used for parallel combining. Unused if concurrencyHint = -1, and may
    *                            be null in that case
@@ -190,7 +186,6 @@ public class RowBasedGrouperHelper
       @Nullable final ReferenceCountingResourceHolder<ByteBuffer> combineBufferHolder,
       final int concurrencyHint,
       final LimitedTemporaryStorage temporaryStorage,
-      final ObjectMapper jsonMapper,
       final ObjectMapper spillMapper,
       @Nullable final ListeningExecutorService grouperSorter,
       final int priority,
@@ -314,8 +309,7 @@ public class RowBasedGrouperHelper
         combining,
         includeTimestamp,
         columnSelectorFactory,
-        valueTypes,
-        jsonMapper
+        valueTypes
     );
 
     final Predicate<ResultRow> rowPredicate;
@@ -515,15 +509,14 @@ public class RowBasedGrouperHelper
       final boolean combining,
       final boolean includeTimestamp,
       final ColumnSelectorFactory columnSelectorFactory,
-      final List<ColumnType> valueTypes,
-      final ObjectMapper objectMapper
+      final List<ColumnType> valueTypes
   )
   {
     final TimestampExtractFunction timestampExtractFn = includeTimestamp ?
                                                         makeTimestampExtractFunction(query, combining) :
                                                         null;
 
-    final Function<Object, Object>[] valueConvertFns = makeValueConvertFunctions(valueTypes, objectMapper);
+    final Function<Object, Object>[] valueConvertFns = makeValueConvertFunctions(valueTypes);
 
     if (!combining) {
       final Supplier<Object>[] inputRawSuppliers = getValueSuppliersForDimensions(
@@ -808,22 +801,14 @@ public class RowBasedGrouperHelper
   }
 
   @SuppressWarnings("unchecked")
-  private static Function<Object, Object>[] makeValueConvertFunctions(
-      final List<ColumnType> valueTypes,
-      final ObjectMapper objectMapper
-  )
+  private static Function<Object, Object>[] makeValueConvertFunctions(final List<ColumnType> valueTypes)
   {
     final Function<Object, Object>[] functions = new Function[valueTypes.size()];
     for (int i = 0; i < functions.length; i++) {
       // Subquery post-aggs aren't added to the rowSignature (see rowSignatureFor() in GroupByQueryHelper) because
       // their types aren't known, so default to String handling.
       final ColumnType type = valueTypes.get(i) == null ? ColumnType.STRING : valueTypes.get(i);
-      if (type.is(ValueType.COMPLEX)) {
-        Class dimensionClass = type.getNullableStrategy().complexDimensionType();
-        functions[i] = input -> objectMapper.convertValue(input, dimensionClass);
-      } else {
-        functions[i] = input -> DimensionHandlerUtils.convertObjectToType(input, type);
-      }
+      functions[i] = input -> DimensionHandlerUtils.convertObjectToType(input, type);
     }
     return functions;
   }

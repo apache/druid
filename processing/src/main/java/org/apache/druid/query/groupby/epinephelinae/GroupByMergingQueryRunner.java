@@ -100,7 +100,6 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
   private final QueryProcessingPool queryProcessingPool;
   private final QueryWatcher queryWatcher;
   private final int concurrencyHint;
-  private final ObjectMapper jsonMapper;
   private final ObjectMapper spillMapper;
   private final String processingTmpDir;
   private final int mergeBufferSize;
@@ -114,7 +113,6 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
       GroupByResourcesReservationPool groupByResourcesReservationPool,
       int concurrencyHint,
       int mergeBufferSize,
-      ObjectMapper jsonMapper,
       ObjectMapper spillMapper,
       String processingTmpDir
   )
@@ -126,7 +124,6 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
     this.queryables = Iterables.unmodifiableIterable(Iterables.filter(queryables, Predicates.notNull()));
     this.groupByResourcesReservationPool = groupByResourcesReservationPool;
     this.concurrencyHint = concurrencyHint;
-    this.jsonMapper = jsonMapper;
     this.spillMapper = spillMapper;
     this.processingTmpDir = processingTmpDir;
     this.mergeBufferSize = mergeBufferSize;
@@ -213,7 +210,6 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
                       combineBufferHolder,
                       concurrencyHint,
                       temporaryStorage,
-                      jsonMapper,
                       spillMapper,
                       queryProcessingPool, // Passed as executor service
                       priority,

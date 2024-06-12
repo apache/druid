@@ -448,7 +448,6 @@ public class GroupingEngine
         groupByResourcesReservationPool,
         processingConfig.getNumThreads(),
         processingConfig.intermediateComputeSizeBytes(),
-        jsonMapper,
         spillMapper,
         processingConfig.getTmpDir()
     );
@@ -601,7 +600,6 @@ public class GroupingEngine
           configSupplier.get(),
           processingConfig,
           resource,
-          jsonMapper,
           spillMapper,
           processingConfig.getTmpDir(),
           processingConfig.intermediateComputeSizeBytes()
@@ -683,7 +681,6 @@ public class GroupingEngine
           configSupplier.get(),
           processingConfig,
           resource,
-          jsonMapper,
           spillMapper,
           processingConfig.getTmpDir(),
           processingConfig.intermediateComputeSizeBytes()
@@ -747,7 +744,6 @@ public class GroupingEngine
               configSupplier.get(),
               processingConfig,
               resource,
-              jsonMapper,
               spillMapper,
               processingConfig.getTmpDir(),
               processingConfig.intermediateComputeSizeBytes()

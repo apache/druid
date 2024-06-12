@@ -154,7 +154,7 @@ public final class NullableTypeStrategy<T> implements Comparator<T>, Hash.Strate
     return b != null && delegate.equals(a, b);
   }
 
-  public Class<?> complexDimensionType()
+  public Class<?> getClazz()
   {
     return delegate.getClazz();
   }

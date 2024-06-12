@@ -520,7 +520,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
                   dimensionOutputType
               );
             }
-            classes[i] = dimensionOutputType.getNullableStrategy().complexDimensionType();
+            classes[i] = dimensionOutputType.getNullableStrategy().getClazz();
           } else {
             classes[i] = Object.class;
           }
