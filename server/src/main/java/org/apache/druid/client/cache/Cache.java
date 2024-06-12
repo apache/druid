@@ -59,10 +59,16 @@ public interface Cache extends Closeable
 
   class NamedKey
   {
-    public final String namespace;
+    public final byte[] namespace;
     public final byte[] key;
 
+    @Deprecated
     public NamedKey(String namespace, byte[] key)
+    {
+      this(StringUtils.toUtf8(namespace),key);
+    }
+
+    public NamedKey(byte[] namespace, byte[] key)
     {
       Preconditions.checkArgument(namespace != null, "namespace must not be null");
       Preconditions.checkArgument(key != null, "key must not be null");
@@ -72,10 +78,9 @@ public interface Cache extends Closeable
 
     public byte[] toByteArray()
     {
-      final byte[] nsBytes = StringUtils.toUtf8(this.namespace);
-      return ByteBuffer.allocate(Integer.BYTES + nsBytes.length + this.key.length)
-          .putInt(nsBytes.length)
-          .put(nsBytes)
+      return ByteBuffer.allocate(Integer.BYTES + namespace.length + this.key.length)
+          .putInt(namespace.length)
+          .put(namespace)
           .put(this.key).array();
     }
 
