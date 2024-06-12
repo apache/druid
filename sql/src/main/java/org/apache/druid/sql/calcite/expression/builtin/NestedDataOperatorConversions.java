@@ -721,7 +721,7 @@ public class NestedDataOperatorConversions
 
   public static class JsonObjectOperatorConversion implements SqlOperatorConversion
   {
-    private static final String FUNCTION_NAME = "json_object";
+    private static final String FUNCTION_NAME = "JSON_OBJECT";
     private static final SqlFunction SQL_FUNCTION = OperatorConversions
         .operatorBuilder(FUNCTION_NAME)
         .operandTypeChecker(OperandTypes.variadic(SqlOperandCountRanges.from(1)))
