@@ -20,12 +20,14 @@
 package org.apache.druid.k8s.overlord;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Supplier;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.k8s.overlord.common.DruidKubernetesClient;
+import org.apache.druid.k8s.overlord.execution.KubernetesTaskRunnerDynamicConfig;
 import org.apache.druid.k8s.overlord.taskadapter.MultiContainerTaskAdapter;
 import org.apache.druid.k8s.overlord.taskadapter.PodTemplateTaskAdapter;
 import org.apache.druid.k8s.overlord.taskadapter.SingleContainerTaskAdapter;
@@ -53,6 +55,7 @@ public class KubernetesTaskRunnerFactoryTest
 
   private DruidKubernetesClient druidKubernetesClient;
   @Mock private ServiceEmitter emitter;
+  @Mock private Supplier<KubernetesTaskRunnerDynamicConfig> dynamicConfigRef;
 
   @Before
   public void setup()
@@ -90,7 +93,8 @@ public class KubernetesTaskRunnerFactoryTest
         taskConfig,
         properties,
         druidKubernetesClient,
-        emitter
+        emitter,
+        dynamicConfigRef
     );
 
     KubernetesTaskRunner expectedRunner = factory.build();
@@ -112,7 +116,8 @@ public class KubernetesTaskRunnerFactoryTest
         taskConfig,
         properties,
         druidKubernetesClient,
-        emitter
+        emitter,
+        dynamicConfigRef
     );
 
     KubernetesTaskRunner runner = factory.build();
@@ -139,7 +144,8 @@ public class KubernetesTaskRunnerFactoryTest
         taskConfig,
         properties,
         druidKubernetesClient,
-        emitter
+        emitter,
+        dynamicConfigRef
     );
 
     KubernetesTaskRunner runner = factory.build();
@@ -164,7 +170,8 @@ public class KubernetesTaskRunnerFactoryTest
         taskConfig,
         props,
         druidKubernetesClient,
-        emitter
+        emitter,
+        dynamicConfigRef
     );
 
     KubernetesTaskRunner runner = factory.build();
@@ -194,7 +201,8 @@ public class KubernetesTaskRunnerFactoryTest
         taskConfig,
         props,
         druidKubernetesClient,
-        emitter
+        emitter,
+        dynamicConfigRef
     );
 
     Assert.assertThrows(
@@ -225,7 +233,8 @@ public class KubernetesTaskRunnerFactoryTest
         taskConfig,
         props,
         druidKubernetesClient,
-        emitter
+        emitter,
+        dynamicConfigRef
     );
 
     KubernetesTaskRunner runner = factory.build();
@@ -250,7 +259,8 @@ public class KubernetesTaskRunnerFactoryTest
         taskConfig,
         props,
         druidKubernetesClient,
-        emitter
+        emitter,
+        dynamicConfigRef
     );
 
     KubernetesTaskRunner runner = factory.build();
@@ -278,7 +288,8 @@ public class KubernetesTaskRunnerFactoryTest
         taskConfig,
         props,
         druidKubernetesClient,
-        emitter
+        emitter,
+        dynamicConfigRef
     );
 
     KubernetesTaskRunner runner = factory.build();

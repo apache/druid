@@ -217,6 +217,59 @@ data:
         druid.peon.mode=remote
         druid.indexer.task.encapsulatedTask=true
 ```
+#### Dynamic Pod Template Selection Config
+The Dynamic Pod Template Selection feature enhances the K8s extension by enabling more flexible and dynamic selection of pod templates based on task properties. This process is governed by the `PodTemplateSelectStrategy`. Below are the two strategies implemented:
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`TaskTypePodTemplateSelectStrategy`| This strategy selects pod templates based on task type for execution purposes, implementing the behavior that maps templates to specific task types. | true |
+|`SelectorBasedPodTemplateSelectStrategy`| This strategy evaluates a series of selectors, known as `selectors`, which are aligned with potential task properties. | false |
+
+`SelectorBasedPodTemplateSelectStrategy`, the strategy implementing this new feature, is based on conditional `selectors` that match against top-level keys from the task payload. Currently, it supports matching based on task context tags, task type, and dataSource. These selectors are ordered in the dynamic configuration, with the first selector given the highest priority during the evaluation process. This means that the selection process uses these ordered conditions to determine a task’s Pod template. The first matching condition immediately determines the Pod template, thereby prioritizing certain configurations over others. If no selector matches, it will fall back to an optional `defaultKey` if configured; if there is still no match, it will use the `base` template.
+
+Example Configuration:
+
+We define two template keys in the configuration—`low-throughput` and `medium-throughput`—each associated with specific task conditions and arranged in a priority order.
+
+- Low Throughput Template: This is the first template evaluated and has the highest priority. Tasks that have a context tag `billingCategory=streaming_ingestion` and a datasource of `wikipedia` will be classified under the `low-throughput` template. This classification directs such tasks to utilize a predefined pod template optimized for low throughput requirements.
+
+- Medium Throughput Template: If a task does not meet the low-throughput criteria, the system will then evaluate it against the next selector in order. In this example, if the task type is index_kafka, it will fall into the `medium-throughput` template.
+```
+{
+  "type": "default",
+  "podTemplateSelectStrategy":
+  {
+    "type": "selectorBased",
+    "selectors": [
+      {
+        "selectionKey": "low-throughput",
+        "context.tags":
+        {
+          "billingCategory": ["streaming_ingestion"]
+        },
+        "dataSource": ["wikipedia"]
+      },
+      {
+        "selectionKey": "medium-throughput",
+        "type": ["index_kafka"]
+      }
+    ],
+    "defaultKey"" "base"
+  }
+}
+```
+Task specific pod templates can be specified as the runtime property `druid.indexer.runner.k8s.podTemplate.{template}: /path/to/taskSpecificPodSpec.yaml` where {template} is the matched `selectionKey` of the `podTemplateSelectStrategy` i.e low-throughput.
+
+Similar to Overlord dynamic configuration, the following API endpoints are defined to retrieve and manage dynamic configurations of Pod Template Selection config:
+
+- Get dynamic configuration:
+`POST` `/druid/indexer/v1/k8s/taskRunner/executionConfig`
+
+- Update dynamic configuration:
+`GET` `/druid/indexer/v1/k8s/taskRunner/executionConfig`
+
+- Get dynamic configuration history:
+`GET` `/druid/indexer/v1/k8s/taskRunner/executionConfig/history`
 
 ### Properties
 |Property| Possible Values | Description                                                                                                                                                                                                                                      |Default|required|

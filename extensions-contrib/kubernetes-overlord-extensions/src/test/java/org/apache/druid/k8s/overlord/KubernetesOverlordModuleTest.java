@@ -19,10 +19,15 @@
 
 package org.apache.druid.k8s.overlord;
 
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.ProvisionException;
+import com.google.inject.TypeLiteral;
+import org.apache.druid.audit.AuditManager;
+import org.apache.druid.common.config.ConfigManagerConfig;
 import org.apache.druid.guice.ConfigModule;
 import org.apache.druid.guice.DruidGuiceExtensions;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
@@ -33,6 +38,8 @@ import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunnerFactory;
 import org.apache.druid.jackson.JacksonModule;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.metadata.MetadataStorageConnector;
+import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.server.DruidNode;
 import org.easymock.EasyMockRunner;
 import org.easymock.Mock;
@@ -55,6 +62,14 @@ public class KubernetesOverlordModuleTest
   private RemoteTaskRunnerFactory remoteTaskRunnerFactory;
   @Mock
   private HttpRemoteTaskRunnerFactory httpRemoteTaskRunnerFactory;
+  @Mock
+  private ConfigManagerConfig configManagerConfig;
+  @Mock
+  private MetadataStorageTablesConfig metadataStorageTablesConfig;
+  @Mock
+  private AuditManager auditManager;
+  @Mock
+  private MetadataStorageConnector metadataStorageConnector;
   private Injector injector;
 
   @Test
@@ -111,6 +126,16 @@ public class KubernetesOverlordModuleTest
               if (isWorkerTypeHttpRemote) {
                 binder.bind(HttpRemoteTaskRunnerFactory.class).toInstance(httpRemoteTaskRunnerFactory);
               }
+              binder.bind(
+                  new TypeLiteral<Supplier<ConfigManagerConfig>>()
+                  {
+                  }).toInstance(Suppliers.ofInstance(configManagerConfig));
+              binder.bind(
+                  new TypeLiteral<Supplier<MetadataStorageTablesConfig>>()
+                  {
+                  }).toInstance(Suppliers.ofInstance(metadataStorageTablesConfig));
+              binder.bind(AuditManager.class).toInstance(auditManager);
+              binder.bind(MetadataStorageConnector.class).toInstance(metadataStorageConnector);
             },
             new ConfigModule(),
             new KubernetesOverlordModule()

@@ -21,6 +21,7 @@ package org.apache.druid.k8s.overlord.taskadapter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
+import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import io.fabric8.kubernetes.api.model.PodTemplate;
 import io.fabric8.kubernetes.api.model.PodTemplateBuilder;
@@ -40,16 +41,20 @@ import org.apache.druid.k8s.overlord.common.Base64Compression;
 import org.apache.druid.k8s.overlord.common.DruidK8sConstants;
 import org.apache.druid.k8s.overlord.common.K8sTaskId;
 import org.apache.druid.k8s.overlord.common.K8sTestUtils;
+import org.apache.druid.k8s.overlord.execution.DefaultKubernetesTaskRunnerDynamicConfig;
+import org.apache.druid.k8s.overlord.execution.KubernetesTaskRunnerDynamicConfig;
+import org.apache.druid.k8s.overlord.execution.Selector;
+import org.apache.druid.k8s.overlord.execution.SelectorBasedPodTemplateSelectStrategy;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.tasklogs.TaskLogs;
 import org.easymock.EasyMock;
-import org.easymock.Mock;
 import org.junit.Assert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mockito;
+import org.mockito.internal.util.collections.Sets;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -71,7 +76,8 @@ public class PodTemplateTaskAdapterTest
   private TaskConfig taskConfig;
   private DruidNode node;
   private ObjectMapper mapper;
-  @Mock private TaskLogs taskLogs;
+  private TaskLogs taskLogs;
+  private Supplier<KubernetesTaskRunnerDynamicConfig> dynamicConfigRef;
 
   @BeforeEach
   public void setup()
@@ -89,6 +95,9 @@ public class PodTemplateTaskAdapterTest
     );
     mapper = new TestUtils().getTestObjectMapper();
     podTemplateSpec = K8sTestUtils.fileToResource("basePodTemplate.yaml", PodTemplate.class);
+
+    taskLogs = EasyMock.createMock(TaskLogs.class);
+    dynamicConfigRef = () -> new DefaultKubernetesTaskRunnerDynamicConfig(KubernetesTaskRunnerDynamicConfig.DEFAULT_STRATEGY);
   }
 
   @Test
@@ -103,7 +112,8 @@ public class PodTemplateTaskAdapterTest
         node,
         mapper,
         new Properties(),
-        taskLogs
+        taskLogs,
+        dynamicConfigRef
     ));
     Assert.assertEquals(exception.getMessage(), "Pod template task adapter requires a base pod template to be specified under druid.indexer.runner.k8s.podTemplate.base");
   }
@@ -125,11 +135,11 @@ public class PodTemplateTaskAdapterTest
         node,
         mapper,
         props,
-        taskLogs
+        taskLogs,
+        dynamicConfigRef
     ));
 
     Assert.assertTrue(exception.getMessage().contains("Failed to load pod template file for"));
-
   }
 
   @Test
@@ -147,7 +157,8 @@ public class PodTemplateTaskAdapterTest
         node,
         mapper,
         props,
-        taskLogs
+        taskLogs,
+        dynamicConfigRef
     );
 
     Task task = new NoopTask("id", "id", "datasource", 0, 0, null);
@@ -180,7 +191,8 @@ public class PodTemplateTaskAdapterTest
         ),
         mapper,
         props,
-        taskLogs
+        taskLogs,
+        dynamicConfigRef
     );
 
     Task task = new NoopTask("id", "id", "datasource", 0, 0, null);
@@ -207,7 +219,8 @@ public class PodTemplateTaskAdapterTest
         node,
         mapper,
         props,
-        taskLogs
+        taskLogs,
+        dynamicConfigRef
     ));
   }
 
@@ -227,7 +240,8 @@ public class PodTemplateTaskAdapterTest
         node,
         mapper,
         props,
-        taskLogs
+        taskLogs,
+        dynamicConfigRef
     );
 
     Task task = new NoopTask("id", "id", "datasource", 0, 0, null);
@@ -253,7 +267,8 @@ public class PodTemplateTaskAdapterTest
         node,
         mapper,
         props,
-        taskLogs
+        taskLogs,
+        dynamicConfigRef
     );
 
     Task task = new NoopTask(
@@ -286,7 +301,8 @@ public class PodTemplateTaskAdapterTest
         node,
         mapper,
         props,
-        taskLogs
+        taskLogs,
+        dynamicConfigRef
     );
 
     Job job = K8sTestUtils.fileToResource("baseJobWithoutAnnotations.yaml", Job.class);
@@ -309,7 +325,8 @@ public class PodTemplateTaskAdapterTest
         node,
         mapper,
         props,
-        taskLogs
+        taskLogs,
+        dynamicConfigRef
     );
     Job job = new JobBuilder()
         .editSpec().editTemplate().editMetadata()
@@ -333,7 +350,8 @@ public class PodTemplateTaskAdapterTest
         node,
         mapper,
         props,
-        taskLogs
+        taskLogs,
+        dynamicConfigRef
     );
     Job job = new JobBuilder()
         .editSpec().editTemplate().editMetadata()
@@ -357,7 +375,8 @@ public class PodTemplateTaskAdapterTest
         node,
         mapper,
         props,
-        taskLogs
+        taskLogs,
+        dynamicConfigRef
     );
     Job job = new JobBuilder()
         .editSpec().editTemplate().editMetadata()
@@ -383,7 +402,8 @@ public class PodTemplateTaskAdapterTest
         node,
         mapper,
         props,
-        taskLogs
+        taskLogs,
+        dynamicConfigRef
     );
 
     Job baseJob = K8sTestUtils.fileToResource("baseJobWithoutAnnotations.yaml", Job.class);
@@ -415,7 +435,8 @@ public class PodTemplateTaskAdapterTest
         node,
         mapper,
         props,
-        taskLogs
+        taskLogs,
+        dynamicConfigRef
     );
 
     Job job = K8sTestUtils.fileToResource("baseJob.yaml", Job.class);
@@ -446,7 +467,8 @@ public class PodTemplateTaskAdapterTest
         node,
         mapper,
         props,
-        mockTestLogs
+        mockTestLogs,
+        dynamicConfigRef
     );
 
     Job job = K8sTestUtils.fileToResource("expectedNoopJob.yaml", Job.class);
@@ -470,7 +492,8 @@ public class PodTemplateTaskAdapterTest
         node,
         mapper,
         props,
-        taskLogs
+        taskLogs,
+        dynamicConfigRef
     );
 
     Task task = new NoopTask(
@@ -504,7 +527,8 @@ public class PodTemplateTaskAdapterTest
         node,
         mapper,
         props,
-        taskLogs
+        taskLogs,
+        dynamicConfigRef
     );
 
     Task task = EasyMock.mock(Task.class);
@@ -552,7 +576,8 @@ public class PodTemplateTaskAdapterTest
           node,
           mapper,
           props,
-          taskLogs
+          taskLogs,
+          dynamicConfigRef
     );
 
     Task kafkaTask = new NoopTask("id", "id", "datasource", 0, 0, null) {
@@ -565,6 +590,51 @@ public class PodTemplateTaskAdapterTest
 
     Task noopTask = new NoopTask("id", "id", "datasource", 0, 0, null);
     Job actual = adapter.fromTask(kafkaTask);
+    Assert.assertEquals(1, actual.getSpec().getTemplate().getSpec().getVolumes().size(), 1);
+
+    actual = adapter.fromTask(noopTask);
+    Assert.assertEquals(0, actual.getSpec().getTemplate().getSpec().getVolumes().size(), 1);
+  }
+
+  @Test
+  public void test_fromTask_matchPodTemplateBasedOnStrategy() throws IOException
+  {
+    String dataSource = "my_table";
+    Path baseTemplatePath = Files.createFile(tempDir.resolve("base.yaml"));
+    mapper.writeValue(baseTemplatePath.toFile(), podTemplateSpec);
+
+    Path lowThroughputTemplatePath = Files.createFile(tempDir.resolve("low-throughput.yaml"));
+    PodTemplate lowThroughputPodTemplate = new PodTemplateBuilder(podTemplateSpec)
+        .editTemplate()
+        .editSpec()
+        .setNewVolumeLike(0, new VolumeBuilder().withName("volume").build())
+        .endVolume()
+        .endSpec()
+        .endTemplate()
+        .build();
+    mapper.writeValue(lowThroughputTemplatePath.toFile(), lowThroughputPodTemplate);
+
+    Properties props = new Properties();
+    props.setProperty("druid.indexer.runner.k8s.podTemplate.base", baseTemplatePath.toString());
+    props.setProperty("druid.indexer.runner.k8s.podTemplate.lowThroughput", lowThroughputTemplatePath.toString());
+    dynamicConfigRef = () -> new DefaultKubernetesTaskRunnerDynamicConfig(new SelectorBasedPodTemplateSelectStrategy(
+        Collections.singletonList(
+            new Selector("lowThrougput", null, null, Sets.newSet(dataSource)
+            )), null));
+
+    PodTemplateTaskAdapter adapter = new PodTemplateTaskAdapter(
+        taskRunnerConfig,
+        taskConfig,
+        node,
+        mapper,
+        props,
+        taskLogs,
+        dynamicConfigRef
+    );
+
+    Task taskWithMatchedDatasource = new NoopTask("id", "id", dataSource, 0, 0, null);
+    Task noopTask = new NoopTask("id", "id", "datasource", 0, 0, null);
+    Job actual = adapter.fromTask(taskWithMatchedDatasource);
     Assert.assertEquals(1, actual.getSpec().getTemplate().getSpec().getVolumes().size(), 1);
 
     actual = adapter.fromTask(noopTask);
