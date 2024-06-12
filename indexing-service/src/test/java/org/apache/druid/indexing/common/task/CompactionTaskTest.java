@@ -106,6 +106,7 @@ import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.SimpleQueryableIndex;
+import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
@@ -301,7 +302,7 @@ public class CompactionTaskTest
                   binder.bind(RowIngestionMetersFactory.class).toInstance(TEST_UTILS.getRowIngestionMetersFactory());
                   binder.bind(CoordinatorClient.class).toInstance(COORDINATOR_CLIENT);
                   binder.bind(SegmentCacheManagerFactory.class)
-                        .toInstance(new SegmentCacheManagerFactory(objectMapper));
+                        .toInstance(new SegmentCacheManagerFactory(TestIndex.INDEX_IO, objectMapper));
                   binder.bind(AppenderatorsManager.class).toInstance(new TestAppenderatorsManager());
                 }
             )
@@ -391,7 +392,7 @@ public class CompactionTaskTest
         SEGMENT_MAP
     );
     Mockito.when(clock.millis()).thenReturn(0L, 10_000L);
-    segmentCacheManagerFactory = new SegmentCacheManagerFactory(OBJECT_MAPPER);
+    segmentCacheManagerFactory = new SegmentCacheManagerFactory(TestIndex.INDEX_IO, OBJECT_MAPPER);
   }
 
   @Test

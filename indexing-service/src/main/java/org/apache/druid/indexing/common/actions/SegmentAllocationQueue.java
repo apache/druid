@@ -268,7 +268,7 @@ public class SegmentAllocationQueue
       catch (Throwable t) {
         currentBatch.failPendingRequests(t);
         processed = true;
-        log.error(t, "Error while processing batch [%s]", currentBatch.key);
+        log.error(t, "Error while processing batch[%s].", currentBatch.key);
       }
 
       // Requeue if not fully processed yet
@@ -619,7 +619,7 @@ public class SegmentAllocationQueue
     void failPendingRequests(Throwable cause)
     {
       if (!requestToFuture.isEmpty()) {
-        log.warn("Failing [%d] requests in batch [%s], reason [%s].", size(), cause.getMessage(), key);
+        log.warn("Failing [%d] requests in batch[%s], reason[%s].", size(), key, cause.getMessage());
         requestToFuture.values().forEach(future -> future.completeExceptionally(cause));
         requestToFuture.keySet().forEach(
             request -> emitTaskMetric("task/action/failed/count", 1L, request)
