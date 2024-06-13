@@ -32,6 +32,7 @@ import org.apache.commons.compress.compressors.snappy.FramedSnappyCompressorInpu
 import org.apache.commons.compress.compressors.xz.XZCompressorInputStream;
 import org.apache.commons.compress.compressors.zstandard.ZstdCompressorInputStream;
 import org.apache.commons.compress.utils.FileNameUtils;
+import org.apache.druid.data.input.impl.RetryingGZIPInputStream;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IAE;
@@ -46,7 +47,6 @@ import javax.annotation.Nullable;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -123,7 +123,6 @@ public class CompressionUtils
   public static final long COMPRESSED_TEXT_WEIGHT_FACTOR = 4L;
   private static final Logger log = new Logger(CompressionUtils.class);
   private static final int DEFAULT_RETRY_COUNT = 3;
-  private static final int GZIP_BUFFER_SIZE = 8192; // Default is 512
 
   /**
    * Zip the contents of directory into the file indicated by outputZipFile. Sub directories are skipped
@@ -394,7 +393,7 @@ public class CompressionUtils
    */
   public static FileUtils.FileCopyResult gunzip(InputStream in, File outFile) throws IOException
   {
-    try (GZIPInputStream gzipInputStream = gzipInputStream(in)) {
+    try (InputStream gzipInputStream = gzipInputStream(in)) {
       NativeIO.chunkedCopy(gzipInputStream, outFile);
       return new FileUtils.FileCopyResult(outFile);
     }
@@ -409,22 +408,10 @@ public class CompressionUtils
    *
    * @see #decompress(InputStream, String) which should be used instead for streams coming from files
    */
-  public static GZIPInputStream gzipInputStream(final InputStream in) throws IOException
+  public static InputStream gzipInputStream(final InputStream in) throws IOException
   {
-    return new GZIPInputStream(
-        new FilterInputStream(in)
-        {
-          @Override
-          public int available() throws IOException
-          {
-            final int otherAvailable = super.available();
-            // Hack. Docs say available() should return an estimate,
-            // so we estimate about 1KiB to work around available == 0 bug in GZIPInputStream
-            return otherAvailable == 0 ? 1 << 10 : otherAvailable;
-          }
-        },
-        GZIP_BUFFER_SIZE
-    );
+    GZIPInputStream gzipInputStream = RetryingGZIPInputStream.createGZIPInputStream(in);
+    return new RetryingGZIPInputStream(gzipInputStream, in);
   }
 
   /**
@@ -439,7 +426,7 @@ public class CompressionUtils
    */
   public static long gunzip(InputStream in, OutputStream out) throws IOException
   {
-    try (GZIPInputStream gzipInputStream = gzipInputStream(in)) {
+    try (InputStream gzipInputStream = gzipInputStream(in)) {
       final long result = ByteStreams.copy(gzipInputStream, out);
       out.flush();
       return result;

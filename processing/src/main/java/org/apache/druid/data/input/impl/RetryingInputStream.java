@@ -22,7 +22,6 @@ package org.apache.druid.data.input.impl;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
-import com.google.common.base.Throwables;
 import com.google.common.io.CountingInputStream;
 import org.apache.druid.data.input.impl.prefetch.ObjectOpenFunction;
 import org.apache.druid.java.util.common.IAE;
@@ -109,21 +108,7 @@ public class RetryingInputStream<T> extends InputStream
         break;
       }
       catch (Throwable t) {
-        final int nextTry = nTry + 1;
-        if (nextTry < maxTries && retryCondition.apply(t)) {
-          final String message = StringUtils.format("Stream interrupted at position [%d]", offset);
-          try {
-            if (doWait) {
-              RetryUtils.awaitNextRetry(t, message, nextTry, maxTries, false);
-            }
-          }
-          catch (InterruptedException e) {
-            t.addSuppressed(e);
-            throwAsIOException(t);
-          }
-        } else {
-          throwAsIOException(t);
-        }
+        RetryingInputStreamUtils.handleInputStreamOpenError(t, retryCondition, nTry, maxTries, offset, doWait);
       }
     }
   }
@@ -158,17 +143,11 @@ public class RetryingInputStream<T> extends InputStream
       }
       catch (InterruptedException | IOException e) {
         t.addSuppressed(e);
-        throwAsIOException(t);
+        RetryingInputStreamUtils.throwAsIOException(t);
       }
     } else {
-      throwAsIOException(t);
+      RetryingInputStreamUtils.throwAsIOException(t);
     }
-  }
-
-  private static void throwAsIOException(Throwable t) throws IOException
-  {
-    Throwables.propagateIfInstanceOf(t, IOException.class);
-    throw new IOException(t);
   }
 
   @Override
@@ -269,6 +248,22 @@ public class RetryingInputStream<T> extends InputStream
   {
     if (delegate != null) {
       delegate.close();
+    }
+  }
+
+  @Override
+  public synchronized void reset() throws IOException
+  {
+    startOffset = 0;
+    try {
+      delegate.close();
+    }
+    catch (IOException e) {
+      // ignore this exception
+      log.warn(e, "Error while closing the delegate input stream. Discarding.");
+    }
+    finally {
+      delegate = null;
     }
   }
 }
