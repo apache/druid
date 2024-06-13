@@ -40,6 +40,7 @@ import org.apache.calcite.rel.rules.DateRangeRules;
 import org.apache.calcite.rel.rules.JoinPushThroughJoinRule;
 import org.apache.calcite.rel.rules.ProjectMergeRule;
 import org.apache.calcite.rel.rules.PruneEmptyRules;
+import org.apache.calcite.rel.rules.ReduceExpressionsRule.FilterReduceExpressionsRule;
 import org.apache.calcite.runtime.Hook;
 import org.apache.calcite.sql.SqlExplainFormat;
 import org.apache.calcite.sql.SqlExplainLevel;
@@ -71,6 +72,7 @@ import org.apache.druid.sql.calcite.rule.logical.DruidLogicalRules;
 import org.apache.druid.sql.calcite.run.EngineFeature;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
@@ -291,6 +293,7 @@ public class CalciteRulesManager
     // Program that pre-processes the tree before letting the full-on VolcanoPlanner loose.
     final List<Program> prePrograms = new ArrayList<>();
     prePrograms.add(new LoggingProgram("Start", isDebug));
+    prePrograms.add(sqlToRelWorkaroundProgram());
     prePrograms.add(Programs.subQuery(DefaultRelMetadataProvider.INSTANCE));
     prePrograms.add(new LoggingProgram("Finished subquery program", isDebug));
     prePrograms.add(DecorrelateAndTrimFieldsProgram.INSTANCE);
@@ -304,6 +307,12 @@ public class CalciteRulesManager
     }
 
     return Programs.sequence(prePrograms.toArray(new Program[0]));
+  }
+
+  private Program sqlToRelWorkaroundProgram()
+  {
+    Set<FilterReduceExpressionsRule> rules = Collections.singleton(CoreRules.FILTER_REDUCE_EXPRESSIONS);
+    return Programs.hep(rules, true, DefaultRelMetadataProvider.INSTANCE);
   }
 
   /**
