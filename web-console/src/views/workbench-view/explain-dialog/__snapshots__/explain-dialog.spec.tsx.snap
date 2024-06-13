@@ -186,7 +186,7 @@ exports[`ExplainDialog matches snapshot on some data (many queries) 1`] = `
               label="Signature"
             >
               <Blueprint4.InputGroup
-                defaultValue="channel::STRING"
+                defaultValue="channel::STRING->channel"
                 readOnly={true}
               />
             </Blueprint4.FormGroup>
@@ -289,7 +289,7 @@ exports[`ExplainDialog matches snapshot on some data (many queries) 1`] = `
               label="Signature"
             >
               <Blueprint4.InputGroup
-                defaultValue="channel::STRING"
+                defaultValue="channel::STRING->channel"
                 readOnly={true}
               />
             </Blueprint4.FormGroup>
@@ -475,7 +475,7 @@ exports[`ExplainDialog matches snapshot on some data (one query) 1`] = `
         label="Signature"
       >
         <Blueprint4.InputGroup
-          defaultValue="d0::STRING, a0::LONG"
+          defaultValue="d0::STRING->channel, a0::LONG->"Count""
           readOnly={true}
         />
       </Blueprint4.FormGroup>
