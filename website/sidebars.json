@@ -373,7 +373,8 @@
       },
       "items": [
         "release-info/migr-front-coded-dict",
-        "release-info/migr-subquery-limit"
+        "release-info/migr-subquery-limit",
+        "release-info/migr-mvd-array"
       ]
     }
   ]},

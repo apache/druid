@@ -25,14 +25,12 @@ description: How to migrate from legacy features to get the most from Druid upda
 
 In general, when we introduce new features and behaviors into Apache Druid, we make every effort to avoid breaking existing features when introducing new behaviors. However, sometimes there are either bugs or performance limitations with the old behaviors that are not possible to fix in a backward-compatible way. In these cases, we must introduce breaking changes for the future maintainability of Druid. 
 
-The guides in this section outline breaking changes introduced in Druid 25 and later. Each guide provides instructions to migrate to new features.
+The guides in this section outline breaking changes introduced in Druid 25.0.0 and later. Each guide provides instructions to migrate to new features.
 
-<!--
 
 ## Migrate to arrays from multi-value dimensions
 
-Druid now supports SQL-compliant array types. Whenever possible, you should use the array type over multi-value dimensions. See []()>.
--->
+Druid now supports SQL-compliant array types. Whenever possible, you should use the array type over multi-value dimensions. See [Migration guide: MVDs to arrays](migr-mvd-array.md).
 
 ## Migrate to front-coded dictionary encoding
 
@@ -40,4 +38,4 @@ Druid encodes string columns into dictionaries for better compression. Front-cod
 
 ## Migrate to `maxSubqueryBytes` from `maxSubqueryRows`
 
-Druid allows you to set a byte-based limit on subquery size to prevent Brokers from running out of memory when handling large subqueries. The byte-based subquery limit overrides Druid's row-based subquery limit. We recommend that you move towards using byte-based limits starting in Druid 30.0. See [Migration guide: subquery limit](migr-subquery-limit.md) for more information.
+Druid allows you to set a byte-based limit on subquery size to prevent Brokers from running out of memory when handling large subqueries. The byte-based subquery limit overrides Druid's row-based subquery limit. We recommend that you move towards using byte-based limits starting in Druid 30.0.0. See [Migration guide: subquery limit](migr-subquery-limit.md) for more information.
