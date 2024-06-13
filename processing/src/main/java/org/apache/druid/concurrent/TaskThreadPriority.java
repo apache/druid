@@ -65,4 +65,3 @@ public class TaskThreadPriority
     }
     return finalPriority;
   }
-}
