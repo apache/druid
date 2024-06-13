@@ -518,7 +518,7 @@ public final class DimensionHandlerUtils
       case ARRAY:
         return coerceToObjectArrayWithElementCoercionFunction(
             obj,
-            x -> DimensionHandlerUtils.convertObjectToType(x, type.getElementType(), false, fieldName)
+            x -> DimensionHandlerUtils.convertObjectToType(x, type.getElementType(), reportParseExceptions, fieldName)
         );
       case COMPLEX:
         // Can't coerce complex objects, and we shouldn't need to. If in future selectors behave weirdly, or we need to
