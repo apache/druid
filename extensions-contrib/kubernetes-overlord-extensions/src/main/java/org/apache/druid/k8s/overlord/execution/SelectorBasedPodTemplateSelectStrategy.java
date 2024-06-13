@@ -36,19 +36,15 @@ import java.util.Objects;
  */
 public class SelectorBasedPodTemplateSelectStrategy implements PodTemplateSelectStrategy
 {
-  @Nullable
-  private String defaultKey;
-  private List<Selector> selectors;
+  private final List<Selector> selectors;
 
   @JsonCreator
   public SelectorBasedPodTemplateSelectStrategy(
-      @JsonProperty("selectors") List<Selector> selectors,
-      @JsonProperty("defaultKey") @Nullable String defaultKey
+      @JsonProperty("selectors") List<Selector> selectors
   )
   {
     Preconditions.checkNotNull(selectors, "selectors");
     this.selectors = selectors;
-    this.defaultKey = defaultKey;
   }
 
   /**
@@ -64,22 +60,15 @@ public class SelectorBasedPodTemplateSelectStrategy implements PodTemplateSelect
                                   .filter(selector -> selector.evaluate(task))
                                   .findFirst()
                                   .map(Selector::getSelectionKey)
-                                  .orElse(defaultKey);
+                                  .orElse("base");
 
-    return templates.getOrDefault(templateKey, templates.get("base"));
+    return templates.get(templateKey);
   }
 
   @JsonProperty
   public List<Selector> getSelectors()
   {
     return selectors;
-  }
-
-  @Nullable
-  @JsonProperty
-  public String getDefaultKey()
-  {
-    return defaultKey;
   }
 
   @Override
@@ -92,13 +81,13 @@ public class SelectorBasedPodTemplateSelectStrategy implements PodTemplateSelect
       return false;
     }
     SelectorBasedPodTemplateSelectStrategy that = (SelectorBasedPodTemplateSelectStrategy) o;
-    return Objects.equals(defaultKey, that.defaultKey) && Objects.equals(selectors, that.selectors);
+    return Objects.equals(selectors, that.selectors);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(defaultKey, selectors);
+    return Objects.hash(selectors);
   }
 
   @Override
@@ -106,7 +95,6 @@ public class SelectorBasedPodTemplateSelectStrategy implements PodTemplateSelect
   {
     return "SelectorBasedPodTemplateSelectStrategy{" +
            "selectors=" + selectors +
-           ", defaultKey=" + defaultKey +
            '}';
   }
 }

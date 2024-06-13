@@ -40,6 +40,275 @@ The extension uses `druid.indexer.runner.capacity` to limit the number of k8s jo
 Other configurations required are:
 `druid.indexer.runner.type: k8s` and `druid.indexer.task.encapsulatedTask: true`
 
+### Dynamic config
+
+Druid operators can dynamically tune certain features within this extension without requiring to restart the service.
+The aspects which can be tuned are
+- [Pod Template Selection](#dynamic-pod-template-selection) if the [custom template pod adapate](#custom-template-pod-adapter) is conifgured
+  
+To use these APIs, a user needs read/write permissions for the CONFIG resource type with name "CONFIG".
+
+#### Get dynamic configuration
+
+Retrieves the current dynamic execution config for the Kubernetes task runner. 
+Returns a JSON object with the dynamic configuration properties.
+
+##### URL
+
+`GET` `/druid/indexer/v1/k8s/taskRunner/executionConfig`
+
+##### Responses
+
+<Tabs>
+
+<TabItem value="1" label="200 SUCCESS">
+
+
+*Successfully retrieved dynamic configuration*
+
+</TabItem>
+</Tabs>
+
+---
+
+##### Sample request
+
+<Tabs>
+
+<TabItem value="2" label="cURL">
+
+
+```shell
+curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/k8s/taskRunner/executionConfig"
+```
+
+</TabItem>
+<TabItem value="3" label="HTTP">
+
+
+```HTTP
+GET /druid/indexer/v1/k8s/taskRunner/executionConfig HTTP/1.1
+Host: http://ROUTER_IP:ROUTER_PORT
+```
+
+</TabItem>
+</Tabs>
+
+##### Sample response
+
+<details>
+<summary>View the response</summary>
+
+```json
+{
+  "type": "default",
+  "podTemplateSelectStrategy":
+  {
+    "type": "selectorBased",
+    "selectors": [
+      {
+        "selectionKey": "podSpec1",
+        "context.tags":
+        {
+          "userProvidedTag": ["tag1", "tag2"]
+        },
+        "dataSource": ["wikipedia"]
+      },
+      {
+        "selectionKey": "podSpec2",
+        "type": ["index_kafka"]
+      }
+    ]
+  }
+}
+```
+</details>
+
+#### Update dynamic configuration
+
+Updates the dynamic configuration for the Kubernetes Task Runner
+
+##### URL
+
+`POST` `/druid/indexer/v1/k8s/taskRunner/executionConfig`
+
+##### Header parameters
+
+The endpoint supports a set of optional header parameters to populate the `author` and `comment` fields in the configuration history.
+
+* `X-Druid-Author`
+  * Type: String
+  * Author of the configuration change.
+* `X-Druid-Comment`
+  * Type: String
+  * Description for the update.
+
+##### Responses
+
+<Tabs>
+
+<TabItem value="4" label="200 SUCCESS">
+
+
+*Successfully updated dynamic configuration*
+
+</TabItem>
+</Tabs>
+
+---
+
+##### Sample request
+
+<Tabs>
+
+<TabItem value="5" label="cURL">
+
+
+```shell
+curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/k8s/taskRunner/executionConfig" \
+--header 'Content-Type: application/json' \
+--data '{
+  "type": "default",
+  "podTemplateSelectStrategy":
+  {
+    "type": "selectorBased",
+    "selectors": [
+      {
+        "selectionKey": "podSpec1",
+        "context.tags":
+        {
+          "userProvidedTag": ["tag1", "tag2"]
+        },
+        "dataSource": ["wikipedia"]
+      },
+      {
+        "selectionKey": "podSpec2",
+        "type": ["index_kafka"]
+      }
+    ]
+  }
+}'
+```
+
+</TabItem>
+<TabItem value="6" label="HTTP">
+
+
+```HTTP
+POST /druid/indexer/v1/k8s/taskRunner/executionConfig HTTP/1.1
+Host: http://ROUTER_IP:ROUTER_PORT
+Content-Type: application/json
+
+{
+  "type": "default",
+  "podTemplateSelectStrategy":
+  {
+    "type": "selectorBased",
+    "selectors": [
+      {
+        "selectionKey": "podSpec1",
+        "context.tags":
+        {
+          "userProvidedTag": ["tag1", "tag2"]
+        },
+        "dataSource": ["wikipedia"]
+      },
+      {
+        "selectionKey": "podSpec2",
+        "type": ["index_kafka"]
+      }
+    ]
+  }
+}
+```
+
+</TabItem>
+</Tabs>
+
+##### Sample response
+
+A successful request returns an HTTP `200 OK` message code and an empty response body.
+
+#### Get dynamic configuration history
+
+Retrieves the history of changes to Kubernetes task runner's dynamic execution config over an interval of time. Returns 
+an empty array if there are no history records available.
+
+##### URL
+
+`GET` `/druid/indexer/v1/k8s/taskRunner/executionConfig/history`
+
+##### Query parameters
+
+The endpoint supports a set of optional query parameters to filter results.
+
+* `interval`
+  * Type: String
+  * Limit the results to the specified time interval in ISO 8601 format delimited with `/`. For example, `2023-07-13/2023-07-19`. The default interval is one week. You can change this period by setting `druid.audit.manager.auditHistoryMillis` in the `runtime.properties` file for the Coordinator.
+
+* `count`
+  * Type: Integer
+  * Limit the number of results to the last `n` entries.
+
+##### Responses
+
+<Tabs>
+
+<TabItem value="1" label="200 SUCCESS">
+
+
+*Successfully retrieved dynamic configuration*
+
+</TabItem>
+</Tabs>
+
+---
+
+##### Sample request
+
+<Tabs>
+
+<TabItem value="2" label="cURL">
+
+
+```shell
+curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/k8s/taskRunner/executionConfig/history"
+```
+
+</TabItem>
+<TabItem value="3" label="HTTP">
+
+
+```HTTP
+GET /druid/indexer/v1/k8s/taskRunner/executionConfig/history HTTP/1.1
+Host: http://ROUTER_IP:ROUTER_PORT
+```
+
+</TabItem>
+</Tabs>
+
+##### Sample response
+
+<details>
+<summary>View the response</summary>
+
+```json
+[
+  {
+    "key": "k8s.taskrunner.config",
+    "type": "k8s.taskrunner.config",
+    "auditInfo": {
+      "author": "",
+      "comment": "",
+      "ip": "127.0.0.1"
+    },
+    "payload": "{\"type\": \"default\",\"podTemplateSelectStrategy\":{\"type\": \"taskType\"}",
+    "auditTime": "2024-06-13T20:59:51.622Z"
+  }
+]
+```
+</details>
+
 ## Pod Adapters
 The logic defining how the pod template is built for your Kubernetes Job depends on which pod adapter you have specified.
 
@@ -90,13 +359,10 @@ The custom template pod adapter allows you to specify a pod template file per ta
 
 The base pod template must be specified as the runtime property `druid.indexer.runner.k8s.podTemplate.base: /path/to/basePodSpec.yaml`
 
-Task specific pod templates can be specified as the runtime property `druid.indexer.runner.k8s.podTemplate.{taskType}: /path/to/taskSpecificPodSpec.yaml` where {taskType} is the name of the task type i.e `index_parallel`.
+<details>
+<summary>Example Pod Template that uses the regular druid docker image</summary>
 
-If you are trying to use the default image's environment variable parsing feature to set runtime properties, you need to add a extra escape underscore when specifying pod templates.
-e.g. set the environment variable `druid_indexer_runner_k8s_podTemplate_index__parallel` when setting `druid.indxer.runner.k8s.podTemplate.index_parallel`
-
-The following is an example Pod Template that uses the regular druid docker image.
-```
+```yaml
 apiVersion: "v1"
 kind: "PodTemplate"
 template:
@@ -164,6 +430,7 @@ template:
     - emptyDir: {}
       name: deepstorage-volume
 ```
+</details>
 
 The below runtime properties need to be passed to the Job's peon process.
 
@@ -177,7 +444,10 @@ druid.indexer.task.encapsulatedTask=true
 ```
 
 Any runtime property or JVM config used by the peon process can also be passed. E.G. below is a example of a ConfigMap that can be used to generate the `nodetype-config-volume` mount in the above template.
-```
+
+<details>
+<summary>Example ConfigMap</summary>
+```yaml
 kind: ConfigMap
 metadata:
     name: druid-tiny-cluster-peons-config
@@ -217,59 +487,98 @@ data:
         druid.peon.mode=remote
         druid.indexer.task.encapsulatedTask=true
 ```
-#### Dynamic Pod Template Selection Config
-The Dynamic Pod Template Selection feature enhances the K8s extension by enabling more flexible and dynamic selection of pod templates based on task properties. This process is governed by the `PodTemplateSelectStrategy`. Below are the two strategies implemented:
+</details>
 
-|Property|Description|Default|
-|--------|-----------|-------|
-|`TaskTypePodTemplateSelectStrategy`| This strategy selects pod templates based on task type for execution purposes, implementing the behavior that maps templates to specific task types. | true |
-|`SelectorBasedPodTemplateSelectStrategy`| This strategy evaluates a series of selectors, known as `selectors`, which are aligned with potential task properties. | false |
+#### Pod Template Selection
+ 
+The Pod Template Adapapter can select which pod template should be used for a Task using the [Task Runner Execution Config](#dynamic-config)
 
-`SelectorBasedPodTemplateSelectStrategy`, the strategy implementing this new feature, is based on conditional `selectors` that match against top-level keys from the task payload. Currently, it supports matching based on task context tags, task type, and dataSource. These selectors are ordered in the dynamic configuration, with the first selector given the highest priority during the evaluation process. This means that the selection process uses these ordered conditions to determine a task’s Pod template. The first matching condition immediately determines the Pod template, thereby prioritizing certain configurations over others. If no selector matches, it will fall back to an optional `defaultKey` if configured; if there is still no match, it will use the `base` template.
+##### TaskTypePodTemplateSelectStrategy
+This strategy selects pod templates based on task type for execution purposes, implementing the behavior that maps templates to specific task types.
+This is the default pod template selection strategy.
 
-Example Configuration:
+Task specific pod templates can be specified as the runtime property `druid.indexer.runner.k8s.podTemplate.{taskType}: /path/to/taskSpecificPodSpec.yaml` where {taskType} is the name of the task type i.e `index_parallel`.
 
-We define two template keys in the configuration—`low-throughput` and `medium-throughput`—each associated with specific task conditions and arranged in a priority order.
+If you are trying to use the default image's environment variable parsing feature to set runtime properties, you need to add a extra escape underscore when specifying pod templates.
+e.g. set the environment variable `druid_indexer_runner_k8s_podTemplate_index__kafka` when setting `druid.indxer.runner.k8s.podTemplate.index_kafka`
 
-- Low Throughput Template: This is the first template evaluated and has the highest priority. Tasks that have a context tag `billingCategory=streaming_ingestion` and a datasource of `wikipedia` will be classified under the `low-throughput` template. This classification directs such tasks to utilize a predefined pod template optimized for low throughput requirements.
 
-- Medium Throughput Template: If a task does not meet the low-throughput criteria, the system will then evaluate it against the next selector in order. In this example, if the task type is index_kafka, it will fall into the `medium-throughput` template.
+An example config would look like
 ```
+druid.indexer.runner.k8s.podTemplate.base=/path/to/basePodSpec.yaml
+druid.indexer.runner.k8s.podTemplate.index_kafka=/path/to/kafkaPodSpec.yaml
+```
+
+##### SelectorBasedPodTemplateSelectStrategy
+
+This strategy evaluates a series of `selector`s, to determine which pod template should be used to run the task. Pod
+templates are configured in the runtime properties like `druid.indexer.runner.k8s.podTemplate.<selectionKey>=...`.
+
+```json
 {
-  "type": "default",
-  "podTemplateSelectStrategy":
-  {
-    "type": "selectorBased",
-    "selectors": [
+  "type": "selectorBased",
+  "selectors": [
+    {
+      "selectionKey": "podSpec1", 
+      "context.tags":
       {
-        "selectionKey": "low-throughput",
-        "context.tags":
-        {
-          "billingCategory": ["streaming_ingestion"]
-        },
-        "dataSource": ["wikipedia"]
+        "userProvidedTag": ["tag1", "tag2"]
       },
-      {
-        "selectionKey": "medium-throughput",
-        "type": ["index_kafka"]
-      }
-    ],
-    "defaultKey"" "base"
-  }
+      "dataSource": ["wikipedia"]
+    },
+    {
+      "selectionKey": "podSpec2",
+      "type": ["index_kafka"]
+    }
+  ]
 }
 ```
-Task specific pod templates can be specified as the runtime property `druid.indexer.runner.k8s.podTemplate.{template}: /path/to/taskSpecificPodSpec.yaml` where {template} is the matched `selectionKey` of the `podTemplateSelectStrategy` i.e low-throughput.
 
-Similar to Overlord dynamic configuration, the following API endpoints are defined to retrieve and manage dynamic configurations of Pod Template Selection config:
+Selectors are processed in order - so a task will be selected by the first selector in the list that it matches. If a
+task does not match any selector in the list, it will use the `base` pod template.
 
-- Get dynamic configuration:
-`POST` `/druid/indexer/v1/k8s/taskRunner/executionConfig`
+For a task to match a selector, all the conditions within the selector must match. A selector can match on
+- `type`: The type of the task
+- `dataSource`: The destination dataSource of the task.
+- `context.tags`: The tags passed in to the Task's context.
 
-- Update dynamic configuration:
-`GET` `/druid/indexer/v1/k8s/taskRunner/executionConfig`
+##### Example
 
-- Get dynamic configuration history:
-`GET` `/druid/indexer/v1/k8s/taskRunner/executionConfig/history`
+Set the following runtime properties to define the pod specs that can be used by Druid.
+```
+druid.indexer.runner.k8s.podTemplate.base=/path/to/basePodSpec.yaml
+druid.indexer.runner.k8s.podTemplate.podSpec1=/path/to/podSpecWithHighMemRequests.yaml
+druid.indexer.runner.k8s.podTemplate.podSpec2=/path/to/podSpecWithLowCpuRequests.yaml
+```
+
+Set the dynamic execution config to
+```json
+{
+  "type": "selectorBased",
+  "selectors": [
+    {
+      "selectionKey": "podSpec1",
+      "context.tags":
+      {
+        "userProvidedTag": ["tag1", "tag2"]
+      },
+      "dataSource": ["wikipedia"]
+    },
+    {
+      "selectionKey": "podSpec2",
+      "type": ["index_kafka"]
+    }
+  ]
+}
+```
+This will tell Druid to 
+1. Use `podSpecWithHighMemRequests.yaml` when the tags in the task context contains a tag with the key `userProvidedTag` that has the value
+either `tag1` or `tag2` AND the dataSource is `wikipedia`.
+2. Use `podSpecWithLowCpuRequests.yaml` when the task type is `index_kafka`
+3. Use the `basePodSpec.yaml` for all other tasks.
+
+In this example, if there is an `index_kafka` task on the dataSource `wikipedia` with the tag `userProvidedTag: tag1`, 
+the podTemplate `podSpecWithHighMemRequests.yaml` will be selected.
 
 ### Properties
 |Property| Possible Values | Description                                                                                                                                                                                                                                      |Default|required|
