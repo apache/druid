@@ -56,7 +56,7 @@ Druid includes two built-in Authenticators, one of which is used for the default
 
 This built-in Authenticator authenticates all requests, and always directs them to an Authorizer named `allowAll`. It's not intended to be used for anything other than the default unsecured configuration.
 
-```
+```properties
 druid.auth.authorizer.allowAll.type=allowAll
 ```
 
