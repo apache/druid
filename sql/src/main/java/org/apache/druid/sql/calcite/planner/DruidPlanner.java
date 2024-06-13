@@ -380,13 +380,7 @@ public class DruidPlanner implements Closeable
         }
       }
 
-      return DruidException.forPersona(DruidException.Persona.DEVELOPER)
-                           .ofCategory(DruidException.Category.UNCATEGORIZED)
-                           .build(
-                               inner,
-                               "Unable to parse the SQL, unrecognized error from calcite: [%s]",
-                               inner.getMessage()
-                           );
+      return InvalidSqlInput.exception(inner.getMessage());
     }
     catch (RelOptPlanner.CannotPlanException inner) {
       return DruidException.forPersona(DruidException.Persona.USER)
