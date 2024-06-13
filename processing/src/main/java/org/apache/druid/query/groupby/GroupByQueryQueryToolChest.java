@@ -473,13 +473,34 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
     final JsonDeserializer<ResultRow> deserializer = new JsonDeserializer<ResultRow>()
     {
       final Class<?>[] dimensionClasses = createDimensionClasses();
+      boolean containsComplexDimensions = query.getDimensions()
+                                               .stream()
+                                               .anyMatch(
+                                                   dimensionSpec -> dimensionSpec.getOutputType().is(ValueType.COMPLEX)
+                                               );
 
       @Override
       public ResultRow deserialize(final JsonParser jp, final DeserializationContext ctxt) throws IOException
       {
         if (jp.isExpectedStartObjectToken()) {
           final Row row = jp.readValueAs(Row.class);
-          return ResultRow.fromLegacyRow(row, query);
+          final ResultRow resultRow = ResultRow.fromLegacyRow(row, query);
+          if (containsComplexDimensions) {
+            final List<DimensionSpec> queryDimensions = query.getDimensions();
+            for (int i = 0; i < queryDimensions.size(); ++i) {
+              if (queryDimensions.get(i).getOutputType().is(ValueType.COMPLEX)) {
+                final int dimensionIndexInResultRow = query.getResultRowDimensionStart() + i;
+                resultRow.set(
+                    dimensionIndexInResultRow,
+                    objectMapper.convertValue(
+                        resultRow.get(dimensionIndexInResultRow),
+                        dimensionClasses[i]
+                    )
+                );
+              }
+            }
+          }
+          return resultRow;
         } else {
           Object[] objectArray = new Object[query.getResultRowSizeWithPostAggregators()];
 
@@ -520,7 +541,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
                   dimensionOutputType
               );
             }
-            classes[i] = dimensionOutputType.getNullableStrategy().getClazz();
+            classes[i] = nullableTypeStrategy.getClazz();
           } else {
             classes[i] = Object.class;
           }
