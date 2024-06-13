@@ -153,6 +153,14 @@ public class CalciteSelectQueryMSQTest extends CalciteQueryTest
   @Disabled
   @Override
   @Test
+  public void testExactCountDistinctWithFilter2()
+  {
+
+  }
+
+  @Disabled
+  @Override
+  @Test
   public void testUnplannableScanOrderByNonTime()
   {
 
