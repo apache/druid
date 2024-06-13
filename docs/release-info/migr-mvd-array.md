@@ -32,7 +32,7 @@ For new projects and complex use cases involving multiple data types, use arrays
 The following table compares the general behavior between arrays and MVDs.
 For specific query differences between arrays and MVDs, see [Querying arrays and MVDs](#querying-arrays-and-mvds).
 
-|  | Arrays| MVDs |
+|  | Array| MVD |
 |---|---|---|
 | Data types | Supports VARCHAR, BIGINT, and DOUBLE types (ARRAY<STRING\>, ARRAY<LONG\>, ARRAY<DOUBLE\>) | Only supports arrays of strings (VARCHAR) |
 | SQL compliance | Behaves like standard SQL arrays with SQL-compliant behavior | Behaves like SQL VARCHAR rather than standard SQL arrays and requires special SQL functions to achieve array-like behavior. See the [examples](#examples). |
@@ -61,7 +61,7 @@ For example, any of the following filters return the row for the query:
 Note this difference between arrays and MVDs when you write queries that involve filtering or grouping.
 
 When your query applies both filters and grouping, MVDs may return rows that don't seem to match the filter,
-since the grouping occurs after Druid performs the filter. For an example, see [Filter and group by array elements](#filter-and-group-by-array-elements).
+since the grouping occurs after Druid applies the filter. For an example, see [Filter and group by array elements](#filter-and-group-by-array-elements).
 
 ## Examples
 
