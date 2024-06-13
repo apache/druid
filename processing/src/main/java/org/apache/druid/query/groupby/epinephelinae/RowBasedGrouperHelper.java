@@ -801,7 +801,9 @@ public class RowBasedGrouperHelper
   }
 
   @SuppressWarnings("unchecked")
-  private static Function<Object, Object>[] makeValueConvertFunctions(final List<ColumnType> valueTypes)
+  private static Function<Object, Object>[] makeValueConvertFunctions(
+      final List<ColumnType> valueTypes
+  )
   {
     final Function<Object, Object>[] functions = new Function[valueTypes.size()];
     for (int i = 0; i < functions.length; i++) {
