@@ -63,6 +63,12 @@ public class SqlSegmentsMetadataManagerTestBase
       "wikipedia/index/y=2012/m=01/d=05/2012-01-06T22:19:12.565Z/0/index.zip",
       0
   );
+
+  protected void publishSegment(final DataSegment segment) throws IOException
+  {
+    publishSegment(connector, storageConfig, jsonMapper, segment);
+  }
+
   protected static DataSegment createSegment(
       String dataSource,
       String interval,
@@ -86,11 +92,6 @@ public class SqlSegmentsMetadataManagerTestBase
         binaryVersion,
         1234L
     );
-  }
-
-  protected void publishSegment(final DataSegment segment) throws IOException
-  {
-    publishSegment(connector, storageConfig, jsonMapper, segment);
   }
 
   public static void publishSegment(
