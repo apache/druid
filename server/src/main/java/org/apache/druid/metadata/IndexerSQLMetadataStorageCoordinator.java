@@ -1464,7 +1464,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     for (PendingSegmentRecord pendingSegment : pendingSegments) {
       final SegmentIdWithShardSpec segmentId = pendingSegment.getId();
       if (processedSegmentIds.contains(segmentId.toString())) {
-        //continue;
+        continue;
       }
       final Interval interval = segmentId.getInterval();
 
