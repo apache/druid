@@ -360,7 +360,7 @@ export function formatColumnMappingsAndSignature(queryExplanation: QueryExplanat
   return queryExplanation.columnMappings
     .map(({ queryColumn, outputColumn }) => {
       const type = columnNameToType[queryColumn];
-      return `${C.optionalQuotes(queryColumn)}${type ? `::${type}` : ''}->${C.optionalQuotes(
+      return `${C.optionalQuotes(queryColumn)}${type ? `::${type}` : ''}→${C.optionalQuotes(
         outputColumn,
       )}`;
     })
