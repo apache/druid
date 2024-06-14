@@ -1460,8 +1460,12 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         ));
 
     final String now = DateTimes.nowUtc().toString();
+    final Set<String> processedSegmentIds = new HashSet<>();
     for (PendingSegmentRecord pendingSegment : pendingSegments) {
       final SegmentIdWithShardSpec segmentId = pendingSegment.getId();
+      if (processedSegmentIds.contains(segmentId.toString())) {
+        //continue;
+      }
       final Interval interval = segmentId.getInterval();
 
       insertBatch.add()
@@ -1479,6 +1483,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                  .bind("payload", jsonMapper.writeValueAsBytes(segmentId))
                  .bind("task_allocator_id", pendingSegment.getTaskAllocatorId())
                  .bind("upgraded_from_segment_id", pendingSegment.getUpgradedFromSegmentId());
+
+      processedSegmentIds.add(segmentId.toString());
     }
     int[] updated = insertBatch.execute();
     return Arrays.stream(updated).sum();
