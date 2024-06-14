@@ -62,6 +62,10 @@ import org.apache.druid.query.aggregation.GroupingAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMinAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.aggregation.SerializablePairLongDoubleComplexMetricSerde;
+import org.apache.druid.query.aggregation.SerializablePairLongFloatComplexMetricSerde;
+import org.apache.druid.query.aggregation.SerializablePairLongLongComplexMetricSerde;
+import org.apache.druid.query.aggregation.SerializablePairLongStringComplexMetricSerde;
 import org.apache.druid.query.aggregation.any.DoubleAnyAggregatorFactory;
 import org.apache.druid.query.aggregation.any.FloatAnyAggregatorFactory;
 import org.apache.druid.query.aggregation.any.LongAnyAggregatorFactory;
@@ -744,6 +748,134 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{1L, 1.0f, "", "", 2L, 2.0f, "1", 1L, 3.0f, "2", 2L, 4.0f, "21", "21"}
         )
+    );
+  }
+
+  @Test
+  public void testGroupingOnStringSerializablePairLongString()
+  {
+    cannotVectorize();
+    testQuery(
+        "SELECT COUNT(*) FROM (SELECT string_first_added FROM druid.wikipedia_first_last GROUP BY 1)",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(new QueryDataSource(
+                            GroupByQuery.builder()
+                                        .setDataSource("wikipedia_first_last")
+                                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                                        .setGranularity(Granularities.ALL)
+                                        .setDimensions(new DefaultDimensionSpec(
+                                            "string_first_added",
+                                            "d0",
+                                            ColumnType.ofComplex(SerializablePairLongStringComplexMetricSerde.TYPE_NAME)
+                                        ))
+                                        .setContext(QUERY_CONTEXT_DEFAULT)
+                                        .build()
+                        ))
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(ImmutableList.of())
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .setAggregatorSpecs(new CountAggregatorFactory("a0"))
+                        .build()
+        ),
+        ImmutableList.of(new Object[]{39244L})
+    );
+  }
+
+  @Test
+  public void testGroupingOnStringSerializablePairLongLong()
+  {
+    cannotVectorize();
+    testQuery(
+        "SELECT COUNT(*) FROM (SELECT long_first_added FROM druid.wikipedia_first_last GROUP BY 1)",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(new QueryDataSource(
+                            GroupByQuery.builder()
+                                        .setDataSource("wikipedia_first_last")
+                                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                                        .setGranularity(Granularities.ALL)
+                                        .setDimensions(new DefaultDimensionSpec(
+                                            "long_first_added",
+                                            "d0",
+                                            ColumnType.ofComplex(SerializablePairLongLongComplexMetricSerde.TYPE_NAME)
+                                        ))
+                                        .setContext(QUERY_CONTEXT_DEFAULT)
+                                        .build()
+                        ))
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(ImmutableList.of())
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .setAggregatorSpecs(new CountAggregatorFactory("a0"))
+                        .build()
+        ),
+        ImmutableList.of(new Object[]{2315L})
+    );
+  }
+
+  @Test
+  public void testGroupingOnStringSerializablePairLongDouble()
+  {
+    cannotVectorize();
+    testQuery(
+        "SELECT COUNT(*) FROM (SELECT double_first_added FROM druid.wikipedia_first_last GROUP BY 1)",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(new QueryDataSource(
+                            GroupByQuery.builder()
+                                        .setDataSource("wikipedia_first_last")
+                                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                                        .setGranularity(Granularities.ALL)
+                                        .setDimensions(new DefaultDimensionSpec(
+                                            "double_first_added",
+                                            "d0",
+                                            ColumnType.ofComplex(SerializablePairLongDoubleComplexMetricSerde.TYPE_NAME)
+                                        ))
+                                        .setContext(QUERY_CONTEXT_DEFAULT)
+                                        .build()
+                        ))
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(ImmutableList.of())
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .setAggregatorSpecs(new CountAggregatorFactory("a0"))
+                        .build()
+        ),
+        ImmutableList.of(new Object[]{2315L})
+    );
+  }
+
+  @Test
+  public void testGroupingOnStringSerializablePairLongFloat()
+  {
+    cannotVectorize();
+    testQuery(
+        "SELECT COUNT(*) FROM (SELECT float_first_added FROM druid.wikipedia_first_last GROUP BY 1)",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(new QueryDataSource(
+                            GroupByQuery.builder()
+                                        .setDataSource("wikipedia_first_last")
+                                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                                        .setGranularity(Granularities.ALL)
+                                        .setDimensions(new DefaultDimensionSpec(
+                                            "float_first_added",
+                                            "d0",
+                                            ColumnType.ofComplex(SerializablePairLongFloatComplexMetricSerde.TYPE_NAME)
+                                        ))
+                                        .setContext(QUERY_CONTEXT_DEFAULT)
+                                        .build()
+                        ))
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(ImmutableList.of())
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .setAggregatorSpecs(new CountAggregatorFactory("a0"))
+                        .build()
+        ),
+        ImmutableList.of(new Object[]{2315L})
     );
   }
 
