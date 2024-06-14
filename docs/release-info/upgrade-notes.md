@@ -30,9 +30,8 @@ For the full release notes for a specific version, see the [releases page](https
 
 As part of the continued improvements to Druid, we are deprecating certain features and behaviors in favor of newer iterations that offer more robust features and are more aligned with standard ANSI SQL. Many of these new features have been the default for new deployments for several releases.
 
-The following features are deprecated, and we plan to remove support as early as Druid 36.0.0:
+The following features are deprecated, and we currently plan to remove support as early as Druid 32.0.0:
 
-* **Multi-value dimensions**: Druid now offers support for [array types](../querying/sql-data-types.md#arrays). 
 * **Non-SQL compliant null handling**: By default, Druid now differentiates between an empty string and a record with no data as well as between an empty numerical record and `0`. For more information, see [NULL values](../querying/sql-data-types.md#null-values). For a tutorial on the SQL-compliant logic, see the [Null handling tutorial](../tutorials/tutorial-sql-null.md).
 * **Non-strict Boolean handling**: Druid now strictly uses `1` (true) or `0` (false). Previously, true and false could be represented either as `true` and `false` or as `1` and `0`, respectively. In addition, Druid now returns a null value for Boolean comparisons like `True && NULL`. For more information, see [Boolean logic](../querying/sql-data-types.md#boolean-logic). For examples of filters that use the SQL-compliant logic, see [Query filters](../querying/filters.md).
 * **Two-value logic**: By default, Druid now uses three-valued logic for both ingestion and querying. This primarily affects filters using logical NOT operations on columns with NULL values. For more information, see [Boolean logic](../querying/sql-data-types.md#boolean-logic). For examples of filters that use the SQL-compliant logic, see [Query filters](../querying/filters.md).
