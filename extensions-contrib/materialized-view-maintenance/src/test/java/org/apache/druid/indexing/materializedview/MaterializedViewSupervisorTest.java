@@ -64,7 +64,6 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -171,7 +170,7 @@ public class MaterializedViewSupervisorTest
   }
 
   @Test
-  public void testSubmitTasksDoesNotFailIfTaskAlreadyExists() throws IOException
+  public void testSubmitTasksDoesNotFailIfTaskAlreadyExists()
   {
     Set<DataSegment> baseSegments = Sets.newHashSet(createBaseSegments());
     Set<DataSegment> derivativeSegments = Sets.newHashSet(createDerivativeSegments());
@@ -193,7 +192,7 @@ public class MaterializedViewSupervisorTest
   }
 
   @Test
-  public void testSubmitTasksFailsIfTaskCannotBeAdded() throws IOException
+  public void testSubmitTasksFailsIfTaskCannotBeAdded()
   {
     Set<DataSegment> baseSegments = Sets.newHashSet(createBaseSegments());
     Set<DataSegment> derivativeSegments = Sets.newHashSet(createDerivativeSegments());

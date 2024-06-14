@@ -20,226 +20,211 @@
 package org.apache.druid.testsEx.query;
 
 import com.google.inject.Inject;
-import org.apache.commons.io.IOUtils;
-import org.apache.druid.curator.discovery.ServerDiscoveryFactory;
-import org.apache.druid.curator.discovery.ServerDiscoverySelector;
-import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.indexing.kafka.KafkaConsumerConfigs;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.java.util.http.client.HttpClient;
-import org.apache.druid.java.util.http.client.Request;
-import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
-import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
-import org.apache.druid.testing.clients.EventReceiverFirehoseTestClient;
-import org.apache.druid.testing.guice.TestClient;
+import org.apache.druid.testing.IntegrationTestingConfig;
+import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
+import org.apache.druid.testing.clients.OverlordResourceTestClient;
 import org.apache.druid.testing.utils.ITRetryUtil;
-import org.apache.druid.testing.utils.ServerDiscoveryUtil;
+import org.apache.druid.testing.utils.KafkaAdminClient;
+import org.apache.druid.testing.utils.KafkaEventWriter;
+import org.apache.druid.testing.utils.KafkaUtil;
+import org.apache.druid.testing.utils.StreamEventWriter;
+import org.apache.druid.testing.utils.TestQueryHelper;
 import org.apache.druid.testsEx.categories.Query;
 import org.apache.druid.testsEx.config.DruidTestRunner;
-import org.apache.druid.testsEx.indexer.AbstractITBatchIndexTest;
 import org.apache.druid.testsEx.indexer.AbstractIndexerTest;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.joda.time.DateTime;
+import org.joda.time.Interval;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.URL;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
+import java.util.Map;
+import java.util.Properties;
+import java.util.UUID;
+import java.util.function.Function;
 
 @RunWith(DruidTestRunner.class)
 @Category(Query.class)
 public class ITUnionQueryTest extends AbstractIndexerTest
 {
   private static final Logger LOG = new Logger(ITUnionQueryTest.class);
-  private static final String UNION_TASK_RESOURCE = "/indexer/wikipedia_union_index_task.json";
-  private static final String EVENT_RECEIVER_SERVICE_PREFIX = "eventReceiverServiceName";
-  private static final String UNION_DATA_FILE = "/data/union_query/wikipedia_index_data.json";
-  private static final String UNION_QUERIES_RESOURCE = "/queries/union_queries.json";
+  private static final String UNION_SUPERVISOR_TEMPLATE = "/query/union_kafka_supervisor_template.json";
+  private static final String UNION_DATA_FILE = "/query/union_data.json";
+  private static final String UNION_QUERIES_RESOURCE = "/query/union_queries.json";
   private static final String UNION_DATASOURCE = "wikipedia_index_test";
 
   @Inject
-  ServerDiscoveryFactory factory;
-
+  protected CoordinatorResourceTestClient coordinator;
   @Inject
-  @TestClient
-  HttpClient httpClient;
-
+  protected OverlordResourceTestClient indexer;
+  @Inject
+  protected TestQueryHelper queryHelper;
   private String fullDatasourceName;
 
   @Before
-  public void setFullDatasourceName()
+  public void setup()
   {
-    fullDatasourceName = UNION_DATASOURCE + config.getExtraDatasourceNameSuffix();
   }
 
   @Test
-  public void testUnionQuery() throws IOException
+  public void testUnionQuery() throws Exception
   {
-    final int numTasks = 3;
-    final Closer closer = Closer.create();
-    for (int i = 0; i < numTasks; i++) {
-      closer.register(unloader(fullDatasourceName + i));
-    }
-    try {
-      // Load 3 datasources with same dimensions
-      String task = setShutOffTime(
-          getResourceAsString(UNION_TASK_RESOURCE),
-          DateTimes.utc(System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(3))
-      );
-      List<String> taskIDs = new ArrayList<>();
-      for (int i = 0; i < numTasks; i++) {
-        taskIDs.add(
-            indexer.submitTask(
-                withServiceName(
-                    withDataSource(task, fullDatasourceName + i),
-                    EVENT_RECEIVER_SERVICE_PREFIX + i
-                )
-            )
-        );
-      }
-      for (int i = 0; i < numTasks; i++) {
-        postEvents(i);
-      }
+    fullDatasourceName = UNION_DATASOURCE + config.getExtraDatasourceNameSuffix();
+    final String baseName = fullDatasourceName + UUID.randomUUID();
+    KafkaAdminClient streamAdminClient = new KafkaAdminClient(config);
+    List<String> supervisors = new ArrayList<>();
 
-      // wait until all events are ingested
+    final int numDatasources = 3;
+    for (int i = 0; i < numDatasources; i++) {
+      String datasource = baseName + "-" + i;
+      streamAdminClient.createStream(datasource, 1, Collections.emptyMap());
       ITRetryUtil.retryUntil(
-          () -> {
-            for (int i = 0; i < numTasks; i++) {
-              final int countRows = queryHelper.countRows(
-                  fullDatasourceName + i,
-                  Intervals.of("2013-08-31/2013-09-01"),
-                  name -> new LongSumAggregatorFactory(name, "count")
-              );
-
-              // there are 10 rows, but query only covers the first 5
-              if (countRows < 5) {
-                LOG.warn("%d events have been ingested to %s so far", countRows, fullDatasourceName + i);
-                return false;
-              }
-            }
-            return true;
-          },
+          () -> streamAdminClient.isStreamActive(datasource),
           true,
-          1000,
-          100,
-          "Waiting all events are ingested"
+          10000,
+          30,
+          "Wait for stream active"
       );
+      String supervisorSpec = generateStreamIngestionPropsTransform(
+          datasource,
+          datasource,
+          config
+      ).apply(getResourceAsString(UNION_SUPERVISOR_TEMPLATE));
+      LOG.info("supervisorSpec: [%s]\n", supervisorSpec);
+      // Start supervisor
+      String specResponse = indexer.submitSupervisor(supervisorSpec);
+      LOG.info("Submitted supervisor [%s]", specResponse);
+      supervisors.add(specResponse);
 
-      // should hit the queries on realtime task
-      LOG.info("Running Union Queries..");
+      int ctr = 0;
+      try (
+          StreamEventWriter streamEventWriter = new KafkaEventWriter(config, false);
+          BufferedReader reader = new BufferedReader(
+              new InputStreamReader(getResourceAsStream(UNION_DATA_FILE), StandardCharsets.UTF_8)
+          )
+      ) {
+        String line;
+        while ((line = reader.readLine()) != null) {
+          streamEventWriter.write(datasource, StringUtils.toUtf8(line));
+          ctr++;
+        }
+      }
+      final int numWritten = ctr;
 
-      String queryResponseTemplate;
+      LOG.info("Waiting for stream indexing tasks to consume events");
+
+      ITRetryUtil.retryUntilTrue(
+          () ->
+              numWritten == this.queryHelper.countRows(
+                  datasource,
+                  Intervals.ETERNITY,
+                  name -> new LongSumAggregatorFactory(name, "count")
+              ),
+          StringUtils.format(
+              "dataSource[%s] consumed [%,d] events, expected [%,d]",
+              datasource,
+              this.queryHelper.countRows(
+                  datasource,
+                  Intervals.ETERNITY,
+                  name -> new LongSumAggregatorFactory(name, "count")
+              ),
+              numWritten
+          )
+      );
+    }
+
+    String queryResponseTemplate = StringUtils.replace(
+        getResourceAsString(UNION_QUERIES_RESOURCE),
+        "%%DATASOURCE%%",
+        baseName
+    );
+
+    queryHelper.testQueriesFromString(queryResponseTemplate);
+
+
+    for (int i = 0; i < numDatasources; i++) {
+      indexer.terminateSupervisor(supervisors.get(i));
+      streamAdminClient.deleteStream(baseName + "-" + i);
+    }
+
+    for (int i = 0; i < numDatasources; i++) {
+      final int datasourceNumber = i;
+      ITRetryUtil.retryUntil(
+          () -> coordinator.areSegmentsLoaded(baseName + "-" + datasourceNumber),
+          true,
+          10000,
+          10,
+          "Kafka segments loaded"
+      );
+    }
+
+    queryHelper.testQueriesFromString(queryResponseTemplate);
+
+    for (int i = 0; i < numDatasources; i++) {
+      final String datasource = baseName + "-" + i;
+      List<String> intervals = coordinator.getSegmentIntervals(datasource);
+
+      Collections.sort(intervals);
+      String first = intervals.get(0).split("/")[0];
+      String last = intervals.get(intervals.size() - 1).split("/")[1];
+      Interval interval = Intervals.of(first + "/" + last);
+      coordinator.unloadSegmentsForDataSource(baseName + "-" + i);
+      ITRetryUtil.retryUntilFalse(
+          () -> coordinator.areSegmentsLoaded(datasource),
+          "Segment Unloading"
+      );
+      coordinator.deleteSegmentsDataSource(baseName + "-" + i, interval);
+    }
+  }
+
+
+  /**
+   * sad version of
+   * {@link org.apache.druid.tests.indexer.AbstractKafkaIndexingServiceTest#generateStreamIngestionPropsTransform}
+   */
+  private Function<String, String> generateStreamIngestionPropsTransform(
+      String streamName,
+      String fullDatasourceName,
+      IntegrationTestingConfig config
+  )
+  {
+    final Map<String, Object> consumerConfigs = KafkaConsumerConfigs.getConsumerProperties();
+    final Properties consumerProperties = new Properties();
+    consumerProperties.putAll(consumerConfigs);
+    consumerProperties.setProperty("bootstrap.servers", config.getKafkaInternalHost());
+    KafkaUtil.addPropertiesFromTestConfig(config, consumerProperties);
+    return spec -> {
       try {
-        InputStream is = AbstractITBatchIndexTest.class.getResourceAsStream(UNION_QUERIES_RESOURCE);
-        queryResponseTemplate = IOUtils.toString(is, StandardCharsets.UTF_8);
-      }
-      catch (IOException e) {
-        throw new ISE(e, "could not read query file: %s", UNION_QUERIES_RESOURCE);
-      }
-
-      queryResponseTemplate = StringUtils.replace(
-          queryResponseTemplate,
-          "%%DATASOURCE%%",
-          fullDatasourceName
-      );
-
-      this.queryHelper.testQueriesFromString(queryResponseTemplate);
-
-      // wait for the task to complete
-      for (int i = 0; i < numTasks; i++) {
-        indexer.waitUntilTaskCompletes(taskIDs.get(i));
-      }
-      // task should complete only after the segments are loaded by historical node
-      for (int i = 0; i < numTasks; i++) {
-        final int taskNum = i;
-        ITRetryUtil.retryUntil(
-            () -> coordinator.areSegmentsLoaded(fullDatasourceName + taskNum),
-            true,
-            10000,
-            10,
-            "Real-time generated segments loaded"
+        spec = StringUtils.replace(
+            spec,
+            "%%DATASOURCE%%",
+            fullDatasourceName
+        );
+        spec = StringUtils.replace(
+            spec,
+            "%%TOPIC_VALUE%%",
+            streamName
+        );
+        return StringUtils.replace(
+            spec,
+            "%%STREAM_PROPERTIES_VALUE%%",
+            jsonMapper.writeValueAsString(consumerProperties)
         );
       }
-      // run queries on historical nodes
-      this.queryHelper.testQueriesFromString(queryResponseTemplate);
-
-    }
-    catch (Throwable e) {
-      throw closer.rethrow(e);
-    }
-    finally {
-      closer.close();
-    }
-  }
-
-  private String setShutOffTime(String taskAsString, DateTime time)
-  {
-    return StringUtils.replace(taskAsString, "#SHUTOFFTIME", time.toString());
-  }
-
-  private String withDataSource(String taskAsString, String dataSource)
-  {
-    return StringUtils.replace(taskAsString, "%%DATASOURCE%%", dataSource);
-  }
-
-  private String withServiceName(String taskAsString, String serviceName)
-  {
-    return StringUtils.replace(taskAsString, EVENT_RECEIVER_SERVICE_PREFIX, serviceName);
-  }
-
-  private void postEvents(int id) throws Exception
-  {
-    final ServerDiscoverySelector eventReceiverSelector = factory.createSelector(EVENT_RECEIVER_SERVICE_PREFIX + id);
-    eventReceiverSelector.start();
-    try {
-      ServerDiscoveryUtil.waitUntilInstanceReady(eventReceiverSelector, "Event Receiver");
-      // Access the docker VM mapped host and port instead of service announced in zookeeper
-      String host = config.getMiddleManagerHost() + ":" + eventReceiverSelector.pick().getPort();
-
-      LOG.info("Event Receiver Found at host [%s]", host);
-
-      LOG.info("Checking worker /status/health for [%s]", host);
-      ITRetryUtil.retryUntilTrue(
-          () -> {
-            try {
-              StatusResponseHolder response = httpClient.go(
-                  new Request(HttpMethod.GET, new URL(StringUtils.format("https://%s/status/health", host))),
-                  StatusResponseHandler.getInstance()
-              ).get();
-              return response.getStatus().equals(HttpResponseStatus.OK);
-            }
-            catch (Throwable e) {
-              LOG.error(e, "");
-              return false;
-            }
-          },
-          StringUtils.format("Checking /status/health for worker [%s]", host)
-      );
-      LOG.info("Finished checking worker /status/health for [%s], success", host);
-
-      EventReceiverFirehoseTestClient client = new EventReceiverFirehoseTestClient(
-          host,
-          EVENT_RECEIVER_SERVICE_PREFIX + id,
-          jsonMapper,
-          httpClient,
-          smileMapper
-      );
-      client.postEventsFromFile(UNION_DATA_FILE);
-    }
-    finally {
-      eventReceiverSelector.stop();
-    }
+      catch (Exception e) {
+        throw new RuntimeException(e);
+      }
+    };
   }
 }
