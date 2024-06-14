@@ -27,39 +27,41 @@ import org.apache.druid.segment.serde.ComplexMetrics;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class HllSketchBuildComplexMetricSerdeTest {
+public class HllSketchBuildComplexMetricSerdeTest
+{
 
-    @Test
-    public void testComplexSerdeToBytesOnRealtimeSegmentSketch() {
-        ComplexMetrics.registerSerde(HllSketchModule.BUILD_TYPE_NAME, new HllSketchBuildComplexMetricSerde());
-        ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(HllSketchModule.BUILD_TYPE_NAME);
-        Assert.assertNotNull(serde);
-        HllSketch sketchNew = new HllSketch(14, TgtHllType.HLL_8);
-        HllSketchBuildUtil.updateSketch(sketchNew, StringEncoding.UTF16LE, new int[]{1, 2});
+  @Test
+  public void testComplexSerdeToBytesOnRealtimeSegmentSketch()
+  {
+    ComplexMetrics.registerSerde(HllSketchModule.BUILD_TYPE_NAME, new HllSketchBuildComplexMetricSerde());
+    ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(HllSketchModule.BUILD_TYPE_NAME);
+    Assert.assertNotNull(serde);
+    HllSketch sketchNew = new HllSketch(14, TgtHllType.HLL_8);
+    HllSketchBuildUtil.updateSketch(sketchNew, StringEncoding.UTF16LE, new int[]{1, 2});
 
-        HllSketchHolder sketchHolder = HllSketchHolder.of(sketchNew);
+    HllSketchHolder sketchHolder = HllSketchHolder.of(sketchNew);
 
-        byte[] bytes = serde.toBytes(sketchHolder);
-        Assert.assertEquals(bytes, serde.toBytes(bytes));
+    byte[] bytes = serde.toBytes(sketchHolder);
+    Assert.assertEquals(bytes, serde.toBytes(bytes));
 
-        HllSketchHolder fromBytesHolder = (HllSketchHolder) serde.fromBytes(bytes, 0, bytes.length);
+    HllSketchHolder fromBytesHolder = (HllSketchHolder) serde.fromBytes(bytes, 0, bytes.length);
 
-        Assert.assertEquals(sketchHolder.getSketch().getLgConfigK(), fromBytesHolder.getSketch().getLgConfigK());
-        Assert.assertEquals(sketchHolder.getSketch().getTgtHllType(), fromBytesHolder.getSketch().getTgtHllType());
-        Assert.assertEquals(
-                sketchHolder.getSketch().getCompactSerializationBytes(),
-                fromBytesHolder.getSketch().getCompactSerializationBytes()
-        );
-        Assert.assertEquals(
-                sketchHolder.getSketch().getUpdatableSerializationBytes(),
-                fromBytesHolder.getSketch().getUpdatableSerializationBytes()
-        );
-        Assert.assertEquals(sketchHolder.getSketch().getEstimate(), fromBytesHolder.getSketch().getEstimate(), 0);
-        Assert.assertEquals(sketchHolder.getSketch().getLowerBound(1), fromBytesHolder.getSketch().getLowerBound(1), 0);
-        Assert.assertEquals(sketchHolder.getSketch().getUpperBound(1), fromBytesHolder.getSketch().getUpperBound(1), 0);
+    Assert.assertEquals(sketchHolder.getSketch().getLgConfigK(), fromBytesHolder.getSketch().getLgConfigK());
+    Assert.assertEquals(sketchHolder.getSketch().getTgtHllType(), fromBytesHolder.getSketch().getTgtHllType());
+    Assert.assertEquals(
+        sketchHolder.getSketch().getCompactSerializationBytes(),
+        fromBytesHolder.getSketch().getCompactSerializationBytes()
+    );
+    Assert.assertEquals(
+        sketchHolder.getSketch().getUpdatableSerializationBytes(),
+        fromBytesHolder.getSketch().getUpdatableSerializationBytes()
+    );
+    Assert.assertEquals(sketchHolder.getSketch().getEstimate(), fromBytesHolder.getSketch().getEstimate(), 0);
+    Assert.assertEquals(sketchHolder.getSketch().getLowerBound(1), fromBytesHolder.getSketch().getLowerBound(1), 0);
+    Assert.assertEquals(sketchHolder.getSketch().getUpperBound(1), fromBytesHolder.getSketch().getUpperBound(1), 0);
 
-        // During fromBytes() sketches field memory changes to TRUE
-        Assert.assertFalse(sketchHolder.getSketch().isMemory());
-        Assert.assertTrue(fromBytesHolder.getSketch().isMemory());
-    }
+    // During fromBytes() sketches field memory changes to TRUE
+    Assert.assertFalse(sketchHolder.getSketch().isMemory());
+    Assert.assertTrue(fromBytesHolder.getSketch().isMemory());
+  }
 }
