@@ -315,19 +315,19 @@ public class DruidException extends RuntimeException
   }
 
   /**
-   * Category of error.  The simplest way to describe this is that it exists as a classification of errors that
+   * Category of error. The simplest way to describe this is that it exists as a classification of errors that
    * enables us to identify the expected response code (e.g. HTTP status code) of a specific DruidException
    */
   public enum Category
   {
     /**
      * Means that the exception is being created defensively, because we want to validate something but expect that
-     * it should never actually be hit.  Using this category is good to provide an indication to future reviewers and
+     * it should never actually be hit. Using this category is good to provide an indication to future reviewers and
      * developers that the case being checked is not intended to actually be able to occur in the wild.
      */
     DEFENSIVE(500),
     /**
-     * Means that the input provided was malformed in some way.  Generally speaking, it is hoped that errors of this
+     * Means that the input provided was malformed in some way. Generally speaking, it is hoped that errors of this
      * category have messages written either targeting the USER or ADMIN personas as those are the general users
      * of the APIs who could generate invalid inputs.
      */
@@ -340,9 +340,8 @@ public class DruidException extends RuntimeException
      * Means that an action that was attempted is forbidden
      */
     FORBIDDEN(403),
-
     /**
-     * Means that the requsted requested resource cannot be found.
+     * Means that the requested resource cannot be found.
      */
     NOT_FOUND(404),
     /**
@@ -357,6 +356,10 @@ public class DruidException extends RuntimeException
      * Indicates a server-side failure of some sort at runtime
      */
     RUNTIME_FAILURE(500),
+    /**
+     * Means that the requested resource could not be found due to a transient unavailability.
+     */
+    UNAVAILABLE(503),
     /**
      * A timeout happened
      */

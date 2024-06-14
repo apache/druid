@@ -29,24 +29,35 @@ import com.google.common.util.concurrent.AbstractFuture;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.inject.Inject;
+import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.common.guava.FutureUtils;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.ServerTypeConfig;
+import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
+import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.rpc.HttpResponseException;
+import org.apache.druid.rpc.StandardRetryPolicy;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.metrics.SegmentRowCountDistribution;
 import org.apache.druid.timeline.DataSegment;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -83,6 +94,8 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
   private final SegmentManager segmentManager;
   private final ScheduledExecutorService exec;
   private final ServerTypeConfig serverTypeConfig;
+  private final CoordinatorClient coordinatorClient;
+  private final ServiceEmitter emitter;
   private final ConcurrentSkipListSet<DataSegment> segmentsToDelete;
 
   private volatile boolean started = false;
@@ -103,7 +116,9 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
       DataSegmentAnnouncer announcer,
       DataSegmentServerAnnouncer serverAnnouncer,
       SegmentManager segmentManager,
-      ServerTypeConfig serverTypeConfig
+      ServerTypeConfig serverTypeConfig,
+      CoordinatorClient coordinatorClient,
+      ServiceEmitter emitter
   )
   {
     this(
@@ -115,7 +130,9 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
             config.getNumLoadingThreads(),
             Execs.makeThreadFactory("SimpleDataSegmentChangeHandler-%s")
         ),
-        serverTypeConfig
+        serverTypeConfig,
+        coordinatorClient,
+        emitter
     );
   }
 
@@ -126,7 +143,9 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
       DataSegmentServerAnnouncer serverAnnouncer,
       SegmentManager segmentManager,
       ScheduledExecutorService exec,
-      ServerTypeConfig serverTypeConfig
+      ServerTypeConfig serverTypeConfig,
+      CoordinatorClient coordinatorClient,
+      ServiceEmitter emitter
   )
   {
     this.config = config;
@@ -135,6 +154,8 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     this.segmentManager = segmentManager;
     this.exec = exec;
     this.serverTypeConfig = serverTypeConfig;
+    this.coordinatorClient = coordinatorClient;
+    this.emitter = emitter;
 
     this.segmentsToDelete = new ConcurrentSkipListSet<>();
     requestStatuses = CacheBuilder.newBuilder().maximumSize(config.getStatusQueueMaxSize()).initialCapacity(8).build();
@@ -151,7 +172,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
       log.info("Starting...");
       try {
         if (segmentManager.canHandleSegments()) {
-          bootstrapCachedSegments();
+          loadSegmentsOnBootstrap();
         }
 
         if (shouldAnnounce()) {
@@ -207,14 +228,24 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
   }
 
   /**
-   * Bulk loading of cached segments into page cache during bootstrap.
+   * Bulk loading of the following segments into the page cache at startup:
+   * <li> Previously cached segments </li>
+   * <li> Bootstrap segments from the coordinator </li>
    */
-  private void bootstrapCachedSegments() throws IOException
+  private void loadSegmentsOnBootstrap() throws IOException
   {
-    final Stopwatch stopwatch = Stopwatch.createStarted();
-    final List<DataSegment> segments = segmentManager.getCachedSegments();
+    final List<DataSegment> startupSegments = new ArrayList<>();
 
-    // Start a temporary thread pool to load segments into page cache during bootstrap
+    final Stopwatch stopwatch = Stopwatch.createStarted();
+    startupSegments.addAll(segmentManager.getCachedSegments());
+
+    final List<DataSegment> bootstrapSegments = getBootstrapSegments();
+    log.info("Found [%d] bootstrap cachedSegments from the coordinator. They are [%s]", bootstrapSegments.size(), bootstrapSegments);
+    // Add all elements from both lists to the new list
+    startupSegments.addAll(bootstrapSegments);
+
+
+    // Start a temporary thread pool to load cachedSegments into page cache during bootstrap
     final ExecutorService loadingExecutor = Execs.multiThreaded(
         config.getNumBootstrapThreads(), "Segment-Load-Startup-%s"
     );
@@ -224,11 +255,11 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
 
       backgroundSegmentAnnouncer.startAnnouncing();
 
-      final int numSegments = segments.size();
+      final int numSegments = startupSegments.size();
       final CountDownLatch latch = new CountDownLatch(numSegments);
       final AtomicInteger counter = new AtomicInteger(0);
       final CopyOnWriteArrayList<DataSegment> failedSegments = new CopyOnWriteArrayList<>();
-      for (final DataSegment segment : segments) {
+      for (final DataSegment segment : startupSegments) {
         loadingExecutor.submit(
             () -> {
               try {
@@ -269,7 +300,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
         latch.await();
 
         if (failedSegments.size() > 0) {
-          log.makeAlert("%,d errors seen while loading segments", failedSegments.size())
+          log.makeAlert("%,d errors seen while loading segments on startup", failedSegments.size())
              .addData("failedSegments", failedSegments)
              .emit();
         }
@@ -282,8 +313,8 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
       backgroundSegmentAnnouncer.finishAnnouncing();
     }
     catch (SegmentLoadingException e) {
-      log.makeAlert(e, "Failed to load segments -- likely problem with announcing.")
-         .addData("numSegments", segments.size())
+      log.makeAlert(e, "Failed to load cachedSegments -- likely problem with announcing.")
+         .addData("numSegments", startupSegments.size())
          .emit();
     }
     finally {
@@ -292,7 +323,58 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
       // At this stage, all tasks have been submitted, send a shutdown command to cleanup any resources alloted
       // for the bootstrapping function.
       segmentManager.shutdownBootstrap();
-      log.info("Cache load of [%d] bootstrap segments took [%,d]ms.", segments.size(), stopwatch.millisElapsed());
+      log.info("Cache load of [%d] bootstrap segments took [%,d]ms.", startupSegments.size(), stopwatch.millisElapsed());
+    }
+  }
+
+  private List<DataSegment> getBootstrapSegments() throws IOException
+  {
+    final List<DataSegment> bootstrapSegments;
+    try (CloseableIterator<DataSegment> iterator = fetchBootstrapSegments()) {
+      bootstrapSegments = ImmutableList.copyOf(iterator);
+    }
+    return bootstrapSegments;
+  }
+
+  /**
+   * Fetches all broadcast segments.
+   */
+  private CloseableIterator<DataSegment> fetchBootstrapSegments()
+  {
+    // So think about the failure mechanisms.
+    // If the endpoint doesn't exist as with first scenario, handle gracefuly (404)
+    // If the endpoint exists, but a 503, then keep retrying with an appropriate strategy.
+    // Any other exception, then bomb? Or fail gracefully and wait for the usual coordinator route to assigning
+    // bootstrap segments.
+    final Stopwatch stopwatch = Stopwatch.createStarted();
+    log.info("Fetching bootstrap segments from the coordinator");
+
+    final ListenableFuture<CloseableIterator<DataSegment>> bootstrapSegments =
+        coordinatorClient.withRetryPolicy(StandardRetryPolicy.aboutAnHour()).fetchBootstrapSegments();
+
+    try {
+      return FutureUtils.getUnchecked(bootstrapSegments, true);
+    }
+    catch (Exception e) {
+      log.info("Exception and retry as necessary. Cause[%s]", e.getCause());
+      if (e.getCause() instanceof HttpResponseException &&
+          ((HttpResponseException) e.getCause()).getResponse().getStatus().equals(HttpResponseStatus.NOT_FOUND)) {
+        // NOTE: this is to support backward compatibility, when the coordinator is running on an older version and
+        // doesn't have the "bootstrapSegments" endpoint.
+        log.warn("Bootstrap segments endpoint is not available in the coordinator.");
+        return CloseableIterators.withEmptyBaggage(Collections.emptyIterator());
+      }
+      // All retriable errors are handled by the service client itself. For any other error code/exception,
+      // we just bail. TODO: evaluate if this is the right thing. Should we fail startup or start gracefully?
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                          .build(e, "Could not fetch bootstrap segments from the coordinator at startup.");
+    }
+    finally {
+      stopwatch.stop();
+      final long fetchRunMillis = stopwatch.millisElapsed();
+      emitter.emit(new ServiceMetricEvent.Builder().setMetric("bootstrapSegments/fetch/time", fetchRunMillis));
+      log.info("Fetching bootstrap segments completed in [%d] ms", fetchRunMillis);
     }
   }
 

@@ -39,6 +39,8 @@ import org.apache.druid.curator.CuratorTestBase;
 import org.apache.druid.curator.CuratorUtils;
 import org.apache.druid.curator.discovery.LatchableServiceAnnouncer;
 import org.apache.druid.discovery.DruidLeaderSelector;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -74,6 +76,7 @@ import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
+import org.hamcrest.MatcherAssert;
 import org.joda.time.Duration;
 import org.junit.After;
 import org.junit.Assert;
@@ -82,6 +85,7 @@ import org.junit.Test;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
@@ -266,7 +270,14 @@ public class DruidCoordinatorTest extends CuratorTestBase
     coordinator.start();
 
     Assert.assertNull(coordinator.getReplicationFactor(dataSegment.getId()));
-
+    MatcherAssert.assertThat(
+        Assert.assertThrows(DruidException.class, () -> coordinator.getBroadcastSegments()),
+        new DruidExceptionMatcher(
+            DruidException.Persona.OPERATOR,
+            DruidException.Category.UNAVAILABLE,
+            "general"
+        ).expectMessageIs("bootstrap segments not available yet.")
+    );
     // Wait for this coordinator to become leader
     leaderAnnouncerLatch.await();
 
@@ -293,6 +304,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         coordinator.getDatasourceToUnavailableSegmentCount();
     Assert.assertEquals(1, numsUnavailableUsedSegmentsPerDataSource.size());
     Assert.assertEquals(0, numsUnavailableUsedSegmentsPerDataSource.getInt(dataSource));
+    Assert.assertEquals(0, coordinator.getBroadcastSegments().size());
 
     Map<String, Object2LongMap<String>> underReplicationCountsPerDataSourcePerTier =
         coordinator.getTierToDatasourceToUnderReplicatedCount(false);
@@ -571,6 +583,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
     coordinatorRunLatch.await();
 
     Assert.assertEquals(ImmutableMap.of(dataSource, 100.0), coordinator.getDatasourceToLoadStatus());
+    Assert.assertEquals(new HashSet<>(dataSegments.values()), coordinator.getBroadcastSegments());
 
     // Under-replicated counts are updated only after the next coordinator run
     Map<String, Object2LongMap<String>> underReplicationCountsPerDataSourcePerTier =

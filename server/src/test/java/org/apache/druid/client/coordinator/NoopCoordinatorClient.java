@@ -21,6 +21,7 @@ package org.apache.druid.client.coordinator;
 
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
+import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.rpc.ServiceRetryPolicy;
 import org.apache.druid.segment.metadata.DataSourceInformation;
@@ -58,6 +59,12 @@ public class NoopCoordinatorClient implements CoordinatorClient
 
   @Override
   public ListenableFuture<List<DataSourceInformation>> fetchDataSourceInformation(Set<String> datasources)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public ListenableFuture<CloseableIterator<DataSegment>> fetchBootstrapSegments()
   {
     throw new UnsupportedOperationException();
   }

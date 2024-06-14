@@ -21,17 +21,23 @@ package org.apache.druid.client.coordinator;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
+import org.apache.druid.client.JsonParserIterator;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
+import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.http.client.response.BytesFullResponseHandler;
+import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceClient;
 import org.apache.druid.rpc.ServiceRetryPolicy;
 import org.apache.druid.segment.metadata.DataSourceInformation;
+import org.apache.druid.server.coordination.LoadableDataSegment;
 import org.apache.druid.timeline.DataSegment;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Interval;
@@ -42,6 +48,7 @@ import java.util.Set;
 
 public class CoordinatorClientImpl implements CoordinatorClient
 {
+  private static final Logger log = new Logger(CoordinatorClientImpl.class);
   private final ServiceClient client;
   private final ObjectMapper jsonMapper;
 
@@ -153,6 +160,23 @@ public class CoordinatorClientImpl implements CoordinatorClient
             new BytesFullResponseHandler()
         ),
         holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), new TypeReference<List<DataSourceInformation>>() {})
+    );
+  }
+
+  @Override
+  public ListenableFuture<CloseableIterator<DataSegment>> fetchBootstrapSegments()
+  {
+    final String path = "/druid/coordinator/v1/metadata/bootstrapSegments";
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.GET, path),
+            new InputStreamResponseHandler()
+        ),
+        in -> new JsonParserIterator<>(
+            jsonMapper.getTypeFactory().constructType(LoadableDataSegment.class),
+            Futures.immediateFuture(in),
+            jsonMapper
+        )
     );
   }
 

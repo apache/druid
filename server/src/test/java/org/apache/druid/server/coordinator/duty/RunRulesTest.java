@@ -46,8 +46,11 @@ import org.apache.druid.server.coordinator.loading.LoadQueuePeon;
 import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.loading.SegmentReplicaCount;
 import org.apache.druid.server.coordinator.loading.SegmentReplicationStatus;
+import org.apache.druid.server.coordinator.loading.StrategicSegmentAssigner;
 import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
+import org.apache.druid.server.coordinator.rules.ForeverBroadcastDistributionRule;
 import org.apache.druid.server.coordinator.rules.ForeverLoadRule;
+import org.apache.druid.server.coordinator.rules.IntervalBroadcastDistributionRule;
 import org.apache.druid.server.coordinator.rules.IntervalDropRule;
 import org.apache.druid.server.coordinator.rules.IntervalLoadRule;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
@@ -69,9 +72,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-/**
- *
- */
 public class RunRulesTest
 {
   private static final long SERVER_SIZE_10GB = 10L << 30;
@@ -315,6 +315,11 @@ public class RunRulesTest
     return new ServerHolder(createHistorical(name, tier).toImmutableDruidServer(), peon);
   }
 
+  private ServerHolder createServerHolder(String name, String tier, LoadQueuePeon peon, boolean isDecommmisionning)
+  {
+    return new ServerHolder(createHistorical(name, tier).toImmutableDruidServer(), peon, isDecommmisionning);
+  }
+
   private DruidCoordinatorRuntimeParams.Builder createCoordinatorRuntimeParams(
       DruidCluster druidCluster,
       DataSegment segment
@@ -482,7 +487,6 @@ public class RunRulesTest
   @Test
   public void testRunRuleDoesNotExist()
   {
-
     EasyMock
         .expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject()))
         .andReturn(
@@ -521,6 +525,134 @@ public class RunRulesTest
         "No matching retention rule for [24] segments in datasource[test]",
         eventMap.get("description")
     );
+    EasyMock.verify(mockPeon);
+  }
+
+  @Test
+  public void testRunRuleWithNoServers()
+  {
+    EasyMock
+        .expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject()))
+        .andReturn(
+            Lists.newArrayList(
+                new IntervalBroadcastDistributionRule(
+                    Intervals.of("2012-01-01/2012-01-02")
+                ),
+                new IntervalBroadcastDistributionRule(
+                    Intervals.of("2012-01-02/2012-01-03")
+                )
+            )
+        )
+        .atLeastOnce();
+
+    EasyMock.replay(databaseRuleManager, mockPeon);
+
+    DruidCluster emptyCluster = DruidCluster.builder().build();
+
+    DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(emptyCluster)
+        .withBalancerStrategy(new CostBalancerStrategy(balancerExecutor))
+        .withSegmentAssignerUsing(loadQueueManager)
+        .build();
+
+    CoordinatorRunStats stats = runDutyAndGetStats(params);
+
+    Assert.assertFalse(stats.hasStat(Stats.Segments.ASSIGNED));
+    Assert.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
+
+    Assert.assertEquals(0, emitter.getAlerts().size());
+
+    StrategicSegmentAssigner segmentAssigner = params.getSegmentAssigner();
+    Assert.assertNotNull(segmentAssigner);
+    Assert.assertEquals(usedSegments.size(), segmentAssigner.getBroadcastSegments().size());
+
+    EasyMock.verify(mockPeon);
+  }
+
+  @Test
+  public void testBroadcastLoad()
+  {
+    EasyMock
+        .expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject()))
+        .andReturn(
+            Lists.newArrayList(
+                new IntervalBroadcastDistributionRule(
+                    Intervals.of("2012-01-01/2012-01-02")
+                ),
+                new IntervalBroadcastDistributionRule(
+                    Intervals.of("2012-01-02/2012-01-03")
+                )
+            )
+        )
+        .atLeastOnce();
+
+    mockPeon.loadSegment(EasyMock.anyObject(), EasyMock.anyObject(), EasyMock.anyObject());
+    EasyMock.expectLastCall().atLeastOnce();
+
+    EasyMock.expect(mockPeon.getSegmentsInQueue()).andReturn(Collections.emptySet()).anyTimes();
+    EasyMock.expect(mockPeon.getSegmentsMarkedToDrop()).andReturn(Collections.emptySet()).anyTimes();
+    EasyMock.replay(databaseRuleManager, mockPeon);
+
+    DruidCluster druidCluster = DruidCluster
+        .builder()
+        .add(createServerHolder("serverNorm", "normal", mockPeon))
+        .build();
+
+    DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
+        .withBalancerStrategy(new CostBalancerStrategy(balancerExecutor))
+        .withSegmentAssignerUsing(loadQueueManager)
+        .build();
+
+    CoordinatorRunStats stats = runDutyAndGetStats(params);
+
+    Assert.assertEquals(24L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "normal", DATASOURCE));
+    Assert.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
+
+    StrategicSegmentAssigner segmentAssigner = params.getSegmentAssigner();
+    Assert.assertNotNull(segmentAssigner);
+    Assert.assertEquals(usedSegments.size(), segmentAssigner.getBroadcastSegments().size());
+
+    EasyMock.verify(mockPeon);
+  }
+
+  @Test
+  public void testBroadcastDrop()
+  {
+    EasyMock
+        .expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject()))
+        .andReturn(Collections.singletonList(new ForeverBroadcastDistributionRule()))
+        .atLeastOnce();
+
+    mockPeon.dropSegment(EasyMock.anyObject(), EasyMock.anyObject());
+    EasyMock.expectLastCall().atLeastOnce();
+
+    EasyMock.expect(mockPeon.getSegmentsInQueue()).andReturn(Collections.emptySet()).anyTimes();
+    EasyMock.expect(mockPeon.getSegmentsMarkedToDrop()).andReturn(Collections.emptySet()).anyTimes();
+    EasyMock.replay(databaseRuleManager, mockPeon);
+
+    DruidServer server = createHistorical("serverNorm", "normal");
+    for (DataSegment segment : usedSegments) {
+      server.addDataSegment(segment);
+    }
+
+    DruidCluster druidCluster = DruidCluster
+        .builder()
+        .add(new ServerHolder(server.toImmutableDruidServer(), mockPeon, true))
+        .build();
+
+    DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
+        .withBalancerStrategy(new CostBalancerStrategy(balancerExecutor))
+        .withSegmentAssignerUsing(loadQueueManager)
+        .build();
+
+    CoordinatorRunStats stats = runDutyAndGetStats(params);
+
+    Assert.assertEquals(24L, stats.getSegmentStat(Stats.Segments.DROPPED, "normal", DATASOURCE));
+    Assert.assertFalse(stats.hasStat(Stats.Segments.ASSIGNED));
+
+    StrategicSegmentAssigner segmentAssigner = params.getSegmentAssigner();
+    Assert.assertNotNull(segmentAssigner);
+    Assert.assertEquals(usedSegments.size(), segmentAssigner.getBroadcastSegments().size());
+
     EasyMock.verify(mockPeon);
   }
 

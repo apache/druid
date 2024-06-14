@@ -182,6 +182,58 @@ public class CoordinatorClientImplTest
   }
 
   @Test
+  public void test_fetchBootstrapSegments() throws Exception
+  {
+    final DataSegment segment1 =
+        DataSegment.builder()
+                   .dataSource("xyz")
+                   .interval(Intervals.of("1000/2000"))
+                   .version("1")
+                   .shardSpec(new NumberedShardSpec(0, 1))
+                   .size(1)
+                   .build();
+    final DataSegment segment2 =
+        DataSegment.builder()
+                   .dataSource("xyz")
+                   .interval(Intervals.of("2000/3000"))
+                   .version("1")
+                   .shardSpec(new NumberedShardSpec(0, 1))
+                   .size(1)
+                   .build();
+    final List<DataSegment> segments = ImmutableList.of(segment1, segment2);
+
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.GET, "/druid/coordinator/v1/metadata/bootstrapSegments"),
+        HttpResponseStatus.OK,
+        ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
+        jsonMapper.writeValueAsBytes(segments)
+    );
+
+    Assert.assertEquals(
+        segments,
+        ImmutableList.copyOf(coordinatorClient.fetchBootstrapSegments().get())
+    );
+  }
+
+  @Test
+  public void test_fetchEmptyBootstrapSegments() throws Exception
+  {
+    final List<DataSegment> segments = ImmutableList.of();
+
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.GET, "/druid/coordinator/v1/metadata/bootstrapSegments"),
+        HttpResponseStatus.OK,
+        ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
+        jsonMapper.writeValueAsBytes(segments)
+    );
+
+    Assert.assertEquals(
+        segments,
+        ImmutableList.copyOf(coordinatorClient.fetchBootstrapSegments().get())
+    );
+  }
+
+  @Test
   public void test_fetchDataSourceInformation() throws Exception
   {
     String foo = "foo";

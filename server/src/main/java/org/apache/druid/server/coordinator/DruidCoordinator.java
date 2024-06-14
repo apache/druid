@@ -37,6 +37,7 @@ import org.apache.druid.client.ServerInventoryView;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.curator.discovery.ServiceAnnouncer;
 import org.apache.druid.discovery.DruidLeaderSelector;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.DateTimes;
@@ -83,6 +84,7 @@ import org.apache.druid.server.coordinator.loading.LoadQueueTaskMaster;
 import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.loading.SegmentReplicaCount;
 import org.apache.druid.server.coordinator.loading.SegmentReplicationStatus;
+import org.apache.druid.server.coordinator.loading.StrategicSegmentAssigner;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.CoordinatorStat;
 import org.apache.druid.server.coordinator.stats.Dimension;
@@ -173,6 +175,12 @@ public class DruidCoordinator
    * as fully replicated, it is guaranteed to be so.
    */
   private volatile SegmentReplicationStatus segmentReplicationStatus = null;
+
+  /**
+   * Used to determine broadcast segments. Similar to {@link #segmentReplicationStatus}, this might contain stale
+   * information if the coordinator runs are delayed.
+   */
+  private volatile StrategicSegmentAssigner segmentAssigner = null;
 
   public static final String HISTORICAL_MANAGEMENT_DUTIES_DUTY_GROUP = "HistoricalManagementDuties";
   private static final String METADATA_STORE_MANAGEMENT_DUTIES_DUTY_GROUP = "MetadataStoreManagementDuties";
@@ -313,6 +321,20 @@ public class DruidCoordinator
     }
 
     return loadStatus;
+  }
+
+  /**
+   * @return the set of broadcast segments. If the coordinator hasn't initialized fully, a retriable exception
+   * will be thrown.
+   */
+  public Set<DataSegment> getBroadcastSegments()
+  {
+    if (segmentAssigner == null) {
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.UNAVAILABLE)
+                          .build("bootstrap segments not available yet.");
+    }
+    return segmentAssigner.getBroadcastSegments();
   }
 
   @Nullable
@@ -798,6 +820,7 @@ public class DruidCoordinator
     @Override
     public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
     {
+      segmentAssigner = params.getSegmentAssigner();
       segmentReplicationStatus = params.getSegmentReplicationStatus();
 
       // Collect stats for unavailable and under-replicated segments

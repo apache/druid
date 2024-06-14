@@ -471,4 +471,36 @@ public class MetadataResource
     );
     return Response.status(Response.Status.OK).entity(authorizedDataSourceInformation).build();
   }
+
+  /**
+   * @return all bootstrap segments determined by the coordinator. Currently, only the set of broadcast segments
+   * is returned.
+   * @implNote this currently accepts an empty POST, but is future-proof to other scenarios.
+   */
+  @GET
+  @Path("/bootstrapSegments")
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(DatasourceResourceFilter.class)
+  public Response getBootstrapSegments()
+  {
+    try {
+      log.info("Hmm call to bootstrap segments..");
+      Set<DataSegment> broadcastSegments = coordinator.getBroadcastSegments();
+      log.info(
+          "Number of bootstrap segments coordinator is returning [%d] and they are [%s]",
+          broadcastSegments.size(),
+          broadcastSegments
+      );
+      return Response.status(Response.Status.OK).entity(broadcastSegments).build();
+    }
+    catch (DruidException e) {
+      return ServletResourceUtils.buildErrorResponseFrom(e);
+    }
+    catch (Exception e) {
+      return Response
+          .serverError()
+          .entity(ImmutableMap.of("error", "Exception occurred.", "message", Throwables.getRootCause(e).toString()))
+          .build();
+    }
+  }
 }

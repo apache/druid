@@ -486,6 +486,39 @@ public class MetadataResourceTest
     );
   }
 
+  @Test
+  public void testGetBootstrapSegmentsWithEmptySet()
+  {
+    Mockito.doReturn(ImmutableSet.of()).when(coordinator).getBroadcastSegments();
+
+    Response response = metadataResource.getBootstrapSegments();
+    final List<DataSegment> observedSegments = extractResponseList(response);
+    Assert.assertEquals(0, observedSegments.size());
+  }
+
+  @Test
+  public void testGetBootstrapSegmentsWithNonEmptySet()
+  {
+    Mockito.doReturn(ImmutableSet.of(segments[0], segments[1])).when(coordinator).getBroadcastSegments();
+
+    Response response = metadataResource.getBootstrapSegments();
+    final List<DataSegment> observedSegments = extractResponseList(response);
+    Assert.assertEquals(2, observedSegments.size());
+  }
+
+  @Test
+  public void testGetBootstrapSegmentsWithNullSet()
+  {
+    Mockito.doThrow(DruidException.forPersona(DruidException.Persona.OPERATOR)
+                                  .ofCategory(DruidException.Category.UNAVAILABLE)
+                                  .build("something went wrong"))
+           .when(coordinator).getBroadcastSegments();
+
+    Response response = metadataResource.getBootstrapSegments();
+    Assert.assertEquals(503, response.getStatus());
+    Assert.assertEquals("something went wrong", getExceptionMessage(response));
+  }
+
   private <T> List<T> extractResponseList(Response response)
   {
     return Lists.newArrayList(

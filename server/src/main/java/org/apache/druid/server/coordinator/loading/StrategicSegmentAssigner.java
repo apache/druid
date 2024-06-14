@@ -22,6 +22,7 @@ package org.apache.druid.server.coordinator.loading;
 import com.google.common.collect.Sets;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.druid.client.DruidServer;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategy;
@@ -55,6 +56,7 @@ import java.util.stream.Collectors;
 @NotThreadSafe
 public class StrategicSegmentAssigner implements SegmentActionHandler
 {
+  private static final EmittingLogger log = new EmittingLogger(StrategicSegmentAssigner.class);
   private final SegmentLoadQueueManager loadQueueManager;
   private final DruidCluster cluster;
   private final CoordinatorRunStats stats;
@@ -69,6 +71,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
   private final Map<String, Integer> tierToHistoricalCount = new HashMap<>();
   private final Map<String, Set<SegmentId>> segmentsToDelete = new HashMap<>();
   private final Map<String, Set<DataSegment>> segmentsWithZeroRequiredReplicas = new HashMap<>();
+  private final Set<DataSegment> broadcastSegments = new HashSet<>();
 
   public StrategicSegmentAssigner(
       SegmentLoadQueueManager loadQueueManager,
@@ -361,6 +364,8 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
         entry -> replicaCountMap.computeIfAbsent(segment.getId(), entry.getKey())
                                 .setRequired(entry.getIntValue(), entry.getIntValue())
     );
+
+    broadcastSegments.add(segment);
   }
 
   @Override
@@ -396,6 +401,11 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
 
     incrementSkipStat(Stats.Segments.ASSIGN_SKIPPED, skipReason, segment, server.getServer().getTier());
     return false;
+  }
+
+  public Set<DataSegment> getBroadcastSegments()
+  {
+    return broadcastSegments;
   }
 
   /**
