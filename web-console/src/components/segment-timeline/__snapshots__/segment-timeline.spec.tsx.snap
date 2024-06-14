@@ -95,38 +95,40 @@ exports[`SegmentTimeline matches snapshot 1`] = `
         class="bp4-form-content"
       >
         <div
-          class="bp4-html-select bp4-fill"
+          aria-controls="listbox-1"
+          aria-expanded="false"
+          aria-haspopup="listbox"
+          class="bp4-popover2-target bp4-fill"
+          role="combobox"
         >
-          <select>
-            <option
-              value="all"
+          <button
+            class="bp4-button bp4-fill"
+            type="button"
+          >
+            <span
+              class="bp4-button-text"
             >
               Show all
-            </option>
-          </select>
-          <span
-            class="bp4-icon bp4-icon-double-caret-vertical"
-            icon="double-caret-vertical"
-          >
-            <svg
-              aria-labelledby="iconTitle-0"
-              data-icon="double-caret-vertical"
-              height="16"
-              role="img"
-              viewBox="0 0 16 16"
-              width="16"
+            </span>
+            <span
+              aria-hidden="true"
+              class="bp4-icon bp4-icon-caret-down"
+              icon="caret-down"
             >
-              <title
-                id="iconTitle-0"
+              <svg
+                data-icon="caret-down"
+                height="16"
+                role="img"
+                viewBox="0 0 16 16"
+                width="16"
               >
-                Open dropdown
-              </title>
-              <path
-                d="M5 7h6a1.003 1.003 0 00.71-1.71l-3-3C8.53 2.11 8.28 2 8 2s-.53.11-.71.29l-3 3A1.003 1.003 0 005 7zm6 2H5a1.003 1.003 0 00-.71 1.71l3 3c.18.18.43.29.71.29s.53-.11.71-.29l3-3A1.003 1.003 0 0011 9z"
-                fill-rule="evenodd"
-              />
-            </svg>
-          </span>
+                <path
+                  d="M12 6.5c0-.28-.22-.5-.5-.5h-7a.495.495 0 00-.37.83l3.5 4c.09.1.22.17.37.17s.28-.07.37-.17l3.5-4c.08-.09.13-.2.13-.33z"
+                  fill-rule="evenodd"
+                />
+              </svg>
+            </span>
+          </button>
         </div>
       </div>
     </div>

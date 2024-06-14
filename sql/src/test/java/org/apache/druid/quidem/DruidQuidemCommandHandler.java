@@ -33,6 +33,7 @@ import org.apache.calcite.sql.SqlExplainLevel;
 import org.apache.calcite.util.Util;
 import org.apache.druid.query.Query;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
+import org.apache.druid.sql.calcite.rel.DruidRel;
 import org.apache.druid.sql.calcite.util.QueryLogHook;
 
 import java.sql.ResultSet;
@@ -171,6 +172,9 @@ public class DruidQuidemCommandHandler implements CommandHandler
       }
 
       for (RelNode node : logged) {
+        if (node instanceof DruidRel<?>) {
+          node = ((DruidRel) node).unwrapLogicalPlan();
+        }
         String str = RelOptUtil.dumpPlan("", node, SqlExplainFormat.TEXT, SqlExplainLevel.EXPPLAN_ATTRIBUTES);
         x.echo(ImmutableList.of(str));
       }

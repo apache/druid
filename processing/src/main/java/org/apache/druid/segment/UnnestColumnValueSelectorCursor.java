@@ -24,7 +24,6 @@ import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
@@ -202,24 +201,11 @@ public class UnnestColumnValueSelectorCursor implements Cursor
       @Override
       public ColumnCapabilities getColumnCapabilities(String column)
       {
-        if (!outputName.equals(column)) {
-          return baseColumnSelectorFactory.getColumnCapabilities(column);
+        if (outputName.equals(column)) {
+          return UnnestStorageAdapter.computeOutputColumnCapabilities(baseColumnSelectorFactory, unnestColumn);
         }
 
-        final ColumnCapabilities capabilities = unnestColumn.capabilities(
-            baseColumnSelectorFactory,
-            unnestColumn.getOutputName()
-        );
-
-        if (capabilities == null) {
-          return null;
-        } else if (capabilities.isArray()) {
-          return ColumnCapabilitiesImpl.copyOf(capabilities).setType(capabilities.getElementType());
-        } else if (capabilities.hasMultipleValues().isTrue()) {
-          return ColumnCapabilitiesImpl.copyOf(capabilities).setHasMultipleValues(false);
-        } else {
-          return capabilities;
-        }
+        return baseColumnSelectorFactory.getColumnCapabilities(column);
       }
     };
   }

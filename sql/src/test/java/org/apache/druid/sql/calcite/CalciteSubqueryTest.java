@@ -49,7 +49,6 @@ import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
-import org.apache.druid.query.groupby.orderby.NoopLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery;
@@ -103,9 +102,9 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testExactCountDistinctUsingSubqueryWithWhereToOuterFilter(String testName, Map<String, Object> queryContext)
   {
-    // Cannot vectorize topN operator.
-    cannotVectorize();
-
+    if (!queryContext.containsKey(QueryContexts.MAX_SUBQUERY_BYTES_KEY)) {
+      cannotVectorize();
+    }
     testQuery(
         "SELECT\n"
         + "  SUM(cnt),\n"
@@ -374,8 +373,9 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testGroupByWithPostAggregatorReferencingTimeFloorColumnOnTimeseries(String testName, Map<String, Object> queryContext)
   {
-    cannotVectorize();
-
+    if (!queryContext.containsKey(QueryContexts.MAX_SUBQUERY_BYTES_KEY)) {
+      cannotVectorize();
+    }
     testQuery(
         "SELECT TIME_FORMAT(\"date\", 'yyyy-MM'), SUM(x)\n"
         + "FROM (\n"
@@ -537,9 +537,9 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testMinMaxAvgDailyCountWithLimit(String testName, Map<String, Object> queryContext)
   {
-    // Cannot vectorize due to virtual columns.
-    cannotVectorize();
-
+    if (!queryContext.containsKey(QueryContexts.MAX_SUBQUERY_BYTES_KEY)) {
+      cannotVectorize();
+    }
     testQuery(
         "SELECT * FROM ("
         + "  SELECT max(cnt), min(cnt), avg(cnt), TIME_EXTRACT(max(t), 'EPOCH') last_time, count(1) num_days FROM (\n"
@@ -782,8 +782,9 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testUseTimeFloorInsteadOfGranularityOnJoinResult(String testName, Map<String, Object> queryContext)
   {
-    cannotVectorize();
-
+    if (!queryContext.containsKey(QueryContexts.MAX_SUBQUERY_BYTES_KEY)) {
+      cannotVectorize();
+    }
     testQuery(
         "WITH main AS (SELECT * FROM foo LIMIT 2)\n"
         + "SELECT TIME_FLOOR(__time, 'PT1H') AS \"time\", dim1, COUNT(*)\n"
@@ -902,9 +903,9 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testUsingSubqueryWithLimit(String testName, Map<String, Object> queryContext)
   {
-    // Cannot vectorize scan query.
-    cannotVectorize();
-
+    if (!queryContext.containsKey(QueryContexts.MAX_SUBQUERY_BYTES_KEY)) {
+      cannotVectorize();
+    }
     testQuery(
         "SELECT COUNT(*) AS cnt FROM ( SELECT * FROM druid.foo LIMIT 10 ) tmpA",
         queryContext,
@@ -987,8 +988,6 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testJoinWithSubqueries(String testName, Map<String, Object> queryContext)
   {
-    cannotVectorize();
-
     List<Object[]> results = new ArrayList<>(ImmutableList.of(
         new Object[]{"", NullHandling.defaultStringValue()},
         new Object[]{"10.1", NullHandling.defaultStringValue()},
@@ -1075,57 +1074,43 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   public void testSingleValueFloatAgg(String testName, Map<String, Object> queryContext)
   {
     cannotVectorize();
-    testQuery(
-        "SELECT count(*) FROM foo where m1 <= (select min(m1) + 4 from foo)",
-        ImmutableList.of(
+    testBuilder()
+        .sql("SELECT count(*) FROM foo where m1 <= (select min(m1) + 4 from foo)")
+        .expectedQuery(
             Druids.newTimeseriesQueryBuilder()
-                  .dataSource(join(
-                      new TableDataSource(CalciteTests.DATASOURCE1),
-                      new QueryDataSource(GroupByQuery.builder()
-                                                      .setDataSource(new QueryDataSource(
-                                                          Druids.newTimeseriesQueryBuilder()
-                                                                .dataSource(CalciteTests.DATASOURCE1)
-                                                                .intervals(querySegmentSpec(Filtration.eternity()))
-                                                                .granularity(Granularities.ALL)
-                                                                .aggregators(new FloatMinAggregatorFactory("a0", "m1"))
-                                                                .build()
-                                                      ))
-                                                      .setInterval(querySegmentSpec(Filtration.eternity()))
-                                                      .setGranularity(Granularities.ALL)
-                                                      .setVirtualColumns(expressionVirtualColumn(
-                                                                             "v0",
-                                                                             "(\"a0\" + 4)",
-                                                                             ColumnType.FLOAT
-                                                                         )
-                                                      )
-                                                      .setAggregatorSpecs(
-                                                          aggregators(
-                                                              new SingleValueAggregatorFactory(
-                                                                  "_a0",
-                                                                  "v0",
-                                                                  ColumnType.FLOAT
-                                                              )
-                                                          )
-                                                      )
-                                                      .setLimitSpec(NoopLimitSpec.instance())
-                                                      .setContext(QUERY_CONTEXT_DEFAULT)
-                                                      .build()
-                      ),
-                      "j0.",
-                      "1",
-                      NullHandling.replaceWithDefault() ? JoinType.LEFT : JoinType.INNER
-                  ))
-                  .intervals(querySegmentSpec(Filtration.eternity()))
-                  .granularity(Granularities.ALL)
-                  .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .filters(expressionFilter("(\"m1\" <= \"j0._a0\")"))
-                  .context(QUERY_CONTEXT_DEFAULT)
-                  .build()
-        ),
-        ImmutableList.of(
-            new Object[]{5L}
+                .dataSource(
+                    join(
+                        new TableDataSource(CalciteTests.DATASOURCE1),
+                        new QueryDataSource(
+                            Druids.newTimeseriesQueryBuilder()
+                                .dataSource(CalciteTests.DATASOURCE1)
+                                .intervals(querySegmentSpec(Filtration.eternity()))
+                                .granularity(Granularities.ALL)
+                                .aggregators(new FloatMinAggregatorFactory("a0", "m1"))
+                                .postAggregators(
+                                    expressionPostAgg("p0", "(\"a0\" + 4)", ColumnType.FLOAT)
+                                )
+
+                                .build()
+                        ),
+                        "j0.",
+                        "1",
+                        NullHandling.replaceWithDefault() ? JoinType.LEFT : JoinType.INNER
+                    )
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .granularity(Granularities.ALL)
+                .aggregators(aggregators(new CountAggregatorFactory("a0")))
+                .filters(expressionFilter("(\"m1\" <= \"j0.p0\")"))
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
         )
-    );
+        .expectedResults(
+            ImmutableList.of(
+                new Object[] {5L}
+            )
+        )
+        .run();
   }
 
   @MethodSource("constructorFeeder")
@@ -1133,57 +1118,46 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   public void testSingleValueDoubleAgg(String testName, Map<String, Object> queryContext)
   {
     cannotVectorize();
-    testQuery(
-        "SELECT count(*) FROM foo where m1 >= (select max(m1) - 3.5 from foo)",
-        ImmutableList.of(
+    testBuilder()
+        .sql("SELECT count(*) FROM foo where m1 >= (select max(m1) - 3.5 from foo)")
+        .expectedQuery(
             Druids.newTimeseriesQueryBuilder()
-                  .dataSource(join(
-                      new TableDataSource(CalciteTests.DATASOURCE1),
-                      new QueryDataSource(GroupByQuery.builder()
-                                                      .setDataSource(new QueryDataSource(
-                                                          Druids.newTimeseriesQueryBuilder()
-                                                                .dataSource(CalciteTests.DATASOURCE1)
-                                                                .intervals(querySegmentSpec(Filtration.eternity()))
-                                                                .granularity(Granularities.ALL)
-                                                                .aggregators(new FloatMaxAggregatorFactory("a0", "m1"))
-                                                                .build()
-                                                      ))
-                                                      .setInterval(querySegmentSpec(Filtration.eternity()))
-                                                      .setGranularity(Granularities.ALL)
-                                                      .setVirtualColumns(expressionVirtualColumn(
-                                                                             "v0",
-                                                                             "(\"a0\" - 3.5)",
-                                                                             ColumnType.DOUBLE
-                                                                         )
-                                                      )
-                                                      .setAggregatorSpecs(
-                                                          aggregators(
-                                                              new SingleValueAggregatorFactory(
-                                                                  "_a0",
-                                                                  "v0",
-                                                                  ColumnType.DOUBLE
-                                                              )
-                                                          )
-                                                      )
-                                                      .setLimitSpec(NoopLimitSpec.instance())
-                                                      .setContext(QUERY_CONTEXT_DEFAULT)
-                                                      .build()
-                      ),
-                      "j0.",
-                      "1",
-                      NullHandling.replaceWithDefault() ? JoinType.LEFT : JoinType.INNER
-                  ))
-                  .intervals(querySegmentSpec(Filtration.eternity()))
-                  .granularity(Granularities.ALL)
-                  .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .filters(expressionFilter("(\"m1\" >= \"j0._a0\")"))
-                  .context(QUERY_CONTEXT_DEFAULT)
-                  .build()
-        ),
-        ImmutableList.of(
-            new Object[]{4L}
+                .dataSource(
+                    join(
+                        new TableDataSource(CalciteTests.DATASOURCE1),
+                        new QueryDataSource(
+                            Druids.newTimeseriesQueryBuilder()
+                                .dataSource(CalciteTests.DATASOURCE1)
+                                .intervals(querySegmentSpec(Filtration.eternity()))
+                                .granularity(Granularities.ALL)
+                                .aggregators(new FloatMaxAggregatorFactory("a0", "m1"))
+                                .postAggregators(
+                                    expressionPostAgg(
+                                        "p0",
+                                        "(\"a0\" - 3.5)",
+                                        ColumnType.DOUBLE
+                                    )
+                                )
+                                .build()
+                        ),
+                        "j0.",
+                        "1",
+                        NullHandling.replaceWithDefault() ? JoinType.LEFT : JoinType.INNER
+                    )
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .granularity(Granularities.ALL)
+                .aggregators(aggregators(new CountAggregatorFactory("a0")))
+                .filters(expressionFilter("(\"m1\" >= \"j0.p0\")"))
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
         )
-    );
+        .expectedResults(
+            ImmutableList.of(
+                new Object[] {4L}
+            )
+        )
+        .run();
   }
 
   @MethodSource("constructorFeeder")
@@ -1191,122 +1165,97 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   public void testSingleValueLongAgg(String testName, Map<String, Object> queryContext)
   {
     cannotVectorize();
-    testQuery(
-        "SELECT count(*) FROM wikipedia where __time >= (select max(__time) - INTERVAL '10' MINUTE from wikipedia)",
-        ImmutableList.of(
-            Druids.newTimeseriesQueryBuilder()
-                  .dataSource(join(
-                      new TableDataSource(CalciteTests.WIKIPEDIA),
-                      new QueryDataSource(GroupByQuery.builder()
-                                                      .setDataSource(new QueryDataSource(
-                                                          Druids.newTimeseriesQueryBuilder()
-                                                                .dataSource(CalciteTests.WIKIPEDIA)
-                                                                .intervals(querySegmentSpec(Filtration.eternity()))
-                                                                .granularity(Granularities.ALL)
-                                                                .aggregators(new LongMaxAggregatorFactory(
-                                                                    "a0",
-                                                                    "__time"
-                                                                ))
-                                                                .build()
-                                                      ))
-                                                      .setInterval(querySegmentSpec(Filtration.eternity()))
-                                                      .setGranularity(Granularities.ALL)
-                                                      .setVirtualColumns(expressionVirtualColumn(
-                                                                             "v0",
-                                                                             "(\"a0\" - 600000)",
-                                                                             ColumnType.LONG
-                                                                         )
-                                                      )
-                                                      .setAggregatorSpecs(
-                                                          aggregators(
-                                                              new SingleValueAggregatorFactory(
-                                                                  "_a0",
-                                                                  "v0",
-                                                                  ColumnType.LONG
-                                                              )
-                                                          )
-                                                      )
-                                                      .setLimitSpec(NoopLimitSpec.instance())
-                                                      .setContext(QUERY_CONTEXT_DEFAULT)
-                                                      .build()
-                      ),
-                      "j0.",
-                      "1",
-                      NullHandling.replaceWithDefault() ? JoinType.LEFT : JoinType.INNER
-                  ))
-                  .intervals(querySegmentSpec(Filtration.eternity()))
-                  .granularity(Granularities.ALL)
-                  .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .filters(expressionFilter("(\"__time\" >= \"j0._a0\")"))
-                  .context(QUERY_CONTEXT_DEFAULT)
-                  .build()
-        ),
-        ImmutableList.of(
-            new Object[]{220L}
+    testBuilder()
+        .sql(
+            "SELECT count(*) FROM wikipedia where __time >= (select max(__time) - INTERVAL '10' MINUTE from wikipedia)"
         )
-    );
+        .expectedQuery(
+            Druids.newTimeseriesQueryBuilder()
+                .dataSource(
+                    join(
+                        new TableDataSource(CalciteTests.WIKIPEDIA),
+                        new QueryDataSource(
+                            Druids.newTimeseriesQueryBuilder()
+                                .dataSource(CalciteTests.WIKIPEDIA)
+                                .intervals(querySegmentSpec(Filtration.eternity()))
+                                .granularity(Granularities.ALL)
+                                .aggregators(
+                                    new LongMaxAggregatorFactory(
+                                        "a0",
+                                        "__time"
+                                    )
+                                )
+                                .postAggregators(
+                                    expressionPostAgg(
+                                        "p0", "(\"a0\" - 600000)",
+                                        ColumnType.LONG
+                                    )
+                                )
+                                .build()
+                        ),
+                        "j0.",
+                        "1",
+                        NullHandling.replaceWithDefault() ? JoinType.LEFT : JoinType.INNER
+                    )
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .granularity(Granularities.ALL)
+                .aggregators(aggregators(new CountAggregatorFactory("a0")))
+                .filters(expressionFilter("(\"__time\" >= \"j0.p0\")"))
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        )
+        .expectedResults(
+            ImmutableList.of(
+                new Object[] {220L}
+            )
+        )
+        .run();
   }
 
   @MethodSource("constructorFeeder")
   @ParameterizedTest(name = "{0}")
   public void testSingleValueStringAgg(String testName, Map<String, Object> queryContext)
   {
-    cannotVectorize();
-    testQuery(
-        "SELECT  count(*) FROM wikipedia where channel = (select channel from wikipedia order by __time desc LIMIT 1 OFFSET 6)",
-        ImmutableList.of(
-            Druids.newTimeseriesQueryBuilder()
-                  .dataSource(join(
-                      new TableDataSource(CalciteTests.WIKIPEDIA),
-                      new QueryDataSource(GroupByQuery.builder()
-                                                      .setDataSource(new QueryDataSource(
-                                                          Druids.newScanQueryBuilder()
-                                                                .dataSource(CalciteTests.WIKIPEDIA)
-                                                                .intervals(querySegmentSpec(Filtration.eternity()))
-                                                                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                                                                .offset(6L)
-                                                                .limit(1L)
-                                                                .order(ScanQuery.Order.DESCENDING)
-                                                                .columns("__time", "channel")
-                                                                .legacy(false)
-                                                                .context(QUERY_CONTEXT_DEFAULT)
-                                                                .build()
-                                                      ))
-                                                      .setInterval(querySegmentSpec(Filtration.eternity()))
-                                                      .setGranularity(Granularities.ALL)
-                                                      .setVirtualColumns(expressionVirtualColumn(
-                                                                             "v0",
-                                                                             "\"channel\"",
-                                                                             ColumnType.STRING
-                                                                         )
-                                                      )
-                                                      .setAggregatorSpecs(
-                                                          aggregators(
-                                                              new SingleValueAggregatorFactory(
-                                                                  "a0",
-                                                                  "v0",
-                                                                  ColumnType.STRING
-                                                              )
-                                                          )
-                                                      )
-                                                      .setLimitSpec(NoopLimitSpec.instance())
-                                                      .setContext(QUERY_CONTEXT_DEFAULT)
-                                                      .build()
-                      ),
-                      "j0.",
-                      "(\"channel\" == \"j0.a0\")",
-                      JoinType.INNER
-                  ))
-                  .intervals(querySegmentSpec(Filtration.eternity()))
-                  .granularity(Granularities.ALL)
-                  .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(QUERY_CONTEXT_DEFAULT)
-                  .build()
-        ),
-        ImmutableList.of(
-            new Object[]{1256L}
+    testBuilder()
+        .sql(
+            "SELECT count(*) FROM wikipedia where channel = (select channel from wikipedia order by __time desc LIMIT 1 OFFSET 6)"
         )
-    );
+        .expectedQuery(
+            Druids.newTimeseriesQueryBuilder()
+                .dataSource(
+                    join(
+                        new TableDataSource(CalciteTests.WIKIPEDIA),
+                        new QueryDataSource(
+                            Druids.newScanQueryBuilder()
+                                .dataSource(CalciteTests.WIKIPEDIA)
+                                .intervals(querySegmentSpec(Filtration.eternity()))
+                                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                .offset(6L)
+                                .limit(1L)
+                                .order(ScanQuery.Order.DESCENDING)
+                                .columns("__time", "channel")
+                                .legacy(false)
+                                .context(QUERY_CONTEXT_DEFAULT)
+                                .build()
+                        ),
+                        "j0.",
+                        "(\"channel\" == \"j0.channel\")",
+                        JoinType.INNER
+                    )
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .granularity(Granularities.ALL)
+                .aggregators(aggregators(new CountAggregatorFactory("a0")))
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        )
+        .expectedResults(
+            ImmutableList.of(
+                new Object[] {1256L}
+            )
+        )
+        .run();
   }
 
   @MethodSource("constructorFeeder")

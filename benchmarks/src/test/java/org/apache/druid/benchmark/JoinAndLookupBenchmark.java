@@ -305,6 +305,12 @@ public class JoinAndLookupBenchmark
                       return Optional.empty();
                     }
                   }
+
+                  @Override
+                  public String getCanonicalLookupName(String lookupName)
+                  {
+                    return lookupName;
+                  }
                 }
             )
         )
