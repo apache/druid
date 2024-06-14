@@ -453,8 +453,6 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
         } else {
           throw new ISE("Failed to add a row with timestamp[%s]", inputRow.getTimestamp());
         }
-
-        rowIngestionMeters.incrementProcessed();
       }
 
       final SegmentsAndCommitMetadata pushed = driver.pushAllAndClear(pushTimeout);
