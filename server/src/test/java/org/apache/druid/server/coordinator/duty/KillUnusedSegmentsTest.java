@@ -40,7 +40,7 @@ import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.SQLMetadataConnector;
 import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
 import org.apache.druid.metadata.SqlSegmentsMetadataManager;
-import org.apache.druid.metadata.SqlSegmentsMetadataManagerTest;
+import org.apache.druid.metadata.SqlSegmentsMetadataManagerTestBase;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
@@ -732,7 +732,7 @@ public class KillUnusedSegmentsTest
   {
     final DataSegment segment = createSegment(dataSource, interval, version);
     try {
-      SqlSegmentsMetadataManagerTest.publishSegment(connector, config, TestHelper.makeJsonMapper(), segment);
+      SqlSegmentsMetadataManagerTestBase.publishSegment(connector, config, TestHelper.makeJsonMapper(), segment);
     }
     catch (IOException e) {
       throw new RuntimeException(e);

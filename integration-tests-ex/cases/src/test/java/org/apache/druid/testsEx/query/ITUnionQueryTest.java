@@ -19,26 +19,21 @@
 
 package org.apache.druid.testsEx.query;
 
-import com.google.inject.Inject;
 import org.apache.druid.indexing.kafka.KafkaConsumerConfigs;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.testing.IntegrationTestingConfig;
-import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
-import org.apache.druid.testing.clients.OverlordResourceTestClient;
 import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.testing.utils.KafkaAdminClient;
 import org.apache.druid.testing.utils.KafkaEventWriter;
 import org.apache.druid.testing.utils.KafkaUtil;
 import org.apache.druid.testing.utils.StreamEventWriter;
-import org.apache.druid.testing.utils.TestQueryHelper;
 import org.apache.druid.testsEx.categories.Query;
 import org.apache.druid.testsEx.config.DruidTestRunner;
 import org.apache.druid.testsEx.indexer.AbstractIndexerTest;
 import org.joda.time.Interval;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
@@ -63,19 +58,7 @@ public class ITUnionQueryTest extends AbstractIndexerTest
   private static final String UNION_DATA_FILE = "/query/union_data.json";
   private static final String UNION_QUERIES_RESOURCE = "/query/union_queries.json";
   private static final String UNION_DATASOURCE = "wikipedia_index_test";
-
-  @Inject
-  protected CoordinatorResourceTestClient coordinator;
-  @Inject
-  protected OverlordResourceTestClient indexer;
-  @Inject
-  protected TestQueryHelper queryHelper;
   private String fullDatasourceName;
-
-  @Before
-  public void setup()
-  {
-  }
 
   @Test
   public void testUnionQuery() throws Exception

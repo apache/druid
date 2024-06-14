@@ -315,7 +315,7 @@ public class SQLMetadataRuleManagerTest
         1,
         1234L
     );
-    SqlSegmentsMetadataManagerTest.publishSegment(connector, tablesConfig, mapper, dataSegment);
+    SqlSegmentsMetadataManagerTestBase.publishSegment(connector, tablesConfig, mapper, dataSegment);
 
     // This will not delete the rule as the datasource has segment in the segment metadata table
     ruleManager.removeRulesForEmptyDatasourcesOlderThan(System.currentTimeMillis());

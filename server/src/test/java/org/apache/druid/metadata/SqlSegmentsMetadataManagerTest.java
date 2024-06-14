@@ -19,7 +19,6 @@
 
 package org.apache.druid.metadata;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
@@ -34,7 +33,6 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.SegmentSchemaCache;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
@@ -89,10 +87,6 @@ public class SqlSegmentsMetadataManagerTest extends SqlSegmentsMetadataManagerTe
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule
       = new TestDerbyConnector.DerbyConnectorRule();
 
-  private SqlSegmentsMetadataManager sqlSegmentsMetadataManager;
-  private SQLMetadataConnector connector;
-  private static final ObjectMapper JSON_MAPPER = TestHelper.makeJsonMapper();
-
   private final DataSegment wikiSegment1 =
       CreateDataSegments.ofDatasource(DS.WIKI).startingAt("2012-03-15").eachOfSizeInMb(500).get(0);
   private final DataSegment wikiSegment2 =
@@ -132,10 +126,8 @@ public class SqlSegmentsMetadataManagerTest extends SqlSegmentsMetadataManagerTe
         connector
     );
 
-    final TestDerbyConnector connector = derbyConnectorRule.getConnector();
-
     sqlSegmentsMetadataManager = new SqlSegmentsMetadataManager(
-        JSON_MAPPER,
+        jsonMapper,
         Suppliers.ofInstance(config),
         derbyConnectorRule.metadataTablesConfigSupplier(),
         connector,
@@ -1346,7 +1338,7 @@ public class SqlSegmentsMetadataManagerTest extends SqlSegmentsMetadataManagerTe
     final SegmentsMetadataManagerConfig config = new SegmentsMetadataManagerConfig();
     config.setPollDuration(Period.seconds(1));
     sqlSegmentsMetadataManager = new SqlSegmentsMetadataManager(
-        JSON_MAPPER,
+        jsonMapper,
         Suppliers.ofInstance(config),
         derbyConnectorRule.metadataTablesConfigSupplier(),
         derbyConnectorRule.getConnector(),

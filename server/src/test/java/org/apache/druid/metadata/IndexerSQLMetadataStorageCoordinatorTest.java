@@ -1352,7 +1352,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   }
 
   @Test
-  public void testRetrieveUnusedSegmentsWithVersions() throws IOException
+  public void testRetrieveUnusedSegmentsWithVersions()
   {
     final DateTime now = DateTimes.nowUtc();
     final String v1 = now.toString();
@@ -1429,7 +1429,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   }
 
   @Test
-  public void testSimpleUnusedListWithLimit() throws IOException
+  public void testSimpleUnusedListWithLimit()
   {
     coordinator.commitSegments(SEGMENTS, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
     markAllSegmentsUnused();
@@ -3174,7 +3174,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   }
 
   @Test
-  public void testSegmentIdShouldNotBeReallocated() throws IOException
+  public void testSegmentIdShouldNotBeReallocated()
   {
     final SegmentIdWithShardSpec idWithNullTaskAllocator = coordinator.allocatePendingSegment(
         DS.WIKI,
