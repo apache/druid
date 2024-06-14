@@ -28,7 +28,6 @@ sidebar_label: SQL JDBC driver
  This document describes the SQL language.
 :::
 
-
 You can make [Druid SQL](../querying/sql.md) queries using the [Avatica JDBC driver](https://calcite.apache.org/avatica/downloads/).
 We recommend using Avatica JDBC driver version 1.23.0 or later. Note that starting with Avatica 1.21.0, you may need to set the [`transparent_reconnection`](https://calcite.apache.org/avatica/docs/client_reference.html#transparent_reconnection) property to `true` if you notice intermittent query failures.
 
@@ -89,6 +88,7 @@ For a runnable example that includes a query that you might run, see [Examples](
 
 It is also possible to use a protocol buffers JDBC connection with Druid, this offer reduced bloat and potential performance
 improvements for larger result sets. To use it apply the following connection URL instead, everything else remains the same
+
 ```
 String url = "jdbc:avatica:remote:url=http://localhost:8888/druid/v2/sql/avatica-protobuf/;transparent_reconnection=true;serialization=protobuf";
 ```
@@ -134,7 +134,7 @@ You can try out these examples after verifying that you meet the [prerequisites]
 
 For more information about the connection options, see [Client Reference](https://calcite.apache.org/avatica/docs/client_reference.html).
 
-### Prerequisites 
+### Prerequisites
 
 Make sure you meet the following requirements before trying these examples:
 

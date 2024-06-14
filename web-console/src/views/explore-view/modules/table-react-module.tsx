@@ -16,125 +16,28 @@
  * limitations under the License.
  */
 
-import type { SqlOrderByExpression } from '@druid-toolkit/query';
-import {
-  C,
-  F,
-  SqlCase,
-  SqlExpression,
-  SqlFunction,
-  SqlLiteral,
-  SqlQuery,
-  SqlWithPart,
-  T,
-} from '@druid-toolkit/query';
-import type { ExpressionMeta, Host } from '@druid-toolkit/visuals-core';
-import { typedVisualModule } from '@druid-toolkit/visuals-core';
-import React, { useMemo, useState } from 'react';
+import {Button} from '@blueprintjs/core';
+import type {SqlExpression, SqlOrderByExpression, SqlQuery} from '@druid-toolkit/query';
+import {C, F, SqlFunction, SqlLiteral} from '@druid-toolkit/query';
+import type {ExpressionMeta, Host} from '@druid-toolkit/visuals-core';
+import {typedVisualModule} from '@druid-toolkit/visuals-core';
+import React, {useMemo, useState} from 'react';
 import ReactDOM from 'react-dom';
 
-import { Loader } from '../../../components';
-import { useQueryManager } from '../../../hooks';
-import { getInitQuery } from '../utils';
+import {Loader} from '../../../components';
+import {useQueryManager} from '../../../hooks';
+import {formatInteger} from '../../../utils';
+import {getInitQuery} from '../utils';
 
-import { GenericOutputTable } from './components';
-import { shiftTimeInWhere } from './utils/utils';
+import {GenericOutputTable} from './components';
+import type {QueryAndHints} from './utils/table-query';
+import {DEFAULT_TOP_VALUES_K, makeTableQueryAndHints} from './utils/table-query';
 
 import './table-react-module.scss';
 
-type MultipleValueMode = 'null' | 'empty' | 'latest' | 'latestNonNull' | 'count';
-
-const KNOWN_AGGREGATIONS = [
-  'COUNT',
-  'SUM',
-  'MIN',
-  'MAX',
-  'AVG',
-  'APPROX_COUNT_DISTINCT',
-  'APPROX_COUNT_DISTINCT_DS_HLL',
-  'APPROX_COUNT_DISTINCT_DS_THETA',
-  'DS_HLL',
-  'DS_THETA',
-  'APPROX_QUANTILE',
-  'APPROX_QUANTILE_DS',
-  'APPROX_QUANTILE_FIXED_BUCKETS',
-  'DS_QUANTILES_SKETCH',
-  'BLOOM_FILTER',
-  'TDIGEST_QUANTILE',
-  'TDIGEST_GENERATE_SKETCH',
-  'VAR_POP',
-  'VAR_SAMP',
-  'VARIANCE',
-  'STDDEV_POP',
-  'STDDEV_SAMP',
-  'STDDEV',
-  'EARLIEST',
-  'LATEST',
-  'ANY_VALUE',
-];
-
-function toGroupByExpression(
-  splitColumn: ExpressionMeta,
-  timeBucket: string,
-  compareShiftDuration?: string,
-) {
-  const { expression, sqlType, name } = splitColumn;
-  return expression
-    .applyIf(sqlType === 'TIMESTAMP' && compareShiftDuration, e =>
-      F.timeShift(e, compareShiftDuration!, 1),
-    )
-    .applyIf(sqlType === 'TIMESTAMP', e => F.timeFloor(e, timeBucket))
-    .as(name);
-}
-
-function toShowColumnExpression(
-  showColumn: ExpressionMeta,
-  mode: MultipleValueMode,
-): SqlExpression {
-  let ex: SqlExpression = SqlFunction.simple('LATEST', [showColumn.expression, 1024]);
-
-  let elseEx: SqlExpression | undefined;
-  switch (mode) {
-    case 'null':
-      elseEx = SqlLiteral.NULL;
-      break;
-
-    case 'empty':
-      elseEx = SqlLiteral.create('');
-      break;
-
-    case 'latestNonNull':
-      elseEx = SqlFunction.simple(
-        'LATEST',
-        [showColumn.expression, 1024],
-        showColumn.expression.isNotNull(),
-      );
-      break;
-
-    case 'count':
-      elseEx = SqlFunction.simple('CONCAT', [
-        'Multiple values (',
-        SqlFunction.countDistinct(showColumn.expression),
-        ')',
-      ]);
-      break;
-
-    default:
-      // latest
-      break;
-  }
-
-  if (elseEx) {
-    ex = SqlCase.ifThenElse(SqlFunction.countDistinct(showColumn.expression).equal(1), ex, elseEx);
-  }
-
-  return ex.as(showColumn.name);
-}
-
-interface QueryAndHints {
-  query: SqlQuery;
-  groupHints: string[];
-}
+// As of this writing ordering the outer query on something other than __time sometimes throws an error, set this to false / remove it
+// when ordering on non __time is more robust
+const NEEDS_GROUPING_TO_ORDER = true;
 
 export default typedVisualModule({
   parameters: {
@@ -189,6 +92,15 @@ export default typedVisualModule({
         label: 'Pivot column',
       },
     },
+    maxPivotValues: {
+      type: 'number',
+      default: 10,
+      min: 2,
+      max: 100,
+      control: {
+        visible: ({ params }) => Boolean(params.pivotColumn),
+      },
+    },
     metrics: {
       type: 'aggregates',
       default: [{ expression: SqlFunction.count(), name: 'Count', sqlType: 'BIGINT' }],
@@ -200,31 +112,61 @@ export default typedVisualModule({
 
     compares: {
       type: 'options',
-      options: ['PT1M', 'PT5M', 'PT1H', 'P1D', 'P1M'],
+      options: ['PT1M', 'PT5M', 'PT1H', 'PT6H', 'P1D', 'P1M', 'P1Y'],
       control: {
         label: 'Compares',
         optionLabels: {
           PT1M: '1 minute',
           PT5M: '5 minutes',
           PT1H: '1 hour',
+          PT6H: '6 hours',
           P1D: '1 day',
           P1M: '1 month',
+          P1Y: '1 year',
         },
-        visible: ({ params }) => !params.pivotColumn,
       },
     },
 
-    showDelta: {
-      type: 'boolean',
+    compareStrategy: {
+      type: 'option',
+      options: ['auto', 'filtered', 'join'],
+      default: 'auto',
       control: {
         visible: ({ params }) => Boolean((params.compares || []).length),
       },
     },
+    compareTypes: {
+      type: 'options',
+      options: ['value', 'delta', 'absDelta', 'percent', 'absPercent'],
+      default: ['value', 'delta'],
+      control: {
+        label: 'Compare types',
+        visible: ({ params }) => Boolean((params.compares || []).length),
+        optionLabels: {
+          value: 'Value',
+          delta: 'Delta',
+          absDelta: 'Abs. delta',
+          percent: 'Percent',
+          absPercent: 'Abs. percent',
+        },
+      },
+    },
+    restrictTop: {
+      type: 'option',
+      options: ['always', 'never'],
+      default: 'always',
+      control: {
+        label: `Restrict to top ${formatInteger(DEFAULT_TOP_VALUES_K)} values when...`,
+        visible: ({ params }) =>
+          Boolean((params.compares || []).length && params.compareStrategy !== 'filtered'),
+      },
+    },
+
     maxRows: {
       type: 'number',
       default: 200,
       min: 1,
-      max: 1000000,
+      max: 100000,
       control: {
         label: 'Max rows',
         required: true,
@@ -268,16 +210,15 @@ function TableModule(props: TableModuleProps) {
   const pivotValueQuery = useMemo(() => {
     const pivotColumn: ExpressionMeta = parameterValues.pivotColumn;
     const metrics: ExpressionMeta[] = parameterValues.metrics;
+    const maxPivotValues = parameterValues.maxPivotValues || 10;
     if (!pivotColumn) return;
 
     return getInitQuery(table, where)
       .addSelect(pivotColumn.expression.as('v'), { addToGroupBy: 'end' })
       .changeOrderByExpression(
-        metrics.length
-          ? metrics[0].expression.toOrderByExpression('DESC')
-          : F.count().toOrderByExpression('DESC'),
+        (metrics.length ? metrics[0].expression : F.count()).toOrderByExpression('DESC'),
       )
-      .changeLimitValue(20);
+      .changeLimitValue(maxPivotValues);
   }, [table, where, parameterValues]);
 
   const [pivotValueState] = useQueryManager({
@@ -287,151 +228,36 @@ function TableModule(props: TableModuleProps) {
     },
   });
 
-  const queryAndHints = useMemo(() => {
-    const splitColumns: ExpressionMeta[] = parameterValues.splitColumns;
-    const timeBucket: string = parameterValues.timeBucket || 'PT1H';
-    const showColumns: ExpressionMeta[] = parameterValues.showColumns;
-    const multipleValueMode: MultipleValueMode = parameterValues.multipleValueMode || 'null';
-    const pivotColumn: ExpressionMeta = parameterValues.pivotColumn;
-    const metrics: ExpressionMeta[] = parameterValues.metrics;
-    const compares: string[] = parameterValues.compares || [];
-    const showDelta: boolean = parameterValues.showDelta;
-    const maxRows: number = parameterValues.maxRows;
-
-    const pivotValues = pivotColumn ? pivotValueState.data : undefined;
-    if (pivotColumn && !pivotValues) return;
-
-    const hasCompare = Boolean(compares.length);
-
-    const mainQuery = getInitQuery(table, where)
-      .applyForEach(splitColumns, (q, splitColumn) =>
-        q.addSelect(toGroupByExpression(splitColumn, timeBucket), {
-          addToGroupBy: 'end',
-        }),
-      )
-      .applyForEach(showColumns, (q, showColumn) =>
-        q.addSelect(toShowColumnExpression(showColumn, multipleValueMode)),
-      )
-      .applyForEach(pivotValues || [''], (q, pivotValue, i) =>
-        q.applyForEach(metrics, (q, metric) =>
-          q.addSelect(
-            metric.expression
-              .as(metric.name)
-              .applyIf(pivotColumn, q =>
-                q
-                  .addFilterToAggregations(
-                    pivotColumn.expression.equal(pivotValue),
-                    KNOWN_AGGREGATIONS,
-                  )
-                  .as(`${metric.name}${i > 0 ? ` [${pivotValue}]` : ''}`),
-              ),
-          ),
-        ),
-      )
-      .applyIf(metrics.length > 0 || splitColumns.length > 0, q =>
-        q.changeOrderByExpression(
-          orderBy || C(metrics[0]?.name || splitColumns[0]?.name).toOrderByExpression('DESC'),
-        ),
-      )
-      .changeLimitValue(maxRows);
-
-    if (!hasCompare) {
-      return {
-        query: mainQuery,
-        groupHints: pivotColumn
-          ? splitColumns
-              .map(() => '')
-              .concat(
-                showColumns.map(() => ''),
-                (pivotValues || []).flatMap(v => metrics.map(() => v)),
-              )
-          : [],
-      };
-    }
-
-    const main = T('main');
-    return {
-      query: SqlQuery.from(main)
-        .changeWithParts(
-          [SqlWithPart.simple('main', mainQuery)].concat(
-            compares.map((comparePeriod, i) =>
-              SqlWithPart.simple(
-                `compare${i}`,
-                getInitQuery(table, shiftTimeInWhere(where, comparePeriod))
-                  .applyForEach(splitColumns, (q, splitColumn) =>
-                    q.addSelect(toGroupByExpression(splitColumn, timeBucket, comparePeriod), {
-                      addToGroupBy: 'end',
-                    }),
-                  )
-                  .applyForEach(metrics, (q, metric) =>
-                    q.addSelect(metric.expression.as(metric.name)),
-                  ),
-              ),
-            ),
-          ),
-        )
-        .changeSelectExpressions(
-          splitColumns
-            .map(splitColumn => main.column(splitColumn.name).as(splitColumn.name))
-            .concat(
-              showColumns.map(showColumn => main.column(showColumn.name).as(showColumn.name)),
-              metrics.map(metric => main.column(metric.name).as(metric.name)),
-              compares.flatMap((_, i) =>
-                metrics.flatMap(metric => {
-                  const c = T(`compare${i}`).column(metric.name);
-
-                  const ret = [SqlFunction.simple('COALESCE', [c, 0]).as(`#prev: ${metric.name}`)];
-
-                  if (showDelta) {
-                    ret.push(
-                      F.stringFormat(
-                        '%.1f%%',
-                        SqlFunction.simple('SAFE_DIVIDE', [
-                          SqlExpression.parse(`(${main.column(metric.name)} - ${c}) * 100.0`),
-                          c,
-                        ]),
-                      ).as(`%chg: ${metric.name}`),
-                    );
-                  }
-
-                  return ret;
-                }),
-              ),
-            ),
-        )
-        .applyForEach(compares, (q, _comparePeriod, i) =>
-          q.addLeftJoin(
-            T(`compare${i}`),
-            SqlExpression.and(
-              ...splitColumns.map(splitColumn =>
-                main
-                  .column(splitColumn.name)
-                  .isNotDistinctFrom(T(`compare${i}`).column(splitColumn.name)),
-              ),
-            ),
-          ),
-        ),
-      groupHints: splitColumns
-        .map(() => 'Current')
-        .concat(
-          showColumns.map(() => 'Current'),
-          metrics.map(() => 'Current'),
-          compares.flatMap(comparePeriod =>
-            metrics
-              .flatMap(() => (showDelta ? ['', ''] : ['']))
-              .map(() => `Comparison to ${comparePeriod}`),
-          ),
-        ),
-    };
+  const queryAndHints = useMemo((): QueryAndHints | undefined => {
+    const pivotValues = pivotValueState.data;
+    if (parameterValues.pivotColumn && !pivotValues) return;
+    return makeTableQueryAndHints({
+      table,
+      where,
+      splitColumns: parameterValues.splitColumns,
+      timeBucket: parameterValues.timeBucket,
+      showColumns: parameterValues.showColumns,
+      multipleValueMode: parameterValues.multipleValueMode,
+      pivotColumn: parameterValues.pivotColumn,
+      pivotValues,
+      metrics: parameterValues.metrics,
+      compares: parameterValues.compares || [],
+      compareStrategy: parameterValues.compareStrategy,
+      compareTypes: parameterValues.compareTypes,
+      restrictTop: parameterValues.restrictTop,
+      maxRows: parameterValues.maxRows,
+      orderBy,
+      useGroupingToOrderSubQueries: NEEDS_GROUPING_TO_ORDER,
+    });
   }, [table, where, parameterValues, orderBy, pivotValueState.data]);
 
   const [resultState] = useQueryManager({
     query: queryAndHints,
     processQuery: async (queryAndHints: QueryAndHints) => {
-      const { query, groupHints } = queryAndHints;
+      const { query, columnHints } = queryAndHints;
       return {
         result: await sqlQuery(query),
-        groupHints,
+        columnHints,
       };
     },
   });
@@ -440,19 +266,24 @@ function TableModule(props: TableModuleProps) {
   return (
     <div className="table-module">
       {resultState.error ? (
-        resultState.getErrorMessage()
+        <div>
+          <div>{resultState.getErrorMessage()}</div>
+          {resultState.getErrorMessage()?.includes('not found in any table') && orderBy && (
+            <Button text="Clear order by" onClick={() => setOrderBy(undefined)} />
+          )}
+        </div>
       ) : resultData ? (
         <GenericOutputTable
           runeMode={false}
           queryResult={resultData.result}
-          groupHints={resultData.groupHints}
+          columnHints={resultData.columnHints}
           showTypeIcons={false}
-          onOrderByChange={(headerIndex, desc) => {
-            const idx = SqlLiteral.index(headerIndex);
-            if (orderBy && String(orderBy.expression) === String(idx)) {
+          onOrderByChange={(columnName, desc) => {
+            const column = C(columnName);
+            if (orderBy && orderBy.expression.equals(column)) {
               setOrderBy(orderBy.reverseDirection());
             } else {
-              setOrderBy(idx.toOrderByExpression(desc ? 'DESC' : 'ASC'));
+              setOrderBy(column.toOrderByExpression(desc ? 'DESC' : 'ASC'));
             }
           }}
           onQueryAction={action => {

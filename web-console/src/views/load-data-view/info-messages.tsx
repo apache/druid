@@ -16,14 +16,14 @@
  * limitations under the License.
  */
 
-import { Button, Callout, Code, FormGroup, Intent } from '@blueprintjs/core';
+import {Button, Callout, Code, FormGroup, Intent, Tag} from '@blueprintjs/core';
 import React from 'react';
 
-import { ExternalLink, LearnMore } from '../../components';
-import type { IngestionSpec, SchemaMode } from '../../druid-models';
-import { getIngestionDocLink } from '../../druid-models';
-import { getLink } from '../../links';
-import { deepGet, deepSet } from '../../utils';
+import {ExternalLink, LearnMore} from '../../components';
+import type {IngestionSpec, SchemaMode} from '../../druid-models';
+import {getIngestionDocLink} from '../../druid-models';
+import {getLink} from '../../links';
+import {deepGet, deepSet} from '../../utils';
 
 export interface ConnectMessageProps {
   inlineMode: boolean;
@@ -236,8 +236,8 @@ export const AppendToExistingIssue = React.memo(function AppendToExistingIssue(
     <FormGroup>
       <Callout intent={Intent.DANGER}>
         <p>
-          Only <Code>dynamic</Code> partitioning supports <Code>appendToExisting: true</Code>. You
-          have currently selected <Code>{partitionsSpecType}</Code> partitioning.
+          Only <Tag minimal>dynamic</Tag> partitioning supports <Code>appendToExisting: true</Code>.
+          You have currently selected <Tag minimal>{partitionsSpecType}</Tag> partitioning.
         </p>
         <Button
           intent={Intent.SUCCESS}

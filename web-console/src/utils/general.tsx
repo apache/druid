@@ -16,22 +16,27 @@
  * limitations under the License.
  */
 
-import { Intent } from '@blueprintjs/core';
-import type { IconName } from '@blueprintjs/icons';
-import { IconNames } from '@blueprintjs/icons';
+import {Intent} from '@blueprintjs/core';
+import type {IconName} from '@blueprintjs/icons';
+import {IconNames} from '@blueprintjs/icons';
 import copy from 'copy-to-clipboard';
 import * as JSONBig from 'json-bigint-native';
 import numeral from 'numeral';
-import type { JSX } from 'react';
+import type {JSX} from 'react';
 import React from 'react';
 
-import { AppToaster } from '../singletons';
+import {AppToaster} from '../singletons';
 
 // These constants are used to make sure that they are not constantly recreated thrashing the pure components
 export const EMPTY_OBJECT: any = {};
 export const EMPTY_ARRAY: any[] = [];
 
 export type NumberLike = number | bigint;
+
+export function isNumberLike(x: unknown): x is NumberLike {
+  const t = typeof x;
+  return t === 'number' || t === 'bigint';
+}
 
 export function isNumberLikeNaN(x: NumberLike): boolean {
   return isNaN(Number(x));
@@ -83,6 +88,10 @@ export function addOrUpdate<T>(xs: readonly T[], x: T, keyFn: (x: T) => string |
 }
 
 // ----------------------------
+
+export function caseInsensitiveEquals(str1: string | undefined, str2: string | undefined): boolean {
+  return str1?.toLowerCase() === str2?.toLowerCase();
+}
 
 export function caseInsensitiveContains(testString: string, searchString: string): boolean {
   if (!searchString) return true;
@@ -234,12 +243,24 @@ export function formatNumber(n: NumberLike): string {
   return n.toLocaleString('en-US', { maximumFractionDigits: 20 });
 }
 
+export function formatRate(n: NumberLike) {
+  return numeral(n).format('0,0.0') + '/s';
+}
+
 export function formatBytes(n: NumberLike): string {
   return numeral(n).format('0.00 b');
 }
 
+export function formatByteRate(n: NumberLike): string {
+  return numeral(n).format('0.00 b') + '/s';
+}
+
 export function formatBytesCompact(n: NumberLike): string {
   return numeral(n).format('0.00b');
+}
+
+export function formatByteRateCompact(n: NumberLike): string {
+  return numeral(n).format('0.00b') + '/s';
 }
 
 export function formatMegabytes(n: NumberLike): string {
@@ -258,6 +279,18 @@ export function formatMillions(n: NumberLike): string {
   const s = (Number(n) / 1e6).toFixed(3);
   if (s === '0.000') return String(Math.round(Number(n)));
   return s + ' M';
+}
+
+export function forceSignInNumberFormatter(
+  formatter: (n: NumberLike) => string,
+): (n: NumberLike) => string {
+  return (n: NumberLike) => {
+    if (n > 0) {
+      return '+' + formatter(n);
+    } else {
+      return formatter(n);
+    }
+  };
 }
 
 function pad2(str: string | number): string {
@@ -320,6 +353,22 @@ export function pluralIfNeeded(n: NumberLike, singular: string, plural?: string)
 }
 
 // ----------------------------
+
+export function partition<T>(xs: T[], predicate: (x: T, i: number) => boolean): [T[], T[]] {
+  const match: T[] = [];
+  const nonMatch: T[] = [];
+
+  for (let i = 0; i < xs.length; i++) {
+    const x = xs[i];
+    if (predicate(x, i)) {
+      match.push(x);
+    } else {
+      nonMatch.push(x);
+    }
+  }
+
+  return [match, nonMatch];
+}
 
 export function filterMap<T, Q>(xs: readonly T[], f: (x: T, i: number) => Q | undefined): Q[] {
   return xs.map(f).filter((x: Q | undefined) => typeof x !== 'undefined') as Q[];

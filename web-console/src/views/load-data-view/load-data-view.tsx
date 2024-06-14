@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import type { IconName } from '@blueprintjs/core';
+import type {IconName} from '@blueprintjs/core';
 import {
   AnchorButton,
   Button,
@@ -34,14 +34,15 @@ import {
   Radio,
   RadioGroup,
   Switch,
+  Tag,
   TextArea,
 } from '@blueprintjs/core';
-import { IconNames } from '@blueprintjs/icons';
-import { Popover2 } from '@blueprintjs/popover2';
+import {IconNames} from '@blueprintjs/icons';
+import {Popover2} from '@blueprintjs/popover2';
 import classNames from 'classnames';
 import * as JSONBig from 'json-bigint-native';
 import memoize from 'memoize-one';
-import type { JSX } from 'react';
+import type {JSX} from 'react';
 import React from 'react';
 
 import {
@@ -55,7 +56,7 @@ import {
   Loader,
   PopoverText,
 } from '../../components';
-import { AlertDialog, AsyncActionDialog } from '../../dialogs';
+import {AlertDialog, AsyncActionDialog} from '../../dialogs';
 import type {
   ArrayMode,
   DimensionSpec,
@@ -134,9 +135,9 @@ import {
   updateSchemaWithSample,
   upgradeSpec,
 } from '../../druid-models';
-import { getSpecDatasourceName } from '../../helpers';
-import { getLink } from '../../links';
-import { Api, AppToaster, UrlBaser } from '../../singletons';
+import {getSpecDatasourceName} from '../../helpers';
+import {getLink} from '../../links';
+import {Api, AppToaster, UrlBaser} from '../../singletons';
 import {
   alphanumericCompare,
   compact,
@@ -177,10 +178,10 @@ import {
   sampleForTransform,
 } from '../../utils/sampler';
 
-import { ExamplePicker } from './example-picker/example-picker';
-import { EXAMPLE_SPECS } from './example-specs';
-import { FilterTable, filterTableSelectedColumnName } from './filter-table/filter-table';
-import { FormEditor } from './form-editor/form-editor';
+import {ExamplePicker} from './example-picker/example-picker';
+import {EXAMPLE_SPECS} from './example-specs';
+import {FilterTable, filterTableSelectedColumnName} from './filter-table/filter-table';
+import {FormEditor} from './form-editor/form-editor';
 import {
   AppendToExistingIssue,
   ConnectMessage,
@@ -194,17 +195,11 @@ import {
   TransformMessage,
   TuningMessage,
 } from './info-messages';
-import { ParseDataTable } from './parse-data-table/parse-data-table';
-import {
-  ParseTimeTable,
-  parseTimeTableSelectedColumnName,
-} from './parse-time-table/parse-time-table';
-import { ReorderMenu } from './reorder-menu/reorder-menu';
-import { SchemaTable } from './schema-table/schema-table';
-import {
-  TransformTable,
-  transformTableSelectedColumnName,
-} from './transform-table/transform-table';
+import {ParseDataTable} from './parse-data-table/parse-data-table';
+import {ParseTimeTable, parseTimeTableSelectedColumnName,} from './parse-time-table/parse-time-table';
+import {ReorderMenu} from './reorder-menu/reorder-menu';
+import {SchemaTable} from './schema-table/schema-table';
+import {TransformTable, transformTableSelectedColumnName,} from './transform-table/transform-table';
 
 import './load-data-view.scss';
 
@@ -3073,8 +3068,9 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               <p>Your partitioning and sorting configuration is uncommon.</p>
               <p>
                 For best performance the first dimension in your schema (
-                <Code>{firstDimensionName}</Code>), which is what the data will be primarily sorted
-                on, commonly matches the partitioning dimension (<Code>{partitionDimension}</Code>).
+                <Tag minimal>{firstDimensionName}</Tag>), which is what the data will be primarily
+                sorted on, commonly matches the partitioning dimension (
+                <Tag minimal>{partitionDimension}</Tag>).
               </p>
               <p>
                 <Button
@@ -3243,6 +3239,26 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                   <>
                     Creates segments as additional shards of the latest version, effectively
                     appending to the segment set instead of replacing it.
+                  </>
+                ),
+              },
+              {
+                name: 'suspended',
+                type: 'boolean',
+                defined: isStreamingSpec,
+                defaultValue: false,
+                info: (
+                  <>
+                    <p>Create a supervisor in a suspended state.</p>
+                    <p>
+                      Creating a supervisor in a suspended state can be helpful if you are not yet
+                      ready to begin ingesting data or if you prefer to configure the
+                      supervisor&apos;s metadata before starting it.
+                    </p>
+                    <p>
+                      You can configure the exact offsets that the supervisor will read from using
+                      the <Code>Actions</Code> menu on the <Code>Supervisors</Code> tab.
+                    </p>
                   </>
                 ),
               },
@@ -3431,11 +3447,11 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                   <p>
                     You have enabled type-aware schema discovery (
                     <Code>useSchemaDiscovery: true</Code>) to ingest data into the existing
-                    datasource <Code>{datasource}</Code>.
+                    datasource <Tag minimal>{datasource}</Tag>.
                   </p>
                   <p>
                     If you used string-based schema discovery when first ingesting data to{' '}
-                    <Code>{datasource}</Code>, using type-aware schema discovery now can cause
+                    <Tag minimal>{datasource}</Tag>, using type-aware schema discovery now can cause
                     problems with the values multi-value string dimensions.
                   </p>
                   <p>

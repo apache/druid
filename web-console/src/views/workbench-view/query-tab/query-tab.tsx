@@ -16,32 +16,32 @@
  * limitations under the License.
  */
 
-import { Code, Intent } from '@blueprintjs/core';
-import { IconNames } from '@blueprintjs/icons';
-import type { QueryResult } from '@druid-toolkit/query';
-import { QueryRunner, SqlQuery } from '@druid-toolkit/query';
+import {Code, Intent} from '@blueprintjs/core';
+import {IconNames} from '@blueprintjs/icons';
+import type {QueryResult} from '@druid-toolkit/query';
+import {QueryRunner, SqlQuery} from '@druid-toolkit/query';
 import axios from 'axios';
-import type { JSX } from 'react';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import type {JSX} from 'react';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
 import SplitterLayout from 'react-splitter-layout';
-import { useStore } from 'zustand';
+import {useStore} from 'zustand';
 
-import { Loader, QueryErrorPane } from '../../../components';
-import type { DruidEngine, LastExecution, QueryContext } from '../../../druid-models';
-import { Execution, WorkbenchQuery } from '../../../druid-models';
+import {Loader, QueryErrorPane} from '../../../components';
+import type {DruidEngine, LastExecution, QueryContext} from '../../../druid-models';
+import {Execution, WorkbenchQuery} from '../../../druid-models';
 import {
   executionBackgroundStatusCheck,
   maybeGetClusterCapacity,
   reattachTaskExecution,
   submitTaskQuery,
 } from '../../../helpers';
-import { usePermanentCallback, useQueryManager } from '../../../hooks';
-import { Api, AppToaster } from '../../../singletons';
-import { ExecutionStateCache } from '../../../singletons/execution-state-cache';
-import { WorkbenchHistory } from '../../../singletons/workbench-history';
-import type { WorkbenchRunningPromise } from '../../../singletons/workbench-running-promises';
-import { WorkbenchRunningPromises } from '../../../singletons/workbench-running-promises';
-import type { ColumnMetadata, QueryAction, QuerySlice, RowColumn } from '../../../utils';
+import {usePermanentCallback, useQueryManager} from '../../../hooks';
+import {Api, AppToaster} from '../../../singletons';
+import {ExecutionStateCache} from '../../../singletons/execution-state-cache';
+import {WorkbenchHistory} from '../../../singletons/workbench-history';
+import type {WorkbenchRunningPromise} from '../../../singletons/workbench-running-promises';
+import {WorkbenchRunningPromises} from '../../../singletons/workbench-running-promises';
+import type {ColumnMetadata, QueryAction, QuerySlice, RowColumn} from '../../../utils';
 import {
   DruidError,
   findAllSqlQueriesInText,
@@ -50,19 +50,19 @@ import {
   localStorageSet,
   QueryManager,
 } from '../../../utils';
-import { CapacityAlert } from '../capacity-alert/capacity-alert';
-import type { ExecutionDetailsTab } from '../execution-details-pane/execution-details-pane';
-import { ExecutionErrorPane } from '../execution-error-pane/execution-error-pane';
-import { ExecutionProgressPane } from '../execution-progress-pane/execution-progress-pane';
-import { ExecutionStagesPane } from '../execution-stages-pane/execution-stages-pane';
-import { ExecutionSummaryPanel } from '../execution-summary-panel/execution-summary-panel';
-import { ExecutionTimerPanel } from '../execution-timer-panel/execution-timer-panel';
-import { FlexibleQueryInput } from '../flexible-query-input/flexible-query-input';
-import { IngestSuccessPane } from '../ingest-success-pane/ingest-success-pane';
-import { metadataStateStore } from '../metadata-state-store';
-import { ResultTablePane } from '../result-table-pane/result-table-pane';
-import { RunPanel } from '../run-panel/run-panel';
-import { workStateStore } from '../work-state-store';
+import {CapacityAlert} from '../capacity-alert/capacity-alert';
+import type {ExecutionDetailsTab} from '../execution-details-pane/execution-details-pane';
+import {ExecutionErrorPane} from '../execution-error-pane/execution-error-pane';
+import {ExecutionProgressPane} from '../execution-progress-pane/execution-progress-pane';
+import {ExecutionStagesPane} from '../execution-stages-pane/execution-stages-pane';
+import {ExecutionSummaryPanel} from '../execution-summary-panel/execution-summary-panel';
+import {ExecutionTimerPanel} from '../execution-timer-panel/execution-timer-panel';
+import {FlexibleQueryInput} from '../flexible-query-input/flexible-query-input';
+import {IngestSuccessPane} from '../ingest-success-pane/ingest-success-pane';
+import {metadataStateStore} from '../metadata-state-store';
+import {ResultTablePane} from '../result-table-pane/result-table-pane';
+import {RunPanel} from '../run-panel/run-panel';
+import {workStateStore} from '../work-state-store';
 
 import './query-tab.scss';
 
@@ -170,16 +170,16 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
 
   const queryInputRef = useRef<FlexibleQueryInput | null>(null);
 
+  const cachedExecutionState = ExecutionStateCache.getState(id);
+  const currentRunningPromise = WorkbenchRunningPromises.getPromise(id);
   const [executionState, queryManager] = useQueryManager<
     WorkbenchQuery | WorkbenchRunningPromise | LastExecution,
     Execution,
     Execution,
     DruidError
   >({
-    initQuery: ExecutionStateCache.getState(id)
-      ? undefined
-      : WorkbenchRunningPromises.getPromise(id) || query.getLastExecution(),
-    initState: ExecutionStateCache.getState(id),
+    initQuery: cachedExecutionState ? undefined : currentRunningPromise || query.getLastExecution(),
+    initState: cachedExecutionState,
     processQuery: async (q, cancelToken) => {
       if (q instanceof WorkbenchQuery) {
         ExecutionStateCache.deleteState(id);
@@ -214,6 +214,7 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
 
             onQueryChange(props.query.changeLastExecution(undefined));
 
+            const startTime = new Date();
             let result: QueryResult;
             try {
               const resultPromise = queryRunner.runQuery({
@@ -223,13 +224,19 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
                   nativeQueryCancelFnRef.current = cancelFn;
                 }),
               });
-              WorkbenchRunningPromises.storePromise(id, { promise: resultPromise, prefixLines });
+              WorkbenchRunningPromises.storePromise(id, {
+                promise: resultPromise,
+                prefixLines,
+                startTime,
+              });
 
               result = await resultPromise;
               nativeQueryCancelFnRef.current = undefined;
             } catch (e) {
               nativeQueryCancelFnRef.current = undefined;
-              throw new DruidError(e, prefixLines);
+              const druidError = new DruidError(e, prefixLines);
+              druidError.queryDuration = Date.now() - startTime.valueOf();
+              throw druidError;
             }
 
             return Execution.fromResult(engine, result);
@@ -240,11 +247,9 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
         try {
           result = await q.promise;
         } catch (e) {
-          WorkbenchRunningPromises.deletePromise(id);
           throw new DruidError(e, q.prefixLines);
         }
 
-        WorkbenchRunningPromises.deletePromise(id);
         return Execution.fromResult('sql-native', result);
       } else {
         switch (q.engine) {
@@ -265,9 +270,9 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
   });
 
   useEffect(() => {
-    if (!executionState.data) return;
+    if (!executionState.data && !executionState.error) return;
+    WorkbenchRunningPromises.deletePromise(id);
     ExecutionStateCache.storeState(id, executionState);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [executionState.data, executionState.error]);
 
   const incrementWorkVersion = useStore(
@@ -397,12 +402,14 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
             {executionState.isLoading() && (
               <ExecutionTimerPanel
                 execution={executionState.intermediate}
+                startTime={currentRunningPromise?.startTime}
                 onCancel={() => queryManager.cancelCurrent()}
               />
             )}
             {(execution || executionState.error) && (
               <ExecutionSummaryPanel
                 execution={execution}
+                queryErrorDuration={executionState.error?.queryDuration}
                 onExecutionDetail={() => onDetails(statsTaskId!)}
                 onReset={() => {
                   queryManager.reset();

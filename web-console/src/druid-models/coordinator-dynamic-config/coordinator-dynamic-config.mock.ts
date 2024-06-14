@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import type { CoordinatorDynamicConfig } from './coordinator-dynamic-config';
+import type {CoordinatorDynamicConfig} from './coordinator-dynamic-config';
 
 export const DEFAULT_COORDINATOR_DYNAMIC_CONFIG: CoordinatorDynamicConfig = {
   millisToWaitBeforeDeleting: 900000,
@@ -27,7 +27,7 @@ export const DEFAULT_COORDINATOR_DYNAMIC_CONFIG: CoordinatorDynamicConfig = {
   replicationThrottleLimit: 500,
   balancerComputeThreads: 1,
   killDataSourceWhitelist: [],
-  killTaskSlotRatio: 1,
+  killTaskSlotRatio: 0.1,
   maxKillTaskSlots: 2147483647,
   killPendingSegmentsSkipList: [],
   maxSegmentsInNodeLoadingQueue: 500,

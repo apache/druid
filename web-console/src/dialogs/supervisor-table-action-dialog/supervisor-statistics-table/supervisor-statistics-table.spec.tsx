@@ -18,17 +18,14 @@
 
 import React from 'react';
 
-import { QueryState } from '../../../utils';
-import { shallow } from '../../../utils/shallow-renderer';
+import {QueryState} from '../../../utils';
+import {shallow} from '../../../utils/shallow-renderer';
 
-import type { SupervisorStatisticsTableRow } from './supervisor-statistics-table';
-import {
-  normalizeSupervisorStatisticsResults,
-  SupervisorStatisticsTable,
-} from './supervisor-statistics-table';
+import type {SupervisorStatisticsTableRow} from './supervisor-statistics-table';
+import {normalizeSupervisorStatisticsResults, SupervisorStatisticsTable,} from './supervisor-statistics-table';
 
 let supervisorStatisticsState: QueryState<SupervisorStatisticsTableRow[]> = QueryState.INIT;
-jest.mock('../../../hooks', () => {
+jest.mock('../../../hooks/use-query-manager', () => {
   return {
     useQueryManager: () => [supervisorStatisticsState],
   };
@@ -72,18 +69,21 @@ describe('SupervisorStatisticsTable', () => {
               buildSegments: {
                 '5m': {
                   processed: 3.5455993615040584,
+                  processedBytes: 10,
                   unparseable: 0,
                   thrownAway: 0,
                   processedWithError: 0,
                 },
                 '15m': {
                   processed: 5.544749689510444,
+                  processedBytes: 20,
                   unparseable: 0,
                   thrownAway: 0,
                   processedWithError: 0,
                 },
                 '1m': {
                   processed: 4.593670088770785,
+                  processedBytes: 30,
                   unparseable: 0,
                   thrownAway: 0,
                   processedWithError: 0,
@@ -93,6 +93,7 @@ describe('SupervisorStatisticsTable', () => {
             totals: {
               buildSegments: {
                 processed: 7516,
+                processedBytes: 60,
                 processedWithError: 0,
                 thrownAway: 0,
                 unparseable: 0,

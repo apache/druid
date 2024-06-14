@@ -16,27 +16,21 @@
  * limitations under the License.
  */
 
-import { Icon } from '@blueprintjs/core';
-import { IconNames } from '@blueprintjs/icons';
-import { Popover2 } from '@blueprintjs/popover2';
-import type { Column, QueryResult, SqlExpression, SqlQuery } from '@druid-toolkit/query';
-import { SqlAlias, SqlFunction, SqlStar } from '@druid-toolkit/query';
+import {Icon} from '@blueprintjs/core';
+import {IconNames} from '@blueprintjs/icons';
+import {Popover2} from '@blueprintjs/popover2';
+import type {Column, QueryResult, SqlExpression, SqlQuery} from '@druid-toolkit/query';
+import {SqlAlias, SqlFunction, SqlStar} from '@druid-toolkit/query';
 import classNames from 'classnames';
-import React, { useState } from 'react';
-import type { RowRenderProps } from 'react-table';
+import React, {useState} from 'react';
+import type {RowRenderProps} from 'react-table';
 import ReactTable from 'react-table';
 
-import { BracedText, Deferred, TableCell } from '../../../../components';
-import { CellFilterMenu } from '../../../../components/cell-filter-menu/cell-filter-menu';
-import { ShowValueDialog } from '../../../../dialogs/show-value-dialog/show-value-dialog';
-import type { QueryAction } from '../../../../utils';
-import {
-  columnToIcon,
-  columnToSummary,
-  columnToWidth,
-  filterMap,
-  getNumericColumnBraces,
-} from '../../../../utils';
+import {BracedText, Deferred, TableCell} from '../../../../components';
+import {CellFilterMenu} from '../../../../components/cell-filter-menu/cell-filter-menu';
+import {ShowValueDialog} from '../../../../dialogs/show-value-dialog/show-value-dialog';
+import type {QueryAction} from '../../../../utils';
+import {columnToIcon, columnToSummary, columnToWidth, filterMap, getNumericColumnBraces,} from '../../../../utils';
 
 import './preview-table.scss';
 
@@ -103,7 +97,7 @@ export const PreviewTable = React.memo(function PreviewTable(props: PreviewTable
     );
   }
 
-  const numericColumnBraces = getNumericColumnBraces(queryResult);
+  const numericColumnBraces = getNumericColumnBraces(queryResult, undefined, undefined);
   return (
     <div className="preview-table">
       <ReactTable

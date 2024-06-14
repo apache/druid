@@ -16,12 +16,12 @@
  * limitations under the License.
  */
 
-import { render } from '@testing-library/react';
+import {render} from '@testing-library/react';
 import React from 'react';
 
-import { Execution } from '../../../druid-models';
+import {Execution} from '../../../druid-models';
 
-import { ExecutionTimerPanel } from './execution-timer-panel';
+import {ExecutionTimerPanel} from './execution-timer-panel';
 
 describe('AnchoredQueryTimer', () => {
   const start = 1619201218452;
@@ -37,12 +37,20 @@ describe('AnchoredQueryTimer', () => {
     jest.restoreAllMocks();
   });
 
-  it('matches snapshot', () => {
+  it('matches snapshot with execution', () => {
     const { container } = render(
       <ExecutionTimerPanel
         execution={new Execution({ engine: 'sql-msq-task', id: 'xxx', startTime: new Date(start) })}
+        startTime={undefined}
         onCancel={() => {}}
       />,
+    );
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot with startTime', () => {
+    const { container } = render(
+      <ExecutionTimerPanel execution={undefined} startTime={new Date(start)} onCancel={() => {}} />,
     );
     expect(container.firstChild).toMatchSnapshot();
   });

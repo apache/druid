@@ -336,6 +336,7 @@ public class FunctionTest extends InitializedNullHandlingTest
   {
     assertExpr("array_offset([1, 2, 3], 2)", 3L);
     assertArrayExpr("array_offset([1, 2, 3], 3)", null);
+    assertArrayExpr("array_offset([1, 2, 3], -1)", null);
     assertExpr("array_offset(a, 2)", "baz");
     // nested types only work with typed bindings right now, and pretty limited support for stuff
     assertExpr("array_offset(nestedArray, 1)", ImmutableMap.of("x", 4L, "y", 6.6), typedBindings);
@@ -346,6 +347,7 @@ public class FunctionTest extends InitializedNullHandlingTest
   {
     assertExpr("array_ordinal([1, 2, 3], 3)", 3L);
     assertArrayExpr("array_ordinal([1, 2, 3], 4)", null);
+    assertArrayExpr("array_ordinal([1, 2, 3], 0)", null);
     assertExpr("array_ordinal(a, 3)", "baz");
     // nested types only work with typed bindings right now, and pretty limited support for stuff
     assertExpr("array_ordinal(nestedArray, 2)", ImmutableMap.of("x", 4L, "y", 6.6), typedBindings);
@@ -365,6 +367,21 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertExpr("array_ordinal_of([1, 2, 3], 3)", 3L);
     assertExpr("array_ordinal_of([1, 2, 3], 4)", NullHandling.replaceWithDefault() ? -1L : null);
     assertExpr("array_ordinal_of(a, 'baz')", 3L);
+  }
+
+  @Test
+  public void testScalarInArray()
+  {
+    assertExpr("scalar_in_array(2, [1, 2, 3])", 1L);
+    assertExpr("scalar_in_array(2.1, [1, 2, 3])", 0L);
+    assertExpr("scalar_in_array(2, [1.1, 2.1, 3.1])", 0L);
+    assertExpr("scalar_in_array(2, [1.1, 2.0, 3.1])", 1L);
+    assertExpr("scalar_in_array(4, [1, 2, 3])", 0L);
+    assertExpr("scalar_in_array(b, [3, 4])", 0L);
+    assertExpr("scalar_in_array(1, null)", null);
+    assertExpr("scalar_in_array(null, null)", null);
+    assertExpr("scalar_in_array(null, [1, null, 2])", 1L);
+    assertExpr("scalar_in_array(null, [1, 2])", null);
   }
 
   @Test
@@ -1275,6 +1292,13 @@ public class FunctionTest extends InitializedNullHandlingTest
 
     final Expr singleThreaded = Expr.singleThreaded(expr, bindings);
     Assert.assertEquals(singleThreaded.stringify(), expectedResult, singleThreaded.eval(bindings).value());
+
+    final Expr singleThreadedNoFlatten = Expr.singleThreaded(exprNoFlatten, bindings);
+    Assert.assertEquals(
+        singleThreadedNoFlatten.stringify(),
+        expectedResult,
+        singleThreadedNoFlatten.eval(bindings).value()
+    );
 
     Assert.assertEquals(expr.stringify(), roundTrip.stringify());
     Assert.assertEquals(expr.stringify(), roundTripFlatten.stringify());

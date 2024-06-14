@@ -16,26 +16,17 @@
  * limitations under the License.
  */
 
-import { Button, Callout, Classes, Code, Dialog, Intent, Switch } from '@blueprintjs/core';
-import React, { useState } from 'react';
+import {Button, Callout, Classes, Code, Dialog, Intent, Switch} from '@blueprintjs/core';
+import {Tooltip2} from '@blueprintjs/popover2';
+import React, {useState} from 'react';
 
-import type { FormJsonTabs } from '../../components';
-import {
-  AutoForm,
-  ExternalLink,
-  FormGroupWithInfo,
-  FormJsonSelector,
-  JsonInput,
-  PopoverText,
-} from '../../components';
-import type { CompactionConfig } from '../../druid-models';
-import {
-  COMPACTION_CONFIG_FIELDS,
-  compactionConfigHasLegacyInputSegmentSizeBytesSet,
-} from '../../druid-models';
-import { getLink } from '../../links';
-import { deepDelete, deepGet, deepSet, formatBytesCompact } from '../../utils';
-import { CompactionHistoryDialog } from '../compaction-history-dialog/compaction-history-dialog';
+import type {FormJsonTabs} from '../../components';
+import {AutoForm, ExternalLink, FormGroupWithInfo, FormJsonSelector, JsonInput, PopoverText,} from '../../components';
+import type {CompactionConfig} from '../../druid-models';
+import {COMPACTION_CONFIG_FIELDS, compactionConfigHasLegacyInputSegmentSizeBytesSet,} from '../../druid-models';
+import {getLink} from '../../links';
+import {deepDelete, deepGet, deepSet, formatBytesCompact} from '../../utils';
+import {CompactionHistoryDialog} from '../compaction-history-dialog/compaction-history-dialog';
 
 import './compaction-config-dialog.scss';
 
@@ -162,7 +153,13 @@ export const CompactionConfigDialog = React.memo(function CompactionConfigDialog
             minimal
             onClick={() => setShowHistory(true)}
           />
-          {compactionConfig && <Button text="Delete" intent={Intent.DANGER} onClick={onDelete} />}
+          {compactionConfig ? (
+            <Button text="Delete" intent={Intent.DANGER} onClick={onDelete} />
+          ) : (
+            <Tooltip2 content="There is no compaction config currently set for this datasource">
+              <Button text="Delete" disabled intent={Intent.DANGER} />
+            </Tooltip2>
+          )}
           <Button text="Close" onClick={onClose} />
           <Button
             text="Submit"

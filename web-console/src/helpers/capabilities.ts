@@ -16,9 +16,9 @@
  * limitations under the License.
  */
 
-import { Api } from '../singletons';
+import {Api} from '../singletons';
 
-import { maybeGetClusterCapacity } from './index';
+import {maybeGetClusterCapacity} from './index';
 
 export type CapabilitiesMode = 'full' | 'no-sql' | 'no-proxy';
 
@@ -65,8 +65,8 @@ export class Capabilities {
         { timeout: Capabilities.STATUS_TIMEOUT },
       );
     } catch (e) {
-      const { response } = e;
-      if (response.status !== 405 && response.status !== 404) {
+      const status = e.response?.status;
+      if (status !== 405 && status !== 404) {
         return; // other failure
       }
       try {
@@ -87,7 +87,7 @@ export class Capabilities {
           { timeout: Capabilities.STATUS_TIMEOUT },
         );
       } catch (e) {
-        if (response.status !== 405 && response.status !== 404) {
+        if (status !== 405 && status !== 404) {
           return; // other failure
         }
 
@@ -106,9 +106,9 @@ export class Capabilities {
         timeout: Capabilities.STATUS_TIMEOUT,
       });
     } catch (e) {
-      const { response } = e;
+      const status = e.response?.status;
       // If we detect error code 400 the management proxy is enabled but just does not know about the recently added /proxy/enabled route so treat this as a win.
-      return response.status === 400;
+      return status === 400;
     }
 
     return true;

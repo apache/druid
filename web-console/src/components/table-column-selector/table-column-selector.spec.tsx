@@ -16,16 +16,16 @@
  * limitations under the License.
  */
 
-import { render } from '@testing-library/react';
+import {render} from '@testing-library/react';
 import React from 'react';
 
-import { TableColumnSelector } from './table-column-selector';
+import {TableColumnSelector} from './table-column-selector';
 
 describe('TableColumnSelector', () => {
   it('matches snapshot', () => {
     const tableColumn = (
       <TableColumnSelector
-        columns={['a', 'b', 'c']}
+        columns={['a', 'b', { text: 'c', label: 'c-label' }]}
         onChange={() => {}}
         tableColumnsHidden={['b']}
       />

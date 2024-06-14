@@ -133,7 +133,7 @@ class StreamChunkParser<RecordType extends ByteEntity>
   {
     final FluentIterable<InputRow> iterable = FluentIterable
         .from(valueBytes)
-        .transform(ByteEntity::getBuffer)
+        .transform(entity -> entity.getBuffer().duplicate() /* Parsing may need to modify buffer position */)
         .transform(this::incrementProcessedBytes)
         .transformAndConcat(parser::parseBatch);
 

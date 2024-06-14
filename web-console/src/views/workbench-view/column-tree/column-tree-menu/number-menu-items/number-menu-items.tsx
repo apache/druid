@@ -16,14 +16,14 @@
  * limitations under the License.
  */
 
-import { MenuItem } from '@blueprintjs/core';
-import { IconNames } from '@blueprintjs/icons';
-import type { SqlExpression, SqlQuery } from '@druid-toolkit/query';
-import { C, F, L } from '@druid-toolkit/query';
-import type { JSX } from 'react';
+import {MenuItem} from '@blueprintjs/core';
+import {IconNames} from '@blueprintjs/icons';
+import type {SqlExpression, SqlQuery} from '@druid-toolkit/query';
+import {C, F, L} from '@druid-toolkit/query';
+import type {JSX} from 'react';
 import React from 'react';
 
-import { prettyPrintSql } from '../../../../../utils';
+import {prettyPrintSql} from '../../../../../utils';
 
 const NINE_THOUSAND = L(9000);
 
@@ -82,10 +82,13 @@ export const NumberMenuItems = React.memo(function NumberMenuItems(props: Number
           text={prettyPrintSql(ex)}
           onClick={() => {
             onQueryChange(
-              parsedQuery.addSelect(ex.as(alias), {
-                insertIndex: 'last-grouping',
-                addToGroupBy: 'end',
-              }),
+              parsedQuery.addSelect(
+                ex.applyIf(alias, e => e.as(String(alias))),
+                {
+                  insertIndex: 'last-grouping',
+                  addToGroupBy: 'end',
+                },
+              ),
               true,
             );
           }}

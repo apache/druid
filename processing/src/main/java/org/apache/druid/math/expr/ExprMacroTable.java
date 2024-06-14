@@ -25,6 +25,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.math.expr.vector.ExprVectorProcessor;
+import org.apache.druid.math.expr.vector.FallbackVectorProcessor;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -158,6 +160,18 @@ public class ExprMacroTable
       return analyzeInputsSupplier.get();
     }
 
+    @Override
+    public boolean canVectorize(InputBindingInspector inspector)
+    {
+      return getOutputType(inspector) != null && inspector.canVectorize(args);
+    }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
+    {
+      return FallbackVectorProcessor.create(macro, args, inspector);
+    }
+
     /**
      * Implemented by subclasses to provide the value for {@link #analyzeInputs()}, which uses a memoized supplier.
      */
@@ -172,7 +186,7 @@ public class ExprMacroTable
       if (o == null || getClass() != o.getClass()) {
         return false;
       }
-      BaseScalarMacroFunctionExpr that = (BaseScalarMacroFunctionExpr) o;
+      BaseMacroFunctionExpr that = (BaseMacroFunctionExpr) o;
       return Objects.equals(macro, that.macro) &&
              Objects.equals(args, that.args);
     }

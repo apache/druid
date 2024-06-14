@@ -23,6 +23,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.metadata.SegmentSchemaCache;
 
 public class SqlSegmentsMetadataManagerProvider implements SegmentsMetadataManagerProvider
 {
@@ -31,6 +33,8 @@ public class SqlSegmentsMetadataManagerProvider implements SegmentsMetadataManag
   private final Supplier<MetadataStorageTablesConfig> storageConfig;
   private final SQLMetadataConnector connector;
   private final Lifecycle lifecycle;
+  private final SegmentSchemaCache segmentSchemaCache;
+  private final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
 
   @Inject
   public SqlSegmentsMetadataManagerProvider(
@@ -38,7 +42,9 @@ public class SqlSegmentsMetadataManagerProvider implements SegmentsMetadataManag
       Supplier<SegmentsMetadataManagerConfig> config,
       Supplier<MetadataStorageTablesConfig> storageConfig,
       SQLMetadataConnector connector,
-      Lifecycle lifecycle
+      Lifecycle lifecycle,
+      SegmentSchemaCache segmentSchemaCache,
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
     this.jsonMapper = jsonMapper;
@@ -46,6 +52,8 @@ public class SqlSegmentsMetadataManagerProvider implements SegmentsMetadataManag
     this.storageConfig = storageConfig;
     this.connector = connector;
     this.lifecycle = lifecycle;
+    this.segmentSchemaCache = segmentSchemaCache;
+    this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
   }
 
   @Override
@@ -57,6 +65,7 @@ public class SqlSegmentsMetadataManagerProvider implements SegmentsMetadataManag
           @Override
           public void start()
           {
+            connector.createSegmentSchemasTable();
             connector.createSegmentTable();
             connector.createUpgradeSegmentsTable();
           }
@@ -73,7 +82,9 @@ public class SqlSegmentsMetadataManagerProvider implements SegmentsMetadataManag
         jsonMapper,
         config,
         storageConfig,
-        connector
+        connector,
+        segmentSchemaCache,
+        centralizedDatasourceSchemaConfig
     );
   }
 }

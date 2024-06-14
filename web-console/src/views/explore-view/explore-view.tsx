@@ -18,38 +18,36 @@
 
 import './modules';
 
-import { Menu, MenuItem } from '@blueprintjs/core';
-import { IconNames } from '@blueprintjs/icons';
-import type { SqlExpression, SqlTable } from '@druid-toolkit/query';
-import { C, L, sql, SqlLiteral, SqlQuery, T } from '@druid-toolkit/query';
-import type { ExpressionMeta, TransferValue } from '@druid-toolkit/visuals-core';
-import {
-  useModuleContainer,
-  useParameterValues,
-  useSingleHost,
-} from '@druid-toolkit/visuals-react';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { useStore } from 'zustand';
+import {Intent, Menu, MenuItem} from '@blueprintjs/core';
+import {IconNames} from '@blueprintjs/icons';
+import type {SqlExpression} from '@druid-toolkit/query';
+import {C, L, sql, SqlLiteral, SqlQuery, SqlTable, T} from '@druid-toolkit/query';
+import type {ExpressionMeta, TransferValue} from '@druid-toolkit/visuals-core';
+import {useModuleContainer, useParameterValues, useSingleHost,} from '@druid-toolkit/visuals-react';
+import copy from 'copy-to-clipboard';
+import React, {useEffect, useMemo, useRef, useState} from 'react';
+import {useStore} from 'zustand';
 
-import { ShowValueDialog } from '../../dialogs/show-value-dialog/show-value-dialog';
-import { useLocalStorageState, useQueryManager } from '../../hooks';
-import { deepGet, filterMap, findMap, LocalStorageKeys, oneOf, queryDruidSql } from '../../utils';
+import {ShowValueDialog} from '../../dialogs/show-value-dialog/show-value-dialog';
+import {useLocalStorageState, useQueryManager} from '../../hooks';
+import {AppToaster} from '../../singletons';
+import {deepGet, filterMap, LocalStorageKeys, oneOf, queryDruidSql} from '../../utils';
 
-import { ControlPane } from './control-pane/control-pane';
-import { DroppableContainer } from './droppable-container/droppable-container';
-import { FilterPane } from './filter-pane/filter-pane';
-import { HighlightBubble } from './highlight-bubble/highlight-bubble';
-import { highlightStore } from './highlight-store/highlight-store';
+import {ControlPane} from './control-pane/control-pane';
+import {DroppableContainer} from './droppable-container/droppable-container';
+import {FilterPane} from './filter-pane/filter-pane';
+import {HighlightBubble} from './highlight-bubble/highlight-bubble';
+import {highlightStore} from './highlight-store/highlight-store';
 import BarChartEcharts from './modules/bar-chart-echarts-module';
 import MultiAxisChartEcharts from './modules/multi-axis-chart-echarts-module';
 import PieChartEcharts from './modules/pie-chart-echarts-module';
 import TableReact from './modules/table-react-module';
 import TimeChartEcharts from './modules/time-chart-echarts-module';
-import { ResourcePane } from './resource-pane/resource-pane';
-import { SourcePane } from './source-pane/source-pane';
-import { TilePicker } from './tile-picker/tile-picker';
-import type { Dataset } from './utils';
-import { adjustTransferValue, normalizeType } from './utils';
+import {ResourcePane} from './resource-pane/resource-pane';
+import {SourcePane} from './source-pane/source-pane';
+import {TilePicker} from './tile-picker/tile-picker';
+import type {Dataset} from './utils';
+import {adjustTransferValue, normalizeType} from './utils';
 
 import './explore-view.scss';
 
@@ -148,8 +146,11 @@ async function getMaxTimeForTable(tableName: string): Promise<Date | undefined> 
     query: sql`SELECT MAX(__time) AS "maxTime" FROM ${T(tableName)}`,
   });
 
-  const maxTime = new Date(deepGet(d, '0.maxTime'));
+  let maxTime = new Date(deepGet(d, '0.maxTime'));
   if (isNaN(maxTime.valueOf())) return;
+
+  // Add 1ms to the maxTime date so as to allow filters like `"__time" < {maxTime}" to capture the last event which might also be the only event
+  maxTime = new Date(maxTime.valueOf() + 1);
 
   // micro-cache set
   lastMaxTimeTable = tableName;
@@ -160,12 +161,15 @@ async function getMaxTimeForTable(tableName: string): Promise<Date | undefined> 
 }
 
 function getFirstTableName(q: SqlQuery): string | undefined {
-  return (
-    findMap(q.getWithParts(), withPart => {
-      if (!(withPart.query instanceof SqlQuery)) return;
-      return getFirstTableName(withPart.query);
-    }) ?? q.getFirstTableName()
-  );
+  let tableName: string | undefined;
+  q.walk(ex => {
+    if (ex instanceof SqlTable) {
+      tableName = ex.getName();
+      return;
+    }
+    return ex;
+  });
+  return tableName;
 }
 
 async function extendedQueryDruidSql<T = any>(sqlQueryPayload: Record<string, any>): Promise<T[]> {
@@ -320,6 +324,18 @@ export const ExploreView = React.memo(function ExploreView() {
           }}
           moreMenu={
             <Menu>
+              <MenuItem
+                icon={IconNames.DUPLICATE}
+                text="Copy last query"
+                disabled={!QUERY_HISTORY.length}
+                onClick={() => {
+                  copy(QUERY_HISTORY[0]?.sqlQuery, { format: 'text/plain' });
+                  AppToaster.show({
+                    message: `Copied query to clipboard`,
+                    intent: Intent.SUCCESS,
+                  });
+                }}
+              />
               <MenuItem
                 icon={IconNames.HISTORY}
                 text="Show query history"

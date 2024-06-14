@@ -34,7 +34,6 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
-import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.LikeDimFilter;
 import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -273,7 +272,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
             newScanQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE3)
                 .eternityInterval()
-                .filters(new InDimFilter("dim3", ImmutableList.of("a", "b"), null))
+                .filters(in("dim3", ImmutableList.of("a", "b")))
                 .columns("dim3")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .limit(5)
@@ -1123,9 +1122,6 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSelectAndFilterByStringToMV()
   {
-    // Cannot vectorize due to usage of expressions.
-    cannotVectorize();
-
     testBuilder()
         .sql("SELECT STRING_TO_MV(CONCAT(MV_TO_STRING(dim3, ','), ',d'), ',') FROM druid.numfoo "
              + "WHERE MV_CONTAINS(STRING_TO_MV(CONCAT(MV_TO_STRING(dim3, ','), ',d'), ','), 'd')")
@@ -1168,9 +1164,6 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   @Test
   public void testStringToMVOfConstant()
   {
-    // Cannot vectorize due to usage of expressions.
-    cannotVectorize();
-
     testBuilder()
         .sql("SELECT m1, STRING_TO_MV('a,b', ',') AS mv FROM druid.numfoo GROUP BY 1")
         .expectedQuery(
@@ -1338,6 +1331,38 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testMultiValueListFilterNonLiteral()
+  {
+    testQuery(
+        "SELECT MV_FILTER_ONLY(dim3, ARRAY[dim2]) FROM druid.numfoo",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(
+                    new ExpressionVirtualColumn(
+                        "v0",
+                        "filter((x) -> array_contains(array(\"dim2\"), x), \"dim3\")",
+                        ColumnType.STRING,
+                        TestExprMacroTable.INSTANCE
+                    )
+                )
+                .columns("v0")
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"a"},
+            new Object[]{NullHandling.defaultStringValue()},
+            new Object[]{NullHandling.defaultStringValue()},
+            new Object[]{NullHandling.defaultStringValue()},
+            new Object[]{NullHandling.defaultStringValue()},
+            new Object[]{NullHandling.defaultStringValue()}
+        )
+    );
+  }
+
+  @Test
   public void testMultiValueListFilterDeny()
   {
     // Cannot vectorize due to usage of expressions.
@@ -1388,6 +1413,38 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
             new Object[]{"a", 1L},
             new Object[]{"c", 1L},
             new Object[]{"d", 1L}
+        )
+    );
+  }
+
+  @Test
+  public void testMultiValueListFilterDenyNonLiteral()
+  {
+    testQuery(
+        "SELECT MV_FILTER_NONE(dim3, ARRAY[dim2]) FROM druid.numfoo",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(
+                    new ExpressionVirtualColumn(
+                        "v0",
+                        "filter((x) -> !array_contains(array(\"dim2\"), x), \"dim3\")",
+                        ColumnType.STRING,
+                        TestExprMacroTable.INSTANCE
+                    )
+                )
+                .columns("v0")
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"b"},
+            new Object[]{"[\"b\",\"c\"]"},
+            new Object[]{"d"},
+            new Object[]{""},
+            new Object[]{NullHandling.defaultStringValue()},
+            new Object[]{NullHandling.defaultStringValue()}
         )
     );
   }
@@ -2101,7 +2158,6 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMultiValueStringOverlapFilterCoalesceNvl()
   {
-    cannotVectorize();
     testQuery(
         "SELECT COALESCE(dim3, 'other') FROM druid.numfoo "
         + "WHERE MV_OVERLAP(COALESCE(MV_TO_ARRAY(dim3), ARRAY['other']), ARRAY['a', 'b', 'other']) OR "
@@ -2163,7 +2219,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                 .filters(
                     or(
                         isNull("dim3"),
-                        in("dim3", ImmutableSet.of("a", "b", "other"), null)
+                        in("dim3", ImmutableSet.of("a", "b", "other"))
                     )
                 )
                 .columns("v0")
@@ -2210,12 +2266,12 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                 .filters(
                     or(
                         and(
-                            in("dim3", ImmutableSet.of("a", "b", "other"), null),
+                            in("dim3", ImmutableSet.of("a", "b", "other")),
                             notNull("dim3")
                         ),
                         and(
                             isNull("dim3"),
-                            in("dim2", ImmutableSet.of("a", "b", "other"), null)
+                            in("dim2", ImmutableSet.of("a", "b", "other"))
                         )
                     )
                 )
@@ -2323,7 +2379,6 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMvContainsSelectColumns()
   {
-    cannotVectorize();
     testQuery(
         "SELECT MV_CONTAINS(dim3, ARRAY['a', 'b']), MV_OVERLAP(dim3, ARRAY['a', 'b']) FROM druid.numfoo LIMIT 5",
         ImmutableList.of(

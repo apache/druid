@@ -16,10 +16,10 @@
  * limitations under the License.
  */
 
-import type { TabEntry } from '../../druid-models';
-import { WorkbenchQuery } from '../../druid-models';
+import type {TabEntry} from '../../druid-models';
+import {WorkbenchQuery} from '../../druid-models';
 
-const BASE_QUERY = WorkbenchQuery.blank();
+const BASE_QUERY = WorkbenchQuery.blank().changeQueryContext({ maxNumTasks: 2 });
 
 export function getDemoQueries(): TabEntry[] {
   function makeDemoQuery(queryString: string): WorkbenchQuery {

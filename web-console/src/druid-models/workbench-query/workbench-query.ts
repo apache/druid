@@ -18,35 +18,29 @@
 
 import type {
   QueryParameter,
+  QueryPayload,
   SqlClusteredByClause,
   SqlExpression,
   SqlPartitionedByClause,
 } from '@druid-toolkit/query';
-import {
-  C,
-  F,
-  SqlLiteral,
-  SqlOrderByClause,
-  SqlOrderByExpression,
-  SqlQuery,
-} from '@druid-toolkit/query';
+import {C, F, SqlLiteral, SqlOrderByClause, SqlOrderByExpression, SqlQuery,} from '@druid-toolkit/query';
 import Hjson from 'hjson';
 import * as JSONBig from 'json-bigint-native';
-import { v4 as uuidv4 } from 'uuid';
+import {v4 as uuidv4} from 'uuid';
 
-import type { RowColumn } from '../../utils';
-import { deleteKeys } from '../../utils';
-import type { DruidEngine } from '../druid-engine/druid-engine';
-import { validDruidEngine } from '../druid-engine/druid-engine';
-import type { LastExecution } from '../execution/execution';
-import { validateLastExecution } from '../execution/execution';
-import type { ExternalConfig } from '../external-config/external-config';
+import type {RowColumn} from '../../utils';
+import {caseInsensitiveEquals, deleteKeys} from '../../utils';
+import type {DruidEngine} from '../druid-engine/druid-engine';
+import {validDruidEngine} from '../druid-engine/druid-engine';
+import type {LastExecution} from '../execution/execution';
+import {validateLastExecution} from '../execution/execution';
+import type {ExternalConfig} from '../external-config/external-config';
 import {
   externalConfigToIngestQueryPattern,
   ingestQueryPatternToQuery,
 } from '../ingest-query-pattern/ingest-query-pattern';
-import type { ArrayMode } from '../ingestion-spec/ingestion-spec';
-import type { QueryContext } from '../query-context/query-context';
+import type {ArrayMode} from '../ingestion-spec/ingestion-spec';
+import type {QueryContext} from '../query-context/query-context';
 
 const ISSUE_MARKER = '--:ISSUE:';
 
@@ -446,7 +440,7 @@ export class WorkbenchQuery {
 
   public getApiQuery(makeQueryId: () => string = uuidv4): {
     engine: DruidEngine;
-    query: Record<string, any>;
+    query: QueryPayload;
     prefixLines: number;
     cancelQueryId?: string;
   } {
@@ -478,7 +472,7 @@ export class WorkbenchQuery {
       };
     }
 
-    let apiQuery: Record<string, any> = {};
+    let apiQuery: QueryPayload;
     if (this.isJsonLike()) {
       try {
         apiQuery = Hjson.parse(queryString);
@@ -511,7 +505,11 @@ export class WorkbenchQuery {
     }
 
     const ingestQuery = this.isIngestQuery();
-    if (!unlimited && !ingestQuery && queryContext.selectDestination !== 'durableStorage') {
+    if (
+      !unlimited &&
+      !ingestQuery &&
+      !caseInsensitiveEquals(queryContext.selectDestination, 'durableStorage')
+    ) {
       apiQuery.context ||= {};
       apiQuery.context.sqlOuterLimit = 1001;
     }

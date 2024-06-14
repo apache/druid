@@ -27,20 +27,21 @@ import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatusPlus;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
+import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.msq.indexing.report.MSQResultsReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.msq.sql.SqlTaskStatus;
 import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.testing.IntegrationTestingConfig;
+import org.apache.druid.testing.clients.OverlordResourceTestClient;
 import org.apache.druid.testing.clients.SqlResourceTestClient;
-import org.apache.druid.testing.clients.msq.MsqOverlordResourceTestClient;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.testng.Assert;
 
@@ -64,7 +65,7 @@ public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResu
 
   private final ObjectMapper jsonMapper;
   private final IntegrationTestingConfig config;
-  private final MsqOverlordResourceTestClient overlordClient;
+  private final OverlordResourceTestClient overlordClient;
   private final SqlResourceTestClient msqClient;
 
 
@@ -73,7 +74,7 @@ public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResu
       final ObjectMapper jsonMapper,
       final SqlResourceTestClient queryClient,
       final IntegrationTestingConfig config,
-      final MsqOverlordResourceTestClient overlordClient,
+      final OverlordResourceTestClient overlordClient,
       final SqlResourceTestClient msqClient
   )
   {
@@ -82,6 +83,8 @@ public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResu
     this.config = config;
     this.overlordClient = overlordClient;
     this.msqClient = msqClient;
+
+    this.jsonMapper.registerModules(new MSQIndexingModule().getJacksonModules());
   }
 
   @Override
@@ -119,13 +122,28 @@ public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResu
    */
   public SqlTaskStatus submitMsqTaskSuccesfully(SqlQuery sqlQuery, String username, String password) throws ExecutionException, InterruptedException
   {
+    return submitMsqTaskWithExpectedStatusCode(sqlQuery, username, password, HttpResponseStatus.ACCEPTED);
+  }
+
+  /**
+   * Submits a {@link SqlQuery} to the MSQ API for execution. This method waits for the task to be accepted by the cluster
+   * and returns the status associated with the submitted task
+   */
+  public SqlTaskStatus submitMsqTaskWithExpectedStatusCode(
+      SqlQuery sqlQuery,
+      String username,
+      String password,
+      HttpResponseStatus expectedResponseStatus
+  ) throws ExecutionException, InterruptedException
+  {
     StatusResponseHolder statusResponseHolder = submitMsqTask(sqlQuery, username, password);
     // Check if the task has been accepted successfully
     HttpResponseStatus httpResponseStatus = statusResponseHolder.getStatus();
-    if (!httpResponseStatus.equals(HttpResponseStatus.ACCEPTED)) {
+    if (!httpResponseStatus.equals(expectedResponseStatus)) {
       throw new ISE(
           StringUtils.format(
-              "Unable to submit the task successfully. Received response status code [%d], and response content:\n[%s]",
+              "Expected response status code [%d] when submitting task. Received response status code [%d], and response content:\n[%s]",
+              expectedResponseStatus.getCode(),
               httpResponseStatus.getCode(),
               statusResponseHolder.getContent()
           )
@@ -185,9 +203,9 @@ public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResu
   /**
    * Fetches status reports for a given task
    */
-  public Map<String, MSQTaskReport> fetchStatusReports(String taskId)
+  public TaskReport.ReportMap fetchStatusReports(String taskId)
   {
-    return overlordClient.getMsqTaskReport(taskId);
+    return overlordClient.getTaskReport(taskId);
   }
 
   /**
@@ -195,8 +213,8 @@ public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResu
    */
   private void compareResults(String taskId, MsqQueryWithResults expectedQueryWithResults)
   {
-    Map<String, MSQTaskReport> statusReport = fetchStatusReports(taskId);
-    MSQTaskReport taskReport = statusReport.get(MSQTaskReport.REPORT_KEY);
+    Map<String, TaskReport> statusReport = fetchStatusReports(taskId);
+    MSQTaskReport taskReport = (MSQTaskReport) statusReport.get(MSQTaskReport.REPORT_KEY);
     if (taskReport == null) {
       throw new ISE("Unable to fetch the status report for the task [%]", taskId);
     }
@@ -211,17 +229,14 @@ public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResu
 
     List<Map<String, Object>> actualResults = new ArrayList<>();
 
-    Yielder<Object[]> yielder = resultsReport.getResultYielder();
     List<MSQResultsReport.ColumnAndType> rowSignature = resultsReport.getSignature();
 
-    while (!yielder.isDone()) {
-      Object[] row = yielder.get();
+    for (final Object[] row : resultsReport.getResults()) {
       Map<String, Object> rowWithFieldNames = new LinkedHashMap<>();
       for (int i = 0; i < row.length; ++i) {
         rowWithFieldNames.put(rowSignature.get(i).getName(), row[i]);
       }
       actualResults.add(rowWithFieldNames);
-      yielder = yielder.next(null);
     }
 
     QueryResultVerifier.ResultVerificationObject resultsComparison = QueryResultVerifier.compareResults(

@@ -16,32 +16,28 @@
  * limitations under the License.
  */
 
-import type { IconName } from '@blueprintjs/core';
-import { Card, Icon, Intent } from '@blueprintjs/core';
-import { IconNames } from '@blueprintjs/icons';
-import { SqlQuery } from '@druid-toolkit/query';
-import type { JSX } from 'react';
-import React, { useState } from 'react';
+import type {IconName} from '@blueprintjs/core';
+import {Card, Icon, Intent} from '@blueprintjs/core';
+import {IconNames} from '@blueprintjs/icons';
+import {SqlQuery, SqlTable} from '@druid-toolkit/query';
+import type {JSX} from 'react';
+import React, {useState} from 'react';
 
-import type { ExternalConfig, QueryContext, QueryWithContext } from '../../druid-models';
-import {
-  Execution,
-  externalConfigToIngestQueryPattern,
-  ingestQueryPatternToQuery,
-} from '../../druid-models';
-import type { Capabilities } from '../../helpers';
-import { maybeGetClusterCapacity, submitTaskQuery } from '../../helpers';
-import { useLocalStorageState } from '../../hooks';
-import { AppToaster } from '../../singletons';
-import { deepDelete, LocalStorageKeys } from '../../utils';
-import { CapacityAlert } from '../workbench-view/capacity-alert/capacity-alert';
-import { InputFormatStep } from '../workbench-view/input-format-step/input-format-step';
-import { InputSourceStep } from '../workbench-view/input-source-step/input-source-step';
-import { MaxTasksButton } from '../workbench-view/max-tasks-button/max-tasks-button';
+import type {ExternalConfig, QueryContext, QueryWithContext} from '../../druid-models';
+import {Execution, externalConfigToIngestQueryPattern, ingestQueryPatternToQuery,} from '../../druid-models';
+import type {Capabilities} from '../../helpers';
+import {maybeGetClusterCapacity, submitTaskQuery} from '../../helpers';
+import {useLocalStorageState} from '../../hooks';
+import {AppToaster} from '../../singletons';
+import {deepDelete, LocalStorageKeys} from '../../utils';
+import {CapacityAlert} from '../workbench-view/capacity-alert/capacity-alert';
+import {InputFormatStep} from '../workbench-view/input-format-step/input-format-step';
+import {InputSourceStep} from '../workbench-view/input-source-step/input-source-step';
+import {MaxTasksButton} from '../workbench-view/max-tasks-button/max-tasks-button';
 
-import { IngestionProgressDialog } from './ingestion-progress-dialog/ingestion-progress-dialog';
-import { SchemaStep } from './schema-step/schema-step';
-import { TitleFrame } from './title-frame/title-frame';
+import {IngestionProgressDialog} from './ingestion-progress-dialog/ingestion-progress-dialog';
+import {SchemaStep} from './schema-step/schema-step';
+import {TitleFrame} from './title-frame/title-frame';
 
 import './sql-data-loader-view.scss';
 
@@ -136,7 +132,9 @@ export const SqlDataLoaderView = React.memo(function SqlDataLoaderView(
           onBack={() => setContent(undefined)}
           onDone={async () => {
             const { queryString, queryContext } = content;
-            const ingestDatasource = SqlQuery.parse(queryString).getIngestTable()?.getName();
+            const ingestTable = SqlQuery.parse(queryString).getIngestTable();
+            const ingestDatasource =
+              ingestTable instanceof SqlTable ? ingestTable.getName() : undefined;
 
             if (!ingestDatasource) {
               AppToaster.show({ message: `Must have an ingest datasource`, intent: Intent.DANGER });

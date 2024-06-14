@@ -16,16 +16,16 @@
  * limitations under the License.
  */
 
-import { Code } from '@blueprintjs/core';
-import { range } from 'd3-array';
-import { csvParseRows, tsvParseRows } from 'd3-dsv';
-import type { JSX } from 'react';
+import {Code} from '@blueprintjs/core';
+import {range} from 'd3-array';
+import {csvParseRows, tsvParseRows} from 'd3-dsv';
+import type {JSX} from 'react';
 import React from 'react';
 
-import type { Field } from '../../components';
-import { AutoForm, ExternalLink } from '../../components';
-import { IndexSpecDialog } from '../../dialogs/index-spec-dialog/index-spec-dialog';
-import { getLink } from '../../links';
+import type {Field} from '../../components';
+import {AutoForm, ExternalLink} from '../../components';
+import {IndexSpecDialog} from '../../dialogs/index-spec-dialog/index-spec-dialog';
+import {getLink} from '../../links';
 import {
   allowKeys,
   deepDelete,
@@ -43,28 +43,20 @@ import {
   parseCsvLine,
   typeIsKnown,
 } from '../../utils';
-import type { SampleResponse } from '../../utils/sampler';
-import type { DimensionSpec, DimensionsSpec } from '../dimension-spec/dimension-spec';
-import {
-  getDimensionSpecColumnType,
-  getDimensionSpecName,
-  getDimensionSpecs,
-} from '../dimension-spec/dimension-spec';
-import type { FlattenSpec } from '../flatten-spec/flatten-spec';
-import type { IndexSpec } from '../index-spec/index-spec';
-import { summarizeIndexSpec } from '../index-spec/index-spec';
-import type { InputFormat } from '../input-format/input-format';
-import { issueWithInputFormat } from '../input-format/input-format';
-import type { InputSource } from '../input-source/input-source';
-import { FILTER_SUGGESTIONS, issueWithInputSource } from '../input-source/input-source';
-import type { MetricSpec } from '../metric-spec/metric-spec';
-import {
-  getMetricSpecOutputType,
-  getMetricSpecs,
-  getMetricSpecSingleFieldName,
-} from '../metric-spec/metric-spec';
-import type { TimestampSpec } from '../timestamp-spec/timestamp-spec';
-import type { TransformSpec } from '../transform-spec/transform-spec';
+import type {SampleResponse} from '../../utils/sampler';
+import type {DimensionSpec, DimensionsSpec} from '../dimension-spec/dimension-spec';
+import {getDimensionSpecColumnType, getDimensionSpecName, getDimensionSpecs,} from '../dimension-spec/dimension-spec';
+import type {FlattenSpec} from '../flatten-spec/flatten-spec';
+import type {IndexSpec} from '../index-spec/index-spec';
+import {summarizeIndexSpec} from '../index-spec/index-spec';
+import type {InputFormat} from '../input-format/input-format';
+import {issueWithInputFormat} from '../input-format/input-format';
+import type {InputSource} from '../input-source/input-source';
+import {FILTER_SUGGESTIONS, issueWithInputSource, OBJECT_GLOB_SUGGESTIONS,} from '../input-source/input-source';
+import type {MetricSpec} from '../metric-spec/metric-spec';
+import {getMetricSpecOutputType, getMetricSpecs, getMetricSpecSingleFieldName,} from '../metric-spec/metric-spec';
+import type {TimestampSpec} from '../timestamp-spec/timestamp-spec';
+import type {TransformSpec} from '../transform-spec/transform-spec';
 
 export const MAX_INLINE_DATA_LENGTH = 65536;
 
@@ -208,7 +200,7 @@ export function getIngestionTitle(ingestionType: IngestionComboTypeWithExtra): s
 
 export function getIngestionImage(ingestionType: IngestionComboTypeWithExtra): string {
   const parts = ingestionType.split(':');
-  if (parts.length === 2) return parts[1].toLowerCase();
+  if (parts.length === 2) return parts[1];
   return ingestionType;
 }
 
@@ -229,6 +221,9 @@ export function getIngestionDocLink(spec: Partial<IngestionSpec>): string {
 
 export function getRequiredModule(ingestionType: IngestionComboTypeWithExtra): string | undefined {
   switch (ingestionType) {
+    case 'azure-event-hubs':
+      return 'druid-kafka-indexing-service';
+
     case 'index_parallel:s3':
       return 'druid-s3-extensions';
 
@@ -584,21 +579,29 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
     ),
   };
 
-  const inputSourceFilter: Field<IoConfig> = {
-    name: 'inputSource.filter',
-    label: 'File filter',
+  const inputSourceObjectGlob: Field<IoConfig> = {
+    name: 'inputSource.objectGlob',
+    label: 'Object glob',
     type: 'string',
-    suggestions: FILTER_SUGGESTIONS,
-    placeholder: '*',
+    suggestions: OBJECT_GLOB_SUGGESTIONS,
+    placeholder: '(all files)',
     info: (
-      <p>
-        A wildcard filter for files. See{' '}
-        <ExternalLink href="https://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/filefilter/WildcardFileFilter.html">
-          here
-        </ExternalLink>{' '}
-        for format information. Files matching the filter criteria are considered for ingestion.
-        Files not matching the filter criteria are ignored.
-      </p>
+      <>
+        <p>A glob for the object part of the URI.</p>
+        <p>
+          The glob must match the entire object part, not just the filename. For example, the glob
+          <Code>*.json</Code> does not match <Code>/bar/file.json</Code>, because and the{' '}
+          <Code>*</Code> does not match the slash. To match all objects ending in <Code>.json</Code>
+          , use <Code>**.json</Code> instead.
+        </p>
+        <p>
+          For more information, refer to the documentation for{' '}
+          <ExternalLink href="https://docs.oracle.com/javase/8/docs/api/java/nio/file/FileSystem.html#getPathMatcher-java.lang.String-">
+            FileSystem#getPathMatcher
+          </ExternalLink>
+          .
+        </p>
+      </>
     ),
   };
 
@@ -781,7 +784,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
             </>
           ),
         },
-        inputSourceFilter,
+        inputSourceObjectGlob,
         {
           name: 'inputSource.properties.accessKeyId.type',
           label: 'Access key ID type',
@@ -944,7 +947,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
             </>
           ),
         },
-        inputSourceFilter,
+        inputSourceObjectGlob,
         {
           name: 'inputSource.properties.sharedAccessStorageToken',
           label: 'Shared Access Storage Token',
@@ -1018,7 +1021,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
             </>
           ),
         },
-        inputSourceFilter,
+        inputSourceObjectGlob,
       ];
 
     case 'index_parallel:delta':
@@ -1030,6 +1033,27 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           type: 'string',
           placeholder: '/path/to/deltaTable',
           required: true,
+          info: (
+            <>
+              <p>A full path to the Delta Lake table.</p>
+            </>
+          ),
+        },
+        {
+          name: 'inputSource.filter',
+          label: 'Delta filter',
+          type: 'json',
+          defaultValue: {},
+          info: (
+            <>
+              <ExternalLink
+                href={`${getLink('DOCS')}/ingestion/input-sources/#delta-filter-object`}
+              >
+                filter
+              </ExternalLink>
+              <p>A Delta filter json object to filter Delta Lake scan files.</p>
+            </>
+          ),
         },
       ];
 
@@ -2071,6 +2095,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
   {
     name: 'spec.tuningConfig.maxPendingPersists',
     type: 'number',
+    defaultValue: 0,
     hideInMore: true,
     info: (
       <>
@@ -2417,7 +2442,10 @@ export function fillInputFormatIfNeeded(
     spec,
     'spec.ioConfig.inputFormat',
     getSpecType(spec) === 'kafka'
-      ? guessKafkaInputFormat(filterMap(sampleResponse.data, l => l.input))
+      ? guessKafkaInputFormat(
+          filterMap(sampleResponse.data, l => l.input),
+          typeof deepGet(spec, 'spec.ioConfig.topicPattern') === 'string',
+        )
       : guessSimpleInputFormat(
           filterMap(sampleResponse.data, l => l.input?.raw),
           isStreamingSpec(spec),
@@ -2429,15 +2457,27 @@ function noNumbers(xs: string[]): boolean {
   return xs.every(x => isNaN(Number(x)));
 }
 
-export function guessKafkaInputFormat(sampleRaw: Record<string, any>[]): InputFormat {
+export function guessKafkaInputFormat(
+  sampleRaw: Record<string, any>[],
+  multiTopic: boolean,
+): InputFormat {
   const hasHeader = sampleRaw.some(x => Object.keys(x).some(k => k.startsWith('kafka.header.')));
   const keys = filterMap(sampleRaw, x => x['kafka.key']);
-  const payloads = filterMap(sampleRaw, x => x.raw);
+  const valueFormat = guessSimpleInputFormat(
+    filterMap(sampleRaw, x => x.raw),
+    true,
+  );
+
+  if (!hasHeader && !keys.length && !multiTopic) {
+    // No headers or keys and just a single topic means do not pick the 'kafka' format by default as it is less performant
+    return valueFormat;
+  }
+
   return {
     type: 'kafka',
     headerFormat: hasHeader ? { type: 'string' } : undefined,
     keyFormat: keys.length ? guessSimpleInputFormat(keys, true) : undefined,
-    valueFormat: guessSimpleInputFormat(payloads, true),
+    valueFormat,
   };
 }
 

@@ -29,7 +29,6 @@ import org.apache.druid.segment.incremental.ParseExceptionReport;
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 public interface Supervisor
 {
@@ -96,7 +95,12 @@ public interface Supervisor
   int getActiveTaskGroupsCount();
 
   /**
-   * @return active sequence prefixes for reading and pending completion task groups of a seekable stream supervisor
+   * Marks the given task groups as ready for segment hand-off irrespective of the task run times.
+   * In the subsequent run, the supervisor initiates segment publish and hand-off for these task groups and rolls over their tasks.
+   * taskGroupIds that are not valid or not actively reading are simply ignored.
    */
-  Set<String> getActiveRealtimeSequencePrefixes();
+  default void handoffTaskGroupsEarly(List<Integer> taskGroupIds)
+  {
+    throw new UnsupportedOperationException("Supervisor does not have the feature to handoff task groups early implemented");
+  }
 }

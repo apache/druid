@@ -16,11 +16,11 @@
  * limitations under the License.
  */
 
-import type { AxiosError, AxiosInstance, CreateAxiosDefaults } from 'axios';
-import axios from 'axios';
+import type {AxiosInstance, CreateAxiosDefaults} from 'axios';
+import axios, {AxiosError} from 'axios';
 import * as JSONBig from 'json-bigint-native';
 
-import { nonEmptyString } from '../utils';
+import {nonEmptyString} from '../utils';
 
 export class Api {
   static instance: AxiosInstance;
@@ -36,11 +36,15 @@ export class Api {
         const responseData = error.response?.data;
         const message = responseData?.message;
         if (nonEmptyString(message)) {
-          return Promise.reject(new Error(message));
+          return Promise.reject(
+            new AxiosError(message, error.code, error.config, error.request, error.response),
+          );
         }
 
         if (error.config?.method?.toLowerCase() === 'get' && nonEmptyString(responseData)) {
-          return Promise.reject(new Error(responseData));
+          return Promise.reject(
+            new AxiosError(responseData, error.code, error.config, error.request, error.response),
+          );
         }
 
         return Promise.reject(error);

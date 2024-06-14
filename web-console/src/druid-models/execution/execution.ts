@@ -16,28 +16,15 @@
  * limitations under the License.
  */
 
-import { Column, QueryResult, SqlExpression, SqlQuery, SqlWithQuery } from '@druid-toolkit/query';
+import {Column, QueryResult, SqlExpression, SqlQuery, SqlWithQuery} from '@druid-toolkit/query';
 
-import {
-  deepGet,
-  deleteKeys,
-  formatDuration,
-  formatInteger,
-  nonEmptyArray,
-  oneOf,
-  pluralIfNeeded,
-} from '../../utils';
-import type { AsyncState, AsyncStatusResponse } from '../async-query/async-query';
-import type { DruidEngine } from '../druid-engine/druid-engine';
-import { validDruidEngine } from '../druid-engine/druid-engine';
-import type { QueryContext } from '../query-context/query-context';
-import { Stages } from '../stages/stages';
-import type {
-  MsqTaskPayloadResponse,
-  MsqTaskReportResponse,
-  SegmentLoadWaiterStatus,
-  TaskStatus,
-} from '../task/task';
+import {deepGet, deleteKeys, formatDuration, formatInteger, nonEmptyArray, oneOf, pluralIfNeeded,} from '../../utils';
+import type {AsyncState, AsyncStatusResponse} from '../async-query/async-query';
+import type {DruidEngine} from '../druid-engine/druid-engine';
+import {validDruidEngine} from '../druid-engine/druid-engine';
+import type {QueryContext} from '../query-context/query-context';
+import {Stages} from '../stages/stages';
+import type {MsqTaskPayloadResponse, MsqTaskReportResponse, SegmentLoadWaiterStatus, TaskStatus,} from '../task/task';
 
 const IGNORE_CONTEXT_KEYS = [
   '__asyncIdentity__',
@@ -440,7 +427,10 @@ export class Execution {
     value.queryContext = queryContext;
     const parsedQuery = parseSqlQuery(sqlQuery);
     if (value.result && (parsedQuery || queryContext)) {
-      value.result = value.result.attachQuery({ context: queryContext }, parsedQuery);
+      value.result = value.result.attachQuery(
+        { ...this.nativeQuery, context: queryContext },
+        parsedQuery,
+      );
     }
 
     return new Execution(value);
@@ -463,7 +453,10 @@ export class Execution {
   public changeResult(result: QueryResult): Execution {
     return new Execution({
       ...this.valueOf(),
-      result: result.attachQuery({}, this.sqlQuery ? parseSqlQuery(this.sqlQuery) : undefined),
+      result: result.attachQuery(
+        this.nativeQuery,
+        this.sqlQuery ? parseSqlQuery(this.sqlQuery) : undefined,
+      ),
     });
   }
 

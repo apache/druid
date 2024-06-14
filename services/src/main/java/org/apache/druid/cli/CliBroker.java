@@ -121,6 +121,8 @@ public class CliBroker extends ServerRunnable
         new JoinableFactoryModule(),
         new BrokerServiceModule(),
         binder -> {
+          validateCentralizedDatasourceSchemaConfig(getProperties());
+
           binder.bindConstant().annotatedWith(Names.named("serviceName")).to(
               TieredBrokerConfig.DEFAULT_BROKER_SERVICE_NAME
           );

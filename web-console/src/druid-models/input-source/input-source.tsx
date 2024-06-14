@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+import { Code } from '@blueprintjs/core';
 import React from 'react';
 
 import type { Field } from '../../components';
@@ -36,6 +37,18 @@ export const FILTER_SUGGESTIONS: string[] = [
   '*.avro',
 ];
 
+export const OBJECT_GLOB_SUGGESTIONS: string[] = [
+  '**.jsonl',
+  '**.jsonl.gz',
+  '**.json',
+  '**.json.gz',
+  '**.csv',
+  '**.tsv',
+  '**.parquet',
+  '**.orc',
+  '**.avro',
+];
+
 export interface InputSource {
   type: string;
   baseDir?: string;
@@ -43,6 +56,7 @@ export interface InputSource {
   uris?: string[];
   prefixes?: string[];
   objects?: { bucket: string; path: string }[];
+  objectGlob?: string;
   fetchTimeout?: number;
   systemFields?: string[];
 
@@ -94,10 +108,11 @@ export type InputSourceDesc =
       httpAuthenticationPassword?: any;
     }
   | {
-      type: 's3';
+      type: 's3' | 'google' | 'azureStorage';
       uris?: string[];
       prefixes?: string[];
       objects?: { bucket: string; path: string }[];
+      objectGlob?: string;
       properties?: {
         accessKeyId?: any;
         secretAccessKey?: any;
@@ -106,18 +121,13 @@ export type InputSourceDesc =
       };
     }
   | {
-      type: 'google' | 'azureStorage';
-      uris?: string[];
-      prefixes?: string[];
-      objects?: { bucket: string; path: string }[];
-    }
-  | {
       type: 'hdfs';
       paths?: string | string[];
     }
   | {
       type: 'delta';
-      tablePath?: string;
+      tablePath: string;
+      filter?: string;
     }
   | {
       type: 'sql';
@@ -482,21 +492,28 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
 
   // Cloud common
   {
-    name: 'filter',
-    label: 'File filter',
+    name: 'objectGlob',
     type: 'string',
-    suggestions: FILTER_SUGGESTIONS,
-    placeholder: '*',
+    suggestions: OBJECT_GLOB_SUGGESTIONS,
+    placeholder: '(all files)',
     defined: typeIsKnown(KNOWN_TYPES, 's3', 'azureStorage', 'google'),
     info: (
-      <p>
-        A wildcard filter for files. See{' '}
-        <ExternalLink href="https://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/filefilter/WildcardFileFilter.html">
-          here
-        </ExternalLink>{' '}
-        for format information. Files matching the filter criteria are considered for ingestion.
-        Files not matching the filter criteria are ignored.
-      </p>
+      <>
+        <p>A glob for the object part of the URI.</p>
+        <p>
+          The glob must match the entire object part, not just the filename. For example, the glob
+          <Code>*.json</Code> does not match <Code>/bar/file.json</Code>, because and the{' '}
+          <Code>*</Code> does not match the slash. To match all objects ending in <Code>.json</Code>
+          , use <Code>**.json</Code> instead.
+        </p>
+        <p>
+          For more information, refer to the documentation for{' '}
+          <ExternalLink href="https://docs.oracle.com/javase/8/docs/api/java/nio/file/FileSystem.html#getPathMatcher-java.lang.String-">
+            FileSystem#getPathMatcher
+          </ExternalLink>
+          .
+        </p>
+      </>
     ),
   },
 
@@ -624,6 +641,27 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
     placeholder: '/path/to/deltaTable',
     defined: typeIsKnown(KNOWN_TYPES, 'delta'),
     required: true,
+    info: (
+      <>
+        <p>A full path to the Delta Lake table.</p>
+      </>
+    ),
+  },
+  {
+    name: 'filter',
+    label: 'Delta filter',
+    type: 'json',
+    placeholder: '{"type": "=", "column": "name", "value": "foo"}',
+    defined: inputSource => inputSource.type === 'delta' && deepGet(inputSource, 'filter'),
+    required: false,
+    info: (
+      <>
+        <ExternalLink href={`${getLink('DOCS')}/ingestion/input-sources/#delta-filter-object`}>
+          filter
+        </ExternalLink>
+        <p>A Delta filter json object to filter Delta Lake scan files.</p>
+      </>
+    ),
   },
 
   // sql

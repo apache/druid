@@ -39,6 +39,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.hamcrest.CoreMatchers;
 import org.joda.time.Interval;
 import org.junit.After;
@@ -311,7 +312,8 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
           supervisorTask.getId(),
           supervisorTask.getGroupId(),
           supervisorTask.getIngestionSchema(),
-          supervisorTask.getContext()
+          supervisorTask.getContext(),
+          CentralizedDatasourceSchemaConfig.create()
       );
       this.supervisorTask = supervisorTask;
     }

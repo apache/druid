@@ -39,7 +39,7 @@ public final class CastToStringVectorProcessor extends CastToTypeVectorProcessor
     for (int i = 0; i < objects.length; i++) {
       output[i] = Evals.asString(objects[i]);
     }
-    return new ExprEvalObjectVector(output);
+    return new ExprEvalObjectVector(output, ExpressionType.STRING);
   }
 
   @Override

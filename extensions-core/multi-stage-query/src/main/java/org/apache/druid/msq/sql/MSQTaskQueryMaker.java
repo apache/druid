@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import org.apache.calcite.runtime.Hook;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.calcite.util.Pair;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
@@ -52,6 +51,7 @@ import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.server.QueryResponse;
+import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.sql.calcite.parser.DruidSqlIngest;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.parser.DruidSqlReplace;
@@ -77,6 +77,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -90,7 +91,7 @@ public class MSQTaskQueryMaker implements QueryMaker
   private final OverlordClient overlordClient;
   private final PlannerContext plannerContext;
   private final ObjectMapper jsonMapper;
-  private final List<Pair<Integer, String>> fieldMapping;
+  private final List<Entry<Integer, String>> fieldMapping;
 
 
   MSQTaskQueryMaker(
@@ -98,7 +99,7 @@ public class MSQTaskQueryMaker implements QueryMaker
       final OverlordClient overlordClient,
       final PlannerContext plannerContext,
       final ObjectMapper jsonMapper,
-      final List<Pair<Integer, String>> fieldMapping
+      final List<Entry<Integer, String>> fieldMapping
   )
   {
     this.targetDataSource = targetDataSource;
@@ -192,7 +193,7 @@ public class MSQTaskQueryMaker implements QueryMaker
     final List<ColumnType> columnTypeList = new ArrayList<>();
     final List<ColumnMapping> columnMappings = QueryUtils.buildColumnMappings(fieldMapping, druidQuery);
 
-    for (final Pair<Integer, String> entry : fieldMapping) {
+    for (final Entry<Integer, String> entry : fieldMapping) {
       final String queryColumn = druidQuery.getOutputRowSignature().getColumnName(entry.getKey());
 
       final SqlTypeName sqlTypeName;
@@ -237,7 +238,7 @@ public class MSQTaskQueryMaker implements QueryMaker
 
       MSQTaskQueryMakerUtils.validateSegmentSortOrder(
           segmentSortOrder,
-          fieldMapping.stream().map(f -> f.right).collect(Collectors.toList())
+          fieldMapping.stream().map(f -> f.getValue()).collect(Collectors.toList())
       );
 
       final DataSourceMSQDestination dataSourceMSQDestination = new DataSourceMSQDestination(
@@ -281,6 +282,14 @@ public class MSQTaskQueryMaker implements QueryMaker
                .tuningConfig(new MSQTuningConfig(maxNumWorkers, maxRowsInMemory, rowsPerSegment, indexSpec))
                .build();
 
+    MSQTaskQueryMakerUtils.validateRealtimeReindex(querySpec);
+
+    final Map<String, Object> context = new HashMap<>();
+    context.put(LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE, plannerContext.getLookupLoadingSpec().getMode());
+    if (plannerContext.getLookupLoadingSpec().getMode() == LookupLoadingSpec.Mode.ONLY_REQUIRED) {
+      context.put(LookupLoadingSpec.CTX_LOOKUPS_TO_LOAD, plannerContext.getLookupLoadingSpec().getLookupsToLoad());
+    }
+
     final MSQControllerTask controllerTask = new MSQControllerTask(
         taskId,
         querySpec.withOverriddenContext(nativeQueryContext),
@@ -289,7 +298,7 @@ public class MSQTaskQueryMaker implements QueryMaker
         SqlResults.Context.fromPlannerContext(plannerContext),
         sqlTypeNames,
         columnTypeList,
-        null
+        context
     );
 
     FutureUtils.getUnchecked(overlordClient.runTask(taskId, controllerTask), true);

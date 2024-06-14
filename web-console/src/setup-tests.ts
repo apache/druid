@@ -17,7 +17,8 @@
  */
 
 import 'core-js/stable';
+import './bootstrap/ace';
 
-import { UrlBaser } from './singletons';
+import {UrlBaser} from './singletons';
 
 UrlBaser.baseUrl = '/some/base_url';

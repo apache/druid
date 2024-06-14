@@ -45,7 +45,6 @@ import org.apache.commons.io.IOUtils;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.curator.ZkEnablementConfig;
 import org.apache.druid.discovery.NodeRole;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.Binders;
 import org.apache.druid.guice.CacheModule;
 import org.apache.druid.guice.DruidProcessingModule;
@@ -66,15 +65,14 @@ import org.apache.druid.guice.QueryableModule;
 import org.apache.druid.guice.QueryablePeonModule;
 import org.apache.druid.guice.SegmentWranglerModule;
 import org.apache.druid.guice.ServerTypeConfig;
-import org.apache.druid.guice.ServerViewModule;
 import org.apache.druid.guice.annotations.AttemptId;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Parent;
 import org.apache.druid.guice.annotations.Self;
+import org.apache.druid.indexer.report.SingleFileTaskReportFileWriter;
+import org.apache.druid.indexer.report.TaskReportFileWriter;
 import org.apache.druid.indexing.common.RetryPolicyConfig;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
-import org.apache.druid.indexing.common.SingleFileTaskReportFileWriter;
-import org.apache.druid.indexing.common.TaskReportFileWriter;
 import org.apache.druid.indexing.common.TaskToolboxFactory;
 import org.apache.druid.indexing.common.actions.LocalTaskActionClientFactory;
 import org.apache.druid.indexing.common.actions.RemoteTaskActionClientFactory;
@@ -100,7 +98,6 @@ import org.apache.druid.indexing.worker.executor.ExecutorLifecycleConfig;
 import org.apache.druid.indexing.worker.shuffle.DeepStorageIntermediaryDataManager;
 import org.apache.druid.indexing.worker.shuffle.IntermediaryDataManager;
 import org.apache.druid.indexing.worker.shuffle.LocalIntermediaryDataManager;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
@@ -134,6 +131,7 @@ import org.apache.druid.server.http.HistoricalResource;
 import org.apache.druid.server.http.SegmentListerResource;
 import org.apache.druid.server.initialization.jetty.ChatHandlerServerModule;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
+import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.metrics.DataSourceTaskIdHolder;
 import org.apache.druid.server.metrics.ServiceStatusMonitor;
 import org.apache.druid.tasklogs.TaskPayloadManager;
@@ -220,37 +218,16 @@ public class CliPeon extends GuiceRunnable
           @Override
           public void configure(Binder binder)
           {
+            ServerRunnable.validateCentralizedDatasourceSchemaConfig(getProperties());
             taskDirPath = taskAndStatusFile.get(0);
             attemptId = taskAndStatusFile.get(1);
 
-            String serverViewType = (String) properties.getOrDefault(
-                ServerViewModule.SERVERVIEW_TYPE_PROPERTY,
-                ServerViewModule.DEFAULT_SERVERVIEW_TYPE
-            );
-
-            if (Boolean.parseBoolean(properties.getProperty(CliCoordinator.CENTRALIZED_DATASOURCE_SCHEMA_ENABLED))
-                && !serverViewType.equals(ServerViewModule.SERVERVIEW_TYPE_HTTP)) {
-              throw DruidException
-                  .forPersona(DruidException.Persona.ADMIN)
-                  .ofCategory(DruidException.Category.UNSUPPORTED)
-                  .build(
-                      StringUtils.format(
-                          "CentralizedDatasourceSchema feature is incompatible with config %1$s=%2$s. "
-                          + "Please consider switching to http based segment discovery (set %1$s=%3$s) "
-                          + "or disable the feature (set %4$s=false).",
-                          ServerViewModule.SERVERVIEW_TYPE_PROPERTY,
-                          serverViewType,
-                          ServerViewModule.SERVERVIEW_TYPE_HTTP,
-                          CliCoordinator.CENTRALIZED_DATASOURCE_SCHEMA_ENABLED
-                      ));
-            }
-
+            JsonConfigProvider.bind(binder, CentralizedDatasourceSchemaConfig.PROPERTY_PREFIX, CentralizedDatasourceSchemaConfig.class);
             binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/peon");
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
             binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
             binder.bind(ResponseContextConfig.class).toInstance(ResponseContextConfig.newConfig(true));
             binder.bindConstant().annotatedWith(AttemptId.class).to(attemptId);
-            JsonConfigProvider.bind(binder, "druid.centralizedDatasourceSchema", CentralizedDatasourceSchemaConfig.class);
 
             JsonConfigProvider.bind(binder, "druid.task.executor", DruidNode.class, Parent.class);
 
@@ -308,13 +285,18 @@ public class CliPeon extends GuiceRunnable
           @Named(ServiceStatusMonitor.HEARTBEAT_TAGS_BINDING)
           public Supplier<Map<String, Object>> heartbeatDimensions(Task task)
           {
+            ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
+            builder.put(DruidMetrics.TASK_ID, task.getId());
+            builder.put(DruidMetrics.DATASOURCE, task.getDataSource());
+            builder.put(DruidMetrics.TASK_TYPE, task.getType());
+            builder.put(DruidMetrics.GROUP_ID, task.getGroupId());
+            Map<String, Object> tags = task.getContextValue(DruidMetrics.TAGS);
+            if (tags != null && !tags.isEmpty()) {
+              builder.put(DruidMetrics.TAGS, tags);
+            }
+
             return Suppliers.ofInstance(
-                ImmutableMap.of(
-                    DruidMetrics.TASK_ID, task.getId(),
-                    DruidMetrics.DATASOURCE, task.getDataSource(),
-                    DruidMetrics.TASK_TYPE, task.getType(),
-                    DruidMetrics.GROUP_ID, task.getGroupId()
-                )
+                builder.build()
             );
           }
 
@@ -350,6 +332,14 @@ public class CliPeon extends GuiceRunnable
           public String getTaskIDFromTask(final Task task)
           {
             return task.getId();
+          }
+
+          @Provides
+          @LazySingleton
+          @Named(DataSourceTaskIdHolder.LOOKUPS_TO_LOAD_FOR_TASK)
+          public LookupLoadingSpec getLookupsToLoad(final Task task)
+          {
+            return task.getLookupLoadingSpec();
           }
         },
         new QueryablePeonModule(),
