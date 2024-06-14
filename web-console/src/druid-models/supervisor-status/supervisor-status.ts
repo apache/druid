@@ -16,10 +16,10 @@
  * limitations under the License.
  */
 
-import {max, sum} from 'd3-array';
+import { max, sum } from 'd3-array';
 
-import type {NumberLike} from '../../utils';
-import {deepGet, filterMap} from '../../utils';
+import type { NumberLike } from '../../utils';
+import { deepGet, filterMap } from '../../utils';
 
 export type SupervisorOffsetMap = Record<string, NumberLike>;
 

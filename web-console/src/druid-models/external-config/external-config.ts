@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import type {SqlQuery} from '@druid-toolkit/query';
+import type { SqlQuery } from '@druid-toolkit/query';
 import {
   C,
   F,
@@ -31,10 +31,10 @@ import {
 } from '@druid-toolkit/query';
 import * as JSONBig from 'json-bigint-native';
 
-import {nonEmptyArray} from '../../utils';
-import type {ArrayMode} from '../ingestion-spec/ingestion-spec';
-import type {InputFormat} from '../input-format/input-format';
-import type {InputSource} from '../input-source/input-source';
+import { nonEmptyArray } from '../../utils';
+import type { ArrayMode } from '../ingestion-spec/ingestion-spec';
+import type { InputFormat } from '../input-format/input-format';
+import type { InputSource } from '../input-source/input-source';
 
 export const MULTI_STAGE_QUERY_MAX_COLUMNS = 2000;
 const MAX_LINES = 10;

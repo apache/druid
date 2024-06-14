@@ -16,14 +16,14 @@
  * limitations under the License.
  */
 
-import {Button, ButtonGroup, Menu, MenuItem, Position} from '@blueprintjs/core';
-import {IconNames} from '@blueprintjs/icons';
-import {Popover2} from '@blueprintjs/popover2';
-import type {JSX} from 'react';
-import React, {useState} from 'react';
+import { Button, ButtonGroup, Menu, MenuItem, Position } from '@blueprintjs/core';
+import { IconNames } from '@blueprintjs/icons';
+import { Popover2 } from '@blueprintjs/popover2';
+import type { JSX } from 'react';
+import React, { useState } from 'react';
 
-import type {Execution} from '../../../druid-models';
-import type {Format} from '../../../utils';
+import type { Execution } from '../../../druid-models';
+import type { Format } from '../../../utils';
 import {
   copyQueryResultsToClipboard,
   downloadQueryResults,
@@ -31,7 +31,7 @@ import {
   formatInteger,
   pluralIfNeeded,
 } from '../../../utils';
-import {DestinationPagesDialog} from '../destination-pages-dialog/destination-pages-dialog';
+import { DestinationPagesDialog } from '../destination-pages-dialog/destination-pages-dialog';
 
 import './execution-summary-panel.scss';
 

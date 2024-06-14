@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import type {Column, QueryResult, SqlExpression} from '@druid-toolkit/query';
+import type { Column, QueryResult, SqlExpression } from '@druid-toolkit/query';
 import {
   C,
   F,
@@ -31,7 +31,7 @@ import {
 } from '@druid-toolkit/query';
 import * as JSONBig from 'json-bigint-native';
 
-import {oneOf} from './general';
+import { oneOf } from './general';
 
 const SAMPLE_ARRAY_SEPARATOR = '<#>'; // Note that this is a regexp so don't add anything that is a special regexp thing
 

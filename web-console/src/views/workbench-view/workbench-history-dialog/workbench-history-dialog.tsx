@@ -16,18 +16,18 @@
  * limitations under the License.
  */
 
-import {Button, Classes, Dialog, Intent, Tab, Tabs} from '@blueprintjs/core';
-import {Popover2} from '@blueprintjs/popover2';
+import { Button, Classes, Dialog, Intent, Tab, Tabs } from '@blueprintjs/core';
+import { Popover2 } from '@blueprintjs/popover2';
 import * as JSONBig from 'json-bigint-native';
-import type {JSX} from 'react';
-import React, {useState} from 'react';
+import type { JSX } from 'react';
+import React, { useState } from 'react';
 import AceEditor from 'react-ace';
 
-import {CenterMessage} from '../../../components';
-import type {WorkbenchQuery} from '../../../druid-models';
-import type {WorkbenchQueryHistoryEntry} from '../../../singletons/workbench-history';
-import {WorkbenchHistory} from '../../../singletons/workbench-history';
-import {pluralIfNeeded} from '../../../utils';
+import { CenterMessage } from '../../../components';
+import type { WorkbenchQuery } from '../../../druid-models';
+import type { WorkbenchQueryHistoryEntry } from '../../../singletons/workbench-history';
+import { WorkbenchHistory } from '../../../singletons/workbench-history';
+import { pluralIfNeeded } from '../../../utils';
 
 import './workbench-history-dialog.scss';
 

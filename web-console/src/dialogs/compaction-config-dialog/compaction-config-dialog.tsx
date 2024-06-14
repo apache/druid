@@ -16,17 +16,27 @@
  * limitations under the License.
  */
 
-import {Button, Callout, Classes, Code, Dialog, Intent, Switch} from '@blueprintjs/core';
-import {Tooltip2} from '@blueprintjs/popover2';
-import React, {useState} from 'react';
+import { Button, Callout, Classes, Code, Dialog, Intent, Switch } from '@blueprintjs/core';
+import { Tooltip2 } from '@blueprintjs/popover2';
+import React, { useState } from 'react';
 
-import type {FormJsonTabs} from '../../components';
-import {AutoForm, ExternalLink, FormGroupWithInfo, FormJsonSelector, JsonInput, PopoverText,} from '../../components';
-import type {CompactionConfig} from '../../druid-models';
-import {COMPACTION_CONFIG_FIELDS, compactionConfigHasLegacyInputSegmentSizeBytesSet,} from '../../druid-models';
-import {getLink} from '../../links';
-import {deepDelete, deepGet, deepSet, formatBytesCompact} from '../../utils';
-import {CompactionHistoryDialog} from '../compaction-history-dialog/compaction-history-dialog';
+import type { FormJsonTabs } from '../../components';
+import {
+  AutoForm,
+  ExternalLink,
+  FormGroupWithInfo,
+  FormJsonSelector,
+  JsonInput,
+  PopoverText,
+} from '../../components';
+import type { CompactionConfig } from '../../druid-models';
+import {
+  COMPACTION_CONFIG_FIELDS,
+  compactionConfigHasLegacyInputSegmentSizeBytesSet,
+} from '../../druid-models';
+import { getLink } from '../../links';
+import { deepDelete, deepGet, deepSet, formatBytesCompact } from '../../utils';
+import { CompactionHistoryDialog } from '../compaction-history-dialog/compaction-history-dialog';
 
 import './compaction-config-dialog.scss';
 

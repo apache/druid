@@ -16,9 +16,9 @@
  * limitations under the License.
  */
 
-import type {IconName} from '@blueprintjs/core';
-import {IconNames} from '@blueprintjs/icons';
-import type {Column} from '@druid-toolkit/query';
+import type { IconName } from '@blueprintjs/core';
+import { IconNames } from '@blueprintjs/icons';
+import type { Column } from '@druid-toolkit/query';
 
 export function columnToSummary(column: Column): string {
   const lines: string[] = [column.name];

@@ -16,16 +16,16 @@
  * limitations under the License.
  */
 
-import {Intent} from '@blueprintjs/core';
-import type {IconName} from '@blueprintjs/icons';
-import {IconNames} from '@blueprintjs/icons';
+import { Intent } from '@blueprintjs/core';
+import type { IconName } from '@blueprintjs/icons';
+import { IconNames } from '@blueprintjs/icons';
 import copy from 'copy-to-clipboard';
 import * as JSONBig from 'json-bigint-native';
 import numeral from 'numeral';
-import type {JSX} from 'react';
+import type { JSX } from 'react';
 import React from 'react';
 
-import {AppToaster} from '../singletons';
+import { AppToaster } from '../singletons';
 
 // These constants are used to make sure that they are not constantly recreated thrashing the pure components
 export const EMPTY_OBJECT: any = {};

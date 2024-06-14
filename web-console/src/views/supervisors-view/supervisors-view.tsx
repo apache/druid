@@ -16,17 +16,17 @@
  * limitations under the License.
  */
 
-import {Icon, Intent, Menu, MenuItem, Position, Tag} from '@blueprintjs/core';
-import {IconNames} from '@blueprintjs/icons';
-import {Popover2} from '@blueprintjs/popover2';
-import {SqlExpression} from '@druid-toolkit/query';
+import { Icon, Intent, Menu, MenuItem, Position, Tag } from '@blueprintjs/core';
+import { IconNames } from '@blueprintjs/icons';
+import { Popover2 } from '@blueprintjs/popover2';
+import { SqlExpression } from '@druid-toolkit/query';
 import * as JSONBig from 'json-bigint-native';
-import type {JSX} from 'react';
+import type { JSX } from 'react';
 import React from 'react';
-import type {Filter} from 'react-table';
+import type { Filter } from 'react-table';
 import ReactTable from 'react-table';
 
-import type {TableColumnSelectorColumn} from '../../components';
+import type { TableColumnSelectorColumn } from '../../components';
 import {
   ACTION_COLUMN_ID,
   ACTION_COLUMN_LABEL,
@@ -39,10 +39,13 @@ import {
   TableFilterableCell,
   ViewControlBar,
 } from '../../components';
-import {AlertDialog, AsyncActionDialog, SpecDialog, SupervisorTableActionDialog,} from '../../dialogs';
 import {
-  SupervisorResetOffsetsDialog
-} from '../../dialogs/supervisor-reset-offsets-dialog/supervisor-reset-offsets-dialog';
+  AlertDialog,
+  AsyncActionDialog,
+  SpecDialog,
+  SupervisorTableActionDialog,
+} from '../../dialogs';
+import { SupervisorResetOffsetsDialog } from '../../dialogs/supervisor-reset-offsets-dialog/supervisor-reset-offsets-dialog';
 import type {
   IngestionSpec,
   QueryWithContext,
@@ -50,11 +53,15 @@ import type {
   SupervisorStatus,
   SupervisorStatusTask,
 } from '../../druid-models';
-import {getTotalSupervisorStats} from '../../druid-models';
-import type {Capabilities} from '../../helpers';
-import {SMALL_TABLE_PAGE_SIZE, SMALL_TABLE_PAGE_SIZE_OPTIONS, sqlQueryCustomTableFilter,} from '../../react-table';
-import {Api, AppToaster} from '../../singletons';
-import type {TableState} from '../../utils';
+import { getTotalSupervisorStats } from '../../druid-models';
+import type { Capabilities } from '../../helpers';
+import {
+  SMALL_TABLE_PAGE_SIZE,
+  SMALL_TABLE_PAGE_SIZE_OPTIONS,
+  sqlQueryCustomTableFilter,
+} from '../../react-table';
+import { Api, AppToaster } from '../../singletons';
+import type { TableState } from '../../utils';
 import {
   assemble,
   checkedCircleIcon,
@@ -77,7 +84,7 @@ import {
   sortedToOrderByClause,
   twoLines,
 } from '../../utils';
-import type {BasicAction} from '../../utils/basic-action';
+import type { BasicAction } from '../../utils/basic-action';
 
 import './supervisors-view.scss';
 

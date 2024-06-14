@@ -16,12 +16,12 @@
  * limitations under the License.
  */
 
-import type {QueryResult} from '@druid-toolkit/query';
+import type { QueryResult } from '@druid-toolkit/query';
 import FileSaver from 'file-saver';
 import * as JSONBig from 'json-bigint-native';
 
-import {copyAndAlert, stringifyValue} from './general';
-import {queryResultToValuesQuery} from './values-query';
+import { copyAndAlert, stringifyValue } from './general';
+import { queryResultToValuesQuery } from './values-query';
 
 export type Format = 'csv' | 'tsv' | 'json' | 'sql';
 

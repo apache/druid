@@ -28,15 +28,15 @@ import {
   T,
 } from '@druid-toolkit/query';
 
-import {filterMap, oneOf} from '../../utils';
-import type {ExternalConfig} from '../external-config/external-config';
+import { filterMap, oneOf } from '../../utils';
+import type { ExternalConfig } from '../external-config/external-config';
 import {
   externalConfigToInitDimensions,
   externalConfigToTableExpression,
   fitExternalConfigPattern,
 } from '../external-config/external-config';
-import type {ArrayMode} from '../ingestion-spec/ingestion-spec';
-import {guessDataSourceNameFromInputSource} from '../ingestion-spec/ingestion-spec';
+import type { ArrayMode } from '../ingestion-spec/ingestion-spec';
+import { guessDataSourceNameFromInputSource } from '../ingestion-spec/ingestion-spec';
 
 export type IngestMode = 'insert' | 'replace';
 

@@ -16,16 +16,16 @@
  * limitations under the License.
  */
 
-import {Code} from '@blueprintjs/core';
-import {range} from 'd3-array';
-import {csvParseRows, tsvParseRows} from 'd3-dsv';
-import type {JSX} from 'react';
+import { Code } from '@blueprintjs/core';
+import { range } from 'd3-array';
+import { csvParseRows, tsvParseRows } from 'd3-dsv';
+import type { JSX } from 'react';
 import React from 'react';
 
-import type {Field} from '../../components';
-import {AutoForm, ExternalLink} from '../../components';
-import {IndexSpecDialog} from '../../dialogs/index-spec-dialog/index-spec-dialog';
-import {getLink} from '../../links';
+import type { Field } from '../../components';
+import { AutoForm, ExternalLink } from '../../components';
+import { IndexSpecDialog } from '../../dialogs/index-spec-dialog/index-spec-dialog';
+import { getLink } from '../../links';
 import {
   allowKeys,
   deepDelete,
@@ -43,20 +43,32 @@ import {
   parseCsvLine,
   typeIsKnown,
 } from '../../utils';
-import type {SampleResponse} from '../../utils/sampler';
-import type {DimensionSpec, DimensionsSpec} from '../dimension-spec/dimension-spec';
-import {getDimensionSpecColumnType, getDimensionSpecName, getDimensionSpecs,} from '../dimension-spec/dimension-spec';
-import type {FlattenSpec} from '../flatten-spec/flatten-spec';
-import type {IndexSpec} from '../index-spec/index-spec';
-import {summarizeIndexSpec} from '../index-spec/index-spec';
-import type {InputFormat} from '../input-format/input-format';
-import {issueWithInputFormat} from '../input-format/input-format';
-import type {InputSource} from '../input-source/input-source';
-import {FILTER_SUGGESTIONS, issueWithInputSource, OBJECT_GLOB_SUGGESTIONS,} from '../input-source/input-source';
-import type {MetricSpec} from '../metric-spec/metric-spec';
-import {getMetricSpecOutputType, getMetricSpecs, getMetricSpecSingleFieldName,} from '../metric-spec/metric-spec';
-import type {TimestampSpec} from '../timestamp-spec/timestamp-spec';
-import type {TransformSpec} from '../transform-spec/transform-spec';
+import type { SampleResponse } from '../../utils/sampler';
+import type { DimensionSpec, DimensionsSpec } from '../dimension-spec/dimension-spec';
+import {
+  getDimensionSpecColumnType,
+  getDimensionSpecName,
+  getDimensionSpecs,
+} from '../dimension-spec/dimension-spec';
+import type { FlattenSpec } from '../flatten-spec/flatten-spec';
+import type { IndexSpec } from '../index-spec/index-spec';
+import { summarizeIndexSpec } from '../index-spec/index-spec';
+import type { InputFormat } from '../input-format/input-format';
+import { issueWithInputFormat } from '../input-format/input-format';
+import type { InputSource } from '../input-source/input-source';
+import {
+  FILTER_SUGGESTIONS,
+  issueWithInputSource,
+  OBJECT_GLOB_SUGGESTIONS,
+} from '../input-source/input-source';
+import type { MetricSpec } from '../metric-spec/metric-spec';
+import {
+  getMetricSpecOutputType,
+  getMetricSpecs,
+  getMetricSpecSingleFieldName,
+} from '../metric-spec/metric-spec';
+import type { TimestampSpec } from '../timestamp-spec/timestamp-spec';
+import type { TransformSpec } from '../transform-spec/transform-spec';
 
 export const MAX_INLINE_DATA_LENGTH = 65536;
 

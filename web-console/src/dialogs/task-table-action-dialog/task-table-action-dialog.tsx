@@ -16,14 +16,14 @@
  * limitations under the License.
  */
 
-import React, {useState} from 'react';
+import React, { useState } from 'react';
 
-import {ShowJson, ShowLog} from '../../components';
-import {Api} from '../../singletons';
-import {deepGet} from '../../utils';
-import type {BasicAction} from '../../utils/basic-action';
-import type {SideButtonMetaData} from '../table-action-dialog/table-action-dialog';
-import {TableActionDialog} from '../table-action-dialog/table-action-dialog';
+import { ShowJson, ShowLog } from '../../components';
+import { Api } from '../../singletons';
+import { deepGet } from '../../utils';
+import type { BasicAction } from '../../utils/basic-action';
+import type { SideButtonMetaData } from '../table-action-dialog/table-action-dialog';
+import { TableActionDialog } from '../table-action-dialog/table-action-dialog';
 
 type TaskTableActionDialogTab = 'status' | 'report' | 'spec' | 'log';
 

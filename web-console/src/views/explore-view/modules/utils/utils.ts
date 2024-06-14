@@ -16,9 +16,9 @@
  * limitations under the License.
  */
 
-import {F, SqlExpression, SqlFunction, SqlLiteral} from '@druid-toolkit/query';
+import { F, SqlExpression, SqlFunction, SqlLiteral } from '@druid-toolkit/query';
 
-import {partition} from '../../../../utils';
+import { partition } from '../../../../utils';
 
 const IS_DATE_LIKE = /^[+-]?\d\d\d\d[^']+$/;
 

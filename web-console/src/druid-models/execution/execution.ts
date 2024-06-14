@@ -16,15 +16,28 @@
  * limitations under the License.
  */
 
-import {Column, QueryResult, SqlExpression, SqlQuery, SqlWithQuery} from '@druid-toolkit/query';
+import { Column, QueryResult, SqlExpression, SqlQuery, SqlWithQuery } from '@druid-toolkit/query';
 
-import {deepGet, deleteKeys, formatDuration, formatInteger, nonEmptyArray, oneOf, pluralIfNeeded,} from '../../utils';
-import type {AsyncState, AsyncStatusResponse} from '../async-query/async-query';
-import type {DruidEngine} from '../druid-engine/druid-engine';
-import {validDruidEngine} from '../druid-engine/druid-engine';
-import type {QueryContext} from '../query-context/query-context';
-import {Stages} from '../stages/stages';
-import type {MsqTaskPayloadResponse, MsqTaskReportResponse, SegmentLoadWaiterStatus, TaskStatus,} from '../task/task';
+import {
+  deepGet,
+  deleteKeys,
+  formatDuration,
+  formatInteger,
+  nonEmptyArray,
+  oneOf,
+  pluralIfNeeded,
+} from '../../utils';
+import type { AsyncState, AsyncStatusResponse } from '../async-query/async-query';
+import type { DruidEngine } from '../druid-engine/druid-engine';
+import { validDruidEngine } from '../druid-engine/druid-engine';
+import type { QueryContext } from '../query-context/query-context';
+import { Stages } from '../stages/stages';
+import type {
+  MsqTaskPayloadResponse,
+  MsqTaskReportResponse,
+  SegmentLoadWaiterStatus,
+  TaskStatus,
+} from '../task/task';
 
 const IGNORE_CONTEXT_KEYS = [
   '__asyncIdentity__',

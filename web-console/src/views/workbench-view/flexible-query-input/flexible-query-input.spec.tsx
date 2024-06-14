@@ -16,10 +16,10 @@
  * limitations under the License.
  */
 
-import {render} from '@testing-library/react';
+import { render } from '@testing-library/react';
 import React from 'react';
 
-import {FlexibleQueryInput} from './flexible-query-input';
+import { FlexibleQueryInput } from './flexible-query-input';
 
 describe('FlexibleQueryInput', () => {
   it('matches snapshot', () => {

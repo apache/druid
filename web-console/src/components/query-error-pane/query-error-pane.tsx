@@ -16,11 +16,11 @@
  * limitations under the License.
  */
 
-import type {JSX} from 'react';
-import React, {useState} from 'react';
+import type { JSX } from 'react';
+import React, { useState } from 'react';
 
-import type {DruidError, RowColumn} from '../../utils';
-import {HighlightText} from '../highlight-text/highlight-text';
+import type { DruidError, RowColumn } from '../../utils';
+import { HighlightText } from '../highlight-text/highlight-text';
 
 import './query-error-pane.scss';
 

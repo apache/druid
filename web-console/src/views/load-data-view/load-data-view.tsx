@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import type {IconName} from '@blueprintjs/core';
+import type { IconName } from '@blueprintjs/core';
 import {
   AnchorButton,
   Button,
@@ -37,12 +37,12 @@ import {
   Tag,
   TextArea,
 } from '@blueprintjs/core';
-import {IconNames} from '@blueprintjs/icons';
-import {Popover2} from '@blueprintjs/popover2';
+import { IconNames } from '@blueprintjs/icons';
+import { Popover2 } from '@blueprintjs/popover2';
 import classNames from 'classnames';
 import * as JSONBig from 'json-bigint-native';
 import memoize from 'memoize-one';
-import type {JSX} from 'react';
+import type { JSX } from 'react';
 import React from 'react';
 
 import {
@@ -56,7 +56,7 @@ import {
   Loader,
   PopoverText,
 } from '../../components';
-import {AlertDialog, AsyncActionDialog} from '../../dialogs';
+import { AlertDialog, AsyncActionDialog } from '../../dialogs';
 import type {
   ArrayMode,
   DimensionSpec,
@@ -135,9 +135,9 @@ import {
   updateSchemaWithSample,
   upgradeSpec,
 } from '../../druid-models';
-import {getSpecDatasourceName} from '../../helpers';
-import {getLink} from '../../links';
-import {Api, AppToaster, UrlBaser} from '../../singletons';
+import { getSpecDatasourceName } from '../../helpers';
+import { getLink } from '../../links';
+import { Api, AppToaster, UrlBaser } from '../../singletons';
 import {
   alphanumericCompare,
   compact,
@@ -178,10 +178,10 @@ import {
   sampleForTransform,
 } from '../../utils/sampler';
 
-import {ExamplePicker} from './example-picker/example-picker';
-import {EXAMPLE_SPECS} from './example-specs';
-import {FilterTable, filterTableSelectedColumnName} from './filter-table/filter-table';
-import {FormEditor} from './form-editor/form-editor';
+import { ExamplePicker } from './example-picker/example-picker';
+import { EXAMPLE_SPECS } from './example-specs';
+import { FilterTable, filterTableSelectedColumnName } from './filter-table/filter-table';
+import { FormEditor } from './form-editor/form-editor';
 import {
   AppendToExistingIssue,
   ConnectMessage,
@@ -195,11 +195,17 @@ import {
   TransformMessage,
   TuningMessage,
 } from './info-messages';
-import {ParseDataTable} from './parse-data-table/parse-data-table';
-import {ParseTimeTable, parseTimeTableSelectedColumnName,} from './parse-time-table/parse-time-table';
-import {ReorderMenu} from './reorder-menu/reorder-menu';
-import {SchemaTable} from './schema-table/schema-table';
-import {TransformTable, transformTableSelectedColumnName,} from './transform-table/transform-table';
+import { ParseDataTable } from './parse-data-table/parse-data-table';
+import {
+  ParseTimeTable,
+  parseTimeTableSelectedColumnName,
+} from './parse-time-table/parse-time-table';
+import { ReorderMenu } from './reorder-menu/reorder-menu';
+import { SchemaTable } from './schema-table/schema-table';
+import {
+  TransformTable,
+  transformTableSelectedColumnName,
+} from './transform-table/transform-table';
 
 import './load-data-view.scss';
 

@@ -16,14 +16,14 @@
  * limitations under the License.
  */
 
-import {Button, ButtonGroup} from '@blueprintjs/core';
-import {IconNames} from '@blueprintjs/icons';
-import React, {useState} from 'react';
+import { Button, ButtonGroup } from '@blueprintjs/core';
+import { IconNames } from '@blueprintjs/icons';
+import React, { useState } from 'react';
 
-import type {Execution} from '../../../druid-models';
-import {useInterval} from '../../../hooks';
-import {formatDurationHybrid} from '../../../utils';
-import {CancelQueryDialog} from '../cancel-query-dialog/cancel-query-dialog';
+import type { Execution } from '../../../druid-models';
+import { useInterval } from '../../../hooks';
+import { formatDurationHybrid } from '../../../utils';
+import { CancelQueryDialog } from '../cancel-query-dialog/cancel-query-dialog';
 
 import './execution-timer-panel.scss';
 

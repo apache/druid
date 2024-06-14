@@ -16,10 +16,10 @@
  * limitations under the License.
  */
 
-import {Button, Icon, Intent, Tag} from '@blueprintjs/core';
-import {IconNames} from '@blueprintjs/icons';
+import { Button, Icon, Intent, Tag } from '@blueprintjs/core';
+import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
-import type {Filter} from 'react-table';
+import type { Filter } from 'react-table';
 import ReactTable from 'react-table';
 
 import {
@@ -33,12 +33,12 @@ import {
   TableFilterableCell,
   ViewControlBar,
 } from '../../components';
-import {AsyncActionDialog, LookupEditDialog} from '../../dialogs/';
-import {LookupTableActionDialog} from '../../dialogs/lookup-table-action-dialog/lookup-table-action-dialog';
-import type {LookupSpec} from '../../druid-models';
-import {lookupSpecSummary} from '../../druid-models';
-import {STANDARD_TABLE_PAGE_SIZE, STANDARD_TABLE_PAGE_SIZE_OPTIONS} from '../../react-table';
-import {Api, AppToaster} from '../../singletons';
+import { AsyncActionDialog, LookupEditDialog } from '../../dialogs/';
+import { LookupTableActionDialog } from '../../dialogs/lookup-table-action-dialog/lookup-table-action-dialog';
+import type { LookupSpec } from '../../druid-models';
+import { lookupSpecSummary } from '../../druid-models';
+import { STANDARD_TABLE_PAGE_SIZE, STANDARD_TABLE_PAGE_SIZE_OPTIONS } from '../../react-table';
+import { Api, AppToaster } from '../../singletons';
 import {
   deepGet,
   getDruidErrorMessage,
@@ -49,7 +49,7 @@ import {
   QueryManager,
   QueryState,
 } from '../../utils';
-import type {BasicAction} from '../../utils/basic-action';
+import type { BasicAction } from '../../utils/basic-action';
 
 import './lookups-view.scss';
 

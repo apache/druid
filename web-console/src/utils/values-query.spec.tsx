@@ -16,9 +16,9 @@
  * limitations under the License.
  */
 
-import {QueryResult, sane} from '@druid-toolkit/query';
+import { QueryResult, sane } from '@druid-toolkit/query';
 
-import {queryResultToValuesQuery} from './values-query';
+import { queryResultToValuesQuery } from './values-query';
 
 describe('queryResultToValuesQuery', () => {
   it('works', () => {

@@ -16,16 +16,31 @@
  * limitations under the License.
  */
 
-import {Button, Classes, ControlGroup, Dialog, FormGroup, Intent, Label, Tag,} from '@blueprintjs/core';
-import React, {useState} from 'react';
+import {
+  Button,
+  Classes,
+  ControlGroup,
+  Dialog,
+  FormGroup,
+  Intent,
+  Label,
+  Tag,
+} from '@blueprintjs/core';
+import React, { useState } from 'react';
 
-import type {FormJsonTabs} from '../../components';
-import {FormJsonSelector, JsonInput, Loader} from '../../components';
-import {FancyNumericInput} from '../../components/fancy-numeric-input/fancy-numeric-input';
-import type {SupervisorOffsetMap, SupervisorStatus} from '../../druid-models';
-import {useQueryManager} from '../../hooks';
-import {Api, AppToaster} from '../../singletons';
-import {deepDelete, deepGet, formatInteger, getDruidErrorMessage, isNumberLike,} from '../../utils';
+import type { FormJsonTabs } from '../../components';
+import { FormJsonSelector, JsonInput, Loader } from '../../components';
+import { FancyNumericInput } from '../../components/fancy-numeric-input/fancy-numeric-input';
+import type { SupervisorOffsetMap, SupervisorStatus } from '../../druid-models';
+import { useQueryManager } from '../../hooks';
+import { Api, AppToaster } from '../../singletons';
+import {
+  deepDelete,
+  deepGet,
+  formatInteger,
+  getDruidErrorMessage,
+  isNumberLike,
+} from '../../utils';
 
 import './supervisor-reset-offsets-dialog.scss';
 

@@ -16,23 +16,29 @@
  * limitations under the License.
  */
 
-import {Button, Icon} from '@blueprintjs/core';
-import {IconNames} from '@blueprintjs/icons';
-import {Popover2} from '@blueprintjs/popover2';
-import type {Column, QueryResult} from '@druid-toolkit/query';
+import { Button, Icon } from '@blueprintjs/core';
+import { IconNames } from '@blueprintjs/icons';
+import { Popover2 } from '@blueprintjs/popover2';
+import type { Column, QueryResult } from '@druid-toolkit/query';
 import classNames from 'classnames';
-import React, {useEffect, useState} from 'react';
-import type {RowRenderProps} from 'react-table';
+import React, { useEffect, useState } from 'react';
+import type { RowRenderProps } from 'react-table';
 import ReactTable from 'react-table';
 
-import {ShowValueDialog} from '../../dialogs/show-value-dialog/show-value-dialog';
-import {SMALL_TABLE_PAGE_SIZE, SMALL_TABLE_PAGE_SIZE_OPTIONS} from '../../react-table';
-import type {Pagination} from '../../utils';
-import {columnToIcon, columnToSummary, columnToWidth, formatNumber, getNumericColumnBraces,} from '../../utils';
-import {BracedText} from '../braced-text/braced-text';
-import {CellFilterMenu} from '../cell-filter-menu/cell-filter-menu';
-import {Deferred} from '../deferred/deferred';
-import {TableCell} from '../table-cell/table-cell';
+import { ShowValueDialog } from '../../dialogs/show-value-dialog/show-value-dialog';
+import { SMALL_TABLE_PAGE_SIZE, SMALL_TABLE_PAGE_SIZE_OPTIONS } from '../../react-table';
+import type { Pagination } from '../../utils';
+import {
+  columnToIcon,
+  columnToSummary,
+  columnToWidth,
+  formatNumber,
+  getNumericColumnBraces,
+} from '../../utils';
+import { BracedText } from '../braced-text/braced-text';
+import { CellFilterMenu } from '../cell-filter-menu/cell-filter-menu';
+import { Deferred } from '../deferred/deferred';
+import { TableCell } from '../table-cell/table-cell';
 
 import './record-table-pane.scss';
 

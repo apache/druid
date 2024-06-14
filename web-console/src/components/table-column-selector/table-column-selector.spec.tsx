@@ -16,10 +16,10 @@
  * limitations under the License.
  */
 
-import {render} from '@testing-library/react';
+import { render } from '@testing-library/react';
 import React from 'react';
 
-import {TableColumnSelector} from './table-column-selector';
+import { TableColumnSelector } from './table-column-selector';
 
 describe('TableColumnSelector', () => {
   it('matches snapshot', () => {

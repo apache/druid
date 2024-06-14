@@ -23,24 +23,31 @@ import type {
   SqlExpression,
   SqlPartitionedByClause,
 } from '@druid-toolkit/query';
-import {C, F, SqlLiteral, SqlOrderByClause, SqlOrderByExpression, SqlQuery,} from '@druid-toolkit/query';
+import {
+  C,
+  F,
+  SqlLiteral,
+  SqlOrderByClause,
+  SqlOrderByExpression,
+  SqlQuery,
+} from '@druid-toolkit/query';
 import Hjson from 'hjson';
 import * as JSONBig from 'json-bigint-native';
-import {v4 as uuidv4} from 'uuid';
+import { v4 as uuidv4 } from 'uuid';
 
-import type {RowColumn} from '../../utils';
-import {caseInsensitiveEquals, deleteKeys} from '../../utils';
-import type {DruidEngine} from '../druid-engine/druid-engine';
-import {validDruidEngine} from '../druid-engine/druid-engine';
-import type {LastExecution} from '../execution/execution';
-import {validateLastExecution} from '../execution/execution';
-import type {ExternalConfig} from '../external-config/external-config';
+import type { RowColumn } from '../../utils';
+import { caseInsensitiveEquals, deleteKeys } from '../../utils';
+import type { DruidEngine } from '../druid-engine/druid-engine';
+import { validDruidEngine } from '../druid-engine/druid-engine';
+import type { LastExecution } from '../execution/execution';
+import { validateLastExecution } from '../execution/execution';
+import type { ExternalConfig } from '../external-config/external-config';
 import {
   externalConfigToIngestQueryPattern,
   ingestQueryPatternToQuery,
 } from '../ingest-query-pattern/ingest-query-pattern';
-import type {ArrayMode} from '../ingestion-spec/ingestion-spec';
-import type {QueryContext} from '../query-context/query-context';
+import type { ArrayMode } from '../ingestion-spec/ingestion-spec';
+import type { QueryContext } from '../query-context/query-context';
 
 const ISSUE_MARKER = '--:ISSUE:';
 

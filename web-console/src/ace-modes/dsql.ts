@@ -21,14 +21,14 @@
 // Originally licensed under the MIT license (https://github.com/thlorenz/brace/blob/master/LICENSE)
 // This file was modified to make the list of keywords more closely adhere to what is found in DruidSQL
 
-import type {Ace} from 'ace-builds';
+import type { Ace } from 'ace-builds';
 import ace from 'ace-builds/src-noconflict/ace';
 
 import * as druidKeywords from '../../lib/keywords';
 import * as druidFunctions from '../../lib/sql-docs';
 
-import type {ItemDescription} from './make-doc-html';
-import {makeDocHtml} from './make-doc-html';
+import type { ItemDescription } from './make-doc-html';
+import { makeDocHtml } from './make-doc-html';
 
 ace.define(
   'ace/mode/dsql_highlight_rules',

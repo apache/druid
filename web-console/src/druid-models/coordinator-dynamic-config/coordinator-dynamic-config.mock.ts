@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import type {CoordinatorDynamicConfig} from './coordinator-dynamic-config';
+import type { CoordinatorDynamicConfig } from './coordinator-dynamic-config';
 
 export const DEFAULT_COORDINATOR_DYNAMIC_CONFIG: CoordinatorDynamicConfig = {
   millisToWaitBeforeDeleting: 900000,

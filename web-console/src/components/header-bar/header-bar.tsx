@@ -30,9 +30,9 @@ import {
   Position,
   Tag,
 } from '@blueprintjs/core';
-import {IconNames} from '@blueprintjs/icons';
-import {Popover2} from '@blueprintjs/popover2';
-import React, {useState} from 'react';
+import { IconNames } from '@blueprintjs/icons';
+import { Popover2 } from '@blueprintjs/popover2';
+import React, { useState } from 'react';
 
 import {
   AboutDialog,
@@ -41,12 +41,18 @@ import {
   DoctorDialog,
   OverlordDynamicConfigDialog,
 } from '../../dialogs';
-import {Capabilities} from '../../helpers';
-import {getLink} from '../../links';
-import {localStorageGetJson, LocalStorageKeys, localStorageRemove, localStorageSetJson, oneOf,} from '../../utils';
-import {PopoverText} from '../popover-text/popover-text';
+import { Capabilities } from '../../helpers';
+import { getLink } from '../../links';
+import {
+  localStorageGetJson,
+  LocalStorageKeys,
+  localStorageRemove,
+  localStorageSetJson,
+  oneOf,
+} from '../../utils';
+import { PopoverText } from '../popover-text/popover-text';
 
-import {RestrictedMode} from './restricted-mode/restricted-mode';
+import { RestrictedMode } from './restricted-mode/restricted-mode';
 
 import './header-bar.scss';
 

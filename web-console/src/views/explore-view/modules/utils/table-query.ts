@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import type {SqlAlias, SqlExpression, SqlOrderByExpression, SqlTable} from '@druid-toolkit/query';
+import type { SqlAlias, SqlExpression, SqlOrderByExpression, SqlTable } from '@druid-toolkit/query';
 import {
   C,
   F,
@@ -29,14 +29,14 @@ import {
   SqlWithPart,
   T,
 } from '@druid-toolkit/query';
-import type {ExpressionMeta} from '@druid-toolkit/visuals-core';
+import type { ExpressionMeta } from '@druid-toolkit/visuals-core';
 
-import type {ColumnHint} from '../../../../utils';
-import {forceSignInNumberFormatter, formatNumber, formatPercent} from '../../../../utils';
-import {addTableScope, getInitQuery} from '../../utils';
+import type { ColumnHint } from '../../../../utils';
+import { forceSignInNumberFormatter, formatNumber, formatPercent } from '../../../../utils';
+import { addTableScope, getInitQuery } from '../../utils';
 
-import type {Compare} from './utils';
-import {decodeWhereForCompares, getWhereForCompares, shiftTimeInExpression} from './utils';
+import type { Compare } from './utils';
+import { decodeWhereForCompares, getWhereForCompares, shiftTimeInExpression } from './utils';
 
 export type MultipleValueMode = 'null' | 'empty' | 'latest' | 'latestNonNull' | 'count';
 

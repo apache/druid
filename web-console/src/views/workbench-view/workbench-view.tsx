@@ -16,25 +16,25 @@
  * limitations under the License.
  */
 
-import {Button, ButtonGroup, Intent, Menu, MenuDivider, MenuItem} from '@blueprintjs/core';
-import {IconNames} from '@blueprintjs/icons';
-import {Popover2} from '@blueprintjs/popover2';
-import type {SqlQuery} from '@druid-toolkit/query';
+import { Button, ButtonGroup, Intent, Menu, MenuDivider, MenuItem } from '@blueprintjs/core';
+import { IconNames } from '@blueprintjs/icons';
+import { Popover2 } from '@blueprintjs/popover2';
+import type { SqlQuery } from '@druid-toolkit/query';
 import classNames from 'classnames';
 import copy from 'copy-to-clipboard';
 import React from 'react';
 
-import {SpecDialog, StringInputDialog} from '../../dialogs';
-import type {DruidEngine, Execution, QueryWithContext, TabEntry} from '../../druid-models';
-import {guessDataSourceNameFromInputSource, WorkbenchQuery} from '../../druid-models';
-import type {Capabilities} from '../../helpers';
-import {convertSpecToSql, getSpecDatasourceName, getTaskExecution} from '../../helpers';
-import {getLink} from '../../links';
-import {AppToaster} from '../../singletons';
-import {AceEditorStateCache} from '../../singletons/ace-editor-state-cache';
-import {ExecutionStateCache} from '../../singletons/execution-state-cache';
-import {WorkbenchRunningPromises} from '../../singletons/workbench-running-promises';
-import type {ColumnMetadata} from '../../utils';
+import { SpecDialog, StringInputDialog } from '../../dialogs';
+import type { DruidEngine, Execution, QueryWithContext, TabEntry } from '../../druid-models';
+import { guessDataSourceNameFromInputSource, WorkbenchQuery } from '../../druid-models';
+import type { Capabilities } from '../../helpers';
+import { convertSpecToSql, getSpecDatasourceName, getTaskExecution } from '../../helpers';
+import { getLink } from '../../links';
+import { AppToaster } from '../../singletons';
+import { AceEditorStateCache } from '../../singletons/ace-editor-state-cache';
+import { ExecutionStateCache } from '../../singletons/execution-state-cache';
+import { WorkbenchRunningPromises } from '../../singletons/workbench-running-promises';
+import type { ColumnMetadata } from '../../utils';
 import {
   deepSet,
   generate8HexId,
@@ -48,18 +48,18 @@ import {
   QueryState,
 } from '../../utils';
 
-import {ColumnTree} from './column-tree/column-tree';
-import {ConnectExternalDataDialog} from './connect-external-data-dialog/connect-external-data-dialog';
-import {getDemoQueries} from './demo-queries';
-import {ExecutionDetailsDialog} from './execution-details-dialog/execution-details-dialog';
-import type {ExecutionDetailsTab} from './execution-details-pane/execution-details-pane';
-import {ExecutionSubmitDialog} from './execution-submit-dialog/execution-submit-dialog';
-import {ExplainDialog} from './explain-dialog/explain-dialog';
-import {MetadataChangeDetector} from './metadata-change-detector';
-import {QueryTab} from './query-tab/query-tab';
-import {RecentQueryTaskPanel} from './recent-query-task-panel/recent-query-task-panel';
-import {TabRenameDialog} from './tab-rename-dialog/tab-rename-dialog';
-import {WorkbenchHistoryDialog} from './workbench-history-dialog/workbench-history-dialog';
+import { ColumnTree } from './column-tree/column-tree';
+import { ConnectExternalDataDialog } from './connect-external-data-dialog/connect-external-data-dialog';
+import { getDemoQueries } from './demo-queries';
+import { ExecutionDetailsDialog } from './execution-details-dialog/execution-details-dialog';
+import type { ExecutionDetailsTab } from './execution-details-pane/execution-details-pane';
+import { ExecutionSubmitDialog } from './execution-submit-dialog/execution-submit-dialog';
+import { ExplainDialog } from './explain-dialog/explain-dialog';
+import { MetadataChangeDetector } from './metadata-change-detector';
+import { QueryTab } from './query-tab/query-tab';
+import { RecentQueryTaskPanel } from './recent-query-task-panel/recent-query-task-panel';
+import { TabRenameDialog } from './tab-rename-dialog/tab-rename-dialog';
+import { WorkbenchHistoryDialog } from './workbench-history-dialog/workbench-history-dialog';
 
 import './workbench-view.scss';
 

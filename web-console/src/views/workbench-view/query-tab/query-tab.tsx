@@ -16,32 +16,32 @@
  * limitations under the License.
  */
 
-import {Code, Intent} from '@blueprintjs/core';
-import {IconNames} from '@blueprintjs/icons';
-import type {QueryResult} from '@druid-toolkit/query';
-import {QueryRunner, SqlQuery} from '@druid-toolkit/query';
+import { Code, Intent } from '@blueprintjs/core';
+import { IconNames } from '@blueprintjs/icons';
+import type { QueryResult } from '@druid-toolkit/query';
+import { QueryRunner, SqlQuery } from '@druid-toolkit/query';
 import axios from 'axios';
-import type {JSX} from 'react';
-import React, {useCallback, useEffect, useRef, useState} from 'react';
+import type { JSX } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import SplitterLayout from 'react-splitter-layout';
-import {useStore} from 'zustand';
+import { useStore } from 'zustand';
 
-import {Loader, QueryErrorPane} from '../../../components';
-import type {DruidEngine, LastExecution, QueryContext} from '../../../druid-models';
-import {Execution, WorkbenchQuery} from '../../../druid-models';
+import { Loader, QueryErrorPane } from '../../../components';
+import type { DruidEngine, LastExecution, QueryContext } from '../../../druid-models';
+import { Execution, WorkbenchQuery } from '../../../druid-models';
 import {
   executionBackgroundStatusCheck,
   maybeGetClusterCapacity,
   reattachTaskExecution,
   submitTaskQuery,
 } from '../../../helpers';
-import {usePermanentCallback, useQueryManager} from '../../../hooks';
-import {Api, AppToaster} from '../../../singletons';
-import {ExecutionStateCache} from '../../../singletons/execution-state-cache';
-import {WorkbenchHistory} from '../../../singletons/workbench-history';
-import type {WorkbenchRunningPromise} from '../../../singletons/workbench-running-promises';
-import {WorkbenchRunningPromises} from '../../../singletons/workbench-running-promises';
-import type {ColumnMetadata, QueryAction, QuerySlice, RowColumn} from '../../../utils';
+import { usePermanentCallback, useQueryManager } from '../../../hooks';
+import { Api, AppToaster } from '../../../singletons';
+import { ExecutionStateCache } from '../../../singletons/execution-state-cache';
+import { WorkbenchHistory } from '../../../singletons/workbench-history';
+import type { WorkbenchRunningPromise } from '../../../singletons/workbench-running-promises';
+import { WorkbenchRunningPromises } from '../../../singletons/workbench-running-promises';
+import type { ColumnMetadata, QueryAction, QuerySlice, RowColumn } from '../../../utils';
 import {
   DruidError,
   findAllSqlQueriesInText,
@@ -50,19 +50,19 @@ import {
   localStorageSet,
   QueryManager,
 } from '../../../utils';
-import {CapacityAlert} from '../capacity-alert/capacity-alert';
-import type {ExecutionDetailsTab} from '../execution-details-pane/execution-details-pane';
-import {ExecutionErrorPane} from '../execution-error-pane/execution-error-pane';
-import {ExecutionProgressPane} from '../execution-progress-pane/execution-progress-pane';
-import {ExecutionStagesPane} from '../execution-stages-pane/execution-stages-pane';
-import {ExecutionSummaryPanel} from '../execution-summary-panel/execution-summary-panel';
-import {ExecutionTimerPanel} from '../execution-timer-panel/execution-timer-panel';
-import {FlexibleQueryInput} from '../flexible-query-input/flexible-query-input';
-import {IngestSuccessPane} from '../ingest-success-pane/ingest-success-pane';
-import {metadataStateStore} from '../metadata-state-store';
-import {ResultTablePane} from '../result-table-pane/result-table-pane';
-import {RunPanel} from '../run-panel/run-panel';
-import {workStateStore} from '../work-state-store';
+import { CapacityAlert } from '../capacity-alert/capacity-alert';
+import type { ExecutionDetailsTab } from '../execution-details-pane/execution-details-pane';
+import { ExecutionErrorPane } from '../execution-error-pane/execution-error-pane';
+import { ExecutionProgressPane } from '../execution-progress-pane/execution-progress-pane';
+import { ExecutionStagesPane } from '../execution-stages-pane/execution-stages-pane';
+import { ExecutionSummaryPanel } from '../execution-summary-panel/execution-summary-panel';
+import { ExecutionTimerPanel } from '../execution-timer-panel/execution-timer-panel';
+import { FlexibleQueryInput } from '../flexible-query-input/flexible-query-input';
+import { IngestSuccessPane } from '../ingest-success-pane/ingest-success-pane';
+import { metadataStateStore } from '../metadata-state-store';
+import { ResultTablePane } from '../result-table-pane/result-table-pane';
+import { RunPanel } from '../run-panel/run-panel';
+import { workStateStore } from '../work-state-store';
 
 import './query-tab.scss';
 

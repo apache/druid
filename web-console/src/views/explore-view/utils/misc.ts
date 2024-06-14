@@ -16,12 +16,12 @@
  * limitations under the License.
  */
 
-import type {SqlExpression, SqlTable} from '@druid-toolkit/query';
-import {SqlColumn, SqlQuery} from '@druid-toolkit/query';
-import type {ExpressionMeta} from '@druid-toolkit/visuals-core';
-import type {ParameterDefinition} from '@druid-toolkit/visuals-core/src/models/parameter';
+import type { SqlExpression, SqlTable } from '@druid-toolkit/query';
+import { SqlColumn, SqlQuery } from '@druid-toolkit/query';
+import type { ExpressionMeta } from '@druid-toolkit/visuals-core';
+import type { ParameterDefinition } from '@druid-toolkit/visuals-core/src/models/parameter';
 
-import {nonEmptyArray} from '../../../utils';
+import { nonEmptyArray } from '../../../utils';
 
 export interface Dataset {
   table: SqlTable;

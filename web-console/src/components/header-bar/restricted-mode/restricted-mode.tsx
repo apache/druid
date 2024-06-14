@@ -16,15 +16,15 @@
  * limitations under the License.
  */
 
-import {Button, Intent, Position} from '@blueprintjs/core';
-import {IconNames} from '@blueprintjs/icons';
-import {Popover2} from '@blueprintjs/popover2';
-import React, {type JSX} from 'react';
+import { Button, Intent, Position } from '@blueprintjs/core';
+import { IconNames } from '@blueprintjs/icons';
+import { Popover2 } from '@blueprintjs/popover2';
+import React, { type JSX } from 'react';
 
-import {Capabilities} from '../../../helpers';
-import {getLink} from '../../../links';
-import {ExternalLink} from '../../external-link/external-link';
-import {PopoverText} from '../../popover-text/popover-text';
+import { Capabilities } from '../../../helpers';
+import { getLink } from '../../../links';
+import { ExternalLink } from '../../external-link/external-link';
+import { PopoverText } from '../../popover-text/popover-text';
 
 export interface RestrictedModeProps {
   capabilities: Capabilities;

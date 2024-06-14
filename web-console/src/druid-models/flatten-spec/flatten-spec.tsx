@@ -18,10 +18,10 @@
 
 import React from 'react';
 
-import type {Field} from '../../components';
-import {ExternalLink} from '../../components';
-import {getLink} from '../../links';
-import {typeIsKnown} from '../../utils';
+import type { Field } from '../../components';
+import { ExternalLink } from '../../components';
+import { getLink } from '../../links';
+import { typeIsKnown } from '../../utils';
 
 export interface FlattenSpec {
   useFieldDiscovery?: boolean;

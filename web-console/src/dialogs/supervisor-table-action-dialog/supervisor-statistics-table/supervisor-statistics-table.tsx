@@ -16,17 +16,17 @@
  * limitations under the License.
  */
 
-import {Button, ButtonGroup} from '@blueprintjs/core';
+import { Button, ButtonGroup } from '@blueprintjs/core';
 import React from 'react';
-import type {CellInfo, Column} from 'react-table';
+import type { CellInfo, Column } from 'react-table';
 import ReactTable from 'react-table';
 
-import {Loader} from '../../../components/loader/loader';
-import type {RowStats, RowStatsCounter, SupervisorStats} from '../../../druid-models';
-import {useInterval, useQueryManager} from '../../../hooks';
-import {SMALL_TABLE_PAGE_SIZE, SMALL_TABLE_PAGE_SIZE_OPTIONS} from '../../../react-table';
-import {Api, UrlBaser} from '../../../singletons';
-import {deepGet, formatByteRate, formatBytes, formatInteger, formatRate} from '../../../utils';
+import { Loader } from '../../../components/loader/loader';
+import type { RowStats, RowStatsCounter, SupervisorStats } from '../../../druid-models';
+import { useInterval, useQueryManager } from '../../../hooks';
+import { SMALL_TABLE_PAGE_SIZE, SMALL_TABLE_PAGE_SIZE_OPTIONS } from '../../../react-table';
+import { Api, UrlBaser } from '../../../singletons';
+import { deepGet, formatByteRate, formatBytes, formatInteger, formatRate } from '../../../utils';
 
 import './supervisor-statistics-table.scss';
 

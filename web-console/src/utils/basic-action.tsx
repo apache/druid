@@ -16,9 +16,9 @@
  * limitations under the License.
  */
 
-import type {IconName, Intent} from '@blueprintjs/core';
-import {Menu, MenuItem} from '@blueprintjs/core';
-import type {JSX} from 'react';
+import type { IconName, Intent } from '@blueprintjs/core';
+import { Menu, MenuItem } from '@blueprintjs/core';
+import type { JSX } from 'react';
 import React from 'react';
 
 export interface BasicAction {

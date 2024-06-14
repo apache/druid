@@ -16,12 +16,12 @@
  * limitations under the License.
  */
 
-import {Button, FormGroup} from '@blueprintjs/core';
-import type {TimeRelativeFilterPattern} from '@druid-toolkit/query';
-import React, {useState} from 'react';
+import { Button, FormGroup } from '@blueprintjs/core';
+import type { TimeRelativeFilterPattern } from '@druid-toolkit/query';
+import React, { useState } from 'react';
 
-import {ColumnPicker} from '../../../column-picker/column-picker';
-import type {Dataset} from '../../../utils';
+import { ColumnPicker } from '../../../column-picker/column-picker';
+import type { Dataset } from '../../../utils';
 
 interface PartialPattern {
   anchor: 'timestamp' | 'maxDataTime';

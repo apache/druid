@@ -16,11 +16,11 @@
  * limitations under the License.
  */
 
-import type {AxiosInstance, CreateAxiosDefaults} from 'axios';
-import axios, {AxiosError} from 'axios';
+import type { AxiosInstance, CreateAxiosDefaults } from 'axios';
+import axios, { AxiosError } from 'axios';
 import * as JSONBig from 'json-bigint-native';
 
-import {nonEmptyString} from '../utils';
+import { nonEmptyString } from '../utils';
 
 export class Api {
   static instance: AxiosInstance;

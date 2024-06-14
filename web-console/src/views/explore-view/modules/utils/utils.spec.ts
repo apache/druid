@@ -16,9 +16,9 @@
  * limitations under the License.
  */
 
-import {SqlExpression} from '@druid-toolkit/query';
+import { SqlExpression } from '@druid-toolkit/query';
 
-import {getWhereForCompares, shiftTimeInExpression} from './utils';
+import { getWhereForCompares, shiftTimeInExpression } from './utils';
 
 describe('getWhereForCompares', () => {
   it('works', () => {

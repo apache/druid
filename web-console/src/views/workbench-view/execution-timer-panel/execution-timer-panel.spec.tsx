@@ -16,12 +16,12 @@
  * limitations under the License.
  */
 
-import {render} from '@testing-library/react';
+import { render } from '@testing-library/react';
 import React from 'react';
 
-import {Execution} from '../../../druid-models';
+import { Execution } from '../../../druid-models';
 
-import {ExecutionTimerPanel} from './execution-timer-panel';
+import { ExecutionTimerPanel } from './execution-timer-panel';
 
 describe('AnchoredQueryTimer', () => {
   const start = 1619201218452;

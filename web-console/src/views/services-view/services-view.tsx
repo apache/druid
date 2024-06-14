@@ -16,11 +16,11 @@
  * limitations under the License.
  */
 
-import {Button, ButtonGroup, Intent, Label, MenuItem, Tag} from '@blueprintjs/core';
-import {IconNames} from '@blueprintjs/icons';
-import {sum} from 'd3-array';
+import { Button, ButtonGroup, Intent, Label, MenuItem, Tag } from '@blueprintjs/core';
+import { IconNames } from '@blueprintjs/icons';
+import { sum } from 'd3-array';
 import React from 'react';
-import type {Filter} from 'react-table';
+import type { Filter } from 'react-table';
 import ReactTable from 'react-table';
 
 import {
@@ -34,12 +34,12 @@ import {
   TableFilterableCell,
   ViewControlBar,
 } from '../../components';
-import {AsyncActionDialog} from '../../dialogs';
-import type {QueryWithContext} from '../../druid-models';
-import type {Capabilities, CapabilitiesMode} from '../../helpers';
-import {STANDARD_TABLE_PAGE_SIZE, STANDARD_TABLE_PAGE_SIZE_OPTIONS} from '../../react-table';
-import {Api, AppToaster} from '../../singletons';
-import type {NumberLike} from '../../utils';
+import { AsyncActionDialog } from '../../dialogs';
+import type { QueryWithContext } from '../../druid-models';
+import type { Capabilities, CapabilitiesMode } from '../../helpers';
+import { STANDARD_TABLE_PAGE_SIZE, STANDARD_TABLE_PAGE_SIZE_OPTIONS } from '../../react-table';
+import { Api, AppToaster } from '../../singletons';
+import type { NumberLike } from '../../utils';
 import {
   deepGet,
   filterMap,
@@ -55,7 +55,7 @@ import {
   QueryManager,
   QueryState,
 } from '../../utils';
-import type {BasicAction} from '../../utils/basic-action';
+import type { BasicAction } from '../../utils/basic-action';
 
 import './services-view.scss';
 

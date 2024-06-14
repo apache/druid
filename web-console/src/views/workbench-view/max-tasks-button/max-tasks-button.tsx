@@ -16,16 +16,21 @@
  * limitations under the License.
  */
 
-import type {ButtonProps} from '@blueprintjs/core';
-import {Button, Menu, MenuDivider, MenuItem, Position} from '@blueprintjs/core';
-import {IconNames} from '@blueprintjs/icons';
-import {Popover2} from '@blueprintjs/popover2';
-import React, {useState} from 'react';
+import type { ButtonProps } from '@blueprintjs/core';
+import { Button, Menu, MenuDivider, MenuItem, Position } from '@blueprintjs/core';
+import { IconNames } from '@blueprintjs/icons';
+import { Popover2 } from '@blueprintjs/popover2';
+import React, { useState } from 'react';
 
-import {NumericInputDialog} from '../../../dialogs';
-import type {QueryContext} from '../../../druid-models';
-import {changeMaxNumTasks, changeTaskAssigment, getMaxNumTasks, getTaskAssigment,} from '../../../druid-models';
-import {formatInteger, tickIcon} from '../../../utils';
+import { NumericInputDialog } from '../../../dialogs';
+import type { QueryContext } from '../../../druid-models';
+import {
+  changeMaxNumTasks,
+  changeTaskAssigment,
+  getMaxNumTasks,
+  getTaskAssigment,
+} from '../../../druid-models';
+import { formatInteger, tickIcon } from '../../../utils';
 
 const MAX_NUM_TASK_OPTIONS = [2, 3, 4, 5, 7, 9, 11, 17, 33, 65, 129];
 const TASK_ASSIGNMENT_OPTIONS = ['max', 'auto'];

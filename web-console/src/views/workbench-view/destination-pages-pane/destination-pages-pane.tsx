@@ -16,16 +16,24 @@
  * limitations under the License.
  */
 
-import {AnchorButton, Button, Intent, Menu, MenuItem, Position} from '@blueprintjs/core';
-import {IconNames} from '@blueprintjs/icons';
-import {Popover2} from '@blueprintjs/popover2';
-import React, {useState} from 'react';
+import { AnchorButton, Button, Intent, Menu, MenuItem, Position } from '@blueprintjs/core';
+import { IconNames } from '@blueprintjs/icons';
+import { Popover2 } from '@blueprintjs/popover2';
+import React, { useState } from 'react';
 import ReactTable from 'react-table';
 
-import type {Execution} from '../../../druid-models';
-import {SMALL_TABLE_PAGE_SIZE} from '../../../react-table';
-import {Api, UrlBaser} from '../../../singletons';
-import {clamp, downloadUrl, formatBytes, formatInteger, pluralIfNeeded, tickIcon, wait,} from '../../../utils';
+import type { Execution } from '../../../druid-models';
+import { SMALL_TABLE_PAGE_SIZE } from '../../../react-table';
+import { Api, UrlBaser } from '../../../singletons';
+import {
+  clamp,
+  downloadUrl,
+  formatBytes,
+  formatInteger,
+  pluralIfNeeded,
+  tickIcon,
+  wait,
+} from '../../../utils';
 
 import './destination-pages-pane.scss';
 

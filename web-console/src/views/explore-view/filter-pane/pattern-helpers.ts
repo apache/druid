@@ -16,10 +16,10 @@
  * limitations under the License.
  */
 
-import type {FilterPattern} from '@druid-toolkit/query';
-import type {ExpressionMeta} from '@druid-toolkit/visuals-core';
+import type { FilterPattern } from '@druid-toolkit/query';
+import type { ExpressionMeta } from '@druid-toolkit/visuals-core';
 
-import {DATE_FORMAT} from '../utils';
+import { DATE_FORMAT } from '../utils';
 
 export function initPatternForColumn(column: ExpressionMeta): FilterPattern {
   switch (column.sqlType) {

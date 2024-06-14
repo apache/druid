@@ -16,12 +16,12 @@
  * limitations under the License.
  */
 
-import {Button, FormGroup, InputGroup, Intent} from '@blueprintjs/core';
-import type {TimeIntervalFilterPattern} from '@druid-toolkit/query';
-import React, {useState} from 'react';
+import { Button, FormGroup, InputGroup, Intent } from '@blueprintjs/core';
+import type { TimeIntervalFilterPattern } from '@druid-toolkit/query';
+import React, { useState } from 'react';
 
-import {ColumnPicker} from '../../../column-picker/column-picker';
-import type {Dataset} from '../../../utils';
+import { ColumnPicker } from '../../../column-picker/column-picker';
+import type { Dataset } from '../../../utils';
 
 function utcParseDate(dateString: string): Date | undefined {
   const dateParts = dateString.split(/[-T:. ]/g);

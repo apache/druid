@@ -16,22 +16,22 @@
  * limitations under the License.
  */
 
-import {Button} from '@blueprintjs/core';
-import type {SqlExpression, SqlOrderByExpression, SqlQuery} from '@druid-toolkit/query';
-import {C, F, SqlFunction, SqlLiteral} from '@druid-toolkit/query';
-import type {ExpressionMeta, Host} from '@druid-toolkit/visuals-core';
-import {typedVisualModule} from '@druid-toolkit/visuals-core';
-import React, {useMemo, useState} from 'react';
+import { Button } from '@blueprintjs/core';
+import type { SqlExpression, SqlOrderByExpression, SqlQuery } from '@druid-toolkit/query';
+import { C, F, SqlFunction, SqlLiteral } from '@druid-toolkit/query';
+import type { ExpressionMeta, Host } from '@druid-toolkit/visuals-core';
+import { typedVisualModule } from '@druid-toolkit/visuals-core';
+import React, { useMemo, useState } from 'react';
 import ReactDOM from 'react-dom';
 
-import {Loader} from '../../../components';
-import {useQueryManager} from '../../../hooks';
-import {formatInteger} from '../../../utils';
-import {getInitQuery} from '../utils';
+import { Loader } from '../../../components';
+import { useQueryManager } from '../../../hooks';
+import { formatInteger } from '../../../utils';
+import { getInitQuery } from '../utils';
 
-import {GenericOutputTable} from './components';
-import type {QueryAndHints} from './utils/table-query';
-import {DEFAULT_TOP_VALUES_K, makeTableQueryAndHints} from './utils/table-query';
+import { GenericOutputTable } from './components';
+import type { QueryAndHints } from './utils/table-query';
+import { DEFAULT_TOP_VALUES_K, makeTableQueryAndHints } from './utils/table-query';
 
 import './table-react-module.scss';
 

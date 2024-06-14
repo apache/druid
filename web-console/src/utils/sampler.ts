@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import {dedupe, F, SqlExpression, SqlFunction} from '@druid-toolkit/query';
+import { dedupe, F, SqlExpression, SqlFunction } from '@druid-toolkit/query';
 import * as JSONBig from 'json-bigint-native';
 
 import type {
@@ -44,11 +44,11 @@ import {
   REINDEX_TIMESTAMP_SPEC,
   TIME_COLUMN,
 } from '../druid-models';
-import {Api} from '../singletons';
+import { Api } from '../singletons';
 
-import {getDruidErrorMessage, queryDruidRune} from './druid-query';
-import {EMPTY_ARRAY, filterMap} from './general';
-import {allowKeys, deepGet, deepSet} from './object-change';
+import { getDruidErrorMessage, queryDruidRune } from './druid-query';
+import { EMPTY_ARRAY, filterMap } from './general';
+import { allowKeys, deepGet, deepSet } from './object-change';
 
 const BASE_SAMPLER_CONFIG: SamplerConfig = {
   numRows: 500,

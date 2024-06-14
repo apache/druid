@@ -16,13 +16,13 @@
  * limitations under the License.
  */
 
-import {FormGroup, InputGroup, Intent, MenuItem, Switch, Tag} from '@blueprintjs/core';
-import {IconNames} from '@blueprintjs/icons';
-import {SqlQuery, T} from '@druid-toolkit/query';
+import { FormGroup, InputGroup, Intent, MenuItem, Switch, Tag } from '@blueprintjs/core';
+import { IconNames } from '@blueprintjs/icons';
+import { SqlQuery, T } from '@druid-toolkit/query';
 import classNames from 'classnames';
-import {sum} from 'd3-array';
+import { sum } from 'd3-array';
 import React from 'react';
-import type {Filter} from 'react-table';
+import type { Filter } from 'react-table';
 import ReactTable from 'react-table';
 
 import {
@@ -38,14 +38,24 @@ import {
   TableColumnSelector,
   ViewControlBar,
 } from '../../components';
-import {AsyncActionDialog, CompactionConfigDialog, KillDatasourceDialog, RetentionDialog,} from '../../dialogs';
-import {DatasourceTableActionDialog} from '../../dialogs/datasource-table-action-dialog/datasource-table-action-dialog';
-import type {CompactionConfig, CompactionInfo, CompactionStatus, QueryWithContext,} from '../../druid-models';
-import {formatCompactionInfo, zeroCompactionStatus} from '../../druid-models';
-import type {Capabilities, CapabilitiesMode} from '../../helpers';
-import {STANDARD_TABLE_PAGE_SIZE, STANDARD_TABLE_PAGE_SIZE_OPTIONS} from '../../react-table';
-import {Api, AppToaster} from '../../singletons';
-import type {NumberLike} from '../../utils';
+import {
+  AsyncActionDialog,
+  CompactionConfigDialog,
+  KillDatasourceDialog,
+  RetentionDialog,
+} from '../../dialogs';
+import { DatasourceTableActionDialog } from '../../dialogs/datasource-table-action-dialog/datasource-table-action-dialog';
+import type {
+  CompactionConfig,
+  CompactionInfo,
+  CompactionStatus,
+  QueryWithContext,
+} from '../../druid-models';
+import { formatCompactionInfo, zeroCompactionStatus } from '../../druid-models';
+import type { Capabilities, CapabilitiesMode } from '../../helpers';
+import { STANDARD_TABLE_PAGE_SIZE, STANDARD_TABLE_PAGE_SIZE_OPTIONS } from '../../react-table';
+import { Api, AppToaster } from '../../singletons';
+import type { NumberLike } from '../../utils';
 import {
   assemble,
   compact,
@@ -69,9 +79,9 @@ import {
   QueryState,
   twoLines,
 } from '../../utils';
-import type {BasicAction} from '../../utils/basic-action';
-import type {Rule} from '../../utils/load-rule';
-import {RuleUtil} from '../../utils/load-rule';
+import type { BasicAction } from '../../utils/basic-action';
+import type { Rule } from '../../utils/load-rule';
+import { RuleUtil } from '../../utils/load-rule';
 
 import './datasources-view.scss';
 

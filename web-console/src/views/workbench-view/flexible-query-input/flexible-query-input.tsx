@@ -16,21 +16,21 @@
  * limitations under the License.
  */
 
-import {Intent} from '@blueprintjs/core';
-import {IconNames} from '@blueprintjs/icons';
-import {ResizeSensor2} from '@blueprintjs/popover2';
-import {C, dedupe, T} from '@druid-toolkit/query';
-import type {Ace} from 'ace-builds';
+import { Intent } from '@blueprintjs/core';
+import { IconNames } from '@blueprintjs/icons';
+import { ResizeSensor2 } from '@blueprintjs/popover2';
+import { C, dedupe, T } from '@druid-toolkit/query';
+import type { Ace } from 'ace-builds';
 import ace from 'ace-builds';
 import classNames from 'classnames';
 import debounce from 'lodash.debounce';
 import React from 'react';
 import AceEditor from 'react-ace';
 
-import {AppToaster} from '../../../singletons';
-import {AceEditorStateCache} from '../../../singletons/ace-editor-state-cache';
-import type {ColumnMetadata, QuerySlice, RowColumn} from '../../../utils';
-import {findAllSqlQueriesInText, findMap, uniq} from '../../../utils';
+import { AppToaster } from '../../../singletons';
+import { AceEditorStateCache } from '../../../singletons/ace-editor-state-cache';
+import type { ColumnMetadata, QuerySlice, RowColumn } from '../../../utils';
+import { findAllSqlQueriesInText, findMap, uniq } from '../../../utils';
 
 import './flexible-query-input.scss';
 

@@ -16,14 +16,14 @@
  * limitations under the License.
  */
 
-import {MenuItem} from '@blueprintjs/core';
-import {IconNames} from '@blueprintjs/icons';
-import type {SqlExpression, SqlQuery} from '@druid-toolkit/query';
-import {C, F, L} from '@druid-toolkit/query';
-import type {JSX} from 'react';
+import { MenuItem } from '@blueprintjs/core';
+import { IconNames } from '@blueprintjs/icons';
+import type { SqlExpression, SqlQuery } from '@druid-toolkit/query';
+import { C, F, L } from '@druid-toolkit/query';
+import type { JSX } from 'react';
 import React from 'react';
 
-import {prettyPrintSql} from '../../../../../utils';
+import { prettyPrintSql } from '../../../../../utils';
 
 const NINE_THOUSAND = L(9000);
 

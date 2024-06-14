@@ -16,23 +16,23 @@
  * limitations under the License.
  */
 
-import {HotkeysProvider, Intent} from '@blueprintjs/core';
-import {IconNames} from '@blueprintjs/icons';
+import { HotkeysProvider, Intent } from '@blueprintjs/core';
+import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
-import type {JSX} from 'react';
+import type { JSX } from 'react';
 import React from 'react';
-import type {RouteComponentProps} from 'react-router';
-import {Redirect} from 'react-router';
-import {HashRouter, Route, Switch} from 'react-router-dom';
-import type {Filter} from 'react-table';
+import type { RouteComponentProps } from 'react-router';
+import { Redirect } from 'react-router';
+import { HashRouter, Route, Switch } from 'react-router-dom';
+import type { Filter } from 'react-table';
 
-import type {HeaderActiveTab} from './components';
-import {HeaderBar, Loader} from './components';
-import type {DruidEngine, QueryWithContext} from './druid-models';
-import {Capabilities} from './helpers';
-import {stringToTableFilters, tableFiltersToString} from './react-table';
-import {AppToaster} from './singletons';
-import {compact, localStorageGetJson, LocalStorageKeys, QueryManager} from './utils';
+import type { HeaderActiveTab } from './components';
+import { HeaderBar, Loader } from './components';
+import type { DruidEngine, QueryWithContext } from './druid-models';
+import { Capabilities } from './helpers';
+import { stringToTableFilters, tableFiltersToString } from './react-table';
+import { AppToaster } from './singletons';
+import { compact, localStorageGetJson, LocalStorageKeys, QueryManager } from './utils';
 import {
   DatasourcesView,
   ExploreView,

@@ -16,22 +16,29 @@
  * limitations under the License.
  */
 
-import {Button, FormGroup, MenuItem, Radio, RadioGroup, ResizeSensor} from '@blueprintjs/core';
-import {IconNames} from '@blueprintjs/icons';
-import type {ItemPredicate, ItemRenderer} from '@blueprintjs/select';
-import {Select2} from '@blueprintjs/select';
-import type {AxisScale} from 'd3-axis';
-import {scaleLinear, scaleUtc} from 'd3-scale';
+import { Button, FormGroup, MenuItem, Radio, RadioGroup, ResizeSensor } from '@blueprintjs/core';
+import { IconNames } from '@blueprintjs/icons';
+import type { ItemPredicate, ItemRenderer } from '@blueprintjs/select';
+import { Select2 } from '@blueprintjs/select';
+import type { AxisScale } from 'd3-axis';
+import { scaleLinear, scaleUtc } from 'd3-scale';
 import React from 'react';
 
-import type {Capabilities} from '../../helpers';
-import {Api} from '../../singletons';
-import {ceilToUtcDay, formatBytes, formatInteger, queryDruidSql, QueryManager, uniq,} from '../../utils';
-import {DateRangeSelector} from '../date-range-selector/date-range-selector';
-import {Loader} from '../loader/loader';
+import type { Capabilities } from '../../helpers';
+import { Api } from '../../singletons';
+import {
+  ceilToUtcDay,
+  formatBytes,
+  formatInteger,
+  queryDruidSql,
+  QueryManager,
+  uniq,
+} from '../../utils';
+import { DateRangeSelector } from '../date-range-selector/date-range-selector';
+import { Loader } from '../loader/loader';
 
-import type {BarUnitData} from './stacked-bar-chart';
-import {StackedBarChart} from './stacked-bar-chart';
+import type { BarUnitData } from './stacked-bar-chart';
+import { StackedBarChart } from './stacked-bar-chart';
 
 import './segment-timeline.scss';
 

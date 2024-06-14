@@ -16,16 +16,16 @@
  * limitations under the License.
  */
 
-import {Button, Callout, Classes, Dialog, Tab, Tabs, Tag} from '@blueprintjs/core';
+import { Button, Callout, Classes, Dialog, Tab, Tabs, Tag } from '@blueprintjs/core';
 import * as JSONBig from 'json-bigint-native';
-import React, {useState} from 'react';
+import React, { useState } from 'react';
 
-import {Loader, ShowValue} from '../../components';
-import type {CompactionConfig} from '../../druid-models';
-import {useQueryManager} from '../../hooks';
-import {Api} from '../../singletons';
-import {formatInteger, formatPercent} from '../../utils';
-import {DiffDialog} from '../diff-dialog/diff-dialog';
+import { Loader, ShowValue } from '../../components';
+import type { CompactionConfig } from '../../druid-models';
+import { useQueryManager } from '../../hooks';
+import { Api } from '../../singletons';
+import { formatInteger, formatPercent } from '../../utils';
+import { DiffDialog } from '../diff-dialog/diff-dialog';
 
 import './compaction-history-dialog.scss';
 

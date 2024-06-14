@@ -16,12 +16,12 @@
  * limitations under the License.
  */
 
-import type {QueryResult} from '@druid-toolkit/query';
-import {C} from '@druid-toolkit/query';
-import type {Filter} from 'react-table';
+import type { QueryResult } from '@druid-toolkit/query';
+import { C } from '@druid-toolkit/query';
+import type { Filter } from 'react-table';
 
-import {filterMap, formatNumber, oneOf} from './general';
-import {deepSet} from './object-change';
+import { filterMap, formatNumber, oneOf } from './general';
+import { deepSet } from './object-change';
 
 export interface Pagination {
   page: number;

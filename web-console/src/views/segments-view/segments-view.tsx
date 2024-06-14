@@ -16,13 +16,13 @@
  * limitations under the License.
  */
 
-import {Button, ButtonGroup, Intent, Label, MenuItem, Switch, Tag} from '@blueprintjs/core';
-import {IconNames} from '@blueprintjs/icons';
-import {C, L, SqlComparison, SqlExpression} from '@druid-toolkit/query';
+import { Button, ButtonGroup, Intent, Label, MenuItem, Switch, Tag } from '@blueprintjs/core';
+import { IconNames } from '@blueprintjs/icons';
+import { C, L, SqlComparison, SqlExpression } from '@druid-toolkit/query';
 import classNames from 'classnames';
 import * as JSONBig from 'json-bigint-native';
 import React from 'react';
-import type {Filter} from 'react-table';
+import type { Filter } from 'react-table';
 import ReactTable from 'react-table';
 
 import {
@@ -39,11 +39,11 @@ import {
   TableFilterableCell,
   ViewControlBar,
 } from '../../components';
-import {AsyncActionDialog} from '../../dialogs';
-import {SegmentTableActionDialog} from '../../dialogs/segments-table-action-dialog/segment-table-action-dialog';
-import {ShowValueDialog} from '../../dialogs/show-value-dialog/show-value-dialog';
-import type {QueryWithContext} from '../../druid-models';
-import type {Capabilities, CapabilitiesMode} from '../../helpers';
+import { AsyncActionDialog } from '../../dialogs';
+import { SegmentTableActionDialog } from '../../dialogs/segments-table-action-dialog/segment-table-action-dialog';
+import { ShowValueDialog } from '../../dialogs/show-value-dialog/show-value-dialog';
+import type { QueryWithContext } from '../../druid-models';
+import type { Capabilities, CapabilitiesMode } from '../../helpers';
 import {
   booleanCustomTableFilter,
   BooleanFilterInput,
@@ -52,8 +52,8 @@ import {
   STANDARD_TABLE_PAGE_SIZE,
   STANDARD_TABLE_PAGE_SIZE_OPTIONS,
 } from '../../react-table';
-import {Api} from '../../singletons';
-import type {NumberLike, TableState} from '../../utils';
+import { Api } from '../../singletons';
+import type { NumberLike, TableState } from '../../utils';
 import {
   compact,
   countBy,
@@ -72,7 +72,7 @@ import {
   sortedToOrderByClause,
   twoLines,
 } from '../../utils';
-import type {BasicAction} from '../../utils/basic-action';
+import type { BasicAction } from '../../utils/basic-action';
 
 import './segments-view.scss';
 

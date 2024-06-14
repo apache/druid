@@ -18,10 +18,10 @@
 
 import React from 'react';
 
-import {Capabilities} from '../../../helpers';
-import {shallow} from '../../../utils/shallow-renderer';
+import { Capabilities } from '../../../helpers';
+import { shallow } from '../../../utils/shallow-renderer';
 
-import {RestrictedMode} from './restricted-mode';
+import { RestrictedMode } from './restricted-mode';
 
 describe('RestrictedMode', () => {
   it('matches snapshot when in auto capability detection mode', () => {

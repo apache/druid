@@ -16,9 +16,9 @@
  * limitations under the License.
  */
 
-import {Api} from '../singletons';
+import { Api } from '../singletons';
 
-import {maybeGetClusterCapacity} from './index';
+import { maybeGetClusterCapacity } from './index';
 
 export type CapabilitiesMode = 'full' | 'no-sql' | 'no-proxy';
 

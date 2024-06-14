@@ -16,9 +16,9 @@
  * limitations under the License.
  */
 
-import {CSV_SAMPLE, JSON_SAMPLE} from '../../utils/sampler.mock';
+import { CSV_SAMPLE, JSON_SAMPLE } from '../../utils/sampler.mock';
 
-import type {IngestionSpec} from './ingestion-spec';
+import type { IngestionSpec } from './ingestion-spec';
 import {
   adjustId,
   cleanSpec,

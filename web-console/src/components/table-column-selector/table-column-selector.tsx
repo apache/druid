@@ -16,12 +16,12 @@
  * limitations under the License.
  */
 
-import {Button, Menu, Position} from '@blueprintjs/core';
-import {IconNames} from '@blueprintjs/icons';
-import {Popover2} from '@blueprintjs/popover2';
-import React, {useState} from 'react';
+import { Button, Menu, Position } from '@blueprintjs/core';
+import { IconNames } from '@blueprintjs/icons';
+import { Popover2 } from '@blueprintjs/popover2';
+import React, { useState } from 'react';
 
-import {MenuCheckbox} from '../menu-checkbox/menu-checkbox';
+import { MenuCheckbox } from '../menu-checkbox/menu-checkbox';
 
 import './table-column-selector.scss';
 

@@ -16,12 +16,12 @@
  * limitations under the License.
  */
 
-import {Code} from '@blueprintjs/core';
+import { Code } from '@blueprintjs/core';
 import React from 'react';
 
-import type {Field} from '../../components';
-import {ExternalLink} from '../../components';
-import {getLink} from '../../links';
+import type { Field } from '../../components';
+import { ExternalLink } from '../../components';
+import { getLink } from '../../links';
 
 export interface CoordinatorDynamicConfig {
   maxSegmentsToMove?: number;

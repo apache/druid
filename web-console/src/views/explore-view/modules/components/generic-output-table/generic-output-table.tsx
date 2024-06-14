@@ -16,22 +16,22 @@
  * limitations under the License.
  */
 
-import {Button, Icon, Intent, Menu, MenuItem} from '@blueprintjs/core';
-import type {IconName} from '@blueprintjs/icons';
-import {IconNames} from '@blueprintjs/icons';
-import {Popover2} from '@blueprintjs/popover2';
-import type {Column, QueryResult, SqlExpression} from '@druid-toolkit/query';
-import {SqlColumn, SqlLiteral, trimString} from '@druid-toolkit/query';
+import { Button, Icon, Intent, Menu, MenuItem } from '@blueprintjs/core';
+import type { IconName } from '@blueprintjs/icons';
+import { IconNames } from '@blueprintjs/icons';
+import { Popover2 } from '@blueprintjs/popover2';
+import type { Column, QueryResult, SqlExpression } from '@druid-toolkit/query';
+import { SqlColumn, SqlLiteral, trimString } from '@druid-toolkit/query';
 import classNames from 'classnames';
-import type {JSX} from 'react';
-import React, {useEffect, useState} from 'react';
-import type {Column as TableColumn} from 'react-table';
+import type { JSX } from 'react';
+import React, { useEffect, useState } from 'react';
+import type { Column as TableColumn } from 'react-table';
 import ReactTable from 'react-table';
 
-import {BracedText, Deferred, TableCell} from '../../../../../components';
-import {possibleDruidFormatForValues, TIME_COLUMN} from '../../../../../druid-models';
-import {SMALL_TABLE_PAGE_SIZE, SMALL_TABLE_PAGE_SIZE_OPTIONS} from '../../../../../react-table';
-import type {ColumnHint, Pagination, QueryAction} from '../../../../../utils';
+import { BracedText, Deferred, TableCell } from '../../../../../components';
+import { possibleDruidFormatForValues, TIME_COLUMN } from '../../../../../druid-models';
+import { SMALL_TABLE_PAGE_SIZE, SMALL_TABLE_PAGE_SIZE_OPTIONS } from '../../../../../react-table';
+import type { ColumnHint, Pagination, QueryAction } from '../../../../../utils';
 import {
   columnToIcon,
   columnToWidth,

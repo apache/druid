@@ -16,9 +16,9 @@
  * limitations under the License.
  */
 
-import {Api} from '../../singletons';
-import {deepGet, pluralIfNeeded, queryDruidSql} from '../../utils';
-import {postToSampler} from '../../utils/sampler';
+import { Api } from '../../singletons';
+import { deepGet, pluralIfNeeded, queryDruidSql } from '../../utils';
+import { postToSampler } from '../../utils/sampler';
 
 export interface CheckControls {
   addSuggestion: (message: string) => void;
