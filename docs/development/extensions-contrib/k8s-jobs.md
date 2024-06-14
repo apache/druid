@@ -44,7 +44,7 @@ Other configurations required are:
 
 Druid operators can dynamically tune certain features within this extension without requiring to restart the service.
 The aspects which can be tuned are
-- [Pod Template Selection](#dynamic-pod-template-selection) if the [custom template pod adapate](#custom-template-pod-adapter) is conifgured
+- [Pod Template Selection](#dynamic-pod-template-selection) if the [custom template pod adapater](#custom-template-pod-adapter) is conifgured
   
 To use these APIs, a user needs read/write permissions for the CONFIG resource type with name "CONFIG".
 
@@ -77,14 +77,12 @@ Returns a JSON object with the dynamic configuration properties.
 
 <TabItem value="2" label="cURL">
 
-
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/k8s/taskRunner/executionConfig"
 ```
-
 </TabItem>
-<TabItem value="3" label="HTTP">
 
+<TabItem value="3" label="HTTP">
 
 ```HTTP
 GET /druid/indexer/v1/k8s/taskRunner/executionConfig HTTP/1.1
@@ -108,8 +106,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
     "selectors": [
       {
         "selectionKey": "podSpec1",
-        "context.tags":
-        {
+        "context.tags": {
           "userProvidedTag": ["tag1", "tag2"]
         },
         "dataSource": ["wikipedia"]
@@ -447,6 +444,7 @@ Any runtime property or JVM config used by the peon process can also be passed. 
 
 <details>
 <summary>Example ConfigMap</summary>
+
 ```yaml
 kind: ConfigMap
 metadata:
@@ -504,7 +502,8 @@ e.g. set the environment variable `druid_indexer_runner_k8s_podTemplate_index__k
 
 
 An example config would look like
-```
+
+```properties
 druid.indexer.runner.k8s.podTemplate.base=/path/to/basePodSpec.yaml
 druid.indexer.runner.k8s.podTemplate.index_kafka=/path/to/kafkaPodSpec.yaml
 ```
@@ -545,7 +544,8 @@ For a task to match a selector, all the conditions within the selector must matc
 ##### Example
 
 Set the following runtime properties to define the pod specs that can be used by Druid.
-```
+
+```properties
 druid.indexer.runner.k8s.podTemplate.base=/path/to/basePodSpec.yaml
 druid.indexer.runner.k8s.podTemplate.podSpec1=/path/to/podSpecWithHighMemRequests.yaml
 druid.indexer.runner.k8s.podTemplate.podSpec2=/path/to/podSpecWithLowCpuRequests.yaml
@@ -554,23 +554,24 @@ druid.indexer.runner.k8s.podTemplate.podSpec2=/path/to/podSpecWithLowCpuRequests
 Set the dynamic execution config to
 ```json
 {
-  "type": "selectorBased",
-  "selectors": [
-    {
-      "selectionKey": "podSpec1",
-      "context.tags":
+  "type": "default",
+  "podTemplateSelectStrategy": {
+    "type": "selectorBased",
+    "selectors": [
       {
-        "userProvidedTag": ["tag1", "tag2"]
+        "selectionKey": "podSpec1",
+        "context.tags": { "userProvidedTag": ["tag1", "tag2"] },
+        "dataSource": ["wikipedia"]
       },
-      "dataSource": ["wikipedia"]
-    },
-    {
-      "selectionKey": "podSpec2",
-      "type": ["index_kafka"]
-    }
-  ]
+      {
+        "selectionKey": "podSpec2",
+        "type": ["index_kafka"]
+      }
+    ]
+  }
 }
 ```
+
 This will tell Druid to 
 1. Use `podSpecWithHighMemRequests.yaml` when the tags in the task context contains a tag with the key `userProvidedTag` that has the value
 either `tag1` or `tag2` AND the dataSource is `wikipedia`.
@@ -611,7 +612,8 @@ the podTemplate `podSpecWithHighMemRequests.yaml` will be selected.
 - All Druid Pods belonging to one Druid cluster must be inside the same Kubernetes namespace.
 
 - You must have a role binding for the overlord's service account that provides the needed permissions for interacting with Kubernetes. An example spec could be:
-```
+
+```yaml
 kind: Role
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
