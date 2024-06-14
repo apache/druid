@@ -115,11 +115,13 @@ public abstract class ComplexMetricSerde
    */
   public byte[] toBytes(@Nullable Object val)
   {
-    if (val != null) {
+    if (val == null) {
+      return ByteArrays.EMPTY_ARRAY;
+    } else if (val instanceof byte[]) {
+      return (byte[]) val;
+    } else {
       byte[] bytes = getObjectStrategy().toBytes(val);
       return bytes != null ? bytes : ByteArrays.EMPTY_ARRAY;
-    } else {
-      return ByteArrays.EMPTY_ARRAY;
     }
   }
 
