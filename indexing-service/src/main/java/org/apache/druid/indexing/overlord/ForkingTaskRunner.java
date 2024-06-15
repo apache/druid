@@ -316,7 +316,7 @@ public class ForkingTaskRunner
                             if (propName.startsWith(CHILD_PROPERTY_PREFIX)) {
                               command.addSystemProperty(
                                   propName.substring(CHILD_PROPERTY_PREFIX.length()),
-                                  task.getContextValue(propName)
+                                  (Object) task.getContextValue(propName)
                               );
                             }
                           }
@@ -920,6 +920,11 @@ public class ForkingTaskRunner
     }
 
     public CommandListBuilder addSystemProperty(String property, boolean value)
+    {
+      return addSystemProperty(property, String.valueOf(value));
+    }
+
+    public CommandListBuilder addSystemProperty(String property, Object value)
     {
       return addSystemProperty(property, String.valueOf(value));
     }
