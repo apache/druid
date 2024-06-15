@@ -484,13 +484,7 @@ public class MetadataResource
   public Response getBootstrapSegments()
   {
     try {
-      log.info("Hmm call to bootstrap segments..");
       Set<DataSegment> broadcastSegments = coordinator.getBroadcastSegments();
-      log.info(
-          "Number of bootstrap segments coordinator is returning [%d] and they are [%s]",
-          broadcastSegments.size(),
-          broadcastSegments
-      );
       return Response.status(Response.Status.OK).entity(broadcastSegments).build();
     }
     catch (DruidException e) {

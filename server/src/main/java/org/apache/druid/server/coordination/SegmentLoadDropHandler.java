@@ -232,8 +232,6 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     startupSegments.addAll(segmentManager.getCachedSegments());
     startupSegments.addAll(getBootstrapSegments());
 
-    log.info("Server type[%s]", serverTypeConfig.getServerType());
-
     final Stopwatch stopwatch = Stopwatch.createStarted();
 
     // Start a temporary thread pool to load cachedSegments into page cache during bootstrap
@@ -318,17 +316,18 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     }
   }
 
+  /**
+   * @return a list of bootstrap segments. When bootstrap segments cannot be found, an empty list is returned.
+   */
   private List<DataSegment> getBootstrapSegments()
   {
     log.info("Fetching bootstrap segments from the coordinator.");
     final Stopwatch stopwatch = Stopwatch.createStarted();
 
-    final ListenableFuture<CloseableIterator<DataSegment>> bootstrapSegmentsFuture =
-        coordinatorClient.fetchBootstrapSegments();
-
     List<DataSegment> bootstrapSegments = new ArrayList<>();
 
-    try (CloseableIterator<DataSegment> iterator = FutureUtils.getUnchecked(bootstrapSegmentsFuture, true)) {
+    try (final CloseableIterator<DataSegment> iterator =
+             FutureUtils.getUnchecked(coordinatorClient.fetchBootstrapSegments(), true)) {
       bootstrapSegments = ImmutableList.copyOf(iterator);
     }
     catch (Exception e) {

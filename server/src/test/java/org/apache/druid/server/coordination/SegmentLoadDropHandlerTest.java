@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.guice.ServerTypeConfig;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.MapUtils;
@@ -302,7 +303,7 @@ public class SegmentLoadDropHandlerTest
   @Test
   public void testLoadBootstrapSegments() throws Exception
   {
-    Set<DataSegment> segments = new HashSet<>();
+    final Set<DataSegment> segments = new HashSet<>();
     for (int i = 0; i < COUNT; ++i) {
       segments.add(makeSegment("test" + i, "1", Intervals.of("P1d/2011-04-01")));
       segments.add(makeSegment("test" + i, "1", Intervals.of("P1d/2011-04-02")));
@@ -334,9 +335,31 @@ public class SegmentLoadDropHandlerTest
 
     Assert.assertEquals(expectedBootstrapSegments, cacheManager.observedBootstrapSegments);
     Assert.assertEquals(expectedBootstrapSegments, cacheManager.observedBootstrapSegmentsLoadedIntoPageCache);
-    Assert.assertEquals(ImmutableList.of(), cacheManager.observedSegments);
-    Assert.assertEquals(ImmutableList.of(), cacheManager.observedSegmentsLoadedIntoPageCache);
 
+    handler.stop();
+
+    Assert.assertEquals(0, serverAnnouncer.getObservedCount());
+    Assert.assertEquals(1, cacheManager.observedShutdownBootstrapCount.get());
+  }
+
+  @Test
+  public void testLoadBootstrapSegmentsWhenExceptionThrown() throws Exception
+  {
+    final TestSegmentCacheManager cacheManager = new TestSegmentCacheManager();
+    final SegmentManager segmentManager = new SegmentManager(cacheManager);
+
+    final SegmentLoadDropHandler handler = initSegmentLoadDropHandler(segmentManager, new NoopCoordinatorClient());
+
+    Assert.assertTrue(segmentManager.getDataSourceCounts().isEmpty());
+
+    handler.start();
+
+    Assert.assertEquals(1, serverAnnouncer.getObservedCount());
+    Assert.assertTrue(segmentManager.getDataSourceCounts().isEmpty());
+
+    Assert.assertEquals(ImmutableList.of(), segmentAnnouncer.getObservedSegments());
+    Assert.assertEquals(ImmutableList.of(), cacheManager.observedBootstrapSegments);
+    Assert.assertEquals(ImmutableList.of(), cacheManager.observedBootstrapSegmentsLoadedIntoPageCache);
 
     handler.stop();
 
@@ -595,7 +618,7 @@ public class SegmentLoadDropHandlerTest
     Assert.assertEquals(0, serverAnnouncer.getObservedCount());
   }
 
-  private SegmentLoadDropHandler initSegmentLoadDropHandler(SegmentManager segmentManager, TestCoordinatorClient coordinatorClient)
+  private SegmentLoadDropHandler initSegmentLoadDropHandler(SegmentManager segmentManager, CoordinatorClient coordinatorClient)
   {
     return initSegmentLoadDropHandler(segmentLoaderConfig, segmentManager, coordinatorClient);
   }
