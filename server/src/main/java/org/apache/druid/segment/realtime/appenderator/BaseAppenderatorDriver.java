@@ -253,7 +253,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
   private static final Logger log = new Logger(BaseAppenderatorDriver.class);
 
   private final SegmentAllocator segmentAllocator;
-  private final PublishedSegmentRetriever segmentChecker;
+  private final PublishedSegmentRetriever segmentRetriever;
   private final DataSegmentKiller dataSegmentKiller;
 
   protected final Appenderator appenderator;
@@ -268,13 +268,13 @@ public abstract class BaseAppenderatorDriver implements Closeable
   BaseAppenderatorDriver(
       Appenderator appenderator,
       SegmentAllocator segmentAllocator,
-      PublishedSegmentRetriever segmentChecker,
+      PublishedSegmentRetriever segmentRetriever,
       DataSegmentKiller dataSegmentKiller
   )
   {
     this.appenderator = Preconditions.checkNotNull(appenderator, "appenderator");
     this.segmentAllocator = Preconditions.checkNotNull(segmentAllocator, "segmentAllocator");
-    this.segmentChecker = Preconditions.checkNotNull(segmentChecker, "usedSegmentChecker");
+    this.segmentRetriever = Preconditions.checkNotNull(segmentRetriever, "usedSegmentChecker");
     this.dataSegmentKiller = Preconditions.checkNotNull(dataSegmentKiller, "dataSegmentKiller");
     this.executor = MoreExecutors.listeningDecorator(
         Execs.singleThreaded("[" + StringUtils.encodeForFormat(appenderator.getId()) + "]-publish")
@@ -656,7 +656,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
                       .map(SegmentIdWithShardSpec::fromDataSegment)
                       .collect(Collectors.toSet());
 
-                  final Set<DataSegment> publishedSegments = segmentChecker.findPublishedSegments(segmentsIdentifiers);
+                  final Set<DataSegment> publishedSegments = segmentRetriever.findPublishedSegments(segmentsIdentifiers);
                   if (publishedSegments.equals(ourSegments)) {
                     log.info(
                         "Could not publish [%d] segments, but they have already been published by another task.",
