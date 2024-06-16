@@ -23,9 +23,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.segment.realtime.appenderator.PublishedSegmentRetriever;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
-import org.apache.druid.segment.realtime.appenderator.UsedSegmentChecker;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.easymock.EasyMock;
@@ -35,7 +36,7 @@ import org.junit.Test;
 import java.io.IOException;
 import java.util.Set;
 
-public class ActionBasedUsedSegmentCheckerTest
+public class ActionBasedPublishedSegmentRetrieverTest
 {
   @Test
   public void testBasic() throws IOException
@@ -43,31 +44,10 @@ public class ActionBasedUsedSegmentCheckerTest
     final TaskActionClient taskActionClient = EasyMock.createMock(TaskActionClient.class);
     EasyMock.expect(
         taskActionClient.submit(
-            new RetrieveUsedSegmentsAction("bar", ImmutableList.of(Intervals.of("2002/P1D")))
-        )
-    ).andReturn(
-        ImmutableList.of(
-            DataSegment.builder()
-                       .dataSource("bar")
-                       .interval(Intervals.of("2002/P1D"))
-                       .shardSpec(new LinearShardSpec(0))
-                       .version("b")
-                       .size(0)
-                       .build(),
-            DataSegment.builder()
-                       .dataSource("bar")
-                       .interval(Intervals.of("2002/P1D"))
-                       .shardSpec(new LinearShardSpec(1))
-                       .version("b")
-                       .size(0)
-                       .build()
-        )
-    );
-    EasyMock.expect(
-        taskActionClient.submit(
             new RetrieveUsedSegmentsAction(
                 "foo",
-                ImmutableList.of(Intervals.of("2000/P1D"), Intervals.of("2001/P1D"))
+                ImmutableList.of(Intervals.of("2000/P1D")),
+                Segments.INCLUDING_OVERSHADOWED
             )
         )
     ).andReturn(
@@ -104,12 +84,10 @@ public class ActionBasedUsedSegmentCheckerTest
     );
     EasyMock.replay(taskActionClient);
 
-    final UsedSegmentChecker checker = new ActionBasedUsedSegmentChecker(taskActionClient);
-    final Set<DataSegment> segments = checker.findUsedSegments(
+    final PublishedSegmentRetriever checker = new ActionBasedPublishedSegmentRetriever(taskActionClient);
+    final Set<DataSegment> segments = checker.findPublishedSegments(
         ImmutableSet.of(
-            new SegmentIdWithShardSpec("foo", Intervals.of("2000/P1D"), "a", new LinearShardSpec(1)),
-            new SegmentIdWithShardSpec("foo", Intervals.of("2001/P1D"), "b", new LinearShardSpec(0)),
-            new SegmentIdWithShardSpec("bar", Intervals.of("2002/P1D"), "b", new LinearShardSpec(0))
+            new SegmentIdWithShardSpec("foo", Intervals.of("2000/P1D"), "a", new LinearShardSpec(1))
         )
     );
 
@@ -121,18 +99,40 @@ public class ActionBasedUsedSegmentCheckerTest
                        .shardSpec(new LinearShardSpec(1))
                        .version("a")
                        .size(0)
-                       .build(),
-            DataSegment.builder()
-                       .dataSource("bar")
-                       .interval(Intervals.of("2002/P1D"))
-                       .shardSpec(new LinearShardSpec(0))
-                       .version("b")
-                       .size(0)
                        .build()
         ),
         segments
     );
 
     EasyMock.verify(taskActionClient);
+  }
+
+  @Test
+  public void testFindReturnsUnusedSegments() throws IOException
+  {
+    final TaskActionClient taskActionClient = EasyMock.createMock(TaskActionClient.class);
+    EasyMock.expect(
+        taskActionClient.submit(
+            new RetrieveUsedSegmentsAction("bar", ImmutableList.of(Intervals.of("2002/P1D")))
+        )
+    ).andReturn(
+        ImmutableList.of(
+            DataSegment.builder()
+                       .dataSource("bar")
+                       .interval(Intervals.of("2002/P1D"))
+                       .shardSpec(new LinearShardSpec(0))
+                       .version("b")
+                       .size(0)
+                       .build(),
+            DataSegment.builder()
+                       .dataSource("bar")
+                       .interval(Intervals.of("2002/P1D"))
+                       .shardSpec(new LinearShardSpec(1))
+                       .version("b")
+                       .size(0)
+                       .build()
+        )
+    );
+
   }
 }

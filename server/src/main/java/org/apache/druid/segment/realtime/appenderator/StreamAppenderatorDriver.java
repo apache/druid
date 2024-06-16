@@ -91,7 +91,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
    * @param appenderator           appenderator
    * @param segmentAllocator       segment allocator
    * @param handoffNotifierFactory handoff notifier factory
-   * @param usedSegmentChecker     used segment checker
+   * @param segmentChecker     used segment checker
    * @param objectMapper           object mapper, used for serde of commit metadata
    * @param metrics                Firedepartment metrics
    */
@@ -99,13 +99,13 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
       Appenderator appenderator,
       SegmentAllocator segmentAllocator,
       SegmentHandoffNotifierFactory handoffNotifierFactory,
-      UsedSegmentChecker usedSegmentChecker,
+      PublishedSegmentRetriever segmentChecker,
       DataSegmentKiller dataSegmentKiller,
       ObjectMapper objectMapper,
       FireDepartmentMetrics metrics
   )
   {
-    super(appenderator, segmentAllocator, usedSegmentChecker, dataSegmentKiller);
+    super(appenderator, segmentAllocator, segmentChecker, dataSegmentKiller);
 
     this.handoffNotifier = Preconditions.checkNotNull(handoffNotifierFactory, "handoffNotifierFactory")
                                         .createSegmentHandoffNotifier(appenderator.getDataSource());
@@ -335,17 +335,10 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
       final Object metadata = Preconditions.checkNotNull(segmentsAndCommitMetadata.getCommitMetadata(), "commitMetadata");
 
       if (waitingSegmentIdList.isEmpty()) {
-        return Futures.immediateFuture(
-            new SegmentsAndCommitMetadata(
-                segmentsAndCommitMetadata.getSegments(),
-                ((AppenderatorDriverMetadata) metadata).getCallerMetadata(),
-                segmentsAndCommitMetadata.getSegmentSchemaMapping(),
-                segmentsAndCommitMetadata.getUpgradedSegments()
-            )
-        );
+        return Futures.immediateFuture(segmentsAndCommitMetadata.asAppenderatorMetadata());
       }
 
-      log.debug("Register handoff of segments: [%s]", waitingSegmentIdList);
+      log.debug("Register handoff of segments[%s].", waitingSegmentIdList);
       final long handoffStartTime = System.currentTimeMillis();
 
       final SettableFuture<SegmentsAndCommitMetadata> resultFuture = SettableFuture.create();
@@ -376,17 +369,10 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
                         final long handoffTotalTime = System.currentTimeMillis() - handoffStartTime;
                         metrics.reportMaxSegmentHandoffTime(handoffTotalTime);
                         if (handoffTotalTime > HANDOFF_TIME_THRESHOLD) {
-                          log.warn("Slow segment handoff! Time taken for [%d] segments is %d ms",
+                          log.warn("Slow segment handoff! Time taken for [%d] segments is [%d]ms",
                                    segments.size(), handoffTotalTime);
                         }
-                        resultFuture.set(
-                            new SegmentsAndCommitMetadata(
-                                segmentsAndCommitMetadata.getSegments(),
-                                ((AppenderatorDriverMetadata) metadata).getCallerMetadata(),
-                                segmentsAndCommitMetadata.getSegmentSchemaMapping(),
-                                segmentsAndCommitMetadata.getUpgradedSegments()
-                            )
-                        );
+                        resultFuture.set(segmentsAndCommitMetadata.asAppenderatorMetadata());
                       }
                     }
 

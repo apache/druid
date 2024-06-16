@@ -28,24 +28,24 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-public class TestUsedSegmentChecker implements UsedSegmentChecker
+public class TestPublishedSegmentRetriever implements PublishedSegmentRetriever
 {
   private final List<DataSegment> pushedSegments;
 
-  public TestUsedSegmentChecker(List<DataSegment> pushedSegments)
+  public TestPublishedSegmentRetriever(List<DataSegment> pushedSegments)
   {
     this.pushedSegments = pushedSegments;
   }
 
   @Override
-  public Set<DataSegment> findUsedSegments(Set<SegmentIdWithShardSpec> identifiers)
+  public Set<DataSegment> findPublishedSegments(Set<SegmentIdWithShardSpec> segmentIds)
   {
     final SegmentTimeline timeline = SegmentTimeline.forSegments(pushedSegments);
     final Set<DataSegment> retVal = new HashSet<>();
-    for (SegmentIdWithShardSpec identifier : identifiers) {
+    for (SegmentIdWithShardSpec identifier : segmentIds) {
       for (TimelineObjectHolder<String, DataSegment> holder : timeline.lookup(identifier.getInterval())) {
         for (PartitionChunk<DataSegment> chunk : holder.getObject()) {
-          if (identifiers.contains(SegmentIdWithShardSpec.fromDataSegment(chunk.getObject()))) {
+          if (segmentIds.contains(SegmentIdWithShardSpec.fromDataSegment(chunk.getObject()))) {
             retVal.add(chunk.getObject());
           }
         }
