@@ -20,6 +20,7 @@
 package org.apache.druid.query.aggregation.variance.sql;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.inject.Injector;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
@@ -32,6 +33,7 @@ import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -61,6 +63,7 @@ import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.filtration.Filtration;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
@@ -697,5 +700,29 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
         ResultMatchMode.EQUALS_EPS,
         expectedResults
     );
+  }
+
+  @Test
+  public void testOverWindow()
+  {
+    testBuilder()
+        .sql(
+            "select dim4, dim5, mod(m1, 3), var_pop(mod(m1, 3)) over (partition by dim4 order by dim5) c\n"
+            + "from numfoo\n"
+            + "group by dim4, dim5, mod(m1, 3)")
+        .queryContext(ImmutableMap.of(
+            PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
+            QueryContexts.ENABLE_DEBUG, true,
+            QueryContexts.WINDOWING_STRICT_VALIDATION, false
+        ))
+        .expectedResults(ImmutableList.of(
+            new Object[]{"a", "aa", 1.0D, 0.0D},
+            new Object[]{"a", "ab", 2.0D, 0.25D},
+            new Object[]{"a", "ba", 0.0D, 0.6666666666666666D},
+            new Object[]{"b", "aa", 2.0D, 0.0D},
+            new Object[]{"b", "ab", 0.0D, 1.0D},
+            new Object[]{"b", "ad", 1.0D, 0.6666666666666666D}
+        ))
+        .run();
   }
 }

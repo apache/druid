@@ -172,7 +172,9 @@ public class Windowing
             throw new CannotBuildQueryException(window, aggregateCall);
           }
 
-          aggregations.add(Iterables.getOnlyElement(aggregation.getAggregatorFactories()));
+          AggregatorFactory aggregatorFactory = Iterables.getOnlyElement(aggregation.getAggregatorFactories());
+          windowOutputColumns.set(windowOutputColumns.size() - 1, aggregatorFactory.getName());
+          aggregations.add(aggregatorFactory);
         } else {
           processors.add(
               maker.make(
