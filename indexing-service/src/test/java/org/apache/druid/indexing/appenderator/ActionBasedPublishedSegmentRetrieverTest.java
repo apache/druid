@@ -31,7 +31,6 @@ import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.easymock.EasyMock;
-import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -76,7 +75,9 @@ public class ActionBasedPublishedSegmentRetrieverTest
     ).andReturn(new HashSet<>(segments)).once();
     EasyMock.replay(taskActionClient);
 
-    final Set<SegmentId> searchSegmentIds = segments.stream().map(DataSegment::getId).collect(Collectors.toSet());
+    final Set<SegmentId> searchSegmentIds = segments.stream()
+                                                    .map(DataSegment::getId)
+                                                    .collect(Collectors.toSet());
     Assert.assertEquals(
         new HashSet<>(segments),
         segmentRetriever.findPublishedSegments(searchSegmentIds)
@@ -117,7 +118,9 @@ public class ActionBasedPublishedSegmentRetrieverTest
     ).andReturn(segments).once();
     EasyMock.replay(taskActionClient);
 
-    final Set<SegmentId> searchSegmentIds = segments.stream().map(DataSegment::getId).collect(Collectors.toSet());
+    final Set<SegmentId> searchSegmentIds = segments.stream()
+                                                    .map(DataSegment::getId)
+                                                    .collect(Collectors.toSet());
     Assert.assertEquals(
         new HashSet<>(segments),
         segmentRetriever.findPublishedSegments(searchSegmentIds)
