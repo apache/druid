@@ -20,6 +20,7 @@
 package org.apache.druid.segment.realtime.appenderator;
 
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.partition.PartitionChunk;
@@ -38,14 +39,14 @@ public class TestPublishedSegmentRetriever implements PublishedSegmentRetriever
   }
 
   @Override
-  public Set<DataSegment> findPublishedSegments(Set<SegmentIdWithShardSpec> segmentIds)
+  public Set<DataSegment> findPublishedSegments(Set<SegmentId> segmentIds)
   {
     final SegmentTimeline timeline = SegmentTimeline.forSegments(pushedSegments);
     final Set<DataSegment> retVal = new HashSet<>();
-    for (SegmentIdWithShardSpec identifier : segmentIds) {
+    for (SegmentId identifier : segmentIds) {
       for (TimelineObjectHolder<String, DataSegment> holder : timeline.lookup(identifier.getInterval())) {
         for (PartitionChunk<DataSegment> chunk : holder.getObject()) {
-          if (segmentIds.contains(SegmentIdWithShardSpec.fromDataSegment(chunk.getObject()))) {
+          if (segmentIds.contains(chunk.getObject().getId())) {
             retVal.add(chunk.getObject());
           }
         }

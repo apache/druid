@@ -27,12 +27,12 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.segment.realtime.appenderator.PublishedSegmentRetriever;
-import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
@@ -49,13 +49,12 @@ public class ActionBasedPublishedSegmentRetriever implements PublishedSegmentRet
   }
 
   @Override
-  public Set<DataSegment> findPublishedSegments(Set<SegmentIdWithShardSpec> segmentIds) throws IOException
+  public Set<DataSegment> findPublishedSegments(Set<SegmentId> segmentIds) throws IOException
   {
     // Validate that all segments belong to the same datasource
     final String dataSource = segmentIds.iterator().next().getDataSource();
-    final Set<SegmentId> segmentIdsToFind = new HashSet<>();
-    for (SegmentIdWithShardSpec segmentId : segmentIds) {
-      segmentIdsToFind.add(segmentId.asSegmentId());
+    final Set<SegmentId> segmentIdsToFind = new HashSet<>(segmentIds);
+    for (SegmentId segmentId : segmentIds) {
       if (!segmentId.getDataSource().equals(dataSource)) {
         throw InvalidInput.exception(
             "Published segment IDs to find cannot belong to multiple datasources[%s, %s].",
@@ -85,13 +84,14 @@ public class ActionBasedPublishedSegmentRetriever implements PublishedSegmentRet
     }
 
     // Search for the remaining segments in the "unused" set
-    final List<String> versions = segmentIdsToFind.stream().map(SegmentId::getVersion).collect(Collectors.toList());
+    final Set<String> versions = segmentIdsToFind.stream().map(SegmentId::getVersion).collect(Collectors.toSet());
     final List<Interval> unusedSearchIntervals = JodaUtils.condenseIntervals(
         Iterables.transform(segmentIdsToFind, SegmentId::getInterval)
     );
     for (Interval searchInterval : unusedSearchIntervals) {
-      final Collection<DataSegment> foundUnusedSegments = taskActionClient
-          .submit(new RetrieveUnusedSegmentsAction(dataSource, searchInterval, versions, null, null));
+      final Collection<DataSegment> foundUnusedSegments = taskActionClient.submit(
+          new RetrieveUnusedSegmentsAction(dataSource, searchInterval, new ArrayList<>(versions), null, null)
+      );
       for (DataSegment segment : foundUnusedSegments) {
         if (segmentIdsToFind.contains(segment.getId())) {
           publishedSegments.add(segment);

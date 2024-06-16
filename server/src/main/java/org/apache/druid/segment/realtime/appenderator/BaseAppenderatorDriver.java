@@ -46,6 +46,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.realtime.appenderator.SegmentWithState.SegmentState;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -274,7 +275,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
   {
     this.appenderator = Preconditions.checkNotNull(appenderator, "appenderator");
     this.segmentAllocator = Preconditions.checkNotNull(segmentAllocator, "segmentAllocator");
-    this.segmentRetriever = Preconditions.checkNotNull(segmentRetriever, "usedSegmentChecker");
+    this.segmentRetriever = Preconditions.checkNotNull(segmentRetriever, "segmentRetriever");
     this.dataSegmentKiller = Preconditions.checkNotNull(dataSegmentKiller, "dataSegmentKiller");
     this.executor = MoreExecutors.listeningDecorator(
         Execs.singleThreaded("[" + StringUtils.encodeForFormat(appenderator.getId()) + "]-publish")
@@ -630,7 +631,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
                   );
                   log.infoSegments(segmentsAndCommitMetadata.getSegments(), "Published segments");
 
-                  // Segments upgraded as a result of a concurrent replace
+                  // Log segments upgraded as a result of a concurrent replace
                   final Set<DataSegment> upgradedSegments = new HashSet<>(publishResult.getSegments());
                   segmentsAndCommitMetadata.getSegments().forEach(upgradedSegments::remove);
                   if (!upgradedSegments.isEmpty()) {
@@ -650,13 +651,13 @@ public abstract class BaseAppenderatorDriver implements Closeable
                   //    from the overlord. In this case we do not want to delete the segments we pushed, since they are
                   //    now live!
 
-                  final Set<SegmentIdWithShardSpec> segmentsIdentifiers = segmentsAndCommitMetadata
+                  final Set<SegmentId> segmentIds = segmentsAndCommitMetadata
                       .getSegments()
                       .stream()
-                      .map(SegmentIdWithShardSpec::fromDataSegment)
+                      .map(DataSegment::getId)
                       .collect(Collectors.toSet());
 
-                  final Set<DataSegment> publishedSegments = segmentRetriever.findPublishedSegments(segmentsIdentifiers);
+                  final Set<DataSegment> publishedSegments = segmentRetriever.findPublishedSegments(segmentIds);
                   if (publishedSegments.equals(ourSegments)) {
                     log.info(
                         "Could not publish [%d] segments, but they have already been published by another task.",

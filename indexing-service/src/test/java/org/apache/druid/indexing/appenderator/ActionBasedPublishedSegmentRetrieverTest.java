@@ -19,120 +19,128 @@
 
 package org.apache.druid.indexing.appenderator;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.indexing.common.actions.RetrieveUnusedSegmentsAction;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.segment.realtime.appenderator.PublishedSegmentRetriever;
-import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.LinearShardSpec;
+import org.apache.druid.timeline.SegmentId;
 import org.easymock.EasyMock;
+import org.junit.After;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class ActionBasedPublishedSegmentRetrieverTest
 {
-  @Test
-  public void testBasic() throws IOException
+  private TaskActionClient taskActionClient;
+  private ActionBasedPublishedSegmentRetriever segmentRetriever;
+
+  @Before
+  public void setup()
   {
-    final TaskActionClient taskActionClient = EasyMock.createMock(TaskActionClient.class);
+    taskActionClient = EasyMock.createMock(TaskActionClient.class);
+    segmentRetriever = new ActionBasedPublishedSegmentRetriever(taskActionClient);
+  }
+
+  @Test
+  public void testRetrieveUsedSegments() throws IOException
+  {
+    final List<DataSegment> segments =
+        CreateDataSegments.ofDatasource("wiki")
+                          .forIntervals(3, Granularities.DAY)
+                          .startingAt("2013-01-01")
+                          .eachOfSizeInMb(400);
+
     EasyMock.expect(
         taskActionClient.submit(
             new RetrieveUsedSegmentsAction(
-                "foo",
-                ImmutableList.of(Intervals.of("2000/P1D")),
+                "wiki",
+                null,
+                Collections.singletonList(Intervals.of("2013-01-01/2013-01-04")),
                 Segments.INCLUDING_OVERSHADOWED
             )
         )
-    ).andReturn(
-        ImmutableList.of(
-            DataSegment.builder()
-                       .dataSource("foo")
-                       .interval(Intervals.of("2000/P1D"))
-                       .shardSpec(new LinearShardSpec(0))
-                       .version("a")
-                       .size(0)
-                       .build(),
-            DataSegment.builder()
-                       .dataSource("foo")
-                       .interval(Intervals.of("2000/P1D"))
-                       .shardSpec(new LinearShardSpec(1))
-                       .version("a")
-                       .size(0)
-                       .build(),
-            DataSegment.builder()
-                       .dataSource("foo")
-                       .interval(Intervals.of("2001/P1D"))
-                       .shardSpec(new LinearShardSpec(1))
-                       .version("b")
-                       .size(0)
-                       .build(),
-            DataSegment.builder()
-                       .dataSource("foo")
-                       .interval(Intervals.of("2002/P1D"))
-                       .shardSpec(new LinearShardSpec(1))
-                       .version("b")
-                       .size(0)
-                       .build()
-        )
-    );
+    ).andReturn(new HashSet<>(segments)).once();
     EasyMock.replay(taskActionClient);
 
-    final PublishedSegmentRetriever checker = new ActionBasedPublishedSegmentRetriever(taskActionClient);
-    final Set<DataSegment> segments = checker.findPublishedSegments(
-        ImmutableSet.of(
-            new SegmentIdWithShardSpec("foo", Intervals.of("2000/P1D"), "a", new LinearShardSpec(1))
-        )
-    );
-
+    final Set<SegmentId> searchSegmentIds = segments.stream().map(DataSegment::getId).collect(Collectors.toSet());
     Assert.assertEquals(
-        ImmutableSet.of(
-            DataSegment.builder()
-                       .dataSource("foo")
-                       .interval(Intervals.of("2000/P1D"))
-                       .shardSpec(new LinearShardSpec(1))
-                       .version("a")
-                       .size(0)
-                       .build()
-        ),
-        segments
+        new HashSet<>(segments),
+        segmentRetriever.findPublishedSegments(searchSegmentIds)
     );
 
     EasyMock.verify(taskActionClient);
   }
 
   @Test
-  public void testFindReturnsUnusedSegments() throws IOException
+  public void testRetrieveUnusedSegmentsIfNotFoundInUsed() throws IOException
   {
-    final TaskActionClient taskActionClient = EasyMock.createMock(TaskActionClient.class);
+    final List<DataSegment> segments =
+        CreateDataSegments.ofDatasource("wiki")
+                          .forIntervals(3, Granularities.DAY)
+                          .startingAt("2013-01-01")
+                          .eachOfSizeInMb(400);
+
     EasyMock.expect(
         taskActionClient.submit(
-            new RetrieveUsedSegmentsAction("bar", ImmutableList.of(Intervals.of("2002/P1D")))
+            new RetrieveUsedSegmentsAction(
+                "wiki",
+                null,
+                Collections.singletonList(Intervals.of("2013-01-01/P3D")),
+                Segments.INCLUDING_OVERSHADOWED
+            )
         )
-    ).andReturn(
-        ImmutableList.of(
-            DataSegment.builder()
-                       .dataSource("bar")
-                       .interval(Intervals.of("2002/P1D"))
-                       .shardSpec(new LinearShardSpec(0))
-                       .version("b")
-                       .size(0)
-                       .build(),
-            DataSegment.builder()
-                       .dataSource("bar")
-                       .interval(Intervals.of("2002/P1D"))
-                       .shardSpec(new LinearShardSpec(1))
-                       .version("b")
-                       .size(0)
-                       .build()
+    ).andReturn(Collections.emptySet()).once();
+    EasyMock.expect(
+        taskActionClient.submit(
+            new RetrieveUnusedSegmentsAction(
+                "wiki",
+                Intervals.of("2013-01-01/P3D"),
+                Collections.singletonList(segments.get(0).getVersion()),
+                null,
+                null
+            )
         )
+    ).andReturn(segments).once();
+    EasyMock.replay(taskActionClient);
+
+    final Set<SegmentId> searchSegmentIds = segments.stream().map(DataSegment::getId).collect(Collectors.toSet());
+    Assert.assertEquals(
+        new HashSet<>(segments),
+        segmentRetriever.findPublishedSegments(searchSegmentIds)
     );
 
+    EasyMock.verify(taskActionClient);
+  }
+
+  @Test
+  public void testSegmentsForMultipleDatasourcesThrowsException()
+  {
+    DruidException exception = Assert.assertThrows(
+        DruidException.class,
+        () -> segmentRetriever.findPublishedSegments(
+            ImmutableSet.of(
+                SegmentId.of("wiki", Intervals.ETERNITY, "v1", 0),
+                SegmentId.of("koala", Intervals.ETERNITY, "v1", 0)
+            )
+        )
+    );
+    Assert.assertEquals(
+        "Published segment IDs to find cannot belong to multiple datasources[wiki, koala].",
+        exception.getMessage()
+    );
   }
 }

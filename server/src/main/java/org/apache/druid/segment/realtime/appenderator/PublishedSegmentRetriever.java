@@ -20,6 +20,7 @@
 package org.apache.druid.segment.realtime.appenderator;
 
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 
 import java.io.IOException;
 import java.util.Set;
@@ -31,6 +32,5 @@ import java.util.Set;
 @FunctionalInterface
 public interface PublishedSegmentRetriever
 {
-  Set<DataSegment> findPublishedSegments(Set<SegmentIdWithShardSpec> segmentIds)
-      throws IOException;
+  Set<DataSegment> findPublishedSegments(Set<SegmentId> segmentIds) throws IOException;
 }
