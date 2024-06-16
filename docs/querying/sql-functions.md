@@ -1143,6 +1143,14 @@ Adds the expression to the beginning of the array.
 
 Returns a slice of the array from the zero-based start and end indexes.
 
+## MV_TO_ARRAY
+
+`MV_TO_ARRAY(str)`
+
+**Function type:** [Multi-value string](sql-multivalue-string-functions.md)
+
+Converts a multi-value string from a `VARCHAR` to a `VARCHAR ARRAY`.
+
 ## MV_TO_STRING
 
 `MV_TO_STRING(arr, str)`

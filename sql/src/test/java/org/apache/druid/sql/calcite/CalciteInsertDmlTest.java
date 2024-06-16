@@ -1627,6 +1627,18 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
+  public void testInsertWithLongIdentifer()
+  {
+    // This test fails because an identifer is specified of length 200, which exceeds the length limit of 128
+    // characters.
+    String longIdentifer = new String(new char[200]).replace('\0', 'a');
+    testIngestionQuery()
+        .sql(StringUtils.format("INSERT INTO t SELECT %s FROM foo PARTITIONED BY ALL", longIdentifer)) // count is a keyword
+        .expectValidationError(invalidSqlContains(StringUtils.format("Length of identifier '%s' must be less than or equal to 128 characters", longIdentifer)))
+        .verify();
+  }
+
+  @Test
   public void testInsertWithUnnamedColumnInSelectStatement()
   {
     testIngestionQuery()

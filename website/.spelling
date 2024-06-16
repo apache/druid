@@ -1280,7 +1280,7 @@ ComplexMetrics
 DataSegmentArchiver
 DataSegmentKiller
 DataSegmentMover
-DataSegmentPuller
+URIDataPuller
 DataSegmentPusher
 DruidModule
 ExtractionFns
