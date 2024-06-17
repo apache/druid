@@ -55,6 +55,18 @@ public class ScanResultValueFramesIterableTest extends InitializedNullHandlingTe
                                                              .add("col2", ColumnType.LONG)
                                                              .build();
 
+  private static final RowSignature SIGNATURE3 = RowSignature.builder()
+                                                             .add("col1", ColumnType.DOUBLE)
+                                                             .add("col2", ColumnType.LONG)
+                                                             .add("col3", null)
+                                                             .build();
+
+  private static final RowSignature SIGNATURE4 = RowSignature.builder()
+                                                             .add("col1", ColumnType.DOUBLE)
+                                                             .add("col3", null)
+                                                             .add("col2", ColumnType.LONG)
+                                                             .build();
+
 
   @Test
   public void testEmptySequence()
@@ -192,7 +204,64 @@ public class ScanResultValueFramesIterableTest extends InitializedNullHandlingTe
   }
 
   @Test
+  public void testBatchingWithHeterogenousScanResultValuesAndNullTypes()
+  {
+    List<FrameSignaturePair> frames = Lists.newArrayList(
+        createIterable(
+            scanResultValue1(2),
+            scanResultValue3(2)
+        )
+    );
+    Assert.assertEquals(2, frames.size());
+    QueryToolChestTestHelper.assertArrayResultsEquals(
+        ImmutableList.of(
+            new Object[]{1L, 1.0D},
+            new Object[]{2L, 2.0D}
+        ),
+        new FrameBasedInlineDataSource(Collections.singletonList(frames.get(0)), SIGNATURE1).getRowsAsSequence()
+    );
+    QueryToolChestTestHelper.assertArrayResultsEquals(
+        ImmutableList.of(
+            new Object[]{5.0D, 5L},
+            new Object[]{6.0D, 6L}
+        ),
+        new FrameBasedInlineDataSource(Collections.singletonList(frames.get(1)), SIGNATURE2).getRowsAsSequence()
+    );
+  }
+
+  @Test
   public void testBatchingWithHeterogenousAndEmptyScanResultValues()
+  {
+    List<FrameSignaturePair> frames = Lists.newArrayList(
+        createIterable(
+            scanResultValue1(0),
+            scanResultValue2(0),
+            scanResultValue1(2),
+            scanResultValue1(0),
+            scanResultValue2(2),
+            scanResultValue2(0),
+            scanResultValue2(0)
+        )
+    );
+    Assert.assertEquals(2, frames.size());
+    QueryToolChestTestHelper.assertArrayResultsEquals(
+        ImmutableList.of(
+            new Object[]{1L, 1.0D},
+            new Object[]{2L, 2.0D}
+        ),
+        new FrameBasedInlineDataSource(Collections.singletonList(frames.get(0)), SIGNATURE1).getRowsAsSequence()
+    );
+    QueryToolChestTestHelper.assertArrayResultsEquals(
+        ImmutableList.of(
+            new Object[]{3.0D, 3L},
+            new Object[]{4.0D, 4L}
+        ),
+        new FrameBasedInlineDataSource(Collections.singletonList(frames.get(1)), SIGNATURE2).getRowsAsSequence()
+    );
+  }
+
+  @Test
+  public void testBatchingWithHeterogenousAndEmptyScanResultValuesAndNullTypes()
   {
     List<FrameSignaturePair> frames = Lists.newArrayList(
         createIterable(
@@ -265,6 +334,16 @@ public class ScanResultValueFramesIterableTest extends InitializedNullHandlingTe
         ImmutableList.of("col1", "col2"),
         IntStream.range(3, 3 + numRows).mapToObj(i -> new Object[]{(double) i, i}).collect(Collectors.toList()),
         SIGNATURE2
+    );
+  }
+
+  private static ScanResultValue scanResultValue3(int numRows)
+  {
+    return new ScanResultValue(
+        "dummy",
+        ImmutableList.of("col1", "col2", "col3"),
+        IntStream.range(5, 5 + numRows).mapToObj(i -> new Object[]{(double) i, i, null}).collect(Collectors.toList()),
+        SIGNATURE3
     );
   }
 }

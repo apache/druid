@@ -22,6 +22,9 @@ package org.apache.druid.query.scan;
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.ints.IntList;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.MemoryAllocatorFactory;
@@ -36,6 +39,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.FrameSignaturePair;
 import org.apache.druid.query.IterableRowsCursorHelper;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 
 import java.io.Closeable;
@@ -161,6 +165,20 @@ public class ScanResultValueFramesIterable implements Iterable<FrameSignaturePai
      */
     RowSignature currentRowSignature = null;
 
+    RowSignature trimmedRowSignature = null;
+
+    /**
+     * Current row index
+     */
+    int currentRowIndex = 0;
+
+    /**
+     *
+     */
+    IntList nullTypedColumns = null;
+
+    List<Object[]> currentRows = null;
+
 
     public ScanResultValueFramesIterator(
         Sequence<ScanResultValue> resultSequence,
@@ -200,26 +218,33 @@ public class ScanResultValueFramesIterable implements Iterable<FrameSignaturePai
       // start all the processing
       populateCursor();
       boolean firstRowWritten = false;
-      // While calling populateCursor() repeatedly, currentRowSignature might change. Therefore we store the signature
+      // While calling populateCursor() repeatedly, currentRowSignature might change. Therefore, we store the signature
       // with which we have written the frames
-      final RowSignature writtenSignature = currentRowSignature;
+      final RowSignature writtenSignature = trimmedRowSignature;
       FrameWriterFactory frameWriterFactory = FrameWriters.makeFrameWriterFactory(
           FrameType.COLUMNAR,
           memoryAllocatorFactory,
-          currentRowSignature,
+          trimmedRowSignature,
           Collections.emptyList()
       );
       Frame frame;
-      try (final FrameWriter frameWriter = frameWriterFactory.newFrameWriter(new SettableCursorColumnSelectorFactory(
-          () -> currentCursor,
-          currentRowSignature
-      ))) {
+      try (final FrameWriter frameWriter = frameWriterFactory.newFrameWriter(
+          new SettableCursorColumnSelectorFactory(() -> currentCursor, currentRowSignature))) {
         while (populateCursor()) { // Do till we don't have any more rows, or the next row isn't compatible with the current row
           if (!frameWriter.addSelection()) { // Add the cursor's row to the frame, till the frame is full
             break;
           }
+
+          for (Integer columnNumber : nullTypedColumns) {
+            if (currentRows.get(currentRowIndex)[columnNumber] != null) {
+              throw DruidException.defensive("Expected a null value");
+            }
+          }
+
           firstRowWritten = true;
+          // Check that the columns with the null types are actually null before advancing
           currentCursor.advance();
+          currentRowIndex++;
         }
 
         if (!firstRowWritten) {
@@ -276,19 +301,34 @@ public class ScanResultValueFramesIterable implements Iterable<FrameSignaturePai
       // At this point, we know that we need to move to the next non-empty cursor, AND it exists, because
       // done() is not false
       ScanResultValue scanResultValue = resultSequenceIterator.next();
+
       final RowSignature rowSignature = scanResultValue.getRowSignature() != null
                                         ? scanResultValue.getRowSignature()
                                         : defaultRowSignature;
+
       RowSignature modifiedRowSignature = useNestedForUnknownTypes
                                           ? FrameWriterUtils.replaceUnknownTypesWithNestedColumns(rowSignature)
                                           : rowSignature;
 
+      IntList currentNullTypedColumns = new IntArrayList();
+      RowSignature.Builder modifiedTrimmedRowSignatureBuilder = RowSignature.builder();
+
+      for (int i = 0; i < modifiedRowSignature.size(); ++i) {
+        ColumnType columnType = modifiedRowSignature.getColumnType(i).orElse(null);
+        if (columnType == null) {
+          currentNullTypedColumns.add(i);
+        } else {
+          modifiedTrimmedRowSignatureBuilder.add(modifiedRowSignature.getColumnName(i), columnType);
+        }
+      }
+
+      RowSignature modifiedTrimmedRowSignature = modifiedTrimmedRowSignatureBuilder.build();
+
       // currentRowSignature at this time points to the previous row's signature
-      final boolean compatible = modifiedRowSignature != null
-                                 && modifiedRowSignature.equals(currentRowSignature);
+      final boolean compatible = modifiedTrimmedRowSignature.equals(trimmedRowSignature);
 
       final List rows = (List) scanResultValue.getEvents();
-      final Iterable<Object[]> formattedRows = Lists.newArrayList(Iterables.transform(
+      final List<Object[]> formattedRows = Lists.newArrayList(Iterables.transform(
           rows,
           (Function) resultFormatMapper.apply(modifiedRowSignature)
       ));
@@ -307,6 +347,12 @@ public class ScanResultValueFramesIterable implements Iterable<FrameSignaturePai
       }
 
       currentRowSignature = modifiedRowSignature;
+      trimmedRowSignature = modifiedTrimmedRowSignature;
+      nullTypedColumns = currentNullTypedColumns;
+      currentRows = formattedRows;
+      currentRowIndex = 0;
+
+
       return compatible;
     }
   }
