@@ -28,7 +28,6 @@ import java.util.Map;
 import java.util.Objects;
 
 @FunctionalInterface
-
 public interface DruidHook<T>
 {
   static class HookKey<T>
@@ -73,14 +72,14 @@ public interface DruidHook<T>
 
   void invoke(HookKey<T> key, T object);
 
-  static Map<HookKey<?>, List<DruidHook>> GLOBAL = new HashMap<>();
+  static Map<HookKey<?>, List<DruidHook<?>>> GLOBAL = new HashMap<>();
 
-  public static void register(HookKey<?> label, DruidHook hook)
+  static void register(HookKey<?> label, DruidHook<?> hook)
   {
     GLOBAL.computeIfAbsent(label, k -> new ArrayList<>()).add(hook);
   }
 
-  public static void unregister(HookKey<?> key, DruidHook hook)
+  static void unregister(HookKey<?> key, DruidHook<?> hook)
   {
     GLOBAL.get(key).remove(hook);
   }
@@ -100,7 +99,7 @@ public interface DruidHook<T>
 
   public static <T> void dispatch(HookKey<T> key, T object)
   {
-    List<DruidHook> hooks = GLOBAL.get(key);
+    List<DruidHook<?>> hooks = GLOBAL.get(key);
     if (hooks != null) {
       for (DruidHook hook : hooks) {
         hook.invoke(key, object);

@@ -21,16 +21,24 @@ package org.apache.druid.quidem;
 
 import org.apache.druid.sql.calcite.run.DruidHook;
 
+import java.io.FileOutputStream;
 import java.io.PrintStream;
+import java.io.UnsupportedEncodingException;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 
 public class QuidemRecorder implements AutoCloseable, DruidHook<String>
 {
   private PrintStream printStream;
 
-  public QuidemRecorder(URI quidemURI, PrintStream printStream)
+  public QuidemRecorder(URI quidemURI, FileOutputStream fileOutputStream)
   {
-    this.printStream = printStream;
+    try {
+      this.printStream = new PrintStream(fileOutputStream, true, StandardCharsets.UTF_8.name());
+    }
+    catch (UnsupportedEncodingException e) {
+      throw new RuntimeException();
+    }
     printStream.println("#started");
     printStream.println("!connect " + quidemURI.toString());
     DruidHook.register(DruidHook.SQL, this);

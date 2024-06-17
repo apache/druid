@@ -27,8 +27,8 @@ import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 
+import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.PrintStream;
 import java.net.URI;
 
 @Path("/quidem")
@@ -62,7 +62,10 @@ public class QuidemCaptureResource
   public synchronized String start() throws IOException
   {
     stopIfRunning();
-    recorder = new QuidemRecorder(quidemURI, new PrintStream("/tmp/new.iq"));
+    recorder = new QuidemRecorder(
+        quidemURI,
+        new FileOutputStream("/tmp/new.iq")
+    );
     return recorder.toString();
   }
 

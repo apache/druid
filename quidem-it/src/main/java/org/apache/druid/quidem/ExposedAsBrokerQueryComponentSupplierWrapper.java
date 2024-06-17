@@ -77,7 +77,6 @@ import org.apache.druid.initialization.Log4jShutterDownerModule;
 import org.apache.druid.initialization.ServerInjectorBuilder;
 import org.apache.druid.initialization.TombstoneDataStorageModule;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.metadata.storage.derby.DerbyMetadataStorageDruidModule;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
@@ -96,6 +95,7 @@ import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.SubqueryGuardrailHelper;
 import org.apache.druid.server.SubqueryGuardrailHelperProvider;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.emitter.EmitterModule;
 import org.apache.druid.server.http.BrokerResource;
 import org.apache.druid.server.http.SelfDiscoveryResource;
 import org.apache.druid.server.initialization.AuthorizerMapperModule;
@@ -104,7 +104,6 @@ import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
 import org.apache.druid.server.initialization.jetty.JettyServerModule;
 import org.apache.druid.server.log.NoopRequestLogger;
 import org.apache.druid.server.log.RequestLogger;
-import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.metrics.QueryCountStatsProvider;
 import org.apache.druid.server.metrics.SubqueryCountStatsProvider;
 import org.apache.druid.server.router.TieredBrokerConfig;
@@ -226,7 +225,6 @@ public class ExposedAsBrokerQueryComponentSupplierWrapper implements QueryCompon
       bind(String.class)
           .annotatedWith(DruidSchemaName.class)
           .toInstance(CalciteTests.DRUID_SCHEMA_NAME);
-      bind(ServiceEmitter.class).to(NoopServiceEmitter.class);
       bind(QuerySchedulerProvider.class).in(LazySingleton.class);
       bind(CalciteRulesManager.class).toInstance(new CalciteRulesManager(ImmutableSet.of()));
       bind(CatalogResolver.class).toInstance(CatalogResolver.NULL_RESOLVER);
@@ -282,7 +280,7 @@ public class ExposedAsBrokerQueryComponentSupplierWrapper implements QueryCompon
         ExtensionsModule.SecondaryModule.class,
         new DruidAuthModule(),
         TLSCertificateCheckerModule.class,
-        // EmitterModule.class,
+        EmitterModule.class,
         HttpClientModule.global(),
         HttpClientModule.escalatedGlobal(),
         new HttpClientModule("druid.broker.http", Client.class, true),
