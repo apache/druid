@@ -36,6 +36,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.core.Event;
+import org.apache.druid.java.util.emitter.core.EventMap;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.druid.java.util.http.client.response.SequenceInputStreamResponseHandler;
@@ -147,6 +148,10 @@ public class LookupCoordinatorManagerTest
   {
     List<Event> events = SERVICE_EMITTER.getEvents();
     log.info("Events: [%s]", events);
+    for (Event event : events) {
+      Assert.assertEquals(EventMap.builder().put("foo", "bar").build(), event.toMap());
+    }
+    Assert.assertEquals(ImmutableList.of(), events);
     Assert.assertEquals(0, events.size());
     SERVICE_EMITTER.flush();
   }
