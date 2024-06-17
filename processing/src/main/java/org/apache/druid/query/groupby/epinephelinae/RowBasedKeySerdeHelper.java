@@ -23,6 +23,7 @@ import org.apache.druid.query.groupby.epinephelinae.Grouper.BufferComparator;
 import org.apache.druid.query.groupby.epinephelinae.RowBasedGrouperHelper.RowBasedKey;
 
 import javax.annotation.CheckReturnValue;
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
 interface RowBasedKeySerdeHelper
@@ -65,4 +66,7 @@ interface RowBasedKeySerdeHelper
    * Return a {@link BufferComparator} to compare keys stored in ByteBuffer.
    */
   BufferComparator getBufferComparator();
+
+  @Nullable
+  Class getComplexClazz();
 }

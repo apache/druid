@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.groupby.epinephelinae;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -231,6 +232,11 @@ public interface Grouper<KeyType> extends Closeable
      * @return comparator for keys + aggs
      */
     BufferComparator bufferComparatorWithAggregators(AggregatorFactory[] aggregatorFactories, int[] aggregatorOffsets);
+
+    default ObjectMapper decorateObjectMapper(ObjectMapper spillMapper)
+    {
+      return spillMapper;
+    }
 
     /**
      * Reset the keySerde to its initial state. After this method is called, {@link #readFromByteBuffer}
