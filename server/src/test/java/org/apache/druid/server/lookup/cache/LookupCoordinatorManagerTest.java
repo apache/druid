@@ -35,8 +35,6 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.java.util.emitter.core.Event;
-import org.apache.druid.java.util.emitter.core.EventMap;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.druid.java.util.http.client.response.SequenceInputStreamResponseHandler;
@@ -63,8 +61,6 @@ import java.util.concurrent.atomic.AtomicReference;
 
 public class LookupCoordinatorManagerTest
 {
-  private static final EmittingLogger log = new EmittingLogger(LookupCoordinatorManagerTest.class);
-
   private final ObjectMapper mapper = new DefaultObjectMapper();
   private final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createStrictMock(DruidNodeDiscoveryProvider.class);
   private final LookupNodeDiscovery lookupNodeDiscovery = EasyMock.createStrictMock(
@@ -146,13 +142,7 @@ public class LookupCoordinatorManagerTest
   @After
   public void tearDown()
   {
-    List<Event> events = SERVICE_EMITTER.getEvents();
-    log.info("Events: [%s]", events);
-    for (Event event : events) {
-      Assert.assertEquals(EventMap.builder().put("foo", "bar").build(), event.toMap());
-    }
-    Assert.assertEquals(ImmutableList.of(), events);
-    Assert.assertEquals(0, events.size());
+    Assert.assertEquals(0, SERVICE_EMITTER.getEvents().size());
     SERVICE_EMITTER.flush();
   }
 
