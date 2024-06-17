@@ -252,7 +252,7 @@ public class RetryingInputStream<T> extends InputStream
   }
 
   @Override
-  public synchronized void reset() throws IOException
+  public synchronized void reset()
   {
     startOffset = 0;
     try {
