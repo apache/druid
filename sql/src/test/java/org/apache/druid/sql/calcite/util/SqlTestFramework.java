@@ -70,6 +70,8 @@ import org.apache.druid.sql.calcite.view.InProcessViewManager;
 import org.apache.druid.sql.calcite.view.ViewManager;
 import org.apache.druid.timeline.DataSegment;
 
+import javax.inject.Named;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.URI;
@@ -627,6 +629,19 @@ public class SqlTestFramework
           builder.catalogResolver
       );
       return rootSchema;
+    }
+
+    @Provides
+    SqlTestFrameworkConfig getTestConfig()
+    {
+      return builder.config;
+    }
+
+    @Provides
+    @Named("quidem")
+    public URI getDruidTestURI()
+    {
+      return getTestConfig().getDruidTestURI();
     }
   }
 

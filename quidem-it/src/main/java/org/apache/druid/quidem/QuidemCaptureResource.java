@@ -19,6 +19,9 @@
 
 package org.apache.druid.quidem;
 
+import com.google.inject.Inject;
+
+import javax.inject.Named;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
@@ -26,10 +29,19 @@ import javax.ws.rs.core.MediaType;
 
 import java.io.IOException;
 import java.io.PrintStream;
+import java.net.URI;
 
 @Path("/quidem")
 public class QuidemCaptureResource
 {
+  private URI quidemURI;
+
+  @Inject
+  public QuidemCaptureResource(@Named("quidem") URI quidemURI)
+  {
+    this.quidemURI = quidemURI;
+  }
+
   private QuidemRecorder recorder = null;
 
   @GET
@@ -52,7 +64,7 @@ public class QuidemCaptureResource
 
   private void start() throws IOException
   {
-    recorder = new QuidemRecorder(new PrintStream("/tmp/new.iq"));
+    recorder = new QuidemRecorder(quidemURI, new PrintStream("/tmp/new.iq"));
   }
 
   private void stopIfRunning()

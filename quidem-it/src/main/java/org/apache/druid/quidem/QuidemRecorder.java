@@ -22,16 +22,17 @@ package org.apache.druid.quidem;
 import org.apache.druid.sql.calcite.run.DruidHook;
 
 import java.io.PrintStream;
+import java.net.URI;
 
 public class QuidemRecorder implements AutoCloseable, DruidHook<String>
 {
   private PrintStream printStream;
 
-  public QuidemRecorder(PrintStream printStream)
+  public QuidemRecorder(URI quidemURI, PrintStream printStream)
   {
     this.printStream = printStream;
     printStream.println("#started");
-    printStream.println("!connect druidtest:///");
+    printStream.println("!connect " + quidemURI.toString());
     DruidHook.register(DruidHook.SQL, this);
   }
 
