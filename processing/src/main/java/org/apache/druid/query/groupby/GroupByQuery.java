@@ -468,7 +468,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
   @Override
   public Ordering getResultOrdering()
   {
-    final Ordering<ResultRow> rowOrdering = getOrderingAndDimensions(false).getRowOrdering();
+    final Ordering<ResultRow> rowOrdering = getRowOrdering(false);
 
     return Ordering.from(
         (lhs, rhs) -> {
@@ -560,15 +560,20 @@ public class GroupByQuery extends BaseQuery<ResultRow>
     return false;
   }
 
-  /**
-   * When limit push down is applied, the partial results would be sorted by the ordering specified by the
-   * limit/order spec (unlike non-push down case where the results always use the default natural ascending order),
-   * so when merging these partial result streams, the merge needs to use the same ordering to get correct results.
-   */
-  private OrderingAndDimensions getRowOrderingAndDimensionsForPushDown(
-      final boolean granular,
-      final DefaultLimitSpec limitSpec
-  )
+  public Ordering<ResultRow> getRowOrdering(final boolean granular)
+  {
+    return getOrderingAndDimensions(granular).getRowOrdering();
+  }
+
+  public List<String> getDimensionNamesInOrder()
+  {
+    return getOrderingAndDimensions(false).getDimensions()
+                                          .stream()
+                                          .map(DimensionSpec::getOutputName)
+                                          .collect(Collectors.toList());
+  }
+
+  public OrderingAndDimensions getOrderingAndDimensions(final boolean granular)
   {
     final boolean sortByDimsFirst = getContextSortByDimsFirst();
 
@@ -579,18 +584,28 @@ public class GroupByQuery extends BaseQuery<ResultRow>
     final List<StringComparator> comparators = new ArrayList<>();
     final List<DimensionSpec> dimensionsInOrder = new ArrayList<>();
 
-    for (OrderByColumnSpec orderSpec : limitSpec.getColumns()) {
-      boolean needsReverse = orderSpec.getDirection() != OrderByColumnSpec.Direction.ASCENDING;
-      int dimIndex = OrderByColumnSpec.getDimIndexForOrderBy(orderSpec, dimensions);
-      if (dimIndex >= 0) {
-        DimensionSpec dim = dimensions.get(dimIndex);
-        orderedFieldNumbers.add(resultRowSignature.indexOf(dim.getOutputName()));
-        dimsInOrderBy.add(dimIndex);
-        needsReverseList.add(needsReverse);
-        final ColumnType type = dimensions.get(dimIndex).getOutputType();
-        dimensionTypes.add(type);
-        comparators.add(orderSpec.getDimensionComparator());
-        dimensionsInOrder.add(dim);
+    /*
+     * When limit push down is applied, the partial results would be sorted by the ordering specified by the
+     * limit/order spec (unlike non-push down case where the results always use the default natural ascending order),
+     * so when merging these partial result streams, the merge needs to use the same ordering to get correct results.
+     */
+    if (isApplyLimitPushDown()) {
+      DefaultLimitSpec limitSpec1 = (DefaultLimitSpec) limitSpec;
+      if (!DefaultLimitSpec.sortingOrderHasNonGroupingFields(limitSpec1, dimensions)) {
+        for (OrderByColumnSpec orderSpec : ((DefaultLimitSpec) limitSpec).getColumns()) {
+          boolean needsReverse = orderSpec.getDirection() != OrderByColumnSpec.Direction.ASCENDING;
+          int dimIndex = OrderByColumnSpec.getDimIndexForOrderBy(orderSpec, dimensions);
+          if (dimIndex >= 0) {
+            DimensionSpec dim = dimensions.get(dimIndex);
+            orderedFieldNumbers.add(resultRowSignature.indexOf(dim.getOutputName()));
+            dimsInOrderBy.add(dimIndex);
+            needsReverseList.add(needsReverse);
+            final ColumnType type = dimensions.get(dimIndex).getOutputType();
+            dimensionTypes.add(type);
+            comparators.add(orderSpec.getDimensionComparator());
+            dimensionsInOrder.add(dim);
+          }
+        }
       }
     }
 
@@ -606,10 +621,11 @@ public class GroupByQuery extends BaseQuery<ResultRow>
     }
 
     final Comparator<ResultRow> timeComparator = getTimeComparator(granular);
+    Ordering<ResultRow> ordering;
 
     if (timeComparator == null) {
-      return new OrderingAndDimensions(Ordering.from(
-          (lhs, rhs) -> compareDimsForLimitPushDown(
+      ordering = Ordering.from(
+          (lhs, rhs) -> compareDims(
               orderedFieldNumbers,
               needsReverseList,
               dimensionTypes,
@@ -617,11 +633,11 @@ public class GroupByQuery extends BaseQuery<ResultRow>
               lhs,
               rhs
           )
-      ), dimensionsInOrder);
+      );
     } else if (sortByDimsFirst) {
-      return new OrderingAndDimensions(Ordering.from(
+      ordering = Ordering.from(
           (lhs, rhs) -> {
-            final int cmp = compareDimsForLimitPushDown(
+            final int cmp = compareDims(
                 orderedFieldNumbers,
                 needsReverseList,
                 dimensionTypes,
@@ -635,9 +651,9 @@ public class GroupByQuery extends BaseQuery<ResultRow>
 
             return timeComparator.compare(lhs, rhs);
           }
-      ), dimensionsInOrder);
+      );
     } else {
-      return new OrderingAndDimensions(Ordering.from(
+      ordering = Ordering.from(
           (lhs, rhs) -> {
             final int timeCompare = timeComparator.compare(lhs, rhs);
 
@@ -645,7 +661,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
               return timeCompare;
             }
 
-            return compareDimsForLimitPushDown(
+            return compareDims(
                 orderedFieldNumbers,
                 needsReverseList,
                 dimensionTypes,
@@ -654,47 +670,10 @@ public class GroupByQuery extends BaseQuery<ResultRow>
                 rhs
             );
           }
-      ), dimensionsInOrder);
-    }
-  }
-
-  public OrderingAndDimensions getOrderingAndDimensions(final boolean granular)
-  {
-    if (isApplyLimitPushDown()) {
-      if (!DefaultLimitSpec.sortingOrderHasNonGroupingFields((DefaultLimitSpec) limitSpec, dimensions)) {
-        return getRowOrderingAndDimensionsForPushDown(granular, (DefaultLimitSpec) limitSpec);
-      }
+      );
     }
 
-    final boolean sortByDimsFirst = getContextSortByDimsFirst();
-    final Comparator<ResultRow> timeComparator = getTimeComparator(granular);
-
-    if (timeComparator == null) {
-      return new OrderingAndDimensions(Ordering.from((lhs, rhs) -> compareDims(dimensions, lhs, rhs)), dimensions);
-    } else if (sortByDimsFirst) {
-      return new OrderingAndDimensions(Ordering.from(
-          (lhs, rhs) -> {
-            final int cmp = compareDims(dimensions, lhs, rhs);
-            if (cmp != 0) {
-              return cmp;
-            }
-
-            return timeComparator.compare(lhs, rhs);
-          }
-      ), dimensions);
-    } else {
-      return new OrderingAndDimensions(Ordering.from(
-          (lhs, rhs) -> {
-            final int timeCompare = timeComparator.compare(lhs, rhs);
-
-            if (timeCompare != 0) {
-              return timeCompare;
-            }
-
-            return compareDims(dimensions, lhs, rhs);
-          }
-      ), dimensions);
-    }
+    return new OrderingAndDimensions(ordering, dimensionsInOrder);
   }
 
   @Nullable
@@ -717,25 +696,6 @@ public class GroupByQuery extends BaseQuery<ResultRow>
         return NON_GRANULAR_TIME_COMP;
       }
     }
-  }
-
-  private int compareDims(List<DimensionSpec> dimensions, ResultRow lhs, ResultRow rhs)
-  {
-    final int dimensionStart = getResultRowDimensionStart();
-
-    for (int i = 0; i < dimensions.size(); i++) {
-      DimensionSpec dimension = dimensions.get(i);
-      final int dimCompare = DimensionHandlerUtils.compareObjectsAsType(
-          lhs.get(dimensionStart + i),
-          rhs.get(dimensionStart + i),
-          dimension.getOutputType()
-      );
-      if (dimCompare != 0) {
-        return dimCompare;
-      }
-    }
-
-    return 0;
   }
 
   /**
@@ -763,12 +723,12 @@ public class GroupByQuery extends BaseQuery<ResultRow>
   }
 
   /**
-   * Compares the dimensions for limit pushdown.
+   * Compares the dimensions.
    *
    * Due to legacy reason, the provided StringComparator for the arrays isn't applied and must be changed once we
    * get rid of the StringComparators for array types
    */
-  private static int compareDimsForLimitPushDown(
+  private static int compareDims(
       final IntList fields,
       final List<Boolean> needsReverseList,
       final List<ColumnType> dimensionTypes,

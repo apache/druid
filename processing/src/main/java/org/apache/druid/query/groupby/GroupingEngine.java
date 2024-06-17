@@ -201,7 +201,7 @@ public class GroupingEngine
    */
   public Comparator<ResultRow> createResultComparator(Query<ResultRow> queryParam)
   {
-    return ((GroupByQuery) queryParam).getOrderingAndDimensions(true).getRowOrdering();
+    return ((GroupByQuery) queryParam).getRowOrdering(true);
   }
 
   /**
@@ -686,11 +686,7 @@ public class GroupingEngine
           processingConfig.intermediateComputeSizeBytes()
       );
 
-      List<String> queryDimNamesInOrder = baseSubtotalQuery.getOrderingAndDimensions(false)
-                                                           .getDimensions()
-                                                           .stream()
-                                                           .map(DimensionSpec::getOutputName)
-                                                           .collect(Collectors.toList());
+      List<String> queryDimNamesInOrder = baseSubtotalQuery.getDimensionNamesInOrder();
 
       // Only needed to make LimitSpec.filterColumns(..) call later in case base query has a non default LimitSpec.
       Set<String> aggsAndPostAggs = null;

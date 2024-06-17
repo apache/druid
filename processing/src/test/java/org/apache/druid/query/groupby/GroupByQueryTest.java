@@ -130,7 +130,7 @@ public class GroupByQueryTest extends InitializedNullHandlingTest
                                            .addDimension(new DefaultDimensionSpec("bat", "bat", ColumnType.STRING_ARRAY))
                                            .build();
 
-    final Ordering<ResultRow> rowOrdering = query.getOrderingAndDimensions(false).getRowOrdering();
+    final Ordering<ResultRow> rowOrdering = query.getRowOrdering(false);
     final int compare = rowOrdering.compare(
         ResultRow.of(1, 1f, "a", new Object[]{"1", "2"}),
         ResultRow.of(1L, 1d, "b", new Object[]{"3"})
