@@ -301,8 +301,7 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
              + "group by countryName, cityName, added")
         .queryContext(ImmutableMap.of(
             PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
-            QueryContexts.ENABLE_DEBUG, true,
-            QueryContexts.WINDOWING_STRICT_VALIDATION, false
+            QueryContexts.ENABLE_DEBUG, true
         ))
         .expectedResults(ImmutableList.of(
             new Object[]{"Seoul", 0L, 1L, 2L, 13L, 0L, 1L, 2L, 13L, 12L, 3L, 2L, 13L},
