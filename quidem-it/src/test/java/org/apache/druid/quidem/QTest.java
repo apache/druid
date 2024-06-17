@@ -21,9 +21,9 @@ package org.apache.druid.quidem;
 
 import java.io.File;
 
-public class SqlQuidemTest extends DruidQuidemTestBase
+public class QTest extends DruidQuidemTestBase
 {
-  public SqlQuidemTest()
+  public QTest()
   {
     super();
   }
@@ -31,6 +31,11 @@ public class SqlQuidemTest extends DruidQuidemTestBase
   @Override
   protected File getTestRoot()
   {
-    return ProjectPathUtils.getPathFromProjectRoot("sql/src/test/quidem/" + getClass().getName());
+    return testRoot();
+  }
+
+  public static File testRoot()
+  {
+    return ProjectPathUtils.getPathFromProjectRoot("quidem-it/src/test/quidem/" + QTest.class.getName());
   }
 }

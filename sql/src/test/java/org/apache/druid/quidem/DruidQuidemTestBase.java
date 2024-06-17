@@ -29,12 +29,14 @@ import org.apache.calcite.util.Closer;
 import org.apache.calcite.util.Util;
 import org.apache.commons.io.filefilter.TrueFileFilter;
 import org.apache.commons.io.filefilter.WildcardFileFilter;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.condition.EnabledIf;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -76,8 +78,14 @@ import static org.junit.jupiter.api.Assertions.fail;
  *
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@EnabledIf(value = "enabled", disabledReason = "These tests are only run in SqlCompatible mode!")
 public abstract class DruidQuidemTestBase
 {
+  public static boolean enabled()
+  {
+    NullHandling.initializeForTests();
+    return NullHandling.sqlCompatible();
+  }
 
   public static final String IQ_SUFFIX = ".iq";
   /**

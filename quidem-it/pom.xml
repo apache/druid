@@ -331,6 +331,11 @@
             <artifactId>docker-java-core</artifactId>
         </dependency>
         <dependency>
+            <groupId>com.github.javafaker</groupId>
+            <artifactId>javafaker</artifactId>
+            <version>1.0.2</version>
+        </dependency>
+        <dependency>
             <groupId>io.netty</groupId>
             <artifactId>netty-transport-native-kqueue</artifactId>
             <classifier>osx-x86_64</classifier>
@@ -484,7 +489,6 @@
             <artifactId>hamcrest-core</artifactId>
             <scope>compile</scope>
         </dependency>
-
     </dependencies>
 
     <build>

@@ -19,7 +19,10 @@
 
 package org.apache.druid.quidem;
 
+import com.github.javafaker.Faker;
+import com.github.javafaker.Pokemon;
 import com.google.inject.Inject;
+import org.apache.hadoop.util.StringUtils;
 
 import javax.inject.Named;
 import javax.ws.rs.GET;
@@ -27,6 +30,7 @@ import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URI;
@@ -53,7 +57,7 @@ public class QuidemCaptureResource
 
   private boolean withAutoStart()
   {
-    return Boolean.valueOf(System.getProperty("quidem.autostart", "false"));
+    return Boolean.valueOf(System.getProperty("quidem.record.autostart", "false"));
   }
 
   @GET
@@ -64,9 +68,23 @@ public class QuidemCaptureResource
     stopIfRunning();
     recorder = new QuidemRecorder(
         quidemURI,
-        new FileOutputStream("new1.iq")
+        new FileOutputStream(extracted())
     );
     return recorder.toString();
+  }
+
+  private File extracted()
+  {
+    File dir = QTest.testRoot();
+    Pokemon pokemon = Faker.instance().pokemon();
+    String fileName = StringUtils.format("quidem-%s.txt", pokemon.name());
+    return new File(dir, fileName);
+  }
+  public static void main(String[] args)
+  {
+    Pokemon pokemon = Faker.instance().pokemon();
+    System.out.println(Faker.instance().aviation().aircraft());
+
   }
 
   private synchronized void stopIfRunning()
