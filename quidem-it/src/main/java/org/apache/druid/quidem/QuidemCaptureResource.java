@@ -35,39 +35,38 @@ import java.net.URI;
 public class QuidemCaptureResource
 {
   private URI quidemURI;
+  private QuidemRecorder recorder = null;
 
   @Inject
   public QuidemCaptureResource(@Named("quidem") URI quidemURI)
   {
     this.quidemURI = quidemURI;
+    if (withAutoStart()) {
+      try {
+        start();
+      }
+      catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    }
   }
 
-  private QuidemRecorder recorder = null;
-
-  @GET
-  @Path("/")
-  @Produces(MediaType.TEXT_PLAIN)
-  public String getSome()
+  private boolean withAutoStart()
   {
-    return "Asd";
+    return Boolean.valueOf(System.getProperty("quidem.autostart", "false"));
   }
 
   @GET
   @Path("/start")
   @Produces(MediaType.TEXT_PLAIN)
-  public synchronized String getSome1() throws IOException
+  public synchronized String start() throws IOException
   {
     stopIfRunning();
-    start();
+    recorder = new QuidemRecorder(quidemURI, new PrintStream("/tmp/new.iq"));
     return recorder.toString();
   }
 
-  private void start() throws IOException
-  {
-    recorder = new QuidemRecorder(quidemURI, new PrintStream("/tmp/new.iq"));
-  }
-
-  private void stopIfRunning()
+  private synchronized void stopIfRunning()
   {
     if (recorder != null) {
       recorder.close();
