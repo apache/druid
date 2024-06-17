@@ -332,7 +332,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
           segmentsToBeHandedOff.stream()
                                .map(SegmentIdWithShardSpec::fromDataSegment)
                                .collect(Collectors.toList());
-      final Object metadata = Preconditions.checkNotNull(segmentsAndCommitMetadata.getCommitMetadata(), "commitMetadata");
+      Preconditions.checkNotNull(segmentsAndCommitMetadata.getCommitMetadata(), "commitMetadata");
 
       if (waitingSegmentIdList.isEmpty()) {
         return Futures.immediateFuture(segmentsAndCommitMetadata.asAppenderatorMetadata());
