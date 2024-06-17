@@ -473,9 +473,7 @@ public class MetadataResource
   }
 
   /**
-   * @return all bootstrap segments determined by the coordinator. Currently, only the set of broadcast segments
-   * is returned.
-   * @implNote this currently accepts an empty POST, but is future-proof to other scenarios.
+   * @return all bootstrap segments determined by the coordinator.
    */
   @GET
   @Path("/bootstrapSegments")

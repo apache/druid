@@ -234,7 +234,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
 
     final Stopwatch stopwatch = Stopwatch.createStarted();
 
-    // Start a temporary thread pool to load cachedSegments into page cache during bootstrap
+    // Start a temporary thread pool to load segments into page cache during bootstrap
     final ExecutorService loadingExecutor = Execs.multiThreaded(
         config.getNumBootstrapThreads(), "Segment-Load-Startup-%s"
     );
