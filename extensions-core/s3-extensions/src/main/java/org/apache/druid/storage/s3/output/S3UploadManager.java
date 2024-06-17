@@ -26,9 +26,11 @@ import com.google.inject.Inject;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.concurrent.WaitTimeMonitoringExecutorService;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.storage.s3.S3Utils;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 import org.apache.druid.utils.RuntimeInfo;
@@ -36,6 +38,7 @@ import org.apache.druid.utils.RuntimeInfo;
 import java.io.File;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
+import java.util.concurrent.ThreadPoolExecutor;
 
 /**
  * This class manages uploading files to S3 in chunks, while ensuring that the
@@ -49,11 +52,11 @@ public class S3UploadManager
   private static final Logger log = new Logger(S3UploadManager.class);
 
   @Inject
-  public S3UploadManager(S3OutputConfig s3OutputConfig, S3ExportConfig s3ExportConfig, RuntimeInfo runtimeInfo)
+  public S3UploadManager(S3OutputConfig s3OutputConfig, S3ExportConfig s3ExportConfig, RuntimeInfo runtimeInfo, ServiceEmitter emitter)
   {
     int poolSize = Math.max(4, runtimeInfo.getAvailableProcessors());
     int maxNumChunksOnDisk = computeMaxNumChunksOnDisk(s3OutputConfig, s3ExportConfig);
-    this.uploadExecutor = createExecutorService(poolSize, maxNumChunksOnDisk);
+    this.uploadExecutor = createExecutorService(poolSize, maxNumChunksOnDisk, emitter);
     log.info("Initialized executor service for S3 multipart upload with pool size [%d] and work queue capacity [%d]",
              poolSize, maxNumChunksOnDisk);
   }
@@ -132,9 +135,15 @@ public class S3UploadManager
     return s3Client.uploadPart(uploadPartRequest);
   }
 
-  private ExecutorService createExecutorService(int poolSize, int maxNumConcurrentChunks)
+  private ExecutorService createExecutorService(int poolSize, int maxNumConcurrentChunks, ServiceEmitter emitter)
   {
-    return Execs.newBlockingThreaded("S3UploadThreadPool-%d", poolSize, maxNumConcurrentChunks);
+    final String poolPrefix = "S3UploadThreadPool";
+    ThreadPoolExecutor executorService = Execs.newBlockingThreaded(
+        poolPrefix + "-%d",
+        poolSize,
+        maxNumConcurrentChunks
+    );
+    return new WaitTimeMonitoringExecutorService(executorService, emitter, poolPrefix);
   }
 
   @LifecycleStart

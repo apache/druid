@@ -22,6 +22,7 @@ package org.apache.druid.storage.s3.output;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
 import org.apache.druid.java.util.common.HumanReadableBytes;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.DruidProcessingConfigTest;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 import org.apache.druid.utils.RuntimeInfo;
@@ -50,7 +51,7 @@ public class S3UploadManagerTest
     s3OutputConfig = new S3OutputConfig("bucket", "prefix", EasyMock.mock(File.class), new HumanReadableBytes("100MiB"), 1);
     s3ExportConfig = new S3ExportConfig("tempDir", new HumanReadableBytes("200MiB"), 1, null);
     final RuntimeInfo runtimeInfo = new DruidProcessingConfigTest.MockRuntimeInfo(8, 0, 0);
-    s3UploadManager = new S3UploadManager(s3OutputConfig, s3ExportConfig, runtimeInfo);
+    s3UploadManager = new S3UploadManager(s3OutputConfig, s3ExportConfig, runtimeInfo, new StubServiceEmitter("service", "host"));
   }
 
   @Test
