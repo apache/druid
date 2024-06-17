@@ -531,20 +531,6 @@ public class RunRulesTest
   @Test
   public void testRunRuleWithNoServers()
   {
-    EasyMock
-        .expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject()))
-        .andReturn(
-            Lists.newArrayList(
-                new IntervalBroadcastDistributionRule(
-                    Intervals.of("2012-01-01/2012-01-02")
-                ),
-                new IntervalBroadcastDistributionRule(
-                    Intervals.of("2012-01-02/2012-01-03")
-                )
-            )
-        )
-        .atLeastOnce();
-
     EasyMock.replay(databaseRuleManager, mockPeon);
 
     DruidCluster emptyCluster = DruidCluster.builder().build();
@@ -563,7 +549,7 @@ public class RunRulesTest
 
     StrategicSegmentAssigner segmentAssigner = params.getSegmentAssigner();
     Assert.assertNotNull(segmentAssigner);
-    Assert.assertEquals(usedSegments.size(), segmentAssigner.getBroadcastSegments().size());
+    Assert.assertEquals(0, segmentAssigner.getBroadcastSegments().size());
 
     EasyMock.verify(mockPeon);
   }

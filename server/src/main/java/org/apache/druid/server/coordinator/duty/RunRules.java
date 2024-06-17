@@ -66,6 +66,12 @@ public class RunRules implements CoordinatorDuty
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
+    final DruidCluster cluster = params.getDruidCluster();
+    if (cluster.isEmpty()) {
+      log.warn("Cluster has no servers. Not running any rules.");
+      return params;
+    }
+
     final Set<DataSegment> overshadowed = params.getDataSourcesSnapshot().getOvershadowedSegments();
     final Set<DataSegment> usedSegments = params.getUsedSegments();
     log.info(
@@ -103,7 +109,7 @@ public class RunRules implements CoordinatorDuty
 
     processSegmentDeletes(segmentAssigner, params.getCoordinatorStats());
     alertForSegmentsWithNoRules(datasourceToSegmentsWithNoRule);
-    alertForInvalidRules(segmentAssigner, params.getDruidCluster());
+    alertForInvalidRules(segmentAssigner);
 
     return params.buildFromExisting()
                  .withBroadcastDatasources(getBroadcastDatasources(params))
@@ -139,12 +145,8 @@ public class RunRules implements CoordinatorDuty
     );
   }
 
-  private void alertForInvalidRules(StrategicSegmentAssigner segmentAssigner, DruidCluster druidCluster)
+  private void alertForInvalidRules(StrategicSegmentAssigner segmentAssigner)
   {
-    if (druidCluster.isEmpty()) {
-      log.warn("Cluster has no servers.");
-      return;
-    }
     segmentAssigner.getDatasourceToInvalidLoadTiers().forEach(
         (datasource, invalidTiers) -> log.makeAlert(
             "Load rules for datasource[%s] refer to invalid tiers[%s]."
