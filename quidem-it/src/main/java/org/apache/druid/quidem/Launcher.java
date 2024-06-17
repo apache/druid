@@ -70,7 +70,6 @@ public class Launcher
     }
     log.info("Starting Quidem with URI[%s]", quidemUri);
     Launcher launcher = new Launcher(quidemUri);
-    System.exit(1);
     launcher.start();
     launcher.lifecycle.join();
   }

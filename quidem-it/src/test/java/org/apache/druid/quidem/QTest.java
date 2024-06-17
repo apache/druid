@@ -21,21 +21,23 @@ package org.apache.druid.quidem;
 
 import java.io.File;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 public class QTest extends DruidQuidemTestBase
 {
   public QTest()
   {
     super();
+
+    assertEquals(
+        QuidemCaptureResource.RECORD_PATH
+        , getTestRoot());
+
   }
 
   @Override
   protected File getTestRoot()
   {
-    return testRoot();
-  }
-
-  public static File testRoot()
-  {
-    return ProjectPathUtils.getPathFromProjectRoot("quidem-it/src/test/quidem/" + QTest.class.getName());
+    return ProjectPathUtils.getPathFromProjectRoot("quidem-it/src/test/quidem/" + getClass().getName());
   }
 }

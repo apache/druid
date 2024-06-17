@@ -21,25 +21,28 @@ package org.apache.druid.quidem;
 
 import org.apache.druid.sql.calcite.run.DruidHook;
 
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.util.Date;
 
 public class QuidemRecorder implements AutoCloseable, DruidHook<String>
 {
   private PrintStream printStream;
 
-  public QuidemRecorder(URI quidemURI, FileOutputStream fileOutputStream)
+  public QuidemRecorder(URI quidemURI, File file)
   {
     try {
-      this.printStream = new PrintStream(fileOutputStream, true, StandardCharsets.UTF_8.name());
+      this.printStream = new PrintStream(new FileOutputStream(file), true, StandardCharsets.UTF_8.name());
     }
-    catch (UnsupportedEncodingException e) {
-      throw new RuntimeException();
+    catch (UnsupportedEncodingException | FileNotFoundException e) {
+      throw new RuntimeException(e);
     }
-    printStream.println("#started");
+    printStream.println("#started " + new Date());
     printStream.println("!connect " + quidemURI.toString());
     DruidHook.register(DruidHook.SQL, this);
   }

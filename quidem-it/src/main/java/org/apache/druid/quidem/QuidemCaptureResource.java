@@ -19,10 +19,8 @@
 
 package org.apache.druid.quidem;
 
-import com.github.javafaker.Faker;
-import com.github.javafaker.Pokemon;
 import com.google.inject.Inject;
-import org.apache.hadoop.util.StringUtils;
+import org.apache.druid.java.util.common.StringUtils;
 
 import javax.inject.Named;
 import javax.ws.rs.GET;
@@ -31,13 +29,13 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
 import java.net.URI;
 
 @Path("/quidem")
 public class QuidemCaptureResource
 {
+  public static final File RECORD_PATH = ProjectPathUtils
+      .getPathFromProjectRoot("quidem-it/src/test/quidem/org.apache.druid.quidem.QTest");
   private URI quidemURI;
   private QuidemRecorder recorder = null;
 
@@ -46,12 +44,7 @@ public class QuidemCaptureResource
   {
     this.quidemURI = quidemURI;
     if (withAutoStart()) {
-      try {
-        start();
-      }
-      catch (IOException e) {
-        throw new RuntimeException(e);
-      }
+      start();
     }
   }
 
@@ -63,28 +56,20 @@ public class QuidemCaptureResource
   @GET
   @Path("/start")
   @Produces(MediaType.TEXT_PLAIN)
-  public synchronized String start() throws IOException
+  public synchronized String start()
   {
     stopIfRunning();
     recorder = new QuidemRecorder(
         quidemURI,
-        new FileOutputStream(extracted())
+        genRecordFilePath()
     );
     return recorder.toString();
   }
 
-  private File extracted()
+  private File genRecordFilePath()
   {
-    File dir = QTest.testRoot();
-    Pokemon pokemon = Faker.instance().pokemon();
-    String fileName = StringUtils.format("quidem-%s.txt", pokemon.name());
-    return new File(dir, fileName);
-  }
-  public static void main(String[] args)
-  {
-    Pokemon pokemon = Faker.instance().pokemon();
-    System.out.println(Faker.instance().aviation().aircraft());
-
+    String fileName = StringUtils.format("record-%d.txt", System.currentTimeMillis());
+    return new File(RECORD_PATH, fileName);
   }
 
   private synchronized void stopIfRunning()
