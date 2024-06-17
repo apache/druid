@@ -233,6 +233,11 @@ public interface Grouper<KeyType> extends Closeable
      */
     BufferComparator bufferComparatorWithAggregators(AggregatorFactory[] aggregatorFactories, int[] aggregatorOffsets);
 
+    /**
+     * Decorates the object mapper enabling it to read and write query results' grouping keys. It is used by the
+     * {@link SpillingGrouper} to preserve the types of the dimensions after serializing and deserializing them on the
+     * spilled files.
+     */
     default ObjectMapper decorateObjectMapper(ObjectMapper spillMapper)
     {
       return spillMapper;

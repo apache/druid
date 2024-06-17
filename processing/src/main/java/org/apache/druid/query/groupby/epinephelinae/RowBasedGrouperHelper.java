@@ -315,8 +315,7 @@ public class RowBasedGrouperHelper
         combining,
         includeTimestamp,
         columnSelectorFactory,
-        valueTypes,
-        spillMapper
+        valueTypes
     );
 
     final Predicate<ResultRow> rowPredicate;
@@ -516,8 +515,7 @@ public class RowBasedGrouperHelper
       final boolean combining,
       final boolean includeTimestamp,
       final ColumnSelectorFactory columnSelectorFactory,
-      final List<ColumnType> valueTypes,
-      final ObjectMapper spillMapper
+      final List<ColumnType> valueTypes
   )
   {
     final TimestampExtractFunction timestampExtractFn = includeTimestamp ?
@@ -1639,7 +1637,7 @@ public class RowBasedGrouperHelper
       final BufferComparator bufferComparator;
       final String columnTypeName;
       @Nullable
-      final Class clazz;
+      final Class complexClazz;
 
       final List<Object> dictionary;
       final Object2IntMap<Object> reverseDictionary;
@@ -1666,9 +1664,9 @@ public class RowBasedGrouperHelper
                 dictionary.get(rhsBuffer.getInt(rhsPosition + keyBufferPosition))
             );
         if (columnType.is(ValueType.COMPLEX)) {
-          clazz = columnType.getNullableStrategy().getClazz();
+          complexClazz = columnType.getNullableStrategy().getClazz();
         } else {
-          clazz = null;
+          complexClazz = null;
         }
       }
 
@@ -1707,7 +1705,7 @@ public class RowBasedGrouperHelper
       @Override
       public Class getComplexClazz()
       {
-        return clazz;
+        return complexClazz;
       }
     }
 

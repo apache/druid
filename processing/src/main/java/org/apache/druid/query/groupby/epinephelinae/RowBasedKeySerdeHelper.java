@@ -67,6 +67,12 @@ interface RowBasedKeySerdeHelper
    */
   BufferComparator getBufferComparator();
 
+  /**
+   * If the key(dimension) is complex, returns the expected class of the objects. The class is used to deserialize the
+   * objects correctly from the spilled files. Returns null if the dimension is not complex because all other dimensions
+   * work correctly when deserialized as generic java objects without type information.
+   */
+  @SuppressWarnings("rawtypes")
   @Nullable
   Class getComplexClazz();
 }
