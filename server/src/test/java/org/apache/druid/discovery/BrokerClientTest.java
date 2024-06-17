@@ -138,7 +138,6 @@ public class BrokerClientTest extends BaseJettyTest
     );
 
     Request request = brokerClient.makeRequest(HttpMethod.POST, "/simple/error");
-    request.setContent("hello".getBytes(StandardCharsets.UTF_8));
     Assert.assertEquals("", brokerClient.sendQuery(request));
   }
 
@@ -175,7 +174,7 @@ public class BrokerClientTest extends BaseJettyTest
     @POST
     @Path("/error")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response error(String input)
+    public Response error()
     {
       return Response.status(404).build();
     }
