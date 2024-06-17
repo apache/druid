@@ -39,7 +39,6 @@ import org.apache.druid.timeline.SegmentId;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -51,21 +50,16 @@ import java.util.List;
 import java.util.Map;
 
 @RunWith(Parameterized.class)
-public class ComplexGroupByTest
+public class ComplexDimensionGroupByQueryTest
 {
-
   private final QueryContexts.Vectorize vectorize;
   private final AggregationTestHelper helper;
   private final List<Segment> segments;
 
   @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
-  @Rule
   public final TemporaryFolder tempFolder = new TemporaryFolder();
 
-
-  public ComplexGroupByTest(GroupByQueryConfig config, String vectorize)
+  public ComplexDimensionGroupByQueryTest(GroupByQueryConfig config, String vectorize)
   {
     this.vectorize = QueryContexts.Vectorize.fromString(vectorize);
     this.helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
@@ -131,13 +125,6 @@ public class ComplexGroupByTest
   @Test
   public void testGroupByOnPairClass()
   {
-    if (vectorize == QueryContexts.Vectorize.FORCE) {
-      expectedException.expect(RuntimeException.class);
-      expectedException.expectMessage(
-          "Cannot vectorize!"
-      );
-    }
-
     GroupByQuery groupQuery = GroupByQuery.builder()
                                           .setDataSource("test_datasource")
                                           .setGranularity(Granularities.ALL)
@@ -151,22 +138,27 @@ public class ComplexGroupByTest
                                           .setContext(getContext())
                                           .build();
 
-    List<ResultRow> resultRows = helper.runQueryOnSegmentsObjs(segments, groupQuery).toList();
+    if (vectorize == QueryContexts.Vectorize.FORCE) {
+      // Cannot vectorize group by on complex dimension
+      Assert.assertThrows(
+          RuntimeException.class,
+          () -> helper.runQueryOnSegmentsObjs(segments, groupQuery).toList()
+      );
+    } else {
+      List<ResultRow> resultRows = helper.runQueryOnSegmentsObjs(segments, groupQuery).toList();
 
-    Assert.assertArrayEquals(
-        new ResultRow[]{
-            ResultRow.of(new SerializablePairLongString(1L, "abc"), 4L),
-            ResultRow.of(new SerializablePairLongString(1L, "bar"), 1L),
-            ResultRow.of(new SerializablePairLongString(1L, "def"), 2L),
-            ResultRow.of(new SerializablePairLongString(1L, "foo"), 1L),
-            ResultRow.of(new SerializablePairLongString(1L, "ghi"), 1L),
-            ResultRow.of(new SerializablePairLongString(1L, "pqr"), 1L),
-            ResultRow.of(new SerializablePairLongString(1L, "xyz"), 1L)
-        },
-        resultRows.toArray()
-    );
-
-
+      Assert.assertArrayEquals(
+          new ResultRow[]{
+              ResultRow.of(new SerializablePairLongString(1L, "abc"), 4L),
+              ResultRow.of(new SerializablePairLongString(1L, "bar"), 1L),
+              ResultRow.of(new SerializablePairLongString(1L, "def"), 2L),
+              ResultRow.of(new SerializablePairLongString(1L, "foo"), 1L),
+              ResultRow.of(new SerializablePairLongString(1L, "ghi"), 1L),
+              ResultRow.of(new SerializablePairLongString(1L, "pqr"), 1L),
+              ResultRow.of(new SerializablePairLongString(1L, "xyz"), 1L)
+          },
+          resultRows.toArray()
+      );
+    }
   }
-
 }
