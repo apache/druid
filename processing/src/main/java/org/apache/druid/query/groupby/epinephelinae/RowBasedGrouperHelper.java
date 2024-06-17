@@ -1382,7 +1382,7 @@ public class RowBasedGrouperHelper
           int i = 0;
           Object[] objects = new Object[serdeHelpers.length];
           while (jp.currentToken() != JsonToken.END_ARRAY) {
-            if (i > serdeHelpers.length) {
+            if (i >= serdeHelpers.length) {
               throw DruidException.defensive("not enough serde helpers");
             }
 
