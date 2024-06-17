@@ -18,7 +18,9 @@
   ~ under the License.
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>druid-quidem-it</artifactId>
@@ -420,24 +422,24 @@
             <version>${project.parent.version}</version>
         </dependency>
 
-    <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-simple</artifactId>
-      <optional>true</optional>
-    </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-simple</artifactId>
+            <optional>true</optional>
+        </dependency>
 
         <dependency>
-        <groupId>org.easymock</groupId>
-        <artifactId>easymock</artifactId>
-        <scope>compile</scope>
+            <groupId>org.easymock</groupId>
+            <artifactId>easymock</artifactId>
+            <scope>compile</scope>
         </dependency>
 
 
         <!-- Tests -->
-		<dependency>
-			<groupId>org.junit.jupiter</groupId>
-			<artifactId>junit-jupiter</artifactId>
-		</dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.junit.vintage</groupId>
             <artifactId>junit-vintage-engine</artifactId>
@@ -472,16 +474,16 @@
             <artifactId>datasketches-java</artifactId>
             <scope>runtime</scope>
         </dependency>
-    <dependency>
-      <groupId>org.hamcrest</groupId>
-      <artifactId>hamcrest-all</artifactId>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.hamcrest</groupId>
-      <artifactId>hamcrest-core</artifactId>
-      <scope>compile</scope>
-    </dependency>
+        <dependency>
+            <groupId>org.hamcrest</groupId>
+            <artifactId>hamcrest-all</artifactId>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.hamcrest</groupId>
+            <artifactId>hamcrest-core</artifactId>
+            <scope>compile</scope>
+        </dependency>
 
     </dependencies>
 
@@ -500,21 +502,11 @@
                 <configuration>
                     <executable>java</executable>
                     <arguments>
-                    <argument>-classpath</argument>
-                    <classpath/>
-                    <argument>-Dquidem.uriXXX=Xa</argument>
-                    <!-- <argument>-Xdebug</argument> -->
-                    <!-- <argument>-Xdebug</argument> -->
-                     <!-- <argument>-Xrunjdwp:server=y,transport=dt_socket,address=4000,suspend=y</argument> -->
-                    <argument>org.apache.druid.quidem.Launcher</argument>
+                        <argument>-classpath</argument>
+                        <classpath />
+                        <argument>-Dquidem.uri=${quidem.uri}</argument>
+                        <argument>org.apache.druid.quidem.Launcher</argument>
                     </arguments>
-                <systemProperties>
-                    <projectProperties />
-                        <systemProperty>
-                        <key>quidem.uri1</key>
-                        <value>myvalue</value>
-                    </systemProperty>
-                </systemProperties>
                 </configuration>
             </plugin>
         </plugins>

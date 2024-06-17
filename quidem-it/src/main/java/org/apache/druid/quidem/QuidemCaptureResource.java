@@ -64,7 +64,7 @@ public class QuidemCaptureResource
     stopIfRunning();
     recorder = new QuidemRecorder(
         quidemURI,
-        new FileOutputStream("/tmp/new.iq")
+        new FileOutputStream("new1.iq")
     );
     return recorder.toString();
   }

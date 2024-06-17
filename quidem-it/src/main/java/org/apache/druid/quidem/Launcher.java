@@ -43,7 +43,9 @@ public class Launcher
   public Launcher(String uri) throws Exception
   {
     SqlTestFrameworkConfig config = SqlTestFrameworkConfig.fromURL(uri);
+    System.out.println("Config: " + config);
     configurationInstance = CONFIG_STORE.getConfigurationInstance(config);
+    System.out.println("Configuration instance: " + configurationInstance);
     framework = configurationInstance.framework;
   }
 
@@ -62,11 +64,13 @@ public class Launcher
     String quidemUri = System.getProperty(QUIDEM_URI, "druidtest:///");
     Properties p = System.getProperties();
     for (Object string : p.keySet()) {
-      log.info("[%s] -> %s", string, p.get(string));
+      if (string.toString().startsWith("quidem")) {
+        log.info("[%s] -> %s", string, p.get(string));
+      }
     }
     log.info("Starting Quidem with URI[%s]", quidemUri);
-
     Launcher launcher = new Launcher(quidemUri);
+    System.exit(1);
     launcher.start();
     launcher.lifecycle.join();
   }
