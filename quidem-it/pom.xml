@@ -40,6 +40,9 @@
         </repository>
     </repositories>
 
+    <properties>
+        <quidem.uri>druidtest:///</quidem.uri>
+    </properties>
     <dependencies>
         <dependency>
             <groupId>com.amazonaws</groupId>
@@ -436,6 +439,11 @@
         <dependency>
             <groupId>org.easymock</groupId>
             <artifactId>easymock</artifactId>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.reflections</groupId>
+            <artifactId>reflections</artifactId>
             <scope>compile</scope>
         </dependency>
 
