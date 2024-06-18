@@ -201,8 +201,8 @@ const Redirects=[
   },
   {
     "from": [
-      "/docs/latest/ingestion/flatten-json.html",
-      "/docs/latest/ingestion/transform-spec.html"
+      "/docs/latest/ingestion/transform-spec.html",
+      "/docs/latest/ingestion/flatten-json.html"
     ],
     "to": "/docs/latest/ingestion/ingestion-spec"
   },
