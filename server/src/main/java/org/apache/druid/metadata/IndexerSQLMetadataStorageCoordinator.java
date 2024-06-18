@@ -250,6 +250,47 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   @Override
+  public List<DataSegment> retrieveUnusedSegmentsForExactIntervalAndVersion(
+      String dataSource,
+      Interval interval,
+      String version
+  )
+  {
+    StringBuilder sb = new StringBuilder();
+    sb.append(StringUtils.format("SELECT payload FROM %s", dbTables.getSegmentsTable()));
+    sb.append(" WHERE used = :used AND dataSource = :dataSource AND version = :version");
+    sb.append(StringUtils.format(" AND start = :start AND %1$send%1$s = :end", connector.getQuoteString()));
+
+    final List<DataSegment> matchingSegments = connector.inReadOnlyTransaction(
+        (handle, status) -> {
+          final Query<Map<String, Object>> sql = handle
+              .createQuery(StringUtils.format(
+                  sb.toString(),
+                  dbTables.getSegmentsTable()
+              ))
+              .setFetchSize(connector.getStreamingFetchSize())
+              .bind("used", false)
+              .bind("dataSource", dataSource)
+              .bind("version", version)
+              .bind("start", interval.getStart().toString())
+              .bind("end", interval.getEnd().toString());
+
+          try (final ResultIterator<DataSegment> iterator =
+                   sql.map(
+                       (index, r, ctx) -> JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class)
+                   ).iterator()
+          ) {
+            return ImmutableList.copyOf(iterator);
+          }
+        }
+    );
+
+    log.info("Found [%,d] unused segments for datasource[%s] in interval[%s] and version[%s].",
+             matchingSegments.size(), dataSource, interval, version);
+    return matchingSegments;
+  }
+
+  @Override
   public List<DataSegment> retrieveUnusedSegmentsForInterval(
       String dataSource,
       Interval interval,
@@ -1908,12 +1949,10 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
   private SegmentIdWithShardSpec getUnusedMaxId(String datasource, Interval interval, String version)
   {
-    List<DataSegment> unusedSegments = retrieveUnusedSegmentsForInterval(
+    List<DataSegment> unusedSegments = retrieveUnusedSegmentsForExactIntervalAndVersion(
         datasource,
         interval,
-        ImmutableList.of(version),
-        null,
-        null
+        version
     );
 
     SegmentIdWithShardSpec unusedMaxId = null;

@@ -3275,4 +3275,46 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     );
     Assert.assertNull(coordinator.retrieveSegmentForId(theId.asSegmentId().toString(), true));
   }
+
+  @Test
+  public void testRetrieveUnusedSegmentsForExactIntervalAndVersion() throws Exception
+  {
+    DataSegment unusedForDifferentVersion = createSegment(
+        Intervals.of("2024/2025"),
+        "v0",
+        new NumberedShardSpec(0, 0)
+    );
+    DataSegment unusedSegmentForExactIntervalAndVersion = createSegment(
+        Intervals.of("2024/2025"),
+        "v1",
+        new NumberedShardSpec(0, 0)
+    );
+    DataSegment unusedSegmentForDifferentInterval = createSegment(
+        Intervals.of("2023/2024"),
+        "v1",
+        new NumberedShardSpec(0, 0)
+    );
+    coordinator.commitSegments(
+        ImmutableSet.of(
+            unusedForDifferentVersion,
+            unusedSegmentForDifferentInterval,
+            unusedSegmentForExactIntervalAndVersion
+        ),
+        null
+    );
+    coordinator.markSegmentsAsUnusedWithinInterval(DS.WIKI, Intervals.ETERNITY);
+
+    DataSegment usedSegmentForExactIntervalAndVersion = createSegment(
+        Intervals.of("2024/2025"),
+        "v1",
+        new NumberedShardSpec(1, 0)
+    );
+    coordinator.commitSegments(ImmutableSet.of(usedSegmentForExactIntervalAndVersion), null);
+
+
+    List<DataSegment> unusedSegmentsForIntervalAndVersion =
+        coordinator.retrieveUnusedSegmentsForExactIntervalAndVersion(DS.WIKI, Intervals.of("2024/2025"), "v1");
+    Assert.assertEquals(1, unusedSegmentsForIntervalAndVersion.size());
+    Assert.assertEquals(unusedSegmentForExactIntervalAndVersion, unusedSegmentsForIntervalAndVersion.get(0));
+  }
 }

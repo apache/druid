@@ -118,6 +118,25 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   }
 
   @Override
+  public List<DataSegment> retrieveUnusedSegmentsForExactIntervalAndVersion(
+      String dataSource,
+      Interval interval,
+      String version
+  )
+  {
+    synchronized (unusedSegments) {
+      return ImmutableList.copyOf(
+          unusedSegments.stream()
+                        .filter(ds -> !nuked.contains(ds))
+                        .filter(ds -> dataSource.equals(ds.getDataSource())
+                                      && interval.equals(ds.getInterval())
+                                      && version.equals(ds.getVersion())
+                        ).iterator()
+      );
+    }
+  }
+
+  @Override
   public List<DataSegment> retrieveUnusedSegmentsForInterval(
       String dataSource,
       Interval interval,
