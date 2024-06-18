@@ -27,6 +27,9 @@ import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig.ConfigurationInstance;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig.SqlTestFrameworkConfigStore;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
 
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
@@ -49,9 +52,25 @@ public class Launcher
     framework = configurationInstance.framework;
   }
 
-  public void start()
+  public void start() throws Exception
   {
     lifecycle = GuiceRunnable.initLifecycle(framework.injector(), log);
+    if (withAutoStart()) {
+      callQuidemStart();
+    }
+  }
+
+  private void callQuidemStart() throws Exception
+  {
+    CloseableHttpClient client = HttpClients.createDefault();
+    HttpGet request = new HttpGet("http://localhost:12345/quidem/start");
+    request.addHeader("Content-Type", "application/json");
+    client.execute(request);
+  }
+
+  private boolean withAutoStart()
+  {
+    return Boolean.valueOf(System.getProperty("quidem.record.autostart", "false"));
   }
 
   public void shutdown()

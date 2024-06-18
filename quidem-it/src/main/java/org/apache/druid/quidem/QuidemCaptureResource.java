@@ -20,7 +20,9 @@
 package org.apache.druid.quidem;
 
 import com.google.inject.Inject;
+import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 
 import javax.inject.Named;
 import javax.ws.rs.GET;
@@ -32,6 +34,7 @@ import java.io.File;
 import java.net.URI;
 
 @Path("/quidem")
+@LazySingleton
 public class QuidemCaptureResource
 {
   public static final File RECORD_PATH = ProjectPathUtils
@@ -43,6 +46,10 @@ public class QuidemCaptureResource
   public QuidemCaptureResource(@Named("quidem") URI quidemURI)
   {
     this.quidemURI = quidemURI;
+  }
+
+  @LifecycleStart
+  public void autostart() {
     if (withAutoStart()) {
       start();
     }
