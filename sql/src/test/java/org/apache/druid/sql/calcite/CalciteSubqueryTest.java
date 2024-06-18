@@ -20,7 +20,15 @@
 package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.inject.Injector;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.MapInputRowParser;
+import org.apache.druid.data.input.impl.StringDimensionSchema;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
@@ -31,6 +39,7 @@ import org.apache.druid.query.Druids;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
+import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -54,12 +63,21 @@ import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.topn.DimensionTopNMetricSpec;
 import org.apache.druid.query.topn.TopNQueryBuilder;
+import org.apache.druid.segment.IndexBuilder;
+import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.join.JoinType;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
+import org.apache.druid.segment.writeout.OnHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.calcite.util.SqlTestFramework;
+import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.hamcrest.CoreMatchers;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
@@ -67,12 +85,14 @@ import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import static org.junit.Assert.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -84,6 +104,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * 1. Where the memory limit is not set. The intermediate results are materialized as inline rows
  * 2. Where the memory limit is set. The intermediate results are materialized as frames
  */
+@SqlTestFrameworkConfig.ComponentSupplier(CalciteSubqueryTest.SubqueryComponentSupplier.class)
 public class CalciteSubqueryTest extends BaseCalciteQueryTest
 {
   public static Iterable<Object[]> constructorFeeder()
@@ -143,6 +164,57 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
         ) :
         ImmutableList.of(
             new Object[]{2L, 1L}
+        )
+    );
+  }
+
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testSubqueryOnDataSourceWithMissingColumnsInSegments(String testName, Map<String, Object> queryContext)
+  {
+    if (!queryContext.containsKey(QueryContexts.MAX_SUBQUERY_BYTES_KEY)) {
+      cannotVectorize();
+    }
+    testQuery(
+        "SELECT\n"
+        + "  __time,\n"
+        + "  col1,\n"
+        + "  col2,\n"
+        + "  col3,\n"
+        + "  COUNT(*)\n"
+        + "FROM (SELECT * FROM dsMissingCol LIMIT 10)\n"
+        + "GROUP BY 1, 2, 3, 4",
+        queryContext,
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            new QueryDataSource(
+                                newScanQueryBuilder()
+                                    .dataSource("dsMissingCol")
+                                    .intervals(querySegmentSpec(Filtration.eternity()))
+                                    .columns("__time", "col1", "col2", "col3")
+                                    .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                    .limit(10)
+                                    .build()
+                            )
+                        )
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(
+                            new DefaultDimensionSpec("__time", "d0", ColumnType.LONG),
+                            new DefaultDimensionSpec("col1", "d1", ColumnType.STRING),
+                            new DefaultDimensionSpec("col2", "d2", ColumnType.STRING),
+                            new DefaultDimensionSpec("col3", "d3", ColumnType.STRING)
+                        )
+                        .setAggregatorSpecs(aggregators(
+                            new CountAggregatorFactory("a0")
+                        ))
+                        .setContext(queryContext)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{946684800000L, "abc", null, "def", 1L},
+            new Object[]{946684800000L, "foo", "bar", null, 1L}
         )
     );
   }
@@ -1314,5 +1386,135 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of()
     );
+  }
+
+  public static class SubqueryComponentSupplier extends SqlTestFramework.StandardComponentSupplier
+  {
+
+    private final TempDirProducer tmpDirProducer;
+    
+    public SubqueryComponentSupplier(TempDirProducer tempDirProducer)
+    {
+      super(tempDirProducer);
+      this.tmpDirProducer = tempDirProducer;
+    }
+
+    @Override
+    public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
+        QueryRunnerFactoryConglomerate conglomerate,
+        JoinableFactoryWrapper joinableFactory,
+        Injector injector
+    )
+    {
+      SpecificSegmentsQuerySegmentWalker walker =
+          super.createQuerySegmentWalker(conglomerate, joinableFactory, injector);
+
+      final String datasource1 = "dsMissingCol";
+      final File tmpFolder = tempDirProducer.newTempFolder();
+
+      final List<ImmutableMap<String, Object>> rawRows1 = ImmutableList.of(
+          ImmutableMap.<String, Object>builder()
+                      .put("t", "2000-01-01")
+                      .put("col1", "foo")
+                      .put("col2", "bar")
+                      .build()
+      );
+      final List<InputRow> rows1 =
+          rawRows1
+              .stream()
+              .map(mapInputRow -> MapInputRowParser.parse(
+                  new InputRowSchema(
+                      new TimestampSpec("t", "iso", null),
+                      new DimensionsSpec(
+                          DimensionsSpec.getDefaultSchemas(ImmutableList.of("col1", "col2"))
+                      ),
+                      null
+                  ),
+                  mapInputRow
+              ))
+              .collect(Collectors.toList());
+      final QueryableIndex queryableIndex1 = IndexBuilder
+          .create()
+          .tmpDir(new File(tmpFolder, datasource1))
+          .segmentWriteOutMediumFactory(OnHeapMemorySegmentWriteOutMediumFactory.instance())
+          .schema(new IncrementalIndexSchema.Builder()
+                      .withRollup(false)
+                      .withDimensionsSpec(
+                          new DimensionsSpec(
+                              ImmutableList.of(
+                                  new StringDimensionSchema("col1"),
+                                  new StringDimensionSchema("col2")
+                              )
+                          )
+                      )
+                      .build()
+          )
+          .rows(rows1)
+          .buildMMappedIndex();
+
+      final List<ImmutableMap<String, Object>> rawRows2 = ImmutableList.of(
+          ImmutableMap.<String, Object>builder()
+                      .put("t", "2000-01-01")
+                      .put("col1", "abc")
+                      .put("col3", "def")
+                      .build()
+      );
+      final List<InputRow> rows2 =
+          rawRows2
+              .stream()
+              .map(mapInputRow -> MapInputRowParser.parse(
+                  new InputRowSchema(
+                      new TimestampSpec("t", "iso", null),
+                      new DimensionsSpec(
+                          DimensionsSpec.getDefaultSchemas(ImmutableList.of("col1", "col3"))
+                      ),
+                      null
+                  ),
+                  mapInputRow
+              ))
+              .collect(Collectors.toList());
+      final QueryableIndex queryableIndex2 = IndexBuilder
+          .create()
+          .tmpDir(new File(tmpFolder, datasource1))
+          .segmentWriteOutMediumFactory(OnHeapMemorySegmentWriteOutMediumFactory.instance())
+          .schema(new IncrementalIndexSchema.Builder()
+                      .withRollup(false)
+                      .withDimensionsSpec(
+                          new DimensionsSpec(
+                              ImmutableList.of(
+                                  new StringDimensionSchema("col1"),
+                                  new StringDimensionSchema("col3")
+                              )
+                          )
+                      )
+                      .build()
+          )
+          .rows(rows2)
+          .buildMMappedIndex();
+
+      walker.add(
+          DataSegment.builder()
+              .dataSource(datasource1)
+              .interval(Intervals.ETERNITY)
+              .version("1")
+              .shardSpec(new LinearShardSpec(0))
+              .size(0)
+              .build(),
+          queryableIndex1
+      );
+
+      walker.add(
+          DataSegment.builder()
+                     .dataSource(datasource1)
+                     .interval(Intervals.ETERNITY)
+                     .version("1")
+                     .shardSpec(new LinearShardSpec(1))
+                     .size(0)
+                     .build(),
+          queryableIndex2
+      );
+
+      return walker;
+    }
   }
 }
