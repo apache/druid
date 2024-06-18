@@ -416,6 +416,9 @@ public class SqlTestFrameworkConfig
     if (def.minTopNThreshold != minTopNThreshold) {
       map.put("minTopNThreshold", String.valueOf(minTopNThreshold));
     }
+    if (def.componentSupplier != componentSupplier) {
+      map.put("componentSupplier", componentSupplier.getSimpleName());
+    }
     if (!equals(new SqlTestFrameworkConfig(map))) {
       throw new IAE("Can't reproduce config via map!");
     }
