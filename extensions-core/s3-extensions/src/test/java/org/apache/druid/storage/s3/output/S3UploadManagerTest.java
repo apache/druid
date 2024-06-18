@@ -81,6 +81,7 @@ public class S3UploadManagerTest
 
     serviceEmitter.verifyEmitted("s3upload/threadPool/taskQueuedDuration", 1);
     serviceEmitter.verifyEmitted("s3upload/threadPool/queuedTasks", 1);
+    serviceEmitter.verifyEmitted("s3upload/threadPool/taskDuration", 1);
   }
 
   @Test

@@ -298,8 +298,9 @@ If the JVM does not support CPU time measurement for the current thread, `ingest
 |`worker/task/assigned/count`|Number of tasks assigned to an indexer per emission period. This metric is only available if the `WorkerTaskCountStatsMonitor` module is included.|`dataSource`|Varies|
 |`worker/task/completed/count`|Number of tasks completed by an indexer per emission period. This metric is only available if the `WorkerTaskCountStatsMonitor` module is included.|`dataSource`|Varies|
 |`worker/task/running/count`|Number of tasks running on an indexer per emission period. This metric is only available if the `WorkerTaskCountStatsMonitor` module is included.|`dataSource`|Varies|
-|`s3upload/threadPool/taskQueuedDuration`|Milliseconds spent by a task in queue before it starts uploading chunk to S3 when durable storage is enabled.||Varies|
-|`s3upload/threadPool/queuedTasks`|The number of tasks that are currently queued and waiting to upload chunks to S3 when durable storage is enabled.||Varies|
+|`s3upload/threadPool/taskQueuedDuration`|Milliseconds spent by a task in queue before it starts uploading a part to S3 (in a multi-part upload) when durable storage is enabled.||Varies|
+|`s3upload/threadPool/queuedTasks`|The number of tasks that are currently queued and waiting to upload a part to S3 (in a multi-part upload) when durable storage is enabled.||Varies|
+|`s3upload/threadPool/taskDuration`|The time taken in milliseconds to upload a chunk to S3 when durable storage is enabled.|`uploadId`, `partNumber`|Varies|
 
 ## Shuffle metrics (Native parallel task)
 
