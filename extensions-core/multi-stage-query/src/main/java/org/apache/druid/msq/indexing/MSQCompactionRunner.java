@@ -20,6 +20,7 @@
 package org.apache.druid.msq.indexing;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -36,7 +37,6 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.task.CompactionRunner;
 import org.apache.druid.indexing.common.task.CompactionTask;
 import org.apache.druid.indexing.common.task.CurrentSubTaskHolder;
-import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.AllGranularity;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -45,7 +45,6 @@ import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
-import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.Query;
@@ -65,6 +64,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
+import org.apache.druid.server.coordinator.ClientCompactionRunnerInfo;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.planner.ColumnMapping;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
@@ -82,13 +82,13 @@ import java.util.stream.Collectors;
 public class MSQCompactionRunner implements CompactionRunner
 {
   private static final Logger log = new Logger(MSQCompactionRunner.class);
+  public static final String TYPE = "msq";
   private static final Granularity DEFAULT_SEGMENT_GRANULARITY = Granularities.ALL;
 
   private final ObjectMapper jsonMapper;
   private final Injector injector;
 
   public static final String TIME_VIRTUAL_COLUMN = "__vTime";
-  public static final String TIME_COLUMN = ColumnHolder.TIME_COLUMN_NAME;
 
   @JsonIgnore
   private final CurrentSubTaskHolder currentSubTaskHolder = new CurrentSubTaskHolder(
@@ -98,64 +98,57 @@ public class MSQCompactionRunner implements CompactionRunner
       });
 
 
+  @JsonCreator
   public MSQCompactionRunner(@JacksonInject ObjectMapper jsonMapper, @JacksonInject Injector injector)
   {
     this.jsonMapper = jsonMapper;
     this.injector = injector;
   }
 
+  /**
+   Checks if the provided compaction config is supported by MSQ.
+   The same validation is done at
+   {@link ClientCompactionRunnerInfo#msqEngineSupportsCompactionConfig}
+   The following configs aren't supported:
+   * <ul>
+   * <li>finalizeAggregations set to false in context.</li>
+   *
+   * <li>taskAssignment set to auto in context.</li>
+   *
+   * <li>partitionsSpec of type HashedParititionsSpec.</li>
+   *
+   * <li>maxTotalRows in DynamicPartitionsSpec.</li>
+   *
+   * <li>rollup set to false in granularitySpec when metricsSpec is specified.</li>
+   * </ul>
+   */
   @Override
-  public NonnullPair<Boolean, String> supportsCompactionSpec(
+  public ClientCompactionRunnerInfo.ValidationResult validateCompactionTask(
       CompactionTask compactionTask
   )
   {
     if (compactionTask.getTuningConfig() != null) {
-      PartitionsSpec partitionsSpec = compactionTask.getTuningConfig().getPartitionsSpec();
-      if (!(partitionsSpec instanceof DynamicPartitionsSpec
-            || partitionsSpec instanceof DimensionRangePartitionsSpec)) {
-        return new NonnullPair<>(false, StringUtils.format(
-            "Invalid partition spec type[%s] for MSQ compaction engine."
-            + " Type must be either DynamicPartitionsSpec or DynamicRangePartitionsSpec.",
-            partitionsSpec.getClass()
-        ));
-      }
-      if (partitionsSpec instanceof DynamicPartitionsSpec
-          && ((DynamicPartitionsSpec) partitionsSpec).getMaxTotalRows() != null) {
-        return new NonnullPair<>(false, StringUtils.format(
-            "maxTotalRows[%d] in DynamicPartitionsSpec not supported for MSQ compaction engine.",
-            ((DynamicPartitionsSpec) partitionsSpec).getMaxTotalRows()
-        ));
+      ClientCompactionRunnerInfo.ValidationResult partitionSpecValidationResult =
+          ClientCompactionRunnerInfo.validatePartitionsSpec(compactionTask.getTuningConfig().getPartitionsSpec());
+      if (!partitionSpecValidationResult.isValid()) {
+        return partitionSpecValidationResult;
       }
     }
-    if (compactionTask.getMetricsSpec() != null
-        && compactionTask.getGranularitySpec() != null
-        && !compactionTask.getGranularitySpec()
-                          .isRollup()) {
-      return new NonnullPair<>(
-          false,
-          "rollup in granularitySpec must be set to true if metricsSpec is specifed "
-          + "for MSQ compaction engine."
+    if (compactionTask.getGranularitySpec() != null) {
+      ClientCompactionRunnerInfo.ValidationResult rollupValidationResult = ClientCompactionRunnerInfo.validateRollup(
+          compactionTask.getMetricsSpec(),
+          compactionTask.getGranularitySpec().isRollup()
       );
+      if (!rollupValidationResult.isValid()) {
+        return rollupValidationResult;
+      }
     }
-
-    QueryContext compactionTaskContext = new QueryContext(compactionTask.getContext());
-    if (!MultiStageQueryContext.isFinalizeAggregations(compactionTaskContext)) {
-      return new NonnullPair<>(false, StringUtils.format(
-          "Config[%s] cannot be set to false for auto-compaction with MSQ engine.",
-          MultiStageQueryContext.CTX_FINALIZE_AGGREGATIONS
-      ));
+    ClientCompactionRunnerInfo.ValidationResult finalizeAggregationValidationResult =
+        ClientCompactionRunnerInfo.validateFinalizeAggregations(compactionTask.getContext());
+    if (!finalizeAggregationValidationResult.isValid()) {
+      return finalizeAggregationValidationResult;
     }
-    if (MultiStageQueryContext.getAssignmentStrategy(compactionTaskContext) == WorkerAssignmentStrategy.AUTO) {
-      return new NonnullPair<>(
-          false,
-          StringUtils.format(
-              "Config[%s] cannot be set to value[%s] for auto-compaction with MSQ engine.",
-              MultiStageQueryContext.CTX_TASK_ASSIGNMENT_STRATEGY,
-              WorkerAssignmentStrategy.AUTO
-          )
-      );
-    }
-    return new NonnullPair<>(true, "");
+    return new ClientCompactionRunnerInfo.ValidationResult(true, null);
   }
 
   @Override
@@ -167,11 +160,11 @@ public class MSQCompactionRunner implements CompactionRunner
   @Override
   public TaskStatus runCompactionTasks(
       CompactionTask compactionTask,
-      List<NonnullPair<Interval, DataSchema>> intervalDataSchemas,
+      Map<Interval, DataSchema> intervalDataSchemas,
       TaskToolbox taskToolbox
   ) throws Exception
   {
-    List<MSQControllerTask> msqControllerTasks = compactionToMSQTasks(compactionTask, intervalDataSchemas);
+    List<MSQControllerTask> msqControllerTasks = createMsqControllerTasks(compactionTask, intervalDataSchemas);
 
     if (msqControllerTasks.isEmpty()) {
       String msg = StringUtils.format(
@@ -188,22 +181,22 @@ public class MSQCompactionRunner implements CompactionRunner
     );
   }
 
-  public List<MSQControllerTask> compactionToMSQTasks(
+  public List<MSQControllerTask> createMsqControllerTasks(
       CompactionTask compactionTask,
-      List<NonnullPair<Interval, DataSchema>> intervalDataSchemas
+      Map<Interval, DataSchema> intervalDataSchemas
   ) throws JsonProcessingException
   {
-    List<MSQControllerTask> msqControllerTasks = new ArrayList<>();
+    final List<MSQControllerTask> msqControllerTasks = new ArrayList<>();
 
-    for (NonnullPair<Interval, DataSchema> intervalDataSchema : intervalDataSchemas) {
+    for (Map.Entry<Interval, DataSchema> intervalDataSchema : intervalDataSchemas.entrySet()) {
       Query<?> query;
-      Interval interval = intervalDataSchema.lhs;
-      DataSchema dataSchema = intervalDataSchema.rhs;
+      Interval interval = intervalDataSchema.getKey();
+      DataSchema dataSchema = intervalDataSchema.getValue();
 
-      if (!isGroupBy(dataSchema)) {
-        query = buildScanQuery(compactionTask, interval, dataSchema);
-      } else {
+      if (isGroupBy(dataSchema)) {
         query = buildGroupByQuery(compactionTask, interval, dataSchema);
+      } else {
+        query = buildScanQuery(compactionTask, interval, dataSchema);
       }
       QueryContext compactionTaskContext = new QueryContext(compactionTask.getContext());
 
@@ -314,7 +307,7 @@ public class MSQCompactionRunner implements CompactionRunner
 
     if (isQueryGranularityEmptyOrNone(dataSchema)) {
       // Dimensions in group-by aren't allowed to have time column name as the output name.
-      dimensionSpecs.add(new DefaultDimensionSpec(TIME_COLUMN, TIME_VIRTUAL_COLUMN, ColumnType.LONG));
+      dimensionSpecs.add(new DefaultDimensionSpec(ColumnHolder.TIME_COLUMN_NAME, TIME_VIRTUAL_COLUMN, ColumnType.LONG));
     } else {
       // The changed granularity would result in a new virtual column that needs to be aggregated upon.
       dimensionSpecs.add(new DefaultDimensionSpec(TIME_VIRTUAL_COLUMN, TIME_VIRTUAL_COLUMN, ColumnType.LONG));
@@ -347,9 +340,9 @@ public class MSQCompactionRunner implements CompactionRunner
       // For group-by queries, time will always be one of the dimension. Since dimensions in groupby aren't allowed to
       // have time column as the output name, we map time dimension to a fixed column name in dimensions, and map it
       // back to the time column here.
-      columnMappings.add(new ColumnMapping(TIME_VIRTUAL_COLUMN, TIME_COLUMN));
+      columnMappings.add(new ColumnMapping(TIME_VIRTUAL_COLUMN, ColumnHolder.TIME_COLUMN_NAME));
     } else {
-      columnMappings.add(new ColumnMapping(TIME_COLUMN, TIME_COLUMN));
+      columnMappings.add(new ColumnMapping(ColumnHolder.TIME_COLUMN_NAME, ColumnHolder.TIME_COLUMN_NAME));
     }
     return new ColumnMappings(columnMappings);
   }
@@ -407,7 +400,7 @@ public class MSQCompactionRunner implements CompactionRunner
           TIME_VIRTUAL_COLUMN,
           StringUtils.format(
               "timestamp_floor(\"%s\", '%s')",
-              TIME_COLUMN,
+              ColumnHolder.TIME_COLUMN_NAME,
               periodQueryGranularity.getPeriod().toString()
           ),
           ColumnType.LONG,

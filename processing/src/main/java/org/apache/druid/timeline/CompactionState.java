@@ -27,6 +27,7 @@ import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -68,12 +69,13 @@ public class CompactionState
   public CompactionState(
       @JsonProperty("partitionsSpec") PartitionsSpec partitionsSpec,
       @JsonProperty("dimensionsSpec") DimensionsSpec dimensionsSpec,
-      @JsonProperty("dimensionToAggregatoryFactoryMap") Map<String, AggregatorFactory> dimensionToAggregatoryFactoryMap,
+      @Nullable @JsonProperty("dimensionToAggregatoryFactoryMap")
+      Map<String, AggregatorFactory> dimensionToAggregatoryFactoryMap,
       @JsonProperty("metricsSpec") List<Object> metricsSpec,
       @JsonProperty("transformSpec") Map<String, Object> transformSpec,
       @JsonProperty("indexSpec") Map<String, Object> indexSpec,
       @JsonProperty("granularitySpec") Map<String, Object> granularitySpec,
-      @JsonProperty("engine") CompactionEngine engine
+      @Nullable @JsonProperty("engine") CompactionEngine engine
   )
   {
     this.partitionsSpec = partitionsSpec;
@@ -123,12 +125,14 @@ public class CompactionState
   }
 
   @JsonProperty
+  @Nullable
   public CompactionEngine getEngine()
   {
     return engine;
   }
 
   @JsonProperty
+  @Nullable
   public Map<String, AggregatorFactory> getDimensionToAggregatoryFactoryMap()
   {
     return dimensionToAggregatoryFactoryMap;

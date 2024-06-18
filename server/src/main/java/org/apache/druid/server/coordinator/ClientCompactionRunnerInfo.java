@@ -25,10 +25,11 @@ import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
-import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 
+import java.util.Map;
 import java.util.Objects;
 
 
@@ -73,73 +74,133 @@ public class ClientCompactionRunnerInfo
     return type == that.type;
   }
 
+  public static class ValidationResult{
+    private final boolean valid;
+    private final String reason;
+
+    public ValidationResult(boolean valid, String reason)
+    {
+      this.valid = valid;
+      this.reason = reason;
+    }
+
+    public boolean isValid()
+    {
+      return valid;
+    }
+
+    public String getReason()
+    {
+      return reason;
+    }
+  }
+
   @Override
   public int hashCode()
   {
     return Objects.hash(type);
   }
 
-  /**
-   * Checks if the provided compaction config is supported by the runner
-   * @param newConfig The updated compaction config
-   * @param engineSource String indicating the source of compaction engine.
-   * @return Pair of support boolean and reason string. The reason string is empty if support boolean is True.
-   */
-  public static NonnullPair<Boolean, String> supportsCompactionConfig(DataSourceCompactionConfig newConfig, String engineSource)
+  public static ValidationResult supportsCompactionConfig(DataSourceCompactionConfig newConfig)
   {
     CompactionEngine compactionEngine = newConfig.getEngine();
-    if (compactionEngine == CompactionEngine.MSQ) {
-      if (newConfig.getTuningConfig() != null) {
-        PartitionsSpec partitionsSpec = newConfig.getTuningConfig().getPartitionsSpec();
-        if (!(partitionsSpec instanceof DimensionRangePartitionsSpec
-              || partitionsSpec instanceof DynamicPartitionsSpec)) {
-          return new NonnullPair<>(false, StringUtils.format(
-              "Invalid partition spec type[%s] for MSQ compaction engine[%s]."
-              + " Type must be either DynamicPartitionsSpec or DynamicRangePartitionsSpec.",
-              partitionsSpec.getClass(),
-              engineSource
-          )
-          );
-        }
-        if (partitionsSpec instanceof DynamicPartitionsSpec
-            && ((DynamicPartitionsSpec) partitionsSpec).getMaxTotalRows() != null) {
-          return new NonnullPair<>(false, StringUtils.format(
-              "maxTotalRows[%d] in DynamicPartitionsSpec not supported for MSQ compaction engine[%s].",
-              ((DynamicPartitionsSpec) partitionsSpec).getMaxTotalRows(), engineSource
-          ));
-        }
-      }
+    if (compactionEngine == CompactionEngine.NATIVE) {
+      return new ValidationResult(true, null);
+    } else {
+      return msqEngineSupportsCompactionConfig(newConfig);
+    }
+  }
 
-      if (newConfig.getMetricsSpec() != null
-          && newConfig.getGranularitySpec() != null
-          && !newConfig.getGranularitySpec()
-                       .isRollup()) {
-        return new NonnullPair<>(false, StringUtils.format(
-            "rollup in granularitySpec must be set to True if metricsSpec is specifed "
-            + "for MSQ compaction engine[%s].", engineSource));
-      }
-
-      QueryContext queryContext = QueryContext.of(newConfig.getTaskContext());
-
-      if (!queryContext.getBoolean(MSQContext.CTX_FINALIZE_AGGREGATIONS, true)) {
-        return new NonnullPair<>(false, StringUtils.format(
-            "Config[%s] cannot be set to false for auto-compaction with MSQ engine[%s].",
-            MSQContext.CTX_FINALIZE_AGGREGATIONS,
-            engineSource
-        ));
-      }
-
-      if (queryContext.getString(MSQContext.CTX_TASK_ASSIGNMENT_STRATEGY, MSQContext.TASK_ASSIGNMENT_STRATEGY_MAX)
-                      .equals(MSQContext.TASK_ASSIGNMENT_STRATEGY_AUTO)) {
-        return new NonnullPair<>(false, StringUtils.format(
-            "Config[%s] cannot be set to value[%s] for auto-compaction with MSQ engine[%s].",
-            MSQContext.CTX_TASK_ASSIGNMENT_STRATEGY,
-            MSQContext.TASK_ASSIGNMENT_STRATEGY_AUTO,
-            engineSource
-        ));
+  /**
+   * Checks if the provided compaction config is supported by MSQ. The following configs aren't supported:
+   * <ul>
+   * <li>finalizeAggregations set to false in context.</li>
+   *
+   * <li>partitionsSpec of type HashedParititionsSpec.</li>
+   *
+   * <li>maxTotalRows in DynamicPartitionsSpec.</li>
+   *
+   * <li>rollup set to false in granularitySpec when metricsSpec is specified.</li>
+   * </ul>
+   *
+   * @param newConfig The updated compaction config
+   * @return ValidationResult. The reason string is null if isValid() is True.
+   */
+  private static ValidationResult msqEngineSupportsCompactionConfig(DataSourceCompactionConfig newConfig)
+  {
+    if (newConfig.getTuningConfig() != null) {
+      ValidationResult partitionSpecValidationResult =
+          validatePartitionsSpec(newConfig.getTuningConfig().getPartitionsSpec());
+      if (!partitionSpecValidationResult.isValid()) {
+        return partitionSpecValidationResult;
       }
     }
-    return new NonnullPair<>(true, "");
+    if (newConfig.getGranularitySpec() != null) {
+      ValidationResult rollupValidationResult = validateRollup(
+          newConfig.getMetricsSpec(),
+          newConfig.getGranularitySpec().isRollup()
+      );
+      if (!rollupValidationResult.isValid()) {
+        return rollupValidationResult;
+      }
+    }
+    ValidationResult finalizeAggregationValidationResult = validateFinalizeAggregations(newConfig.getTaskContext());
+    if (!finalizeAggregationValidationResult.isValid()) {
+      return finalizeAggregationValidationResult;
+    }
+    return new ValidationResult(true, null);
+  }
+
+  /**
+   * Validte that partitionSpec is either 'dynamic` or 'range', and if 'dynamic', ensure maxTotalRows is null.
+   */
+  public static ValidationResult validatePartitionsSpec(PartitionsSpec partitionsSpec)
+  {
+    if (!(partitionsSpec instanceof DimensionRangePartitionsSpec
+          || partitionsSpec instanceof DynamicPartitionsSpec)) {
+      return new ValidationResult(false, StringUtils.format(
+          "Invalid partition spec type[%s] for MSQ engine."
+          + " Type must be either DynamicPartitionsSpec or DynamicRangePartitionsSpec.",
+          partitionsSpec.getClass()
+      )
+      );
+    }
+    if (partitionsSpec instanceof DynamicPartitionsSpec
+        && ((DynamicPartitionsSpec) partitionsSpec).getMaxTotalRows() != null) {
+      return new ValidationResult(false, StringUtils.format(
+          "maxTotalRows[%d] in DynamicPartitionsSpec not supported for MSQ engine.",
+          ((DynamicPartitionsSpec) partitionsSpec).getMaxTotalRows()
+      ));
+    }
+    return new ValidationResult(true, null);
+  }
+
+  /**
+   * Validate rollup is set to false in granularitySpec when metricsSpec is specified.
+   */
+  public static ValidationResult validateRollup(AggregatorFactory[] metricsSpec, boolean isRollup) {
+    if (metricsSpec != null
+       ) {
+      return new ValidationResult(false, StringUtils.format(
+          "rollup in granularitySpec must be set to True if metricsSpec is specifed "
+          + "for MSQ engine."));
+    }
+    return new ValidationResult(true, null);
+  }
+
+  /**
+   * Validate finalizeAggregations is not set to false
+   */
+  public static ValidationResult validateFinalizeAggregations(Map<String, Object> context){
+    QueryContext queryContext = QueryContext.of(context);
+
+    if (!queryContext.getBoolean(MSQContext.CTX_FINALIZE_AGGREGATIONS, true)) {
+      return new ValidationResult(false, StringUtils.format(
+          "Config[%s] cannot be set to false for auto-compaction with MSQ engine.",
+          MSQContext.CTX_FINALIZE_AGGREGATIONS
+      ));
+    }
+    return new ValidationResult(true, null);
   }
 
   /**
@@ -150,8 +211,5 @@ public class ClientCompactionRunnerInfo
   public static class MSQContext
   {
     public static final String CTX_FINALIZE_AGGREGATIONS = "finalizeAggregations";
-    public static final String CTX_TASK_ASSIGNMENT_STRATEGY = "taskAssignment";
-    public static final String TASK_ASSIGNMENT_STRATEGY_MAX = "MAX";
-    public static final String TASK_ASSIGNMENT_STRATEGY_AUTO = "AUTO";
   }
 }

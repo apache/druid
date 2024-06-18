@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexer.CompactionEngine;
-import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.joda.time.Period;
 
@@ -236,10 +235,8 @@ public class DataSourceCompactionConfig
   )
   {
     CompactionEngine newCompactionEngine = newConfig.getEngine();
-    String engineSource = "specified in spec";
     if (newCompactionEngine == null) {
       newCompactionEngine = defaultCompactionEngine;
-      engineSource = "set as default";
       newConfig = new DataSourceCompactionConfig(
           newConfig.getDataSource(),
           newConfig.getTaskPriority(),
@@ -257,12 +254,11 @@ public class DataSourceCompactionConfig
       );
     }
 
-    NonnullPair<Boolean, String> supportsCompactionConfig = ClientCompactionRunnerInfo.supportsCompactionConfig(
-        newConfig,
-        engineSource
+    ClientCompactionRunnerInfo.ValidationResult validationResult = ClientCompactionRunnerInfo.supportsCompactionConfig(
+        newConfig
     );
-    if (!supportsCompactionConfig.lhs) {
-      throw InvalidInput.exception("Compaction config not supported. Reason[%s].", supportsCompactionConfig.rhs);
+    if (!validationResult.isValid()) {
+      throw InvalidInput.exception("Compaction config not supported. Reason[%s].", validationResult.getReason());
     }
     return newConfig;
   }

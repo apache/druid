@@ -31,7 +31,6 @@ import javax.annotation.Nullable;
  */
 public enum CompactionEngine
 {
-  // Using uppercase constants since "native" is a reserved keyword.
   NATIVE,
   MSQ;
 
@@ -39,7 +38,7 @@ public enum CompactionEngine
   @JsonValue
   public String toString()
   {
-    return this.name().toLowerCase();
+    return StringUtils.toLowerCase(this.name().toLowerCase());
   }
 
   @JsonCreator

@@ -50,9 +50,8 @@ public class ClientCompactionRunnerInfoTest
   {
     assertFalse(
         ClientCompactionRunnerInfo.supportsCompactionConfig(
-            createCompactionConfig(new HashedPartitionsSpec(100, null, null), Collections.emptyMap()),
-            "dummy"
-        ).lhs
+            createCompactionConfig(new HashedPartitionsSpec(100, null, null), Collections.emptyMap())
+        ).isValid()
     );
   }
 
@@ -61,9 +60,8 @@ public class ClientCompactionRunnerInfoTest
   {
     assertFalse(
         ClientCompactionRunnerInfo.supportsCompactionConfig(
-            createCompactionConfig(new DynamicPartitionsSpec(100, 100L), Collections.emptyMap()),
-            "dummy"
-        ).lhs
+            createCompactionConfig(new DynamicPartitionsSpec(100, 100L), Collections.emptyMap())
+        ).isValid()
     );
   }
 
@@ -71,9 +69,8 @@ public class ClientCompactionRunnerInfoTest
   public void testDynamicPartitionsSpecs()
   {
     assertTrue(ClientCompactionRunnerInfo.supportsCompactionConfig(
-        createCompactionConfig(new DynamicPartitionsSpec(100, null), Collections.emptyMap()),
-        "dummy"
-    ).lhs);
+        createCompactionConfig(new DynamicPartitionsSpec(100, null), Collections.emptyMap())
+    ).isValid());
   }
 
   @Test
@@ -83,19 +80,8 @@ public class ClientCompactionRunnerInfoTest
         createCompactionConfig(
             new DimensionRangePartitionsSpec(100, null, ImmutableList.of("partitionDim"), false),
             Collections.emptyMap()
-        ),
-        "engine"
-    ).lhs);
-  }
-
-  @Test
-  public void testWithWorkerStrategyAuto()
-  {
-    DataSourceCompactionConfig compactionConfig = createCompactionConfig(
-        new DynamicPartitionsSpec(3, null),
-        ImmutableMap.of(ClientCompactionRunnerInfo.MSQContext.CTX_TASK_ASSIGNMENT_STRATEGY, "AUTO")
-    );
-    Assert.assertFalse(ClientCompactionRunnerInfo.supportsCompactionConfig(compactionConfig, "").lhs);
+        )
+    ).isValid());
   }
 
   @Test
@@ -105,7 +91,7 @@ public class ClientCompactionRunnerInfoTest
         new DynamicPartitionsSpec(3, null),
         ImmutableMap.of(ClientCompactionRunnerInfo.MSQContext.CTX_FINALIZE_AGGREGATIONS, false)
     );
-    Assert.assertFalse(ClientCompactionRunnerInfo.supportsCompactionConfig(compactionConfig, "").lhs);
+    Assert.assertFalse(ClientCompactionRunnerInfo.supportsCompactionConfig(compactionConfig).isValid());
   }
 
   private static DataSourceCompactionConfig createCompactionConfig(

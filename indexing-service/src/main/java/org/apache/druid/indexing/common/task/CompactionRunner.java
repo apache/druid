@@ -23,12 +23,11 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskToolbox;
-import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.server.coordinator.ClientCompactionRunnerInfo;
 import org.joda.time.Interval;
 
-import java.util.List;
+import java.util.Map;
 
 /**
  * Strategy to be used for executing a compaction task.
@@ -36,15 +35,18 @@ import java.util.List;
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = CompactionRunner.TYPE_PROPERTY)
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "native", value = NativeCompactionRunner.class)
+    @JsonSubTypes.Type(name = NativeCompactionRunner.TYPE, value = NativeCompactionRunner.class)
 })
 public interface CompactionRunner
 {
   String TYPE_PROPERTY = "type";
 
+  /**
+   * Converts compaction tasks to the runner-type tasks and runs them serially for each interval.
+   */
   TaskStatus runCompactionTasks(
       CompactionTask compactionTask,
-      List<NonnullPair<Interval, DataSchema>> dataSchemas,
+      Map<Interval, DataSchema> intervalDataSchemaMap,
       TaskToolbox taskToolbox
   ) throws Exception;
 
@@ -52,10 +54,9 @@ public interface CompactionRunner
 
   /**
    * Checks if the provided compaction config is supported by the runner.
-   *
-   * @param compactionTask
-   * @return Pair of (supported) boolean and a reason string. Reason string is empty if supported is true.
+   * The same validation is done at {@link org.apache.druid.msq.indexing.MSQCompactionRunner#validateCompactionTask}
+   * @return ValidationResult. The reason string is null if isValid() is True.
    */
-  NonnullPair<Boolean, String> supportsCompactionSpec(CompactionTask compactionTask);
+  ClientCompactionRunnerInfo.ValidationResult validateCompactionTask(CompactionTask compactionTask);
 
 }

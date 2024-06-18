@@ -85,6 +85,7 @@ import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
+import org.apache.druid.server.coordinator.ClientCompactionRunnerInfo;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.security.ResourceAction;
@@ -465,7 +466,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     // emit metric for compact ingestion mode:
     emitCompactIngestionModeMetrics(toolbox.getEmitter(), ioConfig.isDropExisting());
 
-    final List<NonnullPair<Interval, DataSchema>> intervalDataSchemas = createDataSchemasForIntervals(
+    final Map<Interval, DataSchema> intervalDataSchemas = createDataSchemasForIntervals(
         UTC_CLOCK,
         toolbox,
         getTaskLockHelper().getLockGranularityToUse(),
@@ -478,9 +479,9 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     );
 
     registerResourceCloserOnAbnormalExit(compactionRunner.getCurrentSubTaskHolder());
-    NonnullPair<Boolean, String> supportsCompactionConfig = compactionRunner.supportsCompactionSpec(this);
-    if (!supportsCompactionConfig.lhs) {
-      throw InvalidInput.exception("Compaction spec not supported. Reason[%s].", supportsCompactionConfig.rhs);
+    ClientCompactionRunnerInfo.ValidationResult supportsCompactionConfig = compactionRunner.validateCompactionTask(this);
+    if (!supportsCompactionConfig.isValid()) {
+      throw InvalidInput.exception("Compaction spec not supported. Reason[%s].", supportsCompactionConfig.getReason());
     }
     return compactionRunner.runCompactionTasks(this, intervalDataSchemas, toolbox);
   }
@@ -491,7 +492,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
    * @throws IOException
    */
   @VisibleForTesting
-  static List<NonnullPair<Interval, DataSchema>> createDataSchemasForIntervals(
+  static Map<Interval, DataSchema> createDataSchemasForIntervals(
       final Clock clock,
       final TaskToolbox toolbox,
       final LockGranularity lockGranularityInUse,
@@ -510,11 +511,11 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     );
 
     if (timelineSegments.isEmpty()) {
-      return Collections.emptyList();
+      return Collections.emptyMap();
     }
 
     if (granularitySpec == null || granularitySpec.getSegmentGranularity() == null) {
-      List<NonnullPair<Interval, DataSchema>> intervalToDataSchemaList = new ArrayList<>();
+      Map<Interval, DataSchema> intervalDataSchemaMap = new HashMap<>();
 
       // original granularity
       final Map<Interval, List<DataSegment>> intervalToSegments = new TreeMap<>(
@@ -567,9 +568,9 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
             ? new ClientCompactionTaskGranularitySpec(segmentGranularityToUse, null, null)
             : granularitySpec.withSegmentGranularity(segmentGranularityToUse)
         );
-        intervalToDataSchemaList.add(new NonnullPair<>(interval, dataSchema));
+        intervalDataSchemaMap.put(interval, dataSchema);
       }
-      return intervalToDataSchemaList;
+      return intervalDataSchemaMap;
     } else {
       // given segment granularity
       final DataSchema dataSchema = createDataSchema(
@@ -593,7 +594,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
           metricsSpec,
           granularitySpec
       );
-      return Collections.singletonList(new NonnullPair<>(segmentProvider.interval, dataSchema));
+      return Collections.singletonMap(segmentProvider.interval, dataSchema);
     }
   }
 

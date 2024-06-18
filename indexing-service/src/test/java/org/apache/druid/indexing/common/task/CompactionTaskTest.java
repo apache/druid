@@ -966,7 +966,7 @@ public class CompactionTaskTest
   @Test
   public void testCreateIngestionSchema() throws IOException
   {
-    final List<NonnullPair<Interval, DataSchema>> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
+    final Map<Interval, DataSchema> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
         clock,
         toolbox,
         LockGranularity.TIME_CHUNK,
@@ -1048,7 +1048,7 @@ public class CompactionTaskTest
         null,
         null
     );
-    final List<NonnullPair<Interval, DataSchema>> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
+    final Map<Interval, DataSchema> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
         clock,
         toolbox,
         LockGranularity.TIME_CHUNK,
@@ -1131,7 +1131,7 @@ public class CompactionTaskTest
         null,
         null
     );
-    final List<NonnullPair<Interval, DataSchema>> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
+    final Map<Interval, DataSchema> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
         clock,
         toolbox,
         LockGranularity.TIME_CHUNK,
@@ -1214,7 +1214,7 @@ public class CompactionTaskTest
         null,
         null
     );
-    final List<NonnullPair<Interval, DataSchema>> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
+    final Map<Interval, DataSchema> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
         clock,
         toolbox,
         LockGranularity.TIME_CHUNK,
@@ -1285,7 +1285,7 @@ public class CompactionTaskTest
         )
     );
 
-    final List<NonnullPair<Interval, DataSchema>> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
+    final Map<Interval, DataSchema> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
         clock,
         toolbox,
         LockGranularity.TIME_CHUNK,
@@ -1336,7 +1336,7 @@ public class CompactionTaskTest
         new DoubleMaxAggregatorFactory("custom_double_max", "agg_4")
     };
 
-    final List<NonnullPair<Interval, DataSchema>> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
+    final Map<Interval, DataSchema> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
         clock,
         toolbox,
         LockGranularity.TIME_CHUNK,
@@ -1380,7 +1380,7 @@ public class CompactionTaskTest
   @Test
   public void testCreateIngestionSchemaWithCustomSegments() throws IOException
   {
-    final List<NonnullPair<Interval, DataSchema>> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
+    final Map<Interval, DataSchema> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
         clock,
         toolbox,
         LockGranularity.TIME_CHUNK,
@@ -1431,7 +1431,7 @@ public class CompactionTaskTest
     Collections.sort(segments);
     // Remove one segment in the middle
     segments.remove(segments.size() / 2);
-    final List<NonnullPair<Interval, DataSchema>> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
+    final Map<Interval, DataSchema> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
         clock,
         toolbox,
         LockGranularity.TIME_CHUNK,
@@ -1462,7 +1462,7 @@ public class CompactionTaskTest
     final TestIndexIO indexIO = (TestIndexIO) toolbox.getIndexIO();
     indexIO.removeMetadata(Iterables.getFirst(indexIO.getQueryableIndexMap().keySet(), null));
     final List<DataSegment> segments = new ArrayList<>(SEGMENTS);
-    final List<NonnullPair<Interval, DataSchema>> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
+    final Map<Interval, DataSchema> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
         clock,
         toolbox,
         LockGranularity.TIME_CHUNK,
@@ -1505,7 +1505,7 @@ public class CompactionTaskTest
   @Test
   public void testSegmentGranularityAndNullQueryGranularity() throws IOException
   {
-    final List<NonnullPair<Interval, DataSchema>> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
+    final Map<Interval, DataSchema> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
         clock,
         toolbox,
         LockGranularity.TIME_CHUNK,
@@ -1550,7 +1550,7 @@ public class CompactionTaskTest
   @Test
   public void testQueryGranularityAndNullSegmentGranularity() throws IOException
   {
-    final List<NonnullPair<Interval, DataSchema>> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
+    final Map<Interval, DataSchema> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
         clock,
         toolbox,
         LockGranularity.TIME_CHUNK,
@@ -1592,7 +1592,7 @@ public class CompactionTaskTest
   @Test
   public void testQueryGranularityAndSegmentGranularityNonNull() throws IOException
   {
-    final List<NonnullPair<Interval, DataSchema>> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
+    final Map<Interval, DataSchema> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
         clock,
         toolbox,
         LockGranularity.TIME_CHUNK,
@@ -1644,7 +1644,7 @@ public class CompactionTaskTest
   @Test
   public void testNullGranularitySpec() throws IOException
   {
-    final List<NonnullPair<Interval, DataSchema>> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
+    final Map<Interval, DataSchema> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
         clock,
         toolbox,
         LockGranularity.TIME_CHUNK,
@@ -1690,7 +1690,7 @@ public class CompactionTaskTest
   public void testGranularitySpecWithNullQueryGranularityAndNullSegmentGranularity()
       throws IOException
   {
-    final List<NonnullPair<Interval, DataSchema>> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
+    final Map<Interval, DataSchema> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
         clock,
         toolbox,
         LockGranularity.TIME_CHUNK,
@@ -1736,7 +1736,7 @@ public class CompactionTaskTest
   public void testGranularitySpecWithNotNullRollup()
       throws IOException
   {
-    final List<NonnullPair<Interval, DataSchema>> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
+    final Map<Interval, DataSchema> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
         clock,
         toolbox,
         LockGranularity.TIME_CHUNK,
@@ -1767,7 +1767,7 @@ public class CompactionTaskTest
   public void testGranularitySpecWithNullRollup()
       throws IOException
   {
-    final List<NonnullPair<Interval, DataSchema>> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
+    final Map<Interval, DataSchema> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
         clock,
         toolbox,
         LockGranularity.TIME_CHUNK,

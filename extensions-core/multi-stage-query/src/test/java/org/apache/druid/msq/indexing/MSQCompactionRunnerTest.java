@@ -41,7 +41,6 @@ import org.apache.druid.indexing.common.task.CompactionIntervalSpec;
 import org.apache.druid.indexing.common.task.CompactionTask;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
@@ -94,7 +93,7 @@ public class MSQCompactionRunnerTest
   private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
   private static final AggregatorFactory AGG1 = new CountAggregatorFactory("agg_0");
   private static final AggregatorFactory AGG2 = new LongSumAggregatorFactory("agg_1", "long_dim_1");
-  private static List<AggregatorFactory> AGGREGATORS = ImmutableList.of(AGG1, AGG2);
+  private static final List<AggregatorFactory> AGGREGATORS = ImmutableList.of(AGG1, AGG2);
   private static final MSQCompactionRunner MSQ_COMPACTION_RUNNER = new MSQCompactionRunner(JSON_MAPPER, null);
 
   @BeforeClass
@@ -128,7 +127,7 @@ public class MSQCompactionRunnerTest
         null,
         Collections.emptyMap()
     );
-    Assert.assertFalse(MSQ_COMPACTION_RUNNER.supportsCompactionSpec(compactionTask).lhs);
+    Assert.assertFalse(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask).isValid());
   }
 
   @Test
@@ -139,7 +138,7 @@ public class MSQCompactionRunnerTest
         null,
         Collections.emptyMap()
     );
-    Assert.assertTrue(MSQ_COMPACTION_RUNNER.supportsCompactionSpec(compactionTask).lhs);
+    Assert.assertTrue(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask).isValid());
   }
 
   @Test
@@ -150,7 +149,7 @@ public class MSQCompactionRunnerTest
         null,
         Collections.emptyMap()
     );
-    Assert.assertFalse(MSQ_COMPACTION_RUNNER.supportsCompactionSpec(compactionTask).lhs);
+    Assert.assertFalse(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask).isValid());
   }
 
   @Test
@@ -161,7 +160,7 @@ public class MSQCompactionRunnerTest
         null,
         Collections.emptyMap()
     );
-    Assert.assertTrue(MSQ_COMPACTION_RUNNER.supportsCompactionSpec(compactionTask).lhs);
+    Assert.assertTrue(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask).isValid());
   }
 
   @Test
@@ -172,7 +171,7 @@ public class MSQCompactionRunnerTest
         null,
         ImmutableMap.of(MultiStageQueryContext.CTX_TASK_ASSIGNMENT_STRATEGY, WorkerAssignmentStrategy.AUTO.toString())
     );
-    Assert.assertFalse(MSQ_COMPACTION_RUNNER.supportsCompactionSpec(compactionTask).lhs);
+    Assert.assertFalse(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask).isValid());
   }
 
   @Test
@@ -183,14 +182,14 @@ public class MSQCompactionRunnerTest
         null,
         ImmutableMap.of(MultiStageQueryContext.CTX_FINALIZE_AGGREGATIONS, false)
     );
-    Assert.assertFalse(MSQ_COMPACTION_RUNNER.supportsCompactionSpec(compactionTask).lhs);
+    Assert.assertFalse(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask).isValid());
   }
 
   @Test
   public void testRunCompactionTasksWithEmptyTaskList() throws Exception
   {
     CompactionTask compactionTask = createCompactionTask(null, null, Collections.emptyMap());
-    TaskStatus taskStatus = MSQ_COMPACTION_RUNNER.runCompactionTasks(compactionTask, Collections.emptyList(), null);
+    TaskStatus taskStatus = MSQ_COMPACTION_RUNNER.runCompactionTasks(compactionTask, Collections.emptyMap(), null);
     Assert.assertTrue(taskStatus.isFailure());
   }
 
@@ -219,14 +218,10 @@ public class MSQCompactionRunnerTest
     );
 
 
-    List<MSQControllerTask> msqControllerTasks = MSQ_COMPACTION_RUNNER
-        .compactionToMSQTasks(
-            taskCreatedWithTransformSpec,
-            Collections.singletonList(new NonnullPair<>(
-                COMPACTION_INTERVAL,
-                dataSchema
-            ))
-        );
+    List<MSQControllerTask> msqControllerTasks = MSQ_COMPACTION_RUNNER.createMsqControllerTasks(
+        taskCreatedWithTransformSpec,
+        Collections.singletonMap(COMPACTION_INTERVAL, dataSchema)
+    );
 
     MSQControllerTask msqControllerTask = Iterables.getOnlyElement(msqControllerTasks);
 
@@ -288,14 +283,10 @@ public class MSQCompactionRunnerTest
     );
 
 
-    List<MSQControllerTask> msqControllerTasks = MSQ_COMPACTION_RUNNER
-        .compactionToMSQTasks(
-            taskCreatedWithTransformSpec,
-            Collections.singletonList(new NonnullPair<>(
-                COMPACTION_INTERVAL,
-                dataSchema
-            ))
-        );
+    List<MSQControllerTask> msqControllerTasks = MSQ_COMPACTION_RUNNER.createMsqControllerTasks(
+        taskCreatedWithTransformSpec,
+        Collections.singletonMap(COMPACTION_INTERVAL, dataSchema)
+    );
 
     MSQControllerTask msqControllerTask = Iterables.getOnlyElement(msqControllerTasks);
 

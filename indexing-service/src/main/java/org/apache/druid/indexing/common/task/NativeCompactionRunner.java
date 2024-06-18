@@ -41,6 +41,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.server.coordinator.ClientCompactionRunnerInfo;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
 import org.apache.druid.utils.CollectionUtils;
 import org.codehaus.jackson.annotate.JsonCreator;
@@ -57,6 +58,7 @@ import java.util.stream.IntStream;
 public class NativeCompactionRunner implements CompactionRunner
 {
   private static final Logger log = new Logger(NativeCompactionRunner.class);
+  public static final String TYPE = "native";
   private static final boolean STORE_COMPACTION_STATE = true;
   @JsonIgnore
   private final SegmentCacheManagerFactory segmentCacheManagerFactory;
@@ -80,11 +82,11 @@ public class NativeCompactionRunner implements CompactionRunner
   }
 
   @Override
-  public NonnullPair<Boolean, String> supportsCompactionSpec(
+  public ClientCompactionRunnerInfo.ValidationResult validateCompactionTask(
       CompactionTask compactionTask
   )
   {
-    return new NonnullPair<>(true, "");
+    return new ClientCompactionRunnerInfo.ValidationResult(true, null);
   }
 
   /**
@@ -94,7 +96,7 @@ public class NativeCompactionRunner implements CompactionRunner
    */
   @VisibleForTesting
   static List<ParallelIndexIngestionSpec> createIngestionSpecs(
-      List<NonnullPair<Interval, DataSchema>> dataschemas,
+      Map<Interval, DataSchema> intervalDataSchemaMap,
       final TaskToolbox toolbox,
       final CompactionIOConfig ioConfig,
       final PartitionConfigurationManager partitionConfigurationManager,
@@ -104,12 +106,12 @@ public class NativeCompactionRunner implements CompactionRunner
   {
     final CompactionTask.CompactionTuningConfig compactionTuningConfig = partitionConfigurationManager.computeTuningConfig();
 
-    return dataschemas.stream().map((dataSchema) -> new ParallelIndexIngestionSpec(
-                                        dataSchema.rhs,
+    return intervalDataSchemaMap.entrySet().stream().map((dataSchema) -> new ParallelIndexIngestionSpec(
+                                        dataSchema.getValue(),
                                         createIoConfig(
                                             toolbox,
-                                            dataSchema.rhs,
-                                            dataSchema.lhs,
+                                            dataSchema.getValue(),
+                                            dataSchema.getKey(),
                                             coordinatorClient,
                                             segmentCacheManagerFactory,
                                             ioConfig
@@ -175,7 +177,7 @@ public class NativeCompactionRunner implements CompactionRunner
   @Override
   public TaskStatus runCompactionTasks(
       CompactionTask compactionTask,
-      List<NonnullPair<Interval, DataSchema>> dataSchemas,
+      Map<Interval, DataSchema> intervalDataSchemaMap,
       TaskToolbox taskToolbox
   ) throws Exception
   {
@@ -184,7 +186,7 @@ public class NativeCompactionRunner implements CompactionRunner
 
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = createIngestionSpecs(
-        dataSchemas,
+        intervalDataSchemaMap,
         taskToolbox,
         compactionTask.getIoConfig(),
         partitionConfigurationManager,

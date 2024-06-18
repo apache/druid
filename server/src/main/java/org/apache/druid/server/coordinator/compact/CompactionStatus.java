@@ -329,6 +329,8 @@ public class CompactionStatus
       final List<Object> metricSpecList = lastCompactionState.getMetricsSpec();
       final AggregatorFactory[] existingMetricsSpec;
       if (CollectionUtils.isNullOrEmpty(metricSpecList)) {
+        // Use the dimensionToAggregatorFactoryMap to check metrics that were converted to dimensions due to
+        // finalizeAggregations=true
         final Map<String, AggregatorFactory> dimensionToAggregatorFactoryMap =
             lastCompactionState.getDimensionToAggregatoryFactoryMap();
         existingMetricsSpec = dimensionToAggregatorFactoryMap == null
