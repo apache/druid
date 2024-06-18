@@ -37,7 +37,6 @@ import org.apache.druid.client.ServerInventoryView;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.curator.discovery.ServiceAnnouncer;
 import org.apache.druid.discovery.DruidLeaderSelector;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.DateTimes;
@@ -324,15 +323,15 @@ public class DruidCoordinator
   }
 
   /**
-   * @return the set of broadcast segments. If the coordinator hasn't initialized fully and run a cycle of the historical
-   * duties, a retryable exception will be thrown.
+   * @return the set of broadcast segments as determined by the coordinator at a point in time.
+   * If the coordinator runs haven't triggered or are delayed, this returned information
+   * may be stale.
    */
+  @Nullable
   public Set<DataSegment> getBroadcastSegments()
   {
     if (segmentAssigner == null) {
-      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
-                          .ofCategory(DruidException.Category.UNAVAILABLE)
-                          .build("bootstrap segments not available yet.");
+      return null;
     }
     return segmentAssigner.getBroadcastSegments();
   }

@@ -173,6 +173,8 @@ public class CoordinatorClientImpl implements CoordinatorClient
             new InputStreamResponseHandler()
         ),
         in -> new JsonParserIterator<>(
+            // We specifically use LoadableDataSegment instead of DataSegment so the callers can correctly load the
+            // returned set of segments, as the load specs are guaranteed not to be pruned.
             jsonMapper.getTypeFactory().constructType(LoadableDataSegment.class),
             Futures.immediateFuture(in),
             jsonMapper

@@ -507,16 +507,12 @@ public class MetadataResourceTest
   }
 
   @Test
-  public void testGetBootstrapSegmentsWhenCoordinatorIsUninitialized()
+  public void testNullGetBootstrapSegments()
   {
-    Mockito.doThrow(DruidException.forPersona(DruidException.Persona.OPERATOR)
-                                  .ofCategory(DruidException.Category.UNAVAILABLE)
-                                  .build("something went wrong"))
-           .when(coordinator).getBroadcastSegments();
+    Mockito.doReturn(null).when(coordinator).getBroadcastSegments();
 
     Response response = metadataResource.getBootstrapSegments();
     Assert.assertEquals(503, response.getStatus());
-    Assert.assertEquals("something went wrong", getExceptionMessage(response));
   }
 
   private <T> List<T> extractResponseList(Response response)

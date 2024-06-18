@@ -481,18 +481,13 @@ public class MetadataResource
   @ResourceFilters(DatasourceResourceFilter.class)
   public Response getBootstrapSegments()
   {
-    try {
-      final Set<DataSegment> broadcastSegments = coordinator.getBroadcastSegments();
-      return Response.status(Response.Status.OK).entity(broadcastSegments).build();
+    final Set<DataSegment> broadcastSegments = coordinator.getBroadcastSegments();
+    if (broadcastSegments == null) {
+      return Response.status(Response.Status.SERVICE_UNAVAILABLE)
+                     .entity("No bootstrap segments were found. The coordinator may still be"
+                             + " initializing, please try again later.")
+                     .build();
     }
-    catch (DruidException e) {
-      return ServletResourceUtils.buildErrorResponseFrom(e);
-    }
-    catch (Exception e) {
-      return Response
-          .serverError()
-          .entity(ImmutableMap.of("error", "Exception occurred.", "message", Throwables.getRootCause(e).toString()))
-          .build();
-    }
+    return Response.status(Response.Status.OK).entity(broadcastSegments).build();
   }
 }

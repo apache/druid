@@ -333,9 +333,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     catch (Exception e) {
       // By default, we "fail open" when there is any error -- finding the coordinator, or if the API endpoint cannot
       // be found during rolling upgrades, or even if it's irrecoverable.
-      log.warn(e, "Error fetching bootstrap segments from the coordinator. "
-                  + "Returning an empty set of bootstrap segments.");
-      bootstrapSegments = ImmutableList.of();
+      log.warn("Error fetching bootstrap segments from the coordinator: [%s]. ", e.getMessage());
     }
     finally {
       stopwatch.stop();

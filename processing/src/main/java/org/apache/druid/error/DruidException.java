@@ -357,10 +357,6 @@ public class DruidException extends RuntimeException
      */
     RUNTIME_FAILURE(500),
     /**
-     * Means that the requested resource could not be found due to a transient unavailability.
-     */
-    UNAVAILABLE(503),
-    /**
      * A timeout happened
      */
     TIMEOUT(504),
