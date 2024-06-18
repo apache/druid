@@ -42,7 +42,11 @@ import org.apache.http.client.utils.URLEncodedUtils;
 import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
+import org.reflections.Configuration;
 import org.reflections.Reflections;
+import org.reflections.scanners.SubTypesScanner;
+import org.reflections.util.ConfigurationBuilder;
+import org.reflections.util.FilterBuilder;
 
 import javax.annotation.Nonnull;
 
@@ -506,7 +510,15 @@ public class SqlTestFrameworkConfig
         @Override
         public Set<Class<? extends QueryComponentSupplier>> load(String pkg)
         {
-          return new Reflections(pkg).getSubTypesOf(QueryComponentSupplier.class);
+          Configuration cfg = new ConfigurationBuilder()
+              .setScanners(new SubTypesScanner(true))
+              .setUrls(org.reflections.util.ClasspathHelper.forJavaClassPath())
+              .filterInputsBy(
+                  new FilterBuilder()
+                      .includePackage(pkg)
+                      .and(s -> s.contains("ComponentSupplier"))
+              );
+          return new Reflections(cfg).getSubTypesOf(QueryComponentSupplier.class);
         }
       });
 
