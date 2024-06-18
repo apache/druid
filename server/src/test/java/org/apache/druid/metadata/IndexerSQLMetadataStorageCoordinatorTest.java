@@ -3312,9 +3312,12 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     coordinator.commitSegments(ImmutableSet.of(usedSegmentForExactIntervalAndVersion), null);
 
 
-    List<DataSegment> unusedSegmentsForIntervalAndVersion =
-        coordinator.retrieveUnusedSegmentsForExactIntervalAndVersion(DS.WIKI, Intervals.of("2024/2025"), "v1");
-    Assert.assertEquals(1, unusedSegmentsForIntervalAndVersion.size());
-    Assert.assertEquals(unusedSegmentForExactIntervalAndVersion, unusedSegmentsForIntervalAndVersion.get(0));
+    List<String> unusedSegmentIdsForIntervalAndVersion =
+        coordinator.retrieveUnusedSegmentIdsForExactIntervalAndVersion(DS.WIKI, Intervals.of("2024/2025"), "v1");
+    Assert.assertEquals(1, unusedSegmentIdsForIntervalAndVersion.size());
+    Assert.assertEquals(
+        unusedSegmentForExactIntervalAndVersion.getId().toString(),
+        unusedSegmentIdsForIntervalAndVersion.get(0)
+    );
   }
 }
