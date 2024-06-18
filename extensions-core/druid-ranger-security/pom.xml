@@ -41,6 +41,12 @@
                 <artifactId>woodstox-core</artifactId>
                 <version>6.4.0</version>
             </dependency>
+            <!-- override the solrj dependency version to address: CVE-2023-50298 -->
+            <dependency>
+                <groupId>org.apache.solr</groupId>
+                <artifactId>solr-solrj</artifactId>
+                <version>8.11.3</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
