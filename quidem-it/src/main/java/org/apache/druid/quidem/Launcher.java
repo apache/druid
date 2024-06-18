@@ -19,6 +19,7 @@
 
 package org.apache.druid.quidem;
 
+import com.google.common.base.Stopwatch;
 import org.apache.druid.cli.GuiceRunnable;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -28,6 +29,7 @@ import org.apache.druid.sql.calcite.SqlTestFrameworkConfig.SqlTestFrameworkConfi
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
 
 import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 
 public class Launcher
 {
@@ -43,9 +45,7 @@ public class Launcher
   public Launcher(String uri) throws Exception
   {
     SqlTestFrameworkConfig config = SqlTestFrameworkConfig.fromURL(uri);
-    System.out.println("Config: " + config);
     configurationInstance = CONFIG_STORE.getConfigurationInstance(config);
-    System.out.println("Configuration instance: " + configurationInstance);
     framework = configurationInstance.framework;
   }
 
@@ -69,8 +69,11 @@ public class Launcher
       }
     }
     log.info("Starting Quidem with URI[%s]", quidemUri);
+    Stopwatch stopwatch = Stopwatch.createStarted();
     Launcher launcher = new Launcher(quidemUri);
+    log.info("Framework creation time: %d ms", stopwatch.elapsed(TimeUnit.MILLISECONDS));
     launcher.start();
+    log.info("Total time to launch: %d ms", stopwatch.elapsed(TimeUnit.MILLISECONDS));
     launcher.lifecycle.join();
   }
 }

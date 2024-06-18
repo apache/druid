@@ -331,6 +331,11 @@
             <artifactId>docker-java-core</artifactId>
         </dependency>
         <dependency>
+            <groupId>net.hydromatic</groupId>
+            <artifactId>quidem</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>io.netty</groupId>
             <artifactId>netty-transport-native-kqueue</artifactId>
             <classifier>osx-x86_64</classifier>
@@ -456,6 +461,11 @@
         <dependency>
             <groupId>org.apache.calcite.avatica</groupId>
             <artifactId>avatica-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.calcite</groupId>
+            <artifactId>calcite-testkit</artifactId>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>com.github.os72</groupId>

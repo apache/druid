@@ -68,7 +68,7 @@ public class QuidemCaptureResource
 
   private File genRecordFilePath()
   {
-    String fileName = StringUtils.format("record-%d.txt", System.currentTimeMillis());
+    String fileName = StringUtils.format("record-%d.iq", System.currentTimeMillis());
     return new File(RECORD_PATH, fileName);
   }
 

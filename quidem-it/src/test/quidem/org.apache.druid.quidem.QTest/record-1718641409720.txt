@@ -1,4 +1,0 @@
-#started
-!connect druidtest:///
-select * from numfoo;
-!ok

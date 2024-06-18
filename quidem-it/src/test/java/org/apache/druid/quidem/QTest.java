@@ -19,7 +19,10 @@
 
 package org.apache.druid.quidem;
 
+import org.junit.jupiter.api.Test;
+
 import java.io.File;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -28,16 +31,21 @@ public class QTest extends DruidQuidemTestBase
   public QTest()
   {
     super();
-
-    assertEquals(
-        QuidemCaptureResource.RECORD_PATH
-        , getTestRoot());
-
+    assertEquals(QuidemCaptureResource.RECORD_PATH, getTestRoot());
   }
 
   @Override
   protected File getTestRoot()
   {
     return ProjectPathUtils.getPathFromProjectRoot("quidem-it/src/test/quidem/" + getClass().getName());
+  }
+
+  @Test
+  public void aa() {
+
+    List<String> n = getFileNames();
+    for(String name : n) {
+      run(name);
+    }
   }
 }
