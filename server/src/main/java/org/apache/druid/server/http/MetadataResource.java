@@ -475,7 +475,7 @@ public class MetadataResource
   /**
    * @return all bootstrap segments determined by the coordinator.
    */
-  @GET
+  @POST
   @Path("/bootstrapSegments")
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(DatasourceResourceFilter.class)

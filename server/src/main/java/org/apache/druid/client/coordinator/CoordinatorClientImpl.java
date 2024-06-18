@@ -169,7 +169,7 @@ public class CoordinatorClientImpl implements CoordinatorClient
     final String path = "/druid/coordinator/v1/metadata/bootstrapSegments";
     return FutureUtils.transform(
         client.asyncRequest(
-            new RequestBuilder(HttpMethod.GET, path),
+            new RequestBuilder(HttpMethod.POST, path),
             new InputStreamResponseHandler()
         ),
         in -> new JsonParserIterator<>(
