@@ -22,16 +22,16 @@ package org.apache.druid.quidem;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
-import java.util.List;
+import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class QTest extends DruidQuidemTestBase
 {
   public QTest()
   {
     super();
-    assertEquals(QuidemCaptureResource.RECORD_PATH, getTestRoot());
   }
 
   @Override
@@ -41,11 +41,14 @@ public class QTest extends DruidQuidemTestBase
   }
 
   @Test
-  public void aa() {
-
-    List<String> n = getFileNames();
-    for(String name : n) {
-      run(name);
+  public void ensureNoRecordFilesPresent() throws IOException
+  {
+    // ensure that the captured ones are saved into this test's input path
+    assertEquals(QuidemCaptureResource.RECORD_PATH, getTestRoot());
+    for (String name : getFileNames()) {
+      if (name.startsWith("record-")) {
+        fail("Record file found: " + name);
+      }
     }
   }
 }

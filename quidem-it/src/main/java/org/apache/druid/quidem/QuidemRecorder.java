@@ -44,6 +44,7 @@ public class QuidemRecorder implements AutoCloseable, DruidHook<String>
     }
     printStream.println("#started " + new Date());
     printStream.println("!use " + quidemURI.toString());
+    printStream.println("!set outputformat mysql");
     DruidHook.register(DruidHook.SQL, this);
   }
 
