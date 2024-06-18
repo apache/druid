@@ -152,11 +152,7 @@ public class S3UploadManager
 
   private ExecutorService createExecutorService(int poolSize, int maxNumConcurrentChunks)
   {
-    return Execs.newBlockingThreaded(
-        "S3UploadThreadPool-%d",
-        poolSize,
-        maxNumConcurrentChunks
-    );
+    return Execs.newBlockingThreaded("S3UploadThreadPool-%d", poolSize, maxNumConcurrentChunks);
   }
 
   @LifecycleStart
