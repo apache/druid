@@ -160,7 +160,7 @@ public class S3StorageConnectorProviderTest
                     new S3OutputConfig("bucket", "prefix", EasyMock.mock(File.class), new HumanReadableBytes("5MiB"), 1),
                     new S3ExportConfig("tempDir", new HumanReadableBytes("5MiB"), 1, null),
                     new DruidProcessingConfigTest.MockRuntimeInfo(10, 0, 0),
-                    new StubServiceEmitter("service", "host"))
+                    new StubServiceEmitter())
             )
     );
 

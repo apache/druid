@@ -55,10 +55,12 @@ public class S3UploadManager
 
   // For metrics regarding uploadExecutor.
   private final AtomicInteger queueSize = new AtomicInteger(0);
+  private final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
+
+  // Metric related constants.
   private static final String METRIC_PREFIX = "s3upload/threadPool/";
   private static final String TASK_QUEUED_DURATION_METRIC = METRIC_PREFIX + "taskQueuedDuration";
-  private static final String NUM_TASKS_QUEUED = METRIC_PREFIX + "queuedTasks";
-  private final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
+  private static final String NUM_TASKS_QUEUED_METRIC = METRIC_PREFIX + "queuedTasks";
 
   @Inject
   public S3UploadManager(S3OutputConfig s3OutputConfig, S3ExportConfig s3ExportConfig, RuntimeInfo runtimeInfo, ServiceEmitter emitter)
@@ -100,7 +102,7 @@ public class S3UploadManager
       S3OutputConfig config
   )
   {
-    Stopwatch stopwatch = Stopwatch.createStarted();
+    final Stopwatch stopwatch = Stopwatch.createStarted();
     queueSize.incrementAndGet();
     return uploadExecutor.submit(() -> {
       emitMetrics(stopwatch.millisElapsed(), queueSize.decrementAndGet());
@@ -175,6 +177,6 @@ public class S3UploadManager
   private void emitMetrics(long taskQueuedDuration, int queueSize)
   {
     emitter.emit(builder.setMetric(TASK_QUEUED_DURATION_METRIC, taskQueuedDuration));
-    emitter.emit(builder.setMetric(NUM_TASKS_QUEUED, queueSize));
+    emitter.emit(builder.setMetric(NUM_TASKS_QUEUED_METRIC, queueSize));
   }
 }

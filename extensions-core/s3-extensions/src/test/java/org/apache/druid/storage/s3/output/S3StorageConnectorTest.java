@@ -92,7 +92,7 @@ public class S3StorageConnectorTest
           s3OutputConfig,
           new S3ExportConfig("tempDir", new HumanReadableBytes("5MiB"), 1, null),
           new DruidProcessingConfigTest.MockRuntimeInfo(10, 0, 0),
-          new StubServiceEmitter("service", "host")));
+          new StubServiceEmitter()));
     }
     catch (IOException e) {
       throw new RuntimeException(e);
