@@ -324,8 +324,8 @@ public class DruidCoordinator
   }
 
   /**
-   * @return the set of broadcast segments. If the coordinator hasn't initialized fully, a retriable exception
-   * will be thrown.
+   * @return the set of broadcast segments. If the coordinator hasn't initialized fully and run a cycle of the historical
+   * duties, a retryable exception will be thrown.
    */
   public Set<DataSegment> getBroadcastSegments()
   {

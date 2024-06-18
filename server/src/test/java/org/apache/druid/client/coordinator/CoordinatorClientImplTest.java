@@ -203,7 +203,7 @@ public class CoordinatorClientImplTest
     final List<DataSegment> segments = ImmutableList.of(segment1, segment2);
 
     serviceClient.expectAndRespond(
-        new RequestBuilder(HttpMethod.GET, "/druid/coordinator/v1/metadata/bootstrapSegments"),
+        new RequestBuilder(HttpMethod.POST, "/druid/coordinator/v1/metadata/bootstrapSegments"),
         HttpResponseStatus.OK,
         ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
         jsonMapper.writeValueAsBytes(segments)
@@ -221,7 +221,7 @@ public class CoordinatorClientImplTest
     final List<DataSegment> segments = ImmutableList.of();
 
     serviceClient.expectAndRespond(
-        new RequestBuilder(HttpMethod.GET, "/druid/coordinator/v1/metadata/bootstrapSegments"),
+        new RequestBuilder(HttpMethod.POST, "/druid/coordinator/v1/metadata/bootstrapSegments"),
         HttpResponseStatus.OK,
         ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
         jsonMapper.writeValueAsBytes(segments)

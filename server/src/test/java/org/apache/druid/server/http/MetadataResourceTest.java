@@ -487,17 +487,7 @@ public class MetadataResourceTest
   }
 
   @Test
-  public void testGetBootstrapSegmentsWithEmptySet()
-  {
-    Mockito.doReturn(ImmutableSet.of()).when(coordinator).getBroadcastSegments();
-
-    Response response = metadataResource.getBootstrapSegments();
-    final List<DataSegment> observedSegments = extractResponseList(response);
-    Assert.assertEquals(0, observedSegments.size());
-  }
-
-  @Test
-  public void testGetBootstrapSegmentsWithNonEmptySet()
+  public void testGetBootstrapSegments()
   {
     Mockito.doReturn(ImmutableSet.of(segments[0], segments[1])).when(coordinator).getBroadcastSegments();
 
@@ -507,7 +497,17 @@ public class MetadataResourceTest
   }
 
   @Test
-  public void testGetBootstrapSegmentsWithNullSet()
+  public void testEmptyGetBootstrapSegments()
+  {
+    Mockito.doReturn(ImmutableSet.of()).when(coordinator).getBroadcastSegments();
+
+    Response response = metadataResource.getBootstrapSegments();
+    final List<DataSegment> observedSegments = extractResponseList(response);
+    Assert.assertEquals(0, observedSegments.size());
+  }
+
+  @Test
+  public void testGetBootstrapSegmentsWhenCoordinatorIsUninitialized()
   {
     Mockito.doThrow(DruidException.forPersona(DruidException.Persona.OPERATOR)
                                   .ofCategory(DruidException.Category.UNAVAILABLE)

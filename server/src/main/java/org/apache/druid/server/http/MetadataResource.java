@@ -482,7 +482,7 @@ public class MetadataResource
   public Response getBootstrapSegments()
   {
     try {
-      Set<DataSegment> broadcastSegments = coordinator.getBroadcastSegments();
+      final Set<DataSegment> broadcastSegments = coordinator.getBroadcastSegments();
       return Response.status(Response.Status.OK).entity(broadcastSegments).build();
     }
     catch (DruidException e) {
