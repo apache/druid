@@ -228,9 +228,9 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
    */
   private void loadSegmentsOnStartup() throws IOException
   {
-    final List<DataSegment> startupSegments = new ArrayList<>();
-    startupSegments.addAll(segmentManager.getCachedSegments());
-    startupSegments.addAll(getBootstrapSegments());
+    final List<DataSegment> segmentsOnStartup = new ArrayList<>();
+    segmentsOnStartup.addAll(segmentManager.getCachedSegments());
+    segmentsOnStartup.addAll(getBootstrapSegments());
 
     final Stopwatch stopwatch = Stopwatch.createStarted();
 
@@ -244,11 +244,11 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
 
       backgroundSegmentAnnouncer.startAnnouncing();
 
-      final int numSegments = startupSegments.size();
+      final int numSegments = segmentsOnStartup.size();
       final CountDownLatch latch = new CountDownLatch(numSegments);
       final AtomicInteger counter = new AtomicInteger(0);
       final CopyOnWriteArrayList<DataSegment> failedSegments = new CopyOnWriteArrayList<>();
-      for (final DataSegment segment : startupSegments) {
+      for (final DataSegment segment : segmentsOnStartup) {
         loadingExecutor.submit(
             () -> {
               try {
@@ -302,8 +302,8 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
       backgroundSegmentAnnouncer.finishAnnouncing();
     }
     catch (SegmentLoadingException e) {
-      log.makeAlert(e, "Failed to load startup segments -- likely problem with announcing.")
-         .addData("numSegments", startupSegments.size())
+      log.makeAlert(e, "Failed to load segments on startup -- likely problem with announcing.")
+         .addData("numSegments", segmentsOnStartup.size())
          .emit();
     }
     finally {
@@ -312,7 +312,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
       // At this stage, all tasks have been submitted, send a shutdown command to cleanup any resources alloted
       // for the bootstrapping function.
       segmentManager.shutdownBootstrap();
-      log.info("Cache load of [%d] startup segments took [%,d]ms.", startupSegments.size(), stopwatch.millisElapsed());
+      log.info("Loaded [%d] segments on startup in [%,d]ms.", segmentsOnStartup.size(), stopwatch.millisElapsed());
     }
   }
 

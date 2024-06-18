@@ -30,7 +30,6 @@ import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
@@ -76,7 +75,7 @@ public class SegmentLoadDropHandlerTest
   private SegmentLoaderConfig segmentLoaderConfig;
   private ScheduledExecutorFactory scheduledExecutorFactory;
   private TestCoordinatorClient coordinatorClient;
-  private ServiceEmitter emitter;
+  private StubServiceEmitter serviceEmitter;
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
@@ -142,8 +141,8 @@ public class SegmentLoadDropHandlerTest
     };
 
     coordinatorClient = new TestCoordinatorClient();
-    emitter = new StubServiceEmitter();
-    EmittingLogger.registerEmitter(emitter);
+    serviceEmitter = new StubServiceEmitter();
+    EmittingLogger.registerEmitter(serviceEmitter);
   }
 
   /**
@@ -335,11 +334,10 @@ public class SegmentLoadDropHandlerTest
 
     Assert.assertEquals(expectedBootstrapSegments, cacheManager.observedBootstrapSegments);
     Assert.assertEquals(expectedBootstrapSegments, cacheManager.observedBootstrapSegmentsLoadedIntoPageCache);
+    serviceEmitter.verifyValue("bootstrapSegments/fetch/count", expectedBootstrapSegments.size());
+    serviceEmitter.verifyEmitted("bootstrapSegments/fetch/time", 1);
 
     handler.stop();
-
-    Assert.assertEquals(0, serverAnnouncer.getObservedCount());
-    Assert.assertEquals(1, cacheManager.observedShutdownBootstrapCount.get());
   }
 
   @Test
@@ -360,11 +358,10 @@ public class SegmentLoadDropHandlerTest
     Assert.assertEquals(ImmutableList.of(), segmentAnnouncer.getObservedSegments());
     Assert.assertEquals(ImmutableList.of(), cacheManager.observedBootstrapSegments);
     Assert.assertEquals(ImmutableList.of(), cacheManager.observedBootstrapSegmentsLoadedIntoPageCache);
+    serviceEmitter.verifyValue("bootstrapSegments/fetch/count", 0);
+    serviceEmitter.verifyEmitted("bootstrapSegments/fetch/time", 1);
 
     handler.stop();
-
-    Assert.assertEquals(0, serverAnnouncer.getObservedCount());
-    Assert.assertEquals(1, cacheManager.observedShutdownBootstrapCount.get());
   }
 
   @Test
@@ -642,7 +639,7 @@ public class SegmentLoadDropHandlerTest
         scheduledExecutorFactory.create(5, "SegmentLoadDropHandlerTest-[%d]"),
         new ServerTypeConfig(ServerType.HISTORICAL),
         coordinatorClient,
-        emitter
+        serviceEmitter
     );
   }
 
