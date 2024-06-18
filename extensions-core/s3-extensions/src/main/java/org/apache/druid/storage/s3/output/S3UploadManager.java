@@ -48,6 +48,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 @ManageLifecycle
 public class S3UploadManager
 {
+  // Metric related constants.
+  private static final String METRIC_PREFIX = "s3upload/chunk/";
+  private static final String TASK_QUEUED_DURATION_METRIC = METRIC_PREFIX + "queuedTime";
+  private static final String NUM_TASKS_QUEUED_METRIC = METRIC_PREFIX + "queueSize";
+  private static final String TASK_DURATION_METRIC = METRIC_PREFIX + "uploadTime";
+
   private final ExecutorService uploadExecutor;
   private final ServiceEmitter emitter;
 
@@ -55,12 +61,7 @@ public class S3UploadManager
 
   // For metrics regarding uploadExecutor.
   private final AtomicInteger queueSize = new AtomicInteger(0);
-
-  // Metric related constants.
-  private static final String METRIC_PREFIX = "s3upload/threadPool/";
-  private static final String TASK_QUEUED_DURATION_METRIC = METRIC_PREFIX + "taskQueuedDuration";
-  private static final String NUM_TASKS_QUEUED_METRIC = METRIC_PREFIX + "queuedTasks";
-  private static final String TASK_DURATION_METRIC = METRIC_PREFIX + "taskDuration";
+  private final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
 
   @Inject
   public S3UploadManager(S3OutputConfig s3OutputConfig, S3ExportConfig s3ExportConfig, RuntimeInfo runtimeInfo, ServiceEmitter emitter)
@@ -102,13 +103,15 @@ public class S3UploadManager
       S3OutputConfig config
   )
   {
-    final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
-    final Stopwatch taskQueuedStopwatch = Stopwatch.createStarted();
+    final ServiceMetricEvent.Builder taskMetricBuilder = new ServiceMetricEvent.Builder()
+        .setDimension("uploadId", uploadId)
+        .setDimension("partNumber", chunkNumber);
+    final Stopwatch stopwatch = Stopwatch.createStarted();
     queueSize.incrementAndGet();
     return uploadExecutor.submit(() -> {
-      emitter.emit(builder.setMetric(TASK_QUEUED_DURATION_METRIC, taskQueuedStopwatch.millisElapsed()));
-      emitter.emit(builder.setMetric(NUM_TASKS_QUEUED_METRIC, queueSize.decrementAndGet()));
-      final Stopwatch taskDurationStopwatch = Stopwatch.createStarted();
+      emitMetric(taskMetricBuilder.setMetric(TASK_QUEUED_DURATION_METRIC, stopwatch.millisElapsed()));
+      emitMetric(builder.setMetric(NUM_TASKS_QUEUED_METRIC, queueSize.decrementAndGet()));
+      stopwatch.restart();
       return RetryUtils.retry(
           () -> {
             log.debug("Uploading chunk[%d] for uploadId[%s].", chunkNumber, uploadId);
@@ -123,9 +126,7 @@ public class S3UploadManager
             if (!chunkFile.delete()) {
               log.warn("Failed to delete chunk [%s]", chunkFile.getAbsolutePath());
             }
-            emitter.emit(builder.setMetric(TASK_DURATION_METRIC, taskDurationStopwatch.millisElapsed())
-                                .setDimension("uploadId", uploadId)
-                                .setDimension("partNumber", chunkNumber));
+            emitMetric(taskMetricBuilder.setMetric(TASK_DURATION_METRIC, stopwatch.millisElapsed()));
             return uploadPartResult;
           },
           S3Utils.S3RETRY,
@@ -173,5 +174,10 @@ public class S3UploadManager
   public void stop()
   {
     uploadExecutor.shutdown();
+  }
+
+  protected void emitMetric(ServiceMetricEvent.Builder builder)
+  {
+    emitter.emit(builder);
   }
 }

@@ -32,6 +32,7 @@ import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.storage.s3.S3Utils;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 
@@ -69,6 +70,11 @@ import java.util.concurrent.TimeUnit;
  */
 public class RetryableS3OutputStream extends OutputStream
 {
+  // Metric related constants.
+  private static final String METRIC_PREFIX = "s3upload/job/";
+  private static final String JOB_TOTAL_TIME_METRIC = METRIC_PREFIX + "totalTime";
+  private static final String JOB_TOTAL_BYTES_METRIC = METRIC_PREFIX + "totalBytes";
+
   private static final Logger LOG = new Logger(RetryableS3OutputStream.class);
 
   private final S3OutputConfig config;
@@ -208,16 +214,20 @@ public class RetryableS3OutputStream extends OutputStream
       org.apache.commons.io.FileUtils.forceDelete(chunkStorePath);
       LOG.info("Deleted chunkStorePath[%s]", chunkStorePath);
 
-      // This should be emitted as a metric
-      long totalChunkSize = (currentChunk.id - 1) * chunkSize + currentChunk.length();
+      final long totalChunkSize = (currentChunk.id - 1) * chunkSize + currentChunk.length();
+      final long timeElapsed = pushStopwatch.elapsed(TimeUnit.MILLISECONDS);
       LOG.info(
           "Pushed total [%d] parts containing [%d] bytes in [%d]ms for s3Key[%s], uploadId[%s].",
           futures.size(),
           totalChunkSize,
-          pushStopwatch.elapsed(TimeUnit.MILLISECONDS),
+          timeElapsed,
           s3Key,
           uploadId
       );
+
+      final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder().setDimension("uploadId", uploadId);
+      uploadManager.emitMetric(builder.setMetric(JOB_TOTAL_TIME_METRIC, timeElapsed));
+      uploadManager.emitMetric(builder.setMetric(JOB_TOTAL_BYTES_METRIC, totalChunkSize));
     });
 
     try (Closer ignored = closer) {

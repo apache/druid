@@ -298,9 +298,11 @@ If the JVM does not support CPU time measurement for the current thread, `ingest
 |`worker/task/assigned/count`|Number of tasks assigned to an indexer per emission period. This metric is only available if the `WorkerTaskCountStatsMonitor` module is included.|`dataSource`|Varies|
 |`worker/task/completed/count`|Number of tasks completed by an indexer per emission period. This metric is only available if the `WorkerTaskCountStatsMonitor` module is included.|`dataSource`|Varies|
 |`worker/task/running/count`|Number of tasks running on an indexer per emission period. This metric is only available if the `WorkerTaskCountStatsMonitor` module is included.|`dataSource`|Varies|
-|`s3upload/threadPool/taskQueuedDuration`|Milliseconds spent by a task in queue before it starts uploading a part to S3 (in a multi-part upload) when durable storage is enabled.||Varies|
-|`s3upload/threadPool/queuedTasks`|The number of tasks that are currently queued and waiting to upload a part to S3 (in a multi-part upload) when durable storage is enabled.||Varies|
-|`s3upload/threadPool/taskDuration`|The time taken in milliseconds to upload a part to S3 (in a multi-part upload) when durable storage is enabled.|`uploadId`, `partNumber`|Varies|
+|`s3upload/chunk/queueSize`|The number of tasks that are currently queued and waiting to upload a part to S3 (in a multi-part upload) when durable storage is enabled.||Varies|
+|`s3upload/chunk/queuedTime`|Milliseconds spent by a task in queue before it starts uploading a part to S3 (in a multi-part upload) when durable storage is enabled.|`uploadId`, `partNumber`|Varies|
+|`s3upload/chunk/uploadTime`|The time taken in milliseconds to upload a part to S3 (in a multi-part upload) when durable storage is enabled.|`uploadId`, `partNumber`|Varies|
+|`s3upload/job/totalTime`|The total time taken in milliseconds for uploading all parts of a file to S3 when durable storage is enabled.|`uploadId`|Varies|
+|`s3upload/job/totalBytes`|The total number of bytes uploaded across all parts of a file to S3 when durable storage is enabled.|`uploadId`|Varies|
 
 ## Shuffle metrics (Native parallel task)
 
