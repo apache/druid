@@ -84,7 +84,7 @@ public interface DruidHook<T>
     GLOBAL.get(key).remove(hook);
   }
 
-  public static <T> Closeable  withHook(HookKey<T> key, DruidHook<T> hook)
+  static <T> Closeable withHook(HookKey<T> key, DruidHook<T> hook)
   {
     register(key, hook);
     return new Closeable()
@@ -97,7 +97,7 @@ public interface DruidHook<T>
     };
   }
 
-  public static <T> void dispatch(HookKey<T> key, T object)
+  static <T> void dispatch(HookKey<T> key, T object)
   {
     List<DruidHook<?>> hooks = GLOBAL.get(key);
     if (hooks != null) {

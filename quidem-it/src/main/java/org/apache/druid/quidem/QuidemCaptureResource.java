@@ -22,8 +22,6 @@ package org.apache.druid.quidem;
 import com.google.inject.Inject;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
-
 import javax.inject.Named;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
@@ -46,18 +44,6 @@ public class QuidemCaptureResource
   public QuidemCaptureResource(@Named("quidem") URI quidemURI)
   {
     this.quidemURI = quidemURI;
-  }
-
-  @LifecycleStart
-  public void autostart() {
-    if (withAutoStart()) {
-      start();
-    }
-  }
-
-  private boolean withAutoStart()
-  {
-    return Boolean.valueOf(System.getProperty("quidem.record.autostart", "false"));
   }
 
   @GET

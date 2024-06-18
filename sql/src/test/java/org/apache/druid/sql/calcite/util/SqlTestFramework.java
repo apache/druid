@@ -187,7 +187,8 @@ public class SqlTestFramework
     {
     }
 
-    default void configureGuice(CoreInjectorBuilder injectorBuilder, List<Module> overrideModules) {
+    default void configureGuice(CoreInjectorBuilder injectorBuilder, List<Module> overrideModules)
+    {
       configureGuice(injectorBuilder);
     }
   }
@@ -615,9 +616,9 @@ public class SqlTestFramework
         final AuthConfig authConfig,
         final ViewManager viewManager,
         QueryRunnerFactoryConglomerate conglomerate,
-        QuerySegmentWalker  walker
-
-        ) {
+        QuerySegmentWalker walker
+    )
+    {
       final DruidSchemaCatalog rootSchema = QueryFrameworkUtils.createMockRootSchema(
           injector,
           conglomerate,
@@ -667,8 +668,7 @@ public class SqlTestFramework
         // Ignore load scopes. This is a unit test, not a Druid node. If a
         // test pulls in a module, then pull in that module, even though we are
         // not the Druid node to which the module is scoped.
-        .ignoreLoadScopes()
-        ;
+        .ignoreLoadScopes();
 
     List<Module> overrideModules = new ArrayList<>(builder.overrideModules);
     overrideModules.add(new LookylooModule());

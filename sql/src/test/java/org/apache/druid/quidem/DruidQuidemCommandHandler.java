@@ -170,7 +170,9 @@ public class DruidQuidemCommandHandler implements CommandHandler
     protected final void executeExplain(Context x) throws IOException
     {
       List<RelNode> logged = new ArrayList<>();
-      try (Closeable unhook = DruidHook.withHook(hook, (key, relNode) -> { logged.add(relNode);})) {
+      try (Closeable unhook = DruidHook.withHook(hook, (key, relNode) -> {
+        logged.add(relNode);
+      })) {
         executeQuery(x);
       }
 
