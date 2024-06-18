@@ -331,6 +331,34 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   }
 
   @Test
+  public void testDuplicatePendingSegmentEntriesAreNotInserted()
+  {
+    final PendingSegmentRecord pendingSegment0 = new PendingSegmentRecord(
+        new SegmentIdWithShardSpec("foo", Intervals.ETERNITY, "version", new NumberedShardSpec(0, 0)),
+        "sequenceName0",
+        "sequencePrevId0",
+        null,
+        "taskAllocatorId"
+    );
+    final PendingSegmentRecord pendingSegment1 = new PendingSegmentRecord(
+        new SegmentIdWithShardSpec("foo", Intervals.ETERNITY, "version", new NumberedShardSpec(1, 0)),
+        "sequenceName1",
+        "sequencePrevId1",
+        null,
+        "taskAllocatorId"
+    );
+    final int actualInserted = derbyConnector.retryWithHandle(
+        handle -> coordinator.insertPendingSegmentsIntoMetastore(
+            handle,
+            ImmutableList.of(pendingSegment0, pendingSegment0, pendingSegment1, pendingSegment1, pendingSegment1),
+            "foo",
+            true
+        )
+    );
+    Assert.assertEquals(2, actualInserted);
+  }
+
+  @Test
   public void testSimpleAnnounce() throws IOException
   {
     coordinator.commitSegments(SEGMENTS, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
