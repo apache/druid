@@ -111,10 +111,10 @@ public class ScanResultValueFramesIterableTest extends InitializedNullHandlingTe
     Assert.assertEquals(1, frames.size());
     QueryToolChestTestHelper.assertArrayResultsEquals(
         ImmutableList.of(
-            new Object[]{1L, 1.0D},
-            new Object[]{2L, 2.0D},
-            new Object[]{1L, 1.0D},
-            new Object[]{2L, 2.0D}
+            new Object[]{1000L, 1100.0D},
+            new Object[]{1001L, 1101.0D},
+            new Object[]{1000L, 1100.0D},
+            new Object[]{1001L, 1101.0D}
         ),
         new FrameBasedInlineDataSource(frames, SIGNATURE1).getRowsAsSequence()
     );
@@ -167,10 +167,10 @@ public class ScanResultValueFramesIterableTest extends InitializedNullHandlingTe
       Assert.assertEquals(1, frames.size());
       QueryToolChestTestHelper.assertArrayResultsEquals(
           ImmutableList.of(
-              new Object[]{1L, 1.0D},
-              new Object[]{2L, 2.0D},
-              new Object[]{1L, 1.0D},
-              new Object[]{2L, 2.0D}
+              new Object[]{1000L, 1100.0D},
+              new Object[]{1001L, 1101.0D},
+              new Object[]{1000L, 1100.0D},
+              new Object[]{1001L, 1101.0D}
           ),
           new FrameBasedInlineDataSource(frames, SIGNATURE1).getRowsAsSequence()
       );
@@ -191,17 +191,17 @@ public class ScanResultValueFramesIterableTest extends InitializedNullHandlingTe
     Assert.assertEquals(2, frames.size());
     QueryToolChestTestHelper.assertArrayResultsEquals(
         ImmutableList.of(
-            new Object[]{1L, 1.0D},
-            new Object[]{2L, 2.0D}
+            new Object[]{1000L, 1100.0D},
+            new Object[]{1001L, 1101.0D}
         ),
-        new FrameBasedInlineDataSource(Collections.singletonList(frames.get(0)), SIGNATURE1).getRowsAsSequence()
+        new FrameBasedInlineDataSource(frames.subList(0, 1), SIGNATURE1).getRowsAsSequence()
     );
     QueryToolChestTestHelper.assertArrayResultsEquals(
         ImmutableList.of(
-            new Object[]{3.0D, 3L},
-            new Object[]{4.0D, 4L}
+            new Object[]{2000.0D, 2100L},
+            new Object[]{2001.0D, 2101L}
         ),
-        new FrameBasedInlineDataSource(Collections.singletonList(frames.get(1)), SIGNATURE2).getRowsAsSequence()
+        new FrameBasedInlineDataSource(frames.subList(1, 2), SIGNATURE2).getRowsAsSequence()
     );
   }
 
@@ -217,17 +217,17 @@ public class ScanResultValueFramesIterableTest extends InitializedNullHandlingTe
     Assert.assertEquals(2, frames.size());
     QueryToolChestTestHelper.assertArrayResultsEquals(
         ImmutableList.of(
-            new Object[]{1L, 1.0D},
-            new Object[]{2L, 2.0D}
+            new Object[]{1000L, 1100.0D},
+            new Object[]{1001L, 1101.0D}
         ),
-        new FrameBasedInlineDataSource(Collections.singletonList(frames.get(0)), SIGNATURE1).getRowsAsSequence()
+        new FrameBasedInlineDataSource(frames.subList(0, 1), SIGNATURE1).getRowsAsSequence()
     );
     QueryToolChestTestHelper.assertArrayResultsEquals(
         ImmutableList.of(
-            new Object[]{5.0D, 5L},
-            new Object[]{6.0D, 6L}
+            new Object[]{3000.0D, 3100L},
+            new Object[]{3001.0D, 3101L}
         ),
-        new FrameBasedInlineDataSource(Collections.singletonList(frames.get(1)), SIGNATURE2).getRowsAsSequence()
+        new FrameBasedInlineDataSource(frames.subList(1, 2), SIGNATURE2).getRowsAsSequence()
     );
   }
 
@@ -248,17 +248,17 @@ public class ScanResultValueFramesIterableTest extends InitializedNullHandlingTe
     Assert.assertEquals(2, frames.size());
     QueryToolChestTestHelper.assertArrayResultsEquals(
         ImmutableList.of(
-            new Object[]{1L, 1.0D},
-            new Object[]{2L, 2.0D}
+            new Object[]{1000L, 1100.0D},
+            new Object[]{1001L, 1101.0D}
         ),
-        new FrameBasedInlineDataSource(Collections.singletonList(frames.get(0)), SIGNATURE1).getRowsAsSequence()
+        new FrameBasedInlineDataSource(frames.subList(0, 1), SIGNATURE1).getRowsAsSequence()
     );
     QueryToolChestTestHelper.assertArrayResultsEquals(
         ImmutableList.of(
-            new Object[]{3.0D, 3L},
-            new Object[]{4.0D, 4L}
+            new Object[]{2000.0D, 2100L},
+            new Object[]{2001.0D, 2101L}
         ),
-        new FrameBasedInlineDataSource(Collections.singletonList(frames.get(1)), SIGNATURE2).getRowsAsSequence()
+        new FrameBasedInlineDataSource(frames.subList(1, 2), SIGNATURE2).getRowsAsSequence()
     );
   }
 
@@ -279,17 +279,17 @@ public class ScanResultValueFramesIterableTest extends InitializedNullHandlingTe
     Assert.assertEquals(2, frames.size());
     QueryToolChestTestHelper.assertArrayResultsEquals(
         ImmutableList.of(
-            new Object[]{1L, 1.0D},
-            new Object[]{2L, 2.0D}
+            new Object[]{1000L, 1100.0D},
+            new Object[]{1001L, 1101.0D}
         ),
-        new FrameBasedInlineDataSource(Collections.singletonList(frames.get(0)), SIGNATURE1).getRowsAsSequence()
+        new FrameBasedInlineDataSource(frames.subList(0, 1), SIGNATURE1).getRowsAsSequence()
     );
     QueryToolChestTestHelper.assertArrayResultsEquals(
         ImmutableList.of(
-            new Object[]{3.0D, 3L},
-            new Object[]{4.0D, 4L}
+            new Object[]{2000.0D, 2100L},
+            new Object[]{2001.0D, 2101L}
         ),
-        new FrameBasedInlineDataSource(Collections.singletonList(frames.get(1)), SIGNATURE2).getRowsAsSequence()
+        new FrameBasedInlineDataSource(frames.subList(1, 2), SIGNATURE2).getRowsAsSequence()
     );
   }
 
@@ -310,12 +310,12 @@ public class ScanResultValueFramesIterableTest extends InitializedNullHandlingTe
     Assert.assertEquals(1, frames.size());
     QueryToolChestTestHelper.assertArrayResultsEquals(
         ImmutableList.of(
-            new Object[]{5.0D, 5L},
-            new Object[]{6.0D, 6L},
-            new Object[]{7.0D, 7L},
-            new Object[]{8.0D, 8L}
+            new Object[]{3000.0D, 3100L},
+            new Object[]{3001.0D, 3101L},
+            new Object[]{4000.0D, 4100L},
+            new Object[]{4001.0D, 4101L}
         ),
-        new FrameBasedInlineDataSource(Collections.singletonList(frames.get(0)), SIGNATURE2).getRowsAsSequence()
+        new FrameBasedInlineDataSource(frames, SIGNATURE2).getRowsAsSequence()
     );
   }
 
@@ -357,7 +357,9 @@ public class ScanResultValueFramesIterableTest extends InitializedNullHandlingTe
     return new ScanResultValue(
         "dummy",
         ImmutableList.of("col1", "col2"),
-        IntStream.range(1, 1 + numRows).mapToObj(i -> new Object[]{i, (double) i}).collect(Collectors.toList()),
+        IntStream.range(1000, 1000 + numRows)
+                 .mapToObj(i -> new Object[]{i, (double) i + 100})
+                 .collect(Collectors.toList()),
         SIGNATURE1
     );
   }
@@ -368,7 +370,9 @@ public class ScanResultValueFramesIterableTest extends InitializedNullHandlingTe
     return new ScanResultValue(
         "dummy",
         ImmutableList.of("col1", "col2"),
-        IntStream.range(3, 3 + numRows).mapToObj(i -> new Object[]{(double) i, i}).collect(Collectors.toList()),
+        IntStream.range(2000, 2000 + numRows)
+                 .mapToObj(i -> new Object[]{(double) i, i + 100})
+                 .collect(Collectors.toList()),
         SIGNATURE2
     );
   }
@@ -379,7 +383,9 @@ public class ScanResultValueFramesIterableTest extends InitializedNullHandlingTe
     return new ScanResultValue(
         "dummy",
         ImmutableList.of("col1", "col2", "col3"),
-        IntStream.range(5, 5 + numRows).mapToObj(i -> new Object[]{(double) i, i, null}).collect(Collectors.toList()),
+        IntStream.range(3000, 3000 + numRows)
+                 .mapToObj(i -> new Object[]{(double) i, i + 100, null})
+                 .collect(Collectors.toList()),
         SIGNATURE3
     );
   }
@@ -390,7 +396,9 @@ public class ScanResultValueFramesIterableTest extends InitializedNullHandlingTe
     return new ScanResultValue(
         "dummy",
         ImmutableList.of("col1", "col3", "col2"),
-        IntStream.range(7, 7 + numRows).mapToObj(i -> new Object[]{(double) i, null, i}).collect(Collectors.toList()),
+        IntStream.range(4000, 4000 + numRows)
+                 .mapToObj(i -> new Object[]{(double) i, null, i + 100})
+                 .collect(Collectors.toList()),
         SIGNATURE4
     );
   }
@@ -401,7 +409,9 @@ public class ScanResultValueFramesIterableTest extends InitializedNullHandlingTe
     return new ScanResultValue(
         "dummy",
         ImmutableList.of("col1", "col3", "col2"),
-        IntStream.range(7, 7 + numRows).mapToObj(i -> new Object[]{(double) i, i, i}).collect(Collectors.toList()),
+        IntStream.range(5000, 5000 + numRows)
+                 .mapToObj(i -> new Object[]{(double) i, i + 100, i + 200})
+                 .collect(Collectors.toList()),
         SIGNATURE4
     );
   }

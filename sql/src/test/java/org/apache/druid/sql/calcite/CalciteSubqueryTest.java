@@ -1392,7 +1392,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   {
 
     private final TempDirProducer tmpDirProducer;
-    
+
     public SubqueryComponentSupplier(TempDirProducer tempDirProducer)
     {
       super(tempDirProducer);
