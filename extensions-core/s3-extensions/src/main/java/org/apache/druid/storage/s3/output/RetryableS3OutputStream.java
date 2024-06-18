@@ -211,10 +211,12 @@ public class RetryableS3OutputStream extends OutputStream
       // This should be emitted as a metric
       long totalChunkSize = (currentChunk.id - 1) * chunkSize + currentChunk.length();
       LOG.info(
-          "Pushed total [%d] parts containing [%d] bytes in [%d]ms.",
+          "Pushed total [%d] parts containing [%d] bytes in [%d]ms for s3Key[%s], uploadId[%s].",
           futures.size(),
           totalChunkSize,
-          pushStopwatch.elapsed(TimeUnit.MILLISECONDS)
+          pushStopwatch.elapsed(TimeUnit.MILLISECONDS),
+          s3Key,
+          uploadId
       );
     });
 
