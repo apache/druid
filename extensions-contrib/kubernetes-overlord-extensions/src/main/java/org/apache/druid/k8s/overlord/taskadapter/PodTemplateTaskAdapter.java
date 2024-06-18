@@ -141,10 +141,6 @@ public class PodTemplateTaskAdapter implements TaskAdapter
 
     PodTemplate podTemplate = podTemplateSelectStrategy.getPodTemplateForTask(task, templates);
 
-    if (podTemplate == null) {
-      throw new ISE("Pod template spec not found for task type [%s]", task.getType());
-    }
-
     return new JobBuilder()
         .withNewMetadata()
         .withName(new K8sTaskId(task).getK8sJobName())
