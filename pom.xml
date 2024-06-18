@@ -180,7 +180,6 @@
         <module>extensions-core/druid-bloom-filter</module>
         <module>extensions-core/druid-kerberos</module>
         <module>extensions-core/druid-pac4j</module>
-        <module>extensions-core/druid-pac4j-v5</module>
         <module>extensions-core/hdfs-storage</module>
         <module>extensions-core/histogram</module>
         <module>extensions-core/stats</module>
@@ -1937,6 +1936,9 @@
                     -Djava.security.manager=allow
                 </jdk.security.manager.allow.argLine>
             </properties>
+            <modules>
+                <module>extensions-core/druid-pac4j-v5</module>
+            </modules>
         </profile>
         <profile>
             <id>java-9+</id>
@@ -1985,6 +1987,9 @@
                     </plugin>
                 </plugins>
             </build>
+            <modules>
+                <module>extensions-core/druid-pac4j-v5</module>
+            </modules>
           </profile>
           <profile>
             <id>strict</id>
