@@ -256,7 +256,9 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   )
   {
     final String sql = "SELECT id FROM %1$s"
-                       + " WHERE used = :used AND dataSource = :dataSource AND version = :version"
+                       + " WHERE used = :used"
+                       + " AND dataSource = :dataSource"
+                       + " AND version = :version"
                        + " AND start = :start AND %2$send%2$s = :end";
 
     final List<String> matchingSegments = connector.inReadOnlyTransaction(
