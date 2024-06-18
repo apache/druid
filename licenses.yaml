@@ -149,6 +149,16 @@ source_paths:
 
 ---
 
+name: code adapted from Apache Knox KnoxSessionStore and ConfigurableEncryptor
+license_category: source
+module: extensions/druid-pac4j-v5
+license_name: Apache License version 2.0
+source_paths:
+  - extensions-core/druid-pac4j-v5/src/main/java/org/apache/druid/security/pac4j/Pac4jSessionStore.java
+  - processing/src/main/java/org/apache/druid/crypto/CryptoService.java
+
+---
+
 name: Code adopted from org.apache.commons.dbcp2.BasicDataSource
 license_category: source
 module: server
@@ -784,6 +794,17 @@ libraries:
 
 ---
 
+
+name: pac4j-oidc java security library
+license_category: binary
+module: extensions/druid-pac4j-v5
+license_name: Apache License version 2.0
+version: 5.7.3
+libraries:
+  - org.pac4j: pac4j-oidc
+
+---
+
 name: pac4j-core java security library
 license_category: binary
 module: extensions/druid-pac4j
@@ -794,10 +815,20 @@ libraries:
 
 ---
 
+name: pac4j-core java security library
+license_category: binary
+module: extensions/druid-pac4j-v5
+license_name: Apache License version 2.0
+version: 5.7.3
+libraries:
+  - org.pac4j: pac4j-core
+
+---
 
 name: com.nimbusds lang-tag
 license_category: binary
 module: extensions/druid-pac4j
+module: extensions/druid-pac4j-v5
 license_name: Apache License version 2.0
 version: 1.7
 libraries:
@@ -809,6 +840,16 @@ name: com.nimbusds nimbus-jose-jwt
 license_category: binary
 module: extensions/druid-pac4j
 license_name: Apache License version 2.0
+version: 8.22.1
+libraries:
+  - com.nimbusds: nimbus-jose-jwt
+
+---
+
+name: com.nimbusds nimbus-jose-jwt
+license_category: binary
+module: extensions/druid-pac4j-v5
+license_name: Apache License version 2.0
 version: 9.37.2
 libraries:
   - com.nimbusds: nimbus-jose-jwt
@@ -818,6 +859,7 @@ libraries:
 name: com.nimbusds content-type
 license_category: binary
 module: extensions/druid-pac4j
+module: extensions/druid-pac4j-v5
 license_name: Apache License version 2.0
 version: 2.1
 libraries:
@@ -828,6 +870,7 @@ libraries:
 name: com.nimbusds oauth2-oidc-sdk
 license_category: binary
 module: extensions/druid-pac4j
+module: extensions/druid-pac4j-v5
 license_name: Apache License version 2.0
 version: 9.37.2
 libraries:
@@ -838,6 +881,7 @@ libraries:
 name: javax.activation activation
 license_category: binary
 module: extensions/druid-pac4j
+module: extensions/druid-pac4j-v5
 license_name: COMMON DEVELOPMENT AND DISTRIBUTION LICENSE (CDDL) Version 1.0
 version: 1.1.1
 libraries:
@@ -848,6 +892,7 @@ libraries:
 name: com.sun.mail javax.mail
 license_category: binary
 module: extensions/druid-pac4j
+module: extensions/druid-pac4j-v5
 license_name: CDDL 1.1
 version: 1.6.2
 libraries:
@@ -2569,6 +2614,7 @@ notices:
 name: JSON Small and Fast Parser
 license_category: binary
 module: druid-pac4j
+module: druid-pac4j-v5
 license_name: Apache License version 2.0
 version: 2.4.11
 libraries:
@@ -2578,6 +2624,7 @@ libraries:
 name: JSON Small and Fast Parser
 license_category: binary
 module: druid-pac4j
+module: druid-pac4j-v5
 license_name: Apache License version 2.0
 version: 2.4.11
 libraries:
