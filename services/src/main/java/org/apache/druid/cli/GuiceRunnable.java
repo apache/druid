@@ -44,7 +44,7 @@ public abstract class GuiceRunnable implements Runnable
   private final Logger log;
 
   private Properties properties;
-  protected Injector baseInjector;
+  private Injector baseInjector;
 
   public GuiceRunnable(Logger log)
   {
