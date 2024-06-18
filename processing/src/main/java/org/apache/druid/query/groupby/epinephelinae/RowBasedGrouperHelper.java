@@ -1376,14 +1376,14 @@ public class RowBasedGrouperHelper
           if (!jp.isExpectedStartArrayToken()) {
             throw DruidException.defensive("Expected array start token, received [%s]", jp.getCurrentToken());
           }
-
           jp.nextToken();
-          ObjectCodec codec = jp.getCodec();
 
-          int timestampAdjustment = includeTimestamp ? 1 : 0;
-          int dimsToRead = timestampAdjustment + serdeHelpers.length;
+          final ObjectCodec codec = jp.getCodec();
+          final int timestampAdjustment = includeTimestamp ? 1 : 0;
+          final int dimsToRead = timestampAdjustment + serdeHelpers.length;
           int dimsReadSoFar = 0;
-          Object[] objects = new Object[dimsToRead];
+          final Object[] objects = new Object[dimsToRead];
+
           while (jp.currentToken() != JsonToken.END_ARRAY) {
             if (dimsReadSoFar >= dimsToRead) {
               throw DruidException.defensive("More dimensions encountered than expected [%d]", dimsToRead);
@@ -1393,6 +1393,10 @@ public class RowBasedGrouperHelper
               // Read the timestamp
               objects[dimsReadSoFar] = codec.readValue(jp, Long.class);
             } else {
+              DruidException.conditionalDefensive(
+                  dimsReadSoFar - timestampAdjustment < serdeHelpers.length,
+                  "Insufficient serde helpers present"
+              );
               // Read the dimension
               if (serdeHelpers[dimsReadSoFar - timestampAdjustment].getComplexClazz() == null) {
                 objects[dimsReadSoFar] = codec.readValue(jp, Object.class);
