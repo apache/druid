@@ -59,6 +59,7 @@ public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
   private static PeriodGranularity computeGranularity(final List<Expr> args, final Expr.ObjectBinding bindings)
   {
     return ExprUtils.toPeriodGranularity(
+        args.get(0),
         args.get(1),
         args.size() > 2 ? args.get(2) : null,
         args.size() > 3 ? args.get(3) : null,
