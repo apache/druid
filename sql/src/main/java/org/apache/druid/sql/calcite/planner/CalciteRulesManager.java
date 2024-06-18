@@ -40,7 +40,6 @@ import org.apache.calcite.rel.rules.DateRangeRules;
 import org.apache.calcite.rel.rules.JoinPushThroughJoinRule;
 import org.apache.calcite.rel.rules.ProjectMergeRule;
 import org.apache.calcite.rel.rules.PruneEmptyRules;
-import org.apache.calcite.rel.rules.ReduceExpressionsRule.FilterReduceExpressionsRule;
 import org.apache.calcite.runtime.Hook;
 import org.apache.calcite.sql.SqlExplainFormat;
 import org.apache.calcite.sql.SqlExplainLevel;
@@ -66,6 +65,7 @@ import org.apache.druid.sql.calcite.rule.FlattenConcatRule;
 import org.apache.druid.sql.calcite.rule.ProjectAggregatePruneUnusedCallRule;
 import org.apache.druid.sql.calcite.rule.ReverseLookupRule;
 import org.apache.druid.sql.calcite.rule.RewriteFirstValueLastValueRule;
+import org.apache.druid.sql.calcite.rule.FixIncorrectInExpansionTypes;
 import org.apache.druid.sql.calcite.rule.SortCollapseRule;
 import org.apache.druid.sql.calcite.rule.logical.DruidAggregateRemoveRedundancyRule;
 import org.apache.druid.sql.calcite.rule.logical.DruidLogicalRules;
@@ -311,7 +311,7 @@ public class CalciteRulesManager
 
   private Program sqlToRelWorkaroundProgram()
   {
-    Set<FilterReduceExpressionsRule> rules = Collections.singleton(CoreRules.FILTER_REDUCE_EXPRESSIONS);
+    Set<RelOptRule> rules = Collections.singleton(new FixIncorrectInExpansionTypes());
     return Programs.hep(rules, true, DefaultRelMetadataProvider.INSTANCE);
   }
 

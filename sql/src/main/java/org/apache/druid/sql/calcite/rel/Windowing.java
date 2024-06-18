@@ -163,6 +163,9 @@ public class Windowing
               false // Windowed aggregations don't currently finalize.  This means that sketches won't work as expected.
           );
 
+          if(!aggName.equals(          aggregation.getOutputName())) {
+            throw new CannotBuildQueryException(window, aggregateCall);
+          }
           if (aggregation == null
               || aggregation.getPostAggregator() != null
               || aggregation.getAggregatorFactories().size() != 1) {
