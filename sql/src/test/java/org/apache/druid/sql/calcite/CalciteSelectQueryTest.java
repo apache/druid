@@ -132,23 +132,23 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testTimeFloorContainingInvalidPeriod()
+  public void testTimeCeilExpressionContainingInvalidPeriod()
   {
     testQueryThrows(
-        "SELECT TIME_FLOOR(__time, 'PT1D') FROM foo",
+        "SELECT TIME_CEIL(__time, 'PT1Y') FROM foo",
         DruidExceptionMatcher.invalidInput().expectMessageContains(
-            "Invalid period[PT1D] specified for expression[__time]"
+            "Invalid period['PT1Y'] specified for expression[timestamp_ceil(\"__time\", 'PT1Y', null, 'UTC')]"
         )
     );
   }
 
   @Test
-  public void testTimeFloorContainingInvalidPeriod2()
+  public void testTimeFloorExpressionContainingInvalidPeriod()
   {
     testQueryThrows(
-        "SELECT TIME_FLOOR(CURRENT_TIMESTAMP, 'PT1Y')",
+        "SELECT TIME_FLOOR(TIMESTAMPADD(DAY, -1, __time), 'PT1D') FROM foo",
         DruidExceptionMatcher.invalidInput().expectMessageContains(
-            "Invalid period[PT1Y] specified for expression[946684800000]"
+            "Invalid period['PT1D'] specified for expression[timestamp_floor((\"__time\" + -86400000), 'PT1D', null, 'UTC')]"
         )
     );
   }

@@ -46,7 +46,7 @@ public class ExprUtils
   }
 
   static PeriodGranularity toPeriodGranularity(
-      final Expr timeExpressionArg,
+      final Expr wrappingExpr,
       final Expr periodArg,
       @Nullable final Expr originArg,
       @Nullable final Expr timeZoneArg,
@@ -60,7 +60,7 @@ public class ExprUtils
     catch (IllegalArgumentException iae) {
       throw InvalidInput.exception(
           "Invalid period[%s] specified for expression[%s]: [%s]",
-          periodArg.eval(bindings).asString(), timeExpressionArg, iae.getMessage()
+          periodArg.stringify(), wrappingExpr.stringify(), iae.getMessage()
       );
     }
     final DateTime origin;
