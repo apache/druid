@@ -97,28 +97,11 @@ public abstract class BaseVarianceSqlAggregator implements SqlAggregator
     final RelDataType dataType = inputOperand.getType();
     final ColumnType inputType = Calcites.getColumnTypeForRelDataType(dataType);
     final DimensionSpec dimensionSpec;
-
-    final String aggName;
-
-
+    final String aggName = StringUtils.format("%s:agg", name);
     final SqlAggFunction func = calciteFunction();
     final String estimator;
     final String inputTypeName;
     PostAggregator postAggregator = null;
-
-    String tempAggName;
-    if (func.getName().equals(STDDEV_NAME)
-        || func.getName().equals(SqlKind.STDDEV_POP.name())
-        || func.getName().equals(SqlKind.STDDEV_SAMP.name())) {
-
-      aggName = StringUtils.format("%s:agg", name);
-      tempAggName = name;
-    }else {
-//      aggName = name;
-      aggName = StringUtils.format("%s:agg", name);
-      tempAggName=null;
-    }
-
 
     if (input.isSimpleExtraction()) {
       dimensionSpec = input.getSimpleExtraction().toDimensionSpec(null, inputType);
@@ -153,13 +136,14 @@ public abstract class BaseVarianceSqlAggregator implements SqlAggregator
         inputTypeName
     );
 
-    if(tempAggName!=null) {
+    if (func.getName().equals(STDDEV_NAME)
+        || func.getName().equals(SqlKind.STDDEV_POP.name())
+        || func.getName().equals(SqlKind.STDDEV_SAMP.name())) {
       postAggregator = new StandardDeviationPostAggregator(
-          tempAggName,
+          name,
           aggregatorFactory.getName(),
           estimator);
     }
-
 
     return Aggregation.create(
         ImmutableList.of(aggregatorFactory),
