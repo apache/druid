@@ -72,7 +72,6 @@ interface RowBasedKeySerdeHelper
    * objects correctly from the spilled files. Returns null if the dimension is not complex because all other dimensions
    * work correctly when deserialized as generic java objects without type information.
    */
-  @SuppressWarnings("rawtypes")
   @Nullable
-  Class getComplexClazz();
+  Class<?> getComplexClazz();
 }

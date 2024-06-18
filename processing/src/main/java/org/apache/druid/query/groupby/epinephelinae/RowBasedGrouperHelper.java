@@ -1712,7 +1712,7 @@ public class RowBasedGrouperHelper
 
       @Nullable
       @Override
-      public Class getComplexClazz()
+      public Class<?> getComplexClazz()
       {
         return complexClazz;
       }
@@ -1800,7 +1800,7 @@ public class RowBasedGrouperHelper
 
       @Nullable
       @Override
-      public Class getComplexClazz()
+      public Class<?> getComplexClazz()
       {
         return null;
       }
@@ -1851,7 +1851,7 @@ public class RowBasedGrouperHelper
 
       @Nullable
       @Override
-      public Class getComplexClazz()
+      public Class<?> getComplexClazz()
       {
         return null;
       }
@@ -1907,7 +1907,7 @@ public class RowBasedGrouperHelper
 
       @Nullable
       @Override
-      public Class getComplexClazz()
+      public Class<?> getComplexClazz()
       {
         return null;
       }
@@ -2032,7 +2032,7 @@ public class RowBasedGrouperHelper
 
       @Nullable
       @Override
-      public Class getComplexClazz()
+      public Class<?> getComplexClazz()
       {
         return null;
       }
@@ -2084,7 +2084,7 @@ public class RowBasedGrouperHelper
 
       @Nullable
       @Override
-      public Class getComplexClazz()
+      public Class<?> getComplexClazz()
       {
         return null;
       }
@@ -2136,7 +2136,7 @@ public class RowBasedGrouperHelper
 
       @Nullable
       @Override
-      public Class getComplexClazz()
+      public Class<?> getComplexClazz()
       {
         return null;
       }
@@ -2198,7 +2198,7 @@ public class RowBasedGrouperHelper
 
       @Nullable
       @Override
-      public Class getComplexClazz()
+      public Class<?> getComplexClazz()
       {
         return delegate.getComplexClazz();
       }
