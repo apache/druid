@@ -161,24 +161,35 @@ public class ScanResultValueFramesIterable implements Iterable<FrameSignaturePai
     Cursor currentCursor = null;
 
     /**
-     * Row signature of the current row
+     * Rows in the List form. The {@link #currentCursor} is a wrapper over these rows
+     */
+    List<Object[]> currentRows = null;
+
+    /**
+     * Row index pointing to the current row in {@link #currentRows}. This is the exact same row that the {@link #currentCursor}
+     * is also pointing at. Therefore {@link #currentRows} + {@link #currentCursor} represent the same information as presented
+     * by {@link #currentCursor}.
+     */
+    int currentRowIndex = -1;
+
+    /**
+     * Row signature of the current cursor. This is used to create the cursor out of the ScanResultValue. We have to use
+     * the full signature because the ScanResultValue will have
      */
     RowSignature currentRowSignature = null;
 
+    /**
+     * Row signature of the current cursor, with columns having unknown (null) types trimmed out. This is used to write
+     * the rows onto the frame. There's an implicit assumption (that we verify), that columns with null typed only
+     * contain null values, because the underlying segment didn't have the column.
+     */
     RowSignature trimmedRowSignature = null;
 
     /**
-     * Current row index
-     */
-    int currentRowIndex = 0;
-
-    /**
-     *
+     * Columns of the currentRows with missing type information. As we materialize the rows onto the frames, we also
+     * verify that these columns only contain null values.
      */
     IntList nullTypedColumns = null;
-
-    List<Object[]> currentRows = null;
-
 
     public ScanResultValueFramesIterator(
         Sequence<ScanResultValue> resultSequence,
@@ -282,7 +293,9 @@ public class ScanResultValueFramesIterable implements Iterable<FrameSignaturePai
      * if (hasNext()) was true before calling the method -
      * 1. {@link #currentCursor} - Points to the cursor with non-empty value (i.e. isDone()) is false, and the cursor points
      * to the next row present in the sequence of the scan result values. This row would get materialized to frame
-     * 2. {@link #currentRowSignature} - Row signature of the row.
+     * 2. {@link #currentRowSignature} - Row signature of the row
+     * 3. {@link #currentRows} - Points to the group of rows underlying the currentCursor
+     * 4. {@link #currentRowIndex} - Reset to 0 if we modified the cursor, else untouched
      * <p>
      * Return value -
      * if (hasNext()) is false before calling the method - returns false
@@ -324,7 +337,9 @@ public class ScanResultValueFramesIterable implements Iterable<FrameSignaturePai
 
       RowSignature modifiedTrimmedRowSignature = modifiedTrimmedRowSignatureBuilder.build();
 
-      // currentRowSignature at this time points to the previous row's signature
+      // currentRowSignature at this time points to the previous row's signature. We look at the trimmed signature
+      // because that is the one used to write onto the frames, and if two rows have same trimmed signature, we can
+      // write both the rows onto the same frame
       final boolean compatible = modifiedTrimmedRowSignature.equals(trimmedRowSignature);
 
       final List rows = (List) scanResultValue.getEvents();

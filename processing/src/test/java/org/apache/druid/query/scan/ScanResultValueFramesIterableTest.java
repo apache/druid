@@ -21,7 +21,9 @@ package org.apache.druid.query.scan;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocatorFactory;
+import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.FrameBasedInlineDataSource;
 import org.apache.druid.query.FrameSignaturePair;
@@ -292,6 +294,40 @@ public class ScanResultValueFramesIterableTest extends InitializedNullHandlingTe
   }
 
   @Test
+  public void testBatchingWithDifferentRowSignaturesButSameTrimmedRowSignature()
+  {
+    List<FrameSignaturePair> frames = Lists.newArrayList(
+        createIterable(
+            scanResultValue3(0),
+            scanResultValue4(0),
+            scanResultValue3(2),
+            scanResultValue3(0),
+            scanResultValue4(2),
+            scanResultValue4(0),
+            scanResultValue3(0)
+        )
+    );
+    Assert.assertEquals(1, frames.size());
+    QueryToolChestTestHelper.assertArrayResultsEquals(
+        ImmutableList.of(
+            new Object[]{5.0D, 5L},
+            new Object[]{6.0D, 6L},
+            new Object[]{7.0D, 7L},
+            new Object[]{8.0D, 8L}
+        ),
+        new FrameBasedInlineDataSource(Collections.singletonList(frames.get(0)), SIGNATURE2).getRowsAsSequence()
+    );
+  }
+
+  @Test
+  public void testExceptionThrownWithMissingType()
+  {
+    Sequence<FrameSignaturePair> frames = Sequences.simple(createIterable(incompleteTypeScanResultValue(1)));
+    Assert.assertThrows(DruidException.class, frames::toList);
+  }
+
+
+  @Test
   public void testSplitting()
   {
     List<FrameSignaturePair> frames = Lists.newArrayList(
@@ -337,6 +373,7 @@ public class ScanResultValueFramesIterableTest extends InitializedNullHandlingTe
     );
   }
 
+  // Signature: col1: DOUBLE, col2: LONG, col3: null
   private static ScanResultValue scanResultValue3(int numRows)
   {
     return new ScanResultValue(
@@ -344,6 +381,28 @@ public class ScanResultValueFramesIterableTest extends InitializedNullHandlingTe
         ImmutableList.of("col1", "col2", "col3"),
         IntStream.range(5, 5 + numRows).mapToObj(i -> new Object[]{(double) i, i, null}).collect(Collectors.toList()),
         SIGNATURE3
+    );
+  }
+
+  // Signature: col1: DOUBLE, col3: null, col2: LONG
+  private static ScanResultValue scanResultValue4(int numRows)
+  {
+    return new ScanResultValue(
+        "dummy",
+        ImmutableList.of("col1", "col3", "col2"),
+        IntStream.range(7, 7 + numRows).mapToObj(i -> new Object[]{(double) i, null, i}).collect(Collectors.toList()),
+        SIGNATURE4
+    );
+  }
+
+  // Contains ScanResultValue with incomplete type, and non-null row
+  private static ScanResultValue incompleteTypeScanResultValue(int numRows)
+  {
+    return new ScanResultValue(
+        "dummy",
+        ImmutableList.of("col1", "col3", "col2"),
+        IntStream.range(7, 7 + numRows).mapToObj(i -> new Object[]{(double) i, i, i}).collect(Collectors.toList()),
+        SIGNATURE4
     );
   }
 }
