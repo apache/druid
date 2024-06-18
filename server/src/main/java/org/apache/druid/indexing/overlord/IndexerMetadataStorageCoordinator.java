@@ -179,12 +179,6 @@ public interface IndexerMetadataStorageCoordinator
       @Nullable DateTime maxUsedStatusLastUpdatedTime
   );
 
-  List<DataSegment> retrieveUnusedSegmentsForExactIntervalAndVersion(
-      String dataSource,
-      Interval interval,
-      String version
-  );
-
   /**
    * Mark as unused segments which include ONLY data within the given interval.
    *

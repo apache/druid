@@ -249,24 +249,23 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     );
   }
 
-  @Override
   public List<DataSegment> retrieveUnusedSegmentsForExactIntervalAndVersion(
       String dataSource,
       Interval interval,
       String version
   )
   {
-    StringBuilder sb = new StringBuilder();
-    sb.append(StringUtils.format("SELECT payload FROM %s", dbTables.getSegmentsTable()));
-    sb.append(" WHERE used = :used AND dataSource = :dataSource AND version = :version");
-    sb.append(StringUtils.format(" AND start = :start AND %1$send%1$s = :end", connector.getQuoteString()));
+    final String sql = "SELECT payload FROM %1$s"
+                       + " WHERE used = :used AND dataSource = :dataSource AND version = :version"
+                       + " AND start = :start AND %2$send%2$s = :end";
 
     final List<DataSegment> matchingSegments = connector.inReadOnlyTransaction(
         (handle, status) -> {
-          final Query<Map<String, Object>> sql = handle
+          final Query<Map<String, Object>> query = handle
               .createQuery(StringUtils.format(
-                  sb.toString(),
-                  dbTables.getSegmentsTable()
+                  sql,
+                  dbTables.getSegmentsTable(),
+                  connector.getQuoteString()
               ))
               .setFetchSize(connector.getStreamingFetchSize())
               .bind("used", false)
@@ -276,7 +275,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
               .bind("end", interval.getEnd().toString());
 
           try (final ResultIterator<DataSegment> iterator =
-                   sql.map(
+                   query.map(
                        (index, r, ctx) -> JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class)
                    ).iterator()
           ) {
@@ -285,7 +284,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         }
     );
 
-    log.info("Found [%,d] unused segments for datasource[%s] in interval[%s] and version[%s].",
+    log.info("Found [%,d] unused segments for datasource[%s] for interval[%s] and version[%s].",
              matchingSegments.size(), dataSource, interval, version);
     return matchingSegments;
   }
