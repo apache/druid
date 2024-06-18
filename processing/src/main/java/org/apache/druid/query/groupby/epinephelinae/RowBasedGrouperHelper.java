@@ -1374,31 +1374,40 @@ public class RowBasedGrouperHelper
         ) throws IOException
         {
           if (!jp.isExpectedStartArrayToken()) {
-            throw DruidException.defensive("expected start token");
+            throw DruidException.defensive("Expected array start token, received [%s]", jp.getCurrentToken());
           }
+
           jp.nextToken();
           ObjectCodec codec = jp.getCodec();
 
-          int i = 0;
-          Object[] objects = new Object[serdeHelpers.length];
+          int timestampAdjustment = includeTimestamp ? 1 : 0;
+          int dimsToRead = timestampAdjustment + serdeHelpers.length;
+          int dimsReadSoFar = 0;
+          Object[] objects = new Object[dimsToRead];
           while (jp.currentToken() != JsonToken.END_ARRAY) {
-            if (i >= serdeHelpers.length) {
-              throw DruidException.defensive("not enough serde helpers");
+            if (dimsReadSoFar >= dimsToRead) {
+              throw DruidException.defensive("More dimensions encountered than expected [%d]", dimsToRead);
             }
 
-            if (serdeHelpers[i].getComplexClazz() == null) {
-              objects[i] = codec.readValue(jp, Object.class);
-              if (objects[i] instanceof Integer) {
-                objects[i] = ((Integer) objects[i]).longValue();
-              } else if (objects[i] instanceof Double) {
-                objects[i] = ((Double) objects[i]).floatValue();
-              }
-
+            if (includeTimestamp && dimsReadSoFar == 0) {
+              // Read the timestamp
+              objects[dimsReadSoFar] = codec.readValue(jp, Long.class);
             } else {
-              objects[i] = codec.readValue(jp, serdeHelpers[i].getComplexClazz());
+              // Read the dimension
+              if (serdeHelpers[dimsReadSoFar - timestampAdjustment].getComplexClazz() == null) {
+                objects[dimsReadSoFar] = codec.readValue(jp, Object.class);
+                if (objects[dimsReadSoFar] instanceof Integer) {
+                  objects[dimsReadSoFar] = ((Integer) objects[dimsReadSoFar]).longValue();
+                } else if (objects[dimsReadSoFar] instanceof Double) {
+                  objects[dimsReadSoFar] = ((Double) objects[dimsReadSoFar]).floatValue();
+                }
+              } else {
+                objects[dimsReadSoFar] =
+                    codec.readValue(jp, serdeHelpers[dimsReadSoFar - timestampAdjustment].getComplexClazz());
+              }
             }
 
-            ++i;
+            ++dimsReadSoFar;
             jp.nextToken();
           }
 
