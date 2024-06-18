@@ -429,6 +429,12 @@
             <type>test-jar</type>
             <version>${project.parent.version}</version>
         </dependency>
+        <dependency>
+            <groupId>org.apache.druid</groupId>
+            <artifactId>druid-datasketches</artifactId>
+            <type>test-jar</type>
+            <version>${project.parent.version}</version>
+        </dependency>
 
         <dependency>
             <groupId>org.slf4j</groupId>
