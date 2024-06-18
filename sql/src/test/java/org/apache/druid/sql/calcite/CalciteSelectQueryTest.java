@@ -2162,7 +2162,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
     assertEquals(
         "1.37.0",
         RelNode.class.getPackage().getImplementationVersion(),
-        "Calcite version changed; check if CALCITE-6435 is fixed and remove:\n * method CalciteRulesManager#sqlToRelWorkaroundProgram\n * this assertion"
+        "Calcite version changed; check if CALCITE-6435 is fixed and remove:\n * method CalciteRulesManager#sqlToRelWorkaroundProgram\n * FixIncorrectInExpansionTypes class\n* this assertion"
     );
 
     testBuilder()
