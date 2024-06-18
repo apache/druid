@@ -61,7 +61,6 @@ public class S3UploadManager
 
   // For metrics regarding uploadExecutor.
   private final AtomicInteger queueSize = new AtomicInteger(0);
-  private final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
 
   @Inject
   public S3UploadManager(S3OutputConfig s3OutputConfig, S3ExportConfig s3ExportConfig, RuntimeInfo runtimeInfo, ServiceEmitter emitter)
@@ -110,7 +109,7 @@ public class S3UploadManager
     queueSize.incrementAndGet();
     return uploadExecutor.submit(() -> {
       emitMetric(taskMetricBuilder.setMetric(TASK_QUEUED_DURATION_METRIC, stopwatch.millisElapsed()));
-      emitMetric(builder.setMetric(NUM_TASKS_QUEUED_METRIC, queueSize.decrementAndGet()));
+      emitMetric(new ServiceMetricEvent.Builder().setMetric(NUM_TASKS_QUEUED_METRIC, queueSize.decrementAndGet()));
       stopwatch.restart();
       return RetryUtils.retry(
           () -> {
