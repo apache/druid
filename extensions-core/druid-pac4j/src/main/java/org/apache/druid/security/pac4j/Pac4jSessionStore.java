@@ -23,14 +23,14 @@ import org.apache.commons.io.IOUtils;
 import org.apache.druid.crypto.CryptoService;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.pac4j.core.context.ContextHelper;
 import org.pac4j.core.context.Cookie;
 import org.pac4j.core.context.WebContext;
-import org.pac4j.core.context.WebContextHelper;
 import org.pac4j.core.context.session.SessionStore;
 import org.pac4j.core.exception.TechnicalException;
 import org.pac4j.core.profile.CommonProfile;
+import org.pac4j.core.util.JavaSerializationHelper;
 import org.pac4j.core.util.Pac4jConstants;
-import org.pac4j.core.util.serializer.JavaSerializer;
 
 import javax.annotation.Nullable;
 import java.io.ByteArrayInputStream;
@@ -46,19 +46,19 @@ import java.util.zip.GZIPOutputStream;
  * Code here is slight adaptation from <a href="https://github.com/apache/knox/blob/master/gateway-provider-security-pac4j/src/main/java/org/apache/knox/gateway/pac4j/session/KnoxSessionStore.java">KnoxSessionStore</a>
  * for storing oauth session information in cookies.
  */
-public class Pac4jSessionStore<T extends WebContext> implements SessionStore
+public class Pac4jSessionStore<T extends WebContext> implements SessionStore<T>
 {
 
   private static final Logger LOGGER = new Logger(Pac4jSessionStore.class);
 
   public static final String PAC4J_SESSION_PREFIX = "pac4j.session.";
 
-  private final JavaSerializer javaSerializer;
+  private final JavaSerializationHelper javaSerializationHelper;
   private final CryptoService cryptoService;
 
   public Pac4jSessionStore(String cookiePassphrase)
   {
-    javaSerializer = new JavaSerializer();
+    javaSerializationHelper = new JavaSerializationHelper();
     cryptoService = new CryptoService(
         cookiePassphrase,
         "AES",
@@ -72,16 +72,16 @@ public class Pac4jSessionStore<T extends WebContext> implements SessionStore
   }
 
   @Override
-  public Optional<String> getSessionId(WebContext webContext, boolean b)
+  public String getOrCreateSessionId(WebContext context)
   {
-    return Optional.empty();
+    return null;
   }
 
   @Nullable
   @Override
   public Optional<Object> get(WebContext context, String key)
   {
-    final Cookie cookie = WebContextHelper.getCookie(context, PAC4J_SESSION_PREFIX + key);
+    final Cookie cookie = ContextHelper.getCookie(context, PAC4J_SESSION_PREFIX + key);
     Object value = null;
     if (cookie != null) {
       value = uncompressDecryptBase64(cookie.getValue());
@@ -112,7 +112,7 @@ public class Pac4jSessionStore<T extends WebContext> implements SessionStore
 
     cookie.setDomain("");
     cookie.setHttpOnly(true);
-    cookie.setSecure(WebContextHelper.isHttpsOrSecure(context));
+    cookie.setSecure(ContextHelper.isHttpsOrSecure(context));
     cookie.setPath("/");
     cookie.setMaxAge(900);
 
@@ -126,7 +126,7 @@ public class Pac4jSessionStore<T extends WebContext> implements SessionStore
         || (o instanceof Map<?, ?> && ((Map<?, ?>) o).isEmpty())) {
       return null;
     } else {
-      byte[] bytes = javaSerializer.serializeToBytes(o);
+      byte[] bytes = javaSerializationHelper.serializeToBytes((Serializable) o);
 
       bytes = compress(bytes);
       if (bytes.length > 3000) {
@@ -143,7 +143,7 @@ public class Pac4jSessionStore<T extends WebContext> implements SessionStore
     if (v != null && !v.isEmpty()) {
       byte[] bytes = StringUtils.decodeBase64String(v);
       if (bytes != null) {
-        return (Serializable) javaSerializer.deserializeFromBytes(unCompress(cryptoService.decrypt(bytes)));
+        return javaSerializationHelper.deserializeFromBytes(unCompress(cryptoService.decrypt(bytes)));
       }
     }
     return null;
@@ -187,7 +187,7 @@ public class Pac4jSessionStore<T extends WebContext> implements SessionStore
   }
 
   @Override
-  public Optional<SessionStore> buildFromTrackableSession(WebContext arg0, Object arg1)
+  public Optional<SessionStore<T>> buildFromTrackableSession(WebContext arg0, Object arg1)
   {
     return Optional.empty();
   }
