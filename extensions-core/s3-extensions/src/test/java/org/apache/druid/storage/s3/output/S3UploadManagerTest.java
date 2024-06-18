@@ -44,14 +44,16 @@ public class S3UploadManagerTest
   private S3UploadManager s3UploadManager;
   private S3OutputConfig s3OutputConfig;
   private S3ExportConfig s3ExportConfig;
+  private StubServiceEmitter serviceEmitter;
 
   @Before
   public void setUp()
   {
     s3OutputConfig = new S3OutputConfig("bucket", "prefix", EasyMock.mock(File.class), new HumanReadableBytes("100MiB"), 1);
     s3ExportConfig = new S3ExportConfig("tempDir", new HumanReadableBytes("200MiB"), 1, null);
+    serviceEmitter = new StubServiceEmitter("service", "host");
     final RuntimeInfo runtimeInfo = new DruidProcessingConfigTest.MockRuntimeInfo(8, 0, 0);
-    s3UploadManager = new S3UploadManager(s3OutputConfig, s3ExportConfig, runtimeInfo, new StubServiceEmitter("service", "host"));
+    s3UploadManager = new S3UploadManager(s3OutputConfig, s3ExportConfig, runtimeInfo, serviceEmitter);
   }
 
   @Test
@@ -76,6 +78,10 @@ public class S3UploadManagerTest
     UploadPartResult futureResult = result.get();
     Assert.assertEquals(chunkId, futureResult.getPartNumber());
     Assert.assertEquals("etag", futureResult.getETag());
+
+    serviceEmitter.verifyEmitted("s3upload/threadPool/taskQueuedDuration", 1);
+    serviceEmitter.verifyEmitted("s3upload/threadPool/queuedTasks", 1);
+    serviceEmitter.verifyNotEmitted("someRandomMetricName");
   }
 
   @Test

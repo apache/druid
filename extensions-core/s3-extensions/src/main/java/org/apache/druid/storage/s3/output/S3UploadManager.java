@@ -25,12 +25,13 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.java.util.common.RetryUtils;
+import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.concurrent.Execs;
-import org.apache.druid.java.util.common.concurrent.WaitTimeMonitoringExecutorService;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.storage.s3.S3Utils;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 import org.apache.druid.utils.RuntimeInfo;
@@ -38,7 +39,7 @@ import org.apache.druid.utils.RuntimeInfo;
 import java.io.File;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
-import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * This class manages uploading files to S3 in chunks, while ensuring that the
@@ -48,17 +49,26 @@ import java.util.concurrent.ThreadPoolExecutor;
 public class S3UploadManager
 {
   private final ExecutorService uploadExecutor;
+  private final ServiceEmitter emitter;
 
   private static final Logger log = new Logger(S3UploadManager.class);
+
+  // For metrics regarding uploadExecutor.
+  private final AtomicInteger queueSize = new AtomicInteger(0);
+  private static final String METRIC_PREFIX = "s3upload/threadPool/";
+  private static final String TASK_QUEUED_DURATION_METRIC = METRIC_PREFIX + "taskQueuedDuration";
+  private static final String NUM_TASKS_QUEUED = METRIC_PREFIX + "queuedTasks";
+  private final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
 
   @Inject
   public S3UploadManager(S3OutputConfig s3OutputConfig, S3ExportConfig s3ExportConfig, RuntimeInfo runtimeInfo, ServiceEmitter emitter)
   {
     int poolSize = Math.max(4, runtimeInfo.getAvailableProcessors());
     int maxNumChunksOnDisk = computeMaxNumChunksOnDisk(s3OutputConfig, s3ExportConfig);
-    this.uploadExecutor = createExecutorService(poolSize, maxNumChunksOnDisk, emitter);
+    this.uploadExecutor = createExecutorService(poolSize, maxNumChunksOnDisk);
     log.info("Initialized executor service for S3 multipart upload with pool size [%d] and work queue capacity [%d]",
              poolSize, maxNumChunksOnDisk);
+    this.emitter = emitter;
   }
 
   /**
@@ -90,25 +100,30 @@ public class S3UploadManager
       S3OutputConfig config
   )
   {
-    return uploadExecutor.submit(() -> RetryUtils.retry(
-        () -> {
-          log.debug("Uploading chunk[%d] for uploadId[%s].", chunkNumber, uploadId);
-          UploadPartResult uploadPartResult = uploadPartIfPossible(
-              s3Client,
-              uploadId,
-              config.getBucket(),
-              key,
-              chunkNumber,
-              chunkFile
-          );
-          if (!chunkFile.delete()) {
-            log.warn("Failed to delete chunk [%s]", chunkFile.getAbsolutePath());
-          }
-          return uploadPartResult;
-        },
-        S3Utils.S3RETRY,
-        config.getMaxRetry()
-    ));
+    Stopwatch stopwatch = Stopwatch.createStarted();
+    queueSize.incrementAndGet();
+    return uploadExecutor.submit(() -> {
+      emitMetrics(stopwatch.millisElapsed(), queueSize.decrementAndGet());
+      return RetryUtils.retry(
+          () -> {
+            log.debug("Uploading chunk[%d] for uploadId[%s].", chunkNumber, uploadId);
+            UploadPartResult uploadPartResult = uploadPartIfPossible(
+                s3Client,
+                uploadId,
+                config.getBucket(),
+                key,
+                chunkNumber,
+                chunkFile
+            );
+            if (!chunkFile.delete()) {
+              log.warn("Failed to delete chunk [%s]", chunkFile.getAbsolutePath());
+            }
+            return uploadPartResult;
+          },
+          S3Utils.S3RETRY,
+          config.getMaxRetry()
+      );
+    });
   }
 
   @VisibleForTesting
@@ -135,15 +150,13 @@ public class S3UploadManager
     return s3Client.uploadPart(uploadPartRequest);
   }
 
-  private ExecutorService createExecutorService(int poolSize, int maxNumConcurrentChunks, ServiceEmitter emitter)
+  private ExecutorService createExecutorService(int poolSize, int maxNumConcurrentChunks)
   {
-    final String poolPrefix = "S3UploadThreadPool";
-    ThreadPoolExecutor executorService = Execs.newBlockingThreaded(
-        poolPrefix + "-%d",
+    return Execs.newBlockingThreaded(
+        "S3UploadThreadPool-%d",
         poolSize,
         maxNumConcurrentChunks
     );
-    return new WaitTimeMonitoringExecutorService(executorService, emitter, poolPrefix);
   }
 
   @LifecycleStart
@@ -158,4 +171,14 @@ public class S3UploadManager
     uploadExecutor.shutdown();
   }
 
+  /**
+   * Emits various metrics about the executor service's state.
+   *
+   * @param taskQueuedDuration the time a task spent in the queue before execution.
+   */
+  private void emitMetrics(long taskQueuedDuration, int queueSize)
+  {
+    emitter.emit(builder.setMetric(TASK_QUEUED_DURATION_METRIC, taskQueuedDuration));
+    emitter.emit(builder.setMetric(NUM_TASKS_QUEUED, queueSize));
+  }
 }

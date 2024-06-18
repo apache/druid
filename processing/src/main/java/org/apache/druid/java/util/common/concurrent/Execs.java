@@ -129,12 +129,12 @@ public class Execs
     return newBlockingThreaded(nameFormat, 1, capacity, priority);
   }
 
-  public static ThreadPoolExecutor newBlockingThreaded(final String nameFormat, int nThreads, final int capacity)
+  public static ExecutorService newBlockingThreaded(final String nameFormat, int nThreads, final int capacity)
   {
     return newBlockingThreaded(nameFormat, nThreads, capacity, null);
   }
 
-  public static ThreadPoolExecutor newBlockingThreaded(
+  public static ExecutorService newBlockingThreaded(
       final String nameFormat,
       int nThreads,
       final int capacity,
