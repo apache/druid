@@ -42,6 +42,7 @@
 
     <properties>
         <quidem.uri>druidtest:///</quidem.uri>
+        <quidem.record.autostart>false</quidem.record.autostart>
     </properties>
     <dependencies>
         <dependency>
@@ -512,7 +513,7 @@
                         <argument>-classpath</argument>
                         <classpath />
                         <argument>-Dquidem.uri=${quidem.uri}</argument>
-                        <argument>-Dquidem.record.autostart=true</argument>
+                        <argument>-Dquidem.record.autostart=${quidem.record.autostart}</argument>
                         <argument>org.apache.druid.quidem.Launcher</argument>
                     </arguments>
                 </configuration>
