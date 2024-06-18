@@ -247,7 +247,12 @@ public class MSQExportTest extends MSQTestBase
                                             .add("cnt", ColumnType.LONG).build();
 
     File exportDir = newTempFolder("export");
-    final String sql = StringUtils.format("insert into extern(local(exportPath=>'%s')) as csv select cnt, dim1 as dim from foo where dim1='nonexistentvalue'", exportDir.getAbsolutePath());
+    final String sql = StringUtils.format("INSERT INTO "
+                                          + "EXTERN(local(exportPath=>'%s'))"
+                                          + "AS CSV "
+                                          + "SELECT cnt, dim1 AS dim "
+                                          + "FROM foo "
+                                          + "WHERE dim1='nonexistentvalue'", exportDir.getAbsolutePath());
 
     testIngestQuery().setSql(sql)
                      .setExpectedDataSource("foo1")

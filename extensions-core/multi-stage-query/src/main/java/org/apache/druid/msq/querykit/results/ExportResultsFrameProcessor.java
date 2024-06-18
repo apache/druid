@@ -176,19 +176,20 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
                 String columnName = exportRowSignature.getColumnName(j);
                 BaseObjectColumnValueSelector<?> selector = selectors.get(outputColumnNameToFrameColumnNumberMap.getInt(columnName));
                 if (resultsContext == null) {
-                  exportWriter.writeRowField(columnName, selector.getObject());
-                } else {
-                  exportWriter.writeRowField(
-                      columnName,
-                      SqlResults.coerce(
-                          jsonMapper,
-                          resultsContext.getSqlResultsContext(),
-                          selector.getObject(),
-                          resultsContext.getSqlTypeNames().get(j),
-                          columnName
-                      )
-                  );
+                  throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                                      .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                                      .build("Received null resultsContext from controller. This might be due to an upgrade.");
                 }
+                exportWriter.writeRowField(
+                    columnName,
+                    SqlResults.coerce(
+                        jsonMapper,
+                        resultsContext.getSqlResultsContext(),
+                        selector.getObject(),
+                        resultsContext.getSqlTypeNames().get(j),
+                        columnName
+                    )
+                );
               }
               channelCounter.incrementRowCount(partitionNum);
               exportWriter.writeRowEnd();
