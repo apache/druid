@@ -60,7 +60,9 @@ public class ExprUtils
     catch (IllegalArgumentException iae) {
       throw InvalidInput.exception(
           "Invalid period[%s] specified for expression[%s]: [%s]",
-          periodArg.stringify(), wrappingExpr.stringify(), iae.getMessage()
+          periodArg.stringify(), 
+          wrappingExpr.stringify(),
+          iae.getMessage()
       );
     }
     final DateTime origin;
