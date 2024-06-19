@@ -166,9 +166,9 @@ public class ExposedAsBrokerQueryComponentSupplierWrapper implements QueryCompon
   }
 
   @Override
-  public QueryRunnerFactoryConglomerate createCongolmerate(Builder builder, Closer closer)
+  public QueryRunnerFactoryConglomerate createCongolmerate(Builder builder, Closer closer, ObjectMapper om)
   {
-    return delegate.createCongolmerate(builder, closer);
+    return delegate.createCongolmerate(builder, closer, om);
   }
 
   @Override
