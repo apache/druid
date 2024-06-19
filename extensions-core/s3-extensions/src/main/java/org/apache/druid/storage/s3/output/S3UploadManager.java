@@ -50,9 +50,9 @@ public class S3UploadManager
 {
   // Metric related constants.
   private static final String METRIC_PREFIX = "s3/upload/part/";
-  private static final String TASK_QUEUED_DURATION_METRIC = METRIC_PREFIX + "queuedTime";
-  private static final String NUM_TASKS_QUEUED_METRIC = METRIC_PREFIX + "queueSize";
-  private static final String TASK_DURATION_METRIC = METRIC_PREFIX + "time";
+  private static final String METRIC_PART_QUEUED_TIME = METRIC_PREFIX + "queuedTime";
+  private static final String METRIC_QUEUE_SIZE = METRIC_PREFIX + "queueSize";
+  private static final String METRIC_PART_UPLOAD_TIME = METRIC_PREFIX + "time";
 
   private final ExecutorService uploadExecutor;
   private final ServiceEmitter emitter;
@@ -60,7 +60,7 @@ public class S3UploadManager
   private static final Logger log = new Logger(S3UploadManager.class);
 
   // For metrics regarding uploadExecutor.
-  private final AtomicInteger queueSize = new AtomicInteger(0);
+  private final AtomicInteger executorQueueSize = new AtomicInteger(0);
 
   @Inject
   public S3UploadManager(
@@ -108,12 +108,12 @@ public class S3UploadManager
   )
   {
     final Stopwatch stopwatch = Stopwatch.createStarted();
-    queueSize.incrementAndGet();
+    executorQueueSize.incrementAndGet();
     return uploadExecutor.submit(() -> {
       final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
-      emitMetric(metricBuilder.setMetric(NUM_TASKS_QUEUED_METRIC, queueSize.decrementAndGet()));
+      emitMetric(metricBuilder.setMetric(METRIC_QUEUE_SIZE, executorQueueSize.decrementAndGet()));
       metricBuilder.setDimension("uploadId", uploadId).setDimension("partNumber", chunkNumber);
-      emitMetric(metricBuilder.setMetric(TASK_QUEUED_DURATION_METRIC, stopwatch.millisElapsed()));
+      emitMetric(metricBuilder.setMetric(METRIC_PART_QUEUED_TIME, stopwatch.millisElapsed()));
       stopwatch.restart();
 
       return RetryUtils.retry(
@@ -130,7 +130,7 @@ public class S3UploadManager
             if (!chunkFile.delete()) {
               log.warn("Failed to delete chunk [%s]", chunkFile.getAbsolutePath());
             }
-            emitMetric(metricBuilder.setMetric(TASK_DURATION_METRIC, stopwatch.millisElapsed()));
+            emitMetric(metricBuilder.setMetric(METRIC_PART_UPLOAD_TIME, stopwatch.millisElapsed()));
             return uploadPartResult;
           },
           S3Utils.S3RETRY,

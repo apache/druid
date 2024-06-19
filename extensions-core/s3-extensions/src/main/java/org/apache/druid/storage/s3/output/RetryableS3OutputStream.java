@@ -72,8 +72,8 @@ public class RetryableS3OutputStream extends OutputStream
 {
   // Metric related constants.
   private static final String METRIC_PREFIX = "s3/upload/total/";
-  private static final String JOB_TOTAL_TIME_METRIC = METRIC_PREFIX + "time";
-  private static final String JOB_TOTAL_BYTES_METRIC = METRIC_PREFIX + "bytes";
+  private static final String METRIC_TOTAL_UPLOAD_TIME = METRIC_PREFIX + "time";
+  private static final String METRIC_TOTAL_UPLOAD_BYTES = METRIC_PREFIX + "bytes";
 
   private static final Logger LOG = new Logger(RetryableS3OutputStream.class);
 
@@ -226,8 +226,8 @@ public class RetryableS3OutputStream extends OutputStream
       );
 
       final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder().setDimension("uploadId", uploadId);
-      uploadManager.emitMetric(builder.setMetric(JOB_TOTAL_TIME_METRIC, totalUploadTimeMillis));
-      uploadManager.emitMetric(builder.setMetric(JOB_TOTAL_BYTES_METRIC, totalBytesUploaded));
+      uploadManager.emitMetric(builder.setMetric(METRIC_TOTAL_UPLOAD_TIME, totalUploadTimeMillis));
+      uploadManager.emitMetric(builder.setMetric(METRIC_TOTAL_UPLOAD_BYTES, totalBytesUploaded));
     });
 
     try (Closer ignored = closer) {

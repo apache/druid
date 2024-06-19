@@ -517,9 +517,9 @@ These metrics are only available if the `druid-s3-extensions` module is included
 |------|-----------|----------|------------|
 |`s3/upload/part/queueSize`|Number of items currently waiting in queue to be uploaded to S3. Each item in the queue corresponds to a single part in a multi-part upload.||Varies|
 |`s3/upload/part/queuedTime`|Milliseconds spent by a single item (or part) in queue before it starts getting uploaded to S3.|`uploadId`, `partNumber`|Varies|
-|`s3/upload/part/time`|Milliseconds taken to upload a part to S3 as part of a multi-part upload.|`uploadId`, `partNumber`|Varies|
-|`s3/upload/total/time`|The total time taken in milliseconds for uploading all parts of a file to S3 when durable storage is enabled.|`uploadId`|Varies|
-|`s3/upload/total/bytes`|The total number of bytes uploaded across all parts of a file to S3 when durable storage is enabled.|`uploadId`|Varies|
+|`s3/upload/part/time`|Milliseconds taken to upload a single part of a multi-part upload to S3.|`uploadId`, `partNumber`|Varies|
+|`s3/upload/total/time`|Milliseconds taken for uploading all parts of a multi-part upload to S3.|`uploadId`|Varies|
+|`s3/upload/total/bytes`|Total bytes uploaded to S3 during a multi-part upload.|`uploadId`|Varies|
 
 ## Cgroup
 
