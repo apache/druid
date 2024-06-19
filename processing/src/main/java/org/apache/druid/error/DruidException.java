@@ -47,7 +47,7 @@ import java.util.Map;
  * no change should occur.
  * <p>
  * <h3>Notes about exception messages:</h3>
- *
+ * <p>
  * Firstly, exception messages should always be written with the notions from the style conventions covered in
  * {@code dev/style-conventions.md}.  Whenever possible, we should also try to provide an action to take to resolve
  * the issue.
@@ -174,6 +174,22 @@ public class DruidException extends RuntimeException
   public static DruidException defensive(String format, Object... args)
   {
     return defensive().build(format, args);
+  }
+
+  /**
+   * Build a "defensive" exception, this is an exception that should never actually be triggered. Throw to
+   * allow messages to be seen by developers
+   *
+   * @param condition - boolean condition to validate
+   * @param msg - passed through to InvalidInput.exception()
+   * @param args - passed through to InvalidInput.exception()
+   */
+  @SuppressWarnings("unused")
+  public static void conditionalDefensive(boolean condition, String msg, Object... args)
+  {
+    if (!condition) {
+      throw defensive(msg, args);
+    }
   }
 
   private final Persona targetPersona;
