@@ -79,9 +79,9 @@ public class S3UploadManagerTest
     Assert.assertEquals(chunkId, futureResult.getPartNumber());
     Assert.assertEquals("etag", futureResult.getETag());
 
-    serviceEmitter.verifyEmitted("s3upload/chunk/queuedTime", 1);
-    serviceEmitter.verifyEmitted("s3upload/chunk/queueSize", 1);
-    serviceEmitter.verifyEmitted("s3upload/chunk/uploadTime", 1);
+    serviceEmitter.verifyEmitted("s3/upload/part/queuedTime", 1);
+    serviceEmitter.verifyEmitted("s3/upload/part/queueSize", 1);
+    serviceEmitter.verifyEmitted("s3/upload/part/time", 1);
   }
 
   @Test

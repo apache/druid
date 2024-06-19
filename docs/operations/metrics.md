@@ -298,11 +298,6 @@ If the JVM does not support CPU time measurement for the current thread, `ingest
 |`worker/task/assigned/count`|Number of tasks assigned to an indexer per emission period. This metric is only available if the `WorkerTaskCountStatsMonitor` module is included.|`dataSource`|Varies|
 |`worker/task/completed/count`|Number of tasks completed by an indexer per emission period. This metric is only available if the `WorkerTaskCountStatsMonitor` module is included.|`dataSource`|Varies|
 |`worker/task/running/count`|Number of tasks running on an indexer per emission period. This metric is only available if the `WorkerTaskCountStatsMonitor` module is included.|`dataSource`|Varies|
-|`s3upload/chunk/queueSize`|The number of tasks that are currently queued and waiting to upload a part to S3 (in a multi-part upload) when durable storage is enabled.||Varies|
-|`s3upload/chunk/queuedTime`|Milliseconds spent by a task in queue before it starts uploading a part to S3 (in a multi-part upload) when durable storage is enabled.|`uploadId`, `partNumber`|Varies|
-|`s3upload/chunk/uploadTime`|The time taken in milliseconds to upload a part to S3 (in a multi-part upload) when durable storage is enabled.|`uploadId`, `partNumber`|Varies|
-|`s3upload/job/totalTime`|The total time taken in milliseconds for uploading all parts of a file to S3 when durable storage is enabled.|`uploadId`|Varies|
-|`s3upload/job/totalBytes`|The total number of bytes uploaded across all parts of a file to S3 when durable storage is enabled.|`uploadId`|Varies|
 
 ## Shuffle metrics (Native parallel task)
 
@@ -512,6 +507,19 @@ These metrics are only available if the `OshiSysMonitor` module is included.
 |`sys/tcpv4/out/segs`|Total segments sent||Varies|
 |`sys/tcpv4/out/rsts`|Total "out reset" packets sent to reset the connection||Generally 0|
 |`sys/tcpv4/retrans/segs`|Total segments re-transmitted||Varies|
+
+
+## S3 multi-part upload
+
+These metrics are only available if the `druid-s3-extensions` module is included and if certain specific features are being used: MSQ export to S3, durable intermediate storage on S3.
+
+|Metric|Description|Dimensions|Normal value|
+|------|-----------|----------|------------|
+|`s3/upload/part/queueSize`|Number of items currently waiting in queue to be uploaded to S3. Each item in the queue corresponds to a single part in a multi-part upload.||Varies|
+|`s3/upload/part/queuedTime`|Milliseconds spent by a single item (or part) in queue before it starts getting uploaded to S3.|`uploadId`, `partNumber`|Varies|
+|`s3/upload/part/time`|Milliseconds taken to upload a part to S3 as part of a multi-part upload.|`uploadId`, `partNumber`|Varies|
+|`s3/upload/total/time`|The total time taken in milliseconds for uploading all parts of a file to S3 when durable storage is enabled.|`uploadId`|Varies|
+|`s3/upload/total/bytes`|The total number of bytes uploaded across all parts of a file to S3 when durable storage is enabled.|`uploadId`|Varies|
 
 ## Cgroup
 

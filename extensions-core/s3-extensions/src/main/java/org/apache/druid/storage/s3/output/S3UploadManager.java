@@ -49,10 +49,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class S3UploadManager
 {
   // Metric related constants.
-  private static final String METRIC_PREFIX = "s3upload/chunk/";
+  private static final String METRIC_PREFIX = "s3/upload/part/";
   private static final String TASK_QUEUED_DURATION_METRIC = METRIC_PREFIX + "queuedTime";
   private static final String NUM_TASKS_QUEUED_METRIC = METRIC_PREFIX + "queueSize";
-  private static final String TASK_DURATION_METRIC = METRIC_PREFIX + "uploadTime";
+  private static final String TASK_DURATION_METRIC = METRIC_PREFIX + "time";
 
   private final ExecutorService uploadExecutor;
   private final ServiceEmitter emitter;
@@ -63,7 +63,12 @@ public class S3UploadManager
   private final AtomicInteger queueSize = new AtomicInteger(0);
 
   @Inject
-  public S3UploadManager(S3OutputConfig s3OutputConfig, S3ExportConfig s3ExportConfig, RuntimeInfo runtimeInfo, ServiceEmitter emitter)
+  public S3UploadManager(
+      S3OutputConfig s3OutputConfig,
+      S3ExportConfig s3ExportConfig,
+      RuntimeInfo runtimeInfo,
+      ServiceEmitter emitter
+  )
   {
     int poolSize = Math.max(4, runtimeInfo.getAvailableProcessors());
     int maxNumChunksOnDisk = computeMaxNumChunksOnDisk(s3OutputConfig, s3ExportConfig);
@@ -102,15 +107,15 @@ public class S3UploadManager
       S3OutputConfig config
   )
   {
-    final ServiceMetricEvent.Builder taskMetricBuilder = new ServiceMetricEvent.Builder()
-        .setDimension("uploadId", uploadId)
-        .setDimension("partNumber", chunkNumber);
     final Stopwatch stopwatch = Stopwatch.createStarted();
     queueSize.incrementAndGet();
     return uploadExecutor.submit(() -> {
-      emitMetric(taskMetricBuilder.setMetric(TASK_QUEUED_DURATION_METRIC, stopwatch.millisElapsed()));
-      emitMetric(new ServiceMetricEvent.Builder().setMetric(NUM_TASKS_QUEUED_METRIC, queueSize.decrementAndGet()));
+      final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
+      emitMetric(metricBuilder.setMetric(NUM_TASKS_QUEUED_METRIC, queueSize.decrementAndGet()));
+      metricBuilder.setDimension("uploadId", uploadId).setDimension("partNumber", chunkNumber);
+      emitMetric(metricBuilder.setMetric(TASK_QUEUED_DURATION_METRIC, stopwatch.millisElapsed()));
       stopwatch.restart();
+
       return RetryUtils.retry(
           () -> {
             log.debug("Uploading chunk[%d] for uploadId[%s].", chunkNumber, uploadId);
@@ -125,7 +130,7 @@ public class S3UploadManager
             if (!chunkFile.delete()) {
               log.warn("Failed to delete chunk [%s]", chunkFile.getAbsolutePath());
             }
-            emitMetric(taskMetricBuilder.setMetric(TASK_DURATION_METRIC, stopwatch.millisElapsed()));
+            emitMetric(metricBuilder.setMetric(TASK_DURATION_METRIC, stopwatch.millisElapsed()));
             return uploadPartResult;
           },
           S3Utils.S3RETRY,

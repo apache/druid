@@ -71,9 +71,9 @@ import java.util.concurrent.TimeUnit;
 public class RetryableS3OutputStream extends OutputStream
 {
   // Metric related constants.
-  private static final String METRIC_PREFIX = "s3upload/job/";
-  private static final String JOB_TOTAL_TIME_METRIC = METRIC_PREFIX + "totalTime";
-  private static final String JOB_TOTAL_BYTES_METRIC = METRIC_PREFIX + "totalBytes";
+  private static final String METRIC_PREFIX = "s3/upload/total/";
+  private static final String JOB_TOTAL_TIME_METRIC = METRIC_PREFIX + "time";
+  private static final String JOB_TOTAL_BYTES_METRIC = METRIC_PREFIX + "bytes";
 
   private static final Logger LOG = new Logger(RetryableS3OutputStream.class);
 
@@ -214,20 +214,20 @@ public class RetryableS3OutputStream extends OutputStream
       org.apache.commons.io.FileUtils.forceDelete(chunkStorePath);
       LOG.info("Deleted chunkStorePath[%s]", chunkStorePath);
 
-      final long totalChunkSize = (currentChunk.id - 1) * chunkSize + currentChunk.length();
-      final long timeElapsed = pushStopwatch.elapsed(TimeUnit.MILLISECONDS);
+      final long totalBytesUploaded = (currentChunk.id - 1) * chunkSize + currentChunk.length();
+      final long totalUploadTimeMillis = pushStopwatch.elapsed(TimeUnit.MILLISECONDS);
       LOG.info(
           "Pushed total [%d] parts containing [%d] bytes in [%d]ms for s3Key[%s], uploadId[%s].",
           futures.size(),
-          totalChunkSize,
-          timeElapsed,
+          totalBytesUploaded,
+          totalUploadTimeMillis,
           s3Key,
           uploadId
       );
 
       final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder().setDimension("uploadId", uploadId);
-      uploadManager.emitMetric(builder.setMetric(JOB_TOTAL_TIME_METRIC, timeElapsed));
-      uploadManager.emitMetric(builder.setMetric(JOB_TOTAL_BYTES_METRIC, totalChunkSize));
+      uploadManager.emitMetric(builder.setMetric(JOB_TOTAL_TIME_METRIC, totalUploadTimeMillis));
+      uploadManager.emitMetric(builder.setMetric(JOB_TOTAL_BYTES_METRIC, totalBytesUploaded));
     });
 
     try (Closer ignored = closer) {
