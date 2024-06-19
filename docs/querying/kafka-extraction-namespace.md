@@ -22,7 +22,7 @@ title: "Apache Kafka Lookups"
   ~ under the License.
   -->
 
-To use this Apache Druid extension, [include](../../configuration/extensions.md#loading-extensions) `druid-lookups-cached-global` and `druid-kafka-extraction-namespace` in the extensions load list.
+To use this Apache Druid extension, [include](../configuration/extensions.md#loading-extensions) `druid-lookups-cached-global` and `druid-kafka-extraction-namespace` in the extensions load list.
 
 If you need updates to populate as promptly as possible, it is possible to plug into a Kafka topic whose key is the old value and message is the desired new value (both in UTF-8) as a LookupExtractorFactory.
 
@@ -41,13 +41,13 @@ If you need updates to populate as promptly as possible, it is possible to plug 
 | `kafkaTopic`      | The Kafka topic to read the data from                                                   | Yes      ||
 | `kafkaProperties` | Kafka consumer properties (`bootstrap.servers` must be specified)                       | Yes      ||
 | `connectTimeout`  | How long to wait for an initial connection                                              | No       | `0` (do not wait) |
-| `isOneToOne`      | The map is a one-to-one (see [Lookup DimensionSpecs](../../querying/dimensionspecs.md)) | No       | `false`           |
+| `isOneToOne`      | The map is a one-to-one (see [Lookup DimensionSpecs](./dimensionspecs.md)) | No       | `false`           |
 
 The extension `kafka-extraction-namespace` enables reading from an [Apache Kafka](https://kafka.apache.org/) topic which has name/key pairs to allow renaming of dimension values. An example use case would be to rename an ID to a human-readable format.
 
 ## How it Works
 
-The extractor works by consuming the configured Kafka topic from the beginning, and appending every record to an internal map. The key of the Kafka record is used as they key of the map, and the payload of the record is used as the value. At query time, a lookup can be used to transform the key into the associated value. See [lookups](../../querying/lookups.md) for how to configure and use lookups in a query. Keys and values are both stored as strings by the lookup extractor.
+The extractor works by consuming the configured Kafka topic from the beginning, and appending every record to an internal map. The key of the Kafka record is used as they key of the map, and the payload of the record is used as the value. At query time, a lookup can be used to transform the key into the associated value. See [lookups](./lookups.md) for how to configure and use lookups in a query. Keys and values are both stored as strings by the lookup extractor.
 
 The extractor remains subscribed to the topic, so new records are added to the lookup map as they appear. This allows for lookup values to be updated in near-realtime. If two records are added to the topic with the same key, the record with the larger offset will replace the previous record in the lookup map. A record with a `null` payload will be treated as a tombstone record, and the associated key will be removed from the lookup map.
 

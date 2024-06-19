@@ -43,9 +43,10 @@ public class KllDoublesSketchToStringPostAggregatorTest
         new FieldAccessPostAggregator("field1", "sketch")
     );
     DefaultObjectMapper mapper = new DefaultObjectMapper();
-    KllDoublesSketchToStringPostAggregator andBackAgain = mapper.readValue(
+    mapper.registerModules(new KllSketchModule().getJacksonModules());
+    PostAggregator andBackAgain = mapper.readValue(
         mapper.writeValueAsString(there),
-        KllDoublesSketchToStringPostAggregator.class
+        PostAggregator.class
     );
 
     Assert.assertEquals(there, andBackAgain);

@@ -53,96 +53,48 @@ interface GroupedNamedPartialPatterns {
   namedPartialPatterns: NamedPartialPattern[];
 }
 
+const DURATIONS_TO_SHOW: [string, string][] = [
+  ['Hour', 'PT1H'],
+  ['Day', 'P1D'],
+  ['Week', 'P1W'],
+  ['Month', 'P1M'],
+  ['Year', 'P1Y'],
+];
+
 const GROUPS: GroupedNamedPartialPatterns[] = [
   {
     groupName: 'Latest',
-    namedPartialPatterns: [
-      {
-        name: 'Hour',
-        partialPattern: {
-          anchor: 'maxDataTime',
-          rangeDuration: 'PT1H',
-        },
+    namedPartialPatterns: DURATIONS_TO_SHOW.map(([name, duration]) => ({
+      name,
+      partialPattern: {
+        anchor: 'maxDataTime',
+        rangeDuration: duration,
       },
-      {
-        name: 'Day',
-        partialPattern: {
-          anchor: 'maxDataTime',
-          rangeDuration: 'P1D',
-        },
-      },
-      {
-        name: 'Week',
-        partialPattern: {
-          anchor: 'maxDataTime',
-          rangeDuration: 'P1W',
-        },
-      },
-    ],
+    })),
   },
   {
     groupName: 'Current',
-    namedPartialPatterns: [
-      {
-        name: 'Hour',
-        partialPattern: {
-          anchor: 'timestamp',
-          alignType: 'ceil',
-          alignDuration: 'PT1H',
-          rangeDuration: 'PT1H',
-        },
+    namedPartialPatterns: DURATIONS_TO_SHOW.map(([name, duration]) => ({
+      name,
+      partialPattern: {
+        anchor: 'timestamp',
+        alignType: 'ceil',
+        alignDuration: duration,
+        rangeDuration: duration,
       },
-      {
-        name: 'Day',
-        partialPattern: {
-          anchor: 'timestamp',
-          alignType: 'ceil',
-          alignDuration: 'P1D',
-          rangeDuration: 'P1D',
-        },
-      },
-      {
-        name: 'Week',
-        partialPattern: {
-          anchor: 'timestamp',
-          alignType: 'ceil',
-          alignDuration: 'P1W',
-          rangeDuration: 'P1W',
-        },
-      },
-    ],
+    })),
   },
   {
     groupName: 'Previous',
-    namedPartialPatterns: [
-      {
-        name: 'Hour',
-        partialPattern: {
-          anchor: 'timestamp',
-          alignType: 'floor',
-          alignDuration: 'PT1H',
-          rangeDuration: 'PT1H',
-        },
+    namedPartialPatterns: DURATIONS_TO_SHOW.map(([name, duration]) => ({
+      name,
+      partialPattern: {
+        anchor: 'timestamp',
+        alignType: 'floor',
+        alignDuration: duration,
+        rangeDuration: duration,
       },
-      {
-        name: 'Day',
-        partialPattern: {
-          anchor: 'timestamp',
-          alignType: 'floor',
-          alignDuration: 'P1D',
-          rangeDuration: 'P1D',
-        },
-      },
-      {
-        name: 'Week',
-        partialPattern: {
-          anchor: 'timestamp',
-          alignType: 'floor',
-          alignDuration: 'P1W',
-          rangeDuration: 'P1W',
-        },
-      },
-    ],
+    })),
   },
 ];
 

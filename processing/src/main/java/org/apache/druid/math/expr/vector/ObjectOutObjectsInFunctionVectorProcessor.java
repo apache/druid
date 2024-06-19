@@ -61,7 +61,7 @@ public abstract class ObjectOutObjectsInFunctionVectorProcessor
   @Override
   ExprEvalVector<Object[]> asEval()
   {
-    return new ExprEvalObjectVector(outValues);
+    return new ExprEvalObjectVector(outValues, expressionType);
   }
 
   @Override

@@ -270,9 +270,9 @@ public class DruidAvaticaTestDriver implements Driver
     }
 
     @Override
-    public QueryRunnerFactoryConglomerate createCongolmerate(Builder builder, Closer closer)
+    public QueryRunnerFactoryConglomerate createCongolmerate(Builder builder, Closer closer, ObjectMapper jsonMapper)
     {
-      return delegate.createCongolmerate(builder, closer);
+      return delegate.createCongolmerate(builder, closer, jsonMapper);
     }
 
     @Override

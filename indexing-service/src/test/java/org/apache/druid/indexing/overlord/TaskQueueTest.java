@@ -71,6 +71,7 @@ import org.apache.druid.indexing.worker.TaskAnnouncement;
 import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -94,6 +95,7 @@ import org.junit.Test;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.net.URI;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -119,7 +121,7 @@ public class TaskQueueTest extends IngestionTestBase
 
     taskQueue = new TaskQueue(
         new TaskLockConfig(),
-        new TaskQueueConfig(3, null, null, null, null),
+        new TaskQueueConfig(3, null, null, null, null, null),
         new DefaultTaskConfig()
         {
           @Override
@@ -211,6 +213,73 @@ public class TaskQueueTest extends IngestionTestBase
     Assert.assertThrows(
         DruidException.class,
         () -> taskQueue.add(new TestTask("tx", Intervals.of("2021-01/P1M")))
+    );
+  }
+
+  @Test
+  public void testAddThrowsExceptionWhenPayloadIsTooLarge()
+  {
+    HumanReadableBytes maxPayloadSize10Mib = HumanReadableBytes.valueOf(10 * 1024 * 1024);
+    TaskQueue maxPayloadTaskQueue = new TaskQueue(
+        new TaskLockConfig(),
+        new TaskQueueConfig(3, null, null, null, null, maxPayloadSize10Mib),
+        new DefaultTaskConfig()
+        {
+          @Override
+          public Map<String, Object> getContext()
+          {
+            return defaultTaskContext;
+          }
+        },
+        getTaskStorage(),
+        new SimpleTaskRunner(),
+        actionClientFactory,
+        getLockbox(),
+        serviceEmitter,
+        getObjectMapper(),
+        new NoopTaskContextEnricher()
+    );
+    maxPayloadTaskQueue.setActive();
+
+    // 1 MB is not too large
+    char[] context = new char[1024 * 1024];
+    Arrays.fill(context, 'a');
+    maxPayloadTaskQueue.add(
+        new TestTask(
+            "tx",
+            Intervals.of("2021-01/P1M"),
+            ImmutableMap.of(
+                "contextKey", new String(context)
+            )
+        )
+    );
+
+    // 100 MB is too large
+    char[] contextLarge = new char[100 * 1024 * 1024];
+    Arrays.fill(contextLarge, 'a');
+
+    Assert.assertThrows(
+        DruidException.class,
+        () -> maxPayloadTaskQueue.add(
+            new TestTask(
+                "tx2",
+                Intervals.of("2021-01/P1M"),
+                ImmutableMap.of(
+                    "contextKey", new String(contextLarge)
+                )
+            )
+        )
+    );
+
+    // If no limit is set, don't throw anything
+    taskQueue.add(
+        new TestTask(
+            "tx3",
+            Intervals.of("2021-01/P1M"),
+            ImmutableMap.of(
+                "contextKey", new String(contextLarge)
+            )
+        )
     );
   }
 
@@ -336,7 +405,7 @@ public class TaskQueueTest extends IngestionTestBase
     EasyMock.replay(workerHolder);
     final TaskQueue taskQueue = new TaskQueue(
         new TaskLockConfig(),
-        new TaskQueueConfig(null, null, null, null, null),
+        new TaskQueueConfig(null, null, null, null, null, null),
         new DefaultTaskConfig(),
         getTaskStorage(),
         taskRunner,
@@ -424,7 +493,7 @@ public class TaskQueueTest extends IngestionTestBase
 
     final TaskQueue taskQueue = new TaskQueue(
         new TaskLockConfig(),
-        new TaskQueueConfig(null, null, null, null, null),
+        new TaskQueueConfig(null, null, null, null, null, null),
         new DefaultTaskConfig(),
         taskStorage,
         taskRunner,
@@ -469,7 +538,7 @@ public class TaskQueueTest extends IngestionTestBase
 
     final TaskQueue taskQueue = new TaskQueue(
         new TaskLockConfig(),
-        new TaskQueueConfig(null, null, null, null, null),
+        new TaskQueueConfig(null, null, null, null, null, null),
         new DefaultTaskConfig(),
         taskStorage,
         EasyMock.createMock(HttpRemoteTaskRunner.class),

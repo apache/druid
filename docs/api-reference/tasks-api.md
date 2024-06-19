@@ -749,10 +749,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
                     "filter": "wikiticker-2015-09-12-sampled.json.gz"
                 },
                 "inputFormat": {
-                    "type": "json",
-                    "keepNullColumns": false,
-                    "assumeNewlineDelimited": false,
-                    "useJsonNodeReader": false
+                    "type": "json"
                 },
                 "appendToExisting": false,
                 "dropExisting": false
