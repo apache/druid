@@ -356,13 +356,12 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         configSupplier,
         bufferPools.getProcessingPool(),
         groupByResourcesReservationPool,
-        TestHelper.makeJsonMapper(),
+        mapper,
         mapper,
         QueryRunnerTestHelper.NOOP_QUERYWATCHER
     );
     final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(
         groupingEngine,
-        () -> config,
         DefaultGroupByQueryMetricsFactory.instance(),
         groupByResourcesReservationPool
     );

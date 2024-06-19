@@ -331,6 +331,34 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   }
 
   @Test
+  public void testDuplicatePendingSegmentEntriesAreNotInserted()
+  {
+    final PendingSegmentRecord pendingSegment0 = new PendingSegmentRecord(
+        new SegmentIdWithShardSpec("foo", Intervals.ETERNITY, "version", new NumberedShardSpec(0, 0)),
+        "sequenceName0",
+        "sequencePrevId0",
+        null,
+        "taskAllocatorId"
+    );
+    final PendingSegmentRecord pendingSegment1 = new PendingSegmentRecord(
+        new SegmentIdWithShardSpec("foo", Intervals.ETERNITY, "version", new NumberedShardSpec(1, 0)),
+        "sequenceName1",
+        "sequencePrevId1",
+        null,
+        "taskAllocatorId"
+    );
+    final int actualInserted = derbyConnector.retryWithHandle(
+        handle -> coordinator.insertPendingSegmentsIntoMetastore(
+            handle,
+            ImmutableList.of(pendingSegment0, pendingSegment0, pendingSegment1, pendingSegment1, pendingSegment1),
+            "foo",
+            true
+        )
+    );
+    Assert.assertEquals(2, actualInserted);
+  }
+
+  @Test
   public void testSimpleAnnounce() throws IOException
   {
     coordinator.commitSegments(SEGMENTS, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
@@ -3246,5 +3274,50 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         "taskAllocatorId"
     );
     Assert.assertNull(coordinator.retrieveSegmentForId(theId.asSegmentId().toString(), true));
+  }
+
+  @Test
+  public void testRetrieveUnusedSegmentsForExactIntervalAndVersion() throws Exception
+  {
+    DataSegment unusedForDifferentVersion = createSegment(
+        Intervals.of("2024/2025"),
+        "v0",
+        new NumberedShardSpec(0, 0)
+    );
+    DataSegment unusedSegmentForExactIntervalAndVersion = createSegment(
+        Intervals.of("2024/2025"),
+        "v1",
+        new NumberedShardSpec(0, 0)
+    );
+    DataSegment unusedSegmentForDifferentInterval = createSegment(
+        Intervals.of("2023/2024"),
+        "v1",
+        new NumberedShardSpec(0, 0)
+    );
+    coordinator.commitSegments(
+        ImmutableSet.of(
+            unusedForDifferentVersion,
+            unusedSegmentForDifferentInterval,
+            unusedSegmentForExactIntervalAndVersion
+        ),
+        null
+    );
+    coordinator.markSegmentsAsUnusedWithinInterval(DS.WIKI, Intervals.ETERNITY);
+
+    DataSegment usedSegmentForExactIntervalAndVersion = createSegment(
+        Intervals.of("2024/2025"),
+        "v1",
+        new NumberedShardSpec(1, 0)
+    );
+    coordinator.commitSegments(ImmutableSet.of(usedSegmentForExactIntervalAndVersion), null);
+
+
+    List<String> unusedSegmentIdsForIntervalAndVersion =
+        coordinator.retrieveUnusedSegmentIdsForExactIntervalAndVersion(DS.WIKI, Intervals.of("2024/2025"), "v1");
+    Assert.assertEquals(1, unusedSegmentIdsForIntervalAndVersion.size());
+    Assert.assertEquals(
+        unusedSegmentForExactIntervalAndVersion.getId().toString(),
+        unusedSegmentIdsForIntervalAndVersion.get(0)
+    );
   }
 }
