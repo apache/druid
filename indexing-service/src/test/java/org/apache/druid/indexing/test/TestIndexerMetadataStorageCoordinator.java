@@ -85,9 +85,9 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   }
 
   @Override
-  public List<DataSegment> retrieveAllUsedSegments(String dataSource, Segments visibility)
+  public Set<DataSegment> retrieveAllUsedSegments(String dataSource, Segments visibility)
   {
-    return ImmutableList.of();
+    return ImmutableSet.of();
   }
 
   @Override
@@ -97,13 +97,13 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   }
 
   @Override
-  public List<DataSegment> retrieveUsedSegmentsForIntervals(
+  public Set<DataSegment> retrieveUsedSegmentsForIntervals(
       String dataSource,
       List<Interval> intervals,
       Segments visibility
   )
   {
-    return ImmutableList.of();
+    return ImmutableSet.of();
   }
 
   @Override

@@ -22,8 +22,7 @@ package org.apache.druid.indexing.common.actions;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.batch.parallel.AbstractBatchSubtask;
 import org.apache.druid.indexing.overlord.Segments;
@@ -48,19 +47,13 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * This TaskAction returns a collection of segments which have data within the specified intervals and are marked as
- * used.
+ * Task action to retrieve a collection of segments which have data within the
+ * specified intervals and are marked as used.
+ * <p>
  * If the task holds REPLACE locks and is writing back to the same datasource,
- * only segments that were created before the REPLACE lock was acquired are returned for an interval.
- * This ensures that the input set of segments for this replace task remains consistent
- * even when new data is appended by other concurrent tasks.
- *
- * The order of segments within the returned collection is unspecified, but each segment is guaranteed to appear in
- * the collection only once.
- *
- * @implNote This action doesn't produce a {@link Set} because it's implemented via {@link
- * org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator#retrieveUsedSegmentsForIntervals} which returns
- * a collection. Producing a {@link Set} would require an unnecessary copy of segments collection.
+ * only segments that were created before the REPLACE lock was acquired are
+ * returned for an interval. This ensures that the input set of segments for this
+ * replace task remains consistent even when new data is appended by other concurrent tasks.
  */
 public class RetrieveUsedSegmentsAction implements TaskAction<Collection<DataSegment>>
 {
@@ -73,27 +66,18 @@ public class RetrieveUsedSegmentsAction implements TaskAction<Collection<DataSeg
   @JsonCreator
   public RetrieveUsedSegmentsAction(
       @JsonProperty("dataSource") String dataSource,
-      @Deprecated @JsonProperty("interval") Interval interval,
       @JsonProperty("intervals") Collection<Interval> intervals,
       // When JSON object is deserialized, this parameter is optional for backward compatibility.
       // Otherwise, it shouldn't be considered optional.
       @JsonProperty("visibility") @Nullable Segments visibility
   )
   {
-    this.dataSource = dataSource;
-
-    Preconditions.checkArgument(
-        interval == null || intervals == null,
-        "please specify intervals only"
-    );
-
-    List<Interval> theIntervals = null;
-    if (interval != null) {
-      theIntervals = ImmutableList.of(interval);
-    } else if (intervals != null && intervals.size() > 0) {
-      theIntervals = JodaUtils.condenseIntervals(intervals);
+    if (intervals == null || intervals.isEmpty()) {
+      throw InvalidInput.exception("No interval specified for retrieving used segments");
     }
-    this.intervals = Preconditions.checkNotNull(theIntervals, "no intervals found");
+
+    this.dataSource = dataSource;
+    this.intervals = JodaUtils.condenseIntervals(intervals);
 
     // Defaulting to the former behaviour when visibility wasn't explicitly specified for backward compatibility
     this.visibility = visibility != null ? visibility : Segments.ONLY_VISIBLE;
@@ -101,7 +85,7 @@ public class RetrieveUsedSegmentsAction implements TaskAction<Collection<DataSeg
 
   public RetrieveUsedSegmentsAction(String dataSource, Collection<Interval> intervals)
   {
-    this(dataSource, null, intervals, Segments.ONLY_VISIBLE);
+    this(dataSource, intervals, Segments.ONLY_VISIBLE);
   }
 
   @JsonProperty
@@ -198,7 +182,7 @@ public class RetrieveUsedSegmentsAction implements TaskAction<Collection<DataSeg
     }
   }
 
-  private Collection<DataSegment> retrieveUsedSegments(TaskActionToolbox toolbox)
+  private Set<DataSegment> retrieveUsedSegments(TaskActionToolbox toolbox)
   {
     return toolbox.getIndexerMetadataStorageCoordinator()
                   .retrieveUsedSegmentsForIntervals(dataSource, intervals, visibility);

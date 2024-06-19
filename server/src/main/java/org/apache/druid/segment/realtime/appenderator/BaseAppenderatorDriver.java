@@ -622,7 +622,6 @@ public abstract class BaseAppenderatorDriver implements Closeable
           return RetryUtils.retry(
               () -> {
               try {
-                final Set<DataSegment> upgradedSegments = new HashSet<>();
                 final ImmutableSet<DataSegment> ourSegments = ImmutableSet.copyOf(pushedAndTombstones);
                 final SegmentPublishResult publishResult = publisher.publishSegments(
                     segmentsToBeOverwritten,
@@ -639,13 +638,14 @@ public abstract class BaseAppenderatorDriver implements Closeable
                   );
                   log.infoSegments(segmentsAndCommitMetadata.getSegments(), "Published segments");
                   // This set must contain only those segments that were upgraded as a result of a concurrent replace.
-                  upgradedSegments.addAll(publishResult.getSegments());
+                  final Set<DataSegment> upgradedSegments = new HashSet<>(publishResult.getSegments());
                   segmentsAndCommitMetadata.getSegments().forEach(upgradedSegments::remove);
                   if (!upgradedSegments.isEmpty()) {
                     log.info("Published [%d] upgraded segments.", upgradedSegments.size());
                     log.infoSegments(upgradedSegments, "Upgraded segments");
                   }
                   log.info("Published segment schemas: [%s]", segmentsAndCommitMetadata.getSegmentSchemaMapping());
+                  return segmentsAndCommitMetadata.withUpgradedSegments(upgradedSegments);
                 } else {
                   // Publishing didn't affirmatively succeed. However, segments with our identifiers may still be active
                   // now after all, for two possible reasons:
@@ -698,8 +698,9 @@ public abstract class BaseAppenderatorDriver implements Closeable
                     }
                     throw new ISE("Failed to publish segments");
                   }
+
+                  return segmentsAndCommitMetadata;
                 }
-                return segmentsAndCommitMetadata.withUpgradedSegments(upgradedSegments);
               }
               catch (Exception e) {
                 // Must not remove segments here, we aren't sure if our transaction succeeded or not.

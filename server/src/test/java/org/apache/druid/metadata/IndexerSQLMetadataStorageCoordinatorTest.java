@@ -495,7 +495,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
       {
         metadataUpdateCounter.getAndIncrement();
         if (attemptCounter.getAndIncrement() == 0) {
-          return new DataStoreMetadataUpdateResult(true, true, null);
+          return DataStoreMetadataUpdateResult.retryableFailure(null);
         } else {
           return super.updateDataSourceMetadataWithHandle(handle, dataSource, startMetadata, endMetadata);
         }

@@ -981,7 +981,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
             sequenceMetadata.getCommitterSupplier(this, stream, lastPersistedOffsets).get(),
             Collections.singletonList(sequenceMetadata.getSequenceName())
         ),
-        (Function<SegmentsAndCommitMetadata, SegmentsAndCommitMetadata>) publishedSegmentsAndMetadata -> {
+        publishedSegmentsAndMetadata -> {
           if (publishedSegmentsAndMetadata == null) {
             throw new ISE(
                 "Transaction failure publishing segments for sequence [%s]",

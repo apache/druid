@@ -416,7 +416,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
   {
     return Futures.transformAsync(
         publish(publisher, committer, sequenceNames),
-        (AsyncFunction<SegmentsAndCommitMetadata, SegmentsAndCommitMetadata>) this::registerHandoff,
+        this::registerHandoff,
         MoreExecutors.directExecutor()
     );
   }

@@ -337,11 +337,6 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
     return new FailableAppenderator().disablePush();
   }
 
-  static Appenderator createPushInterruptAppenderator()
-  {
-    return new FailableAppenderator().interruptPush();
-  }
-
   static Appenderator createPersistFailAppenderator()
   {
     return new FailableAppenderator().disablePersist();
