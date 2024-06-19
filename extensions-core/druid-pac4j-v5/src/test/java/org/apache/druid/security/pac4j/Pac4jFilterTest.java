@@ -26,14 +26,11 @@ import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
-import org.pac4j.core.adapter.JEEAdapter;
 import org.pac4j.core.exception.http.ForbiddenAction;
 import org.pac4j.core.exception.http.FoundAction;
 import org.pac4j.core.exception.http.HttpAction;
 import org.pac4j.core.exception.http.WithLocationAction;
-import org.pac4j.jee.adapter.JEEAdapterImpl;
 import org.pac4j.jee.context.JEEContext;
-import org.pac4j.jee.context.session.JEESessionStoreFactory;
 import org.pac4j.jee.http.adapter.JEEHttpActionAdapter;
 
 import javax.servlet.http.HttpServletRequest;
@@ -41,7 +38,6 @@ import javax.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.io.Writer;
 
 import static org.mockito.ArgumentMatchers.any;
 
