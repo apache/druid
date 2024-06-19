@@ -1332,6 +1332,77 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
 
   @MethodSource("constructorFeeder")
   @ParameterizedTest(name = "{0}")
+  public void testtest(String testName, Map<String, Object> queryContext)
+  {
+    testBuilder()
+        .sql(
+            "SELECT\n"
+            + "  DATE_TRUNC('DAY', CURRENT_TIMESTAMP) AS __time,\n"
+            + "  table_nb_days.\"user\",\n"
+            + "  table_nb_days.number_days_interactions,\n"
+            + "  (CASE WHEN table_nb_days.number_days_interactions < table_quantiles.first_quartile THEN 'Low_NB_DAYS' \n"
+            + "  WHEN table_nb_days.number_days_interactions >= table_quantiles.first_quartile AND table_nb_days.number_days_interactions < table_quantiles.third_quartile THEN 'Medium_NB_DAYS' \n"
+            + "  WHEN table_nb_days.number_days_interactions >= table_quantiles.third_quartile THEN 'High_NB_DAYS' END) AS NB_Days_Segment\n"
+            + "FROM (\n"
+            + "  SELECT\n"
+            + "    APPROX_QUANTILE_DS(table_nb_days.number_days_interactions, 0.25) AS first_quartile,\n"
+            + "    APPROX_QUANTILE_DS(table_nb_days.number_days_interactions, 0.75) AS third_quartile\n"
+            + "  FROM (\n"
+            + "    SELECT\n"
+            + "      dim1,\n"
+            + "      COUNT(DISTINCT __time) AS number_days_interactions\n"
+            + "    FROM \"foo\"\n"
+            + "    WHERE __time >= TIMESTAMP '2010-01-23' AND __time <= TIMESTAMP '2024-03-23'\n"
+            + "    GROUP BY 1\n"
+            + "  ) AS table_nb_days\n"
+            + ") AS table_quantiles, (\n"
+            + "  SELECT\n"
+            + "    dim1,\n"
+            + "    COUNT(DISTINCT __time) AS number_days_interactions\n"
+            + "  FROM \"foo\"\n"
+            + "  WHERE __time >= TIMESTAMP '2010-01-23' AND __time <= TIMESTAMP '2024-03-23' \n"
+            + "  GROUP BY 1\n"
+            + ") AS table_nb_days\n"
+        )
+        .expectedQuery(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(
+                      join(
+                          new TableDataSource(CalciteTests.WIKIPEDIA),
+                          new QueryDataSource(
+                              Druids.newScanQueryBuilder()
+                                    .dataSource(CalciteTests.WIKIPEDIA)
+                                    .intervals(querySegmentSpec(Filtration.eternity()))
+                                    .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                    .offset(6L)
+                                    .limit(1L)
+                                    .order(ScanQuery.Order.DESCENDING)
+                                    .columns("__time", "channel")
+                                    .legacy(false)
+                                    .context(QUERY_CONTEXT_DEFAULT)
+                                    .build()
+                          ),
+                          "j0.",
+                          "(\"channel\" == \"j0.channel\")",
+                          JoinType.INNER
+                      )
+                  )
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .aggregators(aggregators(new CountAggregatorFactory("a0")))
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        )
+        .expectedResults(
+            ImmutableList.of(
+                new Object[] {1256L}
+            )
+        )
+        .run();
+  }
+
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
   public void testSingleValueStringMultipleRowsAgg(String testName, Map<String, Object> queryContext)
   {
     cannotVectorize();

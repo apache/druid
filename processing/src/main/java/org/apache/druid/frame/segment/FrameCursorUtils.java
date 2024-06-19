@@ -107,6 +107,10 @@ public class FrameCursorUtils
       final FrameWriterFactory frameWriterFactory
   )
   {
+
+    frameWriterFactory.signature()
+
+
     return () -> new Iterator<Frame>()
     {
       @Override

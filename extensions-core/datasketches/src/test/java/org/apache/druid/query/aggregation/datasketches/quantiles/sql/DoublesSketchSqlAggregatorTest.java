@@ -264,6 +264,118 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testtest()
+  {
+    final List<Object[]> expectedResults;
+    if (NullHandling.replaceWithDefault()) {
+      expectedResults = ImmutableList.of(
+          new Object[]{
+              0.0,
+              0.0,
+              10.1,
+              10.1,
+              20.2,
+              0.0,
+              10.1,
+              0.0
+          }
+      );
+    } else {
+      expectedResults = ImmutableList.of(
+          new Object[]{
+              1.0,
+              2.0,
+              10.1,
+              10.1,
+              20.2,
+              Double.NaN,
+              2.0,
+              Double.NaN
+          }
+      );
+    }
+
+    testQuery(
+        "SELECT\n"
+        + "  DATE_TRUNC('DAY', CURRENT_TIMESTAMP) AS __time,\n"
+        + "  table_nb_days.\"user\",\n"
+        + "  table_nb_days.number_days_interactions,\n"
+        + "  (CASE WHEN table_nb_days.number_days_interactions < table_quantiles.first_quartile THEN 'Low_NB_DAYS' \n"
+        + "  WHEN table_nb_days.number_days_interactions >= table_quantiles.first_quartile AND table_nb_days.number_days_interactions < table_quantiles.third_quartile THEN 'Medium_NB_DAYS' \n"
+        + "  WHEN table_nb_days.number_days_interactions >= table_quantiles.third_quartile THEN 'High_NB_DAYS' END) AS NB_Days_Segment\n"
+        + "FROM (\n"
+        + "  SELECT\n"
+        + "    APPROX_QUANTILE_DS(table_nb_days.number_days_interactions, 0.25) AS first_quartile,\n"
+        + "    APPROX_QUANTILE_DS(table_nb_days.number_days_interactions, 0.75) AS third_quartile\n"
+        + "  FROM (\n"
+        + "    SELECT\n"
+        + "      dim1 \"user\",\n"
+        + "      COUNT(DISTINCT __time) AS number_days_interactions\n"
+        + "    FROM \"foo\"\n"
+        + "    WHERE __time >= TIMESTAMP '1990-01-23' AND __time <= TIMESTAMP '2024-03-23'\n"
+        + "    GROUP BY 1\n"
+        + "  ) AS table_nb_days\n"
+        + ") AS table_quantiles, (\n"
+        + "  SELECT\n"
+        + "    dim1 \"user\",\n"
+        + "    COUNT(DISTINCT __time) AS number_days_interactions\n"
+        + "  FROM \"foo\"\n"
+        + "  WHERE __time >= TIMESTAMP '1990-01-23' AND __time <= TIMESTAMP '2024-03-23' \n"
+        + "  GROUP BY 1\n"
+        + ") AS table_nb_days\n",
+        QUERY_CONTEXT_WITH_SUBQUERY_MEMORY_LIMIT,
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(
+                      new ExpressionVirtualColumn(
+                          "v0",
+                          "CAST(\"dim1\", 'DOUBLE')",
+                          ColumnType.FLOAT,
+                          TestExprMacroTable.INSTANCE
+                      ),
+                      new ExpressionVirtualColumn(
+                          "v1",
+                          "(CAST(\"dim1\", 'DOUBLE') * 2)",
+                          ColumnType.FLOAT,
+                          TestExprMacroTable.INSTANCE
+                      )
+                  )
+                  .aggregators(ImmutableList.of(
+                      new DoublesSketchAggregatorFactory("a0:agg", "v0", 128),
+                      new DoublesSketchAggregatorFactory("a1:agg", "v0", 64),
+                      new DoublesSketchAggregatorFactory("a2:agg", "v0", 256),
+                      new DoublesSketchAggregatorFactory("a4:agg", "v1", 128),
+                      new FilteredAggregatorFactory(
+                          new DoublesSketchAggregatorFactory("a5:agg", "v0", 128),
+                          equality("dim2", "abc", ColumnType.STRING)
+                      ),
+                      new FilteredAggregatorFactory(
+                          new DoublesSketchAggregatorFactory("a6:agg", "v0", 128),
+                          not(equality("dim2", "abc", ColumnType.STRING))
+                      )
+                  ))
+                  .postAggregators(
+                      new DoublesSketchToQuantilePostAggregator("a0", makeFieldAccessPostAgg("a0:agg"), 0.01f),
+                      new DoublesSketchToQuantilePostAggregator("a1", makeFieldAccessPostAgg("a1:agg"), 0.50f),
+                      new DoublesSketchToQuantilePostAggregator("a2", makeFieldAccessPostAgg("a2:agg"), 0.98f),
+                      new DoublesSketchToQuantilePostAggregator("a3", makeFieldAccessPostAgg("a0:agg"), 0.99f),
+                      new DoublesSketchToQuantilePostAggregator("a4", makeFieldAccessPostAgg("a4:agg"), 0.97f),
+                      new DoublesSketchToQuantilePostAggregator("a5", makeFieldAccessPostAgg("a5:agg"), 0.99f),
+                      new DoublesSketchToQuantilePostAggregator("a6", makeFieldAccessPostAgg("a6:agg"), 0.999f),
+                      new DoublesSketchToQuantilePostAggregator("a7", makeFieldAccessPostAgg("a5:agg"), 0.999f)
+                  )
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        expectedResults
+    );
+  }
+
+
+  @Test
   public void testQuantileOnCastedString()
   {
     final List<Object[]> expectedResults;
@@ -963,9 +1075,32 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
     );
     testQuery(
         "SELECT\n"
-        + "APPROX_QUANTILE_DS(m1, 0.01),\n"
-        + "APPROX_QUANTILE_DS(cnt, 0.5)\n"
-        + "FROM foo",
+        + "  DATE_TRUNC('DAY', CURRENT_TIMESTAMP) AS __time,\n"
+        + "  table_nb_days.\"user\",\n"
+        + "  table_nb_days.number_days_interactions,\n"
+        + "  (CASE WHEN table_nb_days.number_days_interactions < table_quantiles.first_quartile THEN 'Low_NB_DAYS' \n"
+        + "  WHEN table_nb_days.number_days_interactions >= table_quantiles.first_quartile AND table_nb_days.number_days_interactions < table_quantiles.third_quartile THEN 'Medium_NB_DAYS' \n"
+        + "  WHEN table_nb_days.number_days_interactions >= table_quantiles.third_quartile THEN 'High_NB_DAYS' END) AS NB_Days_Segment\n"
+        + "FROM (\n"
+        + "  SELECT\n"
+        + "    APPROX_QUANTILE_DS(table_nb_days.number_days_interactions, 0.25) AS first_quartile,\n"
+        + "    APPROX_QUANTILE_DS(table_nb_days.number_days_interactions, 0.75) AS third_quartile\n"
+        + "  FROM (\n"
+        + "    SELECT\n"
+        + "      dim1,\n"
+        + "      COUNT(DISTINCT __time) AS number_days_interactions\n"
+        + "    FROM \"foo\"\n"
+        + "    WHERE __time >= TIMESTAMP '2010-01-23' AND __time <= TIMESTAMP '2024-03-23'\n"
+        + "    GROUP BY 1\n"
+        + "  ) AS table_nb_days\n"
+        + ") AS table_quantiles, (\n"
+        + "  SELECT\n"
+        + "    dim1,\n"
+        + "    COUNT(DISTINCT __time) AS number_days_interactions\n"
+        + "  FROM \"foo\"\n"
+        + "  WHERE __time >= TIMESTAMP '2010-01-23' AND __time <= TIMESTAMP '2024-03-23' \n"
+        + "  GROUP BY 1\n"
+        + ") AS table_nb_days\n",
         context,
         Collections.singletonList(
             Druids.newTimeseriesQueryBuilder()
