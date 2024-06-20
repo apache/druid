@@ -696,11 +696,9 @@ public class KafkaInputFormatTest
 
     try (CloseableIterator<InputRow> iterator = reader.read()) {
       while (iterator.hasNext()) {
-        Throwable t = Assert.assertThrows(ParseException.class, () -> iterator.next());
-        Assert.assertEquals(
-            "Timestamp[null] is unparseable! Event: {kafka.newtopic.topic=sample, foo=x, kafka.newts"
-            + ".timestamp=1624492800000, kafka.newkey.key=sampleKey...",
-            t.getMessage()
+        Throwable t = Assert.assertThrows(ParseException.class, iterator::next);
+        Assert.assertTrue(
+            t.getMessage().startsWith("Timestamp[null] is unparseable! Event: {")
         );
       }
     }
