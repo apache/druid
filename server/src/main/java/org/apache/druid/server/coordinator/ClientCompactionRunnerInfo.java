@@ -101,7 +101,7 @@ public class ClientCompactionRunnerInfo
     return Objects.hash(type);
   }
 
-  public static ValidationResult supportsCompactionConfig(DataSourceCompactionConfig newConfig)
+  public static ValidationResult validateCompactionConfig(DataSourceCompactionConfig newConfig)
   {
     CompactionEngine compactionEngine = newConfig.getEngine();
     if (compactionEngine == CompactionEngine.NATIVE) {
@@ -144,10 +144,6 @@ public class ClientCompactionRunnerInfo
         return rollupValidationResult;
       }
     }
-    ValidationResult finalizeAggregationValidationResult = validateFinalizeAggregations(newConfig.getTaskContext());
-    if (!finalizeAggregationValidationResult.isValid()) {
-      return finalizeAggregationValidationResult;
-    }
     return new ValidationResult(true, null);
   }
 
@@ -179,26 +175,10 @@ public class ClientCompactionRunnerInfo
    * Validate rollup is set to false in granularitySpec when metricsSpec is specified.
    */
   public static ValidationResult validateRollup(AggregatorFactory[] metricsSpec, boolean isRollup) {
-    if (metricsSpec != null
-       ) {
+    if (metricsSpec != null && !isRollup) {
       return new ValidationResult(false, StringUtils.format(
           "rollup in granularitySpec must be set to True if metricsSpec is specifed "
           + "for MSQ engine."));
-    }
-    return new ValidationResult(true, null);
-  }
-
-  /**
-   * Validate finalizeAggregations is not set to false
-   */
-  public static ValidationResult validateFinalizeAggregations(Map<String, Object> context){
-    QueryContext queryContext = QueryContext.of(context);
-
-    if (!queryContext.getBoolean(MSQContext.CTX_FINALIZE_AGGREGATIONS, true)) {
-      return new ValidationResult(false, StringUtils.format(
-          "Config[%s] cannot be set to false for auto-compaction with MSQ engine.",
-          MSQContext.CTX_FINALIZE_AGGREGATIONS
-      ));
     }
     return new ValidationResult(true, null);
   }

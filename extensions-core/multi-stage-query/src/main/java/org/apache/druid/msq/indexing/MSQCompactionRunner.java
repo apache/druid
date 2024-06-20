@@ -143,11 +143,6 @@ public class MSQCompactionRunner implements CompactionRunner
         return rollupValidationResult;
       }
     }
-    ClientCompactionRunnerInfo.ValidationResult finalizeAggregationValidationResult =
-        ClientCompactionRunnerInfo.validateFinalizeAggregations(compactionTask.getContext());
-    if (!finalizeAggregationValidationResult.isValid()) {
-      return finalizeAggregationValidationResult;
-    }
     return new ClientCompactionRunnerInfo.ValidationResult(true, null);
   }
 

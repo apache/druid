@@ -254,7 +254,7 @@ public class DataSourceCompactionConfig
       );
     }
 
-    ClientCompactionRunnerInfo.ValidationResult validationResult = ClientCompactionRunnerInfo.supportsCompactionConfig(
+    ClientCompactionRunnerInfo.ValidationResult validationResult = ClientCompactionRunnerInfo.validateCompactionConfig(
         newConfig
     );
     if (!validationResult.isValid()) {

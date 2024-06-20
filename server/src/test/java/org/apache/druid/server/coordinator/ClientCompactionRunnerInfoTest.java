@@ -49,7 +49,7 @@ public class ClientCompactionRunnerInfoTest
   public void testHashedPartitionsSpecs()
   {
     assertFalse(
-        ClientCompactionRunnerInfo.supportsCompactionConfig(
+        ClientCompactionRunnerInfo.validateCompactionConfig(
             createCompactionConfig(new HashedPartitionsSpec(100, null, null), Collections.emptyMap())
         ).isValid()
     );
@@ -59,7 +59,7 @@ public class ClientCompactionRunnerInfoTest
   public void testrInvalidDynamicPartitionsSpecs()
   {
     assertFalse(
-        ClientCompactionRunnerInfo.supportsCompactionConfig(
+        ClientCompactionRunnerInfo.validateCompactionConfig(
             createCompactionConfig(new DynamicPartitionsSpec(100, 100L), Collections.emptyMap())
         ).isValid()
     );
@@ -68,7 +68,7 @@ public class ClientCompactionRunnerInfoTest
   @Test
   public void testDynamicPartitionsSpecs()
   {
-    assertTrue(ClientCompactionRunnerInfo.supportsCompactionConfig(
+    assertTrue(ClientCompactionRunnerInfo.validateCompactionConfig(
         createCompactionConfig(new DynamicPartitionsSpec(100, null), Collections.emptyMap())
     ).isValid());
   }
@@ -76,7 +76,7 @@ public class ClientCompactionRunnerInfoTest
   @Test
   public void testDimensionRangePartitionsSpecs()
   {
-    assertTrue(ClientCompactionRunnerInfo.supportsCompactionConfig(
+    assertTrue(ClientCompactionRunnerInfo.validateCompactionConfig(
         createCompactionConfig(
             new DimensionRangePartitionsSpec(100, null, ImmutableList.of("partitionDim"), false),
             Collections.emptyMap()
@@ -91,7 +91,7 @@ public class ClientCompactionRunnerInfoTest
         new DynamicPartitionsSpec(3, null),
         ImmutableMap.of(ClientCompactionRunnerInfo.MSQContext.CTX_FINALIZE_AGGREGATIONS, false)
     );
-    Assert.assertFalse(ClientCompactionRunnerInfo.supportsCompactionConfig(compactionConfig).isValid());
+    Assert.assertFalse(ClientCompactionRunnerInfo.validateCompactionConfig(compactionConfig).isValid());
   }
 
   private static DataSourceCompactionConfig createCompactionConfig(
