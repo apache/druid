@@ -19,12 +19,8 @@
 
 package org.apache.druid.quidem;
 
-import org.junit.jupiter.api.extension.ExtendWith;
-
 import java.io.File;
 
-//@EnabledIf(value = "enabled", disabledReason = "These tests are only run in SqlCompatible mode!")
-@ExtendWith(EnabledOnlyInSqlCompatibleMode.class)
 public class SqlQuidemTest extends DruidQuidemTestBase
 {
   public SqlQuidemTest()
