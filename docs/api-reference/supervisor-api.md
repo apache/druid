@@ -3518,7 +3518,7 @@ Trigger handoff for specified task groups of a supervisor early. This is a best 
 
 #### Sample request
 
-The following example shows how to handoff task groups for a Kafka supervisor with the name `social_media` and has the task groups: `1,2,3`.
+The following example shows how to handoff task groups for a supervisor with the name `social_media` and has the task groups: `1,2,3`.
 
 <Tabs>
 

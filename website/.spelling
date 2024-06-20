@@ -216,6 +216,7 @@ ROUTINE_TYPE
 Rackspace
 Redis
 S3
+SAS
 SDK
 SIGAR
 SPNEGO
@@ -1279,7 +1280,7 @@ ComplexMetrics
 DataSegmentArchiver
 DataSegmentKiller
 DataSegmentMover
-DataSegmentPuller
+URIDataPuller
 DataSegmentPusher
 DruidModule
 ExtractionFns
