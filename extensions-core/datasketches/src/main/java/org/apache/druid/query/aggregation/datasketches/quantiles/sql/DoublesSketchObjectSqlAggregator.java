@@ -89,7 +89,6 @@ public class DoublesSketchObjectSqlAggregator implements SqlAggregator
     }
 
     final AggregatorFactory aggregatorFactory;
-    final String histogramName = StringUtils.format("%s:agg", name);
     final int k;
 
     if (aggregateCall.getArgList().size() >= 2) {
@@ -108,7 +107,7 @@ public class DoublesSketchObjectSqlAggregator implements SqlAggregator
     // No existing match found. Create a new one.
     if (input.isDirectColumnAccess()) {
       aggregatorFactory = new DoublesSketchAggregatorFactory(
-          histogramName,
+          name,
           input.getDirectColumn(),
           k,
           DoublesSketchApproxQuantileSqlAggregator.getMaxStreamLengthFromQueryContext(plannerContext.queryContext()),
@@ -120,7 +119,7 @@ public class DoublesSketchObjectSqlAggregator implements SqlAggregator
           ColumnType.FLOAT
       );
       aggregatorFactory = new DoublesSketchAggregatorFactory(
-          histogramName,
+          name,
           virtualColumnName,
           k,
           DoublesSketchApproxQuantileSqlAggregator.getMaxStreamLengthFromQueryContext(plannerContext.queryContext()),

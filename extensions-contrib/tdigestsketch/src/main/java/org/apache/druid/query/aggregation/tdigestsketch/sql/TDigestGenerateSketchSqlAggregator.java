@@ -79,7 +79,6 @@ public class TDigestGenerateSketchSqlAggregator implements SqlAggregator
     }
 
     final AggregatorFactory aggregatorFactory;
-    final String aggName = StringUtils.format("%s:agg", name);
 
     Integer compression = TDigestSketchAggregatorFactory.DEFAULT_COMPRESSION;
     if (aggregateCall.getArgList().size() > 1) {
@@ -116,7 +115,7 @@ public class TDigestGenerateSketchSqlAggregator implements SqlAggregator
     // No existing match found. Create a new one.
     if (input.isDirectColumnAccess()) {
       aggregatorFactory = new TDigestSketchAggregatorFactory(
-          aggName,
+          name,
           input.getDirectColumn(),
           compression
       );
@@ -125,7 +124,7 @@ public class TDigestGenerateSketchSqlAggregator implements SqlAggregator
           input,
           ColumnType.FLOAT
       );
-      aggregatorFactory = new TDigestSketchAggregatorFactory(aggName, virtualColumnName, compression);
+      aggregatorFactory = new TDigestSketchAggregatorFactory(name, virtualColumnName, compression);
     }
 
     return Aggregation.create(aggregatorFactory);

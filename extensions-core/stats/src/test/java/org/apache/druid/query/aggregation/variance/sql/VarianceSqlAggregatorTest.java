@@ -202,9 +202,9 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
                   .granularity(Granularities.ALL)
                   .aggregators(
                       ImmutableList.of(
-                          new VarianceAggregatorFactory("a0:agg", "d1", "population", "double"),
-                          new VarianceAggregatorFactory("a1:agg", "f1", "population", "float"),
-                          new VarianceAggregatorFactory("a2:agg", "l1", "population", "long")
+                          new VarianceAggregatorFactory("a0", "d1", "population", "double"),
+                          new VarianceAggregatorFactory("a1", "f1", "population", "float"),
+                          new VarianceAggregatorFactory("a2", "l1", "population", "long")
                       )
                   )
                   .context(BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT)
@@ -250,9 +250,9 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
                   .granularity(Granularities.ALL)
                   .aggregators(
                       ImmutableList.of(
-                          new VarianceAggregatorFactory("a0:agg", "d1", "sample", "double"),
-                          new VarianceAggregatorFactory("a1:agg", "f1", "sample", "float"),
-                          new VarianceAggregatorFactory("a2:agg", "l1", "sample", "long")
+                          new VarianceAggregatorFactory("a0", "d1", "sample", "double"),
+                          new VarianceAggregatorFactory("a1", "f1", "sample", "float"),
+                          new VarianceAggregatorFactory("a2", "l1", "sample", "long")
                       )
                   )
                   .context(BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT)
@@ -457,14 +457,14 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
                         .setGranularity(Granularities.ALL)
                         .setDimensions(new DefaultDimensionSpec("dim2", "_d0"))
                         .setAggregatorSpecs(
-                            new VarianceAggregatorFactory("a0:agg", "f1", "sample", "float")
+                            new VarianceAggregatorFactory("a0", "f1", "sample", "float")
                         )
                         .setLimitSpec(
                             DefaultLimitSpec
                                 .builder()
                                 .orderBy(
                                     new OrderByColumnSpec(
-                                        "a0:agg",
+                                        "a0",
                                         OrderByColumnSpec.Direction.DESCENDING,
                                         StringComparators.NUMERIC
                                     )
@@ -501,7 +501,7 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
                 new VarianceAggregatorFactory("a0:agg", "v0", "population", "double"),
                 new VarianceAggregatorFactory("a1:agg", "v0", "sample", "double"),
                 new VarianceAggregatorFactory("a2:agg", "v0", "sample", "double"),
-                new VarianceAggregatorFactory("a3:agg", "v0", "sample", "double")
+                new VarianceAggregatorFactory("a3", "v0", "sample", "double")
             )
             .postAggregators(
                 new StandardDeviationPostAggregator("a0", "a0:agg", "population"),
@@ -544,11 +544,11 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
                       new VarianceAggregatorFactory("a0:agg", "d1", "population", "double"),
                       new VarianceAggregatorFactory("a1:agg", "d1", "sample", "double"),
                       new VarianceAggregatorFactory("a2:agg", "d1", "sample", "double"),
-                      new VarianceAggregatorFactory("a3:agg", "d1", "sample", "double"),
+                      new VarianceAggregatorFactory("a3", "d1", "sample", "double"),
                       new VarianceAggregatorFactory("a4:agg", "l1", "population", "long"),
                       new VarianceAggregatorFactory("a5:agg", "l1", "sample", "long"),
                       new VarianceAggregatorFactory("a6:agg", "l1", "sample", "long"),
-                      new VarianceAggregatorFactory("a7:agg", "l1", "sample", "long")
+                      new VarianceAggregatorFactory("a7", "l1", "sample", "long")
 
                   )
                   .postAggregators(
@@ -609,7 +609,7 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
                                     equality("dim1", "nonexistent", ColumnType.STRING)
                                 ),
                                 new FilteredAggregatorFactory(
-                                    new VarianceAggregatorFactory("a3:agg", "d1", "sample", "double"),
+                                    new VarianceAggregatorFactory("a3", "d1", "sample", "double"),
                                     equality("dim1", "nonexistent", ColumnType.STRING)
                                 ),
                                 new FilteredAggregatorFactory(
@@ -625,7 +625,7 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
                                     equality("dim1", "nonexistent", ColumnType.STRING)
                                 ),
                                 new FilteredAggregatorFactory(
-                                    new VarianceAggregatorFactory("a7:agg", "l1", "sample", "long"),
+                                    new VarianceAggregatorFactory("a7", "l1", "sample", "long"),
                                     equality("dim1", "nonexistent", ColumnType.STRING)
                                 )
                             )
@@ -681,9 +681,9 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
                   .granularity(Granularities.ALL)
                   .aggregators(
                       ImmutableList.of(
-                          new VarianceAggregatorFactory("a0:agg", "var1", "sample", "variance"),
-                          new VarianceAggregatorFactory("a1:agg", "var1", "population", "variance"),
-                          new VarianceAggregatorFactory("a2:agg", "var1", "sample", "variance"),
+                          new VarianceAggregatorFactory("a0", "var1", "sample", "variance"),
+                          new VarianceAggregatorFactory("a1", "var1", "population", "variance"),
+                          new VarianceAggregatorFactory("a2", "var1", "sample", "variance"),
                           new VarianceAggregatorFactory("a3:agg", "var1", "sample", "variance"),
                           new VarianceAggregatorFactory("a4:agg", "var1", "population", "variance"),
                           new VarianceAggregatorFactory("a5:agg", "var1", "sample", "variance")

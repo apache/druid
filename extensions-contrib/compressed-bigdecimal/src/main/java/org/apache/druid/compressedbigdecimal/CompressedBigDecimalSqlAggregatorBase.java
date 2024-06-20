@@ -130,7 +130,7 @@ public abstract class CompressedBigDecimalSqlAggregatorBase implements SqlAggreg
 
     // create the factory
     AggregatorFactory aggregatorFactory = factoryCreator.create(
-        StringUtils.format("%s:agg", name),
+        name,
         sumColumnName,
         size,
         scale,
