@@ -150,7 +150,7 @@ public abstract class AbstractTestQueryHelper<QueryResultType extends AbstractQu
 
       if ((queryWithResult.getQuery() instanceof Map)) {
         Map<String, String> s = (Map<String, String>) queryWithResult.getQuery();
-        if (s.get("query").contains("SELECT task_id, group_id, type, datasource, status, error_msg FROM sys.tasks WHERE datasource ")) {
+        if (s.containsKey("query") && s.get("query").contains("SELECT task_id, group_id, type, datasource, status, error_msg FROM sys.tasks WHERE datasource ")) {
           LOG.info("Result for failed query %s", result);
         }
       }
