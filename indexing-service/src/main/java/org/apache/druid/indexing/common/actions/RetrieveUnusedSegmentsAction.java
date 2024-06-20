@@ -30,7 +30,6 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 
 import java.util.List;
-import java.util.Objects;
 
 public class RetrieveUnusedSegmentsAction implements TaskAction<List<DataSegment>>
 {
@@ -106,29 +105,6 @@ public class RetrieveUnusedSegmentsAction implements TaskAction<List<DataSegment
   public boolean isAudited()
   {
     return false;
-  }
-
-  @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    RetrieveUnusedSegmentsAction that = (RetrieveUnusedSegmentsAction) o;
-    return Objects.equals(dataSource, that.dataSource)
-           && Objects.equals(interval, that.interval)
-           && Objects.equals(versions, that.versions)
-           && Objects.equals(limit, that.limit)
-           && Objects.equals(maxUsedStatusLastUpdatedTime, that.maxUsedStatusLastUpdatedTime);
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return Objects.hash(dataSource, interval, versions, limit, maxUsedStatusLastUpdatedTime);
   }
 
   @Override

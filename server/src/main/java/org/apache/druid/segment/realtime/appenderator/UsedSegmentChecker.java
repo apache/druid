@@ -20,17 +20,18 @@
 package org.apache.druid.segment.realtime.appenderator;
 
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.SegmentId;
 
 import java.io.IOException;
 import java.util.Set;
 
-/**
- * Finds published segments of a datasource for given segment IDs.
- * The segments may be visible, overshadowed or unused.
- */
-@FunctionalInterface
-public interface PublishedSegmentRetriever
+public interface UsedSegmentChecker
 {
-  Set<DataSegment> findPublishedSegments(Set<SegmentId> segmentIds) throws IOException;
+  /**
+   * For any identifiers that exist and are actually used, returns the corresponding DataSegment objects.
+   *
+   * @param identifiers identifiers to search for
+   *
+   * @return used DataSegments
+   */
+  Set<DataSegment> findUsedSegments(Set<SegmentIdWithShardSpec> identifiers) throws IOException;
 }

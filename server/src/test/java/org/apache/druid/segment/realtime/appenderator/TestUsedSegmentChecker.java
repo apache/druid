@@ -20,7 +20,6 @@
 package org.apache.druid.segment.realtime.appenderator;
 
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.partition.PartitionChunk;
@@ -29,24 +28,24 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-public class TestPublishedSegmentRetriever implements PublishedSegmentRetriever
+public class TestUsedSegmentChecker implements UsedSegmentChecker
 {
   private final List<DataSegment> pushedSegments;
 
-  public TestPublishedSegmentRetriever(List<DataSegment> pushedSegments)
+  public TestUsedSegmentChecker(List<DataSegment> pushedSegments)
   {
     this.pushedSegments = pushedSegments;
   }
 
   @Override
-  public Set<DataSegment> findPublishedSegments(Set<SegmentId> segmentIds)
+  public Set<DataSegment> findUsedSegments(Set<SegmentIdWithShardSpec> identifiers)
   {
     final SegmentTimeline timeline = SegmentTimeline.forSegments(pushedSegments);
     final Set<DataSegment> retVal = new HashSet<>();
-    for (SegmentId identifier : segmentIds) {
+    for (SegmentIdWithShardSpec identifier : identifiers) {
       for (TimelineObjectHolder<String, DataSegment> holder : timeline.lookup(identifier.getInterval())) {
         for (PartitionChunk<DataSegment> chunk : holder.getObject()) {
-          if (segmentIds.contains(chunk.getObject().getId())) {
+          if (identifiers.contains(SegmentIdWithShardSpec.fromDataSegment(chunk.getObject()))) {
             retVal.add(chunk.getObject());
           }
         }

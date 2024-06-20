@@ -70,7 +70,7 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
   public BatchAppenderatorDriver(
       Appenderator appenderator,
       SegmentAllocator segmentAllocator,
-      PublishedSegmentRetriever usedSegmentChecker,
+      UsedSegmentChecker usedSegmentChecker,
       DataSegmentKiller dataSegmentKiller
   )
   {

@@ -27,8 +27,8 @@ import com.google.common.base.Suppliers;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexing.appenderator.ActionBasedPublishedSegmentRetriever;
 import org.apache.druid.indexing.appenderator.ActionBasedSegmentAllocator;
+import org.apache.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
@@ -237,7 +237,7 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
             )
         ),
         toolbox.getSegmentHandoffNotifierFactory(),
-        new ActionBasedPublishedSegmentRetriever(toolbox.getTaskActionClient()),
+        new ActionBasedUsedSegmentChecker(toolbox.getTaskActionClient()),
         toolbox.getDataSegmentKiller(),
         toolbox.getJsonMapper(),
         metrics

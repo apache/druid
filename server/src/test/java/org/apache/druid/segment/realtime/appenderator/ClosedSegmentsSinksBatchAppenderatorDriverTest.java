@@ -95,7 +95,7 @@ public class ClosedSegmentsSinksBatchAppenderatorDriverTest extends EasyMockSupp
     driver = new BatchAppenderatorDriver(
         appenderatorTester.getAppenderator(),
         allocator,
-        new TestPublishedSegmentRetriever(appenderatorTester.getPushedSegments()),
+        new TestUsedSegmentChecker(appenderatorTester.getPushedSegments()),
         dataSegmentKiller
     );
 

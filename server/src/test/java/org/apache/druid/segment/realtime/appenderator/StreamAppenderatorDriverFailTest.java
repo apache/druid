@@ -46,7 +46,6 @@ import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriverTe
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriverTest.TestSegmentAllocator;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriverTest.TestSegmentHandoffNotifierFactory;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
@@ -133,7 +132,7 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
         createPersistFailAppenderator(),
         allocator,
         segmentHandoffNotifierFactory,
-        new NoopPublishedSegmentRetriever(),
+        new NoopUsedSegmentChecker(),
         dataSegmentKiller,
         OBJECT_MAPPER,
         new FireDepartmentMetrics()
@@ -171,7 +170,7 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
         createPushFailAppenderator(),
         allocator,
         segmentHandoffNotifierFactory,
-        new NoopPublishedSegmentRetriever(),
+        new NoopUsedSegmentChecker(),
         dataSegmentKiller,
         OBJECT_MAPPER,
         new FireDepartmentMetrics()
@@ -209,7 +208,7 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
         createDropFailAppenderator(),
         allocator,
         segmentHandoffNotifierFactory,
-        new NoopPublishedSegmentRetriever(),
+        new NoopUsedSegmentChecker(),
         dataSegmentKiller,
         OBJECT_MAPPER,
         new FireDepartmentMetrics()
@@ -260,7 +259,7 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
         new FailableAppenderator(),
         allocator,
         segmentHandoffNotifierFactory,
-        new NoopPublishedSegmentRetriever(),
+        new NoopUsedSegmentChecker(),
         dataSegmentKiller,
         OBJECT_MAPPER,
         new FireDepartmentMetrics()
@@ -324,10 +323,10 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
     }
   }
 
-  private static class NoopPublishedSegmentRetriever implements PublishedSegmentRetriever
+  private static class NoopUsedSegmentChecker implements UsedSegmentChecker
   {
     @Override
-    public Set<DataSegment> findPublishedSegments(Set<SegmentId> segmentIds)
+    public Set<DataSegment> findUsedSegments(Set<SegmentIdWithShardSpec> identifiers)
     {
       return ImmutableSet.of();
     }
