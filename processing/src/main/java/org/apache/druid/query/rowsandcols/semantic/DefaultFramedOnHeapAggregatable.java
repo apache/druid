@@ -405,16 +405,6 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
           .setType(factory.getIntermediateType());
     }
 
-    public void increment()
-    {
-      ++index;
-    }
-
-    public void decrement()
-    {
-      --index;
-    }
-
     @Override
     @Nonnull
     public DimensionSelector makeDimensionSelector(@Nonnull DimensionSpec dimensionSpec)
