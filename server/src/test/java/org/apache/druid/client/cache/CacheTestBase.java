@@ -17,15 +17,24 @@
  * under the License.
  */
 
-package org.apache.druid.storage.azure;
+package org.apache.druid.client.cache;
 
-import org.apache.druid.data.input.impl.CloudObjectLocation;
+import org.apache.druid.client.CacheUtil;
+import org.apache.druid.client.cache.Cache.NamedKey;
+import org.junit.Test;
 
-/**
- * Interface for converting between from some object, T,  and a {@link CloudObjectLocation} object
- * @param <T> The object to convert to a {@link CloudObjectLocation} object
- */
-public interface ICloudSpecificObjectToCloudObjectLocationConverter<T>
+import static org.junit.Assert.assertArrayEquals;
+
+public class CacheTestBase<T extends Cache>
 {
-  CloudObjectLocation createCloudObjectLocation(T cloudSpecificImpl);
+  T cache;
+
+  @Test
+  public void testKeyContainingNegativeBytes()
+  {
+    byte[] value = new byte[] {1, 0, -10, -55, 111};
+    NamedKey key = CacheUtil.computeResultLevelCacheKey(new byte[] {1, 0, -10, 0});
+    cache.put(key, value);
+    assertArrayEquals(value, cache.get(key));
+  }
 }

@@ -652,10 +652,6 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
   @Test
   public void testWrongTypeParameter()
   {
-    if (!useDefault) {
-      // cannot vectorize inline datasource
-      cannotVectorize();
-    }
     testQuery(
         "SELECT COUNT(*)\n"
         + "FROM druid.numfoo\n"
@@ -701,7 +697,6 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
   @Test
   public void testNullParameter()
   {
-    cannotVectorize();
     // contrived example of using null as an sql parameter to at least test the codepath because lots of things dont
     // actually work as null and things like 'IS NULL' fail to parse in calcite if expressed as 'IS ?'
 

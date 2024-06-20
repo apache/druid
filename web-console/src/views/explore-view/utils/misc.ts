@@ -17,7 +17,7 @@
  */
 
 import type { SqlExpression, SqlTable } from '@druid-toolkit/query';
-import { SqlQuery } from '@druid-toolkit/query';
+import { SqlColumn, SqlQuery } from '@druid-toolkit/query';
 import type { ExpressionMeta } from '@druid-toolkit/visuals-core';
 import type { ParameterDefinition } from '@druid-toolkit/visuals-core/src/models/parameter';
 
@@ -33,9 +33,18 @@ export function toggle<T>(xs: readonly T[], x: T, eq?: (a: T, b: T) => boolean):
   return xs.find(_ => e(_, x)) ? xs.filter(d => !e(d, x)) : xs.concat([x]);
 }
 
+export function addTableScope(expression: SqlExpression, newTableScope: string): SqlExpression {
+  return expression.walk(ex => {
+    if (ex instanceof SqlColumn && !ex.getTableName()) {
+      return ex.changeTableName(newTableScope);
+    }
+    return ex;
+  }) as SqlExpression;
+}
+
 export function getInitQuery(table: SqlExpression, where: SqlExpression): SqlQuery {
   return SqlQuery.from(table.as('t')).applyIf(String(where) !== 'TRUE', q =>
-    q.changeWhereExpression(where),
+    q.changeWhereExpression(addTableScope(where, 't')),
   );
 }
 

@@ -19,8 +19,13 @@
 
 package org.apache.druid.segment.virtual;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.math.expr.Expr;
+import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.expression.TestExprMacroTable;
@@ -36,11 +41,13 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import javax.annotation.Nullable;
+import java.util.List;
 import java.util.Map;
 
 public class ExpressionPlannerTest extends InitializedNullHandlingTest
 {
-  public static final ColumnInspector SYNTHETIC_INSPECTOR = new ColumnInspector()
+  private static ColumnType DICTIONARY_COMPLEX = ColumnType.ofComplex("dictionaryComplex");
+  private static final ColumnInspector SYNTHETIC_INSPECTOR = new ColumnInspector()
   {
     private final Map<String, ColumnCapabilities> capabilitiesMap =
         ImmutableMap.<String, ColumnCapabilities>builder()
@@ -141,6 +148,12 @@ public class ExpressionPlannerTest extends InitializedNullHandlingTest
                         "double_array_2",
                         ColumnCapabilitiesImpl.createSimpleArrayColumnCapabilities(ColumnType.DOUBLE_ARRAY)
                     )
+                    .put(
+                        "dictionary_complex",
+                        ColumnCapabilitiesImpl.createDefault()
+                                              .setDictionaryEncoded(true)
+                                              .setType(DICTIONARY_COMPLEX)
+                    )
                     .build();
 
     @Nullable
@@ -150,6 +163,8 @@ public class ExpressionPlannerTest extends InitializedNullHandlingTest
       return capabilitiesMap.get(column);
     }
   };
+
+  private static final TestMacroTable MACRO_TABLE = new TestMacroTable();
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
@@ -369,7 +384,7 @@ public class ExpressionPlannerTest extends InitializedNullHandlingTest
     Assert.assertFalse(inferred.areDictionaryValuesSorted().isMaybeTrue());
     Assert.assertFalse(inferred.areDictionaryValuesUnique().isMaybeTrue());
     Assert.assertFalse(inferred.hasMultipleValues().isMaybeTrue());
-    Assert.assertFalse(inferred.hasBitmapIndexes());
+    Assert.assertTrue(inferred.hasBitmapIndexes());
     Assert.assertFalse(inferred.hasSpatialIndexes());
 
     // multiple input columns
@@ -463,7 +478,7 @@ public class ExpressionPlannerTest extends InitializedNullHandlingTest
     Assert.assertFalse(inferred.areDictionaryValuesSorted().isMaybeTrue());
     Assert.assertFalse(inferred.areDictionaryValuesUnique().isMaybeTrue());
     Assert.assertTrue(inferred.hasMultipleValues().isTrue());
-    Assert.assertFalse(inferred.hasBitmapIndexes());
+    Assert.assertTrue(inferred.hasBitmapIndexes());
     Assert.assertFalse(inferred.hasSpatialIndexes());
 
     thePlan = plan("concat(scalar_string, multi_dictionary_string_nonunique)");
@@ -599,7 +614,7 @@ public class ExpressionPlannerTest extends InitializedNullHandlingTest
         )
     );
     Assert.assertFalse(
-        thePlan.is(
+        thePlan.any(
             ExpressionPlan.Trait.SINGLE_INPUT_SCALAR,
             ExpressionPlan.Trait.SINGLE_INPUT_MAPPABLE,
             ExpressionPlan.Trait.UNKNOWN_INPUTS,
@@ -671,7 +686,7 @@ public class ExpressionPlannerTest extends InitializedNullHandlingTest
         )
     );
     Assert.assertFalse(
-        thePlan.is(
+        thePlan.any(
             ExpressionPlan.Trait.SINGLE_INPUT_SCALAR,
             ExpressionPlan.Trait.SINGLE_INPUT_MAPPABLE,
             ExpressionPlan.Trait.UNKNOWN_INPUTS,
@@ -719,7 +734,22 @@ public class ExpressionPlannerTest extends InitializedNullHandlingTest
 
     // what about a multi-valued input
     thePlan = plan("array_to_string(array_append(scalar_string, multi_dictionary_string), ',')");
-    assertArrayInput(thePlan);
+    Assert.assertTrue(
+        thePlan.is(
+            ExpressionPlan.Trait.NON_SCALAR_INPUTS,
+            ExpressionPlan.Trait.NEEDS_APPLIED
+        )
+    );
+    Assert.assertFalse(
+        thePlan.any(
+            ExpressionPlan.Trait.SINGLE_INPUT_SCALAR,
+            ExpressionPlan.Trait.SINGLE_INPUT_MAPPABLE,
+            ExpressionPlan.Trait.NON_SCALAR_OUTPUT,
+            ExpressionPlan.Trait.INCOMPLETE_INPUTS,
+            ExpressionPlan.Trait.UNKNOWN_INPUTS,
+            ExpressionPlan.Trait.VECTORIZABLE
+        )
+    );
 
     Assert.assertEquals(
         "array_to_string(map((\"multi_dictionary_string\") -> array_append(\"scalar_string\", \"multi_dictionary_string\"), \"multi_dictionary_string\"), ',')",
@@ -789,7 +819,7 @@ public class ExpressionPlannerTest extends InitializedNullHandlingTest
         )
     );
     Assert.assertFalse(
-        thePlan.is(
+        thePlan.any(
             ExpressionPlan.Trait.SINGLE_INPUT_SCALAR,
             ExpressionPlan.Trait.SINGLE_INPUT_MAPPABLE,
             ExpressionPlan.Trait.UNKNOWN_INPUTS,
@@ -812,15 +842,14 @@ public class ExpressionPlannerTest extends InitializedNullHandlingTest
   {
     ExpressionPlan thePlan = plan("json_object('long1', long1, 'long2', long2)");
     Assert.assertFalse(
-        thePlan.is(
+        thePlan.any(
             ExpressionPlan.Trait.NON_SCALAR_OUTPUT,
             ExpressionPlan.Trait.SINGLE_INPUT_SCALAR,
             ExpressionPlan.Trait.SINGLE_INPUT_MAPPABLE,
             ExpressionPlan.Trait.UNKNOWN_INPUTS,
             ExpressionPlan.Trait.INCOMPLETE_INPUTS,
             ExpressionPlan.Trait.NEEDS_APPLIED,
-            ExpressionPlan.Trait.NON_SCALAR_INPUTS,
-            ExpressionPlan.Trait.VECTORIZABLE
+            ExpressionPlan.Trait.NON_SCALAR_INPUTS
         )
     );
     Assert.assertEquals(ExpressionType.NESTED_DATA, thePlan.getOutputType());
@@ -837,9 +866,40 @@ public class ExpressionPlannerTest extends InitializedNullHandlingTest
     );
   }
 
+  @Test
+  public void testDictionaryComplexStringOutput()
+  {
+    ExpressionPlan thePlan = plan("dict_complex_to_string(dictionary_complex)");
+    Assert.assertFalse(
+        thePlan.any(
+            ExpressionPlan.Trait.NON_SCALAR_OUTPUT,
+            ExpressionPlan.Trait.SINGLE_INPUT_MAPPABLE,
+            ExpressionPlan.Trait.UNKNOWN_INPUTS,
+            ExpressionPlan.Trait.INCOMPLETE_INPUTS,
+            ExpressionPlan.Trait.NEEDS_APPLIED,
+            ExpressionPlan.Trait.NON_SCALAR_INPUTS
+        )
+    );
+    Assert.assertTrue(
+        thePlan.is(
+            ExpressionPlan.Trait.SINGLE_INPUT_SCALAR,
+            ExpressionPlan.Trait.VECTORIZABLE
+        )
+    );
+    Assert.assertEquals(ExpressionType.STRING, thePlan.getOutputType());
+    ColumnCapabilities inferred = thePlan.inferColumnCapabilities(
+        ExpressionType.toColumnType(thePlan.getOutputType())
+    );
+    Assert.assertEquals(
+        ColumnType.STRING.getType(),
+        inferred.getType()
+    );
+    Assert.assertFalse(inferred.isDictionaryEncoded().isMaybeTrue());
+  }
+
   private static ExpressionPlan plan(String expression)
   {
-    return ExpressionPlanner.plan(SYNTHETIC_INSPECTOR, Parser.parse(expression, TestExprMacroTable.INSTANCE));
+    return ExpressionPlanner.plan(SYNTHETIC_INSPECTOR, Parser.parse(expression, MACRO_TABLE));
   }
 
   private static void assertArrayInput(ExpressionPlan thePlan)
@@ -850,7 +910,7 @@ public class ExpressionPlannerTest extends InitializedNullHandlingTest
         )
     );
     Assert.assertFalse(
-        thePlan.is(
+        thePlan.any(
             ExpressionPlan.Trait.SINGLE_INPUT_SCALAR,
             ExpressionPlan.Trait.SINGLE_INPUT_MAPPABLE,
             ExpressionPlan.Trait.NON_SCALAR_OUTPUT,
@@ -871,7 +931,7 @@ public class ExpressionPlannerTest extends InitializedNullHandlingTest
         )
     );
     Assert.assertFalse(
-        thePlan.is(
+        thePlan.any(
             ExpressionPlan.Trait.SINGLE_INPUT_SCALAR,
             ExpressionPlan.Trait.SINGLE_INPUT_MAPPABLE,
             ExpressionPlan.Trait.INCOMPLETE_INPUTS,
@@ -880,5 +940,45 @@ public class ExpressionPlannerTest extends InitializedNullHandlingTest
             ExpressionPlan.Trait.VECTORIZABLE
         )
     );
+  }
+
+  private static class TestMacroTable extends ExprMacroTable
+  {
+    public TestMacroTable()
+    {
+      super(
+          ImmutableList.<ExprMacroTable.ExprMacro>builder()
+                       .addAll(TestExprMacroTable.INSTANCE.getMacros())
+                       .add(new ExprMacroTable.ExprMacro()
+                       {
+                         @Override
+                         public Expr apply(List<Expr> args)
+                         {
+                           return new ExprMacroTable.BaseScalarMacroFunctionExpr(this, args)
+                           {
+                             @Override
+                             public ExprEval eval(ObjectBinding bindings)
+                             {
+                               throw DruidException.defensive("just for planner test");
+                             }
+
+                             @Nullable
+                             @Override
+                             public ExpressionType getOutputType(InputBindingInspector inspector)
+                             {
+                               return ExpressionType.STRING;
+                             }
+                           };
+                         }
+
+                         @Override
+                         public String name()
+                         {
+                           return "dict_complex_to_string";
+                         }
+                       })
+                       .build()
+      );
+    }
   }
 }

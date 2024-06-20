@@ -22,12 +22,12 @@ title: "Globally Cached Lookups"
   ~ under the License.
   -->
 
-To use this Apache Druid extension, [include](../../configuration/extensions.md#loading-extensions) `druid-lookups-cached-global` in the extensions load list.
+To use this Apache Druid extension, [include](../configuration/extensions.md#loading-extensions) `druid-lookups-cached-global` in the extensions load list.
 
 ## Configuration
 :::info
  Static configuration is no longer supported. Lookups can be configured through
- [dynamic configuration](../../querying/lookups.md#configuration).
+ [dynamic configuration](./lookups.md#configuration).
 :::
 
 Globally cached lookups are appropriate for lookups which are not possible to pass at query time due to their size,
@@ -36,7 +36,7 @@ and are small enough to reasonably populate in-memory. This usually means tens t
 
 Globally cached lookups all draw from the same cache pool, allowing each process to have a fixed cache pool that can be used by cached lookups.
 
-Globally cached lookups can be specified as part of the [cluster wide config for lookups](../../querying/lookups.md) as a type of `cachedNamespace`
+Globally cached lookups can be specified as part of the [cluster wide config for lookups](./lookups.md) as a type of `cachedNamespace`
 
  ```json
  {
@@ -84,7 +84,7 @@ The parameters are as follows
 |--------|-----------|--------|-------|
 |`extractionNamespace`|Specifies how to populate the local cache. See below|Yes|-|
 |`firstCacheTimeout`|How long to wait (in ms) for the first run of the cache to populate. 0 indicates to not wait|No|`0` (do not wait)|
-|`injective`|If the underlying map is [injective](../../querying/lookups.md#query-rewrites) (keys and values are unique) then optimizations can occur internally by setting this to `true`|No|`false`|
+|`injective`|If the underlying map is [injective](./lookups.md#query-rewrites) (keys and values are unique) then optimizations can occur internally by setting this to `true`|No|`false`|
 
 If `firstCacheTimeout` is set to a non-zero value, it should be less than `druid.manager.lookups.hostUpdateTimeout`. If `firstCacheTimeout` is NOT set, then management is essentially asynchronous and does not know if a lookup succeeded or failed in starting. In such a case logs from the processes using lookups should be monitored for repeated failures.
 
@@ -93,7 +93,7 @@ Proper functionality of globally cached lookups requires the following extension
 
 ## Example configuration
 
-In a simple case where only one [tier](../../querying/lookups.md#dynamic-configuration) exists (`realtime_customer2`) with one `cachedNamespace` lookup called `country_code`, the resulting configuration JSON looks similar to the following:
+In a simple case where only one [tier](./lookups.md#dynamic-configuration) exists (`realtime_customer2`) with one `cachedNamespace` lookup called `country_code`, the resulting configuration JSON looks similar to the following:
 
 ```json
 {
@@ -170,7 +170,7 @@ It's highly recommended that `druid.lookup.namespace.numBufferedEntries` is set 
 
 ## Supported lookups
 
-For additional lookups, please see our [extensions list](../../configuration/extensions.md).
+For additional lookups, please see our [extensions list](../configuration/extensions.md).
 
 ### URI lookup
 
@@ -345,7 +345,7 @@ The JDBC lookups will poll a database to populate its local cache. If the `tsCol
 
 |Parameter|Description|Required|Default|
 |---------|-----------|--------|-------|
-|`connectorConfig`|The connector config to use. You can set `connectURI`, `user` and `password`. You can selectively allow JDBC properties in `connectURI`. See [JDBC connections security config](../../configuration/index.md#jdbc-connections-to-external-databases) for more details.|Yes||
+|`connectorConfig`|The connector config to use. You can set `connectURI`, `user` and `password`. You can selectively allow JDBC properties in `connectURI`. See [JDBC connections security config](../configuration/index.md#jdbc-connections-to-external-databases) for more details.|Yes||
 |`table`|The table which contains the key value pairs|Yes||
 |`keyColumn`|The column in `table` which contains the keys|Yes||
 |`valueColumn`|The column in `table` which contains the values|Yes||
@@ -377,7 +377,7 @@ The JDBC lookups will poll a database to populate its local cache. If the `tsCol
 :::info
  If using JDBC, you will need to add your database's client JAR files to the extension's directory.
  For Postgres, the connector JAR is already included.
- See the MySQL extension documentation for instructions to obtain [MySQL](./mysql.md#installing-the-mysql-connector-library) or [MariaDB](./mysql.md#alternative-installing-the-mariadb-connector-library) connector libraries.
+ See the MySQL extension documentation for instructions to obtain [MySQL](../development/extensions-core/mysql.md#installing-the-mysql-connector-library) or [MariaDB](../development/extensions-core/mysql.md#alternative-installing-the-mariadb-connector-library) connector libraries.
  The connector JAR should reside in the classpath of Druid's main class loader.
  To add the connector JAR to the classpath, you can copy the downloaded file to `lib/` under the distribution root directory. Alternatively, create a symbolic link to the connector in the `lib` directory.
 :::

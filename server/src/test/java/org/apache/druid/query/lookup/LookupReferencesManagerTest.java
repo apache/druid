@@ -580,6 +580,13 @@ public class LookupReferencesManagerTest
   }
 
   @Test
+  public void testGetCanonicalLookupName()
+  {
+    String lookupName = "lookupName1";
+    Assert.assertEquals(lookupName, lookupReferencesManager.getCanonicalLookupName(lookupName));
+  }
+
+  @Test
   public void testGetAllLookupsState() throws Exception
   {
     LookupExtractorFactoryContainer container1 = new LookupExtractorFactoryContainer(

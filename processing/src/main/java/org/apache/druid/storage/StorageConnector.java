@@ -42,7 +42,7 @@ import java.util.Iterator;
  * <li>{@code druid.extension.custom.type="s3"}
  * <li>{@code druid.extension.custom.bucket="myBucket"}
  * </ul>
- * The final state of this inteface would have
+ * The final state of this interface would have
  * <ol>
  * <li>Future Non blocking API's</li>
  * <li>Offset based fetch</li>

@@ -24,20 +24,26 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.output.NullOutputStream;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.segment.IndexIO;
+import org.apache.druid.segment.ReferenceCountingSegment;
+import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
@@ -86,16 +92,17 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
 
   private final StorageLocationSelectorStrategy strategy;
 
-  private ExecutorService loadSegmentsIntoPageCacheOnDownloadExec = null;
+  private final IndexIO indexIO;
 
-  // Note that we only create this via injection in historical and realtime nodes. Peons create these
-  // objects via SegmentCacheManagerFactory objects, so that they can store segments in task-specific
-  // directories rather than statically configured directories.
+  private ExecutorService loadOnBootstrapExec = null;
+  private ExecutorService loadOnDownloadExec = null;
+
   @Inject
   public SegmentLocalCacheManager(
       List<StorageLocation> locations,
       SegmentLoaderConfig config,
       @Nonnull StorageLocationSelectorStrategy strategy,
+      IndexIO indexIO,
       @Json ObjectMapper mapper
   )
   {
@@ -103,53 +110,185 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     this.jsonMapper = mapper;
     this.locations = locations;
     this.strategy = strategy;
-    log.info("Using storage location strategy: [%s]", this.strategy.getClass().getSimpleName());
+    this.indexIO = indexIO;
 
-    if (this.config.getNumThreadsToLoadSegmentsIntoPageCacheOnDownload() != 0) {
-      loadSegmentsIntoPageCacheOnDownloadExec = Executors.newFixedThreadPool(
+    log.info("Using storage location strategy[%s].", this.strategy.getClass().getSimpleName());
+    log.info(
+        "Number of threads to load segments into page cache - on bootstrap: [%d], on download: [%d].",
+        config.getNumThreadsToLoadSegmentsIntoPageCacheOnBootstrap(),
+        config.getNumThreadsToLoadSegmentsIntoPageCacheOnDownload()
+    );
+
+    if (config.getNumThreadsToLoadSegmentsIntoPageCacheOnBootstrap() > 0) {
+      loadOnBootstrapExec = Execs.multiThreaded(
+          config.getNumThreadsToLoadSegmentsIntoPageCacheOnBootstrap(),
+          "Load-SegmentsIntoPageCacheOnBootstrap-%s"
+      );
+    }
+
+    if (config.getNumThreadsToLoadSegmentsIntoPageCacheOnDownload() > 0) {
+      loadOnDownloadExec = Executors.newFixedThreadPool(
           config.getNumThreadsToLoadSegmentsIntoPageCacheOnDownload(),
-          Execs.makeThreadFactory("LoadSegmentsIntoPageCacheOnDownload-%s"));
-      log.info("Size of thread pool to load segments into page cache on download [%d]",
-               config.getNumThreadsToLoadSegmentsIntoPageCacheOnDownload());
+          Execs.makeThreadFactory("LoadSegmentsIntoPageCacheOnDownload-%s")
+      );
     }
   }
 
-  @VisibleForTesting
-  SegmentLocalCacheManager(
-      SegmentLoaderConfig config,
-      @Nonnull StorageLocationSelectorStrategy strategy,
-      @Json ObjectMapper mapper
-  )
+  @Override
+  public boolean canHandleSegments()
   {
-    this(config.toStorageLocations(), config, strategy, mapper);
+    final boolean isLocationsValid = !(locations == null || locations.isEmpty());
+    final boolean isLocationsConfigValid = !(config.getLocations() == null || config.getLocations().isEmpty());
+    return isLocationsValid || isLocationsConfigValid;
+  }
+
+  @Override
+  public List<DataSegment> getCachedSegments() throws IOException
+  {
+    if (!canHandleSegments()) {
+      throw DruidException.defensive(
+          "canHandleSegments() is false. getCachedSegments() must be invoked only when canHandleSegments() returns true."
+      );
+    }
+    final File infoDir = getEffectiveInfoDir();
+    FileUtils.mkdirp(infoDir);
+
+    final List<DataSegment> cachedSegments = new ArrayList<>();
+    final File[] segmentsToLoad = infoDir.listFiles();
+
+    int ignored = 0;
+
+    for (int i = 0; i < segmentsToLoad.length; i++) {
+      final File file = segmentsToLoad[i];
+      log.info("Loading segment cache file [%d/%d][%s].", i + 1, segmentsToLoad.length, file);
+      try {
+        final DataSegment segment = jsonMapper.readValue(file, DataSegment.class);
+        if (!segment.getId().toString().equals(file.getName())) {
+          log.warn("Ignoring cache file[%s] for segment[%s].", file.getPath(), segment.getId());
+          ignored++;
+        } else if (isSegmentCached(segment)) {
+          cachedSegments.add(segment);
+        } else {
+          final SegmentId segmentId = segment.getId();
+          log.warn("Unable to find cache file for segment[%s]. Deleting lookup entry.", segmentId);
+          removeInfoFile(segment);
+        }
+      }
+      catch (Exception e) {
+        log.makeAlert(e, "Failed to load segment from segment cache file.")
+           .addData("file", file)
+           .emit();
+      }
+    }
+
+    if (ignored > 0) {
+      log.makeAlert("Ignored misnamed segment cache files on startup.")
+         .addData("numIgnored", ignored)
+         .emit();
+    }
+
+    return cachedSegments;
+  }
+
+  @Override
+  public void storeInfoFile(DataSegment segment) throws IOException
+  {
+    final File segmentInfoCacheFile = new File(getEffectiveInfoDir(), segment.getId().toString());
+    if (!segmentInfoCacheFile.exists()) {
+      jsonMapper.writeValue(segmentInfoCacheFile, segment);
+    }
+  }
+
+  @Override
+  public void removeInfoFile(DataSegment segment)
+  {
+    final File segmentInfoCacheFile = new File(getEffectiveInfoDir(), segment.getId().toString());
+    if (!segmentInfoCacheFile.delete()) {
+      log.warn("Unable to delete cache file[%s] for segment[%s].", segmentInfoCacheFile, segment.getId());
+    }
+  }
+
+  @Override
+  public ReferenceCountingSegment getSegment(final DataSegment dataSegment) throws SegmentLoadingException
+  {
+    final File segmentFiles = getSegmentFiles(dataSegment);
+    final SegmentizerFactory factory = getSegmentFactory(segmentFiles);
+
+    final Segment segment = factory.factorize(dataSegment, segmentFiles, false, SegmentLazyLoadFailCallback.NOOP);
+    return ReferenceCountingSegment.wrapSegment(segment, dataSegment.getShardSpec());
+  }
+
+  @Override
+  public ReferenceCountingSegment getBootstrapSegment(
+      final DataSegment dataSegment,
+      final SegmentLazyLoadFailCallback loadFailed
+  ) throws SegmentLoadingException
+  {
+    final File segmentFiles = getSegmentFiles(dataSegment);
+    final SegmentizerFactory factory = getSegmentFactory(segmentFiles);
+
+    final Segment segment = factory.factorize(dataSegment, segmentFiles, config.isLazyLoadOnStart(), loadFailed);
+    return ReferenceCountingSegment.wrapSegment(segment, dataSegment.getShardSpec());
+  }
+
+  private SegmentizerFactory getSegmentFactory(final File segmentFiles) throws SegmentLoadingException
+  {
+    final File factoryJson = new File(segmentFiles, "factory.json");
+    final SegmentizerFactory factory;
+
+    if (factoryJson.exists()) {
+      try {
+        factory = jsonMapper.readValue(factoryJson, SegmentizerFactory.class);
+      }
+      catch (IOException e) {
+        throw new SegmentLoadingException(e, "Failed to get segment facotry for %s", e.getMessage());
+      }
+    } else {
+      factory = new MMappedQueryableSegmentizerFactory(indexIO);
+    }
+    return factory;
   }
 
   /**
-   * creates instance with default storage location selector strategy
+   * Returns the effective segment info directory based on the configuration settings.
+   * The directory is selected based on the following configurations injected into this class:
+   * <ul>
+   *   <li>{@link SegmentLoaderConfig#getInfoDir()} - If {@code infoDir} is set, it is used as the info directory.</li>
+   *   <li>{@link SegmentLoaderConfig#getLocations()} - If the info directory is not set, the first location from this list is used.</li>
+   *   <li>List of {@link StorageLocation}s injected - If both the info directory and locations list are not set, the
+   *   first storage location is used.</li>
+   * </ul>
    *
-   * This ctor is mainly for test cases, including test cases in other modules
+   * @throws DruidException if none of the configurations are set, and the info directory cannot be determined.
    */
-  @VisibleForTesting
-  public SegmentLocalCacheManager(
-      SegmentLoaderConfig config,
-      @Json ObjectMapper mapper
-  )
+  private File getEffectiveInfoDir()
   {
-    this.config = config;
-    this.jsonMapper = mapper;
-    this.locations = config.toStorageLocations();
-    this.strategy = new LeastBytesUsedStorageLocationSelectorStrategy(locations);
-    log.info("Using storage location strategy: [%s]", this.strategy.getClass().getSimpleName());
+    final File infoDir;
+    if (config.getInfoDir() != null) {
+      infoDir = config.getInfoDir();
+    } else if (!config.getLocations().isEmpty()) {
+      infoDir = new File(config.getLocations().get(0).getPath(), "info_dir");
+    } else if (!locations.isEmpty()) {
+      infoDir = new File(locations.get(0).getPath(), "info_dir");
+    } else {
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+          .ofCategory(DruidException.Category.NOT_FOUND)
+          .build("Could not determine infoDir. Make sure 'druid.segmentCache.infoDir' "
+                 + "or 'druid.segmentCache.locations' is set correctly.");
+    }
+    return infoDir;
   }
 
-
-  static String getSegmentDir(DataSegment segment)
+  private static String getSegmentDir(DataSegment segment)
   {
     return DataSegmentPusher.getDefaultStorageDir(segment, false);
   }
 
-  @Override
-  public boolean isSegmentCached(final DataSegment segment)
+  /**
+   * Checks whether a segment is already cached. It can return false even if {@link #reserve(DataSegment)}
+   * has been successful for a segment but is not downloaded yet.
+   */
+  boolean isSegmentCached(final DataSegment segment)
   {
     return findStoragePathIfCached(segment) != null;
   }
@@ -254,7 +393,9 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
         File storageDir = loc.segmentDirectoryAsFile(segmentDir);
         boolean success = loadInLocationWithStartMarkerQuietly(loc, segment, storageDir, false);
         if (!success) {
-          throw new SegmentLoadingException("Failed to load segment %s in reserved location [%s]", segment.getId(), loc.getPath().getAbsolutePath());
+          throw new SegmentLoadingException(
+              "Failed to load segment[%s] in reserved location[%s]", segment.getId(), loc.getPath().getAbsolutePath()
+          );
         }
         return storageDir;
       }
@@ -275,7 +416,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
         }
       }
     }
-    throw new SegmentLoadingException("Failed to load segment %s in all locations.", segment.getId());
+    throw new SegmentLoadingException("Failed to load segment[%s] in all locations.", segment.getId());
   }
 
   /**
@@ -357,7 +498,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     final ReferenceCountingLock lock = createOrGetLock(segment);
     synchronized (lock) {
       try {
-        // May be the segment was already loaded [This check is required to account for restart scenarios]
+        // Maybe the segment was already loaded. This check is required to account for restart scenarios.
         if (null != findStoragePathIfCached(segment)) {
           return true;
         }
@@ -454,55 +595,68 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   }
 
   @Override
-  public void loadSegmentIntoPageCache(DataSegment segment, ExecutorService exec)
+  public void loadSegmentIntoPageCache(DataSegment segment)
   {
-    ExecutorService execToUse = exec != null ? exec : loadSegmentsIntoPageCacheOnDownloadExec;
-    if (execToUse == null) {
+    if (loadOnDownloadExec == null) {
       return;
     }
 
-    execToUse.submit(
-        () -> {
-          final ReferenceCountingLock lock = createOrGetLock(segment);
-          synchronized (lock) {
-            try {
-              for (StorageLocation location : locations) {
-                File localStorageDir = new File(location.getPath(), DataSegmentPusher.getDefaultStorageDir(segment, false));
-                if (localStorageDir.exists()) {
-                  File baseFile = location.getPath();
-                  if (localStorageDir.equals(baseFile)) {
-                    continue;
-                  }
+    loadOnDownloadExec.submit(() -> loadSegmentIntoPageCacheInternal(segment));
+  }
 
-                  log.info("Loading directory[%s] into page cache", localStorageDir);
+  @Override
+  public void loadSegmentIntoPageCacheOnBootstrap(DataSegment segment)
+  {
+    if (loadOnBootstrapExec == null) {
+      return;
+    }
 
-                  File[] children = localStorageDir.listFiles();
-                  if (children != null) {
-                    for (File child : children) {
-                      InputStream in = null;
-                      try {
-                        in = new FileInputStream(child);
-                        IOUtils.copy(in, new NullOutputStream());
+    loadOnBootstrapExec.submit(() -> loadSegmentIntoPageCacheInternal(segment));
+  }
 
-                        log.info("Loaded [%s] into page cache", child.getAbsolutePath());
-                      }
-                      catch (Exception e) {
-                        log.error("Failed to load [%s] into page cache, [%s]", child.getAbsolutePath(), e.getMessage());
-                      }
-                      finally {
-                        IOUtils.closeQuietly(in);
-                      }
-                    }
-                  }
+  void loadSegmentIntoPageCacheInternal(DataSegment segment)
+  {
+    final ReferenceCountingLock lock = createOrGetLock(segment);
+    synchronized (lock) {
+      try {
+        for (StorageLocation location : locations) {
+          File localStorageDir = new File(location.getPath(), DataSegmentPusher.getDefaultStorageDir(segment, false));
+          if (localStorageDir.exists()) {
+            File baseFile = location.getPath();
+            if (localStorageDir.equals(baseFile)) {
+              continue;
+            }
+
+            log.info("Loading directory[%s] into page cache.", localStorageDir);
+
+            File[] children = localStorageDir.listFiles();
+            if (children != null) {
+              for (File child : children) {
+                try (InputStream in = Files.newInputStream(child.toPath())) {
+                  IOUtils.copy(in, NullOutputStream.NULL_OUTPUT_STREAM);
+                  log.info("Loaded [%s] into page cache.", child.getAbsolutePath());
+                }
+                catch (Exception e) {
+                  log.error(e, "Failed to load [%s] into page cache", child.getAbsolutePath());
                 }
               }
             }
-            finally {
-              unlock(segment, lock);
-            }
           }
         }
-    );
+      }
+      finally {
+        unlock(segment, lock);
+      }
+    }
+  }
+
+  @Override
+  public void shutdownBootstrap()
+  {
+    if (loadOnBootstrapExec == null) {
+      return;
+    }
+    loadOnBootstrapExec.shutdown();
   }
 
   private void cleanupCacheFiles(File baseFile, File cacheFile)
@@ -569,7 +723,6 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     );
   }
 
-  @VisibleForTesting
   private static class ReferenceCountingLock
   {
     private int numReferences;
