@@ -106,11 +106,20 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
 
   public static Iterable<AggInterval> buildIteratorFor(AppendableRowsAndColumns rac, WindowFrame frame)
   {
-    if (frame.getPeerType() == WindowFrame.PeerType.RANGE) {
+    int numRows = rac.numRows();
+    if (frame.getLowerOffsetClamped(numRows) == -numRows && frame.getUpperOffsetClamped(numRows) == numRows) {
+      return buildUnboundedIteratorFor(rac, frame);
+    } else if (frame.getPeerType() == WindowFrame.PeerType.RANGE) {
       return buildGroupIteratorFor(rac, frame);
     } else {
       return buildRowIteratorFor(rac, frame);
     }
+  }
+
+  private static Iterable<AggInterval> buildUnboundedIteratorFor(AppendableRowsAndColumns rac, WindowFrame frame)
+  {
+    int[] groupBoundaries = new int[]{0, rac.numRows()};
+    return new GroupIteratorForWindowFrame(frame, groupBoundaries);
   }
 
   private static Iterable<AggInterval> buildRowIteratorFor(AppendableRowsAndColumns rac, WindowFrame frame)
@@ -346,6 +355,10 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
       if (currentRows.a == newRows.a && currentRows.b < newRows.b) {
         // incremental addition of additional values
         for (int i = currentRows.b; i < newRows.b; i++) {
+          aggregate(i);
+        }
+      } else if (currentRows.a > newRows.a && currentRows.b == newRows.b) {
+        for (int i = newRows.a; i < currentRows.a; i++) {
           aggregate(i);
         }
       } else {
