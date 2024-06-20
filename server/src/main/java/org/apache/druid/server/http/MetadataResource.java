@@ -484,7 +484,7 @@ public class MetadataResource
     final Set<DataSegment> broadcastSegments = coordinator.getBroadcastSegments();
     if (broadcastSegments == null) {
       return Response.status(Response.Status.SERVICE_UNAVAILABLE)
-                     .entity("No bootstrap segments were found. The coordinator may still be"
+                     .entity("Could not determine bootstrap segments. The coordinator is likely still"
                              + " initializing, please try again later.")
                      .build();
     }
