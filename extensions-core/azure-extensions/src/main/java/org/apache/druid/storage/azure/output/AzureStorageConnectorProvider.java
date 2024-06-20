@@ -45,17 +45,16 @@ public class AzureStorageConnectorProvider extends AzureOutputConfig implements 
   public AzureStorageConnectorProvider(
       @JsonProperty(value = "container", required = true) String container,
       @JsonProperty(value = "prefix", required = true) String prefix,
-      @JsonProperty(value = "tempDir", required = true) File tempDir,
       @JsonProperty(value = "chunkSize") @Nullable HumanReadableBytes chunkSize,
       @JsonProperty(value = "maxRetry") @Nullable Integer maxRetry
   )
   {
-    super(container, prefix, tempDir, chunkSize, maxRetry);
+    super(container, prefix, chunkSize, maxRetry);
   }
 
   @Override
-  public StorageConnector get()
+  public StorageConnector createStorageConnector(File tempDir)
   {
-    return new AzureStorageConnector(this, azureStorage);
+    return new AzureStorageConnector(this, azureStorage, tempDir);
   }
 }

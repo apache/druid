@@ -711,7 +711,7 @@ public class WorkerImpl implements Worker
     if (durableStageStorageEnabled) {
       return DurableStorageInputChannelFactory.createStandardImplementation(
           task.getControllerTaskId(),
-          MSQTasks.makeStorageConnector(context.injector()),
+          MSQTasks.makeStorageConnector(context.injector(), context.tempDir()),
           closer,
           false
       );
@@ -738,7 +738,7 @@ public class WorkerImpl implements Worker
           stageNumber,
           task().getId(),
           frameSize,
-          MSQTasks.makeStorageConnector(context.injector()),
+          MSQTasks.makeStorageConnector(context.injector(), context.tempDir()),
           context.tempDir(),
           (isFinalStage && MSQSelectDestination.DURABLESTORAGE.equals(selectDestination))
       );
@@ -772,7 +772,7 @@ public class WorkerImpl implements Worker
                   stageNumber,
                   task().getId(),
                   frameSize,
-                  MSQTasks.makeStorageConnector(context.injector()),
+                  MSQTasks.makeStorageConnector(context.injector(), context.tempDir()),
                   tmpDir,
                   false
               )
@@ -896,7 +896,7 @@ public class WorkerImpl implements Worker
           task.getId()
       );
       try {
-        MSQTasks.makeStorageConnector(context.injector()).deleteRecursively(folderName);
+        MSQTasks.makeStorageConnector(context.injector(), context.tempDir()).deleteRecursively(folderName);
       }
       catch (Exception e) {
         // If an error is thrown while cleaning up a file, log it and try to continue with the cleanup
@@ -1375,7 +1375,7 @@ public class WorkerImpl implements Worker
             stageNumber,
             task().getId(),
             frameContext.memoryParameters().getStandardFrameSize(),
-            MSQTasks.makeStorageConnector(context.injector()),
+            MSQTasks.makeStorageConnector(context.injector(), context.tempDir()),
             context.tempDir(),
             (isFinalStage && MSQSelectDestination.DURABLESTORAGE.equals(selectDestination))
         );

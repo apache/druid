@@ -47,8 +47,8 @@ public class S3UploadManagerTest
   @Before
   public void setUp()
   {
-    s3OutputConfig = new S3OutputConfig("bucket", "prefix", EasyMock.mock(File.class), new HumanReadableBytes("100MiB"), 1);
-    s3ExportConfig = new S3ExportConfig("tempDir", new HumanReadableBytes("200MiB"), 1, null);
+    s3OutputConfig = new S3OutputConfig("bucket", "prefix", new HumanReadableBytes("100MiB"), 1);
+    s3ExportConfig = new S3ExportConfig(new HumanReadableBytes("200MiB"), 1, null);
     final RuntimeInfo runtimeInfo = new DruidProcessingConfigTest.MockRuntimeInfo(8, 0, 0);
     s3UploadManager = new S3UploadManager(s3OutputConfig, s3ExportConfig, runtimeInfo);
   }

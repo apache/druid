@@ -82,14 +82,13 @@ public class S3StorageConnectorTest
       S3OutputConfig s3OutputConfig = new S3OutputConfig(
           BUCKET,
           PREFIX,
-          temporaryFolder.newFolder(),
           null,
           null,
           true
       );
-      storageConnector = new S3StorageConnector(s3OutputConfig, service, new S3UploadManager(
+      storageConnector = new S3StorageConnector(s3OutputConfig, service, temporaryFolder.newFolder(), new S3UploadManager(
           s3OutputConfig,
-          new S3ExportConfig("tempDir", new HumanReadableBytes("5MiB"), 1, null),
+          new S3ExportConfig(new HumanReadableBytes("5MiB"), 1, null),
           new DruidProcessingConfigTest.MockRuntimeInfo(10, 0, 0)));
     }
     catch (IOException e) {

@@ -23,14 +23,9 @@ import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
-import org.junit.rules.TemporaryFolder;
-
-import java.io.IOException;
 
 public class S3OutputConfigTest
 {
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
   private static String BUCKET = "BUCKET";
@@ -38,7 +33,7 @@ public class S3OutputConfigTest
   private static int MAX_RETRY_COUNT = 0;
 
   @Test
-  public void testTooLargeChunkSize() throws IOException
+  public void testTooLargeChunkSize()
   {
     long chunkSize = S3OutputConfig.S3_MULTIPART_UPLOAD_MAX_PART_SIZE_BYTES + 1;
 
@@ -49,7 +44,6 @@ public class S3OutputConfigTest
     new S3OutputConfig(
         BUCKET,
         PREFIX,
-        temporaryFolder.newFolder(),
         HumanReadableBytes.valueOf(chunkSize),
         MAX_RETRY_COUNT,
         true

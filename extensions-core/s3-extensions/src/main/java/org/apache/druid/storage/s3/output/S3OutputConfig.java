@@ -27,7 +27,6 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.RetryUtils;
 
 import javax.annotation.Nullable;
-import java.io.File;
 import java.util.Objects;
 
 public class S3OutputConfig
@@ -39,10 +38,6 @@ public class S3OutputConfig
   private String bucket;
   @JsonProperty
   private String prefix;
-
-  @JsonProperty
-  private File tempDir;
-
   @Nullable
   @JsonProperty
   private HumanReadableBytes chunkSize = new HumanReadableBytes("100MiB");
@@ -57,19 +52,17 @@ public class S3OutputConfig
   public S3OutputConfig(
       @JsonProperty(value = "bucket", required = true) String bucket,
       @JsonProperty(value = "prefix", required = true) String prefix,
-      @JsonProperty(value = "tempDir", required = true) File tempDir,
       @JsonProperty("chunkSize") HumanReadableBytes chunkSize,
       @JsonProperty("maxRetry") Integer maxRetry
   )
   {
-    this(bucket, prefix, tempDir, chunkSize, maxRetry, true);
+    this(bucket, prefix, chunkSize, maxRetry, true);
   }
 
   @VisibleForTesting
   protected S3OutputConfig(
       String bucket,
       String prefix,
-      File tempDir,
       @Nullable
       HumanReadableBytes chunkSize,
       @Nullable
@@ -79,7 +72,6 @@ public class S3OutputConfig
   {
     this.bucket = bucket;
     this.prefix = prefix;
-    this.tempDir = tempDir;
     if (chunkSize != null) {
       this.chunkSize = chunkSize;
     }
@@ -120,11 +112,6 @@ public class S3OutputConfig
     return prefix;
   }
 
-  public File getTempDir()
-  {
-    return tempDir;
-  }
-
   public Long getChunkSize()
   {
     return chunkSize.getBytes();
@@ -159,14 +146,13 @@ public class S3OutputConfig
     return maxRetry == that.maxRetry
            && bucket.equals(that.bucket)
            && prefix.equals(that.prefix)
-           && tempDir.equals(that.tempDir)
            && Objects.equals(chunkSize, that.chunkSize);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(bucket, prefix, tempDir, chunkSize, maxRetry);
+    return Objects.hash(bucket, prefix, chunkSize, maxRetry);
   }
 
 }

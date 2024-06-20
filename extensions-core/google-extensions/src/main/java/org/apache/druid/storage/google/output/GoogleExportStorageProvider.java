@@ -70,14 +70,8 @@ public class GoogleExportStorageProvider implements ExportStorageProvider
   }
 
   @Override
-  public StorageConnector get()
+  public StorageConnector createStorageConnector(File tempDir)
   {
-    final String tempDir = googleExportConfig.getTempLocalDir();
-    if (tempDir == null) {
-      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
-                          .ofCategory(DruidException.Category.NOT_FOUND)
-                          .build("The runtime property `druid.export.storage.google.tempLocalDir` must be configured for GCS export.");
-    }
     final List<String> allowedExportPaths = googleExportConfig.getAllowedExportPaths();
     if (allowedExportPaths == null) {
       throw DruidException.forPersona(DruidException.Persona.OPERATOR)
@@ -89,11 +83,10 @@ public class GoogleExportStorageProvider implements ExportStorageProvider
     final GoogleOutputConfig googleOutputConfig = new GoogleOutputConfig(
         bucket,
         prefix,
-        new File(tempDir),
         googleExportConfig.getChunkSize(),
         googleExportConfig.getMaxRetry()
     );
-    return new GoogleStorageConnector(googleOutputConfig, googleStorage, googleInputDataConfig);
+    return new GoogleStorageConnector(googleOutputConfig, googleStorage, googleInputDataConfig, tempDir);
   }
 
   @VisibleForTesting

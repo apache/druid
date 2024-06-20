@@ -107,6 +107,7 @@ public class RetryableS3OutputStream extends OutputStream
   public RetryableS3OutputStream(
       S3OutputConfig config,
       ServerSideEncryptingAmazonS3 s3,
+      File tempDir,
       String s3Key,
       S3UploadManager uploadManager
   ) throws IOException
@@ -126,7 +127,7 @@ public class RetryableS3OutputStream extends OutputStream
       throw new IOException("Unable to start multipart upload", e);
     }
     this.uploadId = result.getUploadId();
-    this.chunkStorePath = new File(config.getTempDir(), uploadId + UUID.randomUUID());
+    this.chunkStorePath = new File(tempDir, uploadId + UUID.randomUUID());
     FileUtils.mkdirp(this.chunkStorePath);
     this.chunkSize = config.getChunkSize();
     this.pushStopwatch = Stopwatch.createStarted();

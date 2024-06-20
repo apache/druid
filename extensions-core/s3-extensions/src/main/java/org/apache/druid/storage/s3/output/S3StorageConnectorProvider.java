@@ -45,17 +45,16 @@ public class S3StorageConnectorProvider extends S3OutputConfig implements Storag
   public S3StorageConnectorProvider(
       @JsonProperty(value = "bucket", required = true) String bucket,
       @JsonProperty(value = "prefix", required = true) String prefix,
-      @JsonProperty(value = "tempDir", required = true) File tempDir,
       @JsonProperty("chunkSize") HumanReadableBytes chunkSize,
       @JsonProperty("maxRetry") Integer maxRetry
   )
   {
-    super(bucket, prefix, tempDir, chunkSize, maxRetry);
+    super(bucket, prefix, chunkSize, maxRetry);
   }
 
   @Override
-  public StorageConnector get()
+  public StorageConnector createStorageConnector(File tempDir)
   {
-    return new S3StorageConnector(this, s3, s3UploadManager);
+    return new S3StorageConnector(this, s3, tempDir, s3UploadManager);
   }
 }

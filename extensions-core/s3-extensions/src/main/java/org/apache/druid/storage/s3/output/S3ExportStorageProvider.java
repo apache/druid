@@ -70,14 +70,8 @@ public class S3ExportStorageProvider implements ExportStorageProvider
   }
 
   @Override
-  public StorageConnector get()
+  public StorageConnector createStorageConnector(File tempDir)
   {
-    final String tempDir = s3ExportConfig.getTempLocalDir();
-    if (tempDir == null) {
-      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
-                          .ofCategory(DruidException.Category.NOT_FOUND)
-                          .build("The runtime property `druid.export.storage.s3.tempLocalDir` must be configured for S3 export.");
-    }
     final List<String> allowedExportPaths = s3ExportConfig.getAllowedExportPaths();
     if (allowedExportPaths == null) {
       throw DruidException.forPersona(DruidException.Persona.OPERATOR)
@@ -89,11 +83,10 @@ public class S3ExportStorageProvider implements ExportStorageProvider
     final S3OutputConfig s3OutputConfig = new S3OutputConfig(
         bucket,
         prefix,
-        new File(tempDir),
         s3ExportConfig.getChunkSize(),
         s3ExportConfig.getMaxRetry()
     );
-    return new S3StorageConnector(s3OutputConfig, s3, s3UploadManager);
+    return new S3StorageConnector(s3OutputConfig, s3, tempDir, s3UploadManager);
   }
 
   @VisibleForTesting

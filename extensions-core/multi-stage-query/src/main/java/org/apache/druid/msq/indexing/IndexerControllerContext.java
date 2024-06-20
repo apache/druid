@@ -57,6 +57,7 @@ import org.apache.druid.segment.realtime.firehose.ChatHandler;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 
+import java.io.File;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
@@ -74,6 +75,7 @@ public class IndexerControllerContext implements ControllerContext
   private final ServiceClientFactory clientFactory;
   private final OverlordClient overlordClient;
   private final ServiceMetricEvent.Builder metricBuilder;
+  private final File tempDir;
 
   public IndexerControllerContext(
       final MSQControllerTask task,
@@ -90,6 +92,7 @@ public class IndexerControllerContext implements ControllerContext
     this.overlordClient = overlordClient;
     this.metricBuilder = new ServiceMetricEvent.Builder();
     IndexTaskUtils.setTaskDimensions(metricBuilder, task);
+    this.tempDir = toolbox.getIndexingTmpDir();
   }
 
   @Override
@@ -198,6 +201,12 @@ public class IndexerControllerContext implements ControllerContext
         // 10 minutes +- 2 minutes jitter
         TimeUnit.SECONDS.toMillis(600 + ThreadLocalRandom.current().nextInt(-4, 5) * 30L)
     );
+  }
+
+  @Override
+  public File tempDir()
+  {
+    return tempDir;
   }
 
   /**

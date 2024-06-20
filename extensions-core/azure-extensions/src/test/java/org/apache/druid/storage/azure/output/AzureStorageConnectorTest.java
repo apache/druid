@@ -57,8 +57,9 @@ public class AzureStorageConnectorTest
   public void setup(@TempDir File tempDir)
   {
     storageConnector = new AzureStorageConnector(
-        new AzureOutputConfig(CONTAINER, PREFIX, tempDir, null, null),
-        azureStorage
+        new AzureOutputConfig(CONTAINER, PREFIX, null, null),
+        azureStorage,
+        tempDir
     );
   }
 

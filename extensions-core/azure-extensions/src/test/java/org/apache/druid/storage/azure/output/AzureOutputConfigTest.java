@@ -21,14 +21,8 @@ package org.apache.druid.storage.azure.output;
 
 
 import org.apache.druid.error.DruidException;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.HumanReadableBytes;
-import org.apache.druid.java.util.common.ISE;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-
-import java.io.File;
-import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -39,45 +33,14 @@ public class AzureOutputConfigTest
   private static final int MAX_RETRY_COUNT = 0;
 
   @Test
-  public void testTooLargeChunkSize(@TempDir File tempDir)
+  public void testTooLargeChunkSize()
   {
     HumanReadableBytes chunkSize = new HumanReadableBytes("4001MiB");
 
     //noinspection ResultOfObjectAllocationIgnored
     assertThrows(
         DruidException.class,
-        () -> new AzureOutputConfig(CONTAINER, PREFIX, tempDir, chunkSize, MAX_RETRY_COUNT)
+        () -> new AzureOutputConfig(CONTAINER, PREFIX, chunkSize, MAX_RETRY_COUNT)
     );
-  }
-
-  @Test
-  public void testTempDirectoryNotWritable(@TempDir File tempDir)
-  {
-    if (!tempDir.setWritable(false)) {
-      throw new ISE("Unable to change the permission of temp folder for %s", this.getClass().getName());
-    }
-
-    //noinspection ResultOfObjectAllocationIgnored
-    assertThrows(
-        DruidException.class,
-        () -> new AzureOutputConfig(CONTAINER, PREFIX, tempDir, null, MAX_RETRY_COUNT)
-    );
-  }
-
-  @Test
-  public void testTempDirectoryNotPresentButWritable(@TempDir File tempDir)
-  {
-    File temporaryFolder = new File(tempDir + "/notPresent1/notPresent2/notPresent3");
-    //noinspection ResultOfObjectAllocationIgnored
-    new AzureOutputConfig(CONTAINER, PREFIX, temporaryFolder, null, MAX_RETRY_COUNT);
-  }
-
-  @Test
-  public void testTempDirectoryPresent(@TempDir File tempDir) throws IOException
-  {
-    File temporaryFolder = new File(tempDir + "/notPresent1/notPresent2/notPresent3");
-    FileUtils.mkdirp(temporaryFolder);
-    //noinspection ResultOfObjectAllocationIgnored
-    new AzureOutputConfig(CONTAINER, PREFIX, temporaryFolder, null, MAX_RETRY_COUNT);
   }
 }

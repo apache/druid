@@ -66,29 +66,21 @@ public class RetryableS3OutputStreamTest
 
   private S3OutputConfig config;
   private long chunkSize;
-
   private S3UploadManager s3UploadManager;
+  private File tempDir;
 
   @Before
   public void setup() throws IOException
   {
-    final File tempDir = temporaryFolder.newFolder();
     chunkSize = 10L;
     config = new S3OutputConfig(
         "TEST",
         "TEST",
-        tempDir,
         HumanReadableBytes.valueOf(chunkSize),
         2,
         false
     )
     {
-      @Override
-      public File getTempDir()
-      {
-        return tempDir;
-      }
-
       @Override
       public Long getChunkSize()
       {
@@ -103,8 +95,8 @@ public class RetryableS3OutputStreamTest
     };
 
     s3UploadManager = new S3UploadManager(
-        new S3OutputConfig("bucket", "prefix", EasyMock.mock(File.class), new HumanReadableBytes("5MiB"), 1),
-        new S3ExportConfig("tempDir", new HumanReadableBytes("5MiB"), 1, null),
+        new S3OutputConfig("bucket", "prefix", new HumanReadableBytes("5MiB"), 1),
+        new S3ExportConfig(new HumanReadableBytes("5MiB"), 1, null),
         new DruidProcessingConfigTest.MockRuntimeInfo(10, 0, 0));
   }
 
@@ -116,6 +108,7 @@ public class RetryableS3OutputStreamTest
     try (RetryableS3OutputStream out = new RetryableS3OutputStream(
         config,
         s3,
+        tempDir,
         path,
         s3UploadManager
     )) {
@@ -138,6 +131,7 @@ public class RetryableS3OutputStreamTest
     try (RetryableS3OutputStream out = new RetryableS3OutputStream(
         config,
         s3,
+        tempDir,
         path,
         s3UploadManager
     )) {
@@ -159,6 +153,7 @@ public class RetryableS3OutputStreamTest
     try (RetryableS3OutputStream out = new RetryableS3OutputStream(
         config,
         s3,
+        tempDir,
         path,
         s3UploadManager
     )) {
@@ -181,6 +176,7 @@ public class RetryableS3OutputStreamTest
     try (RetryableS3OutputStream out = new RetryableS3OutputStream(
         config,
         s3,
+        tempDir,
         path,
         s3UploadManager
     )) {
@@ -204,6 +200,7 @@ public class RetryableS3OutputStreamTest
     try (RetryableS3OutputStream out = new RetryableS3OutputStream(
         config,
         s3,
+        tempDir,
         path,
         s3UploadManager
     )) {

@@ -25,7 +25,6 @@ import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.RetryUtils;
 
 import javax.annotation.Nullable;
-import java.io.File;
 import java.util.Objects;
 
 public class GoogleOutputConfig
@@ -36,9 +35,6 @@ public class GoogleOutputConfig
 
   @JsonProperty
   private final String prefix;
-
-  @JsonProperty
-  private final File tempDir;
 
   @JsonProperty
   private HumanReadableBytes chunkSize;
@@ -58,14 +54,12 @@ public class GoogleOutputConfig
   public GoogleOutputConfig(
       final String bucket,
       final String prefix,
-      final File tempDir,
       @Nullable final HumanReadableBytes chunkSize,
       @Nullable final Integer maxRetry
   )
   {
     this.bucket = bucket;
     this.prefix = prefix;
-    this.tempDir = tempDir;
     this.chunkSize = chunkSize != null ? chunkSize : DEFAULT_CHUNK_SIZE;
     this.maxRetry = maxRetry != null ? maxRetry : RetryUtils.DEFAULT_MAX_TRIES;
 
@@ -80,11 +74,6 @@ public class GoogleOutputConfig
   public String getPrefix()
   {
     return prefix;
-  }
-
-  public File getTempDir()
-  {
-    return tempDir;
   }
 
   public HumanReadableBytes getChunkSize()
@@ -122,7 +111,6 @@ public class GoogleOutputConfig
     GoogleOutputConfig that = (GoogleOutputConfig) o;
     return Objects.equals(bucket, that.bucket)
            && Objects.equals(prefix, that.prefix)
-           && Objects.equals(tempDir, that.tempDir)
            && Objects.equals(chunkSize, that.chunkSize)
            && Objects.equals(maxRetry, that.maxRetry);
   }
@@ -130,7 +118,7 @@ public class GoogleOutputConfig
   @Override
   public int hashCode()
   {
-    return Objects.hash(bucket, prefix, tempDir, chunkSize, maxRetry);
+    return Objects.hash(bucket, prefix, chunkSize, maxRetry);
   }
 
   @Override
@@ -139,7 +127,6 @@ public class GoogleOutputConfig
     return "GoogleOutputConfig{" +
            "container='" + bucket + '\'' +
            ", prefix='" + prefix + '\'' +
-           ", tempDir=" + tempDir +
            ", chunkSize=" + chunkSize +
            ", maxRetry=" + maxRetry +
            '}';

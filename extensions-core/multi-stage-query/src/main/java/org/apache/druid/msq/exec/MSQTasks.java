@@ -41,8 +41,10 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.storage.NilStorageConnector;
 import org.apache.druid.storage.StorageConnector;
+import org.apache.druid.storage.StorageConnectorProvider;
 
 import javax.annotation.Nullable;
+import java.io.File;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -129,10 +131,11 @@ public class MSQTasks
     return selfNode != null ? selfNode.getHostAndPortToUse() : null;
   }
 
-  static StorageConnector makeStorageConnector(final Injector injector)
+  static StorageConnector makeStorageConnector(final Injector injector, final File tempDir)
   {
     try {
-      StorageConnector storageConnector = injector.getInstance(Key.get(StorageConnector.class, MultiStageQuery.class));
+      final StorageConnectorProvider storageConnectorProvider = injector.getInstance(Key.get(StorageConnectorProvider.class, MultiStageQuery.class));
+      final StorageConnector storageConnector = storageConnectorProvider.createStorageConnector(tempDir);
       if (storageConnector instanceof NilStorageConnector) {
         throw new Exception("Storage connector not configured.");
       }

@@ -27,7 +27,6 @@ import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
 import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -44,7 +43,6 @@ public class AzureOutputSerdeTest
     String json = jsonStringReadyForAssert("{\n"
                                            + "  \"container\": \"TEST\",\n"
                                            + "  \"prefix\": \"abc\",\n"
-                                           + "  \"tempDir\": \"/tmp\",\n"
                                            + "  \"chunkSize\":104857600,\n"
                                            + "  \"maxRetry\": 2\n"
                                            + "}\n");
@@ -52,7 +50,6 @@ public class AzureOutputSerdeTest
     AzureOutputConfig azureOutputConfig = new AzureOutputConfig(
         "TEST",
         "abc",
-        new File("/tmp"),
         HumanReadableBytes.valueOf(HumanReadableBytes.parse("100Mib")),
         2
     );
@@ -67,7 +64,6 @@ public class AzureOutputSerdeTest
   {
     String json = jsonStringReadyForAssert("{\n"
                                            + "  \"container\": \"TEST\",\n"
-                                           + "  \"tempDir\": \"/tmp\",\n"
                                            + "  \"chunkSize\":104857600,\n"
                                            + "  \"maxRetry\": 2\n"
                                            + "}\n");
@@ -79,19 +75,6 @@ public class AzureOutputSerdeTest
   {
     String json = jsonStringReadyForAssert("{\n"
                                            + "  \"prefix\": \"abc\",\n"
-                                           + "  \"tempDir\": \"/tmp\",\n"
-                                           + "  \"chunkSize\":104857600,\n"
-                                           + "  \"maxRetry\": 2\n"
-                                           + "}\n");
-    assertThrows(MismatchedInputException.class, () -> MAPPER.readValue(json, AzureOutputConfig.class));
-  }
-
-  @Test
-  public void noTempDir()
-  {
-    String json = jsonStringReadyForAssert("{\n"
-                                           + "  \"prefix\": \"abc\",\n"
-                                           + "  \"container\": \"TEST\",\n"
                                            + "  \"chunkSize\":104857600,\n"
                                            + "  \"maxRetry\": 2\n"
                                            + "}\n");
@@ -102,7 +85,6 @@ public class AzureOutputSerdeTest
   public void leastArguments() throws JsonProcessingException
   {
     String json = jsonStringReadyForAssert("{\n"
-                                           + "  \"tempDir\": \"/tmp\",\n"
                                            + "  \"prefix\": \"abc\",\n"
                                            + "  \"container\": \"TEST\"\n"
                                            + "}\n");
@@ -110,7 +92,6 @@ public class AzureOutputSerdeTest
     AzureOutputConfig azureOutputConfig = new AzureOutputConfig(
         "TEST",
         "abc",
-        new File("/tmp"),
         null,
         null
     );
@@ -125,7 +106,6 @@ public class AzureOutputSerdeTest
     String json = jsonStringReadyForAssert("{\n"
                                            + "  \"prefix\": \"abc\",\n"
                                            + "  \"container\": \"TEST\",\n"
-                                           + "  \"tempDir\": \"/tmp\",\n"
                                            + "  \"chunkSize\":104,\n"
                                            + "  \"maxRetry\": 2\n"
                                            + "}\n");
