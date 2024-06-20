@@ -32,8 +32,6 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import java.io.IOException;
-
 import static org.junit.Assert.assertEquals;
 
 public class LauncherSmokeTest
@@ -54,7 +52,7 @@ public class LauncherSmokeTest
   }
 
   @Test
-  public void chkSelectFromFoo() throws IOException, InterruptedException
+  public void chkSelectFromFoo() throws Exception
   {
     CloseableHttpClient client = HttpClients.createDefault();
     HttpPost request = new HttpPost("http://localhost:12345/druid/v2/sql");
@@ -65,7 +63,7 @@ public class LauncherSmokeTest
   }
 
   @Test
-  public void chkStatusWorks() throws IOException, InterruptedException
+  public void chkStatusWorks() throws Exception
   {
     CloseableHttpClient client = HttpClients.createDefault();
     HttpGet request = new HttpGet("http://localhost:12345/status");

@@ -33,9 +33,11 @@ import java.util.Date;
 public class QuidemRecorder implements AutoCloseable, DruidHook<String>
 {
   private PrintStream printStream;
+  private File file;
 
   public QuidemRecorder(URI quidemURI, File file)
   {
+    this.file = file;
     try {
       this.printStream = new PrintStream(new FileOutputStream(file), true, StandardCharsets.UTF_8.name());
     }
@@ -43,7 +45,7 @@ public class QuidemRecorder implements AutoCloseable, DruidHook<String>
       throw new RuntimeException(e);
     }
     printStream.println("#started " + new Date());
-    printStream.println("!use " + quidemURI.toString());
+    printStream.println("!use " + quidemURI);
     printStream.println("!set outputformat mysql");
     DruidHook.register(DruidHook.SQL, this);
   }
@@ -64,4 +66,11 @@ public class QuidemRecorder implements AutoCloseable, DruidHook<String>
       return;
     }
   }
+
+  @Override
+  public String toString()
+  {
+    return "QuidemRecorder [file=" + file + "]";
+  }
+
 }

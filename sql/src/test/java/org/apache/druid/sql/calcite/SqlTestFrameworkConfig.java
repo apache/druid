@@ -27,7 +27,6 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
-import com.google.inject.Module;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.topn.TopNQueryConfig;
@@ -45,6 +44,7 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 import org.reflections.Configuration;
 import org.reflections.Reflections;
 import org.reflections.scanners.SubTypesScanner;
+import org.reflections.util.ClasspathHelper;
 import org.reflections.util.ConfigurationBuilder;
 import org.reflections.util.FilterBuilder;
 
@@ -356,16 +356,12 @@ public class SqlTestFrameworkConfig
 
     ConfigurationInstance(SqlTestFrameworkConfig config, QueryComponentSupplier testHost)
     {
-      Module[] modules = {};
       SqlTestFramework.Builder builder = new SqlTestFramework.Builder(testHost)
           .withConfig(config)
           .catalogResolver(testHost.createCatalogResolver())
           .minTopNThreshold(config.minTopNThreshold)
           .mergeBufferCount(config.numMergeBuffers)
           .withOverrideModule(config.resultCache.makeModule());
-      for (Module m : modules) {
-        builder.withOverrideModule(m);
-      }
 
       framework = builder.build();
     }
@@ -515,7 +511,7 @@ public class SqlTestFrameworkConfig
         {
           Configuration cfg = new ConfigurationBuilder()
               .setScanners(new SubTypesScanner(true))
-              .setUrls(org.reflections.util.ClasspathHelper.forJavaClassPath())
+              .setUrls(ClasspathHelper.forJavaClassPath())
               .filterInputsBy(
                   new FilterBuilder()
                       .includePackage(pkg)

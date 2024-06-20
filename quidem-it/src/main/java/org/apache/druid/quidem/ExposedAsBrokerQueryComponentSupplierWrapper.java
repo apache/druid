@@ -214,7 +214,7 @@ public class ExposedAsBrokerQueryComponentSupplierWrapper implements QueryCompon
     return delegate.getPlannerComponentSupplier();
   }
 
-  public class BrokerTestModule extends AbstractModule
+  public static class BrokerTestModule extends AbstractModule
   {
     @Override
     protected void configure()

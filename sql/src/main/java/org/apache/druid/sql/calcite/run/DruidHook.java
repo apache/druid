@@ -30,7 +30,7 @@ import java.util.Objects;
 @FunctionalInterface
 public interface DruidHook<T>
 {
-  static class HookKey<T>
+  class HookKey<T>
   {
     private String label;
     private Class<T> type;
@@ -65,14 +65,14 @@ public interface DruidHook<T>
 
   }
 
-  public static final HookKey<RelNode> CONVERTED_PLAN = new HookKey<>("converted", RelNode.class);
-  public static final HookKey<RelNode> LOGICAL_PLAN = new HookKey<>("logicalPlan", RelNode.class);
-  public static final HookKey<RelNode> DRUID_PLAN = new HookKey<>("druidPlan", RelNode.class);
-  public static final HookKey<String> SQL = new HookKey<>("sql", String.class);
+  final HookKey<RelNode> CONVERTED_PLAN = new HookKey<>("converted", RelNode.class);
+  final HookKey<RelNode> LOGICAL_PLAN = new HookKey<>("logicalPlan", RelNode.class);
+  final HookKey<RelNode> DRUID_PLAN = new HookKey<>("druidPlan", RelNode.class);
+  final HookKey<String> SQL = new HookKey<>("sql", String.class);
 
   void invoke(HookKey<T> key, T object);
 
-  static Map<HookKey<?>, List<DruidHook<?>>> GLOBAL = new HashMap<>();
+  Map<HookKey<?>, List<DruidHook<?>>> GLOBAL = new HashMap<>();
 
   static void register(HookKey<?> label, DruidHook<?> hook)
   {
