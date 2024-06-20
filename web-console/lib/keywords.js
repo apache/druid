@@ -47,6 +47,7 @@ exports.SQL_KEYWORDS = [
   'FULL',
   'CROSS',
   'USING',
+  'NATURAL',
   'FETCH',
   'FIRST',
   'NEXT',
