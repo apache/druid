@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import io.fabric8.kubernetes.api.model.PodTemplate;
 import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.java.util.common.ISE;
 
 import java.util.List;
 import java.util.Map;
@@ -62,16 +61,7 @@ public class SelectorBasedPodTemplateSelectStrategy implements PodTemplateSelect
                                   .map(Selector::getSelectionKey)
                                   .orElse("base");
 
-    PodTemplate podTemplate = templates.getOrDefault(templateKey, templates.get("base"));
-
-    if (podTemplate == null) {
-      throw new ISE(
-          "Pod template spec not found for task id [%s]. Matched templateKey [%s]",
-          task.getId(),
-          templateKey
-      );
-    }
-    return podTemplate;
+    return templates.getOrDefault(templateKey, templates.get("base"));
   }
 
   @JsonProperty
