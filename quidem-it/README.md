@@ -24,6 +24,28 @@ Can be used to write tests against existing test backends (ComponentSupplier) - 
 
 ## Usage
 
+### Install java&maven (if needed)
+
+If you don't have java&maven - one way to set that up is by using sdkman like this:
+```
+# install sdkman
+curl -s "https://get.sdkman.io" | bash
+# at the end of installation either open a new terminal; or follow the instructions at the end
+
+# install java&maven
+sdk install java 11.0.23-zulu
+sdk install maven
+
+# run mvn to see if it works
+mvn --version
+
+# download druid sourcces (FIXME: change this to the main repo/branch before merging)
+git clone --branch quidem-record https://github.com/kgyrtkirk/druid
+```
+
+
+
+
 ### Running these tests
 
 * CI execution happens by a standard JUnit test `QTest` in this module
@@ -47,6 +69,6 @@ Can be used to write tests against existing test backends (ComponentSupplier) - 
   * new record files can be started by calling http://localhost:12345/quidem/start
     * if `quidem.record.autostart` is omitted recording will not start
 * after finished with the usage of the broker ; a new `record-123.iq` file will be in the project's worktree - it will contain all the executed statements
-  * running `dev/quidem -Dquidem.overwrite` updates the resultsets of all  `iq` files around there
+  * running `dev/quidem -Dquidem.overwrite` updates the resultsets of all `iq` files around there
   * rename the testfile to have a more descriptive name
 
