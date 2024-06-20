@@ -101,9 +101,12 @@ public class ClientCompactionRunnerInfo
     return Objects.hash(type);
   }
 
-  public static ValidationResult validateCompactionConfig(DataSourceCompactionConfig newConfig)
+  public static ValidationResult validateCompactionConfig(
+      DataSourceCompactionConfig newConfig,
+      CompactionEngine defaultCompactionEngine
+  )
   {
-    CompactionEngine compactionEngine = newConfig.getEngine();
+    CompactionEngine compactionEngine = newConfig.getEngine() == null ? defaultCompactionEngine : newConfig.getEngine();
     if (compactionEngine == CompactionEngine.NATIVE) {
       return new ValidationResult(true, null);
     } else {

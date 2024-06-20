@@ -38,7 +38,6 @@ import org.apache.druid.data.input.impl.NewSpatialDimensionSchema;
 import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
-import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
@@ -246,7 +245,6 @@ public class CompactionTaskRunTest extends IngestionTestBase
     return new CompactionState(
         new DynamicPartitionsSpec(5000000, Long.MAX_VALUE),
         expectedDims,
-        Collections.emptyMap(),
         ImmutableList.of(expectedMetric),
         null,
         IndexSpec.DEFAULT.asMap(mapper),
@@ -260,8 +258,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
                 )
             ),
             Map.class
-        ),
-        CompactionEngine.NATIVE
+        )
     );
   }
 
@@ -424,7 +421,6 @@ public class CompactionTaskRunTest extends IngestionTestBase
         CompactionState expectedState = new CompactionState(
             new HashedPartitionsSpec(null, 3, null),
             new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
-            Collections.emptyMap(),
             ImmutableList.of(expectedLongSumMetric),
             null,
             compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper()),
@@ -438,8 +434,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
                     )
                 ),
                 Map.class
-            ),
-            CompactionEngine.NATIVE
+            )
         );
         Assert.assertEquals(expectedState, segments.get(segmentIdx).getLastCompactionState());
         Assert.assertSame(HashBasedNumberedShardSpec.class, segments.get(segmentIdx).getShardSpec().getClass());
@@ -853,7 +848,6 @@ public class CompactionTaskRunTest extends IngestionTestBase
     CompactionState expectedCompactionState = new CompactionState(
         new DynamicPartitionsSpec(5000000, Long.MAX_VALUE),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
-        Collections.emptyMap(),
         ImmutableList.of(expectedLongSumMetric),
         getObjectMapper().readValue(getObjectMapper().writeValueAsString(compactionTask.getTransformSpec()), Map.class),
         IndexSpec.DEFAULT.asMap(mapper),
@@ -867,8 +861,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
                 )
             ),
             Map.class
-        ),
-        CompactionEngine.NATIVE
+        )
     );
     Assert.assertEquals(
         expectedCompactionState,
@@ -922,7 +915,6 @@ public class CompactionTaskRunTest extends IngestionTestBase
     CompactionState expectedCompactionState = new CompactionState(
         new DynamicPartitionsSpec(5000000, Long.MAX_VALUE),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
-        Collections.emptyMap(),
         ImmutableList.of(expectedCountMetric, expectedLongSumMetric),
         getObjectMapper().readValue(getObjectMapper().writeValueAsString(compactionTask.getTransformSpec()), Map.class),
         IndexSpec.DEFAULT.asMap(mapper),
@@ -936,8 +928,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
                 )
             ),
             Map.class
-        ),
-        CompactionEngine.NATIVE
+        )
     );
     Assert.assertEquals(
         expectedCompactionState,

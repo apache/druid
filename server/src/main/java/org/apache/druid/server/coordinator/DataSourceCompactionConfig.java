@@ -22,7 +22,6 @@ package org.apache.druid.server.coordinator;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.joda.time.Period;
@@ -227,39 +226,5 @@ public class DataSourceCompactionConfig
     );
     result = 31 * result + Arrays.hashCode(metricsSpec);
     return result;
-  }
-
-  public static DataSourceCompactionConfig from(
-      DataSourceCompactionConfig newConfig,
-      CompactionEngine defaultCompactionEngine
-  )
-  {
-    CompactionEngine newCompactionEngine = newConfig.getEngine();
-    if (newCompactionEngine == null) {
-      newCompactionEngine = defaultCompactionEngine;
-      newConfig = new DataSourceCompactionConfig(
-          newConfig.getDataSource(),
-          newConfig.getTaskPriority(),
-          newConfig.getInputSegmentSizeBytes(),
-          newConfig.getMaxRowsPerSegment(),
-          newConfig.getSkipOffsetFromLatest(),
-          newConfig.getTuningConfig(),
-          newConfig.getGranularitySpec(),
-          newConfig.getDimensionsSpec(),
-          newConfig.getMetricsSpec(),
-          newConfig.getTransformSpec(),
-          newConfig.getIoConfig(),
-          newCompactionEngine,
-          newConfig.getTaskContext()
-      );
-    }
-
-    ClientCompactionRunnerInfo.ValidationResult validationResult = ClientCompactionRunnerInfo.validateCompactionConfig(
-        newConfig
-    );
-    if (!validationResult.isValid()) {
-      throw InvalidInput.exception("Compaction config not supported. Reason[%s].", validationResult.getReason());
-    }
-    return newConfig;
   }
 }

@@ -102,7 +102,7 @@ public class MultiStageQueryContext
 
   public static final String CTX_MAX_NUM_TASKS = "maxNumTasks";
   @VisibleForTesting
-  public static final int DEFAULT_MAX_NUM_TASKS = 2;
+  static final int DEFAULT_MAX_NUM_TASKS = 2;
 
   public static final String CTX_TASK_ASSIGNMENT_STRATEGY = "taskAssignment";
   private static final String DEFAULT_TASK_ASSIGNMENT_STRATEGY = WorkerAssignmentStrategy.MAX.toString();

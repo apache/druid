@@ -26,7 +26,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
@@ -42,7 +41,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Map;
 
 public class DataSegmentPlusTest
@@ -90,12 +88,10 @@ public class DataSegmentPlusTest
                 new DimensionsSpec(
                     DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "bar", "foo"))
                 ),
-                Collections.emptyMap(),
                 ImmutableList.of(ImmutableMap.of("type", "count", "name", "count")),
                 ImmutableMap.of("filter", ImmutableMap.of("type", "selector", "dimension", "dim1", "value", "foo")),
                 ImmutableMap.of(),
-                ImmutableMap.of(),
-                CompactionEngine.NATIVE
+                ImmutableMap.of()
             ),
             TEST_VERSION,
             1
@@ -129,7 +125,7 @@ public class DataSegmentPlusTest
     Assert.assertEquals(ImmutableMap.of("type", "numbered", "partitionNum", 3, "partitions", 0), segmentObjectMap.get("shardSpec"));
     Assert.assertEquals(TEST_VERSION, segmentObjectMap.get("binaryVersion"));
     Assert.assertEquals(1, segmentObjectMap.get("size"));
-    Assert.assertEquals(8, ((Map) segmentObjectMap.get("lastCompactionState")).size());
+    Assert.assertEquals(6, ((Map) segmentObjectMap.get("lastCompactionState")).size());
 
     // verify extra metadata
     Assert.assertEquals(createdDateStr, objectMap.get("createdDate"));

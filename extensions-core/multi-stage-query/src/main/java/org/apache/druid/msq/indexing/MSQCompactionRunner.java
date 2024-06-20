@@ -55,6 +55,7 @@ import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.expression.TimestampFloorExprMacro;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.VirtualColumn;
@@ -111,10 +112,6 @@ public class MSQCompactionRunner implements CompactionRunner
    {@link ClientCompactionRunnerInfo#msqEngineSupportsCompactionConfig}
    The following configs aren't supported:
    * <ul>
-   * <li>finalizeAggregations set to false in context.</li>
-   *
-   * <li>taskAssignment set to auto in context.</li>
-   *
    * <li>partitionsSpec of type HashedParititionsSpec.</li>
    *
    * <li>maxTotalRows in DynamicPartitionsSpec.</li>
@@ -444,6 +441,9 @@ public class MSQCompactionRunner implements CompactionRunner
       );
     }
     context.put(MultiStageQueryContext.CTX_SEGMENT_LOAD_WAIT, true);
+    // Similar to compaction using the native engine, don't finalize aggregations.
+    context.put(MultiStageQueryContext.CTX_FINALIZE_AGGREGATIONS, false);
+    context.put(GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING, false);
     return context;
   }
 

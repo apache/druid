@@ -50,7 +50,7 @@ public class ClientCompactionRunnerInfoTest
   {
     assertFalse(
         ClientCompactionRunnerInfo.validateCompactionConfig(
-            createCompactionConfig(new HashedPartitionsSpec(100, null, null), Collections.emptyMap())
+            createCompactionConfig(new HashedPartitionsSpec(100, null, null), Collections.emptyMap()), CompactionEngine.NATIVE
         ).isValid()
     );
   }
@@ -60,7 +60,7 @@ public class ClientCompactionRunnerInfoTest
   {
     assertFalse(
         ClientCompactionRunnerInfo.validateCompactionConfig(
-            createCompactionConfig(new DynamicPartitionsSpec(100, 100L), Collections.emptyMap())
+            createCompactionConfig(new DynamicPartitionsSpec(100, 100L), Collections.emptyMap()), CompactionEngine.NATIVE
         ).isValid()
     );
   }
@@ -69,7 +69,7 @@ public class ClientCompactionRunnerInfoTest
   public void testDynamicPartitionsSpecs()
   {
     assertTrue(ClientCompactionRunnerInfo.validateCompactionConfig(
-        createCompactionConfig(new DynamicPartitionsSpec(100, null), Collections.emptyMap())
+        createCompactionConfig(new DynamicPartitionsSpec(100, null), Collections.emptyMap()), CompactionEngine.NATIVE
     ).isValid());
   }
 
@@ -80,7 +80,7 @@ public class ClientCompactionRunnerInfoTest
         createCompactionConfig(
             new DimensionRangePartitionsSpec(100, null, ImmutableList.of("partitionDim"), false),
             Collections.emptyMap()
-        )
+        ), CompactionEngine.NATIVE
     ).isValid());
   }
 
@@ -91,7 +91,7 @@ public class ClientCompactionRunnerInfoTest
         new DynamicPartitionsSpec(3, null),
         ImmutableMap.of(ClientCompactionRunnerInfo.MSQContext.CTX_FINALIZE_AGGREGATIONS, false)
     );
-    Assert.assertFalse(ClientCompactionRunnerInfo.validateCompactionConfig(compactionConfig).isValid());
+    Assert.assertFalse(ClientCompactionRunnerInfo.validateCompactionConfig(compactionConfig, CompactionEngine.NATIVE).isValid());
   }
 
   private static DataSourceCompactionConfig createCompactionConfig(

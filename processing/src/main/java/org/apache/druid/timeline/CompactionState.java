@@ -21,13 +21,9 @@ package org.apache.druid.timeline;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.common.config.Configs;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
-import org.apache.druid.query.aggregation.AggregatorFactory;
 
-import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -40,7 +36,7 @@ import java.util.stream.Collectors;
  * The compaction task is a task that reads Druid segments and overwrites them with new ones. Since this task always
  * reads segments in the same order, the same task spec will always create the same set of segments
  * (not same segment ID, but same content).
- * <p>
+ *
  * Note that this class doesn't include all fields in the compaction task spec. Only the configurations that can
  * affect the content of segment should be included.
  *
@@ -62,20 +58,15 @@ public class CompactionState
   // org.apache.druid.query.aggregation.AggregatorFactory cannot be used here because it's in the 'processing' module which
   // has a dependency on the 'core' module where this class is.
   private final List<Object> metricsSpec;
-  private final CompactionEngine engine;
-  private final Map<String, AggregatorFactory> dimensionToAggregatoryFactoryMap;
 
   @JsonCreator
   public CompactionState(
       @JsonProperty("partitionsSpec") PartitionsSpec partitionsSpec,
       @JsonProperty("dimensionsSpec") DimensionsSpec dimensionsSpec,
-      @Nullable @JsonProperty("dimensionToAggregatoryFactoryMap")
-      Map<String, AggregatorFactory> dimensionToAggregatoryFactoryMap,
       @JsonProperty("metricsSpec") List<Object> metricsSpec,
       @JsonProperty("transformSpec") Map<String, Object> transformSpec,
       @JsonProperty("indexSpec") Map<String, Object> indexSpec,
-      @JsonProperty("granularitySpec") Map<String, Object> granularitySpec,
-      @Nullable @JsonProperty("engine") CompactionEngine engine
+      @JsonProperty("granularitySpec") Map<String, Object> granularitySpec
   )
   {
     this.partitionsSpec = partitionsSpec;
@@ -84,8 +75,6 @@ public class CompactionState
     this.transformSpec = transformSpec;
     this.indexSpec = indexSpec;
     this.granularitySpec = granularitySpec;
-    this.engine = Configs.valueOrDefault(engine, CompactionEngine.NATIVE);
-    this.dimensionToAggregatoryFactoryMap = dimensionToAggregatoryFactoryMap;
   }
 
   @JsonProperty
@@ -124,20 +113,6 @@ public class CompactionState
     return granularitySpec;
   }
 
-  @JsonProperty
-  @Nullable
-  public CompactionEngine getEngine()
-  {
-    return engine;
-  }
-
-  @JsonProperty
-  @Nullable
-  public Map<String, AggregatorFactory> getDimensionToAggregatoryFactoryMap()
-  {
-    return dimensionToAggregatoryFactoryMap;
-  }
-
   @Override
   public boolean equals(Object o)
   {
@@ -159,14 +134,7 @@ public class CompactionState
   @Override
   public int hashCode()
   {
-    return Objects.hash(
-        partitionsSpec,
-        dimensionsSpec,
-        transformSpec,
-        indexSpec,
-        granularitySpec,
-        metricsSpec
-    );
+    return Objects.hash(partitionsSpec, dimensionsSpec, transformSpec, indexSpec, granularitySpec, metricsSpec);
   }
 
   @Override
@@ -185,23 +153,19 @@ public class CompactionState
   public static Function<Set<DataSegment>, Set<DataSegment>> addCompactionStateToSegments(
       PartitionsSpec partitionsSpec,
       DimensionsSpec dimensionsSpec,
-      Map<String, AggregatorFactory> dimensionToAggregatoryFactoryMap,
       List<Object> metricsSpec,
       Map<String, Object> transformSpec,
       Map<String, Object> indexSpec,
-      Map<String, Object> granularitySpec,
-      CompactionEngine engine
+      Map<String, Object> granularitySpec
   )
   {
     CompactionState compactionState = new CompactionState(
         partitionsSpec,
         dimensionsSpec,
-        dimensionToAggregatoryFactoryMap,
         metricsSpec,
         transformSpec,
         indexSpec,
-        granularitySpec,
-        engine
+        granularitySpec
     );
 
     return segments -> segments
@@ -209,4 +173,5 @@ public class CompactionState
         .map(s -> s.withLastCompactionState(compactionState))
         .collect(Collectors.toSet());
   }
+
 }

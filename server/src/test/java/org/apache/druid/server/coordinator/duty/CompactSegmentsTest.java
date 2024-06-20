@@ -408,42 +408,12 @@ public class CompactSegmentsTest
         DataSegment afterNoon = createSegment(dataSourceName, j, false, k);
         if (j == 3) {
           // Make two intervals on this day compacted (two compacted intervals back-to-back)
-          beforeNoon = beforeNoon.withLastCompactionState(
-              new CompactionState(
-                  partitionsSpec,
-                  null,
-                  Collections.emptyMap(),
-                  null,
-                  null,
-                  ImmutableMap.of(),
-                  ImmutableMap.of(),
-                  CompactionEngine.NATIVE
-              ));
-          afterNoon = afterNoon.withLastCompactionState(
-              new CompactionState(
-                  partitionsSpec,
-                  null,
-                  Collections.emptyMap(),
-                  null,
-                  null,
-                  ImmutableMap.of(),
-                  ImmutableMap.of(),
-                  CompactionEngine.NATIVE
-              ));
+          beforeNoon = beforeNoon.withLastCompactionState(new CompactionState(partitionsSpec, null, null, null, ImmutableMap.of(), ImmutableMap.of()));
+          afterNoon = afterNoon.withLastCompactionState(new CompactionState(partitionsSpec, null, null, null, ImmutableMap.of(), ImmutableMap.of()));
         }
         if (j == 1) {
           // Make one interval on this day compacted
-          afterNoon = afterNoon.withLastCompactionState(
-              new CompactionState(
-                  partitionsSpec,
-                  null,
-                  Collections.emptyMap(),
-                  null,
-                  null,
-                  ImmutableMap.of(),
-                  ImmutableMap.of(),
-                  CompactionEngine.NATIVE
-              ));
+          afterNoon = afterNoon.withLastCompactionState(new CompactionState(partitionsSpec, null, null, null, ImmutableMap.of(), ImmutableMap.of()));
         }
         segments.add(beforeNoon);
         segments.add(afterNoon);
@@ -2140,7 +2110,7 @@ public class CompactSegmentsTest
                 clientCompactionTaskQuery.getDimensionsSpec() == null ? null : new DimensionsSpec(
                     clientCompactionTaskQuery.getDimensionsSpec().getDimensions()
                 ),
-                Collections.emptyMap(), metricsSpec,
+                metricsSpec,
                 transformSpec,
                 ImmutableMap.of(
                     "bitmap",
@@ -2152,8 +2122,7 @@ public class CompactSegmentsTest
                     "longEncoding",
                     "longs"
                 ),
-                ImmutableMap.of(),
-                CompactionEngine.NATIVE
+                ImmutableMap.of()
             ),
             1,
             segmentSize

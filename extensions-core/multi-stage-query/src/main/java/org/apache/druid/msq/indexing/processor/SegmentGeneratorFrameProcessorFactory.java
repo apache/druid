@@ -49,7 +49,6 @@ import org.apache.druid.msq.kernel.FrameProcessorFactory;
 import org.apache.druid.msq.kernel.ProcessorsAndChannels;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.StagePartition;
-import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.data.CompressionFactory;
 import org.apache.druid.segment.data.CompressionStrategy;
@@ -72,7 +71,6 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -84,21 +82,17 @@ public class SegmentGeneratorFrameProcessorFactory
   private final DataSchema dataSchema;
   private final ColumnMappings columnMappings;
   private final MSQTuningConfig tuningConfig;
-  private final Map<String, AggregatorFactory> dimensionToAggregatorFactoryMap;
 
   @JsonCreator
   public SegmentGeneratorFrameProcessorFactory(
       @JsonProperty("dataSchema") final DataSchema dataSchema,
       @JsonProperty("columnMappings") final ColumnMappings columnMappings,
-      @JsonProperty("tuningConfig") final MSQTuningConfig tuningConfig,
-      @JsonProperty("dimensionToAggregatorFactoryMap")
-      final Map<String, AggregatorFactory> dimensionToAggregatorFactoryMap
+      @JsonProperty("tuningConfig") final MSQTuningConfig tuningConfig
   )
   {
     this.dataSchema = Preconditions.checkNotNull(dataSchema, "dataSchema");
     this.columnMappings = Preconditions.checkNotNull(columnMappings, "columnMappings");
     this.tuningConfig = Preconditions.checkNotNull(tuningConfig, "tuningConfig");
-    this.dimensionToAggregatorFactoryMap = dimensionToAggregatorFactoryMap;
   }
 
   @JsonProperty
@@ -117,12 +111,6 @@ public class SegmentGeneratorFrameProcessorFactory
   public MSQTuningConfig getTuningConfig()
   {
     return tuningConfig;
-  }
-
-  @JsonProperty
-  public Map<String, AggregatorFactory> getDimensionToAggregatorFactoryMap()
-  {
-    return dimensionToAggregatorFactoryMap;
   }
 
   @Override

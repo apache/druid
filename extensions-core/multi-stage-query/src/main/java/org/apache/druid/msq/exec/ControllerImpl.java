@@ -57,7 +57,6 @@ import org.apache.druid.frame.processor.FrameProcessorExecutor;
 import org.apache.druid.frame.util.DurableStorageUtils;
 import org.apache.druid.frame.write.InvalidFieldException;
 import org.apache.druid.frame.write.InvalidNullByteException;
-import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
@@ -220,7 +219,6 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -1525,15 +1523,10 @@ public class ControllerImpl implements Controller
 
           ShardSpec shardSpec = segments.stream().findFirst().get().getShardSpec();
 
-          Map<String, AggregatorFactory> dimensionToAggregatoryFactoryMap =
-              ((SegmentGeneratorFrameProcessorFactory) queryKernel
-                  .getStageDefinition(finalStageId).getProcessorFactory()).getDimensionToAggregatorFactoryMap();
-
           Function<Set<DataSegment>, Set<DataSegment>> compactionStateAnnotateFunction = addCompactionStateToSegments(
               querySpec,
               context.jsonMapper(),
               dataSchema,
-              dimensionToAggregatoryFactoryMap,
               shardSpec,
               queryDef.getQueryId()
           );
@@ -1587,7 +1580,6 @@ public class ControllerImpl implements Controller
       MSQSpec querySpec,
       ObjectMapper jsonMapper,
       DataSchema dataSchema,
-      Map<String, AggregatorFactory> dimensionToAggregatorFactoryMap,
       ShardSpec shardSpec,
       String queryId
   )
@@ -1634,25 +1626,37 @@ public class ControllerImpl implements Controller
                                         : new ClientCompactionTaskTransformSpec(
                                             dataSchema.getTransformSpec().getFilter()
                                         ).asMap(jsonMapper);
-    List<Object> metricsSpec = dataSchema.getAggregators() == null
-                               ? null
-                               : jsonMapper.convertValue(
-                                   dataSchema.getAggregators(), new TypeReference<List<Object>>()
-                                   {
-                                   });
+    List<Object> metricsSpec = null;
 
+    if (querySpec.getQuery() instanceof GroupByQuery){
+      GroupByQuery groupByQuery = (GroupByQuery) querySpec.getQuery();
+      // Need to fetch this from the querySpec since the dataSchema uses the AggregatorFactory's combining factory
+      // version which updates field_name to name. For e.g.
+
+      // LongSumAggregatorFactory{fieldName='added', expression='null', name='added_sum'}
+      // gets updated to
+      // LongSumAggregatorFactory{fieldName='added_sum', expression='null', name='added_sum'}
+
+      // Also converting to metricsSpec from list to array as direct serialization from list doesn't capture the type.
+      metricsSpec = jsonMapper.convertValue(
+          groupByQuery.getAggregatorSpecs().toArray(new AggregatorFactory[0]),
+          new TypeReference<List<Object>>()
+          {
+          }
+      );
+    }
 
     IndexSpec indexSpec = tuningConfig.getIndexSpec();
+
     log.info("Query[%s] storing compaction state in segments.", queryId);
+
     return CompactionState.addCompactionStateToSegments(
         partitionSpec,
         dimensionsSpec,
-        dimensionToAggregatorFactoryMap,
         metricsSpec,
         transformSpec,
         indexSpec.asMap(jsonMapper),
-        granularitySpec.asMap(jsonMapper),
-        CompactionEngine.MSQ
+        granularitySpec.asMap(jsonMapper)
     );
   }
 
@@ -1773,21 +1777,9 @@ public class ControllerImpl implements Controller
         }
       }
 
-      // Map to track the aggregator factories of dimensions that have been created from metrics due to context flag
-      // finalizeAggregations=true. Using LinkedHashMap to preserve order as metrics are compared as arrays
-      // in CompactionStatus.
-      final Map<String, AggregatorFactory> dimensionToAggregatoryFactoryMap = new LinkedHashMap<>();
-
       // Then, add a segment-generation stage.
       final DataSchema dataSchema =
-          makeDataSchemaForIngestion(
-              querySpec,
-              querySignature,
-              queryClusterBy,
-              columnMappings,
-              jsonMapper,
-              dimensionToAggregatoryFactoryMap
-          );
+          makeDataSchemaForIngestion(querySpec, querySignature, queryClusterBy, columnMappings, jsonMapper);
 
       builder.add(
           StageDefinition.builder(queryDef.getNextStageNumber())
@@ -1797,8 +1789,7 @@ public class ControllerImpl implements Controller
                              new SegmentGeneratorFrameProcessorFactory(
                                  dataSchema,
                                  columnMappings,
-                                 tuningConfig,
-                                 dimensionToAggregatoryFactoryMap
+                                 tuningConfig
                              )
                          )
       );
@@ -1878,8 +1869,7 @@ public class ControllerImpl implements Controller
       RowSignature querySignature,
       ClusterBy queryClusterBy,
       ColumnMappings columnMappings,
-      ObjectMapper jsonMapper,
-      Map<String, AggregatorFactory> dimensionToAggregatorFactoryMap
+      ObjectMapper jsonMapper
   )
   {
     final DataSourceMSQDestination destination = (DataSourceMSQDestination) querySpec.getDestination();
@@ -1892,8 +1882,7 @@ public class ControllerImpl implements Controller
             destination.getSegmentSortOrder(),
             columnMappings,
             isRollupQuery,
-            querySpec.getQuery(),
-            dimensionToAggregatorFactoryMap
+            querySpec.getQuery()
         );
 
     return new DataSchema(
@@ -2071,9 +2060,7 @@ public class ControllerImpl implements Controller
       final List<String> segmentSortOrder,
       final ColumnMappings columnMappings,
       final boolean isRollupQuery,
-      final Query<?> query,
-      final Map<String, AggregatorFactory> dimensionToAggregatoryFactoryMap
-
+      final Query<?> query
   )
   {
     // Log a warning unconditionally if arrayIngestMode is MVD, since the behaviour is incorrect, and is subject to
@@ -2117,22 +2104,18 @@ public class ControllerImpl implements Controller
 
     Map<String, AggregatorFactory> outputColumnAggregatorFactories = new HashMap<>();
 
-    // Populate aggregators from the native query when doing an ingest in rollup mode.
-    if (query instanceof GroupByQuery) {
+    if (isRollupQuery) {
+      // Populate aggregators from the native query when doing an ingest in rollup mode.
       for (AggregatorFactory aggregatorFactory : ((GroupByQuery) query).getAggregatorSpecs()) {
         for (final int outputColumn : columnMappings.getOutputColumnsForQueryColumn(aggregatorFactory.getName())) {
           final String outputColumnName = columnMappings.getOutputColumnName(outputColumn);
           if (outputColumnAggregatorFactories.containsKey(outputColumnName)) {
             throw new ISE("There can only be one aggregation for column [%s].", outputColumn);
           } else {
-            if (isRollupQuery) {
-              outputColumnAggregatorFactories.put(
-                  outputColumnName,
-                  aggregatorFactory.withName(outputColumnName).getCombiningFactory()
-              );
-            } else {
-              dimensionToAggregatoryFactoryMap.put(outputColumnName, aggregatorFactory);
-            }
+            outputColumnAggregatorFactories.put(
+                outputColumnName,
+                aggregatorFactory.withName(outputColumnName).getCombiningFactory()
+            );
           }
         }
       }

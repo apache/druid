@@ -26,9 +26,7 @@ import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
 import org.apache.druid.common.config.Configs;
-import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.java.util.common.StringUtils;
@@ -43,9 +41,7 @@ import org.apache.druid.utils.CollectionUtils;
 import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 /**
  * Represents the status of compaction for a given list of candidate segments.
@@ -265,10 +261,7 @@ public class CompactionStatus
 
     private CompactionStatus rollupIsUpToDate()
     {
-      // MSQ considers a query as rollup only if finalizeAggregations=false. Compaction can have that set to true.
-      if (configuredGranularitySpec == null || (configuredGranularitySpec.isRollup() != null
-                                                && configuredGranularitySpec.isRollup()
-                                                && lastCompactionState.getEngine() == CompactionEngine.MSQ)) {
+      if (configuredGranularitySpec == null) {
         return COMPLETE;
       } else {
         return CompactionStatus.completeIfEqual(
@@ -298,23 +291,10 @@ public class CompactionStatus
         return COMPLETE;
       } else {
         final DimensionsSpec existingDimensionsSpec = lastCompactionState.getDimensionsSpec();
-        final Map<String, AggregatorFactory> dimensionToAggregatorFactoryMap =
-            lastCompactionState.getDimensionToAggregatoryFactoryMap();
-        // Remove dimensions which were converted from metrics due to finalizeAggregations=true
-        final List<DimensionSchema> originalDimensions =
-            existingDimensionsSpec == null
-            ? null
-            : dimensionToAggregatorFactoryMap == null
-              ? existingDimensionsSpec.getDimensions()
-              : existingDimensionsSpec.getDimensions()
-                                      .stream()
-                                      .filter(dimensionSchema -> !dimensionToAggregatorFactoryMap.containsKey(
-                                          dimensionSchema.getName()))
-                                      .collect(Collectors.toList());
         return CompactionStatus.completeIfEqual(
             "dimensionsSpec",
             compactionConfig.getDimensionsSpec().getDimensions(),
-            originalDimensions
+            existingDimensionsSpec == null ? null : existingDimensionsSpec.getDimensions()
         );
       }
     }
@@ -327,18 +307,9 @@ public class CompactionStatus
       }
 
       final List<Object> metricSpecList = lastCompactionState.getMetricsSpec();
-      final AggregatorFactory[] existingMetricsSpec;
-      if (CollectionUtils.isNullOrEmpty(metricSpecList)) {
-        // Use the dimensionToAggregatorFactoryMap to check metrics that were converted to dimensions due to
-        // finalizeAggregations=true
-        final Map<String, AggregatorFactory> dimensionToAggregatorFactoryMap =
-            lastCompactionState.getDimensionToAggregatoryFactoryMap();
-        existingMetricsSpec = dimensionToAggregatorFactoryMap == null
-                              ? null
-                              : dimensionToAggregatorFactoryMap.values().toArray(new AggregatorFactory[0]);
-      } else {
-        existingMetricsSpec = objectMapper.convertValue(metricSpecList, AggregatorFactory[].class);
-      }
+      final AggregatorFactory[] existingMetricsSpec
+          = CollectionUtils.isNullOrEmpty(metricSpecList)
+            ? null : objectMapper.convertValue(metricSpecList, AggregatorFactory[].class);
 
       if (existingMetricsSpec == null || !Arrays.deepEquals(configuredMetricsSpec, existingMetricsSpec)) {
         return CompactionStatus.configChanged(
