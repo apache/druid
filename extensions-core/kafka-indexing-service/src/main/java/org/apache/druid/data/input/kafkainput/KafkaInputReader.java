@@ -24,6 +24,7 @@ import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.ListBasedInputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.kafka.KafkaRecordEntity;
@@ -173,14 +174,24 @@ public class KafkaInputReader implements InputEntityReader
         r -> {
           final MapBasedInputRow valueRow;
           try {
-            // Return type for the value parser should be of type MapBasedInputRow
-            // Parsers returning other types are not compatible currently.
-            valueRow = (MapBasedInputRow) r;
+            if (r instanceof ListBasedInputRow) {
+              valueRow = new MapBasedInputRow(
+                  r.getTimestamp(),
+                  r.getDimensions(),
+                  ((ListBasedInputRow) r).asMap()
+              );
+            } else {
+              // Return type for the value parser should be of type MapBasedInputRow
+              // Parsers returning other types are not compatible currently.
+              valueRow = (MapBasedInputRow) r;
+            }
           }
           catch (ClassCastException e) {
             throw new ParseException(
                 null,
-                "Unsupported input format in valueFormat. KafkaInputFormat only supports input format that return MapBasedInputRow rows"
+                "Unsupported input format[%s] in valueFormat. KafkaInputFormat only supports"
+                + " input formats that return MapBasedInputRows or ListBasedInputRows.",
+                r.getClass().getSimpleName()
             );
           }
 
@@ -252,12 +263,22 @@ public class KafkaInputReader implements InputEntityReader
           for (InputRow r : rowAndValues.getInputRows()) {
             MapBasedInputRow valueRow = null;
             try {
-              valueRow = (MapBasedInputRow) r;
+              if (r instanceof ListBasedInputRow) {
+                valueRow = new MapBasedInputRow(
+                    r.getTimestamp(),
+                    r.getDimensions(),
+                    ((ListBasedInputRow) r).asMap()
+                );
+              } else {
+                valueRow = (MapBasedInputRow) r;
+              }
             }
             catch (ClassCastException e) {
               parseException = new ParseException(
                   null,
-                  "Unsupported input format in valueFormat. KafkaInputFormat only supports input format that return MapBasedInputRow rows"
+                  "Unsupported input format[%s] in valueFormat. KafkaInputFormat only supports"
+                  + " input formats that return MapBasedInputRows or ListBasedInputRows.",
+                  r.getClass().getSimpleName()
               );
             }
             if (valueRow != null) {
