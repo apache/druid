@@ -137,8 +137,8 @@ jobs:
       sql_compatibility: ${{ matrix.sql_compatibility }}
 
   standard-its:
-    needs: unit-tests
-    if: ${{ always() && (needs.unit-tests.result == 'success' || needs.unit-tests.outputs.continue_tests) }}
+    #needs: unit-tests
+    if: true #${{ always() && (needs.unit-tests.result == 'success' || needs.unit-tests.outputs.continue_tests) }}
     uses: ./.github/workflows/standard-its.yml
 
   revised-its:
