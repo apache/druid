@@ -68,6 +68,8 @@ exports.SQL_KEYWORDS = [
   'RANGE',
   'PRECEDING',
   'FOLLOWING',
+  'CURRENT',
+  'UNBOUNDED',
   'EXTEND',
   'PIVOT',
   'UNPIVOT',
