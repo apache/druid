@@ -24,7 +24,7 @@
   },
   {
     "query": {
-      "query": "SELECT status AS status FROM sys.tasks WHERE datasource LIKE 'wikipedia_index_test%' GROUP BY 1"
+      "query": "SELECT task_id, datasource, status, error_msg FROM sys.tasks WHERE datasource LIKE 'wikipedia_index_test%'"
     },
     "expectedResults": [
       {
