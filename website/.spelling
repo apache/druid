@@ -2361,6 +2361,7 @@ mysql-metadata-storage
 postgresql-metadata-storage
 simple-client-sslcontext
 druid-pac4j
+druid-pac4j-v5
 druid-kubernetes-extensions
 aliyun-oss-extensions
 ambari-metrics-emitter
