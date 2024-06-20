@@ -496,7 +496,7 @@ data:
 
 #### Pod template selection
  
-The pod template adapapter can select which pod template should be used for a task using the [task runner execution config](#dynamic-config)
+The pod template adapter can select which pod template should be used for a task using the [task runner execution config](#dynamic-config)
 
 ##### Select based on task type
 

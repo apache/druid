@@ -22,7 +22,6 @@ package org.apache.druid.k8s.overlord.execution;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import io.fabric8.kubernetes.api.model.PodTemplate;
 import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.java.util.common.ISE;
 
 import java.util.Map;
 
@@ -43,11 +42,7 @@ public class TaskTypePodTemplateSelectStrategy implements PodTemplateSelectStrat
   @Override
   public PodTemplate getPodTemplateForTask(Task task, Map<String, PodTemplate> templates)
   {
-    PodTemplate podTemplate = templates.getOrDefault(task.getType(), templates.get("base"));
-    if (podTemplate == null) {
-      throw new ISE("Pod template spec not found for task type [%s]", task.getType());
-    }
-    return podTemplate;
+    return templates.getOrDefault(task.getType(), templates.get("base"));
   }
 
   @Override
