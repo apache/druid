@@ -53,6 +53,10 @@ public class QuidemRecorder implements AutoCloseable, DruidHook<String>
   @Override
   public void close()
   {
+    if (printStream != null) {
+      printStream.close();
+      printStream = null;
+    }
     DruidHook.unregister(DruidHook.SQL, this);
   }
 
