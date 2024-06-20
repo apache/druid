@@ -19,22 +19,25 @@
 
 package org.apache.druid.quidem;
 
-import org.junit.jupiter.api.extension.ExtendWith;
+import org.apache.druid.common.config.NullHandling;
+import org.junit.jupiter.api.extension.ConditionEvaluationResult;
+import org.junit.jupiter.api.extension.ExecutionCondition;
+import org.junit.jupiter.api.extension.ExtensionContext;
 
-import java.io.File;
-
-//@EnabledIf(value = "enabled", disabledReason = "These tests are only run in SqlCompatible mode!")
-@ExtendWith(EnabledOnlyInSqlCompatibleMode.class)
-public class SqlQuidemTest extends DruidQuidemTestBase
+public class EnabledOnlyInSqlCompatibleMode implements ExecutionCondition
 {
-  public SqlQuidemTest()
-  {
-    super();
+  static {
+    NullHandling.initializeForTests();
   }
 
   @Override
-  protected File getTestRoot()
+  public ConditionEvaluationResult evaluateExecutionCondition(ExtensionContext context)
   {
-    return ProjectPathUtils.getPathFromProjectRoot("sql/src/test/quidem/" + getClass().getName());
+    if (NullHandling.sqlCompatible()) {
+      return ConditionEvaluationResult.enabled("SQL compatible mode is enabled");
+    } else {
+      return ConditionEvaluationResult.disabled("SQL compatible mode is disabled");
+    }
   }
+
 }
