@@ -145,7 +145,7 @@
         <skipITs>${skipTests}</skipITs>
 
         <!-- build docker image -->
-        <branch.tag>v2</branch.tag>
+        <branch.tag>v3</branch.tag>
         <docker.image.version>${project.version}-dev-${branch.tag}</docker.image.version>
 
 
@@ -978,6 +978,11 @@
                 <groupId>javax.activation</groupId>
                 <artifactId>activation</artifactId>
                 <version>1.1.1</version>
+            </dependency>
+            <dependency>
+                <groupId>javax.annotation</groupId>
+                <artifactId>javax.annotation-api</artifactId>
+                <version>1.3.2</version>
             </dependency>
             <dependency>
                 <groupId>commons-pool</groupId>
