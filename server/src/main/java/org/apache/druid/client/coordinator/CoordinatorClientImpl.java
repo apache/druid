@@ -29,13 +29,13 @@ import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.http.client.response.BytesFullResponseHandler;
 import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceClient;
 import org.apache.druid.rpc.ServiceRetryPolicy;
+import org.apache.druid.segment.BootstrapSegmentResponse;
 import org.apache.druid.segment.metadata.DataSourceInformation;
 import org.apache.druid.server.coordination.LoadableDataSegment;
 import org.apache.druid.timeline.DataSegment;
@@ -164,7 +164,7 @@ public class CoordinatorClientImpl implements CoordinatorClient
   }
 
   @Override
-  public ListenableFuture<CloseableIterator<DataSegment>> fetchBootstrapSegments()
+  public ListenableFuture<BootstrapSegmentResponse> fetchBootstrapSegments()
   {
     final String path = "/druid/coordinator/v1/metadata/bootstrapSegments";
     return FutureUtils.transform(
@@ -172,12 +172,14 @@ public class CoordinatorClientImpl implements CoordinatorClient
             new RequestBuilder(HttpMethod.POST, path),
             new InputStreamResponseHandler()
         ),
-        in -> new JsonParserIterator<>(
-            // We specifically use LoadableDataSegment instead of DataSegment so the callers can correctly load the
-            // returned set of segments, as the load specs are guaranteed not to be pruned.
-            jsonMapper.getTypeFactory().constructType(LoadableDataSegment.class),
-            Futures.immediateFuture(in),
-            jsonMapper
+        in -> new BootstrapSegmentResponse(
+            new JsonParserIterator<>(
+                // We specifically use LoadableDataSegment instead of DataSegment so the callers can correctly load the
+                // returned set of segments, as the load specs are guaranteed not to be pruned.
+                jsonMapper.getTypeFactory().constructType(LoadableDataSegment.class),
+                Futures.immediateFuture(in),
+                jsonMapper
+            )
         )
     );
   }

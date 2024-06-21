@@ -21,9 +21,9 @@ package org.apache.druid.client.coordinator;
 
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
-import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.rpc.ServiceRetryPolicy;
+import org.apache.druid.segment.BootstrapSegmentResponse;
 import org.apache.druid.segment.metadata.DataSourceInformation;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
@@ -60,10 +60,10 @@ public interface CoordinatorClient
   ListenableFuture<List<DataSourceInformation>> fetchDataSourceInformation(Set<String> datasources);
 
   /**
-   * Fetch bootstrap segments from the coordiantor. The results must be streamed back to the caller as the
+   * Fetch bootstrap segments from the coordinator. The results must be streamed back to the caller as the
    * result set can be large.
    */
-  ListenableFuture<CloseableIterator<DataSegment>> fetchBootstrapSegments();
+  ListenableFuture<BootstrapSegmentResponse> fetchBootstrapSegments();
 
   /**
    * Returns a new instance backed by a ServiceClient which follows the provided retryPolicy
