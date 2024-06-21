@@ -35,7 +35,6 @@ import org.apache.druid.testing.clients.AbstractQueryResourceTestClient;
 import org.joda.time.Interval;
 
 import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -147,26 +146,11 @@ public abstract class AbstractTestQueryHelper<QueryResultType extends AbstractQu
     for (QueryResultType queryWithResult : queries) {
       LOG.info("Running Query %s", queryWithResult.getQuery());
       List<Map<String, Object>> result = queryClient.query(url, queryWithResult.getQuery());
-
-      boolean skipVerification = false;
-      if ((queryWithResult.getQuery() instanceof Map)) {
-        Map<String, String> s = (Map<String, String>) queryWithResult.getQuery();
-        if (s.containsKey("query") && s.get("query").contains("SELECT task_id, datasource, status, error_msg FROM sys.tasks WHERE datasource ")) {
-          LOG.info("Result for failed query %s", result);
-          skipVerification = true;
-        }
-      }
-
-      if (skipVerification) {
-        continue;
-      }
-
       QueryResultVerifier.ResultVerificationObject resultsComparison = QueryResultVerifier.compareResults(
           result,
           queryWithResult.getExpectedResults(),
           queryWithResult.getFieldsToTest()
       );
-
       if (!resultsComparison.isSuccess()) {
         LOG.error(
             "Failed while executing query %s \n expectedResults: %s \n actualResults : %s",
