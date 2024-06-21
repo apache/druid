@@ -334,8 +334,8 @@ public class SegmentLoadDropHandlerTest
 
     Assert.assertEquals(expectedBootstrapSegments, cacheManager.observedBootstrapSegments);
     Assert.assertEquals(expectedBootstrapSegments, cacheManager.observedBootstrapSegmentsLoadedIntoPageCache);
-    serviceEmitter.verifyValue("bootstrapSegments/fetch/count", expectedBootstrapSegments.size());
-    serviceEmitter.verifyEmitted("bootstrapSegments/fetch/time", 1);
+    serviceEmitter.verifyValue("segment/bootstrap/count", expectedBootstrapSegments.size());
+    serviceEmitter.verifyEmitted("segment/bootstrap/time", 1);
 
     handler.stop();
   }
@@ -358,8 +358,8 @@ public class SegmentLoadDropHandlerTest
     Assert.assertEquals(ImmutableList.of(), segmentAnnouncer.getObservedSegments());
     Assert.assertEquals(ImmutableList.of(), cacheManager.observedBootstrapSegments);
     Assert.assertEquals(ImmutableList.of(), cacheManager.observedBootstrapSegmentsLoadedIntoPageCache);
-    serviceEmitter.verifyValue("bootstrapSegments/fetch/count", 0);
-    serviceEmitter.verifyEmitted("bootstrapSegments/fetch/time", 1);
+    serviceEmitter.verifyValue("segment/bootstrap/count", 0);
+    serviceEmitter.verifyEmitted("segment/bootstrap/time", 1);
 
     handler.stop();
   }

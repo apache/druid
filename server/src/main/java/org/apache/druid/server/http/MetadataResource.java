@@ -484,7 +484,7 @@ public class MetadataResource
     final Set<DataSegment> broadcastSegments = coordinator.getBroadcastSegments();
     if (broadcastSegments == null) {
       return Response.status(Response.Status.SERVICE_UNAVAILABLE)
-                     .entity("Bootstrap segments are not initialized yet.
+                     .entity("Bootstrap segments are not initialized yet."
                          + " Please ensure that the Coordinator duties are running and try again.")
                      .build();
     }
