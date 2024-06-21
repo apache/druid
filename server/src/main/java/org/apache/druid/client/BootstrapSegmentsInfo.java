@@ -22,6 +22,9 @@ package org.apache.druid.client;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.timeline.DataSegment;
 
+/**
+ * A container that holds information about bootstrap segments.
+ */
 public class BootstrapSegmentsInfo
 {
   private final CloseableIterator<DataSegment> iterator;

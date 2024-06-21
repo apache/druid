@@ -172,8 +172,9 @@ public class CoordinatorClientImpl implements CoordinatorClient
         ),
         in -> new BootstrapSegmentsInfo(
             new JsonParserIterator<>(
-                // We specifically use LoadableDataSegment instead of DataSegment so the callers can correctly load the
-                // returned set of segments, as the load specs are guaranteed not to be pruned.
+                // Some servers, like the Broker, may have PruneLoadSpec set to true for optimization reasons.
+                // We specifically use LoadableDataSegment here instead of DataSegment so the callers can still correctly
+                // load the bootstrap segments, as the load specs are guaranteed not to be pruned.
                 jsonMapper.getTypeFactory().constructType(LoadableDataSegment.class),
                 Futures.immediateFuture(in),
                 jsonMapper
