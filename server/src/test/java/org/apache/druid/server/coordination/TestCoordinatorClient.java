@@ -21,9 +21,9 @@ package org.apache.druid.server.coordination;
 
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.client.BootstrapSegmentsInfo;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.java.util.common.CloseableIterators;
-import org.apache.druid.segment.BootstrapSegmentResponse;
 import org.apache.druid.timeline.DataSegment;
 
 import java.util.HashSet;
@@ -44,10 +44,10 @@ class TestCoordinatorClient extends NoopCoordinatorClient
   }
 
   @Override
-  public ListenableFuture<BootstrapSegmentResponse> fetchBootstrapSegments()
+  public ListenableFuture<BootstrapSegmentsInfo> fetchBootstrapSegments()
   {
     return Futures.immediateFuture(
-        new BootstrapSegmentResponse(CloseableIterators.withEmptyBaggage(bootstrapSegments.iterator()))
+        new BootstrapSegmentsInfo(CloseableIterators.withEmptyBaggage(bootstrapSegments.iterator()))
     );
   }
 }

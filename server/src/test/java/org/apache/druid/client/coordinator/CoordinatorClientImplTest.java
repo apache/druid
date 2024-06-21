@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.client.BootstrapSegmentsInfo;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
@@ -32,7 +33,6 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.rpc.MockServiceClient;
 import org.apache.druid.rpc.RequestBuilder;
-import org.apache.druid.segment.BootstrapSegmentResponse;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.metadata.DataSourceInformation;
@@ -211,12 +211,12 @@ public class CoordinatorClientImplTest
         jsonMapper.writeValueAsBytes(segments)
     );
 
-    final ListenableFuture<BootstrapSegmentResponse> response = coordinatorClient.fetchBootstrapSegments();
+    final ListenableFuture<BootstrapSegmentsInfo> response = coordinatorClient.fetchBootstrapSegments();
     Assert.assertNotNull(response);
 
     Assert.assertEquals(
         segments,
-        ImmutableList.copyOf(response.get().getBootstrapSegmentsIterator())
+        ImmutableList.copyOf(response.get().getIterator())
     );
   }
 
@@ -232,12 +232,12 @@ public class CoordinatorClientImplTest
         jsonMapper.writeValueAsBytes(segments)
     );
 
-    final ListenableFuture<BootstrapSegmentResponse> response = coordinatorClient.fetchBootstrapSegments();
+    final ListenableFuture<BootstrapSegmentsInfo> response = coordinatorClient.fetchBootstrapSegments();
     Assert.assertNotNull(response);
 
     Assert.assertEquals(
         segments,
-        ImmutableList.copyOf(response.get().getBootstrapSegmentsIterator())
+        ImmutableList.copyOf(response.get().getIterator())
     );
   }
 

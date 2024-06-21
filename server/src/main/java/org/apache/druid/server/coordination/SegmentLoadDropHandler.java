@@ -29,6 +29,7 @@ import com.google.common.util.concurrent.AbstractFuture;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.inject.Inject;
+import org.apache.druid.client.BootstrapSegmentsInfo;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.guice.ManageLifecycle;
@@ -42,7 +43,6 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
-import org.apache.druid.segment.BootstrapSegmentResponse;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.server.SegmentManager;
@@ -328,9 +328,9 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     List<DataSegment> bootstrapSegments = new ArrayList<>();
 
     try {
-      final BootstrapSegmentResponse response =
+      final BootstrapSegmentsInfo response =
           FutureUtils.getUnchecked(coordinatorClient.fetchBootstrapSegments(), true);
-      final CloseableIterator<DataSegment> iterator = response.getBootstrapSegmentsIterator();
+      final CloseableIterator<DataSegment> iterator = response.getIterator();
       bootstrapSegments = ImmutableList.copyOf(iterator);
     }
     catch (Exception e) {

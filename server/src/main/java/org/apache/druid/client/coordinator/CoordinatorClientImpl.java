@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.client.BootstrapSegmentsInfo;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.client.JsonParserIterator;
 import org.apache.druid.common.guava.FutureUtils;
@@ -35,7 +36,6 @@ import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceClient;
 import org.apache.druid.rpc.ServiceRetryPolicy;
-import org.apache.druid.segment.BootstrapSegmentResponse;
 import org.apache.druid.segment.metadata.DataSourceInformation;
 import org.apache.druid.server.coordination.LoadableDataSegment;
 import org.apache.druid.timeline.DataSegment;
@@ -164,7 +164,7 @@ public class CoordinatorClientImpl implements CoordinatorClient
   }
 
   @Override
-  public ListenableFuture<BootstrapSegmentResponse> fetchBootstrapSegments()
+  public ListenableFuture<BootstrapSegmentsInfo> fetchBootstrapSegments()
   {
     final String path = "/druid/coordinator/v1/metadata/bootstrapSegments";
     return FutureUtils.transform(
@@ -172,7 +172,7 @@ public class CoordinatorClientImpl implements CoordinatorClient
             new RequestBuilder(HttpMethod.POST, path),
             new InputStreamResponseHandler()
         ),
-        in -> new BootstrapSegmentResponse(
+        in -> new BootstrapSegmentsInfo(
             new JsonParserIterator<>(
                 // We specifically use LoadableDataSegment instead of DataSegment so the callers can correctly load the
                 // returned set of segments, as the load specs are guaranteed not to be pruned.
