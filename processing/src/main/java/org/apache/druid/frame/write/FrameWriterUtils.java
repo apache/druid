@@ -245,19 +245,19 @@ public class FrameWriterUtils
   /**
    * Copies "len" bytes from {@code src.position()} to "dstPosition" in "memory". Does not update the position of src.
    *
-   * @throws InvalidNullByteException if "ignoreNullBytes" is false and a null byte is encountered
+   * @throws InvalidNullByteException if "allowNullBytes" is false and a null byte is encountered
    */
   public static void copyByteBufferToMemory(
       final ByteBuffer src,
       final WritableMemory dst,
       final long dstPosition,
       final int len,
-      final boolean ignoreNullBytes,
+      final boolean allowNullBytes,
       final boolean removeNullBytes
   )
   {
-    if (ignoreNullBytes && removeNullBytes) {
-      throw DruidException.defensive("Cannot ignore null bytes and remove them at the same time");
+    if (allowNullBytes && removeNullBytes) {
+      throw DruidException.defensive("Cannot allow null bytes and remove them at the same time");
     }
     if (src.remaining() < len) {
       throw new ISE("Insufficient source space available");
@@ -268,7 +268,7 @@ public class FrameWriterUtils
 
     final int srcEnd = src.position() + len;
 
-    if (ignoreNullBytes) {
+    if (allowNullBytes) {
       if (src.hasArray()) {
         // Null bytes are ignored and the src buffer is backed by an array. Bulk copying to the destination would be the fastest
         dst.putByteArray(dstPosition, src.array(), src.arrayOffset() + src.position(), len);
@@ -282,7 +282,7 @@ public class FrameWriterUtils
       }
     } else {
       long q = dstPosition;
-      for (int p = src.position(); p < srcEnd; p++, q++) {
+      for (int p = src.position(); p < srcEnd; p++) {
         final byte b = src.get(p);
 
         if (b == 0) {
@@ -297,6 +297,7 @@ public class FrameWriterUtils
           }
         } else {
           dst.putByte(q, b);
+          q++;
         }
       }
     }
