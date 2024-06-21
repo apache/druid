@@ -21,9 +21,14 @@ PWD="$(pwd)"
 WHEREAMI="$(dirname "$0")"
 WHEREAMI="$(cd "$WHEREAMI" && pwd)"
 
-if [ -x "$(command -v python2)" ]
+if [ -x "$(command -v python3)" ]
 then
-  exec python2 "$WHEREAMI/dsql-main" "$@"
+  exec python3 "$WHEREAMI/dsql-main-py3" "$@"
+elif [ -x "$(command -v python2)" ]
+then
+  exec python2 "$WHEREAMI/dsql-main-py2" "$@"
+elif [ -x "$(command -v python)" ]
+  exec python "$WHEREAMI/dsql-main-py3" "$@"
 else
-  exec "$WHEREAMI/dsql-main" "$@"
+  echo "python interepreter not found"
 fi
