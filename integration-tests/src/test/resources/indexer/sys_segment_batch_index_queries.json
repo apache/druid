@@ -31,5 +31,15 @@
         "status": "SUCCESS"
       }
     ]
+  },
+  {
+    "query": {
+      "query": "SELECT status AS status FROM sys.tasks WHERE datasource LIKE 'wikipedia_index_test%' GROUP BY 1"
+    },
+    "expectedResults": [
+      {
+        "status": "SUCCESS"
+      }
+    ]
   }
 ]

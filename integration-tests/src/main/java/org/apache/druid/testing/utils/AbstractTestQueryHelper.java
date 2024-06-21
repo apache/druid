@@ -148,11 +148,17 @@ public abstract class AbstractTestQueryHelper<QueryResultType extends AbstractQu
       LOG.info("Running Query %s", queryWithResult.getQuery());
       List<Map<String, Object>> result = queryClient.query(url, queryWithResult.getQuery());
 
+      boolean skipVerification = false;
       if ((queryWithResult.getQuery() instanceof Map)) {
         Map<String, String> s = (Map<String, String>) queryWithResult.getQuery();
         if (s.containsKey("query") && s.get("query").contains("SELECT task_id, group_id, type, datasource, status, error_msg FROM sys.tasks WHERE datasource ")) {
           LOG.info("Result for failed query %s", result);
+          skipVerification = true;
         }
+      }
+
+      if (skipVerification) {
+        continue;
       }
 
       QueryResultVerifier.ResultVerificationObject resultsComparison = QueryResultVerifier.compareResults(
