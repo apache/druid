@@ -289,7 +289,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
         latch.await();
 
         if (failedSegments.size() > 0) {
-          log.makeAlert("%,d errors seen while loading segments on startup", failedSegments.size())
+          log.makeAlert("[%,d] errors seen while loading segments on startup", failedSegments.size())
              .addData("failedSegments", failedSegments)
              .emit();
         }
