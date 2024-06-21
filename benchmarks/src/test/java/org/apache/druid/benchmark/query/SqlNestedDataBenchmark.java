@@ -20,7 +20,6 @@
 package org.apache.druid.benchmark.query;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -301,7 +300,7 @@ public class SqlNestedDataBenchmark
   private SqlEngine engine;
   @Nullable
   private PlannerFactory plannerFactory;
-  private Closer closer = Closer.create();
+  private final Closer closer = Closer.create();
 
   @Setup(Level.Trial)
   public void setup()
@@ -345,16 +344,19 @@ public class SqlNestedDataBenchmark
     }
     final QueryableIndex index;
     if ("auto".equals(schema)) {
-      List<DimensionSchema> columnSchemas = schemaInfo.getDimensionsSpec()
-                                                      .getDimensions()
-                                                      .stream()
-                                                      .map(x -> new AutoTypeColumnSchema(x.getName(), null))
-                                                      .collect(Collectors.toList());
+      Iterable<DimensionSchema> columnSchemas = Iterables.concat(
+          schemaInfo.getDimensionsSpec()
+                    .getDimensions()
+                    .stream()
+                    .map(x -> new AutoTypeColumnSchema(x.getName(), null))
+                    .collect(Collectors.toList()),
+          Collections.singletonList(new AutoTypeColumnSchema("nested", null))
+      );
       index = segmentGenerator.generate(
           dataSegment,
           schemaInfo,
-          DimensionsSpec.builder().setDimensions(columnSchemas).build(),
-          TransformSpec.NONE,
+          DimensionsSpec.builder().setDimensions(ImmutableList.copyOf(columnSchemas.iterator())).build(),
+          transformSpec,
           IndexSpec.builder().withStringDictionaryEncoding(encodingStrategy).build(),
           Granularities.NONE,
           rowsPerSegment
@@ -368,7 +370,7 @@ public class SqlNestedDataBenchmark
           dataSegment,
           schemaInfo,
           DimensionsSpec.builder().setDimensions(ImmutableList.copyOf(columnSchemas.iterator())).build(),
-          TransformSpec.NONE,
+          transformSpec,
           IndexSpec.builder().withStringDictionaryEncoding(encodingStrategy).build(),
           Granularities.NONE,
           rowsPerSegment
@@ -405,12 +407,14 @@ public class SqlNestedDataBenchmark
 
     try {
       SqlVectorizedExpressionSanityTest.sanityTestVectorizedSqlQueries(
+          engine,
           plannerFactory,
           QUERIES.get(Integer.parseInt(query))
       );
+      log.info("non-vectorized and vectorized results match");
     }
     catch (Throwable ex) {
-      log.warn(ex, "failed to sanity check");
+      log.warn(ex, "non-vectorized and vectorized results do not match");
     }
 
     final String sql = QUERIES.get(Integer.parseInt(query));
@@ -424,11 +428,8 @@ public class SqlNestedDataBenchmark
                          .writeValueAsString(jsonMapper.readValue((String) planResult[0], List.class))
       );
     }
-    catch (JsonMappingException e) {
-      throw new RuntimeException(e);
-    }
-    catch (JsonProcessingException e) {
-      throw new RuntimeException(e);
+    catch (JsonProcessingException ex) {
+      log.warn(ex, "explain failed");
     }
 
     try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(engine, sql, ImmutableMap.of())) {

@@ -89,6 +89,12 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
         {
           return Optional.empty();
         }
+
+        @Override
+        public String getCanonicalLookupName(String lookupName)
+        {
+          return lookupName;
+        }
       };
 
   public static SpecificSegmentsQuerySegmentWalker createWalker(
