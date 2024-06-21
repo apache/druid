@@ -178,7 +178,7 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
                 if (resultsContext == null) {
                   throw DruidException.forPersona(DruidException.Persona.OPERATOR)
                                       .ofCategory(DruidException.Category.RUNTIME_FAILURE)
-                                      .build("Received null resultsContext from controller. This might be due to an upgrade.");
+                                      .build("Received null resultsContext from the controller. This is due to a version mismatch between the controller and the worker. Please ensure that the worker and the controller are on the same version before retrying the query.");
                 }
                 exportWriter.writeRowField(
                     columnName,
