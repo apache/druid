@@ -20,12 +20,12 @@
 package org.apache.druid.delta.input;
 
 import io.delta.kernel.Scan;
-import io.delta.kernel.TableNotFoundException;
-import io.delta.kernel.client.TableClient;
 import io.delta.kernel.data.ColumnarBatch;
 import io.delta.kernel.data.FilteredColumnarBatch;
 import io.delta.kernel.data.Row;
-import io.delta.kernel.defaults.client.DefaultTableClient;
+import io.delta.kernel.defaults.engine.DefaultEngine;
+import io.delta.kernel.engine.Engine;
+import io.delta.kernel.exceptions.TableNotFoundException;
 import io.delta.kernel.internal.InternalScanFileUtils;
 import io.delta.kernel.internal.data.ScanStateRow;
 import io.delta.kernel.internal.util.Utils;
@@ -68,13 +68,13 @@ public class DeltaInputRowTest
       final List<Map<String, Object>> expectedRows
   ) throws TableNotFoundException, IOException
   {
-    final TableClient tableClient = DefaultTableClient.create(new Configuration());
-    final Scan scan = DeltaTestUtils.getScan(tableClient, deltaTablePath);
+    final Engine engine = DefaultEngine.create(new Configuration());
+    final Scan scan = DeltaTestUtils.getScan(engine, deltaTablePath);
 
-    final Row scanState = scan.getScanState(tableClient);
-    final StructType physicalReadSchema = ScanStateRow.getPhysicalDataReadSchema(tableClient, scanState);
+    final Row scanState = scan.getScanState(engine);
+    final StructType physicalReadSchema = ScanStateRow.getPhysicalDataReadSchema(engine, scanState);
 
-    final CloseableIterator<FilteredColumnarBatch> scanFileIter = scan.getScanFiles(tableClient);
+    final CloseableIterator<FilteredColumnarBatch> scanFileIter = scan.getScanFiles(engine);
     int totalRecordCount = 0;
     while (scanFileIter.hasNext()) {
       final FilteredColumnarBatch scanFileBatch = scanFileIter.next();
@@ -84,13 +84,13 @@ public class DeltaInputRowTest
         final Row scanFile = scanFileRows.next();
         final FileStatus fileStatus = InternalScanFileUtils.getAddFileStatus(scanFile);
 
-        final CloseableIterator<ColumnarBatch> physicalDataIter = tableClient.getParquetHandler().readParquetFiles(
+        final CloseableIterator<ColumnarBatch> physicalDataIter = engine.getParquetHandler().readParquetFiles(
             Utils.singletonCloseableIterator(fileStatus),
             physicalReadSchema,
             Optional.empty()
         );
         final CloseableIterator<FilteredColumnarBatch> dataIter = Scan.transformPhysicalData(
-            tableClient,
+            engine,
             scanState,
             scanFile,
             physicalDataIter

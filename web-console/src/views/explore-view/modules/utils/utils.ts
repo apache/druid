@@ -22,6 +22,8 @@ import { partition } from '../../../../utils';
 
 const IS_DATE_LIKE = /^[+-]?\d\d\d\d[^']+$/;
 
+export type Compare = `P${string}`;
+
 function isoStringToTimestampLiteral(iso: string): SqlExpression {
   const zulu = iso.endsWith('Z');
   const cleanIso = iso.replace('T', ' ').replace('Z', '');
@@ -34,20 +36,34 @@ function isoStringToTimestampLiteral(iso: string): SqlExpression {
   return SqlExpression.parse(sql);
 }
 
-export function getWhereForCompares(where: SqlExpression, compares: string[]): SqlExpression {
+export function decodeWhereForCompares(
+  where: SqlExpression,
+  compares: Compare[],
+): {
+  commonWhere: SqlExpression;
+  mainWherePart: SqlExpression;
+  perCompareWhereParts: SqlExpression[];
+} {
   const whereParts = where.decomposeViaAnd({ flatten: true });
   const [timeExpressions, timelessExpressions] = partition(whereParts, expressionUsesTime);
-  return SqlExpression.and(
-    SqlExpression.or(
-      SqlExpression.and(...timeExpressions),
-      ...compares.map(compare =>
-        SqlExpression.and(
-          ...timeExpressions.map(timeExpression => shiftTimeInExpression(timeExpression, compare)),
-        ),
+  return {
+    commonWhere: SqlExpression.and(...timelessExpressions),
+    mainWherePart: SqlExpression.and(...timeExpressions),
+    perCompareWhereParts: compares.map(compare =>
+      SqlExpression.and(
+        ...timeExpressions.map(timeExpression => shiftTimeInExpression(timeExpression, compare)),
       ),
     ),
-    ...timelessExpressions,
+  };
+}
+
+export function getWhereForCompares(where: SqlExpression, compares: Compare[]): SqlExpression {
+  const { commonWhere, mainWherePart, perCompareWhereParts } = decodeWhereForCompares(
+    where,
+    compares,
   );
+
+  return SqlExpression.and(SqlExpression.or(mainWherePart, ...perCompareWhereParts), commonWhere);
 }
 
 function expressionUsesTime(expression: SqlExpression): boolean {
