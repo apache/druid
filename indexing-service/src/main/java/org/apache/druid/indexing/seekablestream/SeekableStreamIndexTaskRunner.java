@@ -78,6 +78,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
@@ -100,7 +101,6 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
-import javax.annotation.PostConstruct;
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.NotNull;
 import javax.ws.rs.Consumes;
@@ -269,8 +269,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     resetNextCheckpointTime();
   }
 
-  @PostConstruct
-  private void init()
+  @LifecycleStart
+  public void init()
   {
     try {
       RetryUtils.retry(
