@@ -26,6 +26,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
@@ -75,6 +76,7 @@ import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
@@ -98,6 +100,7 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
+import javax.annotation.PostConstruct;
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.NotNull;
 import javax.ws.rs.Consumes;
@@ -264,6 +267,23 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     this.lockGranularityToUse = lockGranularityToUse;
 
     resetNextCheckpointTime();
+  }
+
+  @PostConstruct
+  private void init()
+  {
+    try {
+      RetryUtils.retry(
+          () -> Preconditions.checkNotNull(startTime, "startTime is null"),
+          Predicates.alwaysTrue(),
+          ChatHandler.MAX_WAIT_TASK_STARTUP_TRIES
+      );
+    }
+    catch (Exception e) {
+      throw new RuntimeException("SeekableStreamIndexTaskRunner::init() => Failed to wait for ingestion task startup");
+    }
+
+    log.info("SeekableStreamIndexTaskRunner::init() => Succeed to wait for ingestion task started");
   }
 
   public TaskStatus run(TaskToolbox toolbox)

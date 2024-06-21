@@ -20,12 +20,17 @@
 package org.apache.druid.segment.realtime.firehose;
 
 import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
+import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
+import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.initialization.jetty.BadRequestException;
 import org.apache.druid.server.metrics.DataSourceTaskIdHolder;
 
+import javax.annotation.PostConstruct;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.core.Context;
@@ -35,6 +40,8 @@ import java.util.List;
 @Path("/druid/worker/v1/chat")
 public class ChatHandlerResource
 {
+  private static final EmittingLogger log = new EmittingLogger(ChatHandlerResource.class);
+
   public static final String TASK_ID_HEADER = "X-Druid-Task-Id";
 
   private final ChatHandlerProvider handlers;
@@ -45,6 +52,26 @@ public class ChatHandlerResource
   {
     this.handlers = handlers;
     this.taskId = taskIdHolder.getTaskId();
+  }
+
+  @PostConstruct
+  private void init()
+  {
+    try {
+      RetryUtils.retry(
+          () -> {
+            Preconditions.checkState(handlers.get(this.taskId).isPresent(), "task not started");
+            return true;
+          },
+          Predicates.alwaysTrue(),
+          ChatHandler.MAX_WAIT_TASK_STARTUP_TRIES
+      );
+    }
+    catch (Exception e) {
+      throw new RuntimeException("ChatHandlerResource::init() => Failed to wait for ingestion task startup");
+    }
+
+    log.info("ChatHandlerResource::init() => Succeed to wait for ingestion task started");
   }
 
   @Path("/{id}")
