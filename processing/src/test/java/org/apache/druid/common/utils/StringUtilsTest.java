@@ -87,4 +87,13 @@ public class StringUtilsTest
     Assert.assertEquals(ByteBuffer.wrap(StringUtils.toUtf8("foo")), StringUtils.toUtf8ByteBuffer("foo"));
     Assert.assertEquals(ByteBuffer.wrap(StringUtils.toUtf8("🙂")), StringUtils.toUtf8ByteBuffer("🙂"));
   }
+
+  @Test
+  public void testSingleQuoteToStandardJson()
+  {
+    Assert.assertEquals(
+        "{\"stringField\":\"stringValue\", \"numberField\":5}",
+        StringUtils.singleQuoteToStandardJson("{'stringField':'stringValue', 'numberField':5}")
+    );
+  }
 }

@@ -66,18 +66,20 @@ public class KafkaInputFormatTest
   private static final long TIMESTAMP_MILLIS = DateTimes.of("2021-06-24").getMillis();
   private static final String TOPIC = "sample";
   private static final byte[] SIMPLE_JSON_KEY_BYTES = StringUtils.toUtf8(
-      "{'key': 'sampleKey'}"
-          .replaceAll("'", "\"")
+      StringUtils.singleQuoteToStandardJson(
+          "{'key': 'sampleKey'}"
+      )
   );
   private static final byte[] SIMPLE_JSON_VALUE_BYTES = StringUtils.toUtf8(
-      ("{"
-       + "    'timestamp': '2021-06-25',"
-       + "    'bar': null,"
-       + "    'foo': 'x',"
-       + "    'baz': 4,"
-       + "    'o': {'mg': 1}"
-       + "}")
-          .replaceAll("'", "\"")
+      StringUtils.singleQuoteToStandardJson(
+          "{"
+          + "    'timestamp': '2021-06-25',"
+          + "    'bar': null,"
+          + "    'foo': 'x',"
+          + "    'baz': 4,"
+          + "    'o': {'mg': 1}"
+          + "}"
+      )
   );
 
   private static final Iterable<Header> SAMPLE_HEADERS = ImmutableList.of(
