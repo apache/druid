@@ -324,7 +324,7 @@ public class DruidCoordinator
 
   /**
    * @return the set of broadcast segments as determined by the coordinator at a point in time.
-   * If the coordinator runs haven't triggered or are delayed, this returned information
+   * If the coordinator runs haven't triggered or are delayed, this information
    * may be stale.
    */
   @Nullable

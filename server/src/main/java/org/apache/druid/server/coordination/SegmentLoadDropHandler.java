@@ -338,8 +338,8 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     finally {
       stopwatch.stop();
       final long fetchRunMillis = stopwatch.millisElapsed();
-      emitter.emit(new ServiceMetricEvent.Builder().setMetric("bootstrapSegments/fetch/time", fetchRunMillis));
-      emitter.emit(new ServiceMetricEvent.Builder().setMetric("bootstrapSegments/fetch/count", bootstrapSegments.size()));
+      emitter.emit(new ServiceMetricEvent.Builder().setMetric("segment/bootstrap/time", fetchRunMillis));
+      emitter.emit(new ServiceMetricEvent.Builder().setMetric("segment/bootstrap/count", bootstrapSegments.size()));
       log.info("Fetched [%d] bootstrap segments in [%d]ms.", bootstrapSegments.size(), fetchRunMillis);
     }
 
