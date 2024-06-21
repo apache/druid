@@ -57,24 +57,29 @@ public class MSQTuningConfig
   private final Integer rowsPerSegment;
 
   @Nullable
+  private final Integer maxNumSegments;
+
+  @Nullable
   private final IndexSpec indexSpec;
 
   public MSQTuningConfig(
       @JsonProperty("maxNumWorkers") @Nullable final Integer maxNumWorkers,
       @JsonProperty("maxRowsInMemory") @Nullable final Integer maxRowsInMemory,
       @JsonProperty("rowsPerSegment") @Nullable final Integer rowsPerSegment,
+      @JsonProperty("maxNumSegments") @Nullable final Integer maxNumSegments,
       @JsonProperty("indexSpec") @Nullable final IndexSpec indexSpec
   )
   {
     this.maxNumWorkers = maxNumWorkers;
     this.maxRowsInMemory = maxRowsInMemory;
     this.rowsPerSegment = rowsPerSegment;
+    this.maxNumSegments = maxNumSegments;
     this.indexSpec = indexSpec;
   }
 
   public static MSQTuningConfig defaultConfig()
   {
-    return new MSQTuningConfig(null, null, null, null);
+    return new MSQTuningConfig(null, null, null, null, null);
   }
 
   @JsonProperty("maxNumWorkers")
@@ -96,6 +101,13 @@ public class MSQTuningConfig
   Integer getRowsPerSegmentForSerialization()
   {
     return rowsPerSegment;
+  }
+
+  @JsonProperty("maxNumSegments")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  Integer getMaxNumSegmentsForSerialization()
+  {
+    return maxNumSegments;
   }
 
   @JsonProperty("indexSpec")
@@ -120,6 +132,11 @@ public class MSQTuningConfig
     return rowsPerSegment != null ? rowsPerSegment : PartitionsSpec.DEFAULT_MAX_ROWS_PER_SEGMENT;
   }
 
+  public int getMaxNumSegments()
+  {
+    return maxNumSegments != null ? maxNumSegments : Integer.MAX_VALUE; // is there a native default we can reuse?
+  }
+
   public IndexSpec getIndexSpec()
   {
     return indexSpec != null ? indexSpec : IndexSpec.DEFAULT;
@@ -138,6 +155,7 @@ public class MSQTuningConfig
     return Objects.equals(maxNumWorkers, that.maxNumWorkers)
            && Objects.equals(maxRowsInMemory, that.maxRowsInMemory)
            && Objects.equals(rowsPerSegment, that.rowsPerSegment)
+           && Objects.equals(maxNumSegments, that.maxNumSegments)
            && Objects.equals(indexSpec, that.indexSpec);
   }
 
@@ -154,6 +172,7 @@ public class MSQTuningConfig
            "maxNumWorkers=" + maxNumWorkers +
            ", maxRowsInMemory=" + maxRowsInMemory +
            ", rowsPerSegment=" + rowsPerSegment +
+           ", maxNumSegments=" + maxNumSegments +
            ", indexSpec=" + indexSpec +
            '}';
   }
