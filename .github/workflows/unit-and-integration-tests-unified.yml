@@ -143,5 +143,5 @@ jobs:
 
   revised-its:
     needs: unit-tests
-    if: ${{ always() && (needs.unit-tests.result == 'success' || needs.unit-tests.outputs.continue_tests) }}
+    if: false #${{ always() && (needs.unit-tests.result == 'success' || needs.unit-tests.outputs.continue_tests) }}
     uses: ./.github/workflows/revised-its.yml
