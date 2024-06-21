@@ -1,7 +1,7 @@
 ---
 id: index
 title: "Local quickstart"
-sidebar_label: Local Quickstart
+sidebar_label: Local quickstart
 ---
 
 <!--
