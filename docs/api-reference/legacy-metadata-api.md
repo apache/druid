@@ -180,7 +180,7 @@ Returns information about the specified datasources, including the datasource sc
 
 `POST /druid/coordinator/v1/metadata/bootstrapSegments`
 
-Returns a list of bootstrap segments for all datasources. The returned set will include all broadcast segments if broadcast rules are configured.
+Returns information about bootstrap segments for all datasources. The returned set will include all broadcast segments if broadcast rules are configured.
 
 <a name="coordinator-datasources"></a>
 

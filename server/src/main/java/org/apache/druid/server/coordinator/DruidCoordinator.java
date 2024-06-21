@@ -177,9 +177,9 @@ public class DruidCoordinator
 
   /**
    * Used to determine broadcast segments. Similar to {@link #segmentReplicationStatus}, this might contain stale
-   * information if the coordinator runs are delayed.
+   * information if the Coordinator duties haven't run or are delayed.
    */
-  private volatile StrategicSegmentAssigner segmentAssigner = null;
+  private volatile Set<DataSegment> broadcastSegments = null;
 
   public static final String HISTORICAL_MANAGEMENT_DUTIES_DUTY_GROUP = "HistoricalManagementDuties";
   private static final String METADATA_STORE_MANAGEMENT_DUTIES_DUTY_GROUP = "MetadataStoreManagementDuties";
@@ -324,16 +324,12 @@ public class DruidCoordinator
 
   /**
    * @return the set of broadcast segments as determined by the coordinator at a point in time.
-   * If the coordinator runs haven't triggered or are delayed, this information
-   * may be stale.
+   * If the coordinator runs haven't triggered or are delayed, this information may be stale.
    */
   @Nullable
   public Set<DataSegment> getBroadcastSegments()
   {
-    if (segmentAssigner == null) {
-      return null;
-    }
-    return segmentAssigner.getBroadcastSegments();
+    return broadcastSegments;
   }
 
   @Nullable
@@ -819,7 +815,7 @@ public class DruidCoordinator
     @Override
     public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
     {
-      segmentAssigner = params.getSegmentAssigner();
+      broadcastSegments = params.getBroadcastSegments();
       segmentReplicationStatus = params.getSegmentReplicationStatus();
 
       // Collect stats for unavailable and under-replicated segments
