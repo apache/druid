@@ -668,14 +668,12 @@ Store task logs in S3. Note that the `druid-s3-extensions` extension must be loa
 
 ##### Azure Blob Store task logs
 
-Store task logs in Azure Blob Store.
+Store task logs in Azure Blob Store. To enable this feature, load the `druid-azure-extensions` extension, and configure deep storage for Azure. Druid uses the same authentication method configured for deep storage and stores task logs in the same storage account (set in `druid.azure.account`).
 
-Note: The `druid-azure-extensions` extension must be loaded, and this uses the same storage account as the deep storage module for azure.
-
-|Property|Description|Default|
-|--------|-----------|-------|
-|`druid.indexer.logs.container`|The Azure Blob Store container to write logs to|none|
-|`druid.indexer.logs.prefix`|The path to prepend to logs|none|
+| Property | Description | Default |
+|---|---|---|
+| `druid.indexer.logs.container` | The Azure Blob Store container to write logs to. | Must be set. |
+| `druid.indexer.logs.prefix` | The path to prepend to logs. | Must be set. |
 
 ##### Google Cloud Storage task logs
 
@@ -714,7 +712,7 @@ You can configure Druid API error responses to hide internal information like th
 |`druid.server.http.showDetailedJettyErrors`|When set to true, any error from the Jetty layer / Jetty filter includes the following fields  in the JSON response: `servlet`, `message`, `url`, `status`, and `cause`, if it exists. When set to false, the JSON response only includes `message`, `url`, and `status`. The field values remain unchanged.|true|
 |`druid.server.http.errorResponseTransform.strategy`|Error response transform strategy. The strategy controls how Druid transforms error responses from Druid services. When unset or set to `none`, Druid leaves error responses unchanged.|`none`|
 
-##### Error response transform strategy
+#### Error response transform strategy
 
 You can use an error response transform strategy to transform error responses from within Druid services to hide internal information.
 When you specify an error response transform strategy other than `none`, Druid transforms the error responses from Druid services as follows:
@@ -723,12 +721,12 @@ When you specify an error response transform strategy other than `none`, Druid t
 * For any SQL query API that fails, for example `POST /druid/v2/sql/...`, Druid sets the fields `errorClass` and `host` to null. Druid applies the transformation strategy to the `errorMessage` field.
 * For any JDBC related exceptions, Druid will turn all checked exceptions into `QueryInterruptedException` otherwise druid will attempt to keep the exception as the same type. For example if the original exception isn't owned by Druid it will become `QueryInterruptedException`. Druid applies the transformation strategy to the `errorMessage` field.
 
-###### No error response transform strategy
+##### No error response transform strategy
 
 In this mode, Druid leaves error responses from underlying services unchanged and returns the unchanged errors to the API client.
 This is the default Druid error response mode. To explicitly enable this strategy, set `druid.server.http.errorResponseTransform.strategy` to `none`.
 
-###### Allowed regular expression error response transform strategy
+##### Allowed regular expression error response transform strategy
 
 In this mode, Druid validates the error responses from underlying services against a list of regular expressions. Only error messages that match a configured regular expression are returned. To enable this strategy, set `druid.server.http.errorResponseTransform.strategy` to `allowedRegex`.
 
@@ -774,7 +772,7 @@ This config is used to find the [Coordinator](../design/coordinator.md) using Cu
 
 You can configure how to announce and unannounce Znodes in ZooKeeper (using Curator). For normal operations you do not need to override any of these configs.
 
-##### Batch data segment announcer
+#### Batch data segment announcer
 
 In current Druid, multiple data segments may be announced under the same Znode.
 
@@ -2037,7 +2035,7 @@ A simple in-memory LRU cache. Local cache resides in JVM heap memory, so if you 
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.cache.sizeInBytes`|Maximum cache size in bytes. Zero disables caching.|0|
-|`druid.cache.initialSize`|Initial size of the hashtable backing the cache.|500000|
+|`druid.cache.initialSize`|Initial size of the hash table backing the cache.|500000|
 |`druid.cache.logEvictionCount`|If non-zero, log cache eviction every `logEvictionCount` items.|0|
 
 #### Caffeine cache
