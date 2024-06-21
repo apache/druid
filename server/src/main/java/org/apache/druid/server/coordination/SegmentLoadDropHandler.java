@@ -330,8 +330,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     try {
       final BootstrapSegmentsInfo response =
           FutureUtils.getUnchecked(coordinatorClient.fetchBootstrapSegments(), true);
-      final CloseableIterator<DataSegment> iterator = response.getIterator();
-      bootstrapSegments = ImmutableList.copyOf(iterator);
+      bootstrapSegments = ImmutableList.copyOf(response.getIterator());
     }
     catch (Exception e) {
       // By default, we "fail open" when there is any error -- finding the coordinator, or if the API endpoint cannot
