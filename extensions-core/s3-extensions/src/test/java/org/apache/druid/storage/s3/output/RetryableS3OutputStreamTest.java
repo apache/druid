@@ -175,8 +175,7 @@ public class RetryableS3OutputStreamTest
   public void testWriteSmallBufferExactChunkSizeShouldSucceed() throws IOException
   {
     chunkSize = 128;
-    final int numChunks = 5;
-    final long fileSize = chunkSize * numChunks;
+    final int fileSize = 128 * 5;
     try (RetryableS3OutputStream out = new RetryableS3OutputStream(
         config,
         s3,
@@ -188,7 +187,7 @@ public class RetryableS3OutputStreamTest
       }
     }
     // each chunk 128 bytes, so there should be 5 chunks.
-    Assert.assertEquals(numChunks, s3.partRequests.size());
+    Assert.assertEquals(5, s3.partRequests.size());
     s3.assertCompleted(chunkSize, fileSize);
   }
 
@@ -312,11 +311,11 @@ public class RetryableS3OutputStreamTest
         numChunksOfChunkSize++;
       }
 
-      int numChunksOfSmallerSize = fileSize == 0 ? 0 : 1;
+      final int numChunksOfSmallerSize = fileSize == 0 ? 0 : 1;
 
       // Validate part sizes
-      long numOfExactChunks = partRequests.stream().filter(part -> part.getPartSize() == chunkSize).count();
-      long numOfSmallerChunks = partRequests.stream().filter(part -> part.getPartSize() < chunkSize).count();
+      final long numOfExactChunks = partRequests.stream().filter(part -> part.getPartSize() == chunkSize).count();
+      final long numOfSmallerChunks = partRequests.stream().filter(part -> part.getPartSize() < chunkSize).count();
 
       Assert.assertEquals(numChunksOfChunkSize, numOfExactChunks);
       Assert.assertEquals(numChunksOfSmallerSize, numOfSmallerChunks);
