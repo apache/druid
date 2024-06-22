@@ -1724,7 +1724,8 @@ public class ControllerImpl implements Controller
           toolKit,
           shuffleSpecFactory,
           tuningConfig.getMaxNumWorkers(),
-          0
+          0,
+          MSQControllerTask.needsFinalShuffling(querySpec)
       );
     }
     catch (MSQException e) {

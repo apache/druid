@@ -73,7 +73,8 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
       final QueryKit<Query<?>> queryKit,
       final ShuffleSpecFactory resultShuffleSpecFactory,
       final int maxWorkerCount,
-      final int minStageNumber
+      final int minStageNumber,
+      final boolean destinationNeedsSorting
   )
   {
     validateQuery(originalQuery);
@@ -132,12 +133,12 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
       shuffleSpecFactoryPreAggregation = intermediateClusterBy.isEmpty()
                                          ? ShuffleSpecFactories.singlePartition()
                                          : ShuffleSpecFactories.globalSortWithMaxPartitionCount(maxWorkerCount);
-      shuffleSpecFactoryPostAggregation = doLimitOrOffset
+      shuffleSpecFactoryPostAggregation = doLimitOrOffset && !destinationNeedsSorting
                                           ? ShuffleSpecFactories.singlePartition()
                                           : resultShuffleSpecFactory;
       partitionBoost = true;
     } else {
-      shuffleSpecFactoryPreAggregation = doLimitOrOffset
+      shuffleSpecFactoryPreAggregation = doLimitOrOffset && !destinationNeedsSorting
                                          ? ShuffleSpecFactories.singlePartition()
                                          : resultShuffleSpecFactory;
 
@@ -185,13 +186,16 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
       );
 
       if (doLimitOrOffset) {
+        final ShuffleSpec finalShuffleSpec = destinationNeedsSorting ?
+                                             shuffleSpecFactoryPreAggregation.build(intermediateClusterBy, true) :
+                                             null;
         final DefaultLimitSpec limitSpec = (DefaultLimitSpec) queryToRun.getLimitSpec();
         queryDefBuilder.add(
             StageDefinition.builder(firstStageNumber + 2)
                            .inputs(new StageInputSpec(firstStageNumber + 1))
                            .signature(resultSignature)
                            .maxWorkerCount(1)
-                           .shuffleSpec(null) // no shuffling should be required after a limit processor.
+                           .shuffleSpec(finalShuffleSpec)
                            .processorFactory(
                                new OffsetLimitFrameProcessorFactory(
                                    limitSpec.getOffset(),
@@ -224,12 +228,15 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
       );
       if (doLimitOrOffset) {
         final DefaultLimitSpec limitSpec = (DefaultLimitSpec) queryToRun.getLimitSpec();
+        final ShuffleSpec finalShuffleSpec = destinationNeedsSorting ?
+                                             shuffleSpecFactoryPreAggregation.build(intermediateClusterBy, true) :
+                                             null;
         queryDefBuilder.add(
             StageDefinition.builder(firstStageNumber + 2)
                            .inputs(new StageInputSpec(firstStageNumber + 1))
                            .signature(resultSignature)
                            .maxWorkerCount(1)
-                           .shuffleSpec(null)
+                           .shuffleSpec(finalShuffleSpec)
                            .processorFactory(
                                new OffsetLimitFrameProcessorFactory(
                                    limitSpec.getOffset(),

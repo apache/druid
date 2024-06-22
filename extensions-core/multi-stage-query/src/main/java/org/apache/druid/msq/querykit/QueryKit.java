@@ -40,6 +40,7 @@ public interface QueryKit<QueryType extends Query<?>>
    * @param minStageNumber           lowest stage number to use for any generated stages. Useful if the resulting
    *                                 {@link QueryDefinition} is going to be added to an existing
    *                                 {@link org.apache.druid.msq.kernel.QueryDefinitionBuilder}.
+   * @param needsFinalShuffling      Determines if a final shuffling is required.
    */
   QueryDefinition makeQueryDefinition(
       String queryId,
@@ -47,6 +48,7 @@ public interface QueryKit<QueryType extends Query<?>>
       QueryKit<Query<?>> toolKitForSubQueries,
       ShuffleSpecFactory resultShuffleSpecFactory,
       int maxWorkerCount,
-      int minStageNumber
+      int minStageNumber,
+      boolean needsFinalShuffling
   );
 }
