@@ -304,10 +304,9 @@ public class RetryableS3OutputStreamTest
       Set<Integer> partNumbersFromRequest = partRequests.stream().map(UploadPartRequest::getPartNumber).collect(Collectors.toSet());
       Assert.assertEquals(partRequests.size(), partNumbersFromRequest.size());
 
+      // Validate number of chunks uploaded.
       final long numChunksOfChunkSize = expectedFileSize / chunkSize;
       final int numChunksOfSmallerSize = expectedFileSize % chunkSize == 0 ? 0 : 1;
-
-      // Validate part sizes
       final long numOfExactChunks = partRequests.stream().filter(part -> part.getPartSize() == chunkSize).count();
       final long numOfSmallerChunks = partRequests.stream().filter(part -> part.getPartSize() < chunkSize).count();
 
