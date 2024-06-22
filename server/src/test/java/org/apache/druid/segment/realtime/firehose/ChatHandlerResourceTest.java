@@ -36,6 +36,8 @@ public class ChatHandlerResourceTest extends EasyMockSupport
 {
 
   @Mock
+  ChatHandler chatHandler;
+  @Mock
   ChatHandlerProvider handlers;
   @Mock
   DataSourceTaskIdHolder dataSourceTaskIdHolder;
@@ -51,6 +53,32 @@ public class ChatHandlerResourceTest extends EasyMockSupport
     replayAll();
     chatHandlerResource = new ChatHandlerResource(handlers, dataSourceTaskIdHolder);
     Assert.assertThrows(ServiceUnavailableException.class, () -> chatHandlerResource.doTaskChat(handlerId, null));
+    verifyAll();
+  }
+
+  @Test
+  public void test_start_failed()
+  {
+    String handlerId = "handlerId";
+    EasyMock.expect(dataSourceTaskIdHolder.getTaskId()).andReturn(handlerId);
+    EasyMock.expect(handlers.get(handlerId)).andReturn(Optional.absent()).anyTimes();
+
+    replayAll();
+    chatHandlerResource = new ChatHandlerResource(handlers, dataSourceTaskIdHolder);
+    Assert.assertThrows(ServiceUnavailableException.class, () -> chatHandlerResource.start());
+    verifyAll();
+  }
+
+  @Test
+  public void test_start_succeed()
+  {
+    String handlerId = "handlerId";
+    EasyMock.expect(dataSourceTaskIdHolder.getTaskId()).andReturn(handlerId);
+    EasyMock.expect(handlers.get(handlerId)).andReturn(Optional.of(chatHandler)).anyTimes();
+
+    replayAll();
+    chatHandlerResource = new ChatHandlerResource(handlers, dataSourceTaskIdHolder);
+    chatHandlerResource.start();
     verifyAll();
   }
 }

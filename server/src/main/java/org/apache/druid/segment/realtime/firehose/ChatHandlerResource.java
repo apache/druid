@@ -72,7 +72,7 @@ public class ChatHandlerResource
       );
     }
     catch (Exception e) {
-      throw new RuntimeException("ChatHandlerResource::init() => Failed to wait for ingestion task startup");
+      throw new ServiceUnavailableException("ChatHandlerResource::init() => Failed to wait for ingestion task startup");
     }
 
     log.info("ChatHandlerResource::init() => Succeed to wait for ingestion task startup");
