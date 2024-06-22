@@ -172,6 +172,27 @@ public class RetryableS3OutputStreamTest
   }
 
   @Test
+  public void testWriteSmallBufferExactChunkSizeShouldSucceed() throws IOException
+  {
+    chunkSize = 128;
+    final int numChunks = 5;
+    final long fileSize = chunkSize * numChunks;
+    try (RetryableS3OutputStream out = new RetryableS3OutputStream(
+        config,
+        s3,
+        path,
+        s3UploadManager
+    )) {
+      for (int i = 0; i < fileSize; i++) {
+        out.write(i);
+      }
+    }
+    // each chunk 128 bytes, so there should be 5 chunks.
+    Assert.assertEquals(numChunks, s3.partRequests.size());
+    s3.assertCompleted(chunkSize, fileSize);
+  }
+
+  @Test
   public void testSuccessToUploadAfterRetry() throws IOException
   {
     final TestAmazonS3 s3 = new TestAmazonS3(1);
@@ -284,13 +305,22 @@ public class RetryableS3OutputStreamTest
       Set<Integer> partNumbersFromRequest = partRequests.stream().map(UploadPartRequest::getPartNumber).collect(Collectors.toSet());
       Assert.assertEquals(partRequests.size(), partNumbersFromRequest.size());
 
-      for (int i = 0; i < partRequests.size(); i++) {
-        if (i < partRequests.size() - 1) {
-          Assert.assertEquals(chunkSize, partRequests.get(i).getPartSize());
-        } else {
-          Assert.assertTrue(chunkSize >= partRequests.get(i).getPartSize());
-        }
+      int numChunksOfChunkSize = 0;
+      long fileSize = expectedFileSize;
+      while (fileSize - chunkSize >= 0) {
+        fileSize -= chunkSize;
+        numChunksOfChunkSize++;
       }
+
+      int numChunksOfSmallerSize = fileSize == 0 ? 0 : 1;
+
+      // Validate part sizes
+      long numOfExactChunks = partRequests.stream().filter(part -> part.getPartSize() == chunkSize).count();
+      long numOfSmallerChunks = partRequests.stream().filter(part -> part.getPartSize() < chunkSize).count();
+
+      Assert.assertEquals(numChunksOfChunkSize, numOfExactChunks);
+      Assert.assertEquals(numChunksOfSmallerSize, numOfSmallerChunks);
+
       final List<PartETag> eTags = completeRequest.getPartETags();
       Assert.assertEquals(partRequests.size(), eTags.size());
       Assert.assertEquals(
