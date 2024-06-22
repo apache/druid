@@ -162,7 +162,7 @@ public class MSQTuningConfig
   @Override
   public int hashCode()
   {
-    return Objects.hash(maxNumWorkers, maxRowsInMemory, rowsPerSegment, indexSpec);
+    return Objects.hash(maxNumWorkers, maxRowsInMemory, rowsPerSegment, maxNumSegments, indexSpec);
   }
 
   @Override
