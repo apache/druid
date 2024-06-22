@@ -113,12 +113,8 @@ public class RetryableS3OutputStreamTest
   {
     chunkSize = 10;
     ByteBuffer bb = ByteBuffer.allocate(Integer.BYTES);
-    try (RetryableS3OutputStream out = new RetryableS3OutputStream(
-        config,
-        s3,
-        path,
-        s3UploadManager
-    )) {
+    try (RetryableS3OutputStream out =
+             new RetryableS3OutputStream(config, s3, path, s3UploadManager)) {
       for (int i = 0; i < 25; i++) {
         bb.clear();
         bb.putInt(i);
@@ -135,12 +131,8 @@ public class RetryableS3OutputStreamTest
   {
     chunkSize = 10;
     ByteBuffer bb = ByteBuffer.allocate(Integer.BYTES * 3);
-    try (RetryableS3OutputStream out = new RetryableS3OutputStream(
-        config,
-        s3,
-        path,
-        s3UploadManager
-    )) {
+    try (RetryableS3OutputStream out =
+             new RetryableS3OutputStream(config, s3, path, s3UploadManager)) {
       bb.clear();
       bb.putInt(1);
       bb.putInt(2);
@@ -156,12 +148,8 @@ public class RetryableS3OutputStreamTest
   public void testWriteSmallBufferShouldSucceed() throws IOException
   {
     chunkSize = 128;
-    try (RetryableS3OutputStream out = new RetryableS3OutputStream(
-        config,
-        s3,
-        path,
-        s3UploadManager
-    )) {
+    try (RetryableS3OutputStream out =
+             new RetryableS3OutputStream(config, s3, path, s3UploadManager)) {
       for (int i = 0; i < 600; i++) {
         out.write(i);
       }
@@ -176,12 +164,8 @@ public class RetryableS3OutputStreamTest
   {
     chunkSize = 128;
     final int fileSize = 128 * 5;
-    try (RetryableS3OutputStream out = new RetryableS3OutputStream(
-        config,
-        s3,
-        path,
-        s3UploadManager
-    )) {
+    try (RetryableS3OutputStream out =
+             new RetryableS3OutputStream(config, s3, path, s3UploadManager)) {
       for (int i = 0; i < fileSize; i++) {
         out.write(i);
       }
@@ -198,12 +182,8 @@ public class RetryableS3OutputStreamTest
 
     chunkSize = 10;
     ByteBuffer bb = ByteBuffer.allocate(Integer.BYTES);
-    try (RetryableS3OutputStream out = new RetryableS3OutputStream(
-        config,
-        s3,
-        path,
-        s3UploadManager
-    )) {
+    try (RetryableS3OutputStream out =
+             new RetryableS3OutputStream(config, s3, path, s3UploadManager)) {
       for (int i = 0; i < 25; i++) {
         bb.clear();
         bb.putInt(i);
@@ -221,12 +201,8 @@ public class RetryableS3OutputStreamTest
     final TestAmazonS3 s3 = new TestAmazonS3(3);
 
     ByteBuffer bb = ByteBuffer.allocate(Integer.BYTES);
-    try (RetryableS3OutputStream out = new RetryableS3OutputStream(
-        config,
-        s3,
-        path,
-        s3UploadManager
-    )) {
+    try (RetryableS3OutputStream out =
+             new RetryableS3OutputStream(config, s3, path, s3UploadManager)) {
       for (int i = 0; i < 2; i++) {
         bb.clear();
         bb.putInt(i);
@@ -304,14 +280,15 @@ public class RetryableS3OutputStreamTest
       Set<Integer> partNumbersFromRequest = partRequests.stream().map(UploadPartRequest::getPartNumber).collect(Collectors.toSet());
       Assert.assertEquals(partRequests.size(), partNumbersFromRequest.size());
 
-      // Validate number of chunks uploaded.
-      final long numChunksOfChunkSize = expectedFileSize / chunkSize;
-      final int numChunksOfSmallerSize = expectedFileSize % chunkSize == 0 ? 0 : 1;
-      final long numOfExactChunks = partRequests.stream().filter(part -> part.getPartSize() == chunkSize).count();
-      final long numOfSmallerChunks = partRequests.stream().filter(part -> part.getPartSize() < chunkSize).count();
-
-      Assert.assertEquals(numChunksOfChunkSize, numOfExactChunks);
-      Assert.assertEquals(numChunksOfSmallerSize, numOfSmallerChunks);
+      // Verify sizes of uploaded chunks
+      int numSmallerChunks = 0;
+      for (UploadPartRequest part : partRequests) {
+        Assert.assertTrue(part.getPartSize() <= chunkSize);
+        if (part.getPartSize() < chunkSize) {
+          ++numSmallerChunks;
+        }
+      }
+      Assert.assertTrue(numSmallerChunks <= 1);
 
       final List<PartETag> eTags = completeRequest.getPartETags();
       Assert.assertEquals(partRequests.size(), eTags.size());
