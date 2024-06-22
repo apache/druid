@@ -23,7 +23,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.client.BootstrapSegmentsInfo;
+import org.apache.druid.client.BootstrapSegmentsResponse;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.client.JsonParserIterator;
 import org.apache.druid.common.guava.FutureUtils;
@@ -162,7 +162,7 @@ public class CoordinatorClientImpl implements CoordinatorClient
   }
 
   @Override
-  public ListenableFuture<BootstrapSegmentsInfo> fetchBootstrapSegments()
+  public ListenableFuture<BootstrapSegmentsResponse> fetchBootstrapSegments()
   {
     final String path = "/druid/coordinator/v1/metadata/bootstrapSegments";
     return FutureUtils.transform(
@@ -170,7 +170,7 @@ public class CoordinatorClientImpl implements CoordinatorClient
             new RequestBuilder(HttpMethod.POST, path),
             new InputStreamResponseHandler()
         ),
-        in -> new BootstrapSegmentsInfo(
+        in -> new BootstrapSegmentsResponse(
             new JsonParserIterator<>(
                 // Some servers, like the Broker, may have PruneLoadSpec set to true for optimization reasons.
                 // We specifically use LoadableDataSegment here instead of DataSegment so the callers can still correctly

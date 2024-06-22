@@ -26,7 +26,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Injector;
-import org.apache.druid.client.BootstrapSegmentsInfo;
+import org.apache.druid.client.BootstrapSegmentsResponse;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.initialization.CoreInjectorBuilder;
@@ -217,7 +217,7 @@ public class CoordinatorClientImplTest
         jsonMapper.writeValueAsBytes(expectedSegments)
     );
 
-    final ListenableFuture<BootstrapSegmentsInfo> response = coordinatorClient.fetchBootstrapSegments();
+    final ListenableFuture<BootstrapSegmentsResponse> response = coordinatorClient.fetchBootstrapSegments();
     Assert.assertNotNull(response);
 
     final ImmutableList<DataSegment> observedDataSegments = ImmutableList.copyOf(response.get().getIterator());
@@ -250,7 +250,7 @@ public class CoordinatorClientImplTest
         objectMapper.writeValueAsBytes(expectedSegments)
     );
 
-    final ListenableFuture<BootstrapSegmentsInfo> response = coordinatorClient.fetchBootstrapSegments();
+    final ListenableFuture<BootstrapSegmentsResponse> response = coordinatorClient.fetchBootstrapSegments();
     Assert.assertNotNull(response);
 
     final ImmutableList<DataSegment> observedDataSegments = ImmutableList.copyOf(response.get().getIterator());
@@ -272,7 +272,7 @@ public class CoordinatorClientImplTest
         jsonMapper.writeValueAsBytes(segments)
     );
 
-    final ListenableFuture<BootstrapSegmentsInfo> response = coordinatorClient.fetchBootstrapSegments();
+    final ListenableFuture<BootstrapSegmentsResponse> response = coordinatorClient.fetchBootstrapSegments();
     Assert.assertNotNull(response);
 
     Assert.assertEquals(

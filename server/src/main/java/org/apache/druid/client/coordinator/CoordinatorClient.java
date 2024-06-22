@@ -20,7 +20,7 @@
 package org.apache.druid.client.coordinator;
 
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.client.BootstrapSegmentsInfo;
+import org.apache.druid.client.BootstrapSegmentsResponse;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.rpc.ServiceRetryPolicy;
@@ -63,7 +63,7 @@ public interface CoordinatorClient
    * Fetch bootstrap segments from the coordinator. The results must be streamed back to the caller as the
    * result set can be large.
    */
-  ListenableFuture<BootstrapSegmentsInfo> fetchBootstrapSegments();
+  ListenableFuture<BootstrapSegmentsResponse> fetchBootstrapSegments();
 
   /**
    * Returns a new instance backed by a ServiceClient which follows the provided retryPolicy

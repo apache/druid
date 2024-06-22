@@ -29,7 +29,7 @@ import com.google.common.util.concurrent.AbstractFuture;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.inject.Inject;
-import org.apache.druid.client.BootstrapSegmentsInfo;
+import org.apache.druid.client.BootstrapSegmentsResponse;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.guice.ManageLifecycle;
@@ -327,7 +327,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     List<DataSegment> bootstrapSegments = new ArrayList<>();
 
     try {
-      final BootstrapSegmentsInfo response =
+      final BootstrapSegmentsResponse response =
           FutureUtils.getUnchecked(coordinatorClient.fetchBootstrapSegments(), true);
       bootstrapSegments = ImmutableList.copyOf(response.getIterator());
     }

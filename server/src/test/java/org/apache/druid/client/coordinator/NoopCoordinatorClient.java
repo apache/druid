@@ -20,7 +20,7 @@
 package org.apache.druid.client.coordinator;
 
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.client.BootstrapSegmentsInfo;
+import org.apache.druid.client.BootstrapSegmentsResponse;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.rpc.ServiceRetryPolicy;
@@ -64,7 +64,7 @@ public class NoopCoordinatorClient implements CoordinatorClient
   }
 
   @Override
-  public ListenableFuture<BootstrapSegmentsInfo> fetchBootstrapSegments()
+  public ListenableFuture<BootstrapSegmentsResponse> fetchBootstrapSegments()
   {
     throw new UnsupportedOperationException();
   }
