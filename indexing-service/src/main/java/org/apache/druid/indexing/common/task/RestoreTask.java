@@ -41,6 +41,7 @@ import java.util.Set;
 
 public class RestoreTask extends AbstractFixedIntervalTask
 {
+  public static final String TYPE = "restore";
   private static final Logger log = new Logger(RestoreTask.class);
 
   public RestoreTask(
@@ -61,7 +62,7 @@ public class RestoreTask extends AbstractFixedIntervalTask
   @Override
   public String getType()
   {
-    return "restore";
+    return TYPE;
   }
 
   @Nonnull
@@ -80,7 +81,7 @@ public class RestoreTask extends AbstractFixedIntervalTask
     // List unused segments
     final List<DataSegment> unusedSegments = toolbox
         .getTaskActionClient()
-        .submit(new RetrieveUnusedSegmentsAction(myLock.getDataSource(), myLock.getInterval(), null));
+        .submit(new RetrieveUnusedSegmentsAction(myLock.getDataSource(), myLock.getInterval(), null, null, null));
 
     // Verify none of these segments have versions > lock version
     for (final DataSegment unusedSegment : unusedSegments) {

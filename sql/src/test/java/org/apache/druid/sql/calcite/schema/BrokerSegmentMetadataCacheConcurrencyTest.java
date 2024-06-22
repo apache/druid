@@ -51,6 +51,8 @@ import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.join.MapJoinableFactory;
 import org.apache.druid.segment.metadata.AbstractSegmentMetadataCache;
 import org.apache.druid.segment.metadata.AvailableSegmentMetadata;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.coordination.DruidServerMetadata;
@@ -84,7 +86,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
-public class BrokerSegmentMetadataCacheConcurrencyTest extends BrokerSegmentMetadataCacheCommon
+public class BrokerSegmentMetadataCacheConcurrencyTest extends BrokerSegmentMetadataCacheTestBase
 {
   private static final String DATASOURCE = "datasource";
   static final BrokerSegmentMetadataCacheConfig SEGMENT_CACHE_CONFIG_DEFAULT = BrokerSegmentMetadataCacheConfig.create("PT1S");
@@ -100,7 +102,7 @@ public class BrokerSegmentMetadataCacheConcurrencyTest extends BrokerSegmentMeta
   {
     super.setUp();
     tmpDir = temporaryFolder.newFolder();
-    walker = new SpecificSegmentsQuerySegmentWalker(conglomerate);
+    walker = SpecificSegmentsQuerySegmentWalker.createWalker(conglomerate);
     inventoryView = new TestServerInventoryView();
     serverView = newBrokerServerView(inventoryView);
     inventoryView.init();
@@ -140,7 +142,8 @@ public class BrokerSegmentMetadataCacheConcurrencyTest extends BrokerSegmentMeta
         new InternalQueryConfig(),
         new NoopServiceEmitter(),
         new PhysicalDatasourceMetadataFactory(new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()), segmentManager),
-        new NoopCoordinatorClient()
+        new NoopCoordinatorClient(),
+        CentralizedDatasourceSchemaConfig.create()
     )
     {
       @Override
@@ -187,6 +190,12 @@ public class BrokerSegmentMetadataCacheConcurrencyTest extends BrokerSegmentMeta
 
           @Override
           public ServerView.CallbackAction serverSegmentRemoved(DruidServerMetadata server, DataSegment segment)
+          {
+            return ServerView.CallbackAction.CONTINUE;
+          }
+
+          @Override
+          public ServerView.CallbackAction segmentSchemasAnnounced(SegmentSchemas segmentSchemas)
           {
             return ServerView.CallbackAction.CONTINUE;
           }
@@ -250,7 +259,8 @@ public class BrokerSegmentMetadataCacheConcurrencyTest extends BrokerSegmentMeta
         new InternalQueryConfig(),
         new NoopServiceEmitter(),
         new PhysicalDatasourceMetadataFactory(new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()), segmentManager),
-        new NoopCoordinatorClient()
+        new NoopCoordinatorClient(),
+        CentralizedDatasourceSchemaConfig.create()
     )
     {
       @Override
@@ -297,6 +307,12 @@ public class BrokerSegmentMetadataCacheConcurrencyTest extends BrokerSegmentMeta
 
           @Override
           public ServerView.CallbackAction serverSegmentRemoved(DruidServerMetadata server, DataSegment segment)
+          {
+            return ServerView.CallbackAction.CONTINUE;
+          }
+
+          @Override
+          public ServerView.CallbackAction segmentSchemasAnnounced(SegmentSchemas segmentSchemas)
           {
             return ServerView.CallbackAction.CONTINUE;
           }

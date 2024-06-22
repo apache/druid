@@ -19,8 +19,10 @@
 
 package org.apache.druid.server.coordination;
 
+import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
 import org.apache.druid.timeline.DataSegment;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 
 public interface DataSegmentAnnouncer
@@ -32,4 +34,23 @@ public interface DataSegmentAnnouncer
   void announceSegments(Iterable<DataSegment> segments) throws IOException;
 
   void unannounceSegments(Iterable<DataSegment> segments) throws IOException;
+
+  /**
+   * Announces schema associated with all segments for the specified realtime task.
+   *
+   * @param taskId taskId
+   * @param segmentSchemas absolute schema for all sinks, in case the client requests full sync.
+   * @param segmentSchemasChange schema change for all sinks
+   */
+  void announceSegmentSchemas(
+      String taskId,
+      SegmentSchemas segmentSchemas,
+      @Nullable SegmentSchemas segmentSchemasChange
+  );
+
+  /**
+   * Removes schema associated with all segments for the specified realtime task.
+   * @param taskId taskId
+   */
+  void removeSegmentSchemasForTask(String taskId);
 }

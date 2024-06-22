@@ -392,6 +392,7 @@ public class ForkingTaskRunnerTest
                                + "  \"firehose\" : null,\n"
                                + "  \"context\" : {\n"
                                + "    \"druid.indexer.runner.javaOptsArray\" : [ \"-Xmx10g\", \"-Xms10g\" ],\n"
+                               + "    \"druid.indexer.fork.property.druid.processing.numThreads\" : 4,\n"
                                + "    \"druid.indexer.runner.javaOpts\" : \"-Xmx1g -Xms1g\"\n"
                                + "  }\n"
                                + "}";
@@ -438,7 +439,6 @@ public class ForkingTaskRunnerTest
   @Test
   public void testInvalidTaskContextJavaOptsArray() throws JsonProcessingException
   {
-    ObjectMapper mapper = new DefaultObjectMapper();
     final String taskContent = "{\n"
                                + "  \"type\" : \"noop\",\n"
                                + "  \"id\" : \"noop_2022-03-25T05:17:34.929Z_3a074de1-74b8-4f6e-84b5-67996144f9ac\",\n"
@@ -463,7 +463,7 @@ public class ForkingTaskRunnerTest
         workerConfig,
         new Properties(),
         new NoopTaskLogs(),
-        mapper,
+        OBJECT_MAPPER,
         new DruidNode("middleManager", "host", false, 8091, null, true, false),
         new StartupLoggingConfig(),
         TaskStorageDirTracker.fromConfigs(workerConfig, taskConfig)
@@ -494,7 +494,7 @@ public class ForkingTaskRunnerTest
                                               + task.getId()
                                               + " must be an array of strings.")
     );
-    Assert.assertEquals(1L, (long) forkingTaskRunner.getWorkerFailedTaskCount());
+    Assert.assertEquals(0L, (long) forkingTaskRunner.getWorkerFailedTaskCount());
     Assert.assertEquals(0L, (long) forkingTaskRunner.getWorkerSuccessfulTaskCount());
   }
 

@@ -35,6 +35,8 @@ import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatusPlus;
+import org.apache.druid.indexer.report.KillTaskReport;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
@@ -289,7 +291,7 @@ public class OverlordClientImplTest
   public void test_taskReportAsMap() throws Exception
   {
     final String taskId = "testTaskId";
-    final Map<String, Object> response = ImmutableMap.of("test", "value");
+    final TaskReport.ReportMap response = TaskReport.buildTaskReports(new KillTaskReport("taskId", null));
 
     serviceClient.expectAndRespond(
         new RequestBuilder(HttpMethod.GET, "/druid/indexer/v1/task/testTaskId/reports"),
@@ -298,7 +300,7 @@ public class OverlordClientImplTest
         jsonMapper.writeValueAsBytes(response)
     );
 
-    final ListenableFuture<Map<String, Object>> future = overlordClient.taskReportAsMap(taskId);
+    final ListenableFuture<TaskReport.ReportMap> future = overlordClient.taskReportAsMap(taskId);
     Assert.assertEquals(response, future.get());
   }
 
@@ -319,7 +321,7 @@ public class OverlordClientImplTest
         )
     );
 
-    final ListenableFuture<Map<String, Object>> future = overlordClient.taskReportAsMap(taskId);
+    final ListenableFuture<TaskReport.ReportMap> future = overlordClient.taskReportAsMap(taskId);
 
     final ExecutionException e = Assert.assertThrows(
         ExecutionException.class,
@@ -345,7 +347,7 @@ public class OverlordClientImplTest
         StringUtils.toUtf8("{}")
     );
 
-    final Map<String, Object> actualResponse =
+    final TaskReport.ReportMap actualResponse =
         FutureUtils.getUnchecked(overlordClient.taskReportAsMap(taskID), true);
     Assert.assertEquals(Collections.emptyMap(), actualResponse);
   }
@@ -430,6 +432,7 @@ public class OverlordClientImplTest
     final ClientTaskQuery clientTaskQuery = new ClientKillUnusedSegmentsTaskQuery(
         taskID,
         "test",
+        null,
         null,
         null,
         null,

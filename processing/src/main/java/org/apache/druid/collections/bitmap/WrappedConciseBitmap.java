@@ -133,6 +133,15 @@ public class WrappedConciseBitmap implements MutableBitmap
   }
 
   @Override
+  public ImmutableBitmap union(ImmutableBitmap otherBitmap)
+  {
+    WrappedConciseBitmap other = (WrappedConciseBitmap) otherBitmap;
+    ConciseSet clone = bitmap.clone();
+    clone.addAll(other.bitmap);
+    return new WrappedConciseBitmap(clone);
+  }
+
+  @Override
   public boolean get(int value)
   {
     return bitmap.contains(value);

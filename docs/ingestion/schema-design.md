@@ -263,12 +263,17 @@ native boolean types, Druid ingests these values as longs if `druid.expressions.
 the [array functions](../querying/sql-array-functions.md) or [UNNEST](../querying/sql-functions.md#unnest). Nested
 columns can be queried with the [JSON functions](../querying/sql-json-functions.md).
 
-Mixed type columns are stored in the _least_ restrictive type that can represent all values in the column. For example:
+Mixed type columns follow the same rules for schema differences between segments, and present as the _least_ restrictive
+type that can represent all values in the column. For example:
 
 - Mixed numeric columns are `DOUBLE`
 - If there are any strings present, then the column is a `STRING`
 - If there are arrays, then the column becomes an array with the least restrictive element type
 - Any nested data or arrays of nested data become `COMPLEX<json>` nested columns.
+
+Grouping, filtering, and aggregating mixed type values will handle these columns as if all values are represented as the
+least restrictive type. The exception to this is the scan query, which will return the values in their original mixed
+types, but any downstream operations on these values will still coerce them to the common type.
 
 If you're already using string-based schema discovery and want to migrate, see [Migrating to type-aware schema discovery](#migrating-to-type-aware-schema-discovery).
 

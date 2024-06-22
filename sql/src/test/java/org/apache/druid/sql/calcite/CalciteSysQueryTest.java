@@ -24,14 +24,12 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.sql.calcite.NotYetSupported.Modes;
 import org.apache.druid.sql.calcite.NotYetSupported.NotYetSupportedProcessor;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
+@ExtendWith(NotYetSupportedProcessor.class)
 public class CalciteSysQueryTest extends BaseCalciteQueryTest
 {
-  @Rule(order = 0)
-  public NotYetSupportedProcessor NegativeTestProcessor = new NotYetSupportedProcessor();
-
   @Test
   public void testTasksSum()
   {
@@ -41,10 +39,11 @@ public class CalciteSysQueryTest extends BaseCalciteQueryTest
         .sql("select datasource, sum(duration) from sys.tasks group by datasource")
         .expectedResults(ImmutableList.of(
             new Object[]{"foo", 11L},
-            new Object[]{"foo2", 22L}))
+            new Object[]{"foo2", 22L}
+        ))
         .expectedLogicalPlan("LogicalAggregate(group=[{0}], EXPR$1=[SUM($1)])\n"
-            + "  LogicalProject(exprs=[[$3, $8]])\n"
-            + "    LogicalTableScan(table=[[sys, tasks]])\n")
+                             + "  LogicalProject(exprs=[[$3, $8]])\n"
+                             + "    LogicalTableScan(table=[[sys, tasks]])\n")
         .run();
   }
 
@@ -59,8 +58,43 @@ public class CalciteSysQueryTest extends BaseCalciteQueryTest
         .sql("select datasource, sum(duration) over () from sys.tasks group by datasource")
         .expectedResults(ImmutableList.of(
             new Object[]{"foo", 11L},
-            new Object[]{"foo2", 22L}))
+            new Object[]{"foo2", 22L}
+        ))
         // please add expectedLogicalPlan if this test starts passing!
+        .run();
+  }
+
+  @Test
+  public void testRoundOnSysTableColumn()
+  {
+    msqIncompatible();
+
+    testBuilder()
+        .sql("select round(duration, 1) from sys.tasks ")
+        .expectedResults(ImmutableList.of(
+            new Object[]{10L},
+            new Object[]{1L},
+            new Object[]{20L},
+            new Object[]{2L}
+        ))
+        .expectedLogicalPlan("LogicalProject(exprs=[[ROUND($8, 1)]])\n"
+                             + "  LogicalTableScan(table=[[sys, tasks]])\n")
+        .run();
+  }
+
+  @Test
+  public void testRoundOnAvgOnSysTableColumn()
+  {
+    msqIncompatible();
+
+    testBuilder()
+        .sql("select round(avg(duration), 1) from sys.tasks ")
+        .expectedResults(ImmutableList.of(
+            new Object[]{8.3D}))
+        .expectedLogicalPlan("LogicalProject(exprs=[[ROUND($0, 1)]])\n"
+                             + "  LogicalAggregate(group=[{}], agg#0=[AVG($0)])\n"
+                             + "    LogicalProject(exprs=[[$8]])\n"
+                             + "      LogicalTableScan(table=[[sys, tasks]])\n")
         .run();
   }
 }

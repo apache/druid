@@ -68,7 +68,7 @@ public class BasicAuthorizerResourceTest
            .when(authValidator)
            .validateAuthorizerName(INVALID_AUTHORIZER_NAME);
 
-    target = new BasicAuthorizerResource(resourceHandler, authValidator);
+    target = new BasicAuthorizerResource(resourceHandler, authValidator, null);
   }
 
   @Test

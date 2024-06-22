@@ -19,6 +19,8 @@
 
 package org.apache.druid.indexing.overlord.supervisor;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
@@ -30,6 +32,9 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
+import org.apache.commons.lang3.NotImplementedException;
+import org.apache.druid.audit.AuditEntry;
+import org.apache.druid.audit.AuditManager;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.http.security.SupervisorResourceFilter;
@@ -46,6 +51,7 @@ import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
@@ -90,6 +96,7 @@ public class SupervisorResource
   private final TaskMaster taskMaster;
   private final AuthorizerMapper authorizerMapper;
   private final ObjectMapper objectMapper;
+  private final AuditManager auditManager;
   private final AuthConfig authConfig;
 
   @Inject
@@ -97,13 +104,15 @@ public class SupervisorResource
       TaskMaster taskMaster,
       AuthorizerMapper authorizerMapper,
       ObjectMapper objectMapper,
-      AuthConfig authConfig
+      AuthConfig authConfig,
+      AuditManager auditManager
   )
   {
     this.taskMaster = taskMaster;
     this.authorizerMapper = authorizerMapper;
     this.objectMapper = objectMapper;
     this.authConfig = authConfig;
+    this.auditManager = auditManager;
   }
 
   @POST
@@ -143,6 +152,19 @@ public class SupervisorResource
           }
 
           manager.createOrUpdateAndStartSupervisor(spec);
+
+          final String auditPayload
+              = StringUtils.format("Update supervisor[%s] for datasource[%s]", spec.getId(), spec.getDataSources());
+          auditManager.doAudit(
+              AuditEntry.builder()
+                        .key(spec.getId())
+                        .type("supervisor")
+                        .auditInfo(AuthorizationUtils.buildAuditInfo(req))
+                        .request(AuthorizationUtils.buildRequestInfo("overlord", req))
+                        .payload(auditPayload)
+                        .build()
+          );
+
           return Response.ok(ImmutableMap.of("id", spec.getId())).build();
         }
     );
@@ -375,6 +397,45 @@ public class SupervisorResource
   public Response shutdown(@PathParam("id") final String id)
   {
     return terminate(id);
+  }
+
+  /**
+   * This method will immediately try to handoff the list of task group ids for the given supervisor.
+   * This is a best effort API and makes no guarantees of execution, e.g. if a non-existent task group id
+   * is passed to it, the API call will still suceced.
+   */
+  @POST
+  @Path("/{id}/taskGroups/handoff")
+  @Consumes(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(SupervisorResourceFilter.class)
+  public Response handoffTaskGroups(@PathParam("id") final String id, @Nonnull final HandoffTaskGroupsRequest handoffTaskGroupsRequest)
+  {
+    List<Integer> taskGroupIds = handoffTaskGroupsRequest.getTaskGroupIds();
+    if (taskGroupIds == null || taskGroupIds.isEmpty()) {
+      return Response.status(Response.Status.BAD_REQUEST)
+          .entity(ImmutableMap.of("error", "List of task groups to handoff can't be empty"))
+          .build();
+
+    }
+    return asLeaderWithSupervisorManager(
+        manager -> {
+          try {
+            if (manager.handoffTaskGroupsEarly(id, taskGroupIds)) {
+              return Response.ok().build();
+            } else {
+              return Response.status(Response.Status.NOT_FOUND)
+                  .entity(ImmutableMap.of("error", StringUtils.format("Supervisor was not found [%s]", id)))
+                  .build();
+            }
+          }
+          catch (NotImplementedException e) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                .entity(ImmutableMap.of("error", StringUtils.format("Supervisor [%s] does not support early handoff", id)))
+                .build();
+          }
+        }
+    );
   }
 
   @POST
@@ -612,5 +673,23 @@ public class SupervisorResource
           return Response.ok(ImmutableMap.of("status", "success")).build();
         }
     );
+  }
+
+  public static class HandoffTaskGroupsRequest
+  {
+
+    private final List<Integer> taskGroupIds;
+
+    @JsonCreator
+    public HandoffTaskGroupsRequest(@JsonProperty("taskGroupIds") List<Integer> taskGroupIds)
+    {
+      this.taskGroupIds = taskGroupIds;
+    }
+
+    @JsonProperty
+    public List<Integer> getTaskGroupIds()
+    {
+      return taskGroupIds;
+    }
   }
 }

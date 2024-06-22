@@ -101,7 +101,7 @@ public class SerializablePairLongStringComplexColumn implements ComplexColumn
       serializedSize = masterByteBuffer.remaining();
 
       SerializablePairLongStringColumnHeader columnHeader =
-          SerializablePairLongStringColumnHeader.fromBuffer(masterByteBuffer);
+          (SerializablePairLongStringColumnHeader) AbstractSerializablePairLongObjectColumnHeader.fromBuffer(masterByteBuffer, SerializablePairLongString.class);
 
       Preconditions.checkArgument(
           columnHeader.getVersion() == SerializablePairLongStringComplexMetricSerde.EXPECTED_VERSION,

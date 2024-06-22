@@ -20,6 +20,7 @@
 package org.apache.druid.query.operator.window;
 
 import com.google.common.collect.ImmutableMap;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -44,7 +45,7 @@ public class WindowFramedAggregateProcessorTest
   @Test
   public void testIsPassThruWhenRACReturnsSemanticInterface()
   {
-    final WindowFrame theFrame = new WindowFrame(WindowFrame.PeerType.ROWS, true, 0, false, 0);
+    final WindowFrame theFrame = new WindowFrame(WindowFrame.PeerType.ROWS, true, 0, false, 0, null);
     final AggregatorFactory[] theAggs = {
         new LongMaxAggregatorFactory("cummMax", "intCol"),
         new DoubleSumAggregatorFactory("cummSum", "doubleCol")
@@ -75,7 +76,7 @@ public class WindowFramedAggregateProcessorTest
   @Test
   public void testDoesStuffWhenNoSemanticInterfacesAvailable()
   {
-    final WindowFrame theFrame = new WindowFrame(WindowFrame.PeerType.ROWS, true, 0, false, 0);
+    final WindowFrame theFrame = new WindowFrame(WindowFrame.PeerType.ROWS, true, 0, false, 0, null);
     final AggregatorFactory[] theAggs = {
         new LongSumAggregatorFactory("sum", "intCol")
     };
@@ -92,5 +93,13 @@ public class WindowFramedAggregateProcessorTest
         .expectColumn("sum", new int[]{1, 3, 6})
         .allColumnsRegistered()
         .validate(processed);
+  }
+
+  @Test
+  public void testEquals()
+  {
+    EqualsVerifier.forClass(WindowFramedAggregateProcessor.class)
+        .usingGetClass()
+        .verify();
   }
 }

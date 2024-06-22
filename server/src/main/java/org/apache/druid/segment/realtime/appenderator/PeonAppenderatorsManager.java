@@ -37,6 +37,8 @@ import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.segment.loading.SegmentLoaderConfig;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.joda.time.Interval;
@@ -61,6 +63,7 @@ public class PeonAppenderatorsManager implements AppenderatorsManager
 
   @Override
   public Appenderator createRealtimeAppenderatorForTask(
+      SegmentLoaderConfig segmentLoaderConfig,
       String taskId,
       DataSchema schema,
       AppenderatorConfig config,
@@ -79,7 +82,8 @@ public class PeonAppenderatorsManager implements AppenderatorsManager
       CachePopulatorStats cachePopulatorStats,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates
+      boolean useMaxMemoryEstimates,
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
     if (realtimeAppenderator != null) {
@@ -88,6 +92,7 @@ public class PeonAppenderatorsManager implements AppenderatorsManager
       throw new ISE("A batch appenderator was already created for this peon's task.");
     } else {
       realtimeAppenderator = Appenderators.createRealtime(
+          segmentLoaderConfig,
           taskId,
           schema,
           config,
@@ -100,13 +105,13 @@ public class PeonAppenderatorsManager implements AppenderatorsManager
           segmentAnnouncer,
           emitter,
           queryProcessingPool,
-          joinableFactory,
           cache,
           cacheConfig,
           cachePopulatorStats,
           rowIngestionMeters,
           parseExceptionHandler,
-          useMaxMemoryEstimates
+          useMaxMemoryEstimates,
+          centralizedDatasourceSchemaConfig
       );
     }
     return realtimeAppenderator;
@@ -124,7 +129,8 @@ public class PeonAppenderatorsManager implements AppenderatorsManager
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates
+      boolean useMaxMemoryEstimates,
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
     // CompactionTask does run multiple sub-IndexTasks, so we allow multiple batch appenderators
@@ -142,7 +148,8 @@ public class PeonAppenderatorsManager implements AppenderatorsManager
           indexMerger,
           rowIngestionMeters,
           parseExceptionHandler,
-          useMaxMemoryEstimates
+          useMaxMemoryEstimates,
+          centralizedDatasourceSchemaConfig
       );
       return batchAppenderator;
     }
@@ -160,7 +167,8 @@ public class PeonAppenderatorsManager implements AppenderatorsManager
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates
+      boolean useMaxMemoryEstimates,
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
     // CompactionTask does run multiple sub-IndexTasks, so we allow multiple batch appenderators
@@ -178,7 +186,8 @@ public class PeonAppenderatorsManager implements AppenderatorsManager
           indexMerger,
           rowIngestionMeters,
           parseExceptionHandler,
-          useMaxMemoryEstimates
+          useMaxMemoryEstimates,
+          centralizedDatasourceSchemaConfig
       );
       return batchAppenderator;
     }
@@ -196,7 +205,8 @@ public class PeonAppenderatorsManager implements AppenderatorsManager
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates
+      boolean useMaxMemoryEstimates,
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
     // CompactionTask does run multiple sub-IndexTasks, so we allow multiple batch appenderators
@@ -214,7 +224,8 @@ public class PeonAppenderatorsManager implements AppenderatorsManager
           indexMerger,
           rowIngestionMeters,
           parseExceptionHandler,
-          useMaxMemoryEstimates
+          useMaxMemoryEstimates,
+          centralizedDatasourceSchemaConfig
       );
       return batchAppenderator;
     }

@@ -43,6 +43,7 @@ import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.response.BytesFullResponseHandler;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
+import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.IgnoreHttpResponseHandler;
 import org.apache.druid.rpc.RequestBuilder;
@@ -57,7 +58,6 @@ import org.apache.druid.rpc.ServiceRetryPolicy;
 import org.apache.druid.rpc.StandardRetryPolicy;
 import org.apache.druid.rpc.indexing.SpecificTaskRetryPolicy;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
-import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.DateTime;
@@ -197,13 +197,12 @@ public abstract class SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, Se
   @Override
   public ListenableFuture<Boolean> registerNewVersionOfPendingSegmentAsync(
       String taskId,
-      SegmentIdWithShardSpec basePendingSegment,
-      SegmentIdWithShardSpec newVersionOfSegment
+      PendingSegmentRecord pendingSegmentRecord
   )
   {
     final RequestBuilder requestBuilder
         = new RequestBuilder(HttpMethod.POST, "/pendingSegmentVersion")
-        .jsonContent(jsonMapper, new PendingSegmentVersions(basePendingSegment, newVersionOfSegment));
+        .jsonContent(jsonMapper, pendingSegmentRecord);
 
     return makeRequest(taskId, requestBuilder)
         .handler(IgnoreHttpResponseHandler.INSTANCE)

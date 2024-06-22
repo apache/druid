@@ -33,10 +33,12 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.query.extraction.MapLookupExtractor;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.LikeDimFilter;
 import org.apache.druid.query.filter.NotDimFilter;
+import org.apache.druid.query.lookup.LookupExtractionFn;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.column.ColumnType;
@@ -139,7 +141,9 @@ public class LikeFilterTest extends BaseFilterTest
     );
     assertFilterMatches(
         NotDimFilter.of(new LikeDimFilter("dim1", "bar", null, new SubstringDimExtractionFn(3, 3))),
-        ImmutableList.of("0", "1", "3", "5", "6")
+        NullHandling.replaceWithDefault()
+        ? ImmutableList.of("0", "1", "3", "5", "6")
+        : ImmutableList.of("5", "6")
     );
 
     assertFilterMatches(
@@ -150,7 +154,7 @@ public class LikeFilterTest extends BaseFilterTest
         NotDimFilter.of(new LikeDimFilter("dim2", "bbb", null, new SubstringDimExtractionFn(0, 3))),
         NullHandling.replaceWithDefault()
         ? ImmutableList.of("0", "1", "2", "3", "4", "6")
-        : ImmutableList.of("0", "1", "2", "4", "6")
+        : ImmutableList.of("1", "2", "4", "6")
     );
   }
 
@@ -194,7 +198,9 @@ public class LikeFilterTest extends BaseFilterTest
     );
     assertFilterMatches(
         NotDimFilter.of(new LikeDimFilter("dim1", "a%", null, new SubstringDimExtractionFn(1, null))),
-        ImmutableList.of("0", "1", "2", "4", "5", "6")
+        NullHandling.replaceWithDefault()
+        ? ImmutableList.of("0", "1", "2", "4", "5", "6")
+        : ImmutableList.of("1", "2", "4", "5", "6")
     );
 
     assertFilterMatches(
@@ -205,7 +211,7 @@ public class LikeFilterTest extends BaseFilterTest
         NotDimFilter.of(new LikeDimFilter("dim2", "a%", null, new SubstringDimExtractionFn(1, null))),
         NullHandling.replaceWithDefault()
         ? ImmutableList.of("0", "3", "4", "5", "6")
-        : ImmutableList.of("0", "4", "5", "6")
+        : ImmutableList.of("4", "5", "6")
     );
   }
 
@@ -254,6 +260,27 @@ public class LikeFilterTest extends BaseFilterTest
           ImmutableList.of()
       );
     }
+  }
+
+  @Test
+  public void testNonNullableExtractionFnMissingColumn()
+  {
+    final LookupExtractionFn extractionFn = new LookupExtractionFn(
+        new MapLookupExtractor(ImmutableMap.of("foo", "bar"), false),
+        false,
+        "replaced",
+        false,
+        false
+    );
+    final LikeDimFilter filter = new LikeDimFilter("fake", "__DOESNT_EXIST__%", null, extractionFn);
+    assertFilterMatches(
+        filter,
+        ImmutableList.of()
+    );
+    assertFilterMatches(
+        NotDimFilter.of(filter),
+        ImmutableList.of("0", "1", "2", "3", "4", "5", "6")
+    );
   }
 
   @Test

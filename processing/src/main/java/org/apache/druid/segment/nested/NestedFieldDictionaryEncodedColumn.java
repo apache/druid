@@ -20,7 +20,6 @@
 
 package org.apache.druid.segment.nested;
 
-import com.google.common.base.Predicate;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Floats;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
@@ -30,6 +29,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.extraction.ExtractionFn;
+import org.apache.druid.query.filter.DruidObjectPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.StringPredicateDruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
@@ -435,7 +435,7 @@ public class NestedFieldDictionaryEncodedColumn<TStringDictionary extends Indexe
       {
         final BitSet checkedIds = new BitSet(getCardinality());
         final BitSet matchingIds = new BitSet(getCardinality());
-        final Predicate<String> predicate = predicateFactory.makeStringPredicate();
+        final DruidObjectPredicate<String> predicate = predicateFactory.makeStringPredicate();
 
         // Lazy matcher; only check an id if matches() is called.
         return new ValueMatcher()
@@ -444,13 +444,12 @@ public class NestedFieldDictionaryEncodedColumn<TStringDictionary extends Indexe
           public boolean matches(boolean includeUnknown)
           {
             final int id = getRowValue();
-            final boolean matchNull = includeUnknown && predicateFactory.isNullInputUnknown();
 
             if (checkedIds.get(id)) {
               return matchingIds.get(id);
             } else {
               final String rowVal = lookupName(id);
-              final boolean matches = (matchNull && rowVal == null) || predicate.apply(rowVal);
+              final boolean matches = predicate.apply(rowVal).matches(includeUnknown);
               checkedIds.set(id);
               if (matches) {
                 matchingIds.set(id);

@@ -26,65 +26,62 @@ import com.google.inject.Module;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
+import org.apache.druid.msq.test.CalciteArraysQueryMSQTest.ArraysQueryMSQComponentSupplier;
 import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.sql.calcite.CalciteArraysQueryTest;
 import org.apache.druid.sql.calcite.QueryTestBuilder;
+import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
+import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.run.SqlEngine;
-import org.junit.After;
-import org.junit.Before;
 
 /**
  * Runs {@link CalciteArraysQueryTest} but with MSQ engine
  */
+@SqlTestFrameworkConfig.ComponentSupplier(ArraysQueryMSQComponentSupplier.class)
 public class CalciteArraysQueryMSQTest extends CalciteArraysQueryTest
 {
-  private TestGroupByBuffers groupByBuffers;
-
-  @Before
-  public void setup2()
+  public static class ArraysQueryMSQComponentSupplier extends ArraysComponentSupplier
   {
-    groupByBuffers = TestGroupByBuffers.createDefault();
-  }
+    public ArraysQueryMSQComponentSupplier(TempDirProducer tempFolderProducer)
+    {
+      super(tempFolderProducer);
+    }
 
-  @After
-  public void teardown2()
-  {
-    groupByBuffers.close();
-  }
+    @Override
+    public void configureGuice(DruidInjectorBuilder builder)
+    {
+      super.configureGuice(builder);
+      builder.addModules(
+          CalciteMSQTestsHelper.fetchModules(tempDirProducer::newTempFolder, TestGroupByBuffers.createDefault()).toArray(new Module[0])
+      );
+    }
 
-  @Override
-  public void configureGuice(DruidInjectorBuilder builder)
-  {
-    super.configureGuice(builder);
-    builder.addModules(CalciteMSQTestsHelper.fetchModules(temporaryFolder, groupByBuffers).toArray(new Module[0]));
-  }
-
-
-  @Override
-  public SqlEngine createEngine(
-      QueryLifecycleFactory qlf,
-      ObjectMapper queryJsonMapper,
-      Injector injector
-  )
-  {
-    final WorkerMemoryParameters workerMemoryParameters =
-        WorkerMemoryParameters.createInstance(
-            WorkerMemoryParameters.PROCESSING_MINIMUM_BYTES * 50,
-            2,
-            10,
-            2,
-            0,
-            0
-        );
-    final MSQTestOverlordServiceClient indexingServiceClient = new MSQTestOverlordServiceClient(
-        queryJsonMapper,
-        injector,
-        new MSQTestTaskActionClient(queryJsonMapper, injector),
-        workerMemoryParameters,
-        ImmutableList.of()
-    );
-    return new MSQTaskSqlEngine(indexingServiceClient, queryJsonMapper);
+    @Override
+    public SqlEngine createEngine(
+        QueryLifecycleFactory qlf,
+        ObjectMapper queryJsonMapper,
+        Injector injector
+    )
+    {
+      final WorkerMemoryParameters workerMemoryParameters =
+          WorkerMemoryParameters.createInstance(
+              WorkerMemoryParameters.PROCESSING_MINIMUM_BYTES * 50,
+              2,
+              10,
+              2,
+              0,
+              0
+          );
+      final MSQTestOverlordServiceClient indexingServiceClient = new MSQTestOverlordServiceClient(
+          queryJsonMapper,
+          injector,
+          new MSQTestTaskActionClient(queryJsonMapper, injector),
+          workerMemoryParameters,
+          ImmutableList.of()
+      );
+      return new MSQTaskSqlEngine(indexingServiceClient, queryJsonMapper);
+    }
   }
 
   @Override
@@ -93,8 +90,7 @@ public class CalciteArraysQueryMSQTest extends CalciteArraysQueryTest
     return new QueryTestBuilder(new CalciteTestConfig(true))
         .addCustomRunner(new ExtractResultsFactory(() -> (MSQTestOverlordServiceClient) ((MSQTaskSqlEngine) queryFramework().engine()).overlordClient()))
         .skipVectorize(true)
-        .verifyNativeQueries(new VerifyMSQSupportedNativeQueriesPredicate())
-        .msqCompatible(msqCompatible);
+        .verifyNativeQueries(new VerifyMSQSupportedNativeQueriesPredicate());
   }
 }
 

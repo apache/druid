@@ -19,11 +19,12 @@
 
 package org.apache.druid.storage.azure;
 
+import com.azure.storage.blob.models.BlobStorageException;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
-import com.microsoft.azure.storage.StorageException;
+import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.SegmentUtils;
@@ -35,7 +36,6 @@ import org.joda.time.format.ISODateTimeFormat;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.List;
 import java.util.Map;
 
@@ -52,7 +52,7 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
 
   @Inject
   public AzureDataSegmentPusher(
-      AzureStorage azureStorage,
+      @Global AzureStorage azureStorage,
       AzureAccountConfig accountConfig,
       AzureDataSegmentConfig segmentConfig
   )
@@ -79,7 +79,7 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
         AzureUtils.AZURE_STORAGE_HADOOP_PROTOCOL,
         segmentConfig.getContainer(),
         accountConfig.getAccount(),
-        AzureUtils.AZURE_STORAGE_HOST_ADDRESS,
+        accountConfig.getBlobStorageEndpoint(),
         prefixIsNullOrEmpty ? "" : StringUtils.maybeRemoveTrailingSlash(prefix) + '/'
     );
 
@@ -142,10 +142,7 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
       final File outFile = zipOutFile = File.createTempFile("index", ".zip");
       final long size = CompressionUtils.zip(indexFilesDir, zipOutFile);
 
-      return AzureUtils.retryAzureOperation(
-          () -> uploadDataSegment(segment, binaryVersion, size, outFile, azurePath),
-          accountConfig.getMaxTries()
-      );
+      return uploadDataSegment(segment, binaryVersion, size, outFile, azurePath);
     }
     catch (Exception e) {
       throw new RuntimeException(e);
@@ -181,9 +178,9 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
       final File compressedSegmentData,
       final String azurePath
   )
-      throws StorageException, IOException, URISyntaxException
+      throws BlobStorageException, IOException
   {
-    azureStorage.uploadBlockBlob(compressedSegmentData, segmentConfig.getContainer(), azurePath);
+    azureStorage.uploadBlockBlob(compressedSegmentData, segmentConfig.getContainer(), azurePath, accountConfig.getMaxTries());
 
     final DataSegment outSegment = segment
         .withSize(size)

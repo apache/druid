@@ -1,0 +1,146 @@
+# testGroupByTimeFloorAndDimOnGroupByTimeFloorAndDim@NullHandling=sql case-crc:d9fe7bd2
+# quidem testcase reason: IMPROVED_PLAN
+!set debug true
+!set defaultTimeout 300000
+!set maxScatterGatherBytes 9223372036854775807
+!set plannerStrategy DECOUPLED
+!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set sqlQueryId dummy
+!set outputformat mysql
+!use druidtest:///
+SELECT dim2, time_floor(gran, 'P1M') gran, sum(s)
+FROM (SELECT time_floor(__time, 'P1D') AS gran, dim2, sum(m1) as s FROM druid.foo GROUP BY 1, 2 HAVING sum(m1) > 1) AS x
+GROUP BY 1, 2
+ORDER BY dim2, gran desc;
++------+-------------------------+--------+
+| dim2 | gran                    | EXPR$2 |
++------+-------------------------+--------+
+|      | 2001-01-01 00:00:00.000 |    6.0 |
+|      | 2000-01-01 00:00:00.000 |    2.0 |
+|      | 2000-01-01 00:00:00.000 |    3.0 |
+| a    | 2001-01-01 00:00:00.000 |    4.0 |
+| abc  | 2001-01-01 00:00:00.000 |    5.0 |
++------+-------------------------+--------+
+(5 rows)
+
+!ok
+LogicalSort(sort0=[$0], sort1=[$1], dir0=[ASC], dir1=[DESC])
+  LogicalAggregate(group=[{0, 1}], EXPR$2=[SUM($2)])
+    LogicalProject(dim2=[$1], gran=[TIME_FLOOR($0, 'P1M')], s=[$2])
+      LogicalFilter(condition=[>($2, 1)])
+        LogicalAggregate(group=[{0, 1}], s=[SUM($2)])
+          LogicalProject(gran=[TIME_FLOOR($0, 'P1D')], dim2=[$2], m1=[$5])
+            LogicalTableScan(table=[[druid, foo]])
+
+!logicalPlan
+DruidSort(sort0=[$0], sort1=[$1], dir0=[ASC], dir1=[DESC], druid=[logical])
+  DruidAggregate(group=[{0, 1}], EXPR$2=[SUM($2)], druid=[logical])
+    DruidProject(dim2=[$1], gran=[TIME_FLOOR($0, 'P1M')], s=[$2], druid=[logical])
+      DruidFilter(condition=[>($2, 1)])
+        DruidAggregate(group=[{0, 1}], s=[SUM($2)], druid=[logical])
+          DruidProject(gran=[TIME_FLOOR($0, 'P1D')], dim2=[$2], m1=[$5], druid=[logical])
+            DruidTableScan(table=[[druid, foo]], druid=[logical])
+
+!druidPlan
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "query",
+    "query" : {
+      "queryType" : "groupBy",
+      "dataSource" : {
+        "type" : "table",
+        "name" : "foo"
+      },
+      "intervals" : {
+        "type" : "intervals",
+        "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      },
+      "virtualColumns" : [ {
+        "type" : "expression",
+        "name" : "v0",
+        "expression" : "timestamp_floor(\"__time\",'P1D',null,'UTC')",
+        "outputType" : "LONG"
+      } ],
+      "granularity" : {
+        "type" : "all"
+      },
+      "dimensions" : [ {
+        "type" : "default",
+        "dimension" : "v0",
+        "outputName" : "d0",
+        "outputType" : "LONG"
+      }, {
+        "type" : "default",
+        "dimension" : "dim2",
+        "outputName" : "d1",
+        "outputType" : "STRING"
+      } ],
+      "aggregations" : [ {
+        "type" : "doubleSum",
+        "name" : "a0",
+        "fieldName" : "m1"
+      } ],
+      "having" : {
+        "type" : "filter",
+        "filter" : {
+          "type" : "range",
+          "column" : "a0",
+          "matchValueType" : "LONG",
+          "lower" : 1,
+          "lowerOpen" : true
+        },
+        "finalize" : true
+      },
+      "limitSpec" : {
+        "type" : "NoopLimitSpec"
+      }
+    }
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "timestamp_floor(\"d0\",'P1M',null,'UTC')",
+    "outputType" : "LONG"
+  } ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "d1",
+    "outputName" : "_d0",
+    "outputType" : "STRING"
+  }, {
+    "type" : "default",
+    "dimension" : "v0",
+    "outputName" : "_d1",
+    "outputType" : "LONG"
+  } ],
+  "aggregations" : [ {
+    "type" : "doubleSum",
+    "name" : "_a0",
+    "fieldName" : "a0"
+  } ],
+  "limitSpec" : {
+    "type" : "default",
+    "columns" : [ {
+      "dimension" : "_d0",
+      "direction" : "ascending",
+      "dimensionOrder" : {
+        "type" : "lexicographic"
+      }
+    }, {
+      "dimension" : "_d1",
+      "direction" : "descending",
+      "dimensionOrder" : {
+        "type" : "numeric"
+      }
+    } ]
+  }
+}
+!nativePlan

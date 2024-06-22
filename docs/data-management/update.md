@@ -24,7 +24,7 @@ title: "Data updates"
 
 ## Overwrite
 
-Apache Druid stores data [partitioned by time chunk](../design/architecture.md#datasources-and-segments) and supports
+Apache Druid stores data [partitioned by time chunk](../design/storage.md) and supports
 overwriting existing data using time ranges. Data outside the replacement time range is not touched. Overwriting of
 existing data is done using the same mechanisms as [batch ingestion](../ingestion/index.md#batch).
 

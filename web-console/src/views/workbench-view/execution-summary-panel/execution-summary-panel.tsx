@@ -16,13 +16,14 @@
  * limitations under the License.
  */
 
-import { Button, ButtonGroup, Menu, MenuDivider, MenuItem, Position } from '@blueprintjs/core';
+import { Button, ButtonGroup, Menu, MenuItem, Position } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
 import type { JSX } from 'react';
 import React, { useState } from 'react';
 
 import type { Execution } from '../../../druid-models';
+import type { Format } from '../../../utils';
 import {
   copyQueryResultsToClipboard,
   downloadQueryResults,
@@ -36,6 +37,7 @@ import './execution-summary-panel.scss';
 
 export interface ExecutionSummaryPanelProps {
   execution: Execution | undefined;
+  queryErrorDuration: number | undefined;
   onExecutionDetail(): void;
   onReset?: () => void;
 }
@@ -43,11 +45,21 @@ export interface ExecutionSummaryPanelProps {
 export const ExecutionSummaryPanel = React.memo(function ExecutionSummaryPanel(
   props: ExecutionSummaryPanelProps,
 ) {
-  const { execution, onExecutionDetail, onReset } = props;
+  const { execution, queryErrorDuration, onExecutionDetail, onReset } = props;
   const [showDestinationPages, setShowDestinationPages] = useState(false);
   const queryResult = execution?.result;
 
   const buttons: JSX.Element[] = [];
+
+  if (typeof queryErrorDuration === 'number') {
+    buttons.push(
+      <Button
+        key="timing"
+        minimal
+        text={`Error after ${formatDurationHybrid(queryErrorDuration)}`}
+      />,
+    );
+  }
 
   if (queryResult) {
     const wrapQueryLimit = queryResult.getSqlOuterLimit();
@@ -65,11 +77,11 @@ export const ExecutionSummaryPanel = React.memo(function ExecutionSummaryPanel(
 
     const warningCount = execution?.stages?.getWarningCount();
 
-    const handleDownload = (format: string) => {
+    const handleDownload = (format: Format) => {
       downloadQueryResults(queryResult, `results-${execution.id}.${format}`, format);
     };
 
-    const handleCopy = (format: string) => {
+    const handleCopy = (format: Format) => {
       copyQueryResultsToClipboard(queryResult, format);
     };
 
@@ -102,14 +114,18 @@ export const ExecutionSummaryPanel = React.memo(function ExecutionSummaryPanel(
           className="download-button"
           content={
             <Menu>
-              <MenuDivider title="Download results as..." />
-              <MenuItem text="CSV" onClick={() => handleDownload('csv')} />
-              <MenuItem text="TSV" onClick={() => handleDownload('tsv')} />
-              <MenuItem text="JSON (new line delimited)" onClick={() => handleDownload('json')} />
-              <MenuDivider title="Copy to clipboard as..." />
-              <MenuItem text="CSV" onClick={() => handleCopy('csv')} />
-              <MenuItem text="TSV" onClick={() => handleCopy('tsv')} />
-              <MenuItem text="JSON (new line delimited)" onClick={() => handleCopy('json')} />
+              <MenuItem text="Download results as...">
+                <MenuItem text="CSV" onClick={() => handleDownload('csv')} />
+                <MenuItem text="TSV" onClick={() => handleDownload('tsv')} />
+                <MenuItem text="JSON (new line delimited)" onClick={() => handleDownload('json')} />
+                <MenuItem text="SQL (VALUES)" onClick={() => handleDownload('sql')} />
+              </MenuItem>
+              <MenuItem text="Copy to clipboard as...">
+                <MenuItem text="CSV" onClick={() => handleCopy('csv')} />
+                <MenuItem text="TSV" onClick={() => handleCopy('tsv')} />
+                <MenuItem text="JSON (new line delimited)" onClick={() => handleCopy('json')} />
+                <MenuItem text="SQL (VALUES)" onClick={() => handleCopy('sql')} />
+              </MenuItem>
             </Menu>
           }
           position={Position.BOTTOM_RIGHT}

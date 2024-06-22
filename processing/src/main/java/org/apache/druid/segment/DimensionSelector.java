@@ -19,11 +19,12 @@
 
 package org.apache.druid.segment;
 
-import com.google.common.base.Predicate;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.query.extraction.ExtractionFn;
+import org.apache.druid.query.filter.DruidObjectPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
+import org.apache.druid.query.filter.DruidPredicateMatch;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.CalledFromHotLoop;
 import org.apache.druid.query.monomorphicprocessing.HotLoopCallee;
@@ -271,12 +272,16 @@ public interface DimensionSelector extends ColumnValueSelector<Object>, Dimensio
       @Override
       public ValueMatcher makeValueMatcher(DruidPredicateFactory predicateFactory)
       {
-        final Predicate<String> predicate = predicateFactory.makeStringPredicate();
-        if (predicate.apply(null)) {
+        final DruidObjectPredicate<String> predicate = predicateFactory.makeStringPredicate();
+        final DruidPredicateMatch match = predicate.apply(null);
+
+        if (match == DruidPredicateMatch.TRUE) {
           return ValueMatchers.allTrue();
         }
-
-        return predicateFactory.isNullInputUnknown() ? ValueMatchers.allUnknown() : ValueMatchers.allFalse();
+        if (match == DruidPredicateMatch.UNKNOWN) {
+          return ValueMatchers.allUnknown();
+        }
+        return ValueMatchers.allFalse();
       }
 
       @Override

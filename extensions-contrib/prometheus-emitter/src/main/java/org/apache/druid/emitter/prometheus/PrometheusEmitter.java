@@ -69,7 +69,13 @@ public class PrometheusEmitter implements Emitter
   {
     this.config = config;
     this.strategy = config.getStrategy();
-    metrics = new Metrics(config.getNamespace(), config.getDimensionMapPath(), config.isAddHostAsLabel(), config.isAddServiceAsLabel(), config.getExtraLabels());
+    metrics = new Metrics(
+        config.getNamespace(),
+        config.getDimensionMapPath(),
+        config.isAddHostAsLabel(),
+        config.isAddServiceAsLabel(),
+        config.getExtraLabels()
+    );
   }
 
 
@@ -164,7 +170,8 @@ public class PrometheusEmitter implements Emitter
       } else if (metric.getCollector() instanceof Gauge) {
         ((Gauge) metric.getCollector()).labels(labelValues).set(value.doubleValue());
       } else if (metric.getCollector() instanceof Histogram) {
-        ((Histogram) metric.getCollector()).labels(labelValues).observe(value.doubleValue() / metric.getConversionFactor());
+        ((Histogram) metric.getCollector()).labels(labelValues)
+                                           .observe(value.doubleValue() / metric.getConversionFactor());
       } else {
         log.error("Unrecognized metric type [%s]", metric.getCollector().getClass());
       }
@@ -202,11 +209,36 @@ public class PrometheusEmitter implements Emitter
   {
     if (strategy.equals(PrometheusEmitterConfig.Strategy.exporter)) {
       if (server != null) {
-        server.stop();
+        server.close();
       }
     } else {
       exec.shutdownNow();
       flush();
+
+      try {
+        if (config.getWaitForShutdownDelay().getMillis() > 0) {
+          log.info("Waiting [%s]ms before deleting metrics from the push gateway.", config.getWaitForShutdownDelay().getMillis());
+          Thread.sleep(config.getWaitForShutdownDelay().getMillis());
+        }
+      }
+      catch (InterruptedException e) {
+        log.error(e, "Interrupted while waiting for shutdown delay. Deleting metrics from the push gateway now.");
+      }
+      finally {
+        deletePushGatewayMetrics();
+      }
+    }
+  }
+
+  private void deletePushGatewayMetrics()
+  {
+    if (pushGateway != null && config.isDeletePushGatewayMetricsOnShutdown()) {
+      try {
+        pushGateway.delete(config.getNamespace(), ImmutableMap.of(config.getNamespace(), identifier));
+      }
+      catch (IOException e) {
+        log.error(e, "Unable to delete prometheus metrics from push gateway");
+      }
     }
   }
 

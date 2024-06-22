@@ -46,6 +46,10 @@ import org.junit.runners.Parameterized;
 import java.io.Closeable;
 import java.util.List;
 
+/**
+ * Classic {@link BoundFilter} test. Consider adding tests to {@link RangeFilterTests} in addition to, or instead of
+ * here.
+ */
 @RunWith(Parameterized.class)
 public class BoundFilterTest extends BaseFilterTest
 {
@@ -812,6 +816,22 @@ public class BoundFilterTest extends BaseFilterTest
         ? ImmutableList.of("0", "3", "7")
         : ImmutableList.of("0")
     );
+
+    assertFilterMatches(
+        new BoundDimFilter(
+            "vd0-nvl-2",
+            "0",
+            null,
+            true,
+            false,
+            false,
+            null,
+            StringComparators.NUMERIC
+        ),
+        NullHandling.replaceWithDefault()
+        ? ImmutableList.of("1", "3", "4", "5", "6")
+        : ImmutableList.of("1", "2", "3", "4", "5", "6", "7")
+    );
   }
 
   @Test
@@ -895,8 +915,7 @@ public class BoundFilterTest extends BaseFilterTest
                   .withIgnoredFields(
                       "longPredicateSupplier",
                       "floatPredicateSupplier",
-                      "doublePredicateSupplier",
-                      "isNullUnknown"
+                      "doublePredicateSupplier"
                   )
                   .verify();
   }

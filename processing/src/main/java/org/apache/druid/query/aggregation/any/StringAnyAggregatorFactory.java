@@ -27,13 +27,14 @@ import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
-import org.apache.druid.query.aggregation.first.StringFirstAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.first.StringFirstAggregatorFactory;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
@@ -89,6 +90,7 @@ public class StringAnyAggregatorFactory extends AggregatorFactory
   {
     ColumnCapabilities capabilities = selectorFactory.getColumnCapabilities(fieldName);
     // null capabilities mean the column doesn't exist, so in vector engines the selector will never be multi-value
+    // canVectorize ensures that nonnull capabilities => dict-encoded string
     if (capabilities != null && capabilities.hasMultipleValues().isMaybeTrue()) {
       return new StringAnyVectorAggregator(
           null,
@@ -109,7 +111,9 @@ public class StringAnyAggregatorFactory extends AggregatorFactory
   @Override
   public boolean canVectorize(ColumnInspector columnInspector)
   {
-    return true;
+    final ColumnCapabilities capabilities = columnInspector.getColumnCapabilities(fieldName);
+    return capabilities == null
+           || (capabilities.is(ValueType.STRING) && capabilities.isDictionaryEncoded().isTrue());
   }
 
   @Override

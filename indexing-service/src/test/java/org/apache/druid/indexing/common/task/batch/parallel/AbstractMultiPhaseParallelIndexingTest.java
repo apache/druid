@@ -29,6 +29,7 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.task.Task;
@@ -48,15 +49,14 @@ import org.apache.druid.query.scan.ScanQueryQueryToolChest;
 import org.apache.druid.query.scan.ScanQueryRunnerFactory;
 import org.apache.druid.query.scan.ScanResultValue;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
+import org.apache.druid.segment.DataSegmentsWithSchemas;
 import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.SegmentLazyLoadFailCallback;
+import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.loading.SegmentCacheManager;
-import org.apache.druid.segment.loading.SegmentLoader;
 import org.apache.druid.segment.loading.SegmentLoadingException;
-import org.apache.druid.segment.loading.SegmentLocalCacheLoader;
 import org.apache.druid.segment.loading.TombstoneLoadSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
@@ -66,8 +66,6 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 @SuppressWarnings("SameParameterValue")
 abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIndexSupervisorTaskTest
@@ -109,7 +107,7 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
     return useInputFormatApi;
   }
 
-  Set<DataSegment> runTestTask(
+  DataSegmentsWithSchemas runTestTask(
       @Nullable TimestampSpec timestampSpec,
       @Nullable DimensionsSpec dimensionsSpec,
       @Nullable InputFormat inputFormat,
@@ -138,7 +136,7 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
     );
   }
 
-  Set<DataSegment> runTestTask(
+  DataSegmentsWithSchemas runTestTask(
       @Nullable TimestampSpec timestampSpec,
       @Nullable DimensionsSpec dimensionsSpec,
       @Nullable InputFormat inputFormat,
@@ -177,13 +175,13 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
     Assert.assertEquals("Actual task status: " + taskStatus, expectedTaskStatus, taskStatus.getStatusCode());
   }
 
-  Set<DataSegment> runTask(Task task, TaskState expectedTaskStatus)
+  DataSegmentsWithSchemas runTask(Task task, TaskState expectedTaskStatus)
   {
     runTaskAndVerifyStatus(task, expectedTaskStatus);
-    return getIndexingServiceClient().getPublishedSegments(task);
+    return getIndexingServiceClient().getSegmentAndSchemas(task);
   }
 
-  Map<String, Object> runTaskAndGetReports(Task task, TaskState expectedTaskStatus)
+  TaskReport.ReportMap runTaskAndGetReports(Task task, TaskState expectedTaskStatus)
   {
     runTaskAndVerifyStatus(task, expectedTaskStatus);
     return FutureUtils.getUnchecked(getIndexingServiceClient().taskReportAsMap(task.getId()), true);
@@ -296,6 +294,7 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
                 null,
                 columns,
                 false,
+                null,
                 null
             )
         )
@@ -304,11 +303,10 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
 
   private Segment loadSegment(DataSegment dataSegment, File tempSegmentDir)
   {
-    final SegmentCacheManager cacheManager = new SegmentCacheManagerFactory(getObjectMapper())
+    final SegmentCacheManager cacheManager = new SegmentCacheManagerFactory(TestIndex.INDEX_IO, getObjectMapper())
         .manufacturate(tempSegmentDir);
-    final SegmentLoader loader = new SegmentLocalCacheLoader(cacheManager, getIndexIO(), getObjectMapper());
     try {
-      return loader.getSegment(dataSegment, false, SegmentLazyLoadFailCallback.NOOP);
+      return cacheManager.getSegment(dataSegment);
     }
     catch (SegmentLoadingException e) {
       throw new RuntimeException(e);

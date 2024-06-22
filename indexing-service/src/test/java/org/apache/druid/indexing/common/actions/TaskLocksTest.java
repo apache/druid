@@ -338,6 +338,17 @@ public class TaskLocksTest
   }
 
   @Test
+  public void testLockTypeForAppendUsingConcurrentLocks()
+  {
+    Assert.assertEquals(
+        TaskLockType.APPEND,
+        TaskLocks.determineLockTypeForAppend(
+            ImmutableMap.of(Tasks.USE_CONCURRENT_LOCKS, true)
+        )
+    );
+  }
+
+  @Test
   public void testLockTypeForAppendWithLockTypeInContext()
   {
     Assert.assertEquals(

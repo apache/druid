@@ -26,7 +26,7 @@ Druid includes a web console for loading data, managing datasources and tasks, a
 You can also run SQL and native Druid queries in the console.
 
 Enable the following cluster settings to use the web console. Note that these settings are enabled by default.
-- Enable the Router's [management proxy](../design/router.md#enabling-the-management-proxy).
+- Enable the Router's [management proxy](../design/router.md#enable-the-management-proxy).
 - Enable [Druid SQL](../configuration/index.md#sql) for the Broker processes in the cluster.
 
 The [Router](../design/router.md) service hosts the web console.

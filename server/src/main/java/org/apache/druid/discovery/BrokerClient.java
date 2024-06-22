@@ -33,7 +33,6 @@ import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
-import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -88,16 +87,15 @@ public class BrokerClient
             throw DruidException.forPersona(DruidException.Persona.OPERATOR)
                                 .ofCategory(DruidException.Category.RUNTIME_FAILURE)
                                 .build("Request to broker failed due to failed response status: [%s]", responseStatus);
-          } else if (responseStatus.getCode() != HttpServletResponse.SC_OK) {
-            throw DruidException.forPersona(DruidException.Persona.OPERATOR)
-                                .ofCategory(DruidException.Category.RUNTIME_FAILURE)
-                                .build("Request to broker failed due to failed response code: [%s]", responseStatus.getCode());
           }
           return fullResponseHolder.getContent();
         },
         (throwable) -> {
           if (throwable instanceof ExecutionException) {
             return throwable.getCause() instanceof IOException || throwable.getCause() instanceof ChannelException;
+          }
+          if (throwable instanceof DruidException) {
+            return ((DruidException) throwable).getCategory() == DruidException.Category.RUNTIME_FAILURE;
           }
           return throwable instanceof IOE;
         },
@@ -116,7 +114,7 @@ public class BrokerClient
     catch (MalformedURLException e) {
       // Not an IOException; this is our own fault.
       throw DruidException.defensive(
-          "Failed to build url with path[%] and query string [%s].",
+          "Failed to build url with path[%s] and query string [%s].",
           oldRequest.getUrl().getPath(),
           oldRequest.getUrl().getQuery()
       );

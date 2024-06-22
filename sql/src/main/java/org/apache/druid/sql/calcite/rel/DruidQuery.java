@@ -90,8 +90,6 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.Types;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.DimensionExpression;
@@ -108,6 +106,7 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -129,7 +128,10 @@ public class DruidQuery
 {
   /**
    * Native query context key that is set when {@link EngineFeature#SCAN_NEEDS_SIGNATURE}.
+   *
+   * {@link Deprecated} Instead of the context value {@link ScanQuery#getRowSignature()} can be used.
    */
+  @Deprecated
   public static final String CTX_SCAN_SIGNATURE = "scanSignature";
 
   /**
@@ -482,15 +484,16 @@ public class DruidQuery
 
       final RelDataType dataType = rexNode.getType();
       final ColumnType outputType = Calcites.getColumnTypeForRelDataType(dataType);
-      if (Types.isNullOr(outputType, ValueType.COMPLEX)) {
-        // Can't group on unknown or COMPLEX types.
-        plannerContext.setPlanningError(
-            "SQL requires a group-by on a column of type %s that is unsupported.",
-            outputType
-        );
+      if (outputType == null) {
+        // Can't group on unknown types.
+        plannerContext.setPlanningError("SQL requires a group-by on a column with unknown type that is unsupported.");
         throw new CannotBuildQueryException(aggregate, rexNode);
       }
-
+      if (!outputType.getNullableStrategy().groupable()) {
+        // Can't group on 'ungroupable' types.
+        plannerContext.setPlanningError("SQL requires a group-by on a column with type [%s] that is unsupported.", outputType);
+        throw new CannotBuildQueryException(aggregate, rexNode);
+      }
       final String dimOutputName = outputNamePrefix + outputNameCounter++;
       if (!druidExpression.isSimpleExtraction()) {
         final String virtualColumn = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
@@ -587,10 +590,9 @@ public class DruidQuery
           virtualColumnRegistry,
           rexBuilder,
           InputAccessor.buildFor(
-              rexBuilder,
-              rowSignature,
+              aggregate,
               partialQuery.getSelectProject(),
-              null),
+              rowSignature),
           aggregations,
           aggName,
           aggCall,
@@ -1076,6 +1078,12 @@ public class DruidQuery
           virtualColumnRegistry,
           plannerContext.getJoinableFactoryWrapper()
       );
+
+      if (!getVirtualColumns(true).isEmpty()) {
+        // timeBoundary query does not support virtual columns.
+        return null;
+      }
+
       final DataSource newDataSource = dataSourceFiltrationPair.lhs;
       final Filtration filtration = dataSourceFiltrationPair.rhs;
       String bound = minTime ? TimeBoundaryQuery.MIN_TIME : TimeBoundaryQuery.MAX_TIME;
@@ -1247,8 +1255,9 @@ public class DruidQuery
     }
 
     final DimensionSpec dimensionSpec = Iterables.getOnlyElement(grouping.getDimensions()).toDimensionSpec();
-    // grouping col cannot be type array
-    if (dimensionSpec.getOutputType().isArray()) {
+    // TopN queries can't handle arrays or complex dimensions. Return's null so that they get planned as a group by query
+    // which does support complex and array dimensions
+    if (!dimensionSpec.getOutputType().isPrimitive()) {
       return null;
     }
     final OrderByColumnSpec limitColumn;
@@ -1476,13 +1485,18 @@ public class DruidQuery
           .addAll(windowing.getOperators())
           .build();
     }
+    // if planning in native set to null
+    // if planning in MSQ set to empty list
+    // This would cause MSQ queries to plan as
+    // Window over an inner scan and avoid
+    // leaf operators
     return new WindowOperatorQuery(
         dataSource,
         new LegacySegmentSpec(Intervals.ETERNITY),
         plannerContext.queryContextMap(),
         windowing.getSignature(),
         operators,
-        null
+        plannerContext.featureAvailable(EngineFeature.WINDOW_LEAF_OPERATOR) ? ImmutableList.of() : null
     );
   }
 
@@ -1494,7 +1508,7 @@ public class DruidQuery
   {
     if (sorting == null
         || sorting.getOrderBys().isEmpty()
-        || sorting.getProjection() != null) {
+        || (sorting.getProjection() != null && !sorting.getProjection().getVirtualColumns().isEmpty())) {
       return null;
     }
 
@@ -1505,13 +1519,7 @@ public class DruidQuery
 
     if (dataSource.isConcrete()) {
       // Currently only non-time orderings of subqueries are allowed.
-      List<String> orderByColumnNames = sorting.getOrderBys()
-          .stream().map(OrderByColumnSpec::getDimension)
-          .collect(Collectors.toList());
-      plannerContext.setPlanningError(
-          "SQL query requires ordering a table by non-time column [%s], which is not supported.",
-          orderByColumnNames
-      );
+      setPlanningErrorOrderByNonTimeIsUnsupported();
       return null;
     }
 
@@ -1521,13 +1529,25 @@ public class DruidQuery
     List<OperatorFactory> operators = new ArrayList<>();
 
     operators.add(new NaiveSortOperatorFactory(sortColumns));
-    if (!sorting.getOffsetLimit().isNone()) {
+
+
+    final Projection projection = sorting.getProjection();
+
+    final org.apache.druid.query.operator.OffsetLimit offsetLimit = sorting.getOffsetLimit().isNone()
+        ? null
+        : sorting.getOffsetLimit().toOperatorOffsetLimit();
+
+    final List<String> projectedColumns = projection == null
+        ? null
+        : projection.getOutputRowSignature().getColumnNames();
+
+    if (offsetLimit != null || projectedColumns != null) {
       operators.add(
           new ScanOperatorFactory(
               null,
               null,
-              sorting.getOffsetLimit().toOperatorOffsetLimit(),
-              null,
+              offsetLimit,
+              projectedColumns,
               null,
               null
           )
@@ -1541,6 +1561,17 @@ public class DruidQuery
         signature,
         operators,
         null
+    );
+  }
+
+  private void setPlanningErrorOrderByNonTimeIsUnsupported()
+  {
+    List<String> orderByColumnNames = sorting.getOrderBys()
+        .stream().map(OrderByColumnSpec::getDimension)
+        .collect(Collectors.toList());
+    plannerContext.setPlanningError(
+        "SQL query requires ordering a table by non-time column [%s], which is not supported.",
+        orderByColumnNames
     );
   }
 
@@ -1571,7 +1602,8 @@ public class DruidQuery
 
     if (outputRowSignature.size() == 0) {
       // Should never do a scan query without any columns that we're interested in. This is probably a planner bug.
-      throw new ISE("Cannot convert to Scan query without any columns.");
+      this.plannerContext.setPlanningError("Cannot convert to Scan query without any columns.");
+      return null;
     }
 
     final Pair<DataSource, Filtration> dataSourceFiltrationPair = getFiltration(
@@ -1623,10 +1655,7 @@ public class DruidQuery
         // potential branches of exploration rather than being a semantic requirement of the query itself.  So, it is
         // not safe to send an error message telling the end-user exactly what is happening, instead we need to set the
         // planning error and hope.
-        plannerContext.setPlanningError(
-            "SQL query requires order by non-time column [%s], which is not supported.",
-            orderByColumns
-        );
+        setPlanningErrorOrderByNonTimeIsUnsupported();
         return null;
       }
     }
@@ -1655,14 +1684,18 @@ public class DruidQuery
             virtualColumns,
             scanColumnsList,
             plannerContext.queryContextMap()
-        )
+        ),
+        outputRowSignature.buildSafeSignature(scanColumnsList).getColumnTypes()
     );
   }
 
   /**
    * Returns a copy of "queryContext" with {@link #CTX_SCAN_SIGNATURE} added if the execution context has the
    * {@link EngineFeature#SCAN_NEEDS_SIGNATURE} feature.
+   *
+   * {@link Deprecated} Instead of the context value {@link ScanQuery#getRowSignature()} can be used.
    */
+  @Deprecated
   private Map<String, Object> withScanSignatureIfNeeded(
       final VirtualColumns virtualColumns,
       final List<String> scanColumns,
@@ -1672,22 +1705,7 @@ public class DruidQuery
     if (!plannerContext.featureAvailable(EngineFeature.SCAN_NEEDS_SIGNATURE)) {
       return queryContext;
     }
-    // Compute the signature of the columns that we are selecting.
-    final RowSignature.Builder scanSignatureBuilder = RowSignature.builder();
-
-    for (final String columnName : scanColumns) {
-      final ColumnCapabilities capabilities =
-          virtualColumns.getColumnCapabilitiesWithFallback(sourceRowSignature, columnName);
-
-      if (capabilities == null) {
-        // No type for this column. This is a planner bug.
-        throw new ISE("No type for column [%s]", columnName);
-      }
-
-      scanSignatureBuilder.add(columnName, capabilities.toColumnType());
-    }
-
-    final RowSignature signature = scanSignatureBuilder.build();
+    final RowSignature signature = buildRowSignature(virtualColumns, scanColumns);
 
     try {
       Map<String, Object> revised = new HashMap<>(queryContext);
@@ -1700,5 +1718,23 @@ public class DruidQuery
     catch (JsonProcessingException e) {
       throw new RuntimeException(e);
     }
+  }
+
+  private RowSignature buildRowSignature(final VirtualColumns virtualColumns, final List<String> columns)
+  {
+    // Compute the signature of the columns that we are selecting.
+    final RowSignature.Builder builder = RowSignature.builder();
+
+    for (final String columnName : columns) {
+      final ColumnCapabilities capabilities =
+          virtualColumns.getColumnCapabilitiesWithFallback(sourceRowSignature, columnName);
+
+      if (capabilities == null) {
+        // No type for this column. This is a planner bug.
+        throw new ISE("No type for column [%s]", columnName);
+      }
+      builder.add(columnName, capabilities.toColumnType());
+    }
+    return builder.build();
   }
 }

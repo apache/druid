@@ -35,7 +35,7 @@ public class DoubleTopNColumnAggregatesProcessor
 {
   private Long2ObjectMap<Aggregator[]> aggregatesStore;
 
-  protected DoubleTopNColumnAggregatesProcessor(Function<Object, Comparable<?>> converter)
+  protected DoubleTopNColumnAggregatesProcessor(Function<Object, Object> converter)
   {
     super(converter);
   }
@@ -68,7 +68,7 @@ public class DoubleTopNColumnAggregatesProcessor
   }
 
   @Override
-  Comparable<?> convertAggregatorStoreKeyToColumnValue(Object aggregatorStoreKey)
+  Object convertAggregatorStoreKeyToColumnValue(Object aggregatorStoreKey)
   {
     return converter.apply(Double.longBitsToDouble((Long) aggregatorStoreKey));
   }

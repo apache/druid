@@ -19,8 +19,11 @@
 
 package org.apache.druid.java.util.http.client.response;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
@@ -55,5 +58,18 @@ public class BytesFullResponseHolder extends FullResponseHolder<byte[]>
     }
 
     return buf.array();
+  }
+
+  /**
+   * Deserialize a {@link BytesFullResponseHolder} as JSON.
+   */
+  public <T> T deserialize(final ObjectMapper jsonMapper, final TypeReference<T> typeReference)
+  {
+    try {
+      return jsonMapper.readValue(getContent(), typeReference);
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
   }
 }

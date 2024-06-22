@@ -20,9 +20,10 @@
 package org.apache.druid.query.dimension;
 
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
-import org.apache.druid.common.config.NullHandling;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.query.filter.DruidObjectPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.StringPredicateDruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
@@ -129,9 +130,13 @@ final class ForwardingFilteredDimensionSelector extends AbstractDimensionSelecto
   @Override
   public ValueMatcher makeValueMatcher(DruidPredicateFactory predicateFactory)
   {
-    final Predicate<String> predicate = predicateFactory.makeStringPredicate();
-    final BitSet valueIds = DimensionSelectorUtils.makePredicateMatchingSet(this, predicate);
-    final boolean predicateMatchesNull = predicate.apply(null);
+    final DruidObjectPredicate<String> predicate = predicateFactory.makeStringPredicate();
+    final Supplier<BitSet> valueIds = Suppliers.memoize(
+        () -> DimensionSelectorUtils.makePredicateMatchingSet(this, predicate, false)
+    );
+    final Supplier<BitSet> valueIdsWithUnknown = Suppliers.memoize(
+        () -> DimensionSelectorUtils.makePredicateMatchingSet(this, predicate, true)
+    );
     return new ValueMatcher()
     {
       @Override
@@ -142,20 +147,20 @@ final class ForwardingFilteredDimensionSelector extends AbstractDimensionSelecto
         boolean nullRow = true;
         for (int i = 0; i < baseRowSize; ++i) {
           final int baseId = baseRow.get(i);
-
-          if (includeUnknown && NullHandling.isNullOrEquivalent(selector.lookupName(baseId))) {
-            return true;
-          }
           int forwardedValue = idMapping.getForwardedId(baseId);
           if (forwardedValue >= 0) {
-            if (valueIds.get(forwardedValue)) {
+            if (includeUnknown) {
+              if (valueIdsWithUnknown.get().get(forwardedValue)) {
+                return true;
+              }
+            } else if (valueIds.get().get(forwardedValue)) {
               return true;
             }
             nullRow = false;
           }
         }
         // null should match empty rows in multi-value columns
-        return nullRow && (includeUnknown || predicateMatchesNull);
+        return nullRow && predicate.apply(null).matches(includeUnknown);
       }
 
       @Override

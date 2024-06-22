@@ -21,24 +21,21 @@ title: "Apache Ranger Security"
   ~ specific language governing permissions and limitations
   ~ under the License.
   -->
-  
+
 This Apache Druid extension adds an Authorizer which implements access control for Druid, backed by [Apache Ranger](https://ranger.apache.org/). Please see [Authentication and Authorization](../../operations/auth.md) for more information on the basic facilities this extension provides.
 
 Make sure to [include](../../configuration/extensions.md#loading-extensions) `druid-ranger-security` in the extensions load list.
 
-:::info
- The latest release of Apache Ranger is at the time of writing version 2.0. This version has a dependency on `log4j 1.2.17` which has a vulnerability if you configure it to use a `SocketServer` (CVE-2019-17571). Next to that, it also includes Kafka 2.0.0 which has 2 known vulnerabilities (CVE-2019-12399, CVE-2018-17196). Kafka can be used by the audit component in Ranger, but is not required.
-:::
 
 ## Configuration
 
-Support for Apache Ranger authorization consists of three elements: 
+Support for Apache Ranger authorization consists of three elements:
 * configuring the extension in Apache Druid
 * configuring the connection to Apache Ranger
 * providing the service definition for Druid to Apache Ranger
- 
+
 ### Enabling the extension
-Ensure that you have a valid authenticator chain and escalator set in your `common.runtime.properties`. For every authenticator your wish to use the authorizer for, set `druid.auth.authenticator.<authenticatorName>.authorizerName` to the name you will give the authorizer, e.g. `ranger`. 
+Ensure that you have a valid authenticator chain and escalator set in your `common.runtime.properties`. For every authenticator your wish to use the authorizer for, set `druid.auth.authenticator.<authenticatorName>.authorizerName` to the name you will give the authorizer, e.g. `ranger`.
 
 Then add the following and amend to your needs (in case you need to use multiple authorizers):
 

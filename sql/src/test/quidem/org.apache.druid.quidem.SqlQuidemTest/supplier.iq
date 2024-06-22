@@ -1,0 +1,39 @@
+!use druidtest://?componentSupplier=NestedComponentSupplier
+!set outputformat mysql
+
+select count(1) from nested;
++--------+
+| EXPR$0 |
++--------+
+|      7 |
++--------+
+(1 row)
+
+!ok
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "nested"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ]
+}
+!nativePlan
+LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
+  LogicalTableScan(table=[[druid, nested]])
+
+!convertedPlan
+LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
+  LogicalTableScan(table=[[druid, nested]])
+
+!logicalPlan

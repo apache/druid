@@ -27,7 +27,7 @@
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>29.0.0-SNAPSHOT</version>
+        <version>31.0.0-SNAPSHOT</version>
     </parent>
 
     <dependencies>
@@ -94,10 +94,6 @@
         <dependency>
             <groupId>org.eclipse.jetty</groupId>
             <artifactId>jetty-server</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.curator</groupId>
-            <artifactId>curator-framework</artifactId>
         </dependency>
         <dependency>
             <groupId>org.apache.calcite.avatica</groupId>

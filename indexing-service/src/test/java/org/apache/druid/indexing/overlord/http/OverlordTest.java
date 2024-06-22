@@ -31,6 +31,7 @@ import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.RetryOneTime;
 import org.apache.curator.test.TestingServer;
 import org.apache.curator.test.Timing;
+import org.apache.druid.audit.AuditManager;
 import org.apache.druid.curator.PotentiallyGzippedCompressionProvider;
 import org.apache.druid.curator.discovery.LatchableServiceAnnouncer;
 import org.apache.druid.discovery.DruidLeaderSelector;
@@ -44,6 +45,7 @@ import org.apache.druid.indexing.common.actions.SegmentAllocationQueue;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.task.NoopTask;
+import org.apache.druid.indexing.common.task.NoopTaskContextEnricher;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.HeapMemoryTaskStorage;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageAdapter;
@@ -64,6 +66,7 @@ import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
 import org.apache.druid.indexing.overlord.duty.OverlordDutyExecutor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.indexing.test.TestIndexerMetadataStorageCoordinator;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -148,11 +151,18 @@ public class OverlordTest
   public void setUp() throws Exception
   {
     req = EasyMock.createMock(HttpServletRequest.class);
-    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).anyTimes();
-    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).anyTimes();
+    EasyMock.expect(req.getHeader(AuditManager.X_DRUID_AUTHOR)).andReturn("author").once();
+    EasyMock.expect(req.getHeader(AuditManager.X_DRUID_COMMENT)).andReturn("comment").once();
+    EasyMock.expect(req.getRemoteAddr()).andReturn("127.0.0.1").once();
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(
         new AuthenticationResult("druid", "druid", null, null)
     ).anyTimes();
+    EasyMock.expect(req.getMethod()).andReturn("GET").anyTimes();
+    EasyMock.expect(req.getRequestURI()).andReturn("/request/uri").anyTimes();
+    EasyMock.expect(req.getQueryString()).andReturn("query=string").anyTimes();
+
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).anyTimes();
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).anyTimes();
     req.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
     EasyMock.expectLastCall().anyTimes();
     supervisorManager = EasyMock.createMock(SupervisorManager.class);
@@ -226,7 +236,7 @@ public class OverlordTest
 
     taskMaster = new TaskMaster(
         new TaskLockConfig(),
-        new TaskQueueConfig(null, new Period(1), null, new Period(10), null),
+        new TaskQueueConfig(null, new Period(1), null, new Period(10), null, null),
         new DefaultTaskConfig(),
         taskLockbox,
         taskStorage,
@@ -239,7 +249,9 @@ public class OverlordTest
         supervisorManager,
         EasyMock.createNiceMock(OverlordDutyExecutor.class),
         new TestDruidLeaderSelector(),
-        EasyMock.createNiceMock(SegmentAllocationQueue.class)
+        EasyMock.createNiceMock(SegmentAllocationQueue.class),
+        new DefaultObjectMapper(),
+        new NoopTaskContextEnricher()
     );
     EmittingLogger.registerEmitter(serviceEmitter);
   }
@@ -260,13 +272,14 @@ public class OverlordTest
     final TaskStorageQueryAdapter taskStorageQueryAdapter = new TaskStorageQueryAdapter(taskStorage, taskLockbox, taskMaster);
     final WorkerTaskRunnerQueryAdapter workerTaskRunnerQueryAdapter = new WorkerTaskRunnerQueryAdapter(taskMaster, null);
     // Test Overlord resource stuff
+    AuditManager auditManager = EasyMock.createNiceMock(AuditManager.class);
     overlordResource = new OverlordResource(
         taskMaster,
         taskStorageQueryAdapter,
         new IndexerMetadataStorageAdapter(taskStorageQueryAdapter, null),
         null,
         null,
-        null,
+        auditManager,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         workerTaskRunnerQueryAdapter,
         null,

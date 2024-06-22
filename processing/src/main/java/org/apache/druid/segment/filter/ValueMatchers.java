@@ -19,12 +19,13 @@
 
 package org.apache.druid.segment.filter;
 
-import com.google.common.base.Predicate;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.filter.DruidDoublePredicate;
 import org.apache.druid.query.filter.DruidFloatPredicate;
 import org.apache.druid.query.filter.DruidLongPredicate;
+import org.apache.druid.query.filter.DruidObjectPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
+import org.apache.druid.query.filter.DruidPredicateMatch;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseDoubleColumnValueSelector;
@@ -39,7 +40,6 @@ import org.apache.druid.segment.IdLookup;
 import org.apache.druid.segment.data.IndexedInts;
 
 import javax.annotation.Nullable;
-import java.util.Objects;
 
 /**
  * Utility methods for creating {@link ValueMatcher} instances. Mainly used by {@link StringConstantValueMatcherFactory}
@@ -90,10 +90,11 @@ public class ValueMatchers
       final boolean hasMultipleValues
   )
   {
+    final String constant = NullHandling.emptyToNullIfNeeded(value);
     final ConstantMatcherType matcherType = toConstantMatcherTypeIfPossible(
         selector,
         hasMultipleValues,
-        s -> Objects.equals(s, NullHandling.emptyToNullIfNeeded(value))
+        constant == null ? DruidObjectPredicate.isNull() : DruidObjectPredicate.equalTo(constant)
     );
     if (matcherType != null) {
       return matcherType.asValueMatcher();
@@ -115,7 +116,7 @@ public class ValueMatchers
       final boolean hasMultipleValues
   )
   {
-    final Predicate<String> predicate = predicateFactory.makeStringPredicate();
+    final DruidObjectPredicate<String> predicate = predicateFactory.makeStringPredicate();
     final ConstantMatcherType constantMatcherType = toConstantMatcherTypeIfPossible(
         selector,
         hasMultipleValues,
@@ -197,11 +198,10 @@ public class ValueMatchers
       @Override
       public boolean matches(boolean includeUnknown)
       {
-        final boolean matchNull = includeUnknown && predicateFactory.isNullInputUnknown();
         if (selector.isNull()) {
-          return matchNull || predicate.applyNull();
+          return predicate.applyNull().matches(includeUnknown);
         }
-        return predicate.applyFloat(selector.getFloat());
+        return predicate.applyFloat(selector.getFloat()).matches(includeUnknown);
       }
 
       @Override
@@ -272,11 +272,10 @@ public class ValueMatchers
       @Override
       public boolean matches(boolean includeUnknown)
       {
-        final boolean matchNull = includeUnknown && predicateFactory.isNullInputUnknown();
         if (selector.isNull()) {
-          return matchNull || predicate.applyNull();
+          return predicate.applyNull().matches(includeUnknown);
         }
-        return predicate.applyLong(selector.getLong());
+        return predicate.applyLong(selector.getLong()).matches(includeUnknown);
       }
 
       @Override
@@ -357,11 +356,10 @@ public class ValueMatchers
       @Override
       public boolean matches(boolean includeUnknown)
       {
-        final boolean matchNull = includeUnknown && predicateFactory.isNullInputUnknown();
         if (selector.isNull()) {
-          return matchNull || predicate.applyNull();
+          return predicate.applyNull().matches(includeUnknown);
         }
-        return predicate.applyDouble(selector.getDouble());
+        return predicate.applyDouble(selector.getDouble()).matches(includeUnknown);
       }
 
       @Override
@@ -378,7 +376,7 @@ public class ValueMatchers
    * null values will be matched. This is typically used when the filter should never match any actual values, but
    * still needs to be able to report 'unknown' matches.
    */
-  public static ValueMatcher makeAlwaysFalseDimensionMatcher(final DimensionSelector selector, boolean multiValue)
+  public static ValueMatcher makeAlwaysFalseWithNullUnknownDimensionMatcher(final DimensionSelector selector, boolean multiValue)
   {
     final IdLookup lookup = selector.idLookup();
     // if the column doesn't have null
@@ -466,7 +464,7 @@ public class ValueMatchers
    * null values will be matched. This is typically used when the filter should never match any actual values, but
    * still needs to be able to report 'unknown' matches.
    */
-  public static ValueMatcher makeAlwaysFalseNumericMatcher(BaseNullableColumnValueSelector selector)
+  public static ValueMatcher makeAlwaysFalseWithNullUnknownNumericMatcher(BaseNullableColumnValueSelector selector)
   {
     return new ValueMatcher()
     {
@@ -489,7 +487,7 @@ public class ValueMatchers
    * null values will be matched. This is typically used when the filter should never match any actual values, but
    * still needs to be able to report 'unknown' matches.
    */
-  public static ValueMatcher makeAlwaysFalseObjectMatcher(BaseObjectColumnValueSelector<?> selector)
+  public static ValueMatcher makeAlwaysFalseWithNullUnknownObjectMatcher(BaseObjectColumnValueSelector<?> selector)
   {
     return new ValueMatcher()
     {
@@ -522,23 +520,28 @@ public class ValueMatchers
   public static ConstantMatcherType toConstantMatcherTypeIfPossible(
       final DimensionDictionarySelector selector,
       final boolean hasMultipleValues,
-      final Predicate<String> predicate
+      final DruidObjectPredicate<String> predicate
   )
   {
     if (selector.getValueCardinality() == 0) {
       // Column has no values (it doesn't exist, or it's all empty arrays).
       // Match if and only if "predicate" matches null.
-      if (predicate.apply(null)) {
+      final DruidPredicateMatch match = predicate.apply(null);
+      if (match.matches(false)) {
         return ConstantMatcherType.ALL_TRUE;
       }
-      return ConstantMatcherType.ALL_UNKNOWN;
+      if (match == DruidPredicateMatch.UNKNOWN) {
+        return ConstantMatcherType.ALL_UNKNOWN;
+      }
+      return ConstantMatcherType.ALL_FALSE;
     } else if (!hasMultipleValues && selector.getValueCardinality() == 1 && selector.nameLookupPossibleInAdvance()) {
       // Every row has the same value. Match if and only if "predicate" matches the possible value.
       final String constant = selector.lookupName(0);
-      if (predicate.apply(constant)) {
+      final DruidPredicateMatch match = predicate.apply(constant);
+      if (match == DruidPredicateMatch.TRUE) {
         return ConstantMatcherType.ALL_TRUE;
       }
-      if (constant == null) {
+      if (match == DruidPredicateMatch.UNKNOWN) {
         return ConstantMatcherType.ALL_UNKNOWN;
       }
       return ConstantMatcherType.ALL_FALSE;

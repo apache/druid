@@ -19,19 +19,25 @@
 
 package org.apache.druid.benchmark.query;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.guava.Yielder;
+import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
+import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
@@ -73,6 +79,7 @@ import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * Benchmark that tests various SQL queries.
@@ -202,7 +209,16 @@ public class SqlExpressionBenchmark
       "SELECT TIME_SHIFT(MILLIS_TO_TIMESTAMP(long5), 'PT1H', 1), string2, SUM(long1 * double4) FROM foo GROUP BY 1,2 ORDER BY 3",
       // 38,39: array element filtering
       "SELECT string1, long1 FROM foo WHERE ARRAY_CONTAINS(\"multi-string3\", 100) GROUP BY 1,2",
-      "SELECT string1, long1 FROM foo WHERE ARRAY_OVERLAP(\"multi-string3\", ARRAY[100, 200]) GROUP BY 1,2"
+      "SELECT string1, long1 FROM foo WHERE ARRAY_OVERLAP(\"multi-string3\", ARRAY[100, 200]) GROUP BY 1,2",
+      // 40: regex filtering
+      "SELECT string4, COUNT(*) FROM foo WHERE REGEXP_EXTRACT(string1, '^1') IS NOT NULL OR REGEXP_EXTRACT('Z' || string2, '^Z2') IS NOT NULL GROUP BY 1",
+      // 41: complicated filtering
+      "SELECT string2, SUM(long1) FROM foo WHERE string1 = '1000' AND string5 LIKE '%1%' AND (string3 in ('1', '10', '20', '22', '32') AND long2 IN (1, 19, 21, 23, 25, 26, 46) AND double3 < 1010.0 AND double3 > 1000.0 AND (string4 = '1' OR REGEXP_EXTRACT(string1, '^1') IS NOT NULL OR REGEXP_EXTRACT('Z' || string2, '^Z2') IS NOT NULL)) GROUP BY 1 ORDER BY 2",
+      // 42: array_contains expr
+      "SELECT ARRAY_CONTAINS(\"multi-string3\", 100) FROM foo",
+      "SELECT ARRAY_CONTAINS(\"multi-string3\", ARRAY[1, 2, 10, 11, 20, 22, 30, 33, 40, 44, 50, 55, 100]) FROM foo",
+      "SELECT ARRAY_OVERLAP(\"multi-string3\", ARRAY[1, 100]) FROM foo",
+      "SELECT ARRAY_OVERLAP(\"multi-string3\", ARRAY[1, 2, 10, 11, 20, 22, 30, 33, 40, 44, 50, 55, 100]) FROM foo"
   );
 
   @Param({"5000000"})
@@ -262,7 +278,13 @@ public class SqlExpressionBenchmark
       "36",
       "37",
       "38",
-      "39"
+      "39",
+      "40",
+      "41",
+      "42",
+      "43",
+      "44",
+      "45"
   })
   private String query;
 
@@ -290,10 +312,15 @@ public class SqlExpressionBenchmark
     log.info("Starting benchmark setup using cacheDir[%s], rows[%,d], schema[%s].", segmentGenerator.getCacheDir(), rowsPerSegment, schema);
     final QueryableIndex index;
     if ("auto".equals(schema)) {
+      List<DimensionSchema> columnSchemas = schemaInfo.getDimensionsSpec()
+                                                      .getDimensions()
+                                                      .stream()
+                                                      .map(x -> new AutoTypeColumnSchema(x.getName(), null))
+                                                      .collect(Collectors.toList());
       index = segmentGenerator.generate(
           dataSegment,
           schemaInfo,
-          DimensionsSpec.builder().useSchemaDiscovery(true).build(),
+          DimensionsSpec.builder().setDimensions(columnSchemas).build(),
           TransformSpec.NONE,
           IndexSpec.DEFAULT,
           Granularities.NONE,
@@ -308,12 +335,12 @@ public class SqlExpressionBenchmark
         PROCESSING_CONFIG
     );
 
-    final SpecificSegmentsQuerySegmentWalker walker = new SpecificSegmentsQuerySegmentWalker(conglomerate).add(
+    final SpecificSegmentsQuerySegmentWalker walker = SpecificSegmentsQuerySegmentWalker.createWalker(conglomerate).add(
         dataSegment,
         index
     );
     closer.register(walker);
-
+    final ObjectMapper jsonMapper = CalciteTests.getJsonMapper();
     final DruidSchemaCatalog rootSchema =
         CalciteTests.createMockRootSchema(conglomerate, walker, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
     engine = CalciteTests.createMockSqlEngine(walker, conglomerate);
@@ -323,7 +350,7 @@ public class SqlExpressionBenchmark
         CalciteTests.createExprMacroTable(),
         plannerConfig,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        CalciteTests.getJsonMapper(),
+        jsonMapper,
         CalciteTests.DRUID_SCHEMA_NAME,
         new CalciteRulesManager(ImmutableSet.of()),
         CalciteTests.createJoinableFactoryWrapper(),
@@ -333,12 +360,44 @@ public class SqlExpressionBenchmark
 
     try {
       SqlVectorizedExpressionSanityTest.sanityTestVectorizedSqlQueries(
+          engine,
           plannerFactory,
           QUERIES.get(Integer.parseInt(query))
       );
+      log.info("non-vectorized and vectorized results match");
     }
-    catch (Throwable ignored) {
-      // the show must go on
+    catch (Throwable ex) {
+      log.warn(ex, "non-vectorized and vectorized results do not match");
+    }
+
+    final String sql = QUERIES.get(Integer.parseInt(query));
+
+    try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(engine, "EXPLAIN PLAN FOR " + sql, ImmutableMap.of("useNativeQueryExplain", true))) {
+      final PlannerResult plannerResult = planner.plan();
+      final Sequence<Object[]> resultSequence = plannerResult.run().getResults();
+      final Object[] planResult = resultSequence.toList().get(0);
+      log.info("Native query plan:\n" +
+               jsonMapper.writerWithDefaultPrettyPrinter()
+                         .writeValueAsString(jsonMapper.readValue((String) planResult[0], List.class))
+      );
+    }
+    catch (JsonProcessingException ex) {
+      log.warn(ex, "explain failed");
+    }
+
+    try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(engine, sql, ImmutableMap.of())) {
+      final PlannerResult plannerResult = planner.plan();
+      final Sequence<Object[]> resultSequence = plannerResult.run().getResults();
+      final Yielder<Object[]> yielder = Yielders.each(resultSequence);
+      int rowCounter = 0;
+      while (!yielder.isDone()) {
+        rowCounter++;
+        yielder.next(yielder.get());
+      }
+      log.info("Total result row count:" + rowCounter);
+    }
+    catch (Throwable ex) {
+      log.warn(ex, "failed to count rows");
     }
   }
 

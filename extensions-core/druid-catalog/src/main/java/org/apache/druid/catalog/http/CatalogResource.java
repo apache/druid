@@ -278,8 +278,7 @@ public class CatalogResource
   // Retrieval
 
   /**
-   * Retrieves the list of all Druid schema names, all table names, or
-   * all table metadata.
+   * Retrieves the list of all Druid schema names.
    *
    * @param format the format of the response. See the code for the
    *        available formats

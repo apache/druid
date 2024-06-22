@@ -33,7 +33,7 @@ import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.query.filter.ArrayContainsElementFilter;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.EqualityFilter;
-import org.apache.druid.query.filter.InDimFilter;
+import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -45,6 +45,7 @@ import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class ArrayOverlapOperatorConversion extends BaseExpressionDimFilterOperatorConversion
@@ -66,7 +67,7 @@ public class ArrayOverlapOperatorConversion extends BaseExpressionDimFilterOpera
               )
           )
       )
-      .returnTypeInference(ReturnTypes.BOOLEAN)
+      .returnTypeInference(ReturnTypes.BOOLEAN_NULLABLE)
       .build();
 
   public ArrayOverlapOperatorConversion()
@@ -110,13 +111,11 @@ public class ArrayOverlapOperatorConversion extends BaseExpressionDimFilterOpera
         complexExpr = leftExpr;
       }
     } else {
-      return toExpressionFilter(plannerContext, getDruidFunctionName(), druidExpressions);
+      return toExpressionFilter(plannerContext, druidExpressions);
     }
 
     final Expr expr = plannerContext.parseExpression(complexExpr.getExpression());
-    if (expr.isLiteral()
-        && !simpleExtractionExpr.isArray()
-        && (plannerContext.isUseBoundsAndSelectors() || simpleExtractionExpr.isDirectColumnAccess())) {
+    if (expr.isLiteral() && !simpleExtractionExpr.isArray()) {
       // Evaluate the expression to take out the array elements.
       // We can safely pass null if the expression is literal.
       ExprEval<?> exprEval = expr.eval(InputBindings.nilBindings());
@@ -131,25 +130,37 @@ public class ArrayOverlapOperatorConversion extends BaseExpressionDimFilterOpera
         if (plannerContext.isUseBoundsAndSelectors()) {
           return newSelectorDimFilter(simpleExtractionExpr.getSimpleExtraction(), Evals.asString(arrayElements[0]));
         } else {
-          // Cannot handle extractionFn here. We won't get one due to the isDirectColumnAccess check above.
+          final String column;
+          if (simpleExtractionExpr.isDirectColumnAccess()) {
+            column = simpleExtractionExpr.getDirectColumn();
+          } else {
+            if (virtualColumnRegistry == null) {
+              // fall back to expression filter
+              return toExpressionFilter(plannerContext, druidExpressions);
+            }
+            column = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
+                simpleExtractionExpr,
+                simpleExtractionExpr.getDruidType()
+            );
+          }
+          final Object elementValue = arrayElements[0];
+          if (elementValue == null) {
+            return NullFilter.forColumn(column);
+          }
           return new EqualityFilter(
-              simpleExtractionExpr.getSimpleExtraction().getColumn(),
+              column,
               ExpressionType.toColumnType(exprEval.type()),
-              arrayElements[0],
+              elementValue,
               null
           );
         }
       } else {
-        final InDimFilter.ValuesSet valuesSet = InDimFilter.ValuesSet.create();
-        for (final Object arrayElement : arrayElements) {
-          valuesSet.add(Evals.asString(arrayElement));
-        }
-
-        return new InDimFilter(
+        return ScalarInArrayOperatorConversion.makeInFilter(
+            plannerContext,
             simpleExtractionExpr.getSimpleExtraction().getColumn(),
-            valuesSet,
             simpleExtractionExpr.getSimpleExtraction().getExtractionFn(),
-            null
+            Arrays.asList(arrayElements),
+            ExpressionType.toColumnType((ExpressionType) exprEval.type().getElementType())
         );
       }
     }
@@ -194,6 +205,6 @@ public class ArrayOverlapOperatorConversion extends BaseExpressionDimFilterOpera
       }
     }
 
-    return toExpressionFilter(plannerContext, getDruidFunctionName(), druidExpressions);
+    return toExpressionFilter(plannerContext, druidExpressions);
   }
 }

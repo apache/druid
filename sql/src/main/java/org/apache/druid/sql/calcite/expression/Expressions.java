@@ -38,6 +38,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.math.expr.Expr;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.expression.TimestampFloorExprMacro;
 import org.apache.druid.query.extraction.ExtractionFn;
@@ -240,7 +241,8 @@ public class Expressions
     } else if (rexNode instanceof RexCall) {
       return rexCallToDruidExpression(plannerContext, rowSignature, rexNode, postAggregatorVisitor);
     } else if (kind == SqlKind.LITERAL) {
-      return literalToDruidExpression(plannerContext, rexNode);
+      final DruidLiteral eval = calciteLiteralToDruidLiteral(plannerContext, rexNode);
+      return eval != null ? DruidExpression.ofLiteral(eval) : null;
     } else {
       // Can't translate.
       return null;
@@ -306,61 +308,85 @@ public class Expressions
     }
   }
 
+  /**
+   * Create a {@link DruidLiteral} from a literal {@link RexNode}. Necessary because Calcite represents literals using
+   * different Java classes than Druid does.
+   *
+   * @param plannerContext planner context
+   * @param rexNode        Calcite literal
+   *
+   * @return converted literal, or null if the literal cannot be converted
+   */
   @Nullable
-  static DruidExpression literalToDruidExpression(
+  public static DruidLiteral calciteLiteralToDruidLiteral(
       final PlannerContext plannerContext,
       final RexNode rexNode
   )
   {
-    final SqlTypeName sqlTypeName = rexNode.getType().getSqlTypeName();
+    if (rexNode.isA(SqlKind.CAST)) {
+      if (SqlTypeFamily.DATE.contains(rexNode.getType())) {
+        // Cast to DATE suggests some timestamp flooring. We don't deal with that here, so return null.
+        return null;
+      }
+
+      final DruidLiteral innerLiteral =
+          calciteLiteralToDruidLiteral(plannerContext, ((RexCall) rexNode).getOperands().get(0));
+      if (innerLiteral == null) {
+        return null;
+      }
+
+      final ColumnType castToColumnType = Calcites.getColumnTypeForRelDataType(rexNode.getType());
+      if (castToColumnType == null) {
+        return null;
+      }
+
+      final ExpressionType castToExprType = ExpressionType.fromColumnType(castToColumnType);
+      if (castToExprType == null) {
+        return null;
+      }
+
+      return innerLiteral.castTo(castToExprType);
+    }
 
     // Translate literal.
-    final ColumnType columnType = Calcites.getColumnTypeForRelDataType(rexNode.getType());
+    final SqlTypeName sqlTypeName = rexNode.getType().getSqlTypeName();
+    final DruidLiteral retVal;
+
     if (RexLiteral.isNullLiteral(rexNode)) {
-      return DruidExpression.ofLiteral(columnType, DruidExpression.nullLiteral());
+      final ColumnType columnType = Calcites.getColumnTypeForRelDataType(rexNode.getType());
+      final ExpressionType expressionType = columnType == null ? null : ExpressionType.fromColumnTypeStrict(columnType);
+      retVal = new DruidLiteral(expressionType, null);
     } else if (SqlTypeName.INT_TYPES.contains(sqlTypeName)) {
       final Number number = (Number) RexLiteral.value(rexNode);
-      return DruidExpression.ofLiteral(
-          columnType,
-          number == null ? DruidExpression.nullLiteral() : DruidExpression.longLiteral(number.longValue())
-      );
+      retVal = new DruidLiteral(ExpressionType.LONG, number == null ? null : number.longValue());
     } else if (SqlTypeName.NUMERIC_TYPES.contains(sqlTypeName)) {
       // Numeric, non-INT, means we represent it as a double.
       final Number number = (Number) RexLiteral.value(rexNode);
-      return DruidExpression.ofLiteral(
-          columnType,
-          number == null ? DruidExpression.nullLiteral() : DruidExpression.doubleLiteral(number.doubleValue())
-      );
+      retVal = new DruidLiteral(ExpressionType.DOUBLE, number == null ? null : number.doubleValue());
     } else if (SqlTypeFamily.INTERVAL_DAY_TIME == sqlTypeName.getFamily()) {
       // Calcite represents DAY-TIME intervals in milliseconds.
       final long milliseconds = ((Number) RexLiteral.value(rexNode)).longValue();
-      return DruidExpression.ofLiteral(columnType, DruidExpression.longLiteral(milliseconds));
+      retVal = new DruidLiteral(ExpressionType.LONG, milliseconds);
     } else if (SqlTypeFamily.INTERVAL_YEAR_MONTH == sqlTypeName.getFamily()) {
       // Calcite represents YEAR-MONTH intervals in months.
       final long months = ((Number) RexLiteral.value(rexNode)).longValue();
-      return DruidExpression.ofLiteral(columnType, DruidExpression.longLiteral(months));
+      retVal = new DruidLiteral(ExpressionType.LONG, months);
     } else if (SqlTypeName.STRING_TYPES.contains(sqlTypeName)) {
-      return DruidExpression.ofStringLiteral(RexLiteral.stringValue(rexNode));
+      final String s = RexLiteral.stringValue(rexNode);
+      retVal = new DruidLiteral(ExpressionType.STRING, s);
     } else if (SqlTypeName.TIMESTAMP == sqlTypeName || SqlTypeName.DATE == sqlTypeName) {
-      if (RexLiteral.isNullLiteral(rexNode)) {
-        return DruidExpression.ofLiteral(columnType, DruidExpression.nullLiteral());
-      } else {
-        return DruidExpression.ofLiteral(
-            columnType,
-            DruidExpression.longLiteral(
-                Calcites.calciteDateTimeLiteralToJoda(rexNode, plannerContext.getTimeZone()).getMillis()
-            )
-        );
-      }
-    } else if (SqlTypeName.BOOLEAN == sqlTypeName) {
-      return DruidExpression.ofLiteral(
-          columnType,
-          DruidExpression.longLiteral(RexLiteral.booleanValue(rexNode) ? 1 : 0)
+      retVal = new DruidLiteral(
+          ExpressionType.LONG,
+          Calcites.calciteDateTimeLiteralToJoda(rexNode, plannerContext.getTimeZone()).getMillis()
       );
+    } else if (SqlTypeName.BOOLEAN == sqlTypeName) {
+      retVal = new DruidLiteral(ExpressionType.LONG, RexLiteral.booleanValue(rexNode) ? 1L : 0L);
     } else {
       // Can't translate other literals.
       return null;
     }
+
+    return retVal;
   }
 
   /**
@@ -563,10 +589,19 @@ public class Expressions
           );
         } else {
           if (druidExpression.getSimpleExtraction().getExtractionFn() != null) {
-            // return null to fallback to using an expression filter
-            return null;
+            if (virtualColumnRegistry != null) {
+              String column = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
+                  druidExpression,
+                  druidExpression.getDruidType()
+              );
+              equalFilter = NullFilter.forColumn(column);
+            } else {
+              // virtual column registry unavailable, fallback to expression filter
+              return null;
+            }
+          } else {
+            equalFilter = NullFilter.forColumn(druidExpression.getDirectColumn());
           }
-          equalFilter = NullFilter.forColumn(druidExpression.getDirectColumn());
         }
       } else if (virtualColumnRegistry != null) {
         final String virtualColumn = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
@@ -638,8 +673,8 @@ public class Expressions
 
       final DruidExpression rhsExpression = toDruidExpression(plannerContext, rowSignature, rhs);
       final Expr rhsParsed = rhsExpression != null
-                                       ? plannerContext.parseExpression(rhsExpression.getExpression())
-                                       : null;
+                             ? plannerContext.parseExpression(rhsExpression.getExpression())
+                             : null;
       // rhs must be a literal
       if (rhsParsed == null || !rhsParsed.isLiteral()) {
         return null;
@@ -666,7 +701,7 @@ public class Expressions
         );
       }
 
-      final String column;
+      String column;
       final ExtractionFn extractionFn;
       if (lhsExpression.isSimpleExtraction()) {
         column = lhsExpression.getSimpleExtraction().getColumn();
@@ -755,9 +790,22 @@ public class Expressions
       } else {
         final Object val = rhsParsed.getLiteralValue();
 
-        if (extractionFn != null || val == null) {
+        if (val == null) {
           // fall back to expression filter
           return null;
+        }
+
+        // extractionFn are not supported by equality/range filter
+        if (extractionFn != null) {
+          if (virtualColumnRegistry != null) {
+            column = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
+                lhsExpression,
+                lhs.getType()
+            );
+          } else {
+            // if this happens for some reason, bail and use an expression filter
+            return null;
+          }
         }
 
         final RangeRefKey rangeRefKey = new RangeRefKey(column, matchValueType);
@@ -793,7 +841,9 @@ public class Expressions
       }
     } else if (rexNode instanceof RexCall) {
       final SqlOperator operator = ((RexCall) rexNode).getOperator();
-      final SqlOperatorConversion conversion = plannerContext.getPlannerToolbox().operatorTable().lookupOperatorConversion(operator);
+      final SqlOperatorConversion conversion = plannerContext.getPlannerToolbox()
+                                                             .operatorTable()
+                                                             .lookupOperatorConversion(operator);
 
       if (conversion == null) {
         return null;
@@ -943,17 +993,17 @@ public class Expressions
                ? new NotDimFilter(Ranges.interval(rangeRefKey, interval))
                : Filtration.matchEverything();
       case GREATER_THAN:
-        return Ranges.greaterThanOrEqualTo(rangeRefKey, String.valueOf(interval.getEndMillis()));
+        return Ranges.greaterThanOrEqualTo(rangeRefKey, interval.getEndMillis());
       case GREATER_THAN_OR_EQUAL:
         return isAligned
-               ? Ranges.greaterThanOrEqualTo(rangeRefKey, String.valueOf(interval.getStartMillis()))
-               : Ranges.greaterThanOrEqualTo(rangeRefKey, String.valueOf(interval.getEndMillis()));
+               ? Ranges.greaterThanOrEqualTo(rangeRefKey, interval.getStartMillis())
+               : Ranges.greaterThanOrEqualTo(rangeRefKey, interval.getEndMillis());
       case LESS_THAN:
         return isAligned
-               ? Ranges.lessThan(rangeRefKey, String.valueOf(interval.getStartMillis()))
-               : Ranges.lessThan(rangeRefKey, String.valueOf(interval.getEndMillis()));
+               ? Ranges.lessThan(rangeRefKey, interval.getStartMillis())
+               : Ranges.lessThan(rangeRefKey, interval.getEndMillis());
       case LESS_THAN_OR_EQUAL:
-        return Ranges.lessThan(rangeRefKey, String.valueOf(interval.getEndMillis()));
+        return Ranges.lessThan(rangeRefKey, interval.getEndMillis());
       default:
         throw new IllegalStateException("Shouldn't have got here");
     }

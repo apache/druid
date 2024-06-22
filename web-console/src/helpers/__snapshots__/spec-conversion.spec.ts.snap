@@ -58,6 +58,7 @@ SELECT
   COUNT(*) AS "count",
   SUM("added") AS "sum_added",
   SUM("commentLength") AS "sum_commentLength",
+  MAX("commentLength") AS "max_commentLength",
   SUM("delta") AS "sum_delta",
   SUM("deltaBucket") AS "sum_deltaBucket",
   SUM("deleted") AS "sum_deleted",
@@ -206,4 +207,27 @@ SELECT
 FROM "source"
 PARTITIONED BY HOUR
 CLUSTERED BY "isRobot"
+`;
+
+exports[`spec conversion works with ARRAY mode 1`] = `
+-- This SQL query was auto generated from an ingestion spec
+REPLACE INTO "lol" OVERWRITE ALL
+WITH "source" AS (SELECT * FROM TABLE(
+  EXTERN(
+    '{"type":"inline","data":"{\\"s\\":\\"X\\", \\"l\\":10, \\"f\\":10.1, \\"array_s\\":[\\"A\\", \\"B\\"], \\"array_l\\":[1,2], \\"array_f\\":[1.1,2.2], \\"mix1\\":[1, \\"lol\\"], \\"mix2\\":[1.1, 77]}\\n{\\"s\\":\\"Y\\", \\"l\\":11, \\"f\\":11.1, \\"array_s\\":[\\"C\\", \\"D\\"], \\"array_l\\":[3,4], \\"array_f\\":[3.3,4.4], \\"mix1\\":[2, \\"zoz\\"], \\"mix2\\":[1.2, 88]}"}',
+    '{"type":"json"}'
+  )
+) EXTEND ("s" VARCHAR, "l" BIGINT, "f" DOUBLE, "array_s" VARCHAR ARRAY, "array_l" BIGINT ARRAY, "array_f" DOUBLE ARRAY, "mix1" VARCHAR ARRAY, "mix2" DOUBLE ARRAY))
+SELECT
+  TIME_PARSE('2010-01-01T00:00:00Z') AS "__time",
+  "s",
+  "l",
+  "f",
+  "array_s",
+  "array_l",
+  "array_f",
+  "mix1",
+  "mix2"
+FROM "source"
+PARTITIONED BY DAY
 `;

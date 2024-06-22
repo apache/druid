@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.java.util.common.Cacheable;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.data.ReadableOffset;
@@ -299,13 +300,16 @@ public interface VirtualColumn extends Cacheable
 
   /**
    * Get the {@link ColumnIndexSupplier} for the specified virtual column, with the assistance of a
-   * {@link ColumnSelector} to allow reading things from segments. If the virtual column has no indexes, this method
-   * will return null, or may also return a non-null supplier whose methods may return null values - having a supplier
-   * is no guarantee that the column has indexes.
+   * {@link ColumnIndexSelector} to allow reading things from segments. If the virtual column has no indexes, this
+   * method will return null, or may also return a non-null supplier whose methods may return null values - having a
+   * supplier is no guarantee that the column has indexes.
    */
   @SuppressWarnings("unused")
   @Nullable
-  default ColumnIndexSupplier getIndexSupplier(String columnName, ColumnSelector columnSelector)
+  default ColumnIndexSupplier getIndexSupplier(
+      String columnName,
+      ColumnIndexSelector columnIndexSelector
+  )
   {
     return NoIndexesColumnIndexSupplier.getInstance();
   }

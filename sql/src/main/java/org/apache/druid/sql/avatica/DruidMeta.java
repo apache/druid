@@ -56,7 +56,6 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -753,7 +752,7 @@ public class DruidMeta extends MetaImpl
   }
 
   @VisibleForTesting
-  void closeAllConnections()
+  public void closeAllConnections()
   {
     for (String connectionId : ImmutableSet.copyOf(connections.keySet())) {
       closeConnection(new ConnectionHandle(connectionId));

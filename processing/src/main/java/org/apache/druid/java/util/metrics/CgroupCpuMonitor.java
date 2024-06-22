@@ -20,28 +20,64 @@
 package org.apache.druid.java.util.metrics;
 
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.cgroups.CgroupDiscoverer;
 import org.apache.druid.java.util.metrics.cgroups.Cpu;
+import org.apache.druid.java.util.metrics.cgroups.ProcSelfCgroupDiscoverer;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.Map;
 
 public class CgroupCpuMonitor extends FeedDefiningMonitor
 {
+  private static final Logger LOG = new Logger(CgroupCpuMonitor.class);
+  private static final Long DEFAULT_USER_HZ = 100L;
+  public static final String TOTAL_USAGE_METRIC = "cgroup/cpu/usage/total/percentage";
+  public static final String USER_USAGE_METRIC = "cgroup/cpu/usage/user/percentage";
+  public static final String SYS_USAGE_METRIC = "cgroup/cpu/usage/sys/percentage";
+  private static final String TOTAL = "total";
+  private static final String USER = "user";
+  private static final String SYSTEM = "system";
   final CgroupDiscoverer cgroupDiscoverer;
   final Map<String, String[]> dimensions;
+  private Long userHz;
+  private KeyedDiff jiffies = new KeyedDiff();
+  private long prevJiffiesSnapshotAt = 0;
 
   public CgroupCpuMonitor(CgroupDiscoverer cgroupDiscoverer, final Map<String, String[]> dimensions, String feed)
   {
     super(feed);
     this.cgroupDiscoverer = cgroupDiscoverer;
     this.dimensions = dimensions;
+    try {
+      Process p = new ProcessBuilder("getconf", "CLK_TCK").start();
+      try (BufferedReader in = new BufferedReader(new InputStreamReader(p.getInputStream(), StandardCharsets.UTF_8))) {
+        String line = in.readLine();
+        if (line != null) {
+          userHz = Long.valueOf(line.trim());
+        }
+      }
+    }
+    catch (IOException | NumberFormatException e) {
+      LOG.warn(e, "Error getting the USER_HZ value");
+    }
+    finally {
+      if (userHz == null) {
+        LOG.warn("Using default value for USER_HZ");
+        userHz = DEFAULT_USER_HZ;
+      }
+    }
   }
 
   public CgroupCpuMonitor(final Map<String, String[]> dimensions, String feed)
   {
-    this(null, dimensions, feed);
+    this(new ProcSelfCgroupDiscoverer(), dimensions, feed);
   }
 
   public CgroupCpuMonitor(final Map<String, String[]> dimensions)
@@ -58,7 +94,8 @@ public class CgroupCpuMonitor extends FeedDefiningMonitor
   public boolean doMonitor(ServiceEmitter emitter)
   {
     final Cpu cpu = new Cpu(cgroupDiscoverer);
-    final Cpu.CpuAllocationMetric cpuSnapshot = cpu.snapshot();
+    final Cpu.CpuMetrics cpuSnapshot = cpu.snapshot();
+    long now = Instant.now().getEpochSecond();
 
     final ServiceMetricEvent.Builder builder = builder();
     MonitorUtils.addDimensionsToBuilder(builder, dimensions);
@@ -68,6 +105,26 @@ public class CgroupCpuMonitor extends FeedDefiningMonitor
         computeProcessorQuota(cpuSnapshot.getQuotaUs(), cpuSnapshot.getPeriodUs())
     ));
 
+    long elapsedJiffiesSnapshotSecs = now - prevJiffiesSnapshotAt;
+    if (elapsedJiffiesSnapshotSecs > 0) {
+      prevJiffiesSnapshotAt = now;
+      final Map<String, Long> elapsedJiffies = jiffies.to(
+          "usage",
+          ImmutableMap.<String, Long>builder()
+                      .put(USER, cpuSnapshot.getUserJiffies())
+                      .put(SYSTEM, cpuSnapshot.getSystemJiffies())
+                      .put(TOTAL, cpuSnapshot.getTotalJiffies())
+                      .build()
+      );
+      if (elapsedJiffies != null) {
+        double totalUsagePct = 100.0 * elapsedJiffies.get(TOTAL) / userHz / elapsedJiffiesSnapshotSecs;
+        double sysUsagePct = 100.0 * elapsedJiffies.get(SYSTEM) / userHz / elapsedJiffiesSnapshotSecs;
+        double userUsagePct = 100.0 * elapsedJiffies.get(USER) / userHz / elapsedJiffiesSnapshotSecs;
+        emitter.emit(builder.setMetric(TOTAL_USAGE_METRIC, totalUsagePct));
+        emitter.emit(builder.setMetric(SYS_USAGE_METRIC, sysUsagePct));
+        emitter.emit(builder.setMetric(USER_USAGE_METRIC, userUsagePct));
+      }
+    }
     return true;
   }
 

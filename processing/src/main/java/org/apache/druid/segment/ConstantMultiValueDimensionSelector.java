@@ -19,8 +19,8 @@
 
 package org.apache.druid.segment;
 
-import com.google.common.base.Predicate;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.query.filter.DruidObjectPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
@@ -111,8 +111,8 @@ public class ConstantMultiValueDimensionSelector implements HistoricalDimensionS
   @Override
   public ValueMatcher makeValueMatcher(DruidPredicateFactory predicateFactory)
   {
-    final Predicate<String> predicate = predicateFactory.makeStringPredicate();
-    return values.stream().anyMatch(predicate::apply) ? ValueMatchers.allTrue() : ValueMatchers.allFalse();
+    final DruidObjectPredicate<String> predicate = predicateFactory.makeStringPredicate();
+    return values.stream().anyMatch(x -> predicate.apply(x).matches(false)) ? ValueMatchers.allTrue() : ValueMatchers.allFalse();
   }
 
   @Override

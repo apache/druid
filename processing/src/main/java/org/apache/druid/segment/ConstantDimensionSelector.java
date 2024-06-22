@@ -19,9 +19,10 @@
 
 package org.apache.druid.segment;
 
-import com.google.common.base.Predicate;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.query.filter.DruidObjectPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
+import org.apache.druid.query.filter.DruidPredicateMatch;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.data.IndexedInts;
@@ -73,8 +74,15 @@ public class ConstantDimensionSelector implements SingleValueHistoricalDimension
   @Override
   public ValueMatcher makeValueMatcher(DruidPredicateFactory predicateFactory)
   {
-    final Predicate<String> predicate = predicateFactory.makeStringPredicate();
-    return predicate.apply(value) ? ValueMatchers.allTrue() : ValueMatchers.allFalse();
+    final DruidObjectPredicate<String> predicate = predicateFactory.makeStringPredicate();
+    final DruidPredicateMatch match = predicate.apply(value);
+    if (match == DruidPredicateMatch.TRUE) {
+      return ValueMatchers.allTrue();
+    }
+    if (match == DruidPredicateMatch.UNKNOWN) {
+      return ValueMatchers.allUnknown();
+    }
+    return ValueMatchers.allFalse();
   }
 
   @Override

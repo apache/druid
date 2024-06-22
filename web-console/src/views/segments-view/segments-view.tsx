@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, ButtonGroup, Code, Intent, Label, MenuItem, Switch } from '@blueprintjs/core';
+import { Button, ButtonGroup, Intent, Label, MenuItem, Switch, Tag } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { C, L, SqlComparison, SqlExpression } from '@druid-toolkit/query';
 import classNames from 'classnames';
@@ -53,9 +53,10 @@ import {
   STANDARD_TABLE_PAGE_SIZE_OPTIONS,
 } from '../../react-table';
 import { Api } from '../../singletons';
-import type { NumberLike } from '../../utils';
+import type { NumberLike, TableState } from '../../utils';
 import {
   compact,
+  countBy,
   deepGet,
   filterMap,
   formatBytes,
@@ -64,9 +65,11 @@ import {
   isNumberLikeNaN,
   LocalStorageBackedVisibility,
   LocalStorageKeys,
+  oneOf,
   queryDruidSql,
   QueryManager,
   QueryState,
+  sortedToOrderByClause,
   twoLines,
 } from '../../utils';
 import type { BasicAction } from '../../utils/basic-action';
@@ -94,18 +97,8 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
     'Is realtime',
     'Is published',
     'Is overshadowed',
-    ACTION_COLUMN_LABEL,
   ],
-  'no-sql': [
-    'Segment ID',
-    'Datasource',
-    'Start',
-    'End',
-    'Version',
-    'Partition',
-    'Size',
-    ACTION_COLUMN_LABEL,
-  ],
+  'no-sql': ['Segment ID', 'Datasource', 'Start', 'End', 'Version', 'Partition', 'Size'],
   'no-proxy': [
     'Segment ID',
     'Datasource',
@@ -130,18 +123,6 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
 
 function formatRangeDimensionValue(dimension: any, value: any): string {
   return `${C(String(dimension))}=${L(String(value))}`;
-}
-
-interface Sorted {
-  id: string;
-  desc: boolean;
-}
-
-interface TableState {
-  page: number;
-  pageSize: number;
-  filtered: Filter[];
-  sorted: Sorted[];
 }
 
 interface SegmentsQuery extends TableState {
@@ -210,7 +191,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
   WHEN "start" LIKE '%:00.000Z' AND "end" LIKE '%:00.000Z' THEN 'Minute'
   ELSE 'Sub minute'
 END AS "time_span"`,
-      (visibleColumns.shown('Shard type') || visibleColumns.shown('Shard spec')) && `"shard_spec"`,
+      visibleColumns.shown('Shard type', 'Shard spec') && `"shard_spec"`,
       visibleColumns.shown('Partition') && `"partition_num"`,
       visibleColumns.shown('Size') && `"size"`,
       visibleColumns.shown('Num rows') && `"num_rows"`,
@@ -315,9 +296,9 @@ END AS "time_span"`,
 
           let queryParts: string[];
 
-          let whereClause = '';
+          let filterClause = '';
           if (whereParts.length) {
-            whereClause = SqlExpression.and(...whereParts).toString();
+            filterClause = SqlExpression.and(...whereParts).toString();
           }
 
           let effectiveSorted = sorted;
@@ -331,61 +312,45 @@ END AS "time_span"`,
             ]);
           }
 
+          const base = SegmentsView.baseQuery(visibleColumns);
+          const orderByClause = sortedToOrderByClause(effectiveSorted);
+
           if (groupByInterval) {
             const innerQuery = compact([
-              `SELECT "start" || '/' || "end" AS "interval"`,
+              `SELECT "start", "end"`,
               `FROM sys.segments`,
-              whereClause ? `WHERE ${whereClause}` : undefined,
-              `GROUP BY 1`,
-              `ORDER BY 1 DESC`,
+              filterClause ? `WHERE ${filterClause}` : undefined,
+              `GROUP BY 1, 2`,
+              sortedToOrderByClause(sorted.filter(sort => oneOf(sort.id, 'start', 'end'))) ||
+                `ORDER BY 1 DESC`,
               `LIMIT ${pageSize}`,
               page ? `OFFSET ${page * pageSize}` : undefined,
             ]).join('\n');
 
             const intervals: string = (await queryDruidSql({ query: innerQuery }))
-              .map(row => `'${row.interval}'`)
+              .map(({ start, end }) => `'${start}/${end}'`)
               .join(', ');
 
             queryParts = compact([
-              SegmentsView.baseQuery(visibleColumns),
+              base,
               `SELECT "start" || '/' || "end" AS "interval", *`,
               `FROM s`,
               `WHERE`,
               intervals ? `  ("start" || '/' || "end") IN (${intervals})` : 'FALSE',
-              whereClause ? `  AND ${whereClause}` : '',
+              filterClause ? `  AND ${filterClause}` : '',
+              orderByClause,
+              `LIMIT ${pageSize * 1000}`,
             ]);
-
-            if (effectiveSorted.length) {
-              queryParts.push(
-                'ORDER BY ' +
-                  effectiveSorted
-                    .map(sort => `${C(sort.id)} ${sort.desc ? 'DESC' : 'ASC'}`)
-                    .join(', '),
-              );
-            }
-
-            queryParts.push(`LIMIT ${pageSize * 1000}`);
           } else {
-            queryParts = [SegmentsView.baseQuery(visibleColumns), `SELECT *`, `FROM s`];
-
-            if (whereClause) {
-              queryParts.push(`WHERE ${whereClause}`);
-            }
-
-            if (effectiveSorted.length) {
-              queryParts.push(
-                'ORDER BY ' +
-                  effectiveSorted
-                    .map(sort => `${C(sort.id)} ${sort.desc ? 'DESC' : 'ASC'}`)
-                    .join(', '),
-              );
-            }
-
-            queryParts.push(`LIMIT ${pageSize}`);
-
-            if (page) {
-              queryParts.push(`OFFSET ${page * pageSize}`);
-            }
+            queryParts = compact([
+              base,
+              `SELECT *`,
+              `FROM s`,
+              filterClause ? `WHERE ${filterClause}` : undefined,
+              orderByClause,
+              `LIMIT ${pageSize}`,
+              page ? `OFFSET ${page * pageSize}` : undefined,
+            ]);
           }
           const sqlQuery = queryParts.join('\n');
           setIntermediateQuery(sqlQuery);
@@ -480,7 +445,8 @@ END AS "time_span"`,
     const { capabilities } = this.props;
     const { visibleColumns } = this.state;
     if (tableState) this.lastTableState = tableState;
-    const { page, pageSize, filtered, sorted } = this.lastTableState!;
+    if (!this.lastTableState) return;
+    const { page, pageSize, filtered, sorted } = this.lastTableState;
     this.segmentsQueryManager.runQuery({
       page,
       pageSize,
@@ -762,6 +728,19 @@ END AS "time_span"`,
                   );
               }
             },
+            Aggregated: opt => {
+              const { subRows } = opt;
+              const previewValues = filterMap(subRows, row => row['shard_spec'].type);
+              const previewCount = countBy(previewValues);
+              return (
+                <div className="default-aggregated">
+                  {Object.keys(previewCount)
+                    .sort()
+                    .map(v => `${v} (${previewCount[v]})`)
+                    .join(', ')}
+                </div>
+              );
+            },
           },
           {
             Header: 'Partition',
@@ -891,11 +870,12 @@ END AS "time_span"`,
           },
           {
             Header: ACTION_COLUMN_LABEL,
-            show: capabilities.hasCoordinatorAccess() && visibleColumns.shown(ACTION_COLUMN_LABEL),
+            show: capabilities.hasCoordinatorAccess(),
             id: ACTION_COLUMN_ID,
             accessor: 'segment_id',
             width: ACTION_COLUMN_WIDTH,
             filterable: false,
+            sortable: false,
             Cell: row => {
               if (row.aggregated) return '';
               const id = row.value;
@@ -931,7 +911,7 @@ END AS "time_span"`,
           );
           return resp.data;
         }}
-        confirmButtonText="Drop Segment"
+        confirmButtonText="Drop segment"
         successText="Segment drop request acknowledged, next time the coordinator runs segment will be dropped"
         failText="Could not drop segment"
         intent={Intent.DANGER}
@@ -943,7 +923,7 @@ END AS "time_span"`,
         }}
       >
         <p>
-          Are you sure you want to drop segment <Code>{terminateSegmentId}</Code>?
+          Are you sure you want to drop segment <Tag minimal>{terminateSegmentId}</Tag>?
         </p>
         <p>This action is not reversible.</p>
       </AsyncActionDialog>

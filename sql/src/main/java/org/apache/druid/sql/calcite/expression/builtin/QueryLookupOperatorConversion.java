@@ -35,17 +35,18 @@ import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.rule.ReverseLookupRule;
 
 import java.util.List;
 
 public class QueryLookupOperatorConversion implements SqlOperatorConversion
 {
-  private static final SqlFunction SQL_FUNCTION = OperatorConversions
+  public static final SqlFunction SQL_FUNCTION = OperatorConversions
       .operatorBuilder("LOOKUP")
       .operandNames("expr", "lookupName", "replaceMissingValueWith")
       .operandTypes(SqlTypeFamily.CHARACTER, SqlTypeFamily.CHARACTER, SqlTypeFamily.CHARACTER)
       .requiredOperandCount(2)
-      .literalOperands(2)
+      .literalOperands(1, 2)
       .returnTypeNullable(SqlTypeName.VARCHAR)
       .functionCategory(SqlFunctionCategory.STRING)
       .build();
@@ -80,16 +81,27 @@ public class QueryLookupOperatorConversion implements SqlOperatorConversion
           final DruidExpression arg = inputExpressions.get(0);
           final Expr lookupNameExpr = plannerContext.parseExpression(inputExpressions.get(1).getExpression());
           final String replaceMissingValueWith = getReplaceMissingValueWith(inputExpressions, plannerContext);
+          final String lookupName = (String) lookupNameExpr.getLiteralValue();
+
+          // Add the lookup name to the set of lookups to selectively load.
+          plannerContext.addLookupToLoad(lookupExtractorFactoryContainerProvider.getCanonicalLookupName(lookupName));
 
           if (arg.isSimpleExtraction() && lookupNameExpr.isLiteral()) {
             return arg.getSimpleExtraction().cascade(
                 new RegisteredLookupExtractionFn(
                     lookupExtractorFactoryContainerProvider,
-                    (String) lookupNameExpr.getLiteralValue(),
+                    lookupName,
                     false,
                     replaceMissingValueWith,
                     null,
-                    true
+                    // If LOOKUP pull-up is disabled, then enable optimization at the extractionFn level, since a
+                    // similar optimization may be done by the native query toolchests. We'd like to ensure that if
+                    // people upgrade to a version where this rule was added, and then disable the rule due to some
+                    // problem with it, they still get any optimization that the native layer was able to do.
+                    //
+                    // Note that we don't check plannerContext.isReverseLookup(), because the native layer doesn't
+                    // optimize filters on RegisteredLookupExtractionFn anyway.
+                    !plannerContext.isPullUpLookup()
                 )
             );
           } else {
@@ -97,6 +109,15 @@ public class QueryLookupOperatorConversion implements SqlOperatorConversion
           }
         }
     );
+  }
+
+  /**
+   * For {@link org.apache.druid.sql.calcite.rule.DruidRules} to be able to instantiate
+   * {@link ReverseLookupRule}.
+   */
+  public LookupExtractorFactoryContainerProvider getLookupExtractorFactoryContainerProvider()
+  {
+    return lookupExtractorFactoryContainerProvider;
   }
 
   private String getReplaceMissingValueWith(

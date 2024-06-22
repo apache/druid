@@ -22,7 +22,7 @@ package org.apache.druid.sql.calcite;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -43,16 +43,18 @@ import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.topn.DimensionTopNMetricSpec;
 import org.apache.druid.query.topn.InvertedTopNMetricSpec;
 import org.apache.druid.query.topn.TopNQueryBuilder;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.util.CacheTestHelperModule.ResultCacheMode;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -126,6 +128,28 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 .build()
         ),
         ImmutableList.of(new Object[]{"[\"Hello\",null]"})
+    );
+  }
+
+  @Test
+  public void testTimeCeilExpressionContainingInvalidPeriod()
+  {
+    testQueryThrows(
+        "SELECT TIME_CEIL(__time, 'PT1Y') FROM foo",
+        DruidExceptionMatcher.invalidInput().expectMessageContains(
+            "Invalid period['PT1Y'] specified for expression[timestamp_ceil(\"__time\", 'PT1Y', null, 'UTC')]"
+        )
+    );
+  }
+
+  @Test
+  public void testTimeFloorExpressionContainingInvalidPeriod()
+  {
+    testQueryThrows(
+        "SELECT TIME_FLOOR(TIMESTAMPADD(DAY, -1, __time), 'PT1D') FROM foo",
+        DruidExceptionMatcher.invalidInput().expectMessageContains(
+            "Invalid period['PT1D'] specified for expression[timestamp_floor((\"__time\" + -86400000), 'PT1D', null, 'UTC')]"
+        )
     );
   }
 
@@ -314,28 +338,24 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSelectConstantExpressionEquivalentToNaN()
   {
-    expectedException.expect(invalidSqlIs(
-        "Expression [(log10(0) - log10(0))] evaluates to an unsupported value [NaN], "
-        + "expected something that can be a Double.  Consider casting with 'CAST(<col> AS BIGINT)'"
-    ));
-    testQuery(
+    testQueryThrows(
         "SELECT log10(0) - log10(0), dim1 FROM foo LIMIT 1",
-        ImmutableList.of(),
-        ImmutableList.of()
+        invalidSqlIs(
+            "Expression [(log10(0) - log10(0))] evaluates to an unsupported value [NaN], "
+                + "expected something that can be a Double.  Consider casting with 'CAST(<col> AS BIGINT)'"
+        )
     );
   }
 
   @Test
   public void testSelectConstantExpressionEquivalentToInfinity()
   {
-    expectedException.expect(invalidSqlIs(
-        "Expression [log10(0)] evaluates to an unsupported value [-Infinity], "
-        + "expected something that can be a Double.  Consider casting with 'CAST(<col> AS BIGINT)'"
-    ));
-    testQuery(
+    testQueryThrows(
         "SELECT log10(0), dim1 FROM foo LIMIT 1",
-        ImmutableList.of(),
-        ImmutableList.of()
+        invalidSqlIs(
+            "Expression [log10(0)] evaluates to an unsupported value [-Infinity], "
+                + "expected something that can be a Double.  Consider casting with 'CAST(<col> AS BIGINT)'"
+        )
     );
   }
 
@@ -482,6 +502,50 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testSafeDivideWithoutTable()
+  {
+    final Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
+
+    testQuery(
+        "select SAFE_DIVIDE(0, 0), SAFE_DIVIDE(1,0), SAFE_DIVIDE(10,2.5), "
+        + " SAFE_DIVIDE(10.5,3.5), SAFE_DIVIDE(10.5,3), SAFE_DIVIDE(10,2)",
+        context,
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(
+                      InlineDataSource.fromIterable(
+                          ImmutableList.of(
+                              new Object[]{0L}
+                          ),
+                          RowSignature.builder().add("ZERO", ColumnType.LONG).build()
+                      )
+                  )
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .columns("v0", "v1", "v2", "v3", "v4")
+                  .virtualColumns(
+                      expressionVirtualColumn("v0", NullHandling.sqlCompatible() ? "null" : "0", ColumnType.LONG),
+                      expressionVirtualColumn("v1", "4.0", ColumnType.DOUBLE),
+                      expressionVirtualColumn("v2", "3.0", ColumnType.DOUBLE),
+                      expressionVirtualColumn("v3", "3.5", ColumnType.DOUBLE),
+                      expressionVirtualColumn("v4", "5", ColumnType.LONG)
+                  )
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .context(context)
+                  .build()
+        ),
+        ImmutableList.of(new Object[]{
+            NullHandling.sqlCompatible() ? null : 0,
+            NullHandling.sqlCompatible() ? null : 0,
+            4.0D,
+            3.0D,
+            3.5D,
+            5
+        })
+    );
+  }
+
+  @Test
   public void testSafeDivideExpressions()
   {
     List<Object[]> expected;
@@ -497,8 +561,8 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
     } else {
       expected = ImmutableList.of(
           new Object[]{null, null, null, 7.0F},
-          new Object[]{1.0F, 1L, 1.0, 3253230.0F},
-          new Object[]{0.0F, 0L, 0.0, 0.0F},
+          new Object[]{1.0F, 1L, 1.0D, 3253230.0F},
+          new Object[]{0.0F, null, 0.0D, 0.0F},
           new Object[]{null, null, null, null},
           new Object[]{null, null, null, null},
           new Object[]{null, null, null, null}
@@ -545,11 +609,12 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                                + "\"columns\":[\"EXPR$0\"],"
                                + "\"legacy\":false,"
                                + "\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},"
-                               + "\"granularity\":{\"type\":\"all\"}},"
+                               + "\"columnTypes\":[\"LONG\"],\"granularity\":{\"type\":\"all\"}},"
                                + "\"signature\":[{\"name\":\"EXPR$0\",\"type\":\"LONG\"}],"
                                + "\"columnMappings\":[{\"queryColumn\":\"EXPR$0\",\"outputColumn\":\"EXPR$0\"}]"
                                + "}]";
-    final String legacyExplanation = "DruidQueryRel(query=[{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"inline\",\"columnNames\":[\"EXPR$0\"],\"columnTypes\":[\"LONG\"],\"rows\":[[2]]},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"resultFormat\":\"compactedList\",\"columns\":[\"EXPR$0\"],\"legacy\":false,\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"granularity\":{\"type\":\"all\"}}], signature=[{EXPR$0:LONG}])\n";
+    final String legacyExplanation = "DruidQueryRel(query=[{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"inline\",\"columnNames\":[\"EXPR$0\"],\"columnTypes\":[\"LONG\"],\"rows\":[[2]]},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"resultFormat\":\"compactedList\",\"columns\":[\"EXPR$0\"],\"legacy\":false,\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},"
+        + "\"columnTypes\":[\"LONG\"],\"granularity\":{\"type\":\"all\"}}], signature=[{EXPR$0:LONG}])\n";
     final String resources = "[]";
     final String attributes = "{\"statementType\":\"SELECT\"}";
 
@@ -615,18 +680,21 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSelectDistinctWithCascadeExtractionFilter()
   {
-    if (NullHandling.sqlCompatible()) {
-      // cannot vectorize due to expression filter
-      cannotVectorize();
-    }
     testQuery(
         "SELECT distinct dim1 FROM druid.foo WHERE substring(substring(dim1, 2), 1, 1) = 'e' OR dim2 = 'a'",
         ImmutableList.of(
             GroupByQuery.builder()
-                .setDataSource(CalciteTests.DATASOURCE1)
-                .setInterval(querySegmentSpec(Filtration.eternity()))
-                .setGranularity(Granularities.ALL)
-                .setDimensions(dimensions(new DefaultDimensionSpec("dim1", "d0")))
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(dimensions(new DefaultDimensionSpec("dim1", "d0")))
+                        .setVirtualColumns(
+                            NullHandling.replaceWithDefault()
+                            ? VirtualColumns.EMPTY
+                            : VirtualColumns.create(
+                                expressionVirtualColumn("v0", "substring(substring(\"dim1\", 1, -1), 0, 1)", ColumnType.STRING)
+                            )
+                        )
                 .setDimFilter(
                     or(
                         NullHandling.replaceWithDefault()
@@ -638,7 +706,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                                 new SubstringDimExtractionFn(0, 1)
                             )
                         )
-                        : expressionFilter("(substring(substring(\"dim1\", 1, -1), 0, 1) == 'e')"),
+                        : equality("v0", "e", ColumnType.STRING),
                         equality("dim2", "a", ColumnType.STRING)
                     )
                 )
@@ -656,9 +724,6 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSelectDistinctWithStrlenFilter()
   {
-    // Cannot vectorize due to usage of expressions.
-    cannotVectorize();
-
     testQuery(
         "SELECT distinct dim1 FROM druid.foo "
             + "WHERE CHARACTER_LENGTH(dim1) = 3 OR CAST(CHARACTER_LENGTH(dim1) AS varchar) = 3",
@@ -668,20 +733,11 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 .setInterval(querySegmentSpec(Filtration.eternity()))
                 .setGranularity(Granularities.ALL)
                 .setVirtualColumns(
-                    expressionVirtualColumn("v0", "strlen(\"dim1\")", ColumnType.LONG),
-                    // The two layers of CASTs here are unusual, they should really be collapsed into one
-                    expressionVirtualColumn(
-                        "v1",
-                        "CAST(CAST(strlen(\"dim1\"), 'STRING'), 'LONG')",
-                        ColumnType.LONG
-                    )
+                    expressionVirtualColumn("v0", "strlen(\"dim1\")", ColumnType.LONG)
                 )
                 .setDimensions(dimensions(new DefaultDimensionSpec("dim1", "d0")))
                 .setDimFilter(
-                    or(
-                        equality("v0", 3L, ColumnType.LONG),
-                        equality("v1", 3L, ColumnType.LONG)
-                    )
+                    equality("v0", 3L, ColumnType.LONG)
                 )
                 .setContext(QUERY_CONTEXT_DEFAULT)
                 .build()
@@ -976,12 +1032,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   {
     testQueryThrows(
         "SELECT CURRENT_TIMESTAMP(4)",
-        expectedException -> {
-          expectedException.expect(DruidException.class);
-          expectedException.expectMessage(
-              "Argument to function 'CURRENT_TIMESTAMP' must be a valid precision between '0' and '3'"
-          );
-        }
+        invalidSqlContains("Argument to function 'CURRENT_TIMESTAMP' must be a valid precision between '0' and '3'")
     );
   }
 
@@ -1090,10 +1141,10 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 .build()
         ),
         ImmutableList.of(
-            new Object[]{"a", "xa"},
             new Object[]{"abc", "xabc"},
-            new Object[]{"nosuchkey", "mysteryvalue"},
-            new Object[]{"6", "x6"}
+            new Object[]{"6", "x6"},
+            new Object[]{"a", "xa"},
+            new Object[]{"nosuchkey", "mysteryvalue"}
         )
     );
   }
@@ -1290,7 +1341,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
     skipVectorize();
 
     final String query = "EXPLAIN PLAN FOR SELECT * FROM druid.foo";
-    final String legacyExplanation = "DruidQueryRel(query=[{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"resultFormat\":\"compactedList\",\"columns\":[\"__time\",\"cnt\",\"dim1\",\"dim2\",\"dim3\",\"m1\",\"m2\",\"unique_dim1\"],\"legacy\":false,\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"granularity\":{\"type\":\"all\"}}], signature=[{__time:LONG, dim1:STRING, dim2:STRING, dim3:STRING, cnt:LONG, m1:FLOAT, m2:DOUBLE, unique_dim1:COMPLEX<hyperUnique>}])\n";
+    final String legacyExplanation = "DruidQueryRel(query=[{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"resultFormat\":\"compactedList\",\"columns\":[\"__time\",\"cnt\",\"dim1\",\"dim2\",\"dim3\",\"m1\",\"m2\",\"unique_dim1\"],\"legacy\":false,\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"columnTypes\":[\"LONG\",\"LONG\",\"STRING\",\"STRING\",\"STRING\",\"FLOAT\",\"DOUBLE\",\"COMPLEX<hyperUnique>\"],\"granularity\":{\"type\":\"all\"}}], signature=[{__time:LONG, dim1:STRING, dim2:STRING, dim3:STRING, cnt:LONG, m1:FLOAT, m2:DOUBLE, unique_dim1:COMPLEX<hyperUnique>}])\n";
     final String explanation = "[{"
                                + "\"query\":{\"queryType\":\"scan\","
                                + "\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},"
@@ -1299,7 +1350,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                                + "\"columns\":[\"__time\",\"cnt\",\"dim1\",\"dim2\",\"dim3\",\"m1\",\"m2\",\"unique_dim1\"],"
                                + "\"legacy\":false,"
                                + "\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},"
-                               + "\"granularity\":{\"type\":\"all\"}},"
+                               + "\"columnTypes\":[\"LONG\",\"LONG\",\"STRING\",\"STRING\",\"STRING\",\"FLOAT\",\"DOUBLE\",\"COMPLEX<hyperUnique>\"],\"granularity\":{\"type\":\"all\"}},"
                                + "\"signature\":[{\"name\":\"__time\",\"type\":\"LONG\"},{\"name\":\"dim1\",\"type\":\"STRING\"},{\"name\":\"dim2\",\"type\":\"STRING\"},{\"name\":\"dim3\",\"type\":\"STRING\"},{\"name\":\"cnt\",\"type\":\"LONG\"},{\"name\":\"m1\",\"type\":\"FLOAT\"},{\"name\":\"m2\",\"type\":\"DOUBLE\"},{\"name\":\"unique_dim1\",\"type\":\"COMPLEX<hyperUnique>\"}],"
                                + "\"columnMappings\":[{\"queryColumn\":\"__time\",\"outputColumn\":\"__time\"},{\"queryColumn\":\"dim1\",\"outputColumn\":\"dim1\"},{\"queryColumn\":\"dim2\",\"outputColumn\":\"dim2\"},{\"queryColumn\":\"dim3\",\"outputColumn\":\"dim3\"},{\"queryColumn\":\"cnt\",\"outputColumn\":\"cnt\"},{\"queryColumn\":\"m1\",\"outputColumn\":\"m1\"},{\"queryColumn\":\"m2\",\"outputColumn\":\"m2\"},{\"queryColumn\":\"unique_dim1\",\"outputColumn\":\"unique_dim1\"}]}]";
     final String resources = "[{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]";
@@ -1915,7 +1966,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 )
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns(ImmutableList.of("dim1"))
-                .filters(in("dim1", Arrays.asList("abc", "def"), null))
+                .filters(in("dim1", Arrays.asList("abc", "def")))
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
@@ -1952,7 +2003,6 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testCountDistinctNonApproximateEmptySet()
   {
-    cannotVectorize();
     testQuery(
         PLANNER_CONFIG_DEFAULT.withOverrides(
             ImmutableMap.of(
@@ -1989,7 +2039,6 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testCountDistinctNonApproximateBasic()
   {
-    cannotVectorize();
     testQuery(
         PLANNER_CONFIG_DEFAULT.withOverrides(
             ImmutableMap.of(
@@ -2025,8 +2074,6 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testCountDistinctNonApproximateWithFilter()
   {
-    cannotVectorize();
-
     testQuery(
         PLANNER_CONFIG_DEFAULT.withOverrides(
             ImmutableMap.of(
@@ -2065,8 +2112,6 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testCountDistinctNonApproximateWithFilterHaving()
   {
-    cannotVectorize();
-
     testQuery(
         PLANNER_CONFIG_DEFAULT.withOverrides(
             ImmutableMap.of(
@@ -2102,5 +2147,32 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
 
         ),
         ImmutableList.of());
+  }
+
+  @SqlTestFrameworkConfig.ResultCache(ResultCacheMode.ENABLED)
+  @Test
+  public void testCacheKeyConsistency()
+  {
+    skipVectorize();
+    // possibly pollute the cache
+    // https://github.com/apache/druid/issues/16552
+    testBuilder()
+        .sql("select dim1,d1 from numfoo where 0.0 < d1 and d1 < 1.25 group by dim1,d1")
+        .expectedResults(
+            ImmutableList.of(
+                new Object[] {"", 1.0D}
+            )
+        )
+        .run();
+
+    testBuilder()
+        .sql("select dim1,d1 from numfoo where 0.0 < d1 and d1 < 1.75 group by dim1,d1")
+        .expectedResults(
+            ImmutableList.of(
+                new Object[] {"", 1.0D},
+                new Object[] {"10.1", 1.7D}
+            )
+        )
+        .run();
   }
 }

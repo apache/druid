@@ -63,9 +63,7 @@ public class SimpleServerView implements TimelineServerView
   // dataSource -> version -> serverSelector
   private final Map<String, VersionedIntervalTimeline<String, ServerSelector>> timelines = new HashMap<>();
 
-  private final QueryToolChestWarehouse warehouse;
-  private final ObjectMapper objectMapper;
-  private final HttpClient httpClient;
+  private final DirectDruidClientFactory clientFactory;
 
   public SimpleServerView(
       QueryToolChestWarehouse warehouse,
@@ -73,28 +71,18 @@ public class SimpleServerView implements TimelineServerView
       HttpClient httpClient
   )
   {
-    this.warehouse = warehouse;
-    this.objectMapper = objectMapper;
-    this.httpClient = httpClient;
+    this.clientFactory = new DirectDruidClientFactory(
+        new NoopServiceEmitter(),
+        warehouse,
+        NOOP_QUERY_WATCHER,
+        objectMapper,
+        httpClient
+    );
   }
 
   public void addServer(DruidServer server, DataSegment dataSegment)
   {
-    servers.put(
-        server,
-        new QueryableDruidServer<>(
-            server,
-            new DirectDruidClient<>(
-                warehouse,
-                NOOP_QUERY_WATCHER,
-                objectMapper,
-                httpClient,
-                server.getScheme(),
-                server.getHost(),
-                new NoopServiceEmitter()
-            )
-        )
-    );
+    servers.put(server, new QueryableDruidServer<>(server, clientFactory.makeDirectClient(server)));
     addSegmentToServer(server, dataSegment);
   }
 

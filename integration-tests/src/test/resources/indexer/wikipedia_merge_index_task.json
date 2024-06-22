@@ -40,6 +40,36 @@
                     "type": "stringLast",
                     "name": "last_user",
                     "fieldName": "user"
+                },
+                {
+                    "type": "doubleFirst",
+                    "name": "double_first_delta",
+                    "fieldName": "delta"
+                },
+                {
+                    "type": "doubleLast",
+                    "name": "double_last_delta",
+                    "fieldName": "delta"
+                },
+                {
+                    "type": "longFirst",
+                    "name": "long_first_delta",
+                    "fieldName": "delta"
+                },
+                {
+                    "type": "longLast",
+                    "name": "long_last_delta",
+                    "fieldName": "delta"
+                },
+                {
+                    "type": "floatFirst",
+                    "name": "float_first_delta",
+                    "fieldName": "delta"
+                },
+                {
+                    "type": "floatLast",
+                    "name": "float_last_delta",
+                    "fieldName": "delta"
                 }
             ],
             "granularitySpec": {

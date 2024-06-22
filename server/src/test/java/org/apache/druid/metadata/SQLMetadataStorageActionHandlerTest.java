@@ -25,6 +25,7 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.TaskIdentifier;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskLocation;
@@ -59,6 +60,7 @@ public class SQLMetadataStorageActionHandlerTest
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
 
   private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
+
   private static final Random RANDOM = new Random(1);
 
   private SQLMetadataStorageActionHandler<Map<String, Object>, Map<String, Object>, Map<String, String>, Map<String, Object>> handler;
@@ -131,17 +133,10 @@ public class SQLMetadataStorageActionHandlerTest
 
     handler.insert(entryId, DateTimes.of("2014-01-02T00:00:00.123"), "testDataSource", entry, true, null, "type", "group");
 
-    Assert.assertEquals(
-        Optional.of(entry),
-        handler.getEntry(entryId)
-    );
-
+    Assert.assertEquals(Optional.of(entry), handler.getEntry(entryId));
     Assert.assertEquals(Optional.absent(), handler.getEntry("non_exist_entry"));
-
     Assert.assertEquals(Optional.absent(), handler.getStatus(entryId));
-
     Assert.assertEquals(Optional.absent(), handler.getStatus("non_exist_entry"));
-
     Assert.assertTrue(handler.setStatus(entryId, true, status1));
 
     Assert.assertEquals(
@@ -175,21 +170,12 @@ public class SQLMetadataStorageActionHandlerTest
     // inactive statuses cannot be updated, this should fail
     Assert.assertFalse(handler.setStatus(entryId, false, status2));
 
-    Assert.assertEquals(
-        Optional.of(status1),
-        handler.getStatus(entryId)
-    );
-
-    Assert.assertEquals(
-        Optional.of(entry),
-        handler.getEntry(entryId)
-    );
-
+    Assert.assertEquals(Optional.of(status1), handler.getStatus(entryId));
+    Assert.assertEquals(Optional.of(entry), handler.getEntry(entryId));
     Assert.assertEquals(
         ImmutableList.of(),
         handler.getTaskInfos(CompleteTaskLookup.withTasksCreatedPriorTo(null, DateTimes.of("2014-01-03")), null)
     );
-
     Assert.assertEquals(
         ImmutableList.of(status1),
         handler.getTaskInfos(CompleteTaskLookup.withTasksCreatedPriorTo(null, DateTimes.of("2014-01-01")), null)
@@ -200,7 +186,7 @@ public class SQLMetadataStorageActionHandlerTest
   }
 
   @Test
-  public void testGetRecentStatuses() throws EntryExistsException
+  public void testGetRecentStatuses()
   {
     for (int i = 1; i < 11; i++) {
       final String entryId = "abcd_" + i;
@@ -211,10 +197,7 @@ public class SQLMetadataStorageActionHandlerTest
     }
 
     final List<TaskInfo<Map<String, Object>, Map<String, Object>>> statuses = handler.getTaskInfos(
-        CompleteTaskLookup.withTasksCreatedPriorTo(
-            7,
-            DateTimes.of("2014-01-01")
-        ),
+        CompleteTaskLookup.withTasksCreatedPriorTo(7, DateTimes.of("2014-01-01")),
         null
     );
     Assert.assertEquals(7, statuses.size());
@@ -225,7 +208,7 @@ public class SQLMetadataStorageActionHandlerTest
   }
 
   @Test
-  public void testGetRecentStatuses2() throws EntryExistsException
+  public void testGetRecentStatuses2()
   {
     for (int i = 1; i < 6; i++) {
       final String entryId = "abcd_" + i;
@@ -236,10 +219,7 @@ public class SQLMetadataStorageActionHandlerTest
     }
 
     final List<TaskInfo<Map<String, Object>, Map<String, Object>>> statuses = handler.getTaskInfos(
-        CompleteTaskLookup.withTasksCreatedPriorTo(
-            10,
-            DateTimes.of("2014-01-01")
-        ),
+        CompleteTaskLookup.withTasksCreatedPriorTo(10, DateTimes.of("2014-01-01")),
         null
     );
     Assert.assertEquals(5, statuses.size());
@@ -257,10 +237,13 @@ public class SQLMetadataStorageActionHandlerTest
     Map<String, Object> status = ImmutableMap.of("count", 42);
 
     handler.insert(entryId, DateTimes.of("2014-01-01"), "test", entry, true, status, "type", "group");
-    Assert.assertThrows(
-        EntryExistsException.class,
+
+    DruidException exception = Assert.assertThrows(
+        DruidException.class,
         () -> handler.insert(entryId, DateTimes.of("2014-01-01"), "test", entry, true, status, "type", "group")
     );
+    Assert.assertEquals("invalidInput", exception.getErrorCode());
+    Assert.assertEquals("Task [abcd] already exists", exception.getMessage());
   }
 
   @Test
@@ -341,7 +324,7 @@ public class SQLMetadataStorageActionHandlerTest
   }
 
   @Test
-  public void testReplaceLock() throws EntryExistsException
+  public void testReplaceLock()
   {
     final String entryId = "ABC123";
     Map<String, Object> entry = ImmutableMap.of("a", 1);
@@ -371,7 +354,7 @@ public class SQLMetadataStorageActionHandlerTest
   }
 
   @Test
-  public void testGetLockId() throws EntryExistsException
+  public void testGetLockId()
   {
     final String entryId = "ABC123";
     Map<String, Object> entry = ImmutableMap.of("a", 1);

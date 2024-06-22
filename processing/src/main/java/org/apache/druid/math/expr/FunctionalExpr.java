@@ -24,6 +24,8 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
+import org.apache.druid.math.expr.vector.FallbackVectorProcessor;
+import org.apache.druid.segment.column.Types;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -179,6 +181,16 @@ class FunctionExpr implements Expr
   }
 
   @Override
+  public Expr asSingleThreaded(InputBindingInspector inspector)
+  {
+    return new FunctionExpr(
+        function.asSingleThreaded(args, inspector),
+        name,
+        args
+    );
+  }
+
+  @Override
   public String toString()
   {
     return StringUtils.format("(%s %s)", name, args);
@@ -190,24 +202,40 @@ class FunctionExpr implements Expr
     try {
       return function.apply(args, bindings);
     }
-    catch (DruidException | ExpressionValidationException e) {
+    catch (ExpressionValidationException e) {
+      // ExpressionValidationException already contain function name
+      throw DruidException.forPersona(DruidException.Persona.USER)
+                          .ofCategory(DruidException.Category.INVALID_INPUT)
+                          .build(e, e.getMessage());
+    }
+    catch (Types.InvalidCastException | Types.InvalidCastBooleanException e) {
+      throw DruidException.forPersona(DruidException.Persona.USER)
+                          .ofCategory(DruidException.Category.INVALID_INPUT)
+                          .build(e, "Function[%s] encountered exception: %s", name, e.getMessage());
+    }
+    catch (DruidException e) {
       throw e;
     }
     catch (Exception e) {
-      throw DruidException.defensive().build(e, "Invocation of function '%s' encountered exception.", name);
+      throw DruidException.defensive().build(e, "Function[%s] encountered unknown exception.", name);
     }
   }
 
   @Override
   public boolean canVectorize(InputBindingInspector inspector)
   {
-    return function.canVectorize(inspector, args);
+    return function.canVectorize(inspector, args)
+           || (getOutputType(inspector) != null && inspector.canVectorize(args));
   }
 
   @Override
   public ExprVectorProcessor<?> asVectorProcessor(VectorInputBindingInspector inspector)
   {
-    return function.asVectorProcessor(inspector, args);
+    if (function.canVectorize(inspector, args)) {
+      return function.asVectorProcessor(inspector, args);
+    } else {
+      return FallbackVectorProcessor.create(function, args, inspector);
+    }
   }
 
   @Override

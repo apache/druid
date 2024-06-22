@@ -19,10 +19,10 @@
 
 package org.apache.druid.segment.column;
 
-import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.extraction.ExtractionFn;
+import org.apache.druid.query.filter.DruidObjectPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.StringPredicateDruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
@@ -331,7 +331,7 @@ public class StringUtf8DictionaryEncodedColumn implements DictionaryEncodedColum
         {
           final BitSet checkedIds = new BitSet(getCardinality());
           final BitSet matchingIds = new BitSet(getCardinality());
-          final Predicate<String> predicate = predicateFactory.makeStringPredicate();
+          final DruidObjectPredicate<String> predicate = predicateFactory.makeStringPredicate();
 
           // Lazy matcher; only check an id if matches() is called.
           return new ValueMatcher()
@@ -344,9 +344,8 @@ public class StringUtf8DictionaryEncodedColumn implements DictionaryEncodedColum
               if (checkedIds.get(id)) {
                 return matchingIds.get(id);
               } else {
-                final boolean matchNull = includeUnknown && predicateFactory.isNullInputUnknown();
                 final String rowValue = lookupName(id);
-                final boolean matches = (matchNull && rowValue == null) || predicate.apply(rowValue);
+                final boolean matches = predicate.apply(rowValue).matches(includeUnknown);
                 checkedIds.set(id);
                 if (matches) {
                   matchingIds.set(id);

@@ -45,6 +45,7 @@ public class HllSketchHolderObjectStrategy implements ObjectStrategy<HllSketchHo
     return HllSketchAggregatorFactory.COMPARATOR.compare(sketch1, sketch2);
   }
 
+  @Nullable
   @Override
   public HllSketchHolder fromByteBuffer(final ByteBuffer buf, final int size)
   {
@@ -84,7 +85,7 @@ public class HllSketchHolderObjectStrategy implements ObjectStrategy<HllSketchHo
    * Checks the initial 8 byte header to find the type of internal sketch implementation, then uses the logic the
    * corresponding implementation uses to tell if a sketch is empty while deserializing it.
    */
-  private static boolean isSafeToConvertToNullSketch(ByteBuffer buf, int size)
+  static boolean isSafeToConvertToNullSketch(ByteBuffer buf, int size)
   {
     if (size < 8) {
       // Sanity check.
@@ -109,13 +110,14 @@ public class HllSketchHolderObjectStrategy implements ObjectStrategy<HllSketchHo
         int listCount = buf.get(position + 6) & 0xFF; // get(LIST_COUNT_BYTE) & 0xFF
         return listCount == 0;
       case 1: // SET
-        if (preInts != 3 || size < 9) {
+        if (preInts != 3 || size < 12) {
           // preInts should be HASH_SET_PREINTS, Sanity check.
-          // We also need to read an additional byte for Set implementations.
+          // We also need to read an additional int for Set implementations.
           return false;
         }
         // Based on org.apache.datasketches.hll.PreambleUtil.extractHashSetCount
-        int setCount = buf.get(position + 8);  // get(HASH_SET_COUNT_INT)
+        // Endianness of buf doesn't matter, since we're checking for equality with zero.
+        int setCount = buf.getInt(position + 8);  // getInt(HASH_SET_COUNT_INT)
         return setCount == 0;
       case 2: // HLL
         if (preInts != 10) {

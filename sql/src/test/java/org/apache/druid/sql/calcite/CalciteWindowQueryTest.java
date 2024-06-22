@@ -22,8 +22,8 @@ package org.apache.druid.sql.calcite;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
@@ -37,11 +37,10 @@ import org.apache.druid.sql.calcite.CalciteWindowQueryTest.WindowQueryTestInputC
 import org.apache.druid.sql.calcite.QueryTestRunner.QueryResults;
 import org.apache.druid.sql.calcite.QueryVerification.QueryResultsVerifier;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.hamcrest.Matchers;
 import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.File;
 import java.net.URL;
@@ -53,27 +52,21 @@ import java.util.Objects;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.junit.Assume.assumeThat;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * These tests are file-based, look in resources -> calcite/tests/window for the set of test specifications.
  */
-@RunWith(Parameterized.class)
 public class CalciteWindowQueryTest extends BaseCalciteQueryTest
 {
 
   public static final boolean DUMP_ACTUAL_RESULTS = Boolean.parseBoolean(
       System.getProperty("druid.tests.sql.dumpActualResults")
-  );
-
-  static {
-    NullHandling.initializeForTests();
-  }
+  ) || developerIDEdetected();
 
   private static final ObjectMapper YAML_JACKSON = new DefaultObjectMapper(new YAMLFactory(), "tests");
 
-  @Parameterized.Parameters(name = "{0}")
-  public static Object parametersForWindowQueryTest() throws Exception
+  public static Object[] parametersForWindowQueryTest() throws Exception
   {
     final URL windowFolderUrl = ClassLoader.getSystemResource("calcite/tests/window");
     File windowFolder = new File(windowFolderUrl.toURI());
@@ -84,13 +77,6 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
         .stream(Objects.requireNonNull(listedFiles))
         .map(File::getName)
         .toArray();
-  }
-
-  private final String filename;
-
-  public CalciteWindowQueryTest(String filename)
-  {
-    this.filename = filename;
   }
 
   class TestCase implements QueryResultsVerifier
@@ -130,16 +116,7 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
       maybeDumpActualResults(results.results);
       if (input.expectedOperators != null) {
         final WindowOperatorQuery query = getWindowOperatorQuery(results.recordedQueries);
-        for (int i = 0; i < input.expectedOperators.size(); ++i) {
-          final OperatorFactory expectedOperator = input.expectedOperators.get(i);
-          final OperatorFactory actualOperator = query.getOperators().get(i);
-          if (!expectedOperator.validateEquivalent(actualOperator)) {
-            assertEquals("Operator Mismatch, index[" + i + "]",
-                queryJackson.writeValueAsString(expectedOperator),
-                queryJackson.writeValueAsString(actualOperator));
-            fail("validateEquivalent failed; but textual comparision of operators didn't reported the mismatch!");
-          }
-        }
+        validateOperators(input.expectedOperators, query.getOperators());
       }
 
       final RowSignature outputSignature = results.signature;
@@ -179,6 +156,22 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
       assertResultsValid(ResultMatchMode.RELAX_NULLS, input.expectedResults, results);
     }
 
+    private void validateOperators(List<OperatorFactory> expectedOperators, List<OperatorFactory> currentOperators)
+        throws Exception
+    {
+      for (int i = 0; i < expectedOperators.size(); ++i) {
+        final OperatorFactory expectedOperator = expectedOperators.get(i);
+        final OperatorFactory actualOperator = currentOperators.get(i);
+        if (!expectedOperator.validateEquivalent(actualOperator)) {
+          assertEquals("Operator Mismatch, index[" + i + "]",
+              queryJackson.writeValueAsString(expectedOperator),
+              queryJackson.writeValueAsString(actualOperator));
+          fail("validateEquivalent failed; but textual comparision of operators didn't reported the mismatch!");
+        }
+      }
+      assertEquals("Operator count mismatch!", expectedOperators.size(), currentOperators.size());
+    }
+
     private void maybeDumpActualResults(List<Object[]> results) throws Exception
     {
       if (DUMP_ACTUAL_RESULTS) {
@@ -193,23 +186,96 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
     }
   }
 
-  @Test
+  @MethodSource("parametersForWindowQueryTest")
+  @ParameterizedTest(name = "{0}")
   @SuppressWarnings("unchecked")
-  public void windowQueryTest() throws Exception
+  public void windowQueryTest(String filename) throws Exception
   {
     TestCase testCase = new TestCase(filename);
 
-    assumeThat(testCase.getType(), Matchers.not(TestType.failingTest));
+    assumeTrue(testCase.getType() != TestType.failingTest);
 
     if (testCase.getType() == TestType.operatorValidation) {
       testBuilder()
           .skipVectorize(true)
           .sql(testCase.getSql())
-          .queryContext(ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
-              QueryContexts.ENABLE_DEBUG, true))
+          .queryContext(ImmutableMap.of(
+              PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
+              QueryContexts.ENABLE_DEBUG, true,
+              QueryContexts.WINDOWING_STRICT_VALIDATION, false
+              ))
           .addCustomVerification(QueryVerification.ofResults(testCase))
           .run();
     }
+  }
+
+  @MethodSource("parametersForWindowQueryTest")
+  @ParameterizedTest(name = "{0}")
+  @SuppressWarnings("unchecked")
+  public void windowQueryTestWithCustomContextMaxSubqueryBytes(String filename) throws Exception
+  {
+    TestCase testCase = new TestCase(filename);
+
+    assumeTrue(testCase.getType() != TestType.failingTest);
+
+    if (testCase.getType() == TestType.operatorValidation) {
+      testBuilder()
+          .skipVectorize(true)
+          .sql(testCase.getSql())
+          .queryContext(ImmutableMap.of(QueryContexts.ENABLE_DEBUG, true,
+                                        PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
+                                        QueryContexts.MAX_SUBQUERY_BYTES_KEY, "100000",
+                                        QueryContexts.WINDOWING_STRICT_VALIDATION, false
+                        )
+          )
+          .addCustomVerification(QueryVerification.ofResults(testCase))
+          .run();
+    }
+  }
+
+  @Test
+  public void testEmptyWindowInSubquery()
+  {
+    testBuilder()
+        .sql(
+            "select c from (\n"
+            + "  select channel, row_number() over () as c\n"
+            + "  from wikipedia\n"
+            + "  group by channel\n"
+            + ") LIMIT 5"
+        )
+        .queryContext(ImmutableMap.of(
+            PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
+            QueryContexts.ENABLE_DEBUG, true,
+            QueryContexts.WINDOWING_STRICT_VALIDATION, false
+        ))
+        .expectedResults(ImmutableList.of(
+            new Object[]{1L},
+            new Object[]{2L},
+            new Object[]{3L},
+            new Object[]{4L},
+            new Object[]{5L}
+        ))
+        .run();
+  }
+
+  @Test
+  public void testWindow()
+  {
+    testBuilder()
+        .sql("SELECT\n" +
+             "(rank() over (order by count(*) desc)),\n" +
+             "(rank() over (order by count(*) desc))\n" +
+             "FROM \"wikipedia\"")
+        .queryContext(ImmutableMap.of(
+            PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
+            QueryContexts.ENABLE_DEBUG, true,
+            QueryContexts.WINDOWING_STRICT_VALIDATION, false
+        ))
+        .expectedResults(ImmutableList.of(
+            new Object[]{1L, 1L}
+        ))
+        .run();
   }
 
   private WindowOperatorQuery getWindowOperatorQuery(List<Query<?>> queries)

@@ -86,12 +86,12 @@ public class IsBooleanDimFilterTest extends InitializedNullHandlingTest
   {
     EqualsVerifier.forClass(IsTrueDimFilter.class).usingGetClass()
                   .withNonnullFields("field")
-                  .withIgnoredFields("cachedOptimizedFilter")
+                  .withIgnoredFields("optimizedFilterIncludeUnknown", "optimizedFilterNoIncludeUnknown")
                   .verify();
 
     EqualsVerifier.forClass(IsFalseDimFilter.class).usingGetClass()
                   .withNonnullFields("field")
-                  .withIgnoredFields("cachedOptimizedFilter")
+                  .withIgnoredFields("optimizedFilterIncludeUnknown", "optimizedFilterNoIncludeUnknown")
                   .verify();
   }
 }

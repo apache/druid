@@ -434,7 +434,7 @@ public class LimitedBufferHashGrouperTest extends InitializedNullHandlingTest
   }
 
   /**
-   * key serde for more realistic ordering tests, similar to the {@link GroupByQueryEngineV2.GroupByEngineKeySerde} or
+   * key serde for more realistic ordering tests, similar to the {@link GroupByQueryEngine.GroupByEngineKeySerde} or
    * {@link RowBasedGrouperHelper.RowBasedKeySerde} which are likely to be used in practice by the group-by engine,
    * which also both use {@link GrouperBufferComparatorUtils} to make comparators
    */

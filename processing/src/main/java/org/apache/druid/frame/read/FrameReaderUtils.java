@@ -22,12 +22,15 @@ package org.apache.druid.frame.read;
 import com.google.common.primitives.Ints;
 import org.apache.datasketches.memory.Memory;
 import org.apache.druid.frame.allocation.MemoryRange;
+import org.apache.druid.frame.field.ComplexFieldReader;
 import org.apache.druid.frame.segment.row.FrameColumnSelectorFactory;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.serde.ComplexMetricSerde;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -117,24 +120,51 @@ public class FrameReaderUtils
   public static int compareMemoryUnsigned(
       final Memory memory1,
       final long position1,
-      final long length1,
+      final int length1,
       final Memory memory2,
       final long position2,
-      final long length2
+      final int length2
   )
   {
-    final long commonLength = Math.min(length1, length2);
+    final int commonLength = Math.min(length1, length2);
 
-    for (long i = 0; i < commonLength; i++) {
-      final byte byte1 = memory1.getByte(position1 + i);
-      final byte byte2 = memory2.getByte(position2 + i);
-      final int cmp = (byte1 & 0xFF) - (byte2 & 0xFF); // Unsigned comparison
+    for (int i = 0; i < commonLength; i += Long.BYTES) {
+      final int remaining = commonLength - i;
+      final long r1 = readComparableLong(memory1, position1 + i, remaining);
+      final long r2 = readComparableLong(memory2, position2 + i, remaining);
+      final int cmp = Long.compare(r1, r2);
       if (cmp != 0) {
         return cmp;
       }
     }
 
-    return Long.compare(length1, length2);
+    return Integer.compare(length1, length2);
+  }
+
+  public static long readComparableLong(final Memory memory, final long position, final int length)
+  {
+    long retVal = 0;
+    switch (length) {
+      case 7:
+        retVal |= (memory.getByte(position + 6) & 0xFFL) << 8;
+      case 6:
+        retVal |= (memory.getByte(position + 5) & 0xFFL) << 16;
+      case 5:
+        retVal |= (memory.getByte(position + 4) & 0xFFL) << 24;
+      case 4:
+        retVal |= (memory.getByte(position + 3) & 0xFFL) << 32;
+      case 3:
+        retVal |= (memory.getByte(position + 2) & 0xFFL) << 40;
+      case 2:
+        retVal |= (memory.getByte(position + 1) & 0xFFL) << 48;
+      case 1:
+        retVal |= (memory.getByte(position) & 0xFFL) << 56;
+        break;
+      default:
+        retVal = Long.reverseBytes(memory.getLong(position));
+    }
+
+    return retVal + Long.MIN_VALUE;
   }
 
   /**
@@ -188,6 +218,52 @@ public class FrameReaderUtils
 
     return Integer.compare(length1, length2);
   }
+
+  public static int compareComplexTypes(
+      final byte[] array1,
+      final int position1,
+      final byte[] array2,
+      final int position2,
+      final ColumnType columnType,
+      final ComplexMetricSerde complexMetricSerde
+  )
+  {
+    return columnType.getNullableStrategy().compare(
+        ComplexFieldReader.readFieldFromByteArray(complexMetricSerde, array1, position1),
+        ComplexFieldReader.readFieldFromByteArray(complexMetricSerde, array2, position2)
+    );
+  }
+
+  public static int compareComplexTypes(
+      final Memory memory,
+      final long position1,
+      final byte[] array,
+      final int position2,
+      final ColumnType columnType,
+      final ComplexMetricSerde complexMetricSerde
+  )
+  {
+    return columnType.getNullableStrategy().compare(
+        ComplexFieldReader.readFieldFromMemory(complexMetricSerde, memory, position1),
+        ComplexFieldReader.readFieldFromByteArray(complexMetricSerde, array, position2)
+    );
+  }
+
+  public static int compareComplexTypes(
+      final Memory memory1,
+      final long position1,
+      final Memory memory2,
+      final long position2,
+      final ColumnType columnType,
+      final ComplexMetricSerde complexMetricSerde
+  )
+  {
+    return columnType.getNullableStrategy().compare(
+        ComplexFieldReader.readFieldFromMemory(complexMetricSerde, memory1, position1),
+        ComplexFieldReader.readFieldFromMemory(complexMetricSerde, memory2, position2)
+    );
+  }
+
 
   /**
    * Returns whether a {@link ColumnSelectorFactory} may be able to provide a {@link MemoryRange}. This enables

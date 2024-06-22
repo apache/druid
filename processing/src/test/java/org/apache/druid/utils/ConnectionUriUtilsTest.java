@@ -24,15 +24,12 @@ import org.apache.druid.java.util.common.IAE;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.experimental.runners.Enclosed;
 import org.junit.rules.ExpectedException;
-import org.junit.runner.RunWith;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 
 import java.util.Set;
 
-@RunWith(Enclosed.class)
 public class ConnectionUriUtilsTest
 {
   public static class ThrowIfURLHasNotAllowedPropertiesTest
@@ -106,7 +103,7 @@ public class ConnectionUriUtilsTest
 
       props = ConnectionUriUtils.tryParseJdbcUriParameters(MYSQL_URI, false);
       // though this would be 4 if mysql wasn't loaded in classpath because it would fall back to mariadb
-      Assert.assertEquals(9, props.size());
+      Assert.assertEquals(6, props.size());
 
       props = ConnectionUriUtils.tryParseJdbcUriParameters(MARIA_URI, false);
       Assert.assertEquals(4, props.size());
@@ -127,13 +124,6 @@ public class ConnectionUriUtilsTest
     {
       expectedException.expect(IAE.class);
       ConnectionUriUtils.tryParseJdbcUriParameters("jdbc:postgresql://bad:1234&param", true);
-    }
-
-    @Test
-    public void tryParseInvalidMySql()
-    {
-      expectedException.expect(IAE.class);
-      ConnectionUriUtils.tryParseJdbcUriParameters("jdbc:mysql:/bad", true);
     }
 
     @Test
@@ -205,7 +195,7 @@ public class ConnectionUriUtilsTest
       Set<String> props = ConnectionUriUtils.tryParseMySqlConnectionUri(MYSQL_URI);
       // mysql actually misses 'keyonly', but spits out several keys that are not actually uri parameters
       // DBNAME, HOST, PORT, HOST.1, PORT.1, NUM_HOSTS
-      Assert.assertEquals(9, props.size());
+      Assert.assertEquals(6, props.size());
       Assert.assertTrue(props.contains("user"));
       Assert.assertTrue(props.contains("password"));
       Assert.assertTrue(props.contains("otherOptions"));

@@ -24,8 +24,8 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
-import org.apache.druid.query.aggregation.first.StringFirstAggregatorFactory;
-import org.apache.druid.query.aggregation.last.StringLastAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.first.StringFirstAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.last.StringLastAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.filter.LikeDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -36,7 +36,7 @@ import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * This class tests simple aggregation SQL queries, i.e., no joins and no nested queries.
@@ -647,7 +647,7 @@ public class CalciteSimpleQueryTest extends BaseCalciteQueryTest
         .expectedQueries(
             ImmutableList.of(
                 GroupByQuery.builder()
-                    .setDataSource("wikipedia")
+                    .setDataSource(CalciteTests.WIKIPEDIA)
                     .setInterval(querySegmentSpec(Filtration.eternity()))
                     .setGranularity(Granularities.ALL)
                     .setVirtualColumns(

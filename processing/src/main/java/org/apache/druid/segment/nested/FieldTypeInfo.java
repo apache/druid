@@ -183,6 +183,10 @@ public class FieldTypeInfo
       if (hasEmptyArray && columnType != null && !columnType.isArray()) {
         return null;
       }
+      // if column only has empty arrays, call it long array
+      if (types == 0x00 && hasEmptyArray) {
+        return ColumnType.LONG_ARRAY;
+      }
       return columnType;
     }
 
@@ -246,7 +250,21 @@ public class FieldTypeInfo
 
     public void write(MutableTypeSet types) throws IOException
     {
-      valuesOut.write(types.getByteValue());
+      byte typeByte = types.getByteValue();
+      // adjust for empty array if needed
+      if (types.hasUntypedArray()) {
+        Set<ColumnType> columnTypes = FieldTypeInfo.convertToSet(types.getByteValue());
+        ColumnType leastRestrictive = null;
+        for (ColumnType type : columnTypes) {
+          leastRestrictive = ColumnType.leastRestrictiveType(leastRestrictive, type);
+        }
+        if (leastRestrictive == null) {
+          typeByte = add(typeByte, ColumnType.LONG_ARRAY);
+        } else if (!leastRestrictive.isArray()) {
+          typeByte = add(typeByte, ColumnType.ofArray(leastRestrictive));
+        }
+      }
+      valuesOut.write(typeByte);
       numWritten++;
     }
 

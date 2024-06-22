@@ -38,7 +38,8 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.segment.join.JoinableFactory;
-import org.apache.druid.segment.loading.SegmentLoader;
+import org.apache.druid.segment.loading.SegmentCacheManager;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.SegmentManager;
@@ -50,6 +51,7 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.sql.SqlLifecycleManager;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.SqlToolbox;
+import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
@@ -131,14 +133,16 @@ public class QueryFrameworkUtils
       final PlannerConfig plannerConfig,
       @Nullable final ViewManager viewManager,
       final DruidSchemaManager druidSchemaManager,
-      final AuthorizerMapper authorizerMapper
+      final AuthorizerMapper authorizerMapper,
+      final CatalogResolver catalogResolver
   )
   {
     DruidSchema druidSchema = createMockSchema(
         injector,
         conglomerate,
         walker,
-        druidSchemaManager
+        druidSchemaManager,
+        catalogResolver
     );
     SystemSchema systemSchema =
         CalciteTests.createMockSystemSchema(druidSchema, walker, authorizerMapper);
@@ -193,7 +197,8 @@ public class QueryFrameworkUtils
         plannerConfig,
         null,
         new NoopDruidSchemaManager(),
-        authorizerMapper
+        authorizerMapper,
+        CatalogResolver.NULL_RESOLVER
     );
   }
 
@@ -201,7 +206,8 @@ public class QueryFrameworkUtils
       final Injector injector,
       final QueryRunnerFactoryConglomerate conglomerate,
       final SpecificSegmentsQuerySegmentWalker walker,
-      final DruidSchemaManager druidSchemaManager
+      final DruidSchemaManager druidSchemaManager,
+      final CatalogResolver catalog
   )
   {
     final BrokerSegmentMetadataCache cache = new BrokerSegmentMetadataCache(
@@ -213,15 +219,17 @@ public class QueryFrameworkUtils
         new NoopServiceEmitter(),
         new PhysicalDatasourceMetadataFactory(
             createDefaultJoinableFactory(injector),
-            new SegmentManager(EasyMock.createMock(SegmentLoader.class))
+            new SegmentManager(EasyMock.createMock(SegmentCacheManager.class))
             {
               @Override
               public Set<String> getDataSourceNames()
               {
                 return ImmutableSet.of(CalciteTests.BROADCAST_DATASOURCE);
               }
-            }),
-        null
+            }
+        ),
+        null,
+        CentralizedDatasourceSchemaConfig.create()
     );
 
     try {
@@ -233,7 +241,7 @@ public class QueryFrameworkUtils
     }
 
     cache.stop();
-    return new DruidSchema(cache, druidSchemaManager);
+    return new DruidSchema(cache, druidSchemaManager, catalog);
   }
 
   public static JoinableFactory createDefaultJoinableFactory(Injector injector)

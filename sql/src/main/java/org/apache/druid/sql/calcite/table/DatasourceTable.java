@@ -23,11 +23,15 @@ import com.google.common.base.Preconditions;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.logical.LogicalTableScan;
+import org.apache.druid.catalog.model.facade.DatasourceFacade;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.metadata.DataSourceInformation;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -45,7 +49,7 @@ public class DatasourceTable extends DruidTable
    * published in the Coordinator. Used only for datasources, since only
    * datasources are computed from segments.
    */
-  public static class PhysicalDatasourceMetadata extends DataSourceInformation
+  public static class PhysicalDatasourceMetadata extends DataSourceInformation implements DatasourceMetadata
   {
     private final TableDataSource tableDataSource;
     private final boolean joinable;
@@ -64,16 +68,19 @@ public class DatasourceTable extends DruidTable
       this.broadcast = isBroadcast;
     }
 
+    @Override
     public TableDataSource dataSource()
     {
       return tableDataSource;
     }
 
+    @Override
     public boolean isJoinable()
     {
       return joinable;
     }
 
+    @Override
     public boolean isBroadcast()
     {
       return broadcast;
@@ -115,14 +122,125 @@ public class DatasourceTable extends DruidTable
     }
   }
 
-  private final PhysicalDatasourceMetadata physicalMetadata;
+  public static class EffectiveColumnMetadata
+  {
+    protected final String name;
+    protected final ColumnType type;
+
+    public EffectiveColumnMetadata(String name, ColumnType type)
+    {
+      this.name = name;
+      this.type = type;
+    }
+
+    public String name()
+    {
+      return name;
+    }
+
+    public ColumnType druidType()
+    {
+      return type;
+    }
+
+    public static EffectiveColumnMetadata fromPhysical(String name, ColumnType type)
+    {
+      return new EffectiveColumnMetadata(name, type);
+    }
+
+    @Override
+    public String toString()
+    {
+      return "Column{" +
+             "name=" + name +
+             ", type=" + type.asTypeString() +
+             "}";
+    }
+  }
+
+  public static class EffectiveMetadata
+  {
+    private final DatasourceFacade catalogMetadata;
+    private final boolean isEmpty;
+    private final Map<String, EffectiveColumnMetadata> columns;
+
+    public EffectiveMetadata(
+        final DatasourceFacade catalogMetadata,
+        final Map<String, EffectiveColumnMetadata> columns,
+        final boolean isEmpty
+    )
+    {
+      this.catalogMetadata = catalogMetadata;
+      this.isEmpty = isEmpty;
+      this.columns = columns;
+    }
+
+    public static Map<String, EffectiveColumnMetadata> toEffectiveColumns(RowSignature rowSignature)
+    {
+      Map<String, EffectiveColumnMetadata> columns = new HashMap<>();
+      for (int i = 0; i < rowSignature.size(); i++) {
+        String colName = rowSignature.getColumnName(i);
+        ColumnType colType = rowSignature.getColumnType(i).get();
+
+        EffectiveColumnMetadata colMetadata = EffectiveColumnMetadata.fromPhysical(colName, colType);
+        columns.put(colName, colMetadata);
+      }
+      return columns;
+    }
+
+    public static EffectiveMetadata of(RowSignature rowSignature)
+    {
+      return new EffectiveMetadata(null, toEffectiveColumns(rowSignature), false);
+    }
+
+    public DatasourceFacade catalogMetadata()
+    {
+      return catalogMetadata;
+    }
+
+    public EffectiveColumnMetadata column(String name)
+    {
+      return columns.get(name);
+    }
+
+    public boolean isEmpty()
+    {
+      return isEmpty;
+    }
+
+    @Override
+    public String toString()
+    {
+      return getClass().getSimpleName() + "{" +
+             "empty=" + isEmpty +
+             ", columns=" + columns +
+             "}";
+    }
+  }
+
+  private final DatasourceMetadata physicalMetadata;
+  private final EffectiveMetadata effectiveMetadata;
 
   public DatasourceTable(
       final PhysicalDatasourceMetadata physicalMetadata
   )
   {
-    super(physicalMetadata.getRowSignature());
+    this(
+        physicalMetadata.getRowSignature(),
+        physicalMetadata,
+        EffectiveMetadata.of(physicalMetadata.getRowSignature())
+    );
+  }
+
+  public DatasourceTable(
+      final RowSignature rowSignature,
+      final DatasourceMetadata physicalMetadata,
+      final EffectiveMetadata effectiveMetadata
+  )
+  {
+    super(rowSignature);
     this.physicalMetadata = physicalMetadata;
+    this.effectiveMetadata = effectiveMetadata;
   }
 
   @Override
@@ -141,6 +259,11 @@ public class DatasourceTable extends DruidTable
   public boolean isBroadcast()
   {
     return physicalMetadata.isBroadcast();
+  }
+
+  public EffectiveMetadata effectiveMetadata()
+  {
+    return effectiveMetadata;
   }
 
   @Override
@@ -176,9 +299,10 @@ public class DatasourceTable extends DruidTable
   public String toString()
   {
     // Don't include the row signature: it is the same as in
-    // physicalMetadata.
-    return "DruidTable{" +
-           physicalMetadata +
+    // effectiveMetadata.
+    return "DruidTable{physicalMetadata=" +
+           (physicalMetadata == null ? "null" : physicalMetadata.toString()) +
+           ", effectiveMetadata=" + effectiveMetadata +
            '}';
   }
 }

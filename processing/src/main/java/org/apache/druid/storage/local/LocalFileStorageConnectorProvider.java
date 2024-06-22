@@ -28,12 +28,15 @@ import org.apache.druid.storage.StorageConnectorProvider;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Objects;
 
-@JsonTypeName("local")
+@JsonTypeName(LocalFileStorageConnectorProvider.TYPE_NAME)
 public class LocalFileStorageConnectorProvider implements StorageConnectorProvider
 {
+  public static final String TYPE_NAME = "local";
+
   @JsonProperty
-  File basePath;
+  final File basePath;
 
   @JsonCreator
   public LocalFileStorageConnectorProvider(@JsonProperty(value = "basePath", required = true) File basePath)
@@ -55,5 +58,24 @@ public class LocalFileStorageConnectorProvider implements StorageConnectorProvid
           basePath
       );
     }
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    LocalFileStorageConnectorProvider that = (LocalFileStorageConnectorProvider) o;
+    return Objects.equals(basePath, that.basePath);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(basePath);
   }
 }

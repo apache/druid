@@ -23,11 +23,6 @@ import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
-import com.google.inject.Provides;
-import org.apache.druid.discovery.NodeRole;
-import org.apache.druid.frame.processor.Bouncer;
-import org.apache.druid.guice.LazySingleton;
-import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.counters.CounterSnapshotsSerializer;
@@ -47,6 +42,7 @@ import org.apache.druid.msq.indexing.error.InsertCannotBeEmptyFault;
 import org.apache.druid.msq.indexing.error.InsertLockPreemptedFault;
 import org.apache.druid.msq.indexing.error.InsertTimeNullFault;
 import org.apache.druid.msq.indexing.error.InsertTimeOutOfBoundsFault;
+import org.apache.druid.msq.indexing.error.InvalidFieldFault;
 import org.apache.druid.msq.indexing.error.InvalidNullByteFault;
 import org.apache.druid.msq.indexing.error.MSQFault;
 import org.apache.druid.msq.indexing.error.NotEnoughMemoryFault;
@@ -84,18 +80,18 @@ import org.apache.druid.msq.input.table.SegmentsInputSlice;
 import org.apache.druid.msq.input.table.TableInputSpec;
 import org.apache.druid.msq.kernel.NilExtraInfoHolder;
 import org.apache.druid.msq.querykit.InputNumberDataSource;
+import org.apache.druid.msq.querykit.WindowOperatorQueryFrameProcessorFactory;
 import org.apache.druid.msq.querykit.common.OffsetLimitFrameProcessorFactory;
 import org.apache.druid.msq.querykit.common.SortMergeJoinFrameProcessorFactory;
 import org.apache.druid.msq.querykit.groupby.GroupByPostShuffleFrameProcessorFactory;
 import org.apache.druid.msq.querykit.groupby.GroupByPreShuffleFrameProcessorFactory;
+import org.apache.druid.msq.querykit.results.ExportResultsFrameProcessorFactory;
 import org.apache.druid.msq.querykit.results.QueryResultFrameProcessorFactory;
 import org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessorFactory;
 import org.apache.druid.msq.util.PassthroughAggregatorFactory;
-import org.apache.druid.query.DruidProcessingConfig;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 
 /**
  * Module that adds {@link MSQControllerTask}, {@link MSQWorkerTask}, and dependencies.
@@ -116,6 +112,7 @@ public class MSQIndexingModule implements DruidModule
       InsertLockPreemptedFault.class,
       InsertTimeNullFault.class,
       InsertTimeOutOfBoundsFault.class,
+      InvalidFieldFault.class,
       InvalidNullByteFault.class,
       NotEnoughTemporaryStorageFault.class,
       NotEnoughMemoryFault.class,
@@ -158,6 +155,8 @@ public class MSQIndexingModule implements DruidModule
         NilExtraInfoHolder.class,
         SortMergeJoinFrameProcessorFactory.class,
         QueryResultFrameProcessorFactory.class,
+        WindowOperatorQueryFrameProcessorFactory.class,
+        ExportResultsFrameProcessorFactory.class,
 
         // DataSource classes (note: ExternalDataSource is in MSQSqlModule)
         InputNumberDataSource.class,
@@ -199,18 +198,5 @@ public class MSQIndexingModule implements DruidModule
   @Override
   public void configure(Binder binder)
   {
-  }
-
-  @Provides
-  @LazySingleton
-  public Bouncer makeBouncer(final DruidProcessingConfig processingConfig, @Self Set<NodeRole> nodeRoles)
-  {
-    if (nodeRoles.contains(NodeRole.PEON) && !nodeRoles.contains(NodeRole.INDEXER)) {
-      // CliPeon -> use only one thread regardless of configured # of processing threads. This matches the expected
-      // resource usage pattern for CliPeon-based tasks (one task / one working thread per JVM).
-      return new Bouncer(1);
-    } else {
-      return new Bouncer(processingConfig.getNumThreads());
-    }
   }
 }

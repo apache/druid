@@ -33,6 +33,7 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.initialization.ZkPathsConfig;
@@ -387,6 +388,12 @@ public class CoordinatorServerViewTest extends CuratorTestBase
                 segmentViewInitLatch.countDown();
                 return res;
               }
+
+              @Override
+              public CallbackAction segmentSchemasAnnounced(SegmentSchemas segmentSchemas)
+              {
+                return CallbackAction.CONTINUE;
+              }
             }
         );
       }
@@ -450,6 +457,12 @@ public class CoordinatorServerViewTest extends CuratorTestBase
           )
           {
             callbackServerSegmentRemovedLatch.countDown();
+            return ServerView.CallbackAction.CONTINUE;
+          }
+
+          @Override
+          public ServerView.CallbackAction segmentSchemasAnnounced(SegmentSchemas segmentSchemas)
+          {
             return ServerView.CallbackAction.CONTINUE;
           }
         }

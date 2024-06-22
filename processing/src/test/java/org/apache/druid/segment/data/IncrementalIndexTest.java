@@ -36,7 +36,6 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.guice.NestedDataModule;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Accumulator;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -87,9 +86,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -463,11 +460,11 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
     final IncrementalIndex index = indexCreator.createIndex(
         (Object) ingestAggregatorFactories.toArray(new AggregatorFactory[0])
     );
-    final int concurrentThreads = 2;
+    final int addThreads = 1;
     final int elementsPerThread = 10_000;
     final ListeningExecutorService indexExecutor = MoreExecutors.listeningDecorator(
         Executors.newFixedThreadPool(
-            concurrentThreads,
+            addThreads,
             new ThreadFactoryBuilder()
                 .setDaemon(false)
                 .setNameFormat("index-executor-%d")
@@ -477,7 +474,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
     );
     final ListeningExecutorService queryExecutor = MoreExecutors.listeningDecorator(
         Executors.newFixedThreadPool(
-            concurrentThreads,
+            addThreads,
             new ThreadFactoryBuilder()
                 .setDaemon(false)
                 .setNameFormat("query-executor-%d")
@@ -486,8 +483,8 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
     );
     final long timestamp = System.currentTimeMillis();
     final Interval queryInterval = Intervals.of("1900-01-01T00:00:00Z/2900-01-01T00:00:00Z");
-    final List<ListenableFuture<?>> indexFutures = Lists.newArrayListWithExpectedSize(concurrentThreads);
-    final List<ListenableFuture<?>> queryFutures = Lists.newArrayListWithExpectedSize(concurrentThreads);
+    final List<ListenableFuture<?>> indexFutures = Lists.newArrayListWithExpectedSize(addThreads);
+    final List<ListenableFuture<?>> queryFutures = Lists.newArrayListWithExpectedSize(addThreads);
     final Segment incrementalIndexSegment = new IncrementalIndexSegment(index, null);
     final QueryRunnerFactory factory = new TimeseriesQueryRunnerFactory(
         new TimeseriesQueryQueryToolChest(),
@@ -498,9 +495,9 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
     final AtomicInteger concurrentlyRan = new AtomicInteger(0);
     final AtomicInteger someoneRan = new AtomicInteger(0);
     final CountDownLatch startLatch = new CountDownLatch(1);
-    final CountDownLatch readyLatch = new CountDownLatch(concurrentThreads * 2);
+    final CountDownLatch readyLatch = new CountDownLatch(addThreads * 2);
     final AtomicInteger queriesAccumualted = new AtomicInteger(0);
-    for (int j = 0; j < concurrentThreads; j++) {
+    for (int j = 0; j < addThreads; j++) {
       indexFutures.add(
           indexExecutor.submit(
               new Runnable()
@@ -577,7 +574,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
                         }
                     );
                     for (Double result : results) {
-                      final Integer maxValueExpected = someoneRan.get() + concurrentThreads;
+                      final int maxValueExpected = someoneRan.get() + addThreads;
                       if (maxValueExpected > 0) {
                         // Eventually consistent, but should be somewhere in that range
                         // Actual result is validated after all writes are guaranteed done.
@@ -617,68 +614,22 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
     boolean isRollup = index.isRollup();
     for (Result<TimeseriesResultValue> result : results) {
       Assert.assertEquals(
-          elementsPerThread * (isRollup ? 1 : concurrentThreads),
+          elementsPerThread * (isRollup ? 1 : addThreads),
           result.getValue().getLongMetric("rows").intValue()
       );
       for (int i = 0; i < dimensionCount; ++i) {
         Assert.assertEquals(
             StringUtils.format("Failed long sum on dimension %d", i),
-            elementsPerThread * concurrentThreads,
+            elementsPerThread * addThreads,
             result.getValue().getLongMetric(StringUtils.format("sumResult%s", i)).intValue()
         );
         Assert.assertEquals(
             StringUtils.format("Failed double sum on dimension %d", i),
-            elementsPerThread * concurrentThreads,
+            elementsPerThread * addThreads,
             result.getValue().getDoubleMetric(StringUtils.format("doubleSumResult%s", i)).intValue()
         );
       }
     }
-  }
-
-  @Test
-  public void testConcurrentAdd() throws Exception
-  {
-    final IncrementalIndex index = indexCreator.createIndex((Object) DEFAULT_AGGREGATOR_FACTORIES);
-    final int threadCount = 10;
-    final int elementsPerThread = 200;
-    final int dimensionCount = 5;
-    ExecutorService executor = Execs.multiThreaded(threadCount, "IncrementalIndexTest-%d");
-    final long timestamp = System.currentTimeMillis();
-    final CountDownLatch latch = new CountDownLatch(threadCount);
-    for (int j = 0; j < threadCount; j++) {
-      executor.submit(
-          new Runnable()
-          {
-            @Override
-            public void run()
-            {
-              try {
-                for (int i = 0; i < elementsPerThread; i++) {
-                  index.add(getRow(timestamp + i, i, dimensionCount));
-                }
-              }
-              catch (Exception e) {
-                e.printStackTrace();
-              }
-              latch.countDown();
-            }
-          }
-      );
-    }
-    Assert.assertTrue(latch.await(60, TimeUnit.SECONDS));
-
-    boolean isRollup = index.isRollup();
-    Assert.assertEquals(dimensionCount, index.getDimensionNames().size());
-    Assert.assertEquals(elementsPerThread * (isRollup ? 1 : threadCount), index.size());
-    Iterator<Row> iterator = index.iterator();
-    int curr = 0;
-    while (iterator.hasNext()) {
-      Row row = iterator.next();
-      Assert.assertEquals(timestamp + (isRollup ? curr : curr / threadCount), row.getTimestampFromEpoch());
-      Assert.assertEquals(isRollup ? threadCount : 1, row.getMetric("count").intValue());
-      curr++;
-    }
-    Assert.assertEquals(elementsPerThread * (isRollup ? 1 : threadCount), curr);
   }
 
   @Test

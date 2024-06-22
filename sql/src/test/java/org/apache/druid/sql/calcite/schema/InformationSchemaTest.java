@@ -38,6 +38,7 @@ import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.expression.DirectOperatorConversion;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
+import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.table.RowSignatures;
@@ -45,8 +46,8 @@ import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryFrameworkUtils;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import java.util.ArrayList;
@@ -61,7 +62,7 @@ public class InformationSchemaTest extends BaseCalciteQueryTest
   private InformationSchema informationSchema;
   private SqlTestFramework qf;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     qf = queryFramework();
@@ -72,7 +73,8 @@ public class InformationSchemaTest extends BaseCalciteQueryTest
         new PlannerConfig(),
         null,
         new NoopDruidSchemaManager(),
-        CalciteTests.TEST_AUTHORIZER_MAPPER
+        CalciteTests.TEST_AUTHORIZER_MAPPER,
+        CatalogResolver.NULL_RESOLVER
     );
 
     informationSchema = new InformationSchema(

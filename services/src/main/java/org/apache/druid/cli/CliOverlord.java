@@ -37,7 +37,6 @@ import com.google.inject.name.Named;
 import com.google.inject.name.Names;
 import com.google.inject.servlet.GuiceFilter;
 import com.google.inject.util.Providers;
-import org.apache.druid.audit.AuditManager;
 import org.apache.druid.client.indexing.IndexingService;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.IndexingServiceFirehoseModule;
@@ -63,6 +62,8 @@ import org.apache.druid.indexing.common.actions.TaskAuditLogConfig;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
+import org.apache.druid.indexing.common.task.NoopTaskContextEnricher;
+import org.apache.druid.indexing.common.task.TaskContextEnricher;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTaskClientProvider;
 import org.apache.druid.indexing.common.task.batch.parallel.ShuffleClient;
 import org.apache.druid.indexing.common.tasklogs.SwitchingTaskLogStreamer;
@@ -106,11 +107,11 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.input.InputSourceModule;
 import org.apache.druid.query.lookup.LookupSerdeModule;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.DummyForInjectionAppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
-import org.apache.druid.server.audit.AuditManagerProvider;
 import org.apache.druid.server.coordinator.CoordinatorOverlordServiceConfig;
 import org.apache.druid.server.http.RedirectFilter;
 import org.apache.druid.server.http.RedirectInfo;
@@ -158,6 +159,8 @@ public class CliOverlord extends ServerRunnable
       "/status/health"
   );
 
+  private Properties properties;
+
   public CliOverlord()
   {
     super(log);
@@ -175,6 +178,12 @@ public class CliOverlord extends ServerRunnable
     return getModules(true);
   }
 
+  @Inject
+  public void configure(Properties properties)
+  {
+    this.properties = properties;
+  }
+
   protected List<? extends Module> getModules(final boolean standalone)
   {
     return ImmutableList.of(
@@ -183,12 +192,16 @@ public class CliOverlord extends ServerRunnable
           @Override
           public void configure(Binder binder)
           {
+            validateCentralizedDatasourceSchemaConfig(properties);
+
             if (standalone) {
               binder.bindConstant()
                     .annotatedWith(Names.named("serviceName"))
                     .to(DEFAULT_SERVICE_NAME);
               binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8090);
               binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(8290);
+
+              JsonConfigProvider.bind(binder, CentralizedDatasourceSchemaConfig.PROPERTY_PREFIX, CentralizedDatasourceSchemaConfig.class);
             }
 
             JsonConfigProvider.bind(binder, "druid.coordinator.asOverlord", CoordinatorOverlordServiceConfig.class);
@@ -240,15 +253,23 @@ public class CliOverlord extends ServerRunnable
                 .in(LazySingleton.class);
             binder.bind(DropwizardRowIngestionMetersFactory.class).in(LazySingleton.class);
 
+            PolyBind.optionBinder(binder, Key.get(TaskContextEnricher.class))
+                    .addBinding(NoopTaskContextEnricher.TYPE)
+                    .to(NoopTaskContextEnricher.class)
+                    .in(LazySingleton.class);
+
+            PolyBind.createChoiceWithDefault(
+                binder,
+                "druid.indexer.task.contextenricher.type",
+                Key.get(TaskContextEnricher.class),
+                NoopTaskContextEnricher.TYPE
+            );
+
             configureTaskStorage(binder);
             configureIntermediaryData(binder);
             configureAutoscale(binder);
             binder.install(runnerConfigModule());
             configureOverlordHelpers(binder);
-
-            binder.bind(AuditManager.class)
-                  .toProvider(AuditManagerProvider.class)
-                  .in(ManageLifecycle.class);
 
             if (standalone) {
               binder.bind(RedirectFilter.class).in(LazySingleton.class);

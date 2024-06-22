@@ -44,6 +44,7 @@ import {
   columnToWidth,
   convertToGroupByExpression,
   copyAndAlert,
+  deepGet,
   filterMap,
   formatNumber,
   getNumericColumnBraces,
@@ -62,10 +63,24 @@ function getJsonPaths(jsons: Record<string, any>[]): string[] {
   return ['$.'].concat(computeFlattenExprsForData(jsons, 'include-arrays', true));
 }
 
-function getExpressionIfAlias(query: SqlQuery, selectIndex: number): string {
-  const ex = query.getSelectExpressionForIndex(selectIndex);
+function getExpressionIfAlias(query: SqlQuery, columnIndex: number, numColumns: number): string {
+  const selectExpressionsArray = query.getSelectExpressionsArray();
+  // If there is a * before
+  if (
+    columnIndex > 0 &&
+    selectExpressionsArray.slice(0, columnIndex).some(ex => ex instanceof SqlStar)
+  ) {
+    columnIndex = selectExpressionsArray.length - (numColumns - columnIndex);
+    if (
+      columnIndex < 0 || // This column came from a star
+      selectExpressionsArray.slice(columnIndex, 0).some(ex => ex instanceof SqlStar) // We are between stars
+    ) {
+      return '';
+    }
+  }
 
-  if (query.isRealOutputColumnAtSelectIndex(selectIndex)) {
+  const ex = selectExpressionsArray[columnIndex];
+  if (query.isRealOutputColumnAtSelectIndex(columnIndex)) {
     if (ex instanceof SqlAlias) {
       return String(ex.expression.prettify({ keywordCasing: 'preserve' }));
     } else {
@@ -80,7 +95,7 @@ function getExpressionIfAlias(query: SqlQuery, selectIndex: number): string {
 
 export interface ResultTablePaneProps {
   queryResult: QueryResult;
-  onQueryAction(action: QueryAction): void;
+  onQueryAction(action: QueryAction, sliceIndex?: number): void;
   onExport?(): void;
   runeMode: boolean;
   initPageSize?: number;
@@ -102,6 +117,10 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
       return pagination.page ? { ...pagination, page: 0 } : pagination;
     });
   }, [queryResult.rows.length]);
+
+  function handleQueryAction(action: QueryAction) {
+    onQueryAction(action, deepGet(queryResult, 'query.context.sliceIndex'));
+  }
 
   function hasFilterOnHeader(header: string, headerIndex: number): boolean {
     if (!parsedQuery || !parsedQuery.isRealOutputColumnAtSelectIndex(headerIndex)) return false;
@@ -139,7 +158,7 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
             icon={reverseOrderByDirection === 'ASC' ? IconNames.SORT_ASC : IconNames.SORT_DESC}
             text={`Order ${reverseOrderByDirection === 'ASC' ? 'ascending' : 'descending'}`}
             onClick={() => {
-              onQueryAction(q => q.changeOrderByExpressions([reverseOrderBy]));
+              handleQueryAction(q => q.changeOrderByExpressions([reverseOrderBy]));
             }}
           />,
         );
@@ -150,7 +169,7 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
             icon={IconNames.SORT_DESC}
             text="Order descending"
             onClick={() => {
-              onQueryAction(q => q.changeOrderByExpressions([descOrderBy]));
+              handleQueryAction(q => q.changeOrderByExpressions([descOrderBy]));
             }}
           />,
           <MenuItem
@@ -158,7 +177,7 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
             icon={IconNames.SORT_ASC}
             text="Order ascending"
             onClick={() => {
-              onQueryAction(q => q.changeOrderByExpressions([ascOrderBy]));
+              handleQueryAction(q => q.changeOrderByExpressions([ascOrderBy]));
             }}
           />,
         );
@@ -175,10 +194,10 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
               text="Remove cast"
               onClick={() => {
                 if (!selectExpression || !underlyingExpression) return;
-                onQueryAction(q =>
+                handleQueryAction(q =>
                   q.changeSelect(
                     headerIndex,
-                    underlyingExpression.getArg(0)!.as(selectExpression.getOutputName()),
+                    underlyingExpression.getArg(0)!.setAlias(selectExpression.getOutputName()),
                   ),
                 );
               }}
@@ -196,13 +215,13 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
                   text={asType}
                   onClick={() => {
                     if (!selectExpression) return;
-                    onQueryAction(q =>
+                    handleQueryAction(q =>
                       q.changeSelect(
                         headerIndex,
                         selectExpression
                           .getUnderlyingExpression()
                           .cast(asType)
-                          .as(selectExpression.getOutputName()),
+                          .setAlias(selectExpression.getOutputName()),
                       ),
                     );
                   }}
@@ -238,7 +257,7 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
                     text={path}
                     onClick={() => {
                       if (!selectExpression) return;
-                      onQueryAction(q =>
+                      handleQueryAction(q =>
                         q.addSelect(
                           F('JSON_VALUE', selectExpression.getUnderlyingExpression(), path).as(
                             selectExpression.getOutputName() + path.replace(/^\$/, ''),
@@ -264,7 +283,7 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
               icon={IconNames.FILTER_REMOVE}
               text="Remove from WHERE clause"
               onClick={() => {
-                onQueryAction(q =>
+                handleQueryAction(q =>
                   q.changeWhereExpression(whereExpression.removeColumnFromAnd(header)),
                 );
               }}
@@ -280,7 +299,7 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
               icon={IconNames.FILTER_REMOVE}
               text="Remove from HAVING clause"
               onClick={() => {
-                onQueryAction(q =>
+                handleQueryAction(q =>
                   q.changeHavingExpression(havingExpression.removeColumnFromAnd(header)),
                 );
               }}
@@ -309,7 +328,7 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
               key="time_floor"
               expression={selectExpression}
               onChange={expression => {
-                onQueryAction(q => q.changeSelect(headerIndex, expression));
+                handleQueryAction(q => q.changeSelect(headerIndex, expression));
               }}
             />,
           );
@@ -320,7 +339,9 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
               icon={IconNames.TIME}
               text="Use as the primary time column"
               onClick={() => {
-                onQueryAction(q => q.changeSelect(headerIndex, selectExpression.as(TIME_COLUMN)));
+                handleQueryAction(q =>
+                  q.changeSelect(headerIndex, selectExpression.as(TIME_COLUMN)),
+                );
               }}
             />,
           );
@@ -341,7 +362,7 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
                 icon={IconNames.TIME}
                 text={`Time parse as '${possibleDruidFormat}' and use as the primary time column`}
                 onClick={() => {
-                  onQueryAction(q =>
+                  handleQueryAction(q =>
                     q.changeSelect(headerIndex, newSelectExpression.as(TIME_COLUMN)),
                   );
                 }}
@@ -352,7 +373,7 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
           if (parsedQuery.hasGroupBy()) {
             if (parsedQuery.isGroupedOutputColumn(header)) {
               const convertToAggregate = (aggregate: SqlExpression) => {
-                onQueryAction(q =>
+                handleQueryAction(q =>
                   q.removeOutputColumn(header).addSelect(aggregate, {
                     insertIndex: 'last',
                   }),
@@ -428,7 +449,7 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
                     icon={IconNames.EXCHANGE}
                     text="Convert to group by"
                     onClick={() => {
-                      onQueryAction(q =>
+                      handleQueryAction(q =>
                         q.removeOutputColumn(header).addSelect(groupByExpression, {
                           insertIndex: 'last-grouping',
                           addToGroupBy: 'end',
@@ -450,7 +471,7 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
             icon={IconNames.CROSS}
             text="Remove column"
             onClick={() => {
-              onQueryAction(q => q.removeOutputColumn(header));
+              handleQueryAction(q => q.removeOutputColumn(header));
             }}
           />,
         );
@@ -506,7 +527,7 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
         headerIndex={headerIndex}
         runeMode={runeMode}
         query={parsedQuery}
-        onQueryAction={onQueryAction}
+        onQueryAction={handleQueryAction}
         onShowFullValue={setShowValue}
       />
     );
@@ -539,7 +560,8 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
       ? parsedQuery.getSelectExpressionForIndex(editingColumn)
       : undefined;
 
-  const numericColumnBraces = getNumericColumnBraces(queryResult, pagination);
+  const numColumns = queryResult.header.length;
+  const numericColumnBraces = getNumericColumnBraces(queryResult, undefined, pagination);
   return (
     <div className={classNames('result-table-pane', { 'more-results': hasMoreResults })}>
       {finalPage ? (
@@ -580,7 +602,7 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
           showPagination={
             queryResult.rows.length > Math.min(SMALL_TABLE_PAGE_SIZE, pagination.pageSize)
           }
-          columns={filterMap(queryResult.header, (column, i) => {
+          columns={queryResult.header.map((column, i) => {
             const h = column.name;
             const icon = columnToIcon(column);
 
@@ -597,7 +619,9 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
                         )}
                       </div>
                       {parsedQuery && (
-                        <div className="formula">{getExpressionIfAlias(parsedQuery, i)}</div>
+                        <div className="formula">
+                          {getExpressionIfAlias(parsedQuery, i, numColumns)}
+                        </div>
                       )}
                     </div>
                   </Popover2>
@@ -613,7 +637,7 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
                       {numericColumnBraces[i] ? (
                         <BracedText
                           className="table-padding"
-                          text={formatNumber(value)}
+                          text={typeof value === 'number' ? formatNumber(value) : String(value)}
                           braces={numericColumnBraces[i]}
                           padFractionalPart
                         />
@@ -633,14 +657,16 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
           })}
         />
       )}
-      {showValue && <ShowValueDialog onClose={() => setShowValue(undefined)} str={showValue} />}
+      {showValue && (
+        <ShowValueDialog onClose={() => setShowValue(undefined)} str={showValue} size="large" />
+      )}
       {editingExpression && (
         <ExpressionEditorDialog
           includeOutputName
           expression={editingExpression}
           onSave={newExpression => {
             if (!parsedQuery) return;
-            onQueryAction(q => q.changeSelect(editingColumn, newExpression));
+            handleQueryAction(q => q.changeSelect(editingColumn, newExpression));
           }}
           onClose={() => setEditingColumn(-1)}
         />

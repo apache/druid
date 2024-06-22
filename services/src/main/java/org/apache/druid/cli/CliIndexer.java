@@ -56,17 +56,19 @@ import org.apache.druid.guice.annotations.AttemptId;
 import org.apache.druid.guice.annotations.Parent;
 import org.apache.druid.guice.annotations.RemoteChatHandler;
 import org.apache.druid.guice.annotations.Self;
+import org.apache.druid.indexer.report.TaskReportFileWriter;
 import org.apache.druid.indexing.common.MultipleFileTaskReportFileWriter;
-import org.apache.druid.indexing.common.TaskReportFileWriter;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.ThreadingTaskRunner;
 import org.apache.druid.indexing.worker.Worker;
+import org.apache.druid.indexing.worker.WorkerTaskManager;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.indexing.worker.shuffle.ShuffleModule;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.input.InputSourceModule;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.lookup.LookupModule;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.UnifiedIndexerAppenderatorsManager;
 import org.apache.druid.server.DruidNode;
@@ -79,6 +81,7 @@ import org.apache.druid.server.http.SegmentListerResource;
 import org.apache.druid.server.http.SelfDiscoveryResource;
 import org.apache.druid.server.initialization.jetty.CliIndexerServerModule;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
+import org.apache.druid.server.metrics.IndexerTaskCountStatsProvider;
 import org.eclipse.jetty.server.Server;
 
 import java.util.List;
@@ -132,6 +135,8 @@ public class CliIndexer extends ServerRunnable
           @Override
           public void configure(Binder binder)
           {
+            validateCentralizedDatasourceSchemaConfig(properties);
+
             binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/indexer");
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8091);
             binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(8291);
@@ -144,6 +149,9 @@ public class CliIndexer extends ServerRunnable
             JsonConfigProvider.bind(binder, "druid", DruidNode.class, Parent.class);
             JsonConfigProvider.bind(binder, "druid.worker", WorkerConfig.class);
 
+
+            JsonConfigProvider.bind(binder, CentralizedDatasourceSchemaConfig.PROPERTY_PREFIX, CentralizedDatasourceSchemaConfig.class);
+
             CliPeon.configureIntermediaryData(binder);
             CliPeon.bindTaskConfigAndClients(binder);
 
@@ -152,6 +160,7 @@ public class CliIndexer extends ServerRunnable
             binder.bind(TaskRunner.class).to(ThreadingTaskRunner.class);
             binder.bind(QuerySegmentWalker.class).to(ThreadingTaskRunner.class);
             binder.bind(ThreadingTaskRunner.class).in(LazySingleton.class);
+            binder.bind(IndexerTaskCountStatsProvider.class).to(WorkerTaskManager.class);
 
             CliPeon.bindRowIngestionMeters(binder);
             CliPeon.bindChatHandler(binder);

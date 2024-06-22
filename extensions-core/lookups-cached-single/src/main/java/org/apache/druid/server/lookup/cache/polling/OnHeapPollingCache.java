@@ -88,13 +88,7 @@ public class OnHeapPollingCache<K, V> implements PollingCache<K, V>
   @SuppressWarnings("unchecked")
   public long estimateHeapFootprint()
   {
-    for (final Map.Entry<K, V> entry : immutableMap.entrySet()) {
-      if (!(entry.getKey() instanceof String) || !(entry.getValue() instanceof String)) {
-        return 0;
-      }
-    }
-
-    return MapLookupExtractor.estimateHeapFootprint((Map<String, String>) immutableMap);
+    return MapLookupExtractor.estimateHeapFootprint(((Map<String, String>) immutableMap).entrySet());
   }
 
   @Override

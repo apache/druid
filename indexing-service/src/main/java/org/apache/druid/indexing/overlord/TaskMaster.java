@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.overlord;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.inject.Inject;
 import org.apache.druid.client.indexing.IndexingService;
@@ -30,6 +31,7 @@ import org.apache.druid.indexing.common.actions.SegmentAllocationQueue;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.common.task.TaskContextEnricher;
 import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
 import org.apache.druid.indexing.overlord.config.DefaultTaskConfig;
 import org.apache.druid.indexing.overlord.config.TaskLockConfig;
@@ -94,7 +96,9 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
       final SupervisorManager supervisorManager,
       final OverlordDutyExecutor overlordDutyExecutor,
       @IndexingService final DruidLeaderSelector overlordLeaderSelector,
-      final SegmentAllocationQueue segmentAllocationQueue
+      final SegmentAllocationQueue segmentAllocationQueue,
+      final ObjectMapper mapper,
+      final TaskContextEnricher taskContextEnricher
   )
   {
     this.supervisorManager = supervisorManager;
@@ -125,7 +129,9 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
               taskRunner,
               taskActionClientFactory,
               taskLockbox,
-              emitter
+              emitter,
+              mapper,
+              taskContextEnricher
           );
 
           // Sensible order to start stuff:
@@ -238,7 +244,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
   }
 
   /**
-   * Returns true if it's the leader and its all services have been properly initialized.
+   * Returns true if it's the leader and all its services have been initialized.
    */
   public boolean isLeader()
   {

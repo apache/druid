@@ -69,10 +69,10 @@ import org.apache.druid.guice.annotations.AttemptId;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Parent;
 import org.apache.druid.guice.annotations.Self;
+import org.apache.druid.indexer.report.SingleFileTaskReportFileWriter;
+import org.apache.druid.indexer.report.TaskReportFileWriter;
 import org.apache.druid.indexing.common.RetryPolicyConfig;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
-import org.apache.druid.indexing.common.SingleFileTaskReportFileWriter;
-import org.apache.druid.indexing.common.TaskReportFileWriter;
 import org.apache.druid.indexing.common.TaskToolboxFactory;
 import org.apache.druid.indexing.common.actions.LocalTaskActionClientFactory;
 import org.apache.druid.indexing.common.actions.RemoteTaskActionClientFactory;
@@ -116,6 +116,7 @@ import org.apache.druid.segment.loading.OmniDataSegmentArchiver;
 import org.apache.druid.segment.loading.OmniDataSegmentKiller;
 import org.apache.druid.segment.loading.OmniDataSegmentMover;
 import org.apache.druid.segment.loading.StorageLocation;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.PeonAppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
@@ -130,6 +131,7 @@ import org.apache.druid.server.http.HistoricalResource;
 import org.apache.druid.server.http.SegmentListerResource;
 import org.apache.druid.server.initialization.jetty.ChatHandlerServerModule;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
+import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.metrics.DataSourceTaskIdHolder;
 import org.apache.druid.server.metrics.ServiceStatusMonitor;
 import org.apache.druid.tasklogs.TaskPayloadManager;
@@ -216,9 +218,11 @@ public class CliPeon extends GuiceRunnable
           @Override
           public void configure(Binder binder)
           {
+            ServerRunnable.validateCentralizedDatasourceSchemaConfig(getProperties());
             taskDirPath = taskAndStatusFile.get(0);
             attemptId = taskAndStatusFile.get(1);
 
+            JsonConfigProvider.bind(binder, CentralizedDatasourceSchemaConfig.PROPERTY_PREFIX, CentralizedDatasourceSchemaConfig.class);
             binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/peon");
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
             binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
@@ -281,13 +285,18 @@ public class CliPeon extends GuiceRunnable
           @Named(ServiceStatusMonitor.HEARTBEAT_TAGS_BINDING)
           public Supplier<Map<String, Object>> heartbeatDimensions(Task task)
           {
+            ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
+            builder.put(DruidMetrics.TASK_ID, task.getId());
+            builder.put(DruidMetrics.DATASOURCE, task.getDataSource());
+            builder.put(DruidMetrics.TASK_TYPE, task.getType());
+            builder.put(DruidMetrics.GROUP_ID, task.getGroupId());
+            Map<String, Object> tags = task.getContextValue(DruidMetrics.TAGS);
+            if (tags != null && !tags.isEmpty()) {
+              builder.put(DruidMetrics.TAGS, tags);
+            }
+
             return Suppliers.ofInstance(
-                ImmutableMap.of(
-                    DruidMetrics.TASK_ID, task.getId(),
-                    DruidMetrics.DATASOURCE, task.getDataSource(),
-                    DruidMetrics.TASK_TYPE, task.getType(),
-                    DruidMetrics.GROUP_ID, task.getGroupId()
-                )
+                builder.build()
             );
           }
 
@@ -323,6 +332,14 @@ public class CliPeon extends GuiceRunnable
           public String getTaskIDFromTask(final Task task)
           {
             return task.getId();
+          }
+
+          @Provides
+          @LazySingleton
+          @Named(DataSourceTaskIdHolder.LOOKUPS_TO_LOAD_FOR_TASK)
+          public LookupLoadingSpec getLookupsToLoad(final Task task)
+          {
+            return task.getLookupLoadingSpec();
           }
         },
         new QueryablePeonModule(),

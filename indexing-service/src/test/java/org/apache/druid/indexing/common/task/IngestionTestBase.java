@@ -36,8 +36,11 @@ import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.data.input.impl.RegexInputFormat;
 import org.apache.druid.data.input.impl.RegexParseSpec;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.report.IngestionStatsAndErrors;
+import org.apache.druid.indexer.report.IngestionStatsAndErrorsTaskReport;
+import org.apache.druid.indexer.report.SingleFileTaskReportFileWriter;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
-import org.apache.druid.indexing.common.SingleFileTaskReportFileWriter;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.actions.SegmentInsertAction;
@@ -57,26 +60,32 @@ import org.apache.druid.indexing.overlord.TaskRunnerListener;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.metadata.SQLMetadataConnector;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
 import org.apache.druid.metadata.SqlSegmentsMetadataManager;
 import org.apache.druid.metadata.TestDerbyConnector;
+import org.apache.druid.segment.DataSegmentsWithSchemas;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9Factory;
+import org.apache.druid.segment.SegmentSchemaMapping;
+import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.loading.NoopDataSegmentKiller;
 import org.apache.druid.segment.loading.SegmentCacheManager;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.metadata.SegmentSchemaCache;
+import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -84,6 +93,7 @@ import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
@@ -98,6 +108,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executor;
+import java.util.stream.Collectors;
 
 public abstract class IngestionTestBase extends InitializedNullHandlingTest
 {
@@ -105,7 +116,8 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   @Rule
-  public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
+  public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule =
+      new TestDerbyConnector.DerbyConnectorRule(CentralizedDatasourceSchemaConfig.create(true));
 
   protected final TestUtils testUtils = new TestUtils();
   private final ObjectMapper objectMapper = testUtils.getTestObjectMapper();
@@ -115,6 +127,10 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
   private SegmentsMetadataManager segmentsMetadataManager;
   private TaskLockbox lockbox;
   private File baseDir;
+  private SegmentSchemaManager segmentSchemaManager;
+  private SegmentSchemaCache segmentSchemaCache;
+  private SupervisorManager supervisorManager;
+  protected File reportsFile;
 
   @Before
   public void setUpIngestionTestBase() throws IOException
@@ -125,21 +141,34 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
 
     final SQLMetadataConnector connector = derbyConnectorRule.getConnector();
     connector.createTaskTables();
+    connector.createSegmentSchemasTable();
     connector.createSegmentTable();
     taskStorage = new HeapMemoryTaskStorage(new TaskStorageConfig(null));
+    segmentSchemaManager = new SegmentSchemaManager(
+        derbyConnectorRule.metadataTablesConfigSupplier().get(),
+        objectMapper,
+        derbyConnectorRule.getConnector()
+    );
+
     storageCoordinator = new IndexerSQLMetadataStorageCoordinator(
         objectMapper,
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
-        derbyConnectorRule.getConnector()
+        derbyConnectorRule.getConnector(),
+        segmentSchemaManager,
+        CentralizedDatasourceSchemaConfig.create()
     );
+    segmentSchemaCache = new SegmentSchemaCache(new NoopServiceEmitter());
     segmentsMetadataManager = new SqlSegmentsMetadataManager(
         objectMapper,
         SegmentsMetadataManagerConfig::new,
         derbyConnectorRule.metadataTablesConfigSupplier(),
-        derbyConnectorRule.getConnector()
+        derbyConnectorRule.getConnector(),
+        segmentSchemaCache,
+        CentralizedDatasourceSchemaConfig.create()
     );
     lockbox = new TaskLockbox(taskStorage, storageCoordinator);
-    segmentCacheManagerFactory = new SegmentCacheManagerFactory(getObjectMapper());
+    segmentCacheManagerFactory = new SegmentCacheManagerFactory(TestIndex.INDEX_IO, getObjectMapper());
+    reportsFile = temporaryFolder.newFile();
   }
 
   @After
@@ -158,7 +187,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     return new TestLocalTaskActionClient(task);
   }
 
-  public void prepareTaskForLocking(Task task) throws EntryExistsException
+  public void prepareTaskForLocking(Task task)
   {
     lockbox.add(task);
     taskStorage.insert(task, TaskStatus.running(task.getId()));
@@ -222,13 +251,15 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         taskStorage,
         storageCoordinator,
         new NoopServiceEmitter(),
-        null,
+        supervisorManager,
         objectMapper
     );
   }
 
-  public TaskToolbox createTaskToolbox(TaskConfig config, Task task)
+  public TaskToolbox createTaskToolbox(TaskConfig config, Task task, SupervisorManager supervisorManager)
   {
+    CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig = CentralizedDatasourceSchemaConfig.create(true);
+    this.supervisorManager = supervisorManager;
     return new TaskToolbox.Builder()
         .config(config)
         .taskExecutorNode(new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false))
@@ -248,6 +279,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         .appenderatorsManager(new TestAppenderatorsManager())
         .taskLogPusher(null)
         .attemptId("1")
+        .centralizedTableSchemaConfig(centralizedDatasourceSchemaConfig)
         .build();
   }
 
@@ -264,9 +296,6 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
   /**
    * Converts ParseSpec to InputFormat for indexing tests. To be used until {@link FirehoseFactory}
    * & {@link InputRowParser} is deprecated and removed.
-   *
-   * @param parseSpec
-   * @return
    */
   public static InputFormat createInputFormatFromParseSpec(ParseSpec parseSpec)
   {
@@ -317,6 +346,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
   public class TestLocalTaskActionClient extends CountingLocalTaskActionClientForTest
   {
     private final Set<DataSegment> publishedSegments = new HashSet<>();
+    private SegmentSchemaMapping segmentSchemaMapping = new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
 
     private TestLocalTaskActionClient(Task task)
     {
@@ -329,8 +359,10 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
       final RetType result = super.submit(taskAction);
       if (taskAction instanceof SegmentTransactionalInsertAction) {
         publishedSegments.addAll(((SegmentTransactionalInsertAction) taskAction).getSegments());
+        segmentSchemaMapping.merge(((SegmentTransactionalInsertAction) taskAction).getSegmentSchemaMapping());
       } else if (taskAction instanceof SegmentInsertAction) {
         publishedSegments.addAll(((SegmentInsertAction) taskAction).getSegments());
+        segmentSchemaMapping.merge(((SegmentInsertAction) taskAction).getSegmentSchemaMapping());
       }
       return result;
     }
@@ -338,6 +370,11 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     public Set<DataSegment> getPublishedSegments()
     {
       return publishedSegments;
+    }
+
+    public SegmentSchemaMapping getSegmentSchemas()
+    {
+      return segmentSchemaMapping;
     }
   }
 
@@ -387,6 +424,11 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
       return segments;
     }
 
+    public SegmentSchemaMapping getSegmentSchemas()
+    {
+      return taskActionClient.getSegmentSchemas();
+    }
+
     @Override
     public ListenableFuture<TaskStatus> run(Task task)
     {
@@ -401,6 +443,8 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         final TaskConfig config = new TaskConfigBuilder()
             .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
             .build();
+        CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig = new CentralizedDatasourceSchemaConfig();
+        centralizedDatasourceSchemaConfig.setEnabled(true);
         final TaskToolbox box = new TaskToolbox.Builder()
             .config(config)
             .taskExecutorNode(new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false))
@@ -420,6 +464,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
             .appenderatorsManager(new TestAppenderatorsManager())
             .taskLogPusher(null)
             .attemptId("1")
+            .centralizedTableSchemaConfig(centralizedDatasourceSchemaConfig)
             .build();
 
 
@@ -502,5 +547,42 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     {
       throw new UnsupportedOperationException();
     }
+  }
+
+  /**
+   * Verify that schema is present for each segment.
+   */
+  public void verifySchema(DataSegmentsWithSchemas dataSegmentsWithSchemas)
+  {
+    int nonTombstoneSegments = 0;
+    for (DataSegment segment : dataSegmentsWithSchemas.getSegments()) {
+      if (segment.isTombstone()) {
+        continue;
+      }
+      nonTombstoneSegments++;
+      Assert.assertTrue(
+          dataSegmentsWithSchemas.getSegmentSchemaMapping()
+                                 .getSegmentIdToMetadataMap()
+                                 .containsKey(segment.getId().toString())
+      );
+    }
+    Assert.assertEquals(
+        nonTombstoneSegments,
+        dataSegmentsWithSchemas.getSegmentSchemaMapping().getSegmentIdToMetadataMap().size()
+    );
+  }
+
+  public TaskReport.ReportMap getReports() throws IOException
+  {
+    return objectMapper.readValue(reportsFile, TaskReport.ReportMap.class);
+  }
+
+  public List<IngestionStatsAndErrors> getIngestionReports() throws IOException
+  {
+    return getReports().entrySet()
+                       .stream()
+                       .filter(entry -> entry.getKey().contains(IngestionStatsAndErrorsTaskReport.REPORT_KEY))
+                       .map(entry -> (IngestionStatsAndErrors) entry.getValue().getPayload())
+                       .collect(Collectors.toList());
   }
 }

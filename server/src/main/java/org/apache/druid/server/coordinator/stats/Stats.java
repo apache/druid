@@ -53,10 +53,14 @@ public class Stats
         = CoordinatorStat.toDebugAndEmit("underreplicated", "segment/underReplicated/count");
     public static final CoordinatorStat UNAVAILABLE
         = CoordinatorStat.toDebugAndEmit("unavailable", "segment/unavailable/count");
+    public static final CoordinatorStat DEEP_STORAGE_ONLY
+            = CoordinatorStat.toDebugAndEmit("deepStorageOnly", "segment/availableDeepStorageOnly/count");
     public static final CoordinatorStat UNNEEDED
         = CoordinatorStat.toDebugAndEmit("unneeded", "segment/unneeded/count");
     public static final CoordinatorStat OVERSHADOWED
         = CoordinatorStat.toDebugAndEmit("overshadowed", "segment/overshadowed/count");
+    public static final CoordinatorStat UNNEEDED_ETERNITY_TOMBSTONE
+        = CoordinatorStat.toDebugAndEmit("unneededEternityTombstone", "segment/unneededEternityTombstone/count");
   }
 
   public static class SegmentQueue
@@ -137,6 +141,8 @@ public class Stats
         = CoordinatorStat.toDebugAndEmit("killedSupervisorSpecs", "metadata/kill/supervisor/count");
     public static final CoordinatorStat RULES
         = CoordinatorStat.toDebugAndEmit("killedRules", "metadata/kill/rule/count");
+    public static final CoordinatorStat SEGMENT_SCHEMA
+        = CoordinatorStat.toDebugAndEmit("killSchemas", "metadata/kill/segmentSchema/count");
     public static final CoordinatorStat AUDIT_LOGS
         = CoordinatorStat.toDebugAndEmit("killedAuditLogs", "metadata/kill/audit/count");
     public static final CoordinatorStat DATASOURCES
@@ -147,6 +153,8 @@ public class Stats
         = CoordinatorStat.toDebugAndEmit("killMaxSlots", "killTask/maxSlot/count");
     public static final CoordinatorStat SUBMITTED_TASKS
         = CoordinatorStat.toDebugAndEmit("killTasks", "kill/task/count");
+    public static final CoordinatorStat ELIGIBLE_UNUSED_SEGMENTS
+        = CoordinatorStat.toDebugAndEmit("killEligibleUnusedSegs", "kill/eligibleUnusedSegments/count");
     public static final CoordinatorStat PENDING_SEGMENTS
         = CoordinatorStat.toDebugAndEmit("killPendingSegs", "kill/pendingSegments/count");
   }

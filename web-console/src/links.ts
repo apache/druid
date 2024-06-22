@@ -16,8 +16,6 @@
  * limitations under the License.
  */
 
-import hasOwnProp from 'has-own-prop';
-
 // This is set to the latest available version and should be updated to the next version before release
 const DRUID_DOCS_VERSION = 'latest';
 
@@ -50,7 +48,7 @@ const links = DEFAULT_LINKS;
 export function setLinkOverrides(linkOverrides: Links) {
   const keys = Object.keys(DEFAULT_LINKS) as (keyof Links)[];
   for (const k of keys) {
-    if (hasOwnProp(linkOverrides, k)) {
+    if (Object.hasOwn(linkOverrides, k)) {
       links[k] = fillVersion(String(linkOverrides[k]));
     }
   }

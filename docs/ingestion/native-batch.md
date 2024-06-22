@@ -28,12 +28,14 @@ sidebar_label: JSON-based batch
 :::
 
 Apache Druid supports the following types of JSON-based batch indexing tasks:
+
 - Parallel task indexing (`index_parallel`) that can run multiple indexing tasks concurrently. Parallel task works well for production ingestion tasks.
 - Simple task indexing (`index`) that run a single indexing task at a time. Simple task indexing is suitable for development and test environments.
 
 This topic covers the configuration for `index_parallel` ingestion specs.
 
 For related information on batch indexing, see:
+
 - [Batch ingestion method comparison table](./index.md#batch) for a comparison of batch ingestion methods.
 - [Tutorial: Loading a file](../tutorials/tutorial-batch.md) for a tutorial on JSON-based batch ingestion.
 - [Input sources](./input-sources.md) for possible input sources.
@@ -95,6 +97,8 @@ The `maxNumConcurrentSubTasks` in the `tuningConfig` determines the number of co
 
 By default, JSON-based batch ingestion replaces all data in the intervals in your `granularitySpec` for any segment that it writes to. If you want to add to the segment instead, set the `appendToExisting` flag in the `ioConfig`. JSON-based batch ingestion only replaces data in segments where it actively adds data. If there are segments in the intervals for your `granularitySpec` that don't have data from a task, they remain unchanged. If any existing segments partially overlap with the intervals in the `granularitySpec`, the portion of those segments outside the interval for the new spec remain visible.
 
+You can also perform concurrent append and replace tasks. For more information, see [Concurrent append and replace](./concurrent-append-replace.md)
+
 #### Fully replacing existing segments using tombstones
 
 :::info
@@ -121,12 +125,12 @@ You want to re-ingest and overwrite with new data as follows:
 
 Unless you set `dropExisting` to true, the result after ingestion with overwrite using the same `MONTH` `segmentGranularity` would be:
 
-* **January**: 1 record  
-* **February**: 10 records  
-* **March**: 9 records
+- **January**: 1 record  
+- **February**: 10 records  
+- **March**: 9 records
 
 This may not be what it is expected since the new data has 0 records for January. Set `dropExisting` to true to replace the unneeded January segment with a tombstone.
-   
+
 ## Parallel indexing example
 
 The following example illustrates the configuration for a parallel indexing task.
@@ -211,6 +215,7 @@ The following example illustrates the configuration for a parallel indexing task
   }
 }
 ```
+
 </details>
 
 ## Parallel indexing configuration
@@ -302,7 +307,7 @@ The segments split hint spec is used only for [`DruidInputSource`](./input-sourc
 
 ### `partitionsSpec`
 
-The primary partition for Druid is time. You can define a secondary partitioning method in the partitions spec. Use the `partitionsSpec` type that applies for your [rollup](rollup.md) method. 
+The primary partition for Druid is time. You can define a secondary partitioning method in the partitions spec. Use the `partitionsSpec` type that applies for your [rollup](rollup.md) method.
 
 For perfect rollup, you can use:
 
@@ -363,7 +368,7 @@ In the `partial segment generation` phase, just like the Map phase in MapReduce,
 the Parallel task splits the input data based on the split hint spec
 and assigns each split to a worker task. Each worker task (type `partial_index_generate`) reads the assigned split, and partitions rows by the time chunk from `segmentGranularity` (primary partition key) in the `granularitySpec`
 and then by the hash value of `partitionDimensions` (secondary partition key) in the `partitionsSpec`.
-The partitioned data is stored in local storage of 
+The partitioned data is stored in local storage of
 the [middleManager](../design/middlemanager.md) or the [indexer](../design/indexer.md).
 
 The `partial segment merge` phase is similar to the Reduce phase in MapReduce.
@@ -706,12 +711,14 @@ The returned result contains the worker task spec, a current task status if exis
   "taskHistory": []
 }
 ```
+
 </details>
 
 `http://{PEON_IP}:{PEON_PORT}/druid/worker/v1/chat/{SUPERVISOR_TASK_ID}/subtaskspec/{SUB_TASK_SPEC_ID}/history`  
 Returns the task attempt history of the worker task spec of the given id, or HTTP 404 Not Found error if the supervisor task is running in the sequential mode.
 
 ## Segment pushing modes
+
 While ingesting data using the parallel task indexing, Druid creates segments from the input data and pushes them. For segment pushing,
 the parallel task index supports the following segment pushing modes based upon your type of [rollup](./rollup.md):
 
@@ -740,10 +747,12 @@ This may help the higher priority tasks to finish earlier than lower priority ta
 by assigning more task slots to them.
 
 ## Splittable input sources
+
 Use the `inputSource` object to define the location where your index can read data. Only the native parallel task and simple task support the input source.
 
 For details on available input sources see:
-- [S3 input source](./input-sources.md#s3-input-source) (`s3`) reads data from AWS S3 storage.
+
+- [S3 input source](./input-sources.md#s3-input-source) (`s3`) reads data from Amazon S3 storage.
 - [Google Cloud Storage input source](./input-sources.md#google-cloud-storage-input-source) (`gs`) reads data from Google Cloud Storage.
 - [Azure input source](./input-sources.md#azure-input-source) (`azure`) reads data from Azure Blob Storage and Azure Data Lake.
 - [HDFS input source](./input-sources.md#hdfs-input-source) (`hdfs`) reads data from HDFS storage.

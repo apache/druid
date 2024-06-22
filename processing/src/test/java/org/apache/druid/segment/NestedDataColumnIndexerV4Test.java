@@ -68,71 +68,73 @@ public class NestedDataColumnIndexerV4Test extends InitializedNullHandlingTest
   public void testKeySizeEstimation()
   {
     NestedDataColumnIndexerV4 indexer = new NestedDataColumnIndexerV4();
+    Assert.assertEquals(DimensionDictionarySelector.CARDINALITY_UNKNOWN, indexer.getCardinality());
     int baseCardinality = NullHandling.sqlCompatible() ? 0 : 2;
-    Assert.assertEquals(baseCardinality, indexer.getCardinality());
+    Assert.assertEquals(baseCardinality, indexer.globalDictionary.getCardinality());
 
     EncodedKeyComponent<StructuredData> key;
     // new raw value, new field, new dictionary entry
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(ImmutableMap.of("x", "foo"), false);
     Assert.assertEquals(228, key.getEffectiveSizeBytes());
-    Assert.assertEquals(baseCardinality + 1, indexer.getCardinality());
+    Assert.assertEquals(baseCardinality + 1, indexer.globalDictionary.getCardinality());
     // adding same value only adds estimated size of value itself
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(ImmutableMap.of("x", "foo"), false);
     Assert.assertEquals(112, key.getEffectiveSizeBytes());
-    Assert.assertEquals(baseCardinality + 1, indexer.getCardinality());
+    Assert.assertEquals(baseCardinality + 1, indexer.globalDictionary.getCardinality());
     // new raw value, new field, new dictionary entry
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(10L, false);
     Assert.assertEquals(94, key.getEffectiveSizeBytes());
-    Assert.assertEquals(baseCardinality + 2, indexer.getCardinality());
+    Assert.assertEquals(baseCardinality + 2, indexer.globalDictionary.getCardinality());
     // adding same value only adds estimated size of value itself
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(10L, false);
     Assert.assertEquals(16, key.getEffectiveSizeBytes());
-    Assert.assertEquals(baseCardinality + 2, indexer.getCardinality());
+    Assert.assertEquals(baseCardinality + 2, indexer.globalDictionary.getCardinality());
     // new raw value, new dictionary entry
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(11L, false);
     Assert.assertEquals(48, key.getEffectiveSizeBytes());
-    Assert.assertEquals(baseCardinality + 3, indexer.getCardinality());
+    Assert.assertEquals(baseCardinality + 3, indexer.globalDictionary.getCardinality());
 
     // new raw value, new fields
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(ImmutableList.of(1L, 2L, 10L), false);
     Assert.assertEquals(276, key.getEffectiveSizeBytes());
-    Assert.assertEquals(baseCardinality + 5, indexer.getCardinality());
+    Assert.assertEquals(baseCardinality + 5, indexer.globalDictionary.getCardinality());
     // new raw value, re-use fields and dictionary
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(ImmutableList.of(1L, 2L, 10L), false);
     Assert.assertEquals(56, key.getEffectiveSizeBytes());
-    Assert.assertEquals(baseCardinality + 5, indexer.getCardinality());
+    Assert.assertEquals(baseCardinality + 5, indexer.globalDictionary.getCardinality());
     // new raw value, new fields
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(
         ImmutableMap.of("x", ImmutableList.of(1L, 2L, 10L)),
         false
     );
     Assert.assertEquals(286, key.getEffectiveSizeBytes());
-    Assert.assertEquals(baseCardinality + 5, indexer.getCardinality());
+    Assert.assertEquals(baseCardinality + 5, indexer.globalDictionary.getCardinality());
     // new raw value
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(
         ImmutableMap.of("x", ImmutableList.of(1L, 2L, 10L)),
         false
     );
     Assert.assertEquals(118, key.getEffectiveSizeBytes());
-    Assert.assertEquals(baseCardinality + 5, indexer.getCardinality());
+    Assert.assertEquals(baseCardinality + 5, indexer.globalDictionary.getCardinality());
 
     key = indexer.processRowValsToUnsortedEncodedKeyComponent("", false);
     if (NullHandling.replaceWithDefault()) {
       Assert.assertEquals(0, key.getEffectiveSizeBytes());
-      Assert.assertEquals(baseCardinality + 6, indexer.getCardinality());
+      Assert.assertEquals(baseCardinality + 6, indexer.globalDictionary.getCardinality());
     } else {
       Assert.assertEquals(104, key.getEffectiveSizeBytes());
-      Assert.assertEquals(baseCardinality + 6, indexer.getCardinality());
+      Assert.assertEquals(baseCardinality + 6, indexer.globalDictionary.getCardinality());
     }
 
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(0, false);
     if (NullHandling.replaceWithDefault()) {
       Assert.assertEquals(16, key.getEffectiveSizeBytes());
-      Assert.assertEquals(baseCardinality + 6, indexer.getCardinality());
+      Assert.assertEquals(baseCardinality + 6, indexer.globalDictionary.getCardinality());
     } else {
       Assert.assertEquals(48, key.getEffectiveSizeBytes());
-      Assert.assertEquals(baseCardinality + 7, indexer.getCardinality());
+      Assert.assertEquals(baseCardinality + 7, indexer.globalDictionary.getCardinality());
     }
+    Assert.assertEquals(DimensionDictionarySelector.CARDINALITY_UNKNOWN, indexer.getCardinality());
   }
 
   @Test
@@ -551,7 +553,6 @@ public class NestedDataColumnIndexerV4Test extends InitializedNullHandlingTest
         () -> cursorList.get(1).getColumnSelectorFactory().makeDimensionSelector(dimensionSpec)
     );
     Assert.assertEquals(StructuredData.wrap(2L), valueSelector.getObject());
-    Assert.assertFalse(valueSelector.isNull());
 
     columnSelectorFactory = cursorList.get(2).getColumnSelectorFactory();
     valueSelector = columnSelectorFactory.makeColumnValueSelector(NESTED_COL);
@@ -560,7 +561,6 @@ public class NestedDataColumnIndexerV4Test extends InitializedNullHandlingTest
         () -> cursorList.get(2).getColumnSelectorFactory().makeDimensionSelector(dimensionSpec)
     );
     Assert.assertEquals(StructuredData.wrap(ImmutableMap.of("x", 1.1, "y", 2L)), valueSelector.getObject());
-    Assert.assertFalse(valueSelector.isNull());
 
     columnSelectorFactory = cursorList.get(3).getColumnSelectorFactory();
     valueSelector = columnSelectorFactory.makeColumnValueSelector(NESTED_COL);

@@ -19,6 +19,7 @@
 
 package org.apache.druid.java.util.common;
 
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -78,4 +79,11 @@ public class IntervalsTest
     );
   }
 
+  @Test
+  public void testInvalidInterval()
+  {
+    DruidExceptionMatcher.invalidInput().assertThrowsAndMatches(
+        () -> Intervals.of("invalid string")
+    );
+  }
 }

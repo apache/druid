@@ -57,6 +57,7 @@ import org.apache.druid.timeline.Partitions;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
+import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.apache.druid.utils.Streams;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
@@ -1637,6 +1638,70 @@ public class NewestSegmentFirstPolicyTest
   }
 
   @Test
+  public void testSkipFirstHalfEternityToDefault()
+  {
+    CompactionSegmentIterator iterator = policy.reset(
+        ImmutableMap.of(DATA_SOURCE,
+                        createCompactionConfig(10000,
+                                               new Period("P0D"),
+                                               null
+                        )
+        ),
+        ImmutableMap.of(
+            DATA_SOURCE,
+            SegmentTimeline.forSegments(ImmutableSet.of(
+                                            new DataSegment(
+                                                DATA_SOURCE,
+                                                new Interval(DateTimes.MIN, DateTimes.of("2024-01-01")),
+                                                "0",
+                                                new HashMap<>(),
+                                                new ArrayList<>(),
+                                                new ArrayList<>(),
+                                                new NumberedShardSpec(0, 0),
+                                                0,
+                                                100)
+                                        )
+            )
+        ),
+        Collections.emptyMap()
+    );
+
+    Assert.assertFalse(iterator.hasNext());
+  }
+
+  @Test
+  public void testSkipSecondHalfOfEternityToDefault()
+  {
+    CompactionSegmentIterator iterator = policy.reset(
+        ImmutableMap.of(DATA_SOURCE,
+                        createCompactionConfig(10000,
+                                               new Period("P0D"),
+                                               null
+                        )
+        ),
+        ImmutableMap.of(
+            DATA_SOURCE,
+            SegmentTimeline.forSegments(ImmutableSet.of(
+                                            new DataSegment(
+                                                DATA_SOURCE,
+                                                new Interval(DateTimes.of("2024-01-01"), DateTimes.MAX),
+                                                "0",
+                                                new HashMap<>(),
+                                                new ArrayList<>(),
+                                                new ArrayList<>(),
+                                                new NumberedShardSpec(0, 0),
+                                                0,
+                                                100)
+                                        )
+            )
+        ),
+        Collections.emptyMap()
+    );
+
+    Assert.assertFalse(iterator.hasNext());
+  }
+
+  @Test
   public void testSkipAllToAllGranularity()
   {
     CompactionSegmentIterator iterator = policy.reset(
@@ -1698,6 +1763,118 @@ public class NewestSegmentFirstPolicyTest
     );
 
     Assert.assertFalse(iterator.hasNext());
+  }
+
+  @Test
+  public void testSkipCompactionForIntervalsContainingSingleTombstone()
+  {
+    final DataSegment tombstone2023 = new DataSegment(
+        DATA_SOURCE,
+        Intervals.of("2023/2024"),
+        "0",
+        new HashMap<>(),
+        new ArrayList<>(),
+        new ArrayList<>(),
+        TombstoneShardSpec.INSTANCE,
+        0,
+        1);
+    final DataSegment dataSegment2023 = new DataSegment(
+        DATA_SOURCE,
+        Intervals.of("2023/2024"),
+        "0",
+        new HashMap<>(),
+        new ArrayList<>(),
+        new ArrayList<>(),
+        new NumberedShardSpec(1, 0),
+        0,
+        100);
+    final DataSegment tombstone2024 = new DataSegment(
+        DATA_SOURCE,
+        Intervals.of("2024/2025"),
+        "0",
+        new HashMap<>(),
+        new ArrayList<>(),
+        new ArrayList<>(),
+        TombstoneShardSpec.INSTANCE,
+        0,
+        1);
+
+    CompactionSegmentIterator iterator = policy.reset(
+        ImmutableMap.of(DATA_SOURCE,
+                        createCompactionConfig(10000,
+                                               new Period("P0D"),
+                                               new UserCompactionTaskGranularityConfig(Granularities.YEAR, null, null)
+                        )
+        ),
+        ImmutableMap.of(
+            DATA_SOURCE,
+            SegmentTimeline.forSegments(ImmutableSet.of(tombstone2023, dataSegment2023, tombstone2024))
+        ),
+        Collections.emptyMap()
+    );
+
+    // Skips 2024/2025 since it has a single tombstone and no data.
+    // Return all segments in 2023/2024 since at least one of them has data despite there being a tombstone.
+    Assert.assertEquals(
+        ImmutableList.of(tombstone2023, dataSegment2023),
+        iterator.next().getSegments()
+    );
+
+    final DataSegment tombstone2025Jan = new DataSegment(
+        DATA_SOURCE,
+        Intervals.of("2025-01-01/2025-02-01"),
+        "0",
+        new HashMap<>(),
+        new ArrayList<>(),
+        new ArrayList<>(),
+        TombstoneShardSpec.INSTANCE,
+        0,
+        1);
+    final DataSegment tombstone2025Feb = new DataSegment(
+        DATA_SOURCE,
+        Intervals.of("2025-02-01/2025-03-01"),
+        "0",
+        new HashMap<>(),
+        new ArrayList<>(),
+        new ArrayList<>(),
+        TombstoneShardSpec.INSTANCE,
+        0,
+        1);
+    final DataSegment tombstone2025Mar = new DataSegment(
+        DATA_SOURCE,
+        Intervals.of("2025-03-01/2025-04-01"),
+        "0",
+        new HashMap<>(),
+        new ArrayList<>(),
+        new ArrayList<>(),
+        TombstoneShardSpec.INSTANCE,
+        0,
+        1);
+    iterator = policy.reset(
+        ImmutableMap.of(DATA_SOURCE,
+                        createCompactionConfig(10000,
+                                               new Period("P0D"),
+                                               new UserCompactionTaskGranularityConfig(Granularities.YEAR, null, null)
+                        )
+        ),
+        ImmutableMap.of(
+            DATA_SOURCE,
+            SegmentTimeline.forSegments(ImmutableSet.of(
+                tombstone2023,
+                dataSegment2023,
+                tombstone2024,
+                tombstone2025Jan,
+                tombstone2025Feb,
+                tombstone2025Mar
+            ))
+        ),
+        Collections.emptyMap()
+    );
+    // Does not skip the tombstones in 2025 since there are multiple of them which could potentially be condensed to one
+    Assert.assertEquals(
+        ImmutableList.of(tombstone2025Jan, tombstone2025Feb, tombstone2025Mar),
+        iterator.next().getSegments()
+    );
   }
 
   private static void assertCompactSegmentIntervals(

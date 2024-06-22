@@ -88,15 +88,15 @@ import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.emitter.core.NoopEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
-import org.apache.druid.query.CachingEmitter;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatMinAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
-import org.apache.druid.query.aggregation.first.FloatFirstAggregatorFactory;
-import org.apache.druid.query.aggregation.last.DoubleLastAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.first.FloatFirstAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.last.DoubleLastAggregatorFactory;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.DoubleDimensionHandler;
 import org.apache.druid.segment.IndexIO;
@@ -106,6 +106,7 @@ import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.SimpleQueryableIndex;
+import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
@@ -127,11 +128,13 @@ import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.NoopSegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentCacheManager;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.segment.selector.settable.SettableColumnValueSelector;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ResourceAction;
@@ -299,7 +302,7 @@ public class CompactionTaskTest
                   binder.bind(RowIngestionMetersFactory.class).toInstance(TEST_UTILS.getRowIngestionMetersFactory());
                   binder.bind(CoordinatorClient.class).toInstance(COORDINATOR_CLIENT);
                   binder.bind(SegmentCacheManagerFactory.class)
-                        .toInstance(new SegmentCacheManagerFactory(objectMapper));
+                        .toInstance(new SegmentCacheManagerFactory(TestIndex.INDEX_IO, objectMapper));
                   binder.bind(AppenderatorsManager.class).toInstance(new TestAppenderatorsManager());
                 }
             )
@@ -366,6 +369,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
+        null,
         null
     );
   }
@@ -375,21 +379,20 @@ public class CompactionTaskTest
 
   @Mock
   private Clock clock;
-  private CachingEmitter emitter;
+  private StubServiceEmitter emitter;
 
   @Before
   public void setup()
   {
     final IndexIO testIndexIO = new TestIndexIO(OBJECT_MAPPER, SEGMENT_MAP);
-    emitter = new CachingEmitter();
+    emitter = new StubServiceEmitter();
     toolbox = makeTaskToolbox(
         new TestTaskActionClient(new ArrayList<>(SEGMENT_MAP.keySet())),
         testIndexIO,
-        SEGMENT_MAP,
-        emitter
+        SEGMENT_MAP
     );
     Mockito.when(clock.millis()).thenReturn(0L, 10_000L);
-    segmentCacheManagerFactory = new SegmentCacheManagerFactory(OBJECT_MAPPER);
+    segmentCacheManagerFactory = new SegmentCacheManagerFactory(TestIndex.INDEX_IO, OBJECT_MAPPER);
   }
 
   @Test
@@ -666,6 +669,7 @@ public class CompactionTaskTest
             null,
             null,
             null,
+            null,
             null
         ),
         null,
@@ -748,6 +752,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
+        null,
         null
     );
 
@@ -772,6 +777,7 @@ public class CompactionTaskTest
         null,
         true,
         false,
+        null,
         null,
         null,
         null,
@@ -832,6 +838,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
+        null,
         null
     );
 
@@ -857,6 +864,7 @@ public class CompactionTaskTest
         true,
         false,
         5000L,
+        null,
         null,
         null,
         null,
@@ -1020,6 +1028,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
+        null,
         null
     );
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
@@ -1083,6 +1092,7 @@ public class CompactionTaskTest
         false,
         false,
         5000L,
+        null,
         null,
         null,
         null,
@@ -1162,6 +1172,7 @@ public class CompactionTaskTest
         null,
         null,
         10,
+        null,
         null,
         null,
         null,
@@ -1551,9 +1562,7 @@ public class CompactionTaskTest
         new PeriodGranularity(Period.months(3), null, null),
         BatchIOConfig.DEFAULT_DROP_EXISTING
     );
-    Assert.assertEquals(10_000L, emitter.getLastEmittedEvent().toMap().get("value"));
-    Assert.assertEquals("compact/segmentAnalyzer/fetchAndProcessMillis", emitter.getLastEmittedEvent().toMap().get("metric"));
-    Assert.assertEquals("metrics", emitter.getLastEmittedEvent().getFeed());
+    emitter.verifyValue("compact/segmentAnalyzer/fetchAndProcessMillis", 10_000L);
   }
 
   @Test
@@ -1731,6 +1740,35 @@ public class CompactionTaskTest
     Assert.assertNull(chooseFinestGranularityHelper(input));
   }
 
+  @Test
+  public void testGetDefaultLookupLoadingSpec()
+  {
+    final Builder builder = new Builder(
+        DATA_SOURCE,
+        segmentCacheManagerFactory,
+        RETRY_POLICY_FACTORY
+    );
+    final CompactionTask task = builder
+        .interval(Intervals.of("2000-01-01/2000-01-02"))
+        .build();
+    Assert.assertEquals(LookupLoadingSpec.NONE, task.getLookupLoadingSpec());
+  }
+
+  @Test
+  public void testGetDefaultLookupLoadingSpecWithTransformSpec()
+  {
+    final Builder builder = new Builder(
+        DATA_SOURCE,
+        segmentCacheManagerFactory,
+        RETRY_POLICY_FACTORY
+    );
+    final CompactionTask task = builder
+        .interval(Intervals.of("2000-01-01/2000-01-02"))
+        .transformSpec(new ClientCompactionTaskTransformSpec(new SelectorDimFilter("dim1", "foo", null)))
+        .build();
+    Assert.assertEquals(LookupLoadingSpec.ALL, task.getLookupLoadingSpec());
+  }
+
   private Granularity chooseFinestGranularityHelper(List<Granularity> granularities)
   {
     SettableSupplier<Granularity> queryGranularity = new SettableSupplier<>();
@@ -1822,6 +1860,7 @@ public class CompactionTaskTest
             true,
             false,
             5000L,
+            null,
             null,
             null,
             null,
@@ -1929,11 +1968,10 @@ public class CompactionTaskTest
     }
   }
 
-  private static TaskToolbox makeTaskToolbox(
+  private TaskToolbox makeTaskToolbox(
       TaskActionClient taskActionClient,
       IndexIO indexIO,
-      Map<DataSegment, File> segments,
-      CachingEmitter emitter
+      Map<DataSegment, File> segments
   )
   {
     final SegmentCacheManager segmentCacheManager = new NoopSegmentCacheManager()
@@ -1974,7 +2012,8 @@ public class CompactionTaskTest
         .segmentCacheManager(segmentCacheManager)
         .taskLogPusher(null)
         .attemptId("1")
-        .emitter(new ServiceEmitter("service", "host", emitter))
+        .emitter(emitter)
+        .centralizedTableSchemaConfig(CentralizedDatasourceSchemaConfig.create())
         .build();
   }
 

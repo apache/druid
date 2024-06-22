@@ -38,7 +38,6 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -46,6 +45,7 @@ import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.YieldingAccumulator;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
+import org.apache.druid.query.DirectQueryProcessingPool;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
@@ -58,9 +58,10 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerFactory;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
+import org.apache.druid.query.groupby.GroupByQueryRunnerTestHelper;
+import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.TestGroupByBuffers;
-import org.apache.druid.query.groupby.epinephelinae.GroupByQueryEngineV2;
 import org.apache.druid.query.scan.ScanQueryConfig;
 import org.apache.druid.query.scan.ScanQueryEngine;
 import org.apache.druid.query.scan.ScanQueryQueryToolChest;
@@ -158,6 +159,9 @@ public class AggregationTestHelper implements Closeable
     final Closer closer = Closer.create();
     final ObjectMapper mapper = TestHelper.makeJsonMapper();
     final TestGroupByBuffers groupByBuffers = closer.register(TestGroupByBuffers.createDefault());
+    for (Module mod : jsonModulesToRegister) {
+      mapper.registerModule(mod);
+    }
     final GroupByQueryRunnerFactory factory = GroupByQueryRunnerTest.makeQueryRunnerFactory(
         mapper,
         config,
@@ -702,7 +706,7 @@ public class AggregationTestHelper implements Closeable
             toolChest.mergeResults(
                 toolChest.preMergeQueryDecoration(
                     factory.mergeRunners(
-                        Execs.directExecutor(),
+                        DirectQueryProcessingPool.INSTANCE,
                         Lists.transform(
                             segments,
                             new Function<Segment, QueryRunner>()
@@ -724,13 +728,14 @@ public class AggregationTestHelper implements Closeable
                             }
                         )
                     )
-                )
+                ),
+                true
             )
         ),
         toolChest
     );
 
-    return baseRunner.run(QueryPlus.wrap(query));
+    return baseRunner.run(QueryPlus.wrap(GroupByQueryRunnerTestHelper.populateResourceId(query)));
   }
 
   public QueryRunner<ResultRow> makeStringSerdeQueryRunner(
@@ -774,7 +779,7 @@ public class AggregationTestHelper implements Closeable
                 resultRows.stream()
                           .peek(row -> {
                             GroupByQuery query = (GroupByQuery) queryPlus.getQuery();
-                            GroupByQueryEngineV2.convertRowTypesToOutputTypes(
+                            GroupingEngine.convertRowTypesToOutputTypes(
                                 query.getDimensions(),
                                 row,
                                 query.getResultRowDimensionStart()

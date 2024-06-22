@@ -85,6 +85,11 @@ public class TableId
     return StringUtils.format("\"%s\".\"%s\"", schema, name);
   }
 
+  public String unquoted()
+  {
+    return StringUtils.format("%s.%s", schema, name);
+  }
+
   @Override
   public String toString()
   {

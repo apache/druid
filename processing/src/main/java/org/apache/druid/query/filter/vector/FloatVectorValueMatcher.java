@@ -123,10 +123,10 @@ public class FloatVectorValueMatcher implements VectorValueMatcherFactory
         for (int i = 0; i < mask.getSelectionSize(); i++) {
           final int rowNum = mask.getSelection()[i];
           if (hasNulls && nulls[rowNum]) {
-            if ((includeUnknown && predicateFactory.isNullInputUnknown()) || predicate.applyNull()) {
+            if (predicate.applyNull().matches(includeUnknown)) {
               selection[numRows++] = rowNum;
             }
-          } else if (predicate.applyFloat(vector[rowNum])) {
+          } else if (predicate.applyFloat(vector[rowNum]).matches(includeUnknown)) {
             selection[numRows++] = rowNum;
           }
         }

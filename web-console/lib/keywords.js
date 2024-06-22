@@ -47,6 +47,7 @@ exports.SQL_KEYWORDS = [
   'FULL',
   'CROSS',
   'USING',
+  'NATURAL',
   'FETCH',
   'FIRST',
   'NEXT',
@@ -67,7 +68,11 @@ exports.SQL_KEYWORDS = [
   'RANGE',
   'PRECEDING',
   'FOLLOWING',
+  'CURRENT',
+  'UNBOUNDED',
   'EXTEND',
+  'PIVOT',
+  'UNPIVOT',
 ];
 
 exports.SQL_EXPRESSION_PARTS = [
@@ -106,6 +111,7 @@ exports.SQL_EXPRESSION_PARTS = [
   'YEAR',
   'TIMESTAMP',
   'INTERVAL',
+  'CSV',
 ];
 
 exports.SQL_CONSTANTS = ['NULL', 'FALSE', 'TRUE'];

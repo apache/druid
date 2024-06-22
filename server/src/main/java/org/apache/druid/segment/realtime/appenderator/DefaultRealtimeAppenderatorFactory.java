@@ -96,6 +96,7 @@ public class DefaultRealtimeAppenderatorFactory implements AppenderatorFactory
   {
     final RowIngestionMeters rowIngestionMeters = new NoopRowIngestionMeters();
     return Appenderators.createRealtime(
+        null,
         schema.getDataSource(),
         schema,
         config.withBasePersistDirectory(
@@ -114,7 +115,6 @@ public class DefaultRealtimeAppenderatorFactory implements AppenderatorFactory
         segmentAnnouncer,
         emitter,
         queryProcessingPool,
-        joinableFactory,
         cache,
         cacheConfig,
         cachePopulatorStats,
@@ -125,7 +125,8 @@ public class DefaultRealtimeAppenderatorFactory implements AppenderatorFactory
             config.isReportParseExceptions() ? 0 : Integer.MAX_VALUE,
             0
         ),
-        true
+        true,
+        null
     );
   }
 

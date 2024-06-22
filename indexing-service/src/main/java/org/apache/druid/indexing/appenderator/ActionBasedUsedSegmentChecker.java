@@ -22,7 +22,6 @@ package org.apache.druid.indexing.appenderator;
 import com.google.common.collect.Iterables;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
-import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.appenderator.UsedSegmentChecker;
@@ -66,7 +65,7 @@ public class ActionBasedUsedSegmentChecker implements UsedSegmentChecker
       );
 
       final Collection<DataSegment> usedSegmentsForIntervals = taskActionClient
-          .submit(new RetrieveUsedSegmentsAction(dataSource, null, intervals, Segments.ONLY_VISIBLE));
+          .submit(new RetrieveUsedSegmentsAction(dataSource, intervals));
 
       for (DataSegment segment : usedSegmentsForIntervals) {
         if (segmentIdsInDataSource.contains(segment.getId())) {

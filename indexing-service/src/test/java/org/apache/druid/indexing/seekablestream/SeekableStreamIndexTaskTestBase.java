@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.seekablestream;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
@@ -50,12 +49,13 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DruidNodeAnnouncer;
 import org.apache.druid.discovery.LookupNodeService;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
+import org.apache.druid.indexer.report.IngestionStatsAndErrors;
+import org.apache.druid.indexer.report.SingleFileTaskReportFileWriter;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
-import org.apache.druid.indexing.common.SingleFileTaskReportFileWriter;
-import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TaskToolboxFactory;
 import org.apache.druid.indexing.common.TestUtils;
@@ -88,7 +88,6 @@ import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.MonitorScheduler;
 import org.apache.druid.metadata.DerbyMetadataStorageActionHandlerFactory;
-import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.query.DirectQueryProcessingPool;
@@ -106,6 +105,7 @@ import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifier;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
@@ -116,6 +116,8 @@ import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderator;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.server.DruidNode;
@@ -153,6 +155,8 @@ import java.util.stream.Collectors;
 
 public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
 {
+  private static final Logger log = new Logger(SeekableStreamIndexTaskTestBase.class);
+
   @Rule
   public final TemporaryFolder tempFolder = new TemporaryFolder();
 
@@ -203,6 +207,7 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
   protected TaskLockbox taskLockbox;
   protected IndexerMetadataStorageCoordinator metadataStorageCoordinator;
   protected final Set<Integer> checkpointRequestsHash = new HashSet<>();
+  protected SegmentSchemaManager segmentSchemaManager;
 
   static {
     OBJECT_MAPPER = new TestUtils().getTestObjectMapper();
@@ -456,15 +461,13 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
     return new SegmentDescriptorAndExpectedDim1Values(interval, partitionNum, expectedDim1Values);
   }
 
-  protected IngestionStatsAndErrorsTaskReportData getTaskReportData() throws IOException
+  protected IngestionStatsAndErrors getTaskReportData() throws IOException
   {
-    Map<String, TaskReport> taskReports = OBJECT_MAPPER.readValue(
+    TaskReport.ReportMap taskReports = OBJECT_MAPPER.readValue(
         reportsFile,
-        new TypeReference<Map<String, TaskReport>>()
-        {
-        }
+        TaskReport.ReportMap.class
     );
-    return IngestionStatsAndErrorsTaskReportData.getPayloadFromTaskReports(
+    return IngestionStatsAndErrors.getPayloadFromTaskReports(
         taskReports
     );
   }
@@ -474,8 +477,8 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
     try {
       taskStorage.insert(task, TaskStatus.running(task.getId()));
     }
-    catch (EntryExistsException e) {
-      // suppress
+    catch (DruidException e) {
+      log.noStackTrace().info(e, "Suppressing exception while inserting task [%s]", task.getId());
     }
     taskLockbox.syncFromStorage();
     final TaskToolbox toolbox = toolboxFactory.build(task);
@@ -576,6 +579,7 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
     final TestDerbyConnector derbyConnector = derby.getConnector();
     derbyConnector.createDataSourceTable();
     derbyConnector.createPendingSegmentsTable();
+    derbyConnector.createSegmentSchemasTable();
     derbyConnector.createSegmentTable();
     derbyConnector.createRulesTable();
     derbyConnector.createConfigTable();
@@ -590,10 +594,13 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
             objectMapper
         )
     );
+    segmentSchemaManager = new SegmentSchemaManager(derby.metadataTablesConfigSupplier().get(), objectMapper, derbyConnector);
     metadataStorageCoordinator = new IndexerSQLMetadataStorageCoordinator(
         objectMapper,
         derby.metadataTablesConfigSupplier().get(),
-        derbyConnector
+        derbyConnector,
+        segmentSchemaManager,
+        CentralizedDatasourceSchemaConfig.create()
     );
     taskLockbox = new TaskLockbox(taskStorage, metadataStorageCoordinator);
     final TaskActionToolbox taskActionToolbox = new TaskActionToolbox(
@@ -662,6 +669,7 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
     final DataSegmentPusher dataSegmentPusher = new LocalDataSegmentPusher(dataSegmentPusherConfig);
 
     toolboxFactory = new TaskToolboxFactory(
+        null,
         taskConfig,
         null, // taskExecutorNode
         taskActionClientFactory,
@@ -677,7 +685,7 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
         DirectQueryProcessingPool.INSTANCE,
         NoopJoinableFactory.INSTANCE,
         () -> EasyMock.createMock(MonitorScheduler.class),
-        new SegmentCacheManagerFactory(objectMapper),
+        new SegmentCacheManagerFactory(TestIndex.INDEX_IO, objectMapper),
         objectMapper,
         testUtils.getTestIndexIO(),
         MapCache.create(1024),
@@ -699,7 +707,8 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
         null,
         null,
         null,
-        "1"
+        "1",
+        CentralizedDatasourceSchemaConfig.create()
     );
   }
 

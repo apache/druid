@@ -39,7 +39,7 @@ Retrieves an array of all tasks in the Druid cluster. Each task object includes 
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/indexer/v1/tasks</code>
+`GET` `/druid/indexer/v1/tasks`
 
 #### Query parameters
 
@@ -118,7 +118,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
   [
@@ -187,7 +187,7 @@ Retrieves an array of completed tasks in the Druid cluster. This is functionally
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/indexer/v1/completeTasks</code>
+`GET` `/druid/indexer/v1/completeTasks`
 
 #### Query parameters
 
@@ -250,7 +250,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
   [
@@ -301,7 +301,7 @@ Retrieves an array of running task objects in the Druid cluster. It is functiona
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/indexer/v1/runningTasks</code>
+`GET` `/druid/indexer/v1/runningTasks`
 
 #### Query parameters
 
@@ -357,7 +357,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
   [
@@ -390,7 +390,7 @@ Retrieves an array of waiting tasks in the Druid cluster. It is functionally equ
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/indexer/v1/waitingTasks</code>
+`GET` `/druid/indexer/v1/waitingTasks`
 
 #### Query parameters
 
@@ -445,7 +445,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
   [
@@ -514,7 +514,7 @@ Retrieves an array of pending tasks in the Druid cluster. It is functionally equ
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/indexer/v1/pendingTasks</code>
+`GET` `/druid/indexer/v1/pendingTasks`
 
 #### Query parameters
 
@@ -569,7 +569,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
   [
@@ -620,7 +620,7 @@ Retrieves the payload of a task given the task ID. It returns a JSON object with
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/indexer/v1/task/:taskId</code>
+`GET` `/druid/indexer/v1/task/{taskId}`
 
 #### Responses
 
@@ -675,7 +675,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
   {
@@ -749,10 +749,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
                     "filter": "wikiticker-2015-09-12-sampled.json.gz"
                 },
                 "inputFormat": {
-                    "type": "json",
-                    "keepNullColumns": false,
-                    "assumeNewlineDelimited": false,
-                    "useJsonNodeReader": false
+                    "type": "json"
                 },
                 "appendToExisting": false,
                 "dropExisting": false
@@ -835,7 +832,7 @@ Retrieves the status of a task given the task ID. It returns a JSON object with 
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/indexer/v1/task/:taskId/status</code>
+`GET` `/druid/indexer/v1/task/{taskId}/status`
 
 #### Responses
 
@@ -890,24 +887,24 @@ Host: http://ROUTER_IP:ROUTER_PORT
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
   {
-    'task': 'query-223549f8-b993-4483-b028-1b0d54713cad',
-    'status': {
-      'id': 'query-223549f8-b993-4483-b028-1b0d54713cad',
-      'groupId': 'query-223549f8-b993-4483-b028-1b0d54713cad',
-      'type': 'query_controller',
-      'createdTime': '2023-06-22T22:11:28.367Z',
-      'queueInsertionTime': '1970-01-01T00:00:00.000Z',
-      'statusCode': 'RUNNING',
-      'status': 'RUNNING',
-      'runnerStatusCode': 'RUNNING',
-      'duration': -1,
-      'location': {'host': 'localhost', 'port': 8100, 'tlsPort': -1},
-      'dataSource': 'wikipedia_api',
-      'errorMsg': None
+    "task": "query-223549f8-b993-4483-b028-1b0d54713cad",
+    "status": {
+      "id": "query-223549f8-b993-4483-b028-1b0d54713cad",
+      "groupId": "query-223549f8-b993-4483-b028-1b0d54713cad",
+      "type": "query_controller",
+      "createdTime": "2023-06-22T22:11:28.367Z",
+      "queueInsertionTime": "1970-01-01T00:00:00.000Z",
+      "statusCode": "RUNNING",
+      "status": "RUNNING",
+      "runnerStatusCode": "RUNNING",
+      "duration": -1,
+      "location": {"host": "localhost", "port": 8100, "tlsPort": -1},
+      "dataSource": "wikipedia_api",
+      "errorMsg": null
     }
   }
   ```
@@ -926,7 +923,7 @@ In addition to enabling audit logs, configure a cleanup strategy to prevent over
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/indexer/v1/task/:taskId/segments</code>
+`GET` `/druid/indexer/v1/task/{taskId}/segments`
 
 #### Responses
 
@@ -981,11 +978,7 @@ Task logs are automatically retrieved from the Middle Manager/Indexer or in long
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/indexer/v1/task/:taskId/log</code>
-
-#### URL
-
-<code class="getAPI">GET</code> <code>/druid/indexer/v1/task/:taskId/log</code>
+`GET` `/druid/indexer/v1/task/{taskId}/log`
 
 #### Query parameters
 
@@ -1037,7 +1030,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
     2023-07-03T22:11:17,891 INFO [qtp1251996697-122] org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner - Sequence[index_kafka_social_media_0e905aa31037879_0] end offsets updated from [{0=9223372036854775807}] to [{0=230985}].
@@ -1109,7 +1102,7 @@ Retrieves a [task completion report](../ingestion/tasks.md#task-reports) for a t
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/indexer/v1/task/:taskId/reports</code>
+`GET` `/druid/indexer/v1/task/{taskId}/reports`
 
 #### Responses
 
@@ -1155,7 +1148,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
   {
@@ -1201,7 +1194,7 @@ Note that for most batch ingestion use cases, you should use the [SQL-ingestion 
 
 #### URL
 
-<code class="postAPI">POST</code> <code>/druid/indexer/v1/task</code>
+`POST` `/druid/indexer/v1/task`
 
 #### Responses
 
@@ -1355,7 +1348,7 @@ Content-Length: 952
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
   {
@@ -1371,7 +1364,7 @@ Shuts down a task if it not already complete. Returns a JSON object with the ID 
 
 #### URL
 
-<code class="postAPI">POST</code> <code>/druid/indexer/v1/task/:taskId/shutdown</code>
+`POST` `/druid/indexer/v1/task/{taskId}/shutdown`
 
 #### Responses
 
@@ -1425,11 +1418,11 @@ Host: http://ROUTER_IP:ROUTER_PORT
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
   {
-    'task': 'query-577a83dd-a14e-4380-bd01-c942b781236b'
+    "task": "query-577a83dd-a14e-4380-bd01-c942b781236b"
   }
   ```
 
@@ -1441,7 +1434,7 @@ Shuts down all tasks for a specified datasource. If successful, it returns a JSO
 
 #### URL
 
-<code class="postAPI">POST</code> <code>/druid/indexer/v1/datasources/:datasource/shutdownAllTasks</code>
+`POST` `/druid/indexer/v1/datasources/{datasource}/shutdownAllTasks`
 
 #### Responses
 
@@ -1495,7 +1488,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
   {
@@ -1513,7 +1506,7 @@ Retrieves list of task status objects for list of task ID strings in request bod
 
 #### URL
 
-<code class="postAPI">POST</code> <code>/druid/indexer/v1/taskStatus</code>
+`POST` `/druid/indexer/v1/taskStatus`
 
 #### Responses
 
@@ -1574,7 +1567,7 @@ Content-Length: 134
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
   {
@@ -1614,7 +1607,7 @@ which automates this operation to perform periodically.
 
 #### URL
 
-<code class="deleteAPI">DELETE</code> <code>/druid/indexer/v1/pendingSegments/:datasource</code>
+`DELETE` `/druid/indexer/v1/pendingSegments/{datasource}`
 
 #### Responses
 
@@ -1660,7 +1653,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
   {

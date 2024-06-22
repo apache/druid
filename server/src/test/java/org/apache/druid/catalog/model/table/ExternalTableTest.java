@@ -126,7 +126,7 @@ public class ExternalTableTest extends BaseExternTableTest
     TableMetadata table = TableBuilder.external("foo")
         .inputSource(toMap(new InlineInputSource("a\n")))
         .inputFormat(formatToMap(format))
-        .column("a", Columns.VARCHAR)
+        .column("a", Columns.STRING)
         .build();
     ResolvedTable resolved = registry.resolve(table.spec());
     resolved.validate();
@@ -147,16 +147,16 @@ public class ExternalTableTest extends BaseExternTableTest
         .inputSource(toMap(inputSource))
         .inputFormat(formatToMap(format))
         .description("Sample Wikipedia data")
-        .column("timetamp", Columns.VARCHAR)
-        .column("page", Columns.VARCHAR)
-        .column("language", Columns.VARCHAR)
-        .column("unpatrolled", Columns.VARCHAR)
-        .column("newPage", Columns.VARCHAR)
-        .column("robot", Columns.VARCHAR)
-        .column("added", Columns.VARCHAR)
-        .column("namespace", Columns.BIGINT)
-        .column("deleted", Columns.BIGINT)
-        .column("delta", Columns.BIGINT)
+        .column("timetamp", Columns.STRING)
+        .column("page", Columns.STRING)
+        .column("language", Columns.STRING)
+        .column("unpatrolled", Columns.STRING)
+        .column("newPage", Columns.STRING)
+        .column("robot", Columns.STRING)
+        .column("added", Columns.STRING)
+        .column("namespace", Columns.LONG)
+        .column("deleted", Columns.LONG)
+        .column("delta", Columns.LONG)
         .build();
     LOG.info(table.spec().toString());
   }
@@ -179,9 +179,9 @@ public class ExternalTableTest extends BaseExternTableTest
         .inputFormat(CSV_FORMAT)
         .property(HttpInputSourceDefn.URI_TEMPLATE_PROPERTY, "https://example.com/{}")
         .description("Example parameterized external table")
-        .column("timetamp", Columns.VARCHAR)
-        .column("metric", Columns.VARCHAR)
-        .column("value", Columns.BIGINT)
+        .column("timetamp", Columns.STRING)
+        .column("metric", Columns.STRING)
+        .column("value", Columns.LONG)
         .build();
     LOG.info(table.spec().toString());
   }

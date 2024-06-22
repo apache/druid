@@ -23,6 +23,7 @@ import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
+import org.apache.druid.query.filter.DruidObjectPredicate;
 import org.apache.druid.query.filter.StringPredicateDruidPredicateFactory;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.ColumnValueSelector;
@@ -40,8 +41,6 @@ import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 import org.mockito.quality.Strictness;
-
-import java.util.Objects;
 
 public class LongFieldReaderTest extends InitializedNullHandlingTest
 {
@@ -135,12 +134,12 @@ public class LongFieldReaderTest extends InitializedNullHandlingTest
       Assert.assertTrue(readSelector.makeValueMatcher("0").matches(false));
       Assert.assertFalse(readSelector.makeValueMatcher((String) null).matches(false));
       Assert.assertTrue(readSelector.makeValueMatcher(StringPredicateDruidPredicateFactory.equalTo("0")).matches(false));
-      Assert.assertFalse(readSelector.makeValueMatcher(StringPredicateDruidPredicateFactory.of(Objects::isNull, false)).matches(false));
+      Assert.assertFalse(readSelector.makeValueMatcher(StringPredicateDruidPredicateFactory.of(DruidObjectPredicate.isNull())).matches(false));
     } else {
       Assert.assertFalse(readSelector.makeValueMatcher("0").matches(false));
       Assert.assertTrue(readSelector.makeValueMatcher((String) null).matches(false));
       Assert.assertFalse(readSelector.makeValueMatcher(StringPredicateDruidPredicateFactory.equalTo("0")).matches(false));
-      Assert.assertTrue(readSelector.makeValueMatcher(StringPredicateDruidPredicateFactory.of(Objects::isNull, false)).matches(false));
+      Assert.assertTrue(readSelector.makeValueMatcher(StringPredicateDruidPredicateFactory.of(DruidObjectPredicate.isNull())).matches(false));
     }
   }
 

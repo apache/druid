@@ -25,7 +25,7 @@ sidebar_label: "Durable storage"
 
 You can use durable storage to improve querying from deep storage and SQL-based ingestion.
 
-> Note that only S3 is supported as a durable storage location.
+> Note that S3, Azure and Google are all supported as durable storage locations.
 
 Durable storage for queries from deep storage provides a location where you can write the results of deep storage queries to. Durable storage for SQL-based ingestion is used to temporarily house intermediate files, which can improve reliability.
 
@@ -67,12 +67,12 @@ Depending on the size of the results you're expecting, saving the final results 
 
 By default, Druid saves the final results for queries from deep storage to task reports. Generally, this is acceptable for smaller result sets but may lead to timeouts for larger result sets. 
 
-When you run a query, include the context parameter `selectDestination` and set it to `DURABLESTORAGE`:
+When you run a query, include the context parameter `selectDestination` and set it to `durableStorage`:
 
 ```json
     "context":{
         ...
-        "selectDestination": "DURABLESTORAGE"
+        "selectDestination": "durableStorage"
     }
 ```
 

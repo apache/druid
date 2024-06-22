@@ -108,7 +108,21 @@ export function findSqlQueryPrefix(text: string): string | undefined {
   }
 }
 
+export function cleanSqlQueryPrefix(text: string): string {
+  const matchReplace = text.match(/\sREPLACE$/i);
+  if (matchReplace) {
+    // This query likely grabbed a "REPLACE" (which is not a reserved keyword) from the next query over, see if we can delete it
+    const textWithoutReplace = text.slice(0, -matchReplace[0].length).trimEnd();
+    if (SqlQuery.maybeParse(textWithoutReplace)) {
+      return textWithoutReplace;
+    }
+  }
+
+  return text;
+}
+
 export interface QuerySlice {
+  index: number;
   startOffset: number;
   startRowColumn: RowColumn;
   endOffset: number;
@@ -123,18 +137,19 @@ export function findAllSqlQueriesInText(text: string): QuerySlice[] {
   let offset = 0;
   let m: RegExpExecArray | null = null;
   do {
-    m = /SELECT|WITH|INSERT|REPLACE/i.exec(remainingText);
+    m = /SELECT|WITH|INSERT|REPLACE|EXPLAIN/i.exec(remainingText);
     if (m) {
       const sql = findSqlQueryPrefix(remainingText.slice(m.index));
       const advanceBy = m.index + m[0].length; // Skip the initial word
       if (sql) {
         const endIndex = m.index + sql.length;
         found.push({
+          index: found.length,
           startOffset: offset + m.index,
           startRowColumn: offsetToRowColumn(text, offset + m.index)!,
           endOffset: offset + endIndex,
           endRowColumn: offsetToRowColumn(text, offset + endIndex)!,
-          sql,
+          sql: cleanSqlQueryPrefix(sql),
         });
       }
       remainingText = remainingText.slice(advanceBy);

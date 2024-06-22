@@ -26,6 +26,7 @@ import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
+import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -127,5 +128,11 @@ public class TaskTest
         UOE.class,
         TASK::getInputSourceResources
     );
+  }
+
+  @Test
+  public void testGetLookupLoadingSpec()
+  {
+    Assert.assertEquals(LookupLoadingSpec.ALL, TASK.getLookupLoadingSpec());
   }
 }

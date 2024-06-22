@@ -188,7 +188,7 @@ public class TableBuilder
 
   public TableBuilder timeColumn()
   {
-    return column(Columns.TIME_COLUMN, Columns.TIMESTAMP);
+    return column(Columns.TIME_COLUMN, Columns.LONG);
   }
 
   public TableBuilder column(String name, String sqlType)

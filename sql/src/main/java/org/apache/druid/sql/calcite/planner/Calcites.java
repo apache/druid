@@ -26,8 +26,10 @@ import com.google.common.primitives.Chars;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
+import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.sql.SqlCollation;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperatorBinding;
@@ -98,6 +100,15 @@ public class Calcites
   public static final SqlReturnTypeInference
       ARG1_NULLABLE_ARRAY_RETURN_TYPE_INFERENCE = new Arg1NullableArrayTypeInference();
 
+  public static SqlReturnTypeInference complexReturnTypeWithNullability(ColumnType columnType, boolean nullable)
+  {
+    return opBinding -> RowSignatures.makeComplexType(
+        opBinding.getTypeFactory(),
+        columnType,
+        nullable
+    );
+  }
+
   private Calcites()
   {
     // No instantiation.
@@ -127,6 +138,31 @@ public class Calcites
     }
     builder.append("'");
     return isPlainAscii ? builder.toString() : "U&" + builder;
+  }
+
+  /**
+   * Returns whether an expression is a literal. Like {@link RexUtil#isLiteral(RexNode, boolean)} but can accept
+   * arrays too.
+   *
+   * @param rexNode    expression
+   * @param allowCast  allow calls to CAST if its argument is literal
+   * @param allowArray allow calls to ARRAY if its arguments are literal
+   */
+  public static boolean isLiteral(RexNode rexNode, boolean allowCast, boolean allowArray)
+  {
+    if (RexUtil.isLiteral(rexNode, allowCast)) {
+      return true;
+    } else if (allowArray && rexNode.isA(SqlKind.ARRAY_VALUE_CONSTRUCTOR)) {
+      for (final RexNode element : ((RexCall) rexNode).getOperands()) {
+        if (!RexUtil.isLiteral(element, allowCast)) {
+          return false;
+        }
+      }
+
+      return true;
+    } else {
+      return false;
+    }
   }
 
   /**

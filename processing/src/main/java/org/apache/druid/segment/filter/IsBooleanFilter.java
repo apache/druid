@@ -31,7 +31,6 @@ import org.apache.druid.query.filter.vector.VectorMatch;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnInspector;
-import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnIndexCapabilities;
 import org.apache.druid.segment.index.BitmapColumnIndex;
@@ -80,12 +79,6 @@ public class IsBooleanFilter implements Filter
         }
 
         @Override
-        public double estimateSelectivity(int totalRows)
-        {
-          return 1. - baseFilter.estimateSelectivity(selector);
-        }
-
-        @Override
         public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
         {
           if (isTrue) {
@@ -95,6 +88,38 @@ public class IsBooleanFilter implements Filter
               baseIndex.computeBitmapResult(bitmapResultFactory, useThreeValueLogic),
               selector.getNumRows()
           );
+        }
+
+        @Nullable
+        @Override
+        public <T> T computeBitmapResult(
+            BitmapResultFactory<T> bitmapResultFactory,
+            int applyRowCount,
+            int totalRowCount,
+            boolean includeUnknown
+        )
+        {
+          if (isTrue) {
+            return baseIndex.computeBitmapResult(
+                bitmapResultFactory,
+                applyRowCount,
+                totalRowCount,
+                false
+            );
+          }
+
+          final T result = baseIndex.computeBitmapResult(
+              bitmapResultFactory,
+              applyRowCount,
+              totalRowCount,
+              useThreeValueLogic
+          );
+
+          if (result == null) {
+            return null;
+          }
+
+          return bitmapResultFactory.complement(result, selector.getNumRows());
         }
       };
     }
@@ -174,12 +199,6 @@ public class IsBooleanFilter implements Filter
   public Filter rewriteRequiredColumns(Map<String, String> columnRewrites)
   {
     return new IsBooleanFilter(baseFilter.rewriteRequiredColumns(columnRewrites), isTrue);
-  }
-
-  @Override
-  public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, ColumnIndexSelector indexSelector)
-  {
-    return baseFilter.supportsSelectivityEstimation(columnSelector, indexSelector);
   }
 
   @Override

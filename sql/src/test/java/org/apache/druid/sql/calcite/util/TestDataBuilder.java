@@ -38,22 +38,35 @@ import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.InlineDataSource;
+import org.apache.druid.query.NestedDataTestUtils;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.first.DoubleFirstAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.first.LongFirstAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.first.StringFirstAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.last.DoubleLastAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.last.FloatLastAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.last.LongLastAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.last.StringLastAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
+import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.segment.IndexBuilder;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.SegmentWrangler;
+import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.Joinable;
@@ -72,11 +85,13 @@ import org.joda.time.DateTime;
 import org.joda.time.chrono.ISOChronology;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -596,6 +611,19 @@ public class TestDataBuilder
 
   public static QueryableIndex makeWikipediaIndex(File tmpDir)
   {
+    try {
+      final File directory = new File(tmpDir, StringUtils.format("wikipedia-index-%s", UUID.randomUUID()));
+      final IncrementalIndex index = TestIndex.makeWikipediaIncrementalIndex();
+      TestIndex.INDEX_MERGER.persist(index, directory, IndexSpec.DEFAULT, null);
+      return TestIndex.INDEX_IO.loadIndex(directory);
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public static QueryableIndex makeWikipediaIndexWithAggregation(File tmpDir)
+  {
     final List<DimensionSchema> dimensions = Arrays.asList(
         new StringDimensionSchema("channel"),
         new StringDimensionSchema("cityName"),
@@ -612,10 +640,7 @@ public class TestDataBuilder
         new StringDimensionSchema("page"),
         new StringDimensionSchema("regionIsoCode"),
         new StringDimensionSchema("regionName"),
-        new StringDimensionSchema("user"),
-        new LongDimensionSchema("delta"),
-        new LongDimensionSchema("added"),
-        new LongDimensionSchema("deleted")
+        new StringDimensionSchema("user")
     );
 
     return IndexBuilder
@@ -623,15 +648,25 @@ public class TestDataBuilder
         .tmpDir(new File(tmpDir, "wikipedia1"))
         .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
         .schema(new IncrementalIndexSchema.Builder()
-                    .withRollup(false)
+                    .withRollup(true)
                     .withTimestampSpec(new TimestampSpec("time", null, null))
                     .withDimensionsSpec(new DimensionsSpec(dimensions))
+                    .withMetrics(
+                        new LongLastAggregatorFactory("long_last_added", "added", "__time"),
+                        new LongFirstAggregatorFactory("long_first_added", "added", "__time"),
+                        new FloatLastAggregatorFactory("float_last_added", "added", "__time"),
+                        new FloatLastAggregatorFactory("float_first_added", "added", "__time"),
+                        new DoubleLastAggregatorFactory("double_last_added", "added", "__time"),
+                        new DoubleFirstAggregatorFactory("double_first_added", "added", "__time"),
+                        new StringFirstAggregatorFactory("string_first_added", "comment", "__time", 1000),
+                        new StringLastAggregatorFactory("string_last_added", "comment", "__time", 1000)
+                    )
                     .build()
         )
         .inputSource(
             ResourceInputSource.of(
-                TestDataBuilder.class.getClassLoader(),
-                "calcite/tests/wikiticker-2015-09-12-sampled.json.gz"
+                TestIndex.class.getClassLoader(),
+                "wikipedia/wikiticker-2015-09-12-sampled.json.gz"
             )
         )
         .inputFormat(DEFAULT_JSON_INPUT_FORMAT)
@@ -776,11 +811,37 @@ public class TestDataBuilder
         .rows(USER_VISIT_ROWS)
         .buildMMappedIndex();
 
-    return new SpecificSegmentsQuerySegmentWalker(
+    final QueryableIndex arraysIndex = IndexBuilder
+        .create()
+        .tmpDir(new File(tmpDir, "9"))
+        .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+        .schema(
+            new IncrementalIndexSchema.Builder()
+                .withTimestampSpec(NestedDataTestUtils.AUTO_SCHEMA.getTimestampSpec())
+                .withDimensionsSpec(NestedDataTestUtils.AUTO_SCHEMA.getDimensionsSpec())
+                .withMetrics(
+                    new CountAggregatorFactory("cnt")
+                )
+                .withRollup(false)
+                .build()
+        )
+        .inputSource(
+            ResourceInputSource.of(
+                NestedDataTestUtils.class.getClassLoader(),
+                NestedDataTestUtils.ARRAY_TYPES_DATA_FILE
+            )
+        )
+        .inputFormat(TestDataBuilder.DEFAULT_JSON_INPUT_FORMAT)
+        .inputTmpDir(new File(tmpDir, "9-input"))
+        .buildMMappedIndex();
+
+    return SpecificSegmentsQuerySegmentWalker.createWalker(
+        injector,
         conglomerate,
         injector.getInstance(SegmentWrangler.class),
         joinableFactoryWrapper,
-        scheduler
+        scheduler,
+        injector.getInstance(GroupByQueryConfig.class)
     ).add(
         DataSegment.builder()
                    .dataSource(CalciteTests.DATASOURCE1)
@@ -873,13 +934,31 @@ public class TestDataBuilder
         userVisitIndex
     ).add(
         DataSegment.builder()
-                   .dataSource("wikipedia")
+                   .dataSource(CalciteTests.WIKIPEDIA)
                    .interval(Intervals.of("2015-09-12/2015-09-13"))
                    .version("1")
                    .shardSpec(new NumberedShardSpec(0, 0))
                    .size(0)
                    .build(),
         makeWikipediaIndex(tmpDir)
+    ).add(
+      DataSegment.builder()
+                 .dataSource(CalciteTests.WIKIPEDIA_FIRST_LAST)
+                 .interval(Intervals.of("2015-09-12/2015-09-13"))
+                 .version("1")
+                 .shardSpec(new NumberedShardSpec(0, 0))
+                 .size(0)
+                 .build(),
+      makeWikipediaIndexWithAggregation(tmpDir)
+    ).add(
+        DataSegment.builder()
+                   .dataSource(CalciteTests.ARRAYS_DATASOURCE)
+                   .version("1")
+                   .interval(arraysIndex.getDataInterval())
+                   .shardSpec(new LinearShardSpec(1))
+                   .size(0)
+                   .build(),
+        arraysIndex
     );
   }
 

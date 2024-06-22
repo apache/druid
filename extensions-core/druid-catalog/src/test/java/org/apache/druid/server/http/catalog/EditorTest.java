@@ -19,6 +19,8 @@
 
 package org.apache.druid.server.http.catalog;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import org.apache.curator.shaded.com.google.common.collect.ImmutableMap;
 import org.apache.druid.catalog.CatalogException;
 import org.apache.druid.catalog.http.TableEditRequest;
@@ -34,10 +36,12 @@ import org.apache.druid.catalog.model.ColumnSpec;
 import org.apache.druid.catalog.model.Columns;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.TableMetadata;
+import org.apache.druid.catalog.model.table.ClusterKeySpec;
 import org.apache.druid.catalog.model.table.DatasourceDefn;
 import org.apache.druid.catalog.model.table.TableBuilder;
 import org.apache.druid.catalog.storage.CatalogStorage;
 import org.apache.druid.catalog.storage.CatalogTests;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.junit.After;
 import org.junit.Before;
@@ -56,6 +60,7 @@ import static org.junit.Assert.assertThrows;
 
 public class EditorTest
 {
+  private static final ObjectMapper MAPPER = new DefaultObjectMapper();
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
 
@@ -326,25 +331,21 @@ public class EditorTest
     // Can't test an empty property set: no table type allows empty
     // properties.
 
-    // Remove a required property
-    Map<String, Object> updates1 = new HashMap<>();
-    updates1.put(DatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, null);
-    assertThrows(
-        CatalogException.class,
-        () -> new TableEditor(
-                  catalog,
-                  table.id(),
-                  new UpdateProperties(updates1)
-              )
-             .go()
+    Map<String, Object> updates = new HashMap<>();
+    updates.put(DatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, null);
+    cmd = new UpdateProperties(updates);
+    Map<String, Object> expected = ImmutableMap.of();
+    assertEquals(
+        expected,
+        doEdit(tableName, cmd).spec().properties()
     );
 
     // Add and update properties
-    Map<String, Object> updates = new HashMap<>();
+    updates = new HashMap<>();
     updates.put(DatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "PT1H");
     updates.put("foo", "bar");
     cmd = new UpdateProperties(updates);
-    Map<String, Object> expected = ImmutableMap.of(
+    expected = ImmutableMap.of(
         DatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "PT1H",
         "foo", "bar"
     );
@@ -377,6 +378,37 @@ public class EditorTest
         expected,
         doEdit(tableName, cmd).spec().properties()
     );
+
+    // Add a DESC cluster key - should fail
+    Map<String, Object> updates1 = new HashMap<>();
+    updates1.put(DatasourceDefn.CLUSTER_KEYS_PROPERTY, ImmutableList.of(new ClusterKeySpec("clusterKeyA", true)));
+
+    assertThrows(
+        CatalogException.class,
+        () -> new TableEditor(
+            catalog,
+            table.id(),
+            new UpdateProperties(updates1)
+        ).go()
+    );
+
+    // Add a ASC cluster key - should succeed
+    updates = new HashMap<>();
+    updates.put(DatasourceDefn.CLUSTER_KEYS_PROPERTY, ImmutableList.of(new ClusterKeySpec("clusterKeyA", false)));
+    cmd = new UpdateProperties(updates);
+    expected = ImmutableMap.of(
+        DatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "PT1H",
+        DatasourceDefn.CLUSTER_KEYS_PROPERTY, ImmutableList.of(new ClusterKeySpec("clusterKeyA", false))
+    );
+    Map<String, Object> actual = doEdit(tableName, cmd).spec().properties();
+    actual.put(
+        DatasourceDefn.CLUSTER_KEYS_PROPERTY,
+        MAPPER.convertValue(actual.get(DatasourceDefn.CLUSTER_KEYS_PROPERTY), ClusterKeySpec.CLUSTER_KEY_LIST_TYPE_REF)
+    );
+    assertEquals(
+        expected,
+        actual
+    );
   }
 
   @Test
@@ -401,7 +433,7 @@ public class EditorTest
     // Add a column
     cmd = new UpdateColumns(
         Collections.singletonList(
-            new ColumnSpec("d", Columns.VARCHAR, null)
+            new ColumnSpec("d", Columns.STRING, null)
          )
     );
     TableMetadata revised = doEdit(tableName, cmd);
@@ -411,14 +443,14 @@ public class EditorTest
     );
     ColumnSpec colD = revised.spec().columns().get(3);
     assertEquals("d", colD.name());
-    assertEquals(Columns.VARCHAR, colD.sqlType());
+    assertEquals(Columns.STRING, colD.dataType());
 
     // Update a column
     cmd = new UpdateColumns(
         Collections.singletonList(
             new ColumnSpec(
                 "a",
-                Columns.BIGINT,
+                Columns.LONG,
                 ImmutableMap.of("foo", "bar")
             )
          )
@@ -430,13 +462,13 @@ public class EditorTest
     );
     ColumnSpec colA = revised.spec().columns().get(0);
     assertEquals("a", colA.name());
-    assertEquals(Columns.BIGINT, colA.sqlType());
+    assertEquals(Columns.LONG, colA.dataType());
     assertEquals(ImmutableMap.of("foo", "bar"), colA.properties());
 
     // Duplicates
     UpdateColumns cmd2 = new UpdateColumns(
         Arrays.asList(
-            new ColumnSpec("e", Columns.VARCHAR, null),
+            new ColumnSpec("e", Columns.STRING, null),
             new ColumnSpec("e", null, null)
          )
     );
@@ -445,7 +477,7 @@ public class EditorTest
     // Valid time column type
     cmd = new UpdateColumns(
         Collections.singletonList(
-            new ColumnSpec(Columns.TIME_COLUMN, Columns.TIMESTAMP, null)
+            new ColumnSpec(Columns.TIME_COLUMN, Columns.LONG, null)
          )
     );
     revised = doEdit(tableName, cmd);

@@ -19,93 +19,21 @@
 
 package org.apache.druid.query.aggregation;
 
-import com.google.common.base.MoreObjects;
-import com.google.common.base.Preconditions;
-import org.apache.druid.segment.serde.cell.LongSerializer;
-
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.WritableByteChannel;
-
-public class SerializablePairLongStringColumnHeader
+public class SerializablePairLongStringColumnHeader extends AbstractSerializablePairLongObjectColumnHeader<SerializablePairLongString>
 {
-  // header size is 4 bytes for word alignment for LZ4 (minmatch) compression
-  private static final int HEADER_SIZE_BYTES = 4;
-  private static final int USE_INTEGER_MASK = 0x80;
-  private static final int VERSION_INDEX = 0;
-  private static final int ENCODING_INDEX = 1;
-
-  private final byte[] bytes;
-  private final long minValue;
-
-  private SerializablePairLongStringColumnHeader(byte[] bytes, long minTimestamp)
+  SerializablePairLongStringColumnHeader(byte[] bytes, long minTimestamp)
   {
-    this.bytes = bytes;
-    this.minValue = minTimestamp;
+    super(bytes, minTimestamp);
   }
 
   public SerializablePairLongStringColumnHeader(int version, boolean useIntegerDeltas, long minTimestamp)
   {
-    this.minValue = minTimestamp;
-    bytes = new byte[HEADER_SIZE_BYTES];
-    Preconditions.checkArgument(version <= 255, "max version 255");
-    bytes[VERSION_INDEX] = (byte) version;
-
-    if (useIntegerDeltas) {
-      bytes[ENCODING_INDEX] |= USE_INTEGER_MASK;
-    }
-  }
-
-  public static SerializablePairLongStringColumnHeader fromBuffer(ByteBuffer byteBuffer)
-  {
-    byte[] bytes = new byte[HEADER_SIZE_BYTES];
-
-    byteBuffer.get(bytes);
-
-    long minTimestamp = byteBuffer.getLong();
-
-    return new SerializablePairLongStringColumnHeader(bytes, minTimestamp);
-  }
-
-  public SerializablePairLongStringDeltaEncodedStagedSerde createSerde()
-  {
-    return new SerializablePairLongStringDeltaEncodedStagedSerde(minValue, isUseIntegerDeltas());
-  }
-
-  public void transferTo(WritableByteChannel channel) throws IOException
-  {
-    LongSerializer longSerializer = new LongSerializer();
-
-    channel.write(ByteBuffer.wrap(bytes));
-    channel.write(longSerializer.serialize(minValue));
-  }
-
-  public int getVersion()
-  {
-    return 0XFF & bytes[VERSION_INDEX];
-  }
-
-  public boolean isUseIntegerDeltas()
-  {
-    return (bytes[ENCODING_INDEX] & USE_INTEGER_MASK) != 0;
-  }
-
-  public long getMinValue()
-  {
-    return minValue;
-  }
-
-  public int getSerializedSize()
-  {
-    return HEADER_SIZE_BYTES + Long.BYTES;
+    super(version, useIntegerDeltas, minTimestamp);
   }
 
   @Override
-  public String toString()
+  public SerializablePairLongStringDeltaEncodedStagedSerde createSerde()
   {
-    return MoreObjects.toStringHelper(this)
-                      .add("bytes", bytes)
-                      .add("minValue", minValue)
-                      .toString();
+    return new SerializablePairLongStringDeltaEncodedStagedSerde(minValue, isUseIntegerDeltas());
   }
 }

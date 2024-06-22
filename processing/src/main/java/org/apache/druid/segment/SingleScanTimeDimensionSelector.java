@@ -20,8 +20,8 @@
 package org.apache.druid.segment;
 
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
 import org.apache.druid.query.extraction.ExtractionFn;
+import org.apache.druid.query.filter.DruidObjectPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
@@ -95,15 +95,13 @@ public class SingleScanTimeDimensionSelector implements DimensionSelector
   @Override
   public ValueMatcher makeValueMatcher(final DruidPredicateFactory predicateFactory)
   {
-    final Predicate<String> predicate = predicateFactory.makeStringPredicate();
+    final DruidObjectPredicate<String> predicate = predicateFactory.makeStringPredicate();
     return new ValueMatcher()
     {
       @Override
       public boolean matches(boolean includeUnknown)
       {
-        final String rowVal = lookupName(getDimensionValueIndex());
-        final boolean matchNull = includeUnknown && predicateFactory.isNullInputUnknown();
-        return (matchNull && rowVal == null) || predicate.apply(lookupName(getDimensionValueIndex()));
+        return predicate.apply(lookupName(getDimensionValueIndex())).matches(includeUnknown);
       }
 
       @Override

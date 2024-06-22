@@ -19,11 +19,8 @@
 
 package org.apache.druid.query.filter;
 
-import com.google.common.base.Predicate;
 import org.apache.druid.annotations.SubclassesMustOverrideEqualsAndHashCode;
 import org.apache.druid.java.util.common.UOE;
-import org.apache.druid.query.BitmapResultFactory;
-import org.apache.druid.query.filter.vector.ReadableVectorMatch;
 import org.apache.druid.segment.column.TypeSignature;
 import org.apache.druid.segment.column.ValueType;
 
@@ -32,7 +29,7 @@ import javax.annotation.Nullable;
 @SubclassesMustOverrideEqualsAndHashCode
 public interface DruidPredicateFactory
 {
-  Predicate<String> makeStringPredicate();
+  DruidObjectPredicate<String> makeStringPredicate();
 
   DruidLongPredicate makeLongPredicate();
 
@@ -40,7 +37,7 @@ public interface DruidPredicateFactory
 
   DruidDoublePredicate makeDoublePredicate();
 
-  default Predicate<Object[]> makeArrayPredicate(@Nullable TypeSignature<ValueType> inputType)
+  default DruidObjectPredicate<Object[]> makeArrayPredicate(@Nullable TypeSignature<ValueType> inputType)
   {
     throw new UOE("Predicate does not support ARRAY types");
   }
@@ -55,24 +52,9 @@ public interface DruidPredicateFactory
    *
    * @see org.apache.druid.segment.VectorColumnProcessorFactory#makeObjectProcessor
    */
-  default Predicate<Object> makeObjectPredicate()
+  default DruidObjectPredicate<Object> makeObjectPredicate()
   {
-    final Predicate<String> stringPredicate = makeStringPredicate();
+    final DruidObjectPredicate<String> stringPredicate = makeStringPredicate();
     return o -> stringPredicate.apply(null);
-  }
-
-  /**
-   * Indicator for if null inputs should be considered 'unknown' matches when used for filter matching with
-   * {@link ValueMatcher#matches(boolean)},
-   * {@link org.apache.druid.query.filter.vector.VectorValueMatcher#match(ReadableVectorMatch, boolean)}, or
-   * {@link org.apache.druid.segment.index.BitmapColumnIndex#computeBitmapResult(BitmapResultFactory, boolean)}.
-   *
-   * If returns true, unknown (null) inputs can automatically be considered matches if {@code includeUnknown} is set
-   * to true on these methods, else null inputs should be evaluated against the predicate as any other value to
-   * determine a match
-   */
-  default boolean isNullInputUnknown()
-  {
-    return true;
   }
 }

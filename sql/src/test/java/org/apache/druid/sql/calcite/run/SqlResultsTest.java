@@ -27,8 +27,6 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.segment.data.ComparableList;
-import org.apache.druid.segment.data.ComparableStringArray;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
@@ -59,13 +57,13 @@ public class SqlResultsTest extends InitializedNullHandlingTest
   {
     final List<String> stringList = Arrays.asList("x", "y", "z", null);
     final Object[] stringArray = new Object[]{"x", "y", "z", null};
-    final ComparableStringArray comparableStringArray = ComparableStringArray.of(new String[]{"x", "y", "z", null});
     final String[] stringArray2 = new String[]{"x", "y", "z", null};
 
     assertCoerceArrayToList(stringList, stringList);
     assertCoerceArrayToList(stringList, stringArray);
     assertCoerceArrayToList(stringList, stringArray2);
-    assertCoerceArrayToList(stringList, comparableStringArray);
+    assertCoerceArrayToList(null, null);
+    assertCoerceArrayToList(Collections.singletonList("a"), "a");
   }
 
   @Test
@@ -73,15 +71,15 @@ public class SqlResultsTest extends InitializedNullHandlingTest
   {
     final List<Long> listWithNull = Arrays.asList(1L, 2L, null, 3L);
     final Long[] arrayWithNull = new Long[]{1L, 2L, null, 3L};
-    final ComparableList<Long> comparableList = new ComparableList<>(listWithNull);
     final List<Long> list = Arrays.asList(1L, 2L, 3L);
     final long[] array = new long[]{1L, 2L, 3L};
 
     assertCoerceArrayToList(listWithNull, listWithNull);
     assertCoerceArrayToList(listWithNull, arrayWithNull);
-    assertCoerceArrayToList(listWithNull, comparableList);
     assertCoerceArrayToList(list, list);
     assertCoerceArrayToList(list, array);
+    assertCoerceArrayToList(null, null);
+    assertCoerceArrayToList(Collections.singletonList(1L), 1L);
   }
 
   @Test
@@ -89,15 +87,15 @@ public class SqlResultsTest extends InitializedNullHandlingTest
   {
     final List<Double> listWithNull = Arrays.asList(1.1, 2.2, null, 3.3);
     final Double[] arrayWithNull = new Double[]{1.1, 2.2, null, 3.3};
-    final ComparableList<Double> comparableList = new ComparableList<>(listWithNull);
     final List<Double> list = Arrays.asList(1.1, 2.2, 3.3);
     final double[] array = new double[]{1.1, 2.2, 3.3};
 
     assertCoerceArrayToList(listWithNull, listWithNull);
     assertCoerceArrayToList(listWithNull, arrayWithNull);
-    assertCoerceArrayToList(listWithNull, comparableList);
     assertCoerceArrayToList(list, list);
     assertCoerceArrayToList(list, array);
+    assertCoerceArrayToList(null, null);
+    assertCoerceArrayToList(Collections.singletonList(1.1), 1.1);
   }
 
   @Test
@@ -105,15 +103,15 @@ public class SqlResultsTest extends InitializedNullHandlingTest
   {
     final List<Float> listWithNull = Arrays.asList(1.1f, 2.2f, null, 3.3f);
     final Float[] arrayWithNull = new Float[]{1.1f, 2.2f, null, 3.3f};
-    final ComparableList<Float> comparableList = new ComparableList<>(listWithNull);
     final List<Float> list = Arrays.asList(1.1f, 2.2f, 3.3f);
     final float[] array = new float[]{1.1f, 2.2f, 3.3f};
 
     assertCoerceArrayToList(listWithNull, listWithNull);
     assertCoerceArrayToList(listWithNull, arrayWithNull);
-    assertCoerceArrayToList(listWithNull, comparableList);
     assertCoerceArrayToList(list, list);
     assertCoerceArrayToList(list, array);
+    assertCoerceArrayToList(null, null);
+    assertCoerceArrayToList(Collections.singletonList(1.1f), 1.1f);
   }
 
   @Test
@@ -235,11 +233,6 @@ public class SqlResultsTest extends InitializedNullHandlingTest
       Assert.assertEquals("Cannot coerce field [fieldName] from type [Byte Array] to type [BIGINT]", e.getMessage());
     }
   }
-  @Test
-  public void testCoerceArrayFails()
-  {
-    assertCannotCoerce("xyz", SqlTypeName.ARRAY);
-  }
 
   @Test
   public void testCoerceUnsupportedType()
@@ -248,15 +241,9 @@ public class SqlResultsTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testMustCoerce()
+  public void testMayNotCoerceList()
   {
-    Assert.assertNull(SqlResults.maybeCoerceArrayToList("hello", true));
-  }
-
-  @Test
-  public void testMayNotCoerce()
-  {
-    Assert.assertEquals("hello", SqlResults.maybeCoerceArrayToList("hello", false));
+    Assert.assertEquals("hello", SqlResults.coerceArrayToList("hello", false));
   }
 
   private void assertCoerce(Object expected, Object toCoerce, SqlTypeName typeName)
@@ -279,9 +266,9 @@ public class SqlResultsTest extends InitializedNullHandlingTest
     MatcherAssert.assertThat(e, ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("Cannot coerce")));
   }
 
-  private static void assertCoerceArrayToList(Object expected, Object toCoerce)
+  private void assertCoerceArrayToList(Object expected, Object toCoerce)
   {
-    Object coerced = SqlResults.maybeCoerceArrayToList(toCoerce, true);
+    Object coerced = SqlResults.coerce(jsonMapper, DEFAULT_CONTEXT, toCoerce, SqlTypeName.ARRAY, "");
     Assert.assertEquals(expected, coerced);
   }
 }

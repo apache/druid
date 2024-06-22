@@ -25,7 +25,7 @@ import React, { useState } from 'react';
 
 import { useInterval } from '../../hooks';
 import type { LocalStorageKeys } from '../../utils';
-import { isInBackground, localStorageGet, localStorageSet } from '../../utils';
+import { checkedCircleIcon, isInBackground, localStorageGet, localStorageSet } from '../../utils';
 
 export interface DelayLabel {
   label: string;
@@ -84,7 +84,7 @@ export const TimedButton = React.memo(function TimedButton(props: TimedButtonPro
             {delays.map(({ label, delay }, i) => (
               <MenuItem
                 key={i}
-                icon={selectedDelay === delay ? IconNames.SELECTION : IconNames.CIRCLE}
+                icon={checkedCircleIcon(selectedDelay === delay)}
                 text={label}
                 onClick={() => handleSelection(delay)}
               />

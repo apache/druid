@@ -98,7 +98,7 @@ public class CatalogUtils
       return type.cast(value);
     }
     catch (ClassCastException e) {
-      throw new IAE("Value [%s] is not valid for property %s, expected type %s",
+      throw new IAE("Value [%s] is not valid for property [%s], expected type [%s]",
           value,
           key,
           type.getSimpleName()

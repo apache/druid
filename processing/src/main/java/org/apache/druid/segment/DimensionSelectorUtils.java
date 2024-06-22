@@ -19,8 +19,8 @@
 
 package org.apache.druid.segment;
 
-import com.google.common.base.Predicate;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.query.filter.DruidObjectPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.StringPredicateDruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
@@ -182,8 +182,7 @@ public final class DimensionSelectorUtils
   {
     final BitSet checkedIds = new BitSet(selector.getValueCardinality());
     final BitSet matchingIds = new BitSet(selector.getValueCardinality());
-    final Predicate<String> predicate = predicateFactory.makeStringPredicate();
-    final boolean predicateMatchesNull = predicate.apply(null);
+    final DruidObjectPredicate<String> predicate = predicateFactory.makeStringPredicate();
 
     // Lazy matcher; only check an id if matches() is called.
     return new ValueMatcher()
@@ -191,12 +190,11 @@ public final class DimensionSelectorUtils
       @Override
       public boolean matches(boolean includeUnknown)
       {
-        final boolean matchNull = includeUnknown && predicateFactory.isNullInputUnknown();
         final IndexedInts row = selector.getRow();
         final int size = row.size();
         if (size == 0) {
           // null should match empty rows in multi-value columns
-          return matchNull || predicateMatchesNull;
+          return predicate.apply(null).matches(includeUnknown);
         } else {
           for (int i = 0; i < size; ++i) {
             final int id = row.get(i);
@@ -206,7 +204,7 @@ public final class DimensionSelectorUtils
               matches = matchingIds.get(id);
             } else {
               final String rowValue = selector.lookupName(id);
-              matches = (matchNull && rowValue == null) || predicate.apply(rowValue);
+              matches = predicate.apply(rowValue).matches(includeUnknown);
               checkedIds.set(id);
               if (matches) {
                 matchingIds.set(id);
@@ -234,23 +232,21 @@ public final class DimensionSelectorUtils
       final DruidPredicateFactory predicateFactory
   )
   {
-    final Predicate<String> predicate = predicateFactory.makeStringPredicate();
-    final boolean predicateMatchesNull = predicate.apply(null);
+    final DruidObjectPredicate<String> predicate = predicateFactory.makeStringPredicate();
     return new ValueMatcher()
     {
       @Override
       public boolean matches(boolean includeUnknown)
       {
-        final boolean matchNull = includeUnknown && predicateFactory.isNullInputUnknown();
         final IndexedInts row = selector.getRow();
         final int size = row.size();
         if (size == 0) {
           // null should match empty rows in multi-value columns
-          return matchNull || predicateMatchesNull;
+          return predicate.apply(null).matches(includeUnknown);
         } else {
           for (int i = 0; i < size; ++i) {
             final String rowValue = selector.lookupName(row.get(i));
-            if ((matchNull && rowValue == null) || predicate.apply(rowValue)) {
+            if (predicate.apply(rowValue).matches(includeUnknown)) {
               return true;
             }
           }
@@ -267,7 +263,7 @@ public final class DimensionSelectorUtils
     };
   }
 
-  public static BitSet makePredicateMatchingSet(DimensionSelector selector, Predicate<String> predicate)
+  public static BitSet makePredicateMatchingSet(DimensionSelector selector, DruidObjectPredicate<String> predicate, boolean includeUnknown)
   {
     if (!selector.nameLookupPossibleInAdvance()) {
       throw new IAE("selector.nameLookupPossibleInAdvance() should return true");
@@ -275,7 +271,7 @@ public final class DimensionSelectorUtils
     int cardinality = selector.getValueCardinality();
     BitSet valueIds = new BitSet(cardinality);
     for (int i = 0; i < cardinality; i++) {
-      if (predicate.apply(selector.lookupName(i))) {
+      if (predicate.apply(selector.lookupName(i)).matches(includeUnknown)) {
         valueIds.set(i);
       }
     }

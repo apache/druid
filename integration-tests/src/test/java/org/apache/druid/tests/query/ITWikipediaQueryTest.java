@@ -47,7 +47,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.Future;
 
-@Test(groups = {TestNGGroup.QUERY, TestNGGroup.CENTRALIZED_TABLE_SCHEMA})
+@Test(groups = {TestNGGroup.QUERY, TestNGGroup.CENTRALIZED_DATASOURCE_SCHEMA})
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITWikipediaQueryTest
 {

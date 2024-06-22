@@ -92,17 +92,18 @@ public class StringFrameColumnReader implements FrameColumnReader
     final Memory memory = frame.region(columnNumber);
     validate(memory);
 
-    if (isMultiValue(memory)) {
-      // When we implement handling of multi-value, we should actually make this look like an Array of String instead
-      // of perpetuating the multi-value idea.  Thus, when we add support for Arrays to the RAC stuff, that's when
-      // we can start supporting multi-value.
-      throw new ISE("Multivalue not yet handled by RAC");
-    }
     final long positionOfLengths = getStartOfStringLengthSection(frame.numRows(), false);
     final long positionOfPayloads = getStartOfStringDataSection(memory, frame.numRows(), false);
 
     StringFrameColumn frameCol =
-        new StringFrameColumn(frame, false, memory, positionOfLengths, positionOfPayloads, false);
+        new StringFrameColumn(
+            frame,
+            false,
+            memory,
+            positionOfLengths,
+            positionOfPayloads,
+            asArray || isMultiValue(memory) // Read MVDs as String arrays
+        );
 
     return new ColumnAccessorBasedColumn(frameCol);
   }
@@ -174,40 +175,9 @@ public class StringFrameColumnReader implements FrameColumnReader
     return memory.getByte(1) == 1;
   }
 
-  /**
-   * Returns cumulative row length, if the row is not null itself, or -(cumulative row length) - 1 if the row is
-   * null itself.
-   *
-   * To check if the return value from this function indicate a null row, use {@link #isNullRow(int)}
-   *
-   * To get the actual cumulative row length, use {@link #adjustCumulativeRowLength(int)}.
-   */
-  private static int getCumulativeRowLength(final Memory memory, final int physicalRow)
+  private static long getStartOfCumulativeLengthSection()
   {
-    // Note: only valid to call this if multiValue = true.
-    return memory.getInt(StringFrameColumnWriter.DATA_OFFSET + (long) Integer.BYTES * physicalRow);
-  }
-
-  /**
-   * When given a return value from {@link #getCumulativeRowLength(Memory, int)}, returns whether the row is
-   * null itself (i.e. a null array).
-   */
-  private static boolean isNullRow(final int cumulativeRowLength)
-  {
-    return cumulativeRowLength < 0;
-  }
-
-  /**
-   * Adjusts a negative cumulative row length from {@link #getCumulativeRowLength(Memory, int)} to be the actual
-   * positive length.
-   */
-  private static int adjustCumulativeRowLength(final int cumulativeRowLength)
-  {
-    if (cumulativeRowLength < 0) {
-      return -(cumulativeRowLength + 1);
-    } else {
-      return cumulativeRowLength;
-    }
+    return StringFrameColumnWriter.DATA_OFFSET;
   }
 
   private static long getStartOfStringLengthSection(
@@ -231,7 +201,11 @@ public class StringFrameColumnReader implements FrameColumnReader
     final int totalNumValues;
 
     if (multiValue) {
-      totalNumValues = adjustCumulativeRowLength(getCumulativeRowLength(memory, numRows - 1));
+      totalNumValues = FrameColumnReaderUtils.getAdjustedCumulativeRowLength(
+          memory,
+          getStartOfCumulativeLengthSection(),
+          numRows - 1
+      );
     } else {
       totalNumValues = numRows;
     }
@@ -489,15 +463,23 @@ public class StringFrameColumnReader implements FrameColumnReader
     private Object getRowAsObject(final int physicalRow, final boolean decode)
     {
       if (multiValue) {
-        final int cumulativeRowLength = getCumulativeRowLength(memory, physicalRow);
+        final int cumulativeRowLength = FrameColumnReaderUtils.getCumulativeRowLength(
+            memory,
+            getStartOfCumulativeLengthSection(),
+            physicalRow
+        );
         final int rowLength;
 
-        if (isNullRow(cumulativeRowLength)) {
+        if (FrameColumnReaderUtils.isNullRow(cumulativeRowLength)) {
           return null;
         } else if (physicalRow == 0) {
           rowLength = cumulativeRowLength;
         } else {
-          rowLength = cumulativeRowLength - adjustCumulativeRowLength(getCumulativeRowLength(memory, physicalRow - 1));
+          rowLength = cumulativeRowLength - FrameColumnReaderUtils.getAdjustedCumulativeRowLength(
+              memory,
+              getStartOfCumulativeLengthSection(),
+              physicalRow - 1
+          );
         }
 
         if (rowLength == 0) {

@@ -14,3 +14,4 @@
 # limitations under the License.
 
 org.apache.druid.catalog.guice.CatalogCoordinatorModule
+org.apache.druid.catalog.guice.CatalogBrokerModule

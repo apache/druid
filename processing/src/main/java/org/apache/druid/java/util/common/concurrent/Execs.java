@@ -126,6 +126,21 @@ public class Execs
       final Integer priority
   )
   {
+    return newBlockingThreaded(nameFormat, 1, capacity, priority);
+  }
+
+  public static ExecutorService newBlockingThreaded(final String nameFormat, int nThreads, final int capacity)
+  {
+    return newBlockingThreaded(nameFormat, nThreads, capacity, null);
+  }
+
+  public static ExecutorService newBlockingThreaded(
+      final String nameFormat,
+      int nThreads,
+      final int capacity,
+      final Integer priority
+  )
+  {
     final BlockingQueue<Runnable> queue;
     if (capacity > 0) {
       queue = new ArrayBlockingQueue<>(capacity);
@@ -133,8 +148,8 @@ public class Execs
       queue = new SynchronousQueue<>();
     }
     return new ThreadPoolExecutor(
-        1,
-        1,
+        nThreads,
+        nThreads,
         0L,
         TimeUnit.MILLISECONDS,
         queue,

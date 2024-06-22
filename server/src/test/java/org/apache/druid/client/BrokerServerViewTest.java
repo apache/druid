@@ -41,6 +41,7 @@ import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.initialization.ZkPathsConfig;
@@ -631,6 +632,12 @@ public class BrokerServerViewTest extends CuratorTestBase
                 CallbackAction res = callback.segmentViewInitialized();
                 segmentViewInitLatch.countDown();
                 return res;
+              }
+
+              @Override
+              public CallbackAction segmentSchemasAnnounced(SegmentSchemas segmentSchemas)
+              {
+                return CallbackAction.CONTINUE;
               }
             }
         );

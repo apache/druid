@@ -25,7 +25,6 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.RangeSet;
 import org.apache.druid.java.util.common.StringUtils;
@@ -139,12 +138,6 @@ public class JavaScriptDimFilter extends AbstractOptimizableDimFilter implements
   }
 
   @Override
-  public DimFilter optimize()
-  {
-    return this;
-  }
-
-  @Override
   public Filter toFilter()
   {
     JavaScriptPredicateFactory predicateFactory = getPredicateFactory();
@@ -247,7 +240,7 @@ public class JavaScriptDimFilter extends AbstractOptimizableDimFilter implements
     }
 
     @Override
-    public Predicate<String> makeStringPredicate()
+    public DruidObjectPredicate<String> makeStringPredicate()
     {
       return this::applyObject;
     }
@@ -259,13 +252,13 @@ public class JavaScriptDimFilter extends AbstractOptimizableDimFilter implements
       return new DruidLongPredicate()
       {
         @Override
-        public boolean applyLong(long input)
+        public DruidPredicateMatch applyLong(long input)
         {
           return JavaScriptPredicateFactory.this.applyObject(input);
         }
 
         @Override
-        public boolean applyNull()
+        public DruidPredicateMatch applyNull()
         {
           return JavaScriptPredicateFactory.this.applyObject(null);
         }
@@ -279,13 +272,13 @@ public class JavaScriptDimFilter extends AbstractOptimizableDimFilter implements
       return new DruidFloatPredicate()
       {
         @Override
-        public boolean applyFloat(float input)
+        public DruidPredicateMatch applyFloat(float input)
         {
           return JavaScriptPredicateFactory.this.applyObject(input);
         }
 
         @Override
-        public boolean applyNull()
+        public DruidPredicateMatch applyNull()
         {
           return JavaScriptPredicateFactory.this.applyObject(null);
         }
@@ -299,25 +292,25 @@ public class JavaScriptDimFilter extends AbstractOptimizableDimFilter implements
       return new DruidDoublePredicate()
       {
         @Override
-        public boolean applyDouble(double input)
+        public DruidPredicateMatch applyDouble(double input)
         {
           return JavaScriptPredicateFactory.this.applyObject(input);
         }
 
         @Override
-        public boolean applyNull()
+        public DruidPredicateMatch applyNull()
         {
           return JavaScriptPredicateFactory.this.applyObject(null);
         }
       };
     }
 
-    public boolean applyObject(final Object input)
+    public DruidPredicateMatch applyObject(final Object input)
     {
       // one and only one context per thread
       final Context cx = Context.enter();
       try {
-        return applyInContext(cx, input);
+        return DruidPredicateMatch.of(applyInContext(cx, input));
       }
       finally {
         Context.exit();

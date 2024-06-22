@@ -118,9 +118,22 @@ const Redirects=[
     "from": [
       "/docs/latest/development/community-extensions/kafka-simple.html",
       "/docs/latest/development/community-extensions/rabbitmq.html",
-      "/docs/latest/development/kafka-simple-consumer-firehose.html"
+      "/docs/latest/development/kafka-simple-consumer-firehose.html",
+      "/docs/latest/development/extensions-core/kafka-supervisor-operations.html",
+      "/docs/latest/development/extensions-core/kafka-supervisor-reference.html",
+      "/docs/latest/development/extensions-core/kafka-ingestion.html",
+      "/docs/latest/development/extensions-core/kafka-supervisor-operations",
+      "/docs/latest/development/extensions-core/kafka-supervisor-reference",
+      "/docs/latest/development/extensions-core/kafka-ingestion"
     ],
-    "to": "/docs/latest/development/extensions-core/kafka-ingestion"
+    "to": "/docs/latest/ingestion/kafka-ingestion"
+  },
+  {
+    "from": [
+      "/docs/latest/development/extensions-core/kinesis-ingestion.html",
+      "/docs/latest/development/extensions-core/kinesis-ingestion"
+    ],
+    "to": "/docs/latest/ingestion/kinesis-ingestion"
   },
   {
     "from": "/docs/latest/development/extensions-contrib/orc.html",
@@ -135,8 +148,11 @@ const Redirects=[
     "to": "/docs/latest/querying/scan-query"
   },
   {
-    "from": "/docs/latest/development/extensions-core/namespaced-lookup.html",
-    "to": "/docs/latest/development/extensions-core/lookups-cached-global"
+    "from": [
+      "/docs/latest/development/extensions-core/namespaced-lookup.html",
+      "/docs/latest/development/extensions-core/lookups-cached-global"
+    ],
+    "to": "/docs/latest/querying/lookups-cached-global"
   },
   {
     "from": "/docs/latest/development/indexer.html",
@@ -185,8 +201,8 @@ const Redirects=[
   },
   {
     "from": [
-      "/docs/latest/ingestion/flatten-json.html",
-      "/docs/latest/ingestion/transform-spec.html"
+      "/docs/latest/ingestion/transform-spec.html",
+      "/docs/latest/ingestion/flatten-json.html"
     ],
     "to": "/docs/latest/ingestion/ingestion-spec"
   },
@@ -311,10 +327,13 @@ const Redirects=[
     "to": "/docs/latest/api-reference/"
   },
   {
+    "from": "/docs/latest/design/processes.html",
+    "to": "/docs/latest/design/architecture"
+  },
+  {
     "from":  "/docs/latest/operations/api-reference/",
     "to": "/docs/latest/api-reference/"
-  },
-
+  }
 ]
 
 

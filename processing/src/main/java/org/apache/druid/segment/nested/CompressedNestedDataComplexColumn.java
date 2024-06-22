@@ -114,6 +114,7 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
   private final Supplier<TStringDictionary> stringDictionarySupplier;
   private final Supplier<FixedIndexed<Long>> longDictionarySupplier;
   private final Supplier<FixedIndexed<Double>> doubleDictionarySupplier;
+  @Nullable
   private final Supplier<FrontCodedIntArrayIndexed> arrayDictionarySupplier;
   private final SmooshedFileMapper fileMapper;
   private final String rootFieldPath;
@@ -998,10 +999,6 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
                    .setHasNulls(hasNull)
                    .setDictionaryEncodedColumnSupplier(columnSupplier);
 
-      final int size;
-      try (ColumnarInts throwAway = ints.get()) {
-        size = throwAway.size();
-      }
       columnBuilder.setIndexSupplier(
           new NestedFieldColumnIndexSupplier(
               types,
@@ -1012,9 +1009,9 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
               stringDictionarySupplier,
               longDictionarySupplier,
               doubleDictionarySupplier,
+              arrayDictionarySupplier,
               arrayElementDictionarySupplier,
-              arrayElementBitmaps,
-              size
+              arrayElementBitmaps
           ),
           true,
           false

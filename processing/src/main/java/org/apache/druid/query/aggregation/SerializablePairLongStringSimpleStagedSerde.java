@@ -21,7 +21,6 @@ package org.apache.druid.query.aggregation;
 
 import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.segment.serde.cell.StagedSerde;
 import org.apache.druid.segment.serde.cell.StorableBuffer;
 
 import javax.annotation.Nullable;
@@ -34,9 +33,23 @@ import java.nio.ByteOrder;
  * <p>
  * or
  * Long:StringSize:StringData
+ *
+ * The StringSize can be following:
+ * -1 : Denotes an empty string
+ * 0  : Denotes a null string
+ * >0 : Denotes a non-empty string
+ *
+ * Mapping of null and empty string is done weirdly to preserve backward compatibility when nulls were returned all the
+ * time, and there was no distinction between empty and null string
  */
-public class SerializablePairLongStringSimpleStagedSerde implements StagedSerde<SerializablePairLongString>
+public class SerializablePairLongStringSimpleStagedSerde extends AbstractSerializablePairLongObjectSimpleStagedSerde<SerializablePairLongString>
 {
+
+  public SerializablePairLongStringSimpleStagedSerde()
+  {
+    super(SerializablePairLongString.class);
+  }
+
   @Override
   public StorableBuffer serializeDelayed(@Nullable SerializablePairLongString value)
   {
@@ -55,7 +68,13 @@ public class SerializablePairLongStringSimpleStagedSerde implements StagedSerde<
         Preconditions.checkNotNull(value.lhs, "Long in SerializablePairLongString must be non-null");
 
         byteBuffer.putLong(value.lhs);
-        byteBuffer.putInt(rhsBytes.length);
+        if (rhsString == null) {
+          byteBuffer.putInt(0);
+        } else if (rhsBytes.length == 0) {
+          byteBuffer.putInt(-1);
+        } else {
+          byteBuffer.putInt(rhsBytes.length);
+        }
 
         if (rhsBytes.length > 0) {
           byteBuffer.put(rhsBytes);
@@ -88,6 +107,8 @@ public class SerializablePairLongStringSimpleStagedSerde implements StagedSerde<
 
       readOnlyBuffer.get(stringBytes, 0, stringSize);
       lastString = StringUtils.fromUtf8(stringBytes);
+    } else if (stringSize < 0) {
+      lastString = "";
     }
 
     return new SerializablePairLongString(lhs, lastString);

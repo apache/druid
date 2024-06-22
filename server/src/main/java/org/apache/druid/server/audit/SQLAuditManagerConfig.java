@@ -19,48 +19,76 @@
 
 package org.apache.druid.server.audit;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.HumanReadableBytesRange;
 
 /**
  */
-public class SQLAuditManagerConfig
+public class SQLAuditManagerConfig implements AuditManagerConfig
 {
   @JsonProperty
-  private long auditHistoryMillis = 7 * 24 * 60 * 60 * 1000L; // 1 WEEK
+  private final long auditHistoryMillis;
 
   @JsonProperty
-  private boolean includePayloadAsDimensionInMetric = false;
+  private final boolean includePayloadAsDimensionInMetric;
 
   @JsonProperty
   @HumanReadableBytesRange(
       min = -1,
       message = "maxPayloadSizeBytes must either be -1 (for disabling the check) or a non negative number"
   )
-  private HumanReadableBytes maxPayloadSizeBytes = HumanReadableBytes.valueOf(-1);
+  private final HumanReadableBytes maxPayloadSizeBytes;
 
   @JsonProperty
-  private boolean skipNullField = false;
+  private final boolean skipNullField;
+
+  @JsonProperty
+  private final boolean auditSystemRequests;
+
+  @JsonCreator
+  public SQLAuditManagerConfig(
+      @JsonProperty("auditSystemRequests") Boolean auditSystemRequests,
+      @JsonProperty("maxPayloadSizeBytes") HumanReadableBytes maxPayloadSizeBytes,
+      @JsonProperty("skipNullField") Boolean skipNullField,
+      @JsonProperty("auditHistoryMillis") Long auditHistoryMillis,
+      @JsonProperty("includePayloadAsDimensionInMetric") Boolean includePayloadAsDimensionInMetric
+  )
+  {
+    this.auditSystemRequests = Configs.valueOrDefault(auditSystemRequests, true);
+    this.maxPayloadSizeBytes = Configs.valueOrDefault(maxPayloadSizeBytes, HumanReadableBytes.valueOf(-1));
+    this.skipNullField = Configs.valueOrDefault(skipNullField, false);
+    this.auditHistoryMillis = Configs.valueOrDefault(auditHistoryMillis, 7 * 24 * 60 * 60 * 1000L);
+    this.includePayloadAsDimensionInMetric = Configs.valueOrDefault(includePayloadAsDimensionInMetric, false);
+  }
 
   public long getAuditHistoryMillis()
   {
     return auditHistoryMillis;
   }
 
-  public boolean getIncludePayloadAsDimensionInMetric()
+  public boolean isIncludePayloadAsDimensionInMetric()
   {
     return includePayloadAsDimensionInMetric;
   }
 
+  @Override
   public long getMaxPayloadSizeBytes()
   {
     return maxPayloadSizeBytes.getBytes();
   }
 
+  @Override
   public boolean isSkipNullField()
   {
     return skipNullField;
   }
 
+  @Override
+  public boolean isAuditSystemRequests()
+  {
+    return auditSystemRequests;
+  }
 }

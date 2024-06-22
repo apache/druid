@@ -22,7 +22,6 @@ package org.apache.druid.frame.write;
 import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.frame.FrameType;
-import org.apache.druid.frame.field.FieldReaders;
 import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -33,9 +32,6 @@ import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.data.ComparableIntArray;
-import org.apache.druid.segment.data.ComparableList;
-import org.apache.druid.segment.data.ComparableStringArray;
 import org.apache.druid.segment.data.IndexedInts;
 
 import javax.annotation.Nullable;
@@ -164,10 +160,6 @@ public class FrameWriterUtils
       for (Object value : (Object[]) row) {
         retVal.add(getUtf8ByteBufferFromString((String) value));
       }
-    } else if (row instanceof ComparableStringArray) {
-      for (String value : ((ComparableStringArray) row).getDelegate()) {
-        retVal.add(getUtf8ByteBufferFromString(value));
-      }
     } else {
       throw new ISE("Unexpected type %s found", row.getClass().getName());
     }
@@ -200,14 +192,6 @@ public class FrameWriterUtils
     } else if (row instanceof Object[]) {
       for (Object value : (Object[]) row) {
         retVal.add((Number) value);
-      }
-    } else if (row instanceof ComparableList) {
-      for (Object value : ((ComparableList) row).getDelegate()) {
-        retVal.add((Number) value);
-      }
-    } else if (row instanceof ComparableIntArray) {
-      for (int value : ((ComparableIntArray) row).getDelegate()) {
-        retVal.add(value);
       }
     } else {
       throw new ISE("Unexpected type %s found", row.getClass().getName());
@@ -251,8 +235,8 @@ public class FrameWriterUtils
     for (final KeyColumn keyColumn : keyColumns) {
       final ColumnType columnType = signature.getColumnType(keyColumn.columnName()).orElse(null);
 
-      if (columnType == null || !FieldReaders.create(keyColumn.columnName(), columnType).isComparable()) {
-        throw new IAE("Sort column [%s] is not comparable (type = %s)", keyColumn.columnName(), columnType);
+      if (columnType == null) {
+        throw new IAE("Sort column [%s] type is unknown", keyColumn.columnName());
       }
     }
   }

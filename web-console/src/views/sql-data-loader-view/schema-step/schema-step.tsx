@@ -79,7 +79,7 @@ import {
   filterMap,
   oneOf,
   queryDruidSql,
-  sampleDataToQuery,
+  queryResultToValuesQuery,
   tickIcon,
   timeFormatToSql,
   wait,
@@ -430,11 +430,19 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
                 dimensions: filterMap(sampleExternalConfig.signature, s => {
                   const columnName = s.getColumnName();
                   if (columnName === TIME_COLUMN) return;
-                  const t = s.columnType.getNativeType();
-                  return {
-                    name: columnName,
-                    type: t === 'COMPLEX<json>' ? 'json' : t,
-                  };
+                  if (s.columnType.isArray()) {
+                    return {
+                      type: 'auto',
+                      castToType: s.columnType.getNativeType().toUpperCase(),
+                      name: columnName,
+                    };
+                  } else {
+                    const t = s.columnType.getNativeType();
+                    return {
+                      name: columnName,
+                      type: t === 'COMPLEX<json>' ? 'json' : t,
+                    };
+                  }
                 }),
               },
               granularitySpec: {
@@ -471,7 +479,7 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
 
   const sampleDataQuery = useMemo(() => {
     if (!sampleState.data) return;
-    return sampleDataToQuery(sampleState.data);
+    return queryResultToValuesQuery(sampleState.data);
   }, [sampleState.data]);
 
   const previewQueryString = useLastDefined(
@@ -507,7 +515,7 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
           throw new DruidError(e);
         }
 
-        return result.attachQuery({}, SqlQuery.maybeParse(previewQueryString));
+        return result.attachQuery({} as any, SqlQuery.maybeParse(previewQueryString));
       }
     },
     backgroundStatusCheck: executionBackgroundResultStatusCheck,
@@ -899,7 +907,8 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
             {editorColumn && ingestQueryPattern && (
               <>
                 <ColumnEditor
-                  expression={editorColumn.expression}
+                  key={editorColumn.index}
+                  initExpression={editorColumn.expression}
                   onApply={newColumn => {
                     if (!editorColumn) return;
                     updatePattern(
@@ -912,7 +921,10 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
                     );
                   }}
                   onCancel={() => setEditorColumn(undefined)}
-                  dirty={() => setEditorColumn({ ...editorColumn, dirty: true })}
+                  dirty={() => {
+                    if (!editorColumn.dirty) return;
+                    setEditorColumn({ ...editorColumn, dirty: true });
+                  }}
                   queryResult={previewResultState.data}
                   headerIndex={editorColumn.index}
                 />

@@ -20,6 +20,7 @@
 package org.apache.druid.segment.virtual;
 
 import org.apache.druid.math.expr.Expr;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.vector.ExprEvalObjectVector;
 import org.apache.druid.math.expr.vector.ExprEvalVector;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
@@ -57,7 +58,7 @@ public class ExpressionVectorObjectSelectorTest
   public void testSelectObject()
   {
     final String[] vector = new String[]{"1", "2", null, "3"};
-    ExprEvalVector vectorEval = new ExprEvalObjectVector(vector);
+    ExprEvalVector vectorEval = new ExprEvalObjectVector(vector, ExpressionType.STRING);
     EasyMock.expect(binding.getCurrentVectorId()).andReturn(1).anyTimes();
     EasyMock.expect(vectorProcessor.evalVector(binding)).andReturn(vectorEval).once();
     EasyMock.replay(binding, vectorProcessor);

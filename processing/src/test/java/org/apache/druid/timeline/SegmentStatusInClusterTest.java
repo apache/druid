@@ -25,8 +25,8 @@ import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.TestObjectMapper;
 import org.apache.druid.jackson.CommaListJoinDeserializer;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
@@ -56,7 +56,7 @@ public class SegmentStatusInClusterTest
 
   private static ObjectMapper createObjectMapper()
   {
-    ObjectMapper objectMapper = new TestObjectMapper();
+    ObjectMapper objectMapper = new DefaultObjectMapper();
     InjectableValues.Std injectableValues = new InjectableValues.Std();
     injectableValues.addValue(PruneSpecsHolder.class, PruneSpecsHolder.DEFAULT);
     objectMapper.setInjectableValues(injectableValues);

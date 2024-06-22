@@ -30,10 +30,12 @@ import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.rpc.ServiceRetryPolicy;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -73,33 +75,22 @@ public interface OverlordClient
 
   /**
    * Run a "kill" task for a particular datasource and interval. Shortcut to {@link #runTask(String, Object)}.
-   *
    * The kill task deletes all unused segment records from deep storage and the metadata store. The task runs
    * asynchronously after the API call returns. The resolved future is the ID of the task, which can be used to
    * monitor its progress through the {@link #taskStatus(String)} API.
    *
    * @param idPrefix   Descriptive prefix to include at the start of task IDs
    * @param dataSource Datasource to kill
-   * @param interval   Interval to kill
-   *
-   * @return future with task ID
-   */
-  default ListenableFuture<String> runKillTask(String idPrefix, String dataSource, Interval interval)
-  {
-    return runKillTask(idPrefix, dataSource, interval, null);
-  }
-
-  /**
-   * Run a "kill" task for a particular datasource and interval. Shortcut to {@link #runTask(String, Object)}.
-   *
-   * The kill task deletes all unused segment records from deep storage and the metadata store. The task runs
-   * asynchronously after the API call returns. The resolved future is the ID of the task, which can be used to
-   * monitor its progress through the {@link #taskStatus(String)} API.
-   *
-   * @param idPrefix   Descriptive prefix to include at the start of task IDs
-   * @param dataSource Datasource to kill
-   * @param interval   Interval to kill
+   * @param interval   Umbrella interval to be considered by the kill task. Note that unused segments falling in this
+   *                   widened umbrella interval may have different {@code used_status_last_updated} time, so the kill task
+   *                   should also filter by {@code maxUsedStatusLastUpdatedTime}
+   * @param versions   An optional list of segment versions to kill in the given {@code interval}. If unspecified, all
+   *                   versions of segments in the {@code interval} must be killed.
    * @param maxSegmentsToKill  The maximum number of segments to kill
+   * @param maxUsedStatusLastUpdatedTime The maximum {@code used_status_last_updated} time. Any unused segment in {@code interval}
+   *                                   with {@code used_status_last_updated} no later than this time will be included in the
+   *                                   kill task. Segments without {@code used_status_last_updated} time (due to an upgrade
+   *                                   from legacy Druid) will have {@code maxUsedStatusLastUpdatedTime} ignored
    *
    * @return future with task ID
    */
@@ -107,7 +98,9 @@ public interface OverlordClient
       String idPrefix,
       String dataSource,
       Interval interval,
-      @Nullable Integer maxSegmentsToKill
+      @Nullable List<String> versions,
+      @Nullable Integer maxSegmentsToKill,
+      @Nullable DateTime maxUsedStatusLastUpdatedTime
   )
   {
     final String taskId = IdUtils.newTaskId(idPrefix, ClientKillUnusedSegmentsTaskQuery.TYPE, dataSource, interval);
@@ -115,9 +108,10 @@ public interface OverlordClient
         taskId,
         dataSource,
         interval,
-        false,
+        versions,
         null,
-        maxSegmentsToKill
+        maxSegmentsToKill,
+        maxUsedStatusLastUpdatedTime
     );
     return FutureUtils.transform(runTask(taskId, taskQuery), ignored -> taskId);
   }
@@ -172,7 +166,7 @@ public interface OverlordClient
    * Returns a {@link org.apache.druid.rpc.HttpResponseException} with code
    * {@link javax.ws.rs.core.Response.Status#NOT_FOUND} if there is no report available for some reason.
    */
-  ListenableFuture<Map<String, Object>> taskReportAsMap(String taskId);
+  ListenableFuture<TaskReport.ReportMap> taskReportAsMap(String taskId);
 
   /**
    * Returns the payload for a task as an instance of {@link ClientTaskQuery}. This method only works for tasks

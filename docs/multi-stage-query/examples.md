@@ -31,6 +31,10 @@ sidebar_label: Examples
 
 These example queries show you some of the things you can do when modifying queries for your use case. Copy the example queries into the **Query** view of the web console and run them to see what they do.
 
+:::tip
+When you insert or replace data with SQL-based ingestion, set the context parameter `finalizeAggregations` to `false`. This context parameter is automatically set for you if you use the Druid console. If you use the API, you must explicitly set it. For more information, see [Rollup](./concepts.md#rollup).
+:::
+
 ## INSERT with no rollup
 
 This example inserts data into a table named `w000` without performing any data rollup:

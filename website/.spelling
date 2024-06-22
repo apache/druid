@@ -21,6 +21,7 @@
 1M
 100MiB
 32-bit
+4MiB
 500MiB
 64-bit
 ACL
@@ -39,6 +40,7 @@ Authorizer
 Avatica
 Avro
 Azul
+AzureDNSZone
 BCP
 Base64
 Base64-encoded
@@ -51,18 +53,22 @@ CORS
 CNF
 CPUs
 CSVs
+CentralizedDatasourceSchema
 Ceph
 CloudWatch
 ColumnDescriptor
 Corretto
 CLI
+CUME_DIST
 DDL
+DENSE_RANK
 DML
 DNS
 DRUIDVERSION
 DataSketches
 DateTime
 DateType
+DeltaLakeInputSource
 dimensionsSpec
 DimensionSpec
 DimensionSpecs
@@ -79,6 +85,7 @@ downsamples
 downsampling
 Dropwizard
 dropwizard
+druid-deltalake-extensions
 DruidInputSource
 DruidSQL
 DynamicConfigProvider
@@ -91,6 +98,7 @@ ETL
 Elasticsearch
 Enums
 FirehoseFactory
+FIRST_VALUE
 FlattenSpec
 Float.NEGATIVE_INFINITY
 Float.NEGATIVE_INFINITY.
@@ -115,8 +123,10 @@ IANA
 IcebergFilter
 IcebergInputSource
 IETF
+IoT
 IP
 IPv4
+IPv6
 IS_AGGREGATOR
 IS_BROADCAST
 IS_JOINABLE
@@ -130,6 +140,7 @@ InputFormat
 InputSource
 InputSources
 Integer.MAX_VALUE
+IntelliJ
 ioConfig
 Istio
 JBOD
@@ -159,6 +170,7 @@ Kerberos
 KeyStores
 Kinesis
 Kubernetes
+Lakehouse
 LDAPS
 LRU
 LZ4
@@ -204,6 +216,7 @@ ROUTINE_TYPE
 Rackspace
 Redis
 S3
+SAS
 SDK
 SIGAR
 SPNEGO
@@ -230,6 +243,7 @@ TopN
 TopNs
 UI
 UIs
+UPSERT
 URI
 URIs
 uris
@@ -246,6 +260,7 @@ aggregators
 ambari
 analytics
 arrayElement
+arrayContainsElement
 assumeNewlineDelimited
 assumeRoleArn
 assumeRoleExternalId
@@ -264,6 +279,7 @@ backpressure
 base64
 big-endian
 bigint
+blkio
 blobstore
 Boolean
 boolean
@@ -278,6 +294,7 @@ codebase
 codec
 colocated
 colocation
+colocating
 compactable
 compactionTask
 config
@@ -343,6 +360,8 @@ https
 idempotency
 i.e.
 influxdb
+influencer
+influencers
 ingestions
 ingestionSpec
 injective
@@ -359,6 +378,7 @@ json_keys
 json_object
 json_paths
 json_query
+json_query_array
 json_value
 karlkfi
 kerberos
@@ -407,6 +427,7 @@ nonfinalized
 non-null
 non-nullable
 noop
+NTILE
 numerics
 numShards
 parameterize
@@ -418,12 +439,14 @@ partitioner
 partitionFunction
 partitionsSpec
 pathParts
+PERCENT_RANK
 performant
 plaintext
 pluggable
 podSpec
 postgres
 postgresql
+pre-aggregate
 pre-aggregated
 pre-aggregates
 pre-aggregating
@@ -431,7 +454,7 @@ pre-aggregation
 pre-computation
 pre-compute
 pre-computing
-pre-configured
+preconfigured
 pre-existing
 pre-filtered
 pre-filtering
@@ -479,6 +502,7 @@ repo
 requireSSL
 rollup
 rollups
+ROW_NUMBER
 rsync
 runtime
 schemas
@@ -512,6 +536,7 @@ subqueries
 subquery
 subsecond
 substring
+substrings
 subtask
 subtasks
 supervisorTaskId
@@ -519,6 +544,7 @@ SVG
 symlink
 syntaxes
 systemFields
+tablePath
 tiering
 timeseries
 Timeseries
@@ -553,6 +579,7 @@ useFilterCNF
 useJqSyntax
 useJsonNodeReader
 useSSL
+upsert
 uptime
 uris
 urls
@@ -565,6 +592,7 @@ varchar
 vectorizable
 vectorize
 vectorizeVirtualColumns
+versioned
 versioning
 virtualColumns
 w.r.t.
@@ -772,6 +800,10 @@ APPROX_COUNT_DISTINCT_DS_THETA
 APPROX_QUANTILE_DS
 DS_QUANTILES_SKETCH
 APPROX_QUANTILE_FIXED_BUCKETS
+# Operators
+pivoted
+UNPIVOT
+unpivoted
 # File specific overrides
 100x
 _common
@@ -784,12 +816,22 @@ Minio
 multi-server
 BasicDataSource
 LeaderLatch
+2.x
+28.x
+3.0.x
 3.5.x
 3.4.x
+3.5.x.
 AllowAll
 AuthenticationResult
 AuthorizationLoadingLookupTest
+booleans
+EOF
+IE11
+InsufficientResourceException
 HttpClient
+JsonConfigurator
+KIP-297
 allowAll
 authenticatorChain
 defaultUser
@@ -800,8 +842,18 @@ c3.2xlarge
 defaultManualBrokerService
 maxPriority
 minPriority
+NUMBER_FEATURES
+NUMBER_OF_CONTRIBUTORS
+PreparedStatement
+pre-upgrade
+QueryCapacityExceededException
+QueryTimeoutException
+QueryUnsupportedException
+ResultSet
 runtime.properties
+SqlParseException
 timeBoundary
+ValidationException
 0x0
 0x9
 2GB
@@ -923,6 +975,7 @@ prometheus
 Pushgateway
 flushPeriod
 postAggregator
+postAggregators
 quantileFromTDigestSketch
 quantilesFromTDigestSketch
 tDigestSketch
@@ -1094,12 +1147,14 @@ taskDuration
 9.2dist
 KinesisSupervisorIOConfig
 KinesisSupervisorTuningConfig
+RabbitMQ
 Resharding
 resharding
 LZ4LZFuncompressedLZ4LZ4LZFuncompressednoneLZ4autolongsautolongslongstypeconcisetyperoaringtypestreamendpointreplicastaskCounttaskCount
 deaggregate
 druid-kinesis-indexing-service
 maxRecordsPerPoll
+maxBytesPerPoll
 maxRecordsPerPollrecordsPerFetchfetchDelayMillisreplicasfetchDelayMillisrecordsPerFetchfetchDelayMillismaxRecordsPerPollamazon-kinesis-client1
 numKinesisShards
 numProcessors
@@ -1225,7 +1280,7 @@ ComplexMetrics
 DataSegmentArchiver
 DataSegmentKiller
 DataSegmentMover
-DataSegmentPuller
+URIDataPuller
 DataSegmentPusher
 DruidModule
 ExtractionFns
@@ -1270,9 +1325,11 @@ kafka.topic
 keyColumnName
 keyFormat
 listDelimiter
+lowerOpen
 timestamp
 timestampColumnName
 timestampSpec
+upperOpen
 urls
 valueFormat
 1GB
@@ -1458,6 +1515,7 @@ array_overlap
 array_prepend
 array_slice
 array_to_string
+scalar_in_array
 asin
 atan
 atan2
@@ -1489,8 +1547,17 @@ getExponent
 hypot
 ipv4_match
 ipv4_parse
-isnull
 ipv4_stringify
+ipv6_match
+
+# IPv6 Address Example Sections
+75e9
+efa4
+29c6
+85f6
+232c
+
+isnull
 java.lang.Math
 java.lang.String
 JNA
@@ -1596,6 +1663,7 @@ EventReceiverFirehose
 EventReceiverFirehoseMonitor
 Filesystem
 JVMMonitor
+jvmVersion
 QueryCountStatsMonitor
 RealtimeMetricsMonitor
 Sys
@@ -2106,6 +2174,9 @@ jackson-jq
 missingValue
 skipBytesInMemoryOverheadCheck
 spatialDimensions
+radiusUnit
+euclidean
+kilometers
 useFieldDiscovery
 4CPU
 cityName
@@ -2188,6 +2259,8 @@ CHARACTER_LENGTH
 CURRENT_DATE
 CURRENT_TIMESTAMP
 DATE_TRUNC
+DECODE_BASE64_COMPLEX
+DECODE_BASE64_UTF8
 DS_CDF
 DS_GET_QUANTILE
 DS_GET_QUANTILES
@@ -2330,8 +2403,32 @@ isLeader
 taskslots
 loadstatus
 sqlQueryId
+useAzureCredentialsChain
+DefaultAzureCredential
 LAST_VALUE
 markUnused
 markUsed
 segmentId
 aggregateMultipleValues
+appRegistrationClientId
+appRegistrationClientSecret
+tenantId
+relativeError
+ddSketch
+DDSketch
+druid-ddsketch
+numBins
+
+- ../docs/development/extensions-contrib/spectator-histogram.md
+SpectatorHistogram
+PercentileBuckets
+spectatorHistogram
+spectatorHistogramTimer
+spectatorHistogramDistribution
+percentileSpectatorHistogram
+percentilesSpectatorHistogram
+
+- ../docs/development/extensions-contrib/ddsketch-quantiles.md
+quantilesFromDDSketch
+quantileFromDDSketch
+collapsingLowestDense

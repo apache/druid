@@ -288,7 +288,11 @@ public class KubernetesPeonLifecycle
             TaskStatus.class
         );
       } else {
-        taskStatus = TaskStatus.failure(taskId.getOriginalTaskId(), "task status not found");
+        log.info(
+            "Peon for task [%s] did not push its task status. Check k8s logs and events for the pod to see what happened.",
+            taskId
+        );
+        taskStatus = TaskStatus.failure(taskId.getOriginalTaskId(), "Peon did not report status successfully.");
       }
     }
     catch (IOException e) {
@@ -329,6 +333,15 @@ public class KubernetesPeonLifecycle
           FileUtils.copyInputStreamToFile(logWatch.getOutput(), file.toFile());
         } else {
           log.debug("Log stream not found for %s", taskId.getOriginalTaskId());
+          FileUtils.writeStringToFile(
+              file.toFile(),
+              StringUtils.format(
+                  "Peon for task [%s] did not report any logs. Check k8s metrics and events for the pod to see what happened.",
+                  taskId
+              ),
+              Charset.defaultCharset()
+          );
+
         }
         taskLogs.pushTaskLog(taskId.getOriginalTaskId(), file.toFile());
       }

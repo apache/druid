@@ -20,7 +20,6 @@
 package org.apache.druid.benchmark;
 
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
 import com.google.common.collect.FluentIterable;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
@@ -32,7 +31,9 @@ import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.DruidDoublePredicate;
 import org.apache.druid.query.filter.DruidFloatPredicate;
 import org.apache.druid.query.filter.DruidLongPredicate;
+import org.apache.druid.query.filter.DruidObjectPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
+import org.apache.druid.query.filter.DruidPredicateMatch;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
@@ -73,37 +74,32 @@ public class DimensionPredicateFilterBenchmark
       new DruidPredicateFactory()
       {
         @Override
-        public Predicate<String> makeStringPredicate()
+        public DruidObjectPredicate<String> makeStringPredicate()
         {
-          return new Predicate<String>()
-          {
-            @Override
-            public boolean apply(String input)
-            {
-              if (input == null) {
-                return false;
-              }
-              return Integer.parseInt(input) % 2 == 0;
+          return (DruidObjectPredicate<String>) input -> {
+            if (input == null) {
+              return DruidPredicateMatch.UNKNOWN;
             }
+            return DruidPredicateMatch.of(Integer.parseInt(input) % 2 == 0);
           };
         }
 
         @Override
         public DruidLongPredicate makeLongPredicate()
         {
-          return DruidLongPredicate.ALWAYS_FALSE;
+          return DruidLongPredicate.ALWAYS_FALSE_WITH_NULL_UNKNOWN;
         }
 
         @Override
         public DruidFloatPredicate makeFloatPredicate()
         {
-          return DruidFloatPredicate.ALWAYS_FALSE;
+          return DruidFloatPredicate.ALWAYS_FALSE_WITH_NULL_UNKNOWN;
         }
 
         @Override
         public DruidDoublePredicate makeDoublePredicate()
         {
-          return DruidDoublePredicate.ALWAYS_FALSE;
+          return DruidDoublePredicate.ALWAYS_FALSE_WITH_NULL_UNKNOWN;
         }
       },
       null

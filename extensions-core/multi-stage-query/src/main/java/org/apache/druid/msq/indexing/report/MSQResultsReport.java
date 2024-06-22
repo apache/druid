@@ -25,15 +25,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.common.config.Configs;
-import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.java.util.common.guava.Yielder;
-import org.apache.druid.java.util.common.guava.Yielders;
-import org.apache.druid.msq.exec.Limits;
-import org.apache.druid.msq.indexing.destination.MSQSelectDestination;
 import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -46,55 +40,21 @@ public class MSQResultsReport
   private final List<ColumnAndType> signature;
   @Nullable
   private final List<SqlTypeName> sqlTypeNames;
-  private final Yielder<Object[]> resultYielder;
+  private final List<Object[]> results;
   private final boolean resultsTruncated;
 
-  public MSQResultsReport(
-      final List<ColumnAndType> signature,
-      @Nullable final List<SqlTypeName> sqlTypeNames,
-      final Yielder<Object[]> resultYielder,
-      @Nullable Boolean resultsTruncated
-  )
-  {
-    this.signature = Preconditions.checkNotNull(signature, "signature");
-    this.sqlTypeNames = sqlTypeNames;
-    this.resultYielder = Preconditions.checkNotNull(resultYielder, "resultYielder");
-    this.resultsTruncated = Configs.valueOrDefault(resultsTruncated, false);
-  }
-
-  /**
-   * Method that enables Jackson deserialization.
-   */
   @JsonCreator
-  static MSQResultsReport fromJson(
+  public MSQResultsReport(
       @JsonProperty("signature") final List<ColumnAndType> signature,
       @JsonProperty("sqlTypeNames") @Nullable final List<SqlTypeName> sqlTypeNames,
       @JsonProperty("results") final List<Object[]> results,
       @JsonProperty("resultsTruncated") final Boolean resultsTruncated
   )
   {
-    return new MSQResultsReport(signature, sqlTypeNames, Yielders.each(Sequences.simple(results)), resultsTruncated);
-  }
-
-  public static MSQResultsReport createReportAndLimitRowsIfNeeded(
-      final List<ColumnAndType> signature,
-      @Nullable final List<SqlTypeName> sqlTypeNames,
-      Yielder<Object[]> resultYielder,
-      MSQSelectDestination selectDestination
-  )
-  {
-    if (selectDestination.shouldTruncateResultsInTaskReport()) {
-      List<Object[]> results = new ArrayList<>();
-      int rowCount = 0;
-      while (!resultYielder.isDone() && rowCount < Limits.MAX_SELECT_RESULT_ROWS) {
-        results.add(resultYielder.get());
-        resultYielder = resultYielder.next(null);
-        ++rowCount;
-      }
-      return new MSQResultsReport(signature, sqlTypeNames, Yielders.each(Sequences.simple(results)), !resultYielder.isDone());
-    } else {
-      return new MSQResultsReport(signature, sqlTypeNames, resultYielder, false);
-    }
+    this.signature = Preconditions.checkNotNull(signature, "signature");
+    this.sqlTypeNames = sqlTypeNames;
+    this.results = Preconditions.checkNotNull(results, "results");
+    this.resultsTruncated = Configs.valueOrDefault(resultsTruncated, false);
   }
 
   @JsonProperty("signature")
@@ -112,9 +72,9 @@ public class MSQResultsReport
   }
 
   @JsonProperty("results")
-  public Yielder<Object[]> getResultYielder()
+  public List<Object[]> getResults()
   {
-    return resultYielder;
+    return results;
   }
 
   @JsonProperty("resultsTruncated")

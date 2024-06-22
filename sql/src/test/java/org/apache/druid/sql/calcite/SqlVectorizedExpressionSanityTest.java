@@ -130,7 +130,7 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
     );
     CONGLOMERATE = QueryStackTests.createQueryRunnerFactoryConglomerate(CLOSER);
 
-    WALKER = new SpecificSegmentsQuerySegmentWalker(CONGLOMERATE).add(
+    WALKER = SpecificSegmentsQuerySegmentWalker.createWalker(CONGLOMERATE).add(
         dataSegment,
         INDEX
     );
@@ -178,10 +178,10 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
   @Test
   public void testQuery()
   {
-    sanityTestVectorizedSqlQueries(PLANNER_FACTORY, query);
+    sanityTestVectorizedSqlQueries(ENGINE, PLANNER_FACTORY, query);
   }
 
-  public static void sanityTestVectorizedSqlQueries(PlannerFactory plannerFactory, String query)
+  public static void sanityTestVectorizedSqlQueries(SqlEngine engine, PlannerFactory plannerFactory, String query)
   {
     final Map<String, Object> vector = ImmutableMap.of(
             QueryContexts.VECTORIZE_KEY, "force",
@@ -193,8 +193,8 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
     );
 
     try (
-        final DruidPlanner vectorPlanner = plannerFactory.createPlannerForTesting(ENGINE, query, vector);
-        final DruidPlanner nonVectorPlanner = plannerFactory.createPlannerForTesting(ENGINE, query, nonvector)
+        final DruidPlanner vectorPlanner = plannerFactory.createPlannerForTesting(engine, query, vector);
+        final DruidPlanner nonVectorPlanner = plannerFactory.createPlannerForTesting(engine, query, nonvector)
     ) {
       final PlannerResult vectorPlan = vectorPlanner.plan();
       final PlannerResult nonVectorPlan = nonVectorPlanner.plan();

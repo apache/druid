@@ -21,7 +21,6 @@ package org.apache.druid.segment.filter;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.extraction.ExtractionFn;
@@ -29,7 +28,9 @@ import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.DruidDoublePredicate;
 import org.apache.druid.query.filter.DruidFloatPredicate;
 import org.apache.druid.query.filter.DruidLongPredicate;
+import org.apache.druid.query.filter.DruidObjectPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
+import org.apache.druid.query.filter.DruidPredicateMatch;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.filter.ValueMatcher;
@@ -37,7 +38,6 @@ import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.query.filter.vector.VectorValueMatcherColumnProcessorFactory;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnProcessors;
-import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
@@ -125,12 +125,6 @@ public class DimensionPredicateFilter implements Filter
   }
 
   @Override
-  public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, ColumnIndexSelector indexSelector)
-  {
-    return Filters.supportsSelectivityEstimation(this, dimension, columnSelector, indexSelector);
-  }
-
-  @Override
   public String toString()
   {
     if (extractionFn != null) {
@@ -143,21 +137,19 @@ public class DimensionPredicateFilter implements Filter
   @VisibleForTesting
   static class DelegatingStringPredicateFactory implements DruidPredicateFactory
   {
-    private final Predicate<String> baseStringPredicate;
+    private final DruidObjectPredicate<String> baseStringPredicate;
     private final DruidPredicateFactory predicateFactory;
     private final ExtractionFn extractionFn;
-    private final boolean isNullUnknown;
 
     DelegatingStringPredicateFactory(DruidPredicateFactory predicateFactory, ExtractionFn extractionFn)
     {
       this.predicateFactory = predicateFactory;
       this.baseStringPredicate = predicateFactory.makeStringPredicate();
       this.extractionFn = extractionFn;
-      this.isNullUnknown = !baseStringPredicate.apply(extractionFn.apply(null));
     }
 
     @Override
-    public Predicate<String> makeStringPredicate()
+    public DruidObjectPredicate<String> makeStringPredicate()
     {
       return input -> baseStringPredicate.apply(extractionFn.apply(input));
     }
@@ -168,13 +160,13 @@ public class DimensionPredicateFilter implements Filter
       return new DruidLongPredicate()
       {
         @Override
-        public boolean applyLong(long input)
+        public DruidPredicateMatch applyLong(long input)
         {
           return baseStringPredicate.apply(extractionFn.apply(input));
         }
 
         @Override
-        public boolean applyNull()
+        public DruidPredicateMatch applyNull()
         {
           return baseStringPredicate.apply(extractionFn.apply(null));
         }
@@ -187,13 +179,13 @@ public class DimensionPredicateFilter implements Filter
       return new DruidFloatPredicate()
       {
         @Override
-        public boolean applyFloat(float input)
+        public DruidPredicateMatch applyFloat(float input)
         {
           return baseStringPredicate.apply(extractionFn.apply(input));
         }
 
         @Override
-        public boolean applyNull()
+        public DruidPredicateMatch applyNull()
         {
           return baseStringPredicate.apply(extractionFn.apply(null));
         }
@@ -206,23 +198,17 @@ public class DimensionPredicateFilter implements Filter
       return new DruidDoublePredicate()
       {
         @Override
-        public boolean applyDouble(double input)
+        public DruidPredicateMatch applyDouble(double input)
         {
           return baseStringPredicate.apply(extractionFn.apply(input));
         }
 
         @Override
-        public boolean applyNull()
+        public DruidPredicateMatch applyNull()
         {
           return baseStringPredicate.apply(extractionFn.apply(null));
         }
       };
-    }
-
-    @Override
-    public boolean isNullInputUnknown()
-    {
-      return isNullUnknown;
     }
 
     @Override

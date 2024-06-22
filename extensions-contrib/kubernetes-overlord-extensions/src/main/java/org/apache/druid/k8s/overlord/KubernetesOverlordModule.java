@@ -21,15 +21,19 @@ package org.apache.druid.k8s.overlord;
 
 import com.google.inject.Binder;
 import com.google.inject.Inject;
+import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Provider;
 import com.google.inject.Provides;
 import com.google.inject.multibindings.MapBinder;
+import com.google.inject.name.Named;
 import io.fabric8.kubernetes.client.Config;
 import io.fabric8.kubernetes.client.ConfigBuilder;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.Binders;
 import org.apache.druid.guice.IndexingServiceModuleHelper;
+import org.apache.druid.guice.JacksonConfigProvider;
+import org.apache.druid.guice.Jerseys;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.guice.LazySingleton;
@@ -37,13 +41,18 @@ import org.apache.druid.guice.PolyBind;
 import org.apache.druid.guice.annotations.LoadScope;
 import org.apache.druid.indexing.common.config.FileTaskLogsConfig;
 import org.apache.druid.indexing.common.tasklogs.FileTaskLogs;
+import org.apache.druid.indexing.overlord.RemoteTaskRunnerFactory;
 import org.apache.druid.indexing.overlord.TaskRunnerFactory;
+import org.apache.druid.indexing.overlord.WorkerTaskRunner;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
+import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunnerFactory;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.k8s.overlord.common.DruidKubernetesClient;
+import org.apache.druid.k8s.overlord.execution.KubernetesTaskExecutionConfigResource;
+import org.apache.druid.k8s.overlord.execution.KubernetesTaskRunnerDynamicConfig;
 import org.apache.druid.k8s.overlord.runnerstrategy.RunnerStrategy;
 import org.apache.druid.tasklogs.NoopTaskLogs;
 import org.apache.druid.tasklogs.TaskLogKiller;
@@ -70,6 +79,7 @@ public class KubernetesOverlordModule implements DruidModule
     JsonConfigProvider.bind(binder, IndexingServiceModuleHelper.INDEXER_RUNNER_PROPERTY_PREFIX, KubernetesTaskRunnerConfig.class);
     JsonConfigProvider.bind(binder, K8SANDWORKER_PROPERTIES_PREFIX, KubernetesAndWorkerTaskRunnerConfig.class);
     JsonConfigProvider.bind(binder, "druid.indexer.queue", TaskQueueConfig.class);
+    JacksonConfigProvider.bind(binder, KubernetesTaskRunnerDynamicConfig.CONFIG_KEY, KubernetesTaskRunnerDynamicConfig.class, null);
     PolyBind.createChoice(
         binder,
         "druid.indexer.runner.type",
@@ -93,6 +103,8 @@ public class KubernetesOverlordModule implements DruidModule
           .toProvider(RunnerStrategyProvider.class)
           .in(LazySingleton.class);
     configureTaskLogs(binder);
+
+    Jerseys.addResource(binder, KubernetesTaskExecutionConfigResource.class);
   }
 
   @Provides
@@ -128,6 +140,26 @@ public class KubernetesOverlordModule implements DruidModule
     );
 
     return client;
+  }
+
+  /**
+   * Provides a TaskRunnerFactory instance suitable for environments without Zookeeper.
+   * In such environments, the standard RemoteTaskRunnerFactory may not be operational.
+   * Depending on the workerType defined in KubernetesAndWorkerTaskRunnerConfig,
+   * this method selects and returns an appropriate TaskRunnerFactory implementation.
+   */
+  @Provides
+  @LazySingleton
+  @Named("taskRunnerFactory")
+  TaskRunnerFactory<? extends WorkerTaskRunner> provideWorkerTaskRunner(
+      KubernetesAndWorkerTaskRunnerConfig runnerConfig,
+      Injector injector
+  )
+  {
+    String workerType = runnerConfig.getWorkerType();
+    return HttpRemoteTaskRunnerFactory.TYPE_NAME.equals(workerType)
+           ? injector.getInstance(HttpRemoteTaskRunnerFactory.class)
+           : injector.getInstance(RemoteTaskRunnerFactory.class);
   }
 
   private static class RunnerStrategyProvider implements Provider<RunnerStrategy>

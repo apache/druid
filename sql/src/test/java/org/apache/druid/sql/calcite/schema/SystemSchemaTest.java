@@ -78,7 +78,8 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.join.MapJoinableFactory;
-import org.apache.druid.segment.loading.SegmentLoader;
+import org.apache.druid.segment.loading.SegmentCacheManager;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.QueryStackTests;
@@ -95,6 +96,7 @@ import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.server.security.ResourceType;
+import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.schema.SystemSchema.SegmentsTable;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
@@ -109,14 +111,12 @@ import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.easymock.EasyMock;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.joda.time.DateTime;
-import org.junit.AfterClass;
 import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
@@ -169,24 +169,21 @@ public class SystemSchemaTest extends CalciteTestBase
   private DruidNodeDiscoveryProvider druidNodeDiscoveryProvider;
   private FilteredServerInventoryView serverInventoryView;
 
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
-
-  @BeforeClass
+  @BeforeAll
   public static void setUpClass()
   {
     resourceCloser = Closer.create();
     conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(resourceCloser);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownClass() throws IOException
   {
     resourceCloser.close();
   }
 
-  @Before
-  public void setUp() throws Exception
+  @BeforeEach
+  public void setUp(@TempDir File tmpDir) throws Exception
   {
     serverView = EasyMock.createNiceMock(TimelineServerView.class);
     client = EasyMock.createMock(DruidLeaderClient.class);
@@ -206,7 +203,6 @@ public class SystemSchemaTest extends CalciteTestBase
     request = EasyMock.createMock(Request.class);
     authMapper = createAuthMapper();
 
-    final File tmpDir = temporaryFolder.newFolder();
     final QueryableIndex index1 = IndexBuilder.create()
                                               .tmpDir(new File(tmpDir, "1"))
                                               .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
@@ -246,7 +242,7 @@ public class SystemSchemaTest extends CalciteTestBase
                                               .rows(ROWS3)
                                               .buildMMappedIndex();
 
-    walker = new SpecificSegmentsQuerySegmentWalker(conglomerate)
+    walker = SpecificSegmentsQuerySegmentWalker.createWalker(conglomerate)
         .add(segment1, index1)
         .add(segment2, index2)
         .add(segment3, index3);
@@ -260,13 +256,14 @@ public class SystemSchemaTest extends CalciteTestBase
         new NoopServiceEmitter(),
         new PhysicalDatasourceMetadataFactory(
             new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
-            new SegmentManager(EasyMock.createMock(SegmentLoader.class))
+            new SegmentManager(EasyMock.createMock(SegmentCacheManager.class))
         ),
-        new NoopCoordinatorClient()
+        new NoopCoordinatorClient(),
+        CentralizedDatasourceSchemaConfig.create()
     );
     cache.start();
     cache.awaitInitialization();
-    druidSchema = new DruidSchema(cache, null);
+    druidSchema = new DruidSchema(cache, null, CatalogResolver.NULL_RESOLVER);
     metadataView = EasyMock.createMock(MetadataSegmentView.class);
     druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
     serverInventoryView = EasyMock.createMock(FilteredServerInventoryView.class);

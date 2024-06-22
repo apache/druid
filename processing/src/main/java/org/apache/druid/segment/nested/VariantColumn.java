@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.nested;
 
-import com.google.common.base.Predicate;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Floats;
 import it.unimi.dsi.fastutil.ints.IntArraySet;
@@ -32,6 +31,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.extraction.ExtractionFn;
+import org.apache.druid.query.filter.DruidObjectPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.StringPredicateDruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
@@ -518,7 +518,7 @@ public class VariantColumn<TStringDictionary extends Indexed<ByteBuffer>>
       {
         final BitSet checkedIds = new BitSet(getCardinality());
         final BitSet matchingIds = new BitSet(getCardinality());
-        final Predicate<String> predicate = predicateFactory.makeStringPredicate();
+        final DruidObjectPredicate<String> predicate = predicateFactory.makeStringPredicate();
 
         // Lazy matcher; only check an id if matches() is called.
         return new ValueMatcher()
@@ -528,13 +528,10 @@ public class VariantColumn<TStringDictionary extends Indexed<ByteBuffer>>
           {
             final int id = getRowValue();
 
-            final boolean matchNull = includeUnknown && predicateFactory.isNullInputUnknown();
-
             if (checkedIds.get(id)) {
               return matchingIds.get(id);
             } else {
-              final String val = lookupName(id);
-              final boolean matches = (matchNull && val == null) || predicate.apply(lookupName(id));
+              final boolean matches = predicate.apply(lookupName(id)).matches(includeUnknown);
               checkedIds.set(id);
               if (matches) {
                 matchingIds.set(id);
