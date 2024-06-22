@@ -24,6 +24,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
+import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
@@ -38,6 +39,7 @@ import javax.ws.rs.core.HttpHeaders;
 import java.util.List;
 
 @Path("/druid/worker/v1/chat")
+@ManageLifecycle
 public class ChatHandlerResource
 {
   private static final EmittingLogger log = new EmittingLogger(ChatHandlerResource.class);
@@ -55,7 +57,7 @@ public class ChatHandlerResource
   }
 
   @LifecycleStart
-  public void init()
+  public void start()
   {
     try {
       RetryUtils.retry(
@@ -64,6 +66,7 @@ public class ChatHandlerResource
             return true;
           },
           Predicates.alwaysTrue(),
+          ChatHandler.MAX_WAIT_TASK_STARTUP_TRIES,
           ChatHandler.MAX_WAIT_TASK_STARTUP_TRIES
       );
     }

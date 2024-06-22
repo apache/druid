@@ -76,9 +76,7 @@ import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
@@ -267,23 +265,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     this.lockGranularityToUse = lockGranularityToUse;
 
     resetNextCheckpointTime();
-  }
-
-  @LifecycleStart
-  public void init()
-  {
-    try {
-      RetryUtils.retry(
-          () -> Preconditions.checkNotNull(startTime, "startTime is null"),
-          Predicates.alwaysTrue(),
-          ChatHandler.MAX_WAIT_TASK_STARTUP_TRIES
-      );
-    }
-    catch (Exception e) {
-      throw new RuntimeException("SeekableStreamIndexTaskRunner::init() => Failed to wait for ingestion task startup");
-    }
-
-    log.info("SeekableStreamIndexTaskRunner::init() => Succeed to wait for ingestion task started");
   }
 
   public TaskStatus run(TaskToolbox toolbox)
