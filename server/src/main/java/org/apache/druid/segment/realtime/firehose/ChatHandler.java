@@ -26,4 +26,5 @@ package org.apache.druid.segment.realtime.firehose;
  */
 public interface ChatHandler
 {
+  int MAX_WAIT_TASK_STARTUP_TRIES = 6;
 }
