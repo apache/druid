@@ -392,6 +392,8 @@ public class FramedOnHeapAggregatableTest extends SemanticTestBase
         .validate(results);
   }
 
+
+
   @Test
   public void testCumulativeAggregation()
   {
@@ -460,6 +462,73 @@ public class FramedOnHeapAggregatableTest extends SemanticTestBase
         .validate(results);
   }
 
+  @Test
+  public void testCumulativeAggregationUnbounded()
+  {
+    Map<String, Column> map = new LinkedHashMap<>();
+    map.put("intCol", new IntArrayColumn(new int[]{0}));
+    map.put("doubleCol", new DoubleArrayColumn(new double[]{0}));
+    map.put("objectCol", new ObjectArrayColumn(
+                new String[]{"a"},
+                ColumnType.STRING
+            )
+    );
+
+    RowsAndColumns rac = make(MapOfColumnsRowsAndColumns.fromMap(map));
+
+    FramedOnHeapAggregatable agger = FramedOnHeapAggregatable.fromRAC(rac);
+
+    final RowsAndColumns results = agger.aggregateAll(
+        new WindowFrame(WindowFrame.PeerType.ROWS, true, 1, false, 1, null),
+        new AggregatorFactory[]{
+            new LongMaxAggregatorFactory("cummMax", "intCol"),
+            new DoubleSumAggregatorFactory("cummSum", "doubleCol")
+        }
+    );
+
+    new RowsAndColumnsHelper()
+        .expectColumn("intCol", new int[]{0})
+        .expectColumn("doubleCol", new double[]{0})
+        .expectColumn("objectCol", new String[]{"a"}, ColumnType.STRING)
+        .expectColumn("cummMax", new long[]{0})
+        .expectColumn("cummSum", new double[]{0})
+        .allColumnsRegistered()
+        .validate(results);
+  }
+
+  @Test
+  public void testReverseCumulativeAggregationUnbound()
+  {
+    Map<String, Column> map = new LinkedHashMap<>();
+    map.put("intCol", new IntArrayColumn(new int[]{0}));
+    map.put("doubleCol", new DoubleArrayColumn(new double[]{0}));
+    map.put("objectCol", new ObjectArrayColumn(
+                new String[]{"a"},
+                ColumnType.STRING
+            )
+    );
+
+    RowsAndColumns rac = make(MapOfColumnsRowsAndColumns.fromMap(map));
+
+    FramedOnHeapAggregatable agger = FramedOnHeapAggregatable.fromRAC(rac);
+
+    final RowsAndColumns results = agger.aggregateAll(
+        new WindowFrame(WindowFrame.PeerType.ROWS, false, 1, true, 0, null),
+        new AggregatorFactory[]{
+            new LongMaxAggregatorFactory("cummMax", "intCol"),
+            new DoubleSumAggregatorFactory("cummSum", "doubleCol")
+        }
+    );
+
+    new RowsAndColumnsHelper()
+        .expectColumn("intCol", new int[]{0})
+        .expectColumn("doubleCol", new double[]{0})
+        .expectColumn("objectCol", new String[]{"a"}, ColumnType.STRING)
+        .expectColumn("cummMax", new long[]{0})
+        .expectColumn("cummSum", new double[]{0})
+        .allColumnsRegistered()
+        .validate(results);
+  }
 
 
   @Test
