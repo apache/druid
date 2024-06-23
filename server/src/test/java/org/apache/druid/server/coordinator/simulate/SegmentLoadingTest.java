@@ -20,11 +20,16 @@
 package org.apache.druid.server.coordinator.simulate;
 
 import org.apache.druid.client.DruidServer;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
+import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.timeline.DataSegment;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -33,9 +38,15 @@ import java.util.List;
  */
 public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
 {
+  private static final Logger LOG = new Logger(SegmentLoadingTest.class);
   private DruidServer historicalT11;
   private DruidServer historicalT12;
+
   private DruidServer historicalT13;
+
+  private DruidServer historicalT14;
+
+  private DruidServer historicalT15;
   private DruidServer historicalT21;
   private DruidServer historicalT22;
 
@@ -46,12 +57,85 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
   public void setUp()
   {
     // Setup historicals for 2 tiers, size 10 GB each
-    historicalT11 = createHistorical(1, Tier.T1, 10_000);
-    historicalT12 = createHistorical(2, Tier.T1, 10_000);
-    historicalT13 = createHistorical(3, Tier.T1, 10_000);
+    historicalT11 = createHistorical(1, Tier.T1, 10_000_000);
+    historicalT12 = createHistorical(2, Tier.T1, 10_000_000);
+    historicalT13 = createHistorical(3, Tier.T1, 10_000_000);
+    historicalT14 = createHistorical(4, Tier.T1, 10_000_000);
+    historicalT15 = createHistorical(5, Tier.T1, 10_000_000);
 
     historicalT21 = createHistorical(1, Tier.T2, 10_000);
     historicalT22 = createHistorical(2, Tier.T2, 10_000);
+  }
+
+  @Ignore
+  @Test
+  public void testLoadAndBalanceSeveralSortingCost()
+  {
+    final List<DataSegment> wikiHourly =
+        CreateDataSegments.ofDatasource("wiki_hourly")
+                          .forIntervals(3 * 24 * 365, Granularities.HOUR)
+                          .startingAt("2022-01-01")
+                          .withNumPartitions(50)
+                          .eachOfSizeInMb(1);
+
+    final List<DataSegment> wikiWeekly =
+        CreateDataSegments.ofDatasource("wiki_weekly")
+                          .forIntervals(3 * 52, Granularities.WEEK)
+                          .startingAt("2021-12-26")
+                          .withNumPartitions(200)
+                          .eachOfSizeInMb(10);
+
+    final List<DataSegment> wikiYearly =
+        CreateDataSegments.ofDatasource("wiki_yearly")
+                          .forIntervals(3, Granularities.YEAR)
+                          .startingAt("2022-01-01")
+                          .withNumPartitions(1000)
+                          .eachOfSizeInMb(100);
+
+
+    List<DataSegment> severalSegments = new ArrayList<>();
+    severalSegments.addAll(wikiYearly);
+    severalSegments.addAll(wikiWeekly);
+    severalSegments.addAll(wikiHourly);
+
+    CoordinatorDynamicConfig dynamicConfig =
+        CoordinatorDynamicConfig.builder()
+                                .withMaxSegmentsToMove(severalSegments.size() / 10)
+                                .withReplicationThrottleLimit(Integer.MAX_VALUE)
+                                .withMaxSegmentsInNodeLoadingQueue(Integer.MAX_VALUE)
+                                .withUseRoundRobinSegmentAssignment(false)
+                                .withSmartSegmentLoading(false)
+                                .build();
+
+
+    final CoordinatorSimulation sim =
+        CoordinatorSimulation.builder()
+                             .withSegments(severalSegments)
+                             .withServers(historicalT11, historicalT12, historicalT13)
+                             .withRules("wiki_yearly", Load.on(Tier.T1, 2).forever())
+                             .withRules("wiki_weekly", Load.on(Tier.T1, 2).forever())
+                             .withRules("wiki_hourly", Load.on(Tier.T1, 2).forever())
+                             .withBalancer("sortingCost")
+                             .withDynamicConfig(dynamicConfig)
+                             .build();
+
+
+    startSimulation(sim);
+    LOG.info("Starting with 3 historicals");
+    int numCycles = 500;
+    for (int i = 0; i < 50; i++) {
+      LOG.info("Coordinator Run: " + (i + 1) + " / " + numCycles);
+      runCoordinatorCycle();
+      loadQueuedSegments();
+    }
+    sim.cluster().addServer(historicalT14);
+    sim.cluster().addServer(historicalT15);
+    LOG.info("Adding 2 more historicals");
+    for (int i = 50; i < numCycles; i++) {
+      LOG.info("Coordinator Run: " + (i + 1) + " / " + numCycles);
+      runCoordinatorCycle();
+      loadQueuedSegments();
+    }
   }
 
   @Test
@@ -73,7 +157,7 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
     startSimulation(sim);
     runCoordinatorCycle();
 
-    // Verify that that replicationThrottleLimit is honored
+    // Verify that replicationThrottleLimit is honored
     verifyValue(Metric.ASSIGNED_COUNT, 2L);
 
     loadQueuedSegments();

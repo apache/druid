@@ -42,6 +42,7 @@ import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.MetadataManager;
+import org.apache.druid.server.coordinator.SortingCostBalancerStrategyFactory;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategyFactory;
 import org.apache.druid.server.coordinator.balancer.CachingCostBalancerStrategyConfig;
 import org.apache.druid.server.coordinator.balancer.CachingCostBalancerStrategyFactory;
@@ -441,22 +442,23 @@ public class CoordinatorSimulationBuilder
           executorFactory.create(1, ExecutorFactory.HISTORICAL_LOADER)
       );
 
+      final HttpLoadQueuePeonConfig httpLoadQueuePeonConfig = new HttpLoadQueuePeonConfig(null, null, null);
+      this.loadQueueTaskMaster = new LoadQueueTaskMaster(
+          OBJECT_MAPPER,
+          executorFactory.create(1, ExecutorFactory.LOAD_QUEUE_EXECUTOR),
+          executorFactory.create(1, ExecutorFactory.LOAD_CALLBACK_EXECUTOR),
+          httpLoadQueuePeonConfig,
+          httpClient
+      );
+      this.loadQueueManager =
+          new SegmentLoadQueueManager(coordinatorInventoryView, loadQueueTaskMaster);
       this.coordinatorConfig = new DruidCoordinatorConfig(
           new CoordinatorRunConfig(new Duration(1L), Duration.standardMinutes(1)),
           new CoordinatorPeriodConfig(null, null),
           CoordinatorKillConfigs.DEFAULT,
           createBalancerStrategy(balancerStrategy),
-          new HttpLoadQueuePeonConfig(null, null, null)
+          httpLoadQueuePeonConfig
       );
-      this.loadQueueTaskMaster = new LoadQueueTaskMaster(
-          OBJECT_MAPPER,
-          executorFactory.create(1, ExecutorFactory.LOAD_QUEUE_EXECUTOR),
-          executorFactory.create(1, ExecutorFactory.LOAD_CALLBACK_EXECUTOR),
-          coordinatorConfig.getHttpLoadQueuePeonConfig(),
-          httpClient
-      );
-      this.loadQueueManager =
-          new SegmentLoadQueueManager(coordinatorInventoryView, loadQueueTaskMaster);
 
       JacksonConfigManager jacksonConfigManager = mockConfigManager();
       setDynamicConfig(dynamicConfig);
@@ -532,6 +534,8 @@ public class CoordinatorSimulationBuilder
           return new CostBalancerStrategyFactory();
         case "cachingCost":
           return buildCachingCostBalancerStrategy();
+        case "sortingCost":
+          return buildSortingCostBalancerStrategy();
         case "diskNormalized":
           return new DiskNormalizedCostBalancerStrategyFactory();
         case "random":
@@ -551,7 +555,20 @@ public class CoordinatorSimulationBuilder
         );
       }
       catch (Exception e) {
-        throw new ISE(e, "Error building balancer strategy");
+        throw new ISE(e, "Error building cachingCost balancer strategy");
+      }
+    }
+
+    private BalancerStrategyFactory buildSortingCostBalancerStrategy()
+    {
+      try {
+        return new SortingCostBalancerStrategyFactory(
+            this.coordinatorInventoryView,
+            this.loadQueueTaskMaster
+        );
+      }
+      catch (Exception e) {
+        throw new ISE(e, "Error building sortingCost balancer strategy");
       }
     }
   }

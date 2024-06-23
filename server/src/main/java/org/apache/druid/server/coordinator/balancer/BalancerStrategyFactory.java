@@ -25,11 +25,13 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.server.coordinator.SortingCostBalancerStrategyFactory;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "strategy", defaultImpl = CostBalancerStrategyFactory.class)
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "cost", value = CostBalancerStrategyFactory.class),
     @JsonSubTypes.Type(name = "cachingCost", value = DisabledCachingCostBalancerStrategyFactory.class),
+    @JsonSubTypes.Type(name = "sortingCost", value = SortingCostBalancerStrategyFactory.class),
     @JsonSubTypes.Type(name = "diskNormalized", value = DiskNormalizedCostBalancerStrategyFactory.class),
     @JsonSubTypes.Type(name = "random", value = RandomBalancerStrategyFactory.class)
 })

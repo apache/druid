@@ -93,11 +93,19 @@ public class CollectSegmentAndServerStats implements CoordinatorDuty
 
     final AtomicDouble usageSum = new AtomicDouble();
     final AtomicLong currentBytesSum = new AtomicLong();
+    final AtomicLong maxBytes = new AtomicLong(Long.MIN_VALUE);
+    final AtomicLong minBytes = new AtomicLong(Long.MAX_VALUE);
 
     historicals.forEach(serverHolder -> {
       final ImmutableDruidServer server = serverHolder.getServer();
       servedCount.addAndGet(server.getNumSegments());
       currentBytesSum.addAndGet(server.getCurrSize());
+      if (maxBytes.get() < server.getCurrSize()) {
+        maxBytes.set(server.getCurrSize());
+      }
+      if (minBytes.get() > server.getCurrSize()) {
+        minBytes.set(server.getCurrSize());
+      }
       usageSum.addAndGet(100.0f * server.getCurrSize() / server.getMaxSize());
 
       final LoadQueuePeon queuePeon = serverHolder.getPeon();
@@ -108,9 +116,11 @@ public class CollectSegmentAndServerStats implements CoordinatorDuty
     final int numHistoricals = historicals.size();
     log.info(
         "Tier[%s] is serving [%,d], loading [%,d] and dropping [%,d] segments"
-        + " across [%d] historicals with average usage[%d GBs], [%.1f%%].",
+        + " across [%d] historicals with average usage[%d GBs], [%.1f%%]"
+        + ", min usage[%d GBs] and max usage[%d GBs].",
         tier, servedCount.get(), loadingCount.get(), droppingCount.get(), numHistoricals,
-        (currentBytesSum.get() >> 30) / numHistoricals, usageSum.get() / numHistoricals
+        (currentBytesSum.get() >> 30) / numHistoricals, usageSum.get() / numHistoricals,
+        (minBytes.get() >> 30), (maxBytes.get() >> 30)
     );
   }
 

@@ -64,12 +64,12 @@ public class CostBalancerStrategy implements BalancerStrategy
    * Comparator that prioritizes servers by cost. Cheaper servers come before
    * costlier servers. Servers with the same cost may appear in a random order.
    */
-  private static final Comparator<Pair<Double, ServerHolder>> CHEAPEST_SERVERS_FIRST
+  protected static final Comparator<Pair<Double, ServerHolder>> CHEAPEST_SERVERS_FIRST
       = Comparator.<Pair<Double, ServerHolder>, Double>comparing(pair -> pair.lhs)
       .thenComparing(pair -> pair.rhs);
 
-  private final CoordinatorRunStats stats = new CoordinatorRunStats();
-  private final AtomicLong computeTimeNanos = new AtomicLong(0);
+  protected final CoordinatorRunStats stats = new CoordinatorRunStats();
+  protected final AtomicLong computeTimeNanos = new AtomicLong(0);
 
   public static double computeJointSegmentsCost(DataSegment segment, Iterable<DataSegment> segmentSet)
   {
