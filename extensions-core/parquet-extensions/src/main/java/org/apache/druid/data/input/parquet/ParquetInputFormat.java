@@ -41,17 +41,20 @@ public class ParquetInputFormat extends NestedInputFormat
 {
   static final long SCALE_FACTOR = 8L;
   private final boolean binaryAsString;
+  private final boolean projectPushdown;
   private final Configuration conf;
 
   @JsonCreator
   public ParquetInputFormat(
       @JsonProperty("flattenSpec") @Nullable JSONPathSpec flattenSpec,
       @JsonProperty("binaryAsString") @Nullable Boolean binaryAsString,
+      @JsonProperty("projectPushdown") @Nullable Boolean projectPushdown,
       @JacksonInject @Parquet Configuration conf
   )
   {
     super(flattenSpec);
     this.binaryAsString = binaryAsString == null ? false : binaryAsString;
+    this.projectPushdown = projectPushdown == null ? false : projectPushdown;
     this.conf = conf;
   }
 
@@ -82,6 +85,13 @@ public class ParquetInputFormat extends NestedInputFormat
     return binaryAsString;
   }
 
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+  public boolean getProjectPushdown()
+  {
+    return projectPushdown;
+  }
+
   @Override
   public boolean isSplittable()
   {
@@ -96,7 +106,7 @@ public class ParquetInputFormat extends NestedInputFormat
   )
   {
     initialize(conf);
-    return new ParquetReader(conf, inputRowSchema, source, temporaryDirectory, getFlattenSpec(), binaryAsString);
+    return new ParquetReader(conf, inputRowSchema, source, temporaryDirectory, getFlattenSpec(), binaryAsString, projectPushdown);
   }
 
   @Override
@@ -118,12 +128,12 @@ public class ParquetInputFormat extends NestedInputFormat
       return false;
     }
     ParquetInputFormat that = (ParquetInputFormat) o;
-    return binaryAsString == that.binaryAsString;
+    return binaryAsString == that.binaryAsString && this.projectPushdown == that.projectPushdown;
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(super.hashCode(), binaryAsString);
+    return Objects.hash(super.hashCode(), binaryAsString, projectPushdown);
   }
 }
