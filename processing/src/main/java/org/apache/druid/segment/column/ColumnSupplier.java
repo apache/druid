@@ -17,38 +17,33 @@
  * under the License.
  */
 
-package org.apache.druid.segment.serde;
+package org.apache.druid.segment.column;
 
-import org.apache.druid.segment.column.ColumnIndexSupplier;
-import org.apache.druid.segment.column.ColumnPartSize;
+import com.google.common.collect.ImmutableMap;
 
-import javax.annotation.Nullable;
-import java.util.Collections;
 import java.util.Map;
+import java.util.function.Supplier;
 
-/**
- * Default implementation of {@link ColumnIndexSupplier} for columns which do not
- * have any indexes.
- */
-public class NoIndexesColumnIndexSupplier implements ColumnIndexSupplier
+public interface ColumnSupplier<TColumn extends BaseColumn> extends Supplier<TColumn>
 {
-  private static final NoIndexesColumnIndexSupplier INSTANCE = new NoIndexesColumnIndexSupplier();
-
-  public static NoIndexesColumnIndexSupplier getInstance()
+  default Map<String, ColumnPartSize> getComponents()
   {
-    return INSTANCE;
+    return ImmutableMap.of("unavailable", ColumnPartSize.NO_DATA);
   }
 
-  @Nullable
-  @Override
-  public <T> T as(Class<T> clazz)
+  class LegacyColumnSupplier<T extends BaseColumn> implements ColumnSupplier<T>
   {
-    return null;
-  }
+    private final Supplier<T> supplier;
 
-  @Override
-  public Map<String, ColumnPartSize> getIndexComponents()
-  {
-    return Collections.emptyMap();
+    public LegacyColumnSupplier(Supplier<T> supplier)
+    {
+      this.supplier = supplier;
+    }
+
+    @Override
+    public T get()
+    {
+      return supplier.get();
+    }
   }
 }

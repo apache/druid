@@ -428,6 +428,24 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
       rollup = null;
     }
 
+    final LinkedHashMap<String, Integer> smoosh;
+    if (arg1.getSmoosh() != null) {
+      smoosh = new LinkedHashMap<>(arg1.getSmoosh());
+      if (arg2.getSmoosh() != null) {
+        final LinkedHashMap<String, Integer> otherSmoosh = arg2.getSmoosh();
+        for (Map.Entry<String, Integer> entry : otherSmoosh.entrySet()) {
+          smoosh.compute(entry.getKey(), (k, v) -> {
+            if (v != null) {
+              return v + entry.getValue();
+            }
+            return entry.getValue();
+          });
+        }
+      }
+    } else {
+      smoosh = arg2.getSmoosh();
+    }
+
     return new SegmentAnalysis(
         mergedId,
         newIntervals,
@@ -437,7 +455,8 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
         aggregators.isEmpty() ? null : aggregators,
         timestampSpec,
         queryGranularity,
-        rollup
+        rollup,
+        smoosh
     );
   }
 
@@ -453,7 +472,8 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
         analysis.getAggregators(),
         analysis.getTimestampSpec(),
         analysis.getQueryGranularity(),
-        analysis.isRollup()
+        analysis.isRollup(),
+        analysis.getSmoosh()
     );
   }
 

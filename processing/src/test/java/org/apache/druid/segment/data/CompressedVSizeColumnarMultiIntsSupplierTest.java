@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.data;
 
+import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import org.apache.druid.java.util.common.io.Closer;
 
@@ -35,7 +36,7 @@ public class CompressedVSizeColumnarMultiIntsSupplierTest extends CompressedVSiz
 {
   private Closer closer;
   private List<int[]> vals;
-  private WritableSupplier<ColumnarMultiInts> columnarMultiIntsSupplier;
+  private Supplier<ColumnarMultiInts> columnarMultiIntsSupplier;
 
   @Override
   public void setUpSimple()
@@ -76,13 +77,13 @@ public class CompressedVSizeColumnarMultiIntsSupplierTest extends CompressedVSiz
   }
 
   @Override
-  public WritableSupplier<ColumnarMultiInts> getColumnarMultiIntsSupplier()
+  public Supplier<ColumnarMultiInts> getColumnarMultiIntsSupplier()
   {
     return columnarMultiIntsSupplier;
   }
 
   @Override
-  public WritableSupplier<ColumnarMultiInts> fromByteBuffer(ByteBuffer buffer)
+  public Supplier<ColumnarMultiInts> fromByteBuffer(ByteBuffer buffer)
   {
     return wrapSupplier(
         CompressedVSizeColumnarMultiIntsSupplier.fromByteBuffer(

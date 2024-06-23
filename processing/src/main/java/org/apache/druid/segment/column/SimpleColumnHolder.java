@@ -20,12 +20,13 @@
 package org.apache.druid.segment.column;
 
 import com.google.common.base.Preconditions;
-import com.google.common.base.Supplier;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.selector.settable.SettableColumnValueSelector;
 import org.apache.druid.segment.selector.settable.SettableObjectColumnValueSelector;
 
 import javax.annotation.Nullable;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  *
@@ -36,7 +37,7 @@ class SimpleColumnHolder implements ColumnHolder
   private final ColumnFormat columnFormat;
 
   @Nullable
-  private final Supplier<? extends BaseColumn> columnSupplier;
+  private final ColumnSupplier<? extends BaseColumn> columnSupplier;
 
   @Nullable
   private final ColumnIndexSupplier indexSupplier;
@@ -47,7 +48,7 @@ class SimpleColumnHolder implements ColumnHolder
   SimpleColumnHolder(
       ColumnCapabilities capabilities,
       @Nullable ColumnFormat columnFormat,
-      @Nullable Supplier<? extends BaseColumn> columnSupplier,
+      @Nullable ColumnSupplier<? extends BaseColumn> columnSupplier,
       @Nullable ColumnIndexSupplier indexSupplier
   )
   {
@@ -104,6 +105,40 @@ class SimpleColumnHolder implements ColumnHolder
   public ColumnIndexSupplier getIndexSupplier()
   {
     return indexSupplier;
+  }
+
+  @Override
+  public ColumnSize getColumnSize()
+  {
+    if (columnSupplier != null) {
+      LinkedHashMap<String, ColumnPartSize> allParts = new LinkedHashMap<>(columnSupplier.getComponents());
+      if (indexSupplier != null) {
+        allParts.putAll(indexSupplier.getIndexComponents());
+      }
+      long totalSize = 0L;
+      StringBuilder errorMessage = new StringBuilder();
+      boolean hasError = false;
+      for (Map.Entry<String, ColumnPartSize> part : allParts.entrySet()) {
+        long partSize = part.getValue().getTotalSize();
+        if (partSize < 0) {
+          String partialError = "part " + part.getKey() + " is missing size info";
+          if (!hasError) {
+            errorMessage.append(partialError);
+          } else {
+            errorMessage.append(", ").append(partialError);
+          }
+          hasError = true;
+        } else {
+          totalSize += part.getValue().getTotalSize();
+        }
+      }
+      if (hasError) {
+        return new ColumnSize(-1L, allParts, errorMessage.toString());
+      } else {
+        return new ColumnSize(totalSize, allParts, null);
+      }
+    }
+    return ColumnSize.NO_DATA;
   }
 
   @Override

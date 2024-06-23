@@ -19,15 +19,20 @@
 
 package org.apache.druid.segment.serde;
 
-import com.google.common.base.Supplier;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
+import org.apache.druid.segment.column.ColumnPartSize;
+import org.apache.druid.segment.column.ColumnSize;
+import org.apache.druid.segment.column.ColumnSupplier;
 import org.apache.druid.segment.column.FloatsColumn;
 import org.apache.druid.segment.column.NumericColumn;
 import org.apache.druid.segment.data.CompressedColumnarFloatsSupplier;
 
+import java.util.Map;
+
 /**
 */
-public class FloatNumericColumnSupplier implements Supplier<NumericColumn>
+public class FloatNumericColumnSupplier implements ColumnSupplier<NumericColumn>
 {
   private final CompressedColumnarFloatsSupplier column;
   private final ImmutableBitmap nullValueBitmap;
@@ -39,6 +44,15 @@ public class FloatNumericColumnSupplier implements Supplier<NumericColumn>
   {
     this.column = column;
     this.nullValueBitmap = nullValueBitmap;
+  }
+
+  @Override
+  public Map<String, ColumnPartSize> getComponents()
+  {
+    return ImmutableMap.of(
+        ColumnSize.FLOAT_COLUMN_PART,
+        column.getColumnPartSize()
+    );
   }
 
   @Override

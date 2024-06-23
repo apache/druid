@@ -19,15 +19,16 @@
 
 package org.apache.druid.segment.data;
 
-import com.google.common.base.Supplier;
 import org.apache.druid.collections.ResourceHolder;
+import org.apache.druid.segment.column.ColumnPartSize;
+import org.apache.druid.segment.column.ColumnPartSupplier;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.DoubleBuffer;
 
-public class BlockLayoutColumnarDoublesSupplier implements Supplier<ColumnarDoubles>
+public class BlockLayoutColumnarDoublesSupplier implements ColumnPartSupplier<ColumnarDoubles>
 {
   private final GenericIndexed<ResourceHolder<ByteBuffer>> baseDoubleBuffers;
 
@@ -48,6 +49,12 @@ public class BlockLayoutColumnarDoublesSupplier implements Supplier<ColumnarDoub
     baseDoubleBuffers = GenericIndexed.read(fromBuffer, DecompressingByteBufferObjectStrategy.of(byteOrder, strategy));
     this.totalSize = totalSize;
     this.sizePer = sizePer;
+  }
+
+  @Override
+  public ColumnPartSize getColumnPartSize()
+  {
+    return baseDoubleBuffers.getColumnPartSize();
   }
 
   @Override

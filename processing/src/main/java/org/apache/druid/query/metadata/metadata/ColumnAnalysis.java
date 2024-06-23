@@ -20,11 +20,13 @@
 package org.apache.druid.query.metadata.metadata;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnSize;
 import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nullable;
@@ -59,6 +61,8 @@ public class ColumnAnalysis
   private final Comparable maxValue;
   private final String errorMessage;
 
+  private final ColumnSize columnSize;
+
   @JsonCreator
   public ColumnAnalysis(
       @JsonProperty("typeSignature") ColumnType typeSignature,
@@ -69,6 +73,7 @@ public class ColumnAnalysis
       @JsonProperty("cardinality") Integer cardinality,
       @JsonProperty("minValue") Comparable minValue,
       @JsonProperty("maxValue") Comparable maxValue,
+      @JsonProperty("columnSize") ColumnSize columnSize,
       @JsonProperty("errorMessage") String errorMessage
   )
   {
@@ -80,6 +85,7 @@ public class ColumnAnalysis
     this.cardinality = cardinality;
     this.minValue = minValue;
     this.maxValue = maxValue;
+    this.columnSize = columnSize;
     this.errorMessage = errorMessage;
   }
 
@@ -126,6 +132,13 @@ public class ColumnAnalysis
   public Comparable getMaxValue()
   {
     return maxValue;
+  }
+
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public ColumnSize getColumnSize()
+  {
+    return columnSize;
   }
 
   @JsonProperty
@@ -187,6 +200,8 @@ public class ColumnAnalysis
     Comparable newMin = choose(minValue, rhs.minValue, false);
     Comparable newMax = choose(maxValue, rhs.maxValue, true);
 
+    ColumnSize newColumnSize = columnSize == null ? rhs.columnSize : columnSize.merge(rhs.columnSize);
+
     // min and max are currently set for only string columns
     if (typeSignature.equals(ColumnType.STRING)) {
       newMin = NullHandling.nullToEmptyIfNeeded((String) newMin);
@@ -200,6 +215,7 @@ public class ColumnAnalysis
                     .withCardinality(cardinality)
                     .withMinValue(newMin)
                     .withMaxValue(newMax)
+                    .withColumnSize(newColumnSize)
                     .build();
   }
 
@@ -227,6 +243,7 @@ public class ColumnAnalysis
            ", cardinality=" + cardinality +
            ", minValue=" + minValue +
            ", maxValue=" + maxValue +
+           ", columnSize=" + columnSize +
            ", errorMessage='" + errorMessage + '\'' +
            '}';
   }
@@ -249,6 +266,7 @@ public class ColumnAnalysis
            Objects.equals(cardinality, that.cardinality) &&
            Objects.equals(minValue, that.minValue) &&
            Objects.equals(maxValue, that.maxValue) &&
+           Objects.equals(columnSize, that.columnSize) &&
            Objects.equals(errorMessage, that.errorMessage);
   }
 
@@ -278,6 +296,7 @@ public class ColumnAnalysis
     private Integer cardinality;
     private Comparable<T> minValue;
     private Comparable<T> maxValue;
+    private ColumnSize columnSize;
     private String errorMessage;
 
     public Builder withCapabilities(ColumnCapabilities capabilities)
@@ -318,6 +337,12 @@ public class ColumnAnalysis
       return this;
     }
 
+    public Builder withColumnSize(ColumnSize columnSize)
+    {
+      this.columnSize = columnSize;
+      return this;
+    }
+
     public Builder withCardinality(@Nullable Integer cardinality)
     {
       this.cardinality = cardinality;
@@ -353,6 +378,7 @@ public class ColumnAnalysis
           cardinality,
           minValue,
           maxValue,
+          columnSize,
           errorMessage
       );
     }

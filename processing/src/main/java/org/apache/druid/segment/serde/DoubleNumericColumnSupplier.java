@@ -19,21 +19,35 @@
 
 package org.apache.druid.segment.serde;
 
-import com.google.common.base.Supplier;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
+import org.apache.druid.segment.column.ColumnPartSize;
+import org.apache.druid.segment.column.ColumnPartSupplier;
+import org.apache.druid.segment.column.ColumnSize;
+import org.apache.druid.segment.column.ColumnSupplier;
 import org.apache.druid.segment.column.DoublesColumn;
 import org.apache.druid.segment.column.NumericColumn;
 import org.apache.druid.segment.data.ColumnarDoubles;
 
-public class DoubleNumericColumnSupplier implements Supplier<NumericColumn>
+import java.util.Map;
+
+public class DoubleNumericColumnSupplier implements ColumnSupplier<NumericColumn>
 {
-  private final Supplier<ColumnarDoubles> column;
+  private final ColumnPartSupplier<ColumnarDoubles> column;
   private final ImmutableBitmap nullValueBitmap;
 
-  DoubleNumericColumnSupplier(Supplier<ColumnarDoubles> column, ImmutableBitmap nullValueBitmap)
+  DoubleNumericColumnSupplier(ColumnPartSupplier<ColumnarDoubles> column, ImmutableBitmap nullValueBitmap)
   {
     this.column = column;
     this.nullValueBitmap = nullValueBitmap;
+  }
+
+  @Override
+  public Map<String, ColumnPartSize> getComponents()
+  {
+    return ImmutableMap.of(
+        ColumnSize.DOUBLE_COLUMN_PART, column.getColumnPartSize()
+    );
   }
 
   @Override

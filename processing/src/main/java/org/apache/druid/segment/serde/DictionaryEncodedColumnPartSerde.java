@@ -22,7 +22,6 @@ package org.apache.druid.segment.serde;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Supplier;
 import com.google.common.primitives.Ints;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.spatial.ImmutableRTree;
@@ -31,6 +30,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnConfig;
+import org.apache.druid.segment.column.ColumnPartSupplier;
 import org.apache.druid.segment.column.StringEncodingStrategies;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.BitmapSerde;
@@ -49,7 +49,6 @@ import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.V3CompressedVSizeColumnarMultiIntsSupplier;
 import org.apache.druid.segment.data.VSizeColumnarInts;
 import org.apache.druid.segment.data.VSizeColumnarMultiInts;
-import org.apache.druid.segment.data.WritableSupplier;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
@@ -309,15 +308,15 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
 
         builder.setType(ValueType.STRING);
 
-        final Supplier<? extends Indexed<ByteBuffer>> dictionarySupplier =
+        final ColumnPartSupplier<? extends Indexed<ByteBuffer>> dictionarySupplier =
             StringEncodingStrategies.getStringDictionarySupplier(
                 builder.getFileMapper(),
                 buffer,
                 byteOrder
             );
 
-        final WritableSupplier<ColumnarInts> rSingleValuedColumn;
-        final WritableSupplier<ColumnarMultiInts> rMultiValuedColumn;
+        final ColumnPartSupplier<ColumnarInts> rSingleValuedColumn;
+        final ColumnPartSupplier<ColumnarMultiInts> rMultiValuedColumn;
 
         if (hasMultipleValues) {
           rMultiValuedColumn = readMultiValuedColumn(rVersion, buffer, rFlags);
@@ -368,7 +367,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
         }
       }
 
-      private WritableSupplier<ColumnarInts> readSingleValuedColumn(VERSION version, ByteBuffer buffer)
+      private ColumnPartSupplier<ColumnarInts> readSingleValuedColumn(VERSION version, ByteBuffer buffer)
       {
         switch (version) {
           case UNCOMPRESSED_SINGLE_VALUE:
@@ -381,7 +380,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
         }
       }
 
-      private WritableSupplier<ColumnarMultiInts> readMultiValuedColumn(VERSION version, ByteBuffer buffer, int flags)
+      private ColumnPartSupplier<ColumnarMultiInts> readMultiValuedColumn(VERSION version, ByteBuffer buffer, int flags)
       {
         switch (version) {
           case UNCOMPRESSED_MULTI_VALUE: {

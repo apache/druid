@@ -19,8 +19,10 @@
 
 package org.apache.druid.segment.data;
 
-import com.google.common.base.Supplier;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.column.ColumnPartSize;
+import org.apache.druid.segment.column.ColumnPartSupplier;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -34,7 +36,7 @@ public class CompressedColumnarDoublesSuppliers
   {
   }
 
-  public static Supplier<ColumnarDoubles> fromByteBuffer(
+  public static ColumnPartSupplier<ColumnarDoubles> fromByteBuffer(
       ByteBuffer buffer,
       ByteOrder order
   )
@@ -44,18 +46,41 @@ public class CompressedColumnarDoublesSuppliers
     if (versionFromBuffer == LZF_VERSION || versionFromBuffer == VERSION) {
       final int totalSize = buffer.getInt();
       final int sizePer = buffer.getInt();
-      CompressionStrategy compression = CompressionStrategy.LZF;
+      final CompressionStrategy compression;
       if (versionFromBuffer == VERSION) {
         byte compressionId = buffer.get();
         compression = CompressionStrategy.forId(compressionId);
+      } else {
+        compression = CompressionStrategy.LZF;
       }
-      return CompressionFactory.getDoubleSupplier(
+      final ColumnPartSupplier<ColumnarDoubles> doubles = CompressionFactory.getDoubleSupplier(
           totalSize,
           sizePer,
           buffer.asReadOnlyBuffer(),
           order,
           compression
       );
+      return new ColumnPartSupplier<ColumnarDoubles>()
+      {
+        @Override
+        public ColumnarDoubles get()
+        {
+          return doubles.get();
+        }
+
+        @Override
+        public ColumnPartSize getColumnPartSize()
+        {
+          return ColumnPartSize.simple(
+              StringUtils.format(
+                  "compressed doubles column compression:[%s] values per block:[%s]",
+                  compression.toString(),
+                  sizePer
+              ),
+              doubles.getColumnPartSize().getSize()
+          );
+        }
+      };
     }
     throw new IAE("Unknown version[%s]", versionFromBuffer);
   }

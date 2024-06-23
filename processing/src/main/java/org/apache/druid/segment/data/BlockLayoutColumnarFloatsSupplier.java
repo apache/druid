@@ -19,15 +19,16 @@
 
 package org.apache.druid.segment.data;
 
-import com.google.common.base.Supplier;
 import org.apache.druid.collections.ResourceHolder;
+import org.apache.druid.segment.column.ColumnPartSize;
+import org.apache.druid.segment.column.ColumnPartSupplier;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 
-public class BlockLayoutColumnarFloatsSupplier implements Supplier<ColumnarFloats>
+public class BlockLayoutColumnarFloatsSupplier implements ColumnPartSupplier<ColumnarFloats>
 {
   private final GenericIndexed<ResourceHolder<ByteBuffer>> baseFloatBuffers;
 
@@ -48,6 +49,12 @@ public class BlockLayoutColumnarFloatsSupplier implements Supplier<ColumnarFloat
     baseFloatBuffers = GenericIndexed.read(fromBuffer, DecompressingByteBufferObjectStrategy.of(byteOrder, strategy));
     this.totalSize = totalSize;
     this.sizePer = sizePer;
+  }
+
+  @Override
+  public ColumnPartSize getColumnPartSize()
+  {
+    return baseFloatBuffers.getColumnPartSize();
   }
 
   @Override

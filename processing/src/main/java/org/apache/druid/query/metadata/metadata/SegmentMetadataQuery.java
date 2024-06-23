@@ -51,6 +51,8 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
   {
     CARDINALITY,
     SIZE,
+    COLUMN_SIZE,
+    SMOOSH_SIZE,
     INTERVAL,
     AGGREGATORS,
     MINMAX,

@@ -51,6 +51,7 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.query.metadata.metadata.AggregatorMergeStrategy;
 import org.apache.druid.query.metadata.metadata.ColumnAnalysis;
 import org.apache.druid.query.metadata.metadata.ListColumnIncluderator;
@@ -62,6 +63,8 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
+import org.apache.druid.segment.column.ColumnPartSize;
+import org.apache.druid.segment.column.ColumnSize;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
@@ -236,6 +239,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                     null,
                     null,
                     null,
+                    null,
                     null
                 ),
                 "index",
@@ -245,6 +249,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                     false,
                     false,
                     9672,
+                    null,
                     null,
                     null,
                     null,
@@ -260,6 +265,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                     1,
                     "preferred",
                     "preferred",
+                    null,
                     null
                 )
             )
@@ -286,6 +292,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                     null,
                     null,
                     null,
+                    null,
                     null
                 ),
                 "index",
@@ -295,6 +302,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                     false,
                     false,
                     9672,
+                    null,
                     null,
                     null,
                     null,
@@ -308,6 +316,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                     false,
                     placementSize2,
                     1,
+                    null,
                     null,
                     null,
                     null
@@ -351,6 +360,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                     0,
                     NullHandling.defaultStringValue(),
                     NullHandling.defaultStringValue(),
+                    null,
                     null
                 ),
                 "placementish",
@@ -363,6 +373,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                     0,
                     NullHandling.defaultStringValue(),
                     NullHandling.defaultStringValue(),
+                    null,
                     null
                 )
             )
@@ -425,6 +436,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                     1,
                     NullHandling.defaultStringValue(),
                     NullHandling.defaultStringValue(),
+                    null,
                     null
                 ),
                 "placementish",
@@ -437,6 +449,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                     9,
                     NullHandling.defaultStringValue(),
                     NullHandling.defaultStringValue(),
+                    null,
                     null
                 )
             )
@@ -499,6 +512,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                     1,
                     NullHandling.defaultStringValue(),
                     NullHandling.defaultStringValue(),
+                    null,
                     null
                 ),
                 "quality_uniques",
@@ -508,6 +522,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                     false,
                     true,
                     0,
+                    null,
                     null,
                     null,
                     null,
@@ -573,6 +588,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
         1,
         "preferred",
         "preferred",
+        null,
         null
     );
     testSegmentMetadataQueryWithDefaultAnalysisMerge("placement", analysis);
@@ -596,6 +612,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
         3,
         "spot",
         "upfront",
+        null,
         null
     );
     testSegmentMetadataQueryWithDefaultAnalysisMerge("market", analysis);
@@ -619,6 +636,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
         9,
         "automotive",
         "travel",
+        null,
         null
     );
     testSegmentMetadataQueryWithDefaultAnalysisMerge("quality", analysis);
@@ -649,6 +667,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                     null,
                     null,
                     null,
+                    null,
                     null
                 ),
                 "index",
@@ -658,6 +677,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                     false,
                     false,
                     9672 * 2,
+                    null,
                     null,
                     null,
                     null,
@@ -719,6 +739,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                     0,
                     NullHandling.defaultStringValue(),
                     NullHandling.defaultStringValue(),
+                    null,
                     null
                 )
             )
@@ -785,6 +806,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                     0,
                     NullHandling.defaultStringValue(),
                     NullHandling.defaultStringValue(),
+                    null,
                     null
                 )
             )
@@ -851,6 +873,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                     0,
                     NullHandling.defaultStringValue(),
                     NullHandling.defaultStringValue(),
+                    null,
                     null
                 )
             )
@@ -914,6 +937,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                     0,
                     NullHandling.defaultStringValue(),
                     NullHandling.defaultStringValue(),
+                    null,
                     null
                 )
             )
@@ -976,6 +1000,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                     0,
                     NullHandling.defaultStringValue(),
                     NullHandling.defaultStringValue(),
+                    null,
                     null
                 )
             )
@@ -1495,6 +1520,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
         null,
         null,
         null,
+        null,
         null
     );
     testSegmentMetadataQueryWithDefaultAnalysisMerge("longNumericNull", analysis);
@@ -1509,6 +1535,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
         false,
         NullHandling.replaceWithDefault() ? false : true,
         19344,
+        null,
         null,
         null,
         null,
@@ -1530,6 +1557,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
         null,
         null,
         null,
+        null,
         null
     );
     testSegmentMetadataQueryWithDefaultAnalysisMerge("floatNumericNull", analysis);
@@ -1547,6 +1575,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
         1,
         NullHandling.defaultStringValue(),
         NullHandling.defaultStringValue(),
+        null,
         null
     );
     testSegmentMetadataQueryWithDefaultAnalysisMerge("null_column", analysis);
@@ -1799,5 +1828,276 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                                  "Both lenientAggregatorMerge [false] and aggregatorMergeStrategy [latest] parameters cannot be set."
                                  + " Consider using aggregatorMergeStrategy since lenientAggregatorMerge is deprecated.")
     );
+  }
+
+  @Test
+  public void testColumnSizeAndSmooshAnalysis()
+  {
+    SegmentMetadataQuery query = Druids.newSegmentMetadataQueryBuilder()
+                                       .dataSource(DATASOURCE)
+                                       .intervals("2013/2014")
+                                       .toInclude(
+                                           new ListColumnIncluderator(
+                                               Arrays.asList(
+                                                   "__time",
+                                                   "index",
+                                                   "placement",
+                                                   "floatNumericNull",
+                                                   "quality_uniques"
+                                               )
+                                           )
+                                       )
+                                       .analysisTypes(
+                                           SegmentMetadataQuery.AnalysisType.COLUMN_SIZE,
+                                           SegmentMetadataQuery.AnalysisType.SMOOSH_SIZE
+                                       )
+                                       .merge(true)
+                                       .build();
+    List<SegmentAnalysis> results = runner1.run(QueryPlus.wrap(query)).toList();
+
+    LinkedHashMap<String, Integer> smooshAnalysis;
+    ColumnSize timeSize;
+    ColumnSize indexSize;
+    ColumnSize placementSize;
+    ColumnSize floatNumericNullSize;
+    ColumnSize qualityUniquesSize;
+    if (mmap1) {
+      timeSize = new ColumnSize(
+          694L,
+          new LinkedHashMap<>(
+              ImmutableMap.of(
+                  ColumnSize.LONG_COLUMN_PART,
+                  ColumnPartSize.simple("compressed longs column compression:[lz4] values per block:[8192]", 694L)
+              )
+          ),
+          null
+      );
+
+      if (bitmaps) {
+        placementSize = new ColumnSize(
+            104L,
+            new LinkedHashMap<>(
+                ImmutableMap.of(
+                    ColumnSize.ENCODED_VALUE_COLUMN_PART,
+                    ColumnPartSize.simple("dictionary encoded compressed[lz4] vsize[1]", 44L),
+                    ColumnSize.STRING_VALUE_DICTIONARY_COLUMN_PART,
+                    ColumnPartSize.simple("[generic v1] with [1] values", 27L),
+                    ColumnSize.BITMAP_VALUE_INDEX_COLUMN_PART,
+                    ColumnPartSize.simple("[generic v1] with [1] values", 33L)
+                )
+            ),
+            null
+        );
+      } else {
+        placementSize = new ColumnSize(
+            71L,
+            new LinkedHashMap<>(
+                ImmutableMap.of(
+                    ColumnSize.ENCODED_VALUE_COLUMN_PART,
+                    ColumnPartSize.simple("dictionary encoded compressed[lz4] vsize[1]", 44L),
+                    ColumnSize.STRING_VALUE_DICTIONARY_COLUMN_PART,
+                    ColumnPartSize.simple("[generic v1] with [1] values", 27L)
+                )
+            ),
+            null
+        );
+      }
+
+      indexSize = new ColumnSize(
+          9545L,
+          new LinkedHashMap<>(
+              ImmutableMap.of(
+                  ColumnSize.DOUBLE_COLUMN_PART,
+                  ColumnPartSize.simple("compressed doubles column compression:[lz4] values per block:[8192]", 9545L)
+              )
+          ),
+          null
+      );
+
+
+      if (NullHandling.sqlCompatible()) {
+        floatNumericNullSize = new ColumnSize(
+            671L,
+            new LinkedHashMap<>(
+                ImmutableMap.of(
+                    ColumnSize.FLOAT_COLUMN_PART,
+                    ColumnPartSize.simple("compressed floats column compression:[lz4] values per block:[16384]", 93L),
+                    ColumnSize.NULL_VALUE_INDEX_COLUMN_PART,
+                    ColumnPartSize.simple("nullBitmap", 578L)
+                )
+            ),
+            null
+        );
+      } else {
+        floatNumericNullSize = new ColumnSize(
+            93L,
+            new LinkedHashMap<>(
+                ImmutableMap.of(
+                    ColumnSize.FLOAT_COLUMN_PART,
+                    ColumnPartSize.simple("compressed floats column compression:[lz4] values per block:[16384]", 93L)
+                )
+            ),
+            null
+        );
+      }
+
+      qualityUniquesSize = new ColumnSize(
+          21772L,
+          new LinkedHashMap<>(
+              ImmutableMap.of(
+                  ColumnSize.DATA_SECTION,
+                  ColumnPartSize.simple("[generic v1] with [1209] values", 21772)
+              )
+          ),
+          null
+      );
+
+      if (NullHandling.sqlCompatible()) {
+        smooshAnalysis = new LinkedHashMap<>(
+            ImmutableMap.<String, Integer>builder()
+                        .put("__time", 844)
+                        .put("doubleNumericNull", 847)
+                        .put("floatNumericNull", 823)
+                        .put("index", 9709)
+                        .put("index.drd", 1005)
+                        .put("indexFloat", 5001)
+                        .put("indexMaxFloat", 5001)
+                        .put("indexMaxPlusTen", 9723)
+                        .put("indexMin", 9709)
+                        .put("indexMinFloat", 5001)
+                        .put("longNumericNull", 836)
+                        .put("market", bitmaps ? 1464 : 271)
+                        .put("metadata.drd", bitmaps ? 669 : 670)
+                        .put("null_column", 133)
+                        .put("partial_null_column", bitmaps ? 1040 : 243)
+                        .put("placement", bitmaps ? 267 : 234)
+                        .put("placementish", bitmaps ? 7850 : 5207)
+                        .put("quality", bitmaps ? 3018 : 374)
+                        .put("qualityDouble", 284)
+                        .put("qualityFloat", 252)
+                        .put("qualityLong", 273)
+                        .put("qualityNumericString", bitmaps ? 2999 : 355)
+                        .put("quality_uniques", 21879)
+                        .build()
+        );
+      } else {
+        smooshAnalysis = new LinkedHashMap<>(
+            ImmutableMap.<String, Integer>builder()
+                        .put("__time", 798)
+                        .put("doubleNumericNull", 223)
+                        .put("floatNumericNull", 199)
+                        .put("index", 9663)
+                        .put("index.drd", 1005)
+                        .put("indexFloat", 4955)
+                        .put("indexMaxFloat", 4955)
+                        .put("indexMaxPlusTen", 9677)
+                        .put("indexMin", 9663)
+                        .put("indexMinFloat", 4955)
+                        .put("longNumericNull", 212)
+                        .put("market", bitmaps ? 1464 : 271)
+                        .put("metadata.drd", bitmaps ? 669 : 670)
+                        .put("null_column", 133)
+                        .put("partial_null_column", bitmaps ? 1040 : 243)
+                        .put("placement", bitmaps ? 267 : 234)
+                        .put("placementish", bitmaps ? 7850 : 5207)
+                        .put("quality", bitmaps ? 3018 : 374)
+                        .put("qualityDouble", 238)
+                        .put("qualityFloat", 206)
+                        .put("qualityLong", 227)
+                        .put("qualityNumericString", bitmaps ? 2999 : 355)
+                        .put("quality_uniques", 21879)
+                        .build()
+        );
+      }
+    } else {
+      timeSize = null;
+      indexSize = null;
+      placementSize = null;
+      floatNumericNullSize = null;
+      qualityUniquesSize = null;
+      smooshAnalysis = null;
+    }
+    final SegmentId id1 = SegmentId.dummy(differentIds ? "testSegment1" : DATASOURCE);
+    SegmentAnalysis expected = new SegmentAnalysis(
+        id1.toString(),
+        null,
+        new LinkedHashMap<>(
+            ImmutableMap.of(
+                "__time",
+                new ColumnAnalysis(
+                    ColumnType.LONG,
+                    ValueType.LONG.toString(),
+                    false,
+                    false,
+                    0,
+                    null,
+                    null,
+                    null,
+                    timeSize,
+                    null
+                ),
+                "floatNumericNull",
+                new ColumnAnalysis(
+                    ColumnType.FLOAT,
+                    ValueType.FLOAT.toString(),
+                    false,
+                    NullHandling.sqlCompatible(),
+                    0,
+                    null,
+                    null,
+                    null,
+                    floatNumericNullSize,
+                    null
+                ),
+                "placement",
+                new ColumnAnalysis(
+                    ColumnType.STRING,
+                    ValueType.STRING.toString(),
+                    false,
+                    false,
+                    0,
+                    0,
+                    null,
+                    null,
+                    placementSize,
+                    null
+                ),
+                "index",
+                new ColumnAnalysis(
+                    ColumnType.DOUBLE,
+                    ValueType.DOUBLE.toString(),
+                    false,
+                    false,
+                    0,
+                    null,
+                    null,
+                    null,
+                    indexSize,
+                    null
+                ),
+                "quality_uniques",
+                new ColumnAnalysis(
+                    HyperUniquesAggregatorFactory.TYPE,
+                    HyperUniquesAggregatorFactory.TYPE.getComplexTypeName(),
+                    false,
+                    true,
+                    0,
+                    null,
+                    null,
+                    null,
+                    qualityUniquesSize,
+                    null
+                )
+            )
+        ),
+        0,
+        1209,
+        null,
+        null,
+        null,
+        null,
+        smooshAnalysis
+    );
+    Assert.assertEquals(Collections.singletonList(expected), results);
   }
 }

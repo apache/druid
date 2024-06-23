@@ -113,6 +113,7 @@ public class SegmentMetadataUnionQueryTest extends InitializedNullHandlingTest
                     1,
                     "preferred",
                     "preferred",
+                    null,
                     null
                 )
             )

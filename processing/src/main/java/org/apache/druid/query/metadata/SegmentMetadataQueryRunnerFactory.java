@@ -92,7 +92,6 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
         final Map<String, ColumnAnalysis> analyzedColumns = analyzer.analyze(segment);
         final long numRows = analyzer.numRows(segment);
         long totalSize = 0;
-
         if (analyzer.analyzingSize()) {
           // Initialize with the size of the whitespace, 1 byte per
           totalSize = analyzedColumns.size() * numRows;
@@ -163,6 +162,13 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
           }
         }
 
+        final LinkedHashMap<String, Integer> smoosh;
+        if (analyzer.analyzingSmoosh()) {
+          smoosh = analyzer.analyzeSmoosh(segment);
+        } else {
+          smoosh = null;
+        }
+
         return Sequences.simple(
             Collections.singletonList(
                 new SegmentAnalysis(
@@ -174,7 +180,8 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
                     aggregators,
                     timestampSpec,
                     queryGranularity,
-                    rollup
+                    rollup,
+                    smoosh
                 )
             )
         );

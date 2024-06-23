@@ -22,6 +22,7 @@ package org.apache.druid.segment.nested;
 import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.primitives.Doubles;
 import it.unimi.dsi.fastutil.doubles.DoubleArraySet;
@@ -46,12 +47,18 @@ import org.apache.druid.segment.IntListUtils;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
+import org.apache.druid.segment.column.ColumnPartSize;
+import org.apache.druid.segment.column.ColumnPartSupplier;
+import org.apache.druid.segment.column.ColumnSize;
+import org.apache.druid.segment.column.ColumnSupplier;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.TypeSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.ColumnarDoubles;
+import org.apache.druid.segment.data.ColumnarInts;
 import org.apache.druid.segment.data.CompressedColumnarDoublesSuppliers;
+import org.apache.druid.segment.data.CompressedVSizeColumnarIntsSupplier;
 import org.apache.druid.segment.data.FixedIndexed;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.VByte;
@@ -80,10 +87,11 @@ import java.nio.ByteOrder;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.SortedSet;
 
-public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommonFormatColumn>, ColumnIndexSupplier
+public class ScalarDoubleColumnAndIndexSupplier implements ColumnSupplier<NestedCommonFormatColumn>, ColumnIndexSupplier
 {
   public static ScalarDoubleColumnAndIndexSupplier read(
       ByteOrder byteOrder,
@@ -112,22 +120,32 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
             columnName,
             NestedCommonFormatColumnSerializer.DOUBLE_VALUE_COLUMN_FILE_NAME
         );
+        final ByteBuffer encodedValueColumn = NestedCommonFormatColumnPartSerde.loadInternalFile(
+            mapper,
+            columnName,
+            NestedCommonFormatColumnSerializer.ENCODED_VALUE_COLUMN_FILE_NAME
+        );
 
-        final Supplier<FixedIndexed<Double>> doubleDictionarySupplier = FixedIndexed.read(
+        final ByteBuffer valueIndexBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
+            mapper,
+            columnName,
+            NestedCommonFormatColumnSerializer.BITMAP_INDEX_FILE_NAME
+        );
+
+        final ColumnPartSupplier<FixedIndexed<Double>> doubleDictionarySupplier = FixedIndexed.read(
             doubleDictionaryBuffer,
             ColumnType.DOUBLE.getStrategy(),
             byteOrder,
             Double.BYTES
         );
 
-        final Supplier<ColumnarDoubles> doubles = CompressedColumnarDoublesSuppliers.fromByteBuffer(
+        final ColumnPartSupplier<ColumnarDoubles> doubles = CompressedColumnarDoublesSuppliers.fromByteBuffer(
             doublesValueColumn,
             byteOrder
         );
-        final ByteBuffer valueIndexBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
-            mapper,
-            columnName,
-            NestedCommonFormatColumnSerializer.BITMAP_INDEX_FILE_NAME
+        final CompressedVSizeColumnarIntsSupplier ints = CompressedVSizeColumnarIntsSupplier.fromByteBuffer(
+            encodedValueColumn,
+            byteOrder
         );
         GenericIndexed<ImmutableBitmap> rBitmaps = GenericIndexed.read(
             valueIndexBuffer,
@@ -137,6 +155,7 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
         return new ScalarDoubleColumnAndIndexSupplier(
             doubleDictionarySupplier,
             doubles,
+            ints,
             rBitmaps,
             bitmapSerdeFactory.getBitmapFactory(),
             columnConfig
@@ -150,10 +169,9 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
     }
   }
 
-  private final Supplier<FixedIndexed<Double>> doubleDictionarySupplier;
-
-  private final Supplier<ColumnarDoubles> valueColumnSupplier;
-
+  private final ColumnPartSupplier<FixedIndexed<Double>> doubleDictionarySupplier;
+  private final ColumnPartSupplier<ColumnarDoubles> valueColumnSupplier;
+  private final ColumnPartSupplier<ColumnarInts> encodedValueColumnSupplier;
   private final GenericIndexed<ImmutableBitmap> valueIndexes;
 
   private final BitmapFactory bitmapFactory;
@@ -161,8 +179,9 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
   private final ColumnConfig columnConfig;
 
   private ScalarDoubleColumnAndIndexSupplier(
-      Supplier<FixedIndexed<Double>> longDictionary,
-      Supplier<ColumnarDoubles> valueColumnSupplier,
+      ColumnPartSupplier<FixedIndexed<Double>> longDictionary,
+      ColumnPartSupplier<ColumnarDoubles> valueColumnSupplier,
+      ColumnPartSupplier<ColumnarInts> encodedValueColumnSupplier,
       GenericIndexed<ImmutableBitmap> valueIndexes,
       BitmapFactory bitmapFactory,
       ColumnConfig columnConfig
@@ -170,10 +189,29 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
   {
     this.doubleDictionarySupplier = longDictionary;
     this.valueColumnSupplier = valueColumnSupplier;
+    this.encodedValueColumnSupplier = encodedValueColumnSupplier;
     this.valueIndexes = valueIndexes;
     this.bitmapFactory = bitmapFactory;
     this.nullValueBitmap = valueIndexes.get(0) == null ? bitmapFactory.makeEmptyImmutableBitmap() : valueIndexes.get(0);
     this.columnConfig = columnConfig;
+  }
+
+  @Override
+  public Map<String, ColumnPartSize> getIndexComponents()
+  {
+    return ImmutableMap.of(
+        ColumnSize.BITMAP_VALUE_INDEX_COLUMN_PART, valueIndexes.getColumnPartSize()
+    );
+  }
+
+  @Override
+  public Map<String, ColumnPartSize> getComponents()
+  {
+    return ImmutableMap.of(
+        ColumnSize.LONG_COLUMN_PART, valueColumnSupplier.getColumnPartSize(),
+        ColumnSize.ENCODED_VALUE_COLUMN_PART, encodedValueColumnSupplier.getColumnPartSize(),
+        ColumnSize.DOUBLE_VALUE_DICTIONARY_COLUMN_PART, doubleDictionarySupplier.getColumnPartSize()
+    );
   }
 
   @Override

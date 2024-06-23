@@ -19,8 +19,12 @@
 
 package org.apache.druid.segment.serde;
 
-import com.google.common.base.Supplier;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.segment.column.ColumnPartSize;
+import org.apache.druid.segment.column.ColumnPartSupplier;
+import org.apache.druid.segment.column.ColumnSize;
+import org.apache.druid.segment.column.ColumnSupplier;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
 import org.apache.druid.segment.column.StringUtf8DictionaryEncodedColumn;
 import org.apache.druid.segment.data.ColumnarInts;
@@ -29,20 +33,21 @@ import org.apache.druid.segment.data.Indexed;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.util.Map;
 
 /**
  * Supplier for {@link StringUtf8DictionaryEncodedColumn}
  */
-public class StringUtf8DictionaryEncodedColumnSupplier<TIndexed extends Indexed<ByteBuffer>> implements Supplier<DictionaryEncodedColumn<?>>
+public class StringUtf8DictionaryEncodedColumnSupplier<TIndexed extends Indexed<ByteBuffer>> implements ColumnSupplier<DictionaryEncodedColumn<?>>
 {
-  private final Supplier<TIndexed> utf8Dictionary;
-  private final @Nullable Supplier<ColumnarInts> singleValuedColumn;
-  private final @Nullable Supplier<ColumnarMultiInts> multiValuedColumn;
+  private final ColumnPartSupplier<TIndexed> utf8Dictionary;
+  private final @Nullable ColumnPartSupplier<ColumnarInts> singleValuedColumn;
+  private final @Nullable ColumnPartSupplier<ColumnarMultiInts> multiValuedColumn;
 
   public StringUtf8DictionaryEncodedColumnSupplier(
-      Supplier<TIndexed> utf8Dictionary,
-      @Nullable Supplier<ColumnarInts> singleValuedColumn,
-      @Nullable Supplier<ColumnarMultiInts> multiValuedColumn
+      ColumnPartSupplier<TIndexed> utf8Dictionary,
+      @Nullable ColumnPartSupplier<ColumnarInts> singleValuedColumn,
+      @Nullable ColumnPartSupplier<ColumnarMultiInts> multiValuedColumn
   )
   {
     this.utf8Dictionary = utf8Dictionary;
@@ -74,5 +79,14 @@ public class StringUtf8DictionaryEncodedColumnSupplier<TIndexed extends Indexed<
           suppliedUtf8Dictionary
       );
     }
+  }
+
+  @Override
+  public Map<String, ColumnPartSize> getComponents()
+  {
+    return ImmutableMap.of(
+        ColumnSize.ENCODED_VALUE_COLUMN_PART, singleValuedColumn != null ? singleValuedColumn.getColumnPartSize() : multiValuedColumn.getColumnPartSize(),
+        ColumnSize.STRING_VALUE_DICTIONARY_COLUMN_PART, utf8Dictionary.getColumnPartSize()
+    );
   }
 }

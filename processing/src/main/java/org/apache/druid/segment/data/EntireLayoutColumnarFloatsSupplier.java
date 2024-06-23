@@ -19,13 +19,14 @@
 
 package org.apache.druid.segment.data;
 
-import com.google.common.base.Supplier;
+import org.apache.druid.segment.column.ColumnPartSize;
+import org.apache.druid.segment.column.ColumnPartSupplier;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 
-public class EntireLayoutColumnarFloatsSupplier implements Supplier<ColumnarFloats>
+public class EntireLayoutColumnarFloatsSupplier implements ColumnPartSupplier<ColumnarFloats>
 {
   private final int totalSize;
   private FloatBuffer buffer;
@@ -34,6 +35,12 @@ public class EntireLayoutColumnarFloatsSupplier implements Supplier<ColumnarFloa
   {
     this.totalSize = totalSize;
     this.buffer = fromBuffer.asReadOnlyBuffer().order(order).asFloatBuffer();
+  }
+
+  @Override
+  public ColumnPartSize getColumnPartSize()
+  {
+    return ColumnPartSize.simple("unencoded floats", buffer.remaining());
   }
 
   @Override

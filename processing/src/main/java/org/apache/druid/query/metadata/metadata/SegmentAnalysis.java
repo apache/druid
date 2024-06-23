@@ -20,7 +20,9 @@
 package org.apache.druid.query.metadata.metadata;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -55,6 +57,7 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
   private final TimestampSpec timestampSpec;
   private final Granularity queryGranularity;
   private final Boolean rollup;
+  private final LinkedHashMap<String, Integer> smoosh;
 
   @JsonCreator
   public SegmentAnalysis(
@@ -66,7 +69,8 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
       @JsonProperty("aggregators") Map<String, AggregatorFactory> aggregators,
       @JsonProperty("timestampSpec") TimestampSpec timestampSpec,
       @JsonProperty("queryGranularity") Granularity queryGranularity,
-      @JsonProperty("rollup") Boolean rollup
+      @JsonProperty("rollup") Boolean rollup,
+      @JsonProperty("smoosh") LinkedHashMap<String, Integer> smoosh
   )
   {
     this.id = id;
@@ -78,6 +82,23 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
     this.timestampSpec = timestampSpec;
     this.queryGranularity = queryGranularity;
     this.rollup = rollup;
+    this.smoosh = smoosh;
+  }
+
+  @VisibleForTesting
+  public SegmentAnalysis(
+      String id,
+      List<Interval> interval,
+      LinkedHashMap<String, ColumnAnalysis> columns,
+      long size,
+      long numRows,
+      Map<String, AggregatorFactory> aggregators,
+      TimestampSpec timestampSpec,
+      Granularity queryGranularity,
+      Boolean rollup
+  )
+  {
+    this(id, interval, columns, size, numRows, aggregators, timestampSpec, queryGranularity, rollup, null);
   }
 
   @JsonProperty
@@ -134,6 +155,13 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
     return aggregators;
   }
 
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public LinkedHashMap<String, Integer> getSmoosh()
+  {
+    return smoosh;
+  }
+
   @Override
   public String toString()
   {
@@ -147,6 +175,7 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
            ", timestampSpec=" + timestampSpec +
            ", queryGranularity=" + queryGranularity +
            ", rollup=" + rollup +
+           ", smoosh=" + smoosh +
            '}';
   }
 
@@ -171,7 +200,8 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
            Objects.equals(columns, that.columns) &&
            Objects.equals(aggregators, that.aggregators) &&
            Objects.equals(timestampSpec, that.timestampSpec) &&
-           Objects.equals(queryGranularity, that.queryGranularity);
+           Objects.equals(queryGranularity, that.queryGranularity) &&
+           Objects.equals(smoosh, that.smoosh);
   }
 
   /**
@@ -181,7 +211,18 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
   @Override
   public int hashCode()
   {
-    return Objects.hash(id, interval, columns, size, numRows, aggregators, timestampSpec, queryGranularity, rollup);
+    return Objects.hash(
+        id,
+        interval,
+        columns,
+        size,
+        numRows,
+        aggregators,
+        timestampSpec,
+        queryGranularity,
+        rollup,
+        smoosh
+    );
   }
 
   @Override

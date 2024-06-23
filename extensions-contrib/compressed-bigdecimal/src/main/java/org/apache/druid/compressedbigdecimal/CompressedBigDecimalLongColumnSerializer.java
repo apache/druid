@@ -38,7 +38,7 @@ import java.util.Locale;
  */
 public class CompressedBigDecimalLongColumnSerializer implements GenericColumnSerializer<CompressedBigDecimal>
 {
-  private static final byte VERSION = CompressedBigDecimalColumnPartSupplier.VERSION;
+  private static final byte VERSION = CompressedBigDecimalColumnSupplier.VERSION;
 
   /**
    * Static constructor.

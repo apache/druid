@@ -20,14 +20,17 @@
 package org.apache.druid.segment.data;
 
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
+import org.apache.druid.segment.column.ColumnPartSize;
+import org.apache.druid.segment.column.ColumnPartSupplier;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.function.Supplier;
 
-public class CompressedVariableSizedBlobColumnSupplier implements Supplier<CompressedVariableSizedBlobColumn>
+public class CompressedVariableSizedBlobColumnSupplier implements ColumnPartSupplier<CompressedVariableSizedBlobColumn>
 {
   public static final byte VERSION = 0x01;
 
@@ -57,6 +60,7 @@ public class CompressedVariableSizedBlobColumnSupplier implements Supplier<Compr
 
   private final Supplier<CompressedLongsReader> offsetReaderSupplier;
   private final Supplier<CompressedBlockReader> blockDataReaderSupplier;
+  private final int totalSize;
 
   public CompressedVariableSizedBlobColumnSupplier(
       ByteBuffer offsetsBuffer,
@@ -66,8 +70,20 @@ public class CompressedVariableSizedBlobColumnSupplier implements Supplier<Compr
   )
   {
     this.numElements = numElements;
+    final int offsetBufferStart = offsetsBuffer.position();
+    final int dataBufferStart = dataBuffer.position();
     this.offsetReaderSupplier = CompressedLongsReader.fromByteBuffer(offsetsBuffer, order);
     this.blockDataReaderSupplier = CompressedBlockReader.fromByteBuffer(dataBuffer, order);
+    this.totalSize = (offsetsBuffer.position() - offsetBufferStart) + (dataBuffer.position() - dataBufferStart);
+  }
+
+  @Override
+  public ColumnPartSize getColumnPartSize()
+  {
+    return ColumnPartSize.simple(
+        StringUtils.format("compressed blob column values:[%s]", numElements),
+        totalSize
+    );
   }
 
   @Override

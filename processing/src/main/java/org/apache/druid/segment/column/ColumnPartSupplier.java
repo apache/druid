@@ -17,38 +17,15 @@
  * under the License.
  */
 
-package org.apache.druid.segment.serde;
+package org.apache.druid.segment.column;
 
-import org.apache.druid.segment.column.ColumnIndexSupplier;
-import org.apache.druid.segment.column.ColumnPartSize;
 
-import javax.annotation.Nullable;
-import java.util.Collections;
-import java.util.Map;
+import com.google.common.base.Supplier;
 
-/**
- * Default implementation of {@link ColumnIndexSupplier} for columns which do not
- * have any indexes.
- */
-public class NoIndexesColumnIndexSupplier implements ColumnIndexSupplier
+public interface ColumnPartSupplier<T> extends Supplier<T>
 {
-  private static final NoIndexesColumnIndexSupplier INSTANCE = new NoIndexesColumnIndexSupplier();
-
-  public static NoIndexesColumnIndexSupplier getInstance()
+  default ColumnPartSize getColumnPartSize()
   {
-    return INSTANCE;
-  }
-
-  @Nullable
-  @Override
-  public <T> T as(Class<T> clazz)
-  {
-    return null;
-  }
-
-  @Override
-  public Map<String, ColumnPartSize> getIndexComponents()
-  {
-    return Collections.emptyMap();
+    return ColumnPartSize.NO_DATA;
   }
 }

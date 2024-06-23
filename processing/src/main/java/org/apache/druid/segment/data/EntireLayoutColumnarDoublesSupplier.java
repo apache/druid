@@ -19,13 +19,14 @@
 
 package org.apache.druid.segment.data;
 
-import com.google.common.base.Supplier;
+import org.apache.druid.segment.column.ColumnPartSize;
+import org.apache.druid.segment.column.ColumnPartSupplier;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.DoubleBuffer;
 
-public class EntireLayoutColumnarDoublesSupplier implements Supplier<ColumnarDoubles>
+public class EntireLayoutColumnarDoublesSupplier implements ColumnPartSupplier<ColumnarDoubles>
 {
   private final int totalSize;
   private final DoubleBuffer buffer;
@@ -34,6 +35,12 @@ public class EntireLayoutColumnarDoublesSupplier implements Supplier<ColumnarDou
   {
     this.totalSize = totalSize;
     this.buffer = fromBuffer.asReadOnlyBuffer().order(byteOrder).asDoubleBuffer();
+  }
+
+  @Override
+  public ColumnPartSize getColumnPartSize()
+  {
+    return ColumnPartSize.simple("unencoded doubles", buffer.remaining());
   }
 
   @Override

@@ -19,13 +19,17 @@
 
 package org.apache.druid.segment.nested;
 
-import com.google.common.base.Supplier;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
+import org.apache.druid.segment.column.ColumnPartSize;
+import org.apache.druid.segment.column.ColumnPartSupplier;
+import org.apache.druid.segment.column.ColumnSize;
+import org.apache.druid.segment.column.ColumnSupplier;
 import org.apache.druid.segment.column.StringEncodingStrategies;
 import org.apache.druid.segment.column.StringUtf8DictionaryEncodedColumn;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
@@ -41,8 +45,9 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.Map;
 
-public class ScalarStringColumnAndIndexSupplier implements Supplier<NestedCommonFormatColumn>, ColumnIndexSupplier
+public class ScalarStringColumnAndIndexSupplier implements ColumnSupplier<NestedCommonFormatColumn>, ColumnIndexSupplier
 {
   public static ScalarStringColumnAndIndexSupplier read(
       ByteOrder byteOrder,
@@ -58,7 +63,7 @@ public class ScalarStringColumnAndIndexSupplier implements Supplier<NestedCommon
     if (version == NestedCommonFormatColumnSerializer.V0) {
       try {
         final SmooshedFileMapper mapper = columnBuilder.getFileMapper();
-        final Supplier<? extends Indexed<ByteBuffer>> dictionarySupplier;
+        final ColumnPartSupplier<? extends Indexed<ByteBuffer>> dictionarySupplier;
 
         final ByteBuffer stringDictionaryBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
             mapper,
@@ -105,14 +110,14 @@ public class ScalarStringColumnAndIndexSupplier implements Supplier<NestedCommon
     }
   }
 
-  private final Supplier<? extends Indexed<ByteBuffer>> dictionarySupplier;
-  private final Supplier<ColumnarInts> encodedColumnSupplier;
+  private final ColumnPartSupplier<? extends Indexed<ByteBuffer>> dictionarySupplier;
+  private final ColumnPartSupplier<ColumnarInts> encodedColumnSupplier;
   private final GenericIndexed<ImmutableBitmap> valueIndexes;
   private final ColumnIndexSupplier stringIndexSupplier;
 
   private ScalarStringColumnAndIndexSupplier(
-      Supplier<? extends Indexed<ByteBuffer>> dictionarySupplier,
-      Supplier<ColumnarInts> encodedColumnSupplier,
+      ColumnPartSupplier<? extends Indexed<ByteBuffer>> dictionarySupplier,
+      ColumnPartSupplier<ColumnarInts> encodedColumnSupplier,
       GenericIndexed<ImmutableBitmap> valueIndexes,
       BitmapSerdeFactory serdeFactory
   )
@@ -125,6 +130,23 @@ public class ScalarStringColumnAndIndexSupplier implements Supplier<NestedCommon
         dictionarySupplier,
         valueIndexes,
         null
+    );
+  }
+
+  @Override
+  public Map<String, ColumnPartSize> getIndexComponents()
+  {
+    return ImmutableMap.of(
+        ColumnSize.BITMAP_VALUE_INDEX_COLUMN_PART, valueIndexes.getColumnPartSize()
+    );
+  }
+
+  @Override
+  public Map<String, ColumnPartSize> getComponents()
+  {
+    return ImmutableMap.of(
+        ColumnSize.ENCODED_VALUE_COLUMN_PART, encodedColumnSupplier.getColumnPartSize(),
+        ColumnSize.STRING_VALUE_DICTIONARY_COLUMN_PART, dictionarySupplier.getColumnPartSize()
     );
   }
 

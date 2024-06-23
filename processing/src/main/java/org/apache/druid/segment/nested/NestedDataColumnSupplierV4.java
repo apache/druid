@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnConfig;
+import org.apache.druid.segment.column.ColumnSupplier;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ComplexColumn;
 import org.apache.druid.segment.column.StringEncodingStrategies;
@@ -43,7 +44,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
-public class NestedDataColumnSupplierV4 implements Supplier<ComplexColumn>
+public class NestedDataColumnSupplierV4 implements ColumnSupplier<ComplexColumn>
 {
   public static NestedDataColumnSupplierV4 read(
       ByteBuffer bb,
