@@ -213,8 +213,8 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{946684800000L, "abc", null, "def", 1L},
-            new Object[]{946684800000L, "foo", "bar", null, 1L}
+            new Object[]{946684800000L, "abc", NullHandling.defaultStringValue(), "def", 1L},
+            new Object[]{946684800000L, "foo", "bar", NullHandling.defaultStringValue(), 1L}
         )
     );
   }
