@@ -19,49 +19,26 @@
 
 package org.apache.druid.sql.calcite;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterators;
 import com.google.common.io.ByteStreams;
-import com.google.inject.Injector;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql2rel.SqlToRelConverter;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.MapBasedInputRow;
-import org.apache.druid.data.input.impl.DimensionSchema;
-import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.DoubleDimensionSchema;
-import org.apache.druid.data.input.impl.LongDimensionSchema;
-import org.apache.druid.data.input.impl.StringDimensionSchema;
-import org.apache.druid.jackson.DefaultObjectMapper;
-import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Numbers;
-import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.TimestampParser;
 import org.apache.druid.query.QueryContexts;
-import org.apache.druid.query.QueryRunnerFactoryConglomerate;
-import org.apache.druid.segment.IndexBuilder;
-import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.join.JoinableFactoryWrapper;
-import org.apache.druid.segment.writeout.OnHeapMemorySegmentWriteOutMediumFactory;
-import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.DisableUnless.DisableUnlessRule;
-import org.apache.druid.sql.calcite.DrillWindowQueryTest.DrillComponentSupplier;
 import org.apache.druid.sql.calcite.NotYetSupported.Modes;
 import org.apache.druid.sql.calcite.NotYetSupported.NotYetSupportedProcessor;
 import org.apache.druid.sql.calcite.QueryTestRunner.QueryResults;
 import org.apache.druid.sql.calcite.planner.PlannerCaptureHook;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
-import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.LocalTime;
 import org.junit.Assert;
@@ -89,7 +66,6 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -111,11 +87,9 @@ import static org.junit.Assert.fail;
  * so it is believed that most iteration on tests will happen through the
  * CalciteWindowQueryTest instead of this class.
  */
-@SqlTestFrameworkConfig.ComponentSupplier(DrillComponentSupplier.class)
+@SqlTestFrameworkConfig.ComponentSupplier(StandardComponentSupplier.class)
 public class DrillWindowQueryTest extends BaseCalciteQueryTest
 {
-  private static final ObjectMapper MAPPER = new DefaultObjectMapper();
-
   static {
     NullHandling.initializeForTests();
   }
@@ -241,157 +215,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     }
   }
 
-  protected static class DrillComponentSupplier extends StandardComponentSupplier
-  {
-    public DrillComponentSupplier(TempDirProducer tempFolderProducer)
-    {
-      super(tempFolderProducer);
-    }
-
-    @Override
-    public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
-        QueryRunnerFactoryConglomerate conglomerate,
-        JoinableFactoryWrapper joinableFactory,
-        Injector injector
-    )
-    {
-      final SpecificSegmentsQuerySegmentWalker retVal = super.createQuerySegmentWalker(
-          conglomerate,
-          joinableFactory,
-          injector);
-
-      attachIndex(
-          retVal,
-          "tblWnulls.parquet",
-          new LongDimensionSchema("c1"),
-          new StringDimensionSchema("c2"));
-
-      // {"col0":1,"col1":65534,"col2":256.0,"col3":1234.9,"col4":73578580,"col5":1393720082338,"col6":421185052800000,"col7":false,"col8":"CA","col9":"AXXXXXXXXXXXXXXXXXXXXXXXXXCXXXXXXXXXXXXXXXXXXXXXXXXZ"}
-      attachIndex(
-          retVal,
-          "allTypsUniq.parquet",
-          new LongDimensionSchema("col0"),
-          new LongDimensionSchema("col1"),
-          new DoubleDimensionSchema("col2"),
-          new DoubleDimensionSchema("col3"),
-          new LongDimensionSchema("col4"),
-          new LongDimensionSchema("col5"),
-          new LongDimensionSchema("col6"),
-          new StringDimensionSchema("col7"),
-          new StringDimensionSchema("col8"),
-          new StringDimensionSchema("col9"));
-      attachIndex(
-          retVal,
-          "smlTbl.parquet",
-          // "col_int": 8122,
-          new LongDimensionSchema("col_int"),
-          // "col_bgint": 817200,
-          new LongDimensionSchema("col_bgint"),
-          // "col_char_2": "IN",
-          new StringDimensionSchema("col_char_2"),
-          // "col_vchar_52":
-          // "AXXXXXXXXXXXXXXXXXXXXXXXXXCXXXXXXXXXXXXXXXXXXXXXXXXB",
-          new StringDimensionSchema("col_vchar_52"),
-          // "col_tmstmp": 1409617682418,
-          new LongDimensionSchema("col_tmstmp"),
-          // "col_dt": 422717616000000,
-          new LongDimensionSchema("col_dt"),
-          // "col_booln": false,
-          new StringDimensionSchema("col_booln"),
-          // "col_dbl": 12900.48,
-          new DoubleDimensionSchema("col_dbl"),
-          // "col_tm": 33109170
-          new LongDimensionSchema("col_tm"));
-      attachIndex(
-          retVal,
-          "fewRowsAllData.parquet",
-          // "col0":12024,
-          new LongDimensionSchema("col0"),
-          // "col1":307168,
-          new LongDimensionSchema("col1"),
-          // "col2":"VT",
-          new StringDimensionSchema("col2"),
-          // "col3":"DXXXXXXXXXXXXXXXXXXXXXXXXXEXXXXXXXXXXXXXXXXXXXXXXXXF",
-          new StringDimensionSchema("col3"),
-          // "col4":1338596882419,
-          new LongDimensionSchema("col4"),
-          // "col5":422705433600000,
-          new LongDimensionSchema("col5"),
-          // "col6":true,
-          new StringDimensionSchema("col6"),
-          // "col7":3.95110006277E8,
-          new DoubleDimensionSchema("col7"),
-          // "col8":67465430
-          new LongDimensionSchema("col8"));
-      attachIndex(
-          retVal,
-          "t_alltype.parquet",
-          // "c1":1,
-          new LongDimensionSchema("c1"),
-          // "c2":592475043,
-          new LongDimensionSchema("c2"),
-          // "c3":616080519999272,
-          new LongDimensionSchema("c3"),
-          // "c4":"ObHeWTDEcbGzssDwPwurfs",
-          new StringDimensionSchema("c4"),
-          // "c5":"0sZxIfZ CGwTOaLWZ6nWkUNx",
-          new StringDimensionSchema("c5"),
-          // "c6":1456290852307,
-          new LongDimensionSchema("c6"),
-          // "c7":421426627200000,
-          new LongDimensionSchema("c7"),
-          // "c8":true,
-          new StringDimensionSchema("c8"),
-          // "c9":0.626179100469
-          new DoubleDimensionSchema("c9"));
-
-      return retVal;
-    }
-
-    @SuppressWarnings({"rawtypes", "unchecked"})
-    private void attachIndex(SpecificSegmentsQuerySegmentWalker texasRanger, String dataSource, DimensionSchema... dims)
-    {
-      ArrayList<String> dimensionNames = new ArrayList<>(dims.length);
-      for (DimensionSchema dimension : dims) {
-        dimensionNames.add(dimension.getName());
-      }
-
-      final File tmpFolder = tempDirProducer.newTempFolder();
-      final QueryableIndex queryableIndex = IndexBuilder
-          .create()
-          .tmpDir(new File(tmpFolder, dataSource))
-          .segmentWriteOutMediumFactory(OnHeapMemorySegmentWriteOutMediumFactory.instance())
-          .schema(new IncrementalIndexSchema.Builder()
-              .withRollup(false)
-              .withDimensionsSpec(new DimensionsSpec(Arrays.asList(dims)))
-              .build())
-          .rows(
-              () -> {
-                try {
-                  return Iterators.transform(
-                      MAPPER.readerFor(Map.class)
-                          .readValues(
-                              ClassLoader.getSystemResource("drill/window/datasources/" + dataSource + ".json")),
-                      (Function<Map, InputRow>) input -> new MapBasedInputRow(0, dimensionNames, input));
-                }
-                catch (IOException e) {
-                  throw new RE(e, "problem reading file");
-                }
-              })
-          .buildMMappedIndex();
-
-      texasRanger.add(
-          DataSegment.builder()
-              .dataSource(dataSource)
-              .interval(Intervals.ETERNITY)
-              .version("1")
-              .shardSpec(new NumberedShardSpec(0, 0))
-              .size(0)
-              .build(),
-          queryableIndex);
-    }
-  }
-
   public class TextualResultsVerifier implements ResultsVerifier
   {
     protected final List<String[]> expectedResultsText;
@@ -422,7 +245,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
       try {
         Assert.assertEquals(StringUtils.format("result count: %s", sql), expectedResultsText.size(), results.size());
         if (!isOrdered(queryResults)) {
-          // in case the resultset is not ordered; order via the same comparator before comparision
+          // in case the resultset is not ordered; order via the same comparator before comparison
           results.sort(new ArrayRowCmp());
           expectedResults.sort(new ArrayRowCmp());
         }
@@ -4411,6 +4234,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_winFnQry_83()
   {
+    msqIncompatible();
     windowQueryTest();
   }
 
@@ -6303,6 +6127,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_winFnQry_84()
   {
+    msqIncompatible();
     windowQueryTest();
   }
 
@@ -6310,6 +6135,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_winFnQry_85()
   {
+    msqIncompatible();
     windowQueryTest();
   }
 
@@ -6695,6 +6521,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_multipl_wnwds_avg_mulwds()
   {
+    msqIncompatible();
     windowQueryTest();
   }
 
@@ -6702,6 +6529,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_multipl_wnwds_count_mulwds()
   {
+    msqIncompatible();
     windowQueryTest();
   }
 
@@ -6709,6 +6537,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_multipl_wnwds_fval_mulwds()
   {
+    msqIncompatible();
     windowQueryTest();
   }
 
@@ -6716,6 +6545,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_multipl_wnwds_lval_mulwds()
   {
+    msqIncompatible();
     windowQueryTest();
   }
 
@@ -6723,6 +6553,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_multipl_wnwds_mulwind_08()
   {
+    msqIncompatible();
     windowQueryTest();
   }
 
@@ -6730,6 +6561,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_multipl_wnwds_mulwind_09()
   {
+    msqIncompatible();
     windowQueryTest();
   }
 
@@ -6737,6 +6569,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_multipl_wnwds_sum_mulwds()
   {
+    msqIncompatible();
     windowQueryTest();
   }
 
@@ -7509,6 +7342,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_multipl_wnwds_rnkNoFrm01()
   {
+    msqIncompatible();
     windowQueryTest();
   }
 
@@ -7516,6 +7350,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_multipl_wnwds_rnkNoFrm02()
   {
+    msqIncompatible();
     windowQueryTest();
   }
 
@@ -7523,6 +7358,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_multipl_wnwds_rnkNoFrm03()
   {
+    msqIncompatible();
     windowQueryTest();
   }
 
@@ -7530,6 +7366,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_multipl_wnwds_rnkNoFrm04()
   {
+    msqIncompatible();
     windowQueryTest();
   }
 
@@ -7537,6 +7374,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_multipl_wnwds_rnkNoFrm05()
   {
+    msqIncompatible();
     windowQueryTest();
   }
 
@@ -7544,6 +7382,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_multipl_wnwds_rnkNoFrm06()
   {
+    msqIncompatible();
     windowQueryTest();
   }
 
@@ -7656,6 +7495,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_nestedAggs_multiWin_6()
   {
+    msqIncompatible();
     windowQueryTest();
   }
 
