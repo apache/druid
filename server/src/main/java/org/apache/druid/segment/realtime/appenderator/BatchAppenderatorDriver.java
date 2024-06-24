@@ -65,16 +65,16 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
    *
    * @param appenderator       appenderator
    * @param segmentAllocator   segment allocator
-   * @param usedSegmentChecker used segment checker
+   * @param segmentRetriever used segment checker
    */
   public BatchAppenderatorDriver(
       Appenderator appenderator,
       SegmentAllocator segmentAllocator,
-      UsedSegmentChecker usedSegmentChecker,
+      PublishedSegmentRetriever segmentRetriever,
       DataSegmentKiller dataSegmentKiller
   )
   {
-    super(appenderator, segmentAllocator, usedSegmentChecker, dataSegmentKiller);
+    super(appenderator, segmentAllocator, segmentRetriever, dataSegmentKiller);
   }
 
   @Nullable

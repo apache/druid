@@ -29,11 +29,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-public class TestUsedSegmentChecker implements UsedSegmentChecker
+public class TestPublishedSegmentRetriever implements PublishedSegmentRetriever
 {
   private final List<DataSegment> pushedSegments;
 
-  public TestUsedSegmentChecker(List<DataSegment> pushedSegments)
+  public TestPublishedSegmentRetriever(List<DataSegment> pushedSegments)
   {
     this.pushedSegments = pushedSegments;
   }

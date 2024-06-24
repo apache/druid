@@ -45,7 +45,7 @@ import org.apache.druid.indexer.report.IngestionStatsAndErrorsTaskReport;
 import org.apache.druid.indexer.report.TaskContextReport;
 import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.appenderator.ActionBasedSegmentAllocator;
-import org.apache.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
+import org.apache.druid.indexing.appenderator.ActionBasedPublishedSegmentRetriever;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
@@ -838,7 +838,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask
             )
         ),
         toolbox.getSegmentHandoffNotifierFactory(),
-        new ActionBasedUsedSegmentChecker(toolbox.getTaskActionClient()),
+        new ActionBasedPublishedSegmentRetriever(toolbox.getTaskActionClient()),
         toolbox.getDataSegmentKiller(),
         toolbox.getJsonMapper(),
         metrics
