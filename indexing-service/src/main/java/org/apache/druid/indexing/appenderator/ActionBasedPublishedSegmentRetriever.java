@@ -92,7 +92,7 @@ public class ActionBasedPublishedSegmentRetriever implements PublishedSegmentRet
         Iterables.transform(segmentIds, SegmentId::getInterval)
     );
     final Collection<DataSegment> foundUsedSegments = taskActionClient.submit(
-        new RetrieveUsedSegmentsAction(dataSource, null, usedSearchIntervals, Segments.INCLUDING_OVERSHADOWED)
+        new RetrieveUsedSegmentsAction(dataSource, usedSearchIntervals, Segments.INCLUDING_OVERSHADOWED)
     );
     for (DataSegment segment : foundUsedSegments) {
       if (segmentIds.contains(segment.getId())) {
