@@ -20,10 +20,13 @@
 package org.apache.druid.indexing.appenderator;
 
 import com.google.common.collect.Iterables;
+import org.apache.druid.error.InvalidInput;
+import org.apache.druid.indexing.common.actions.RetrieveSegmentsByIdAction;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.JodaUtils;
-import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.realtime.appenderator.UsedSegmentChecker;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -31,14 +34,16 @@ import org.joda.time.Interval;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
+import java.util.stream.Collectors;
 
 public class ActionBasedUsedSegmentChecker implements UsedSegmentChecker
 {
+  private static final Logger log = new Logger(ActionBasedUsedSegmentChecker.class);
+
   private final TaskActionClient taskActionClient;
 
   public ActionBasedUsedSegmentChecker(TaskActionClient taskActionClient)
@@ -47,33 +52,54 @@ public class ActionBasedUsedSegmentChecker implements UsedSegmentChecker
   }
 
   @Override
-  public Set<DataSegment> findUsedSegments(Set<SegmentIdWithShardSpec> segmentIds) throws IOException
+  public Set<DataSegment> findPublishedSegments(Set<SegmentId> segmentIds) throws IOException
   {
-    // Group by dataSource
-    final Map<String, Set<SegmentId>> idsByDataSource = new TreeMap<>();
-    for (SegmentIdWithShardSpec segmentId : segmentIds) {
-      idsByDataSource.computeIfAbsent(segmentId.getDataSource(), i -> new HashSet<>()).add(segmentId.asSegmentId());
+    if (segmentIds == null || segmentIds.isEmpty()) {
+      return Collections.emptySet();
     }
 
-    final Set<DataSegment> usedSegments = new HashSet<>();
-
-    for (Map.Entry<String, Set<SegmentId>> entry : idsByDataSource.entrySet()) {
-      String dataSource = entry.getKey();
-      Set<SegmentId> segmentIdsInDataSource = entry.getValue();
-      final List<Interval> intervals = JodaUtils.condenseIntervals(
-          Iterables.transform(segmentIdsInDataSource, SegmentId::getInterval)
-      );
-
-      final Collection<DataSegment> usedSegmentsForIntervals = taskActionClient
-          .submit(new RetrieveUsedSegmentsAction(dataSource, intervals));
-
-      for (DataSegment segment : usedSegmentsForIntervals) {
-        if (segmentIdsInDataSource.contains(segment.getId())) {
-          usedSegments.add(segment);
-        }
+    // Validate that all segments belong to the same datasource
+    final String dataSource = segmentIds.iterator().next().getDataSource();
+    for (SegmentId segmentId : segmentIds) {
+      if (!segmentId.getDataSource().equals(dataSource)) {
+        throw InvalidInput.exception(
+            "Published segment IDs to find cannot belong to multiple datasources[%s, %s].",
+            dataSource, segmentId.getDataSource()
+        );
       }
     }
 
-    return usedSegments;
+    // Try to retrieve segments using new task action
+    final Set<String> serializedSegmentIds = segmentIds.stream()
+                                                       .map(SegmentId::toString)
+                                                       .collect(Collectors.toSet());
+    try {
+      return taskActionClient.submit(new RetrieveSegmentsByIdAction(dataSource, serializedSegmentIds));
+    }
+    catch (Exception e) {
+      log.warn(
+          e,
+          "Could not retrieve published segment IDs[%s] using task action[segmentListById]."
+          + " Overlord maybe on an older version, retrying with action[segmentListUsed]."
+          + " This task may fail to publish segments if there is a concurrent replace happening.",
+          serializedSegmentIds
+      );
+    }
+
+    // Fall back to using old task action if Overlord is still on an older version
+    final Set<DataSegment> publishedSegments = new HashSet<>();
+    final List<Interval> usedSearchIntervals = JodaUtils.condenseIntervals(
+        Iterables.transform(segmentIds, SegmentId::getInterval)
+    );
+    final Collection<DataSegment> foundUsedSegments = taskActionClient.submit(
+        new RetrieveUsedSegmentsAction(dataSource, null, usedSearchIntervals, Segments.INCLUDING_OVERSHADOWED)
+    );
+    for (DataSegment segment : foundUsedSegments) {
+      if (segmentIds.contains(segment.getId())) {
+        publishedSegments.add(segment);
+      }
+    }
+
+    return publishedSegments;
   }
 }
