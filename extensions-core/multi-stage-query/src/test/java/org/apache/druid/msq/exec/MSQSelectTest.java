@@ -49,6 +49,7 @@ import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
@@ -624,7 +625,17 @@ public class MSQSelectTest extends MSQTestBase
                                                .add("dim1", ColumnType.STRING)
                                                .build();
 
-    testSelectQuery()
+    final ImmutableList<Object[]> expectedResults = ImmutableList.of(
+        new Object[]{1L, ""},
+        new Object[]{1L, "10.1"},
+        new Object[]{1L, "2"},
+        new Object[]{1L, "1"},
+        new Object[]{1L, "def"},
+        new Object[]{1L, "abc"}
+    );
+    final long fullResultsSize = expectedResults.size();
+
+    final SelectTester selectTester = testSelectQuery()
         .setSql("select cnt,dim1 from foo limit 10")
         .setExpectedMSQSpec(
             MSQSpec.builder()
@@ -646,29 +657,59 @@ public class MSQSelectTest extends MSQTestBase
         )
         .setQueryContext(context)
         .setExpectedRowSignature(resultSignature)
-        .setExpectedCountersForStageWorkerChannel(
+        .setExpectedResultRows(expectedResults);
+
+    final QueryContext queryContext = QueryContext.of(context);
+    if (MSQSelectDestination.DURABLESTORAGE.equals(MultiStageQueryContext.getSelectDestinationOrNull(queryContext))) {
+      selectTester.setExpectedCountersForStageWorkerChannel(
+                      CounterSnapshotMatcher
+                          .with().totalFiles(1),
+                      0, 0, "input0"
+                  )
+                  .setExpectedCountersForStageWorkerChannel(
+                      CounterSnapshotMatcher
+                          .with().rows(fullResultsSize).frames(1),
+                      0, 0, "output"
+                  );
+      if (!context.containsKey(MultiStageQueryContext.CTX_ROWS_PER_PAGE)) {
+        selectTester.setExpectedCountersForStageWorkerChannel(
             CounterSnapshotMatcher
-                .with().totalFiles(1),
-            0, 0, "input0"
-        )
-        .setExpectedCountersForStageWorkerChannel(
-            CounterSnapshotMatcher
-                .with().rows(6).frames(1),
-            0, 0, "output"
-        )
-        .setExpectedCountersForStageWorkerChannel(
-            CounterSnapshotMatcher
-                .with().rows(6).frames(1),
+                .with().rows(fullResultsSize).frames(1),
             0, 0, "shuffle"
-        )
-        .setExpectedResultRows(ImmutableList.of(
-            new Object[]{1L, ""},
-            new Object[]{1L, "10.1"},
-            new Object[]{1L, "2"},
-            new Object[]{1L, "1"},
-            new Object[]{1L, "def"},
-            new Object[]{1L, "abc"}
-        )).verifyResults();
+        );
+      } else {
+        final long rowsPerPage = MultiStageQueryContext.getRowsPerPage(queryContext);
+        final int expectedPageCount = (int) (fullResultsSize / rowsPerPage);
+        long[] rows = new long[expectedPageCount];
+        Arrays.fill(rows, rowsPerPage);
+        long[] frames = new long[expectedPageCount];
+        Arrays.fill(frames, 1);
+        selectTester.setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(rows).frames(frames),
+            0, 0, "shuffle"
+        );
+      }
+    } else {
+      selectTester.setExpectedCountersForStageWorkerChannel(
+          CounterSnapshotMatcher
+              .with().totalFiles(1),
+          0, 0, "input0"
+      )
+          .setExpectedCountersForStageWorkerChannel(
+              CounterSnapshotMatcher
+                  .with().rows(fullResultsSize).frames(1),
+              0, 0, "output"
+          )
+          .setExpectedCountersForStageWorkerChannel(
+              CounterSnapshotMatcher
+                  .with().rows(fullResultsSize).frames(1),
+              0, 0, "shuffle"
+          )
+          .setExpectedResultRows(expectedResults);
+    }
+
+    selectTester.verifyResults();
   }
 
   @MethodSource("data")

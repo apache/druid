@@ -74,7 +74,7 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
       final ShuffleSpecFactory resultShuffleSpecFactory,
       final int maxWorkerCount,
       final int minStageNumber,
-      final boolean destinationNeedsSorting
+      final boolean needsFinalShuffling
   )
   {
     validateQuery(originalQuery);
@@ -133,12 +133,12 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
       shuffleSpecFactoryPreAggregation = intermediateClusterBy.isEmpty()
                                          ? ShuffleSpecFactories.singlePartition()
                                          : ShuffleSpecFactories.globalSortWithMaxPartitionCount(maxWorkerCount);
-      shuffleSpecFactoryPostAggregation = doLimitOrOffset && !destinationNeedsSorting
+      shuffleSpecFactoryPostAggregation = doLimitOrOffset && !needsFinalShuffling
                                           ? ShuffleSpecFactories.singlePartition()
                                           : resultShuffleSpecFactory;
       partitionBoost = true;
     } else {
-      shuffleSpecFactoryPreAggregation = doLimitOrOffset && !destinationNeedsSorting
+      shuffleSpecFactoryPreAggregation = doLimitOrOffset && !needsFinalShuffling
                                          ? ShuffleSpecFactories.singlePartition()
                                          : resultShuffleSpecFactory;
 
@@ -186,8 +186,8 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
       );
 
       if (doLimitOrOffset) {
-        final ShuffleSpec finalShuffleSpec = destinationNeedsSorting ?
-                                             shuffleSpecFactoryPreAggregation.build(intermediateClusterBy, true) :
+        final ShuffleSpec finalShuffleSpec = needsFinalShuffling ?
+                                             shuffleSpecFactoryPreAggregation.build(resultClusterBy, true) :
                                              null;
         final DefaultLimitSpec limitSpec = (DefaultLimitSpec) queryToRun.getLimitSpec();
         queryDefBuilder.add(
@@ -228,8 +228,8 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
       );
       if (doLimitOrOffset) {
         final DefaultLimitSpec limitSpec = (DefaultLimitSpec) queryToRun.getLimitSpec();
-        final ShuffleSpec finalShuffleSpec = destinationNeedsSorting ?
-                                             shuffleSpecFactoryPreAggregation.build(intermediateClusterBy, true) :
+        final ShuffleSpec finalShuffleSpec = needsFinalShuffling ?
+                                             shuffleSpecFactoryPreAggregation.build(resultClusterBy, true) :
                                              null;
         queryDefBuilder.add(
             StageDefinition.builder(firstStageNumber + 2)

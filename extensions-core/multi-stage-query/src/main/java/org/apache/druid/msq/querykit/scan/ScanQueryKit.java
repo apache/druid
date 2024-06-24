@@ -90,7 +90,7 @@ public class ScanQueryKit implements QueryKit<ScanQuery>
       final ShuffleSpecFactory resultShuffleSpecFactory,
       final int maxWorkerCount,
       final int minStageNumber,
-      final boolean destinationNeedsSorting
+      final boolean needsFinalShuffling
   )
   {
     final QueryDefinitionBuilder queryDefBuilder = QueryDefinition.builder(queryId);
@@ -120,7 +120,8 @@ public class ScanQueryKit implements QueryKit<ScanQuery>
     // We ignore the resultShuffleSpecFactory in case:
     //  1. There is no cluster by
     //  2. There is an offset which means everything gets funneled into a single partition hence we use MaxCountShuffleSpec
-    if (queryToRun.getOrderBys().isEmpty() && hasLimitOrOffset && !destinationNeedsSorting) {
+    //  3. The destination does not require shuffling after the limit stage to get outputs of a specific size.
+    if (queryToRun.getOrderBys().isEmpty() && hasLimitOrOffset && !needsFinalShuffling) {
       shuffleSpec = MixShuffleSpec.instance();
       signatureToUse = scanSignature;
     } else {
@@ -181,7 +182,7 @@ public class ScanQueryKit implements QueryKit<ScanQuery>
     );
 
     if (hasLimitOrOffset) {
-      final ShuffleSpec finalShuffleSpec = destinationNeedsSorting ? shuffleSpec : null;
+      final ShuffleSpec finalShuffleSpec = needsFinalShuffling ? shuffleSpec : null;
       queryDefBuilder.add(
           StageDefinition.builder(firstStageNumber + 1)
                          .inputs(new StageInputSpec(firstStageNumber))
