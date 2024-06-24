@@ -46,6 +46,7 @@ import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriverTe
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriverTest.TestSegmentAllocator;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriverTest.TestSegmentHandoffNotifierFactory;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
@@ -326,7 +327,7 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
   private static class NoopUsedSegmentChecker implements UsedSegmentChecker
   {
     @Override
-    public Set<DataSegment> findUsedSegments(Set<SegmentIdWithShardSpec> identifiers)
+    public Set<DataSegment> findPublishedSegments(Set<SegmentId> identifiers)
     {
       return ImmutableSet.of();
     }

@@ -17,18 +17,34 @@
  * under the License.
  */
 
-package org.apache.druid.segment.realtime.appenderator;
+package org.apache.druid.error;
 
-import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.SegmentId;
 
-import java.io.IOException;
-import java.util.Set;
+import org.junit.Test;
 
-public interface UsedSegmentChecker
+public class InvalidInputTest
 {
-  /**
-   * For any identifiers that exist and are actually used, returns the corresponding DataSegment objects.
-   */
-  Set<DataSegment> findPublishedSegments(Set<SegmentId> identifiers) throws IOException;
+  @Test
+  public void testConditionalNoThrow()
+  {
+    InvalidInput.conditionalException(true, "This should not throw");
+  }
+
+  @Test(expected = DruidException.class)
+  public void testConditionalThrow()
+  {
+    InvalidInput.conditionalException(false, "This should throw");
+  }
+
+  @Test
+  public void testConditionalNoThrowWithCause()
+  {
+    InvalidInput.conditionalException(true, new RuntimeException(), "This should not throw");
+  }
+
+  @Test(expected = DruidException.class)
+  public void testConditionalThrowWithCause()
+  {
+    InvalidInput.conditionalException(false, new RuntimeException(), "This should throw");
+  }
 }
