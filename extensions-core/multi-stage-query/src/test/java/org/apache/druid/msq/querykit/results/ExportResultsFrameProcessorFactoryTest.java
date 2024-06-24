@@ -48,5 +48,6 @@ public class ExportResultsFrameProcessorFactoryTest
         ExportResultsFrameProcessorFactory.class
     );
     Assert.assertNull(exportResultsFrameProcessorFactory.getColumnMappings());
+    Assert.assertNull(exportResultsFrameProcessorFactory.getResultsContext());
   }
 }

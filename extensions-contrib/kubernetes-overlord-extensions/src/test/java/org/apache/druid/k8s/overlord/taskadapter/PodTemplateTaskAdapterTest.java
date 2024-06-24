@@ -620,7 +620,7 @@ public class PodTemplateTaskAdapterTest
     dynamicConfigRef = () -> new DefaultKubernetesTaskRunnerDynamicConfig(new SelectorBasedPodTemplateSelectStrategy(
         Collections.singletonList(
             new Selector("lowThrougput", null, null, Sets.newSet(dataSource)
-            )), null));
+            ))));
 
     PodTemplateTaskAdapter adapter = new PodTemplateTaskAdapter(
         taskRunnerConfig,
