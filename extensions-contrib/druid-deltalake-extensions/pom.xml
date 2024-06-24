@@ -44,12 +44,17 @@
       <artifactId>delta-kernel-api</artifactId>
       <version>${delta-kernel.version}</version>
     </dependency>
-
     <dependency>
       <groupId>io.delta</groupId>
       <artifactId>delta-kernel-defaults</artifactId>
       <version>${delta-kernel.version}</version>
     </dependency>
+    <dependency>
+      <groupId>io.delta</groupId>
+      <artifactId>delta-storage</artifactId>
+      <version>${delta-kernel.version}</version>
+    </dependency>
+
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-client-api</artifactId>

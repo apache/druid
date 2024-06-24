@@ -42,6 +42,7 @@ import io.delta.kernel.types.StructField;
 import io.delta.kernel.types.StructType;
 import io.delta.kernel.utils.CloseableIterator;
 import io.delta.kernel.utils.FileStatus;
+import io.delta.storage.LogStore;
 import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRowSchema;
@@ -151,7 +152,8 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
         }
       } else {
         final Table table = Table.forPath(engine, tablePath);
-        final Snapshot latestSnapshot = table.getLatestSnapshot(engine);
+        final Snapshot latestSnapshot = getLatestSnapshotForTable(table, engine);
+
         final StructType fullSnapshotSchema = latestSnapshot.getSchema(engine);
         final StructType prunedSchema = pruneSchema(
             fullSnapshotSchema,
@@ -207,7 +209,7 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
     final Snapshot latestSnapshot;
     final Table table = Table.forPath(engine, tablePath);
     try {
-      latestSnapshot = table.getLatestSnapshot(engine);
+      latestSnapshot = getLatestSnapshotForTable(table, engine);
     }
     catch (TableNotFoundException e) {
       throw InvalidInput.exception(e, "tablePath[%s] not found.", tablePath);
@@ -329,6 +331,16 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
         scanFile,
         physicalDataIter
     );
+  }
+
+  private Snapshot getLatestSnapshotForTable(final Table table, final Engine engine)
+  {
+    // Setting the LogStore class loader before calling the Delta Kernel snapshot API is required as a workaround with
+    // the 3.2.0 Delta Kernel because the Kernel library cannot instantiate the LogStore class otherwise. Please see
+    // https://github.com/delta-io/delta/issues/3299 for details. This workaround can be removed once the issue is fixed.
+    Thread.currentThread().setContextClassLoader(LogStore.class.getClassLoader());
+
+    return table.getLatestSnapshot(engine);
   }
 
   @VisibleForTesting
