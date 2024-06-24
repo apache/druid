@@ -1398,17 +1398,9 @@ public class RowBasedGrouperHelper
                   "Insufficient serde helpers present"
               );
               // Read the dimension
-              if (serdeHelpers[dimsReadSoFar - timestampAdjustment].getComplexClazz() == null) {
-                objects[dimsReadSoFar] = codec.readValue(jp, Object.class);
-                if (objects[dimsReadSoFar] instanceof Integer) {
-                  objects[dimsReadSoFar] = ((Integer) objects[dimsReadSoFar]).longValue();
-                } else if (objects[dimsReadSoFar] instanceof Double) {
-                  objects[dimsReadSoFar] = ((Double) objects[dimsReadSoFar]).floatValue();
-                }
-              } else {
-                objects[dimsReadSoFar] =
-                    codec.readValue(jp, serdeHelpers[dimsReadSoFar - timestampAdjustment].getComplexClazz());
-              }
+              serdeHelpers[dimsReadSoFar - timestampAdjustment].getClazz();
+              objects[dimsReadSoFar] =
+                  codec.readValue(jp, serdeHelpers[dimsReadSoFar - timestampAdjustment].getClazz());
             }
 
             ++dimsReadSoFar;
@@ -1649,8 +1641,7 @@ public class RowBasedGrouperHelper
     {
       final BufferComparator bufferComparator;
       final String columnTypeName;
-      @Nullable
-      final Class complexClazz;
+      final Class clazz;
 
       final List<Object> dictionary;
       final Object2IntMap<Object> reverseDictionary;
@@ -1677,9 +1668,9 @@ public class RowBasedGrouperHelper
                 dictionary.get(rhsBuffer.getInt(rhsPosition + keyBufferPosition))
             );
         if (columnType.is(ValueType.COMPLEX)) {
-          complexClazz = columnType.getNullableStrategy().getClazz();
+          clazz = columnType.getNullableStrategy().getClazz();
         } else {
-          complexClazz = null;
+          clazz = Object.class;
         }
       }
 
@@ -1714,11 +1705,10 @@ public class RowBasedGrouperHelper
         return reverseDictionary;
       }
 
-      @Nullable
       @Override
-      public Class<?> getComplexClazz()
+      public Class<?> getClazz()
       {
-        return complexClazz;
+        return clazz;
       }
     }
 
@@ -1802,9 +1792,8 @@ public class RowBasedGrouperHelper
         return reverseDictionary;
       }
 
-      @Nullable
       @Override
-      public Class<?> getComplexClazz()
+      public Class<?> getClazz()
       {
         return null;
       }
@@ -1853,11 +1842,10 @@ public class RowBasedGrouperHelper
         return reverseStringArrayDictionary;
       }
 
-      @Nullable
       @Override
-      public Class<?> getComplexClazz()
+      public Class<?> getClazz()
       {
-        return null;
+        return Object.class;
       }
     }
 
@@ -1909,11 +1897,10 @@ public class RowBasedGrouperHelper
         return bufferComparator;
       }
 
-      @Nullable
       @Override
-      public Class<?> getComplexClazz()
+      public Class<?> getClazz()
       {
-        return null;
+        return Object.class;
       }
     }
 
@@ -2034,11 +2021,10 @@ public class RowBasedGrouperHelper
         return bufferComparator;
       }
 
-      @Nullable
       @Override
-      public Class<?> getComplexClazz()
+      public Class<?> getClazz()
       {
-        return null;
+        return Long.class;
       }
     }
 
@@ -2086,11 +2072,10 @@ public class RowBasedGrouperHelper
         return bufferComparator;
       }
 
-      @Nullable
       @Override
-      public Class<?> getComplexClazz()
+      public Class<?> getClazz()
       {
-        return null;
+        return Float.class;
       }
     }
 
@@ -2138,11 +2123,10 @@ public class RowBasedGrouperHelper
         return bufferComparator;
       }
 
-      @Nullable
       @Override
-      public Class<?> getComplexClazz()
+      public Class<?> getClazz()
       {
-        return null;
+        return Double.class;
       }
     }
 
@@ -2200,11 +2184,10 @@ public class RowBasedGrouperHelper
         return comparator;
       }
 
-      @Nullable
       @Override
-      public Class<?> getComplexClazz()
+      public Class<?> getClazz()
       {
-        return delegate.getComplexClazz();
+        return delegate.getClazz();
       }
     }
   }
