@@ -61,11 +61,7 @@ import java.util.stream.Collectors;
 public class BatchAppenderatorDriver extends BaseAppenderatorDriver
 {
   /**
-   * Create a driver.
-   *
-   * @param appenderator       appenderator
-   * @param segmentAllocator   segment allocator
-   * @param segmentRetriever used segment checker
+   * Creates a driver for batch ingestion.
    */
   public BatchAppenderatorDriver(
       Appenderator appenderator,
