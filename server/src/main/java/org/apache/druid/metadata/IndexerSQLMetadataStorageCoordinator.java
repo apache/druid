@@ -321,6 +321,18 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   @Override
+  public Set<DataSegment> retrieveSegmentsById(String dataSource, Set<String> segmentIds)
+  {
+    return connector.inReadOnlyTransaction(
+        (handle, transactionStatus) ->
+            retrieveSegmentsById(handle, dataSource, segmentIds)
+                .stream()
+                .map(DataSegmentPlus::getDataSegment)
+                .collect(Collectors.toSet())
+    );
+  }
+
+  @Override
   public int markSegmentsAsUnusedWithinInterval(String dataSource, Interval interval)
   {
     final Integer numSegmentsMarkedUnused = connector.retryTransaction(
