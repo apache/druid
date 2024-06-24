@@ -322,7 +322,7 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery, 
 
   public static boolean needsFinalShuffling(final MSQSpec querySpec)
   {
-    return isDurableStorageQuery(querySpec) || isExport(querySpec);
+    return isDurableStorageQuery(querySpec) || isExport(querySpec) || isIngestion(querySpec);
   }
 
   /**

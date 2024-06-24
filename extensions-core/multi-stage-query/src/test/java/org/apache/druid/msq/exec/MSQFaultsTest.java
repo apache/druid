@@ -43,6 +43,7 @@ import org.apache.druid.msq.indexing.error.TooManyInputFilesFault;
 import org.apache.druid.msq.indexing.error.TooManyPartitionsFault;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestTaskActionClient;
+import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
@@ -288,7 +289,7 @@ public class MSQFaultsTest extends MSQTestBase
   {
     Map<String, Object> context = ImmutableMap.<String, Object>builder()
                                               .putAll(DEFAULT_MSQ_CONTEXT)
-                                              .put("rowsPerSegment", 1)
+                                              .put(MultiStageQueryContext.CTX_ROWS_PER_SEGMENT, 1)
                                               .build();
 
 

@@ -669,8 +669,8 @@ public class MSQSelectTest extends MSQTestBase
                   .setExpectedCountersForStageWorkerChannel(
                       CounterSnapshotMatcher
                           .with().rows(fullResultsSize).frames(1),
-                      0, 0, "output"
-                  );
+                      0, 0, "output");
+
       if (!context.containsKey(MultiStageQueryContext.CTX_ROWS_PER_PAGE)) {
         selectTester.setExpectedCountersForStageWorkerChannel(
             CounterSnapshotMatcher
@@ -692,21 +692,21 @@ public class MSQSelectTest extends MSQTestBase
       }
     } else {
       selectTester.setExpectedCountersForStageWorkerChannel(
-          CounterSnapshotMatcher
-              .with().totalFiles(1),
-          0, 0, "input0"
-      )
-          .setExpectedCountersForStageWorkerChannel(
-              CounterSnapshotMatcher
-                  .with().rows(fullResultsSize).frames(1),
-              0, 0, "output"
-          )
-          .setExpectedCountersForStageWorkerChannel(
-              CounterSnapshotMatcher
-                  .with().rows(fullResultsSize).frames(1),
-              0, 0, "shuffle"
-          )
-          .setExpectedResultRows(expectedResults);
+                      CounterSnapshotMatcher
+                          .with().totalFiles(1),
+                      0, 0, "input0"
+                  )
+                  .setExpectedCountersForStageWorkerChannel(
+                      CounterSnapshotMatcher
+                          .with().rows(fullResultsSize).frames(1),
+                      0, 0, "output"
+                  )
+                  .setExpectedCountersForStageWorkerChannel(
+                      CounterSnapshotMatcher
+                          .with().rows(fullResultsSize).frames(1),
+                      0, 0, "shuffle"
+                  )
+                  .setExpectedResultRows(expectedResults);
     }
 
     selectTester.verifyResults();

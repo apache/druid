@@ -65,6 +65,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.stream.Collectors;
 
 
 public class MSQInsertTest extends MSQTestBase
@@ -1392,13 +1393,45 @@ public class MSQInsertTest extends MSQTestBase
                              + "SELECT __time, m1 "
                              + "FROM foo "
                              + "LIMIT 50 "
-                             + "OFFSET 10"
+                             + "OFFSET 10 "
                              + "PARTITIONED BY ALL TIME")
                      .setExpectedValidationErrorMatcher(
                          invalidSqlContains("INSERT and REPLACE queries cannot have an OFFSET")
                      )
                      .setQueryContext(context)
                      .verifyPlanningErrors();
+  }
+
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testInsertOnFoo1WithLimit(String contextName, Map<String, Object> context)
+  {
+    Map<String, Object> queryContext = ImmutableMap.<String, Object>builder()
+                                                   .putAll(context)
+                                                   .put(MultiStageQueryContext.CTX_ROWS_PER_SEGMENT, 2)
+                                                   .build();
+
+    List<Object[]> expectedRows = expectedFooRows().stream().limit(4).collect(Collectors.toList());
+
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("dim1", ColumnType.STRING)
+                                            .add("cnt", ColumnType.LONG).build();
+
+    testIngestQuery().setSql(
+                         "insert into foo1 select  __time, dim1, cnt from foo LIMIT 4 PARTITIONED by ALL")
+                     .setExpectedDataSource("foo1")
+                     .setQueryContext(queryContext)
+                     .setExpectedRowSignature(rowSignature)
+                     .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0), SegmentId.of("foo1", Intervals.ETERNITY, "test", 1)))
+                     .setExpectedResultRows(expectedRows)
+                     .setExpectedMSQSegmentReport(
+                         new MSQSegmentReport(
+                             NumberedShardSpec.class.getSimpleName(),
+                             "Using NumberedShardSpec to generate segments since the query is inserting rows."
+                         )
+                     )
+                     .verifyResults();
   }
 
   @MethodSource("data")
