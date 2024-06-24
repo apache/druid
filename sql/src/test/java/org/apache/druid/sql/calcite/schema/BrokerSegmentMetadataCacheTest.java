@@ -54,6 +54,7 @@ import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
+import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
@@ -86,6 +87,7 @@ import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
+import javax.xml.crypto.Data;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -1026,5 +1028,29 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTe
   {
     buildSchemaMarkAndTableLatch();
     serverView.invokeSegmentSchemasAnnouncedDummy();
+  }
+
+  @Test
+  public void testNoDatasourceSchemaWhenNoSegmentMetadata() throws InterruptedException, IOException
+  {
+    BrokerSegmentMetadataCacheConfig config = new BrokerSegmentMetadataCacheConfig();
+    config.setDisableSegmentMetadataQueries(true);
+
+    BrokerSegmentMetadataCache schema = buildSchemaMarkAndTableLatch(
+        config,
+        new NoopCoordinatorClient()
+    );
+
+    schema.start();
+    schema.awaitInitialization();
+
+    List<DataSegment> segments = schema.getSegmentMetadataSnapshot().values()
+                                .stream()
+                                .map(AvailableSegmentMetadata::getSegment)
+                                .collect(Collectors.toList());
+
+    schema.refresh(segments.stream().map(DataSegment::getId).collect(Collectors.toSet()), Collections.singleton("foo"));
+
+    Assert.assertNull(schema.getDatasource("foo"));
   }
 }
