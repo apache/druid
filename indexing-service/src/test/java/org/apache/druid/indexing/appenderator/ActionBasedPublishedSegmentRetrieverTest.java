@@ -103,7 +103,6 @@ public class ActionBasedPublishedSegmentRetrieverTest
         taskActionClient.submit(
             new RetrieveUsedSegmentsAction(
                 "wiki",
-                null,
                 Collections.singletonList(Intervals.of("2013-01-01/P3D")),
                 Segments.INCLUDING_OVERSHADOWED
             )
