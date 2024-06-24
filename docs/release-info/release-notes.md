@@ -644,6 +644,16 @@ Improved performance of LDAP credentials validator by keeping password hashes in
 
 ### Upgrade notes
 
+#### Front-coded dictionaries
+
+In Druid 32.0.0, the front coded dictionaries feature will be turned on by default. Front-coded dictionaries reduce storage and improve performance by optimizing for strings where the front part looks similar.
+
+Once this feature is on, you cannot easily downgrade to an earlier version that does not support the feature. 
+
+For more information, see [Migration guide: front-coded dictionaries](./migr-front-coded-dict.md).
+
+If you're already using this feature, you don't need to take any action. 
+
 #### Append JsonPath function
 
 The `append` function for JsonPath for ORC format now fails with an exception. Previously, it would run but not append anything.

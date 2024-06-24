@@ -26,6 +26,18 @@ The upgrade notes assume that you are upgrading from the Druid version that imme
 
 For the full release notes for a specific version, see the [releases page](https://github.com/apache/druid/releases).
 
+## Announcements
+
+#### Front-coded dictionaries
+
+In Druid 32.0.0, the front coded dictionaries feature will be turned on by default. Front-coded dictionaries reduce storage and improve performance by optimizing for strings where the front part looks similar.
+
+Once this feature is on, you cannot easily downgrade to an earlier version that does not support the feature. 
+
+For more information, see [Migration guide: front-coded dictionaries](./migr-front-coded-dict.md).
+
+If you're already using this feature, you don't need to take any action. 
+
 ## Upcoming removals
 
 As part of the continued improvements to Druid, we are deprecating certain features and behaviors in favor of newer iterations that offer more robust features and are more aligned with standard ANSI SQL. Many of these new features have been the default for new deployments for several releases.
