@@ -88,7 +88,10 @@ public class MSQCompactionRunner implements CompactionRunner
 
   private final ObjectMapper jsonMapper;
   private final Injector injector;
-
+  // Needed as output column name while grouping in the scenario of:
+  // a) no query granularity -- to specify an output name for the time dimension column since __time is a reserved name.
+  // b) custom query granularity -- to create a virtual column containing the rounded-off row timestamp.
+  // In both cases, the new column is converted back to __time later using columnMappings.
   public static final String TIME_VIRTUAL_COLUMN = "__vTime";
 
   @JsonIgnore
@@ -107,10 +110,10 @@ public class MSQCompactionRunner implements CompactionRunner
   }
 
   /**
-   Checks if the provided compaction config is supported by MSQ.
-   The same validation is done at
-   {@link ClientCompactionRunnerInfo#msqEngineSupportsCompactionConfig}
-   The following configs aren't supported:
+   * Checks if the provided compaction config is supported by MSQ.
+   * The same validation is done at
+   * {@link ClientCompactionRunnerInfo#msqEngineSupportsCompactionConfig}
+   * The following configs aren't supported:
    * <ul>
    * <li>partitionsSpec of type HashedParititionsSpec.</li>
    *
@@ -195,7 +198,7 @@ public class MSQCompactionRunner implements CompactionRunner
       MSQSpec msqSpec = MSQSpec.builder()
                                .query(query)
                                .columnMappings(getColumnMappings(dataSchema))
-                               .destination(buildMSQDestination(compactionTask, dataSchema, compactionTaskContext))
+                               .destination(buildMSQDestination(compactionTask, dataSchema))
                                .assignmentStrategy(MultiStageQueryContext.getAssignmentStrategy(compactionTaskContext))
                                .tuningConfig(buildMSQTuningConfig(compactionTask, compactionTaskContext))
                                .build();
@@ -220,20 +223,17 @@ public class MSQCompactionRunner implements CompactionRunner
 
   private static DataSourceMSQDestination buildMSQDestination(
       CompactionTask compactionTask,
-      DataSchema dataSchema,
-      QueryContext compactionTaskContext
+      DataSchema dataSchema
   )
   {
     final Interval replaceInterval = compactionTask.getIoConfig()
                                                    .getInputSpec()
                                                    .findInterval(compactionTask.getDataSource());
 
-    final List<String> segmentSortOrder = MultiStageQueryContext.getSortOrder(compactionTaskContext);
-
     return new DataSourceMSQDestination(
         dataSchema.getDataSource(),
         dataSchema.getGranularitySpec().getSegmentGranularity(),
-        segmentSortOrder,
+        null,
         ImmutableList.of(replaceInterval)
     );
   }
@@ -440,10 +440,9 @@ public class MSQCompactionRunner implements CompactionRunner
           jsonMapper.writeValueAsString(dataSchema.getGranularitySpec().getQueryGranularity())
       );
     }
-    context.put(MultiStageQueryContext.CTX_SEGMENT_LOAD_WAIT, true);
     // Similar to compaction using the native engine, don't finalize aggregations.
-    context.put(MultiStageQueryContext.CTX_FINALIZE_AGGREGATIONS, false);
-    context.put(GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING, false);
+    context.putIfAbsent(MultiStageQueryContext.CTX_FINALIZE_AGGREGATIONS, false);
+    context.putIfAbsent(GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING, false);
     return context;
   }
 

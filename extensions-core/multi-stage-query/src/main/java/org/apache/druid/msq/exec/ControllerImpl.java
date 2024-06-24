@@ -1616,6 +1616,7 @@ public class ControllerImpl implements Controller
         segmentGranularity,
         QueryContext.of(querySpec.getQuery().getContext())
                     .getGranularity(DruidSqlInsert.SQL_INSERT_QUERY_GRANULARITY, jsonMapper),
+        // MSQ has a custom definition of rollup where it needs to be a group-by query
         dataSchema.getGranularitySpec().isRollup(),
         ((DataSourceMSQDestination) querySpec.getDestination()).getReplaceTimeChunks()
     );
@@ -1626,25 +1627,13 @@ public class ControllerImpl implements Controller
                                         : new ClientCompactionTaskTransformSpec(
                                             dataSchema.getTransformSpec().getFilter()
                                         ).asMap(jsonMapper);
-    List<Object> metricsSpec = null;
+    List<Object> metricsSpec = dataSchema.getAggregators() == null
+                               ? null
+                               : jsonMapper.convertValue(
+                                   dataSchema.getAggregators(),
+                                   new TypeReference<List<Object>>() {}
+                               );
 
-    if (querySpec.getQuery() instanceof GroupByQuery){
-      GroupByQuery groupByQuery = (GroupByQuery) querySpec.getQuery();
-      // Need to fetch this from the querySpec since the dataSchema uses the AggregatorFactory's combining factory
-      // version which updates field_name to name. For e.g.
-
-      // LongSumAggregatorFactory{fieldName='added', expression='null', name='added_sum'}
-      // gets updated to
-      // LongSumAggregatorFactory{fieldName='added_sum', expression='null', name='added_sum'}
-
-      // Also converting to metricsSpec from list to array as direct serialization from list doesn't capture the type.
-      metricsSpec = jsonMapper.convertValue(
-          groupByQuery.getAggregatorSpecs().toArray(new AggregatorFactory[0]),
-          new TypeReference<List<Object>>()
-          {
-          }
-      );
-    }
 
     IndexSpec indexSpec = tuningConfig.getIndexSpec();
 

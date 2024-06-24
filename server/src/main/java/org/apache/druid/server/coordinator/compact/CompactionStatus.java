@@ -305,17 +305,30 @@ public class CompactionStatus
       if (ArrayUtils.isEmpty(configuredMetricsSpec)) {
         return COMPLETE;
       }
+      final AggregatorFactory[] configuredMetricsCombiningFactorySpec =
+          Arrays.stream(configuredMetricsSpec)
+                .map(AggregatorFactory::getCombiningFactory)
+                .toArray(AggregatorFactory[]::new);
 
       final List<Object> metricSpecList = lastCompactionState.getMetricsSpec();
       final AggregatorFactory[] existingMetricsSpec
           = CollectionUtils.isNullOrEmpty(metricSpecList)
             ? null : objectMapper.convertValue(metricSpecList, AggregatorFactory[].class);
+      final AggregatorFactory[] existingMetricsCombiningFactorySpec =
+          existingMetricsSpec == null
+          ? null
+          : Arrays.stream(existingMetricsSpec)
+                  .map(AggregatorFactory::getCombiningFactory)
+                  .toArray(AggregatorFactory[]::new);
 
-      if (existingMetricsSpec == null || !Arrays.deepEquals(configuredMetricsSpec, existingMetricsSpec)) {
+      if (existingMetricsSpec == null || !Arrays.deepEquals(
+          configuredMetricsCombiningFactorySpec,
+          existingMetricsCombiningFactorySpec
+      )) {
         return CompactionStatus.configChanged(
             "metricsSpec",
-            Arrays.toString(configuredMetricsSpec),
-            Arrays.toString(existingMetricsSpec)
+            Arrays.toString(configuredMetricsCombiningFactorySpec),
+            Arrays.toString(existingMetricsCombiningFactorySpec)
         );
       } else {
         return COMPLETE;
