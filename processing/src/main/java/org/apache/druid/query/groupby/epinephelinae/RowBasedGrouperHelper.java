@@ -1641,7 +1641,7 @@ public class RowBasedGrouperHelper
     {
       final BufferComparator bufferComparator;
       final String columnTypeName;
-      final Class clazz;
+      final Class<?> clazz;
 
       final List<Object> dictionary;
       final Object2IntMap<Object> reverseDictionary;
@@ -1795,7 +1795,7 @@ public class RowBasedGrouperHelper
       @Override
       public Class<?> getClazz()
       {
-        return null;
+        return Object.class;
       }
     }
 
