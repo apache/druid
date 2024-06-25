@@ -34,6 +34,7 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.data.input.kafka.KafkaRecordEntity;
+import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.seekablestream.SettableByteEntity;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
@@ -66,12 +67,12 @@ public class KafkaInputFormatTest
   private static final long TIMESTAMP_MILLIS = DateTimes.of("2021-06-24").getMillis();
   private static final String TOPIC = "sample";
   private static final byte[] SIMPLE_JSON_KEY_BYTES = StringUtils.toUtf8(
-      StringUtils.singleQuoteToStandardJson(
+      TestUtils.singleQuoteToStandardJson(
           "{'key': 'sampleKey'}"
       )
   );
   private static final byte[] SIMPLE_JSON_VALUE_BYTES = StringUtils.toUtf8(
-      StringUtils.singleQuoteToStandardJson(
+      TestUtils.singleQuoteToStandardJson(
           "{"
           + "    'timestamp': '2021-06-25',"
           + "    'bar': null,"

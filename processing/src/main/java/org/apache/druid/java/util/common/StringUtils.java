@@ -350,23 +350,6 @@ public class StringUtils
   }
 
   /**
-   * Converts the given JSON string which uses single quotes for field names and
-   * String values to a standard JSON by replacing all occurrences of a single
-   * quote with double quotes.
-   * <p>
-   * Single-quoted JSON is typically easier to read as can be seen below:
-   * <pre>
-   * final String singleQuotedJson = "{'f1':'value', 'f2':5}";
-   *
-   * final String doubleQuotedJson = "{\"f1\":\"value\", \"f2\":5}";
-   * </pre>
-   */
-  public static String singleQuoteToStandardJson(String singleQuotedJson)
-  {
-    return replaceChar(singleQuotedJson, '\'', "\"");
-  }
-
-  /**
    * Equivalent of String.format(Locale.ENGLISH, message, formatArgs).
    */
   public static String format(String message, Object... formatArgs)
