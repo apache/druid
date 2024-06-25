@@ -496,7 +496,10 @@ public class ExpressionSelectors
       return () -> {
         final Object val = selector.getObject();
         if (val != null) {
-          NonnullPair<ExpressionType, Object[]> coerced = ExprEval.coerceListToArray((List) val, homogenizeMultiValue);
+          NonnullPair<ExpressionType, Object[]> coerced = ExprEval.coerceListToArray(
+              Arrays.asList((Object[]) val),
+              homogenizeMultiValue
+          );
           if (coerced == null) {
             return null;
           }
