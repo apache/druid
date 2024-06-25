@@ -36,6 +36,7 @@ import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTaskClientProvider;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.expression.LookupEnabledTestExprMacroTable;
@@ -173,5 +174,22 @@ public class TestUtils
       return false;
     }
     return true;
+  }
+
+  /**
+   * Converts the given JSON string which uses single quotes for field names and
+   * String values to a standard JSON by replacing all occurrences of a single
+   * quote with double quotes.
+   * <p>
+   * Single-quoted JSON is typically easier to read as can be seen below:
+   * <pre>
+   * final String singleQuotedJson = "{'f1':'value', 'f2':5}";
+   *
+   * final String doubleQuotedJson = "{\"f1\":\"value\", \"f2\":5}";
+   * </pre>
+   */
+  public static String singleQuoteToStandardJson(String singleQuotedJson)
+  {
+    return StringUtils.replaceChar(singleQuotedJson, '\'', "\"");
   }
 }

@@ -450,7 +450,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   public Set<DataSegment> commitSegments(
       final Set<DataSegment> segments,
       @Nullable final SegmentSchemaMapping segmentSchemaMapping
-  ) throws IOException
+  )
   {
     final SegmentPublishResult result =
         commitSegmentsAndMetadata(
@@ -474,7 +474,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       @Nullable final DataSourceMetadata startMetadata,
       @Nullable final DataSourceMetadata endMetadata,
       @Nullable final SegmentSchemaMapping segmentSchemaMapping
-  ) throws IOException
+  )
   {
     verifySegmentsToCommit(segments);
 
