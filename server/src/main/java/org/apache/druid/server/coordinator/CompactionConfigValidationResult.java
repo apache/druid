@@ -17,33 +17,28 @@
  * under the License.
  */
 
-package org.apache.druid.indexer;
+package org.apache.druid.server.coordinator;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonValue;
 import org.apache.druid.java.util.common.StringUtils;
 
-import javax.annotation.Nullable;
-
-/**
- * Encapsulates the Engine to be used for a compaction task.
- * Should be kept in sync with the subtypes for {@link org.apache.druid.indexing.common.task.CompactionRunner}.
- */
-public enum CompactionEngine
+public class CompactionConfigValidationResult
 {
-  NATIVE,
-  MSQ;
+  private final boolean valid;
+  private final String reason;
 
-  @Override
-  @JsonValue
-  public String toString()
+  public CompactionConfigValidationResult(boolean valid, String format, Object... args)
   {
-    return StringUtils.toLowerCase(this.name());
+    this.valid = valid;
+    this.reason = StringUtils.format(format, args);
   }
 
-  @JsonCreator
-  public static CompactionEngine fromString(@Nullable String name)
+  public boolean isValid()
   {
-    return name == null ? null : valueOf(StringUtils.toUpperCase(name));
+    return valid;
+  }
+
+  public String getReason()
+  {
+    return reason;
   }
 }

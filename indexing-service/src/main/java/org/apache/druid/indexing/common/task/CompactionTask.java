@@ -85,7 +85,7 @@ import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
-import org.apache.druid.server.coordinator.ClientCompactionRunnerInfo;
+import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.security.ResourceAction;
@@ -479,7 +479,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     );
 
     registerResourceCloserOnAbnormalExit(compactionRunner.getCurrentSubTaskHolder());
-    ClientCompactionRunnerInfo.ValidationResult supportsCompactionConfig = compactionRunner.validateCompactionTask(this);
+    CompactionConfigValidationResult supportsCompactionConfig = compactionRunner.validateCompactionTask(this);
     if (!supportsCompactionConfig.isValid()) {
       throw InvalidInput.exception("Compaction spec not supported. Reason[%s].", supportsCompactionConfig.getReason());
     }

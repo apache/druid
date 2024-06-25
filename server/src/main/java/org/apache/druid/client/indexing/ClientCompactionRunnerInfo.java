@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator;
+package org.apache.druid.client.indexing;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -25,11 +25,11 @@ import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
-import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
+import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 
-import java.util.Map;
+import javax.annotation.Nullable;
 import java.util.Objects;
 
 
@@ -74,41 +74,20 @@ public class ClientCompactionRunnerInfo
     return type == that.type;
   }
 
-  public static class ValidationResult{
-    private final boolean valid;
-    private final String reason;
-
-    public ValidationResult(boolean valid, String reason)
-    {
-      this.valid = valid;
-      this.reason = reason;
-    }
-
-    public boolean isValid()
-    {
-      return valid;
-    }
-
-    public String getReason()
-    {
-      return reason;
-    }
-  }
-
   @Override
   public int hashCode()
   {
     return Objects.hash(type);
   }
 
-  public static ValidationResult validateCompactionConfig(
+  public static CompactionConfigValidationResult validateCompactionConfig(
       DataSourceCompactionConfig newConfig,
       CompactionEngine defaultCompactionEngine
   )
   {
     CompactionEngine compactionEngine = newConfig.getEngine() == null ? defaultCompactionEngine : newConfig.getEngine();
     if (compactionEngine == CompactionEngine.NATIVE) {
-      return new ValidationResult(true, null);
+      return new CompactionConfigValidationResult(true, null);
     } else {
       return msqEngineSupportsCompactionConfig(newConfig);
     }
@@ -118,28 +97,22 @@ public class ClientCompactionRunnerInfo
    * Checks if the provided compaction config is supported by MSQ. The following configs aren't supported:
    * <ul>
    * <li>finalizeAggregations set to false in context.</li>
-   *
    * <li>partitionsSpec of type HashedParititionsSpec.</li>
-   *
    * <li>maxTotalRows in DynamicPartitionsSpec.</li>
-   *
    * <li>rollup set to false in granularitySpec when metricsSpec is specified.</li>
    * </ul>
-   *
-   * @param newConfig The updated compaction config
-   * @return ValidationResult. The reason string is null if isValid() is True.
    */
-  private static ValidationResult msqEngineSupportsCompactionConfig(DataSourceCompactionConfig newConfig)
+  private static CompactionConfigValidationResult msqEngineSupportsCompactionConfig(DataSourceCompactionConfig newConfig)
   {
     if (newConfig.getTuningConfig() != null) {
-      ValidationResult partitionSpecValidationResult =
-          validatePartitionsSpec(newConfig.getTuningConfig().getPartitionsSpec());
+      CompactionConfigValidationResult partitionSpecValidationResult =
+          validatePartitionsSpecForMsq(newConfig.getTuningConfig().getPartitionsSpec());
       if (!partitionSpecValidationResult.isValid()) {
         return partitionSpecValidationResult;
       }
     }
     if (newConfig.getGranularitySpec() != null) {
-      ValidationResult rollupValidationResult = validateRollup(
+      CompactionConfigValidationResult rollupValidationResult = validateRollupForMsq(
           newConfig.getMetricsSpec(),
           newConfig.getGranularitySpec().isRollup()
       );
@@ -147,43 +120,49 @@ public class ClientCompactionRunnerInfo
         return rollupValidationResult;
       }
     }
-    return new ValidationResult(true, null);
+    return new CompactionConfigValidationResult(true, null);
   }
 
   /**
    * Validte that partitionSpec is either 'dynamic` or 'range', and if 'dynamic', ensure maxTotalRows is null.
    */
-  public static ValidationResult validatePartitionsSpec(PartitionsSpec partitionsSpec)
+  public static CompactionConfigValidationResult validatePartitionsSpecForMsq(PartitionsSpec partitionsSpec)
   {
     if (!(partitionsSpec instanceof DimensionRangePartitionsSpec
           || partitionsSpec instanceof DynamicPartitionsSpec)) {
-      return new ValidationResult(false, StringUtils.format(
-          "Invalid partition spec type[%s] for MSQ engine."
-          + " Type must be either DynamicPartitionsSpec or DynamicRangePartitionsSpec.",
-          partitionsSpec.getClass()
-      )
+      return new CompactionConfigValidationResult(
+          false,
+          "Invalid partitionsSpec type[%s] for MSQ engine. Type must be either 'dynamic' or 'range'.",
+          partitionsSpec.getClass().getSimpleName()
+
       );
     }
     if (partitionsSpec instanceof DynamicPartitionsSpec
         && ((DynamicPartitionsSpec) partitionsSpec).getMaxTotalRows() != null) {
-      return new ValidationResult(false, StringUtils.format(
+      return new CompactionConfigValidationResult(
+          false,
           "maxTotalRows[%d] in DynamicPartitionsSpec not supported for MSQ engine.",
           ((DynamicPartitionsSpec) partitionsSpec).getMaxTotalRows()
-      ));
+      );
     }
-    return new ValidationResult(true, null);
+    return new CompactionConfigValidationResult(true, null);
   }
 
   /**
    * Validate rollup is set to false in granularitySpec when metricsSpec is specified.
    */
-  public static ValidationResult validateRollup(AggregatorFactory[] metricsSpec, boolean isRollup) {
-    if (metricsSpec != null && !isRollup) {
-      return new ValidationResult(false, StringUtils.format(
-          "rollup in granularitySpec must be set to True if metricsSpec is specifed "
-          + "for MSQ engine."));
+  public static CompactionConfigValidationResult validateRollupForMsq(
+      AggregatorFactory[] metricsSpec,
+      @Nullable Boolean isRollup
+  )
+  {
+    if (metricsSpec != null && isRollup != null && !isRollup) {
+      return new CompactionConfigValidationResult(
+          false,
+          "rollup in granularitySpec must be set to True if metricsSpec is specifed for MSQ engine."
+      );
     }
-    return new ValidationResult(true, null);
+    return new CompactionConfigValidationResult(true, null);
   }
 
   /**

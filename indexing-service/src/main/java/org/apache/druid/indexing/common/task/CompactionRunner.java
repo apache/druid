@@ -24,7 +24,8 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.server.coordinator.ClientCompactionRunnerInfo;
+import org.apache.druid.client.indexing.ClientCompactionRunnerInfo;
+import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
 import org.joda.time.Interval;
 
 import java.util.Map;
@@ -42,7 +43,7 @@ public interface CompactionRunner
   String TYPE_PROPERTY = "type";
 
   /**
-   * Converts compaction tasks to the runner-type tasks and runs them serially for each interval.
+   * Creates and runs sub-tasks for the given CompactionTask, one interval at a time.
    */
   TaskStatus runCompactionTasks(
       CompactionTask compactionTask,
@@ -55,8 +56,7 @@ public interface CompactionRunner
   /**
    * Checks if the provided compaction config is supported by the runner.
    * The same validation is done at {@link org.apache.druid.msq.indexing.MSQCompactionRunner#validateCompactionTask}
-   * @return ValidationResult. The reason string is null if isValid() is True.
    */
-  ClientCompactionRunnerInfo.ValidationResult validateCompactionTask(CompactionTask compactionTask);
+  CompactionConfigValidationResult validateCompactionTask(CompactionTask compactionTask);
 
 }

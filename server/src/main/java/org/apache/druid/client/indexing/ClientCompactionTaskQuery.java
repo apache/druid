@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.server.coordinator.ClientCompactionRunnerInfo;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
@@ -60,7 +59,7 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
       @JsonProperty("metricsSpec") AggregatorFactory[] metrics,
       @JsonProperty("transformSpec") ClientCompactionTaskTransformSpec transformSpec,
       @JsonProperty("context") Map<String, Object> context,
-      @JsonProperty("compactionRunner") ClientCompactionRunnerInfo compactionRunner
+      @JsonProperty("compactionRunner") @Nullable ClientCompactionRunnerInfo compactionRunner
   )
   {
     this.id = Preconditions.checkNotNull(id, "id");
@@ -140,7 +139,8 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
   }
 
   @JsonProperty("compactionRunner")
-  public ClientCompactionRunnerInfo getClientCompactionRunnerInfo()
+  @Nullable
+  public ClientCompactionRunnerInfo getCompactionRunner()
   {
     return compactionRunner;
   }

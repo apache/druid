@@ -40,7 +40,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.server.coordinator.ClientCompactionRunnerInfo;
+import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
 import org.apache.druid.utils.CollectionUtils;
 import org.codehaus.jackson.annotate.JsonCreator;
@@ -81,11 +81,11 @@ public class NativeCompactionRunner implements CompactionRunner
   }
 
   @Override
-  public ClientCompactionRunnerInfo.ValidationResult validateCompactionTask(
+  public CompactionConfigValidationResult validateCompactionTask(
       CompactionTask compactionTask
   )
   {
-    return new ClientCompactionRunnerInfo.ValidationResult(true, null);
+    return new CompactionConfigValidationResult(true, null);
   }
 
   /**

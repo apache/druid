@@ -65,7 +65,8 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
-import org.apache.druid.server.coordinator.ClientCompactionRunnerInfo;
+import org.apache.druid.client.indexing.ClientCompactionRunnerInfo;
+import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.planner.ColumnMapping;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
@@ -110,32 +111,29 @@ public class MSQCompactionRunner implements CompactionRunner
   }
 
   /**
-   * Checks if the provided compaction config is supported by MSQ.
-   * The same validation is done at
+   * Checks if the provided compaction config is supported by MSQ. The same validation is done at
    * {@link ClientCompactionRunnerInfo#msqEngineSupportsCompactionConfig}
    * The following configs aren't supported:
    * <ul>
    * <li>partitionsSpec of type HashedParititionsSpec.</li>
-   *
    * <li>maxTotalRows in DynamicPartitionsSpec.</li>
-   *
    * <li>rollup set to false in granularitySpec when metricsSpec is specified.</li>
    * </ul>
    */
   @Override
-  public ClientCompactionRunnerInfo.ValidationResult validateCompactionTask(
+  public CompactionConfigValidationResult validateCompactionTask(
       CompactionTask compactionTask
   )
   {
     if (compactionTask.getTuningConfig() != null) {
-      ClientCompactionRunnerInfo.ValidationResult partitionSpecValidationResult =
-          ClientCompactionRunnerInfo.validatePartitionsSpec(compactionTask.getTuningConfig().getPartitionsSpec());
+      CompactionConfigValidationResult partitionSpecValidationResult =
+          ClientCompactionRunnerInfo.validatePartitionsSpecForMsq(compactionTask.getTuningConfig().getPartitionsSpec());
       if (!partitionSpecValidationResult.isValid()) {
         return partitionSpecValidationResult;
       }
     }
     if (compactionTask.getGranularitySpec() != null) {
-      ClientCompactionRunnerInfo.ValidationResult rollupValidationResult = ClientCompactionRunnerInfo.validateRollup(
+      CompactionConfigValidationResult rollupValidationResult = ClientCompactionRunnerInfo.validateRollupForMsq(
           compactionTask.getMetricsSpec(),
           compactionTask.getGranularitySpec().isRollup()
       );
@@ -143,7 +141,7 @@ public class MSQCompactionRunner implements CompactionRunner
         return rollupValidationResult;
       }
     }
-    return new ClientCompactionRunnerInfo.ValidationResult(true, null);
+    return new CompactionConfigValidationResult(true, null);
   }
 
   @Override

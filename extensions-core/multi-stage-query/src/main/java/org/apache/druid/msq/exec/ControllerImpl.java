@@ -1616,8 +1616,8 @@ public class ControllerImpl implements Controller
         segmentGranularity,
         QueryContext.of(querySpec.getQuery().getContext())
                     .getGranularity(DruidSqlInsert.SQL_INSERT_QUERY_GRANULARITY, jsonMapper),
-        // MSQ has a custom definition of rollup where it needs to be a group-by query
         dataSchema.getGranularitySpec().isRollup(),
+        // Not using dataSchema.getGranularitySpec().inputIntervals() as that always has ETERNITY
         ((DataSourceMSQDestination) querySpec.getDestination()).getReplaceTimeChunks()
     );
 
