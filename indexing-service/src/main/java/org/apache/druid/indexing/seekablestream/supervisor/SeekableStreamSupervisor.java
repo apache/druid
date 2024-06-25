@@ -530,7 +530,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * @throws InterruptedException
    * @throws ExecutionException
    */
-  private boolean changeTaskCount(int desiredActiveTaskCount)
+  @Override
+  public boolean changeTaskCount(int desiredActiveTaskCount)
       throws InterruptedException, ExecutionException
   {
     int currentActiveTaskCount;

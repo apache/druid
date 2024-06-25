@@ -561,6 +561,25 @@ public class SupervisorResource
   }
 
   @POST
+  @Path("/{id}/setTaskCount")
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(SupervisorResourceFilter.class)
+  public Response setTaskCount(@PathParam("id") final String id, @QueryParam("taskCount") final Integer taskCount)
+  {
+    return asLeaderWithSupervisorManager(
+        manager -> {
+          if (manager.scaleSupervisor(id, taskCount)) {
+            return Response.ok(ImmutableMap.of("id", id)).build();
+          } else {
+            return Response.status(Response.Status.NOT_MODIFIED)
+                           .entity(ImmutableMap.of("error", StringUtils.format("[%s] is not scaled", id)))
+                           .build();
+          }
+        }
+    );
+  }
+
+  @POST
   @Path("/{id}/resetOffsets")
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)

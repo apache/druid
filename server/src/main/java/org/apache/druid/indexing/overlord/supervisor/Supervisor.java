@@ -29,6 +29,7 @@ import org.apache.druid.segment.incremental.ParseExceptionReport;
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 
 public interface Supervisor
 {
@@ -102,5 +103,10 @@ public interface Supervisor
   default void handoffTaskGroupsEarly(List<Integer> taskGroupIds)
   {
     throw new UnsupportedOperationException("Supervisor does not have the feature to handoff task groups early implemented");
+  }
+
+  default boolean changeTaskCount(int taskCount) throws InterruptedException, ExecutionException
+  {
+    throw new UnsupportedOperationException();
   }
 }
