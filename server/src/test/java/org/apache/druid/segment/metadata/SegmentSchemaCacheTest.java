@@ -63,18 +63,25 @@ public class SegmentSchemaCacheTest
     RowSignature rowSignature = RowSignature.builder().add("cx", ColumnType.FLOAT).build();
     SchemaPayloadPlus expected = new SchemaPayloadPlus(new SchemaPayload(rowSignature, Collections.emptyMap()), 20L);
     SegmentId id = SegmentId.dummy("ds");
+    SegmentId id2 = SegmentId.dummy("ds2");
 
     // this call shouldn't result in any error
     cache.markMetadataQueryResultPublished(id);
 
     cache.addTemporaryMetadataQueryResult(id, rowSignature, Collections.emptyMap(), 20);
+    cache.addTemporaryMetadataQueryResult(id2, rowSignature, Collections.emptyMap(), 20);
 
     Assert.assertTrue(cache.isSchemaCached(id));
+    Assert.assertTrue(cache.isSchemaCached(id2));
     Optional<SchemaPayloadPlus> schema = cache.getSchemaForSegment(id);
     Assert.assertTrue(schema.isPresent());
     Assert.assertEquals(expected, schema.get());
+    Optional<SchemaPayloadPlus> schema2 = cache.getSchemaForSegment(id);
+    Assert.assertTrue(schema2.isPresent());
+    Assert.assertEquals(expected, schema2.get());
 
     cache.markMetadataQueryResultPublished(id);
+    cache.markMetadataQueryResultPublished(id2);
 
     schema = cache.getSchemaForSegment(id);
     Assert.assertTrue(schema.isPresent());
@@ -94,9 +101,14 @@ public class SegmentSchemaCacheTest
     cache.updateFinalizedSegmentSchema(finalizedSegmentSchemaInfo);
 
     Assert.assertNull(cache.getTemporaryPublishedMetadataQueryResults(id));
+    Assert.assertNotNull(cache.getTemporaryPublishedMetadataQueryResults(id2));
     Assert.assertTrue(cache.isSchemaCached(id));
+    Assert.assertTrue(cache.isSchemaCached(id2));
     schema = cache.getSchemaForSegment(id);
     Assert.assertTrue(schema.isPresent());
+
+    schema2 = cache.getSchemaForSegment(id2);
+    Assert.assertTrue(schema2.isPresent());
   }
 
   @Test
