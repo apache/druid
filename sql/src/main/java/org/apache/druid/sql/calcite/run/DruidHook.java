@@ -65,10 +65,10 @@ public interface DruidHook<T>
 
   }
 
-  final HookKey<RelNode> CONVERTED_PLAN = new HookKey<>("converted", RelNode.class);
-  final HookKey<RelNode> LOGICAL_PLAN = new HookKey<>("logicalPlan", RelNode.class);
-  final HookKey<RelNode> DRUID_PLAN = new HookKey<>("druidPlan", RelNode.class);
-  final HookKey<String> SQL = new HookKey<>("sql", String.class);
+  HookKey<RelNode> CONVERTED_PLAN = new HookKey<>("converted", RelNode.class);
+  HookKey<RelNode> LOGICAL_PLAN = new HookKey<>("logicalPlan", RelNode.class);
+  HookKey<RelNode> DRUID_PLAN = new HookKey<>("druidPlan", RelNode.class);
+  HookKey<String> SQL = new HookKey<>("sql", String.class);
 
   void invoke(HookKey<T> key, T object);
 
