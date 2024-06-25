@@ -166,7 +166,7 @@ public interface IndexerMetadataStorageCoordinator
    *
    * @return set of segments actually added
    */
-  Set<DataSegment> commitSegments(Set<DataSegment> segments, @Nullable SegmentSchemaMapping segmentSchemaMapping) throws IOException;
+  Set<DataSegment> commitSegments(Set<DataSegment> segments, @Nullable SegmentSchemaMapping segmentSchemaMapping);
 
   /**
    * Allocates pending segments for the given requests in the pending segments table.
@@ -278,7 +278,7 @@ public interface IndexerMetadataStorageCoordinator
       @Nullable DataSourceMetadata startMetadata,
       @Nullable DataSourceMetadata endMetadata,
       @Nullable SegmentSchemaMapping segmentSchemaMapping
-  ) throws IOException;
+  );
 
   /**
    * Commits segments and corresponding schema created by an APPEND task.
