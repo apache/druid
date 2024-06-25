@@ -180,6 +180,12 @@ public interface IndexerMetadataStorageCoordinator
   );
 
   /**
+   * Retrieves segments for the given IDs, regardless of their visibility
+   * (visible, overshadowed or unused).
+   */
+  Set<DataSegment> retrieveSegmentsById(String dataSource, Set<String> segmentIds);
+
+  /**
    * Mark as unused segments which include ONLY data within the given interval.
    *
    * @param dataSource The data source the segments belong to

@@ -256,6 +256,8 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       ImmutableMap.<String, Object>builder()
                   .putAll(QUERY_CONTEXT_DEFAULT)
                   .put(QueryContexts.MAX_SUBQUERY_BYTES_KEY, "100000")
+                  // Disallows the fallback to row based limiting
+                  .put(QueryContexts.MAX_SUBQUERY_ROWS_KEY, "1")
                   .build();
 
   // Add additional context to the given context map for when the

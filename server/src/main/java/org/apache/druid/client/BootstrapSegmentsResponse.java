@@ -17,18 +17,23 @@
  * under the License.
  */
 
-package org.apache.druid.segment.realtime.appenderator;
+package org.apache.druid.client;
 
+import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.SegmentId;
 
-import java.io.IOException;
-import java.util.Set;
-
-public interface UsedSegmentChecker
+public class BootstrapSegmentsResponse
 {
-  /**
-   * For any identifiers that exist and are actually used, returns the corresponding DataSegment objects.
-   */
-  Set<DataSegment> findPublishedSegments(Set<SegmentId> identifiers) throws IOException;
+  private final CloseableIterator<DataSegment> iterator;
+
+  public BootstrapSegmentsResponse(final CloseableIterator<DataSegment> iterator)
+  {
+    this.iterator = iterator;
+  }
+
+  public CloseableIterator<DataSegment> getIterator()
+  {
+    return iterator;
+  }
+
 }

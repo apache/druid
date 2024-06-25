@@ -23,6 +23,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.guice.ServerTypeConfig;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.loading.DataSegmentPusher;
@@ -34,7 +36,6 @@ import org.apache.druid.segment.loading.StorageLocation;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.TestSegmentUtils;
-import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.junit.Assert;
 import org.junit.Before;
@@ -63,6 +64,8 @@ public class SegmentLoadDropHandlerCacheTest
   private SegmentManager segmentManager;
   private SegmentLoaderConfig loaderConfig;
   private SegmentLocalCacheManager cacheManager;
+  private TestCoordinatorClient coordinatorClient;
+  private ServiceEmitter emitter;
   private ObjectMapper objectMapper;
 
   @Before
@@ -100,7 +103,9 @@ public class SegmentLoadDropHandlerCacheTest
     segmentManager = new SegmentManager(cacheManager);
     segmentAnnouncer = new TestDataSegmentAnnouncer();
     serverAnnouncer = new TestDataServerAnnouncer();
-    EmittingLogger.registerEmitter(new NoopServiceEmitter());
+    coordinatorClient = new TestCoordinatorClient();
+    emitter = new StubServiceEmitter();
+    EmittingLogger.registerEmitter(emitter);
   }
 
   @Test
@@ -122,7 +127,9 @@ public class SegmentLoadDropHandlerCacheTest
         segmentAnnouncer,
         serverAnnouncer,
         segmentManager,
-        new ServerTypeConfig(ServerType.BROKER)
+        new ServerTypeConfig(ServerType.BROKER),
+        coordinatorClient,
+        emitter
     );
 
     loadDropHandler.start();
@@ -140,7 +147,9 @@ public class SegmentLoadDropHandlerCacheTest
         segmentAnnouncer,
         serverAnnouncer,
         segmentManager,
-        new ServerTypeConfig(ServerType.BROKER)
+        new ServerTypeConfig(ServerType.BROKER),
+        coordinatorClient,
+        emitter
     );
 
     loadDropHandler.start();
@@ -171,7 +180,9 @@ public class SegmentLoadDropHandlerCacheTest
         segmentAnnouncer,
         serverAnnouncer,
         segmentManager,
-        new ServerTypeConfig(ServerType.HISTORICAL)
+        new ServerTypeConfig(ServerType.HISTORICAL),
+        coordinatorClient,
+        emitter
     );
 
     // Start the load drop handler
