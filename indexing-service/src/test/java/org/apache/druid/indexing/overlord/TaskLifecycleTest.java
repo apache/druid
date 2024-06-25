@@ -37,8 +37,6 @@ import org.apache.druid.client.cache.MapCache;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.data.input.AbstractInputSource;
-import org.apache.druid.data.input.Firehose;
-import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.InputRowSchema;
@@ -46,7 +44,6 @@ import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputStats;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.NoopInputFormat;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.discovery.DataNodeService;
@@ -133,7 +130,7 @@ import org.apache.druid.segment.loading.NoopDataSegmentArchiver;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.UnifiedIndexerAppenderatorsManager;
-import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
+import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DataSegmentServerAnnouncer;
 import org.apache.druid.server.coordination.ServerType;
@@ -145,9 +142,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
-import org.joda.time.Hours;
 import org.joda.time.Interval;
-import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -216,12 +211,6 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
   };
   private static DateTime now = DateTimes.nowUtc();
 
-  private static final Iterable<InputRow> REALTIME_IDX_TASK_INPUT_ROWS = ImmutableList.of(
-      ir(now.toString("YYYY-MM-dd'T'HH:mm:ss"), "test_dim1", "test_dim2", 1.0f),
-      ir(now.plus(new Period(Hours.ONE)).toString("YYYY-MM-dd'T'HH:mm:ss"), "test_dim1", "test_dim2", 2.0f),
-      ir(now.plus(new Period(Hours.TWO)).toString("YYYY-MM-dd'T'HH:mm:ss"), "test_dim1", "test_dim2", 3.0f)
-  );
-
   private static final Iterable<InputRow> IDX_TASK_INPUT_ROWS = ImmutableList.of(
       ir("2010-01-01T01", "x", "y", 1),
       ir("2010-01-01T01", "x", "z", 1),
@@ -258,7 +247,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
       druidNode.getTlsPort()
   );
   private int pushedSegments;
-  private int announcedSinks;
+  private int announcedAppendableSegments;
   private SegmentHandoffNotifierFactory handoffNotifierFactory;
   private Map<SegmentDescriptor, Pair<Executor, Runnable>> handOffCallbacks;
 
@@ -369,37 +358,6 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     }
   }
 
-  private static class MockFirehoseFactory implements FirehoseFactory
-  {
-    @Override
-    public Firehose connect(InputRowParser parser, File temporaryDirectory)
-    {
-      final Iterator<InputRow> inputRowIterator = REALTIME_IDX_TASK_INPUT_ROWS.iterator();
-
-      return new Firehose()
-      {
-        @Override
-        public boolean hasMore()
-        {
-          return inputRowIterator.hasNext();
-        }
-
-        @Nullable
-        @Override
-        public InputRow nextRow()
-        {
-          return inputRowIterator.next();
-        }
-
-        @Override
-        public void close()
-        {
-
-        }
-      };
-    }
-  }
-
   @Before
   public void setUp() throws Exception
   {
@@ -408,7 +366,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     monitorScheduler = EasyMock.createStrictMock(MonitorScheduler.class);
 
     // initialize variables
-    announcedSinks = 0;
+    announcedAppendableSegments = 0;
     pushedSegments = 0;
     indexSpec = IndexSpec.DEFAULT;
     emitter = newMockEmitter();
@@ -453,7 +411,6 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
       case METADATA_TASK_STORAGE: {
         TestDerbyConnector testDerbyConnector = derbyConnectorRule.getConnector();
         mapper.registerSubtypes(
-            new NamedType(MockFirehoseFactory.class, "mockFirehoseFactory"),
             new NamedType(MockInputSource.class, "mockInputSource"),
             new NamedType(NoopInputFormat.class, "noopInputFormat")
         );
@@ -625,7 +582,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
           @Override
           public void announceSegment(DataSegment segment)
           {
-            announcedSinks++;
+            announcedAppendableSegments++;
           }
 
         },
@@ -729,7 +686,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
                 ),
                 null
             ),
-            new IndexIOConfig(null, new MockInputSource(), new NoopInputFormat(), false, false),
+            new IndexIOConfig(new MockInputSource(), new NoopInputFormat(), false, false),
             new IndexTuningConfig(
                 null,
                 10000,
@@ -814,7 +771,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
                 null,
                 mapper
             ),
-            new IndexIOConfig(null, new MockExceptionInputSource(), new NoopInputFormat(), false, false),
+            new IndexIOConfig(new MockExceptionInputSource(), new NoopInputFormat(), false, false),
             new IndexTuningConfig(
                 null,
                 10000,
@@ -1258,7 +1215,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
                 ),
                 null
             ),
-            new IndexIOConfig(null, new MockInputSource(), new NoopInputFormat(), false, false),
+            new IndexIOConfig(new MockInputSource(), new NoopInputFormat(), false, false),
             new IndexTuningConfig(
                 null,
                 10000,
@@ -1370,7 +1327,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
                 ),
                 null
             ),
-            new IndexIOConfig(null, new MockInputSource(), new NoopInputFormat(), false, false),
+            new IndexIOConfig(new MockInputSource(), new NoopInputFormat(), false, false),
             new IndexTuningConfig(
                 null,
                 10000,

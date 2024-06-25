@@ -1,4 +1,4 @@
--- Kitchen sink
+-- Kitchen appendableSegment
 -- Use all supported functions
 select
  	rank() 				over W,

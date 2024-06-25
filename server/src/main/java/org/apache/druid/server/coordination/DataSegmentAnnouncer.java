@@ -39,8 +39,8 @@ public interface DataSegmentAnnouncer
    * Announces schema associated with all segments for the specified realtime task.
    *
    * @param taskId taskId
-   * @param segmentSchemas absolute schema for all sinks, in case the client requests full sync.
-   * @param segmentSchemasChange schema change for all sinks
+   * @param segmentSchemas absolute schema for all appendable segments, in case the client requests full sync.
+   * @param segmentSchemasChange schema change for all appendable segments
    */
   void announceSegmentSchemas(
       String taskId,

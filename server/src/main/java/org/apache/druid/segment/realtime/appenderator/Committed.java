@@ -31,36 +31,36 @@ public class Committed
 {
   private static final Committed NIL = new Committed(ImmutableMap.of(), null);
 
-  // Map of segment identifierAsString -> number of committed hydrants
-  private final ImmutableMap<String, Integer> hydrants;
+  // Map of segment identifierAsString -> number of committed PartialSegment
+  private final ImmutableMap<String, Integer> partialSegments;
   private final Object metadata;
 
   @JsonCreator
   public Committed(
-      @JsonProperty("hydrants") Map<String, Integer> hydrants,
+      @JsonProperty("hydrants") Map<String, Integer> partialSegments,
       @JsonProperty("metadata") Object metadata
   )
   {
-    this.hydrants = ImmutableMap.copyOf(hydrants);
+    this.partialSegments = ImmutableMap.copyOf(partialSegments);
     this.metadata = metadata;
   }
 
   public static Committed create(
-      Map<SegmentIdWithShardSpec, Integer> hydrants0,
+      Map<SegmentIdWithShardSpec, Integer> newPartialSegments,
       Object metadata
   )
   {
-    final ImmutableMap.Builder<String, Integer> hydrants = ImmutableMap.builder();
-    for (Map.Entry<SegmentIdWithShardSpec, Integer> entry : hydrants0.entrySet()) {
-      hydrants.put(entry.getKey().toString(), entry.getValue());
+    final ImmutableMap.Builder<String, Integer> partialSegments = ImmutableMap.builder();
+    for (Map.Entry<SegmentIdWithShardSpec, Integer> entry : newPartialSegments.entrySet()) {
+      partialSegments.put(entry.getKey().toString(), entry.getValue());
     }
-    return new Committed(hydrants.build(), metadata);
+    return new Committed(partialSegments.build(), metadata);
   }
 
   @JsonProperty
-  public ImmutableMap<String, Integer> getHydrants()
+  public ImmutableMap<String, Integer> getPartialSegments()
   {
-    return hydrants;
+    return partialSegments;
   }
 
   @JsonProperty
@@ -69,25 +69,25 @@ public class Committed
     return metadata;
   }
 
-  public int getCommittedHydrants(final String identifierAsString)
+  public int getCommittedPartialSegments(final String identifierAsString)
   {
-    final Integer committedHydrant = hydrants.get(identifierAsString);
-    return committedHydrant == null ? 0 : committedHydrant;
+    final Integer committedPartialSegment = partialSegments.get(identifierAsString);
+    return committedPartialSegment == null ? 0 : committedPartialSegment;
   }
 
   public Committed without(final String identifierAsString)
   {
-    final Map<String, Integer> newHydrants = new HashMap<>(hydrants);
-    newHydrants.remove(identifierAsString);
-    return new Committed(newHydrants, metadata);
+    final Map<String, Integer> newPartialSegments = new HashMap<>(partialSegments);
+    newPartialSegments.remove(identifierAsString);
+    return new Committed(newPartialSegments, metadata);
   }
 
-  public Committed with(final Map<String, Integer> hydrantsToAdd)
+  public Committed with(final Map<String, Integer> partialSegmentsToAdd)
   {
-    final Map<String, Integer> newHydrants = new HashMap<>();
-    newHydrants.putAll(hydrants);
-    newHydrants.putAll(hydrantsToAdd);
-    return new Committed(newHydrants, metadata);
+    final Map<String, Integer> newPartialSegments = new HashMap<>();
+    newPartialSegments.putAll(partialSegments);
+    newPartialSegments.putAll(partialSegmentsToAdd);
+    return new Committed(newPartialSegments, metadata);
   }
 
   @Override
@@ -100,21 +100,21 @@ public class Committed
       return false;
     }
     Committed committed = (Committed) o;
-    return Objects.equals(hydrants, committed.hydrants) &&
+    return Objects.equals(partialSegments, committed.partialSegments) &&
            Objects.equals(metadata, committed.metadata);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(hydrants, metadata);
+    return Objects.hash(partialSegments, metadata);
   }
 
   @Override
   public String toString()
   {
     return "Committed{" +
-           "hydrants=" + hydrants +
+           "hydrants=" + partialSegments +
            ", metadata=" + metadata +
            '}';
   }

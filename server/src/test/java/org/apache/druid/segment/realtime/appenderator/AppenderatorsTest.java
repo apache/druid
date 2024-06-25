@@ -80,7 +80,7 @@ public class AppenderatorsTest
   }
 
   @Test
-  public void testClosedSegmentsSinksOfflineAppenderator() throws Exception
+  public void testClosedAppendableSegmentsOfflineAppenderator() throws Exception
   {
     try (final AppenderatorTester tester = new AppenderatorTester("CLOSED_SEGMENTS_SINKS")) {
       Assert.assertTrue(tester.appenderator instanceof BatchAppenderator);

@@ -516,7 +516,7 @@ although other technologies are viable alternatives (we initially chose Storm,
 but have since switched to Samza). Samza provides an API to write jobs that run
 over a sequence of tuples and perform operations over those tuples in a
 user-defined way. The input to each job is provided by Kafka, which can also
-act as a sink for the output of the job. Samza jobs are executed in a resource
+act as a appendableSegment for the output of the job. Samza jobs are executed in a resource
 management and task execution framework such as
 YARN\cite{vavilapalli2013apache}. It is beyond the scope of this paper to go
 into the full details of Kafka/YARN/Samza interactions, but more information is

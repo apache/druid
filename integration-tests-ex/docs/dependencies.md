@@ -93,7 +93,7 @@ case: the server. The result is either a huge amount of time fiddling
 to get things right or (as in the original integration tests), we just
 include everything and pretend we are a server.
 
-There is no obvious solution, it is just a massive time sink at
+There is no obvious solution, it is just a massive time appendableSegment at
 present.
 
 ### Druid Modules

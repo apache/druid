@@ -65,7 +65,7 @@ import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
-import org.apache.druid.segment.realtime.sink.Sink;
+import org.apache.druid.segment.realtime.AppendableSegment;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
@@ -84,16 +84,16 @@ import java.util.Map;
  * a single process.
  *
  * This class keeps a map of {@link DatasourceBundle} objects, keyed by datasource name. Each bundle contains:
- * - A per-datasource {@link SinkQuerySegmentWalker} (with an associated per-datasource timeline)
+ * - A per-datasource {@link AppendableSegmentQuerySegmentWalker} (with an associated per-datasource timeline)
  * - A map that associates a taskId with a list of Appenderators created for that task
  *
  * Access to the datasource bundle map and the task->appenderator maps is synchronized. The methods
  * on this class can be called concurrently from multiple task threads. If there are no remaining
  * appenderators for a given datasource, the corresponding bundle will be removed from the bundle map.
  *
- * Appenderators created by this class will use the shared per-datasource SinkQuerySegmentWalkers.
+ * Appenderators created by this class will use the shared per-datasource {@link AppendableSegmentQuerySegmentWalker).
  *
- * The per-datasource SinkQuerySegmentWalkers share a common queryExecutorService.
+ * The per-datasource {@link AppendableSegmentQuerySegmentWalker} share a common queryExecutorService.
  *
  * Each task that requests an Appenderator from this AppenderatorsManager will receive a heap memory limit
  * equal to {@link WorkerConfig#globalIngestionHeapLimitBytes} evenly divided by {@link WorkerConfig#capacity}.
@@ -426,7 +426,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
   @VisibleForTesting
   public class DatasourceBundle
   {
-    private final SinkQuerySegmentWalker walker;
+    private final AppendableSegmentQuerySegmentWalker walker;
     private final Map<String, List<Appenderator>> taskAppenderatorMap;
 
     public DatasourceBundle(
@@ -435,10 +435,10 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
     {
       this.taskAppenderatorMap = new HashMap<>();
 
-      VersionedIntervalTimeline<String, Sink> sinkTimeline = new VersionedIntervalTimeline<>(
+      VersionedIntervalTimeline<String, AppendableSegment> sinkTimeline = new VersionedIntervalTimeline<>(
           String.CASE_INSENSITIVE_ORDER
       );
-      this.walker = new SinkQuerySegmentWalker(
+      this.walker = new AppendableSegmentQuerySegmentWalker(
           dataSource,
           sinkTimeline,
           objectMapper,
@@ -451,7 +451,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
       );
     }
 
-    public SinkQuerySegmentWalker getWalker()
+    public AppendableSegmentQuerySegmentWalker getWalker()
     {
       return walker;
     }

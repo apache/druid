@@ -78,7 +78,7 @@ public class ClosedSegmentsSinksBatchAppenderatorDriverTest extends EasyMockSupp
   );
 
   private SegmentAllocator allocator;
-  private ClosedSegmensSinksBatchAppenderatorTester appenderatorTester;
+  private ClosedSegmentsAppendableSegmentsBatchAppenderatorTester appenderatorTester;
   private BatchAppenderatorDriver driver;
   private DataSegmentKiller dataSegmentKiller;
 
@@ -89,7 +89,7 @@ public class ClosedSegmentsSinksBatchAppenderatorDriverTest extends EasyMockSupp
   @Before
   public void setup()
   {
-    appenderatorTester = new ClosedSegmensSinksBatchAppenderatorTester(MAX_ROWS_IN_MEMORY);
+    appenderatorTester = new ClosedSegmentsAppendableSegmentsBatchAppenderatorTester(MAX_ROWS_IN_MEMORY);
     allocator = new TestSegmentAllocator(DATA_SOURCE, Granularities.HOUR);
     dataSegmentKiller = createStrictMock(DataSegmentKiller.class);
     driver = new BatchAppenderatorDriver(

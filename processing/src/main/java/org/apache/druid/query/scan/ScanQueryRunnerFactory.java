@@ -40,7 +40,7 @@ import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.SegmentDescriptor;
-import org.apache.druid.query.SinkQueryRunners;
+import org.apache.druid.query.AppendableSegmentQueryRunners;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
@@ -142,9 +142,9 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
             for (int i = 0; i < queryRunnersOrdered.size(); i++) {
               intervalsAndRunnersOrdered.add(new Pair<>(intervalsOrdered.get(i), queryRunnersOrdered.get(i)));
             }
-          } else if (queryRunners instanceof SinkQueryRunners) {
-            ((SinkQueryRunners<ScanResultValue>) queryRunners).runnerIntervalMappingIterator()
-                                                              .forEachRemaining(intervalsAndRunnersOrdered::add);
+          } else if (queryRunners instanceof AppendableSegmentQueryRunners) {
+            ((AppendableSegmentQueryRunners<ScanResultValue>) queryRunners).runnerIntervalMappingIterator()
+                                                                           .forEachRemaining(intervalsAndRunnersOrdered::add);
           } else {
             throw new ISE("Number of segment descriptors does not equal number of "
                           + "query runners...something went wrong!");

@@ -22,6 +22,7 @@ package org.apache.druid.segment.realtime.appenderator;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.realtime.AppendableSegment;
 
 import java.util.List;
 import java.util.Map;
@@ -30,7 +31,7 @@ import java.util.Objects;
 /**
  * Encapsulates schema information for multiple segments.
  * <p>
- * Primarily used to announce schema changes for all {@link org.apache.druid.segment.realtime.sink.Sink}
+ * Primarily used to announce schema changes for all {@link AppendableSegment}
  * created by a task in {@link StreamAppenderator}.
  */
 public class SegmentSchemas

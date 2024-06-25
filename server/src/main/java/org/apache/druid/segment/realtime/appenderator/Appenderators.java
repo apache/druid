@@ -74,7 +74,7 @@ public class Appenderators
         dataSegmentPusher,
         objectMapper,
         segmentAnnouncer,
-        new SinkQuerySegmentWalker(
+        new AppendableSegmentQuerySegmentWalker(
             schema.getDataSource(),
             new VersionedIntervalTimeline<>(
                 String.CASE_INSENSITIVE_ORDER

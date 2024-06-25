@@ -125,7 +125,7 @@ public class TaskRealtimeMetricsMonitor extends AbstractMonitor
     emitter.emit(builder.setMetric("ingest/merge/time", metrics.mergeTimeMillis() - previousSegmentGenerationMetrics.mergeTimeMillis()));
     emitter.emit(builder.setMetric("ingest/merge/cpu", metrics.mergeCpuTime() - previousSegmentGenerationMetrics.mergeCpuTime()));
     emitter.emit(builder.setMetric("ingest/handoff/count", metrics.handOffCount() - previousSegmentGenerationMetrics.handOffCount()));
-    emitter.emit(builder.setMetric("ingest/sink/count", metrics.sinkCount()));
+    emitter.emit(builder.setMetric("ingest/sink/count", metrics.appendableSegmentCount()));
 
     long messageGap = metrics.messageGap();
     if (messageGap >= 0) {

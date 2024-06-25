@@ -79,7 +79,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
 
   private final ChangeRequestHistory<DataSegmentChangeRequest> changes = new ChangeRequestHistory<>();
 
-  private final ConcurrentMap<String, SegmentSchemas> taskSinkSchema = new ConcurrentHashMap<>();
+  private final ConcurrentMap<String, SegmentSchemas> taskAppendableSegmentSchema = new ConcurrentHashMap<>();
 
   @Nullable
   private final SegmentZNode dummyZnode;
@@ -321,11 +321,11 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
       SegmentSchemas segmentSchemasChange
   )
   {
-    log.info("Announcing sink schema for task [%s], absolute schema [%s], delta schema [%s].",
+    log.info("Announcing appendable segment schema for task [%s], absolute schema [%s], delta schema [%s].",
              taskId, segmentSchemas, segmentSchemasChange
     );
 
-    taskSinkSchema.put(taskId, segmentSchemas);
+    taskAppendableSegmentSchema.put(taskId, segmentSchemas);
 
     if (segmentSchemasChange != null) {
       changes.addChangeRequest(new SegmentSchemasChangeRequest(segmentSchemasChange));
@@ -336,7 +336,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
   public void removeSegmentSchemasForTask(String taskId)
   {
     log.info("Unannouncing task [%s].", taskId);
-    taskSinkSchema.remove(taskId);
+    taskAppendableSegmentSchema.remove(taskId);
   }
 
   /**
@@ -359,8 +359,8 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
             }
         );
 
-        Iterable<DataSegmentChangeRequest> sinkSchema = Iterables.transform(
-            taskSinkSchema.values(),
+        Iterable<DataSegmentChangeRequest> appendableSegmentSchema = Iterables.transform(
+            taskAppendableSegmentSchema.values(),
             new Function<SegmentSchemas, DataSegmentChangeRequest>()
             {
               @Override
@@ -370,7 +370,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
               }
             }
         );
-        Iterable<DataSegmentChangeRequest> changeRequestIterables = Iterables.concat(segments, sinkSchema);
+        Iterable<DataSegmentChangeRequest> changeRequestIterables = Iterables.concat(segments, appendableSegmentSchema);
         SettableFuture<ChangeRequestsSnapshot<DataSegmentChangeRequest>> future = SettableFuture.create();
         future.set(ChangeRequestsSnapshot.success(changes.getLastCounter(), Lists.newArrayList(changeRequestIterables)));
         return future;

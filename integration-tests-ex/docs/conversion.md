@@ -112,7 +112,7 @@ The `docker-tests/pom.xml` file includes Maven dependencies for the most
 common Druid modules, which transitiviely include the third-party modules
 which the Druid modules reference. You test sub-project may need addition
 dependencies. To find them, review `integration-tests/pom.xml`. Careful,
-however, as that file is a bit of a "kitchen sink" that includes every
+however, as that file is a bit of a "kitchen appendableSegment" that includes every
 possible dependency, even those already available transitively.
 
 If you feel the dependency is one used by multiple tests, go ahead and
