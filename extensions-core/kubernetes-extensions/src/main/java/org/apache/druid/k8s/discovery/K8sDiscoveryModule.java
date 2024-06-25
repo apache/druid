@@ -144,7 +144,6 @@ public class K8sDiscoveryModule implements DruidModule
           druidNode,
           lockResourceName,
           lockResourceNamespace,
-          discoveryConfig,
           new DefaultK8sLeaderElectorFactory(k8sApiClientProvider.get(), discoveryConfig)
       );
     }

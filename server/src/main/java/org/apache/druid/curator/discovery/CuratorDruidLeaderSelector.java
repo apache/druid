@@ -48,7 +48,7 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
 
   private final LifecycleLock lifecycleLock = new LifecycleLock();
 
-  private final DruidNode self;
+  private final String selfId;
   private final CuratorFramework curator;
   private final String latchPath;
 
@@ -63,7 +63,7 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
   public CuratorDruidLeaderSelector(CuratorFramework curator, @Self DruidNode self, String latchPath)
   {
     this.curator = curator;
-    this.self = self;
+    this.selfId = self.getServiceScheme() + "://" + self.getHostAndPortToUse();
     this.latchPath = latchPath;
 
     // Creating a LeaderLatch here allows us to query for the current leader. We will not be considered for leadership
@@ -74,7 +74,7 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
 
   private LeaderLatch createNewLeaderLatch()
   {
-    return new LeaderLatch(curator, latchPath, self.getServiceScheme() + "://" + self.getHostAndPortToUse());
+    return new LeaderLatch(curator, latchPath, selfId);
   }
 
   private LeaderLatch createNewLeaderLatchWithListener()
@@ -98,13 +98,13 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
                 return;
               }
 
-              leader = true;
               term++;
               listener.becomeLeader();
+              leader = true;
             }
             catch (Exception ex) {
-              log.makeAlert(ex, "listener becomeLeader() failed. Unable to become leader").emit();
-
+              leader = false;
+              listener.stopBeingLeader();
               recreateLeaderLatch();
             }
           }
@@ -141,7 +141,11 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
       final LeaderLatch latch = leaderLatch.get();
 
       Participant participant = latch.getLeader();
-      if (participant.isLeader()) {
+      if (!leader && selfId.equals(participant.getId())) {
+        // Handle race condition where listener.becomeLeader() failed
+        // and getCurrentLeader() is called before leaderLatch has been recreated
+        return null;
+      } else if (participant.isLeader()) {
         return participant.getId();
       }
 
@@ -213,7 +217,6 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
         e -> log.warn("Could not close old leader latch; continuing with new one anyway.")
     );
 
-    leader = false;
     try {
       //Small delay before starting the latch so that others waiting are chosen to become leader.
       Thread.sleep(ThreadLocalRandom.current().nextInt(1000, 5000));
