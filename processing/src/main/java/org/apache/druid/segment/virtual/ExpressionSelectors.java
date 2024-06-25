@@ -483,7 +483,7 @@ public class ExpressionSelectors
       return () -> {
         final Object val = selector.getObject();
         if (val instanceof List) {
-          NonnullPair<ExpressionType, Object[]> coerced = ExprEval.coerceListToArray((List) val, homogenizeMultiValue);
+          NonnullPair<ExpressionType, Object[]> coerced = ExprEval.coerceListToArray((List<?>) val, homogenizeMultiValue);
           if (coerced == null) {
             return null;
           }
@@ -492,7 +492,7 @@ public class ExpressionSelectors
           return val;
         }
       };
-    } else if (clazz.isAssignableFrom(List.class)) {
+    } else if (clazz.isAssignableFrom(Object[].class)) {
       return () -> {
         final Object val = selector.getObject();
         if (val != null) {
@@ -500,6 +500,18 @@ public class ExpressionSelectors
               Arrays.asList((Object[]) val),
               homogenizeMultiValue
           );
+          if (coerced == null) {
+            return null;
+          }
+          return coerced.rhs;
+        }
+        return null;
+      };
+    } else if (clazz.isAssignableFrom(List.class)) {
+      return () -> {
+        final Object val = selector.getObject();
+        if (val != null) {
+          NonnullPair<ExpressionType, Object[]> coerced = ExprEval.coerceListToArray((List<?>) val, homogenizeMultiValue);
           if (coerced == null) {
             return null;
           }
