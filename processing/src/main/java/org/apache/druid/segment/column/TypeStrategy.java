@@ -193,6 +193,9 @@ public interface TypeStrategy<T> extends Comparator<Object>, Hash.Strategy<T>
    * c. {@link #compare(Object, Object)} must be consistent with equals. Apart from abiding by the definition of
    *    {@link Comparator#compare}, it must not return 0 for two objects that are not equals, and converse must also hold,
    *    i.e. if the value returned by compare is not zero, then the arguments must not be equal.
+   * <p>
+   * d. {@link #getClazz()} should return the Java class for the dimension represented by the type. This will be used by the
+   *    mapper to deserialize the object during tasks like broker-historical interaction and spilling to the disk.
    */
   default boolean groupable()
   {
@@ -215,5 +218,13 @@ public interface TypeStrategy<T> extends Comparator<Object>, Hash.Strategy<T>
   default boolean equals(T a, T b)
   {
     throw DruidException.defensive("Not implemented. Check groupable() first");
+  }
+
+  /**
+   * @see #groupable()
+   */
+  default Class<?> getClazz()
+  {
+    throw DruidException.defensive("Not implemented. It is only implemented for complex dimensions which are groupable()");
   }
 }

@@ -20,6 +20,7 @@
 package org.apache.druid.client.coordinator;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.client.BootstrapSegmentsResponse;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.rpc.ServiceRetryPolicy;
@@ -57,6 +58,12 @@ public interface CoordinatorClient
    * Retrieves detailed metadata information for the specified data sources, which includes {@code RowSignature}.
    */
   ListenableFuture<List<DataSourceInformation>> fetchDataSourceInformation(Set<String> datasources);
+
+  /**
+   * Fetch bootstrap segments from the coordinator. The results must be streamed back to the caller as the
+   * result set can be large.
+   */
+  ListenableFuture<BootstrapSegmentsResponse> fetchBootstrapSegments();
 
   /**
    * Returns a new instance backed by a ServiceClient which follows the provided retryPolicy

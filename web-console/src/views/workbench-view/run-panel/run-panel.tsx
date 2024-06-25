@@ -535,7 +535,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
       )}
       {editContextDialogOpen && (
         <EditContextDialog
-          queryContext={queryContext}
+          initQueryContext={queryContext}
           onQueryContextChange={changeQueryContext}
           onClose={() => {
             setEditContextDialogOpen(false);

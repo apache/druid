@@ -392,6 +392,7 @@ public class ForkingTaskRunnerTest
                                + "  \"firehose\" : null,\n"
                                + "  \"context\" : {\n"
                                + "    \"druid.indexer.runner.javaOptsArray\" : [ \"-Xmx10g\", \"-Xms10g\" ],\n"
+                               + "    \"druid.indexer.fork.property.druid.processing.numThreads\" : 4,\n"
                                + "    \"druid.indexer.runner.javaOpts\" : \"-Xmx1g -Xms1g\"\n"
                                + "  }\n"
                                + "}";

@@ -621,6 +621,14 @@ public class QueryContext
     );
   }
 
+  public boolean isCatalogValidationEnabled()
+  {
+    return getBoolean(
+        QueryContexts.CATALOG_VALIDATION_ENABLED,
+        QueryContexts.DEFAULT_CATALOG_VALIDATION_ENABLED
+    );
+  }
+
   public QueryResourceId getQueryResourceId()
   {
     return new QueryResourceId(getString(QueryContexts.QUERY_RESOURCE_ID));
