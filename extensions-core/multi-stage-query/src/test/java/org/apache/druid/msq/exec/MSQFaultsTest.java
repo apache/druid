@@ -41,6 +41,7 @@ import org.apache.druid.msq.indexing.error.TooManyClusteredByColumnsFault;
 import org.apache.druid.msq.indexing.error.TooManyColumnsFault;
 import org.apache.druid.msq.indexing.error.TooManyInputFilesFault;
 import org.apache.druid.msq.indexing.error.TooManyPartitionsFault;
+import org.apache.druid.msq.indexing.error.TooManySegmentsInTimeChunkFault;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestTaskActionClient;
 import org.apache.druid.segment.column.ColumnType;
@@ -50,6 +51,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.hamcrest.CoreMatchers;
+import org.joda.time.DateTime;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatcher;
@@ -312,6 +314,41 @@ public class MSQFaultsTest extends MSQTestBase
                      .setExpectedRowSignature(rowSignature)
                      .setQueryContext(context)
                      .setExpectedMSQFault(new TooManyPartitionsFault(25000))
+                     .verifyResults();
+
+  }
+
+  @Test
+  public void testInsertWithTooManySegmentsInTimeChunk() throws IOException
+  {
+    final int rowsPerSegment = 10;
+    final int numRowsInInputFile = 50;
+    final Map<String, Object> context = ImmutableMap.<String, Object>builder()
+                                              .putAll(DEFAULT_MSQ_CONTEXT)
+                                              .put("maxNumSegments", 1)
+                                              .put("rowsPerSegment", rowsPerSegment)
+                                              .build();
+
+
+    final File file = createNdJsonFile(newTempFile("ndjson30k"), numRowsInInputFile, 1);
+    final String filePathAsJson = queryFramework().queryJsonMapper().writeValueAsString(file.getAbsolutePath());
+
+    testIngestQuery().setSql(
+                         "INSERT INTO foo1 "
+                         + " SELECT FLOOR(TIME_PARSE(\"timestamp\") to day) AS __time"
+                         + " FROM TABLE(\n"
+                         + "  EXTERN(\n"
+                         + "    '{ \"files\": [" + filePathAsJson + "],\"type\":\"local\"}',\n"
+                         + "    '{\"type\": \"json\"}',\n"
+                         + "    '[{\"name\": \"timestamp\",\"type\":\"string\"}]'\n"
+                         + "  )\n"
+                         + " ) PARTITIONED BY ALL")
+                     .setExpectedDataSource("foo1")
+                     .setExpectedRowSignature(RowSignature.builder().add("__time", ColumnType.LONG).build())
+                     .setQueryContext(context)
+                     .setExpectedMSQFault(new TooManySegmentsInTimeChunkFault(
+                         DateTime.parse("1970-01-01"), numRowsInInputFile/rowsPerSegment, 1)
+                     )
                      .verifyResults();
 
   }

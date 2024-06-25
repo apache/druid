@@ -26,24 +26,24 @@ import org.joda.time.DateTime;
 
 import java.util.Objects;
 
-@JsonTypeName(TooManySegmentsFault.CODE)
-public class TooManySegmentsFault extends BaseMSQFault
+@JsonTypeName(TooManySegmentsInTimeChunkFault.CODE)
+public class TooManySegmentsInTimeChunkFault extends BaseMSQFault
 {
-  public static final String CODE = "TooManySegments";
+  public static final String CODE = "TooManySegmentsInTimeChunk";
 
   private final DateTime timeChunk;
   private final int numSegments;
   private final int maxNumSegments;
 
   @JsonCreator
-  public TooManySegmentsFault(
+  public TooManySegmentsInTimeChunkFault(
       @JsonProperty("timeChunk") final DateTime timeChunk,
       @JsonProperty("numSegments") final int numSegments,
       @JsonProperty("maxNumSegments") final int maxNumSegments
   )
   {
     super(CODE, "Too many segments [%,d] generated in time chunk[%s] (maxNumSegments = [%,d]). "
-                + "Please increase maxNumSegments in the query context or use a finer PARTITIONED BY granularity.",
+                + "Please set maxNumSegments to a higher value in the query context or use a finer PARTITIONED BY granularity.",
           numSegments, timeChunk, maxNumSegments);
     this.timeChunk = timeChunk;
     this.numSegments = numSegments;
@@ -80,7 +80,7 @@ public class TooManySegmentsFault extends BaseMSQFault
     if (!super.equals(o)) {
       return false;
     }
-    TooManySegmentsFault that = (TooManySegmentsFault) o;
+    TooManySegmentsInTimeChunkFault that = (TooManySegmentsInTimeChunkFault) o;
     return numSegments == that.numSegments
            && maxNumSegments == that.maxNumSegments
            && Objects.equals(timeChunk, that.timeChunk);

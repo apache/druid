@@ -27,6 +27,7 @@ import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.sql.calcite.planner.JoinAlgorithm;
+import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -84,6 +85,7 @@ public class MSQFaultSerdeTest
     assertFaultSerde(new TooManyInputFilesFault(15, 10, 5));
     assertFaultSerde(new TooManyPartitionsFault(10));
     assertFaultSerde(new TooManyRowsWithSameKeyFault(Arrays.asList("foo", 123), 1, 2));
+    assertFaultSerde(new TooManySegmentsInTimeChunkFault(DateTime.now(), 10, 1));
     assertFaultSerde(new TooManyWarningsFault(10, "the error"));
     assertFaultSerde(new TooManyWorkersFault(10, 5));
     assertFaultSerde(new TooManyAttemptsForWorker(2, "taskId", 1, "rootError"));

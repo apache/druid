@@ -119,7 +119,7 @@ import org.apache.druid.msq.indexing.error.MSQFault;
 import org.apache.druid.msq.indexing.error.MSQWarningReportLimiterPublisher;
 import org.apache.druid.msq.indexing.error.QueryNotSupportedFault;
 import org.apache.druid.msq.indexing.error.TooManyBucketsFault;
-import org.apache.druid.msq.indexing.error.TooManySegmentsFault;
+import org.apache.druid.msq.indexing.error.TooManySegmentsInTimeChunkFault;
 import org.apache.druid.msq.indexing.error.TooManyWarningsFault;
 import org.apache.druid.msq.indexing.error.UnknownFault;
 import org.apache.druid.msq.indexing.error.WorkerRpcFailedFault;
@@ -1035,21 +1035,21 @@ public class ControllerImpl implements Controller
                         .add(Pair.of(i, partitionBoundary));
     }
 
-    for (final Map.Entry<DateTime, List<Pair<Integer, ClusterByPartition>>> bucketEntry : partitionsByBucket.entrySet()) {
-      validateNumSegmentsInTimeChunkOrThrow(bucketEntry.getKey(), bucketEntry.getValue().size());
-    }
+    validateNumSegmentsInTimeChunkOrThrow(partitionsByBucket);
 
     return retVal;
   }
 
-  private void validateNumSegmentsInTimeChunkOrThrow(final DateTime timeChunk, final int numSegmentsInTimeChunk)
+  private void validateNumSegmentsInTimeChunkOrThrow(final Map<DateTime, List<Pair<Integer, ClusterByPartition>>> partitionsByBucket)
   {
     final int maxNumSegments = querySpec.getTuningConfig().getMaxNumSegments();
-    if (numSegmentsInTimeChunk > maxNumSegments) {
-      throw new MSQException(new TooManySegmentsFault(timeChunk, numSegmentsInTimeChunk, maxNumSegments));
+    for (final Map.Entry<DateTime, List<Pair<Integer, ClusterByPartition>>> bucketEntry : partitionsByBucket.entrySet()) {
+      final int numSegmentsInTimeChunk = bucketEntry.getValue().size();
+      if (numSegmentsInTimeChunk > maxNumSegments) {
+        throw new MSQException(new TooManySegmentsInTimeChunkFault(bucketEntry.getKey(), numSegmentsInTimeChunk, maxNumSegments));
+      }
     }
   }
-
 
   /**
    * Used by {@link #generateSegmentIdsWithShardSpecs}.
@@ -1113,8 +1113,6 @@ public class ControllerImpl implements Controller
 
       final List<Pair<Integer, ClusterByPartition>> ranges = bucketEntry.getValue();
 
-      validateNumSegmentsInTimeChunkOrThrow(bucketEntry.getKey(), bucketEntry.getValue().size());
-
       String version = null;
 
       final List<TaskLock> locks = context.taskActionClient().submit(new LockListAction());
@@ -1148,6 +1146,8 @@ public class ControllerImpl implements Controller
         retVal[partitionNumber] = new SegmentIdWithShardSpec(destination.getDataSource(), interval, version, shardSpec);
       }
     }
+
+    validateNumSegmentsInTimeChunkOrThrow(partitionsByBucket);
 
     return Arrays.asList(retVal);
   }
