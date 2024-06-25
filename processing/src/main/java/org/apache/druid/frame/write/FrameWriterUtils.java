@@ -21,7 +21,6 @@ package org.apache.druid.frame.write;
 
 import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.java.util.common.IAE;
@@ -242,12 +241,36 @@ public class FrameWriterUtils
     }
   }
 
+  public static void copyByteBufferToMemoryAllowingNullBytes(
+      final ByteBuffer src,
+      final WritableMemory dst,
+      final long dstPosition,
+      final int len
+  )
+  {
+    copyByteBufferToMemory(src, dst, dstPosition, len, true, false);
+  }
+
+  public static void copyByteBufferToMemoryDisallowingNullBytes(
+      final ByteBuffer src,
+      final WritableMemory dst,
+      final long dstPosition,
+      final int len,
+      final boolean removeNullBytes
+  )
+  {
+    copyByteBufferToMemory(src, dst, dstPosition, len, false, removeNullBytes);
+  }
+
   /**
    * Copies "len" bytes from {@code src.position()} to "dstPosition" in "memory". Does not update the position of src.
-   *
-   * @throws InvalidNullByteException if "allowNullBytes" is false and a null byte is encountered
+   * <p>
+   * Whenever "allowNullBytes" is true, "removeNullBytes" must be false. Use the methods {@link #copyByteBufferToMemoryAllowingNullBytes}
+   * and {@link #copyByteBufferToMemoryDisallowingNullBytes} to copy between the memory
+   * <p>
+   * @throws InvalidNullByteException if "allowNullBytes" and "removeNullBytes" is false and a null byte is encountered
    */
-  public static void copyByteBufferToMemory(
+  private static void copyByteBufferToMemory(
       final ByteBuffer src,
       final WritableMemory dst,
       final long dstPosition,
@@ -256,9 +279,6 @@ public class FrameWriterUtils
       final boolean removeNullBytes
   )
   {
-    if (allowNullBytes && removeNullBytes) {
-      throw DruidException.defensive("Cannot allow null bytes and remove them at the same time");
-    }
     if (src.remaining() < len) {
       throw new ISE("Insufficient source space available");
     }

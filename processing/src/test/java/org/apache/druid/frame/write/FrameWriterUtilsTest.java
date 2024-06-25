@@ -20,7 +20,6 @@
 package org.apache.druid.frame.write;
 
 import org.apache.datasketches.memory.WritableMemory;
-import org.apache.druid.error.DruidException;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -37,7 +36,7 @@ public class FrameWriterUtilsTest
   public void test_copyByteBufferToMemory_withAllowNullBytesOnArrayBackedBuffer()
   {
     int originalPosition = INPUT_BYTE_BUFFER.position();
-    FrameWriterUtils.copyByteBufferToMemory(INPUT_BYTE_BUFFER, WRITABLE_MEMORY, 0, 4, true, false);
+    FrameWriterUtils.copyByteBufferToMemoryAllowingNullBytes(INPUT_BYTE_BUFFER, WRITABLE_MEMORY, 0, 4);
     byte[] outputArray = new byte[4];
     WRITABLE_MEMORY.getByteArray(0, outputArray, 0, 4);
     Assert.assertArrayEquals(INPUT_BYTE_ARRAY, outputArray);
@@ -51,29 +50,18 @@ public class FrameWriterUtilsTest
     ByteBuffer inputBuffer = ByteBuffer.allocateDirect(10);
     inputBuffer.put(INPUT_BYTE_ARRAY, 0, 4);
     inputBuffer.rewind();
-    FrameWriterUtils.copyByteBufferToMemory(inputBuffer, WRITABLE_MEMORY, 0, 4, true, false);
+    FrameWriterUtils.copyByteBufferToMemoryAllowingNullBytes(inputBuffer, WRITABLE_MEMORY, 0, 4);
     byte[] outputArray = new byte[4];
     WRITABLE_MEMORY.getByteArray(0, outputArray, 0, 4);
     Assert.assertArrayEquals(INPUT_BYTE_ARRAY, outputArray);
     Assert.assertEquals(originalPosition, INPUT_BYTE_BUFFER.position());
-
-  }
-
-  @Test
-  public void test_copyByteBufferToMemory_withAllowNullBytesAndRemoveNullBytes()
-  {
-    Assert.assertThrows(
-        DruidException.class,
-        () ->
-            FrameWriterUtils.copyByteBufferToMemory(INPUT_BYTE_BUFFER, WRITABLE_MEMORY, 0, 4, true, true)
-    );
   }
 
   @Test
   public void test_copyByteBufferToMemory_withRemoveNullBytes()
   {
     int originalPosition = INPUT_BYTE_BUFFER.position();
-    FrameWriterUtils.copyByteBufferToMemory(INPUT_BYTE_BUFFER, WRITABLE_MEMORY, 0, 4, false, true);
+    FrameWriterUtils.copyByteBufferToMemoryDisallowingNullBytes(INPUT_BYTE_BUFFER, WRITABLE_MEMORY, 0, 4, true);
     byte[] outputArray = new byte[3];
     WRITABLE_MEMORY.getByteArray(0, outputArray, 0, 3);
     Assert.assertArrayEquals(new byte[]{0x0A, (byte) 0xA4, 0x53}, outputArray);
@@ -85,7 +73,13 @@ public class FrameWriterUtilsTest
   {
     Assert.assertThrows(
         InvalidNullByteException.class,
-        () -> FrameWriterUtils.copyByteBufferToMemory(INPUT_BYTE_BUFFER, WRITABLE_MEMORY, 0, 4, false, false)
+        () -> FrameWriterUtils.copyByteBufferToMemoryDisallowingNullBytes(
+            INPUT_BYTE_BUFFER,
+            WRITABLE_MEMORY,
+            0,
+            4,
+            false
+        )
     );
   }
 }
