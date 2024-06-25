@@ -1042,7 +1042,11 @@ public class ControllerImpl implements Controller
 
   private void validateNumSegmentsInTimeChunkOrThrow(final Map<DateTime, List<Pair<Integer, ClusterByPartition>>> partitionsByBucket)
   {
-    final int maxNumSegments = querySpec.getTuningConfig().getMaxNumSegments();
+    final Integer maxNumSegments = querySpec.getTuningConfig().getMaxNumSegments();
+    if (maxNumSegments == null) {
+      // Return early because a null value indicates no maximum, i.e., a time chunk can have any number of segments.
+      return;
+    }
     for (final Map.Entry<DateTime, List<Pair<Integer, ClusterByPartition>>> bucketEntry : partitionsByBucket.entrySet()) {
       final int numSegmentsInTimeChunk = bucketEntry.getValue().size();
       if (numSegmentsInTimeChunk > maxNumSegments) {

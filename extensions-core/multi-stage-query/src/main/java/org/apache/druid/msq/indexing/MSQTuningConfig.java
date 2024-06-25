@@ -43,12 +43,6 @@ public class MSQTuningConfig
   private static final int DEFAULT_MAX_ROWS_IN_MEMORY = 100000;
 
   /**
-   * The default maximum number of segments per time chunk. By default, this number allows a time chunk to have
-   * an unbounded number of segments.
-   */
-  private static final int DEFAULT_MAX_NUM_SEGMENTS_IN_TIME_CHUNK = Integer.MAX_VALUE;
-
-  /**
    * One worker task.
    */
   private static final int DEFAULT_MAX_NUM_TASKS = 1;
@@ -138,9 +132,10 @@ public class MSQTuningConfig
     return rowsPerSegment != null ? rowsPerSegment : PartitionsSpec.DEFAULT_MAX_ROWS_PER_SEGMENT;
   }
 
-  public int getMaxNumSegments()
+  @Nullable
+  public Integer getMaxNumSegments()
   {
-    return maxNumSegments != null ? maxNumSegments : DEFAULT_MAX_NUM_SEGMENTS_IN_TIME_CHUNK;
+    return maxNumSegments;
   }
 
   public IndexSpec getIndexSpec()

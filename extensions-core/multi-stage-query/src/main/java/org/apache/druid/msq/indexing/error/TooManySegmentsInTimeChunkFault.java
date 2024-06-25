@@ -48,8 +48,8 @@ public class TooManySegmentsInTimeChunkFault extends BaseMSQFault
         "Too many segments generated in time chunk[%s] (requested = [%,d], maximum = [%,d]). "
         + " Please try breaking up your query or use a finer PARTITIONED BY granularity."
         + " Alternatively, you can change the maximum using the query context parameter[%s].",
-        numSegments,
         timeChunk,
+        numSegments,
         maxNumSegments,
         MultiStageQueryContext.CTX_MAX_NUM_SEGMENTS
     );
