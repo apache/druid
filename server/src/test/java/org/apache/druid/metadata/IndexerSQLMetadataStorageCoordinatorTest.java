@@ -593,7 +593,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     Assert.assertEquals(
         SegmentPublishResult.fail(
             InvalidInput.exception(
-                "The new start metadata state[ObjectMetadata{theObject={foo=bar}}] is ahead of the last commited"
+                "The new start metadata state[ObjectMetadata{theObject={foo=bar}}] is ahead of the last committed"
                 + " end state[null]. Try resetting the supervisor."
             ).toString()),
         result1
