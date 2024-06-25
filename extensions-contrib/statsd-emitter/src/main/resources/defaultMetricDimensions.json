@@ -65,11 +65,11 @@
   "ingest/kinesis/avgLag/time" : { "dimensions" : ["dataSource", "stream"], "type" : "gauge" },
   "ingest/kinesis/partitionLag/time" : { "dimensions" : ["dataSource", "stream", "partition"], "type" : "gauge" },
 
-  "task/success/count" : { "dimensions" : ["dataSource"], "type" : "count" },
-  "task/failed/count" : { "dimensions" : ["dataSource"], "type" : "count" },
-  "task/running/count" : { "dimensions" : ["dataSource"], "type" : "gauge" },
-  "task/pending/count" : { "dimensions" : ["dataSource"], "type" : "gauge" },
-  "task/waiting/count" : { "dimensions" : ["dataSource"], "type" : "gauge" },
+  "task/success/count" : { "dimensions" : ["dataSource", "taskType"], "type" : "count" },
+  "task/failed/count" : { "dimensions" : ["dataSource", "taskType"], "type" : "count" },
+  "task/running/count" : { "dimensions" : ["dataSource", "taskType"], "type" : "gauge" },
+  "task/pending/count" : { "dimensions" : ["dataSource", "taskType"], "type" : "gauge" },
+  "task/waiting/count" : { "dimensions" : ["dataSource", "taskType"], "type" : "gauge" },
 
   "worker/task/assigned/count" : { "dimensions" : ["dataSource"], "type" : "count" },
   "worker/task/running/count" : { "dimensions" : ["dataSource"], "type" : "count" },
