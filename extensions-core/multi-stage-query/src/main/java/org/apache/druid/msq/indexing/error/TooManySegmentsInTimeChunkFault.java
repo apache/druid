@@ -22,6 +22,7 @@ package org.apache.druid.msq.indexing.error;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.joda.time.DateTime;
 
 import java.util.Objects;
@@ -42,9 +43,16 @@ public class TooManySegmentsInTimeChunkFault extends BaseMSQFault
       @JsonProperty("maxNumSegments") final int maxNumSegments
   )
   {
-    super(CODE, "Too many segments [%,d] generated in time chunk[%s] (maxNumSegments = [%,d]). "
-                + "Please set maxNumSegments to a higher value in the query context or use a finer PARTITIONED BY granularity.",
-          numSegments, timeChunk, maxNumSegments);
+    super(
+        CODE,
+        "Too many segments generated in time chunk[%s] (requested = [%,d], maximum = [%,d]). "
+        + " Please try breaking up your query or use a finer PARTITIONED BY granularity."
+        + " Alternatively, you can change the maximum using the query context parameter[%s].",
+        numSegments,
+        timeChunk,
+        maxNumSegments,
+        MultiStageQueryContext.CTX_MAX_NUM_SEGMENTS
+    );
     this.timeChunk = timeChunk;
     this.numSegments = numSegments;
     this.maxNumSegments = maxNumSegments;
