@@ -3257,7 +3257,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   }
 
   @Test
-  public void testRetrieveUnusedSegmentsForExactIntervalAndVersion() throws Exception
+  public void testRetrieveUnusedSegmentsForExactIntervalAndVersion()
   {
     DataSegment unusedForDifferentVersion = createSegment(
         Intervals.of("2024/2025"),
