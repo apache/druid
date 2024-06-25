@@ -1289,7 +1289,6 @@ public class MSQTestBase extends BaseCalciteQueryTest
                                                                         return lists.contains(Arrays.asList(row));
                                                                       })
                                                                       .collect(Collectors.toList());
-            // Checking if the row belongs to the correct segment interval
             if (diskSegmentList.size() != 1) {
               throw new IllegalStateException("Single key in multiple partitions");
             }
