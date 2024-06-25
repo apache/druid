@@ -347,7 +347,7 @@ public class MSQFaultsTest extends MSQTestBase
                      .setExpectedRowSignature(RowSignature.builder().add("__time", ColumnType.LONG).build())
                      .setQueryContext(context)
                      .setExpectedMSQFault(new TooManySegmentsInTimeChunkFault(
-                         DateTime.parse("1970-01-01"), numRowsInInputFile/rowsPerSegment, 1)
+                         DateTime.parse("1970-01-01"), numRowsInInputFile / rowsPerSegment, 1)
                      )
                      .verifyResults();
 
