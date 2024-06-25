@@ -21,6 +21,8 @@ package org.apache.druid.query.groupby;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonToken;
+import com.fasterxml.jackson.core.ObjectCodec;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
@@ -31,7 +33,6 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
-import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import org.apache.druid.data.input.Row;
@@ -72,7 +73,10 @@ import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionHandlerUtils;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.NullableTypeStrategy;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.ValueType;
 import org.joda.time.DateTime;
 
 import java.io.Closeable;
@@ -102,7 +106,6 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
   };
 
   private final GroupingEngine groupingEngine;
-  private final GroupByQueryConfig queryConfig;
   private final GroupByQueryMetricsFactory queryMetricsFactory;
   private final GroupByResourcesReservationPool groupByResourcesReservationPool;
 
@@ -114,7 +117,6 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
   {
     this(
         groupingEngine,
-        GroupByQueryConfig::new,
         DefaultGroupByQueryMetricsFactory.instance(),
         groupByResourcesReservationPool
     );
@@ -123,13 +125,11 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
   @Inject
   public GroupByQueryQueryToolChest(
       GroupingEngine groupingEngine,
-      Supplier<GroupByQueryConfig> queryConfigSupplier,
       GroupByQueryMetricsFactory queryMetricsFactory,
       @Merging GroupByResourcesReservationPool groupByResourcesReservationPool
   )
   {
     this.groupingEngine = groupingEngine;
-    this.queryConfig = queryConfigSupplier.get();
     this.queryMetricsFactory = queryMetricsFactory;
     this.groupByResourcesReservationPool = groupByResourcesReservationPool;
   }
@@ -450,12 +450,6 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
   {
     final boolean resultAsArray = query.context().getBoolean(GroupByQueryConfig.CTX_KEY_ARRAY_RESULT_ROWS, false);
 
-    if (resultAsArray && !queryConfig.isIntermediateResultAsMapCompat()) {
-      // We can assume ResultRow are serialized and deserialized as arrays. No need for special decoration,
-      // and we can save the overhead of making a copy of the ObjectMapper.
-      return objectMapper;
-    }
-
     // Serializer that writes array- or map-based rows as appropriate, based on the "resultAsArray" setting.
     final JsonSerializer<ResultRow> serializer = new JsonSerializer<ResultRow>()
     {
@@ -477,16 +471,83 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
     // Deserializer that can deserialize either array- or map-based rows.
     final JsonDeserializer<ResultRow> deserializer = new JsonDeserializer<ResultRow>()
     {
+      final Class<?>[] dimensionClasses = createDimensionClasses();
+      boolean containsComplexDimensions = query.getDimensions()
+                                               .stream()
+                                               .anyMatch(
+                                                   dimensionSpec -> dimensionSpec.getOutputType().is(ValueType.COMPLEX)
+                                               );
+
       @Override
       public ResultRow deserialize(final JsonParser jp, final DeserializationContext ctxt) throws IOException
       {
         if (jp.isExpectedStartObjectToken()) {
           final Row row = jp.readValueAs(Row.class);
-          return ResultRow.fromLegacyRow(row, query);
+          final ResultRow resultRow = ResultRow.fromLegacyRow(row, query);
+          if (containsComplexDimensions) {
+            final List<DimensionSpec> queryDimensions = query.getDimensions();
+            for (int i = 0; i < queryDimensions.size(); ++i) {
+              if (queryDimensions.get(i).getOutputType().is(ValueType.COMPLEX)) {
+                final int dimensionIndexInResultRow = query.getResultRowDimensionStart() + i;
+                resultRow.set(
+                    dimensionIndexInResultRow,
+                    objectMapper.convertValue(
+                        resultRow.get(dimensionIndexInResultRow),
+                        dimensionClasses[i]
+                    )
+                );
+              }
+            }
+          }
+          return resultRow;
         } else {
-          return ResultRow.of(jp.readValueAs(Object[].class));
+          Object[] objectArray = new Object[query.getResultRowSizeWithPostAggregators()];
+
+          if (!jp.isExpectedStartArrayToken()) {
+            throw DruidException.defensive("Expected start token, received [%s]", jp.currentToken());
+          }
+
+          ObjectCodec codec = jp.getCodec();
+
+          jp.nextToken();
+
+          int numObjects = 0;
+          while (jp.currentToken() != JsonToken.END_ARRAY) {
+            if (numObjects >= query.getResultRowDimensionStart() && numObjects < query.getResultRowAggregatorStart()) {
+              objectArray[numObjects] = codec.readValue(jp, dimensionClasses[numObjects - query.getResultRowDimensionStart()]);
+            } else {
+              objectArray[numObjects] = codec.readValue(jp, Object.class);
+            }
+            jp.nextToken();
+            ++numObjects;
+          }
+          return ResultRow.of(objectArray);
         }
       }
+
+      private Class<?>[] createDimensionClasses()
+      {
+        final List<DimensionSpec> queryDimensions = query.getDimensions();
+        final Class<?>[] classes = new Class[queryDimensions.size()];
+        for (int i = 0; i < queryDimensions.size(); ++i) {
+          final ColumnType dimensionOutputType = queryDimensions.get(i).getOutputType();
+          if (dimensionOutputType.is(ValueType.COMPLEX)) {
+            NullableTypeStrategy nullableTypeStrategy = dimensionOutputType.getNullableStrategy();
+            if (!nullableTypeStrategy.groupable()) {
+              throw DruidException.defensive(
+                  "Ungroupable dimension [%s] with type [%s] found in the query.",
+                  queryDimensions.get(i).getDimension(),
+                  dimensionOutputType
+              );
+            }
+            classes[i] = nullableTypeStrategy.getClazz();
+          } else {
+            classes[i] = Object.class;
+          }
+        }
+        return classes;
+      }
+
     };
 
     class GroupByResultRowModule extends SimpleModule

@@ -28,7 +28,6 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import javax.annotation.Nonnull;
-
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;

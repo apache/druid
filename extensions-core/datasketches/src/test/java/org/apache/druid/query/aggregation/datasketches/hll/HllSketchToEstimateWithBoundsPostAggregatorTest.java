@@ -38,9 +38,10 @@ public class HllSketchToEstimateWithBoundsPostAggregatorTest
         2
     );
     DefaultObjectMapper mapper = new DefaultObjectMapper();
-    HllSketchToEstimateWithBoundsPostAggregator andBackAgain = mapper.readValue(
+    mapper.registerModules(new HllSketchModule().getJacksonModules());
+    PostAggregator andBackAgain = mapper.readValue(
         mapper.writeValueAsString(there),
-        HllSketchToEstimateWithBoundsPostAggregator.class
+        PostAggregator.class
     );
 
     Assert.assertEquals(there, andBackAgain);

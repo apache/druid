@@ -123,6 +123,7 @@ IANA
 IcebergFilter
 IcebergInputSource
 IETF
+IoT
 IP
 IPv4
 IPv6
@@ -215,6 +216,7 @@ ROUTINE_TYPE
 Rackspace
 Redis
 S3
+SAS
 SDK
 SIGAR
 SPNEGO
@@ -358,6 +360,8 @@ https
 idempotency
 i.e.
 influxdb
+influencer
+influencers
 ingestions
 ingestionSpec
 injective
@@ -1276,7 +1280,7 @@ ComplexMetrics
 DataSegmentArchiver
 DataSegmentKiller
 DataSegmentMover
-DataSegmentPuller
+URIDataPuller
 DataSegmentPusher
 DruidModule
 ExtractionFns
@@ -1661,7 +1665,6 @@ Filesystem
 JVMMonitor
 jvmVersion
 QueryCountStatsMonitor
-RealtimeMetricsMonitor
 Sys
 SysMonitor
 TaskCountStatsMonitor

@@ -22,6 +22,7 @@ package org.apache.druid.sql.calcite;
 import org.apache.calcite.rel.rules.CoreRules;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
+
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;

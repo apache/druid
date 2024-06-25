@@ -32,7 +32,6 @@ import {
   columnToIcon,
   columnToSummary,
   columnToWidth,
-  filterMap,
   formatNumber,
   getNumericColumnBraces,
 } from '../../utils';
@@ -133,7 +132,7 @@ export const RecordTablePane = React.memo(function RecordTablePane(props: Record
           showPagination={
             queryResult.rows.length > Math.min(SMALL_TABLE_PAGE_SIZE, pagination.pageSize)
           }
-          columns={filterMap(queryResult.header, (column, i) => {
+          columns={queryResult.header.map((column, i) => {
             const h = column.name;
             const icon = columnToIcon(column);
 
@@ -175,7 +174,9 @@ export const RecordTablePane = React.memo(function RecordTablePane(props: Record
           })}
         />
       )}
-      {showValue && <ShowValueDialog onClose={() => setShowValue(undefined)} str={showValue} />}
+      {showValue && (
+        <ShowValueDialog onClose={() => setShowValue(undefined)} str={showValue} size="large" />
+      )}
     </div>
   );
 });
