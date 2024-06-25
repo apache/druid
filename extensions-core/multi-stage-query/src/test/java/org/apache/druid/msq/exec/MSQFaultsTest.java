@@ -29,6 +29,7 @@ import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
 import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.task.Tasks;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
@@ -51,7 +52,6 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.hamcrest.CoreMatchers;
-import org.joda.time.DateTime;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatcher;
@@ -286,7 +286,7 @@ public class MSQFaultsTest extends MSQTestBase
   }
 
   @Test
-  public void testInsertWithTooManySegments() throws IOException
+  public void testInsertWithTooManyPartitions() throws IOException
   {
     Map<String, Object> context = ImmutableMap.<String, Object>builder()
                                               .putAll(DEFAULT_MSQ_CONTEXT)
@@ -334,7 +334,8 @@ public class MSQFaultsTest extends MSQTestBase
     final String filePathAsJson = queryFramework().queryJsonMapper().writeValueAsString(file.getAbsolutePath());
 
     testIngestQuery().setSql(
-                         "INSERT INTO foo1 "
+                         "REPLACE INTO foo1 "
+                         + " OVERWRITE ALL "
                          + " SELECT FLOOR(TIME_PARSE(\"timestamp\") to day) AS __time"
                          + " FROM TABLE(\n"
                          + "  EXTERN(\n"
@@ -347,7 +348,7 @@ public class MSQFaultsTest extends MSQTestBase
                      .setExpectedRowSignature(RowSignature.builder().add("__time", ColumnType.LONG).build())
                      .setQueryContext(context)
                      .setExpectedMSQFault(new TooManySegmentsInTimeChunkFault(
-                         DateTime.parse("1970-01-01"), numRowsInInputFile / rowsPerSegment, 1)
+                         DateTimes.of("1970-01-01"), numRowsInInputFile / rowsPerSegment, 1)
                      )
                      .verifyResults();
 

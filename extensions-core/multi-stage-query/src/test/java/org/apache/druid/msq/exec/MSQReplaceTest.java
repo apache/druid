@@ -59,7 +59,6 @@ import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.easymock.EasyMock;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -767,13 +766,13 @@ public class MSQReplaceTest extends MSQTestBase
     testIngestQuery().setSql("REPLACE INTO foo"
                              + " OVERWRITE ALL "
                              + " SELECT TIME_PARSE(ts) AS __time, c1 "
-                             + " FROM (VALUES('2023-01-01 01:00:00', 'day1_1'), ('2023-01-01 01:00:00', 'day1_2'), ('2023-02-01 06:00:00', 'day2')) as t(ts, c1)"
-                             + " PARTITIONED by HOUR")
+                             + " FROM (VALUES('2023-01-01 01:00:00', 'day1_1'), ('2023-01-01 01:00:00', 'day1_2'), ('2023-02-01 06:00:00', 'day2')) AS t(ts, c1)"
+                             + " PARTITIONED BY HOUR")
                      .setExpectedDataSource("foo")
                      .setExpectedRowSignature(RowSignature.builder().add("__time", ColumnType.LONG).build())
                      .setQueryContext(context)
                      .setExpectedMSQFault(new TooManySegmentsInTimeChunkFault(
-                         DateTime.parse("2023-01-01T01:00:00.000Z"), 2, 1)
+                         DateTimes.of("2023-01-01T01:00:00.000Z"), 2, 1)
                      )
                      .verifyResults();
 
@@ -795,9 +794,9 @@ public class MSQReplaceTest extends MSQTestBase
     testIngestQuery().setSql("REPLACE INTO foo"
                              + " OVERWRITE ALL"
                              + " SELECT TIME_PARSE(ts) AS __time, c1 "
-                             + " FROM (VALUES('2023-01-01', 'day1_1'), ('2023-01-01', 'day1_2'), ('2023-02-01', 'day2')) as t(ts, c1)"
+                             + " FROM (VALUES('2023-01-01', 'day1_1'), ('2023-01-01', 'day1_2'), ('2023-02-01', 'day2')) AS t(ts, c1)"
                              + " LIMIT 10"
-                             + " PARTITIONED by ALL")
+                             + " PARTITIONED BY ALL")
                      .setQueryContext(context)
                      .setExpectedDataSource("foo")
                      .setExpectedRowSignature(expectedRowSignature)

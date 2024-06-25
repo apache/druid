@@ -30,6 +30,7 @@ import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.Tasks;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -50,7 +51,6 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.hamcrest.CoreMatchers;
-import org.joda.time.DateTime;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -1381,12 +1381,12 @@ public class MSQInsertTest extends MSQTestBase
     testIngestQuery().setSql("INSERT INTO foo"
                              + " SELECT TIME_PARSE(ts) AS __time, c1 "
                              + " FROM (VALUES('2023-01-01', 'day1_1'), ('2023-01-01', 'day1_2'), ('2023-02-01', 'day2')) AS t(ts, c1)"
-                             + " PARTITIONED by DAY")
+                             + " PARTITIONED BY DAY")
                      .setExpectedDataSource("foo")
                      .setExpectedRowSignature(RowSignature.builder().add("__time", ColumnType.LONG).build())
                      .setQueryContext(context)
                      .setExpectedMSQFault(new TooManySegmentsInTimeChunkFault(
-                         DateTime.parse("2023-01-01"), 2, 1)
+                         DateTimes.of("2023-01-01"), 2, 1)
                      )
                      .verifyResults();
 
@@ -1408,8 +1408,8 @@ public class MSQInsertTest extends MSQTestBase
 
     testIngestQuery().setSql("INSERT INTO foo"
                              + " SELECT TIME_PARSE(ts) AS __time, c1 "
-                             + " FROM (VALUES('2023-01-01', 'day1_1'), ('2023-01-01', 'day1_2'), ('2023-02-01', 'day2')) as t(ts, c1)"
-                             + " PARTITIONED by day")
+                             + " FROM (VALUES('2023-01-01', 'day1_1'), ('2023-01-01', 'day1_2'), ('2023-02-01', 'day2')) AS t(ts, c1)"
+                             + " PARTITIONED BY day")
                      .setQueryContext(context)
                      .setExpectedDataSource("foo")
                      .setExpectedRowSignature(expectedRowSignature)
