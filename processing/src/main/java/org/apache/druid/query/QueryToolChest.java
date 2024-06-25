@@ -266,6 +266,12 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
     return null;
   }
 
+  @Nullable
+  public <T> CacheStrategy<ResultType, T, QueryType> getCacheStrategy(QueryType query, ObjectMapper mapper)
+  {
+    return getCacheStrategy(query);
+  }
+
   /**
    * Wraps a QueryRunner.  The input QueryRunner is the QueryRunner as it exists *before* being passed to
    * mergeResults().

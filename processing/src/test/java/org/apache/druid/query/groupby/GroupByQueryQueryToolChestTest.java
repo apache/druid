@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.groupby;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.google.common.base.Supplier;
@@ -33,6 +34,7 @@ import org.apache.druid.collections.SerializablePair;
 import org.apache.druid.collections.StupidPool;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.Row;
+import org.apache.druid.jackson.AggregatorsModule;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -97,6 +99,8 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
   public static void setUpClass()
   {
     NullHandling.initializeForTests();
+    //noinspection ResultOfObjectAllocationIgnored
+    new AggregatorsModule();
   }
 
   @Test
@@ -510,6 +514,48 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
     doTestCacheStrategy(ColumnType.FLOAT, 2.1f);
     doTestCacheStrategy(ColumnType.DOUBLE, 2.1d);
     doTestCacheStrategy(ColumnType.LONG, 2L);
+  }
+
+  @Test
+  public void testComplexDimensionCacheStrategy() throws IOException
+  {
+    final GroupByQuery query1 = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(ImmutableList.of(
+            new DefaultDimensionSpec(
+                "test",
+                "test",
+                ColumnType.ofComplex(SerializablePairLongStringComplexMetricSerde.TYPE_NAME)
+            )
+        ))
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT)
+        .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
+        .build();
+
+    ObjectMapper objectMapper = TestHelper.makeJsonMapper();
+
+    CacheStrategy<ResultRow, Object, GroupByQuery> strategy =
+        new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query1, objectMapper);
+
+    // test timestamps that result in integer size millis
+    final ResultRow result1 = ResultRow.of(
+        123L,
+        new SerializablePairLongString(123L, "abc"),
+        1
+    );
+
+    Object preparedValue = strategy.prepareForSegmentLevelCache().apply(result1);
+
+    Object fromCacheValue = objectMapper.readValue(
+        objectMapper.writeValueAsBytes(preparedValue),
+        strategy.getCacheObjectClazz()
+    );
+
+    ResultRow fromCacheResult = strategy.pullFromSegmentLevelCache().apply(fromCacheValue);
+
+    Assert.assertEquals(result1, fromCacheResult);
   }
 
   @Test
