@@ -1411,7 +1411,12 @@ public class MSQInsertTest extends MSQTestBase
                                                    .put(MultiStageQueryContext.CTX_ROWS_PER_SEGMENT, 2)
                                                    .build();
 
-    List<Object[]> expectedRows = expectedFooRows().stream().limit(4).collect(Collectors.toList());
+    List<Object[]> expectedRows = ImmutableList.of(
+        new Object[]{946684800000L, "", 1L},
+        new Object[]{978307200000L, "1", 1L},
+        new Object[]{946771200000L, "10.1", 1L},
+        new Object[]{946857600000L, "2", 1L}
+    );
 
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)
@@ -1419,7 +1424,7 @@ public class MSQInsertTest extends MSQTestBase
                                             .add("cnt", ColumnType.LONG).build();
 
     testIngestQuery().setSql(
-                         "insert into foo1 select  __time, dim1, cnt from foo LIMIT 4 PARTITIONED by ALL")
+                         "insert into foo1 select __time, dim1, cnt from foo LIMIT 4 PARTITIONED by ALL CLUSTERED BY dim1")
                      .setExpectedDataSource("foo1")
                      .setQueryContext(queryContext)
                      .setExpectedRowSignature(rowSignature)
