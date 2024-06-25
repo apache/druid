@@ -22,6 +22,7 @@ package org.apache.druid.indexing.common.actions;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.batch.parallel.AbstractBatchSubtask;
@@ -34,6 +35,7 @@ import org.apache.druid.metadata.ReplaceTaskLock;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Partitions;
 import org.apache.druid.timeline.SegmentTimeline;
+import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -67,20 +69,16 @@ public class RetrieveUsedSegmentsAction implements TaskAction<Collection<DataSeg
   public RetrieveUsedSegmentsAction(
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("intervals") Collection<Interval> intervals,
-      // When JSON object is deserialized, this parameter is optional for backward compatibility.
-      // Otherwise, it shouldn't be considered optional.
       @JsonProperty("visibility") @Nullable Segments visibility
   )
   {
-    if (intervals == null || intervals.isEmpty()) {
+    if (CollectionUtils.isNullOrEmpty(intervals)) {
       throw InvalidInput.exception("No interval specified for retrieving used segments");
     }
 
     this.dataSource = dataSource;
     this.intervals = JodaUtils.condenseIntervals(intervals);
-
-    // Defaulting to the former behaviour when visibility wasn't explicitly specified for backward compatibility
-    this.visibility = visibility != null ? visibility : Segments.ONLY_VISIBLE;
+    this.visibility = Configs.valueOrDefault(visibility, Segments.ONLY_VISIBLE);
   }
 
   public RetrieveUsedSegmentsAction(String dataSource, Collection<Interval> intervals)
