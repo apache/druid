@@ -1284,11 +1284,18 @@ public class MSQTestBase extends BaseCalciteQueryTest
                                                                       .stream()
                                                                       .filter(segmentId -> segmentId.getInterval()
                                                                                                     .contains((Long) row[0]))
+                                                                      .filter(segmentId -> {
+                                                                        List<List<Object>> lists = segmentIdVsOutputRowsMap.get(segmentId);
+                                                                        return lists.contains(Arrays.asList(row));
+                                                                      })
                                                                       .collect(Collectors.toList());
             // Checking if the row belongs to the correct segment interval
-            Assert.assertTrue(diskSegmentList.stream()
-                                             .map(segmentIdVsOutputRowsMap::get)
-                                             .anyMatch(rows -> rows.contains(Arrays.asList(row))));
+            if (diskSegmentList.size() != 1) {
+              throw new IllegalStateException("Single key in multiple partitions");
+            }
+            SegmentId diskSegment = diskSegmentList.get(0);
+            // Checking if the row belongs to the correct segment interval
+            Assert.assertTrue(segmentIdVsOutputRowsMap.get(diskSegment).contains(Arrays.asList(row)));
           }
         }
 

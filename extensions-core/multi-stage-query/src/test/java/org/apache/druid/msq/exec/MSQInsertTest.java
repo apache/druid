@@ -1411,10 +1411,10 @@ public class MSQInsertTest extends MSQTestBase
                                                    .build();
 
     List<Object[]> expectedRows = ImmutableList.of(
-        new Object[]{946684800000L, "", 1L},
-        new Object[]{978307200000L, "1", 1L},
         new Object[]{946771200000L, "10.1", 1L},
-        new Object[]{946857600000L, "2", 1L}
+        new Object[]{978307200000L, "1", 1L},
+        new Object[]{946857600000L, "2", 1L},
+        new Object[]{978480000000L, "abc", 1L}
     );
 
     RowSignature rowSignature = RowSignature.builder()
@@ -1423,7 +1423,7 @@ public class MSQInsertTest extends MSQTestBase
                                             .add("cnt", ColumnType.LONG).build();
 
     testIngestQuery().setSql(
-                         "insert into foo1 select __time, dim1, cnt from foo LIMIT 4 PARTITIONED by ALL CLUSTERED BY dim1")
+                         "insert into foo1 select __time, dim1, cnt from foo where dim1 != '' limit 4 partitioned by ALL clustered by dim1")
                      .setExpectedDataSource("foo1")
                      .setQueryContext(queryContext)
                      .setExpectedRowSignature(rowSignature)
