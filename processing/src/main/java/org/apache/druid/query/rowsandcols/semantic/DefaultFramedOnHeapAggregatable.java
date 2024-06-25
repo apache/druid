@@ -39,7 +39,6 @@ import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicInteger;
