@@ -1123,28 +1123,48 @@ public class SupervisorResourceTest extends EasyMockSupport
   @Test
   public void testSetTaskCount()
   {
-    Capture<String> id1 = Capture.newInstance();
-    Capture<String> id2 = Capture.newInstance();
-    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager)).times(2);
-    EasyMock.expect(supervisorManager.changeTaskCountSupervisor(
-        EasyMock.capture(id1),
-        EasyMock.anyObject(Integer.class)
-    )).andReturn(true);
-    EasyMock.expect(supervisorManager.changeTaskCountSupervisor(
-        EasyMock.capture(id2),
-        EasyMock.anyObject(Integer.class)
-    )).andReturn(false);
-    replayAll();
+    String id = "my-id";
+    SupervisorSpec spec = new TestSupervisorSpec(id, null, null)
+    {
 
-    Response response = supervisorResource.setTaskCount("my-id", 2);
+      @Override
+      public List<String> getDataSources()
+      {
+        return Collections.singletonList("datasource1");
+      }
+
+      @Override
+      public void updateTaskCount(int taskCount)
+      {
+      }
+    };
+
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
+    EasyMock.expect(supervisorManager.createOrUpdateAndStartSupervisor(spec)).andReturn(true);
+    EasyMock.expect(supervisorManager.getSupervisorSpec(id)).andReturn(Optional.of(spec));
+    setupMockRequest();
+    setupMockRequestForAudit();
+    EasyMock.expect(authConfig.isEnableInputSourceSecurity()).andReturn(true);
+    auditManager.doAudit(EasyMock.anyObject());
+    EasyMock.expectLastCall().once();
+    replayAll();
+    Response response = supervisorResource.setTaskCount(
+        "my-id",
+        new SupervisorResource.SetTaskCountRequest(2),
+        request
+    );
+    verifyAll();
+
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(ImmutableMap.of("id", "my-id"), response.getEntity());
+    resetAll();
 
-    response = supervisorResource.setTaskCount("my-id-2", 2);
-    Assert.assertEquals(304, response.getStatus());
-    Assert.assertEquals("my-id", id1.getValue());
-    Assert.assertEquals("my-id-2", id2.getValue());
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.absent());
+    replayAll();
+
+    response = supervisorResource.specPost(spec, request);
     verifyAll();
+    Assert.assertEquals(503, response.getStatus());
   }
 
   @Test

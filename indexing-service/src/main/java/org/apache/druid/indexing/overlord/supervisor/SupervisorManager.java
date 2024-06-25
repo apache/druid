@@ -348,44 +348,6 @@ public class SupervisorManager
     return false;
   }
 
-  public boolean changeTaskCountSupervisor(String id, Integer taskCount)
-  {
-    Preconditions.checkState(started, "SupervisorManager not started");
-    Preconditions.checkNotNull(id, "id");
-    Preconditions.checkState(
-        taskCount != null && taskCount >= 0,
-        "taskCount should be non null positive value"
-    );
-
-    synchronized (lock) {
-      Preconditions.checkState(started, "SupervisorManager not started");
-      return changeTaskCountSupervisorInternal(id, taskCount);
-    }
-  }
-
-  /**
-   * Scale a supervisor with a given id.
-   * <p/>
-   * Caller should have acquired [lock] before invoking this method to avoid contention with other threads that may be
-   * starting, stopping, suspending and resuming supervisors.
-   *
-   * @return true if a supervisor was scaled, false if there was no supervisor with this id.
-   */
-  private boolean changeTaskCountSupervisorInternal(String id, Integer taskCount)
-  {
-    Pair<Supervisor, SupervisorSpec> pair = supervisors.get(id);
-    if (pair == null) {
-      return false;
-    }
-
-    try {
-      return pair.lhs.changeTaskCount(taskCount);
-    }
-    catch (Exception e) {
-      log.error(e, "Failed to scale supervisor: [%s]", pair.rhs.getId());
-      throw new RuntimeException(e);
-    }
-  }
 
   /**
    * Stops a supervisor with a given id and then removes it from the list.

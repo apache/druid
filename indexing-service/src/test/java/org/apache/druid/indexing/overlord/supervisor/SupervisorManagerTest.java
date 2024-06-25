@@ -52,7 +52,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
 
 @RunWith(EasyMockRunner.class)
 public class SupervisorManagerTest extends EasyMockSupport
@@ -462,26 +461,6 @@ public class SupervisorManagerTest extends EasyMockSupport
     verifyAll();
 
     Assert.assertTrue(manager.getSupervisorIds().isEmpty());
-  }
-
-  @Test
-  public void testChangeTaskCountSupervisor() throws ExecutionException, InterruptedException
-  {
-    Map<String, SupervisorSpec> existingSpecs = ImmutableMap.of(
-        "id1", new TestSupervisorSpec("id1", supervisor1)
-    );
-
-    EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
-    supervisor1.start();
-    EasyMock.expect(supervisor1.changeTaskCount(EasyMock.anyInt())).andReturn(true);
-    replayAll();
-
-    manager.start();
-
-    Assert.assertEquals(false, manager.changeTaskCountSupervisor("non-existent-id", 2));
-    Assert.assertEquals(true, manager.changeTaskCountSupervisor("id1", 2));
-
-    verifyAll();
   }
 
   @Test

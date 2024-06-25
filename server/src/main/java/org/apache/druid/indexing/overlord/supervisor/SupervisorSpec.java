@@ -100,4 +100,12 @@ public interface SupervisorSpec
    * @return source like stream or topic name
    */
   String getSource();
+
+  default void updateTaskCount(int taskCount)
+  {
+    throw new UOE(StringUtils.format(
+        "SuperviserSpec type [%s], does not support setTaskCount action",
+        getType()
+    ));
+  }
 }

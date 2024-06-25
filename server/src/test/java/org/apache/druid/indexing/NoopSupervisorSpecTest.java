@@ -100,4 +100,14 @@ public class NoopSupervisorSpecTest
         () -> noOpSupervisor.handoffTaskGroupsEarly(ImmutableList.of())
     );
   }
+
+  @Test
+  public void testNoopSupervisorChangeTaskCountThrows()
+  {
+    NoopSupervisorSpec spec = new NoopSupervisorSpec(null, null);
+    Assert.assertThrows(
+        UnsupportedOperationException.class,
+        () -> spec.updateTaskCount(2)
+    );
+  }
 }
