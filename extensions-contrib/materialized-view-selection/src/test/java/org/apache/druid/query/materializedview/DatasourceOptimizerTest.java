@@ -178,13 +178,8 @@ public class DatasourceOptimizerTest extends CuratorTestBase
               Lists.newArrayList("dim1", "dim2", "dim3", "dim4"),
               1024 * 1024
           );
-          try {
-            metadataStorageCoordinator.commitSegments(Sets.newHashSet(segment), null);
-            announceSegmentForServer(druidServer, segment, zkPathsConfig, jsonMapper);
-          }
-          catch (IOException e) {
-            return false;
-          }
+          metadataStorageCoordinator.commitSegments(Sets.newHashSet(segment), null);
+          announceSegmentForServer(druidServer, segment, zkPathsConfig, jsonMapper);
           return true;
         }
     );
@@ -203,13 +198,8 @@ public class DatasourceOptimizerTest extends CuratorTestBase
               Lists.newArrayList("dim1", "dim2", "dim3"),
               1024
           );
-          try {
-            metadataStorageCoordinator.commitSegments(Sets.newHashSet(segment), null);
-            announceSegmentForServer(druidServer, segment, zkPathsConfig, jsonMapper);
-          }
-          catch (IOException e) {
-            return false;
-          }
+          metadataStorageCoordinator.commitSegments(Sets.newHashSet(segment), null);
+          announceSegmentForServer(druidServer, segment, zkPathsConfig, jsonMapper);
           return true;
         }
     );
