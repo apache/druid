@@ -1121,6 +1121,33 @@ public class SupervisorResourceTest extends EasyMockSupport
   }
 
   @Test
+  public void testSetTaskCount()
+  {
+    Capture<String> id1 = Capture.newInstance();
+    Capture<String> id2 = Capture.newInstance();
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager)).times(2);
+    EasyMock.expect(supervisorManager.changeTaskCountSupervisor(
+        EasyMock.capture(id1),
+        EasyMock.anyObject(Integer.class)
+    )).andReturn(true);
+    EasyMock.expect(supervisorManager.changeTaskCountSupervisor(
+        EasyMock.capture(id2),
+        EasyMock.anyObject(Integer.class)
+    )).andReturn(false);
+    replayAll();
+
+    Response response = supervisorResource.setTaskCount("my-id", 2);
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(ImmutableMap.of("id", "my-id"), response.getEntity());
+
+    response = supervisorResource.setTaskCount("my-id-2", 2);
+    Assert.assertEquals(304, response.getStatus());
+    Assert.assertEquals("my-id", id1.getValue());
+    Assert.assertEquals("my-id-2", id2.getValue());
+    verifyAll();
+  }
+
+  @Test
   public void testResetOffsets()
   {
     Capture<String> id1 = Capture.newInstance();

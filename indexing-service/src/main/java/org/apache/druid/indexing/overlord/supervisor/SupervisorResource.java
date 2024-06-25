@@ -568,7 +568,7 @@ public class SupervisorResource
   {
     return asLeaderWithSupervisorManager(
         manager -> {
-          if (manager.scaleSupervisor(id, taskCount)) {
+          if (manager.changeTaskCountSupervisor(id, taskCount)) {
             return Response.ok(ImmutableMap.of("id", id)).build();
           } else {
             return Response.status(Response.Status.NOT_MODIFIED)

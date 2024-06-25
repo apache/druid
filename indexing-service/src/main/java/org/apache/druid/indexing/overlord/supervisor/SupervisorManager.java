@@ -348,7 +348,7 @@ public class SupervisorManager
     return false;
   }
 
-  public boolean scaleSupervisor(String id, Integer taskCount)
+  public boolean changeTaskCountSupervisor(String id, Integer taskCount)
   {
     Preconditions.checkState(started, "SupervisorManager not started");
     Preconditions.checkNotNull(id, "id");
@@ -359,7 +359,7 @@ public class SupervisorManager
 
     synchronized (lock) {
       Preconditions.checkState(started, "SupervisorManager not started");
-      return scaleSupervisorInternal(id, taskCount);
+      return changeTaskCountSupervisorInternal(id, taskCount);
     }
   }
 
@@ -371,7 +371,7 @@ public class SupervisorManager
    *
    * @return true if a supervisor was scaled, false if there was no supervisor with this id.
    */
-  private boolean scaleSupervisorInternal(String id, Integer taskCount)
+  private boolean changeTaskCountSupervisorInternal(String id, Integer taskCount)
   {
     Pair<Supervisor, SupervisorSpec> pair = supervisors.get(id);
     if (pair == null) {
