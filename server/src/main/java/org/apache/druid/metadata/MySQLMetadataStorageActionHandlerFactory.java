@@ -47,7 +47,6 @@ public class MySQLMetadataStorageActionHandlerFactory extends SQLMetadataStorage
         payloadTypes,
         entryType,
         config.getEntryTable(entryType),
-        config.getLogTable(entryType),
         config.getLockTable(entryType)
     );
   }

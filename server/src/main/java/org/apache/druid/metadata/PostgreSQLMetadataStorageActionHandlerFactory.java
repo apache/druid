@@ -47,7 +47,6 @@ public class PostgreSQLMetadataStorageActionHandlerFactory extends SQLMetadataSt
         payloadTypes,
         entryType,
         config.getEntryTable(entryType),
-        config.getLogTable(entryType),
         config.getLockTable(entryType)
     );
   }

@@ -30,11 +30,10 @@ public class SQLServerMetadataStorageActionHandler<EntryType, StatusType, LogTyp
       MetadataStorageActionHandlerTypes<EntryType, StatusType, LogType, LockType> types,
       String entryTypeName,
       String entryTable,
-      String logTable,
       String lockTable
   )
   {
-    super(connector, jsonMapper, types, entryTypeName, entryTable, logTable, lockTable);
+    super(connector, jsonMapper, types, entryTypeName, entryTable, lockTable);
   }
 
   @Override
