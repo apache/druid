@@ -58,10 +58,6 @@ public class TestNGGroup
 
   public static final String QUERY_ERROR = "query-error";
 
-  public static final String CLI_INDEXER = "cli-indexer";
-
-  public static final String REALTIME_INDEX = "realtime-index";
-
   /**
    * This group can only be run individually using -Dgroups=security since it requires specific test data setup.
    */

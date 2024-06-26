@@ -180,6 +180,12 @@ public interface IndexerMetadataStorageCoordinator
   );
 
   /**
+   * Retrieves segments for the given IDs, regardless of their visibility
+   * (visible, overshadowed or unused).
+   */
+  Set<DataSegment> retrieveSegmentsById(String dataSource, Set<String> segmentIds);
+
+  /**
    * Mark as unused segments which include ONLY data within the given interval.
    *
    * @param dataSource The data source the segments belong to
@@ -198,7 +204,7 @@ public interface IndexerMetadataStorageCoordinator
    *
    * @return set of segments actually added
    */
-  Set<DataSegment> commitSegments(Set<DataSegment> segments, @Nullable SegmentSchemaMapping segmentSchemaMapping) throws IOException;
+  Set<DataSegment> commitSegments(Set<DataSegment> segments, @Nullable SegmentSchemaMapping segmentSchemaMapping);
 
   /**
    * Allocates pending segments for the given requests in the pending segments table.
@@ -310,7 +316,7 @@ public interface IndexerMetadataStorageCoordinator
       @Nullable DataSourceMetadata startMetadata,
       @Nullable DataSourceMetadata endMetadata,
       @Nullable SegmentSchemaMapping segmentSchemaMapping
-  ) throws IOException;
+  );
 
   /**
    * Commits segments and corresponding schema created by an APPEND task.

@@ -249,6 +249,44 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     );
   }
 
+  List<String> retrieveUnusedSegmentIdsForExactIntervalAndVersion(
+      String dataSource,
+      Interval interval,
+      String version
+  )
+  {
+    final String sql = "SELECT id FROM %1$s"
+                       + " WHERE used = :used"
+                       + " AND dataSource = :dataSource"
+                       + " AND version = :version"
+                       + " AND start = :start AND %2$send%2$s = :end";
+
+    final List<String> matchingSegments = connector.inReadOnlyTransaction(
+        (handle, status) -> {
+          final Query<Map<String, Object>> query = handle
+              .createQuery(StringUtils.format(
+                  sql,
+                  dbTables.getSegmentsTable(),
+                  connector.getQuoteString()
+              ))
+              .setFetchSize(connector.getStreamingFetchSize())
+              .bind("used", false)
+              .bind("dataSource", dataSource)
+              .bind("version", version)
+              .bind("start", interval.getStart().toString())
+              .bind("end", interval.getEnd().toString());
+
+          try (final ResultIterator<String> iterator = query.map((index, r, ctx) -> r.getString(1)).iterator()) {
+            return ImmutableList.copyOf(iterator);
+          }
+        }
+    );
+
+    log.debug("Found [%,d] unused segments for datasource[%s] for interval[%s] and version[%s].",
+             matchingSegments.size(), dataSource, interval, version);
+    return matchingSegments;
+  }
+
   @Override
   public List<DataSegment> retrieveUnusedSegmentsForInterval(
       String dataSource,
@@ -280,6 +318,18 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     log.info("Found [%,d] unused segments for datasource[%s] in interval[%s] and versions[%s] with maxUsedStatusLastUpdatedTime[%s].",
              matchingSegments.size(), dataSource, interval, versions, maxUsedStatusLastUpdatedTime);
     return matchingSegments;
+  }
+
+  @Override
+  public Set<DataSegment> retrieveSegmentsById(String dataSource, Set<String> segmentIds)
+  {
+    return connector.inReadOnlyTransaction(
+        (handle, transactionStatus) ->
+            retrieveSegmentsById(handle, dataSource, segmentIds)
+                .stream()
+                .map(DataSegmentPlus::getDataSegment)
+                .collect(Collectors.toSet())
+    );
   }
 
   @Override
@@ -400,7 +450,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   public Set<DataSegment> commitSegments(
       final Set<DataSegment> segments,
       @Nullable final SegmentSchemaMapping segmentSchemaMapping
-  ) throws IOException
+  )
   {
     final SegmentPublishResult result =
         commitSegmentsAndMetadata(
@@ -424,7 +474,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       @Nullable final DataSourceMetadata startMetadata,
       @Nullable final DataSourceMetadata endMetadata,
       @Nullable final SegmentSchemaMapping segmentSchemaMapping
-  ) throws IOException
+  )
   {
     verifySegmentsToCommit(segments);
 
@@ -1460,8 +1510,12 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         ));
 
     final String now = DateTimes.nowUtc().toString();
+    final Set<SegmentIdWithShardSpec> processedSegmentIds = new HashSet<>();
     for (PendingSegmentRecord pendingSegment : pendingSegments) {
       final SegmentIdWithShardSpec segmentId = pendingSegment.getId();
+      if (processedSegmentIds.contains(segmentId)) {
+        continue;
+      }
       final Interval interval = segmentId.getInterval();
 
       insertBatch.add()
@@ -1479,6 +1533,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                  .bind("payload", jsonMapper.writeValueAsBytes(segmentId))
                  .bind("task_allocator_id", pendingSegment.getTaskAllocatorId())
                  .bind("upgraded_from_segment_id", pendingSegment.getUpgradedFromSegmentId());
+
+      processedSegmentIds.add(segmentId);
     }
     int[] updated = insertBatch.execute();
     return Arrays.stream(updated).sum();
@@ -1875,7 +1931,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     }
 
     // If yes, try to compute allocated partition num using the max unused segment shard spec
-    SegmentIdWithShardSpec unusedMaxId = getUnusedMaxId(
+    SegmentId unusedMaxId = getUnusedMaxId(
         allocatedId.getDataSource(),
         allocatedId.getInterval(),
         allocatedId.getVersion()
@@ -1887,7 +1943,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
     int maxPartitionNum = Math.max(
         allocatedId.getShardSpec().getPartitionNum(),
-        unusedMaxId.getShardSpec().getPartitionNum() + 1
+        unusedMaxId.getPartitionNum() + 1
     );
     return new SegmentIdWithShardSpec(
         allocatedId.getDataSource(),
@@ -1900,25 +1956,25 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     );
   }
 
-  private SegmentIdWithShardSpec getUnusedMaxId(String datasource, Interval interval, String version)
+  private SegmentId getUnusedMaxId(String datasource, Interval interval, String version)
   {
-    List<DataSegment> unusedSegments = retrieveUnusedSegmentsForInterval(
+    List<String> unusedSegmentIds = retrieveUnusedSegmentIdsForExactIntervalAndVersion(
         datasource,
         interval,
-        ImmutableList.of(version),
-        null,
-        null
+        version
     );
 
-    SegmentIdWithShardSpec unusedMaxId = null;
+    SegmentId unusedMaxId = null;
     int maxPartitionNum = -1;
-    for (DataSegment unusedSegment : unusedSegments) {
-      if (unusedSegment.getInterval().equals(interval)) {
-        int partitionNum = unusedSegment.getShardSpec().getPartitionNum();
-        if (maxPartitionNum < partitionNum) {
-          maxPartitionNum = partitionNum;
-          unusedMaxId = SegmentIdWithShardSpec.fromDataSegment(unusedSegment);
-        }
+    for (String id : unusedSegmentIds) {
+      final SegmentId segmentId = SegmentId.tryParse(datasource, id);
+      if (segmentId == null) {
+        continue;
+      }
+      int partitionNum = segmentId.getPartitionNum();
+      if (maxPartitionNum < partitionNum) {
+        maxPartitionNum = partitionNum;
+        unusedMaxId = segmentId;
       }
     }
     return unusedMaxId;
