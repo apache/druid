@@ -41,6 +41,7 @@ import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.msq.indexing.error.TooManySegmentsInTimeChunkFault;
 import org.apache.druid.msq.indexing.report.MSQSegmentReport;
@@ -772,7 +773,12 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedRowSignature(RowSignature.builder().add("__time", ColumnType.LONG).build())
                      .setQueryContext(context)
                      .setExpectedMSQFault(
-                         new TooManySegmentsInTimeChunkFault(DateTimes.of("2023-01-01T01:00:00.000Z"), 2, 1)
+                         new TooManySegmentsInTimeChunkFault(
+                             DateTimes.of("2023-01-01T01:00:00.000Z"),
+                             2,
+                             1,
+                             Granularities.HOUR
+                         )
                      )
                      .verifyResults();
 

@@ -1386,7 +1386,12 @@ public class MSQInsertTest extends MSQTestBase
                      .setExpectedRowSignature(RowSignature.builder().add("__time", ColumnType.LONG).build())
                      .setQueryContext(context)
                      .setExpectedMSQFault(
-                         new TooManySegmentsInTimeChunkFault(DateTimes.of("2023-01-01"), 2, 1)
+                         new TooManySegmentsInTimeChunkFault(
+                             DateTimes.of("2023-01-01"),
+                             2,
+                             1,
+                             Granularities.DAY
+                         )
                      )
                      .verifyResults();
 

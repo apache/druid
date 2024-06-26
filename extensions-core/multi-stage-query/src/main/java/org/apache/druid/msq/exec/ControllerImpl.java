@@ -968,7 +968,7 @@ public class ControllerImpl implements Controller
       final Map<DateTime, List<Pair<Integer, ClusterByPartition>>> partitionsByBucket =
           getPartitionsByBucket(partitionBoundaries, segmentGranularity, keyReader);
 
-      validateNumSegmentsPerBucketOrThrow(partitionsByBucket);
+      validateNumSegmentsPerBucketOrThrow(partitionsByBucket, segmentGranularity);
     }
 
     String previousSegmentId = null;
@@ -1057,7 +1057,10 @@ public class ControllerImpl implements Controller
     return partitionsByBucket;
   }
 
-  private void validateNumSegmentsPerBucketOrThrow(final Map<DateTime, List<Pair<Integer, ClusterByPartition>>> partitionsByBucket)
+  private void validateNumSegmentsPerBucketOrThrow(
+      final Map<DateTime, List<Pair<Integer, ClusterByPartition>>> partitionsByBucket,
+      final Granularity segmentGranularity
+  )
   {
     final Integer maxNumSegments = querySpec.getTuningConfig().getMaxNumSegments();
     if (maxNumSegments == null) {
@@ -1067,7 +1070,7 @@ public class ControllerImpl implements Controller
     for (final Map.Entry<DateTime, List<Pair<Integer, ClusterByPartition>>> bucketEntry : partitionsByBucket.entrySet()) {
       final int numSegmentsInTimeChunk = bucketEntry.getValue().size();
       if (numSegmentsInTimeChunk > maxNumSegments) {
-        throw new MSQException(new TooManySegmentsInTimeChunkFault(bucketEntry.getKey(), numSegmentsInTimeChunk, maxNumSegments));
+        throw new MSQException(new TooManySegmentsInTimeChunkFault(bucketEntry.getKey(), numSegmentsInTimeChunk, maxNumSegments, segmentGranularity));
       }
     }
   }
@@ -1119,7 +1122,7 @@ public class ControllerImpl implements Controller
         getPartitionsByBucket(partitionBoundaries, segmentGranularity, keyReader);
 
     // Validate the buckets.
-    validateNumSegmentsPerBucketOrThrow(partitionsByBucket);
+    validateNumSegmentsPerBucketOrThrow(partitionsByBucket, segmentGranularity);
 
     // Process buckets (time chunks) one at a time.
     for (final Map.Entry<DateTime, List<Pair<Integer, ClusterByPartition>>> bucketEntry : partitionsByBucket.entrySet()) {

@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
@@ -85,7 +86,7 @@ public class MSQFaultSerdeTest
     assertFaultSerde(new TooManyInputFilesFault(15, 10, 5));
     assertFaultSerde(new TooManyPartitionsFault(10));
     assertFaultSerde(new TooManyRowsWithSameKeyFault(Arrays.asList("foo", 123), 1, 2));
-    assertFaultSerde(new TooManySegmentsInTimeChunkFault(DateTimes.nowUtc(), 10, 1));
+    assertFaultSerde(new TooManySegmentsInTimeChunkFault(DateTimes.nowUtc(), 10, 1, Granularities.ALL));
     assertFaultSerde(new TooManyWarningsFault(10, "the error"));
     assertFaultSerde(new TooManyWorkersFault(10, 5));
     assertFaultSerde(new TooManyAttemptsForWorker(2, "taskId", 1, "rootError"));

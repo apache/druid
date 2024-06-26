@@ -33,6 +33,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.msq.indexing.error.InsertCannotAllocateSegmentFault;
 import org.apache.druid.msq.indexing.error.InsertCannotBeEmptyFault;
 import org.apache.druid.msq.indexing.error.InsertTimeNullFault;
@@ -352,7 +353,12 @@ public class MSQFaultsTest extends MSQTestBase
                      .setExpectedRowSignature(RowSignature.builder().add("__time", ColumnType.LONG).build())
                      .setQueryContext(context)
                      .setExpectedMSQFault(
-                         new TooManySegmentsInTimeChunkFault(DateTimes.of("1970-01-01"), numRowsInInputFile / rowsPerSegment, maxNumSegments)
+                         new TooManySegmentsInTimeChunkFault(
+                             DateTimes.of("1970-01-01"),
+                             numRowsInInputFile / rowsPerSegment,
+                             maxNumSegments,
+                             Granularities.ALL
+                         )
                      )
                      .verifyResults();
 

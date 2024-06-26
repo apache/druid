@@ -22,6 +22,8 @@ package org.apache.druid.msq.indexing.error;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.joda.time.DateTime;
 
@@ -35,20 +37,23 @@ public class TooManySegmentsInTimeChunkFault extends BaseMSQFault
   private final DateTime timeChunk;
   private final int numSegments;
   private final int maxNumSegments;
+  private final Granularity segmentGranularity;
 
   @JsonCreator
   public TooManySegmentsInTimeChunkFault(
       @JsonProperty("timeChunk") final DateTime timeChunk,
       @JsonProperty("numSegments") final int numSegments,
-      @JsonProperty("maxNumSegments") final int maxNumSegments
+      @JsonProperty("maxNumSegments") final int maxNumSegments,
+      @JsonProperty("segmentGranularity") final Granularity segmentGranularity
   )
   {
     super(
         CODE,
-        "Too many segments generated in time chunk[%s] (requested = [%,d], maximum = [%,d]). "
-        + " Please try breaking up your query or use a finer PARTITIONED BY granularity."
-        + " Alternatively, you can change the maximum using the query context parameter[%s].",
+        "Too many segments requested to be generated in time chunk[%s] with granularity[%s]"
+        + " (requested = [%,d], maximum = [%,d]). Please try breaking up your query or change the maximum using"
+        + " the query context parameter[%s].",
         timeChunk,
+        convertToGranularityString(segmentGranularity),
         numSegments,
         maxNumSegments,
         MultiStageQueryContext.CTX_MAX_NUM_SEGMENTS
@@ -56,6 +61,22 @@ public class TooManySegmentsInTimeChunkFault extends BaseMSQFault
     this.timeChunk = timeChunk;
     this.numSegments = numSegments;
     this.maxNumSegments = maxNumSegments;
+    this.segmentGranularity = segmentGranularity;
+  }
+
+  /**
+   * Convert the given granularity to a more user-friendly granularity string, when possible.
+   */
+  private static String convertToGranularityString(final Granularity granularity)
+  {
+    // If it's a "standard" granularity, we get a nicer string from the GranularityType enum. For any other
+    // granularity, we just fall back to the toString(). See GranularityType#isStandard().
+    for (GranularityType value : GranularityType.values()) {
+      if (value.getDefaultGranularity().equals(granularity)) {
+        return value.name();
+      }
+    }
+    return granularity.toString();
   }
 
   @JsonProperty
@@ -76,6 +97,12 @@ public class TooManySegmentsInTimeChunkFault extends BaseMSQFault
     return maxNumSegments;
   }
 
+  @JsonProperty
+  public Granularity getSegmentGranularity()
+  {
+    return segmentGranularity;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -91,12 +118,13 @@ public class TooManySegmentsInTimeChunkFault extends BaseMSQFault
     TooManySegmentsInTimeChunkFault that = (TooManySegmentsInTimeChunkFault) o;
     return numSegments == that.numSegments
            && maxNumSegments == that.maxNumSegments
-           && Objects.equals(timeChunk, that.timeChunk);
+           && Objects.equals(timeChunk, that.timeChunk)
+           && Objects.equals(segmentGranularity, that.segmentGranularity);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(super.hashCode(), timeChunk, numSegments, maxNumSegments);
+    return Objects.hash(super.hashCode(), timeChunk, numSegments, maxNumSegments, segmentGranularity);
   }
 }
