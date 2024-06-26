@@ -35,18 +35,13 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.assertj.core.api.Assertions;
-import org.hamcrest.CoreMatchers;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 public class SegmentTransactionalInsertActionTest
 {
-  @Rule
-  public ExpectedException thrown = ExpectedException.none();
-
   @Rule
   public TaskActionTestKit actionTestKit = new TaskActionTestKit();
 
@@ -157,8 +152,8 @@ public class SegmentTransactionalInsertActionTest
     Assert.assertEquals(
         SegmentPublishResult.fail(
             InvalidInput.exception(
-                "The new start metadata state[ObjectMetadata{theObject=[1]}] is ahead of the last commited end"
-                + " state[null]. Try resetting the supervisor."
+                "The new start metadata state[ObjectMetadata{theObject=[1]}] is"
+                + " ahead of the last committed end state[null]. Try resetting the supervisor."
             ).toString()
         ),
         result
@@ -169,17 +164,15 @@ public class SegmentTransactionalInsertActionTest
   public void testFailBadVersion() throws Exception
   {
     final Task task = NoopTask.create();
-    final SegmentTransactionalInsertAction action = SegmentTransactionalInsertAction.overwriteAction(
-        null,
-        ImmutableSet.of(SEGMENT3),
-        null
-    );
+    final SegmentTransactionalInsertAction action = SegmentTransactionalInsertAction
+        .overwriteAction(null, ImmutableSet.of(SEGMENT3), null);
     actionTestKit.getTaskLockbox().add(task);
     acquireTimeChunkLock(TaskLockType.EXCLUSIVE, task, INTERVAL, 5000);
 
-    thrown.expect(IllegalStateException.class);
-    thrown.expectMessage(CoreMatchers.containsString("are not covered by locks"));
-    SegmentPublishResult result = action.perform(task, actionTestKit.getTaskActionToolbox());
-    Assert.assertEquals(SegmentPublishResult.ok(ImmutableSet.of(SEGMENT3)), result);
+    IllegalStateException exception = Assert.assertThrows(
+        IllegalStateException.class,
+        () -> action.perform(task, actionTestKit.getTaskActionToolbox())
+    );
+    Assert.assertTrue(exception.getMessage().contains("are not covered by locks"));
   }
 }

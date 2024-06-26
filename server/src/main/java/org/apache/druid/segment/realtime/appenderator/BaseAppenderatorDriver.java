@@ -254,7 +254,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
   private static final Logger log = new Logger(BaseAppenderatorDriver.class);
 
   private final SegmentAllocator segmentAllocator;
-  private final UsedSegmentChecker usedSegmentChecker;
+  private final PublishedSegmentRetriever publishedSegmentRetriever;
   private final DataSegmentKiller dataSegmentKiller;
 
   protected final Appenderator appenderator;
@@ -269,13 +269,13 @@ public abstract class BaseAppenderatorDriver implements Closeable
   BaseAppenderatorDriver(
       Appenderator appenderator,
       SegmentAllocator segmentAllocator,
-      UsedSegmentChecker usedSegmentChecker,
+      PublishedSegmentRetriever segmentRetriever,
       DataSegmentKiller dataSegmentKiller
   )
   {
     this.appenderator = Preconditions.checkNotNull(appenderator, "appenderator");
     this.segmentAllocator = Preconditions.checkNotNull(segmentAllocator, "segmentAllocator");
-    this.usedSegmentChecker = Preconditions.checkNotNull(usedSegmentChecker, "segmentRetriever");
+    this.publishedSegmentRetriever = Preconditions.checkNotNull(segmentRetriever, "segmentRetriever");
     this.dataSegmentKiller = Preconditions.checkNotNull(dataSegmentKiller, "dataSegmentKiller");
     this.executor = MoreExecutors.listeningDecorator(
         Execs.singleThreaded("[" + StringUtils.encodeForFormat(appenderator.getId()) + "]-publish")
@@ -665,7 +665,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
                       .map(DataSegment::getId)
                       .collect(Collectors.toSet());
 
-                  final Set<DataSegment> publishedSegments = usedSegmentChecker.findPublishedSegments(segmentIds);
+                  final Set<DataSegment> publishedSegments = publishedSegmentRetriever.findPublishedSegments(segmentIds);
                   if (publishedSegments.equals(ourSegments)) {
                     log.info(
                         "Could not publish [%d] segments, but they have already been published by another task.",
