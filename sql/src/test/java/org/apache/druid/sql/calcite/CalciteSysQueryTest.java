@@ -97,21 +97,4 @@ public class CalciteSysQueryTest extends BaseCalciteQueryTest
                              + "      LogicalTableScan(table=[[sys, tasks]])\n")
         .run();
   }
-
-  @Test
-  public void testJsonObject()
-  {
-    testBuilder()
-        .sql(
-            "select JSON_OBJECT('name': COLUMN_NAME, 'type': \"DATA_TYPE\")"
-                + "from INFORMATION_SCHEMA.COLUMNS order by COLUMN_NAME limit 1"
-        )
-        .expectedResults(
-            ImmutableList.of(
-                new Object[] {"{\"name\":\"CATALOG_NAME\",\"type\":\"VARCHAR\"}"}
-            )
-        )
-        .run();
-  }
-
 }

@@ -4882,7 +4882,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   public void testJsonQueryAndJsonObject()
   {
     testQuery(
-        "SELECT TO_JSON_STRING(JSON_OBJECT(KEY 'n' VALUE JSON_QUERY(nester, '$.n'), KEY 'x' VALUE JSON_VALUE(nest, '$.x')))\n"
+        "SELECT JSON_OBJECT(KEY 'n' VALUE JSON_QUERY(nester, '$.n'), KEY 'x' VALUE JSON_VALUE(nest, '$.x'))\n"
         + "FROM druid.nested",
         ImmutableList.of(
             Druids.newScanQueryBuilder()
