@@ -213,7 +213,7 @@ public class DruidDefaultSerializersModule extends SimpleModule
 
           ColumnBasedFrameRowsAndColumns frc = (ColumnBasedFrameRowsAndColumns) value;
 
-          gen.writeObject(frc.getSignature());
+          JacksonUtils.writeObjectUsingSerializerProvider(gen, serializers, frc.getSignature());
 
           Frame frame = frc.getFrame();
           final ByteArrayOutputStream baos = new ByteArrayOutputStream();
