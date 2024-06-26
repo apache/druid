@@ -1038,6 +1038,25 @@ public class ControllerImpl implements Controller
     return retVal;
   }
 
+  /**
+   * Return partition ranges by bucket (time chunk).
+   */
+  private Map<DateTime, List<Pair<Integer, ClusterByPartition>>> getPartitionsByBucket(
+      final ClusterByPartitions partitionBoundaries,
+      final Granularity segmentGranularity,
+      final RowKeyReader keyReader
+  )
+  {
+    final Map<DateTime, List<Pair<Integer, ClusterByPartition>>> partitionsByBucket = new HashMap<>();
+    for (int i = 0; i < partitionBoundaries.ranges().size(); i++) {
+      final ClusterByPartition partitionBoundary = partitionBoundaries.ranges().get(i);
+      final DateTime bucketDateTime = getBucketDateTime(partitionBoundary, segmentGranularity, keyReader);
+      partitionsByBucket.computeIfAbsent(bucketDateTime, ignored -> new ArrayList<>())
+                        .add(Pair.of(i, partitionBoundary));
+    }
+    return partitionsByBucket;
+  }
+
   private void validateNumSegmentsInTimeChunkOrThrow(final Map<DateTime, List<Pair<Integer, ClusterByPartition>>> partitionsByBucket)
   {
     final Integer maxNumSegments = querySpec.getTuningConfig().getMaxNumSegments();
@@ -1148,25 +1167,6 @@ public class ControllerImpl implements Controller
     }
 
     return Arrays.asList(retVal);
-  }
-
-  /**
-   * Return partition ranges by bucket (time chunk).
-   */
-  private Map<DateTime, List<Pair<Integer, ClusterByPartition>>> getPartitionsByBucket(
-      final ClusterByPartitions partitionBoundaries,
-      final Granularity segmentGranularity,
-      final RowKeyReader keyReader
-  )
-  {
-    final Map<DateTime, List<Pair<Integer, ClusterByPartition>>> partitionsByBucket = new HashMap<>();
-    for (int i = 0; i < partitionBoundaries.ranges().size(); i++) {
-      final ClusterByPartition partitionBoundary = partitionBoundaries.ranges().get(i);
-      final DateTime bucketDateTime = getBucketDateTime(partitionBoundary, segmentGranularity, keyReader);
-      partitionsByBucket.computeIfAbsent(bucketDateTime, ignored -> new ArrayList<>())
-                        .add(Pair.of(i, partitionBoundary));
-    }
-    return partitionsByBucket;
   }
 
   @Override
