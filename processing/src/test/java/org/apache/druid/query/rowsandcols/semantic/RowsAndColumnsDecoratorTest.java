@@ -220,7 +220,7 @@ public class RowsAndColumnsDecoratorTest extends SemanticTestBase
   }
 
   @Test
-  public void asd() throws Exception
+  public void testDecoratorWithColumnBasedFrameRAC()
   {
     RowSignature siggy = RowSignature.builder()
                                      .add("colA", ColumnType.LONG)
