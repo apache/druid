@@ -112,7 +112,7 @@ public class DefaultObjectMapperTest
   }
 
   @Test
-  public void testRowsAndColumns() throws Exception
+  public void testColumnBasedFrameRowsAndColumns() throws Exception
   {
     DefaultObjectMapper om = new DefaultObjectMapper("test");
 
@@ -122,13 +122,11 @@ public class DefaultObjectMapperTest
             "colB", new IntArrayColumn(new int[]{4, -4, 3, -3, 4, 82, -90, 4, 0, 0})
         )));
 
-    ColumnBasedFrameRowsAndColumns frame = ColumnBasedFrameRowsAndColumnsTest.buildFrame(input);
-    byte[] bytes = om.writeValueAsBytes(frame);
+    ColumnBasedFrameRowsAndColumns frc = ColumnBasedFrameRowsAndColumnsTest.buildFrame(input);
+    byte[] bytes = om.writeValueAsBytes(frc);
 
-    System.out.println(new String(bytes));
-    ColumnBasedFrameRowsAndColumns frame2 = (ColumnBasedFrameRowsAndColumns) om.readValue(bytes, RowsAndColumns.class);
-
-    assertEquals(frame, frame2);
+    ColumnBasedFrameRowsAndColumns frc2 = (ColumnBasedFrameRowsAndColumns) om.readValue(bytes, RowsAndColumns.class);
+    assertEquals(frc, frc2);
   }
 
 }

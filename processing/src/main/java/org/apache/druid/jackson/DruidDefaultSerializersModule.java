@@ -29,6 +29,7 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.Frame;
+import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.channel.ByteTracker;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.guava.Accumulator;
@@ -41,6 +42,7 @@ import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.context.ResponseContextDeserializer;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.concrete.ColumnBasedFrameRowsAndColumns;
+import org.apache.druid.query.rowsandcols.concrete.RowBasedFrameRowsAndColumns;
 import org.apache.druid.segment.column.RowSignature;
 import org.joda.time.DateTimeZone;
 
@@ -212,24 +214,31 @@ public class DruidDefaultSerializersModule extends SimpleModule
         if (value instanceof ColumnBasedFrameRowsAndColumns) {
 
           ColumnBasedFrameRowsAndColumns frc = (ColumnBasedFrameRowsAndColumns) value;
-
           JacksonUtils.writeObjectUsingSerializerProvider(gen, serializers, frc.getSignature());
 
-          Frame frame = frc.getFrame();
-          final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-          frame.writeTo(
-              Channels.newChannel(baos),
-              false,
-              ByteBuffer.allocate(Frame.compressionBufferSize((int) frame.numBytes())),
-              ByteTracker.unboundedTracker()
-          );
+          this.writeFrameToGenerator(frc.getFrame(), gen);
+        } else if (value instanceof RowBasedFrameRowsAndColumns) {
+          RowBasedFrameRowsAndColumns frc = (RowBasedFrameRowsAndColumns) value;
+          JacksonUtils.writeObjectUsingSerializerProvider(gen, serializers, frc.getSignature());
 
-          gen.writeBinary(baos.toByteArray());
-
+          this.writeFrameToGenerator(frc.getFrame(), gen);
         } else {
-          throw DruidException.defensive("expected frame");
+          throw DruidException.defensive("expected frame RowsAndColumns");
         }
 
+      }
+
+      private void writeFrameToGenerator(Frame frame, JsonGenerator generator) throws IOException
+      {
+        final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        frame.writeTo(
+            Channels.newChannel(baos),
+            false,
+            ByteBuffer.allocate(Frame.compressionBufferSize((int) frame.numBytes())),
+            ByteTracker.unboundedTracker()
+        );
+
+        generator.writeBinary(baos.toByteArray());
       }
     });
 
@@ -245,7 +254,10 @@ public class DruidDefaultSerializersModule extends SimpleModule
         p.nextValue();
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         p.readBinaryValue(baos);
-        return new ColumnBasedFrameRowsAndColumns(Frame.wrap(baos.toByteArray()), sig);
+        Frame frame = Frame.wrap(baos.toByteArray());
+        return (frame.type() == FrameType.COLUMNAR)
+               ? new ColumnBasedFrameRowsAndColumns(Frame.wrap(baos.toByteArray()), sig)
+               : new RowBasedFrameRowsAndColumns(Frame.wrap(baos.toByteArray()), sig);
       }
     });
   }

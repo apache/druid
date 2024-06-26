@@ -24,8 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.io.CountingOutputStream;
 import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.error.DruidException.Category;
-import org.apache.druid.error.DruidException.Persona;
 import org.apache.druid.error.ErrorResponse;
 import org.apache.druid.error.QueryExceptionCompat;
 import org.apache.druid.java.util.common.ISE;
@@ -452,9 +450,7 @@ public abstract class QueryResultPusher
       }
       catch (IOException ex) {
         QueryResource.NO_STACK_LOGGER.warn(ex, "Unable to write query response.");
-        throw DruidException.forPersona(Persona.DEVELOPER)
-            .ofCategory(Category.UNCATEGORIZED)
-            .build(ex, "Unable to write query response.");
+        throw new RuntimeException(ex);
       }
       return null;
     }

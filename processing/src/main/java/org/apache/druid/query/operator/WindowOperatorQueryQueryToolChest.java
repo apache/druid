@@ -38,6 +38,7 @@ import org.apache.druid.query.rowsandcols.column.Column;
 import org.apache.druid.query.rowsandcols.column.ColumnAccessor;
 import org.apache.druid.query.rowsandcols.column.NullColumn;
 import org.apache.druid.query.rowsandcols.concrete.ColumnBasedFrameRowsAndColumns;
+import org.apache.druid.query.rowsandcols.concrete.RowBasedFrameRowsAndColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 
@@ -204,6 +205,7 @@ public class WindowOperatorQueryQueryToolChest extends QueryToolChest<RowsAndCol
     ObjectMapper om = super.decorateObjectMapper(objectMapper, query).copy();
 
     om.registerSubtypes(ColumnBasedFrameRowsAndColumns.class);
+    om.registerSubtypes(RowBasedFrameRowsAndColumns.class);
 
     return om;
   }
