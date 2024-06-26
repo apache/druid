@@ -1351,7 +1351,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .columns("EXPR$0", "dim2")
                   .context(QUERY_CONTEXT_DEFAULT)
                   .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .legacy(false)
                   .build()
         ),
         ImmutableList.of()
@@ -1376,7 +1375,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .columns("EXPR$0", "dim2")
                   .context(QUERY_CONTEXT_DEFAULT)
                   .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .legacy(false)
                   .build()
         ),
         ImmutableList.of()
@@ -2528,7 +2526,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .limit(1)
                   .columns(ImmutableList.of("v0"))
                   .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .legacy(false)
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
@@ -3470,7 +3467,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .columns("EXPR$0")
                   .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .legacy(false)
                   .build()
         )
         : ImmutableList.of(
@@ -3508,7 +3504,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .columns("EXPR$0")
                   .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .legacy(false)
                   .build()
         )
         : ImmutableList.of(
@@ -3546,7 +3541,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .columns("EXPR$0")
                   .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .legacy(false)
                   .build()
         )
         : ImmutableList.of(
@@ -3965,7 +3959,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .columns("EXPR$0")
                   .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .legacy(false)
                   .build()
         ),
         ImmutableList.of(new Object[]{0L})
@@ -4243,7 +4236,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .columns("EXPR$0", "EXPR$1")
                   .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .legacy(false)
                   .build()
         ),
         ImmutableList.of(
@@ -4316,7 +4308,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .columns("EXPR$0", "EXPR$1")
                   .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .legacy(false)
                   .build()
         ),
         ImmutableList.of()
@@ -6389,7 +6380,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .columns("EXPR$0")
                   .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .legacy(false)
                   .build()
         ),
         ImmutableList.of(
@@ -6777,7 +6767,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                             .virtualColumns(new ExpressionVirtualColumn("v0", ExprEval.of(1L).toExpr(), ColumnType.LONG))
                             .columns("v0")
                             .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                            .legacy(false)
                             .context(QUERY_CONTEXT_LOS_ANGELES)
                             .build()
             ),
@@ -12709,7 +12698,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                     .intervals(querySegmentSpec(Filtration.eternity()))
                     .columns("dim1", "dim2", "dimX")
                     .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                    .legacy(false)
                     .build()
 
         ),
@@ -13851,7 +13839,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                     expressionVirtualColumn("v0", "round(\"f1\")", ColumnType.FLOAT)
                 )
                 .columns("f1", "v0")
-                .legacy(false)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
@@ -14932,7 +14919,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .columns("l1")
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .context(QUERY_CONTEXT_DEFAULT)
-                  .legacy(false)
                   .filters(
                       in("l1", ColumnType.LONG, ImmutableList.of(4842L, 4844L, 4845L, 14905L, 4853L, 29064L))
                   )
@@ -15178,7 +15164,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         )
                     )
                     .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                    .legacy(false)
                     .limit(10)
                     .build()
           ),
@@ -15818,7 +15803,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .columns("a0", "w0")
                         .context(QUERY_CONTEXT_DEFAULT)
                         .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                        .legacy(false)
                         .limit(10)
                         .build()
                 )
@@ -15993,7 +15977,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   )
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .legacy(false)
                   .columns(ImmutableList.of(
                       "EXPR$0"
                   ))
@@ -16078,7 +16061,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .columns("EXPR$0")
                   .context(QUERY_CONTEXT_DEFAULT)
                   .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .legacy(false)
                   .build()
         ) :
         ImmutableList.of(
@@ -16094,7 +16076,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .virtualColumns(expressionVirtualColumn("v0", "0", ColumnType.LONG))
                   .context(QUERY_CONTEXT_DEFAULT)
                   .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .legacy(false)
                   .build()
         ),
         ImmutableList.of(NullHandling.sqlCompatible() ? new Object[]{null} : new Object[]{0})
@@ -16205,7 +16186,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                               .filters(isNull("dim3"))
                               .limit(1)
                               .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                              .legacy(false)
                               .context(QUERY_CONTEXT_LOS_ANGELES)
                               .build()
               )

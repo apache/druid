@@ -2414,7 +2414,6 @@ public class MSQSelectTest extends MSQTestBase
                               ))
                               .intervals(querySegmentSpec(Filtration.eternity()))
                               .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                              .legacy(false)
                               .context(defaultScanQueryContext(
                                   context,
                                   resultSignature
@@ -2488,7 +2487,6 @@ public class MSQSelectTest extends MSQTestBase
                                           )
                                           .intervals(querySegmentSpec(Filtration.eternity()))
                                           .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                                          .legacy(false)
                                           .filters(equality("dim2", "a", ColumnType.STRING))
                                           .columns("dim3")
                                           .context(defaultScanQueryContext(
@@ -2503,7 +2501,6 @@ public class MSQSelectTest extends MSQTestBase
                               ))
                               .intervals(querySegmentSpec(Filtration.eternity()))
                               .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                              .legacy(false)
                               .context(defaultScanQueryContext(
                                   context,
                                   resultSignature
@@ -2571,7 +2568,6 @@ public class MSQSelectTest extends MSQTestBase
                               ))
                               .intervals(querySegmentSpec(Filtration.eternity()))
                               .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                              .legacy(false)
                               .context(defaultScanQueryContext(
                                   context,
                                   rowSignature

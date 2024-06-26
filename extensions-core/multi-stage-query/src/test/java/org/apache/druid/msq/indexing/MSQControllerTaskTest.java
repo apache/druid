@@ -62,7 +62,6 @@ public class MSQControllerTaskTest
       ))
       .query(new Druids.ScanQueryBuilder()
                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                 .legacy(false)
                  .intervals(new MultipleIntervalSegmentSpec(INTERVALS))
                  .dataSource("target")
                  .build()

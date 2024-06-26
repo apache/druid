@@ -108,7 +108,6 @@ public class ScanQueryFrameProcessorTest extends InitializedNullHandlingTest
               .dataSource("test")
               .intervals(new MultipleIntervalSegmentSpec(Intervals.ONLY_ETERNITY))
               .columns(adapter.getRowSignature().getColumnNames())
-              .legacy(false)
               .build();
 
     final StagePartition stagePartition = new StagePartition(new StageId("query", 0), 0);

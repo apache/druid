@@ -72,8 +72,7 @@ public class ScanQueryQueryToolChestTest
   );
 
   private final ScanQueryQueryToolChest toolChest = new ScanQueryQueryToolChest(
-      new ScanQueryConfig(),
-      new DefaultGenericQueryMetricsFactory()
+      DefaultGenericQueryMetricsFactory.instance()
   );
 
   @Test
@@ -95,7 +94,6 @@ public class ScanQueryQueryToolChestTest
         Druids.newScanQueryBuilder()
               .dataSource("foo")
               .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2000/3000"))))
-              .legacy(true)
               .build();
 
     Assert.assertEquals(RowSignature.empty(), toolChest.resultArraySignature(scanQuery));
@@ -125,7 +123,6 @@ public class ScanQueryQueryToolChestTest
               .dataSource("foo")
               .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2000/3000"))))
               .columns("foo", "bar")
-              .legacy(true)
               .build();
 
     Assert.assertEquals(
