@@ -392,6 +392,21 @@ public class OverlordResource
     return Response.status(status).entity(response).build();
   }
 
+  @Deprecated
+  @GET
+  @Path("/task/{taskid}/segments")
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(TaskResourceFilter.class)
+  public Response getTaskSegments(@PathParam("taskid") String taskid)
+  {
+    final String errorMsg =
+        "Segment IDs committed by a task action are not persisted anymore."
+        + " Use the metric 'segment/added/bytes' to identify the segments created by a task.";
+    return Response.status(Status.NOT_FOUND)
+                   .entity(Collections.singletonMap("error", errorMsg))
+                   .build();
+  }
+
   @POST
   @Path("/task/{taskid}/shutdown")
   @Produces(MediaType.APPLICATION_JSON)

@@ -170,7 +170,7 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
   @Deprecated
   default boolean addLog(String entryId, LogType log)
   {
-    throw new UnsupportedOperationException("'tasklogs' table is not used anymore");
+    throw new UnsupportedOperationException("Task actions are not logged anymore.");
   }
 
   /**
@@ -181,7 +181,7 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
   @Deprecated
   default List<LogType> getLogs(String entryId)
   {
-    throw new UnsupportedOperationException("'tasklogs' table is not used anymore");
+    throw new UnsupportedOperationException("Task actions are not logged anymore.");
   }
 
   /**

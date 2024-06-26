@@ -73,7 +73,6 @@ public class SQLMetadataStorageActionHandlerTest
     TestDerbyConnector connector = derbyConnectorRule.getConnector();
 
     final String entryType = "entry";
-    final String logTable = "logs";
     final String lockTable = "locks";
 
     connector.prepareTaskEntryTable(entryTable);
@@ -242,6 +241,32 @@ public class SQLMetadataStorageActionHandlerTest
     );
     Assert.assertEquals("invalidInput", exception.getErrorCode());
     Assert.assertEquals("Task [abcd] already exists", exception.getMessage());
+  }
+
+  @Test
+  public void testAddLogThrowsUnsupportedException()
+  {
+    Exception exception = Assert.assertThrows(
+        UnsupportedOperationException.class,
+        () -> handler.addLog("abcd", ImmutableMap.of("logentry", "created"))
+    );
+    Assert.assertEquals(
+        "Task actions are not logged anymore.",
+        exception.getMessage()
+    );
+  }
+
+  @Test
+  public void testGetLogsThrowsUnsupportedException()
+  {
+    Exception exception = Assert.assertThrows(
+        UnsupportedOperationException.class,
+        () -> handler.getLogs("abcd")
+    );
+    Assert.assertEquals(
+        "Task actions are not logged anymore.",
+        exception.getMessage()
+    );
   }
 
   @Test

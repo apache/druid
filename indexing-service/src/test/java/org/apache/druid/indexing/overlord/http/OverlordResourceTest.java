@@ -1870,6 +1870,23 @@ public class OverlordResourceTest
     Assert.assertEquals(ImmutableMap.of("task", TaskStatus.running("task")), response);
   }
 
+  @Test
+  public void testGetTaskSegmentsReturns404()
+  {
+    OverlordResource overlordResource =
+        new OverlordResource(null, null, null, null, null, null, null, null, null, null);
+    final Response response = overlordResource.getTaskSegments("taskId");
+    Assert.assertEquals(404, response.getStatus());
+    Assert.assertEquals(
+        Collections.singletonMap(
+            "error",
+            "Segment IDs committed by a task action are not persisted anymore."
+            + " Use the metric 'segment/added/bytes' to identify the segments created by a task."
+        ),
+        response.getEntity()
+    );
+  }
+
   private void expectAuthorizationTokenCheck()
   {
     expectAuthorizationTokenCheck(Users.DRUID);
