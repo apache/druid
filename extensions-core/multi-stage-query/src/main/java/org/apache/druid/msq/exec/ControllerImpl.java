@@ -968,7 +968,7 @@ public class ControllerImpl implements Controller
       final Map<DateTime, List<Pair<Integer, ClusterByPartition>>> partitionsByBucket =
           getPartitionsByBucket(partitionBoundaries, segmentGranularity, keyReader);
 
-      validateNumSegmentsInTimeChunkOrThrow(partitionsByBucket);
+      validateNumSegmentsPerBucketOrThrow(partitionsByBucket);
     }
 
     String previousSegmentId = null;
@@ -1057,7 +1057,7 @@ public class ControllerImpl implements Controller
     return partitionsByBucket;
   }
 
-  private void validateNumSegmentsInTimeChunkOrThrow(final Map<DateTime, List<Pair<Integer, ClusterByPartition>>> partitionsByBucket)
+  private void validateNumSegmentsPerBucketOrThrow(final Map<DateTime, List<Pair<Integer, ClusterByPartition>>> partitionsByBucket)
   {
     final Integer maxNumSegments = querySpec.getTuningConfig().getMaxNumSegments();
     if (maxNumSegments == null) {
@@ -1119,7 +1119,7 @@ public class ControllerImpl implements Controller
         getPartitionsByBucket(partitionBoundaries, segmentGranularity, keyReader);
 
     // Validate the buckets.
-    validateNumSegmentsInTimeChunkOrThrow(partitionsByBucket);
+    validateNumSegmentsPerBucketOrThrow(partitionsByBucket);
 
     // Process buckets (time chunks) one at a time.
     for (final Map.Entry<DateTime, List<Pair<Integer, ClusterByPartition>>> bucketEntry : partitionsByBucket.entrySet()) {
