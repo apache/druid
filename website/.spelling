@@ -1665,7 +1665,6 @@ Filesystem
 JVMMonitor
 jvmVersion
 QueryCountStatsMonitor
-RealtimeMetricsMonitor
 Sys
 SysMonitor
 TaskCountStatsMonitor
