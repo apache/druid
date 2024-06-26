@@ -319,13 +319,17 @@ public class MSQFaultsTest extends MSQTestBase
   }
 
   @Test
-  public void testInsertWithTooManySegmentsInTimeChunk() throws IOException
+  public void testReplaceWithTooManySegmentsInTimeChunk() throws IOException
   {
+    // Each segment will contain at most 10 rows. So with ALL granularity, an ingest query will
+    // attempt to generate a total of 5 segments for 50 input rows but will fail since only 1 segment is allowed.
+    final int maxNumSegments = 1;
     final int rowsPerSegment = 10;
     final int numRowsInInputFile = 50;
+
     final Map<String, Object> context = ImmutableMap.<String, Object>builder()
                                               .putAll(DEFAULT_MSQ_CONTEXT)
-                                              .put("maxNumSegments", 1)
+                                              .put("maxNumSegments", maxNumSegments)
                                               .put("rowsPerSegment", rowsPerSegment)
                                               .build();
 
@@ -347,8 +351,8 @@ public class MSQFaultsTest extends MSQTestBase
                      .setExpectedDataSource("foo1")
                      .setExpectedRowSignature(RowSignature.builder().add("__time", ColumnType.LONG).build())
                      .setQueryContext(context)
-                     .setExpectedMSQFault(new TooManySegmentsInTimeChunkFault(
-                         DateTimes.of("1970-01-01"), numRowsInInputFile / rowsPerSegment, 1)
+                     .setExpectedMSQFault(
+                         new TooManySegmentsInTimeChunkFault(DateTimes.of("1970-01-01"), numRowsInInputFile / rowsPerSegment, maxNumSegments)
                      )
                      .verifyResults();
 

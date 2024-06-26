@@ -1385,8 +1385,8 @@ public class MSQInsertTest extends MSQTestBase
                      .setExpectedDataSource("foo")
                      .setExpectedRowSignature(RowSignature.builder().add("__time", ColumnType.LONG).build())
                      .setQueryContext(context)
-                     .setExpectedMSQFault(new TooManySegmentsInTimeChunkFault(
-                         DateTimes.of("2023-01-01"), 2, 1)
+                     .setExpectedMSQFault(
+                         new TooManySegmentsInTimeChunkFault(DateTimes.of("2023-01-01"), 2, 1)
                      )
                      .verifyResults();
 
@@ -1405,11 +1405,12 @@ public class MSQInsertTest extends MSQTestBase
                                                           .add("__time", ColumnType.LONG)
                                                           .add("c1", ColumnType.STRING)
                                                           .build();
-
+    // Ingest query should at most generate 2 segments per time chunk
+    // i.e. 2 segments for the first time chunk and 1 segment for the last time chunk.
     testIngestQuery().setSql("INSERT INTO foo"
                              + " SELECT TIME_PARSE(ts) AS __time, c1 "
                              + " FROM (VALUES('2023-01-01', 'day1_1'), ('2023-01-01', 'day1_2'), ('2023-02-01', 'day2')) AS t(ts, c1)"
-                             + " PARTITIONED BY day")
+                             + " PARTITIONED BY DAY")
                      .setQueryContext(context)
                      .setExpectedDataSource("foo")
                      .setExpectedRowSignature(expectedRowSignature)

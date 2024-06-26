@@ -771,8 +771,8 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedDataSource("foo")
                      .setExpectedRowSignature(RowSignature.builder().add("__time", ColumnType.LONG).build())
                      .setQueryContext(context)
-                     .setExpectedMSQFault(new TooManySegmentsInTimeChunkFault(
-                         DateTimes.of("2023-01-01T01:00:00.000Z"), 2, 1)
+                     .setExpectedMSQFault(
+                         new TooManySegmentsInTimeChunkFault(DateTimes.of("2023-01-01T01:00:00.000Z"), 2, 1)
                      )
                      .verifyResults();
 
@@ -791,6 +791,7 @@ public class MSQReplaceTest extends MSQTestBase
                                                           .add("c1", ColumnType.STRING)
                                                           .build();
 
+    // Ingest query should generate at most 1 segment for all the rows.
     testIngestQuery().setSql("REPLACE INTO foo"
                              + " OVERWRITE ALL"
                              + " SELECT TIME_PARSE(ts) AS __time, c1 "
