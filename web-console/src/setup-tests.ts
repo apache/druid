@@ -17,6 +17,7 @@
  */
 
 import 'core-js/stable';
+import './bootstrap/ace';
 
 import { UrlBaser } from './singletons';
 

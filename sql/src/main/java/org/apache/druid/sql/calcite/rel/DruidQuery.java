@@ -106,7 +106,6 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -1078,6 +1077,12 @@ public class DruidQuery
           virtualColumnRegistry,
           plannerContext.getJoinableFactoryWrapper()
       );
+
+      if (!getVirtualColumns(true).isEmpty()) {
+        // timeBoundary query does not support virtual columns.
+        return null;
+      }
+
       final DataSource newDataSource = dataSourceFiltrationPair.lhs;
       final Filtration filtration = dataSourceFiltrationPair.rhs;
       String bound = minTime ? TimeBoundaryQuery.MIN_TIME : TimeBoundaryQuery.MAX_TIME;
@@ -1596,7 +1601,8 @@ public class DruidQuery
 
     if (outputRowSignature.size() == 0) {
       // Should never do a scan query without any columns that we're interested in. This is probably a planner bug.
-      throw new ISE("Cannot convert to Scan query without any columns.");
+      this.plannerContext.setPlanningError("Cannot convert to Scan query without any columns.");
+      return null;
     }
 
     final Pair<DataSource, Filtration> dataSourceFiltrationPair = getFiltration(

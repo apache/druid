@@ -27,10 +27,13 @@ import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
+import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.task.Tasks;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.msq.indexing.error.InsertCannotAllocateSegmentFault;
 import org.apache.druid.msq.indexing.error.InsertCannotBeEmptyFault;
 import org.apache.druid.msq.indexing.error.InsertTimeNullFault;
@@ -40,6 +43,7 @@ import org.apache.druid.msq.indexing.error.TooManyClusteredByColumnsFault;
 import org.apache.druid.msq.indexing.error.TooManyColumnsFault;
 import org.apache.druid.msq.indexing.error.TooManyInputFilesFault;
 import org.apache.druid.msq.indexing.error.TooManyPartitionsFault;
+import org.apache.druid.msq.indexing.error.TooManySegmentsInTimeChunkFault;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestTaskActionClient;
 import org.apache.druid.segment.column.ColumnType;
@@ -51,6 +55,7 @@ import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.hamcrest.CoreMatchers;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentMatcher;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
@@ -282,7 +287,7 @@ public class MSQFaultsTest extends MSQTestBase
   }
 
   @Test
-  public void testInsertWithTooManySegments() throws IOException
+  public void testInsertWithTooManyPartitions() throws IOException
   {
     Map<String, Object> context = ImmutableMap.<String, Object>builder()
                                               .putAll(DEFAULT_MSQ_CONTEXT)
@@ -310,6 +315,51 @@ public class MSQFaultsTest extends MSQTestBase
                      .setExpectedRowSignature(rowSignature)
                      .setQueryContext(context)
                      .setExpectedMSQFault(new TooManyPartitionsFault(25000))
+                     .verifyResults();
+
+  }
+
+  @Test
+  public void testReplaceWithTooManySegmentsInTimeChunk() throws IOException
+  {
+    // Each segment will contain at most 10 rows. So with ALL granularity, an ingest query will
+    // attempt to generate a total of 5 segments for 50 input rows but will fail since only 1 segment is allowed.
+    final int maxNumSegments = 1;
+    final int rowsPerSegment = 10;
+    final int numRowsInInputFile = 50;
+
+    final Map<String, Object> context = ImmutableMap.<String, Object>builder()
+                                              .putAll(DEFAULT_MSQ_CONTEXT)
+                                              .put("maxNumSegments", maxNumSegments)
+                                              .put("rowsPerSegment", rowsPerSegment)
+                                              .build();
+
+
+    final File file = createNdJsonFile(newTempFile("ndjson30k"), numRowsInInputFile, 1);
+    final String filePathAsJson = queryFramework().queryJsonMapper().writeValueAsString(file.getAbsolutePath());
+
+    testIngestQuery().setSql(
+                         "REPLACE INTO foo1 "
+                         + " OVERWRITE ALL "
+                         + " SELECT FLOOR(TIME_PARSE(\"timestamp\") to day) AS __time"
+                         + " FROM TABLE(\n"
+                         + "  EXTERN(\n"
+                         + "    '{ \"files\": [" + filePathAsJson + "],\"type\":\"local\"}',\n"
+                         + "    '{\"type\": \"json\"}',\n"
+                         + "    '[{\"name\": \"timestamp\",\"type\":\"string\"}]'\n"
+                         + "  )\n"
+                         + " ) PARTITIONED BY ALL")
+                     .setExpectedDataSource("foo1")
+                     .setExpectedRowSignature(RowSignature.builder().add("__time", ColumnType.LONG).build())
+                     .setQueryContext(context)
+                     .setExpectedMSQFault(
+                         new TooManySegmentsInTimeChunkFault(
+                             DateTimes.of("1970-01-01"),
+                             numRowsInInputFile / rowsPerSegment,
+                             maxNumSegments,
+                             Granularities.ALL
+                         )
+                     )
                      .verifyResults();
 
   }
@@ -532,7 +582,10 @@ public class MSQFaultsTest extends MSQTestBase
 
     Mockito.doReturn(ImmutableSet.of(existingDataSegment))
            .when(testTaskActionClient)
-           .submit(ArgumentMatchers.isA(RetrieveUsedSegmentsAction.class));
+           .submit(ArgumentMatchers.argThat(
+               (ArgumentMatcher<TaskAction<?>>) argument ->
+                   argument instanceof RetrieveUsedSegmentsAction
+                   && "foo1".equals(((RetrieveUsedSegmentsAction) argument).getDataSource())));
 
     String expectedError = new TooManyBucketsFault(Limits.MAX_PARTITION_BUCKETS).getErrorMessage();
 
@@ -578,7 +631,10 @@ public class MSQFaultsTest extends MSQTestBase
 
     Mockito.doReturn(ImmutableSet.of(existingDataSegment))
            .when(testTaskActionClient)
-           .submit(ArgumentMatchers.isA(RetrieveUsedSegmentsAction.class));
+           .submit(ArgumentMatchers.argThat(
+               (ArgumentMatcher<TaskAction<?>>) argument ->
+                   argument instanceof RetrieveUsedSegmentsAction
+                   && "foo1".equals(((RetrieveUsedSegmentsAction) argument).getDataSource())));
 
     String expectedError = new TooManyBucketsFault(Limits.MAX_PARTITION_BUCKETS).getErrorMessage();
 

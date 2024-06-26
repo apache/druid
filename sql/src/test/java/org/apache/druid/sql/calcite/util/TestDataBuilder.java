@@ -49,12 +49,14 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
-import org.apache.druid.query.aggregation.first.DoubleFirstAggregatorFactory;
-import org.apache.druid.query.aggregation.first.LongFirstAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.first.DoubleFirstAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.first.LongFirstAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.first.StringFirstAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.last.DoubleLastAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.last.FloatLastAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.last.LongLastAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.last.StringLastAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
-import org.apache.druid.query.aggregation.last.DoubleLastAggregatorFactory;
-import org.apache.druid.query.aggregation.last.FloatLastAggregatorFactory;
-import org.apache.druid.query.aggregation.last.LongLastAggregatorFactory;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.segment.IndexBuilder;
@@ -655,8 +657,9 @@ public class TestDataBuilder
                         new FloatLastAggregatorFactory("float_last_added", "added", "__time"),
                         new FloatLastAggregatorFactory("float_first_added", "added", "__time"),
                         new DoubleLastAggregatorFactory("double_last_added", "added", "__time"),
-                        new DoubleFirstAggregatorFactory("double_first_added", "added", "__time")
-
+                        new DoubleFirstAggregatorFactory("double_first_added", "added", "__time"),
+                        new StringFirstAggregatorFactory("string_first_added", "comment", "__time", 1000),
+                        new StringLastAggregatorFactory("string_last_added", "comment", "__time", 1000)
                     )
                     .build()
         )

@@ -142,6 +142,8 @@ public class GroupingEngine
    * {@link GroupByMergingQueryRunner} for a particular query. The resources are to be acquired once throughout the
    * execution of the query, or need to be re-acquired (if needed). Users must ensure that throughout the execution,
    * a query already holding the resources shouldn't request for more resources, because that can cause deadlocks.
+   * <p>
+   * This method throws an exception if it is not able to allocate sufficient resources required for the query to succeed
    */
   public static GroupByQueryResources prepareResource(
       GroupByQuery query,
@@ -684,8 +686,7 @@ public class GroupingEngine
           processingConfig.intermediateComputeSizeBytes()
       );
 
-      List<String> queryDimNames = baseSubtotalQuery.getDimensions().stream().map(DimensionSpec::getOutputName)
-                                                    .collect(Collectors.toList());
+      List<String> queryDimNamesInOrder = baseSubtotalQuery.getDimensionNamesInOrder();
 
       // Only needed to make LimitSpec.filterColumns(..) call later in case base query has a non default LimitSpec.
       Set<String> aggsAndPostAggs = null;
@@ -722,7 +723,7 @@ public class GroupingEngine
             .withLimitSpec(subtotalQueryLimitSpec);
 
         final GroupByRowProcessor.ResultSupplier resultSupplierOneFinal = resultSupplierOne;
-        if (Utils.isPrefix(subtotalSpec, queryDimNames)) {
+        if (Utils.isPrefix(subtotalSpec, queryDimNamesInOrder)) {
           // Since subtotalSpec is a prefix of base query dimensions, so results from base query are also sorted
           // by subtotalSpec as needed by stream merging.
           subtotalsResults.add(

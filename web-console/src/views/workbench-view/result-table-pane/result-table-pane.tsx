@@ -63,10 +63,24 @@ function getJsonPaths(jsons: Record<string, any>[]): string[] {
   return ['$.'].concat(computeFlattenExprsForData(jsons, 'include-arrays', true));
 }
 
-function getExpressionIfAlias(query: SqlQuery, selectIndex: number): string {
-  const ex = query.getSelectExpressionForIndex(selectIndex);
+function getExpressionIfAlias(query: SqlQuery, columnIndex: number, numColumns: number): string {
+  const selectExpressionsArray = query.getSelectExpressionsArray();
+  // If there is a * before
+  if (
+    columnIndex > 0 &&
+    selectExpressionsArray.slice(0, columnIndex).some(ex => ex instanceof SqlStar)
+  ) {
+    columnIndex = selectExpressionsArray.length - (numColumns - columnIndex);
+    if (
+      columnIndex < 0 || // This column came from a star
+      selectExpressionsArray.slice(columnIndex, 0).some(ex => ex instanceof SqlStar) // We are between stars
+    ) {
+      return '';
+    }
+  }
 
-  if (query.isRealOutputColumnAtSelectIndex(selectIndex)) {
+  const ex = selectExpressionsArray[columnIndex];
+  if (query.isRealOutputColumnAtSelectIndex(columnIndex)) {
     if (ex instanceof SqlAlias) {
       return String(ex.expression.prettify({ keywordCasing: 'preserve' }));
     } else {
@@ -183,7 +197,7 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
                 handleQueryAction(q =>
                   q.changeSelect(
                     headerIndex,
-                    underlyingExpression.getArg(0)!.as(selectExpression.getOutputName()),
+                    underlyingExpression.getArg(0)!.setAlias(selectExpression.getOutputName()),
                   ),
                 );
               }}
@@ -207,7 +221,7 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
                         selectExpression
                           .getUnderlyingExpression()
                           .cast(asType)
-                          .as(selectExpression.getOutputName()),
+                          .setAlias(selectExpression.getOutputName()),
                       ),
                     );
                   }}
@@ -546,7 +560,8 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
       ? parsedQuery.getSelectExpressionForIndex(editingColumn)
       : undefined;
 
-  const numericColumnBraces = getNumericColumnBraces(queryResult, pagination);
+  const numColumns = queryResult.header.length;
+  const numericColumnBraces = getNumericColumnBraces(queryResult, undefined, pagination);
   return (
     <div className={classNames('result-table-pane', { 'more-results': hasMoreResults })}>
       {finalPage ? (
@@ -587,7 +602,7 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
           showPagination={
             queryResult.rows.length > Math.min(SMALL_TABLE_PAGE_SIZE, pagination.pageSize)
           }
-          columns={filterMap(queryResult.header, (column, i) => {
+          columns={queryResult.header.map((column, i) => {
             const h = column.name;
             const icon = columnToIcon(column);
 
@@ -604,7 +619,9 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
                         )}
                       </div>
                       {parsedQuery && (
-                        <div className="formula">{getExpressionIfAlias(parsedQuery, i)}</div>
+                        <div className="formula">
+                          {getExpressionIfAlias(parsedQuery, i, numColumns)}
+                        </div>
                       )}
                     </div>
                   </Popover2>
@@ -620,7 +637,7 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
                       {numericColumnBraces[i] ? (
                         <BracedText
                           className="table-padding"
-                          text={formatNumber(value)}
+                          text={typeof value === 'number' ? formatNumber(value) : String(value)}
                           braces={numericColumnBraces[i]}
                           padFractionalPart
                         />
@@ -640,7 +657,9 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
           })}
         />
       )}
-      {showValue && <ShowValueDialog onClose={() => setShowValue(undefined)} str={showValue} />}
+      {showValue && (
+        <ShowValueDialog onClose={() => setShowValue(undefined)} str={showValue} size="large" />
+      )}
       {editingExpression && (
         <ExpressionEditorDialog
           includeOutputName

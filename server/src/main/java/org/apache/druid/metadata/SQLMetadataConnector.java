@@ -294,7 +294,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
             )
         )
     );
-    alterPendingSegmentsTableAddParentIdAndTaskGroup(tableName);
+    alterPendingSegmentsTable(tableName);
   }
 
   public void createDataSourceTable(final String tableName)
@@ -318,7 +318,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
 
   public void createSegmentTable(final String tableName)
   {
-    List<String> columns = new ArrayList<>();
+    final List<String> columns = new ArrayList<>();
     columns.add("id VARCHAR(255) NOT NULL");
     columns.add("dataSource VARCHAR(255) %4$s NOT NULL");
     columns.add("created_date VARCHAR(255) NOT NULL");
@@ -339,10 +339,10 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
 
     for (String column : columns) {
       createStatementBuilder.append(column);
-      createStatementBuilder.append(",");
+      createStatementBuilder.append(",\n");
     }
 
-    createStatementBuilder.append("PRIMARY KEY (id))");
+    createStatementBuilder.append("PRIMARY KEY (id)\n)");
 
     createTable(
         tableName,
@@ -481,7 +481,16 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     }
   }
 
-  private void alterPendingSegmentsTableAddParentIdAndTaskGroup(final String tableName)
+  /**
+   * Adds the following columns to the pending segments table to clean up unused records,
+   * and to faciliatate concurrent append and replace.
+   * 1) task_allocator_id -> The task id / task group id / task replica group id of the task that allocated it.
+   * 2) upgraded_from_segment_id -> The id of the segment from which the entry was upgraded upon concurrent replace.
+   *
+   * Also, adds an index on (dataSource, task_allocator_id)
+   * @param tableName name of the pending segments table
+   */
+  private void alterPendingSegmentsTable(final String tableName)
   {
     List<String> statements = new ArrayList<>();
     if (tableHasColumn(tableName, "upgraded_from_segment_id")) {
@@ -499,6 +508,14 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     if (!statements.isEmpty()) {
       alterTable(tableName, statements);
     }
+
+    final Set<String> createdIndexSet = getIndexOnTable(tableName);
+    createIndex(
+        tableName,
+        StringUtils.format("idx_%1$s_datasource_task_allocator_id", tableName),
+        ImmutableList.of("dataSource", "task_allocator_id"),
+        createdIndexSet
+    );
   }
 
   public void createLogTable(final String tableName, final String entryTypeName)
@@ -601,10 +618,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
       log.info("Adding columns %s to table[%s].", columnsToAdd, tableName);
     }
 
-    alterTable(
-        tableName,
-        alterCommands
-    );
+    alterTable(tableName, alterCommands);
   }
 
   @Override
@@ -994,7 +1008,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                 tableName, getSerialType(), getPayloadType()
             ),
             StringUtils.format("CREATE INDEX idx_%1$s_fingerprint ON %1$s(fingerprint)", tableName),
-            StringUtils.format("CREATE INDEX idx_%1$s_used ON %1$s(used)", tableName)
+            StringUtils.format("CREATE INDEX idx_%1$s_used ON %1$s(used, used_status_last_updated)", tableName)
         )
     );
   }
@@ -1138,7 +1152,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   {
     String segmentsTables = tablesConfigSupplier.get().getSegmentsTable();
 
-    boolean schemaPersistenceRequirementMet =
+    final boolean schemaPersistenceRequirementMet =
         !centralizedDatasourceSchemaConfig.isEnabled() ||
         (tableHasColumn(segmentsTables, "schema_fingerprint")
          && tableHasColumn(segmentsTables, "num_rows"));

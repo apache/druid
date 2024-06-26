@@ -43,7 +43,6 @@ import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.BatchAppenderators;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
-import org.apache.druid.indexing.common.task.PendingSegmentAllocatingTask;
 import org.apache.druid.indexing.common.task.SegmentAllocatorForBatch;
 import org.apache.druid.indexing.common.task.SegmentAllocators;
 import org.apache.druid.indexing.common.task.TaskResource;
@@ -58,12 +57,10 @@ import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
-import org.apache.druid.segment.realtime.FireDepartment;
-import org.apache.druid.segment.realtime.FireDepartmentMetrics;
+import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
 import org.apache.druid.segment.realtime.appenderator.BaseAppenderatorDriver;
@@ -109,7 +106,7 @@ import java.util.stream.Collectors;
  * generates and pushes segments, and reports them to the {@link SinglePhaseParallelIndexTaskRunner} instead of
  * publishing on its own.
  */
-public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHandler, PendingSegmentAllocatingTask
+public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHandler
 {
   public static final String TYPE = "single_phase_sub_task";
   public static final String OLD_TYPE_NAME = "index_sub";
@@ -241,12 +238,6 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
   }
 
   @Override
-  public String getTaskAllocatorId()
-  {
-    return getGroupId();
-  }
-
-  @Override
   public TaskStatus runTask(final TaskToolbox toolbox) throws Exception
   {
     try {
@@ -375,15 +366,9 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
   {
     final DataSchema dataSchema = ingestionSchema.getDataSchema();
     final GranularitySpec granularitySpec = dataSchema.getGranularitySpec();
-    final FireDepartment fireDepartmentForMetrics =
-        new FireDepartment(dataSchema, new RealtimeIOConfig(null, null), null);
-    final FireDepartmentMetrics fireDepartmentMetrics = fireDepartmentForMetrics.getMetrics();
-
-    TaskRealtimeMetricsMonitor metricsMonitor = TaskRealtimeMetricsMonitorBuilder.build(
-        this,
-        fireDepartmentForMetrics,
-        rowIngestionMeters
-    );
+    final SegmentGenerationMetrics segmentGenerationMetrics = new SegmentGenerationMetrics();
+    final TaskRealtimeMetricsMonitor metricsMonitor =
+        TaskRealtimeMetricsMonitorBuilder.build(this, segmentGenerationMetrics, rowIngestionMeters);
     toolbox.addMonitor(metricsMonitor);
 
     final ParallelIndexTuningConfig tuningConfig = ingestionSchema.getTuningConfig();
@@ -416,7 +401,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
     final Appenderator appenderator = BatchAppenderators.newAppenderator(
         getId(),
         toolbox.getAppenderatorsManager(),
-        fireDepartmentMetrics,
+        segmentGenerationMetrics,
         toolbox,
         dataSchema,
         tuningConfig,
@@ -468,8 +453,6 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
         } else {
           throw new ISE("Failed to add a row with timestamp[%s]", inputRow.getTimestamp());
         }
-
-        fireDepartmentMetrics.incrementProcessed();
       }
 
       final SegmentsAndCommitMetadata pushed = driver.pushAllAndClear(pushTimeout);

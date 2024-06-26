@@ -25,6 +25,7 @@ import com.google.common.hash.Hashing;
 import com.google.common.io.BaseEncoding;
 import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -58,19 +59,27 @@ public class FingerprintGenerator
       final Hasher hasher = Hashing.sha256().newHasher();
 
       hasher.putBytes(objectMapper.writeValueAsBytes(schemaPayload));
+      // add delimiter, inspired from org.apache.druid.metadata.PendingSegmentRecord.computeSequenceNamePrevIdSha1
+      hasher.putByte((byte) 0xff);
+
       hasher.putBytes(StringUtils.toUtf8(dataSource));
+      hasher.putByte((byte) 0xff);
+
       hasher.putBytes(Ints.toByteArray(version));
+      hasher.putByte((byte) 0xff);
+
       return BaseEncoding.base16().encode(hasher.hash().asBytes());
     }
     catch (IOException e) {
       log.error(
-          "Exception generating fingerprint for payload [%s], datasource [%s], version [%s] with stacktrace [%s].",
-          schemaPayload,
-          dataSource,
-          version,
-          e
+          e,
+          "Exception generating schema fingerprint (version[%d]) for datasource[%s], payload[%s].",
+          version, dataSource, schemaPayload
       );
-      throw new RuntimeException(e);
+      throw DruidException.defensive(
+          "Could not generate schema fingerprint (version[%d]) for datasource[%s].",
+          dataSource, version
+      );
     }
   }
 }

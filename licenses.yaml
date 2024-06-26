@@ -652,7 +652,7 @@ name: Apache Commons Configuration
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.8.0
+version: 2.10.1
 libraries:
   - org.apache.commons: commons-configuration2
 
@@ -1054,7 +1054,7 @@ name: org.bouncycastle bcprov-jdk18on
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: MIT License
-version: "1.76"
+version: "1.78.1"
 libraries:
   - org.bouncycastle: bcprov-jdk18on
   - org.bouncycastle: bcprov-ext-jdk18on
@@ -1616,7 +1616,7 @@ name: Apache Calcite
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.35.0
+version: 1.37.0
 libraries:
   - org.apache.calcite: calcite-core
   - org.apache.calcite: calcite-linq4j
@@ -1634,7 +1634,7 @@ name: Apache Calcite Avatica
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.23.0
+version: 1.25.0
 libraries:
   - org.apache.calcite.avatica: avatica-core
   - org.apache.calcite.avatica: avatica-metrics
@@ -1655,7 +1655,7 @@ name: Apache Curator
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 5.5.0
+version: 5.3.0
 libraries:
   - org.apache.curator: curator-client
   - org.apache.curator: curator-framework
@@ -2397,20 +2397,6 @@ license_name: Apache License version 2.0
 version: 0.9
 libraries:
   - org.skife.config: config-magic
-
----
-
-name: Ion Java
-license_category: binary
-module: java-core
-license_name: Apache License version 2.0
-version: 1.0.2
-libraries:
-  - software.amazon.ion: ion-java
-notices:
-  - ion-java: |
-      Amazon Ion Java
-      Copyright 2007-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
 ---
 
@@ -4223,7 +4209,7 @@ license_category: binary
 module: extensions/druid-azure-extensions
 license_name: MIT License
 copyright: Microsoft
-version: 1.11.1
+version: 1.12.0
 libraries:
   - com.azure: azure-identity
 
@@ -4234,9 +4220,20 @@ license_category: binary
 module: extensions/druid-azure-extensions
 license_name: MIT License
 copyright: Microsoft
-version: 12.21.1
+version: 12.21.4
 libraries:
   - com.azure: azure-storage-blob-batch
+
+---
+
+name: Microsoft Azure  Blob Storage SDK
+license_category: binary
+module: extensions/druid-azure-extensions
+license_name: MIT License
+copyright: Microsoft
+version: 12.25.4
+libraries:
+  - com.azure: azure-storage-blob
 
 ---
 
@@ -4245,7 +4242,7 @@ license_category: binary
 module: extensions/druid-azure-extensions
 license_name: MIT License
 copyright: Microsoft
-version: 12.24.1
+version: 12.24.4
 libraries:
   - com.azure: azure-storage-common
 
@@ -4256,7 +4253,7 @@ license_category: binary
 module: extensions/druid-azure-extensions
 license_name: MIT License
 copyright: Microsoft
-version: 12.10.1
+version: 12.10.4
 libraries:
   - com.azure: azure-storage-internal-avro
 
@@ -4272,12 +4269,23 @@ libraries:
   - com.azure: azure-json
 
 ---
+
+name: Microsoft Azure XML
+license_category: binary
+module: extensions/druid-azure-extensions
+license_name: MIT License
+copyright: Microsoft
+version: 1.0.0
+libraries:
+  - com.azure: azure-xml
+
+---
 name: Microsoft Azure Netty Http
 license_category: binary
 module: extensions/druid-azure-extensions
 license_name: MIT License
 copyright: Microsoft
-version: 1.13.11
+version: 1.14.2
 libraries:
   - com.azure: azure-core-http-netty
 
@@ -4288,7 +4296,7 @@ license_category: binary
 module: extensions/druid-azure-extensions
 license_name: MIT License
 copyright: Microsoft
-version: 1.45.1
+version: 1.48.0
 libraries:
   - com.azure: azure-core
 
@@ -4299,7 +4307,7 @@ license_category: binary
 module: extensions/druid-azure-extensions
 license_name: MIT License
 copyright: Microsoft
-version: 1.14.0
+version: 1.15.0
 libraries:
   - com.microsoft.azure: msal4j
 
@@ -4310,7 +4318,7 @@ license_category: binary
 module: extensions/druid-azure-extensions
 license_name: MIT License
 copyright: Microsoft
-version: 1.2.0
+version: 1.3.0
 libraries:
   - com.microsoft.azure: msal4j-persistence-extension
 
@@ -4320,7 +4328,7 @@ name: NimbusDS Content Type
 license_category: binary
 module: extensions/druid-azure-extensions
 license_name: Apache License version 2.0
-version: 2.2
+version: 2.3
 libraries:
   - com.nimbusds: content-type
 
@@ -4330,7 +4338,7 @@ name: NimbusDS Jose
 license_category: binary
 module: extensions/druid-azure-extensions
 license_name: Apache License version 2.0
-version: 9.30.2
+version: 9.37.3
 libraries:
   - com.nimbusds: nimbus-jose-jwt
 
@@ -4340,7 +4348,7 @@ name: NimbusDS Oauth
 license_category: binary
 module: extensions/druid-azure-extensions
 license_name: Apache License version 2.0
-version: 10.7.1
+version: 11.9.1
 libraries:
   - com.nimbusds: oauth2-oidc-sdk
 
@@ -4350,7 +4358,7 @@ name: Reactor Netty
 license_category: binary
 module: extensions/druid-azure-extensions
 license_name: Apache License version 2.0
-version: 1.0.39
+version: 1.0.43
 libraries:
   - io.projectreactor.netty: reactor-netty-core
   - io.projectreactor.netty: reactor-netty-http
@@ -4361,7 +4369,7 @@ name: Reactor Core
 license_category: binary
 module: extensions/druid-azure-extensions
 license_name: Apache License version 2.0
-version: 3.4.34
+version: 3.4.36
 libraries:
   - io.projectreactor: reactor-core
 ---
@@ -5032,7 +5040,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Palantir Technologies
-version: 4.20.1
+version: 4.20.2
 
 ---
 
@@ -5068,7 +5076,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Palantir Technologies
-version: 1.14.9
+version: 1.14.11
 
 ---
 
@@ -5077,7 +5085,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Palantir Technologies
-version: 4.9.22
+version: 4.9.24
 
 ---
 
@@ -5086,7 +5094,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Imply Data
-version: 0.22.11
+version: 0.22.20
 
 ---
 

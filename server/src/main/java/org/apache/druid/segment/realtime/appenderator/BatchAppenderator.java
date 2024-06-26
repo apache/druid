@@ -50,7 +50,7 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.BaseProgressIndicator;
-import org.apache.druid.segment.DataSegmentWithSchema;
+import org.apache.druid.segment.DataSegmentWithMetadata;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.QueryableIndex;
@@ -67,9 +67,9 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.FingerprintGenerator;
-import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.FireHydrant;
-import org.apache.druid.segment.realtime.plumber.Sink;
+import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
+import org.apache.druid.segment.realtime.sink.Sink;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
@@ -113,7 +113,7 @@ public class BatchAppenderator implements Appenderator
   private final String myId;
   private final DataSchema schema;
   private final AppenderatorConfig tuningConfig;
-  private final FireDepartmentMetrics metrics;
+  private final SegmentGenerationMetrics metrics;
   private final DataSegmentPusher dataSegmentPusher;
   private final ObjectMapper objectMapper;
   private final IndexIO indexIO;
@@ -164,7 +164,7 @@ public class BatchAppenderator implements Appenderator
       String id,
       DataSchema schema,
       AppenderatorConfig tuningConfig,
-      FireDepartmentMetrics metrics,
+      SegmentGenerationMetrics metrics,
       DataSegmentPusher dataSegmentPusher,
       ObjectMapper objectMapper,
       IndexIO indexIO,
@@ -481,8 +481,7 @@ public class BatchAppenderator implements Appenderator
           tuningConfig.getAppendableIndexSpec(),
           tuningConfig.getMaxRowsInMemory(),
           maxBytesTuningConfig,
-          useMaxMemoryEstimates,
-          null
+          useMaxMemoryEstimates
       );
       bytesCurrentlyInMemory += calculateSinkMemoryInUsed();
       sinks.put(identifier, retVal);
@@ -715,16 +714,16 @@ public class BatchAppenderator implements Appenderator
             }
 
             // push it:
-            final DataSegmentWithSchema dataSegmentWithSchema = mergeAndPush(
+            final DataSegmentWithMetadata dataSegmentWithMetadata = mergeAndPush(
                 identifier,
                 sinkForIdentifier
             );
 
             // record it:
-            if (dataSegmentWithSchema.getDataSegment() != null) {
-              DataSegment segment = dataSegmentWithSchema.getDataSegment();
+            if (dataSegmentWithMetadata.getDataSegment() != null) {
+              DataSegment segment = dataSegmentWithMetadata.getDataSegment();
               dataSegments.add(segment);
-              SchemaPayloadPlus schemaPayloadPlus = dataSegmentWithSchema.getSegmentSchemaMetadata();
+              SchemaPayloadPlus schemaPayloadPlus = dataSegmentWithMetadata.getSegmentSchemaMetadata();
               if (schemaPayloadPlus != null) {
                 SchemaPayload schemaPayload = schemaPayloadPlus.getSchemaPayload();
                 segmentSchemaMapping.addSchema(
@@ -758,7 +757,7 @@ public class BatchAppenderator implements Appenderator
    * @param sink          sink to push
    * @return segment descriptor along with schema, or null if the sink is no longer valid
    */
-  private DataSegmentWithSchema mergeAndPush(
+  private DataSegmentWithMetadata mergeAndPush(
       final SegmentIdWithShardSpec identifier,
       final Sink sink
   )
@@ -793,7 +792,7 @@ public class BatchAppenderator implements Appenderator
       if (descriptorFile.exists()) {
         // Already pushed.
         log.info("Segment[%s] already pushed, skipping.", identifier);
-        return new DataSegmentWithSchema(
+        return new DataSegmentWithMetadata(
             objectMapper.readValue(descriptorFile, DataSegment.class),
             centralizedDatasourceSchemaConfig.isEnabled() ? TaskSegmentSchemaUtil.getSegmentSchema(
                 mergedTarget,
@@ -895,7 +894,7 @@ public class BatchAppenderator implements Appenderator
           objectMapper.writeValueAsString(segment.getLoadSpec())
       );
 
-      return new DataSegmentWithSchema(segment, schemaMetadata);
+      return new DataSegmentWithMetadata(segment, schemaMetadata);
     }
     catch (Exception e) {
       metrics.incrementFailedHandoffs();
@@ -1075,7 +1074,6 @@ public class BatchAppenderator implements Appenderator
         tuningConfig.getMaxRowsInMemory(),
         maxBytesTuningConfig,
         useMaxMemoryEstimates,
-        null,
         hydrants
     );
     retVal.finishWriting(); // this sink is not writable

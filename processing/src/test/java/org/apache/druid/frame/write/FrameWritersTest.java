@@ -19,17 +19,13 @@
 
 package org.apache.druid.frame.write;
 
-import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocatorFactory;
 import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.frame.key.KeyOrder;
 import org.apache.druid.frame.write.columnar.ColumnarFrameWriterFactory;
-import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
-import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.filter.AllNullColumnSelectorFactory;
-import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
@@ -40,8 +36,8 @@ import org.junit.internal.matchers.ThrowableMessageMatcher;
 import java.util.Collections;
 
 /**
- * Tests {@link FrameWriters#makeFrameWriterFactory} ability to create factories. Largely doesn't test actual
- * frame generation via the factories, since that is exercised well enough in other test suites.
+ * Tests {@link FrameWriters#makeRowBasedFrameWriterFactory} and {@link FrameWriters#makeColumnBasedFrameWriterFactory} ability to create factories.
+ * Largely doesn't test actual frame generation via the factories, since that is exercised well enough in other test suites.
  */
 public class FrameWritersTest extends InitializedNullHandlingTest
 {
@@ -50,11 +46,11 @@ public class FrameWritersTest extends InitializedNullHandlingTest
   @Test
   public void test_rowBased()
   {
-    final FrameWriterFactory factory = FrameWriters.makeFrameWriterFactory(
-        FrameType.ROW_BASED,
+    final FrameWriterFactory factory = FrameWriters.makeRowBasedFrameWriterFactory(
         new ArenaMemoryAllocatorFactory(ALLOCATOR_CAPACITY),
         RowSignature.builder().add("x", ColumnType.LONG).build(),
-        Collections.singletonList(new KeyColumn("x", KeyOrder.ASCENDING))
+        Collections.singletonList(new KeyColumn("x", KeyOrder.ASCENDING)),
+        false
     );
 
     MatcherAssert.assertThat(factory, CoreMatchers.instanceOf(RowBasedFrameWriterFactory.class));
@@ -64,8 +60,7 @@ public class FrameWritersTest extends InitializedNullHandlingTest
   @Test
   public void test_columnar()
   {
-    final FrameWriterFactory factory = FrameWriters.makeFrameWriterFactory(
-        FrameType.COLUMNAR,
+    final FrameWriterFactory factory = FrameWriters.makeColumnBasedFrameWriterFactory(
         new ArenaMemoryAllocatorFactory(ALLOCATOR_CAPACITY),
         RowSignature.builder()
                     .add("a", ColumnType.LONG)
@@ -87,8 +82,7 @@ public class FrameWritersTest extends InitializedNullHandlingTest
   @Test
   public void test_columnar_unsupportedColumnType()
   {
-    final FrameWriterFactory factory = FrameWriters.makeFrameWriterFactory(
-        FrameType.COLUMNAR,
+    final FrameWriterFactory factory = FrameWriters.makeColumnBasedFrameWriterFactory(
         new ArenaMemoryAllocatorFactory(ALLOCATOR_CAPACITY),
         RowSignature.builder().add("x", ColumnType.ofArray(ColumnType.LONG_ARRAY)).build(),
         Collections.emptyList()
@@ -104,42 +98,16 @@ public class FrameWritersTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void test_rowBased_unsupportedSortColumnType()
-  {
-    // Register, but don't unregister at the end of this test, because many other tests out there expect this to exist
-    // even though they don't explicitly register it.
-    ComplexMetrics.registerSerde(HyperUniquesSerde.TYPE_NAME, new HyperUniquesSerde());
-
-    final IllegalArgumentException e = Assert.assertThrows(
-        IllegalArgumentException.class,
-        () ->
-            FrameWriters.makeFrameWriterFactory(
-                FrameType.ROW_BASED,
-                new ArenaMemoryAllocatorFactory(ALLOCATOR_CAPACITY),
-                RowSignature.builder().add("x", HyperUniquesAggregatorFactory.TYPE).build(),
-                Collections.singletonList(new KeyColumn("x", KeyOrder.ASCENDING))
-            )
-    );
-
-    MatcherAssert.assertThat(
-        e,
-        ThrowableMessageMatcher.hasMessage(
-            CoreMatchers.containsString("Sort column [x] is not comparable (type = COMPLEX<hyperUnique>)")
-        )
-    );
-  }
-
-  @Test
   public void test_rowBased_sortColumnsNotPrefix()
   {
     final IllegalArgumentException e = Assert.assertThrows(
         IllegalArgumentException.class,
         () ->
-            FrameWriters.makeFrameWriterFactory(
-                FrameType.ROW_BASED,
+            FrameWriters.makeRowBasedFrameWriterFactory(
                 new ArenaMemoryAllocatorFactory(ALLOCATOR_CAPACITY),
                 RowSignature.builder().add("x", ColumnType.LONG).add("y", ColumnType.LONG).build(),
-                Collections.singletonList(new KeyColumn("y", KeyOrder.ASCENDING))
+                Collections.singletonList(new KeyColumn("y", KeyOrder.ASCENDING)),
+                false
             )
     );
 
@@ -157,8 +125,7 @@ public class FrameWritersTest extends InitializedNullHandlingTest
     final IllegalArgumentException e = Assert.assertThrows(
         IllegalArgumentException.class,
         () ->
-            FrameWriters.makeFrameWriterFactory(
-                FrameType.COLUMNAR,
+            FrameWriters.makeColumnBasedFrameWriterFactory(
                 new ArenaMemoryAllocatorFactory(ALLOCATOR_CAPACITY),
                 RowSignature.builder().add("x", ColumnType.LONG).build(),
                 Collections.singletonList(new KeyColumn("x", KeyOrder.ASCENDING))

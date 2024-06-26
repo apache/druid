@@ -29,7 +29,7 @@
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>30.0.0-SNAPSHOT</version>
+        <version>31.0.0-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
@@ -114,6 +114,12 @@
             <artifactId>hamcrest-core</artifactId>
             <version>1.3</version>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.druid</groupId>
+            <artifactId>druid-server</artifactId>
+            <version>${project.parent.version}</version>
+            <type>test-jar</type>
         </dependency>
     </dependencies>
 

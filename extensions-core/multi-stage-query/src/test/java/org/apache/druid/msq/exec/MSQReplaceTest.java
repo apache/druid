@@ -29,16 +29,21 @@ import org.apache.druid.data.input.impl.DoubleDimensionSchema;
 import org.apache.druid.data.input.impl.FloatDimensionSchema;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
+import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.GranularityType;
+import org.apache.druid.msq.indexing.error.TooManySegmentsInTimeChunkFault;
 import org.apache.druid.msq.indexing.report.MSQSegmentReport;
 import org.apache.druid.msq.test.CounterSnapshotMatcher;
 import org.apache.druid.msq.test.MSQTestBase;
@@ -56,8 +61,10 @@ import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.ArgumentMatcher;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
@@ -743,6 +750,68 @@ public class MSQReplaceTest extends MSQTestBase
                              Collections.emptyList(),
                              Collections.singletonList(new FloatDimensionSchema("m1")),
                              GranularityType.MONTH
+                         )
+                     )
+                     .verifyResults();
+  }
+
+  @Test
+  public void testReplaceWithTooManySegmentsInTimeChunk()
+  {
+    final Map<String, Object> context = ImmutableMap.<String, Object>builder()
+                                                    .putAll(DEFAULT_MSQ_CONTEXT)
+                                                    .put("maxNumSegments", 1)
+                                                    .put("rowsPerSegment", 1)
+                                                    .build();
+
+    testIngestQuery().setSql("REPLACE INTO foo"
+                             + " OVERWRITE ALL "
+                             + " SELECT TIME_PARSE(ts) AS __time, c1 "
+                             + " FROM (VALUES('2023-01-01 01:00:00', 'day1_1'), ('2023-01-01 01:00:00', 'day1_2'), ('2023-02-01 06:00:00', 'day2')) AS t(ts, c1)"
+                             + " PARTITIONED BY HOUR")
+                     .setExpectedDataSource("foo")
+                     .setExpectedRowSignature(RowSignature.builder().add("__time", ColumnType.LONG).build())
+                     .setQueryContext(context)
+                     .setExpectedMSQFault(
+                         new TooManySegmentsInTimeChunkFault(
+                             DateTimes.of("2023-01-01T01:00:00.000Z"),
+                             2,
+                             1,
+                             Granularities.HOUR
+                         )
+                     )
+                     .verifyResults();
+
+  }
+
+  @Test
+  public void testReplaceWithMaxNumSegments()
+  {
+    final Map<String, Object> context = ImmutableMap.<String, Object>builder()
+                                                    .putAll(DEFAULT_MSQ_CONTEXT)
+                                                    .put("maxNumSegments", 1)
+                                                    .build();
+
+    final RowSignature expectedRowSignature = RowSignature.builder()
+                                                          .add("__time", ColumnType.LONG)
+                                                          .add("c1", ColumnType.STRING)
+                                                          .build();
+
+    // Ingest query should generate at most 1 segment for all the rows.
+    testIngestQuery().setSql("REPLACE INTO foo"
+                             + " OVERWRITE ALL"
+                             + " SELECT TIME_PARSE(ts) AS __time, c1 "
+                             + " FROM (VALUES('2023-01-01', 'day1_1'), ('2023-01-01', 'day1_2'), ('2023-02-01', 'day2')) AS t(ts, c1)"
+                             + " LIMIT 10"
+                             + " PARTITIONED BY ALL")
+                     .setQueryContext(context)
+                     .setExpectedDataSource("foo")
+                     .setExpectedRowSignature(expectedRowSignature)
+                     .setExpectedResultRows(
+                         ImmutableList.of(
+                             new Object[]{1672531200000L, "day1_1"},
+                             new Object[]{1672531200000L, "day1_2"},
+                             new Object[]{1675209600000L, "day2"}
                          )
                      )
                      .verifyResults();
@@ -1650,7 +1719,12 @@ public class MSQReplaceTest extends MSQTestBase
 
     Mockito.doReturn(ImmutableSet.of(existingDataSegment))
            .when(testTaskActionClient)
-           .submit(ArgumentMatchers.isA(RetrieveUsedSegmentsAction.class));
+           .submit(
+               ArgumentMatchers.argThat(
+                   (ArgumentMatcher<TaskAction<?>>) argument ->
+                       argument instanceof RetrieveUsedSegmentsAction
+                       && "foo1".equals(((RetrieveUsedSegmentsAction) argument).getDataSource())
+               ));
 
     // Insert with a condition which results in 0 rows being inserted -- do nothing.
     testIngestQuery().setSql(
@@ -1683,7 +1757,10 @@ public class MSQReplaceTest extends MSQTestBase
                                                  .build();
     Mockito.doReturn(ImmutableSet.of(existingDataSegment))
            .when(testTaskActionClient)
-           .submit(ArgumentMatchers.isA(RetrieveUsedSegmentsAction.class));
+           .submit(ArgumentMatchers.argThat(
+               (ArgumentMatcher<TaskAction<?>>) argument ->
+                   argument instanceof RetrieveUsedSegmentsAction
+                   && "foo1".equals(((RetrieveUsedSegmentsAction) argument).getDataSource())));
 
     // Insert with a condition which results in 0 rows being inserted -- do nothing.
     testIngestQuery().setSql(
@@ -1716,7 +1793,10 @@ public class MSQReplaceTest extends MSQTestBase
 
     Mockito.doReturn(ImmutableSet.of(existingDataSegment))
            .when(testTaskActionClient)
-           .submit(ArgumentMatchers.isA(RetrieveUsedSegmentsAction.class));
+           .submit(ArgumentMatchers.argThat(
+               (ArgumentMatcher<TaskAction<?>>) argument ->
+                   argument instanceof RetrieveUsedSegmentsAction
+                   && "foo1".equals(((RetrieveUsedSegmentsAction) argument).getDataSource())));
 
     // Insert with a condition which results in 0 rows being inserted -- do nothing.
     testIngestQuery().setSql(
@@ -1800,7 +1880,10 @@ public class MSQReplaceTest extends MSQTestBase
 
     Mockito.doReturn(ImmutableSet.of(existingDataSegment))
            .when(testTaskActionClient)
-           .submit(ArgumentMatchers.isA(RetrieveUsedSegmentsAction.class));
+           .submit(ArgumentMatchers.argThat(
+               (ArgumentMatcher<TaskAction<?>>) argument ->
+                   argument instanceof RetrieveUsedSegmentsAction
+                   && "foo1".equals(((RetrieveUsedSegmentsAction) argument).getDataSource())));
 
     // Insert with a condition which results in 0 rows being inserted -- do nothing!
     testIngestQuery().setSql(
@@ -1822,6 +1905,35 @@ public class MSQReplaceTest extends MSQTestBase
                          )
                      )
                      .verifyResults();
+  }
+
+  @Test
+  void testRealtimeQueryWithReindexShouldThrowException()
+  {
+    Map<String, Object> context = ImmutableMap.<String, Object>builder()
+                                              .putAll(DEFAULT_MSQ_CONTEXT)
+                                              .put(MultiStageQueryContext.CTX_INCLUDE_SEGMENT_SOURCE, SegmentSource.REALTIME.name())
+                                              .build();
+
+    testIngestQuery().setSql(
+                         "REPLACE INTO foo"
+                         + " OVERWRITE ALL"
+                         + " SELECT *"
+                         + " FROM foo"
+                         + " PARTITIONED BY DAY")
+                     .setQueryContext(context)
+                     .setExpectedValidationErrorMatcher(
+                         new DruidExceptionMatcher(
+                             DruidException.Persona.USER,
+                             DruidException.Category.INVALID_INPUT,
+                             "general"
+                         ).expectMessageContains(
+                             "Cannot ingest into datasource[foo] since it is also being queried from, with REALTIME "
+                             + "segments included. Ingest to a different datasource, or disable querying of realtime "
+                             + "segments by modifying [includeSegmentSource] in the query context.")
+                     )
+                     .verifyPlanningErrors();
+
   }
 
   @Nonnull

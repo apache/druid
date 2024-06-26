@@ -76,10 +76,10 @@ import org.apache.druid.query.aggregation.JavaScriptAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
-import org.apache.druid.query.aggregation.first.LongFirstAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.first.LongFirstAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.last.LongLastAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniqueFinalizingPostAggregator;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
-import org.apache.druid.query.aggregation.last.LongLastAggregatorFactory;
 import org.apache.druid.query.aggregation.mean.DoubleMeanAggregatorFactory;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.ConstantPostAggregator;
@@ -356,13 +356,12 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         configSupplier,
         bufferPools.getProcessingPool(),
         groupByResourcesReservationPool,
-        TestHelper.makeJsonMapper(),
+        mapper,
         mapper,
         QueryRunnerTestHelper.NOOP_QUERYWATCHER
     );
     final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(
         groupingEngine,
-        () -> config,
         DefaultGroupByQueryMetricsFactory.instance(),
         groupByResourcesReservationPool
     );

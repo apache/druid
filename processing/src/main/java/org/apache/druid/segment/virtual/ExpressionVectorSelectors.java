@@ -221,7 +221,7 @@ public class ExpressionVectorSelectors
           default:
             binding.addObjectSelector(
                 columnName,
-                ExpressionType.STRING,
+                ExpressionType.fromColumnType(columnCapabilities.toColumnType()),
                 vectorColumnSelectorFactory.makeObjectSelector(columnName)
             );
         }

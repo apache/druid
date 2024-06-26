@@ -839,7 +839,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                                      + "query=[{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"external\","
                                      + "\"inputSource\":{\"type\":\"inline\",\"data\":\"{\\\" \\\": 1681794225551, \\\"namespace\\\": \\\"day1\\\", \\\"country\\\": \\\"one\\\"}\\n"
                                      + "{\\\"__time\\\": 1681794225558, \\\"namespace\\\": \\\"day2\\\", \\\"country\\\": \\\"two\\\"}\"},"
-                                     + "\"inputFormat\":{\"type\":\"json\",\"keepNullColumns\":false,\"assumeNewlineDelimited\":false,\"useJsonNodeReader\":false},"
+                                     + "\"inputFormat\":{\"type\":\"json\"},"
                                      + "\"signature\":[{\"name\":\"__time\",\"type\":\"LONG\"},{\"name\":\"namespace\",\"type\":\"STRING\"},{\"name\":\"country\",\"type\":\"STRING\"}]},"
                                      + "\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},"
                                      + "\"resultFormat\":\"compactedList\",\"orderBy\":[{\"columnName\":\"namespace\",\"order\":\"ascending\"},{\"columnName\":\"country\",\"order\":\"ascending\"}],"
@@ -871,7 +871,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
     final String explanation = "[{\"query\":{\"queryType\":\"scan\"," + "\"dataSource\":{\"type\":\"external\",\"inputSource\":{\"type\":\"inline\","
                                + "\"data\":\"{\\\" \\\": 1681794225551, \\\"namespace\\\": \\\"day1\\\", \\\"country\\\": \\\"one\\\"}\\n"
                                + "{\\\"__time\\\": 1681794225558, \\\"namespace\\\": \\\"day2\\\", \\\"country\\\": \\\"two\\\"}\"},"
-                               + "\"inputFormat\":{\"type\":\"json\",\"keepNullColumns\":false,\"assumeNewlineDelimited\":false,\"useJsonNodeReader\":false},"
+                               + "\"inputFormat\":{\"type\":\"json\"},"
                                + "\"signature\":[{\"name\":\"__time\",\"type\":\"LONG\"},{\"name\":\"namespace\",\"type\":\"STRING\"},{\"name\":\"country\",\"type\":\"STRING\"}]},"
                                + "\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},"
                                + "\"resultFormat\":\"compactedList\",\"orderBy\":[{\"columnName\":\"namespace\",\"order\":\"ascending\"},{\"columnName\":\"country\",\"order\":\"ascending\"}],"
@@ -945,8 +945,8 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                                      + "\"expression\":\"timestamp_parse(\\\"timestamp\\\",null,'UTC')\",\"outputType\":\"LONG\"}],\"resultFormat\":\"compactedList\",\"orderBy\":[{\"columnName\":\"v0\",\"order\":\"ascending\"},{\"columnName\":\"isRobot\",\"order\":\"ascending\"},"
                                      + "{\"columnName\":\"Capital\",\"order\":\"ascending\"},{\"columnName\":\"regionName\",\"order\":\"ascending\"}],\"columns\":[\"Capital\",\"isRobot\",\"regionName\",\"v0\"],\"legacy\":false,\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlInsertSegmentGranularity\":\"\\\"HOUR\\\"\",\"sqlQueryId\":\"dummy\","
                                      + "\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"columnTypes\":[\"STRING\",\"STRING\",\"STRING\",\"LONG\"],\"granularity\":{\"type\":\"all\"}}], signature=[{v0:LONG, isRobot:STRING, Capital:STRING, regionName:STRING}])\n"
-                                     + "  DruidQueryRel(query=[{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"external\",\"inputSource\":{\"type\":\"http\",\"uris\":[\"https://boo.gz\"]},\"inputFormat\":{\"type\":\"json\",\"keepNullColumns\":false,\"assumeNewlineDelimited\":false,"
-                                     + "\"useJsonNodeReader\":false},\"signature\":[{\"name\":\"isRobot\",\"type\":\"STRING\"},{\"name\":\"timestamp\",\"type\":\"STRING\"},{\"name\":\"cityName\",\"type\":\"STRING\"},{\"name\":\"countryIsoCode\",\"type\":\"STRING\"},{\"name\":\"regionName\",\"type\":\"STRING\"}]},"
+                                     + "  DruidQueryRel(query=[{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"external\",\"inputSource\":{\"type\":\"http\",\"uris\":[\"https://boo.gz\"]},\"inputFormat\":{\"type\":\"json\"},"
+                                     + "\"signature\":[{\"name\":\"isRobot\",\"type\":\"STRING\"},{\"name\":\"timestamp\",\"type\":\"STRING\"},{\"name\":\"cityName\",\"type\":\"STRING\"},{\"name\":\"countryIsoCode\",\"type\":\"STRING\"},{\"name\":\"regionName\",\"type\":\"STRING\"}]},"
                                      + "\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"resultFormat\":\"compactedList\",\"columns\":[\"cityName\",\"countryIsoCode\",\"isRobot\",\"regionName\",\"timestamp\"],\"legacy\":false,"
                                      + "\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlInsertSegmentGranularity\":\"\\\"HOUR\\\"\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"columnTypes\":[\"STRING\",\"STRING\",\"STRING\",\"STRING\",\"STRING\"],\"granularity\":{\"type\":\"all\"}}], signature=[{isRobot:STRING, timestamp:STRING, cityName:STRING, countryIsoCode:STRING, regionName:STRING}])\n"
                                      + "  DruidQueryRel(query=[{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"external\",\"inputSource\":{\"type\":\"http\",\"uris\":[\"https://foo.tsv\"]},\"inputFormat\":{\"type\":\"tsv\",\"delimiter\":\"\\t\",\"findColumnsFromHeader\":true},"
@@ -973,8 +973,8 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
     );
 
     // Test correctness of the query when only the CLUSTERED BY clause is present
-    final String explanation = "[{\"query\":{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"join\",\"left\":{\"type\":\"external\",\"inputSource\":{\"type\":\"http\",\"uris\":[\"https://boo.gz\"]},\"inputFormat\":{\"type\":\"json\",\"keepNullColumns\":false,"
-                               + "\"assumeNewlineDelimited\":false,\"useJsonNodeReader\":false},\"signature\":[{\"name\":\"isRobot\",\"type\":\"STRING\"},{\"name\":\"timestamp\",\"type\":\"STRING\"},{\"name\":\"cityName\",\"type\":\"STRING\"},{\"name\":\"countryIsoCode\",\"type\":\"STRING\"},"
+    final String explanation = "[{\"query\":{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"join\",\"left\":{\"type\":\"external\",\"inputSource\":{\"type\":\"http\",\"uris\":[\"https://boo.gz\"]},\"inputFormat\":{\"type\":\"json\"}"
+                               + ",\"signature\":[{\"name\":\"isRobot\",\"type\":\"STRING\"},{\"name\":\"timestamp\",\"type\":\"STRING\"},{\"name\":\"cityName\",\"type\":\"STRING\"},{\"name\":\"countryIsoCode\",\"type\":\"STRING\"},"
                                + "{\"name\":\"regionName\",\"type\":\"STRING\"}]},\"right\":{\"type\":\"query\",\"query\":{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"external\",\"inputSource\":{\"type\":\"http\",\"uris\":[\"https://foo.tsv\"]},\"inputFormat\":{\"type\":\"tsv\",\"delimiter\":\"\\t\",\"findColumnsFromHeader\":true},"
                                + "\"signature\":[{\"name\":\"Country\",\"type\":\"STRING\"},{\"name\":\"Capital\",\"type\":\"STRING\"},{\"name\":\"ISO3\",\"type\":\"STRING\"},{\"name\":\"ISO2\",\"type\":\"STRING\"}]},\"intervals\":{\"type\":\"intervals\","
                                + "\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"resultFormat\":\"compactedList\",\"columns\":[\"Capital\",\"ISO2\"],\"legacy\":false,\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlInsertSegmentGranularity\":\"\\\"HOUR\\\"\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\","
@@ -1113,7 +1113,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         .sql(
             "INSERT INTO druid.dst "
             + "SELECT __time, FLOOR(m1) as floor_m1, dim1, CEIL(m2) as ceil_m2 FROM foo "
-            + "CLUSTERED BY 2, dim1 DESC, CEIL(m2)"
+            + "CLUSTERED BY 2, dim1, CEIL(m2)"
         )
         .expectValidationError(invalidSqlIs(
             "CLUSTERED BY found before PARTITIONED BY, CLUSTERED BY must come after the PARTITIONED BY clause"
@@ -1623,6 +1623,18 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
     testIngestionQuery()
         .sql("INSERT INTO t SELECT channel, added as count FROM foo PARTITIONED BY ALL") // count is a keyword
         .expectValidationError(invalidSqlContains("Received an unexpected token [as count]"))
+        .verify();
+  }
+
+  @Test
+  public void testInsertWithLongIdentifer()
+  {
+    // This test fails because an identifer is specified of length 200, which exceeds the length limit of 128
+    // characters.
+    String longIdentifer = new String(new char[200]).replace('\0', 'a');
+    testIngestionQuery()
+        .sql(StringUtils.format("INSERT INTO t SELECT %s FROM foo PARTITIONED BY ALL", longIdentifer)) // count is a keyword
+        .expectValidationError(invalidSqlContains(StringUtils.format("Length of identifier '%s' must be less than or equal to 128 characters", longIdentifer)))
         .verify();
   }
 

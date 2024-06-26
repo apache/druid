@@ -34,23 +34,36 @@ import org.apache.druid.query.filter.BloomKFilter;
 import org.apache.druid.query.filter.BloomKFilterHolder;
 import org.apache.druid.query.filter.ExpressionDimFilter;
 import org.apache.druid.query.filter.OrDimFilter;
+import org.apache.druid.query.filter.sql.BloomDimFilterSqlTest.BloomDimFilterComponentSupplier;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
+import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
+import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.sql.http.SqlParameter;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
+@SqlTestFrameworkConfig.ComponentSupplier(BloomDimFilterComponentSupplier.class)
 public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
 {
-  @Override
-  public void configureGuice(DruidInjectorBuilder builder)
+  public static class BloomDimFilterComponentSupplier extends StandardComponentSupplier
   {
-    super.configureGuice(builder);
-    builder.addModule(new BloomFilterExtensionModule());
+    public BloomDimFilterComponentSupplier(TempDirProducer tempFolderProducer)
+    {
+      super(tempFolderProducer);
+    }
+
+    @Override
+    public void configureGuice(DruidInjectorBuilder builder)
+    {
+      super.configureGuice(builder);
+      builder.addModule(new BloomFilterExtensionModule());
+    }
   }
 
   @Test
@@ -81,10 +94,10 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
     );
   }
 
+
   @Test
   public void testBloomFilterExprFilter() throws IOException
   {
-    cannotVectorize();
     BloomKFilter filter = new BloomKFilter(1500);
     filter.addString("a-foo");
     filter.addString("-foo");

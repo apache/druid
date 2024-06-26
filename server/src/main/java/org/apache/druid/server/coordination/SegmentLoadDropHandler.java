@@ -19,11 +19,7 @@
 
 package org.apache.druid.server.coordination;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
@@ -33,15 +29,19 @@ import com.google.common.util.concurrent.AbstractFuture;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.inject.Inject;
+import org.apache.druid.client.BootstrapSegmentsResponse;
+import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.ServerTypeConfig;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.segment.loading.SegmentCacheManager;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.server.SegmentManager;
@@ -49,7 +49,6 @@ import org.apache.druid.server.metrics.SegmentRowCountDistribution;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
-import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -83,22 +82,22 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
   // Synchronizes start/stop of this object.
   private final Object startStopLock = new Object();
 
-  private final ObjectMapper jsonMapper;
   private final SegmentLoaderConfig config;
   private final DataSegmentAnnouncer announcer;
   private final DataSegmentServerAnnouncer serverAnnouncer;
   private final SegmentManager segmentManager;
   private final ScheduledExecutorService exec;
   private final ServerTypeConfig serverTypeConfig;
+  private final CoordinatorClient coordinatorClient;
+  private final ServiceEmitter emitter;
   private final ConcurrentSkipListSet<DataSegment> segmentsToDelete;
-  private final SegmentCacheManager segmentCacheManager;
 
   private volatile boolean started = false;
 
   // Keep history of load/drop request status in a LRU cache to maintain idempotency if same request shows up
   // again and to return status of a completed request. Maximum size of this cache must be significantly greater
   // than number of pending load/drop requests. so that history is not lost too quickly.
-  private final Cache<DataSegmentChangeRequest, AtomicReference<Status>> requestStatuses;
+  private final Cache<DataSegmentChangeRequest, AtomicReference<SegmentChangeStatus>> requestStatuses;
   private final Object requestStatusesLock = new Object();
 
   // This is the list of unresolved futures returned to callers of processBatch(List<DataSegmentChangeRequest>)
@@ -107,50 +106,50 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
 
   @Inject
   public SegmentLoadDropHandler(
-      ObjectMapper jsonMapper,
       SegmentLoaderConfig config,
       DataSegmentAnnouncer announcer,
       DataSegmentServerAnnouncer serverAnnouncer,
       SegmentManager segmentManager,
-      SegmentCacheManager segmentCacheManager,
-      ServerTypeConfig serverTypeConfig
+      ServerTypeConfig serverTypeConfig,
+      CoordinatorClient coordinatorClient,
+      ServiceEmitter emitter
   )
   {
     this(
-        jsonMapper,
         config,
         announcer,
         serverAnnouncer,
         segmentManager,
-        segmentCacheManager,
         Executors.newScheduledThreadPool(
             config.getNumLoadingThreads(),
             Execs.makeThreadFactory("SimpleDataSegmentChangeHandler-%s")
         ),
-        serverTypeConfig
+        serverTypeConfig,
+        coordinatorClient,
+        emitter
     );
   }
 
   @VisibleForTesting
   SegmentLoadDropHandler(
-      ObjectMapper jsonMapper,
       SegmentLoaderConfig config,
       DataSegmentAnnouncer announcer,
       DataSegmentServerAnnouncer serverAnnouncer,
       SegmentManager segmentManager,
-      SegmentCacheManager segmentCacheManager,
       ScheduledExecutorService exec,
-      ServerTypeConfig serverTypeConfig
+      ServerTypeConfig serverTypeConfig,
+      CoordinatorClient coordinatorClient,
+      ServiceEmitter emitter
   )
   {
-    this.jsonMapper = jsonMapper;
     this.config = config;
     this.announcer = announcer;
     this.serverAnnouncer = serverAnnouncer;
     this.segmentManager = segmentManager;
-    this.segmentCacheManager = segmentCacheManager;
     this.exec = exec;
     this.serverTypeConfig = serverTypeConfig;
+    this.coordinatorClient = coordinatorClient;
+    this.emitter = emitter;
 
     this.segmentsToDelete = new ConcurrentSkipListSet<>();
     requestStatuses = CacheBuilder.newBuilder().maximumSize(config.getStatusQueueMaxSize()).initialCapacity(8).build();
@@ -166,8 +165,8 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
 
       log.info("Starting...");
       try {
-        if (!config.getLocations().isEmpty()) {
-          loadLocalCache();
+        if (segmentManager.canHandleSegments()) {
+          loadSegmentsOnStartup();
         }
 
         if (shouldAnnounce()) {
@@ -212,101 +211,6 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     return started;
   }
 
-  private void loadLocalCache() throws IOException
-  {
-    final long start = System.currentTimeMillis();
-    File baseDir = config.getInfoDir();
-    FileUtils.mkdirp(baseDir);
-
-    List<DataSegment> cachedSegments = new ArrayList<>();
-    File[] segmentsToLoad = baseDir.listFiles();
-    int ignored = 0;
-    for (int i = 0; i < segmentsToLoad.length; i++) {
-      File file = segmentsToLoad[i];
-      log.info("Loading segment cache file [%d/%d][%s].", i + 1, segmentsToLoad.length, file);
-      try {
-        final DataSegment segment = jsonMapper.readValue(file, DataSegment.class);
-
-        if (!segment.getId().toString().equals(file.getName())) {
-          log.warn("Ignoring cache file[%s] for segment[%s].", file.getPath(), segment.getId());
-          ignored++;
-        } else if (segmentCacheManager.isSegmentCached(segment)) {
-          cachedSegments.add(segment);
-        } else {
-          log.warn("Unable to find cache file for %s. Deleting lookup entry", segment.getId());
-
-          File segmentInfoCacheFile = new File(baseDir, segment.getId().toString());
-          if (!segmentInfoCacheFile.delete()) {
-            log.warn("Unable to delete segmentInfoCacheFile[%s]", segmentInfoCacheFile);
-          }
-        }
-      }
-      catch (Exception e) {
-        log.makeAlert(e, "Failed to load segment from segmentInfo file")
-           .addData("file", file)
-           .emit();
-      }
-    }
-
-    if (ignored > 0) {
-      log.makeAlert("Ignored misnamed segment cache files on startup.")
-         .addData("numIgnored", ignored)
-         .emit();
-    }
-
-    addSegments(
-        cachedSegments,
-        () -> log.info("Cache load took %,d ms", System.currentTimeMillis() - start)
-    );
-  }
-
-  private void loadSegment(DataSegment segment, DataSegmentChangeCallback callback, boolean lazy)
-      throws SegmentLoadingException
-  {
-    loadSegment(segment, callback, lazy, null);
-  }
-
-  /**
-   * Load a single segment. If the segment is loaded successfully, this function simply returns. Otherwise it will
-   * throw a SegmentLoadingException
-   *
-   * @throws SegmentLoadingException if it fails to load the given segment
-   */
-  private void loadSegment(DataSegment segment, DataSegmentChangeCallback callback, boolean lazy, @Nullable
-      ExecutorService loadSegmentIntoPageCacheExec)
-      throws SegmentLoadingException
-  {
-    final boolean loaded;
-    try {
-      loaded = segmentManager.loadSegment(segment,
-              lazy,
-          () -> this.removeSegment(segment, DataSegmentChangeCallback.NOOP, false),
-              loadSegmentIntoPageCacheExec
-      );
-    }
-    catch (Exception e) {
-      removeSegment(segment, callback, false);
-      throw new SegmentLoadingException(e, "Exception loading segment[%s]", segment.getId());
-    }
-
-    if (loaded) {
-      File segmentInfoCacheFile = new File(config.getInfoDir(), segment.getId().toString());
-      if (!segmentInfoCacheFile.exists()) {
-        try {
-          jsonMapper.writeValue(segmentInfoCacheFile, segment);
-        }
-        catch (IOException e) {
-          removeSegment(segment, callback, false);
-          throw new SegmentLoadingException(
-              e,
-              "Failed to write to disk segment info cache file[%s]",
-              segmentInfoCacheFile
-          );
-        }
-      }
-    }
-  }
-
   public Map<String, Long> getAverageNumOfRowsPerSegmentForDatasource()
   {
     return segmentManager.getAverageRowCountForDatasource();
@@ -317,89 +221,51 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     return segmentManager.getRowCountDistribution();
   }
 
-  @Override
-  public void addSegment(DataSegment segment, @Nullable DataSegmentChangeCallback callback)
-  {
-    Status result = null;
-    try {
-      log.info("Loading segment %s", segment.getId());
-      /*
-         The lock below is used to prevent a race condition when the scheduled runnable in removeSegment() starts,
-         and if (segmentsToDelete.remove(segment)) returns true, in which case historical will start deleting segment
-         files. At that point, it's possible that right after the "if" check, addSegment() is called and actually loads
-         the segment, which makes dropping segment and downloading segment happen at the same time.
-       */
-      if (segmentsToDelete.contains(segment)) {
-        /*
-           Both contains(segment) and remove(segment) can be moved inside the synchronized block. However, in that case,
-           each time when addSegment() is called, it has to wait for the lock in order to make progress, which will make
-           things slow. Given that in most cases segmentsToDelete.contains(segment) returns false, it will save a lot of
-           cost of acquiring lock by doing the "contains" check outside the synchronized block.
-         */
-        synchronized (segmentDeleteLock) {
-          segmentsToDelete.remove(segment);
-        }
-      }
-      loadSegment(segment, DataSegmentChangeCallback.NOOP, false);
-      // announce segment even if the segment file already exists.
-      try {
-        announcer.announceSegment(segment);
-      }
-      catch (IOException e) {
-        throw new SegmentLoadingException(e, "Failed to announce segment[%s]", segment.getId());
-      }
-
-      result = Status.SUCCESS;
-    }
-    catch (Throwable e) {
-      log.makeAlert(e, "Failed to load segment for dataSource")
-         .addData("segment", segment)
-         .emit();
-      result = Status.failed(e.toString());
-    }
-    finally {
-      updateRequestStatus(new SegmentChangeRequestLoad(segment), result);
-      if (null != callback) {
-        callback.execute();
-      }
-    }
-  }
-
   /**
-   * Bulk adding segments during bootstrap
-   * @param segments A collection of segments to add
-   * @param callback Segment loading callback
+   * Bulk loading of the following segments into the page cache at startup:
+   * <li> Previously cached segments </li>
+   * <li> Bootstrap segments from the coordinator </li>
    */
-  private void addSegments(Collection<DataSegment> segments, final DataSegmentChangeCallback callback)
+  private void loadSegmentsOnStartup() throws IOException
   {
+    final List<DataSegment> segmentsOnStartup = new ArrayList<>();
+    segmentsOnStartup.addAll(segmentManager.getCachedSegments());
+    segmentsOnStartup.addAll(getBootstrapSegments());
+
+    final Stopwatch stopwatch = Stopwatch.createStarted();
+
     // Start a temporary thread pool to load segments into page cache during bootstrap
-    ExecutorService loadingExecutor = null;
-    ExecutorService loadSegmentsIntoPageCacheOnBootstrapExec =
-        config.getNumThreadsToLoadSegmentsIntoPageCacheOnBootstrap() != 0 ?
-        Execs.multiThreaded(config.getNumThreadsToLoadSegmentsIntoPageCacheOnBootstrap(),
-                            "Load-Segments-Into-Page-Cache-On-Bootstrap-%s") : null;
+    final ExecutorService loadingExecutor = Execs.multiThreaded(
+        config.getNumBootstrapThreads(), "Segment-Load-Startup-%s"
+    );
+
     try (final BackgroundSegmentAnnouncer backgroundSegmentAnnouncer =
              new BackgroundSegmentAnnouncer(announcer, exec, config.getAnnounceIntervalMillis())) {
 
       backgroundSegmentAnnouncer.startAnnouncing();
 
-      loadingExecutor = Execs.multiThreaded(config.getNumBootstrapThreads(), "Segment-Load-Startup-%s");
-
-      final int numSegments = segments.size();
+      final int numSegments = segmentsOnStartup.size();
       final CountDownLatch latch = new CountDownLatch(numSegments);
       final AtomicInteger counter = new AtomicInteger(0);
       final CopyOnWriteArrayList<DataSegment> failedSegments = new CopyOnWriteArrayList<>();
-      for (final DataSegment segment : segments) {
+      for (final DataSegment segment : segmentsOnStartup) {
         loadingExecutor.submit(
             () -> {
               try {
                 log.info(
                     "Loading segment[%d/%d][%s]",
-                    counter.incrementAndGet(),
-                    numSegments,
-                    segment.getId()
+                    counter.incrementAndGet(), numSegments, segment.getId()
                 );
-                loadSegment(segment, callback, config.isLazyLoadOnStart(), loadSegmentsIntoPageCacheOnBootstrapExec);
+                try {
+                  segmentManager.loadSegmentOnBootstrap(
+                      segment,
+                      () -> this.removeSegment(segment, DataSegmentChangeCallback.NOOP, false)
+                  );
+                }
+                catch (Exception e) {
+                  removeSegment(segment, DataSegmentChangeCallback.NOOP, false);
+                  throw new SegmentLoadingException(e, "Exception loading segment[%s]", segment.getId());
+                }
                 try {
                   backgroundSegmentAnnouncer.announceSegment(segment);
                 }
@@ -423,7 +289,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
         latch.await();
 
         if (failedSegments.size() > 0) {
-          log.makeAlert("%,d errors seen while loading segments", failedSegments.size())
+          log.makeAlert("[%,d] errors seen while loading segments on startup", failedSegments.size())
              .addData("failedSegments", failedSegments)
              .emit();
         }
@@ -436,19 +302,101 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
       backgroundSegmentAnnouncer.finishAnnouncing();
     }
     catch (SegmentLoadingException e) {
-      log.makeAlert(e, "Failed to load segments -- likely problem with announcing.")
-         .addData("numSegments", segments.size())
+      log.makeAlert(e, "Failed to load segments on startup -- likely problem with announcing.")
+         .addData("numSegments", segmentsOnStartup.size())
          .emit();
     }
     finally {
-      callback.execute();
-      if (loadingExecutor != null) {
-        loadingExecutor.shutdownNow();
+      loadingExecutor.shutdownNow();
+      stopwatch.stop();
+      // At this stage, all tasks have been submitted, send a shutdown command to cleanup any resources alloted
+      // for the bootstrapping function.
+      segmentManager.shutdownBootstrap();
+      log.info("Loaded [%d] segments on startup in [%,d]ms.", segmentsOnStartup.size(), stopwatch.millisElapsed());
+    }
+  }
+
+  /**
+   * @return a list of bootstrap segments. When bootstrap segments cannot be found, an empty list is returned.
+   */
+  private List<DataSegment> getBootstrapSegments()
+  {
+    log.info("Fetching bootstrap segments from the coordinator.");
+    final Stopwatch stopwatch = Stopwatch.createStarted();
+
+    List<DataSegment> bootstrapSegments = new ArrayList<>();
+
+    try {
+      final BootstrapSegmentsResponse response =
+          FutureUtils.getUnchecked(coordinatorClient.fetchBootstrapSegments(), true);
+      bootstrapSegments = ImmutableList.copyOf(response.getIterator());
+    }
+    catch (Exception e) {
+      // By default, we "fail open" when there is any error -- finding the coordinator, or if the API endpoint cannot
+      // be found during rolling upgrades, or even if it's irrecoverable.
+      log.warn("Error fetching bootstrap segments from the coordinator: [%s]. ", e.getMessage());
+    }
+    finally {
+      stopwatch.stop();
+      final long fetchRunMillis = stopwatch.millisElapsed();
+      emitter.emit(new ServiceMetricEvent.Builder().setMetric("segment/bootstrap/time", fetchRunMillis));
+      emitter.emit(new ServiceMetricEvent.Builder().setMetric("segment/bootstrap/count", bootstrapSegments.size()));
+      log.info("Fetched [%d] bootstrap segments in [%d]ms.", bootstrapSegments.size(), fetchRunMillis);
+    }
+
+    return bootstrapSegments;
+  }
+
+  @Override
+  public void addSegment(DataSegment segment, @Nullable DataSegmentChangeCallback callback)
+  {
+    SegmentChangeStatus result = null;
+    try {
+      log.info("Loading segment[%s]", segment.getId());
+      /*
+         The lock below is used to prevent a race condition when the scheduled runnable in removeSegment() starts,
+         and if (segmentsToDelete.remove(segment)) returns true, in which case historical will start deleting segment
+         files. At that point, it's possible that right after the "if" check, addSegment() is called and actually loads
+         the segment, which makes dropping segment and downloading segment happen at the same time.
+       */
+      if (segmentsToDelete.contains(segment)) {
+        /*
+           Both contains(segment) and remove(segment) can be moved inside the synchronized block. However, in that case,
+           each time when addSegment() is called, it has to wait for the lock in order to make progress, which will make
+           things slow. Given that in most cases segmentsToDelete.contains(segment) returns false, it will save a lot of
+           cost of acquiring lock by doing the "contains" check outside the synchronized block.
+         */
+        synchronized (segmentDeleteLock) {
+          segmentsToDelete.remove(segment);
+        }
       }
-      if (loadSegmentsIntoPageCacheOnBootstrapExec != null) {
-        // At this stage, all tasks have been submitted, send a shutdown command to the bootstrap
-        // thread pool so threads will exit after finishing the tasks
-        loadSegmentsIntoPageCacheOnBootstrapExec.shutdown();
+      try {
+        segmentManager.loadSegment(segment);
+      }
+      catch (Exception e) {
+        removeSegment(segment, DataSegmentChangeCallback.NOOP, false);
+        throw new SegmentLoadingException(e, "Exception loading segment[%s]", segment.getId());
+      }
+      try {
+        // Announce segment even if the segment file already exists.
+        announcer.announceSegment(segment);
+      }
+      catch (IOException e) {
+        throw new SegmentLoadingException(e, "Failed to announce segment[%s]", segment.getId());
+      }
+
+      result = SegmentChangeStatus.SUCCESS;
+    }
+    catch (Throwable e) {
+      log.makeAlert(e, "Failed to load segment")
+         .addData("segment", segment)
+         .emit();
+      result = SegmentChangeStatus.failed(e.toString());
+    }
+    finally {
+      updateRequestStatus(new SegmentChangeRequestLoad(segment), result);
+      if (null != callback) {
+        callback.execute();
       }
     }
   }
@@ -466,7 +414,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
       final boolean scheduleDrop
   )
   {
-    Status result = null;
+    SegmentChangeStatus result = null;
     try {
       announcer.unannounceSegment(segment);
       segmentsToDelete.add(segment);
@@ -476,11 +424,6 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
           synchronized (segmentDeleteLock) {
             if (segmentsToDelete.remove(segment)) {
               segmentManager.dropSegment(segment);
-
-              File segmentInfoCacheFile = new File(config.getInfoDir(), segment.getId().toString());
-              if (!segmentInfoCacheFile.delete()) {
-                log.warn("Unable to delete segmentInfoCacheFile[%s]", segmentInfoCacheFile);
-              }
             }
           }
         }
@@ -493,9 +436,8 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
 
       if (scheduleDrop) {
         log.info(
-            "Completely removing [%s] in [%,d] millis",
-            segment.getId(),
-            config.getDropSegmentDelayMillis()
+            "Completely removing segment[%s] in [%,d]ms.",
+            segment.getId(), config.getDropSegmentDelayMillis()
         );
         exec.schedule(
             runnable,
@@ -506,13 +448,13 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
         runnable.run();
       }
 
-      result = Status.SUCCESS;
+      result = SegmentChangeStatus.SUCCESS;
     }
     catch (Exception e) {
       log.makeAlert(e, "Failed to remove segment")
          .addData("segment", segment)
          .emit();
-      result = Status.failed(e.getMessage());
+      result = SegmentChangeStatus.failed(e.getMessage());
     }
     finally {
       updateRequestStatus(new SegmentChangeRequestDrop(segment), result);
@@ -522,20 +464,20 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     }
   }
 
-  public Collection<DataSegment> getPendingDeleteSnapshot()
+  public Collection<DataSegment> getSegmentsToDelete()
   {
     return ImmutableList.copyOf(segmentsToDelete);
   }
 
-  public ListenableFuture<List<DataSegmentChangeRequestAndStatus>> processBatch(List<DataSegmentChangeRequest> changeRequests)
+  public ListenableFuture<List<DataSegmentChangeResponse>> processBatch(List<DataSegmentChangeRequest> changeRequests)
   {
     boolean isAnyRequestDone = false;
 
-    Map<DataSegmentChangeRequest, AtomicReference<Status>> statuses = Maps.newHashMapWithExpectedSize(changeRequests.size());
+    Map<DataSegmentChangeRequest, AtomicReference<SegmentChangeStatus>> statuses = Maps.newHashMapWithExpectedSize(changeRequests.size());
 
     for (DataSegmentChangeRequest cr : changeRequests) {
-      AtomicReference<Status> status = processRequest(cr);
-      if (status.get().getState() != Status.STATE.PENDING) {
+      AtomicReference<SegmentChangeStatus> status = processRequest(cr);
+      if (status.get().getState() != SegmentChangeStatus.State.PENDING) {
         isAnyRequestDone = true;
       }
       statuses.put(cr, status);
@@ -554,20 +496,20 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     return future;
   }
 
-  private AtomicReference<Status> processRequest(DataSegmentChangeRequest changeRequest)
+  private AtomicReference<SegmentChangeStatus> processRequest(DataSegmentChangeRequest changeRequest)
   {
     synchronized (requestStatusesLock) {
-      AtomicReference<Status> status = requestStatuses.getIfPresent(changeRequest);
+      AtomicReference<SegmentChangeStatus> status = requestStatuses.getIfPresent(changeRequest);
 
       // If last load/drop request status is failed, here can try that again
-      if (status == null || status.get().getState() == Status.STATE.FAILED) {
+      if (status == null || status.get().getState() == SegmentChangeStatus.State.FAILED) {
         changeRequest.go(
             new DataSegmentChangeHandler()
             {
               @Override
-              public void addSegment(DataSegment segment, DataSegmentChangeCallback callback)
+              public void addSegment(DataSegment segment, @Nullable DataSegmentChangeCallback callback)
               {
-                requestStatuses.put(changeRequest, new AtomicReference<>(Status.PENDING));
+                requestStatuses.put(changeRequest, new AtomicReference<>(SegmentChangeStatus.PENDING));
                 exec.submit(
                     () -> SegmentLoadDropHandler.this.addSegment(
                         ((SegmentChangeRequestLoad) changeRequest).getSegment(),
@@ -577,9 +519,9 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
               }
 
               @Override
-              public void removeSegment(DataSegment segment, DataSegmentChangeCallback callback)
+              public void removeSegment(DataSegment segment, @Nullable DataSegmentChangeCallback callback)
               {
-                requestStatuses.put(changeRequest, new AtomicReference<>(Status.PENDING));
+                requestStatuses.put(changeRequest, new AtomicReference<>(SegmentChangeStatus.PENDING));
                 SegmentLoadDropHandler.this.removeSegment(
                     ((SegmentChangeRequestDrop) changeRequest).getSegment(),
                     () -> resolveWaitingFutures(),
@@ -589,7 +531,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
             },
             this::resolveWaitingFutures
         );
-      } else if (status.get().getState() == Status.STATE.SUCCESS) {
+      } else if (status.get().getState() == SegmentChangeStatus.State.SUCCESS) {
         // SUCCESS case, we'll clear up the cached success while serving it to this client
         // Not doing this can lead to an incorrect response to upcoming clients for a reload
         requestStatuses.invalidate(changeRequest);
@@ -599,13 +541,13 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     }
   }
 
-  private void updateRequestStatus(DataSegmentChangeRequest changeRequest, Status result)
+  private void updateRequestStatus(DataSegmentChangeRequest changeRequest, @Nullable SegmentChangeStatus result)
   {
     if (result == null) {
-      result = Status.failed("Unknown reason. Check server logs.");
+      result = SegmentChangeStatus.failed("Unknown reason. Check server logs.");
     }
     synchronized (requestStatusesLock) {
-      AtomicReference<Status> statusRef = requestStatuses.getIfPresent(changeRequest);
+      AtomicReference<SegmentChangeStatus> statusRef = requestStatuses.getIfPresent(changeRequest);
       if (statusRef != null) {
         statusRef.set(result);
       }
@@ -629,14 +571,14 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
    *
    * Returns true if _either_:
    *
-   * (1) Our {@link #serverTypeConfig} indicates we are a segment server. This is necessary for Brokers to be able
-   * to detect that we exist.
-   * (2) We have non-empty storage locations in {@link #config}. This is necessary for Coordinators to be able to
-   * assign segments to us.
+   * <li> Our {@link #serverTypeConfig} indicates we are a segment server. This is necessary for Brokers to be able
+   * to detect that we exist.</li>
+   * <li> The segment manager is able to handle segments. This is necessary for Coordinators to be able to
+   * assign segments to us.</li>
    */
   private boolean shouldAnnounce()
   {
-    return serverTypeConfig.getServerType().isSegmentServer() || !config.getLocations().isEmpty();
+    return serverTypeConfig.getServerType().isSegmentServer() || segmentManager.canHandleSegments();
   }
 
   private static class BackgroundSegmentAnnouncer implements AutoCloseable
@@ -773,14 +715,14 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
   }
 
   // Future with cancel() implementation to remove it from "waitingFutures" list
-  private class CustomSettableFuture extends AbstractFuture<List<DataSegmentChangeRequestAndStatus>>
+  private class CustomSettableFuture extends AbstractFuture<List<DataSegmentChangeResponse>>
   {
     private final LinkedHashSet<CustomSettableFuture> waitingFutures;
-    private final Map<DataSegmentChangeRequest, AtomicReference<Status>> statusRefs;
+    private final Map<DataSegmentChangeRequest, AtomicReference<SegmentChangeStatus>> statusRefs;
 
     private CustomSettableFuture(
         LinkedHashSet<CustomSettableFuture> waitingFutures,
-        Map<DataSegmentChangeRequest, AtomicReference<Status>> statusRefs
+        Map<DataSegmentChangeRequest, AtomicReference<SegmentChangeStatus>> statusRefs
     )
     {
       this.waitingFutures = waitingFutures;
@@ -794,14 +736,14 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
           return;
         }
 
-        final List<DataSegmentChangeRequestAndStatus> result = new ArrayList<>(statusRefs.size());
+        final List<DataSegmentChangeResponse> result = new ArrayList<>(statusRefs.size());
         statusRefs.forEach((request, statusRef) -> {
           // Remove complete statuses from the cache
-          final Status status = statusRef.get();
-          if (status != null && status.getState() != Status.STATE.PENDING) {
+          final SegmentChangeStatus status = statusRef.get();
+          if (status != null && status.getState() != SegmentChangeStatus.State.PENDING) {
             requestStatuses.invalidate(request);
           }
-          result.add(new DataSegmentChangeRequestAndStatus(request, status));
+          result.add(new DataSegmentChangeResponse(request, status));
         });
 
         set(result);
@@ -818,94 +760,5 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     }
   }
 
-  public static class Status
-  {
-    public enum STATE
-    {
-      SUCCESS, FAILED, PENDING
-    }
-
-    private final STATE state;
-    @Nullable
-    private final String failureCause;
-
-    public static final Status SUCCESS = new Status(STATE.SUCCESS, null);
-    public static final Status PENDING = new Status(STATE.PENDING, null);
-
-    @JsonCreator
-    Status(
-        @JsonProperty("state") STATE state,
-        @JsonProperty("failureCause") @Nullable String failureCause
-    )
-    {
-      Preconditions.checkNotNull(state, "state must be non-null");
-      this.state = state;
-      this.failureCause = failureCause;
-    }
-
-    public static Status failed(String cause)
-    {
-      return new Status(STATE.FAILED, cause);
-    }
-
-    @JsonProperty
-    public STATE getState()
-    {
-      return state;
-    }
-
-    @Nullable
-    @JsonProperty
-    public String getFailureCause()
-    {
-      return failureCause;
-    }
-
-    @Override
-    public String toString()
-    {
-      return "Status{" +
-             "state=" + state +
-             ", failureCause='" + failureCause + '\'' +
-             '}';
-    }
-  }
-
-  public static class DataSegmentChangeRequestAndStatus
-  {
-    private final DataSegmentChangeRequest request;
-    private final Status status;
-
-    @JsonCreator
-    public DataSegmentChangeRequestAndStatus(
-        @JsonProperty("request") DataSegmentChangeRequest request,
-        @JsonProperty("status") Status status
-    )
-    {
-      this.request = request;
-      this.status = status;
-    }
-
-    @JsonProperty
-    public DataSegmentChangeRequest getRequest()
-    {
-      return request;
-    }
-
-    @JsonProperty
-    public Status getStatus()
-    {
-      return status;
-    }
-
-    @Override
-    public String toString()
-    {
-      return "DataSegmentChangeRequestAndStatus{" +
-             "request=" + request +
-             ", status=" + status +
-             '}';
-    }
-  }
 }
 

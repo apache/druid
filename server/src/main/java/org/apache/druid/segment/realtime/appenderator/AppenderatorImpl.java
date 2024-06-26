@@ -55,7 +55,7 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.BaseProgressIndicator;
-import org.apache.druid.segment.DataSegmentWithSchema;
+import org.apache.druid.segment.DataSegmentWithMetadata;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.QueryableIndex;
@@ -73,9 +73,9 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.FingerprintGenerator;
-import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.FireHydrant;
-import org.apache.druid.segment.realtime.plumber.Sink;
+import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
+import org.apache.druid.segment.realtime.sink.Sink;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -135,7 +135,7 @@ public class AppenderatorImpl implements Appenderator
   private final String myId;
   private final DataSchema schema;
   private final AppenderatorConfig tuningConfig;
-  private final FireDepartmentMetrics metrics;
+  private final SegmentGenerationMetrics metrics;
   private final DataSegmentPusher dataSegmentPusher;
   private final ObjectMapper objectMapper;
   private final DataSegmentAnnouncer segmentAnnouncer;
@@ -211,7 +211,7 @@ public class AppenderatorImpl implements Appenderator
       String id,
       DataSchema schema,
       AppenderatorConfig tuningConfig,
-      FireDepartmentMetrics metrics,
+      SegmentGenerationMetrics metrics,
       DataSegmentPusher dataSegmentPusher,
       ObjectMapper objectMapper,
       DataSegmentAnnouncer segmentAnnouncer,
@@ -514,8 +514,7 @@ public class AppenderatorImpl implements Appenderator
           tuningConfig.getAppendableIndexSpec(),
           tuningConfig.getMaxRowsInMemory(),
           maxBytesTuningConfig,
-          useMaxMemoryEstimates,
-          null
+          useMaxMemoryEstimates
       );
       bytesCurrentlyInMemory.addAndGet(calculateSinkMemoryInUsed());
 
@@ -796,16 +795,16 @@ public class AppenderatorImpl implements Appenderator
               continue;
             }
 
-            final DataSegmentWithSchema dataSegmentWithSchema = mergeAndPush(
+            final DataSegmentWithMetadata dataSegmentWithMetadata = mergeAndPush(
                 entry.getKey(),
                 entry.getValue(),
                 useUniquePath
             );
 
-            if (dataSegmentWithSchema != null) {
-              DataSegment segment = dataSegmentWithSchema.getDataSegment();
+            if (dataSegmentWithMetadata != null) {
+              DataSegment segment = dataSegmentWithMetadata.getDataSegment();
               dataSegments.add(segment);
-              SchemaPayloadPlus schemaPayloadPlus = dataSegmentWithSchema.getSegmentSchemaMetadata();
+              SchemaPayloadPlus schemaPayloadPlus = dataSegmentWithMetadata.getSegmentSchemaMetadata();
               if (schemaPayloadPlus != null) {
                 SchemaPayload schemaPayload = schemaPayloadPlus.getSchemaPayload();
                 segmentSchemaMapping.addSchema(
@@ -854,7 +853,7 @@ public class AppenderatorImpl implements Appenderator
    * @return segment descriptor, or null if the sink is no longer valid
    */
   @Nullable
-  private DataSegmentWithSchema mergeAndPush(
+  private DataSegmentWithMetadata mergeAndPush(
       final SegmentIdWithShardSpec identifier,
       final Sink sink,
       final boolean useUniquePath
@@ -898,7 +897,7 @@ public class AppenderatorImpl implements Appenderator
           );
         } else {
           log.info("Segment[%s] already pushed, skipping.", identifier);
-          return new DataSegmentWithSchema(
+          return new DataSegmentWithMetadata(
               objectMapper.readValue(descriptorFile, DataSegment.class),
               centralizedDatasourceSchemaConfig.isEnabled() ? TaskSegmentSchemaUtil.getSegmentSchema(
                   mergedTarget,
@@ -1017,7 +1016,7 @@ public class AppenderatorImpl implements Appenderator
           objectMapper.writeValueAsString(segment.getLoadSpec())
       );
 
-      return new DataSegmentWithSchema(
+      return new DataSegmentWithMetadata(
           segment,
           centralizedDatasourceSchemaConfig.isEnabled()
           ? TaskSegmentSchemaUtil.getSegmentSchema(mergedTarget, indexIO)
@@ -1340,7 +1339,6 @@ public class AppenderatorImpl implements Appenderator
             tuningConfig.getMaxRowsInMemory(),
             maxBytesTuningConfig,
             useMaxMemoryEstimates,
-            null,
             hydrants
         );
         rowsSoFar += currSink.getNumRows();

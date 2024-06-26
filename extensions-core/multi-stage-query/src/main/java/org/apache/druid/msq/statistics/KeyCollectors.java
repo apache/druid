@@ -20,6 +20,7 @@
 package org.apache.druid.msq.statistics;
 
 import org.apache.druid.frame.key.ClusterBy;
+import org.apache.druid.segment.column.RowSignature;
 
 public class KeyCollectors
 {
@@ -33,19 +34,20 @@ public class KeyCollectors
    */
   public static KeyCollectorFactory<?, ?> makeStandardFactory(
       final ClusterBy clusterBy,
-      final boolean aggregate
+      final boolean aggregate,
+      final RowSignature rowSignature
   )
   {
     final KeyCollectorFactory<?, ?> baseFactory;
 
     if (aggregate) {
-      baseFactory = DistinctKeyCollectorFactory.create(clusterBy);
+      baseFactory = DistinctKeyCollectorFactory.create(clusterBy, rowSignature);
     } else {
-      baseFactory = QuantilesSketchKeyCollectorFactory.create(clusterBy);
+      baseFactory = QuantilesSketchKeyCollectorFactory.create(clusterBy, rowSignature);
     }
 
     // Wrap in DelegateOrMinKeyCollectorFactory, so we are guaranteed to be able to downsample to a single key. This
     // is important because it allows us to better handle large numbers of small buckets.
-    return new DelegateOrMinKeyCollectorFactory<>(clusterBy.keyComparator(), baseFactory);
+    return new DelegateOrMinKeyCollectorFactory<>(clusterBy.keyComparator(rowSignature), baseFactory);
   }
 }

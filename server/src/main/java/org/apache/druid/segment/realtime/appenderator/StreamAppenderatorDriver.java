@@ -40,7 +40,7 @@ import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifier;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.loading.DataSegmentKiller;
-import org.apache.druid.segment.realtime.FireDepartmentMetrics;
+import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
 import org.apache.druid.segment.realtime.appenderator.SegmentWithState.SegmentState;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
@@ -51,10 +51,12 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NavigableMap;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -80,7 +82,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
   private static final long HANDOFF_TIME_THRESHOLD = 600_000;
 
   private final SegmentHandoffNotifier handoffNotifier;
-  private final FireDepartmentMetrics metrics;
+  private final SegmentGenerationMetrics metrics;
   private final ObjectMapper objectMapper;
 
   /**
@@ -89,7 +91,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
    * @param appenderator           appenderator
    * @param segmentAllocator       segment allocator
    * @param handoffNotifierFactory handoff notifier factory
-   * @param usedSegmentChecker     used segment checker
+   * @param segmentRetriever     used segment checker
    * @param objectMapper           object mapper, used for serde of commit metadata
    * @param metrics                Firedepartment metrics
    */
@@ -97,13 +99,13 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
       Appenderator appenderator,
       SegmentAllocator segmentAllocator,
       SegmentHandoffNotifierFactory handoffNotifierFactory,
-      UsedSegmentChecker usedSegmentChecker,
+      PublishedSegmentRetriever segmentRetriever,
       DataSegmentKiller dataSegmentKiller,
       ObjectMapper objectMapper,
-      FireDepartmentMetrics metrics
+      SegmentGenerationMetrics metrics
   )
   {
-    super(appenderator, segmentAllocator, usedSegmentChecker, dataSegmentKiller);
+    super(appenderator, segmentAllocator, segmentRetriever, dataSegmentKiller);
 
     this.handoffNotifier = Preconditions.checkNotNull(handoffNotifierFactory, "handoffNotifierFactory")
                                         .createSegmentHandoffNotifier(appenderator.getDataSource());
@@ -322,10 +324,14 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
       return Futures.immediateFuture(null);
 
     } else {
-      final List<SegmentIdWithShardSpec> waitingSegmentIdList = segmentsAndCommitMetadata.getSegments().stream()
-                                                                                         .map(
-                                                                                       SegmentIdWithShardSpec::fromDataSegment)
-                                                                                         .collect(Collectors.toList());
+      final Set<DataSegment> segmentsToBeHandedOff = new HashSet<>(segmentsAndCommitMetadata.getSegments());
+      if (segmentsAndCommitMetadata.getUpgradedSegments() != null) {
+        segmentsToBeHandedOff.addAll(segmentsAndCommitMetadata.getUpgradedSegments());
+      }
+      final List<SegmentIdWithShardSpec> waitingSegmentIdList =
+          segmentsToBeHandedOff.stream()
+                               .map(SegmentIdWithShardSpec::fromDataSegment)
+                               .collect(Collectors.toList());
       final Object metadata = Preconditions.checkNotNull(segmentsAndCommitMetadata.getCommitMetadata(), "commitMetadata");
 
       if (waitingSegmentIdList.isEmpty()) {
@@ -333,7 +339,8 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
             new SegmentsAndCommitMetadata(
                 segmentsAndCommitMetadata.getSegments(),
                 ((AppenderatorDriverMetadata) metadata).getCallerMetadata(),
-                segmentsAndCommitMetadata.getSegmentSchemaMapping()
+                segmentsAndCommitMetadata.getSegmentSchemaMapping(),
+                segmentsAndCommitMetadata.getUpgradedSegments()
             )
         );
       }
@@ -365,8 +372,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
                     public void onSuccess(Object result)
                     {
                       if (numRemainingHandoffSegments.decrementAndGet() == 0) {
-                        List<DataSegment> segments = segmentsAndCommitMetadata.getSegments();
-                        log.info("Successfully handed off [%d] segments.", segments.size());
+                        log.info("Successfully handed off [%d] segments.", segmentsToBeHandedOff.size());
                         final long handoffTotalTime = System.currentTimeMillis() - handoffStartTime;
                         metrics.reportMaxSegmentHandoffTime(handoffTotalTime);
                         if (handoffTotalTime > HANDOFF_TIME_THRESHOLD) {
@@ -375,9 +381,10 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
                         }
                         resultFuture.set(
                             new SegmentsAndCommitMetadata(
-                                segments,
+                                segmentsAndCommitMetadata.getSegments(),
                                 ((AppenderatorDriverMetadata) metadata).getCallerMetadata(),
-                                segmentsAndCommitMetadata.getSegmentSchemaMapping()
+                                segmentsAndCommitMetadata.getSegmentSchemaMapping(),
+                                segmentsAndCommitMetadata.getUpgradedSegments()
                             )
                         );
                       }
@@ -409,7 +416,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
   {
     return Futures.transformAsync(
         publish(publisher, committer, sequenceNames),
-        (AsyncFunction<SegmentsAndCommitMetadata, SegmentsAndCommitMetadata>) this::registerHandoff,
+        this::registerHandoff,
         MoreExecutors.directExecutor()
     );
   }

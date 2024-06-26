@@ -70,17 +70,11 @@ Most metric values reset each emission period, as specified in `druid.monitoring
 |`sqlQuery/bytes`|Number of bytes returned in the SQL query response.|`id`, `nativeQueryIds`, `dataSource`, `remoteAddress`, `success`, `engine`| |
 |`serverview/init/time`|Time taken to initialize the broker server view. Useful to detect if brokers are taking too long to start.||Depends on the number of segments.|
 |`metadatacache/init/time`|Time taken to initialize the broker segment metadata cache. Useful to detect if brokers are taking too long to start||Depends on the number of segments.|
-|`metadatacache/refresh/count`|Number of segments to refresh in broker segment metadata cache.|`dataSource`|
-|`metadatacache/refresh/time`|Time taken to refresh segments in broker segment metadata cache.|`dataSource`|
-|`metadatacache/schemaPoll/count`|Number of coordinator polls to fetch datasource schema.||
-|`metadatacache/schemaPoll/failed`|Number of failed coordinator polls to fetch datasource schema.||
-|`metadatacache/schemaPoll/time`|Time taken for coordinator polls to fetch datasource schema.||
-|`metadatacache/backfill/count`|Number of segments for which schema was back filled in the database.|`dataSource`|
-|`schemacache/realtime/count`|Number of realtime segments for which schema is cached.||Depends on the number of realtime segments.|
-|`schemacache/finalizedSegmentMetadata/count`|Number of finalized segments for which schema metadata is cached.||Depends on the number of segments in the cluster.|
-|`schemacache/finalizedSchemaPayload/count`|Number of finalized segment schema cached.||Depends on the number of distinct schema in the cluster.|
-|`schemacache/inTransitSMQResults/count`|Number of segments for which schema was fetched by executing segment metadata query.||Eventually it should be 0.|
-|`schemacache/inTransitSMQPublishedResults/count`|Number of segments for which schema is cached after back filling in the database.||Eventually it should be 0.|
+|`metadatacache/refresh/count`|Number of segments to refresh in broker segment metadata cache.|`dataSource`||
+|`metadatacache/refresh/time`|Time taken to refresh segments in broker segment metadata cache.|`dataSource`||
+|`metadatacache/schemaPoll/count`|Number of coordinator polls to fetch datasource schema.|||
+|`metadatacache/schemaPoll/failed`|Number of failed coordinator polls to fetch datasource schema.|||
+|`metadatacache/schemaPoll/time`|Time taken for coordinator polls to fetch datasource schema.|||
 |`serverview/sync/healthy`|Sync status of the Broker with a segment-loading server such as a Historical or Peon. Emitted only when [HTTP-based server view](../configuration/index.md#segment-management) is enabled. This metric can be used in conjunction with `serverview/sync/unstableTime` to debug slow startup of Brokers.|`server`, `tier`|1 for fully synced servers, 0 otherwise|
 |`serverview/sync/unstableTime`|Time in milliseconds for which the Broker has been failing to sync with a segment-loading server. Emitted only when [HTTP-based server view](../configuration/index.md#segment-management) is enabled.|`server`, `tier`|Not emitted for synced servers.|
 |`subquery/rowLimit/count`|Number of subqueries whose results are materialized as rows (Java objects on heap).|This metric is only available if the `SubqueryCountStatsMonitor` module is included.| |
@@ -375,8 +369,14 @@ These metrics are for the Druid Coordinator and are reset each time the Coordina
 |`serverview/sync/healthy`|Sync status of the Coordinator with a segment-loading server such as a Historical or Peon. Emitted only when [HTTP-based server view](../configuration/index.md#segment-management) is enabled. You can use this metric in conjunction with `serverview/sync/unstableTime` to debug slow startup of the Coordinator.|`server`, `tier`|1 for fully synced servers, 0 otherwise|
 |`serverview/sync/unstableTime`|Time in milliseconds for which the Coordinator has been failing to sync with a segment-loading server. Emitted only when [HTTP-based server view](../configuration/index.md#segment-management) is enabled.|`server`, `tier`|Not emitted for synced servers.|
 |`metadatacache/init/time`|Time taken to initialize the coordinator segment metadata cache.||Depends on the number of segments.|
-|`metadatacache/refresh/count`|Number of segments to refresh in coordinator segment metadata cache.|`dataSource`|
-|`metadatacache/refresh/time`|Time taken to refresh segments in coordinator segment metadata cache.|`dataSource`|
+|`metadatacache/refresh/count`|Number of segments to refresh in coordinator segment metadata cache.|`dataSource`||
+|`metadatacache/refresh/time`|Time taken to refresh segments in coordinator segment metadata cache.|`dataSource`||
+|`metadatacache/backfill/count`|Number of segments for which schema was back filled in the database.|`dataSource`||
+|`metadatacache/realtimeSegmentSchema/count`|Number of realtime segments for which schema is cached.||Depends on the number of realtime segments in the cluster.|
+|`metadatacache/finalizedSegmentMetadata/count`|Number of finalized segments for which schema metadata is cached.||Depends on the number of segments in the cluster.|
+|`metadatacache/finalizedSchemaPayload/count`|Number of finalized segment schema cached.||Depends on the number of distinct schema in the cluster.|
+|`metadatacache/temporaryMetadataQueryResults/count`|Number of segments for which schema was fetched by executing segment metadata query.||Eventually it should be 0.|
+|`metadatacache/temporaryPublishedMetadataQueryResults/count`|Number of segments for which schema is cached after back filling in the database.||This value gets reset after each database poll. Eventually it should be 0.|
 
 ## General Health
 
@@ -508,6 +508,19 @@ These metrics are only available if the `OshiSysMonitor` module is included.
 |`sys/tcpv4/out/rsts`|Total "out reset" packets sent to reset the connection||Generally 0|
 |`sys/tcpv4/retrans/segs`|Total segments re-transmitted||Varies|
 
+
+## S3 multi-part upload
+
+These metrics are only available if the `druid-s3-extensions` module is included and if certain specific features are being used: MSQ export to S3, durable intermediate storage on S3.
+
+|Metric|Description|Dimensions|Normal value|
+|------|-----------|----------|------------|
+|`s3/upload/part/queueSize`|Number of items currently waiting in queue to be uploaded to S3. Each item in the queue corresponds to a single part in a multi-part upload.||Varies|
+|`s3/upload/part/queuedTime`|Milliseconds spent by a single item (or part) in queue before it starts getting uploaded to S3.|`uploadId`, `partNumber`|Varies|
+|`s3/upload/part/time`|Milliseconds taken to upload a single part of a multi-part upload to S3.|`uploadId`, `partNumber`|Varies|
+|`s3/upload/total/time`|Milliseconds taken for uploading all parts of a multi-part upload to S3.|`uploadId`|Varies|
+|`s3/upload/total/bytes`|Total bytes uploaded to S3 during a multi-part upload.|`uploadId`|Varies|
+
 ## Cgroup
 
 These metrics are available on operating systems with the cgroup kernel feature. All the values are derived by reading from `/sys/fs/cgroup`.
@@ -516,8 +529,17 @@ These metrics are available on operating systems with the cgroup kernel feature.
 |------|-----------|----------|------------|
 |`cgroup/cpu/shares`|Relative value of CPU time available to this process. Read from `cpu.shares`.||Varies|
 |`cgroup/cpu/cores_quota`|Number of cores available to this process. Derived from `cpu.cfs_quota_us`/`cpu.cfs_period_us`.||Varies. A value of -1 indicates there is no explicit quota set.|
+|`cgroup/cpu/usage/total/percentage`|Total cpu percentage used by cgroup of process that is running||0-100|
+|`cgroup/cpu/usage/user/percentage`|User cpu percentage used by cgroup of process that is running||0-100|
+|`cgroup/cpu/usage/sys/percentage`|Sys cpu percentage used by cgroup of process that is running||0-100|
+|`cgroup/disk/read/size`|Reports the number of bytes transferred to specific devices by a cgroup of process that is running.|`diskName`|Varies|
+|`cgroup/disk/write/size`|Reports the number of bytes transferred from specific devices by a cgroup of process that is running.|`diskName`|Varies|
+|`cgroup/disk/read/count`|Reports the number of read operations performed on specific devices by a cgroup of process that is running.|`diskName`|Varies|
+|`cgroup/disk/write/count`|Reports the number of write operations performed on specific devices by a cgroup of process that is running.|`diskName`|Varies|
 |`cgroup/memory/*`|Memory stats for this process, such as `cache` and `total_swap`. Each stat produces a separate metric. Read from `memory.stat`.||Varies|
 |`cgroup/memory_numa/*/pages`|Memory stats, per NUMA node, for this process, such as `total` and `unevictable`. Each stat produces a separate metric. Read from `memory.num_stat`.|`numaZone`|Varies|
+|`cgroup/memory/limit/bytes`|Reports the maximum memory that can be used by processes in the cgroup (in bytes)||Varies|
+|`cgroup/memory/usage/bytes`|Reports the maximum amount of user memory (including file cache)||Varies|
 |`cgroup/cpuset/cpu_count`|Total number of CPUs available to the process. Derived from `cpuset.cpus`.||Varies|
 |`cgroup/cpuset/effective_cpu_count`|Total number of active CPUs available to the process. Derived from `cpuset.effective_cpus`.||Varies|
 |`cgroup/cpuset/mems_count`|Total number of memory nodes available to the process. Derived from `cpuset.mems`.||Varies|

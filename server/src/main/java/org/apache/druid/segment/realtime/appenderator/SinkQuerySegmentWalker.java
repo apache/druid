@@ -59,8 +59,8 @@ import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.realtime.FireHydrant;
-import org.apache.druid.segment.realtime.plumber.Sink;
-import org.apache.druid.segment.realtime.plumber.SinkSegmentReference;
+import org.apache.druid.segment.realtime.sink.Sink;
+import org.apache.druid.segment.realtime.sink.SinkSegmentReference;
 import org.apache.druid.server.ResourceIdPopulatingQueryRunner;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
@@ -356,13 +356,13 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
     }
   }
 
-  public void registerNewVersionOfPendingSegment(
+  public void registerUpgradedPendingSegment(
       SegmentIdWithShardSpec basePendingSegment,
-      SegmentIdWithShardSpec newSegmentVersion
+      SegmentIdWithShardSpec upgradedPendingSegment
   )
   {
     newIdToBasePendingSegment.put(
-        newSegmentVersion.asSegmentId().toDescriptor(),
+        upgradedPendingSegment.asSegmentId().toDescriptor(),
         basePendingSegment.asSegmentId().toDescriptor()
     );
   }

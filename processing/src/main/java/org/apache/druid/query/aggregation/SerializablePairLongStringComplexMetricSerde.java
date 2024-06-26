@@ -19,11 +19,15 @@
 
 package org.apache.druid.query.aggregation;
 
+import it.unimi.dsi.fastutil.Hash;
 import org.apache.druid.collections.SerializablePair;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.GenericColumnSerializer;
 import org.apache.druid.segment.column.ColumnBuilder;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.ObjectStrategyComplexTypeStrategy;
+import org.apache.druid.segment.column.TypeStrategy;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.ObjectStrategy;
 import org.apache.druid.segment.serde.ComplexColumnPartSupplier;
@@ -130,7 +134,7 @@ public class SerializablePairLongStringComplexMetricSerde extends ComplexMetricS
   }
 
   @Override
-  public ObjectStrategy<?> getObjectStrategy()
+  public ObjectStrategy<SerializablePairLongString> getObjectStrategy()
   {
     return new ObjectStrategy<SerializablePairLongString>()
     {
@@ -163,6 +167,29 @@ public class SerializablePairLongStringComplexMetricSerde extends ComplexMetricS
         return SERDE.serialize(val);
       }
     };
+  }
+
+  @Override
+  public TypeStrategy<SerializablePairLongString> getTypeStrategy()
+  {
+    return new ObjectStrategyComplexTypeStrategy<>(
+        getObjectStrategy(),
+        ColumnType.ofComplex(getTypeName()),
+        new Hash.Strategy<SerializablePairLongString>()
+        {
+          @Override
+          public int hashCode(SerializablePairLongString o)
+          {
+            return o.hashCode();
+          }
+
+          @Override
+          public boolean equals(SerializablePairLongString a, SerializablePairLongString b)
+          {
+            return a.equals(b);
+          }
+        }
+    );
   }
 
   @Override

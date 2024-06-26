@@ -35,6 +35,8 @@ import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.query.filter.RangeFilter;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.TypeSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
@@ -229,7 +231,7 @@ public class UnnestStorageAdapter implements StorageAdapter
   public ColumnCapabilities getColumnCapabilities(String column)
   {
     if (outputColumnName.equals(column)) {
-      return unnestColumn.capabilities(baseAdapter, column);
+      return computeOutputColumnCapabilities(baseAdapter, unnestColumn);
     }
 
     return baseAdapter.getColumnCapabilities(column);
@@ -556,6 +558,34 @@ public class UnnestStorageAdapter implements StorageAdapter
       return filter.rewriteRequiredColumns(ImmutableMap.of(outputColumnName, inputColumn));
     } else {
       return null;
+    }
+  }
+
+  /**
+   * Computes the capabilities of {@link #outputColumnName}, after unnesting.
+   */
+  @Nullable
+  public static ColumnCapabilities computeOutputColumnCapabilities(
+      final ColumnInspector baseColumnInspector,
+      final VirtualColumn unnestColumn
+  )
+  {
+    final ColumnCapabilities capabilities = unnestColumn.capabilities(
+        baseColumnInspector,
+        unnestColumn.getOutputName()
+    );
+
+    if (capabilities == null) {
+      return null;
+    } else {
+      // Arrays are unnested as their element type. Anything else is unnested as the same type.
+      final TypeSignature<ValueType> outputType =
+          capabilities.isArray() ? capabilities.getElementType() : capabilities.toColumnType();
+
+      return ColumnCapabilitiesImpl.createDefault()
+                                   .setType(outputType)
+                                   .setHasMultipleValues(false)
+                                   .setDictionaryEncoded(useDimensionCursor(capabilities));
     }
   }
 

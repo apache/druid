@@ -29,6 +29,8 @@ import org.apache.druid.indexing.common.SegmentLock;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
+import org.apache.druid.indexing.overlord.TaskLockbox;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -58,7 +60,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.io.IOException;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.HashMap;
@@ -402,7 +403,7 @@ public class SegmentAllocateActionTest
   }
 
   @Test
-  public void testSegmentIsAllocatedForLatestUsedSegmentVersion() throws IOException
+  public void testSegmentIsAllocatedForLatestUsedSegmentVersion()
   {
     final Task task = NoopTask.create();
     taskActionTestKit.getTaskLockbox().add(task);
@@ -634,7 +635,7 @@ public class SegmentAllocateActionTest
   }
 
   @Test
-  public void testAddToExistingLinearShardSpecsSameGranularity() throws Exception
+  public void testAddToExistingLinearShardSpecsSameGranularity()
   {
     final Task task = NoopTask.create();
 
@@ -700,7 +701,7 @@ public class SegmentAllocateActionTest
   }
 
   @Test
-  public void testAddToExistingNumberedShardSpecsSameGranularity() throws Exception
+  public void testAddToExistingNumberedShardSpecsSameGranularity()
   {
     final Task task = NoopTask.create();
 
@@ -764,7 +765,7 @@ public class SegmentAllocateActionTest
   }
 
   @Test
-  public void testAddToExistingNumberedShardSpecsCoarserPreferredGranularity() throws Exception
+  public void testAddToExistingNumberedShardSpecsCoarserPreferredGranularity()
   {
     final Task task = NoopTask.create();
 
@@ -804,7 +805,7 @@ public class SegmentAllocateActionTest
   }
 
   @Test
-  public void testAddToExistingNumberedShardSpecsFinerPreferredGranularity() throws Exception
+  public void testAddToExistingNumberedShardSpecsFinerPreferredGranularity()
   {
     final Task task = NoopTask.create();
 
@@ -844,7 +845,7 @@ public class SegmentAllocateActionTest
   }
 
   @Test
-  public void testCannotAddToExistingNumberedShardSpecsWithCoarserQueryGranularity() throws Exception
+  public void testCannotAddToExistingNumberedShardSpecsWithCoarserQueryGranularity()
   {
     final Task task = NoopTask.create();
 
@@ -887,7 +888,7 @@ public class SegmentAllocateActionTest
   }
 
   @Test
-  public void testWithPartialShardSpecAndOvershadowingSegments() throws IOException
+  public void testWithPartialShardSpecAndOvershadowingSegments()
   {
     final Task task = NoopTask.create();
     taskActionTestKit.getTaskLockbox().add(task);
@@ -1062,6 +1063,45 @@ public class SegmentAllocateActionTest
     Assert.assertEquals(Duration.ofDays(1).toMillis(), id2.getInterval().toDurationMillis());
   }
 
+  @Test
+  public void testSegmentIdMustNotBeReused()
+  {
+    final IndexerMetadataStorageCoordinator coordinator = taskActionTestKit.getMetadataStorageCoordinator();
+    final TaskLockbox lockbox = taskActionTestKit.getTaskLockbox();
+    final Task task0 = NoopTask.ofPriority(25);
+    lockbox.add(task0);
+    final NoopTask task1 = NoopTask.ofPriority(50);
+    lockbox.add(task1);
+
+    // Allocate and commit for older task task0
+    final SegmentIdWithShardSpec id0 =
+        allocate(task0, DateTimes.nowUtc(), Granularities.NONE, Granularities.ALL, "seq", "0");
+    final DataSegment dataSegment0 = getSegmentForIdentifier(id0);
+    coordinator.commitSegments(ImmutableSet.of(dataSegment0), null);
+    lockbox.unlock(task0, Intervals.ETERNITY);
+
+    // Allocate and commit for newer task task1. Pending segments are cleaned up
+    final SegmentIdWithShardSpec id1 =
+        allocate(task1, DateTimes.nowUtc(), Granularities.NONE, Granularities.ALL, "seq", "1");
+    final DataSegment dataSegment1 = getSegmentForIdentifier(id1);
+    final SegmentIdWithShardSpec id2 =
+        allocate(task1, DateTimes.nowUtc(), Granularities.NONE, Granularities.ALL, "seq", "2");
+    final DataSegment dataSegment2 = getSegmentForIdentifier(id2);
+    coordinator.commitSegments(ImmutableSet.of(dataSegment1, dataSegment2), null);
+    // Clean up pending segments corresponding to the last pending segment
+    coordinator.deletePendingSegmentsForTaskAllocatorId(task1.getDataSource(), task1.getTaskAllocatorId());
+
+    // Drop all segments
+    coordinator.markSegmentsAsUnusedWithinInterval(task0.getDataSource(), Intervals.ETERNITY);
+
+    // Allocate another id and ensure that it doesn't exist in the druid_segments table
+    final SegmentIdWithShardSpec theId =
+        allocate(task1, DateTimes.nowUtc(), Granularities.NONE, Granularities.ALL, "seq", "3");
+    Assert.assertNull(coordinator.retrieveSegmentForId(theId.asSegmentId().toString(), true));
+
+    lockbox.unlock(task1, Intervals.ETERNITY);
+  }
+
   private SegmentIdWithShardSpec allocate(
       final Task task,
       final DateTime timestamp,
@@ -1122,5 +1162,16 @@ public class SegmentAllocateActionTest
   {
     Assert.assertEquals(expected, actual);
     Assert.assertEquals(expected.getShardSpec(), actual.getShardSpec());
+  }
+
+  private DataSegment getSegmentForIdentifier(SegmentIdWithShardSpec identifier)
+  {
+    return DataSegment.builder()
+                      .dataSource(identifier.getDataSource())
+                      .interval(identifier.getInterval())
+                      .version(identifier.getVersion())
+                      .shardSpec(identifier.getShardSpec())
+                      .size(100)
+                      .build();
   }
 }

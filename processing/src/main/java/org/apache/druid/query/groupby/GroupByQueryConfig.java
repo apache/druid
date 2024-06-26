@@ -293,6 +293,7 @@ public class GroupByQueryConfig
     return vectorize;
   }
 
+  @SuppressWarnings("unused")
   public boolean isIntermediateResultAsMapCompat()
   {
     return intermediateResultAsMapCompat;

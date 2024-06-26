@@ -56,27 +56,31 @@ public class SegmentSchemaCacheTest
   }
 
   @Test
-  public void testCacheInTransitSMQResult()
+  public void testCacheTemporaryMetadataQueryResults()
   {
     SegmentSchemaCache cache = new SegmentSchemaCache(new NoopServiceEmitter());
 
     RowSignature rowSignature = RowSignature.builder().add("cx", ColumnType.FLOAT).build();
     SchemaPayloadPlus expected = new SchemaPayloadPlus(new SchemaPayload(rowSignature, Collections.emptyMap()), 20L);
     SegmentId id = SegmentId.dummy("ds");
-    cache.addInTransitSMQResult(id, rowSignature, Collections.emptyMap(), 20);
+
+    // this call shouldn't result in any error
+    cache.markMetadataQueryResultPublished(id);
+
+    cache.addTemporaryMetadataQueryResult(id, rowSignature, Collections.emptyMap(), 20);
 
     Assert.assertTrue(cache.isSchemaCached(id));
     Optional<SchemaPayloadPlus> schema = cache.getSchemaForSegment(id);
     Assert.assertTrue(schema.isPresent());
     Assert.assertEquals(expected, schema.get());
 
-    cache.markInTransitSMQResultPublished(id);
+    cache.markMetadataQueryResultPublished(id);
 
     schema = cache.getSchemaForSegment(id);
     Assert.assertTrue(schema.isPresent());
     Assert.assertEquals(expected, schema.get());
 
-    cache.resetInTransitSMQResultPublishedOnDBPoll();
+    cache.resetTemporaryPublishedMetadataQueryResultOnDBPoll();
 
     Assert.assertFalse(cache.isSchemaCached(id));
     schema = cache.getSchemaForSegment(id);
