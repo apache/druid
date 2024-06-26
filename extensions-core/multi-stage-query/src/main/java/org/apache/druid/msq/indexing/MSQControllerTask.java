@@ -305,21 +305,34 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery, 
     return querySpec.getDestination().getDestinationResource();
   }
 
+  /**
+   * Checks whether the task is an ingestion into a Druid datasource.
+   */
   public static boolean isIngestion(final MSQSpec querySpec)
   {
     return querySpec.getDestination() instanceof DataSourceMSQDestination;
   }
 
+  /**
+   * Checks whether the task is an export into external files.
+   */
   public static boolean isExport(final MSQSpec querySpec)
   {
     return querySpec.getDestination() instanceof ExportMSQDestination;
   }
 
+  /**
+   * Checks whether the task is an async query which writes frame files containing the final results into durable storage.
+   */
   public static boolean isDurableStorageQuery(final MSQSpec querySpec)
   {
     return querySpec.getDestination() instanceof DurableStorageMSQDestination;
   }
 
+  /**
+   * Returns true if the destination of the {@link #querySpec} requires a specific final shuffling, such as applying a
+   * rowsPerSegment or rowsPerPage limit.
+   */
   public static boolean needsFinalShuffling(final MSQSpec querySpec)
   {
     return isDurableStorageQuery(querySpec) || isExport(querySpec) || isIngestion(querySpec);

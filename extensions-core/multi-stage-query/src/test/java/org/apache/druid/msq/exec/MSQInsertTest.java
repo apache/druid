@@ -1423,7 +1423,7 @@ public class MSQInsertTest extends MSQTestBase
                                             .add("cnt", ColumnType.LONG).build();
 
     testIngestQuery().setSql(
-                         "insert into foo1 select __time, dim1, cnt from foo where dim1 != '' limit 4 partitioned by ALL clustered by dim1")
+                         "insert into foo1 select __time, dim1, cnt from foo where dim1 != '' limit 4 partitioned by all clustered by dim1")
                      .setExpectedDataSource("foo1")
                      .setQueryContext(queryContext)
                      .setExpectedRowSignature(rowSignature)
