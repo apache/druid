@@ -147,7 +147,7 @@ public class MultiStageQueryContext
   public static final String CTX_IS_REINDEX = "isReindex";
 
   public static final String CTX_MAX_NUM_SEGMENTS = "maxNumSegments";
-  static final int DEFAULT_MAX_NUM_SEGMENTS = Integer.MAX_VALUE;
+  static final Integer DEFAULT_MAX_NUM_SEGMENTS = null;
 
   /**
    * Controls sort order within segments. Normally, this is the same as the overall order of the query (from the
@@ -319,7 +319,7 @@ public class MultiStageQueryContext
     return queryContext.getInt(CTX_ROWS_IN_MEMORY, DEFAULT_ROWS_IN_MEMORY);
   }
 
-  public static int getMaxNumSegments(final QueryContext queryContext)
+  public static Integer getMaxNumSegments(final QueryContext queryContext)
   {
     return queryContext.getInt(CTX_MAX_NUM_SEGMENTS, DEFAULT_MAX_NUM_SEGMENTS);
   }
