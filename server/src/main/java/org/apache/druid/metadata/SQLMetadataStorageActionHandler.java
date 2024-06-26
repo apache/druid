@@ -90,7 +90,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
 
   /**
    * @deprecated Use the other constructor without {@code logTable} argument
-   * instead.
+   * since this argument is now unused.
    */
   @Deprecated
   public SQLMetadataStorageActionHandler(

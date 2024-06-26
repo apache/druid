@@ -115,6 +115,7 @@ public class SQLMetadataStorageActionHandlerTest
         },
         entryType,
         entryTable,
+        null,
         lockTable
     );
   }
