@@ -47,6 +47,7 @@ public class SQLServerMetadataStorageActionHandlerFactory extends SQLMetadataSto
         payloadTypes,
         entryType,
         config.getEntryTable(entryType),
+        config.getLogTable(entryType),
         config.getLockTable(entryType)
     );
   }

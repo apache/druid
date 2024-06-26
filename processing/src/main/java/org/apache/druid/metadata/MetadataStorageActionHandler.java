@@ -20,7 +20,6 @@
 package org.apache.druid.metadata;
 
 import com.google.common.base.Optional;
-import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.indexer.TaskIdentifier;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.metadata.TaskLookup.TaskLookupType;
@@ -32,7 +31,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-@ExtensionPoint
 public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, LockType>
 {
   /**
@@ -161,6 +159,23 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
    * @param timestamp timestamp in milliseconds
    */
   void removeTasksOlderThan(long timestamp);
+
+  /**
+   * Add a log to the entry with the given id.
+   *
+   * @param entryId entry id
+   * @param log log to add
+   * @return true if the log was added
+   */
+  boolean addLog(String entryId, LogType log);
+
+  /**
+   * Returns the logs for the entry with the given id.
+   *
+   * @param entryId entry id
+   * @return list of logs
+   */
+  List<LogType> getLogs(String entryId);
 
   /**
    * Returns the locks for the given entry

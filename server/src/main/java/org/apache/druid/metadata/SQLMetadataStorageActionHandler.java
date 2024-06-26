@@ -75,10 +75,12 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   private final ObjectMapper jsonMapper;
   private final TypeReference<EntryType> entryType;
   private final TypeReference<StatusType> statusType;
+  private final TypeReference<LogType> logType;
   private final TypeReference<LockType> lockType;
 
   private final String entryTypeName;
   private final String entryTable;
+  private final String logTable;
   private final String lockTable;
 
   private final TaskInfoMapper<EntryType, StatusType> taskInfoMapper;
@@ -95,6 +97,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
       final MetadataStorageActionHandlerTypes<EntryType, StatusType, LogType, LockType> types,
       final String entryTypeName,
       final String entryTable,
+      final String logTable,
       final String lockTable
   )
   {
@@ -105,9 +108,11 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
             org.apache.druid.metadata.PasswordProviderRedactionMixIn.class);
     this.entryType = types.getEntryType();
     this.statusType = types.getStatusType();
+    this.logType = types.getLogType();
     this.lockType = types.getLockType();
     this.entryTypeName = entryTypeName;
     this.entryTable = entryTable;
+    this.logTable = logTable;
     this.lockTable = lockTable;
     this.taskInfoMapper = new TaskInfoMapper<>(jsonMapper, entryType, statusType);
     this.taskStatusMapper = new TaskStatusMapper(jsonMapper);
@@ -133,6 +138,11 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   protected String getEntryTable()
   {
     return entryTable;
+  }
+
+  protected String getLogTable()
+  {
+    return logTable;
   }
 
   protected String getEntryTypeName()
@@ -778,7 +788,14 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   public boolean addLock(final String entryId, final LockType lock)
   {
     return connector.retryWithHandle(
-        handle -> addLock(handle, entryId, lock)
+        new HandleCallback<Boolean>()
+        {
+          @Override
+          public Boolean withHandle(Handle handle) throws Exception
+          {
+            return addLock(handle, entryId, lock);
+          }
+        }
     );
   }
 
@@ -820,7 +837,16 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   public void removeLock(final long lockId)
   {
     connector.retryWithHandle(
-        handle -> removeLock(handle, lockId)
+        new HandleCallback<Void>()
+        {
+          @Override
+          public Void withHandle(Handle handle)
+          {
+            removeLock(handle, lockId);
+
+            return null;
+          }
+        }
     );
   }
 
@@ -829,13 +855,21 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   {
     DateTime dateTime = DateTimes.utc(timestamp);
     connector.retryWithHandle(
-        handle ->
-            handle.createStatement(
-                StringUtils.format(
-                    "DELETE FROM %s WHERE created_date < :date_time AND active = false",
-                    entryTable
-                )
-            ).bind("date_time", dateTime.toString()).execute()
+        handle -> {
+          handle.createStatement(getSqlRemoveLogsOlderThan())
+                .bind("date_time", dateTime.toString())
+                .execute();
+          handle.createStatement(
+              StringUtils.format(
+                  "DELETE FROM %s WHERE created_date < :date_time AND active = false",
+                  entryTable
+              )
+          )
+                .bind("date_time", dateTime.toString())
+                .execute();
+
+          return null;
+        }
     );
   }
 
@@ -844,6 +878,78 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
     return handle.createStatement(StringUtils.format("DELETE FROM %s WHERE id = :id", lockTable))
                  .bind("id", lockId)
                  .execute();
+  }
+
+  @Override
+  public boolean addLog(final String entryId, final LogType log)
+  {
+    return connector.retryWithHandle(
+        new HandleCallback<Boolean>()
+        {
+          @Override
+          public Boolean withHandle(Handle handle) throws Exception
+          {
+            return handle.createStatement(
+                StringUtils.format(
+                    "INSERT INTO %1$s (%2$s_id, log_payload) VALUES (:entryId, :payload)",
+                    logTable, entryTypeName
+                )
+            )
+                         .bind("entryId", entryId)
+                         .bind("payload", jsonMapper.writeValueAsBytes(log))
+                         .execute() == 1;
+          }
+        }
+    );
+  }
+
+  @Override
+  public List<LogType> getLogs(final String entryId)
+  {
+    return connector.retryWithHandle(
+        new HandleCallback<List<LogType>>()
+        {
+          @Override
+          public List<LogType> withHandle(Handle handle)
+          {
+            return handle
+                .createQuery(
+                    StringUtils.format(
+                        "SELECT log_payload FROM %1$s WHERE %2$s_id = :entryId",
+                        logTable, entryTypeName
+                    )
+                )
+                .bind("entryId", entryId)
+                .map(ByteArrayMapper.FIRST)
+                .fold(
+                    new ArrayList<>(),
+                    (List<LogType> list, byte[] bytes, FoldController control, StatementContext ctx) -> {
+                      try {
+                        list.add(jsonMapper.readValue(bytes, logType));
+                        return list;
+                      }
+                      catch (IOException e) {
+                        log.makeAlert(e, "Failed to deserialize log")
+                           .addData("entryId", entryId)
+                           .addData("payload", StringUtils.fromUtf8(bytes))
+                           .emit();
+                        throw new SQLException(e);
+                      }
+                    }
+                );
+          }
+        }
+    );
+  }
+
+  @Deprecated
+  public String getSqlRemoveLogsOlderThan()
+  {
+    return StringUtils.format(
+        "DELETE a FROM %s a INNER JOIN %s b ON a.%s_id = b.id "
+        + "WHERE b.created_date < :date_time and b.active = false",
+        logTable, entryTable, entryTypeName
+    );
   }
 
   @Override
