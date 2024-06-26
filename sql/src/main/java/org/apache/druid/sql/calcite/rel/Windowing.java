@@ -466,7 +466,9 @@ public class Windowing
       if (bound.isUnbounded() || bound.isCurrentRow()) {
         return 0;
       }
-      return getConstant(((RexInputRef) bound.getOffset()).getIndex());
+
+      final int value = getConstant(((RexInputRef) bound.getOffset()).getIndex());
+      return bound.isPreceding() ? -value : value;
     }
 
     private int getConstant(int refIndex)

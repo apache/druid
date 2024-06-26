@@ -20,6 +20,7 @@
 package org.apache.druid.segment.realtime.appenderator;
 
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 
 import java.io.IOException;
 import java.util.Set;
@@ -28,10 +29,6 @@ public interface UsedSegmentChecker
 {
   /**
    * For any identifiers that exist and are actually used, returns the corresponding DataSegment objects.
-   *
-   * @param identifiers identifiers to search for
-   *
-   * @return used DataSegments
    */
-  Set<DataSegment> findUsedSegments(Set<SegmentIdWithShardSpec> identifiers) throws IOException;
+  Set<DataSegment> findPublishedSegments(Set<SegmentId> identifiers) throws IOException;
 }

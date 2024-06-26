@@ -88,7 +88,6 @@ import org.joda.time.Interval;
 import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
-
 import java.io.File;
 import java.util.List;
 import java.util.Set;
