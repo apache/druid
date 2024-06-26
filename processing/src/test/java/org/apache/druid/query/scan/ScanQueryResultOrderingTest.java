@@ -42,6 +42,7 @@ import org.apache.druid.segment.RowBasedSegment;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 import org.junit.Assert;
@@ -65,7 +66,7 @@ import java.util.stream.IntStream;
  * Ensures that we have run-to-run stability of result order, which is important for offset-based pagination.
  */
 @RunWith(Parameterized.class)
-public class ScanQueryResultOrderingTest
+public class ScanQueryResultOrderingTest extends InitializedNullHandlingTest
 {
   private static final String DATASOURCE = "datasource";
   private static final String ID_COLUMN = "id";

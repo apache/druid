@@ -35,9 +35,9 @@ import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseFloatColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.generator.GeneratorColumnSchema;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
@@ -165,14 +165,11 @@ public class ExpressionAggregationBenchmark
   {
     final QueryableIndexStorageAdapter adapter = new QueryableIndexStorageAdapter(index);
 
-    final Sequence<Cursor> cursors = adapter.makeCursors(
-        null,
-        index.getDataInterval(),
-        VirtualColumns.EMPTY,
-        Granularities.ALL,
-        false,
-        null
-    );
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                     .setInterval(index.getDataInterval())
+                                                     .setGranularity(Granularities.ALL)
+                                                     .build();
+    final Sequence<Cursor> cursors = adapter.asCursorMaker(buildSpec).makeCursors();
 
     final List<Double> results = cursors
         .map(cursor -> {

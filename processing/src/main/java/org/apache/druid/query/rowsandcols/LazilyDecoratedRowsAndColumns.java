@@ -28,7 +28,6 @@ import org.apache.druid.frame.write.FrameWriter;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.frame.write.FrameWriters;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -46,6 +45,7 @@ import org.apache.druid.query.rowsandcols.semantic.RowsAndColumnsDecorator;
 import org.apache.druid.query.rowsandcols.semantic.WireTransferable;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -206,16 +206,6 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
   @Nullable
   private Pair<byte[], RowSignature> materializeStorageAdapter(StorageAdapter as)
   {
-    final Sequence<Cursor> cursors = as.makeCursors(
-        filter,
-        interval == null ? Intervals.ETERNITY : interval,
-        virtualColumns == null ? VirtualColumns.EMPTY : virtualColumns,
-        Granularities.ALL,
-        false,
-        null
-    );
-
-
     final Collection<String> cols;
     if (viewableColumns != null) {
       cols = viewableColumns;
@@ -229,6 +219,17 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
                             .build();
       }
     }
+    final CursorBuildSpec.CursorBuildSpecBuilder builder = CursorBuildSpec.builder()
+                                                                          .setFilter(filter)
+                                                                          .setGranularity(Granularities.ALL);
+    if (interval != null) {
+      builder.setInterval(interval);
+    }
+    if (virtualColumns != null) {
+      builder.setVirtualColumns(virtualColumns);
+    }
+    final Sequence<Cursor> cursors = as.asCursorMaker(builder.build()).makeCursors();
+
     AtomicReference<RowSignature> siggy = new AtomicReference<>(null);
 
     FrameWriter writer = cursors.accumulate(null, (accumulated, in) -> {

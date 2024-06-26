@@ -33,9 +33,9 @@ import org.apache.druid.query.filter.ExpressionDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.generator.GeneratorColumnSchema;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
@@ -146,14 +146,13 @@ public class ExpressionFilterBenchmark
   @Benchmark
   public void expressionFilter(Blackhole blackhole)
   {
-    final Sequence<Cursor> cursors = new QueryableIndexStorageAdapter(index).makeCursors(
-        expressionFilter.toFilter(),
-        index.getDataInterval(),
-        VirtualColumns.EMPTY,
-        Granularities.ALL,
-        false,
-        null
-    );
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                     .setFilter(expressionFilter.toFilter())
+                                                     .setInterval(index.getDataInterval())
+                                                     .setGranularity(Granularities.ALL)
+                                                     .build();
+    final Sequence<Cursor> cursors = new QueryableIndexStorageAdapter(index).asCursorMaker(buildSpec).makeCursors();
+
     final List<?> results = cursors
         .map(cursor -> {
           final ColumnValueSelector selector = cursor.getColumnSelectorFactory().makeColumnValueSelector("x");
@@ -168,14 +167,12 @@ public class ExpressionFilterBenchmark
   @Benchmark
   public void nativeFilter(Blackhole blackhole)
   {
-    final Sequence<Cursor> cursors = new QueryableIndexStorageAdapter(index).makeCursors(
-        nativeFilter.toFilter(),
-        index.getDataInterval(),
-        VirtualColumns.EMPTY,
-        Granularities.ALL,
-        false,
-        null
-    );
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                     .setFilter(nativeFilter.toFilter())
+                                                     .setInterval(index.getDataInterval())
+                                                     .setGranularity(Granularities.ALL)
+                                                     .build();
+    final Sequence<Cursor> cursors = new QueryableIndexStorageAdapter(index).asCursorMaker(buildSpec).makeCursors();
     final List<?> results = cursors
         .map(cursor -> {
           final ColumnValueSelector selector = cursor.getColumnSelectorFactory().makeColumnValueSelector("x");

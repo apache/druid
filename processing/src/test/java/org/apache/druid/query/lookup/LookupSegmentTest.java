@@ -29,9 +29,9 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.extraction.MapLookupExtractor;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.RowBasedStorageAdapter;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.timeline.SegmentId;
@@ -192,14 +192,12 @@ public class LookupSegmentTest
   @Test
   public void test_asStorageAdapter_makeCursors()
   {
-    final Sequence<Cursor> cursors = LOOKUP_SEGMENT.asStorageAdapter().makeCursors(
-        null,
-        Intervals.of("1970/PT1H"),
-        VirtualColumns.EMPTY,
-        Granularities.ALL,
-        false,
-        null
-    );
+    final Sequence<Cursor> cursors = LOOKUP_SEGMENT.asStorageAdapter().asCursorMaker(
+        CursorBuildSpec.builder()
+                       .setInterval(Intervals.of("1970/PT1H"))
+                       .setGranularity(Granularities.ALL)
+                       .build()
+    ).makeCursors();
 
     final List<Pair<String, String>> kvs = new ArrayList<>();
 

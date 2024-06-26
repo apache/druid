@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableSet;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -34,6 +33,7 @@ import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.ExpressionDimFilter;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.InDimFilter;
+import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
@@ -83,14 +83,9 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
 
     JoinTestHelper.verifyCursors(
-        adapter.makeCursors(
-            originalFilter,
-            Intervals.ETERNITY,
-            VirtualColumns.EMPTY,
-            Granularities.ALL,
-            false,
-            null
-        ),
+        adapter.asCursorMaker(
+            CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
+        ).makeCursors(),
         ImmutableList.of(
             "page",
             FACT_TO_REGION_PREFIX + "regionName",
@@ -160,14 +155,9 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
 
     JoinTestHelper.verifyCursors(
-        adapter.makeCursors(
-            originalFilter,
-            Intervals.ETERNITY,
-            VirtualColumns.EMPTY,
-            Granularities.ALL,
-            false,
-            null
-        ),
+        adapter.asCursorMaker(
+            CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
+        ).makeCursors(),
         ImmutableList.of(
             "page",
             FACT_TO_REGION_PREFIX + "regionName",
@@ -216,14 +206,9 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
 
     JoinTestHelper.verifyCursors(
-        adapter.makeCursors(
-            originalFilter,
-            Intervals.ETERNITY,
-            VirtualColumns.EMPTY,
-            Granularities.ALL,
-            false,
-            null
-        ),
+        adapter.asCursorMaker(
+            CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
+        ).makeCursors(),
         ImmutableList.of(
             "page",
             FACT_TO_REGION_PREFIX + "regionName",
@@ -283,14 +268,9 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
 
     JoinTestHelper.verifyCursors(
-        adapter.makeCursors(
-            originalFilter,
-            Intervals.ETERNITY,
-            VirtualColumns.EMPTY,
-            Granularities.ALL,
-            false,
-            null
-        ),
+        adapter.asCursorMaker(
+            CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
+        ).makeCursors(),
         ImmutableList.of(
             "page",
             FACT_TO_REGION_PREFIX + "regionName",
@@ -354,14 +334,9 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
 
     JoinTestHelper.verifyCursors(
-        adapter.makeCursors(
-            originalFilter,
-            Intervals.ETERNITY,
-            VirtualColumns.EMPTY,
-            Granularities.ALL,
-            false,
-            null
-        ),
+        adapter.asCursorMaker(
+            CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
+        ).makeCursors(),
         ImmutableList.of(
             "page",
             FACT_TO_REGION_PREFIX + "regionName",
@@ -424,14 +399,13 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
 
     JoinTestHelper.verifyCursors(
-        adapter.makeCursors(
-            originalFilter,
-            Intervals.ETERNITY,
-            virtualColumns,
-            Granularities.ALL,
-            false,
-            null
-        ),
+        adapter.asCursorMaker(
+            CursorBuildSpec.builder()
+                           .setFilter(originalFilter)
+                           .setVirtualColumns(virtualColumns)
+                           .setGranularity(Granularities.ALL)
+                           .build()
+        ).makeCursors(),
         ImmutableList.of(
             "page",
             FACT_TO_REGION_PREFIX + "regionName",
@@ -498,14 +472,13 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
 
     JoinTestHelper.verifyCursors(
-        adapter.makeCursors(
-            originalFilter,
-            Intervals.ETERNITY,
-            virtualColumns,
-            Granularities.ALL,
-            false,
-            null
-        ),
+        adapter.asCursorMaker(
+            CursorBuildSpec.builder()
+                           .setFilter(originalFilter)
+                           .setVirtualColumns(virtualColumns)
+                           .setGranularity(Granularities.ALL)
+                           .build()
+        ).makeCursors(),
         ImmutableList.of(
             "page",
             "v0"
@@ -602,14 +575,9 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
 
     JoinTestHelper.verifyCursors(
-        adapter.makeCursors(
-            originalFilter,
-            Intervals.ETERNITY,
-            VirtualColumns.EMPTY,
-            Granularities.ALL,
-            false,
-            null
-        ),
+        adapter.asCursorMaker(
+            CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
+        ).makeCursors(),
         ImmutableList.of(
             "page",
             FACT_TO_REGION_PREFIX + "regionName",
@@ -729,14 +697,9 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
 
     JoinTestHelper.verifyCursors(
-        adapter.makeCursors(
-            originalFilter,
-            Intervals.ETERNITY,
-            VirtualColumns.EMPTY,
-            Granularities.ALL,
-            false,
-            null
-        ),
+        adapter.asCursorMaker(
+            CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
+        ).makeCursors(),
         ImmutableList.of(
             "page",
             FACT_TO_REGION_PREFIX + "regionName",
@@ -823,14 +786,9 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         joinFilterPreAnalysis
     );
     JoinTestHelper.verifyCursors(
-        adapter.makeCursors(
-            originalFilter,
-            Intervals.ETERNITY,
-            VirtualColumns.EMPTY,
-            Granularities.ALL,
-            false,
-            null
-        ),
+        adapter.asCursorMaker(
+            CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
+        ).makeCursors(),
         ImmutableList.of(
             "page",
             FACT_TO_REGION_PREFIX + "regionName",
@@ -873,14 +831,9 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
 
     JoinTestHelper.verifyCursors(
-        adapter.makeCursors(
-            originalFilter,
-            Intervals.ETERNITY,
-            VirtualColumns.EMPTY,
-            Granularities.ALL,
-            false,
-            null
-        ),
+        adapter.asCursorMaker(
+            CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
+        ).makeCursors(),
         ImmutableList.of(
             "page",
             FACT_TO_REGION_PREFIX + "regionName",
@@ -975,14 +928,9 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
 
     JoinTestHelper.verifyCursors(
-        adapter.makeCursors(
-            filter,
-            Intervals.ETERNITY,
-            VirtualColumns.EMPTY,
-            Granularities.ALL,
-            false,
-            null
-        ),
+        adapter.asCursorMaker(
+            CursorBuildSpec.builder().setFilter(filter).setGranularity(Granularities.ALL).build()
+        ).makeCursors(),
         ImmutableList.of(
             "page",
             FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryName"
@@ -1065,14 +1013,9 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
 
     JoinTestHelper.verifyCursors(
-        adapter.makeCursors(
-            filter,
-            Intervals.ETERNITY,
-            VirtualColumns.EMPTY,
-            Granularities.ALL,
-            false,
-            null
-        ),
+        adapter.asCursorMaker(
+            CursorBuildSpec.builder().setFilter(filter).setGranularity(Granularities.ALL).build()
+        ).makeCursors(),
         ImmutableList.of(
             "page",
             FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "v"
@@ -1139,14 +1082,9 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
 
     JoinTestHelper.verifyCursors(
-        adapter.makeCursors(
-            originalFilter,
-            Intervals.ETERNITY,
-            VirtualColumns.EMPTY,
-            Granularities.ALL,
-            false,
-            null
-        ),
+        adapter.asCursorMaker(
+            CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
+        ).makeCursors(),
         ImmutableList.of(
             "page",
             "countryIsoCode",
@@ -1197,14 +1135,9 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
 
     JoinTestHelper.verifyCursors(
-        adapter.makeCursors(
-            originalFilter,
-            Intervals.ETERNITY,
-            VirtualColumns.EMPTY,
-            Granularities.ALL,
-            false,
-            null
-        ),
+        adapter.asCursorMaker(
+            CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
+        ).makeCursors(),
         ImmutableList.of(
             "page",
             "countryIsoCode",
@@ -1254,14 +1187,9 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
 
     JoinTestHelper.verifyCursors(
-        adapter.makeCursors(
-            originalFilter,
-            Intervals.ETERNITY,
-            VirtualColumns.EMPTY,
-            Granularities.ALL,
-            false,
-            null
-        ),
+        adapter.asCursorMaker(
+            CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
+        ).makeCursors(),
         ImmutableList.of(
             "page",
             "countryIsoCode",
@@ -1310,14 +1238,9 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
 
     JoinTestHelper.verifyCursors(
-        adapter.makeCursors(
-            originalFilter,
-            Intervals.ETERNITY,
-            VirtualColumns.EMPTY,
-            Granularities.ALL,
-            false,
-            null
-        ),
+        adapter.asCursorMaker(
+            CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
+        ).makeCursors(),
         ImmutableList.of(
             "page",
             "countryIsoCode",
@@ -1367,14 +1290,9 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
 
     JoinTestHelper.verifyCursors(
-        adapter.makeCursors(
-            originalFilter,
-            Intervals.ETERNITY,
-            VirtualColumns.EMPTY,
-            Granularities.ALL,
-            false,
-            null
-        ),
+        adapter.asCursorMaker(
+            CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
+        ).makeCursors(),
         ImmutableList.of(
             "page",
             "countryIsoCode",
@@ -1424,14 +1342,9 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     // In non-SQL-compatible mode, we get an extra row, since the 'null' countryNumber for "Talk:Oswald Tilghman"
     // is interpreted as 0 (a.k.a. Australia).
     JoinTestHelper.verifyCursors(
-        adapter.makeCursors(
-            originalFilter,
-            Intervals.ETERNITY,
-            VirtualColumns.EMPTY,
-            Granularities.ALL,
-            false,
-            null
-        ),
+        adapter.asCursorMaker(
+            CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
+        ).makeCursors(),
         ImmutableList.of(
             "page",
             "countryIsoCode",
@@ -1488,14 +1401,9 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     // In non-SQL-compatible mode, we get an extra row, since the 'null' countryNumber for "Talk:Oswald Tilghman"
     // is interpreted as 0 (a.k.a. Australia).
     JoinTestHelper.verifyCursors(
-        adapter.makeCursors(
-            originalFilter,
-            Intervals.ETERNITY,
-            VirtualColumns.EMPTY,
-            Granularities.ALL,
-            false,
-            null
-        ),
+        adapter.asCursorMaker(
+            CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
+        ).makeCursors(),
         ImmutableList.of(
             "page",
             "countryIsoCode",
@@ -1549,14 +1457,9 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
 
     JoinTestHelper.verifyCursors(
-        adapter.makeCursors(
-            originalFilter,
-            Intervals.ETERNITY,
-            VirtualColumns.EMPTY,
-            Granularities.ALL,
-            false,
-            null
-        ),
+        adapter.asCursorMaker(
+            CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
+        ).makeCursors(),
         ImmutableList.of(
             "page",
             "countryIsoCode",
@@ -1604,14 +1507,9 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
 
     JoinTestHelper.verifyCursors(
-        adapter.makeCursors(
-            originalFilter,
-            Intervals.ETERNITY,
-            VirtualColumns.EMPTY,
-            Granularities.ALL,
-            false,
-            null
-        ),
+        adapter.asCursorMaker(
+            CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
+        ).makeCursors(),
         ImmutableList.of(
             "page",
             "countryIsoCode",
@@ -1658,14 +1556,9 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
 
     JoinTestHelper.verifyCursors(
-        adapter.makeCursors(
-            filter,
-            Intervals.ETERNITY,
-            VirtualColumns.EMPTY,
-            Granularities.ALL,
-            false,
-            null
-        ),
+        adapter.asCursorMaker(
+            CursorBuildSpec.builder().setFilter(filter).setGranularity(Granularities.ALL).build()
+        ).makeCursors(),
         ImmutableList.of(
             "page",
             "countryIsoCode",
@@ -1716,14 +1609,9 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
 
     JoinTestHelper.verifyCursors(
-        adapter.makeCursors(
-            filter,
-            Intervals.ETERNITY,
-            VirtualColumns.EMPTY,
-            Granularities.ALL,
-            false,
-            null
-        ),
+        adapter.asCursorMaker(
+            CursorBuildSpec.builder().setFilter(filter).setGranularity(Granularities.ALL).build()
+        ).makeCursors(),
         ImmutableList.of(
             "page",
             "countryIsoCode",
@@ -1773,14 +1661,9 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
 
     JoinTestHelper.verifyCursors(
-        adapter.makeCursors(
-            originalFilter,
-            Intervals.ETERNITY,
-            VirtualColumns.EMPTY,
-            Granularities.ALL,
-            false,
-            null
-        ),
+        adapter.asCursorMaker(
+            CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
+        ).makeCursors(),
         ImmutableList.of(
             "page",
             "countryIsoCode",
@@ -1829,14 +1712,9 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
 
     JoinTestHelper.verifyCursors(
-        adapter.makeCursors(
-            originalFilter,
-            Intervals.ETERNITY,
-            VirtualColumns.EMPTY,
-            Granularities.ALL,
-            false,
-            null
-        ),
+        adapter.asCursorMaker(
+            CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
+        ).makeCursors(),
         ImmutableList.of(
             "page",
             "countryIsoCode",
@@ -1896,14 +1774,9 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
 
     JoinTestHelper.verifyCursors(
-        adapter.makeCursors(
-            originalFilter,
-            Intervals.ETERNITY,
-            VirtualColumns.EMPTY,
-            Granularities.ALL,
-            false,
-            null
-        ),
+        adapter.asCursorMaker(
+            CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
+        ).makeCursors(),
         ImmutableList.of(
             "page",
             FACT_TO_REGION_PREFIX + "regionName"
@@ -1967,14 +1840,9 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
 
     JoinTestHelper.verifyCursors(
-        adapter.makeCursors(
-            originalFilter,
-            Intervals.ETERNITY,
-            VirtualColumns.EMPTY,
-            Granularities.ALL,
-            false,
-            null
-        ),
+        adapter.asCursorMaker(
+            CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
+        ).makeCursors(),
         ImmutableList.of(
             "page",
             FACT_TO_REGION_PREFIX + "regionName"
@@ -2048,14 +1916,9 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
 
     JoinTestHelper.verifyCursors(
-        adapter.makeCursors(
-            originalFilter,
-            Intervals.ETERNITY,
-            VirtualColumns.EMPTY,
-            Granularities.ALL,
-            false,
-            null
-        ),
+        adapter.asCursorMaker(
+            CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
+        ).makeCursors(),
         ImmutableList.of(
             "page",
             FACT_TO_REGION_PREFIX + "regionName"
@@ -2109,14 +1972,9 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
 
     JoinTestHelper.verifyCursors(
-        adapter.makeCursors(
-            originalFilter,
-            Intervals.ETERNITY,
-            VirtualColumns.EMPTY,
-            Granularities.ALL,
-            false,
-            null
-        ),
+        adapter.asCursorMaker(
+            CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
+        ).makeCursors(),
         ImmutableList.of(
             "page",
             FACT_TO_REGION_PREFIX + "regionName",
@@ -2189,14 +2047,9 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
 
     JoinTestHelper.verifyCursors(
-        adapter.makeCursors(
-            originalFilter,
-            Intervals.ETERNITY,
-            VirtualColumns.EMPTY,
-            Granularities.ALL,
-            false,
-            null
-        ),
+        adapter.asCursorMaker(
+            CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
+        ).makeCursors(),
         ImmutableList.of(
             "page",
             FACT_TO_REGION_PREFIX + "regionName",
@@ -2392,14 +2245,9 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     }
 
     JoinTestHelper.verifyCursors(
-        adapter.makeCursors(
-            originalFilter,
-            Intervals.ETERNITY,
-            VirtualColumns.EMPTY,
-            Granularities.ALL,
-            false,
-            null
-        ),
+        adapter.asCursorMaker(
+            CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
+        ).makeCursors(),
         ImmutableList.of(
             "page",
             FACT_TO_REGION_PREFIX + "regionName",
@@ -2526,14 +2374,9 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
 
     JoinTestHelper.verifyCursors(
-        adapter.makeCursors(
-            originalFilter,
-            Intervals.ETERNITY,
-            VirtualColumns.EMPTY,
-            Granularities.ALL,
-            false,
-            null
-        ),
+        adapter.asCursorMaker(
+            CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
+        ).makeCursors(),
         ImmutableList.of(
             "page",
             FACT_TO_REGION_PREFIX + "regionName",
@@ -2606,14 +2449,9 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
 
     JoinTestHelper.verifyCursors(
-        adapter.makeCursors(
-            originalFilter,
-            Intervals.ETERNITY,
-            VirtualColumns.EMPTY,
-            Granularities.ALL,
-            false,
-            null
-        ),
+        adapter.asCursorMaker(
+            CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
+        ).makeCursors(),
         ImmutableList.of(
             "page",
             FACT_TO_REGION_PREFIX + "regionName",

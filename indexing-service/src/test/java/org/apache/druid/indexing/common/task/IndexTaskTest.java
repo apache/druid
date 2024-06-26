@@ -68,6 +68,7 @@ import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.DataSegmentsWithSchemas;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IndexIO;
@@ -75,7 +76,6 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.TestIndex;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.CompressionStrategy;
@@ -543,14 +543,13 @@ public class IndexTaskTest extends IngestionTestBase
         new QueryableIndexStorageAdapter(indexIO.loadIndex(segmentFile)),
         segment.getInterval()
     );
-    final Sequence<Cursor> cursorSequence = adapter.getAdapter().makeCursors(
-        null,
-        segment.getInterval(),
-        VirtualColumns.EMPTY,
-        Granularities.ALL,
-        false,
-        null
-    );
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                     .setGranularity(Granularities.ALL)
+                                                     .setInterval(segment.getInterval())
+                                                     .build();
+    final Sequence<Cursor> cursorSequence = adapter.getAdapter()
+                                                   .asCursorMaker(buildSpec)
+                                                   .makeCursors();
     final List<Map<String, Object>> transforms = cursorSequence
         .map(cursor -> {
           final DimensionSelector selector1 = cursor.getColumnSelectorFactory()
@@ -779,14 +778,13 @@ public class IndexTaskTest extends IngestionTestBase
           segment.getInterval()
       );
 
-      final Sequence<Cursor> cursorSequence = adapter.getAdapter().makeCursors(
-          null,
-          segment.getInterval(),
-          VirtualColumns.EMPTY,
-          Granularities.ALL,
-          false,
-          null
-      );
+      final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                       .setGranularity(Granularities.ALL)
+                                                       .setInterval(segment.getInterval())
+                                                       .build();
+      final Sequence<Cursor> cursorSequence = adapter.getAdapter()
+                                                     .asCursorMaker(buildSpec)
+                                                     .makeCursors();
       final List<Integer> hashes = cursorSequence
           .map(cursor -> {
             final DimensionSelector selector = cursor.getColumnSelectorFactory()

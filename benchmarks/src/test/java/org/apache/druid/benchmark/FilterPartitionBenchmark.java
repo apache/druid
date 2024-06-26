@@ -48,6 +48,7 @@ import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
@@ -55,7 +56,6 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.StorageAdapter;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.data.IndexedInts;
@@ -451,7 +451,13 @@ public class FilterPartitionBenchmark
 
   private Sequence<Cursor> makeCursors(StorageAdapter sa, Filter filter)
   {
-    return sa.makeCursors(filter, schemaInfo.getDataInterval(), VirtualColumns.EMPTY, Granularities.ALL, false, null);
+    return sa.asCursorMaker(
+        CursorBuildSpec.builder()
+                       .setFilter(filter)
+                       .setInterval(schemaInfo.getDataInterval())
+                       .setGranularity(Granularities.ALL)
+                       .build()
+    ).makeCursors();
   }
 
   private void readCursors(Sequence<Cursor> cursors, Blackhole blackhole)

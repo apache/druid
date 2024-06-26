@@ -20,15 +20,20 @@
 package org.apache.druid.query.timeseries;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -38,7 +43,7 @@ import java.io.IOException;
 import java.util.Arrays;
 
 @RunWith(Parameterized.class)
-public class TimeseriesQueryTest
+public class TimeseriesQueryTest extends InitializedNullHandlingTest
 {
   private static final ObjectMapper JSON_MAPPER = TestHelper.makeJsonMapper();
 
@@ -100,5 +105,50 @@ public class TimeseriesQueryTest
               .build();
 
     Assert.assertEquals(ImmutableSet.of("__time", "fieldFromVirtualColumn", "aField"), query.getRequiredColumns());
+  }
+
+  @Test
+  public void testAsCursorBuildSpec()
+  {
+    final VirtualColumns virtualColumns = VirtualColumns.create(
+        new ExpressionVirtualColumn(
+            "index",
+            "\"fieldFromVirtualColumn\"",
+            ColumnType.LONG,
+            ExprMacroTable.nil()
+        )
+    );
+    final LongSumAggregatorFactory beep = new LongSumAggregatorFactory("beep", "aField");
+    final TimeseriesQuery query =
+        Druids.newTimeseriesQueryBuilder()
+              .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+              .granularity(QueryRunnerTestHelper.DAY_GRAN)
+              .virtualColumns(virtualColumns)
+              .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
+              .aggregators(
+                  QueryRunnerTestHelper.ROWS_COUNT,
+                  QueryRunnerTestHelper.INDEX_DOUBLE_SUM,
+                  QueryRunnerTestHelper.INDEX_LONG_MAX,
+                  beep
+              )
+              .postAggregators(QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT)
+              .descending(descending)
+              .build();
+
+    final CursorBuildSpec buildSpec = query.asCursorBuildSpec(null);
+    Assert.assertEquals(QueryRunnerTestHelper.FULL_ON_INTERVAL, buildSpec.getInterval());
+    Assert.assertEquals(Granularities.DAY, buildSpec.getGranularity());
+    Assert.assertNull(buildSpec.getGroupingColumns());
+    Assert.assertEquals(
+        ImmutableList.of(
+            QueryRunnerTestHelper.ROWS_COUNT,
+            QueryRunnerTestHelper.INDEX_DOUBLE_SUM,
+            QueryRunnerTestHelper.INDEX_LONG_MAX,
+            beep
+        ),
+        buildSpec.getAggregators()
+    );
+    Assert.assertEquals(virtualColumns, buildSpec.getVirtualColumns());
+    Assert.assertEquals(query.isDescending(), buildSpec.isDescending());
   }
 }

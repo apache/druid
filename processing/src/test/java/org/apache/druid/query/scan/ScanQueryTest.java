@@ -23,14 +23,21 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
+import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -43,7 +50,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
 
-public class ScanQueryTest
+public class ScanQueryTest extends InitializedNullHandlingTest
 {
   private static QuerySegmentSpec intervalSpec;
   private static ScanResultValue s1;
@@ -399,5 +406,29 @@ public class ScanQueryTest
         .build();
 
     Assert.assertEquals(sig, query.getRowSignature());
+  }
+
+  @Test
+  public void testAsCursorBuildSpec()
+  {
+    final VirtualColumns virtualColumns = VirtualColumns.create(
+        new ExpressionVirtualColumn("v0", "concat(placement, 'foo')", ColumnType.STRING, ExprMacroTable.nil())
+    );
+    final ScanQuery query =
+        Druids.newScanQueryBuilder()
+              .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)
+              .dataSource("some src")
+              .intervals(QueryRunnerTestHelper.FIRST_TO_THIRD)
+              .virtualColumns(virtualColumns)
+              .columns("foo", "bar")
+              .build();
+
+    final CursorBuildSpec buildSpec = query.asCursorBuildSpec(null);
+    Assert.assertEquals(QueryRunnerTestHelper.FIRST_TO_THIRD.getIntervals().get(0), buildSpec.getInterval());
+    Assert.assertEquals(Granularities.ALL, buildSpec.getGranularity());
+    Assert.assertNull(buildSpec.getGroupingColumns());
+    Assert.assertNull(buildSpec.getAggregators());
+    Assert.assertEquals(virtualColumns, buildSpec.getVirtualColumns());
+    Assert.assertEquals(query.isDescending(), buildSpec.isDescending());
   }
 }

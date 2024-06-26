@@ -114,10 +114,10 @@ public class UseIndexesStrategy extends SearchStrategy
       }
 
       if (nonBitmapSuppDims.size() > 0) {
-        builder.add(new CursorBasedExecutor(query, segment, filter, interval, nonBitmapSuppDims));
+        builder.add(new CursorBasedExecutor(query, segment, nonBitmapSuppDims));
       }
     } else {
-      builder.add(new CursorBasedExecutor(query, segment, filter, interval, searchDims));
+      builder.add(new CursorBasedExecutor(query, segment, searchDims));
     }
 
     return builder.build();

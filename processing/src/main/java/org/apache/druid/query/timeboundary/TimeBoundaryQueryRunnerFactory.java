@@ -24,16 +24,15 @@ import com.google.inject.Inject;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.ChainedExecutionQueryRunner;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
-import org.apache.druid.query.QueryRunnerHelper;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.Result;
@@ -41,17 +40,17 @@ import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.StorageAdapter;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import java.util.Iterator;
 import java.util.List;
+import java.util.Objects;
 
 /**
  *
@@ -116,15 +115,15 @@ public class TimeBoundaryQueryRunnerFactory
 
     private DateTime getTimeBoundary(StorageAdapter adapter, TimeBoundaryQuery legacyQuery, boolean descending)
     {
-      final Sequence<Result<DateTime>> resultSequence = QueryRunnerHelper.makeCursorBasedQuery(
-          adapter,
-          legacyQuery.getQuerySegmentSpec().getIntervals(),
-          Filters.toFilter(legacyQuery.getFilter()),
-          VirtualColumns.EMPTY,
-          descending,
-          Granularities.ALL,
-          this.skipToFirstMatching,
-          null
+      final CursorBuildSpec buildSpec = CursorBuildSpec.builder(legacyQuery.asCursorBuildSpec(null))
+                                                       .isDescending(descending)
+                                                       .build();
+      final Sequence<Result<DateTime>> resultSequence = Sequences.filter(
+          Sequences.map(
+              adapter.asCursorMaker(buildSpec).makeCursors(),
+              this.skipToFirstMatching
+          ),
+          Objects::nonNull
       );
       final List<Result<DateTime>> resultList = resultSequence.limit(1).toList();
       if (resultList.size() > 0) {
@@ -201,7 +200,7 @@ public class TimeBoundaryQueryRunnerFactory
 
   /**
    * Whether a particular {@link TimeBoundaryQuery} can use {@link StorageAdapter#getMinTime()} and/or
-   * {@link StorageAdapter#getMaxTime()}. If false, must use {@link StorageAdapter#makeCursors}.
+   * {@link StorageAdapter#getMaxTime()}. If false, must use {@link StorageAdapter#asCursorMaker(CursorBuildSpec)}.
    */
   private static boolean canUseAdapterMinMaxTime(final TimeBoundaryQuery query, final StorageAdapter adapter)
   {

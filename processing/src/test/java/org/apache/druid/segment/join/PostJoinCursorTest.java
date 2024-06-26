@@ -21,17 +21,13 @@ package org.apache.druid.segment.join;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
-import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.QueryInterruptedException;
-import org.apache.druid.query.QueryMetrics;
-import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorMaker;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
@@ -40,10 +36,8 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.join.filter.JoinFilterPreAnalysis;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
-import org.joda.time.Interval;
 import org.junit.Test;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -76,17 +70,10 @@ public class PostJoinCursorTest extends BaseHashJoinSegmentStorageAdapterTest
       }
 
       @Override
-      public Sequence<Cursor> makeCursors(
-          @Nullable Filter filter,
-          Interval interval,
-          VirtualColumns virtualColumns,
-          Granularity gran,
-          boolean descending,
-          @Nullable QueryMetrics<?> queryMetrics
-      )
+      public CursorMaker asCursorMaker(CursorBuildSpec spec)
       {
-        return super.makeCursors(filter, interval, virtualColumns, gran, descending, queryMetrics)
-                    .map(cursor -> new CursorNoAdvance(cursor, countDownLatch));
+        final CursorMaker delegate = super.asCursorMaker(spec);
+        return () -> delegate.makeCursors().map(cursor -> new CursorNoAdvance(cursor, countDownLatch));
       }
 
       private static class CursorNoAdvance implements Cursor
@@ -235,14 +222,9 @@ public class PostJoinCursorTest extends BaseHashJoinSegmentStorageAdapterTest
         joinFilterPreAnalysis
     );
 
-    Cursor cursor = Iterables.getOnlyElement(hashJoinSegmentStorageAdapter.makeCursors(
-        null,
-        Intervals.ETERNITY,
-        VirtualColumns.EMPTY,
-        Granularities.ALL,
-        false,
-        null
-    ).toList());
+    Cursor cursor = Iterables.getOnlyElement(
+        hashJoinSegmentStorageAdapter.asCursorMaker(CursorBuildSpec.FULL_SCAN).makeCursors().toList()
+    );
 
     ((PostJoinCursor) cursor).setValueMatcher(new ValueMatcher()
     {

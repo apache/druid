@@ -44,7 +44,6 @@ import org.apache.druid.frame.segment.FrameStorageAdapter;
 import org.apache.druid.guice.NestedDataModule;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -54,6 +53,8 @@ import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.Parser;
+import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
@@ -70,6 +71,7 @@ import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.IndexSpec;
@@ -416,11 +418,13 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
 
   protected StorageAdapter adapter;
 
+  protected VirtualColumns virtualColumns;
+
   // JUnit creates a new test instance for every test method call.
   // For filter tests, the test setup creates a segment.
   // Creating a new segment for every test method call is pretty slow, so cache the StorageAdapters.
   // Each thread gets its own map.
-  private static ThreadLocal<Map<String, Map<String, Pair<StorageAdapter, Closeable>>>> adapterCache =
+  private static ThreadLocal<Map<String, Map<String, AdapterStuff>>> adapterCache =
       ThreadLocal.withInitial(HashMap::new);
 
   public BaseFilterTest(
@@ -447,32 +451,40 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
   {
     NestedDataModule.registerHandlersAndSerde();
     String className = getClass().getName();
-    Map<String, Pair<StorageAdapter, Closeable>> adaptersForClass = adapterCache.get().get(className);
+    Map<String, AdapterStuff> adaptersForClass = adapterCache.get().get(className);
     if (adaptersForClass == null) {
       adaptersForClass = new HashMap<>();
       adapterCache.get().put(className, adaptersForClass);
     }
 
-    Pair<StorageAdapter, Closeable> pair = adaptersForClass.get(testName);
-    if (pair == null) {
-      pair = finisher.apply(
+    AdapterStuff adapterStuff = adaptersForClass.get(testName);
+    if (adapterStuff == null) {
+      Pair<StorageAdapter, Closeable> pair = finisher.apply(
           indexBuilder.tmpDir(temporaryFolder.newFolder()).rows(rows)
       );
-      adaptersForClass.put(testName, pair);
+      adapterStuff = new AdapterStuff(
+          pair.lhs,
+          VirtualColumns.create(
+              Arrays.stream(VIRTUAL_COLUMNS.getVirtualColumns())
+                    .filter(x -> x.canVectorize(VIRTUAL_COLUMNS.wrapInspector(pair.lhs)))
+                    .collect(Collectors.toList())
+          ),
+          pair.rhs
+      );
+      adaptersForClass.put(testName, adapterStuff);
     }
 
-    this.adapter = pair.lhs;
-
+    this.adapter = adapterStuff.adapter;
+    this.virtualColumns = adapterStuff.virtualColumns;
   }
 
   public static void tearDown(String className) throws Exception
   {
-    Map<String, Pair<StorageAdapter, Closeable>> adaptersForClass = adapterCache.get().get(className);
+    Map<String, AdapterStuff> adaptersForClass = adapterCache.get().get(className);
 
     if (adaptersForClass != null) {
-      for (Map.Entry<String, Pair<StorageAdapter, Closeable>> entry : adaptersForClass.entrySet()) {
-        Closeable closeable = entry.getValue().rhs;
-        closeable.close();
+      for (Map.Entry<String, AdapterStuff> entry : adaptersForClass.entrySet()) {
+        entry.getValue().closeable.close();
       }
       adapterCache.get().put(className, null);
     }
@@ -780,29 +792,30 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
     return optimize ? dimFilter.optimize(false) : dimFilter;
   }
 
+
   private Sequence<Cursor> makeCursorSequence(final Filter filter)
   {
-    return adapter.makeCursors(
-        filter,
-        Intervals.ETERNITY,
-        VIRTUAL_COLUMNS,
-        Granularities.ALL,
-        false,
-        null
-    );
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                     .setFilter(filter)
+                                                     .setVirtualColumns(VIRTUAL_COLUMNS)
+                                                     .setGranularity(Granularities.ALL)
+                                                     .build();
+    return adapter.asCursorMaker(buildSpec).makeCursors();
   }
 
   private VectorCursor makeVectorCursor(final Filter filter)
   {
-
-    return adapter.makeVectorCursor(
-        filter,
-        Intervals.ETERNITY,
-        VIRTUAL_COLUMNS,
-        false,
-        3, // Vector size smaller than the number of rows, to ensure we use more than one.
-        null
-    );
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                     .setFilter(filter)
+                                                     .setVirtualColumns(virtualColumns)
+                                                     .setGranularity(Granularities.ALL)
+                                                     .setQueryContext(
+                                                         QueryContext.of(
+                                                             ImmutableMap.of(QueryContexts.VECTOR_SIZE_KEY, 3)
+                                                         )
+                                                     )
+                                                     .build();
+    return adapter.asCursorMaker(buildSpec).makeVectorCursor();
   }
 
   /**
@@ -1238,6 +1251,24 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
           expectedRows.size(),
           selectCountUsingVectorizedFilteredAggregator(filter)
       );
+    }
+  }
+
+  private static class AdapterStuff
+  {
+    private final StorageAdapter adapter;
+    private final VirtualColumns virtualColumns;
+    private final Closeable closeable;
+
+    private AdapterStuff(
+        StorageAdapter adapter,
+        VirtualColumns virtualColumns,
+        Closeable closeable
+    )
+    {
+      this.adapter = adapter;
+      this.virtualColumns = virtualColumns;
+      this.closeable = closeable;
     }
   }
 }

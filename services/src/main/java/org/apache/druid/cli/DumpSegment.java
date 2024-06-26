@@ -71,13 +71,13 @@ import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.SimpleAscendingOffset;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
@@ -197,7 +197,7 @@ public class DumpSegment extends GuiceRunnable
     try (final QueryableIndex index = indexIO.loadIndex(new File(directory))) {
       switch (dumpType) {
         case ROWS:
-          runDump(injector, index);
+          runDump(injector, outputFileName, index, getColumnsToInclude(index), filterJson, timeISO8601);
           break;
         case METADATA:
           runMetadata(injector, index);
@@ -224,6 +224,16 @@ public class DumpSegment extends GuiceRunnable
     catch (Exception e) {
       throw new RuntimeException(e);
     }
+  }
+
+  private List<String> getColumnsToInclude(final QueryableIndex index)
+  {
+    return getColumnsToInclude(index, columnNamesFromCli);
+  }
+
+  private <T> T withOutputStream(Function<OutputStream, T> f) throws IOException
+  {
+    return withOutputStream(f, outputFileName);
   }
 
   private void runMetadata(final Injector injector, final QueryableIndex index) throws IOException
@@ -274,21 +284,31 @@ public class DumpSegment extends GuiceRunnable
     );
   }
 
-  private void runDump(final Injector injector, final QueryableIndex index) throws IOException
+  @VisibleForTesting
+  public static void runDump(
+      final Injector injector,
+      final String outputFileName,
+      final QueryableIndex index,
+      final List<String> columnNames,
+      final String filterJson,
+      final boolean timeISO8601
+  )
+      throws IOException
   {
     final ObjectMapper objectMapper = injector.getInstance(Key.get(ObjectMapper.class, Json.class));
     final QueryableIndexStorageAdapter adapter = new QueryableIndexStorageAdapter(index);
-    final List<String> columnNames = getColumnsToInclude(index);
     final DimFilter filter = filterJson != null ? objectMapper.readValue(filterJson, DimFilter.class) : null;
 
-    final Sequence<Cursor> cursors = adapter.makeCursors(
-        Filters.toFilter(filter),
-        index.getDataInterval().withChronology(ISOChronology.getInstanceUTC()),
-        VirtualColumns.EMPTY,
-        Granularities.ALL,
-        false,
-        null
-    );
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                     .setFilter(Filters.toFilter(filter))
+                                                     .setInterval(
+                                                         index.getDataInterval()
+                                                              .withChronology(ISOChronology.getInstanceUTC())
+                                                     )
+                                                     .setGranularity(Granularities.ALL)
+                                                     .build();
+
+    final Sequence<Cursor> cursors = adapter.asCursorMaker(buildSpec).makeCursors();
 
     withOutputStream(
         new Function<OutputStream, Object>()
@@ -343,7 +363,8 @@ public class DumpSegment extends GuiceRunnable
 
             return null;
           }
-        }
+        },
+        outputFileName
     );
   }
 
@@ -687,9 +708,10 @@ public class DumpSegment extends GuiceRunnable
     );
   }
 
-  private List<String> getColumnsToInclude(final QueryableIndex index)
+  @VisibleForTesting
+  public static List<String> getColumnsToInclude(final QueryableIndex index, List<String> columns)
   {
-    final Set<String> columnNames = Sets.newLinkedHashSet(columnNamesFromCli);
+    final Set<String> columnNames = Sets.newLinkedHashSet(columns);
 
     // Empty columnNames => include all columns.
     if (columnNames.isEmpty()) {
@@ -705,11 +727,6 @@ public class DumpSegment extends GuiceRunnable
     }
 
     return ImmutableList.copyOf(columnNames);
-  }
-
-  private <T> T withOutputStream(Function<OutputStream, T> f) throws IOException
-  {
-    return withOutputStream(f, outputFileName);
   }
 
   @SuppressForbidden(reason = "System#out")

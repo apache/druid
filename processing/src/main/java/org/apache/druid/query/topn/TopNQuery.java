@@ -24,19 +24,25 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.PerSegmentQueryOptimizationContext;
 import org.apache.druid.query.Queries;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.spec.QuerySegmentSpec;
+import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.filter.Filters;
+import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -171,10 +177,33 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
     return Queries.computeRequiredColumns(
         virtualColumns,
         dimFilter,
-        Collections.singletonList(dimensionSpec),
-        aggregatorSpecs,
-        Collections.emptyList()
+        Collections.singletonList(dimensionSpec.getDimension()),
+        aggregatorSpecs
     );
+  }
+
+
+  @Override
+  public CursorBuildSpec asCursorBuildSpec(@Nullable QueryMetrics<?> queryMetrics)
+  {
+    final List<Interval> intervals = getIntervals();
+    if (intervals.size() > 1) {
+      throw DruidException.defensive(
+          "This method can only be called after query is reduced to a single segment interval, got [%s]",
+          intervals
+      );
+    }
+    return CursorBuildSpec.builder()
+                          .setInterval(Iterables.getOnlyElement(intervals))
+                          .setGranularity(getGranularity())
+                          .setFilter(Filters.convertToCNFFromQueryContext(this, Filters.toFilter(getFilter())))
+                          .setGroupingColumns(Collections.singletonList(dimensionSpec.getDimension()))
+                          .setVirtualColumns(getVirtualColumns())
+                          .setAggregators(getAggregatorSpecs())
+                          .setQueryContext(context())
+                          .isDescending(isDescending())
+                          .setQueryMetrics(queryMetrics)
+                          .build();
   }
 
   public void initTopNAlgorithmSelector(TopNAlgorithmSelector selector)

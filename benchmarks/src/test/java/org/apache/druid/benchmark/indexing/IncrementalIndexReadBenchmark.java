@@ -36,8 +36,8 @@ import org.apache.druid.query.filter.SearchQueryDimFilter;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.search.ContainsSearchQuerySpec;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.DimensionSelector;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.generator.DataGenerator;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
@@ -205,14 +205,13 @@ public class IncrementalIndexReadBenchmark
 
   private Sequence<Cursor> makeCursors(IncrementalIndexStorageAdapter sa, DimFilter filter)
   {
-    return sa.makeCursors(
-        filter == null ? null : filter.toFilter(),
-        schemaInfo.getDataInterval(),
-        VirtualColumns.EMPTY,
-        Granularities.ALL,
-        false,
-        null
-    );
+    CursorBuildSpec.CursorBuildSpecBuilder builder = CursorBuildSpec.builder()
+                                                                    .setGranularity(Granularities.ALL)
+                                                                    .setInterval(schemaInfo.getDataInterval());
+    if (filter != null) {
+      builder.setFilter(filter.toFilter());
+    }
+    return sa.asCursorMaker(builder.build()).makeCursors();
   }
 
   private static DimensionSelector makeDimensionSelector(Cursor cursor, String name)

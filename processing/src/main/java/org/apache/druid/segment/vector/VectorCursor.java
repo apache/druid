@@ -19,12 +19,15 @@
 
 package org.apache.druid.segment.vector;
 
+import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.QueryableIndexCursorMaker;
+
 import java.io.Closeable;
 
 /**
  * Vectorized cursor used during query execution. VectorCursors are returned by
- * {@link org.apache.druid.segment.StorageAdapter#makeVectorCursor} and are created by
- * {@link org.apache.druid.segment.QueryableIndexCursorSequenceBuilder#buildVectorized}.
+ * {@link org.apache.druid.segment.StorageAdapter#asCursorMaker(CursorBuildSpec)} and are created by
+ * {@link QueryableIndexCursorMaker#makeVectorCursor()}.
  *
  * Unlike the non-vectorized version, VectorCursor does not have a getTime() method. This is because we are trying to
  * avoid creating needlessly-small vectors when the time granularity is very fine. See

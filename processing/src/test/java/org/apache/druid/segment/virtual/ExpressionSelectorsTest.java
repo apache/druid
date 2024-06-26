@@ -28,7 +28,6 @@ import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
@@ -45,6 +44,7 @@ import org.apache.druid.segment.BaseSingleValueDimensionSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
@@ -138,15 +138,11 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
   {
     final String columnName = "string3";
     for (StorageAdapter adapter : ADAPTERS) {
-      Sequence<Cursor> cursorSequence = adapter.makeCursors(
-          null,
-          adapter.getInterval(),
-          VirtualColumns.EMPTY,
-          Granularities.ALL,
-          false,
-          null
-      );
-
+      final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                       .setInterval(adapter.getInterval())
+                                                       .setGranularity(Granularities.ALL)
+                                                       .build();
+      Sequence<Cursor> cursorSequence = adapter.asCursorMaker(buildSpec).makeCursors();
 
       cursorSequence.accumulate(null, (accumulated, cursor) -> {
         ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
@@ -213,14 +209,11 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
   {
     final String columnName = "multi-string3";
     for (StorageAdapter adapter : ADAPTERS) {
-      Sequence<Cursor> cursorSequence = adapter.makeCursors(
-          null,
-          adapter.getInterval(),
-          VirtualColumns.EMPTY,
-          Granularities.ALL,
-          false,
-          null
-      );
+      final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                       .setInterval(adapter.getInterval())
+                                                       .setGranularity(Granularities.ALL)
+                                                       .build();
+      Sequence<Cursor> cursorSequence = adapter.asCursorMaker(buildSpec).makeCursors();
 
       cursorSequence.accumulate(null, (ignored, cursor) -> {
         ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
@@ -299,14 +292,11 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
   {
     final String columnName = "long3";
     for (StorageAdapter adapter : ADAPTERS) {
-      Sequence<Cursor> cursorSequence = adapter.makeCursors(
-          null,
-          adapter.getInterval(),
-          VirtualColumns.EMPTY,
-          Granularities.ALL,
-          false,
-          null
-      );
+      final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                       .setInterval(adapter.getInterval())
+                                                       .setGranularity(Granularities.ALL)
+                                                       .build();
+      Sequence<Cursor> cursorSequence = adapter.asCursorMaker(buildSpec).makeCursors();
 
       cursorSequence.accumulate(null, (accumulated, cursor) -> {
         ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
@@ -354,14 +344,11 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
   {
     final String columnName = "double3";
     for (StorageAdapter adapter : ADAPTERS) {
-      Sequence<Cursor> cursorSequence = adapter.makeCursors(
-          null,
-          adapter.getInterval(),
-          VirtualColumns.EMPTY,
-          Granularities.ALL,
-          false,
-          null
-      );
+      final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                       .setInterval(adapter.getInterval())
+                                                       .setGranularity(Granularities.ALL)
+                                                       .build();
+      Sequence<Cursor> cursorSequence = adapter.asCursorMaker(buildSpec).makeCursors();
 
 
       cursorSequence.accumulate(null, (accumulated, cursor) -> {
@@ -670,14 +657,7 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
 
     IncrementalIndexStorageAdapter adapter = new IncrementalIndexStorageAdapter(index);
 
-    Sequence<Cursor> cursors = adapter.makeCursors(
-        null,
-        Intervals.ETERNITY,
-        VirtualColumns.EMPTY,
-        Granularities.ALL,
-        false,
-        null
-    );
+    Sequence<Cursor> cursors = adapter.asCursorMaker(CursorBuildSpec.FULL_SCAN).makeCursors();
     int rowsProcessed = cursors.map(cursor -> {
       DimensionSelector xExprSelector = ExpressionSelectors.makeDimensionSelector(
           cursor.getColumnSelectorFactory(),

@@ -30,10 +30,10 @@ import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.epinephelinae.VectorGrouper;
 import org.apache.druid.query.groupby.epinephelinae.vector.VectorGroupByEngine.VectorGroupByEngineIterator;
 import org.apache.druid.segment.ColumnProcessors;
+import org.apache.druid.segment.CursorMaker;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.TestIndex;
-import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.vector.VectorCursor;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.Interval;
@@ -61,15 +61,9 @@ public class VectorGroupByEngineIteratorTest extends InitializedNullHandlingTest
         .setAggregatorSpecs(factory)
         .build();
     final StorageAdapter storageAdapter = new QueryableIndexStorageAdapter(TestIndex.getMMappedTestIndex());
+    final CursorMaker maker = storageAdapter.asCursorMaker(query.asCursorBuildSpec(null));
     final ByteBuffer byteBuffer = ByteBuffer.wrap(new byte[4096]);
-    final VectorCursor cursor = storageAdapter.makeVectorCursor(
-        Filters.toFilter(query.getDimFilter()),
-        interval,
-        query.getVirtualColumns(),
-        false,
-        query.context().getVectorSize(),
-        null
-    );
+    final VectorCursor cursor = maker.makeVectorCursor();
     final List<GroupByVectorColumnSelector> dimensions = query.getDimensions().stream().map(
         dimensionSpec ->
             ColumnProcessors.makeVectorProcessor(

@@ -28,11 +28,13 @@ import com.google.common.base.Functions;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Longs;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -47,6 +49,7 @@ import org.apache.druid.query.DimensionComparisonUtils;
 import org.apache.druid.query.Queries;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
+import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
@@ -62,19 +65,20 @@ import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.spec.LegacySegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
+import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.filter.Filters;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
@@ -109,6 +113,8 @@ public class GroupByQuery extends BaseQuery<ResultRow>
   @Nullable
   private final DimFilter dimFilter;
   private final List<DimensionSpec> dimensions;
+  private final List<String> groupingColumns;
+
   private final List<AggregatorFactory> aggregatorSpecs;
   private final List<PostAggregator> postAggregatorSpecs;
   @Nullable
@@ -206,8 +212,10 @@ public class GroupByQuery extends BaseQuery<ResultRow>
     this.virtualColumns = VirtualColumns.nullToEmpty(virtualColumns);
     this.dimFilter = dimFilter;
     this.dimensions = dimensions == null ? ImmutableList.of() : dimensions;
+    this.groupingColumns = new ArrayList<>();
     for (DimensionSpec spec : this.dimensions) {
       Preconditions.checkArgument(spec != null, "dimensions has null DimensionSpec");
+      groupingColumns.add(spec.getDimension());
     }
 
     this.aggregatorSpecs = aggregatorSpecs == null ? ImmutableList.of() : aggregatorSpecs;
@@ -795,10 +803,32 @@ public class GroupByQuery extends BaseQuery<ResultRow>
     return Queries.computeRequiredColumns(
         virtualColumns,
         dimFilter,
-        dimensions,
-        aggregatorSpecs,
-        Collections.emptyList()
+        groupingColumns,
+        aggregatorSpecs
     );
+  }
+
+  @Override
+  public CursorBuildSpec asCursorBuildSpec(@Nullable QueryMetrics<?> queryMetrics)
+  {
+    final List<Interval> intervals = getIntervals();
+    if (intervals.size() > 1) {
+      throw DruidException.defensive(
+          "This method can only be called after query is reduced to a single segment interval, got [%s]",
+          intervals
+      );
+    }
+    return CursorBuildSpec.builder()
+                          .setInterval(Iterables.getOnlyElement(intervals))
+                          .setGranularity(getGranularity())
+                          .setFilter(Filters.convertToCNFFromQueryContext(this, Filters.toFilter(getFilter())))
+                          .setGroupingColumns(groupingColumns)
+                          .setVirtualColumns(getVirtualColumns())
+                          .setAggregators(getAggregatorSpecs())
+                          .setQueryContext(context())
+                          .isDescending(isDescending())
+                          .setQueryMetrics(queryMetrics)
+                          .build();
   }
 
   @Override

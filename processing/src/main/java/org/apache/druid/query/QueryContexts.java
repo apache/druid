@@ -29,7 +29,6 @@ import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
-
 import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -138,10 +137,22 @@ public class QueryContexts
       {
         return false;
       }
+
+      @Override
+      public boolean shouldVectorize(boolean canVectorize, Runnable cleanup)
+      {
+        return false;
+      }
     },
     TRUE {
       @Override
       public boolean shouldVectorize(final boolean canVectorize)
+      {
+        return canVectorize;
+      }
+
+      @Override
+      public boolean shouldVectorize(boolean canVectorize, Runnable cleanup)
       {
         return canVectorize;
       }
@@ -156,9 +167,25 @@ public class QueryContexts
 
         return true;
       }
+
+      @Override
+      public boolean shouldVectorize(boolean canVectorize, Runnable cleanup)
+      {
+        if (!canVectorize) {
+          cleanup.run();
+          throw new ISE("Cannot vectorize!");
+        }
+
+        return true;
+      }
     };
 
     public abstract boolean shouldVectorize(boolean canVectorize);
+
+    public boolean shouldVectorize(boolean canVectorize, Runnable cleanup)
+    {
+      return shouldVectorize(canVectorize);
+    }
 
     @JsonCreator
     public static Vectorize fromString(String str)

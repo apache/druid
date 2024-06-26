@@ -27,6 +27,7 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Ordering;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
@@ -37,9 +38,11 @@ import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.Queries;
+import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.operator.OffsetLimit;
 import org.apache.druid.query.spec.QuerySegmentSpec;
+import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -47,6 +50,8 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.RowSignature.Builder;
+import org.apache.druid.segment.filter.Filters;
+import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -490,11 +495,31 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
       return Queries.computeRequiredColumns(
           virtualColumns,
           dimFilter,
-          Collections.emptyList(),
-          Collections.emptyList(),
-          columns
+          columns,
+          Collections.emptyList()
       );
     }
+  }
+
+  @Override
+  public CursorBuildSpec asCursorBuildSpec(@Nullable QueryMetrics<?> queryMetrics)
+  {
+    final List<Interval> intervals = getIntervals();
+    if (intervals.size() > 1) {
+      throw DruidException.defensive(
+          "This method can only be called after query is reduced to a single segment interval, got [%s]",
+          intervals
+      );
+    }
+    return CursorBuildSpec.builder()
+                          .setInterval(Iterables.getOnlyElement(intervals))
+                          .setGranularity(getGranularity())
+                          .setFilter(Filters.convertToCNFFromQueryContext(this, Filters.toFilter(getFilter())))
+                          .setVirtualColumns(getVirtualColumns())
+                          .setQueryContext(context())
+                          .isDescending(isDescending() || Order.DESCENDING.equals(timeOrder))
+                          .setQueryMetrics(queryMetrics)
+                          .build();
   }
 
   public ScanQuery withOffset(final long newOffset)

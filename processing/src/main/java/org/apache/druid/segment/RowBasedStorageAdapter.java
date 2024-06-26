@@ -168,6 +168,57 @@ public class RowBasedStorageAdapter<RowType> implements StorageAdapter
   }
 
   @Override
+  public CursorMaker asCursorMaker(CursorBuildSpec spec)
+  {
+    return new CursorMaker()
+    {
+      @Override
+      public Sequence<Cursor> makeCursors()
+      {
+        final Granularity gran = spec.getGranularity();
+        final Interval actualInterval = spec.getInterval()
+                                            .overlap(new Interval(getMinTime(), gran.bucketEnd(getMaxTime())));
+
+        if (actualInterval == null) {
+          return Sequences.empty();
+        }
+
+        if (!isQueryGranularityAllowed(actualInterval, gran)) {
+          throw new IAE(
+              "Cannot support interval [%s] with granularity [%s]",
+              Intervals.ETERNITY.equals(actualInterval) ? "ETERNITY" : actualInterval,
+              gran
+          );
+        }
+
+        final RowWalker<RowType> rowWalker = new RowWalker<>(
+            spec.isDescending() ? reverse(rowSequence) : rowSequence,
+            rowAdapter
+        );
+
+        final Iterable<Interval> bucketIntervals = gran.getIterable(actualInterval);
+
+        return Sequences.simple(
+            Iterables.transform(
+                spec.isDescending() ? reverse(bucketIntervals) : bucketIntervals,
+                bucketInterval ->
+                    (Cursor) new RowBasedCursor<>(
+                        rowWalker,
+                        rowAdapter,
+                        spec.getFilter(),
+                        bucketInterval,
+                        spec.getVirtualColumns(),
+                        gran,
+                        spec.isDescending(),
+                        rowSignature
+                    )
+            )
+        ).withBaggage(rowWalker::close);
+      }
+    };
+  }
+
+  @Override
   public Sequence<Cursor> makeCursors(
       @Nullable final Filter filter,
       final Interval queryInterval,
@@ -177,43 +228,7 @@ public class RowBasedStorageAdapter<RowType> implements StorageAdapter
       @Nullable final QueryMetrics<?> queryMetrics
   )
   {
-    final Interval actualInterval = queryInterval.overlap(new Interval(getMinTime(), gran.bucketEnd(getMaxTime())));
-
-    if (actualInterval == null) {
-      return Sequences.empty();
-    }
-
-    if (!isQueryGranularityAllowed(actualInterval, gran)) {
-      throw new IAE(
-          "Cannot support interval [%s] with granularity [%s]",
-          Intervals.ETERNITY.equals(actualInterval) ? "ETERNITY" : actualInterval,
-          gran
-      );
-    }
-
-    final RowWalker<RowType> rowWalker = new RowWalker<>(
-        descending ? reverse(rowSequence) : rowSequence,
-        rowAdapter
-    );
-
-    final Iterable<Interval> bucketIntervals = gran.getIterable(actualInterval);
-
-    return Sequences.simple(
-        Iterables.transform(
-            descending ? reverse(bucketIntervals) : bucketIntervals,
-            bucketInterval ->
-                (Cursor) new RowBasedCursor<>(
-                    rowWalker,
-                    rowAdapter,
-                    filter,
-                    bucketInterval,
-                    virtualColumns,
-                    gran,
-                    descending,
-                    rowSignature
-                )
-        )
-    ).withBaggage(rowWalker::close);
+    return delegateMakeCursorToMaker(filter, queryInterval, virtualColumns, gran, descending, queryMetrics);
   }
 
   /**

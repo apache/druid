@@ -26,7 +26,9 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorFactory;
+import org.apache.druid.segment.CursorMaker;
 import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.StorageAdapter;
@@ -147,6 +149,12 @@ public class FrameStorageAdapter implements StorageAdapter
   }
 
   @Override
+  public CursorMaker asCursorMaker(CursorBuildSpec spec)
+  {
+    return cursorFactory.asCursorMaker(spec);
+  }
+
+  @Override
   public boolean canVectorize(@Nullable Filter filter, VirtualColumns virtualColumns, boolean descending)
   {
     return cursorFactory.canVectorize(filter, virtualColumns, descending);
@@ -162,14 +170,7 @@ public class FrameStorageAdapter implements StorageAdapter
       @Nullable QueryMetrics<?> queryMetrics
   )
   {
-    return cursorFactory.makeCursors(
-        filter,
-        interval,
-        virtualColumns,
-        gran,
-        descending,
-        queryMetrics
-    );
+    return delegateMakeCursorToMaker(filter, interval, virtualColumns, gran, descending, queryMetrics);
   }
 
   @Nullable
@@ -183,13 +184,6 @@ public class FrameStorageAdapter implements StorageAdapter
       @Nullable QueryMetrics<?> queryMetrics
   )
   {
-    return cursorFactory.makeVectorCursor(
-        filter,
-        interval,
-        virtualColumns,
-        descending,
-        vectorSize,
-        queryMetrics
-    );
+    return delegateMakeVectorCursorToMaker(filter, interval, virtualColumns, descending, vectorSize, queryMetrics);
   }
 }
