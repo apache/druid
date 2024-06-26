@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.groupby;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.google.common.base.Supplier;
@@ -134,11 +133,13 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
         .build();
 
+    final ObjectMapper mapper = TestHelper.makeJsonMapper();
+
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy1 =
-        new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query1);
+        new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query1, mapper);
 
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 =
-        new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query2);
+        new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query2, mapper);
 
     Assert.assertTrue(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
     Assert.assertFalse(Arrays.equals(
@@ -194,11 +195,12 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         )
         .build();
 
+    final ObjectMapper mapper = TestHelper.makeJsonMapper();
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy1 =
-        new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query1);
+        new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query1, mapper);
 
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 =
-        new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query2);
+        new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query2, mapper);
 
     Assert.assertTrue(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
     Assert.assertFalse(Arrays.equals(
@@ -256,11 +258,12 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         .setHavingSpec(new GreaterThanHavingSpec(QueryRunnerTestHelper.UNIQUE_METRIC, 10))
         .build();
 
+    final ObjectMapper mapper = TestHelper.makeJsonMapper();
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy1 =
-        new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query1);
+        new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query1, mapper);
 
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 =
-        new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query2);
+        new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query2, mapper);
 
     Assert.assertTrue(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
     Assert.assertFalse(Arrays.equals(
@@ -340,11 +343,12 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         .setHavingSpec(andHavingSpec2)
         .build();
 
+    final ObjectMapper mapper = TestHelper.makeJsonMapper();
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy1 =
-        new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query1);
+        new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query1, mapper);
 
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 =
-        new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query2);
+        new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query2, mapper);
 
     Assert.assertTrue(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
     Assert.assertFalse(Arrays.equals(
@@ -431,11 +435,12 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         .setHavingSpec(havingSpec2)
         .build();
 
+    final ObjectMapper mapper = TestHelper.makeJsonMapper();
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy1 =
-        new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query1);
+        new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query1, mapper);
 
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 =
-        new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query2);
+        new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query2, mapper);
 
     Assert.assertTrue(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
     Assert.assertFalse(Arrays.equals(
@@ -494,11 +499,12 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         ))
         .build();
 
+    final ObjectMapper mapper = TestHelper.makeJsonMapper();
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy1 =
-        new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query1);
+        new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query1, mapper);
 
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 =
-        new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query2);
+        new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query2, mapper);
 
     Assert.assertTrue(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
     Assert.assertFalse(Arrays.equals(
@@ -584,8 +590,9 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
         .build();
 
+    final ObjectMapper mapper = TestHelper.makeJsonMapper();
     CacheStrategy<ResultRow, Object, GroupByQuery> strategy =
-        new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query1);
+        new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query1, mapper);
 
     // test timestamps that result in integer size millis
     final ResultRow result1 = ResultRow.of(
@@ -1100,8 +1107,9 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
         .build();
 
+    final ObjectMapper mapper = TestHelper.makeJsonMapper();
     CacheStrategy<ResultRow, Object, GroupByQuery> strategy =
-        new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query1);
+        new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query1, mapper);
 
     // test timestamps that result in integer size millis
     final ResultRow result1 = ResultRow.of(
@@ -1193,11 +1201,12 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
         .build();
 
+    final ObjectMapper mapper = TestHelper.makeJsonMapper();
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy1 =
-        new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query1);
+        new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query1, mapper);
 
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 =
-        new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query2);
+        new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query2, mapper);
 
     Assert.assertFalse(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
     Assert.assertFalse(Arrays.equals(
@@ -1229,11 +1238,12 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         .overrideContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_APPLY_LIMIT_PUSH_DOWN, "false"))
         .build();
 
+    final ObjectMapper mapper = TestHelper.makeJsonMapper();
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy1 =
-        new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query1);
+        new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query1, mapper);
 
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 =
-        new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query2);
+        new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query2, mapper);
 
     Assert.assertFalse(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
     Assert.assertTrue(
@@ -1291,7 +1301,8 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         QueryRunnerTestHelper.NOOP_QUERYWATCHER
     );
     final GroupByQueryQueryToolChest queryToolChest = new GroupByQueryQueryToolChest(groupingEngine, groupByResourcesReservationPool);
-    CacheStrategy<ResultRow, Object, GroupByQuery> cacheStrategy = queryToolChest.getCacheStrategy(query);
+    final ObjectMapper mapper = TestHelper.makeJsonMapper();
+    CacheStrategy<ResultRow, Object, GroupByQuery> cacheStrategy = queryToolChest.getCacheStrategy(query, mapper);
     Assert.assertTrue(
         "result level cache on broker server for GroupByStrategyV2 should be enabled",
         cacheStrategy.isCacheable(query, false, false)

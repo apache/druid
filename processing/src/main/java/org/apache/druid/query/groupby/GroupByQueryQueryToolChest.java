@@ -526,8 +526,6 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
           return ResultRow.of(objectArray);
         }
       }
-
-
     };
 
     class GroupByResultRowModule extends SimpleModule

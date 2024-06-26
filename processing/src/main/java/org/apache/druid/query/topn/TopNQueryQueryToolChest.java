@@ -20,6 +20,7 @@
 package org.apache.druid.query.topn;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
@@ -65,6 +66,7 @@ import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.column.RowSignature;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -269,9 +271,18 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
     return TYPE_REFERENCE;
   }
 
+  @Nullable
+  @Override
+  public CacheStrategy<Result<TopNResultValue>, Object, TopNQuery> getCacheStrategy(TopNQuery query)
+  {
+    return getCacheStrategy(query, null);
+  }
 
   @Override
-  public CacheStrategy<Result<TopNResultValue>, Object, TopNQuery> getCacheStrategy(final TopNQuery query)
+  public CacheStrategy<Result<TopNResultValue>, Object, TopNQuery> getCacheStrategy(
+      final TopNQuery query,
+      @Nullable final ObjectMapper objectMapper
+  )
   {
     return new CacheStrategy<Result<TopNResultValue>, Object, TopNQuery>()
     {
