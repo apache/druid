@@ -116,22 +116,6 @@ public class ScanQueryQueryToolChestTest
   }
 
   @Test
-  public void test_resultArraySignature_columnsSpecifiedLegacyMode()
-  {
-    final ScanQuery scanQuery =
-        Druids.newScanQueryBuilder()
-              .dataSource("foo")
-              .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2000/3000"))))
-              .columns("foo", "bar")
-              .build();
-
-    Assert.assertEquals(
-        RowSignature.builder().add("timestamp", null).add("foo", null).add("bar", null).build(),
-        toolChest.resultArraySignature(scanQuery)
-    );
-  }
-
-  @Test
   public void test_resultsAsArrays_columnsNotSpecifiedListResults()
   {
     final ScanQuery scanQuery =
