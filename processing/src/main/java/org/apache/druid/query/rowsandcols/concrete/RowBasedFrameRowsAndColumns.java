@@ -39,8 +39,6 @@ import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nullable;
 
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 

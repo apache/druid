@@ -41,7 +41,6 @@ import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.context.ResponseContextDeserializer;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.concrete.ColumnBasedFrameRowsAndColumns;
-import org.apache.druid.query.rowsandcols.concrete.RowBasedFrameRowsAndColumns;
 import org.apache.druid.segment.column.RowSignature;
 import org.joda.time.DateTimeZone;
 
@@ -210,7 +209,7 @@ public class DruidDefaultSerializersModule extends SimpleModule
         // through, but it doesn't right now, so we have to build a byte[] instead.  Maybe something to contribute
         // back to Jackson at some point.
 
-        if(value instanceof ColumnBasedFrameRowsAndColumns) {
+        if (value instanceof ColumnBasedFrameRowsAndColumns) {
 
           ColumnBasedFrameRowsAndColumns frc = (ColumnBasedFrameRowsAndColumns) value;
 
