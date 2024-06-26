@@ -57,7 +57,7 @@ public class Committed
     return new Committed(partialSegments.build(), metadata);
   }
 
-  @JsonProperty
+  @JsonProperty("hydrants")
   public ImmutableMap<String, Integer> getPartialSegments()
   {
     return partialSegments;
