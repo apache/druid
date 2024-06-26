@@ -100,6 +100,8 @@ public class MultiStageQueryContext
   public static final String CTX_MSQ_MODE = "mode";
   public static final String DEFAULT_MSQ_MODE = MSQMode.STRICT_MODE.toString();
 
+  // Note: CTX_MAX_NUM_TASKS and DEFAULT_MAX_NUM_TASKS values used here should be kept in sync with those in
+  // org.apache.druid.client.indexing.ClientMsqContext
   public static final String CTX_MAX_NUM_TASKS = "maxNumTasks";
   @VisibleForTesting
   static final int DEFAULT_MAX_NUM_TASKS = 2;

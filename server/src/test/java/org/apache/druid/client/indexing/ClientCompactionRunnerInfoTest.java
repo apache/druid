@@ -17,11 +17,9 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator;
+package org.apache.druid.client.indexing;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import org.apache.druid.client.indexing.ClientCompactionRunnerInfo;
 import org.apache.druid.data.input.SegmentsSplitHintSpec;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
@@ -29,15 +27,21 @@ import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.java.util.common.HumanReadableBytes;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.data.CompressionFactory;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
+import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
+import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
+import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
 import org.joda.time.Duration;
 import org.joda.time.Period;
-import org.junit.Assert;
 import org.junit.Test;
 
+import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.Map;
 
@@ -49,55 +53,99 @@ public class ClientCompactionRunnerInfoTest
   @Test
   public void testHashedPartitionsSpecs()
   {
-    assertFalse(
-        ClientCompactionRunnerInfo.validateCompactionConfig(
-            createCompactionConfig(new HashedPartitionsSpec(100, null, null), Collections.emptyMap()), CompactionEngine.NATIVE
-        ).isValid()
+    DataSourceCompactionConfig compactionConfig = createCompactionConfig(
+        new HashedPartitionsSpec(100, null, null),
+        Collections.emptyMap(),
+        null,
+        null
     );
+    assertFalse(ClientCompactionRunnerInfo.validateCompactionConfig(compactionConfig, CompactionEngine.NATIVE)
+                                          .isValid());
   }
 
   @Test
   public void testrInvalidDynamicPartitionsSpecs()
   {
-    assertFalse(
-        ClientCompactionRunnerInfo.validateCompactionConfig(
-            createCompactionConfig(new DynamicPartitionsSpec(100, 100L), Collections.emptyMap()), CompactionEngine.NATIVE
-        ).isValid()
+    DataSourceCompactionConfig compactionConfig = createCompactionConfig(
+        new DynamicPartitionsSpec(100, 100L),
+        Collections.emptyMap(),
+        null,
+        null
     );
+    assertFalse(ClientCompactionRunnerInfo.validateCompactionConfig(compactionConfig, CompactionEngine.NATIVE)
+                                          .isValid());
   }
 
   @Test
   public void testDynamicPartitionsSpecs()
   {
-    assertTrue(ClientCompactionRunnerInfo.validateCompactionConfig(
-        createCompactionConfig(new DynamicPartitionsSpec(100, null), Collections.emptyMap()), CompactionEngine.NATIVE
-    ).isValid());
+    DataSourceCompactionConfig compactionConfig = createCompactionConfig(
+        new DynamicPartitionsSpec(100, null),
+        Collections.emptyMap(),
+        null,
+        null
+    );
+    assertTrue(ClientCompactionRunnerInfo.validateCompactionConfig(compactionConfig, CompactionEngine.NATIVE)
+                                         .isValid());
   }
 
   @Test
   public void testDimensionRangePartitionsSpecs()
   {
-    assertTrue(ClientCompactionRunnerInfo.validateCompactionConfig(
-        createCompactionConfig(
-            new DimensionRangePartitionsSpec(100, null, ImmutableList.of("partitionDim"), false),
-            Collections.emptyMap()
-        ), CompactionEngine.NATIVE
-    ).isValid());
+    DataSourceCompactionConfig compactionConfig = createCompactionConfig(
+        new DimensionRangePartitionsSpec(100, null, ImmutableList.of("partitionDim"), false),
+        Collections.emptyMap(),
+        null,
+        null
+    );
+    assertTrue(ClientCompactionRunnerInfo.validateCompactionConfig(compactionConfig, CompactionEngine.NATIVE)
+                                         .isValid());
   }
 
   @Test
-  public void testWithFinalizeAggregationsFalse()
+  public void testQueryGranularityAll()
   {
     DataSourceCompactionConfig compactionConfig = createCompactionConfig(
         new DynamicPartitionsSpec(3, null),
-        ImmutableMap.of(ClientCompactionRunnerInfo.MSQContext.CTX_FINALIZE_AGGREGATIONS, false)
+        Collections.emptyMap(),
+        new UserCompactionTaskGranularityConfig(Granularities.ALL, Granularities.ALL, false),
+        null
     );
-    Assert.assertFalse(ClientCompactionRunnerInfo.validateCompactionConfig(compactionConfig, CompactionEngine.NATIVE).isValid());
+    assertFalse(ClientCompactionRunnerInfo.validateCompactionConfig(compactionConfig, CompactionEngine.NATIVE)
+                                          .isValid());
+  }
+
+  @Test
+  public void testRollupFalseWithMetricsSpec()
+  {
+    DataSourceCompactionConfig compactionConfig = createCompactionConfig(
+        new DynamicPartitionsSpec(3, null),
+        Collections.emptyMap(),
+        new UserCompactionTaskGranularityConfig(null, null, false),
+        new AggregatorFactory[]{new LongSumAggregatorFactory("sum", "sum")}
+    );
+    assertFalse(ClientCompactionRunnerInfo.validateCompactionConfig(compactionConfig, CompactionEngine.NATIVE)
+                                          .isValid());
+  }
+
+  @Test
+  public void testRollupNullWithMetricsSpec()
+  {
+    DataSourceCompactionConfig compactionConfig = createCompactionConfig(
+        new DynamicPartitionsSpec(3, null),
+        Collections.emptyMap(),
+        new UserCompactionTaskGranularityConfig(null, null, null),
+        new AggregatorFactory[]{new LongSumAggregatorFactory("sum", "sum")}
+    );
+    assertTrue(ClientCompactionRunnerInfo.validateCompactionConfig(compactionConfig, CompactionEngine.NATIVE)
+                                         .isValid());
   }
 
   private static DataSourceCompactionConfig createCompactionConfig(
       PartitionsSpec partitionsSpec,
-      Map<String, Object> context
+      Map<String, Object> context,
+      @Nullable UserCompactionTaskGranularityConfig granularitySpec,
+      @Nullable AggregatorFactory[] metricsSpec
   )
   {
     final DataSourceCompactionConfig config = new DataSourceCompactionConfig(
@@ -107,9 +155,9 @@ public class ClientCompactionRunnerInfoTest
         10000,
         new Period(3600),
         createTuningConfig(partitionsSpec),
+        granularitySpec,
         null,
-        null,
-        null,
+        metricsSpec,
         null,
         null,
         CompactionEngine.MSQ,

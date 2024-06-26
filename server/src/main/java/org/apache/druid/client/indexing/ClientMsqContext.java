@@ -17,28 +17,15 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator;
+package org.apache.druid.client.indexing;
 
-import org.apache.druid.java.util.common.StringUtils;
-
-public class CompactionConfigValidationResult
+/**
+ * This class copies over MSQ context parameters from the MSQ extension. This is required to validate the submitted
+ * compaction config at the coordinator. The values used here should be kept in sync with those in
+ * {@link org.apache.druid.msq.util.MultiStageQueryContext}
+ */
+public class ClientMsqContext
 {
-  private final boolean valid;
-  private final String reason;
-
-  public CompactionConfigValidationResult(boolean valid, String format, Object... args)
-  {
-    this.valid = valid;
-    this.reason = format == null ? null : StringUtils.format(format, args);
-  }
-
-  public boolean isValid()
-  {
-    return valid;
-  }
-
-  public String getReason()
-  {
-    return reason;
-  }
+  public static final String CTX_MAX_NUM_TASKS = "maxNumTasks";
+  public static final int DEFAULT_MAX_NUM_TASKS = 2;
 }

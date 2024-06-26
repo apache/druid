@@ -231,6 +231,8 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     }
     this.tuningConfig = tuningConfig != null ? getTuningConfig(tuningConfig) : null;
     this.segmentProvider = new SegmentProvider(dataSource, this.ioConfig.getInputSpec());
+    // Note: The default compactionRunnerType used here should match the default runner used in CompactSegments#run
+    // when no runner is detected in the returned compactionTaskQuery.
     this.compactionRunner = compactionRunner == null
                             ? new NativeCompactionRunner(segmentCacheManagerFactory)
                             : compactionRunner;
@@ -1053,14 +1055,12 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     public Builder(
         String dataSource,
         SegmentCacheManagerFactory segmentCacheManagerFactory,
-        RetryPolicyFactory retryPolicyFactory,
-        CompactionRunner compactionRunner
+        RetryPolicyFactory retryPolicyFactory
     )
     {
       this.dataSource = dataSource;
       this.segmentCacheManagerFactory = segmentCacheManagerFactory;
       this.retryPolicyFactory = retryPolicyFactory;
-      this.compactionRunner = compactionRunner;
     }
 
     public Builder interval(Interval interval)

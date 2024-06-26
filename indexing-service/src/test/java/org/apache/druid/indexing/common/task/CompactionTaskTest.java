@@ -401,8 +401,7 @@ public class CompactionTaskTest
     final Builder builder = new Builder(
         DATA_SOURCE,
         segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY,
-        null
+        RETRY_POLICY_FACTORY
     );
     builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
     builder.tuningConfig(createTuningConfig());
@@ -412,8 +411,7 @@ public class CompactionTaskTest
     final Builder builder2 = new Builder(
         DATA_SOURCE,
         segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY,
-        null
+        RETRY_POLICY_FACTORY
     );
     builder2.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
     builder2.tuningConfig(createTuningConfig());
@@ -431,8 +429,7 @@ public class CompactionTaskTest
     final Builder builder = new Builder(
         DATA_SOURCE,
         segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY,
-        null
+        RETRY_POLICY_FACTORY
     );
     builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
     builder.tuningConfig(createTuningConfig());
@@ -452,8 +449,7 @@ public class CompactionTaskTest
   {
     final Builder builder = new Builder(
         DATA_SOURCE,
-        segmentCacheManagerFactory, RETRY_POLICY_FACTORY,
-        null
+        segmentCacheManagerFactory, RETRY_POLICY_FACTORY
     );
     builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
     builder.tuningConfig(createTuningConfig());
@@ -483,8 +479,7 @@ public class CompactionTaskTest
         new ClientCompactionTaskTransformSpec(new SelectorDimFilter("dim1", "foo", null));
     final Builder builder = new Builder(
         DATA_SOURCE,
-        segmentCacheManagerFactory, RETRY_POLICY_FACTORY,
-        null
+        segmentCacheManagerFactory, RETRY_POLICY_FACTORY
     );
     builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
     builder.tuningConfig(createTuningConfig());
@@ -503,8 +498,7 @@ public class CompactionTaskTest
     final Builder builder = new Builder(
         DATA_SOURCE,
         segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY,
-        null
+        RETRY_POLICY_FACTORY
     );
     builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
     builder.tuningConfig(createTuningConfig());
@@ -522,8 +516,7 @@ public class CompactionTaskTest
     final Builder builder = new Builder(
         DATA_SOURCE,
         segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY,
-        null
+        RETRY_POLICY_FACTORY
     );
     builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
     builder.tuningConfig(createTuningConfig());
@@ -552,8 +545,7 @@ public class CompactionTaskTest
     final Builder builder = new Builder(
         DATA_SOURCE,
         segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY,
-        null
+        RETRY_POLICY_FACTORY
     );
     builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
     builder.tuningConfig(createTuningConfig());
@@ -569,8 +561,7 @@ public class CompactionTaskTest
     final Builder builder = new Builder(
         DATA_SOURCE,
         segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY,
-        null
+        RETRY_POLICY_FACTORY
     );
     final CompactionTask task = builder
         .inputSpec(
@@ -591,8 +582,7 @@ public class CompactionTaskTest
     final Builder builder = new Builder(
         DATA_SOURCE,
         segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY,
-        null
+        RETRY_POLICY_FACTORY
     );
     final CompactionTask task = builder
         .segments(SEGMENTS)
@@ -611,8 +601,7 @@ public class CompactionTaskTest
     final Builder builder = new Builder(
         DATA_SOURCE,
         segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY,
-        null
+        RETRY_POLICY_FACTORY
     );
 
     final CompactionTask task = builder
@@ -695,8 +684,7 @@ public class CompactionTaskTest
     final Builder builder = new Builder(
         DATA_SOURCE,
         segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY,
-        null
+        RETRY_POLICY_FACTORY
     );
 
     final CompactionTask expectedFromJson = builder
@@ -717,8 +705,7 @@ public class CompactionTaskTest
     final Builder builder = new Builder(
         DATA_SOURCE,
         segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY,
-        null
+        RETRY_POLICY_FACTORY
     );
     final CompactionTask task = builder
         .inputSpec(
@@ -1492,8 +1479,7 @@ public class CompactionTaskTest
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        segmentCacheManagerFactory, RETRY_POLICY_FACTORY,
-        null
+        segmentCacheManagerFactory, RETRY_POLICY_FACTORY
     );
 
     @SuppressWarnings("unused")
@@ -1847,8 +1833,7 @@ public class CompactionTaskTest
   {
     final Builder builder = new Builder(
         DATA_SOURCE,
-        segmentCacheManagerFactory, RETRY_POLICY_FACTORY,
-        null
+        segmentCacheManagerFactory, RETRY_POLICY_FACTORY
     );
     final CompactionTask task = builder
         .interval(Intervals.of("2000-01-01/2000-01-02"))
@@ -1861,8 +1846,7 @@ public class CompactionTaskTest
   {
     final Builder builder = new Builder(
         DATA_SOURCE,
-        segmentCacheManagerFactory, RETRY_POLICY_FACTORY,
-        null
+        segmentCacheManagerFactory, RETRY_POLICY_FACTORY
     );
     final CompactionTask task = builder
         .interval(Intervals.of("2000-01-01/2000-01-02"))

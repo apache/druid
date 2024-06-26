@@ -25,11 +25,15 @@ import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 
@@ -96,35 +100,33 @@ public class ClientCompactionRunnerInfo
   /**
    * Checks if the provided compaction config is supported by MSQ. The following configs aren't supported:
    * <ul>
-   * <li>finalizeAggregations set to false in context.</li>
    * <li>partitionsSpec of type HashedParititionsSpec.</li>
    * <li>maxTotalRows in DynamicPartitionsSpec.</li>
-   * <li>rollup set to false in granularitySpec when metricsSpec is specified.</li>
+   * <li>rollup set to false in granularitySpec when metricsSpec is specified. Null is treated as true.</li>
+   * <li>queryGranularity set to ALL in granularitySpec.</li>
    * </ul>
    */
   private static CompactionConfigValidationResult msqEngineSupportsCompactionConfig(DataSourceCompactionConfig newConfig)
   {
+    List<CompactionConfigValidationResult> validationResults = new ArrayList<>();
     if (newConfig.getTuningConfig() != null) {
-      CompactionConfigValidationResult partitionSpecValidationResult =
-          validatePartitionsSpecForMsq(newConfig.getTuningConfig().getPartitionsSpec());
-      if (!partitionSpecValidationResult.isValid()) {
-        return partitionSpecValidationResult;
-      }
+      validationResults.add(validatePartitionsSpecForMsq(newConfig.getTuningConfig().getPartitionsSpec()));
     }
     if (newConfig.getGranularitySpec() != null) {
-      CompactionConfigValidationResult rollupValidationResult = validateRollupForMsq(
+      validationResults.add(validateRollupForMsq(
           newConfig.getMetricsSpec(),
           newConfig.getGranularitySpec().isRollup()
-      );
-      if (!rollupValidationResult.isValid()) {
-        return rollupValidationResult;
-      }
+      ));
+      validationResults.add(validateQueryGranularityForMsq(newConfig.getGranularitySpec().getQueryGranularity()));
     }
-    return new CompactionConfigValidationResult(true, null);
+    return validationResults.stream()
+                            .filter(result -> !result.isValid())
+                            .findFirst()
+                            .orElse(new CompactionConfigValidationResult(true, null));
   }
 
   /**
-   * Validte that partitionSpec is either 'dynamic` or 'range', and if 'dynamic', ensure maxTotalRows is null.
+   * Validate that partitionSpec is either 'dynamic` or 'range', and if 'dynamic', ensure 'maxTotalRows' is null.
    */
   public static CompactionConfigValidationResult validatePartitionsSpecForMsq(PartitionsSpec partitionsSpec)
   {
@@ -166,12 +168,15 @@ public class ClientCompactionRunnerInfo
   }
 
   /**
-   * This class copies over MSQ context parameters from the MSQ extension. This is required to validate the submitted
-   * compaction config at the coordinator. The values used here should be kept in sync with those in
-   * {@link org.apache.druid.msq.util.MultiStageQueryContext}
+   * Validate query granularity is not set to ALL.
    */
-  public static class MSQContext
-  {
-    public static final String CTX_FINALIZE_AGGREGATIONS = "finalizeAggregations";
+  public static CompactionConfigValidationResult validateQueryGranularityForMsq(Granularity queryGranularity){
+    if(queryGranularity!=null && queryGranularity.equals(Granularities.ALL)) {
+      return new CompactionConfigValidationResult(
+          false,
+          "queryGranularity[ALL] in granularitySpec not supported for MSQ engine"
+      );
+    }
+    return new CompactionConfigValidationResult(true, null);
   }
 }

@@ -117,7 +117,8 @@ public class MSQCompactionRunner implements CompactionRunner
    * <ul>
    * <li>partitionsSpec of type HashedParititionsSpec.</li>
    * <li>maxTotalRows in DynamicPartitionsSpec.</li>
-   * <li>rollup set to false in granularitySpec when metricsSpec is specified.</li>
+   * <li>rollup set to false in granularitySpec when metricsSpec is specified. Null is treated as true.</li>
+   * <li>queryGranularity set to ALL in granularitySpec.</li>
    * </ul>
    */
   @Override
@@ -125,23 +126,25 @@ public class MSQCompactionRunner implements CompactionRunner
       CompactionTask compactionTask
   )
   {
+    List<CompactionConfigValidationResult> validationResults = new ArrayList<>();
     if (compactionTask.getTuningConfig() != null) {
-      CompactionConfigValidationResult partitionSpecValidationResult =
-          ClientCompactionRunnerInfo.validatePartitionsSpecForMsq(compactionTask.getTuningConfig().getPartitionsSpec());
-      if (!partitionSpecValidationResult.isValid()) {
-        return partitionSpecValidationResult;
-      }
+      validationResults.add(ClientCompactionRunnerInfo.validatePartitionsSpecForMsq(
+          compactionTask.getTuningConfig().getPartitionsSpec())
+      );
     }
     if (compactionTask.getGranularitySpec() != null) {
-      CompactionConfigValidationResult rollupValidationResult = ClientCompactionRunnerInfo.validateRollupForMsq(
+      validationResults.add(ClientCompactionRunnerInfo.validateRollupForMsq(
           compactionTask.getMetricsSpec(),
           compactionTask.getGranularitySpec().isRollup()
-      );
-      if (!rollupValidationResult.isValid()) {
-        return rollupValidationResult;
-      }
+      ));
+      validationResults.add(ClientCompactionRunnerInfo.validateQueryGranularityForMsq(
+          compactionTask.getGranularitySpec().getQueryGranularity()
+      ));
     }
-    return new CompactionConfigValidationResult(true, null);
+    return validationResults.stream()
+                            .filter(result -> !result.isValid())
+                            .findFirst()
+                            .orElse(new CompactionConfigValidationResult(true, null));
   }
 
   @Override

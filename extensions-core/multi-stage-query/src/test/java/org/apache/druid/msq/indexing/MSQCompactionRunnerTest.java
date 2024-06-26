@@ -335,8 +335,7 @@ public class MSQCompactionRunnerTest
     final CompactionTask.Builder builder = new CompactionTask.Builder(
         DATA_SOURCE,
         null,
-        null,
-        new MSQCompactionRunner(JSON_MAPPER, null)
+        null
     );
     IndexSpec indexSpec = createIndexSpec();
 
@@ -352,6 +351,7 @@ public class MSQCompactionRunnerTest
             partitionsSpec == null ? new DynamicPartitionsSpec(100, null) : partitionsSpec
         ))
         .transformSpec(transformSpec)
+        .compactionRunner( new MSQCompactionRunner(JSON_MAPPER, null))
         .context(context);
 
     return builder.build();
