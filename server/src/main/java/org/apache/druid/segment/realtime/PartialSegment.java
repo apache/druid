@@ -45,6 +45,7 @@ public class PartialSegment
 {
   private final int count;
   private final AtomicReference<ReferenceCountingSegment> adapter;
+  @Nullable
   private volatile IncrementalIndex index;
 
   public PartialSegment(IncrementalIndex index, int count, SegmentId segmentId)

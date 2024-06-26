@@ -507,6 +507,7 @@ public class AppendableSegment implements Iterable<PartialSegment>, Overshadowab
    * Helper for {@link #acquireSegmentReferences(Function, boolean)}. Separate method to simplify testing (we test this
    * method instead of testing {@link #acquireSegmentReferences(Function, boolean)} directly).
    */
+  @Nullable
   @VisibleForTesting
   static List<PartialSegmentReference> acquireSegmentReferences(
       final List<PartialSegment> partialSegments,
