@@ -963,6 +963,18 @@ public class ControllerImpl implements Controller
 
     final Granularity segmentGranularity = destination.getSegmentGranularity();
 
+    // Compute & validate partitions by bucket (time chunk) if there is a maximum number of segments to be enforced per time chunk
+    if (querySpec.getTuningConfig().getMaxNumSegments() != null) {
+      final Map<DateTime, List<Pair<Integer, ClusterByPartition>>> partitionsByBucket = new HashMap<>();
+      for (int i = 0; i < partitionBoundaries.ranges().size(); i++) {
+        final ClusterByPartition partitionBoundary = partitionBoundaries.ranges().get(i);
+        final DateTime bucketDateTime = getBucketDateTime(partitionBoundary, segmentGranularity, keyReader);
+        partitionsByBucket.computeIfAbsent(bucketDateTime, ignored -> new ArrayList<>())
+                          .add(Pair.of(i, partitionBoundary));
+      }
+      validateNumSegmentsInTimeChunkOrThrow(partitionsByBucket);
+    }
+
     String previousSegmentId = null;
 
     segmentReport = new MSQSegmentReport(
@@ -1026,16 +1038,6 @@ public class ControllerImpl implements Controller
       retVal.add(allocation);
       previousSegmentId = allocation.asSegmentId().toString();
     }
-
-    final Map<DateTime, List<Pair<Integer, ClusterByPartition>>> partitionsByBucket = new HashMap<>();
-    for (int i = 0; i < partitionBoundaries.ranges().size(); i++) {
-      final ClusterByPartition partitionBoundary = partitionBoundaries.ranges().get(i);
-      final DateTime bucketDateTime = getBucketDateTime(partitionBoundary, segmentGranularity, keyReader);
-      partitionsByBucket.computeIfAbsent(bucketDateTime, ignored -> new ArrayList<>())
-                        .add(Pair.of(i, partitionBoundary));
-    }
-
-    validateNumSegmentsInTimeChunkOrThrow(partitionsByBucket);
 
     return retVal;
   }
@@ -1106,6 +1108,9 @@ public class ControllerImpl implements Controller
                         .add(Pair.of(i, partitionBoundary));
     }
 
+    // Validate the buckets
+    validateNumSegmentsInTimeChunkOrThrow(partitionsByBucket);
+
     // Process buckets (time chunks) one at a time.
     for (final Map.Entry<DateTime, List<Pair<Integer, ClusterByPartition>>> bucketEntry : partitionsByBucket.entrySet()) {
       final Interval interval = segmentGranularity.bucket(bucketEntry.getKey());
@@ -1150,8 +1155,6 @@ public class ControllerImpl implements Controller
         retVal[partitionNumber] = new SegmentIdWithShardSpec(destination.getDataSource(), interval, version, shardSpec);
       }
     }
-
-    validateNumSegmentsInTimeChunkOrThrow(partitionsByBucket);
 
     return Arrays.asList(retVal);
   }
