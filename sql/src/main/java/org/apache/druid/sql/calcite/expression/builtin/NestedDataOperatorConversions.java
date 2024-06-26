@@ -722,7 +722,9 @@ public class NestedDataOperatorConversions
   public static class JsonObjectOperatorConversion implements SqlOperatorConversion
   {
     private static final String FUNCTION_NAME = "json_object";
-    private static final SqlFunction SQL_FUNCTION = OperatorConversions
+    private static final SqlFunction SQL_FUNCTION = SqlStdOperatorTable.JSON_OBJECT;
+
+    private static final SqlFunction SQL_FUNCTION0 = OperatorConversions
         .operatorBuilder(FUNCTION_NAME)
         .operandTypeChecker(OperandTypes.variadic(SqlOperandCountRanges.from(1)))
         .operandTypeInference((callBinding, returnType, operandTypes) -> {
@@ -781,7 +783,8 @@ public class NestedDataOperatorConversions
   public static class ToJsonStringOperatorConversion implements SqlOperatorConversion
   {
     private static final String FUNCTION_NAME = "to_json_string";
-    private static final SqlFunction SQL_FUNCTION = OperatorConversions
+    private static final SqlFunction SQL_FUNCTION =
+        OperatorConversions
         .operatorBuilder(StringUtils.toUpperCase(FUNCTION_NAME))
         .operandTypes(SqlTypeFamily.ANY)
         .returnTypeCascadeNullable(SqlTypeName.VARCHAR)
