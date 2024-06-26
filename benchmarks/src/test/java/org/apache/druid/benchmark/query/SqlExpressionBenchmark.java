@@ -360,13 +360,16 @@ public class SqlExpressionBenchmark
 
     try {
       SqlVectorizedExpressionSanityTest.sanityTestVectorizedSqlQueries(
+          engine,
           plannerFactory,
           QUERIES.get(Integer.parseInt(query))
       );
+      log.info("non-vectorized and vectorized results match");
     }
-    catch (Throwable ignored) {
-      // the show must go on
+    catch (Throwable ex) {
+      log.warn(ex, "non-vectorized and vectorized results do not match");
     }
+
     final String sql = QUERIES.get(Integer.parseInt(query));
 
     try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(engine, "EXPLAIN PLAN FOR " + sql, ImmutableMap.of("useNativeQueryExplain", true))) {
@@ -378,8 +381,8 @@ public class SqlExpressionBenchmark
                          .writeValueAsString(jsonMapper.readValue((String) planResult[0], List.class))
       );
     }
-    catch (JsonProcessingException ignored) {
-
+    catch (JsonProcessingException ex) {
+      log.warn(ex, "explain failed");
     }
 
     try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(engine, sql, ImmutableMap.of())) {
@@ -393,8 +396,8 @@ public class SqlExpressionBenchmark
       }
       log.info("Total result row count:" + rowCounter);
     }
-    catch (Throwable ignored) {
-
+    catch (Throwable ex) {
+      log.warn(ex, "failed to count rows");
     }
   }
 

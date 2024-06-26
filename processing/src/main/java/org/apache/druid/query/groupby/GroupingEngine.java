@@ -686,8 +686,7 @@ public class GroupingEngine
           processingConfig.intermediateComputeSizeBytes()
       );
 
-      List<String> queryDimNames = baseSubtotalQuery.getDimensions().stream().map(DimensionSpec::getOutputName)
-                                                    .collect(Collectors.toList());
+      List<String> queryDimNamesInOrder = baseSubtotalQuery.getDimensionNamesInOrder();
 
       // Only needed to make LimitSpec.filterColumns(..) call later in case base query has a non default LimitSpec.
       Set<String> aggsAndPostAggs = null;
@@ -724,7 +723,7 @@ public class GroupingEngine
             .withLimitSpec(subtotalQueryLimitSpec);
 
         final GroupByRowProcessor.ResultSupplier resultSupplierOneFinal = resultSupplierOne;
-        if (Utils.isPrefix(subtotalSpec, queryDimNames)) {
+        if (Utils.isPrefix(subtotalSpec, queryDimNamesInOrder)) {
           // Since subtotalSpec is a prefix of base query dimensions, so results from base query are also sorted
           // by subtotalSpec as needed by stream merging.
           subtotalsResults.add(

@@ -147,7 +147,8 @@ public class SqlTestFramework
 
     QueryRunnerFactoryConglomerate createCongolmerate(
         Builder builder,
-        Closer closer
+        Closer closer,
+        ObjectMapper jsonMapper
     );
 
     SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
@@ -240,18 +241,21 @@ public class SqlTestFramework
     @Override
     public QueryRunnerFactoryConglomerate createCongolmerate(
         Builder builder,
-        Closer resourceCloser
+        Closer resourceCloser,
+        ObjectMapper jsonMapper
     )
     {
       if (builder.mergeBufferCount == 0) {
         return QueryStackTests.createQueryRunnerFactoryConglomerate(
             resourceCloser,
-            () -> builder.minTopNThreshold
+            () -> builder.minTopNThreshold,
+            jsonMapper
         );
       } else {
         return QueryStackTests.createQueryRunnerFactoryConglomerate(
             resourceCloser,
-            QueryStackTests.getProcessingConfig(builder.mergeBufferCount)
+            QueryStackTests.getProcessingConfig(builder.mergeBufferCount),
+            jsonMapper
         );
       }
     }
@@ -551,7 +555,7 @@ public class SqlTestFramework
     @LazySingleton
     public QueryRunnerFactoryConglomerate conglomerate()
     {
-      return componentSupplier.createCongolmerate(builder, resourceCloser);
+      return componentSupplier.createCongolmerate(builder, resourceCloser, queryJsonMapper());
     }
 
     @Provides

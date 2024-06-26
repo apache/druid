@@ -137,6 +137,12 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   }
 
   @Override
+  public Set<DataSegment> retrieveSegmentsById(String dataSource, Set<String> segmentIds)
+  {
+    return Collections.emptySet();
+  }
+
+  @Override
   public int markSegmentsAsUnusedWithinInterval(String dataSource, Interval interval)
   {
     return 0;

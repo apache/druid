@@ -314,10 +314,13 @@ public class ForkingTaskRunner
                         if (context != null) {
                           for (String propName : context.keySet()) {
                             if (propName.startsWith(CHILD_PROPERTY_PREFIX)) {
-                              command.addSystemProperty(
-                                  propName.substring(CHILD_PROPERTY_PREFIX.length()),
-                                  task.getContextValue(propName)
-                              );
+                              Object contextValue = task.getContextValue(propName);
+                              if (contextValue != null) {
+                                command.addSystemProperty(
+                                    propName.substring(CHILD_PROPERTY_PREFIX.length()),
+                                    String.valueOf(contextValue)
+                                );
+                              }
                             }
                           }
                         }

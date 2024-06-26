@@ -99,7 +99,8 @@ public @interface NotYetSupported
     CORRELATE_CONVERSION(DruidException.class, "Missing conversion( is|s are) LogicalCorrelate"),
     SORT_REMOVE_TROUBLE(DruidException.class, "Calcite assertion violated.*Sort\\.<init>"),
     STACK_OVERFLOW(StackOverflowError.class, ""),
-    CANNOT_JOIN_LOOKUP_NON_KEY(RuntimeException.class, "Cannot join lookup with condition referring to non-key");
+    CANNOT_JOIN_LOOKUP_NON_KEY(RuntimeException.class, "Cannot join lookup with condition referring to non-key"),
+    SORT_REMOVE_CONSTANT_KEYS_CONFLICT(DruidException.class, "not enough rules");
     // @formatter:on
 
     public Class<? extends Throwable> throwableClass;
