@@ -410,8 +410,8 @@ To solve this issue, explicitly provide the type of the dynamic parameter using 
 SELECT * FROM druid.foo WHERE dim1 like CONCAT('%', CAST (? AS VARCHAR), '%')
 ```
 
-With the support of dynamic parameters being extended to arrays, an array with a huge number of entries can be 
-programatically supplied through a parameter.
+With the support of dynamic parameters being extended to arrays, an array with a huge number of entries can be
+programmatically supplied through a parameter.
 
 for example 
 ```
