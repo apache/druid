@@ -43,16 +43,16 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-public class ActionBasedUsedSegmentCheckerTest
+public class ActionBasedPublishedSegmentRetrieverTest
 {
   private TaskActionClient taskActionClient;
-  private ActionBasedUsedSegmentChecker segmentRetriever;
+  private ActionBasedPublishedSegmentRetriever segmentRetriever;
 
   @Before
   public void setup()
   {
     taskActionClient = EasyMock.createMock(TaskActionClient.class);
-    segmentRetriever = new ActionBasedUsedSegmentChecker(taskActionClient);
+    segmentRetriever = new ActionBasedPublishedSegmentRetriever(taskActionClient);
   }
 
   @Test
@@ -103,7 +103,6 @@ public class ActionBasedUsedSegmentCheckerTest
         taskActionClient.submit(
             new RetrieveUsedSegmentsAction(
                 "wiki",
-                null,
                 Collections.singletonList(Intervals.of("2013-01-01/P3D")),
                 Segments.INCLUDING_OVERSHADOWED
             )

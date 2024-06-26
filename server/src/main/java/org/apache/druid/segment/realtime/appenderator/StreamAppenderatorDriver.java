@@ -91,7 +91,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
    * @param appenderator           appenderator
    * @param segmentAllocator       segment allocator
    * @param handoffNotifierFactory handoff notifier factory
-   * @param usedSegmentChecker     used segment checker
+   * @param segmentRetriever     used segment checker
    * @param objectMapper           object mapper, used for serde of commit metadata
    * @param metrics                Firedepartment metrics
    */
@@ -99,13 +99,13 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
       Appenderator appenderator,
       SegmentAllocator segmentAllocator,
       SegmentHandoffNotifierFactory handoffNotifierFactory,
-      UsedSegmentChecker usedSegmentChecker,
+      PublishedSegmentRetriever segmentRetriever,
       DataSegmentKiller dataSegmentKiller,
       ObjectMapper objectMapper,
       SegmentGenerationMetrics metrics
   )
   {
-    super(appenderator, segmentAllocator, usedSegmentChecker, dataSegmentKiller);
+    super(appenderator, segmentAllocator, segmentRetriever, dataSegmentKiller);
 
     this.handoffNotifier = Preconditions.checkNotNull(handoffNotifierFactory, "handoffNotifierFactory")
                                         .createSegmentHandoffNotifier(appenderator.getDataSource());
@@ -416,7 +416,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
   {
     return Futures.transformAsync(
         publish(publisher, committer, sequenceNames),
-        (AsyncFunction<SegmentsAndCommitMetadata, SegmentsAndCommitMetadata>) this::registerHandoff,
+        this::registerHandoff,
         MoreExecutors.directExecutor()
     );
   }

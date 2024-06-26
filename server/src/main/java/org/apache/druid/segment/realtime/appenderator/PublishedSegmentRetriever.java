@@ -25,7 +25,7 @@ import org.apache.druid.timeline.SegmentId;
 import java.io.IOException;
 import java.util.Set;
 
-public interface UsedSegmentChecker
+public interface PublishedSegmentRetriever
 {
   /**
    * For any identifiers that exist and are actually used, returns the corresponding DataSegment objects.
