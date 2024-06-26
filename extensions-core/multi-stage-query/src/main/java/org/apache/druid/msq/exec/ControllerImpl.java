@@ -2914,7 +2914,8 @@ public class ControllerImpl implements Controller
             inputChannelFactory,
             () -> ArenaMemoryAllocator.createOnHeap(5_000_000),
             resultReaderExec,
-            cancellationId
+            cancellationId,
+            MultiStageQueryContext.removeNullBytes(querySpec.getQuery().context())
         );
 
         resultsChannel = ReadableConcatFrameChannel.open(
