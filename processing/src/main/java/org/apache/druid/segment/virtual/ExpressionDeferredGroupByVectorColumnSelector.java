@@ -65,12 +65,13 @@ public class ExpressionDeferredGroupByVectorColumnSelector implements GroupByVec
   {
     this.expr = expr;
     this.subSelectors = subSelectors;
-    this.exprKeyBytes = subSelectors.stream().mapToInt(GroupByVectorColumnSelector::getGroupingKeySize).sum();
     this.tmpResultRow = ResultRow.create(subSelectors.size());
 
+    int exprKeyBytesTmp = 0;
     final Map<String, InputBindings.InputSupplier<?>> tmpResultRowSuppliers = new HashMap<>();
     for (int i = 0; i < exprInputSignature.size(); i++) {
       final int columnPosition = i;
+      exprKeyBytesTmp += subSelectors.get(i).getGroupingKeySize();
       tmpResultRowSuppliers.put(
           exprInputSignature.getColumnName(i),
           InputBindings.inputSupplier(
@@ -79,6 +80,7 @@ public class ExpressionDeferredGroupByVectorColumnSelector implements GroupByVec
           )
       );
     }
+    this.exprKeyBytes = exprKeyBytesTmp;
     this.tmpResultRowBindings = InputBindings.forInputSuppliers(tmpResultRowSuppliers);
   }
 
