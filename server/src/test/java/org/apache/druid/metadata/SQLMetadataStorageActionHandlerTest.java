@@ -78,7 +78,6 @@ public class SQLMetadataStorageActionHandlerTest
 
     connector.prepareTaskEntryTable(entryTable);
     connector.createLockTable(lockTable, entryType);
-    connector.createLogTable(logTable, entryType);
 
     handler = new DerbyMetadataStorageActionHandler<>(
         connector,
