@@ -963,6 +963,14 @@ public class ControllerImpl implements Controller
 
     final Granularity segmentGranularity = destination.getSegmentGranularity();
 
+    // Compute & validate partitions by bucket (time chunk) if there is a maximum number of segments to be enforced per time chunk
+    if (querySpec.getTuningConfig().getMaxNumSegments() != null) {
+      final Map<DateTime, List<Pair<Integer, ClusterByPartition>>> partitionsByBucket =
+          getPartitionsByBucket(partitionBoundaries, segmentGranularity, keyReader);
+
+      validateNumSegmentsInTimeChunkOrThrow(partitionsByBucket);
+    }
+
     String previousSegmentId = null;
 
     segmentReport = new MSQSegmentReport(
@@ -1027,16 +1035,6 @@ public class ControllerImpl implements Controller
       previousSegmentId = allocation.asSegmentId().toString();
     }
 
-    final Map<DateTime, List<Pair<Integer, ClusterByPartition>>> partitionsByBucket = new HashMap<>();
-    for (int i = 0; i < partitionBoundaries.ranges().size(); i++) {
-      final ClusterByPartition partitionBoundary = partitionBoundaries.ranges().get(i);
-      final DateTime bucketDateTime = getBucketDateTime(partitionBoundary, segmentGranularity, keyReader);
-      partitionsByBucket.computeIfAbsent(bucketDateTime, ignored -> new ArrayList<>())
-                        .add(Pair.of(i, partitionBoundary));
-    }
-
-    validateNumSegmentsInTimeChunkOrThrow(partitionsByBucket);
-
     return retVal;
   }
 
@@ -1098,13 +1096,11 @@ public class ControllerImpl implements Controller
     }
 
     // Group partition ranges by bucket (time chunk), so we can generate shardSpecs for each bucket independently.
-    final Map<DateTime, List<Pair<Integer, ClusterByPartition>>> partitionsByBucket = new HashMap<>();
-    for (int i = 0; i < partitionBoundaries.ranges().size(); i++) {
-      ClusterByPartition partitionBoundary = partitionBoundaries.ranges().get(i);
-      final DateTime bucketDateTime = getBucketDateTime(partitionBoundary, segmentGranularity, keyReader);
-      partitionsByBucket.computeIfAbsent(bucketDateTime, ignored -> new ArrayList<>())
-                        .add(Pair.of(i, partitionBoundary));
-    }
+    final Map<DateTime, List<Pair<Integer, ClusterByPartition>>> partitionsByBucket =
+        getPartitionsByBucket(partitionBoundaries, segmentGranularity, keyReader);
+
+    // Validate the buckets.
+    validateNumSegmentsInTimeChunkOrThrow(partitionsByBucket);
 
     // Process buckets (time chunks) one at a time.
     for (final Map.Entry<DateTime, List<Pair<Integer, ClusterByPartition>>> bucketEntry : partitionsByBucket.entrySet()) {
@@ -1151,9 +1147,26 @@ public class ControllerImpl implements Controller
       }
     }
 
-    validateNumSegmentsInTimeChunkOrThrow(partitionsByBucket);
-
     return Arrays.asList(retVal);
+  }
+
+  /**
+   * Return partition ranges by bucket (time chunk).
+   */
+  private Map<DateTime, List<Pair<Integer, ClusterByPartition>>> getPartitionsByBucket(
+      final ClusterByPartitions partitionBoundaries,
+      final Granularity segmentGranularity,
+      final RowKeyReader keyReader
+  )
+  {
+    final Map<DateTime, List<Pair<Integer, ClusterByPartition>>> partitionsByBucket = new HashMap<>();
+    for (int i = 0; i < partitionBoundaries.ranges().size(); i++) {
+      final ClusterByPartition partitionBoundary = partitionBoundaries.ranges().get(i);
+      final DateTime bucketDateTime = getBucketDateTime(partitionBoundary, segmentGranularity, keyReader);
+      partitionsByBucket.computeIfAbsent(bucketDateTime, ignored -> new ArrayList<>())
+                        .add(Pair.of(i, partitionBoundary));
+    }
+    return partitionsByBucket;
   }
 
   @Override
