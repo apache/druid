@@ -19,6 +19,8 @@
 
 package org.apache.druid.query.rowsandcols.semantic;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -34,9 +36,11 @@ import org.apache.druid.query.operator.OffsetLimit;
 import org.apache.druid.query.rowsandcols.MapOfColumnsRowsAndColumns;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.ColumnAccessor;
+import org.apache.druid.query.rowsandcols.column.IntArrayColumn;
 import org.apache.druid.segment.ArrayListSegment;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -327,4 +331,27 @@ public class RowsAndColumnsDecoratorTest extends SemanticTestBase
       }
     }
   }
+
+  @Test
+  public void asd() throws Exception {
+    RowsAndColumns rac = make(MapOfColumnsRowsAndColumns.fromMap(
+        ImmutableMap.of(
+            "colA", new IntArrayColumn(new int[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}),
+            "colB", new IntArrayColumn(new int[]{4, -4, 3, -3, 4, 82, -90, 4, 0, 0})
+        )
+    ));
+
+//    @Test
+//    public void testSerde() throws Exception
+//    {
+//      FrameRowsAndColumns f =
+    ObjectMapper objectMapper = TestHelper.makeJsonMapper();
+    byte[] arr = objectMapper.writeValueAsBytes(rac);
+
+//      Assert.assertEquals(rac, objectMapper.readValue(arr, FrameRowsAndColumns.class));
+//      Assert.assertEquals(rac, objectMapper.readValue(objectMapper.writeValueAsBytes(rac), ResultRow.class));
+//    }
+
+  }
+
 }

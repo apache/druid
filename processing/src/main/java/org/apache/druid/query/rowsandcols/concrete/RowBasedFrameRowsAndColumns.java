@@ -19,6 +19,9 @@
 
 package org.apache.druid.query.rowsandcols.concrete;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Objects;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.read.FrameReader;
@@ -28,12 +31,16 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.Column;
+import org.apache.druid.query.rowsandcols.semantic.WireTransferable;
 import org.apache.druid.segment.CloseableShapeshifter;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nullable;
+
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 
@@ -43,7 +50,10 @@ public class RowBasedFrameRowsAndColumns implements RowsAndColumns, AutoCloseabl
   private final RowSignature signature;
   private final LinkedHashMap<String, Column> colCache = new LinkedHashMap<>();
 
-  public RowBasedFrameRowsAndColumns(Frame frame, RowSignature signature)
+  @JsonCreator
+  public RowBasedFrameRowsAndColumns(
+      @JsonProperty("frame") Frame frame,
+      @JsonProperty("signature") RowSignature signature)
   {
     this.frame = FrameType.ROW_BASED.ensureType(frame);
     this.signature = signature;
@@ -53,6 +63,18 @@ public class RowBasedFrameRowsAndColumns implements RowsAndColumns, AutoCloseabl
   public Collection<String> getColumnNames()
   {
     return signature.getColumnNames();
+  }
+
+  @JsonProperty("frame")
+  public Frame getFrame()
+  {
+    return frame;
+  }
+
+  @JsonProperty("signature")
+  public RowSignature getSignature()
+  {
+    return signature;
   }
 
   @Override
@@ -88,6 +110,9 @@ public class RowBasedFrameRowsAndColumns implements RowsAndColumns, AutoCloseabl
     if (StorageAdapter.class.equals(clazz)) {
       return (T) new FrameStorageAdapter(frame, FrameReader.create(signature), Intervals.ETERNITY);
     }
+    if (WireTransferable.class.equals(clazz)) {
+      return (T) this;
+    }
     return null;
   }
 
@@ -95,5 +120,25 @@ public class RowBasedFrameRowsAndColumns implements RowsAndColumns, AutoCloseabl
   public void close()
   {
     // nothing to close
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hashCode(frame, signature);
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (!(o instanceof RowBasedFrameRowsAndColumns)) {
+      return false;
+    }
+    RowBasedFrameRowsAndColumns otherFrame = (RowBasedFrameRowsAndColumns) o;
+
+    return frame.writableMemory().equals(otherFrame.frame.writableMemory()) && signature.equals(otherFrame.signature);
   }
 }

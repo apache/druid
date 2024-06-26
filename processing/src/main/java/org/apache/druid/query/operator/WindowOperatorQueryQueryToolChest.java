@@ -20,6 +20,7 @@
 package org.apache.druid.query.operator;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.collect.ImmutableMap;
@@ -36,6 +37,7 @@ import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.Column;
 import org.apache.druid.query.rowsandcols.column.ColumnAccessor;
 import org.apache.druid.query.rowsandcols.column.NullColumn;
+import org.apache.druid.query.rowsandcols.concrete.ColumnBasedFrameRowsAndColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 
@@ -45,7 +47,6 @@ import java.util.function.Supplier;
 
 public class WindowOperatorQueryQueryToolChest extends QueryToolChest<RowsAndColumns, WindowOperatorQuery>
 {
-
   @Override
   @SuppressWarnings("unchecked")
   public QueryRunner<RowsAndColumns> mergeResults(QueryRunner<RowsAndColumns> runner)
@@ -196,4 +197,15 @@ public class WindowOperatorQueryQueryToolChest extends QueryToolChest<RowsAndCol
       return baseQueryRunner.run(queryPlus, responseContext);
     }
   }
+
+  @Override
+  public ObjectMapper decorateObjectMapper(ObjectMapper objectMapper, WindowOperatorQuery query)
+  {
+    ObjectMapper om = super.decorateObjectMapper(objectMapper, query).copy();
+
+    om.registerSubtypes(ColumnBasedFrameRowsAndColumns.class);
+
+    return om;
+  }
+
 }

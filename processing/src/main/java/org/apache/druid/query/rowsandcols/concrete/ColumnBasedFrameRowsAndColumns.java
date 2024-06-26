@@ -19,6 +19,9 @@
 
 package org.apache.druid.query.rowsandcols.concrete;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Objects;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.read.FrameReader;
@@ -35,6 +38,8 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nullable;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 
@@ -44,10 +49,25 @@ public class ColumnBasedFrameRowsAndColumns implements RowsAndColumns, AutoClose
   private final RowSignature signature;
   private final LinkedHashMap<String, Column> colCache = new LinkedHashMap<>();
 
-  public ColumnBasedFrameRowsAndColumns(Frame frame, RowSignature signature)
+  @JsonCreator
+  public ColumnBasedFrameRowsAndColumns(
+      @JsonProperty("frame") Frame frame,
+      @JsonProperty("signature") RowSignature signature)
   {
     this.frame = FrameType.COLUMNAR.ensureType(frame);
     this.signature = signature;
+  }
+
+  @JsonProperty("frame")
+  public Frame getFrame()
+  {
+    return frame;
+  }
+
+  @JsonProperty("signature")
+  public RowSignature getSignature()
+  {
+    return signature;
   }
 
   @Override
@@ -101,5 +121,25 @@ public class ColumnBasedFrameRowsAndColumns implements RowsAndColumns, AutoClose
   public void close()
   {
     // nothing to close
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hashCode(frame, signature);
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (!(o instanceof ColumnBasedFrameRowsAndColumns)) {
+      return false;
+    }
+    ColumnBasedFrameRowsAndColumns otherFrame = (ColumnBasedFrameRowsAndColumns) o;
+
+    return frame.writableMemory().equals(otherFrame.frame.writableMemory()) && signature.equals(otherFrame.signature);
   }
 }
