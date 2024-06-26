@@ -228,7 +228,7 @@ public class ScanResultValueFramesIterable implements Iterable<FrameSignaturePai
       populateCursor();
       boolean firstRowWritten = false;
 
-     final FrameWriterFactory frameWriterFactory = FrameWriters.makeColumnBasedFrameWriterFactory(
+      final FrameWriterFactory frameWriterFactory = FrameWriters.makeColumnBasedFrameWriterFactory(
           memoryAllocatorFactory,
           currentOutputRowSignature,
           Collections.emptyList()

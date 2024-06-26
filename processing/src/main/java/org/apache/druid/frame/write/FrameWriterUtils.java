@@ -241,6 +241,9 @@ public class FrameWriterUtils
     }
   }
 
+  /**
+   * Copies {@code src} to {@code dst} without making any modification to the source data.
+   */
   public static void copyByteBufferToMemoryAllowingNullBytes(
       final ByteBuffer src,
       final WritableMemory dst,
@@ -251,6 +254,10 @@ public class FrameWriterUtils
     copyByteBufferToMemory(src, dst, dstPosition, len, true, false);
   }
 
+  /**
+   * Copies {@code src} to {@code dst}, disallowing null bytes to be written to the destination. If {@code removeNullBytes}
+   * is true, the method will drop the null bytes, and if it is false, the method will throw an exception.
+   */
   public static void copyByteBufferToMemoryDisallowingNullBytes(
       final ByteBuffer src,
       final WritableMemory dst,
