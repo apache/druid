@@ -409,3 +409,27 @@ To solve this issue, explicitly provide the type of the dynamic parameter using 
 ```
 SELECT * FROM druid.foo WHERE dim1 like CONCAT('%', CAST (? AS VARCHAR), '%')
 ```
+
+With the support of dynamic parameters being extended to arrays, an array with a huge number of entries can be 
+programatically supplied through a parameter.
+
+for example 
+```
+{
+    "query": "SELECT doubleArrayColumn from druid.table where ARRAY_CONTAINS(?, doubleArrayColumn)",
+    "Parameters":[
+      {"type":"ARRAY", "value":[-25.7, null, 36.85]}
+    ]
+}
+```
+
+Also, an IN filter being supplied with a lot of values, can be replaced by a dynamic parameter passed inside [SCALAR_IN_ARRAY](sql-array-functions.md)
+```
+{
+    "query": "SELECT count(city) from druid.table where SCALAR_IN_ARRAY(city, ?)",
+    "Parameters":[
+      {"type":"ARRAY", "value":["Vienna", "Seoul", "San Francisco"]}
+    ]
+}
+```
+
