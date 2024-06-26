@@ -20,7 +20,6 @@
 package org.apache.druid.msq.indexing;
 
 import com.google.common.collect.Iterables;
-import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.MemoryAllocator;
 import org.apache.druid.frame.allocation.SingleMemoryAllocatorFactory;
 import org.apache.druid.frame.channel.BlockingQueueFrameChannel;
@@ -58,6 +57,7 @@ public class InputChannelsImpl implements InputChannels
   private final FrameProcessorExecutor exec;
   private final String cancellationId;
   private final Map<StagePartition, ReadablePartition> readablePartitionMap;
+  private final boolean removeNullBytes;
 
   public InputChannelsImpl(
       final QueryDefinition queryDefinition,
@@ -65,7 +65,8 @@ public class InputChannelsImpl implements InputChannels
       final InputChannelFactory channelFactory,
       final Supplier<MemoryAllocator> allocatorMaker,
       final FrameProcessorExecutor exec,
-      final String cancellationId
+      final String cancellationId,
+      final boolean removeNullBytes
   )
   {
     this.queryDefinition = queryDefinition;
@@ -74,6 +75,7 @@ public class InputChannelsImpl implements InputChannels
     this.allocatorMaker = allocatorMaker;
     this.exec = exec;
     this.cancellationId = cancellationId;
+    this.removeNullBytes = removeNullBytes;
 
     for (final ReadablePartition readablePartition : readablePartitions) {
       readablePartitionMap.put(
@@ -128,13 +130,13 @@ public class InputChannelsImpl implements InputChannels
           channels,
           stageDefinition.getFrameReader(),
           queueChannel.writable(),
-          FrameWriters.makeFrameWriterFactory(
-              FrameType.ROW_BASED,
+          FrameWriters.makeRowBasedFrameWriterFactory(
               new SingleMemoryAllocatorFactory(allocatorMaker.get()),
               stageDefinition.getFrameReader().signature(),
 
               // No sortColumns, because FrameChannelMerger generates frames that are sorted all on its own
-              Collections.emptyList()
+              Collections.emptyList(),
+              removeNullBytes
           ),
           stageDefinition.getSortKey(),
           null,

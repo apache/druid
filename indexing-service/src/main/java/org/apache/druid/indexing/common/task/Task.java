@@ -81,8 +81,6 @@ import java.util.Set;
     @Type(name = PartialDimensionDistributionTask.TYPE, value = PartialDimensionDistributionTask.class),
     @Type(name = PartialGenericSegmentMergeTask.TYPE, value = PartialGenericSegmentMergeTask.class),
     @Type(name = HadoopIndexTask.TYPE, value = HadoopIndexTask.class),
-    @Type(name = RealtimeIndexTask.TYPE, value = RealtimeIndexTask.class),
-    @Type(name = AppenderatorDriverRealtimeIndexTask.TYPE, value = AppenderatorDriverRealtimeIndexTask.class),
     @Type(name = NoopTask.TYPE, value = NoopTask.class),
     @Type(name = CompactionTask.TYPE, value = CompactionTask.class)
 })

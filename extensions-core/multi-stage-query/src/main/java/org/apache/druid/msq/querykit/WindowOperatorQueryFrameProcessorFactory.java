@@ -119,7 +119,8 @@ public class WindowOperatorQueryFrameProcessorFactory extends BaseFrameProcessor
       FrameContext frameContext,
       int maxOutstandingProcessors,
       CounterTracker counters,
-      Consumer<Throwable> warningPublisher
+      Consumer<Throwable> warningPublisher,
+      final boolean removeNullBytes
   )
   {
     // Expecting a single input slice from some prior stage.
@@ -152,7 +153,7 @@ public class WindowOperatorQueryFrameProcessorFactory extends BaseFrameProcessor
               query,
               readableInput.getChannel(),
               outputChannel.getWritableChannel(),
-              stageDefinition.createFrameWriterFactory(outputChannel.getFrameMemoryAllocator()),
+              stageDefinition.createFrameWriterFactory(outputChannel.getFrameMemoryAllocator(), removeNullBytes),
               readableInput.getChannelFrameReader(),
               frameContext.jsonMapper(),
               operatorList,
