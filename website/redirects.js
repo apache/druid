@@ -21,6 +21,10 @@
 
 const Redirects=[
   {
+    "from": "/docs/latest/development/extensions-core/kafka-extraction-namespace/",
+    "to": "/docs/latest/querying/kafka-extraction-namespace"
+  },
+  {
     "from": [
       "/docs/latest/configuration/auth.html",
       "/docs/latest/design/auth.html"
