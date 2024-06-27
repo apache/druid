@@ -256,6 +256,7 @@ public class MSQCompactionRunner implements CompactionRunner
     // We don't consider maxRowsInMemory coming via CompactionTuningConfig since it always sets a default value if no
     // value specified by user.
     final int maxRowsInMemory = MultiStageQueryContext.getRowsInMemory(compactionTaskContext);
+    final Integer maxNumSegments = MultiStageQueryContext.getMaxNumSegments(compactionTaskContext);
 
     Integer rowsPerSegment = getRowsPerSegment(compactionTask);
 
@@ -263,6 +264,7 @@ public class MSQCompactionRunner implements CompactionRunner
         maxNumWorkers,
         maxRowsInMemory,
         rowsPerSegment,
+        maxNumSegments,
         compactionTask.getTuningConfig() != null ? compactionTask.getTuningConfig().getIndexSpec() : null
     );
   }
