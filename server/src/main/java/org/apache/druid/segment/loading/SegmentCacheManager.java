@@ -19,10 +19,13 @@
 
 package org.apache.druid.segment.loading;
 
+import org.apache.druid.segment.ReferenceCountingSegment;
+import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.timeline.DataSegment;
 
 import java.io.File;
-import java.util.concurrent.ExecutorService;
+import java.io.IOException;
+import java.util.List;
 
 /**
  * A class to fetch segment files to local disk and manage the local cache.
@@ -31,10 +34,60 @@ import java.util.concurrent.ExecutorService;
 public interface SegmentCacheManager
 {
   /**
-   * Checks whether a segment is already cached. It can return false even if {@link #reserve(DataSegment)}
-   * has been successful for a segment but is not downloaded yet.
+   * Return whether the cache manager can handle segments or not.
    */
-  boolean isSegmentCached(DataSegment segment);
+  boolean canHandleSegments();
+
+  /**
+   * Return a list of cached segments from local disk, if any. This should be called only
+   * when {@link #canHandleSegments()} is true.
+   */
+  List<DataSegment> getCachedSegments() throws IOException;
+
+  /**
+   * Store a segment info file for the supplied segment on disk. This operation is idempotent when called
+   * multiple times for a given segment.
+   */
+  void storeInfoFile(DataSegment segment) throws IOException;
+
+  /**
+   * Remove the segment info file for the supplied segment from disk. If the file cannot be
+   * deleted, do nothing.
+   *
+   * @see SegmentCacheManager#cleanup(DataSegment)
+   */
+  void removeInfoFile(DataSegment segment);
+
+  /**
+   * Returns a {@link ReferenceCountingSegment} that will be added by the {@link org.apache.druid.server.SegmentManager}
+   * to the {@link org.apache.druid.timeline.VersionedIntervalTimeline}. This method can be called multiple times
+   * by the {@link org.apache.druid.server.SegmentManager} and implementation can either return same {@link ReferenceCountingSegment}
+   * or a different {@link ReferenceCountingSegment}. Caller should not assume any particular behavior.
+   * <p>
+   * Returning a {@code ReferenceCountingSegment} will let custom implementations keep track of reference count for
+   * segments that the custom implementations are creating. That way, custom implementations can know when the segment
+   * is in use or not.
+   * </p>
+   * @param segment Segment to get on each download after service bootstrap
+   * @throws SegmentLoadingException If there is an error in loading the segment
+   * @see SegmentCacheManager#getBootstrapSegment(DataSegment, SegmentLazyLoadFailCallback)
+   */
+  ReferenceCountingSegment getSegment(DataSegment segment) throws SegmentLoadingException;
+
+  /**
+   * Similar to {@link #getSegment(DataSegment)}, this method returns a {@link ReferenceCountingSegment} that will be
+   * added by the {@link org.apache.druid.server.SegmentManager} to the {@link org.apache.druid.timeline.VersionedIntervalTimeline}
+   * during startup on data nodes.
+   * @param segment Segment to retrieve during service bootstrap
+   * @param loadFailed Callback to execute when segment lazy load failed. This applies only when
+   *                   {@code lazyLoadOnStart} is enabled
+   * @throws SegmentLoadingException - If there is an error in loading the segment
+   * @see SegmentCacheManager#getSegment(DataSegment)
+   */
+  ReferenceCountingSegment getBootstrapSegment(
+      DataSegment segment,
+      SegmentLazyLoadFailCallback loadFailed
+  ) throws SegmentLoadingException;
 
   /**
    * This method fetches the files for the given segment if the segment is not downloaded already. It
@@ -49,51 +102,53 @@ public interface SegmentCacheManager
   File getSegmentFiles(DataSegment segment) throws SegmentLoadingException;
 
   /**
-   * Tries to reserve the space for a segment on any location. When the space has been reserved,
-   * {@link #getSegmentFiles(DataSegment)} should download the segment on the reserved location or
-   * fail otherwise.
-   *
-   * This function is useful for custom extensions. Extensions can try to reserve the space first and
-   * if not successful, make some space by cleaning up other segments, etc. There is also improved
-   * concurrency for extensions with this function. Since reserve is a cheaper operation to invoke
-   * till the space has been reserved. Hence it can be put inside a lock if required by the extensions. getSegment
-   * can't be put inside a lock since it is a time-consuming operation, on account of downloading the files.
-   *
-   * @param segment - Segment to reserve
-   * @return True if enough space found to store the segment, false otherwise
-   */
-  /*
-   * We only return a boolean result instead of a pointer to
-   * {@link StorageLocation} since we don't want callers to operate on {@code StorageLocation} directly outside {@code SegmentLoader}.
-   * {@link SegmentLoader} operates on the {@code StorageLocation} objects in a thread-safe manner.
-   */
-  boolean reserve(DataSegment segment);
-
-  /**
-   * Reverts the effects of {@link #reserve(DataSegment)} (DataSegment)} by releasing the location reserved for this segment.
-   * Callers, that explicitly reserve the space via {@link #reserve(DataSegment)}, should use this method to release the space.
-   *
-   * Implementation can throw error if the space is being released but there is data present. Callers
-   * are supposed to ensure that any data is removed via {@link #cleanup(DataSegment)}
-   * @param segment - Segment to release the location for.
-   * @return - True if any location was reserved and released, false otherwise.
-   */
-  boolean release(DataSegment segment);
-
-  /**
-   * Cleanup the cache space used by the segment. It will not release the space if the space has been
-   * explicitly reserved via {@link #reserve(DataSegment)}
-   */
-  void cleanup(DataSegment segment);
-
-  /**
-   * Asyncly load segment into page cache.
+   * Asynchronously load the supplied segment into the page cache on each download after the service finishes bootstrapping.
    * Equivalent to `cat segment_files > /dev/null` to force loading the segment index files into page cache so that
    * later when the segment is queried, they are already in page cache and only a minor page fault needs to be triggered
    * instead of a major page fault to make the query latency more consistent.
    *
-   * @param segment The segment to load its index files into page cache
-   * @param exec The thread pool to use
+   * @see SegmentCacheManager#loadSegmentIntoPageCacheOnBootstrap(DataSegment)
    */
-  void loadSegmentIntoPageCache(DataSegment segment, ExecutorService exec);
+  void loadSegmentIntoPageCache(DataSegment segment);
+
+  /**
+   * Similar to {@link #loadSegmentIntoPageCache(DataSegment)}, but asynchronously load the supplied segment into the
+   * page cache during service bootstrap.
+   *
+   * @see SegmentCacheManager#loadSegmentIntoPageCache(DataSegment)
+   */
+  void loadSegmentIntoPageCacheOnBootstrap(DataSegment segment);
+
+  /**
+   * Shutdown any previously set up bootstrap executor to save resources.
+   * This should be called after loading bootstrap segments into the page cache.
+   */
+  void shutdownBootstrap();
+
+  boolean reserve(DataSegment segment);
+
+  /**
+   * Reverts the effects of {@link #reserve(DataSegment)} by releasing the location reserved for this segment.
+   * Callers that explicitly reserve the space via {@link #reserve(DataSegment)} should use this method to release the space.
+   *
+   * <p>
+   * Implementation can throw error if the space is being released but there is data present. Callers
+   * are supposed to ensure that any data is removed via {@link #cleanup(DataSegment)}. Only return a boolean instead
+   * of a pointer to {@code StorageLocation} since we don't want callers to operate on {@code StorageLocation} directly
+   * outside this interface.
+   * </p>
+   *
+   * @param segment - Segment to release the location for.
+   * @return - True if any location was reserved and released, false otherwise.
+   *
+   */
+  boolean release(DataSegment segment);
+
+  /**
+   * Cleanup the segment files cache space used by the segment. It will not release the space if the
+   * space has been explicitly reserved via {@link #reserve(DataSegment)}.
+   *
+   * @see SegmentCacheManager#removeInfoFile(DataSegment)
+   */
+  void cleanup(DataSegment segment);
 }

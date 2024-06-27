@@ -27,12 +27,11 @@ import org.junit.Test;
 
 /**
  */
-public class MapCacheTest
+public class MapCacheTest extends CacheTestBase<MapCache>
 {
   private static final byte[] HI = StringUtils.toUtf8("hi");
   private static final byte[] HO = StringUtils.toUtf8("ho");
   private ByteCountingLRUMap baseMap;
-  private MapCache cache;
 
   @Before
   public void setUp()

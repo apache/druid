@@ -26,7 +26,6 @@ import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.runtime.Hook;
-import org.apache.calcite.util.Pair;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
@@ -56,6 +55,7 @@ import org.joda.time.Interval;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -64,13 +64,13 @@ public class NativeQueryMaker implements QueryMaker
   private final QueryLifecycleFactory queryLifecycleFactory;
   private final PlannerContext plannerContext;
   private final ObjectMapper jsonMapper;
-  private final List<Pair<Integer, String>> fieldMapping;
+  private final List<Entry<Integer, String>> fieldMapping;
 
   public NativeQueryMaker(
       final QueryLifecycleFactory queryLifecycleFactory,
       final PlannerContext plannerContext,
       final ObjectMapper jsonMapper,
-      final List<Pair<Integer, String>> fieldMapping
+      final List<Entry<Integer, String>> fieldMapping
   )
   {
     this.queryLifecycleFactory = queryLifecycleFactory;
@@ -257,11 +257,11 @@ public class NativeQueryMaker implements QueryMaker
     );
   }
 
-  private static <T> List<T> mapColumnList(final List<T> in, final List<Pair<Integer, String>> fieldMapping)
+  private static <T> List<T> mapColumnList(final List<T> in, final List<Entry<Integer, String>> fieldMapping)
   {
     final List<T> out = new ArrayList<>(fieldMapping.size());
 
-    for (final Pair<Integer, String> entry : fieldMapping) {
+    for (final Entry<Integer, String> entry : fieldMapping) {
       out.add(in.get(entry.getKey()));
     }
 

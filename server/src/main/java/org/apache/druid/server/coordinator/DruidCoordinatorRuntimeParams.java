@@ -123,6 +123,12 @@ public class DruidCoordinatorRuntimeParams
     return segmentAssigner == null ? null : segmentAssigner.getReplicationStatus();
   }
 
+  @Nullable
+  public Set<DataSegment> getBroadcastSegments()
+  {
+    return segmentAssigner == null ? null : segmentAssigner.getBroadcastSegments();
+  }
+
   public StrategicSegmentAssigner getSegmentAssigner()
   {
     return segmentAssigner;

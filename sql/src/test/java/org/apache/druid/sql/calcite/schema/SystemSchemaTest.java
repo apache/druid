@@ -78,7 +78,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.join.MapJoinableFactory;
-import org.apache.druid.segment.loading.SegmentLoader;
+import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.DruidNode;
@@ -117,6 +117,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
@@ -256,7 +257,7 @@ public class SystemSchemaTest extends CalciteTestBase
         new NoopServiceEmitter(),
         new PhysicalDatasourceMetadataFactory(
             new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
-            new SegmentManager(EasyMock.createMock(SegmentLoader.class))
+            new SegmentManager(EasyMock.createMock(SegmentCacheManager.class))
         ),
         new NoopCoordinatorClient(),
         CentralizedDatasourceSchemaConfig.create()

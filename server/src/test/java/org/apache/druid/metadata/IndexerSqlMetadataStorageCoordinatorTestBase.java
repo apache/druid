@@ -52,7 +52,6 @@ import org.skife.jdbi.v2.PreparedBatch;
 import org.skife.jdbi.v2.ResultIterator;
 import org.skife.jdbi.v2.util.StringMapper;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -326,7 +325,7 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
                       .build();
   }
 
-  protected List<DataSegment> createAndGetUsedYearSegments(final int startYear, final int endYear) throws IOException
+  protected List<DataSegment> createAndGetUsedYearSegments(final int startYear, final int endYear)
   {
     final List<DataSegment> segments = new ArrayList<>();
 

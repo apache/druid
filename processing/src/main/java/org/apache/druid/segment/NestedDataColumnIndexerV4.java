@@ -154,7 +154,7 @@ public class NestedDataColumnIndexerV4 implements DimensionIndexer<StructuredDat
   @Override
   public int getCardinality()
   {
-    return globalDictionary.getCardinality();
+    return DimensionDictionarySelector.CARDINALITY_UNKNOWN;
   }
 
   @Override

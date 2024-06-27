@@ -252,7 +252,7 @@ case $CMD in
     cd $COMPOSE_DIR
     $DOCKER_COMPOSE $DOCKER_ARGS up -d
     # Enable the following for debugging
-    #show_status
+    # show_status
     ;;
   "status" )
     check_env_file

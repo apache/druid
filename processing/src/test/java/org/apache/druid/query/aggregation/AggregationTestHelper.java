@@ -159,6 +159,9 @@ public class AggregationTestHelper implements Closeable
     final Closer closer = Closer.create();
     final ObjectMapper mapper = TestHelper.makeJsonMapper();
     final TestGroupByBuffers groupByBuffers = closer.register(TestGroupByBuffers.createDefault());
+    for (Module mod : jsonModulesToRegister) {
+      mapper.registerModule(mod);
+    }
     final GroupByQueryRunnerFactory factory = GroupByQueryRunnerTest.makeQueryRunnerFactory(
         mapper,
         config,

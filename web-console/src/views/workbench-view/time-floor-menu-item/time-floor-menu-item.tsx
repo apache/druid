@@ -72,9 +72,10 @@ export const TimeFloorMenuItem = function TimeFloorMenuItem(props: TimeFloorMenu
 
   const changeTimeFloor = (duration: string | undefined) => {
     onChange(
-      (duration ? F.timeFloor(innerExpression, duration, origin, timezone) : innerExpression).as(
-        expression.getOutputName(),
-      ),
+      (duration
+        ? F.timeFloor(innerExpression, duration, origin, timezone)
+        : innerExpression
+      ).setAlias(expression.getOutputName()),
     );
   };
 

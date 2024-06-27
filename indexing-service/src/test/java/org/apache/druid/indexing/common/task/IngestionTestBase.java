@@ -76,6 +76,7 @@ import org.apache.druid.segment.DataSegmentsWithSchemas;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9Factory;
 import org.apache.druid.segment.SegmentSchemaMapping;
+import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
@@ -166,7 +167,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         CentralizedDatasourceSchemaConfig.create()
     );
     lockbox = new TaskLockbox(taskStorage, storageCoordinator);
-    segmentCacheManagerFactory = new SegmentCacheManagerFactory(getObjectMapper());
+    segmentCacheManagerFactory = new SegmentCacheManagerFactory(TestIndex.INDEX_IO, getObjectMapper());
     reportsFile = temporaryFolder.newFile();
   }
 
