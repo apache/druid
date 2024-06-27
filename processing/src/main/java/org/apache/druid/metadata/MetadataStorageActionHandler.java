@@ -20,6 +20,7 @@
 package org.apache.druid.metadata;
 
 import com.google.common.base.Optional;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.indexer.TaskIdentifier;
 import org.apache.druid.indexer.TaskInfo;
@@ -166,22 +167,30 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
    * Task logs are not used anymore and this method is never called by Druid code.
    * It has been retained only for backwards compatibility with older extensions.
    * New extensions must not implement this method.
+   *
+   * @throws DruidException of category UNSUPPORTED whenever called.
    */
   @Deprecated
   default boolean addLog(String entryId, LogType log)
   {
-    throw new UnsupportedOperationException("Task actions are not logged anymore.");
+    throw DruidException.defensive()
+                        .ofCategory(DruidException.Category.UNSUPPORTED)
+                        .build("Task actions are not logged anymore.");
   }
 
   /**
    * Task logs are not used anymore and this method is never called by Druid code.
    * It has been retained only for backwards compatibility with older extensions.
    * New extensions must not implement this method.
+   *
+   * @throws DruidException of category UNSUPPORTED whenever called.
    */
   @Deprecated
   default List<LogType> getLogs(String entryId)
   {
-    throw new UnsupportedOperationException("Task actions are not logged anymore.");
+    throw DruidException.defensive()
+                        .ofCategory(DruidException.Category.UNSUPPORTED)
+                        .build("Task actions are not logged anymore.");
   }
 
   /**

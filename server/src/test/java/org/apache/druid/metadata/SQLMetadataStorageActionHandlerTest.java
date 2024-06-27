@@ -248,7 +248,7 @@ public class SQLMetadataStorageActionHandlerTest
   public void testAddLogThrowsUnsupportedException()
   {
     Exception exception = Assert.assertThrows(
-        UnsupportedOperationException.class,
+        DruidException.class,
         () -> handler.addLog("abcd", ImmutableMap.of("logentry", "created"))
     );
     Assert.assertEquals(
@@ -261,7 +261,7 @@ public class SQLMetadataStorageActionHandlerTest
   public void testGetLogsThrowsUnsupportedException()
   {
     Exception exception = Assert.assertThrows(
-        UnsupportedOperationException.class,
+        DruidException.class,
         () -> handler.getLogs("abcd")
     );
     Assert.assertEquals(
