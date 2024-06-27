@@ -21,10 +21,10 @@ package org.apache.druid.indexing.common.task;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.client.indexing.ClientCompactionRunnerInfo;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.client.indexing.ClientCompactionRunnerInfo;
 import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
 import org.joda.time.Interval;
 

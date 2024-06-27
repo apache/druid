@@ -88,8 +88,8 @@ public class MSQCompactionRunnerTest
       null,
       null
   );
-  private static final LongDimensionSchema longDimensionSchema = new LongDimensionSchema("long_dim");
-  private static final List<DimensionSchema> DIMENSIONS = ImmutableList.of(DIM1, longDimensionSchema);
+  private static final LongDimensionSchema LONG_DIMENSION_SCHEMA = new LongDimensionSchema("long_dim");
+  private static final List<DimensionSchema> DIMENSIONS = ImmutableList.of(DIM1, LONG_DIMENSION_SCHEMA);
   private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
   private static final AggregatorFactory AGG1 = new CountAggregatorFactory("agg_0");
   private static final AggregatorFactory AGG2 = new LongSumAggregatorFactory("agg_1", "long_dim_1");

@@ -19,9 +19,8 @@
 
 package org.apache.druid.indexer;
 
+import org.junit.Assert;
 import org.junit.Test;
-
-import static org.junit.Assert.*;
 
 public class CompactionEngineTest
 {
@@ -29,16 +28,16 @@ public class CompactionEngineTest
   @Test
   public void testFromString()
   {
-    assertEquals(CompactionEngine.NATIVE, CompactionEngine.fromString("native"));
-    assertEquals(CompactionEngine.MSQ, CompactionEngine.fromString("msq"));
-    assertNull(CompactionEngine.fromString(null));
-    assertThrows(IllegalArgumentException.class, () -> CompactionEngine.fromString("random"));
+    Assert.assertEquals(CompactionEngine.NATIVE, CompactionEngine.fromString("native"));
+    Assert.assertEquals(CompactionEngine.MSQ, CompactionEngine.fromString("msq"));
+    Assert.assertNull(CompactionEngine.fromString(null));
+    Assert.assertThrows(IllegalArgumentException.class, () -> CompactionEngine.fromString("random"));
   }
 
   @Test
   public void testToString()
   {
-    assertEquals("native", CompactionEngine.NATIVE.toString());
-    assertEquals("msq", CompactionEngine.MSQ.toString());
+    Assert.assertEquals("native", CompactionEngine.NATIVE.toString());
+    Assert.assertEquals("msq", CompactionEngine.MSQ.toString());
   }
 }
