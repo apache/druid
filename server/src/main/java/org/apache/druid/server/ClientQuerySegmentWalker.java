@@ -78,7 +78,6 @@ import java.util.Stack;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 /**
@@ -426,18 +425,16 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       } else if (canRunQueryUsingLocalWalker(subQuery) || canRunQueryUsingClusterWalker(subQuery)) {
         // Subquery needs to be inlined. Assign it a subquery id and run it.
 
-        final Supplier<Sequence<?>> queryResults;
+        final Sequence<?> queryResults;
 
         if (dryRun) {
-          queryResults = Sequences::empty;
+          queryResults = Sequences.empty();
         } else {
-          queryResults = () -> {
-            final QueryRunner subqueryRunner = subQuery.getRunner(this);
-            return subqueryRunner.run(
-                QueryPlus.wrap(subQuery),
-                DirectDruidClient.makeResponseContextForQuery()
-            );
-          };
+          final QueryRunner subqueryRunner = subQuery.getRunner(this);
+          queryResults = subqueryRunner.run(
+              QueryPlus.wrap(subQuery),
+              DirectDruidClient.makeResponseContextForQuery()
+          );
         }
 
         return toInlineDataSource(
@@ -648,7 +645,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
    * Convert the results of a particular query into a materialized (List-based) InlineDataSource.
    *
    * @param query            the query
-   * @param resultsSupplier          query results
+   * @param results          query results
    * @param toolChest        toolchest for the query
    * @param limitAccumulator an accumulator for tracking the number of accumulated rows in all subqueries for a
    *                         particular master query
@@ -658,7 +655,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
    */
   private static <T, QueryType extends Query<T>> DataSource toInlineDataSource(
       final QueryType query,
-      final Supplier<Sequence<?>> resultsSupplier,
+      final Sequence<T> results,
       final QueryToolChest<T, QueryType> toolChest,
       final AtomicInteger limitAccumulator,
       final AtomicLong memoryLimitAccumulator,
@@ -682,7 +679,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         subqueryStatsProvider.incrementSubqueriesWithRowLimit();
         dataSource = materializeResultsAsArray(
             query,
-            resultsSupplier,
+            results,
             toolChest,
             limitAccumulator,
             limit,
@@ -696,7 +693,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         }
         Optional<DataSource> maybeDataSource = materializeResultsAsFrames(
             query,
-            resultsSupplier,
+            results,
             toolChest,
             limitAccumulator,
             memoryLimitAccumulator,
@@ -715,7 +712,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
           subqueryStatsProvider.incrementSubqueriesFallingBackToRowLimit();
           dataSource = materializeResultsAsArray(
               query,
-              resultsSupplier,
+              results,
               toolChest,
               limitAccumulator,
               limit,
@@ -738,7 +735,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
    */
   private static <T, QueryType extends Query<T>> Optional<DataSource> materializeResultsAsFrames(
       final QueryType query,
-      final Supplier<Sequence<?>> results,
+      final Sequence<T> results,
       final QueryToolChest<T, QueryType> toolChest,
       final AtomicInteger limitAccumulator,
       final AtomicLong memoryLimitAccumulator,
@@ -752,7 +749,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     try {
       framesOptional = toolChest.resultsAsFrames(
           query,
-          (Sequence<T>) results.get(),
+          results,
           new ArenaMemoryAllocatorFactory(FRAME_SIZE),
           useNestedForUnknownTypeInSubquery
       );
@@ -775,20 +772,10 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
           }
       );
       return Optional.of(new FrameBasedInlineDataSource(frameSignaturePairs, toolChest.resultArraySignature(query)));
-
-    }
-    catch (ResourceLimitExceededException e) {
-      throw e;
     }
     catch (UnsupportedColumnTypeException e) {
       subqueryStatsProvider.incrementSubqueriesFallingBackDueToUnsufficientTypeInfo();
       log.debug(e, "Type info in signature insufficient to materialize rows as frames.");
-      return Optional.empty();
-    }
-    catch (Exception e) {
-      subqueryStatsProvider.incrementSubqueriesFallingBackDueToUnknownReason();
-      log.debug(e, "Unable to materialize the results as frames due to an unhandleable exception "
-                   + "while conversion. Defaulting to materializing the results as rows");
       return Optional.empty();
     }
   }
@@ -798,7 +785,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
    */
   private static <T, QueryType extends Query<T>> DataSource materializeResultsAsArray(
       final QueryType query,
-      final Supplier<Sequence<?>> resultsSupplier,
+      final Sequence<T> results,
       final QueryToolChest<T, QueryType> toolChest,
       final AtomicInteger limitAccumulator,
       final int limit,
@@ -810,7 +797,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
 
     final ArrayList<Object[]> resultList = new ArrayList<>();
 
-    toolChest.resultsAsArrays(query, (Sequence<T>) resultsSupplier.get()).accumulate(
+    toolChest.resultsAsArrays(query, results).accumulate(
         resultList,
         (acc, in) -> {
           if (limitAccumulator.getAndIncrement() >= rowLimitToUse) {

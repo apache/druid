@@ -264,36 +264,16 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testtest()
+  public void testSubqueryWithNestedGroupBy()
   {
-    final List<Object[]> expectedResults;
-    if (NullHandling.replaceWithDefault()) {
-      expectedResults = ImmutableList.of(
-          new Object[]{
-              0.0,
-              0.0,
-              10.1,
-              10.1,
-              20.2,
-              0.0,
-              10.1,
-              0.0
-          }
-      );
-    } else {
-      expectedResults = ImmutableList.of(
-          new Object[]{
-              1.0,
-              2.0,
-              10.1,
-              10.1,
-              20.2,
-              Double.NaN,
-              2.0,
-              Double.NaN
-          }
-      );
-    }
+    final List<Object[]> expectedResults = ImmutableList.of(
+        new Object[]{946684800000L, "", 1L, "High_NB_DAYS"},
+        new Object[]{946684800000L, "1", 1L, "High_NB_DAYS"},
+        new Object[]{946684800000L, "10.1", 1L, "High_NB_DAYS"},
+        new Object[]{946684800000L, "2", 1L, "High_NB_DAYS"},
+        new Object[]{946684800000L, "abc", 1L, "High_NB_DAYS"},
+        new Object[]{946684800000L, "def", 1L, "High_NB_DAYS"}
+    );
 
     testQuery(
         "SELECT\n"
