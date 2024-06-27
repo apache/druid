@@ -76,14 +76,6 @@ public class MetadataTaskStorage implements TaskStorage
     }
 
     @Override
-    public TypeReference<TaskAction> getLogType()
-    {
-      return new TypeReference<TaskAction>()
-      {
-      };
-    }
-
-    @Override
     public TypeReference<TaskLock> getLockType()
     {
       return new TypeReference<TaskLock>()

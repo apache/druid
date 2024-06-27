@@ -34,7 +34,6 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.metadata.TaskLookup.ActiveTaskLookup;
 import org.apache.druid.metadata.TaskLookup.CompleteTaskLookup;
 import org.joda.time.DateTime;
@@ -97,12 +96,6 @@ public class SQLMetadataStorageActionHandlerTest
             return new TypeReference<Map<String, Object>>()
             {
             };
-          }
-
-          @Override
-          public TypeReference<Map<String, String>> getLogType()
-          {
-            return JacksonUtils.TYPE_REFERENCE_MAP_STRING_STRING;
           }
 
           @Override
