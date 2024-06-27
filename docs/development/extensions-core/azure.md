@@ -22,25 +22,75 @@ title: "Microsoft Azure"
   ~ under the License.
   -->
 
+## Azure extension
+
+This extension allows you to do the following:
+
+* [Ingest data](#ingest-data-from-azure) from objects stored in Azure Blob Storage.
+* [Write segments](#store-segments-in-azure) to Azure Blob Storage for deep storage.
+* [Persist task logs](#persist-task-logs-in-azure) to Azure Blob Storage for long-term storage.
+
+:::info
 
 To use this Apache Druid extension, [include](../../configuration/extensions.md#loading-extensions) `druid-azure-extensions` in the extensions load list.
 
-## Deep Storage
+:::
 
-[Microsoft Azure Storage](http://azure.microsoft.com/en-us/services/storage/) is another option for deep storage. This requires some additional Druid configuration.
+### Ingest data from Azure
 
-|Property|Description|Possible Values|Default|
-|--------|---------------|-----------|-------|
-|`druid.storage.type`|azure||Must be set.|
-|`druid.azure.account`||Azure Storage account name.|Must be set.|
-|`druid.azure.key`||Azure Storage account key.|Optional. Set one of key, sharedAccessStorageToken or useAzureCredentialsChain.|
-|`druid.azure.sharedAccessStorageToken`||Azure Shared Storage access token|Optional. Set one of key, sharedAccessStorageToken or useAzureCredentialsChain..| 
-|`druid.azure.useAzureCredentialsChain`|Use [DefaultAzureCredential](https://learn.microsoft.com/en-us/java/api/overview/azure/identity-readme?view=azure-java-stable) for authentication|Optional. Set one of key, sharedAccessStorageToken or useAzureCredentialsChain.|False|
-|`druid.azure.managedIdentityClientId`|If you want to use managed identity authentication in the `DefaultAzureCredential`, `useAzureCredentialsChain` must be true.||Optional.| 
-|`druid.azure.container`||Azure Storage container name.|Must be set.|
-|`druid.azure.prefix`|A prefix string that will be prepended to the blob names for the segments published to Azure deep storage| |""|
-|`druid.azure.protocol`|the protocol to use|http or https|https|
-|`druid.azure.maxTries`|Number of tries before canceling an Azure operation.| |3|
-|`druid.azure.maxListingLength`|maximum number of input files matching a given prefix to retrieve at a time| |1024|
-|`druid.azure.storageAccountEndpointSuffix`| The endpoint suffix to use. Use this config instead of `druid.azure.endpointSuffix`. Override the default value to connect to [Azure Government](https://learn.microsoft.com/en-us/azure/azure-government/documentation-government-get-started-connect-to-storage#getting-started-with-storage-api). This config supports storage accounts enabled for [AzureDNSZone](https://learn.microsoft.com/en-us/azure/dns/dns-getstarted-portal). Note: do not include the storage account name prefix in this config value. | Examples: `ABCD1234.blob.storage.azure.net`, `blob.core.usgovcloudapi.net`| `blob.core.windows.net`|
-See [Azure Services](http://azure.microsoft.com/en-us/pricing/free-trial/) for more information.
+Ingest data using either [MSQ](../../multi-stage-query/index.md) or a native batch [parallel task](../../ingestion/native-batch.md) with an [Azure input source](../../ingestion/input-sources.md#azure-input-source) (`azureStorage`) to read objects directly from Azure Blob Storage.
+
+### Store segments in Azure
+
+:::info
+
+To use Azure for deep storage, set `druid.storage.type=azure`.
+
+:::
+
+#### Configure location
+
+Configure where to store segments using the following properties:
+
+| Property | Description | Default |
+|---|---|---|
+| `druid.azure.account` | The Azure Storage account name. | Must be set. |
+| `druid.azure.container` | The Azure Storage container name. | Must be set. |
+| `druid.azure.prefix` | A prefix string that will be prepended to the blob names for the segments published. | "" |
+| `druid.azure.maxTries` | Number of tries before canceling an Azure operation. | 3 |
+| `druid.azure.protocol` | The protocol to use to connect to the Azure Storage account. Either `http` or `https`. | `https` |
+| `druid.azure.storageAccountEndpointSuffix` | The Storage account endpoint to use. Override the default value to connect to [Azure Government](https://learn.microsoft.com/en-us/azure/azure-government/documentation-government-get-started-connect-to-storage#getting-started-with-storage-api) or storage accounts with [Azure DNS zone endpoints](https://learn.microsoft.com/en-us/azure/storage/common/storage-account-overview#azure-dns-zone-endpoints-preview).<br/><br/>Do _not_ include the storage account name prefix in this config value.<br/><br/>Examples: `ABCD1234.blob.storage.azure.net`, `blob.core.usgovcloudapi.net`. | `blob.core.windows.net` |
+
+#### Configure authentication
+
+Authenticate access to Azure Blob Storage using one of the following methods:
+
+* [SAS token](https://learn.microsoft.com/en-us/azure/storage/common/storage-sas-overview)
+* [Shared Key](https://learn.microsoft.com/en-us/rest/api/storageservices/authorize-with-shared-key)
+* Default Azure credentials chain ([`DefaultAzureCredential`](https://learn.microsoft.com/en-us/java/api/overview/azure/identity-readme#defaultazurecredential)).
+
+Configure authentication using the following properties:
+
+| Property | Description | Default |
+|---|---|---|
+| `druid.azure.sharedAccessStorageToken` | The SAS (Shared Storage Access) token. |  |
+| `druid.azure.key` | The Shared Key. |  |
+| `druid.azure.useAzureCredentialsChain` | If `true`, use `DefaultAzureCredential` for authentication. | `false` |
+| `druid.azure.managedIdentityClientId` | To use managed identity authentication in the `DefaultAzureCredential`, set `useAzureCredentialsChain` to `true` and provide the client ID here. |  |
+
+### Persist task logs in Azure
+
+:::info
+
+To persist task logs in Azure Blob Storage, set `druid.indexer.logs.type=azure`.
+
+:::
+
+Druid stores task logs using the storage account and authentication method configured for storing segments. Use the following configuration to set up where to store the task logs:
+
+| Property | Description | Default |
+|---|---|---|
+| `druid.indexer.logs.container` | The Azure Blob Store container to write logs to. | Must be set. |
+| `druid.indexer.logs.prefix` | The path to prepend to logs. | Must be set. |
+
+For general options regarding task retention, see [Log retention policy](../../configuration/index.md#log-retention-policy).

@@ -89,6 +89,10 @@ export function addOrUpdate<T>(xs: readonly T[], x: T, keyFn: (x: T) => string |
 
 // ----------------------------
 
+export function caseInsensitiveEquals(str1: string | undefined, str2: string | undefined): boolean {
+  return str1?.toLowerCase() === str2?.toLowerCase();
+}
+
 export function caseInsensitiveContains(testString: string, searchString: string): boolean {
   if (!searchString) return true;
   return testString.toLowerCase().includes(searchString.toLowerCase());
@@ -275,6 +279,18 @@ export function formatMillions(n: NumberLike): string {
   const s = (Number(n) / 1e6).toFixed(3);
   if (s === '0.000') return String(Math.round(Number(n)));
   return s + ' M';
+}
+
+export function forceSignInNumberFormatter(
+  formatter: (n: NumberLike) => string,
+): (n: NumberLike) => string {
+  return (n: NumberLike) => {
+    if (n > 0) {
+      return '+' + formatter(n);
+    } else {
+      return formatter(n);
+    }
+  };
 }
 
 function pad2(str: string | number): string {

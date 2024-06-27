@@ -82,13 +82,12 @@
         <apache.ranger.version>2.4.0</apache.ranger.version>
         <gson.version>2.10.1</gson.version>
         <scala.library.version>2.13.14</scala.library.version>
-        <avatica.version>1.23.0</avatica.version>
+        <avatica.version>1.25.0</avatica.version>
         <avro.version>1.11.3</avro.version>
-        <!-- When updating Calcite, also propagate updates to these files which we've copied and modified:
-             default_config.fmpp
-             sql/src/main/codegen/includes/*
+        <!--
+            The base calcite parser was copied into the project; when updating Calcite run dev/upgrade-calcite-parser to adopt upstream changes
           -->
-        <calcite.version>1.35.0</calcite.version>
+        <calcite.version>1.37.0</calcite.version>
         <confluent.version>6.2.12</confluent.version>
         <datasketches.version>4.2.0</datasketches.version>
         <datasketches.memory.version>2.2.0</datasketches.memory.version>
@@ -1371,7 +1370,7 @@
             <plugin>
                 <groupId>org.openrewrite.maven</groupId>
                 <artifactId>rewrite-maven-plugin</artifactId>
-                <version>5.27.0</version>
+                <version>5.31.0</version>
                 <configuration>
                     <activeRecipes>
                         <recipe>org.apache.druid.RewriteRules</recipe>
@@ -2189,6 +2188,7 @@
                                 <exclude>**/.classpath</exclude> <!-- Eclipse -->
                                 <exclude>**/.project</exclude> <!-- Eclipse -->
                                 <exclude>**/*.iq</exclude> <!-- quidem testfiles -->
+                                <exclude>**/*.iq.out</exclude> <!-- quidem testfiles -->
                             </excludes>
                         </configuration>
                     </plugin>

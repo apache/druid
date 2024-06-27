@@ -48,14 +48,17 @@ import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
 import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.segment.loading.LeastBytesUsedStorageLocationSelectorStrategy;
 import org.apache.druid.segment.loading.LoadSpec;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.loading.SegmentLocalCacheManager;
+import org.apache.druid.segment.loading.StorageLocation;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
@@ -140,10 +143,15 @@ public class TaskDataSegmentProviderTest
     }
 
     cacheDir = temporaryFolder.newFolder();
+    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig().withLocations(
+        ImmutableList.of(new StorageLocationConfig(cacheDir, 10_000_000_000L, null))
+    );
+    final List<StorageLocation> locations = loaderConfig.toStorageLocations();
     cacheManager = new SegmentLocalCacheManager(
-        new SegmentLoaderConfig().withLocations(
-            ImmutableList.of(new StorageLocationConfig(cacheDir, 10_000_000_000L, null))
-        ),
+        locations,
+        loaderConfig,
+        new LeastBytesUsedStorageLocationSelectorStrategy(locations),
+        TestIndex.INDEX_IO,
         jsonMapper
     );
 

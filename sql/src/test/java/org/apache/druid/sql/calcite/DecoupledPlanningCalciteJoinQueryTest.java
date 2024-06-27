@@ -19,12 +19,12 @@
 
 package org.apache.druid.sql.calcite;
 
-import org.apache.druid.sql.calcite.DisableUnless.DisableUnlessRule;
 import org.apache.druid.sql.calcite.NotYetSupported.NotYetSupportedProcessor;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+
 import java.util.Map;
 
 import static org.junit.Assert.assertNotNull;
@@ -32,9 +32,6 @@ import static org.junit.Assert.assertNotNull;
 @ExtendWith(NotYetSupportedProcessor.class)
 public class DecoupledPlanningCalciteJoinQueryTest extends CalciteJoinQueryTest
 {
-  @RegisterExtension
-  public DisableUnlessRule sqlCompatOnly = DisableUnless.SQL_COMPATIBLE;
-
   @RegisterExtension
   DecoupledExtension decoupledExtension = new DecoupledExtension(this);
 
