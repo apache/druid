@@ -20,6 +20,7 @@ import { Button, ButtonGroup, Intent, Menu, MenuDivider, MenuItem } from '@bluep
 import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
 import type { SqlQuery } from '@druid-toolkit/query';
+import { SqlExpression } from '@druid-toolkit/query';
 import classNames from 'classnames';
 import copy from 'copy-to-clipboard';
 import React from 'react';
@@ -62,6 +63,8 @@ import { TabRenameDialog } from './tab-rename-dialog/tab-rename-dialog';
 import { WorkbenchHistoryDialog } from './workbench-history-dialog/workbench-history-dialog';
 
 import './workbench-view.scss';
+
+const LAST_DAY = SqlExpression.parse(`__time >= CURRENT_TIMESTAMP - INTERVAL '1' DAY`);
 
 function cleanupTabEntry(tabEntry: TabEntry): void {
   const discardedId = tabEntry.id;
@@ -786,6 +789,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
             columnMetadata={columnMetadataState.data}
             onQueryChange={this.handleSqlQueryChange}
             defaultSchema={defaultSchema ? defaultSchema : 'druid'}
+            defaultWhere={LAST_DAY}
             defaultTable={defaultTable}
             highlightTable={undefined}
           />

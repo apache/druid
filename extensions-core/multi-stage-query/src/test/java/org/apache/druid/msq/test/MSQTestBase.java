@@ -530,6 +530,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
     objectMapper = setupObjectMapper(injector);
     objectMapper.registerModules(new StorageConnectorModule().getJacksonModules());
     objectMapper.registerModules(sqlModule.getJacksonModules());
+    objectMapper.registerModules(NestedDataModule.getJacksonModulesList());
 
     doReturn(mock(Request.class)).when(brokerClient).makeRequest(any(), anyString());
 
@@ -832,6 +833,10 @@ public class MSQTestBase extends BaseCalciteQueryTest
     Assert.assertEquals(
         expectedTuningConfig.getRowsPerSegment(),
         tuningConfig.getRowsPerSegment()
+    );
+    Assert.assertEquals(
+        expectedTuningConfig.getMaxNumSegments(),
+        tuningConfig.getMaxNumSegments()
     );
   }
 

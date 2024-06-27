@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.rel.RelNode;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -130,6 +131,28 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 .build()
         ),
         ImmutableList.of(new Object[]{"[\"Hello\",null]"})
+    );
+  }
+
+  @Test
+  public void testTimeCeilExpressionContainingInvalidPeriod()
+  {
+    testQueryThrows(
+        "SELECT TIME_CEIL(__time, 'PT1Y') FROM foo",
+        DruidExceptionMatcher.invalidInput().expectMessageContains(
+            "Invalid period['PT1Y'] specified for expression[timestamp_ceil(\"__time\", 'PT1Y', null, 'UTC')]"
+        )
+    );
+  }
+
+  @Test
+  public void testTimeFloorExpressionContainingInvalidPeriod()
+  {
+    testQueryThrows(
+        "SELECT TIME_FLOOR(TIMESTAMPADD(DAY, -1, __time), 'PT1D') FROM foo",
+        DruidExceptionMatcher.invalidInput().expectMessageContains(
+            "Invalid period['PT1D'] specified for expression[timestamp_floor((\"__time\" + -86400000), 'PT1D', null, 'UTC')]"
+        )
     );
   }
 

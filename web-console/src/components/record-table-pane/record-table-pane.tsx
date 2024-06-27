@@ -174,7 +174,9 @@ export const RecordTablePane = React.memo(function RecordTablePane(props: Record
           })}
         />
       )}
-      {showValue && <ShowValueDialog onClose={() => setShowValue(undefined)} str={showValue} />}
+      {showValue && (
+        <ShowValueDialog onClose={() => setShowValue(undefined)} str={showValue} size="large" />
+      )}
     </div>
   );
 });

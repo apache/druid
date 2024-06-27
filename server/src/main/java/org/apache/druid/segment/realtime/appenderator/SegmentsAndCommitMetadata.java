@@ -26,16 +26,12 @@ import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
 public class SegmentsAndCommitMetadata
 {
-  private static final SegmentsAndCommitMetadata NIL
-      = new SegmentsAndCommitMetadata(Collections.emptyList(), null, null, null);
-
   private final Object commitMetadata;
   private final ImmutableList<DataSegment> segments;
   private final SegmentSchemaMapping segmentSchemaMapping;
@@ -138,10 +134,5 @@ public class SegmentsAndCommitMetadata
            ", upgradedSegments=" + SegmentUtils.commaSeparatedIdentifiers(upgradedSegments) +
            ", segmentSchemaMapping=" + segmentSchemaMapping +
            '}';
-  }
-
-  public static SegmentsAndCommitMetadata nil()
-  {
-    return NIL;
   }
 }

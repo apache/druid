@@ -57,53 +57,61 @@ exports[`ShowValueDialog matches snapshot 1`] = `
             </span>
           </button>
         </div>
-        <textarea
-          class="bp4-input"
-          spellcheck="false"
-        >
-          Bot: Automatska zamjena teksta  (-[[Administrativna podjela Meksika|Admin]] +[[Administrativna podjela Meksika|Admi]])
-        </textarea>
         <div
-          class="bp4-dialog-footer-actions"
+          class="bp4-dialog-body"
         >
-          <button
-            class="bp4-button"
-            type="button"
+          <textarea
+            class="bp4-input"
+            spellcheck="false"
           >
-            <span
-              aria-hidden="true"
-              class="bp4-icon bp4-icon-duplicate"
-              icon="duplicate"
+            Bot: Automatska zamjena teksta  (-[[Administrativna podjela Meksika|Admin]] +[[Administrativna podjela Meksika|Admi]])
+          </textarea>
+        </div>
+        <div
+          class="bp4-dialog-footer"
+        >
+          <div
+            class="bp4-dialog-footer-actions"
+          >
+            <button
+              class="bp4-button"
+              type="button"
             >
-              <svg
-                data-icon="duplicate"
-                height="16"
-                role="img"
-                viewBox="0 0 16 16"
-                width="16"
+              <span
+                aria-hidden="true"
+                class="bp4-icon bp4-icon-duplicate"
+                icon="duplicate"
               >
-                <path
-                  d="M15 0H5c-.55 0-1 .45-1 1v2h2V2h8v7h-1v2h2c.55 0 1-.45 1-1V1c0-.55-.45-1-1-1zm-4 4H1c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h10c.55 0 1-.45 1-1V5c0-.55-.45-1-1-1zm-1 10H2V6h8v8z"
-                  fill-rule="evenodd"
-                />
-              </svg>
-            </span>
-            <span
-              class="bp4-button-text"
+                <svg
+                  data-icon="duplicate"
+                  height="16"
+                  role="img"
+                  viewBox="0 0 16 16"
+                  width="16"
+                >
+                  <path
+                    d="M15 0H5c-.55 0-1 .45-1 1v2h2V2h8v7h-1v2h2c.55 0 1-.45 1-1V1c0-.55-.45-1-1-1zm-4 4H1c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h10c.55 0 1-.45 1-1V5c0-.55-.45-1-1-1zm-1 10H2V6h8v8z"
+                    fill-rule="evenodd"
+                  />
+                </svg>
+              </span>
+              <span
+                class="bp4-button-text"
+              >
+                Copy
+              </span>
+            </button>
+            <button
+              class="bp4-button bp4-intent-primary"
+              type="button"
             >
-              Copy
-            </span>
-          </button>
-          <button
-            class="bp4-button bp4-intent-primary"
-            type="button"
-          >
-            <span
-              class="bp4-button-text"
-            >
-              Close
-            </span>
-          </button>
+              <span
+                class="bp4-button-text"
+              >
+                Close
+              </span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
