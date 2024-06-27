@@ -71,7 +71,7 @@ public enum DeferExpressionDimensions
           return false;
         }
 
-        if (!capabilities.isNumeric() && !DeferExpressionDimensions.isDictionaryEncodedScalarString(capabilities)) {
+        if (!capabilities.isNumeric() && !isDictionaryEncodedScalarString(capabilities)) {
           // Not fixed-width.
           return false;
         }
@@ -106,7 +106,7 @@ public enum DeferExpressionDimensions
 
         allNumericInputs = allNumericInputs && capabilities.isNumeric();
 
-        if (!capabilities.isNumeric() && !DeferExpressionDimensions.isDictionaryEncodedScalarString(capabilities)) {
+        if (!capabilities.isNumeric() && !isDictionaryEncodedScalarString(capabilities)) {
           // Not fixed-width.
           return false;
         }
