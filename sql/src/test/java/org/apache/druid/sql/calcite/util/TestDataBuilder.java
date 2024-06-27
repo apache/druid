@@ -968,11 +968,10 @@ public class TestDataBuilder
         arraysIndex
     );
 
-    attachIndexesForDrillTestDatasources(querySegmentWalker, tmpDir);
     return querySegmentWalker;
   }
 
-  private static void attachIndexesForDrillTestDatasources(SpecificSegmentsQuerySegmentWalker segmentWalker, File tmpDir)
+  public static void attachIndexesForDrillTestDatasources(SpecificSegmentsQuerySegmentWalker segmentWalker, File tmpDir)
   {
     attachIndexForDrillTestDatasource(segmentWalker, CalciteTests.TBL_WITH_NULLS_PARQUET, tmpDir);
     attachIndexForDrillTestDatasource(segmentWalker, CalciteTests.SML_TBL_PARQUET, tmpDir);

@@ -38,12 +38,11 @@ import org.apache.druid.sql.calcite.QueryTestBuilder;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.run.SqlEngine;
-import org.apache.druid.sql.calcite.util.SqlTestFramework;
 
 @SqlTestFrameworkConfig.ComponentSupplier(DrillWindowQueryMSQComponentSupplier.class)
 public class MSQDrillWindowQueryTest extends DrillWindowQueryTest
 {
-  public static class DrillWindowQueryMSQComponentSupplier extends SqlTestFramework.StandardComponentSupplier
+  public static class DrillWindowQueryMSQComponentSupplier extends DrillComponentSupplier
   {
     public DrillWindowQueryMSQComponentSupplier(TempDirProducer tempFolderProducer)
     {
@@ -56,7 +55,6 @@ public class MSQDrillWindowQueryTest extends DrillWindowQueryTest
       super.configureGuice(builder);
       builder.addModules(CalciteMSQTestsHelper.fetchModules(tempDirProducer::newTempFolder, TestGroupByBuffers.createDefault()).toArray(new Module[0]));
     }
-
 
     @Override
     public SqlEngine createEngine(

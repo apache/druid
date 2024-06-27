@@ -520,12 +520,6 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
         ImmutableList.of(
             row(
                 Pair.of("TABLE_CAT", "druid"),
-                Pair.of("TABLE_NAME", CalciteTests.ALL_TYPES_UNIQ_PARQUET),
-                Pair.of("TABLE_SCHEM", "druid"),
-                Pair.of("TABLE_TYPE", "TABLE")
-            ),
-            row(
-                Pair.of("TABLE_CAT", "druid"),
                 Pair.of("TABLE_NAME", CalciteTests.ARRAYS_DATASOURCE),
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_TYPE", "TABLE")
@@ -533,12 +527,6 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
             row(
                 Pair.of("TABLE_CAT", "druid"),
                 Pair.of("TABLE_NAME", CalciteTests.BROADCAST_DATASOURCE),
-                Pair.of("TABLE_SCHEM", "druid"),
-                Pair.of("TABLE_TYPE", "TABLE")
-            ),
-            row(
-                Pair.of("TABLE_CAT", "druid"),
-                Pair.of("TABLE_NAME", CalciteTests.FEW_ROWS_ALL_DATA_PARQUET),
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_TYPE", "TABLE")
             ),
@@ -575,12 +563,6 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
             ),
             row(
                 Pair.of("TABLE_CAT", "druid"),
-                Pair.of("TABLE_NAME", CalciteTests.SML_TBL_PARQUET),
-                Pair.of("TABLE_SCHEM", "druid"),
-                Pair.of("TABLE_TYPE", "TABLE")
-            ),
-            row(
-                Pair.of("TABLE_CAT", "druid"),
                 Pair.of("TABLE_NAME", CalciteTests.SOME_DATASOURCE),
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_TYPE", "TABLE")
@@ -588,18 +570,6 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
             row(
                 Pair.of("TABLE_CAT", "druid"),
                 Pair.of("TABLE_NAME", CalciteTests.SOMEXDATASOURCE),
-                Pair.of("TABLE_SCHEM", "druid"),
-                Pair.of("TABLE_TYPE", "TABLE")
-            ),
-            row(
-                Pair.of("TABLE_CAT", "druid"),
-                Pair.of("TABLE_NAME", CalciteTests.T_ALL_TYPE_PARQUET),
-                Pair.of("TABLE_SCHEM", "druid"),
-                Pair.of("TABLE_TYPE", "TABLE")
-            ),
-            row(
-                Pair.of("TABLE_CAT", "druid"),
-                Pair.of("TABLE_NAME", CalciteTests.TBL_WITH_NULLS_PARQUET),
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_TYPE", "TABLE")
             ),
@@ -637,12 +607,6 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
         ImmutableList.of(
             row(
                 Pair.of("TABLE_CAT", "druid"),
-                Pair.of("TABLE_NAME", CalciteTests.ALL_TYPES_UNIQ_PARQUET),
-                Pair.of("TABLE_SCHEM", "druid"),
-                Pair.of("TABLE_TYPE", "TABLE")
-            ),
-            row(
-                Pair.of("TABLE_CAT", "druid"),
                 Pair.of("TABLE_NAME", CalciteTests.ARRAYS_DATASOURCE),
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_TYPE", "TABLE")
@@ -650,12 +614,6 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
             row(
                 Pair.of("TABLE_CAT", "druid"),
                 Pair.of("TABLE_NAME", CalciteTests.BROADCAST_DATASOURCE),
-                Pair.of("TABLE_SCHEM", "druid"),
-                Pair.of("TABLE_TYPE", "TABLE")
-            ),
-            row(
-                Pair.of("TABLE_CAT", "druid"),
-                Pair.of("TABLE_NAME", CalciteTests.FEW_ROWS_ALL_DATA_PARQUET),
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_TYPE", "TABLE")
             ),
@@ -697,12 +655,6 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
             ),
             row(
                 Pair.of("TABLE_CAT", "druid"),
-                Pair.of("TABLE_NAME", CalciteTests.SML_TBL_PARQUET),
-                Pair.of("TABLE_SCHEM", "druid"),
-                Pair.of("TABLE_TYPE", "TABLE")
-            ),
-            row(
-                Pair.of("TABLE_CAT", "druid"),
                 Pair.of("TABLE_NAME", CalciteTests.SOME_DATASOURCE),
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_TYPE", "TABLE")
@@ -710,18 +662,6 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
             row(
                 Pair.of("TABLE_CAT", "druid"),
                 Pair.of("TABLE_NAME", CalciteTests.SOMEXDATASOURCE),
-                Pair.of("TABLE_SCHEM", "druid"),
-                Pair.of("TABLE_TYPE", "TABLE")
-            ),
-            row(
-                Pair.of("TABLE_CAT", "druid"),
-                Pair.of("TABLE_NAME", CalciteTests.T_ALL_TYPE_PARQUET),
-                Pair.of("TABLE_SCHEM", "druid"),
-                Pair.of("TABLE_TYPE", "TABLE")
-            ),
-            row(
-                Pair.of("TABLE_CAT", "druid"),
-                Pair.of("TABLE_NAME", CalciteTests.TBL_WITH_NULLS_PARQUET),
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_TYPE", "TABLE")
             ),

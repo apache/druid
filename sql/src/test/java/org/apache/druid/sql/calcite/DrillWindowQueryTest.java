@@ -22,6 +22,7 @@ package org.apache.druid.sql.calcite;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteStreams;
+import com.google.inject.Injector;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql2rel.SqlToRelConverter;
 import org.apache.commons.io.FileUtils;
@@ -30,15 +31,20 @@ import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.TimestampParser;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
+import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.DisableUnless.DisableUnlessRule;
+import org.apache.druid.sql.calcite.DrillWindowQueryTest.DrillComponentSupplier;
 import org.apache.druid.sql.calcite.NotYetSupported.Modes;
 import org.apache.druid.sql.calcite.NotYetSupported.NotYetSupportedProcessor;
 import org.apache.druid.sql.calcite.QueryTestRunner.QueryResults;
 import org.apache.druid.sql.calcite.planner.PlannerCaptureHook;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
+import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.joda.time.DateTime;
 import org.joda.time.LocalTime;
 import org.junit.Assert;
@@ -87,7 +93,7 @@ import static org.junit.Assert.fail;
  * so it is believed that most iteration on tests will happen through the
  * CalciteWindowQueryTest instead of this class.
  */
-@SqlTestFrameworkConfig.ComponentSupplier(StandardComponentSupplier.class)
+@SqlTestFrameworkConfig.ComponentSupplier(DrillComponentSupplier.class)
 public class DrillWindowQueryTest extends BaseCalciteQueryTest
 {
   static {
@@ -212,6 +218,31 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
         query = new String(ByteStreams.toByteArray(queryIn), StandardCharsets.UTF_8);
       }
       return query;
+    }
+  }
+
+  protected static class DrillComponentSupplier extends StandardComponentSupplier
+  {
+    public DrillComponentSupplier(TempDirProducer tempFolderProducer)
+    {
+      super(tempFolderProducer);
+    }
+
+    @Override
+    public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
+        QueryRunnerFactoryConglomerate conglomerate,
+        JoinableFactoryWrapper joinableFactory,
+        Injector injector
+    )
+    {
+      final SpecificSegmentsQuerySegmentWalker retVal = super.createQuerySegmentWalker(
+          conglomerate,
+          joinableFactory,
+          injector);
+
+      final File tmpFolder = tempDirProducer.newTempFolder();
+      TestDataBuilder.attachIndexesForDrillTestDatasources(retVal, tmpFolder);
+      return retVal;
     }
   }
 
