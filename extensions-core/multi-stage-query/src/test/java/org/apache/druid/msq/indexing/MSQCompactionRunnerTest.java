@@ -242,6 +242,7 @@ public class MSQCompactionRunnerTest
             1,
             MultiStageQueryContext.DEFAULT_ROWS_IN_MEMORY,
             TARGET_ROWS_PER_SEGMENT,
+            null,
             createIndexSpec()
         ),
         actualMSQSpec.getTuningConfig()
@@ -309,6 +310,7 @@ public class MSQCompactionRunnerTest
             1,
             MultiStageQueryContext.DEFAULT_ROWS_IN_MEMORY,
             TARGET_ROWS_PER_SEGMENT,
+            null,
             createIndexSpec()
         ),
         actualMSQSpec.getTuningConfig()
