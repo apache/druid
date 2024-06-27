@@ -493,7 +493,7 @@ public class CompactSegments implements CoordinatorCustomDuty
         }
       }
 
-      final CompactionEngine compactionEngine = config.getEngine() == null? defaultEngine: config.getEngine();
+      final CompactionEngine compactionEngine = config.getEngine() == null ? defaultEngine : config.getEngine();
       final Map<String, Object> autoCompactionContext = newAutoCompactionContext(config.getTaskContext());
       int slotsRequiredForCurrentTask;
 

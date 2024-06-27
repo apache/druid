@@ -170,8 +170,9 @@ public class ClientCompactionRunnerInfo
   /**
    * Validate query granularity is not set to ALL.
    */
-  public static CompactionConfigValidationResult validateQueryGranularityForMsq(Granularity queryGranularity){
-    if(queryGranularity!=null && queryGranularity.equals(Granularities.ALL)) {
+  public static CompactionConfigValidationResult validateQueryGranularityForMsq(Granularity queryGranularity)
+  {
+    if (queryGranularity != null && queryGranularity.equals(Granularities.ALL)) {
       return new CompactionConfigValidationResult(
           false,
           "queryGranularity[ALL] in granularitySpec not supported for MSQ engine"
