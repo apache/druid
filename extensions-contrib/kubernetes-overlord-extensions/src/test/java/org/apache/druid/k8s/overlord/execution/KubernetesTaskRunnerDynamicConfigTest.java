@@ -64,8 +64,7 @@ public class KubernetesTaskRunnerDynamicConfigTest
            + "        \"selectionKey\": \"medium-throughput\",\n"
            + "        \"type\": [\"index_kafka\"]\n"
            + "      }\n"
-           + "    ],\n"
-           + "    \"defaultKey\": \"base\"\n"
+           + "    ]\n"
            + "  }\n"
            + "}";
 

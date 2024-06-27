@@ -1,7 +1,7 @@
 ---
 id: index
-title: "Quickstart (local)"
-sidebar_label: Quickstart (local)
+title: "Local quickstart"
+sidebar_label: Local quickstart
 ---
 
 <!--
@@ -53,7 +53,7 @@ dedicated user account for running Druid.
 
 ## Install Druid
 
-Download the [{{DRUIDVERSION}} release](https://www.apache.org/dyn/closer.cgi?path=/druid/{{DRUIDVERSION}}/apache-druid-{{DRUIDVERSION}}-bin.tar.gz) from Apache Druid. 
+Download the [{{DRUIDVERSION}} release](https://druid.apache.org/downloads/) from Apache Druid. 
 
 In your terminal, extract the file and change directories to the distribution directory:
 

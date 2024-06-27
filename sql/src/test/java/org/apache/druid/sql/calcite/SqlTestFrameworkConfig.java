@@ -41,7 +41,6 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 import org.reflections.Reflections;
 
 import javax.annotation.Nonnull;
-
 import java.io.Closeable;
 import java.lang.annotation.Annotation;
 import java.lang.annotation.ElementType;

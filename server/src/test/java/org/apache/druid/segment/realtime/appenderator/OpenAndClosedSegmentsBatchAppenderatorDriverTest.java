@@ -93,7 +93,7 @@ public class OpenAndClosedSegmentsBatchAppenderatorDriverTest extends EasyMockSu
     driver = new BatchAppenderatorDriver(
         openAndClosedSegmentsAppenderatorTester.getAppenderator(),
         allocator,
-        new TestUsedSegmentChecker(openAndClosedSegmentsAppenderatorTester.getPushedSegments()),
+        new TestPublishedSegmentRetriever(openAndClosedSegmentsAppenderatorTester.getPushedSegments()),
         dataSegmentKiller
     );
 

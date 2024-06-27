@@ -242,16 +242,48 @@ public class FrameWriterUtils
   }
 
   /**
-   * Copies "len" bytes from {@code src.position()} to "dstPosition" in "memory". Does not update the position of src.
-   *
-   * @throws InvalidNullByteException if "allowNullBytes" is false and a null byte is encountered
+   * Copies {@code src} to {@code dst} without making any modification to the source data.
    */
-  public static void copyByteBufferToMemory(
+  public static void copyByteBufferToMemoryAllowingNullBytes(
+      final ByteBuffer src,
+      final WritableMemory dst,
+      final long dstPosition,
+      final int len
+  )
+  {
+    copyByteBufferToMemory(src, dst, dstPosition, len, true, false);
+  }
+
+  /**
+   * Copies {@code src} to {@code dst}, disallowing null bytes to be written to the destination. If {@code removeNullBytes}
+   * is true, the method will drop the null bytes, and if it is false, the method will throw an exception.
+   */
+  public static void copyByteBufferToMemoryDisallowingNullBytes(
       final ByteBuffer src,
       final WritableMemory dst,
       final long dstPosition,
       final int len,
-      final boolean allowNullBytes
+      final boolean removeNullBytes
+  )
+  {
+    copyByteBufferToMemory(src, dst, dstPosition, len, false, removeNullBytes);
+  }
+
+  /**
+   * Copies "len" bytes from {@code src.position()} to "dstPosition" in "memory". Does not update the position of src.
+   * <p>
+   * Whenever "allowNullBytes" is true, "removeNullBytes" must be false. Use the methods {@link #copyByteBufferToMemoryAllowingNullBytes}
+   * and {@link #copyByteBufferToMemoryDisallowingNullBytes} to copy between the memory
+   * <p>
+   * @throws InvalidNullByteException if "allowNullBytes" and "removeNullBytes" is false and a null byte is encountered
+   */
+  private static void copyByteBufferToMemory(
+      final ByteBuffer src,
+      final WritableMemory dst,
+      final long dstPosition,
+      final int len,
+      final boolean allowNullBytes,
+      final boolean removeNullBytes
   )
   {
     if (src.remaining() < len) {
@@ -262,21 +294,39 @@ public class FrameWriterUtils
     }
 
     final int srcEnd = src.position() + len;
-    long q = dstPosition;
 
-    for (int p = src.position(); p < srcEnd; p++, q++) {
-      final byte b = src.get(p);
-
-      if (!allowNullBytes && b == 0) {
-        ByteBuffer duplicate = src.duplicate();
-        duplicate.limit(srcEnd);
-        throw InvalidNullByteException.builder()
-                                      .value(StringUtils.fromUtf8(duplicate))
-                                      .position(p - src.position())
-                                      .build();
+    if (allowNullBytes) {
+      if (src.hasArray()) {
+        // Null bytes are ignored and the src buffer is backed by an array. Bulk copying to the destination would be the fastest
+        dst.putByteArray(dstPosition, src.array(), src.arrayOffset() + src.position(), len);
+      } else {
+        // Null bytes are ignored and the src buffer is not backed by an array. We can copy the byte buffer to the destination individually
+        long q = dstPosition;
+        for (int p = src.position(); p < srcEnd; p++, q++) {
+          final byte b = src.get(p);
+          dst.putByte(q, b);
+        }
       }
+    } else {
+      long q = dstPosition;
+      for (int p = src.position(); p < srcEnd; p++) {
+        final byte b = src.get(p);
 
-      dst.putByte(q, b);
+        if (b == 0) {
+          if (!removeNullBytes) {
+            // Cannot ignore the null byte, but cannot remove them as well. Therefore, throw an error.
+            ByteBuffer duplicate = src.duplicate();
+            duplicate.limit(srcEnd);
+            throw InvalidNullByteException.builder()
+                                          .value(StringUtils.fromUtf8(duplicate))
+                                          .position(p - src.position())
+                                          .build();
+          }
+        } else {
+          dst.putByte(q, b);
+          q++;
+        }
+      }
     }
   }
 
