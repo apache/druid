@@ -27,7 +27,7 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.segment.realtime.appenderator.UsedSegmentChecker;
+import org.apache.druid.segment.realtime.appenderator.PublishedSegmentRetriever;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
@@ -40,13 +40,13 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-public class ActionBasedUsedSegmentChecker implements UsedSegmentChecker
+public class ActionBasedPublishedSegmentRetriever implements PublishedSegmentRetriever
 {
-  private static final Logger log = new Logger(ActionBasedUsedSegmentChecker.class);
+  private static final Logger log = new Logger(ActionBasedPublishedSegmentRetriever.class);
 
   private final TaskActionClient taskActionClient;
 
-  public ActionBasedUsedSegmentChecker(TaskActionClient taskActionClient)
+  public ActionBasedPublishedSegmentRetriever(TaskActionClient taskActionClient)
   {
     this.taskActionClient = taskActionClient;
   }
@@ -92,7 +92,7 @@ public class ActionBasedUsedSegmentChecker implements UsedSegmentChecker
         Iterables.transform(segmentIds, SegmentId::getInterval)
     );
     final Collection<DataSegment> foundUsedSegments = taskActionClient.submit(
-        new RetrieveUsedSegmentsAction(dataSource, null, usedSearchIntervals, Segments.INCLUDING_OVERSHADOWED)
+        new RetrieveUsedSegmentsAction(dataSource, usedSearchIntervals, Segments.INCLUDING_OVERSHADOWED)
     );
     for (DataSegment segment : foundUsedSegments) {
       if (segmentIds.contains(segment.getId())) {

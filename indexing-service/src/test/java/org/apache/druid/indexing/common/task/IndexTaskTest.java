@@ -1603,8 +1603,8 @@ public class IndexTaskTest extends IngestionTestBase
             tmpFile.toURI()
         ),
         "Unable to parse value[notnumber] for field[val]",
-        "could not convert value [notnumber] to float",
-        "could not convert value [notnumber] to long",
+        "Could not convert value [notnumber] to float for dimension [dimFloat].",
+        "Could not convert value [notnumber] to long for dimension [dimLong].",
         StringUtils.format(
             "Timestamp[unparseable] is unparseable! Event: {time=unparseable, dim=a, dimLong=2, dimFloat=3.0, val=1} (Path: %s, Record: 1, Line: 1)",
             tmpFile.toURI()

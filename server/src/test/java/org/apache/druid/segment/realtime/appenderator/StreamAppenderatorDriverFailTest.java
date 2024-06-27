@@ -133,7 +133,7 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
         createPersistFailAppenderator(),
         allocator,
         segmentHandoffNotifierFactory,
-        new NoopUsedSegmentChecker(),
+        new NoopPublishedSegmentRetriever(),
         dataSegmentKiller,
         OBJECT_MAPPER,
         new SegmentGenerationMetrics()
@@ -171,7 +171,7 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
         createPushFailAppenderator(),
         allocator,
         segmentHandoffNotifierFactory,
-        new NoopUsedSegmentChecker(),
+        new NoopPublishedSegmentRetriever(),
         dataSegmentKiller,
         OBJECT_MAPPER,
         new SegmentGenerationMetrics()
@@ -209,7 +209,7 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
         createDropFailAppenderator(),
         allocator,
         segmentHandoffNotifierFactory,
-        new NoopUsedSegmentChecker(),
+        new NoopPublishedSegmentRetriever(),
         dataSegmentKiller,
         OBJECT_MAPPER,
         new SegmentGenerationMetrics()
@@ -260,7 +260,7 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
         new FailableAppenderator(),
         allocator,
         segmentHandoffNotifierFactory,
-        new NoopUsedSegmentChecker(),
+        new NoopPublishedSegmentRetriever(),
         dataSegmentKiller,
         OBJECT_MAPPER,
         new SegmentGenerationMetrics()
@@ -324,7 +324,7 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
     }
   }
 
-  private static class NoopUsedSegmentChecker implements UsedSegmentChecker
+  private static class NoopPublishedSegmentRetriever implements PublishedSegmentRetriever
   {
     @Override
     public Set<DataSegment> findPublishedSegments(Set<SegmentId> identifiers)
@@ -336,11 +336,6 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
   static Appenderator createPushFailAppenderator()
   {
     return new FailableAppenderator().disablePush();
-  }
-
-  static Appenderator createPushInterruptAppenderator()
-  {
-    return new FailableAppenderator().interruptPush();
   }
 
   static Appenderator createPersistFailAppenderator()

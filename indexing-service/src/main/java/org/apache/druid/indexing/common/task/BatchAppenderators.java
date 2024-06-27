@@ -19,7 +19,7 @@
 
 package org.apache.druid.indexing.common.task;
 
-import org.apache.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
+import org.apache.druid.indexing.appenderator.ActionBasedPublishedSegmentRetriever;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.java.util.common.IAE;
@@ -134,7 +134,7 @@ public final class BatchAppenderators
     return new BatchAppenderatorDriver(
         appenderator,
         segmentAllocator,
-        new ActionBasedUsedSegmentChecker(toolbox.getTaskActionClient()),
+        new ActionBasedPublishedSegmentRetriever(toolbox.getTaskActionClient()),
         toolbox.getDataSegmentKiller()
     );
   }

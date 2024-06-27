@@ -26,7 +26,6 @@ import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.Frame;
-import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.MemoryAllocatorFactory;
 import org.apache.druid.frame.segment.FrameCursorUtils;
 import org.apache.druid.frame.write.FrameWriter;
@@ -229,8 +228,7 @@ public class ScanResultValueFramesIterable implements Iterable<FrameSignaturePai
       populateCursor();
       boolean firstRowWritten = false;
 
-      final FrameWriterFactory frameWriterFactory = FrameWriters.makeFrameWriterFactory(
-          FrameType.COLUMNAR,
+      final FrameWriterFactory frameWriterFactory = FrameWriters.makeColumnBasedFrameWriterFactory(
           memoryAllocatorFactory,
           currentOutputRowSignature,
           Collections.emptyList()
@@ -369,7 +367,6 @@ public class ScanResultValueFramesIterable implements Iterable<FrameSignaturePai
       nullTypedColumns = currentNullTypedColumns;
       currentRows = formattedRows;
       currentRowIndex = 0;
-
 
       return compatible;
     }

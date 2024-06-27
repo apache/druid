@@ -38,7 +38,7 @@ import java.util.concurrent.Future;
     @JsonSubTypes.Type(name = "segmentTransactionalInsert", value = SegmentTransactionalInsertAction.class),
     @JsonSubTypes.Type(name = "segmentTransactionalAppend", value = SegmentTransactionalAppendAction.class),
     @JsonSubTypes.Type(name = "segmentTransactionalReplace", value = SegmentTransactionalReplaceAction.class),
-    @JsonSubTypes.Type(name = "segmentListById", value = RetrieveSegmentsByIdAction.class),
+    @JsonSubTypes.Type(name = "retrieveSegmentsById", value = RetrieveSegmentsByIdAction.class),
     @JsonSubTypes.Type(name = "segmentListUsed", value = RetrieveUsedSegmentsAction.class),
     @JsonSubTypes.Type(name = "segmentListUnused", value = RetrieveUnusedSegmentsAction.class),
     @JsonSubTypes.Type(name = "markSegmentsAsUnused", value = MarkSegmentsAsUnusedAction.class),

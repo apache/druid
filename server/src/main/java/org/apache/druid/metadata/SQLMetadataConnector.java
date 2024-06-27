@@ -318,7 +318,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
 
   public void createSegmentTable(final String tableName)
   {
-    List<String> columns = new ArrayList<>();
+    final List<String> columns = new ArrayList<>();
     columns.add("id VARCHAR(255) NOT NULL");
     columns.add("dataSource VARCHAR(255) %4$s NOT NULL");
     columns.add("created_date VARCHAR(255) NOT NULL");

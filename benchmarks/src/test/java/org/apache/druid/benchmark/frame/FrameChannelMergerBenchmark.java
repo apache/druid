@@ -351,11 +351,11 @@ public class FrameChannelMergerBenchmark
         channels.stream().map(BlockingQueueFrameChannel::readable).collect(Collectors.toList()),
         frameReader,
         outputChannel.writable(),
-        FrameWriters.makeFrameWriterFactory(
-            FrameType.ROW_BASED,
+        FrameWriters.makeRowBasedFrameWriterFactory(
             new ArenaMemoryAllocatorFactory(1_000_000),
             signature,
-            sortKey
+            sortKey,
+            false
         ),
         sortKey,
         null,
