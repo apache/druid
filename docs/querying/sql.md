@@ -410,10 +410,9 @@ To solve this issue, explicitly provide the type of the dynamic parameter using 
 SELECT * FROM druid.foo WHERE dim1 like CONCAT('%', CAST (? AS VARCHAR), '%')
 ```
 
-With the support of dynamic parameters extended to arrays, an array with a huge number of entries can be
-programmatically supplied through a parameter.
+Arrays can also be passed as dynamic parameters.
 
-for example 
+for example:
 ```json
 {
     "query": "SELECT doubleArrayColumn from druid.table where ARRAY_CONTAINS(?, doubleArrayColumn)",
