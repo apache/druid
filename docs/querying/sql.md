@@ -416,17 +416,17 @@ for example:
 ```json
 {
     "query": "SELECT doubleArrayColumn from druid.table where ARRAY_CONTAINS(?, doubleArrayColumn)",
-    "Parameters":[
+    "parameters":[
       {"type":"ARRAY", "value":[-25.7, null, 36.85]}
     ]
 }
 ```
 
-Also, an IN filter being supplied with a lot of values, can be replaced by a dynamic parameter passed inside [SCALAR_IN_ARRAY](sql-array-functions.md)
+Also, an IN filter being supplied with a lot of values, can be replaced by a dynamic parameter passed inside [SCALAR_IN_ARRAY](sql-functions.md#scalar_in_array)
 ```json
 {
     "query": "SELECT count(city) from druid.table where SCALAR_IN_ARRAY(city, ?)",
-    "Parameters":[
+    "parameters":[
       {"type":"ARRAY", "value":["Vienna", "Seoul", "San Francisco"]}
     ]
 }
