@@ -108,6 +108,12 @@ public class EqualityFilterTests
           NotDimFilter.of(new EqualityFilter("dim0", ColumnType.LONG, 1L, null)),
           ImmutableList.of("0", "2", "3", "4", "5")
       );
+
+      assertFilterMatches(new EqualityFilter("dim0", ColumnType.DOUBLE, 1, null), ImmutableList.of("1"));
+      assertFilterMatches(
+          NotDimFilter.of(new EqualityFilter("dim0", ColumnType.DOUBLE, 1, null)),
+          ImmutableList.of("0", "2", "3", "4", "5")
+      );
     }
 
     @Test

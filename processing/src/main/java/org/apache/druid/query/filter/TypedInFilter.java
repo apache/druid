@@ -39,6 +39,7 @@ import com.google.common.hash.Hashing;
 import it.unimi.dsi.fastutil.doubles.DoubleOpenHashSet;
 import it.unimi.dsi.fastutil.floats.FloatOpenHashSet;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
+import it.unimi.dsi.fastutil.objects.ObjectAVLTreeSet;
 import it.unimi.dsi.fastutil.objects.ObjectArrays;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.InvalidInput;
@@ -48,6 +49,7 @@ import org.apache.druid.math.expr.Evals;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.query.filter.vector.VectorValueMatcherColumnProcessorFactory;
+import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -301,9 +303,11 @@ public class TypedInFilter extends AbstractOptimizableDimFilter implements Filte
       }
     }
 
-    final ValueSetIndexes valueSetIndexes = indexSupplier.as(ValueSetIndexes.class);
-    if (valueSetIndexes != null) {
-      return valueSetIndexes.forSortedValues(sortedMatchValues.get(), matchValueType);
+    if (EqualityFilter.useSimpleEquality(selector.getColumnCapabilities(column), matchValueType)) {
+      final ValueSetIndexes valueSetIndexes = indexSupplier.as(ValueSetIndexes.class);
+      if (valueSetIndexes != null) {
+        return valueSetIndexes.forSortedValues(sortedMatchValues.get(), matchValueType);
+      }
     }
 
     return Filters.makePredicateIndex(
@@ -541,8 +545,14 @@ public class TypedInFilter extends AbstractOptimizableDimFilter implements Filte
         return DruidPredicateMatch.of(index >= 0);
       };
     }
+    final Set<String> stringSet;
+    // when matching strings to numeric match values, use numeric comparator to implicitly cast the string to number
+    if (matchValueType.isNumeric()) {
+      stringSet = new ObjectAVLTreeSet<>(StringComparators.NUMERIC);
+    } else {
+      stringSet = Sets.newHashSetWithExpectedSize(sortedValues.size());
+    }
     // convert set to strings
-    final Set<String> stringSet = Sets.newHashSetWithExpectedSize(sortedValues.size());
     for (Object o : sortedValues) {
       stringSet.add(Evals.asString(o));
     }
