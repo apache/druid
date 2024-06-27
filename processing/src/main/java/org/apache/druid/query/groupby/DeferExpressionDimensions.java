@@ -71,7 +71,7 @@ public enum DeferExpressionDimensions
           return false;
         }
 
-        if (!capabilities.isNumeric() && !capabilities.isDictionaryEncoded().isTrue()) {
+        if (!capabilities.isNumeric() && !DeferExpressionDimensions.isDictionaryEncodedString(capabilities)) {
           // Not fixed-width.
           return false;
         }
@@ -106,7 +106,7 @@ public enum DeferExpressionDimensions
 
         allNumericInputs = allNumericInputs && capabilities.isNumeric();
 
-        if (!capabilities.isNumeric() && !capabilities.isDictionaryEncoded().isTrue()) {
+        if (!capabilities.isNumeric() && !DeferExpressionDimensions.isDictionaryEncodedString(capabilities)) {
           // Not fixed-width.
           return false;
         }
@@ -160,6 +160,16 @@ public enum DeferExpressionDimensions
   public String toString()
   {
     return jsonName;
+  }
+
+
+  /**
+   * {@link VectorColumnSelectorFactory} currently can only make dictionary encoded selectors for string types, so
+   * we can only consider them as fixed width
+   */
+  private static boolean isDictionaryEncodedString(ColumnCapabilities capabilities)
+  {
+    return capabilities.isDictionaryEncoded().isTrue() && capabilities.is(ValueType.STRING);
   }
 
   /**
