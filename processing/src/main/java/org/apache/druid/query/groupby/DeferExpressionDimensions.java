@@ -71,7 +71,7 @@ public enum DeferExpressionDimensions
           return false;
         }
 
-        if (!capabilities.isNumeric() && !capabilities.isDictionaryEncoded().isTrue()) {
+        if (!capabilities.isNumeric() && !isDictionaryEncodedScalarString(capabilities)) {
           // Not fixed-width.
           return false;
         }
@@ -106,7 +106,7 @@ public enum DeferExpressionDimensions
 
         allNumericInputs = allNumericInputs && capabilities.isNumeric();
 
-        if (!capabilities.isNumeric() && !capabilities.isDictionaryEncoded().isTrue()) {
+        if (!capabilities.isNumeric() && !isDictionaryEncodedScalarString(capabilities)) {
           // Not fixed-width.
           return false;
         }
@@ -160,6 +160,25 @@ public enum DeferExpressionDimensions
   public String toString()
   {
     return jsonName;
+  }
+
+
+  /**
+   * {@link VectorColumnSelectorFactory} currently can only make dictionary encoded selectors for string types, so
+   * we can only consider them as fixed width. Additionally, to err on the side of safety, multi-value string columns
+   * are also not considered fixed width because expressions process multi-value dimensions as single rows, so we would
+   * need all dictionary ids to be present in the combined key.
+   *
+   * At the time of this javadoc, vector group by does not support multi-value dimensions anyway, so this isn't really
+   * a problem, but if it did, we could consider allowing them if we ensure that all multi-value inputs are used as
+   * scalars and so the expression can be applied separately to each individual dictionary id (e.g. the equivalent of
+   * {@link ExpressionPlan.Trait#SINGLE_INPUT_MAPPABLE} but for all multi-value string inputs of the expression).
+   */
+  private static boolean isDictionaryEncodedScalarString(ColumnCapabilities capabilities)
+  {
+    return capabilities.isDictionaryEncoded().isTrue() &&
+           capabilities.is(ValueType.STRING) &&
+           capabilities.hasMultipleValues().isFalse();
   }
 
   /**
