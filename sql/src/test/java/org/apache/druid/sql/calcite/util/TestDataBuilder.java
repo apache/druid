@@ -842,7 +842,7 @@ public class TestDataBuilder
         .inputTmpDir(new File(tmpDir, "9-input"))
         .buildMMappedIndex();
 
-    SpecificSegmentsQuerySegmentWalker querySegmentWalker = SpecificSegmentsQuerySegmentWalker.createWalker(
+    return SpecificSegmentsQuerySegmentWalker.createWalker(
         injector,
         conglomerate,
         injector.getInstance(SegmentWrangler.class),
@@ -949,14 +949,14 @@ public class TestDataBuilder
                    .build(),
         makeWikipediaIndex(tmpDir)
     ).add(
-        DataSegment.builder()
-                   .dataSource(CalciteTests.WIKIPEDIA_FIRST_LAST)
-                   .interval(Intervals.of("2015-09-12/2015-09-13"))
-                   .version("1")
-                   .shardSpec(new NumberedShardSpec(0, 0))
-                   .size(0)
-                   .build(),
-        makeWikipediaIndexWithAggregation(tmpDir)
+      DataSegment.builder()
+                 .dataSource(CalciteTests.WIKIPEDIA_FIRST_LAST)
+                 .interval(Intervals.of("2015-09-12/2015-09-13"))
+                 .version("1")
+                 .shardSpec(new NumberedShardSpec(0, 0))
+                 .size(0)
+                 .build(),
+      makeWikipediaIndexWithAggregation(tmpDir)
     ).add(
         DataSegment.builder()
                    .dataSource(CalciteTests.ARRAYS_DATASOURCE)
@@ -967,8 +967,6 @@ public class TestDataBuilder
                    .build(),
         arraysIndex
     );
-
-    return querySegmentWalker;
   }
 
   public static void attachIndexesForDrillTestDatasources(SpecificSegmentsQuerySegmentWalker segmentWalker, File tmpDir)
