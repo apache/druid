@@ -1,0 +1,31 @@
+// Licensed to the Apache Software Foundation (ASF) under one or more
+// contributor license agreements.  See the NOTICE file distributed with
+// this work for additional information regarding copyright ownership.
+// The ASF licenses this file to You under the Apache License, Version 2.0
+// (the "License"); you may not use this file except in compliance with
+// the License.  You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+
+package org.apache.druid.grpc.results;
+option java_package = "org.apache.druid.grpc.proto";
+
+message AllTypesQueryResult {
+  google.protobuf.Timestamp time_value = 1;
+  string string_value = 2;
+  int64 long_value = 3;
+  // Use of a 'float' type will cause a runtime error. SQL 'FLOAT'
+  // types are actually stored as 'double' internally.
+  double float_value = 4;
+  double double_value = 5;
+}
