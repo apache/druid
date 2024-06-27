@@ -100,6 +100,7 @@ public class DataSegmentPlusTest
         usedStatusLastUpdatedDate,
         null,
         null,
+        null,
         null
     );
 

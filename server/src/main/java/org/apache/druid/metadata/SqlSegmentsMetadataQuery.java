@@ -286,7 +286,7 @@ public class SqlSegmentsMetadataQuery
     if (includeSchemaInfo) {
       final Query<Map<String, Object>> query = handle.createQuery(
           StringUtils.format(
-              "SELECT payload, used, schema_fingerprint, num_rows FROM %s WHERE dataSource = :dataSource %s",
+              "SELECT payload, used, root_segment_id, schema_fingerprint, num_rows FROM %s WHERE dataSource = :dataSource %s",
               dbTables.getSegmentsTable(), getParameterizedInConditionForColumn("id", segmentIds)
           )
       );
@@ -298,15 +298,16 @@ public class SqlSegmentsMetadataQuery
           .setFetchSize(connector.getStreamingFetchSize())
           .map(
               (index, r, ctx) -> {
-                String schemaFingerprint = (String) r.getObject(3);
-                Long numRows = (Long) r.getObject(4);
+                String schemaFingerprint = (String) r.getObject(4);
+                Long numRows = (Long) r.getObject(5);
                 return new DataSegmentPlus(
                     JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class),
                     null,
                     null,
                     r.getBoolean(2),
                     schemaFingerprint,
-                    numRows
+                    numRows,
+                    r.getString(3)
                 );
               }
           )
@@ -314,7 +315,7 @@ public class SqlSegmentsMetadataQuery
     } else {
       final Query<Map<String, Object>> query = handle.createQuery(
           StringUtils.format(
-              "SELECT payload, used FROM %s WHERE dataSource = :dataSource %s",
+              "SELECT payload, used, root_segment_id FROM %s WHERE dataSource = :dataSource %s",
               dbTables.getSegmentsTable(), getParameterizedInConditionForColumn("id", segmentIds)
           )
       );
@@ -331,7 +332,8 @@ public class SqlSegmentsMetadataQuery
                   null,
                   r.getBoolean(2),
                   null,
-                  null
+                  null,
+                  r.getString(3)
               )
           )
           .iterator();
@@ -862,6 +864,7 @@ public class SqlSegmentsMetadataQuery
             JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class),
             DateTimes.of(r.getString(2)),
             DateTimes.of(r.getString(3)),
+            null,
             null,
             null,
             null

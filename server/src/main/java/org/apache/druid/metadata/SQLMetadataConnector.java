@@ -587,6 +587,11 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     Map<String, String> columnNameTypes = new HashMap<>();
     columnNameTypes.put("used_status_last_updated", "VARCHAR(255)");
 
+    // root_segment_id is the segment id is the first / root segment to which the same load spec originally belonged
+    // Load specs can be shared as a result of segment version upgrade
+    // This column is null for segments that haven't been upgraded.
+    columnNameTypes.put("root_segment_id", "VARCHAR(255)");
+
     if (centralizedDatasourceSchemaConfig.isEnabled()) {
       columnNameTypes.put("schema_fingerprint", "VARCHAR(255)");
       columnNameTypes.put("num_rows", "BIGINT");
@@ -619,6 +624,14 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     }
 
     alterTable(tableName, alterCommands);
+
+    final Set<String> createdIndexSet = getIndexOnTable(tableName);
+    createIndex(
+        tableName,
+        StringUtils.format("idx_%1$s_datasource_root_segment_id", tableName),
+        ImmutableList.of("dataSource", "root_segment_id"),
+        createdIndexSet
+    );
   }
 
   @Override
