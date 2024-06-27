@@ -249,7 +249,10 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
       if (rowSignature.getColumnNames().isEmpty()) {
         // this case could arise when metadata refresh is disabled on broker
         // and a new datasource is added
-        log.info("datasource [%s] has empty signature.", dataSource);
+        log.info("datasource [%s] schema has not been initialized yet, "
+                 + "check coordinator logs if this message is persistent.", dataSource);
+        // this is a harmless call
+        tables.remove(dataSource);
         continue;
       }
 
