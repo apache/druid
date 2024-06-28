@@ -91,7 +91,6 @@ public class DoubleStorageTest extends InitializedNullHandlingTest
   );
 
   private static final ScanQueryQueryToolChest SCAN_QUERY_QUERY_TOOL_CHEST = new ScanQueryQueryToolChest(
-      new ScanQueryConfig(),
       DefaultGenericQueryMetricsFactory.instance()
   );
 
@@ -107,8 +106,7 @@ public class DoubleStorageTest extends InitializedNullHandlingTest
                  .dataSource(new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE))
                  .columns(Collections.emptyList())
                  .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
-                 .limit(Integer.MAX_VALUE)
-                 .legacy(false);
+                 .limit(Integer.MAX_VALUE);
   }
 
 

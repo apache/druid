@@ -73,7 +73,6 @@ DruidProject(dim1=[CAST('10.1':VARCHAR):VARCHAR], __time=[$1], druid=[logical])
           "matchValue" : "10.1"
         },
         "columns" : [ "__time", "v0" ],
-        "legacy" : false,
         "columnTypes" : [ "LONG", "STRING" ],
         "granularity" : {
           "type" : "all"
@@ -106,7 +105,6 @@ DruidProject(dim1=[CAST('10.1':VARCHAR):VARCHAR], __time=[$1], druid=[logical])
           "matchValue" : "10.1"
         },
         "columns" : [ "v0" ],
-        "legacy" : false,
         "columnTypes" : [ "STRING" ],
         "granularity" : {
           "type" : "all"
@@ -129,7 +127,6 @@ DruidProject(dim1=[CAST('10.1':VARCHAR):VARCHAR], __time=[$1], druid=[logical])
   } ],
   "resultFormat" : "compactedList",
   "columns" : [ "__time", "_v0" ],
-  "legacy" : false,
   "columnTypes" : [ "LONG", "STRING" ],
   "granularity" : {
     "type" : "all"

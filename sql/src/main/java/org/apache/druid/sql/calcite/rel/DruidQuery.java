@@ -1678,7 +1678,6 @@ public class DruidQuery
         orderByColumns,
         filtration.getDimFilter(),
         scanColumnsList,
-        false,
         withScanSignatureIfNeeded(
             virtualColumns,
             scanColumnsList,

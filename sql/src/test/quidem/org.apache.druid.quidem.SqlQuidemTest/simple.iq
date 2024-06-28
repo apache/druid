@@ -39,7 +39,6 @@ select cityName, countryName from wikipedia where cityName='New York' limit 1;
     "matchValue" : "New York"
   },
   "columns" : [ "cityName", "countryName" ],
-  "legacy" : false,
   "columnTypes" : [ "STRING", "STRING" ],
   "granularity" : {
     "type" : "all"

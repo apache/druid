@@ -278,7 +278,6 @@ public class AggregationTestHelper implements Closeable
     ObjectMapper mapper = TestHelper.makeJsonMapper();
 
     ScanQueryQueryToolChest toolchest = new ScanQueryQueryToolChest(
-        new ScanQueryConfig(),
         DefaultGenericQueryMetricsFactory.instance()
     );
 

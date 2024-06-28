@@ -74,10 +74,7 @@ public class ScanQueryRunnerFactoryTest
   };
 
   private static final ScanQueryRunnerFactory FACTORY = new ScanQueryRunnerFactory(
-      new ScanQueryQueryToolChest(
-          CONFIG,
-          DefaultGenericQueryMetricsFactory.instance()
-      ),
+      new ScanQueryQueryToolChest(DefaultGenericQueryMetricsFactory.instance()),
       new ScanQueryEngine(),
       CONFIG
   );

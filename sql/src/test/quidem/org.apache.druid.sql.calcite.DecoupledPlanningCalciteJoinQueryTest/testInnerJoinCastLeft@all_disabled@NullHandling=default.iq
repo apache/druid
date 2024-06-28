@@ -60,7 +60,6 @@ DruidProject(m1=[$0], k=[$2], v=[$3], druid=[logical])
         } ],
         "resultFormat" : "compactedList",
         "columns" : [ "m1", "v0" ],
-        "legacy" : false,
         "columnTypes" : [ "FLOAT", "STRING" ],
         "granularity" : {
           "type" : "all"
@@ -81,7 +80,6 @@ DruidProject(m1=[$0], k=[$2], v=[$3], druid=[logical])
   },
   "resultFormat" : "compactedList",
   "columns" : [ "j0.k", "j0.v", "m1" ],
-  "legacy" : false,
   "columnTypes" : [ "STRING", "STRING", "FLOAT" ],
   "granularity" : {
     "type" : "all"

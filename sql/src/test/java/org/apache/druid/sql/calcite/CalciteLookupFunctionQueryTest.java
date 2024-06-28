@@ -1748,7 +1748,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
                     expressionVirtualColumn("v0", "null", ColumnType.STRING)
                 )
                 .columns("v0")
-                .legacy(false)
                 .filters(isNull("dim2"))
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(QUERY_CONTEXT_DEFAULT)
@@ -1785,7 +1784,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
                     expressionVirtualColumn("v0", "null", ColumnType.STRING)
                 )
                 .columns("v0")
-                .legacy(false)
                 .filters(isNull("dim2"))
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(QUERY_CONTEXT_DEFAULT)
@@ -2140,7 +2138,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
               .columns("$f1", "EXPR$0")
               .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
               .context(QUERY_CONTEXT)
-              .legacy(false)
               .build()
     );
   }

@@ -262,12 +262,8 @@ public class ScanBenchmark
         rowsPerSegment
     );
 
-    final ScanQueryConfig config = new ScanQueryConfig().setLegacy(false);
     factory = new ScanQueryRunnerFactory(
-        new ScanQueryQueryToolChest(
-            config,
-            DefaultGenericQueryMetricsFactory.instance()
-        ),
+        new ScanQueryQueryToolChest(DefaultGenericQueryMetricsFactory.instance()),
         new ScanQueryEngine(),
         new ScanQueryConfig()
     );

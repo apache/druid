@@ -474,7 +474,6 @@ The response shows an example report for a query.
                   "agent_type",
                   "timestamp"
                 ],
-                "legacy": false,
                 "context": {
                   "finalize": false,
                   "finalizeAggregations": false,

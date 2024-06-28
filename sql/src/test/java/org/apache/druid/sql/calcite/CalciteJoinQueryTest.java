@@ -3515,7 +3515,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
               .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
               .filters(equality("m2", "1000", ColumnType.DOUBLE))
               .columns("dim2")
-              .legacy(false)
               .build()
     );
 
@@ -3545,7 +3544,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                       false
                                   ))
                                   .columns("dim2")
-                                  .legacy(false)
                                   .build()
                         ),
                         rightTable,
@@ -5633,7 +5631,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                   .columns("l1")
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .context(queryContext)
-                  .legacy(false)
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .build()
         ),
@@ -6173,7 +6170,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                 .intervals(querySegmentSpec(Filtration.eternity()))
                                 .dataSource(CalciteTests.DATASOURCE3)
                                 .columns("dim2")
-                                .legacy(false)
                                 .context(context)
                                 .build()
                         ),
@@ -6232,7 +6228,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                 .intervals(querySegmentSpec(Filtration.eternity()))
                                 .dataSource(CalciteTests.DATASOURCE3)
                                 .columns("dim2")
-                                .legacy(false)
                                 .context(context)
                                 .build()
                         ),
@@ -6287,7 +6282,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                         .intervals(querySegmentSpec(Filtration.eternity()))
                                         .dataSource(CalciteTests.DATASOURCE1)
                                         .filters(in("dim2", ImmutableList.of("a", "b", "ab", "abc")))
-                                        .legacy(false)
                                         .context(context)
                                         .columns("dim2")
                                         .build()
@@ -6304,7 +6298,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                 .intervals(querySegmentSpec(Filtration.eternity()))
                                 .dataSource(CalciteTests.DATASOURCE3)
                                 .columns("dim2")
-                                .legacy(false)
                                 .context(context)
                                 .build()
                         ),
@@ -6379,7 +6372,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                     null
                                 ))
                                 .columns("dim2", "j0.unnest")
-                                .legacy(false)
                                 .context(context)
                                 .build()
                         ),
@@ -6451,7 +6443,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                                     ImmutableList.of("a", "ab", "abc", "b")
                                                 )
                                             )
-                                            .legacy(false)
                                             .context(context)
                                             .build()
                                     ),
@@ -6471,7 +6462,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                 .intervals(querySegmentSpec(Filtration.eternity()))
                                 .dataSource(CalciteTests.DATASOURCE3)
                                 .columns("dim2")
-                                .legacy(false)
                                 .context(context)
                                 .build()
                         ),

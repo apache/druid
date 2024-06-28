@@ -304,7 +304,6 @@ The following native Scan query returns the rows of the datasource and unnests t
     "m2",
     "unnest-dim3"
   ],
-  "legacy": false,
   "granularity": {
     "type": "all"
   },
@@ -480,7 +479,6 @@ This query joins the `nested_data` table with itself and outputs the unnested da
               "m2",
               "v0"
             ],
-            "legacy": false,
             "context": {
               "sqlOuterLimit": 1001,
               "useNativeQueryExplain": true
@@ -523,7 +521,6 @@ This query joins the `nested_data` table with itself and outputs the unnested da
     "m2",
     "unnest-dim3"
   ],
-  "legacy": false,
   "context": {
     "sqlOuterLimit": 1001,
     "useNativeQueryExplain": true
@@ -572,7 +569,6 @@ The following query returns the columns `dim45` and `m1`. The `dim45` column is 
     "dim45",
     "m1"
   ],
-  "legacy": false,
   "granularity": {
     "type": "all"
   },
@@ -632,7 +628,6 @@ The following Scan query unnests the column `dim3` into `d3` and a virtual colum
     "dim5",
     "d45"
   ],
-  "legacy": false,
   "context": {
     "queryId": "2618b9ce-6c0d-414e-b88d-16fb59b9c481",
     "sqlOuterLimit": 1001,

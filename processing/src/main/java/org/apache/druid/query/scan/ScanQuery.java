@@ -187,7 +187,6 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
   private final long scanRowsLimit;
   private final DimFilter dimFilter;
   private final List<String> columns;
-  private final Boolean legacy;
   private final Order timeOrder;
   private final List<OrderBy> orderBys;
   private final Integer maxRowsQueuedForOrdering;
@@ -207,7 +206,6 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
       @JsonProperty("orderBy") List<OrderBy> orderBysFromUser,
       @JsonProperty("filter") DimFilter dimFilter,
       @JsonProperty("columns") List<String> columns,
-      @JsonProperty("legacy") Boolean legacy,
       @JsonProperty("context") Map<String, Object> context,
       @JsonProperty("columnTypes") List<ColumnType> columnTypes
   )
@@ -232,7 +230,6 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     );
     this.dimFilter = dimFilter;
     this.columns = columns;
-    this.legacy = legacy;
     this.columnTypes = columnTypes;
 
     if (columnTypes != null) {
@@ -446,21 +443,6 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     return columnTypes;
   }
 
-  /**
-   * Compatibility mode with the legacy scan-query extension.
-   *
-   * True, false, and null have different meanings: true/false mean "legacy" and "not legacy"; null means use the
-   * default set by {@link ScanQueryConfig#isLegacy()}. The method {@link #withNonNullLegacy} is provided to help
-   * with this.
-   */
-  @Nullable
-  @JsonProperty
-  @JsonInclude(JsonInclude.Include.NON_NULL)
-  public Boolean isLegacy()
-  {
-    return legacy;
-  }
-
   @Override
   public Ordering<ScanResultValue> getResultOrdering()
   {
@@ -507,11 +489,6 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     return Druids.ScanQueryBuilder.copy(this).limit(newLimit).build();
   }
 
-  public ScanQuery withNonNullLegacy(final ScanQueryConfig scanQueryConfig)
-  {
-    return Druids.ScanQueryBuilder.copy(this).legacy(legacy != null ? legacy : scanQueryConfig.isLegacy()).build();
-  }
-
   @Override
   public ScanQuery withQuerySegmentSpec(QuerySegmentSpec querySegmentSpec)
   {
@@ -546,7 +523,6 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     return batchSize == scanQuery.batchSize &&
            scanRowsOffset == scanQuery.scanRowsOffset &&
            scanRowsLimit == scanQuery.scanRowsLimit &&
-           Objects.equals(legacy, scanQuery.legacy) &&
            Objects.equals(virtualColumns, scanQuery.virtualColumns) &&
            Objects.equals(resultFormat, scanQuery.resultFormat) &&
            Objects.equals(dimFilter, scanQuery.dimFilter) &&
@@ -566,8 +542,7 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
         scanRowsLimit,
         dimFilter,
         columns,
-        orderBys,
-        legacy
+        orderBys
     );
   }
 
@@ -585,7 +560,6 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
            ", dimFilter=" + dimFilter +
            ", columns=" + columns +
            (orderBys.isEmpty() ? "" : ", orderBy=" + orderBys) +
-           (legacy == null ? "" : ", legacy=" + legacy) +
            ", context=" + getContext() +
            '}';
   }
@@ -711,12 +685,6 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
   @Nullable
   public RowSignature getRowSignature()
   {
-    return getRowSignature(false);
-  }
-
-  @Nullable
-  public RowSignature getRowSignature(boolean defaultIsLegacy)
-  {
     if (columns == null || columns.isEmpty()) {
       // Note: if no specific list of columns is provided, then since we can't predict what columns will come back, we
       // unfortunately can't do array-based results. In this case, there is a major difference between standard and
@@ -731,15 +699,7 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
       }
       return builder.build();
     }
-    return guessRowSignature(defaultIsLegacy);
-  }
-
-  private RowSignature guessRowSignature(boolean defaultIsLegacy)
-  {
     final RowSignature.Builder builder = RowSignature.builder();
-    if (Boolean.TRUE.equals(legacy) || (legacy == null && defaultIsLegacy)) {
-      builder.add(ScanQueryEngine.LEGACY_TIMESTAMP_KEY, null);
-    }
     DataSource dataSource = getDataSource();
     for (String columnName : columns) {
       final ColumnType columnType = guessColumnType(columnName, virtualColumns, dataSource);

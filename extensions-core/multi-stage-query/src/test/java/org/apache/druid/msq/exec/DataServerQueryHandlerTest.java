@@ -132,7 +132,7 @@ public class DataServerQueryHandlerTest
         .build();
     QueryToolChestWarehouse queryToolChestWarehouse = new MapQueryToolChestWarehouse(
         ImmutableMap.<Class<? extends Query>, QueryToolChest>builder()
-                    .put(ScanQuery.class, new ScanQueryQueryToolChest(null, null))
+                    .put(ScanQuery.class, new ScanQueryQueryToolChest(null))
                     .build()
     );
     target = spy(

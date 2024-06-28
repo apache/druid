@@ -123,7 +123,6 @@ public class SqlStatementResourceTest extends MSQTestBase
 
 
   private static final Query<?> QUERY = new Druids.ScanQueryBuilder().resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                                                                     .legacy(false)
                                                                      .intervals(new MultipleIntervalSegmentSpec(
                                                                          Collections.singletonList(Intervals.of(
                                                                              "2011-04-01T00:00:00.000Z/2011-04-03T00:00:00.000Z"))))
