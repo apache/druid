@@ -38,8 +38,13 @@ import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.guava.Accumulator;
 import org.apache.druid.java.util.common.guava.LazySequence;
+import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.common.guava.Yielder;
+import org.apache.druid.java.util.common.guava.Yielders;
+import org.apache.druid.java.util.common.guava.YieldingAccumulator;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.BadJsonQueryException;
@@ -48,6 +53,7 @@ import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.MapQueryToolChestWarehouse;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryCapacityExceededException;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryRunner;
@@ -64,6 +70,7 @@ import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.log.TestRequestLogger;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.mocks.ExceptionalInputStream;
+import org.apache.druid.server.mocks.MockAsyncContext;
 import org.apache.druid.server.mocks.MockHttpServletRequest;
 import org.apache.druid.server.mocks.MockHttpServletResponse;
 import org.apache.druid.server.scheduling.HiLoQueryLaningStrategy;
@@ -80,6 +87,11 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.Resource;
 import org.apache.http.HttpStatus;
+import org.easymock.EasyMock;
+import org.eclipse.jetty.http.HttpFields;
+import org.eclipse.jetty.http.HttpHeader;
+import org.eclipse.jetty.server.HttpChannel;
+import org.eclipse.jetty.server.HttpOutput;
 import org.hamcrest.MatcherAssert;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -254,9 +266,10 @@ public class QueryResourceTest
   @Test
   public void testGoodQueryWithQueryConfigOverrideDefault() throws IOException
   {
-    String overrideConfigKey = "priority";
-    String overrideConfigValue = "678";
-    DefaultQueryConfig overrideConfig = new DefaultQueryConfig(ImmutableMap.of(overrideConfigKey, overrideConfigValue));
+    final String overrideConfigKey = "priority";
+    final String overrideConfigValue = "678";
+    DefaultQueryConfig overrideConfig = new DefaultQueryConfig(ImmutableMap.of(overrideConfigKey, overrideConfigValue,
+        QueryContexts.INCLUDE_TRAILER_HEADER, true));
     queryResource = new QueryResource(
         new QueryLifecycleFactory(
             WAREHOUSE,
@@ -301,6 +314,10 @@ public class QueryResourceTest
     Assert.assertEquals(
         overrideConfigValue,
         testRequestLogger.getNativeQuerylogs().get(0).getQuery().getContext().get(overrideConfigKey)
+    );
+    Assert.assertEquals(
+        overrideConfigValue,
+        testRequestLogger.getNativeQuerylogs().get(0).getQuery().getContext().get(QueryContexts.INCLUDE_TRAILER_HEADER)
     );
   }
 
@@ -375,8 +392,163 @@ public class QueryResourceTest
         overrideConfigValue,
         testRequestLogger.getNativeQuerylogs().get(0).getQuery().getContext().get(overrideConfigKey)
     );
+    Assert.assertFalse(
+        testRequestLogger.getNativeQuerylogs().get(0).getQuery().getContext().containsKey(QueryContexts.INCLUDE_TRAILER_HEADER));
   }
 
+  @Test
+  public void testResponseWithIncludeTrailerHeader() throws IOException
+  {
+    DefaultQueryConfig overrideConfig = new DefaultQueryConfig(ImmutableMap.of(QueryContexts.INCLUDE_TRAILER_HEADER, true));
+
+    queryResource = new QueryResource(
+      new QueryLifecycleFactory(
+        WAREHOUSE,
+        new QuerySegmentWalker()
+        {
+          @Override
+          public <T> QueryRunner<T> getQueryRunnerForIntervals(
+              Query<T> query,
+              Iterable<Interval> intervals
+          )
+          {
+            return (queryPlus, responseContext) -> new Sequence<T>() {
+              @Override
+              public <OutType> OutType accumulate(OutType initValue, Accumulator<OutType, T> accumulator)
+              {
+                if (accumulator instanceof QueryResultPusher.StreamingHttpResponseAccumulator) {
+                  try {
+                    ((QueryResultPusher.StreamingHttpResponseAccumulator) accumulator).flush(); // initialized
+                  }
+                  catch (IOException ignore) {
+                  }
+                }
+
+                throw new QueryTimeoutException();
+              }
+
+              @Override
+              public <OutType> Yielder<OutType> toYielder(OutType initValue, YieldingAccumulator<OutType, T> accumulator)
+              {
+                return Yielders.done(initValue, null);
+              }
+            };
+          }
+
+          @Override
+          public <T> QueryRunner<T> getQueryRunnerForSegments(
+              Query<T> query,
+              Iterable<SegmentDescriptor> specs
+          )
+          {
+            throw new UnsupportedOperationException();
+          }
+        },
+        new DefaultGenericQueryMetricsFactory(),
+        new NoopServiceEmitter(),
+        testRequestLogger,
+        new AuthConfig(),
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+        Suppliers.ofInstance(overrideConfig)
+      ),
+      jsonMapper,
+      smileMapper,
+      queryScheduler,
+      new AuthConfig(),
+      null,
+      ResponseContextConfig.newConfig(true),
+      DRUID_NODE
+    );
+
+    expectPermissiveHappyPathAuth();
+
+    org.eclipse.jetty.server.Response response = this.jettyResponseforRequest(testServletRequest);
+    Assert.assertNull(queryResource.doPost(new ByteArrayInputStream(
+        SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8)),
+        null /*pretty*/,
+        testServletRequest));
+    Assert.assertTrue(response.containsHeader(HttpHeader.TRAILER.toString()));
+    Assert.assertEquals(response.getHeader(HttpHeader.TRAILER.toString()), QueryResource.ERROR_MESSAGE_TRAILER_HEADER);
+
+    final HttpFields fields = response.getTrailers().get();
+    Assert.assertTrue(fields.containsKey(QueryResource.ERROR_MESSAGE_TRAILER_HEADER));
+    Assert.assertEquals(fields.get(QueryResource.ERROR_MESSAGE_TRAILER_HEADER),
+        "Query did not complete within configured timeout period. You can increase query timeout or tune the performance of query.");
+  }
+
+  @Test
+  public void testResponseWithoutIncludeTrailerHeader() throws IOException 
+  {
+    queryResource = new QueryResource(
+      new QueryLifecycleFactory(
+        WAREHOUSE,
+        new QuerySegmentWalker()
+        {
+          @Override
+          public <T> QueryRunner<T> getQueryRunnerForIntervals(
+              Query<T> query,
+              Iterable<Interval> intervals
+          ) 
+          {
+            return (queryPlus, responseContext) -> new Sequence<T>()
+            {
+              @Override
+              public <OutType> OutType accumulate(OutType initValue, Accumulator<OutType, T> accumulator)
+              {
+                if (accumulator instanceof QueryResultPusher.StreamingHttpResponseAccumulator) {
+                  try {
+                    ((QueryResultPusher.StreamingHttpResponseAccumulator) accumulator).flush(); // initialized
+                  }
+                  catch (IOException ignore) {
+                  }
+                }
+
+                throw new QueryTimeoutException();
+              }
+
+              @Override
+              public <OutType> Yielder<OutType> toYielder(OutType initValue, YieldingAccumulator<OutType, T> accumulator)
+              {
+                return Yielders.done(initValue, null);
+              }
+            };
+          }
+
+          @Override
+          public <T> QueryRunner<T> getQueryRunnerForSegments(
+              Query<T> query,
+              Iterable<SegmentDescriptor> specs
+          )
+          {
+            throw new UnsupportedOperationException();
+          }
+        },
+        new DefaultGenericQueryMetricsFactory(),
+        new NoopServiceEmitter(),
+        testRequestLogger,
+        new AuthConfig(),
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+        Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
+      ),
+      jsonMapper,
+      smileMapper,
+      queryScheduler,
+      new AuthConfig(),
+      null,
+      ResponseContextConfig.newConfig(true),
+      DRUID_NODE
+    );
+
+    expectPermissiveHappyPathAuth();
+
+    org.eclipse.jetty.server.Response response = this.jettyResponseforRequest(testServletRequest);
+    Assert.assertNull(queryResource.doPost(new ByteArrayInputStream(
+        SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8)),
+        null /*pretty*/,
+        testServletRequest));
+    Assert.assertFalse(response.containsHeader(HttpHeader.TRAILER.toString()));
+    Assert.assertNull(response.getTrailers());
+  }
 
   @Test
   public void testQueryThrowsRuntimeExceptionFromLifecycleExecute() throws IOException
@@ -1412,5 +1584,30 @@ public class QueryResourceTest
   ) throws IOException
   {
     return queryResource.doPost(new ByteArrayInputStream(bytes), null, req);
+  }
+
+  public org.eclipse.jetty.server.Response jettyResponseforRequest(MockHttpServletRequest req) throws IOException
+  {
+    HttpChannel channelMock = EasyMock.mock(HttpChannel.class);
+    HttpOutput outputMock = EasyMock.mock(HttpOutput.class);
+    org.eclipse.jetty.server.Response response = new org.eclipse.jetty.server.Response(channelMock, outputMock);
+
+    EasyMock.expect(channelMock.isSendError()).andReturn(false);
+    EasyMock.expect(channelMock.isCommitted()).andReturn(true);
+
+    outputMock.close();
+    EasyMock.expectLastCall().andVoid();
+
+    outputMock.write(EasyMock.anyObject(byte[].class), EasyMock.anyInt(), EasyMock.anyInt());
+    EasyMock.expectLastCall().andVoid();
+
+    EasyMock.replay(outputMock, channelMock);
+
+    req.newAsyncContext(() -> {
+      final MockAsyncContext retVal = new MockAsyncContext();
+      retVal.response = response;
+      return retVal;
+    });
+    return response;
   }
 }

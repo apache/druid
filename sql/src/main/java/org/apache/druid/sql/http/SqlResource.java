@@ -27,6 +27,7 @@ import org.apache.druid.guice.annotations.NativeQuery;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.QueryResource;
 import org.apache.druid.server.QueryResponse;
@@ -226,7 +227,8 @@ public class SqlResource
           SqlResource.QUERY_METRIC_COUNTER,
           sqlQueryId,
           MediaType.APPLICATION_JSON_TYPE,
-          headers
+          headers,
+          sqlQuery.queryContext().getBoolean(QueryContexts.INCLUDE_TRAILER_HEADER, false)
       );
       this.sqlQueryId = sqlQueryId;
       this.stmt = stmt;

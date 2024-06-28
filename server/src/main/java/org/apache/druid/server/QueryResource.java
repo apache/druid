@@ -92,6 +92,7 @@ public class QueryResource implements QueryCountStatsProvider
   public static final String HEADER_RESPONSE_CONTEXT = "X-Druid-Response-Context";
   public static final String HEADER_IF_NONE_MATCH = "If-None-Match";
   public static final String QUERY_ID_RESPONSE_HEADER = "X-Druid-Query-Id";
+  public static final String ERROR_MESSAGE_TRAILER_HEADER = "X-Error-Message";
   public static final String HEADER_ETAG = "ETag";
 
   protected final QueryLifecycleFactory queryLifecycleFactory;
@@ -492,7 +493,8 @@ public class QueryResource implements QueryCountStatsProvider
           QueryResource.this.counter,
           queryLifecycle.getQueryId(),
           MediaType.valueOf(io.getResponseWriter().getResponseType()),
-          ImmutableMap.of()
+          ImmutableMap.of(),
+          queryLifecycle.getQuery().context().getBoolean(QueryContexts.INCLUDE_TRAILER_HEADER, false)
       );
       this.req = req;
       this.queryLifecycle = queryLifecycle;

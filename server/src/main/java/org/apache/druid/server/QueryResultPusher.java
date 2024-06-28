@@ -38,6 +38,8 @@ import org.apache.druid.query.TruncatedResponseContextException;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.ForbiddenException;
+import org.eclipse.jetty.http.HttpFields;
+import org.eclipse.jetty.http.HttpHeader;
 
 import javax.annotation.Nullable;
 import javax.servlet.AsyncContext;
@@ -63,6 +65,8 @@ public abstract class QueryResultPusher
   private final QueryResource.QueryMetricCounter counter;
   private final MediaType contentType;
   private final Map<String, String> extraHeaders;
+  private final boolean includeTrailerHeader;
+  private final HttpFields trailerFields;
 
   private StreamingHttpResponseAccumulator accumulator;
   private AsyncContext asyncContext;
@@ -76,7 +80,8 @@ public abstract class QueryResultPusher
       QueryResource.QueryMetricCounter counter,
       String queryId,
       MediaType contentType,
-      Map<String, String> extraHeaders
+      Map<String, String> extraHeaders,
+      boolean includeTrailerHeader
   )
   {
     this.request = request;
@@ -87,6 +92,8 @@ public abstract class QueryResultPusher
     this.counter = counter;
     this.contentType = contentType;
     this.extraHeaders = extraHeaders;
+    this.includeTrailerHeader = includeTrailerHeader;
+    this.trailerFields = new HttpFields();
   }
 
   /**
@@ -121,6 +128,11 @@ public abstract class QueryResultPusher
       final Response.ResponseBuilder startResponse = resultsWriter.start();
       if (startResponse != null) {
         startResponse.header(QueryResource.QUERY_ID_RESPONSE_HEADER, queryId);
+
+        if (includeTrailerHeader) {
+          startResponse.header(HttpHeader.TRAILER.toString(), QueryResource.ERROR_MESSAGE_TRAILER_HEADER);
+        }
+
         for (Map.Entry<String, String> entry : extraHeaders.entrySet()) {
           startResponse.header(entry.getKey(), entry.getValue());
         }
@@ -141,6 +153,13 @@ public abstract class QueryResultPusher
       response.setHeader(QueryResource.QUERY_ID_RESPONSE_HEADER, queryId);
       for (Map.Entry<String, String> entry : extraHeaders.entrySet()) {
         response.setHeader(entry.getKey(), entry.getValue());
+      }
+
+      if (includeTrailerHeader && response instanceof org.eclipse.jetty.server.Response) {
+        org.eclipse.jetty.server.Response jettyResponse = (org.eclipse.jetty.server.Response) response;
+
+        jettyResponse.setHeader(HttpHeader.TRAILER.toString(), QueryResource.ERROR_MESSAGE_TRAILER_HEADER);
+        jettyResponse.setTrailers(() -> trailerFields);
       }
 
       accumulator = new StreamingHttpResponseAccumulator(queryResponse.getResponseContext(), resultsWriter);
@@ -223,6 +242,10 @@ public abstract class QueryResultPusher
         // also throwing the exception body into the response to make it easier for the client to choke if it manages
         // to parse a meaningful object out, but that's potentially an API change so we leave that as an exercise for
         // the future.
+
+        if (includeTrailerHeader) {
+          trailerFields.put(QueryResource.ERROR_MESSAGE_TRAILER_HEADER, e.getMessage());
+        }
         return null;
       }
     }
@@ -417,6 +440,11 @@ public abstract class QueryResultPusher
 
         response.setHeader(QueryResource.HEADER_RESPONSE_CONTEXT, serializationResult.getResult());
         response.setContentType(contentType.toString());
+
+        if (includeTrailerHeader && response instanceof org.eclipse.jetty.server.Response) {
+          org.eclipse.jetty.server.Response jettyResponse = (org.eclipse.jetty.server.Response) response;
+          jettyResponse.setTrailers(() -> trailerFields);
+        }
 
         try {
           out = new CountingOutputStream(response.getOutputStream());
