@@ -916,7 +916,7 @@ public class MSQReplaceTest extends MSQTestBase
                                                    .build();
 
     List<Object[]> expectedRows = ImmutableList.of(
-        new Object[]{946684800000L, NullHandling.sqlCompatible() ? "" : null,},
+        new Object[]{946684800000L, NullHandling.sqlCompatible() ? "" : null},
         new Object[]{978307200000L, "1"},
         new Object[]{946771200000L, "10.1"},
         new Object[]{946857600000L, "2"}
