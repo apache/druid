@@ -317,13 +317,13 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   @Override
   public String getRootSegmentId(final DataSegment segment)
   {
-    throw new UnsupportedOperationException();
+    return null;
   }
 
   @Override
   public boolean isLoadSpecUnreferenced(final DataSegment segment, final String rootSegmentId)
   {
-    throw new UnsupportedOperationException();
+    return true;
   }
 
   public Set<DataSegment> getPublished()
