@@ -1356,6 +1356,21 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   private static void bindColumnValuesToQueryWithInCondition(
       final String columnName,
       final List<String> values,
+      final Query<Map<String, Object>> query
+  )
+  {
+    if (values == null) {
+      return;
+    }
+
+    for (int i = 0; i < values.size(); i++) {
+      query.bind(StringUtils.format("%s%d", columnName, i), values.get(i));
+    }
+  }
+
+  private static void bindColumnValuesToQueryWithInCondition(
+      final String columnName,
+      final List<String> values,
       final Update query
   )
   {
@@ -2942,62 +2957,127 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   @Override
-  public boolean isLoadSpecUnreferenced(final DataSegment segment, final String rootSegmentId)
+  public Set<DataSegment> findSegmentsWithUnreferencedLoadSpecs(final Set<DataSegment> segments)
   {
-    // Check if the segment itself exists
-    if (retrieveSegmentForId(segment.getId().toString(), true) != null) {
-      return false;
+    if (segments.isEmpty()) {
+      return segments;
     }
-
-    // Check if the segment is the parent of any other segment
-    if (!getSegmentIdsWithRootSegmentId(segment.getDataSource(), segment.getId().toString()).isEmpty()) {
-      return false;
+    final String dataSource = segments.stream()
+                                      .findFirst()
+                                      .get()
+                                      .getDataSource();
+    final List<String> segmentIds = segments.stream()
+                                            .map(DataSegment::getId)
+                                            .map(SegmentId::toString)
+                                            .collect(Collectors.toList());
+    Map<String, String> idToRootMap = new HashMap<>(getRootSegmentIds(dataSource, segmentIds));
+    final Set<String> rootSegmentIds = new HashSet<>(segmentIds);
+    rootSegmentIds.addAll(idToRootMap.values());
+    idToRootMap.putAll(getSegmentsWithRootSegmentIds(dataSource, new ArrayList<>(rootSegmentIds)));
+    final Map<String, Set<String>> rootToIdsMap = new HashMap<>();
+    for (Map.Entry<String, String> idAndRoot : idToRootMap.entrySet()) {
+      rootToIdsMap.computeIfAbsent(idAndRoot.getValue(), root -> new HashSet<>())
+                  .add(idAndRoot.getKey());
     }
-
-    // Check if the segment is the child or sibling of any other segment
-    if (rootSegmentId == null) {
-      return true;
+    final Set<DataSegment> segmentsWithUnreferencedLoadSpecs = new HashSet<>();
+    final Set<String> existingSegmentIds = retrieveSegmentsById(dataSource, rootSegmentIds).stream()
+                                                                                           .map(DataSegment::getId)
+                                                                                           .map(SegmentId::toString)
+                                                                                           .collect(Collectors.toSet());
+    for (DataSegment segment : segments) {
+      final String id = segment.getId().toString();
+      final Set<String> conflicts = new HashSet<>();
+      if (rootToIdsMap.containsKey(id)) {
+        // Add children
+        conflicts.addAll(rootToIdsMap.get(id));
+      }
+      final String parent = idToRootMap.get(id);
+      if (parent != null) {
+        // add parent if it exists
+        if (existingSegmentIds.contains(parent)) {
+          conflicts.add(parent);
+        }
+        // add siblings
+        if (rootToIdsMap.containsKey(parent)) {
+          conflicts.addAll(rootToIdsMap.get(parent));
+        }
+      }
+      // Remove segments being deleted
+      segmentIds.forEach(conflicts::remove);
+      if (conflicts.isEmpty()) {
+        segmentsWithUnreferencedLoadSpecs.add(segment);
+      }
     }
-    if (retrieveSegmentForId(rootSegmentId, true) != null) {
-      return false;
-    }
-    return getSegmentIdsWithRootSegmentId(segment.getDataSource(), rootSegmentId).isEmpty();
+    return segmentsWithUnreferencedLoadSpecs;
   }
 
-  @Override
-  public String getRootSegmentId(final DataSegment segment)
+  @VisibleForTesting
+  Map<String, String> getRootSegmentIds(final String dataSource, final List<String> segmentIds)
   {
+    if (segmentIds.isEmpty()) {
+      return Collections.emptyMap();
+    }
+
     final String sql = StringUtils.format(
-        "SELECT root_segment_id FROM %s WHERE id = :id",
-        dbTables.getSegmentsTable()
+        "SELECT id, root_segment_id FROM %s WHERE dataSource = :dataSource %s",
+        dbTables.getSegmentsTable(),
+        SqlSegmentsMetadataQuery.getParameterizedInConditionForColumn("id", segmentIds)
     );
-    return connector.retryWithHandle(
+    Map<String, String> rootSegmentIdMap = new HashMap<>();
+    connector.retryWithHandle(
         handle -> {
-          final List<String> rootIdList = handle.createQuery(sql)
-                                                .bind("id", segment.getId().toString())
-                                                .mapTo(String.class)
-                                                .list();
-          return rootIdList.isEmpty() ? null : rootIdList.get(0);
+          Query<Map<String, Object>> query = handle.createQuery(sql)
+                                                   .bind("dataSource", dataSource);
+          bindColumnValuesToQueryWithInCondition("id", segmentIds, query);
+          query.map(
+              (index, r, ctx) -> {
+                final String id = r.getString(1);
+                final String rootSegmentId = r.getString(2);
+                if (rootSegmentId != null) {
+                  rootSegmentIdMap.put(id, rootSegmentId);
+                }
+                return null;
+              }
+               )
+               .list();
+          return null;
         }
     );
+    return rootSegmentIdMap;
   }
 
-  private List<String> getSegmentIdsWithRootSegmentId(final String dataSource, final String rootSegmentId)
+  private Map<String, String> getSegmentsWithRootSegmentIds(final String dataSource, final List<String> rootSegmentIds)
   {
+    if (rootSegmentIds.isEmpty()) {
+      return Collections.emptyMap();
+    }
+
     final String sql = StringUtils.format(
-        "SELECT id FROM %s WHERE dataSource = :dataSource AND root_segment_id = :root_segment_id",
-        dbTables.getSegmentsTable()
+        "SELECT id, root_segment_id FROM %s WHERE dataSource = :dataSource %s",
+        dbTables.getSegmentsTable(),
+        SqlSegmentsMetadataQuery.getParameterizedInConditionForColumn("root_segment_id", rootSegmentIds)
     );
-    return connector.retryWithHandle(
+    Map<String, String> rootSegmentIdMap = new HashMap<>();
+    connector.retryWithHandle(
         handle -> {
-          final List<String> segmentIds = handle.createQuery(sql)
-                                                .bind("dataSource", dataSource)
-                                                .bind("root_segment_id", rootSegmentId)
-                                                .mapTo(String.class)
-                                                .list();
-          return segmentIds;
+          Query<Map<String, Object>> query = handle.createQuery(sql)
+                                                   .bind("dataSource", dataSource);
+          bindColumnValuesToQueryWithInCondition("root_segment_id", rootSegmentIds, query);
+          query.map(
+              (index, r, ctx) -> {
+                final String id = r.getString(1);
+                final String rootSegmentId = r.getString(2);
+                if (rootSegmentId != null) {
+                  rootSegmentIdMap.put(id, rootSegmentId);
+                }
+                return null;
+              }
+               )
+               .list();
+          return null;
         }
     );
+    return rootSegmentIdMap;
   }
 
   private static class PendingSegmentsRecord

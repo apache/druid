@@ -275,10 +275,14 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
 
     Set<DataSegment> allCommittedSegments
         = new HashSet<>(retrieveUsedSegments(derbyConnectorRule.metadataTablesConfigSupplier().get()));
+    Map<String, String> rootSegmentIdMap = coordinator.getRootSegmentIds(
+        DS.WIKI,
+        allCommittedSegments.stream().map(DataSegment::getId).map(SegmentId::toString).collect(Collectors.toList())
+    );
     // Verify the segments present in the metadata store
     Assert.assertTrue(allCommittedSegments.containsAll(appendSegments));
     for (DataSegment segment : appendSegments) {
-      Assert.assertNull(coordinator.getRootSegmentId(segment));
+      Assert.assertNull(rootSegmentIdMap.get(segment.getId().toString()));
     }
     allCommittedSegments.removeAll(appendSegments);
 
@@ -294,9 +298,9 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
           DataSegment rootSegment = segmentMap.get(pendingSegmentRecord.getUpgradedFromSegmentId());
           Assert.assertNotNull(rootSegment);
           Assert.assertEquals(segment.getLoadSpec(), rootSegment.getLoadSpec());
-          Assert.assertNotNull(
+          Assert.assertEquals(
               pendingSegmentRecord.getUpgradedFromSegmentId(),
-              coordinator.getRootSegmentId(segment)
+              rootSegmentIdMap.get(segment.getId().toString())
           );
         }
       }
@@ -398,17 +402,23 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         retrieveUsedSegmentIds(derbyConnectorRule.metadataTablesConfigSupplier().get()).size()
     );
 
-    final Set<DataSegment> usedSegments = new HashSet<>(retrieveUsedSegments(derbyConnectorRule.metadataTablesConfigSupplier().get()));
+    final Set<DataSegment> usedSegments
+        = new HashSet<>(retrieveUsedSegments(derbyConnectorRule.metadataTablesConfigSupplier().get()));
+
+    final Map<String, String> rootSegmentIdMap = coordinator.getRootSegmentIds(
+        "foo",
+        usedSegments.stream().map(DataSegment::getId).map(SegmentId::toString).collect(Collectors.toList())
+    );
 
     Assert.assertTrue(usedSegments.containsAll(segmentsAppendedWithReplaceLock));
     for (DataSegment appendSegment : segmentsAppendedWithReplaceLock) {
-      Assert.assertNull(coordinator.getRootSegmentId(appendSegment));
+      Assert.assertNull(rootSegmentIdMap.get(appendSegment.getId().toString()));
     }
     usedSegments.removeAll(segmentsAppendedWithReplaceLock);
 
     Assert.assertTrue(usedSegments.containsAll(replacingSegments));
     for (DataSegment replaceSegment : replacingSegments) {
-      Assert.assertNull(coordinator.getRootSegmentId(replaceSegment));
+      Assert.assertNull(rootSegmentIdMap.get(replaceSegment.getId().toString()));
     }
     usedSegments.removeAll(replacingSegments);
 
@@ -419,7 +429,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         if (appendedSegment.getLoadSpec().equals(segmentReplicaWithNewVersion.getLoadSpec())) {
           Assert.assertEquals(
               appendedSegment.getId().toString(),
-              coordinator.getRootSegmentId(segmentReplicaWithNewVersion)
+              rootSegmentIdMap.get(segmentReplicaWithNewVersion.getId().toString())
           );
           hasBeenCarriedForward = true;
           break;
@@ -3420,12 +3430,39 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   }
 
   @Test
-  public void testGetRootSegmentId()
+  public void testFindDataSegmentsWithUnreferencedLoadSpecs()
   {
+    // Empty set
+    Assert.assertTrue(coordinator.findSegmentsWithUnreferencedLoadSpecs(Collections.emptySet()).isEmpty());
+
+    // Lone segment is unreferenced
+    insertUsedSegments(Collections.singleton(eternitySegment), Collections.emptyMap());
+    coordinator.markSegmentsAsUnusedWithinInterval(eternitySegment.getDataSource(), Intervals.ETERNITY);
+    Assert.assertEquals(
+        Collections.singleton(eternitySegment),
+        coordinator.findSegmentsWithUnreferencedLoadSpecs(Collections.singleton(eternitySegment))
+    );
+
+    // Siblings are always referenced unless they're passed together
+    Map<SegmentId, String> rootSegmentIdMap = ImmutableMap.of(
+        defaultSegment.getId(),
+        "nonExistentRoot",
+        defaultSegment2.getId(),
+        "nonExistentRoot"
+    );
+    insertUsedSegments(ImmutableSet.of(defaultSegment, defaultSegment2), rootSegmentIdMap);
+    Assert.assertTrue(coordinator.findSegmentsWithUnreferencedLoadSpecs(ImmutableSet.of(defaultSegment)).isEmpty());
+    Assert.assertTrue(coordinator.findSegmentsWithUnreferencedLoadSpecs(ImmutableSet.of(defaultSegment2)).isEmpty());
+    Assert.assertEquals(
+        ImmutableSet.of(defaultSegment, defaultSegment2),
+        coordinator.findSegmentsWithUnreferencedLoadSpecs(ImmutableSet.of(defaultSegment, defaultSegment2))
+    );
+
+    // The parent and all its children must all be present in the batch for them to be unreferenced
     DataSegment root = createSegment(Intervals.of("2024/2025"), "2024-01-01", new NumberedShardSpec(0, 0));
     DataSegment childV1 = createSegment(Intervals.of("2024/2025"), "2024-02-01", new NumberedShardSpec(0, 0));
     DataSegment childV2 = createSegment(Intervals.ETERNITY, "2025-01-01", new NumberedShardSpec(0, 0));
-    Map<SegmentId, String> rootSegmentIdMap = ImmutableMap.of(
+    rootSegmentIdMap = ImmutableMap.of(
         childV1.getId(),
         root.getId().toString(),
         childV2.getId(),
@@ -3433,50 +3470,17 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     );
     insertUsedSegments(ImmutableSet.of(root, childV1, childV2), rootSegmentIdMap);
     coordinator.markSegmentsAsUnusedWithinInterval(DS.WIKI, Intervals.of("2024/2025"));
-    Assert.assertNull(coordinator.getRootSegmentId(root));
-    Assert.assertEquals(root.getId().toString(), coordinator.getRootSegmentId(childV1));
-    Assert.assertEquals(root.getId().toString(), coordinator.getRootSegmentId(childV2));
-  }
 
-  @Test
-  public void testIsLoadSpecUnreferenced()
-  {
-    DataSegment root = createSegment(Intervals.of("2024/2025"), "2024-01-01", new NumberedShardSpec(0, 0));
-    DataSegment childV1 = createSegment(Intervals.of("2024/2025"), "2024-02-01", new NumberedShardSpec(0, 0));
-    DataSegment childV2 = createSegment(Intervals.ETERNITY, "2025-01-01", new NumberedShardSpec(0, 0));
-    Map<SegmentId, String> rootSegmentIdMap = ImmutableMap.of(
-        childV1.getId(),
-        root.getId().toString(),
-        childV2.getId(),
-        root.getId().toString()
+    Assert.assertTrue(coordinator.findSegmentsWithUnreferencedLoadSpecs(ImmutableSet.of(root)).isEmpty());
+    Assert.assertTrue(coordinator.findSegmentsWithUnreferencedLoadSpecs(ImmutableSet.of(childV1)).isEmpty());
+    Assert.assertTrue(coordinator.findSegmentsWithUnreferencedLoadSpecs(ImmutableSet.of(childV2)).isEmpty());
+    Assert.assertTrue(coordinator.findSegmentsWithUnreferencedLoadSpecs(ImmutableSet.of(root, childV1)).isEmpty());
+    Assert.assertTrue(coordinator.findSegmentsWithUnreferencedLoadSpecs(ImmutableSet.of(root, childV2)).isEmpty());
+    Assert.assertTrue(coordinator.findSegmentsWithUnreferencedLoadSpecs(ImmutableSet.of(childV1, childV2)).isEmpty());
+    Assert.assertEquals(
+        ImmutableSet.of(root, childV1, childV2),
+        coordinator.findSegmentsWithUnreferencedLoadSpecs(ImmutableSet.of(root, childV1, childV2))
     );
-    insertUsedSegments(ImmutableSet.of(root, childV1, childV2), rootSegmentIdMap);
-    coordinator.markSegmentsAsUnusedWithinInterval(DS.WIKI, Intervals.of("2024/2025"));
-
-    final String rootSegmentId = root.getId().toString();
-    Assert.assertFalse(coordinator.isLoadSpecUnreferenced(root, null));
-    Assert.assertFalse(coordinator.isLoadSpecUnreferenced(childV1, rootSegmentId));
-    Assert.assertFalse(coordinator.isLoadSpecUnreferenced(childV2, rootSegmentId));
-
-    Assert.assertFalse(coordinator.isLoadSpecUnreferenced(root, null));
-    Assert.assertFalse(coordinator.isLoadSpecUnreferenced(childV1, rootSegmentId));
-    Assert.assertFalse(coordinator.isLoadSpecUnreferenced(childV2, rootSegmentId));
-
-    coordinator.deleteSegments(ImmutableSet.of(childV2));
-    Assert.assertFalse(coordinator.isLoadSpecUnreferenced(root, null));
-    Assert.assertFalse(coordinator.isLoadSpecUnreferenced(childV1, rootSegmentId));
-    Assert.assertFalse(coordinator.isLoadSpecUnreferenced(childV2, rootSegmentId));
-
-
-    coordinator.deleteSegments(ImmutableSet.of(root));
-    Assert.assertFalse(coordinator.isLoadSpecUnreferenced(root, null));
-    Assert.assertFalse(coordinator.isLoadSpecUnreferenced(childV1, rootSegmentId));
-    Assert.assertFalse(coordinator.isLoadSpecUnreferenced(childV2, rootSegmentId));
-
-    coordinator.deleteSegments(ImmutableSet.of(childV1));
-    Assert.assertTrue(coordinator.isLoadSpecUnreferenced(root, null));
-    Assert.assertTrue(coordinator.isLoadSpecUnreferenced(childV1, rootSegmentId));
-    Assert.assertTrue(coordinator.isLoadSpecUnreferenced(childV2, rootSegmentId));
   }
 
 

@@ -315,15 +315,9 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   }
 
   @Override
-  public String getRootSegmentId(final DataSegment segment)
+  public Set<DataSegment> findSegmentsWithUnreferencedLoadSpecs(final Set<DataSegment> segments)
   {
-    return null;
-  }
-
-  @Override
-  public boolean isLoadSpecUnreferenced(final DataSegment segment, final String rootSegmentId)
-  {
-    return true;
+    return segments;
   }
 
   public Set<DataSegment> getPublished()

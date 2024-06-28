@@ -33,9 +33,7 @@ import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.timeline.DataSegment;
 
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -79,18 +77,12 @@ public class SegmentNukeAction implements TaskAction<Set<DataSegment>>
                             () -> {
                               final IndexerMetadataStorageCoordinator coordinator
                                   = toolbox.getIndexerMetadataStorageCoordinator();
-                              // Need to store the root segment ids before the segments are deleted from the db
-                              final Map<DataSegment, String> rootSegmentIdMap = new HashMap<>();
-                              for (DataSegment segment : segments) {
-                                rootSegmentIdMap.put(segment, coordinator.getRootSegmentId(segment));
-                              }
+
+                              // Find subset of segments with unreferenced load specs assuming successful nuking
+                              segmentsToKill.addAll(coordinator.findSegmentsWithUnreferencedLoadSpecs(segments));
+
+                              // Nuke segments from metadata store
                               coordinator.deleteSegments(segments);
-                              // Check for references after all segments in the batch have been killed
-                              for (DataSegment segment : segments) {
-                                if (coordinator.isLoadSpecUnreferenced(segment, rootSegmentIdMap.get(segment))) {
-                                  segmentsToKill.add(segment);
-                                }
-                              }
                               return null;
                             }
                         )

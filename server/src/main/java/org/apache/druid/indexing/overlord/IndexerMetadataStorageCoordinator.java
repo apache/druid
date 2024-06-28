@@ -475,19 +475,9 @@ public interface IndexerMetadataStorageCoordinator
   List<PendingSegmentRecord> getPendingSegments(String datasource, Interval interval);
 
   /**
-   * Fetches the id of the segment to which the load spec originally belonged for an upgraded segment.
-   * returns null for non-upgraded segments
-   * @param segment DataSegment
-   * @return root segment id
+   * Return subset of segments that do not have load specs referenced by segments outside this set
+   * @param segments set of DataSegments
+   * @return subset of segments that can safely be killed from deep storage
    */
-  String getRootSegmentId(DataSegment segment);
-
-  /**
-   * Verifies if a load spec is being used by any other used or unused segment by relying on the lineage of upgrades
-   * The root segment id must be fetched and provided as an argument for alrady deleted segments
-   * @param segment segment whose load spec needs to be deleted from deep storage
-   * @param rootSegmentId the id of the segment which originally pushed to deep storage
-   * @return true iff the load spec is not being used by any other segment
-   */
-  boolean isLoadSpecUnreferenced(DataSegment segment, String rootSegmentId);
+  Set<DataSegment> findSegmentsWithUnreferencedLoadSpecs(Set<DataSegment> segments);
 }
