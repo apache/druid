@@ -442,8 +442,7 @@ public class DataSourcePlan
         queryKit,
         ShuffleSpecFactories.globalSortWithMaxPartitionCount(maxWorkerCount),
         maxWorkerCount,
-        minStageNumber,
-        false
+        minStageNumber
     );
 
     final int stageNumber = subQueryDef.getFinalStageDefinition().getStageNumber();

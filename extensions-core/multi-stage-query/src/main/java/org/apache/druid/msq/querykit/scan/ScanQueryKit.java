@@ -26,7 +26,6 @@ import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.frame.key.KeyOrder;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.msq.input.stage.StageInputSpec;
-import org.apache.druid.msq.kernel.MixShuffleSpec;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.QueryDefinitionBuilder;
 import org.apache.druid.msq.kernel.ShuffleSpec;
@@ -34,6 +33,7 @@ import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.querykit.DataSourcePlan;
 import org.apache.druid.msq.querykit.QueryKit;
 import org.apache.druid.msq.querykit.QueryKitUtils;
+import org.apache.druid.msq.querykit.ShuffleSpecFactories;
 import org.apache.druid.msq.querykit.ShuffleSpecFactory;
 import org.apache.druid.msq.querykit.common.OffsetLimitFrameProcessorFactory;
 import org.apache.druid.msq.util.MultiStageQueryContext;
@@ -89,8 +89,7 @@ public class ScanQueryKit implements QueryKit<ScanQuery>
       final QueryKit<Query<?>> queryKit,
       final ShuffleSpecFactory resultShuffleSpecFactory,
       final int maxWorkerCount,
-      final int minStageNumber,
-      final boolean needsFinalShuffling
+      final int minStageNumber
   )
   {
     final QueryDefinitionBuilder queryDefBuilder = QueryDefinition.builder(queryId);
@@ -112,83 +111,74 @@ public class ScanQueryKit implements QueryKit<ScanQuery>
     final ScanQuery queryToRun = originalQuery.withDataSource(dataSourcePlan.getNewDataSource());
     final int firstStageNumber = Math.max(minStageNumber, queryDefBuilder.getNextStageNumber());
     final RowSignature scanSignature = getAndValidateSignature(queryToRun, jsonMapper);
-    final ShuffleSpec shuffleSpec;
-    final RowSignature signatureToUse;
     final boolean hasLimitOrOffset = queryToRun.isLimited() || queryToRun.getScanRowsOffset() > 0;
 
+    final RowSignature.Builder signatureBuilder = RowSignature.builder().addAll(scanSignature);
+    final Granularity segmentGranularity =
+        QueryKitUtils.getSegmentGranularityFromContext(jsonMapper, queryToRun.getContext());
+    final List<KeyColumn> clusterByColumns = new ArrayList<>();
 
-    // We ignore the resultShuffleSpecFactory in case:
-    //  1. There is no cluster by
-    //  2. There is an offset which means everything gets funneled into a single partition hence we use MaxCountShuffleSpec
-    //  3. The destination does not require shuffling after the limit stage to get outputs of a specific size.
-    if (queryToRun.getOrderBys().isEmpty() && hasLimitOrOffset && !needsFinalShuffling) {
-      shuffleSpec = MixShuffleSpec.instance();
-      signatureToUse = scanSignature;
-    } else {
-      final RowSignature.Builder signatureBuilder = RowSignature.builder().addAll(scanSignature);
-      final Granularity segmentGranularity =
-          QueryKitUtils.getSegmentGranularityFromContext(jsonMapper, queryToRun.getContext());
-      final List<KeyColumn> clusterByColumns = new ArrayList<>();
-
-      // Add regular orderBys.
-      for (final ScanQuery.OrderBy orderBy : queryToRun.getOrderBys()) {
-        clusterByColumns.add(
-            new KeyColumn(
-                orderBy.getColumnName(),
-                orderBy.getOrder() == ScanQuery.Order.DESCENDING ? KeyOrder.DESCENDING : KeyOrder.ASCENDING
-            )
-        );
-      }
-
-      // Update partition by of next window
-      final RowSignature signatureSoFar = signatureBuilder.build();
-      boolean addShuffle = true;
-      if (originalQuery.getContext().containsKey(MultiStageQueryContext.NEXT_WINDOW_SHUFFLE_COL)) {
-        final ClusterBy windowClusterBy = (ClusterBy) originalQuery.getContext()
-                                                                   .get(MultiStageQueryContext.NEXT_WINDOW_SHUFFLE_COL);
-        for (KeyColumn c : windowClusterBy.getColumns()) {
-          if (!signatureSoFar.contains(c.columnName())) {
-            addShuffle = false;
-            break;
-          }
-        }
-        if (addShuffle) {
-          clusterByColumns.addAll(windowClusterBy.getColumns());
-        }
-      } else {
-        // Add partition boosting column.
-        clusterByColumns.add(new KeyColumn(QueryKitUtils.PARTITION_BOOST_COLUMN, KeyOrder.ASCENDING));
-        signatureBuilder.add(QueryKitUtils.PARTITION_BOOST_COLUMN, ColumnType.LONG);
-      }
-
-
-      final ClusterBy clusterBy =
-          QueryKitUtils.clusterByWithSegmentGranularity(new ClusterBy(clusterByColumns, 0), segmentGranularity);
-      shuffleSpec = resultShuffleSpecFactory.build(clusterBy, false);
-      signatureToUse = QueryKitUtils.sortableSignature(
-          QueryKitUtils.signatureWithSegmentGranularity(signatureBuilder.build(), segmentGranularity),
-          clusterBy.getColumns()
+    // Add regular orderBys.
+    for (final ScanQuery.OrderBy orderBy : queryToRun.getOrderBys()) {
+      clusterByColumns.add(
+          new KeyColumn(
+              orderBy.getColumnName(),
+              orderBy.getOrder() == ScanQuery.Order.DESCENDING ? KeyOrder.DESCENDING : KeyOrder.ASCENDING
+          )
       );
     }
 
+    // Update partition by of next window
+    final RowSignature signatureSoFar = signatureBuilder.build();
+    boolean addShuffle = true;
+    if (originalQuery.getContext().containsKey(MultiStageQueryContext.NEXT_WINDOW_SHUFFLE_COL)) {
+      final ClusterBy windowClusterBy = (ClusterBy) originalQuery.getContext()
+                                                                 .get(MultiStageQueryContext.NEXT_WINDOW_SHUFFLE_COL);
+      for (KeyColumn c : windowClusterBy.getColumns()) {
+        if (!signatureSoFar.contains(c.columnName())) {
+          addShuffle = false;
+          break;
+        }
+      }
+      if (addShuffle) {
+        clusterByColumns.addAll(windowClusterBy.getColumns());
+      }
+    } else {
+      // Add partition boosting column.
+      clusterByColumns.add(new KeyColumn(QueryKitUtils.PARTITION_BOOST_COLUMN, KeyOrder.ASCENDING));
+      signatureBuilder.add(QueryKitUtils.PARTITION_BOOST_COLUMN, ColumnType.LONG);
+    }
+
+
+    final ClusterBy clusterBy =
+        QueryKitUtils.clusterByWithSegmentGranularity(new ClusterBy(clusterByColumns, 0), segmentGranularity);
+    final ShuffleSpec finalShuffleSpec = resultShuffleSpecFactory.build(clusterBy, false);
+
+    final RowSignature signatureToUse = QueryKitUtils.sortableSignature(
+        QueryKitUtils.signatureWithSegmentGranularity(signatureBuilder.build(), segmentGranularity),
+        clusterBy.getColumns()
+    );
+
+    // If there is no limit spec, apply the final shuffling here itself. This will ensure partition sizes etc are respected.
+    // If there is a limit spec, it would write everything into one partition anyway, so the final shuffling should be
+    // applied after that.
     queryDefBuilder.add(
         StageDefinition.builder(Math.max(minStageNumber, queryDefBuilder.getNextStageNumber()))
                        .inputs(dataSourcePlan.getInputSpecs())
                        .broadcastInputs(dataSourcePlan.getBroadcastInputs())
-                       .shuffleSpec(shuffleSpec)
+                       .shuffleSpec(hasLimitOrOffset ? ShuffleSpecFactories.singlePartition().build(clusterBy, false) : finalShuffleSpec)
                        .signature(signatureToUse)
                        .maxWorkerCount(dataSourcePlan.isSingleWorker() ? 1 : maxWorkerCount)
                        .processorFactory(new ScanQueryFrameProcessorFactory(queryToRun))
     );
 
     if (hasLimitOrOffset) {
-      final ShuffleSpec finalShuffleSpec = needsFinalShuffling ? shuffleSpec : null;
       queryDefBuilder.add(
           StageDefinition.builder(firstStageNumber + 1)
                          .inputs(new StageInputSpec(firstStageNumber))
                          .signature(signatureToUse)
                          .maxWorkerCount(1)
-                         .shuffleSpec(finalShuffleSpec)
+                         .shuffleSpec(finalShuffleSpec) // Apply the final shuffling after limit spec.
                          .processorFactory(
                              new OffsetLimitFrameProcessorFactory(
                                  queryToRun.getScanRowsOffset(),

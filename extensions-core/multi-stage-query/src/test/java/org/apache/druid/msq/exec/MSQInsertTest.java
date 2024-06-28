@@ -1483,7 +1483,8 @@ public class MSQInsertTest extends MSQTestBase
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)
                                             .add("dim1", ColumnType.STRING)
-                                            .add("cnt", ColumnType.LONG).build();
+                                            .add("cnt", ColumnType.LONG)
+                                            .build();
 
     testIngestQuery().setSql(
                          "insert into foo1 select __time, dim1, cnt from foo where dim1 != '' limit 4 partitioned by all clustered by dim1")

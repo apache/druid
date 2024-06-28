@@ -52,6 +52,7 @@ import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
 import org.apache.druid.msq.indexing.destination.DurableStorageMSQDestination;
 import org.apache.druid.msq.indexing.destination.ExportMSQDestination;
 import org.apache.druid.msq.indexing.destination.MSQDestination;
+import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.rpc.ServiceClientFactory;
@@ -324,18 +325,17 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery, 
   /**
    * Checks whether the task is an async query which writes frame files containing the final results into durable storage.
    */
-  public static boolean isDurableStorageQuery(final MSQSpec querySpec)
+  public static boolean writeResultsToDurableStorage(final MSQSpec querySpec)
   {
     return querySpec.getDestination() instanceof DurableStorageMSQDestination;
   }
 
   /**
-   * Returns true if the destination of the {@link #querySpec} requires a specific final shuffling, such as applying a
-   * rowsPerSegment or rowsPerPage limit.
+   * Checks whether the task is an async query which writes frame files containing the final results into durable storage.
    */
-  public static boolean needsFinalShuffling(final MSQSpec querySpec)
+  public static boolean writeResultsToTaskReport(final MSQSpec querySpec)
   {
-    return isDurableStorageQuery(querySpec) || isExport(querySpec) || isIngestion(querySpec);
+    return querySpec.getDestination() instanceof TaskReportMSQDestination;
   }
 
   /**
@@ -351,11 +351,6 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery, 
     } else {
       return false;
     }
-  }
-
-  public static boolean writeResultsToDurableStorage(final MSQSpec querySpec)
-  {
-    return querySpec.getDestination() instanceof DurableStorageMSQDestination;
   }
 
   @Override

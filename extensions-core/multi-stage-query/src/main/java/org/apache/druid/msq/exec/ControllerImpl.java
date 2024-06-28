@@ -101,9 +101,7 @@ import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.indexing.WorkerCount;
 import org.apache.druid.msq.indexing.client.ControllerChatHandler;
 import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
-import org.apache.druid.msq.indexing.destination.DurableStorageMSQDestination;
 import org.apache.druid.msq.indexing.destination.ExportMSQDestination;
-import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
 import org.apache.druid.msq.indexing.error.CanceledFault;
 import org.apache.druid.msq.indexing.error.CannotParseExternalDataFault;
 import org.apache.druid.msq.indexing.error.FaultsExceededChecker;
@@ -1769,8 +1767,7 @@ public class ControllerImpl implements Controller
           toolKit,
           shuffleSpecFactory,
           tuningConfig.getMaxNumWorkers(),
-          0,
-          MSQControllerTask.needsFinalShuffling(querySpec)
+          0
       );
     }
     catch (MSQException e) {
@@ -1829,9 +1826,9 @@ public class ControllerImpl implements Controller
       );
 
       return builder.build();
-    } else if (querySpec.getDestination() instanceof TaskReportMSQDestination) {
+    } else if (MSQControllerTask.writeResultsToTaskReport(querySpec)) {
       return queryDef;
-    } else if (querySpec.getDestination() instanceof DurableStorageMSQDestination) {
+    } else if (MSQControllerTask.writeResultsToDurableStorage(querySpec)) {
 
       // attaching new query results stage if the final stage does sort during shuffle so that results are ordered.
       StageDefinition finalShuffleStageDef = queryDef.getFinalStageDefinition();

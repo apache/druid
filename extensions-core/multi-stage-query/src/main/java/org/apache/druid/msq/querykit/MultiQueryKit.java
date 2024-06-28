@@ -46,8 +46,7 @@ public class MultiQueryKit implements QueryKit<Query<?>>
       QueryKit<Query<?>> toolKitForSubQueries,
       ShuffleSpecFactory resultShuffleSpecFactory,
       int maxWorkerCount,
-      int minStageNumber,
-      boolean needsFinalShuffling
+      int minStageNumber
   )
   {
     final QueryKit specificToolKit = toolKitMap.get(query.getClass());
@@ -60,8 +59,7 @@ public class MultiQueryKit implements QueryKit<Query<?>>
           this,
           resultShuffleSpecFactory,
           maxWorkerCount,
-          minStageNumber,
-          needsFinalShuffling
+          minStageNumber
       );
     } else {
       throw new ISE("Unsupported query class [%s]", query.getClass().getName());

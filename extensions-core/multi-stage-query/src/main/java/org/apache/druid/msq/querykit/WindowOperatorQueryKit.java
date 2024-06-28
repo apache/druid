@@ -62,8 +62,7 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
       QueryKit<Query<?>> queryKit,
       ShuffleSpecFactory resultShuffleSpecFactory,
       int maxWorkerCount,
-      int minStageNumber,
-      boolean needsFinalShuffling
+      int minStageNumber
   )
   {
     // need to validate query first

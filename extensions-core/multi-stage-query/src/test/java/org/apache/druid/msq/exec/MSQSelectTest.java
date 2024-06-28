@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.CsvInputFormat;
+import org.apache.druid.data.input.impl.InlineInputSource;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.systemfield.SystemFields;
@@ -49,7 +50,6 @@ import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
@@ -633,10 +633,9 @@ public class MSQSelectTest extends MSQTestBase
         new Object[]{1L, "def"},
         new Object[]{1L, "abc"}
     );
-    final long fullResultsSize = expectedResults.size();
 
-    final SelectTester selectTester = testSelectQuery()
-        .setSql("select cnt,dim1 from foo limit 10")
+    testSelectQuery()
+        .setSql("select cnt, dim1 from foo limit 10")
         .setExpectedMSQSpec(
             MSQSpec.builder()
                    .query(
@@ -657,59 +656,39 @@ public class MSQSelectTest extends MSQTestBase
         )
         .setQueryContext(context)
         .setExpectedRowSignature(resultSignature)
-        .setExpectedResultRows(expectedResults);
-
-    final QueryContext queryContext = QueryContext.of(context);
-    if (MSQSelectDestination.DURABLESTORAGE.equals(MultiStageQueryContext.getSelectDestinationOrNull(queryContext))) {
-      selectTester.setExpectedCountersForStageWorkerChannel(
-                      CounterSnapshotMatcher
-                          .with().totalFiles(1),
-                      0, 0, "input0"
-                  )
-                  .setExpectedCountersForStageWorkerChannel(
-                      CounterSnapshotMatcher
-                          .with().rows(fullResultsSize).frames(1),
-                      0, 0, "output");
-
-      if (!context.containsKey(MultiStageQueryContext.CTX_ROWS_PER_PAGE)) {
-        selectTester.setExpectedCountersForStageWorkerChannel(
+        .setExpectedResultRows(expectedResults)
+        .setExpectedCountersForStageWorkerChannel(
             CounterSnapshotMatcher
-                .with().rows(fullResultsSize).frames(1),
-            0, 0, "shuffle"
-        );
-      } else {
-        final long rowsPerPage = MultiStageQueryContext.getRowsPerPage(queryContext);
-        final int expectedPageCount = (int) (fullResultsSize / rowsPerPage);
-        long[] rows = new long[expectedPageCount];
-        Arrays.fill(rows, rowsPerPage);
-        long[] frames = new long[expectedPageCount];
-        Arrays.fill(frames, 1);
-        selectTester.setExpectedCountersForStageWorkerChannel(
+                .with().totalFiles(1),
+            0, 0, "input0"
+        )
+        .setExpectedCountersForStageWorkerChannel(
             CounterSnapshotMatcher
-                .with().rows(rows).frames(frames),
+                .with().rows(6),
+            0, 0, "output"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(6),
             0, 0, "shuffle"
-        );
-      }
-    } else {
-      selectTester.setExpectedCountersForStageWorkerChannel(
-                      CounterSnapshotMatcher
-                          .with().totalFiles(1),
-                      0, 0, "input0"
-                  )
-                  .setExpectedCountersForStageWorkerChannel(
-                      CounterSnapshotMatcher
-                          .with().rows(fullResultsSize).frames(1),
-                      0, 0, "output"
-                  )
-                  .setExpectedCountersForStageWorkerChannel(
-                      CounterSnapshotMatcher
-                          .with().rows(fullResultsSize).frames(1),
-                      0, 0, "shuffle"
-                  )
-                  .setExpectedResultRows(expectedResults);
-    }
-
-    selectTester.verifyResults();
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(6),
+            1, 0, "input0"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(6),
+            1, 0, "output"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(!context.containsKey(MultiStageQueryContext.CTX_ROWS_PER_PAGE) ? new long[] {6} : new long[] {2, 2, 2}),
+            1, 0, "shuffle"
+        )
+        .setExpectedResultRows(expectedResults)
+        .verifyResults();
   }
 
   @MethodSource("data")
@@ -1784,6 +1763,120 @@ public class MSQSelectTest extends MSQTestBase
         .setExpectedResultRows(ImmutableList.of(
             new Object[]{"1", 1L}
         )).verifyResults();
+  }
+
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testGroupByWithLimitAndOrdering(String contextName, Map<String, Object> context)
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("dim1", ColumnType.STRING)
+                                            .add("count", ColumnType.LONG)
+                                            .build();
+
+    GroupByQuery query = GroupByQuery.builder()
+                                     .setDataSource(
+                                         new ExternalDataSource(
+                                             new InlineInputSource("dim1\nabc\nxyz\ndef\nxyz\nabc\nxyz\nabc\nxyz\ndef\nbbb\naaa"),
+                                             new CsvInputFormat(null, null, null, true, 0),
+                                             RowSignature.builder().add("dim1", ColumnType.STRING).build()
+                                         )
+                                     )
+                                     .setInterval(querySegmentSpec(Filtration.eternity()))
+                                     .setGranularity(Granularities.ALL)
+                                     .addOrderByColumn(new OrderByColumnSpec("a0", OrderByColumnSpec.Direction.DESCENDING, StringComparators.NUMERIC))
+                                     .addOrderByColumn(new OrderByColumnSpec("d0", OrderByColumnSpec.Direction.ASCENDING, StringComparators.LEXICOGRAPHIC))
+                                     .setDimensions(dimensions(new DefaultDimensionSpec("dim1", "d0")))
+                                     .setAggregatorSpecs(
+                                         aggregators(
+                                             new CountAggregatorFactory(
+                                                 "a0"
+                                             )
+                                         )
+                                     )
+                                     .setLimit(4)
+                                     .setContext(context)
+                                     .build();
+
+    List<Object[]> expectedRows = ImmutableList.of(
+        new Object[]{"xyz", 4L},
+        new Object[]{"abc", 3L},
+        new Object[]{"def", 2L},
+        new Object[]{"aaa", 1L}
+    );
+
+    testSelectQuery()
+        .setSql("WITH \"ext\" AS (\n"
+                + "  SELECT *\n"
+                + "  FROM TABLE(\n"
+                + "    EXTERN(\n"
+                + "      '{\"type\":\"inline\",\"data\":\"dim1\\nabc\\nxyz\\ndef\\nxyz\\nabc\\nxyz\\nabc\\nxyz\\ndef\\nbbb\\naaa\"}',\n"
+                + "      '{\"type\":\"csv\",\"findColumnsFromHeader\":true}'\n"
+                + "    )\n"
+                + "  ) EXTEND (\"dim1\" VARCHAR)\n"
+                + ")\n"
+                + "SELECT\n"
+                + "  \"dim1\",\n"
+                + "  COUNT(*) AS \"count\"\n"
+                + "FROM \"ext\"\n"
+                + "GROUP BY 1\n"
+                + "ORDER BY 2 DESC, 1\n"
+                + "LIMIT 4\n")
+        .setExpectedMSQSpec(MSQSpec.builder()
+                                   .query(query)
+                                   .columnMappings(new ColumnMappings(ImmutableList.of(
+                                       new ColumnMapping("d0", "dim1"),
+                                       new ColumnMapping("a0", "count")
+                                   )))
+                                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                                   .destination(isDurableStorageDestination(contextName, context)
+                                                ? DurableStorageMSQDestination.INSTANCE
+                                                : TaskReportMSQDestination.INSTANCE)
+                                   .build())
+        .setExpectedRowSignature(rowSignature)
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().totalFiles(1),
+            0, 0, "input0"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(5),
+            0, 0, "output"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(5),
+            1, 0, "shuffle"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(5),
+            1, 0, "input0"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(5),
+            1, 0, "output"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(5),
+            2, 0, "input0"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(4),
+            2, 0, "output"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(!context.containsKey(MultiStageQueryContext.CTX_ROWS_PER_PAGE) ? new long[] {4} : new long[] {2, 2}),
+            2, 0, "shuffle"
+        )
+        .setQueryContext(context)
+        .setExpectedResultRows(expectedRows)
+        .verifyResults();
   }
 
   @MethodSource("data")
