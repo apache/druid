@@ -26,16 +26,20 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.CriticalAction;
+import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.timeline.DataSegment;
 
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-public class SegmentNukeAction implements TaskAction<Void>
+public class SegmentNukeAction implements TaskAction<Set<DataSegment>>
 {
   private final Set<DataSegment> segments;
 
@@ -54,18 +58,18 @@ public class SegmentNukeAction implements TaskAction<Void>
   }
 
   @Override
-  public TypeReference<Void> getReturnTypeReference()
+  public TypeReference<Set<DataSegment>> getReturnTypeReference()
   {
-    return new TypeReference<Void>()
+    return new TypeReference<Set<DataSegment>>()
     {
     };
   }
 
   @Override
-  public Void perform(Task task, TaskActionToolbox toolbox)
+  public Set<DataSegment> perform(Task task, TaskActionToolbox toolbox)
   {
     TaskLocks.checkLockCoversSegments(task, toolbox.getTaskLockbox(), segments);
-
+    final Set<DataSegment> segmentsToKill = new HashSet<>();
     try {
       toolbox.getTaskLockbox().doInCriticalSection(
           task,
@@ -73,7 +77,20 @@ public class SegmentNukeAction implements TaskAction<Void>
           CriticalAction.builder()
                         .onValidLocks(
                             () -> {
-                              toolbox.getIndexerMetadataStorageCoordinator().deleteSegments(segments);
+                              final IndexerMetadataStorageCoordinator coordinator
+                                  = toolbox.getIndexerMetadataStorageCoordinator();
+                              // Need to store the root segment ids before the segments are deleted from the db
+                              final Map<DataSegment, String> rootSegmentIdMap = new HashMap<>();
+                              for (DataSegment segment : segments) {
+                                rootSegmentIdMap.put(segment, coordinator.getRootSegmentId(segment));
+                              }
+                              coordinator.deleteSegments(segments);
+                              // Check for references after all segments in the batch have been killed
+                              for (DataSegment segment : segments) {
+                                if (coordinator.isLoadSpecUnreferenced(segment, rootSegmentIdMap.get(segment))) {
+                                  segmentsToKill.add(segment);
+                                }
+                              }
                               return null;
                             }
                         )
@@ -98,7 +115,7 @@ public class SegmentNukeAction implements TaskAction<Void>
       toolbox.getEmitter().emit(metricBuilder.setMetric("segment/nuked/bytes", segment.getSize()));
     }
 
-    return null;
+    return segmentsToKill;
   }
 
   @Override

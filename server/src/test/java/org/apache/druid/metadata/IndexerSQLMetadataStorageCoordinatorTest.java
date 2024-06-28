@@ -31,6 +31,7 @@ import org.apache.druid.indexing.overlord.SegmentCreateRequest;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -48,6 +49,7 @@ import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
 import org.apache.druid.timeline.partition.HashBasedNumberedPartialShardSpec;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.LinearShardSpec;
+import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.timeline.partition.NumberedOverwritePartialShardSpec;
 import org.apache.druid.timeline.partition.NumberedOverwriteShardSpec;
 import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
@@ -65,10 +67,12 @@ import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.skife.jdbi.v2.Handle;
+import org.skife.jdbi.v2.PreparedBatch;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -274,7 +278,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     // Verify the segments present in the metadata store
     Assert.assertTrue(allCommittedSegments.containsAll(appendSegments));
     for (DataSegment segment : appendSegments) {
-      Assert.assertNull(coordinator.getRootSegmentIdForSegment(segment.getId().toString()));
+      Assert.assertNull(coordinator.getRootSegmentId(segment));
     }
     allCommittedSegments.removeAll(appendSegments);
 
@@ -292,7 +296,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
           Assert.assertEquals(segment.getLoadSpec(), rootSegment.getLoadSpec());
           Assert.assertNotNull(
               pendingSegmentRecord.getUpgradedFromSegmentId(),
-              coordinator.getRootSegmentIdForSegment(segment.getId().toString())
+              coordinator.getRootSegmentId(segment)
           );
         }
       }
@@ -398,13 +402,13 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
 
     Assert.assertTrue(usedSegments.containsAll(segmentsAppendedWithReplaceLock));
     for (DataSegment appendSegment : segmentsAppendedWithReplaceLock) {
-      Assert.assertNull(coordinator.getRootSegmentIdForSegment(appendSegment.getId().toString()));
+      Assert.assertNull(coordinator.getRootSegmentId(appendSegment));
     }
     usedSegments.removeAll(segmentsAppendedWithReplaceLock);
 
     Assert.assertTrue(usedSegments.containsAll(replacingSegments));
     for (DataSegment replaceSegment : replacingSegments) {
-      Assert.assertNull(coordinator.getRootSegmentIdForSegment(replaceSegment.getId().toString()));
+      Assert.assertNull(coordinator.getRootSegmentId(replaceSegment));
     }
     usedSegments.removeAll(replacingSegments);
 
@@ -415,7 +419,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         if (appendedSegment.getLoadSpec().equals(segmentReplicaWithNewVersion.getLoadSpec())) {
           Assert.assertEquals(
               appendedSegment.getId().toString(),
-              coordinator.getRootSegmentIdForSegment(segmentReplicaWithNewVersion.getId().toString())
+              coordinator.getRootSegmentId(segmentReplicaWithNewVersion)
           );
           hasBeenCarriedForward = true;
           break;
@@ -3412,6 +3416,106 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     Assert.assertEquals(
         unusedSegmentForExactIntervalAndVersion.getId().toString(),
         unusedSegmentIdsForIntervalAndVersion.get(0)
+    );
+  }
+
+  @Test
+  public void testGetRootSegmentId()
+  {
+    DataSegment root = createSegment(Intervals.of("2024/2025"), "2024-01-01", new NumberedShardSpec(0, 0));
+    DataSegment childV1 = createSegment(Intervals.of("2024/2025"), "2024-02-01", new NumberedShardSpec(0, 0));
+    DataSegment childV2 = createSegment(Intervals.ETERNITY, "2025-01-01", new NumberedShardSpec(0, 0));
+    Map<SegmentId, String> rootSegmentIdMap = ImmutableMap.of(
+        childV1.getId(),
+        root.getId().toString(),
+        childV2.getId(),
+        root.getId().toString()
+    );
+    insertUsedSegments(ImmutableSet.of(root, childV1, childV2), rootSegmentIdMap);
+    coordinator.markSegmentsAsUnusedWithinInterval(DS.WIKI, Intervals.of("2024/2025"));
+    Assert.assertNull(coordinator.getRootSegmentId(root));
+    Assert.assertEquals(root.getId().toString(), coordinator.getRootSegmentId(childV1));
+    Assert.assertEquals(root.getId().toString(), coordinator.getRootSegmentId(childV2));
+  }
+
+  @Test
+  public void testIsLoadSpecUnreferenced()
+  {
+    DataSegment root = createSegment(Intervals.of("2024/2025"), "2024-01-01", new NumberedShardSpec(0, 0));
+    DataSegment childV1 = createSegment(Intervals.of("2024/2025"), "2024-02-01", new NumberedShardSpec(0, 0));
+    DataSegment childV2 = createSegment(Intervals.ETERNITY, "2025-01-01", new NumberedShardSpec(0, 0));
+    Map<SegmentId, String> rootSegmentIdMap = ImmutableMap.of(
+        childV1.getId(),
+        root.getId().toString(),
+        childV2.getId(),
+        root.getId().toString()
+    );
+    insertUsedSegments(ImmutableSet.of(root, childV1, childV2), rootSegmentIdMap);
+    coordinator.markSegmentsAsUnusedWithinInterval(DS.WIKI, Intervals.of("2024/2025"));
+
+    final String rootSegmentId = root.getId().toString();
+    Assert.assertFalse(coordinator.isLoadSpecUnreferenced(root, null));
+    Assert.assertFalse(coordinator.isLoadSpecUnreferenced(childV1, rootSegmentId));
+    Assert.assertFalse(coordinator.isLoadSpecUnreferenced(childV2, rootSegmentId));
+
+    Assert.assertFalse(coordinator.isLoadSpecUnreferenced(root, null));
+    Assert.assertFalse(coordinator.isLoadSpecUnreferenced(childV1, rootSegmentId));
+    Assert.assertFalse(coordinator.isLoadSpecUnreferenced(childV2, rootSegmentId));
+
+    coordinator.deleteSegments(ImmutableSet.of(childV2));
+    Assert.assertFalse(coordinator.isLoadSpecUnreferenced(root, null));
+    Assert.assertFalse(coordinator.isLoadSpecUnreferenced(childV1, rootSegmentId));
+    Assert.assertFalse(coordinator.isLoadSpecUnreferenced(childV2, rootSegmentId));
+
+
+    coordinator.deleteSegments(ImmutableSet.of(root));
+    Assert.assertFalse(coordinator.isLoadSpecUnreferenced(root, null));
+    Assert.assertFalse(coordinator.isLoadSpecUnreferenced(childV1, rootSegmentId));
+    Assert.assertFalse(coordinator.isLoadSpecUnreferenced(childV2, rootSegmentId));
+
+    coordinator.deleteSegments(ImmutableSet.of(childV1));
+    Assert.assertTrue(coordinator.isLoadSpecUnreferenced(root, null));
+    Assert.assertTrue(coordinator.isLoadSpecUnreferenced(childV1, rootSegmentId));
+    Assert.assertTrue(coordinator.isLoadSpecUnreferenced(childV2, rootSegmentId));
+  }
+
+
+  private boolean insertUsedSegments(Set<DataSegment> dataSegments, Map<SegmentId, String> rootSegmentIdMap)
+  {
+    final String table = derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable();
+    return derbyConnector.retryWithHandle(
+        handle -> {
+          PreparedBatch preparedBatch = handle.prepareBatch(
+              StringUtils.format(
+                  "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, payload, used_status_last_updated, root_segment_id) "
+                  + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload, :used_status_last_updated, :root_segment_id)",
+                  table,
+                  derbyConnector.getQuoteString()
+              )
+          );
+          for (DataSegment segment : dataSegments) {
+            String id = segment.getId().toString();
+            preparedBatch.add()
+                         .bind("id", id)
+                         .bind("dataSource", segment.getDataSource())
+                         .bind("created_date", DateTimes.nowUtc().toString())
+                         .bind("start", segment.getInterval().getStart().toString())
+                         .bind("end", segment.getInterval().getEnd().toString())
+                         .bind("partitioned", !(segment.getShardSpec() instanceof NoneShardSpec))
+                         .bind("version", segment.getVersion())
+                         .bind("used", true)
+                         .bind("payload", mapper.writeValueAsBytes(segment))
+                         .bind("used_status_last_updated", DateTimes.nowUtc().toString())
+                         .bind("root_segment_id", rootSegmentIdMap.get(segment.getId()));
+          }
+
+          final int[] affectedRows = preparedBatch.execute();
+          final boolean succeeded = Arrays.stream(affectedRows).allMatch(eachAffectedRows -> eachAffectedRows == 1);
+          if (!succeeded) {
+            throw new ISE("Failed to publish segments to DB");
+          }
+          return true;
+        }
     );
   }
 }

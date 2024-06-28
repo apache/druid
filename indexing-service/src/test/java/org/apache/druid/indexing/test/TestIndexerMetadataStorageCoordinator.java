@@ -314,6 +314,18 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
     throw new UnsupportedOperationException();
   }
 
+  @Override
+  public String getRootSegmentId(final DataSegment segment)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public boolean isLoadSpecUnreferenced(final DataSegment segment, final String rootSegmentId)
+  {
+    throw new UnsupportedOperationException();
+  }
+
   public Set<DataSegment> getPublished()
   {
     return ImmutableSet.copyOf(published);

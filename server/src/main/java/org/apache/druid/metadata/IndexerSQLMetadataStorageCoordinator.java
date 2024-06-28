@@ -2941,20 +2941,61 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     );
   }
 
-  @VisibleForTesting
-  String getRootSegmentIdForSegment(final String segmentId)
+  @Override
+  public boolean isLoadSpecUnreferenced(final DataSegment segment, final String rootSegmentId)
+  {
+    // Check if the segment itself exists
+    if (retrieveSegmentForId(segment.getId().toString(), true) != null) {
+      return false;
+    }
+
+    // Check if the segment is the parent of any other segment
+    if (!getSegmentIdsWithRootSegmentId(segment.getDataSource(), segment.getId().toString()).isEmpty()) {
+      return false;
+    }
+
+    // Check if the segment is the child or sibling of any other segment
+    if (rootSegmentId == null) {
+      return true;
+    }
+    if (retrieveSegmentForId(rootSegmentId, true) != null) {
+      return false;
+    }
+    return getSegmentIdsWithRootSegmentId(segment.getDataSource(), rootSegmentId).isEmpty();
+  }
+
+  @Override
+  public String getRootSegmentId(final DataSegment segment)
   {
     final String sql = StringUtils.format(
-        "SELECT root_segment_id from %s where id = :id",
+        "SELECT root_segment_id FROM %s WHERE id = :id",
         dbTables.getSegmentsTable()
     );
     return connector.retryWithHandle(
         handle -> {
           final List<String> rootIdList = handle.createQuery(sql)
-                                                .bind("id", segmentId)
+                                                .bind("id", segment.getId().toString())
                                                 .mapTo(String.class)
                                                 .list();
           return rootIdList.isEmpty() ? null : rootIdList.get(0);
+        }
+    );
+  }
+
+  private List<String> getSegmentIdsWithRootSegmentId(final String dataSource, final String rootSegmentId)
+  {
+    final String sql = StringUtils.format(
+        "SELECT id FROM %s WHERE dataSource = :dataSource AND root_segment_id = :root_segment_id",
+        dbTables.getSegmentsTable()
+    );
+    return connector.retryWithHandle(
+        handle -> {
+          final List<String> segmentIds = handle.createQuery(sql)
+                                                .bind("dataSource", dataSource)
+                                                .bind("root_segment_id", rootSegmentId)
+                                                .mapTo(String.class)
+                                                .list();
+          return segmentIds;
         }
     );
   }
