@@ -1339,7 +1339,7 @@ public class RowBasedGrouperHelper
     @Override
     public Grouper.BufferComparator bufferComparator()
     {
-      if (rankOfDictionaryIds == null) {
+      if (rankOfDictionaryIds == null && !enableRuntimeDictionaryGeneration) {
         initializeRankOfDictionaryIds();
       }
 
@@ -1781,11 +1781,12 @@ public class RowBasedGrouperHelper
       AbstractStringRowBasedKeySerdeHelper(
           int keyBufferPosition,
           boolean pushLimitDown,
-          @Nullable StringComparator stringComparator
+          @Nullable StringComparator stringComparator,
+          boolean enableRuntimeDictionaryGeneration
       )
       {
         this.keyBufferPosition = keyBufferPosition;
-        if (!pushLimitDown) {
+        if (!pushLimitDown && !enableRuntimeDictionaryGeneration) {
           bufferComparator = (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> Ints.compare(
               rankOfDictionaryIds[lhsBuffer.getInt(lhsPosition + keyBufferPosition)],
               rankOfDictionaryIds[rhsBuffer.getInt(rhsPosition + keyBufferPosition)]
@@ -1829,7 +1830,7 @@ public class RowBasedGrouperHelper
           @Nullable StringComparator stringComparator
       )
       {
-        super(keyBufferPosition, pushLimitDown, stringComparator);
+        super(keyBufferPosition, pushLimitDown, stringComparator, true);
       }
 
       @Override
@@ -1877,7 +1878,7 @@ public class RowBasedGrouperHelper
           @Nullable StringComparator stringComparator
       )
       {
-        super(keyBufferPosition, pushLimitDown, stringComparator);
+        super(keyBufferPosition, pushLimitDown, stringComparator, false);
       }
 
       @Override
