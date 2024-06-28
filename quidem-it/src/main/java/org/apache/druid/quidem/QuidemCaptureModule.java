@@ -19,18 +19,16 @@
 
 package org.apache.druid.quidem;
 
-import java.io.File;
+import com.google.inject.Binder;
+import com.google.inject.Module;
+import org.apache.druid.guice.Jerseys;
 
-public class SqlQuidemTest extends DruidQuidemTestBase
+public class QuidemCaptureModule implements Module
 {
-  public SqlQuidemTest()
-  {
-    super();
-  }
 
   @Override
-  protected File getTestRoot()
+  public void configure(Binder binder)
   {
-    return ProjectPathUtils.getPathFromProjectRoot("sql/src/test/quidem/" + getClass().getName());
+    Jerseys.addResource(binder, QuidemCaptureResource.class);
   }
 }

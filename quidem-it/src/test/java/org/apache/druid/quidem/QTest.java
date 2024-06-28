@@ -19,39 +19,36 @@
 
 package org.apache.druid.quidem;
 
-import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.junit.jupiter.api.Test;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.io.File;
+import java.io.IOException;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
-public class DruidAvaticaDriverTest
+public class QTest extends DruidQuidemTestBase
 {
-  // create a new driver instance; this will load the class and register it
-  DruidAvaticaTestDriver driver = new DruidAvaticaTestDriver();
-
-  @Test
-  public void testSelect() throws SQLException
+  public QTest()
   {
-    try (Connection con = DriverManager.getConnection("druidtest:///");
-        Statement stmt = con.createStatement();
-        ResultSet rs = stmt.executeQuery("select 42");) {
-      assertTrue(rs.next());
-      assertEquals(42, rs.getInt(1));
-      assertFalse(rs.next());
-    }
+    super();
+  }
+
+  @Override
+  protected File getTestRoot()
+  {
+    return ProjectPathUtils.getPathFromProjectRoot("quidem-it/src/test/quidem/" + getClass().getName());
   }
 
   @Test
-  public void testURIParse() throws SQLException
+  public void ensureNoRecordFilesPresent() throws IOException
   {
-    SqlTestFrameworkConfig.fromURL("druidtest:///");
+    // ensure that the captured ones are saved into this test's input path
+    assertEquals(QuidemCaptureResource.RECORD_PATH, getTestRoot());
+    for (String name : getFileNames()) {
+      if (name.startsWith("record-")) {
+        fail("Record file found: " + name);
+      }
+    }
   }
 }

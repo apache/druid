@@ -22,6 +22,7 @@ package org.apache.druid.sql.calcite;
 import com.google.common.collect.ImmutableMap;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.sql.calcite.DrillWindowQueryTest.DrillComponentSupplier;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig.MinTopNThreshold;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig.NumMergeBuffers;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig.ResultCache;
@@ -29,6 +30,7 @@ import org.apache.druid.sql.calcite.util.CacheTestHelperModule.ResultCacheMode;
 import org.junit.jupiter.api.Test;
 
 import java.lang.annotation.Annotation;
+import java.net.URI;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -139,4 +141,15 @@ public class SqlTestFrameworkConfigTest
     );
   }
 
+  @Test
+  public void testURI()
+  {
+    SqlTestFrameworkConfig c = new SqlTestFrameworkConfig(
+        ImmutableMap.of(
+            "componentSupplier", DrillComponentSupplier.class.getSimpleName()
+        )
+    );
+    URI uri = c.getDruidTestURI();
+    assertEquals("druidtest:///?componentSupplier=DrillComponentSupplier", uri.toString());
+  }
 }
