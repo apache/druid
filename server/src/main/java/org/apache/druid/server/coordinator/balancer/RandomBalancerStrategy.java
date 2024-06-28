@@ -20,7 +20,7 @@
 package org.apache.druid.server.coordinator.balancer;
 
 import org.apache.druid.server.coordinator.ServerHolder;
-import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
+import org.apache.druid.server.stats.DruidRunStats;
 import org.apache.druid.timeline.DataSegment;
 
 import java.util.ArrayList;
@@ -73,8 +73,8 @@ public class RandomBalancerStrategy implements BalancerStrategy
   }
 
   @Override
-  public CoordinatorRunStats getStats()
+  public DruidRunStats getStats()
   {
-    return CoordinatorRunStats.empty();
+    return DruidRunStats.empty();
   }
 }

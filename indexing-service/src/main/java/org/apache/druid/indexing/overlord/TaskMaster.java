@@ -45,9 +45,9 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.CoordinatorOverlordServiceConfig;
-import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.metrics.TaskCountStatsProvider;
 import org.apache.druid.server.metrics.TaskSlotCountStatsProvider;
+import org.apache.druid.server.stats.DruidRunStats;
 
 import javax.annotation.Nullable;
 import java.util.Map;
@@ -315,68 +315,13 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
   }
 
   @Override
-  public Map<String, Long> getSuccessfulTaskCount()
-  {
-    Optional<TaskQueue> taskQueue = getTaskQueue();
-    if (taskQueue.isPresent()) {
-      return taskQueue.get().getSuccessfulTaskCount();
-    } else {
-      return null;
-    }
-  }
-
-  @Override
-  public Map<String, Long> getFailedTaskCount()
-  {
-    Optional<TaskQueue> taskQueue = getTaskQueue();
-    if (taskQueue.isPresent()) {
-      return taskQueue.get().getFailedTaskCount();
-    } else {
-      return null;
-    }
-  }
-
-  @Override
-  public Map<String, Long> getRunningTaskCount()
-  {
-    Optional<TaskQueue> taskQueue = getTaskQueue();
-    if (taskQueue.isPresent()) {
-      return taskQueue.get().getRunningTaskCount();
-    } else {
-      return null;
-    }
-  }
-
-  @Override
-  public Map<String, Long> getPendingTaskCount()
-  {
-    Optional<TaskQueue> taskQueue = getTaskQueue();
-    if (taskQueue.isPresent()) {
-      return taskQueue.get().getPendingTaskCount();
-    } else {
-      return null;
-    }
-  }
-
-  @Override
-  public Map<String, Long> getWaitingTaskCount()
-  {
-    Optional<TaskQueue> taskQueue = getTaskQueue();
-    if (taskQueue.isPresent()) {
-      return taskQueue.get().getWaitingTaskCount();
-    } else {
-      return null;
-    }
-  }
-
-  @Override
-  public CoordinatorRunStats getStats()
+  public DruidRunStats getTaskCountStats()
   {
     Optional<TaskQueue> taskQueue = getTaskQueue();
     if (taskQueue.isPresent()) {
       return taskQueue.get().getQueueStats();
     } else {
-      return CoordinatorRunStats.empty();
+      return DruidRunStats.empty();
     }
   }
 

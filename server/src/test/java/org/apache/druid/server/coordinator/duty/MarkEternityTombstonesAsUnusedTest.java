@@ -30,14 +30,14 @@ import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.ServerHolder;
+import org.apache.druid.server.coordinator.Stats;
 import org.apache.druid.server.coordinator.balancer.RandomBalancerStrategy;
 import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
 import org.apache.druid.server.coordinator.simulate.TestSegmentsMetadataManager;
-import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
-import org.apache.druid.server.coordinator.stats.Dimension;
-import org.apache.druid.server.coordinator.stats.RowKey;
-import org.apache.druid.server.coordinator.stats.Stats;
+import org.apache.druid.server.stats.Dimension;
+import org.apache.druid.server.stats.DruidRunStats;
+import org.apache.druid.server.stats.RowKey;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
@@ -491,7 +491,7 @@ public class MarkEternityTombstonesAsUnusedTest
     Assert.assertEquals(expectedUsedSegments.size(), actualUsedSegments.size());
     Assert.assertTrue(actualUsedSegments.containsAll(expectedUsedSegments));
 
-    final CoordinatorRunStats runStats = params.getCoordinatorStats();
+    final DruidRunStats runStats = params.getCoordinatorStats();
     Assert.assertEquals(
         allUsedSegments.size() - expectedUsedSegments.size(),
         runStats.get(Stats.Segments.UNNEEDED_ETERNITY_TOMBSTONE, RowKey.of(Dimension.DATASOURCE, ds1)) +

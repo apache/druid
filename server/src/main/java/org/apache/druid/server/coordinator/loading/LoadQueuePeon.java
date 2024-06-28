@@ -19,7 +19,7 @@
 
 package org.apache.druid.server.coordinator.loading;
 
-import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
+import org.apache.druid.server.stats.DruidRunStats;
 import org.apache.druid.timeline.DataSegment;
 
 import java.util.Set;
@@ -54,7 +54,7 @@ public interface LoadQueuePeon
 
   long getSizeOfSegmentsToLoad();
 
-  CoordinatorRunStats getAndResetStats();
+  DruidRunStats getAndResetStats();
 
   /**
    * Tries to cancel the current operation queued for the given segment on this

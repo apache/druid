@@ -38,12 +38,12 @@ import org.apache.druid.server.coordination.DataSegmentChangeRequest;
 import org.apache.druid.server.coordination.DataSegmentChangeResponse;
 import org.apache.druid.server.coordination.SegmentChangeStatus;
 import org.apache.druid.server.coordinator.BytesAccumulatingResponseHandler;
+import org.apache.druid.server.coordinator.Stats;
 import org.apache.druid.server.coordinator.config.HttpLoadQueuePeonConfig;
-import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
-import org.apache.druid.server.coordinator.stats.CoordinatorStat;
-import org.apache.druid.server.coordinator.stats.Dimension;
-import org.apache.druid.server.coordinator.stats.RowKey;
-import org.apache.druid.server.coordinator.stats.Stats;
+import org.apache.druid.server.stats.Dimension;
+import org.apache.druid.server.stats.DruidRunStats;
+import org.apache.druid.server.stats.DruidStat;
+import org.apache.druid.server.stats.RowKey;
 import org.apache.druid.timeline.DataSegment;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -87,7 +87,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
   private static final EmittingLogger log = new EmittingLogger(HttpLoadQueuePeon.class);
 
   private final AtomicLong queuedSize = new AtomicLong(0);
-  private final AtomicReference<CoordinatorRunStats> stats = new AtomicReference<>(new CoordinatorRunStats());
+  private final AtomicReference<DruidRunStats> stats = new AtomicReference<>(new DruidRunStats());
 
   private final ConcurrentMap<DataSegment, SegmentHolder> segmentsToLoad = new ConcurrentHashMap<>();
   private final ConcurrentMap<DataSegment, SegmentHolder> segmentsToDrop = new ConcurrentHashMap<>();
@@ -482,9 +482,9 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
   }
 
   @Override
-  public CoordinatorRunStats getAndResetStats()
+  public DruidRunStats getAndResetStats()
   {
-    return stats.getAndSet(new CoordinatorRunStats());
+    return stats.getAndSet(new DruidRunStats());
   }
 
   @Override
@@ -591,9 +591,9 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
     FAILED(Stats.SegmentQueue.FAILED_ACTIONS),
     CANCELLED(Stats.SegmentQueue.CANCELLED_ACTIONS);
 
-    final CoordinatorStat datasourceStat;
+    final DruidStat datasourceStat;
 
-    RequestStatus(CoordinatorStat datasourceStat)
+    RequestStatus(DruidStat datasourceStat)
     {
       this.datasourceStat = datasourceStat;
     }

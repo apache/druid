@@ -28,14 +28,11 @@ import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.balancer.SegmentToMoveCalculator;
 import org.apache.druid.server.coordinator.balancer.TierSegmentBalancer;
 import org.apache.druid.server.coordinator.loading.SegmentLoadingConfig;
-import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
+import org.apache.druid.server.stats.DruidRunStats;
 import org.joda.time.Duration;
 
 import java.util.Set;
 
-/**
- *
- */
 public class BalanceSegments implements CoordinatorDuty
 {
   private static final EmittingLogger log = new EmittingLogger(BalanceSegments.class);
@@ -73,7 +70,7 @@ public class BalanceSegments implements CoordinatorDuty
         (tier, servers) -> new TierSegmentBalancer(tier, servers, maxSegmentsToMove, params).run()
     );
 
-    CoordinatorRunStats runStats = params.getCoordinatorStats();
+    DruidRunStats runStats = params.getCoordinatorStats();
     params.getBalancerStrategy()
           .getStats()
           .forEachStat(runStats::add);

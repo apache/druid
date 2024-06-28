@@ -23,9 +23,9 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.metadata.MetadataSupervisorManager;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
+import org.apache.druid.server.coordinator.Stats;
 import org.apache.druid.server.coordinator.config.MetadataCleanupConfig;
-import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
-import org.apache.druid.server.coordinator.stats.Stats;
+import org.apache.druid.server.stats.DruidRunStats;
 import org.joda.time.Duration;
 import org.junit.Assert;
 import org.junit.Before;
@@ -49,12 +49,12 @@ public class KillDatasourceMetadataTest
   private DruidCoordinatorRuntimeParams mockDruidCoordinatorRuntimeParams;
 
   private KillDatasourceMetadata killDatasourceMetadata;
-  private CoordinatorRunStats runStats;
+  private DruidRunStats runStats;
 
   @Before
   public void setup()
   {
-    runStats = new CoordinatorRunStats();
+    runStats = new DruidRunStats();
     Mockito.when(mockDruidCoordinatorRuntimeParams.getCoordinatorStats()).thenReturn(runStats);
   }
 

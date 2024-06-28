@@ -46,11 +46,11 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
+import org.apache.druid.server.coordinator.Stats;
 import org.apache.druid.server.coordinator.config.KillUnusedSegmentsConfig;
-import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
-import org.apache.druid.server.coordinator.stats.Dimension;
-import org.apache.druid.server.coordinator.stats.RowKey;
-import org.apache.druid.server.coordinator.stats.Stats;
+import org.apache.druid.server.stats.Dimension;
+import org.apache.druid.server.stats.DruidRunStats;
+import org.apache.druid.server.stats.RowKey;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.DateTime;
@@ -150,7 +150,7 @@ public class KillUnusedSegmentsTest
     createAndAddUnusedSegment(DS1, Intervals.ETERNITY, VERSION, sixtyDaysAgo);
 
     initDuty();
-    final CoordinatorRunStats stats = runDutyAndGetStats();
+    final DruidRunStats stats = runDutyAndGetStats();
 
     Assert.assertEquals(1, stats.get(Stats.Kill.AVAILABLE_SLOTS));
     Assert.assertEquals(1, stats.get(Stats.Kill.SUBMITTED_TASKS));
@@ -164,7 +164,7 @@ public class KillUnusedSegmentsTest
   public void testKillWithNoDatasources()
   {
     initDuty();
-    final CoordinatorRunStats stats = runDutyAndGetStats();
+    final DruidRunStats stats = runDutyAndGetStats();
 
     Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
     Assert.assertEquals(0, stats.get(Stats.Kill.SUBMITTED_TASKS));
@@ -191,7 +191,7 @@ public class KillUnusedSegmentsTest
     createAndAddUnusedSegment(DS2, NEXT_DAY, VERSION, NOW.minusDays(1));
 
     initDuty();
-    CoordinatorRunStats stats = runDutyAndGetStats();
+    DruidRunStats stats = runDutyAndGetStats();
 
     Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
     Assert.assertEquals(2, stats.get(Stats.Kill.SUBMITTED_TASKS));
@@ -246,7 +246,7 @@ public class KillUnusedSegmentsTest
     createAndAddUnusedSegment(DS1, NEXT_MONTH, VERSION, NOW.minusDays(10));
 
     initDuty();
-    final CoordinatorRunStats stats = runDutyAndGetStats();
+    final DruidRunStats stats = runDutyAndGetStats();
 
     Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
     Assert.assertEquals(1, stats.get(Stats.Kill.SUBMITTED_TASKS));
@@ -272,7 +272,7 @@ public class KillUnusedSegmentsTest
     createAndAddUnusedSegment(DS1, NEXT_MONTH, VERSION, NOW.minusDays(1));
 
     initDuty();
-    CoordinatorRunStats stats = runDutyAndGetStats();
+    DruidRunStats stats = runDutyAndGetStats();
 
     Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
     Assert.assertEquals(1, stats.get(Stats.Kill.SUBMITTED_TASKS));
@@ -325,7 +325,7 @@ public class KillUnusedSegmentsTest
     createAndAddUnusedSegment(DS3, MONTH_OLD, VERSION, NOW.minusDays(1));
 
     initDuty();
-    final CoordinatorRunStats stats = runDutyAndGetStats();
+    final DruidRunStats stats = runDutyAndGetStats();
 
     Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
     Assert.assertEquals(2, stats.get(Stats.Kill.SUBMITTED_TASKS));
@@ -352,7 +352,7 @@ public class KillUnusedSegmentsTest
     createAndAddUnusedSegment(DS1, NEXT_MONTH, VERSION, NOW.minusDays(10));
 
     initDuty();
-    final CoordinatorRunStats stats = runDutyAndGetStats();
+    final DruidRunStats stats = runDutyAndGetStats();
 
     Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
     Assert.assertEquals(1, stats.get(Stats.Kill.SUBMITTED_TASKS));
@@ -376,7 +376,7 @@ public class KillUnusedSegmentsTest
     createAndAddUnusedSegment(DS1, NEXT_MONTH, VERSION, NOW.minusDays(10));
 
     initDuty();
-    final CoordinatorRunStats stats = runDutyAndGetStats();
+    final DruidRunStats stats = runDutyAndGetStats();
 
     Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
     Assert.assertEquals(1, stats.get(Stats.Kill.SUBMITTED_TASKS));
@@ -397,7 +397,7 @@ public class KillUnusedSegmentsTest
     createAndAddUnusedSegment(DS1, DAY_OLD, VERSION, NOW.minusDays(2));
 
     initDuty();
-    final CoordinatorRunStats stats = runDutyAndGetStats();
+    final DruidRunStats stats = runDutyAndGetStats();
 
     Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
     Assert.assertEquals(1, stats.get(Stats.Kill.SUBMITTED_TASKS));
@@ -423,7 +423,7 @@ public class KillUnusedSegmentsTest
     createAndAddUnusedSegment(DS1, NEXT_MONTH, VERSION, NOW.minusDays(10));
 
     initDuty();
-    CoordinatorRunStats stats = runDutyAndGetStats();
+    DruidRunStats stats = runDutyAndGetStats();
 
     Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
     Assert.assertEquals(1, stats.get(Stats.Kill.SUBMITTED_TASKS));
@@ -464,7 +464,7 @@ public class KillUnusedSegmentsTest
     createAndAddUnusedSegment(DS3, YEAR_OLD, VERSION, NOW.minusDays(1));
 
     initDuty();
-    final CoordinatorRunStats stats = runDutyAndGetStats();
+    final DruidRunStats stats = runDutyAndGetStats();
 
     Assert.assertEquals(2, stats.get(Stats.Kill.AVAILABLE_SLOTS));
     Assert.assertEquals(2, stats.get(Stats.Kill.SUBMITTED_TASKS));
@@ -489,7 +489,7 @@ public class KillUnusedSegmentsTest
     overlordClient.addTask(DS1);
 
     initDuty();
-    final CoordinatorRunStats stats = runDutyAndGetStats();
+    final DruidRunStats stats = runDutyAndGetStats();
 
     Assert.assertEquals(0, stats.get(Stats.Kill.AVAILABLE_SLOTS));
     Assert.assertEquals(0, stats.get(Stats.Kill.SUBMITTED_TASKS));
@@ -508,7 +508,7 @@ public class KillUnusedSegmentsTest
     overlordClient.addTask(DS1);
 
     initDuty();
-    final CoordinatorRunStats stats = runDutyAndGetStats();
+    final DruidRunStats stats = runDutyAndGetStats();
 
     Assert.assertEquals(1, stats.get(Stats.Kill.AVAILABLE_SLOTS));
     Assert.assertEquals(0, stats.get(Stats.Kill.SUBMITTED_TASKS));
@@ -522,7 +522,7 @@ public class KillUnusedSegmentsTest
     paramsBuilder.withDynamicConfigs(dynamicConfigBuilder.build());
 
     initDuty();
-    final CoordinatorRunStats stats = runDutyAndGetStats();
+    final DruidRunStats stats = runDutyAndGetStats();
 
     Assert.assertEquals(1, stats.get(Stats.Kill.AVAILABLE_SLOTS));
     Assert.assertEquals(0, stats.get(Stats.Kill.SUBMITTED_TASKS));
@@ -537,7 +537,7 @@ public class KillUnusedSegmentsTest
     paramsBuilder.withDynamicConfigs(dynamicConfigBuilder.build());
 
     initDuty();
-    final CoordinatorRunStats stats = runDutyAndGetStats();
+    final DruidRunStats stats = runDutyAndGetStats();
 
     Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
     Assert.assertEquals(0, stats.get(Stats.Kill.SUBMITTED_TASKS));
@@ -552,7 +552,7 @@ public class KillUnusedSegmentsTest
     paramsBuilder.withDynamicConfigs(dynamicConfigBuilder.build());
 
     initDuty();
-    final CoordinatorRunStats stats = runDutyAndGetStats();
+    final DruidRunStats stats = runDutyAndGetStats();
 
     Assert.assertEquals(0, stats.get(Stats.Kill.AVAILABLE_SLOTS));
     Assert.assertEquals(0, stats.get(Stats.Kill.SUBMITTED_TASKS));
@@ -567,7 +567,7 @@ public class KillUnusedSegmentsTest
     paramsBuilder.withDynamicConfigs(dynamicConfigBuilder.build());
 
     initDuty();
-    final CoordinatorRunStats stats = runDutyAndGetStats();
+    final DruidRunStats stats = runDutyAndGetStats();
 
     Assert.assertEquals(0, stats.get(Stats.Kill.AVAILABLE_SLOTS));
     Assert.assertEquals(0, stats.get(Stats.Kill.SUBMITTED_TASKS));
@@ -582,7 +582,7 @@ public class KillUnusedSegmentsTest
     paramsBuilder.withDynamicConfigs(dynamicConfigBuilder.build());
 
     initDuty();
-    final CoordinatorRunStats stats = runDutyAndGetStats();
+    final DruidRunStats stats = runDutyAndGetStats();
 
     Assert.assertEquals(1, stats.get(Stats.Kill.AVAILABLE_SLOTS));
     Assert.assertEquals(0, stats.get(Stats.Kill.SUBMITTED_TASKS));
@@ -597,7 +597,7 @@ public class KillUnusedSegmentsTest
     paramsBuilder.withDynamicConfigs(dynamicConfigBuilder.build());
 
     initDuty();
-    final CoordinatorRunStats stats = runDutyAndGetStats();
+    final DruidRunStats stats = runDutyAndGetStats();
 
     Assert.assertEquals(2, stats.get(Stats.Kill.AVAILABLE_SLOTS));
     Assert.assertEquals(0, stats.get(Stats.Kill.SUBMITTED_TASKS));
@@ -613,7 +613,7 @@ public class KillUnusedSegmentsTest
     createAndAddUnusedSegment(DS1, firstHalfEternity, VERSION, NOW.minusDays(60));
 
     initDuty();
-    final CoordinatorRunStats stats = runDutyAndGetStats();
+    final DruidRunStats stats = runDutyAndGetStats();
 
     Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
     Assert.assertEquals(1, stats.get(Stats.Kill.SUBMITTED_TASKS));
@@ -631,7 +631,7 @@ public class KillUnusedSegmentsTest
     createAndAddUnusedSegment(DS1, Intervals.ETERNITY, VERSION, NOW.minusDays(60));
 
     initDuty();
-    final CoordinatorRunStats stats = runDutyAndGetStats();
+    final DruidRunStats stats = runDutyAndGetStats();
 
     Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
     Assert.assertEquals(1, stats.get(Stats.Kill.SUBMITTED_TASKS));
@@ -650,7 +650,7 @@ public class KillUnusedSegmentsTest
     createAndAddUnusedSegment(DS1, secondHalfEternity, VERSION, NOW.minusDays(60));
 
     initDuty();
-    final CoordinatorRunStats stats = runDutyAndGetStats();
+    final DruidRunStats stats = runDutyAndGetStats();
 
     Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
     Assert.assertEquals(1, stats.get(Stats.Kill.SUBMITTED_TASKS));
@@ -670,7 +670,7 @@ public class KillUnusedSegmentsTest
     createAndAddUnusedSegment(DS1, largeTimeRange2, VERSION, NOW.minusDays(60));
 
     initDuty();
-    final CoordinatorRunStats stats = runDutyAndGetStats();
+    final DruidRunStats stats = runDutyAndGetStats();
 
     Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
     Assert.assertEquals(1, stats.get(Stats.Kill.SUBMITTED_TASKS));
@@ -690,7 +690,7 @@ public class KillUnusedSegmentsTest
     createAndAddUnusedSegment(DS1, YEAR_OLD, "v3", NOW.minusDays(10));
 
     initDuty();
-    final CoordinatorRunStats stats = runDutyAndGetStats();
+    final DruidRunStats stats = runDutyAndGetStats();
 
     Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
     Assert.assertEquals(1, stats.get(Stats.Kill.SUBMITTED_TASKS));
@@ -761,7 +761,7 @@ public class KillUnusedSegmentsTest
     killDuty = new KillUnusedSegments(sqlSegmentsMetadataManager, overlordClient, configBuilder.build());
   }
 
-  private CoordinatorRunStats runDutyAndGetStats()
+  private DruidRunStats runDutyAndGetStats()
   {
     paramsBuilder.withDynamicConfigs(dynamicConfigBuilder.build());
     final DruidCoordinatorRuntimeParams params = killDuty.run(paramsBuilder.build());
