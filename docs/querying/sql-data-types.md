@@ -43,7 +43,7 @@ Druid natively supports the following basic column types:
 ## Complex types
 
 Druid natively supports the following complex types:
-* `COMPLEX<JSON>`: stores a copy of structured data in JSON format and specialized internal columns and indexes for nested basic types. Click here to learn more about [ingesting as `COMPLEX<JSON>`](nested-columns.md#ingest-a-json-string-as-complexjson)
+* `COMPLEX<JSON>`: stores a copy of structured data in JSON format and specialized internal columns and indexes for nested basic types. Click here to learn more about [`COMPLEX<JSON>`](nested-columns.md)
 * `cardinality`: Data structure to compute the cardinality of Apache Druid dimensions using the HyperLogLog algorithm. Click here to learn more about [`cardinality`](hll-old.md#cardinality-aggregator)
 * `hyperUnique`: Data structure of aggregated values to estimate count distinct using a variant of the HyperLogLog approximation algorithm. Consider using HLL sketches for better accuracy in many cases. Click here to learn more about [`hyperUnique`](hll-old.md#hyperunique-aggregator)
 
