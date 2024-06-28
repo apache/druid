@@ -939,7 +939,6 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
   private void runIndexTask(@Nullable PartitionsSpec partitionsSpec, boolean appendToExisting)
   {
     ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
-        null,
         new LocalInputSource(inputDir, "druid*"),
         new CsvInputFormat(
             Arrays.asList("ts", "dim", "val"),

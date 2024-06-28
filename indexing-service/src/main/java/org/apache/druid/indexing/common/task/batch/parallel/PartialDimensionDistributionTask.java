@@ -180,9 +180,6 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
   @Override
   public Set<ResourceAction> getInputSourceResources()
   {
-    if (getIngestionSchema().getIOConfig().getFirehoseFactory() != null) {
-      throw getInputSecurityOnFirehoseUnsupportedError();
-    }
     return getIngestionSchema().getIOConfig().getInputSource() != null ?
            getIngestionSchema().getIOConfig().getInputSource().getTypes()
                                .stream()

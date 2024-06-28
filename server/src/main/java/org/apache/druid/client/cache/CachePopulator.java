@@ -20,6 +20,7 @@
 package org.apache.druid.client.cache;
 
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.segment.realtime.appenderator.AppendableSegmentQuerySegmentWalker;
 
 import java.util.function.Function;
 
@@ -34,7 +35,7 @@ import java.util.function.Function;
  *  historicals:    {@link org.apache.druid.server.coordination.ServerManager} and
  *                  {@link org.apache.druid.client.CachingQueryRunner}
  *
- *  realtime tasks: {@link org.apache.druid.segment.realtime.appenderator.SinkQuerySegmentWalker} and
+ *  realtime tasks: {@link AppendableSegmentQuerySegmentWalker} and
  *                  {@link org.apache.druid.client.CachingQueryRunner}
  *
  *  brokers:        {@link org.apache.druid.server.ClientQuerySegmentWalker} and

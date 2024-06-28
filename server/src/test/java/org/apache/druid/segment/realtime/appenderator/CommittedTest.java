@@ -61,10 +61,10 @@ public class CommittedTest
 
   private static Committed fixedInstance()
   {
-    final Map<String, Integer> hydrants = new HashMap<>();
-    hydrants.put(IDENTIFIER1, 3);
-    hydrants.put(IDENTIFIER2, 2);
-    return new Committed(hydrants, ImmutableMap.of("metadata", "foo"));
+    final Map<String, Integer> partialSegments = new HashMap<>();
+    partialSegments.put(IDENTIFIER1, 3);
+    partialSegments.put(IDENTIFIER2, 2);
+    return new Committed(partialSegments, ImmutableMap.of("metadata", "foo"));
   }
 
   @Test
@@ -89,21 +89,21 @@ public class CommittedTest
     final Committed committed2 = OBJECT_MAPPER.readValue(bytes, Committed.class);
     Assert.assertEquals("Round trip: overall", committed, committed2);
     Assert.assertEquals("Round trip: metadata", committed.getMetadata(), committed2.getMetadata());
-    Assert.assertEquals("Round trip: identifiers", committed.getHydrants().keySet(), committed2.getHydrants().keySet());
+    Assert.assertEquals("Round trip: identifiers", committed.getPartialSegments().keySet(), committed2.getPartialSegments().keySet());
   }
 
   @Test
-  public void testGetCommittedHydrant()
+  public void testGetCommittedPartialSegment()
   {
-    Assert.assertEquals(3, fixedInstance().getCommittedHydrants(IDENTIFIER1));
-    Assert.assertEquals(2, fixedInstance().getCommittedHydrants(IDENTIFIER2));
-    Assert.assertEquals(0, fixedInstance().getCommittedHydrants(IDENTIFIER3));
+    Assert.assertEquals(3, fixedInstance().getCommittedPartialSegments(IDENTIFIER1));
+    Assert.assertEquals(2, fixedInstance().getCommittedPartialSegments(IDENTIFIER2));
+    Assert.assertEquals(0, fixedInstance().getCommittedPartialSegments(IDENTIFIER3));
   }
 
   @Test
   public void testWithout()
   {
-    Assert.assertEquals(0, fixedInstance().without(IDENTIFIER1).getCommittedHydrants(IDENTIFIER1));
-    Assert.assertEquals(2, fixedInstance().without(IDENTIFIER1).getCommittedHydrants(IDENTIFIER2));
+    Assert.assertEquals(0, fixedInstance().without(IDENTIFIER1).getCommittedPartialSegments(IDENTIFIER1));
+    Assert.assertEquals(2, fixedInstance().without(IDENTIFIER1).getCommittedPartialSegments(IDENTIFIER2));
   }
 }

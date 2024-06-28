@@ -323,7 +323,6 @@ public class RangePartitionTaskKillTest extends AbstractMultiPhaseParallelIndexi
 
     Preconditions.checkArgument(parseSpec == null);
     ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
-        null,
         new LocalInputSource(inputDir, filter),
         inputFormat,
         appendToExisting,

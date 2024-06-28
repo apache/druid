@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.CsvInputFormat;
@@ -86,7 +85,7 @@ import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.SegmentSchemaCache;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
-import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
+import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.AuthTestUtils;
@@ -294,8 +293,8 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
   }
 
   /**
-   * Converts ParseSpec to InputFormat for indexing tests. To be used until {@link FirehoseFactory}
-   * & {@link InputRowParser} is deprecated and removed.
+   * Converts ParseSpec to InputFormat for indexing tests. To be used until the {@link InputRowParser} is removed
+   * This is already deprecated, but the translation logic still remains.
    */
   public static InputFormat createInputFormatFromParseSpec(ParseSpec parseSpec)
   {

@@ -48,7 +48,7 @@ public class SegmentGenerationMetrics
   private final AtomicLong mergeCpuTime = new AtomicLong(0);
   private final AtomicLong persistCpuTime = new AtomicLong(0);
   private final AtomicLong handOffCount = new AtomicLong(0);
-  private final AtomicLong sinkCount = new AtomicLong(0);
+  private final AtomicLong appendableSegmentCount = new AtomicLong(0);
   private final AtomicLong messageMaxTimestamp = new AtomicLong(0);
   private final AtomicLong messageGap = new AtomicLong(0);
   private final AtomicBoolean processingDone = new AtomicBoolean(false);
@@ -100,9 +100,9 @@ public class SegmentGenerationMetrics
     handOffCount.incrementAndGet();
   }
 
-  public void setSinkCount(long sinkCount)
+  public void setAppendableSegmentCount(long appendableSegmentCount)
   {
-    this.sinkCount.set(sinkCount);
+    this.appendableSegmentCount.set(appendableSegmentCount);
   }
 
   public void reportMessageMaxTimestamp(long messageMaxTimestamp)
@@ -190,9 +190,9 @@ public class SegmentGenerationMetrics
     return handOffCount.get();
   }
 
-  public long sinkCount()
+  public long appendableSegmentCount()
   {
-    return sinkCount.get();
+    return appendableSegmentCount.get();
   }
 
   public long messageGap()
@@ -219,7 +219,7 @@ public class SegmentGenerationMetrics
     retVal.mergeCpuTime.set(mergeCpuTime.get());
     retVal.persistCpuTime.set(persistCpuTime.get());
     retVal.handOffCount.set(handOffCount.get());
-    retVal.sinkCount.set(sinkCount.get());
+    retVal.appendableSegmentCount.set(appendableSegmentCount.get());
     retVal.messageMaxTimestamp.set(messageMaxTimestamp.get());
     retVal.maxSegmentHandoffTime.set(maxSegmentHandoffTime.get());
     retVal.mergedRows.set(mergedRows.get());

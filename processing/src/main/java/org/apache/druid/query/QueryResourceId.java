@@ -48,7 +48,7 @@ import java.util.Objects;
  * there are three queryable servers (classes are not linkable from this method):
  * 1. {@link org.apache.druid.server.ClientQuerySegmentWalker} - For brokers
  * 2. {@link org.apache.druid.server.coordination.ServerManager} - For historicals
- * 3. {@link org.apache.druid.segment.realtime.appenderator.SinkQuerySegmentWalker} - For peons & indexer's tasks
+ * 3. {@link org.apache.druid.segment.realtime.appenderator.AppendableSegmentQuerySegmentWalker} - For peons & indexer's tasks
  * <p>
  * These three classes are one of the first places the query reaches when it begins processing, therefore it is
  * guaranteed that if the resource id is allotted at only these places, no one will overwrite the resource id
@@ -68,7 +68,7 @@ import java.util.Objects;
  * <p>
  * 3. {@link org.apache.druid.server.coordination.ServerManager} Allocates the query resource id on the historicals
  * <p>
- * 4. {@link org.apache.druid.segment.realtime.appenderator.SinkQuerySegmentWalker} Allocates the query resource id on the peons
+ * 4. {@link org.apache.druid.segment.realtime.appenderator.AppendableSegmentQuerySegmentWalker} Allocates the query resource id on the peons
  * (MMs) and indexers
  * <p>
  * 5. {@link org.apache.druid.server.ResourceIdPopulatingQueryRunner} Populates the query resource id. ({@link org.apache.druid.server.ClientQuerySegmentWalker}

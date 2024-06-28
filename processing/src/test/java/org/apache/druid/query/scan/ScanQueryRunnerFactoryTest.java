@@ -39,6 +39,7 @@ import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -83,7 +84,7 @@ public class ScanQueryRunnerFactoryTest
   );
 
   @RunWith(Parameterized.class)
-  public static class ScanQueryRunnerFactoryParameterizedTest
+  public static class ScanQueryRunnerFactoryParameterizedTest extends InitializedNullHandlingTest
   {
     private int numElements;
     private ScanQuery query;

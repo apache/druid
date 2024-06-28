@@ -765,7 +765,6 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     }
 
     return new ParallelIndexIOConfig(
-        null,
         new DruidInputSource(
             dataSchema.getDataSource(),
             interval,

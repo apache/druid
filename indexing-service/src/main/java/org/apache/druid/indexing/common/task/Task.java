@@ -165,15 +165,6 @@ public interface Task
     ));
   }
 
-  default UOE getInputSecurityOnFirehoseUnsupportedError()
-  {
-    throw new UOE(StringUtils.format(
-        "Input source based security cannot be performed '%s' task because it uses firehose."
-        + " Change the tasks configuration, or disable `isEnableInputSourceSecurity`",
-        getType()
-    ));
-  }
-
   /**
    * Returns query runners for this task. If this task is not meant to answer queries over its datasource, this method
    * should return null.

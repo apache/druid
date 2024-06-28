@@ -54,7 +54,6 @@ public class IndexIngestionSpecTest
             null
         ),
         new IndexIOConfig(
-            null,
             new NoopInputSource(),
             new NoopInputFormat(),
             null,
@@ -79,7 +78,6 @@ public class IndexIngestionSpecTest
             null
         ),
         new IndexIOConfig(
-            null,
             new NoopInputSource(),
             null,
             null,

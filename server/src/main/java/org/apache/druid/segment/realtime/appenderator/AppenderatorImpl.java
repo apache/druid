@@ -73,9 +73,9 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.FingerprintGenerator;
-import org.apache.druid.segment.realtime.FireHydrant;
+import org.apache.druid.segment.realtime.AppendableSegment;
+import org.apache.druid.segment.realtime.PartialSegment;
 import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
-import org.apache.druid.segment.realtime.sink.Sink;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -123,10 +123,10 @@ public class AppenderatorImpl implements Appenderator
   public static final int ROUGH_OVERHEAD_PER_DIMENSION_COLUMN_HOLDER = 1000;
   public static final int ROUGH_OVERHEAD_PER_METRIC_COLUMN_HOLDER = 700;
   public static final int ROUGH_OVERHEAD_PER_TIME_COLUMN_HOLDER = 600;
-  // Rough estimate of memory footprint of empty Sink based on actual heap dumps
-  public static final int ROUGH_OVERHEAD_PER_SINK = 5000;
-  // Rough estimate of memory footprint of empty FireHydrant based on actual heap dumps
-  public static final int ROUGH_OVERHEAD_PER_HYDRANT = 1000;
+  // Rough estimate of memory footprint of empty AppendableSegment based on actual heap dumps
+  public static final int ROUGH_OVERHEAD_PER_APPENDABLE_SEGMENT = 5000;
+  // Rough estimate of memory footprint of empty PartialSegment based on actual heap dumps
+  public static final int ROUGH_OVERHEAD_PER_PARTIAL_SEGMENT = 1000;
 
   private static final EmittingLogger log = new EmittingLogger(AppenderatorImpl.class);
   private static final int WARN_DELAY = 1000;
@@ -148,9 +148,9 @@ public class AppenderatorImpl implements Appenderator
    * called) and from {@link #persistExecutor}. It could also be accessed (but not mutated) potentially in the context
    * of any thread from {@link #drop}.
    */
-  private final ConcurrentMap<SegmentIdWithShardSpec, Sink> sinks = new ConcurrentHashMap<>();
-  private final Set<SegmentIdWithShardSpec> droppingSinks = Sets.newConcurrentHashSet();
-  private final VersionedIntervalTimeline<String, Sink> sinkTimeline;
+  private final ConcurrentMap<SegmentIdWithShardSpec, AppendableSegment> appendableSegments = new ConcurrentHashMap<>();
+  private final Set<SegmentIdWithShardSpec> droppingAppendableSegments = Sets.newConcurrentHashSet();
+  private final VersionedIntervalTimeline<String, AppendableSegment> appendableSegmentTimeline;
   private final long maxBytesTuningConfig;
   private final boolean skipBytesInMemoryOverheadCheck;
 
@@ -183,15 +183,15 @@ public class AppenderatorImpl implements Appenderator
   private final boolean useMaxMemoryEstimates;
 
   /**
-   * Use next Map to store metadata (File, SegmentId) for a hydrant for batch appenderator
-   * in order to facilitate the mapping of the QueryableIndex associated with a given hydrant
+   * Use next Map to store metadata (File, SegmentId) for a {@link PartialSegment} for batch appenderator
+   * in order to facilitate the mapping of the {@link QueryableIndex} associated with a given PartialSegment
    * at merge time. This is necessary since batch appenderator will not map the QueryableIndex
    * at persist time in order to minimize its memory footprint. This has to be synchronized since the
    * map may be accessed from multiple threads.
    * Use {@link IdentityHashMap} to better reflect the fact that the key needs to be interpreted
    * with reference semantics.
    */
-  private final Map<FireHydrant, Pair<File, SegmentId>> persistedHydrantMetadata =
+  private final Map<PartialSegment, Pair<File, SegmentId>> persistedPartialSegmentMetadata =
       Collections.synchronizedMap(new IdentityHashMap<>());
 
   private final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
@@ -199,12 +199,13 @@ public class AppenderatorImpl implements Appenderator
   private final FingerprintGenerator fingerprintGenerator;
 
   /**
-   * This constructor allows the caller to provide its own SinkQuerySegmentWalker.
-   *
-   * The sinkTimeline is set to the sink timeline of the provided SinkQuerySegmentWalker.
-   * If the SinkQuerySegmentWalker is null, a new sink timeline is initialized.
-   *
-   * It is used by UnifiedIndexerAppenderatorsManager which allows queries on data associated with multiple
+   * This constructor allows the caller to provide its own {@link AppendableSegmentQuerySegmentWalker}.
+   * <p>
+   * The {@link #appendableSegmentTimeline} is set to the timeline of the provided
+   * {@link AppendableSegmentQuerySegmentWalker}. If the {@link AppendableSegmentQuerySegmentWalker} is null, a new
+   * timeline is initialized.
+   * <p>
+   * It is used by {@link UnifiedIndexerAppenderatorsManager} which allows queries on data associated with multiple
    * Appenderators.
    */
   AppenderatorImpl(
@@ -215,7 +216,7 @@ public class AppenderatorImpl implements Appenderator
       DataSegmentPusher dataSegmentPusher,
       ObjectMapper objectMapper,
       DataSegmentAnnouncer segmentAnnouncer,
-      @Nullable SinkQuerySegmentWalker sinkQuerySegmentWalker,
+      @Nullable AppendableSegmentQuerySegmentWalker appendableSegmentQuerySegmentWalker,
       IndexIO indexIO,
       IndexMerger indexMerger,
       Cache cache,
@@ -236,18 +237,18 @@ public class AppenderatorImpl implements Appenderator
     this.indexIO = Preconditions.checkNotNull(indexIO, "indexIO");
     this.indexMerger = Preconditions.checkNotNull(indexMerger, "indexMerger");
     this.cache = cache;
-    this.texasRanger = sinkQuerySegmentWalker;
+    this.texasRanger = appendableSegmentQuerySegmentWalker;
     this.rowIngestionMeters = Preconditions.checkNotNull(rowIngestionMeters, "rowIngestionMeters");
     this.parseExceptionHandler = Preconditions.checkNotNull(parseExceptionHandler, "parseExceptionHandler");
     this.isOpenSegments = isOpenSegments;
     this.useMaxMemoryEstimates = useMaxMemoryEstimates;
 
-    if (sinkQuerySegmentWalker == null) {
-      this.sinkTimeline = new VersionedIntervalTimeline<>(
+    if (appendableSegmentQuerySegmentWalker == null) {
+      this.appendableSegmentTimeline = new VersionedIntervalTimeline<>(
           String.CASE_INSENSITIVE_ORDER
       );
     } else {
-      this.sinkTimeline = sinkQuerySegmentWalker.getSinkTimeline();
+      this.appendableSegmentTimeline = appendableSegmentQuerySegmentWalker.getAppendableSegmentTimeline();
     }
 
     maxBytesTuningConfig = tuningConfig.getMaxBytesInMemoryOrDefault();
@@ -278,7 +279,7 @@ public class AppenderatorImpl implements Appenderator
   public Object startJob()
   {
     lockBasePersistDirectory();
-    final Object retVal = bootstrapSinksFromDisk();
+    final Object retVal = bootstrapAppendableSegmentsFromDisk();
     initializeExecutors();
     resetNextFlush();
     return retVal;
@@ -309,29 +310,29 @@ public class AppenderatorImpl implements Appenderator
       );
     }
 
-    final Sink sink = getOrCreateSink(identifier);
+    final AppendableSegment appendableSegment = getOrCreateAppendableSegment(identifier);
     metrics.reportMessageMaxTimestamp(row.getTimestampFromEpoch());
-    final int sinkRowsInMemoryBeforeAdd = sink.getNumRowsInMemory();
-    final int sinkRowsInMemoryAfterAdd;
-    final long bytesInMemoryBeforeAdd = sink.getBytesInMemory();
+    final int appendableSegmentRowsInMemoryBeforeAdd = appendableSegment.getNumRowsInMemory();
+    final int appendableSegmentRowsInMemoryAfterAdd;
+    final long bytesInMemoryBeforeAdd = appendableSegment.getBytesInMemory();
     final long bytesInMemoryAfterAdd;
     final IncrementalIndexAddResult addResult;
 
     try {
-      addResult = sink.add(row, !allowIncrementalPersists);
-      sinkRowsInMemoryAfterAdd = addResult.getRowCount();
+      addResult = appendableSegment.add(row, !allowIncrementalPersists);
+      appendableSegmentRowsInMemoryAfterAdd = addResult.getRowCount();
       bytesInMemoryAfterAdd = addResult.getBytesInMemory();
     }
     catch (IndexSizeExceededException e) {
       // Uh oh, we can't do anything about this! We can't persist (commit metadata would be out of sync) and we
       // can't add the row (it just failed). This should never actually happen, though, because we check
-      // sink.canAddRow after returning from add.
-      log.error(e, "Sink for segment[%s] was unexpectedly full!", identifier);
+      // appendableSegment.canAddRow after returning from add.
+      log.error(e, "Appendable segment[%s] was unexpectedly full!", identifier);
       throw e;
     }
 
-    if (sinkRowsInMemoryAfterAdd < 0) {
-      throw new SegmentNotWritableException("Attempt to add row to swapped-out sink for segment[%s].", identifier);
+    if (appendableSegmentRowsInMemoryAfterAdd < 0) {
+      throw new SegmentNotWritableException("Attempt to add row to swapped-out appendable segment[%s].", identifier);
     }
 
     if (addResult.isRowAdded()) {
@@ -340,7 +341,7 @@ public class AppenderatorImpl implements Appenderator
       parseExceptionHandler.handle(addResult.getParseException());
     }
 
-    final int numAddedRows = sinkRowsInMemoryAfterAdd - sinkRowsInMemoryBeforeAdd;
+    final int numAddedRows = appendableSegmentRowsInMemoryAfterAdd - appendableSegmentRowsInMemoryBeforeAdd;
     rowsCurrentlyInMemory.addAndGet(numAddedRows);
     bytesCurrentlyInMemory.addAndGet(bytesInMemoryAfterAdd - bytesInMemoryBeforeAdd);
     totalRows.addAndGet(numAddedRows);
@@ -349,9 +350,9 @@ public class AppenderatorImpl implements Appenderator
     boolean persist = false;
     List<String> persistReasons = new ArrayList<>();
 
-    if (!sink.canAppendRow()) {
+    if (!appendableSegment.canAppendRow()) {
       persist = true;
-      persistReasons.add("No more rows can be appended to sink");
+      persistReasons.add("No more rows can be appended to appendable segment");
     }
     if (System.currentTimeMillis() > nextFlush) {
       persist = true;
@@ -383,15 +384,18 @@ public class AppenderatorImpl implements Appenderator
         log.info("Flushing in-memory data to disk because %s.", String.join(",", persistReasons));
 
         long bytesToBePersisted = 0L;
-        for (Map.Entry<SegmentIdWithShardSpec, Sink> entry : sinks.entrySet()) {
-          final Sink sinkEntry = entry.getValue();
-          if (sinkEntry != null) {
-            bytesToBePersisted += sinkEntry.getBytesInMemory();
-            if (sinkEntry.swappable()) {
-              // After swapping the sink, we use memory mapped segment instead (but only for real time appenderators!).
-              // However, the memory mapped segment still consumes memory.
-              // These memory mapped segments are held in memory throughout the ingestion phase and permanently add to the bytesCurrentlyInMemory
-              int memoryStillInUse = calculateMMappedHydrantMemoryInUsed(sink.getCurrHydrant());
+        for (Map.Entry<SegmentIdWithShardSpec, AppendableSegment> entry : appendableSegments.entrySet()) {
+          final AppendableSegment appendableSegmentEntry = entry.getValue();
+          if (appendableSegmentEntry != null) {
+            bytesToBePersisted += appendableSegmentEntry.getBytesInMemory();
+            if (appendableSegmentEntry.swappable()) {
+              // After swapping the appendable segment, we use memory mapped segment instead (but only for real time
+              // appenderators!). However, the memory mapped segment still consumes memory. These memory mapped
+              // segments are held in memory throughout the ingestion phase and permanently add to the
+              // bytesCurrentlyInMemory
+              int memoryStillInUse = calculateMMappedPartialSegmentMemoryInUsed(
+                  appendableSegment.getCurrentPartialSegment()
+              );
               bytesCurrentlyInMemory.addAndGet(memoryStillInUse);
             }
           }
@@ -403,10 +407,10 @@ public class AppenderatorImpl implements Appenderator
           // This means that we ran out of all available memory to ingest (due to overheads created as part of ingestion)
           final String alertMessage = StringUtils.format(
               "Task has exceeded safe estimated heap usage limits, failing "
-              + "(numSinks: [%d] numHydrantsAcrossAllSinks: [%d] totalRows: [%d])"
+              + "(numAppendableSegments: [%d] numParialSegmentsAcrossAllAppendableSegments: [%d] totalRows: [%d])"
               + "(bytesCurrentlyInMemory: [%d] - bytesToBePersisted: [%d] > maxBytesTuningConfig: [%d])",
-              sinks.size(),
-              sinks.values().stream().mapToInt(Iterables::size).sum(),
+              appendableSegments.size(),
+              appendableSegments.values().stream().mapToInt(Iterables::size).sum(),
               getTotalRowCount(),
               bytesCurrentlyInMemory.get(),
               bytesToBePersisted,
@@ -450,24 +454,24 @@ public class AppenderatorImpl implements Appenderator
         isPersistRequired = true;
       }
     }
-    return new AppenderatorAddResult(identifier, sink.getNumRows(), isPersistRequired);
+    return new AppenderatorAddResult(identifier, appendableSegment.getNumRows(), isPersistRequired);
   }
 
   @Override
   public List<SegmentIdWithShardSpec> getSegments()
   {
-    return ImmutableList.copyOf(sinks.keySet());
+    return ImmutableList.copyOf(appendableSegments.keySet());
   }
 
   @Override
   public int getRowCount(final SegmentIdWithShardSpec identifier)
   {
-    final Sink sink = sinks.get(identifier);
+    final AppendableSegment appendableSegment = appendableSegments.get(identifier);
 
-    if (sink == null) {
-      throw new ISE("No such sink: %s", identifier);
+    if (appendableSegment == null) {
+      throw new ISE("No such apendable segment: %s", identifier);
     } else {
-      return sink.getNumRows();
+      return appendableSegment.getNumRows();
     }
   }
 
@@ -492,21 +496,21 @@ public class AppenderatorImpl implements Appenderator
   @VisibleForTesting
   long getBytesInMemory(SegmentIdWithShardSpec identifier)
   {
-    final Sink sink = sinks.get(identifier);
+    final AppendableSegment appendableSegment = appendableSegments.get(identifier);
 
-    if (sink == null) {
-      throw new ISE("No such sink: %s", identifier);
+    if (appendableSegment == null) {
+      throw new ISE("No such appendable segment: %s", identifier);
     } else {
-      return sink.getBytesInMemory();
+      return appendableSegment.getBytesInMemory();
     }
   }
 
-  private Sink getOrCreateSink(final SegmentIdWithShardSpec identifier)
+  private AppendableSegment getOrCreateAppendableSegment(final SegmentIdWithShardSpec identifier)
   {
-    Sink retVal = sinks.get(identifier);
+    AppendableSegment retVal = appendableSegments.get(identifier);
 
     if (retVal == null) {
-      retVal = new Sink(
+      retVal = new AppendableSegment(
           identifier.getInterval(),
           schema,
           identifier.getShardSpec(),
@@ -516,7 +520,7 @@ public class AppenderatorImpl implements Appenderator
           maxBytesTuningConfig,
           useMaxMemoryEstimates
       );
-      bytesCurrentlyInMemory.addAndGet(calculateSinkMemoryInUsed());
+      bytesCurrentlyInMemory.addAndGet(calculateAppendableSegmentMemoryInUsed());
 
       try {
         segmentAnnouncer.announceSegment(retVal.getSegment());
@@ -527,9 +531,13 @@ public class AppenderatorImpl implements Appenderator
            .emit();
       }
 
-      sinks.put(identifier, retVal);
-      metrics.setSinkCount(sinks.size());
-      sinkTimeline.add(retVal.getInterval(), retVal.getVersion(), identifier.getShardSpec().createChunk(retVal));
+      appendableSegments.put(identifier, retVal);
+      metrics.setAppendableSegmentCount(appendableSegments.size());
+      appendableSegmentTimeline.add(
+          retVal.getInterval(),
+          retVal.getVersion(),
+          identifier.getShardSpec().createChunk(retVal)
+      );
     }
 
     return retVal;
@@ -582,12 +590,12 @@ public class AppenderatorImpl implements Appenderator
 
         // Drop everything.
         final List<ListenableFuture<?>> futures = new ArrayList<>();
-        for (Map.Entry<SegmentIdWithShardSpec, Sink> entry : sinks.entrySet()) {
+        for (Map.Entry<SegmentIdWithShardSpec, AppendableSegment> entry : appendableSegments.entrySet()) {
           futures.add(abandonSegment(entry.getKey(), entry.getValue(), true));
         }
 
-        // Re-initialize hydrant map:
-        persistedHydrantMetadata.clear();
+        // Re-initialize partial segment map:
+        persistedPartialSegmentMetadata.clear();
 
         // Await dropping.
         Futures.allAsList(futures).get();
@@ -601,9 +609,9 @@ public class AppenderatorImpl implements Appenderator
   @Override
   public ListenableFuture<?> drop(final SegmentIdWithShardSpec identifier)
   {
-    final Sink sink = sinks.get(identifier);
-    if (sink != null) {
-      return abandonSegment(identifier, sink, true);
+    final AppendableSegment appendableSegment = appendableSegments.get(identifier);
+    if (appendableSegment != null) {
+      return abandonSegment(identifier, appendableSegment, true);
     } else {
       return Futures.immediateFuture(null);
     }
@@ -613,40 +621,40 @@ public class AppenderatorImpl implements Appenderator
   public ListenableFuture<Object> persistAll(@Nullable final Committer committer)
   {
     throwPersistErrorIfExists();
-    final Map<String, Integer> currentHydrants = new HashMap<>();
-    final List<Pair<FireHydrant, SegmentIdWithShardSpec>> indexesToPersist = new ArrayList<>();
+    final Map<String, Integer> currentPartialSegments = new HashMap<>();
+    final List<Pair<PartialSegment, SegmentIdWithShardSpec>> indexesToPersist = new ArrayList<>();
     int numPersistedRows = 0;
     long bytesPersisted = 0L;
-    MutableLong totalHydrantsCount = new MutableLong();
-    MutableLong totalHydrantsPersisted = new MutableLong();
-    final long totalSinks = sinks.size();
-    for (Map.Entry<SegmentIdWithShardSpec, Sink> entry : sinks.entrySet()) {
+    MutableLong totalPartialSegmentsCount = new MutableLong();
+    MutableLong totalPartialSegmentsPersisted = new MutableLong();
+    final long totalAppendableSegments = appendableSegments.size();
+    for (Map.Entry<SegmentIdWithShardSpec, AppendableSegment> entry : appendableSegments.entrySet()) {
       final SegmentIdWithShardSpec identifier = entry.getKey();
-      final Sink sink = entry.getValue();
-      if (sink == null) {
-        throw new ISE("No sink for identifier: %s", identifier);
+      final AppendableSegment appendableSegment = entry.getValue();
+      if (appendableSegment == null) {
+        throw new ISE("No appendable segment for identifier: %s", identifier);
       }
-      final List<FireHydrant> hydrants = Lists.newArrayList(sink);
-      totalHydrantsCount.add(hydrants.size());
-      currentHydrants.put(identifier.toString(), hydrants.size());
-      numPersistedRows += sink.getNumRowsInMemory();
-      bytesPersisted += sink.getBytesInMemory();
+      final List<PartialSegment> partialSegments = Lists.newArrayList(appendableSegment);
+      totalPartialSegmentsCount.add(partialSegments.size());
+      currentPartialSegments.put(identifier.toString(), partialSegments.size());
+      numPersistedRows += appendableSegment.getNumRowsInMemory();
+      bytesPersisted += appendableSegment.getBytesInMemory();
 
-      final int limit = sink.isWritable() ? hydrants.size() - 1 : hydrants.size();
+      final int limit = appendableSegment.isWritable() ? partialSegments.size() - 1 : partialSegments.size();
 
-      // gather hydrants that have not been persisted:
-      for (FireHydrant hydrant : hydrants.subList(0, limit)) {
-        if (!hydrant.hasSwapped()) {
-          log.debug("Hydrant[%s] hasn't persisted yet, persisting. Segment[%s]", hydrant, identifier);
-          indexesToPersist.add(Pair.of(hydrant, identifier));
-          totalHydrantsPersisted.add(1);
+      // gather partialSegments that have not been persisted:
+      for (PartialSegment partialSegment : partialSegments.subList(0, limit)) {
+        if (!partialSegment.hasSwapped()) {
+          log.debug("Partial segment[%s] hasn't persisted yet, persisting. Segment[%s]", partialSegment, identifier);
+          indexesToPersist.add(Pair.of(partialSegment, identifier));
+          totalPartialSegmentsPersisted.add(1);
         }
       }
 
-      if (sink.swappable()) {
+      if (appendableSegment.swappable()) {
         // It is swappable. Get the old one to persist it and create a new one:
-        indexesToPersist.add(Pair.of(sink.swap(), identifier));
-        totalHydrantsPersisted.add(1);
+        indexesToPersist.add(Pair.of(appendableSegment.swap(), identifier));
+        totalPartialSegmentsPersisted.add(1);
       }
     }
     log.debug("Submitting persist runnable for dataSource[%s]", schema.getDataSource());
@@ -662,23 +670,23 @@ public class AppenderatorImpl implements Appenderator
           public Object call() throws IOException
           {
             try {
-              for (Pair<FireHydrant, SegmentIdWithShardSpec> pair : indexesToPersist) {
-                metrics.incrementRowOutputCount(persistHydrant(pair.lhs, pair.rhs));
+              for (Pair<PartialSegment, SegmentIdWithShardSpec> pair : indexesToPersist) {
+                metrics.incrementRowOutputCount(persistPartialSegment(pair.lhs, pair.rhs));
               }
 
               if (committer != null) {
                 log.debug(
-                    "Committing metadata[%s] for sinks[%s].",
+                    "Committing metadata[%s] for appendable segments[%s].",
                     commitMetadata,
                     Joiner.on(", ").join(
-                        currentHydrants.entrySet()
-                                       .stream()
-                                       .map(entry -> StringUtils.format(
-                                           "%s:%d",
-                                           entry.getKey(),
-                                           entry.getValue()
-                                       ))
-                                       .collect(Collectors.toList())
+                        currentPartialSegments.entrySet()
+                                              .stream()
+                                              .map(entry -> StringUtils.format(
+                                                  "%s:%d",
+                                                  entry.getKey(),
+                                                  entry.getValue()
+                                              ))
+                                              .collect(Collectors.toList())
                     )
                 );
 
@@ -686,14 +694,14 @@ public class AppenderatorImpl implements Appenderator
 
                 try {
                   commitLock.lock();
-                  final Map<String, Integer> commitHydrants = new HashMap<>();
+                  final Map<String, Integer> commitPartialSegments = new HashMap<>();
                   final Committed oldCommit = readCommit();
                   if (oldCommit != null) {
-                    // merge current hydrants with existing hydrants
-                    commitHydrants.putAll(oldCommit.getHydrants());
+                    // merge current PartialSegment with existing PartialSegment
+                    commitPartialSegments.putAll(oldCommit.getPartialSegments());
                   }
-                  commitHydrants.putAll(currentHydrants);
-                  writeCommit(new Committed(commitHydrants, commitMetadata));
+                  commitPartialSegments.putAll(currentPartialSegments);
+                  writeCommit(new Committed(commitPartialSegments, commitMetadata));
                 }
                 finally {
                   commitLock.unlock();
@@ -709,12 +717,12 @@ public class AppenderatorImpl implements Appenderator
                                   .collect(Collectors.joining(", "))
               );
               log.info(
-                  "Persisted stats: processed rows: [%d], persisted rows[%d], sinks: [%d], total fireHydrants (across sinks): [%d], persisted fireHydrants (across sinks): [%d]",
+                  "Persisted stats: processed rows: [%d], persisted rows[%d], appendable segments: [%d], total partial segments (across appendable segments): [%d], persisted partial segments (across appendable segments): [%d]",
                   rowIngestionMeters.getProcessed(),
                   totalPersistedRows.get(),
-                  totalSinks,
-                  totalHydrantsCount.longValue(),
-                  totalHydrantsPersisted.longValue()
+                  totalAppendableSegments,
+                  totalPartialSegmentsCount.longValue(),
+                  totalPartialSegmentsPersisted.longValue()
               );
 
               // return null if committer is null
@@ -757,19 +765,19 @@ public class AppenderatorImpl implements Appenderator
       final boolean useUniquePath
   )
   {
-    final Map<SegmentIdWithShardSpec, Sink> theSinks = new HashMap<>();
-    AtomicLong pushedHydrantsCount = new AtomicLong();
+    final Map<SegmentIdWithShardSpec, AppendableSegment> theAppendableSegments = new HashMap<>();
+    AtomicLong pushedPartialSegmentsCount = new AtomicLong();
     for (final SegmentIdWithShardSpec identifier : identifiers) {
-      final Sink sink = sinks.get(identifier);
-      if (sink == null) {
-        throw new ISE("No sink for identifier: %s", identifier);
+      final AppendableSegment appendableSegment = appendableSegments.get(identifier);
+      if (appendableSegment == null) {
+        throw new ISE("No appendable segment for identifier: %s", identifier);
       }
-      theSinks.put(identifier, sink);
-      if (sink.finishWriting()) {
-        totalRows.addAndGet(-sink.getNumRows());
+      theAppendableSegments.put(identifier, appendableSegment);
+      if (appendableSegment.finishWriting()) {
+        totalRows.addAndGet(-appendableSegment.getNumRows());
       }
-      // count hydrants for stats:
-      pushedHydrantsCount.addAndGet(Iterables.size(sink));
+      // count partial segments for stats:
+      pushedPartialSegmentsCount.addAndGet(Iterables.size(appendableSegment));
     }
 
     return Futures.transform(
@@ -780,18 +788,24 @@ public class AppenderatorImpl implements Appenderator
           final List<DataSegment> dataSegments = new ArrayList<>();
           final SegmentSchemaMapping segmentSchemaMapping = new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
 
-          log.info("Preparing to push (stats): processed rows: [%d], sinks: [%d], fireHydrants (across sinks): [%d]",
-                   rowIngestionMeters.getProcessed(), theSinks.size(), pushedHydrantsCount.get()
+          log.info(
+              "Preparing to push (stats): processed rows: [%d], appendable segments: [%d], partial segments (across appendable segments): [%d]",
+              rowIngestionMeters.getProcessed(),
+              theAppendableSegments.size(),
+              pushedPartialSegmentsCount.get()
           );
 
           log.debug(
               "Building and pushing segments: %s",
-              theSinks.keySet().stream().map(SegmentIdWithShardSpec::toString).collect(Collectors.joining(", "))
+              theAppendableSegments.keySet()
+                                   .stream()
+                                   .map(SegmentIdWithShardSpec::toString)
+                                   .collect(Collectors.joining(", "))
           );
 
-          for (Map.Entry<SegmentIdWithShardSpec, Sink> entry : theSinks.entrySet()) {
-            if (droppingSinks.contains(entry.getKey())) {
-              log.warn("Skipping push of currently-dropping sink[%s]", entry.getKey());
+          for (Map.Entry<SegmentIdWithShardSpec, AppendableSegment> entry : theAppendableSegments.entrySet()) {
+            if (droppingAppendableSegments.contains(entry.getKey())) {
+              log.warn("Skipping push of currently-dropping appendable segment[%s]", entry.getKey());
               continue;
             }
 
@@ -838,7 +852,8 @@ public class AppenderatorImpl implements Appenderator
   private ListenableFuture<?> pushBarrier()
   {
     return intermediateTempExecutor.submit(
-        (Runnable) () -> pushExecutor.submit(() -> {})
+        (Runnable) () -> pushExecutor.submit(() -> {
+        })
     );
   }
 
@@ -846,23 +861,22 @@ public class AppenderatorImpl implements Appenderator
    * Merge segment, push to deep storage. Should only be used on segments that have been fully persisted. Must only
    * be run in the single-threaded pushExecutor.
    *
-   * @param identifier    sink identifier
-   * @param sink          sink to push
-   * @param useUniquePath true if the segment should be written to a path with a unique identifier
-   *
-   * @return segment descriptor, or null if the sink is no longer valid
+   * @param identifier        appendable segment identifier
+   * @param appendableSegment appendable segment to push
+   * @param useUniquePath     true if the segment should be written to a path with a unique identifier
+   * @return segment descriptor, or null if the appendable segment is no longer valid
    */
   @Nullable
   private DataSegmentWithMetadata mergeAndPush(
       final SegmentIdWithShardSpec identifier,
-      final Sink sink,
+      final AppendableSegment appendableSegment,
       final boolean useUniquePath
   )
   {
-    // Bail out if this sink is null or otherwise not what we expect.
+    // Bail out if this appendable segment is null or otherwise not what we expect.
     //noinspection ObjectEquality
-    if (sinks.get(identifier) != sink) {
-      log.warn("Sink for segment[%s] no longer valid, bailing out of mergeAndPush.", identifier);
+    if (appendableSegments.get(identifier) != appendableSegment) {
+      log.warn("Appendable segment[%s] no longer valid, bailing out of mergeAndPush.", identifier);
       return null;
     }
 
@@ -872,14 +886,20 @@ public class AppenderatorImpl implements Appenderator
     final File descriptorFile = computeDescriptorFile(identifier);
 
     // Sanity checks
-    for (FireHydrant hydrant : sink) {
-      if (sink.isWritable()) {
-        throw new ISE("Expected sink to be no longer writable before mergeAndPush for segment[%s].", identifier);
+    for (PartialSegment partialSegment : appendableSegment) {
+      if (appendableSegment.isWritable()) {
+        throw new ISE(
+            "Expected appendable segment to be no longer writable before mergeAndPush for segment[%s].",
+            identifier
+        );
       }
 
-      synchronized (hydrant) {
-        if (!hydrant.hasSwapped()) {
-          throw new ISE("Expected sink to be fully persisted before mergeAndPush for segment[%s].", identifier);
+      synchronized (partialSegment) {
+        if (!partialSegment.hasSwapped()) {
+          throw new ISE(
+              "Expected appendable segment to be fully persisted before mergeAndPush for segment[%s].",
+              identifier
+          );
         }
       }
     }
@@ -919,15 +939,15 @@ public class AppenderatorImpl implements Appenderator
       List<QueryableIndex> indexes = new ArrayList<>();
       Closer closer = Closer.create();
       try {
-        for (FireHydrant fireHydrant : sink) {
+        for (PartialSegment partialSegment : appendableSegment) {
 
           // if batch, swap/persist did not memory map the incremental index, we need it mapped now:
           if (!isOpenSegments()) {
 
             // sanity
-            Pair<File, SegmentId> persistedMetadata = persistedHydrantMetadata.get(fireHydrant);
+            Pair<File, SegmentId> persistedMetadata = persistedPartialSegmentMetadata.get(partialSegment);
             if (persistedMetadata == null) {
-              throw new ISE("Persisted metadata for batch hydrant [%s] is null!", fireHydrant);
+              throw new ISE("Persisted metadata for batch partial segment [%s] is null!", partialSegment);
             }
 
             File persistedFile = persistedMetadata.lhs;
@@ -935,22 +955,22 @@ public class AppenderatorImpl implements Appenderator
 
             // sanity:
             if (persistedFile == null) {
-              throw new ISE("Persisted file for batch hydrant [%s] is null!", fireHydrant);
+              throw new ISE("Persisted file for batch partial segment [%s] is null!", partialSegment);
             } else if (persistedSegmentId == null) {
               throw new ISE(
-                  "Persisted segmentId for batch hydrant in file [%s] is null!",
+                  "Persisted segmentId for batch partial segment in file [%s] is null!",
                   persistedFile.getPath()
               );
             }
-            fireHydrant.swapSegment(new QueryableIndexSegment(
+            partialSegment.swapSegment(new QueryableIndexSegment(
                 indexIO.loadIndex(persistedFile),
                 persistedSegmentId
             ));
           }
 
-          Pair<ReferenceCountingSegment, Closeable> segmentAndCloseable = fireHydrant.getAndIncrementSegment();
+          Pair<ReferenceCountingSegment, Closeable> segmentAndCloseable = partialSegment.getAndIncrementSegment();
           final QueryableIndex queryableIndex = segmentAndCloseable.lhs.asQueryableIndex();
-          log.debug("Segment[%s] adding hydrant[%s]", identifier, fireHydrant);
+          log.debug("Segment[%s] adding partial segment[%s]", identifier, partialSegment);
           indexes.add(queryableIndex);
           closer.register(segmentAndCloseable.rhs);
         }
@@ -979,7 +999,7 @@ public class AppenderatorImpl implements Appenderator
         closer.close();
       }
 
-      final DataSegment segmentToPush = sink.getSegment().withDimensions(
+      final DataSegment segmentToPush = appendableSegment.getSegment().withDimensions(
           IndexMerger.getMergedDimensionsFromQueryableIndexes(indexes, schema.getDimensionsSpec())
       );
 
@@ -991,11 +1011,11 @@ public class AppenderatorImpl implements Appenderator
       final DataSegment segment = dataSegmentPusher.push(mergedFile, segmentToPush, useUniquePath);
 
       if (!isOpenSegments()) {
-        // Drop the queryable indexes behind the hydrants... they are not needed anymore and their
+        // Drop the queryable indexes behind the partial segments... they are not needed anymore and their
         // mapped file references
         // can generate OOMs during merge if enough of them are held back...
-        for (FireHydrant fireHydrant : sink) {
-          fireHydrant.swapSegment(null);
+        for (PartialSegment partialSegment : appendableSegment) {
+          partialSegment.swapSegment(null);
         }
       }
 
@@ -1041,7 +1061,7 @@ public class AppenderatorImpl implements Appenderator
     log.debug("Shutting down...");
 
     final List<ListenableFuture<?>> futures = new ArrayList<>();
-    for (Map.Entry<SegmentIdWithShardSpec, Sink> entry : sinks.entrySet()) {
+    for (Map.Entry<SegmentIdWithShardSpec, AppendableSegment> entry : appendableSegments.entrySet()) {
       futures.add(abandonSegment(entry.getKey(), entry.getValue(), false));
     }
 
@@ -1100,7 +1120,7 @@ public class AppenderatorImpl implements Appenderator
     }
 
     log.debug("Shutting down immediately...");
-    for (Map.Entry<SegmentIdWithShardSpec, Sink> entry : sinks.entrySet()) {
+    for (Map.Entry<SegmentIdWithShardSpec, AppendableSegment> entry : appendableSegments.entrySet()) {
       try {
         segmentAnnouncer.unannounceSegment(entry.getValue().getSegment());
       }
@@ -1222,13 +1242,14 @@ public class AppenderatorImpl implements Appenderator
   }
 
   /**
-   * Populate "sinks" and "sinkTimeline" with committed segments, and announce them with the segmentAnnouncer.
+   * Populate {@link #appendableSegments} and {@link #appendableSegmentTimeline} with committed segments, and
+   * announce them with the segmentAnnouncer.
    *
    * @return persisted commit metadata
    */
-  private Object bootstrapSinksFromDisk()
+  private Object bootstrapAppendableSegmentsFromDisk()
   {
-    Preconditions.checkState(sinks.isEmpty(), "Already bootstrapped?!");
+    Preconditions.checkState(appendableSegments.isEmpty(), "Already bootstrapped?!");
 
     final File baseDir = tuningConfig.getBasePersistDirectory();
     if (!baseDir.exists()) {
@@ -1266,71 +1287,79 @@ public class AppenderatorImpl implements Appenderator
     } else {
       log.info(
           "Loading partially-persisted segments[%s] from[%s] with commit metadata: %s",
-          String.join(", ", committed.getHydrants().keySet()),
+          String.join(", ", committed.getPartialSegments().keySet()),
           baseDir,
           committed.getMetadata()
       );
     }
 
-    for (File sinkDir : files) {
-      final File identifierFile = new File(sinkDir, IDENTIFIER_FILE_NAME);
+    for (File appendableSegmentDir : files) {
+      final File identifierFile = new File(appendableSegmentDir, IDENTIFIER_FILE_NAME);
       if (!identifierFile.isFile()) {
-        // No identifier in this sinkDir; it must not actually be a sink directory. Skip it.
+        // No identifier in this appendableSegmentDir; it must not actually be a appendable segment directory. Skip it.
         continue;
       }
 
       try {
         final SegmentIdWithShardSpec identifier = objectMapper.readValue(
-            new File(sinkDir, "identifier.json"),
+            new File(appendableSegmentDir, "identifier.json"),
             SegmentIdWithShardSpec.class
         );
 
-        final int committedHydrants = committed.getCommittedHydrants(identifier.toString());
+        final int committedPartialSegments = committed.getCommittedPartialSegments(identifier.toString());
 
-        if (committedHydrants <= 0) {
-          log.info("Removing uncommitted segment at [%s].", sinkDir);
-          FileUtils.deleteDirectory(sinkDir);
+        if (committedPartialSegments <= 0) {
+          log.info("Removing uncommitted segment at [%s].", appendableSegmentDir);
+          FileUtils.deleteDirectory(appendableSegmentDir);
           continue;
         }
 
         // To avoid reading and listing of "merged" dir and other special files
-        final File[] sinkFiles = sinkDir.listFiles(
+        final File[] appendableSegmentFiles = appendableSegmentDir.listFiles(
             (dir, fileName) -> !(Ints.tryParse(fileName) == null)
         );
 
         Arrays.sort(
-            sinkFiles,
+            appendableSegmentFiles,
             (o1, o2) -> Ints.compare(Integer.parseInt(o1.getName()), Integer.parseInt(o2.getName()))
         );
 
-        List<FireHydrant> hydrants = new ArrayList<>();
-        for (File hydrantDir : sinkFiles) {
-          final int hydrantNumber = Integer.parseInt(hydrantDir.getName());
+        List<PartialSegment> partialSegments = new ArrayList<>();
+        for (File partialSegmentDir : appendableSegmentFiles) {
+          final int partialSegmentNumber = Integer.parseInt(partialSegmentDir.getName());
 
-          if (hydrantNumber >= committedHydrants) {
-            log.info("Removing uncommitted partial segment at [%s]", hydrantDir);
-            FileUtils.deleteDirectory(hydrantDir);
+          if (partialSegmentNumber >= committedPartialSegments) {
+            log.info("Removing uncommitted partial segment at [%s]", partialSegmentDir);
+            FileUtils.deleteDirectory(partialSegmentDir);
           } else {
-            log.debug("Loading previously persisted partial segment at [%s]", hydrantDir);
-            if (hydrantNumber != hydrants.size()) {
-              throw new ISE("Missing hydrant [%,d] in sinkDir [%s].", hydrants.size(), sinkDir);
+            log.debug("Loading previously persisted partial segment at [%s]", partialSegmentDir);
+            if (partialSegmentNumber != partialSegments.size()) {
+              throw new ISE(
+                  "Missing partial segment [%,d] in appendableSegmentDir [%s].",
+                  partialSegments.size(),
+                  appendableSegmentDir
+              );
             }
 
-            hydrants.add(
-                new FireHydrant(
-                    new QueryableIndexSegment(indexIO.loadIndex(hydrantDir), identifier.asSegmentId()),
-                    hydrantNumber
+            partialSegments.add(
+                new PartialSegment(
+                    new QueryableIndexSegment(indexIO.loadIndex(partialSegmentDir), identifier.asSegmentId()),
+                    partialSegmentNumber
                 )
             );
           }
         }
 
-        // Make sure we loaded enough hydrants.
-        if (committedHydrants != hydrants.size()) {
-          throw new ISE("Missing hydrant [%,d] in sinkDir [%s].", hydrants.size(), sinkDir);
+        // Make sure we loaded enough partialSegments.
+        if (committedPartialSegments != partialSegments.size()) {
+          throw new ISE(
+              "Missing partial segment [%,d] in appendableSegmentDir [%s].",
+              partialSegments.size(),
+              appendableSegmentDir
+          );
         }
 
-        Sink currSink = new Sink(
+        AppendableSegment currAppendableSegment = new AppendableSegment(
             identifier.getInterval(),
             schema,
             identifier.getShardSpec(),
@@ -1339,32 +1368,35 @@ public class AppenderatorImpl implements Appenderator
             tuningConfig.getMaxRowsInMemory(),
             maxBytesTuningConfig,
             useMaxMemoryEstimates,
-            hydrants
+            partialSegments
         );
-        rowsSoFar += currSink.getNumRows();
-        sinks.put(identifier, currSink);
-        sinkTimeline.add(
-            currSink.getInterval(),
-            currSink.getVersion(),
-            identifier.getShardSpec().createChunk(currSink)
+        rowsSoFar += currAppendableSegment.getNumRows();
+        appendableSegments.put(identifier, currAppendableSegment);
+        appendableSegmentTimeline.add(
+            currAppendableSegment.getInterval(),
+            currAppendableSegment.getVersion(),
+            identifier.getShardSpec().createChunk(currAppendableSegment)
         );
 
-        segmentAnnouncer.announceSegment(currSink.getSegment());
+        segmentAnnouncer.announceSegment(currAppendableSegment.getSegment());
       }
       catch (IOException e) {
-        log.makeAlert(e, "Problem loading sink[%s] from disk.", schema.getDataSource())
-           .addData("sinkDir", sinkDir)
+        log.makeAlert(e, "Problem loading appendable segment[%s] from disk.", schema.getDataSource())
+           .addData("appendableSegmentDir", appendableSegmentDir)
            .emit();
       }
     }
 
-    // Make sure we loaded all committed sinks.
-    final Set<String> loadedSinks = Sets.newHashSet(
-        Iterables.transform(sinks.keySet(), SegmentIdWithShardSpec::toString)
+    // Make sure we loaded all committed appendable segments.
+    final Set<String> loadedAppendableSegments = Sets.newHashSet(
+        Iterables.transform(appendableSegments.keySet(), SegmentIdWithShardSpec::toString)
     );
-    final Set<String> missingSinks = Sets.difference(committed.getHydrants().keySet(), loadedSinks);
-    if (!missingSinks.isEmpty()) {
-      throw new ISE("Missing committed sinks [%s]", Joiner.on(", ").join(missingSinks));
+    final Set<String> missingAppendableSegments = Sets.difference(
+        committed.getPartialSegments().keySet(),
+        loadedAppendableSegments
+    );
+    if (!missingAppendableSegments.isEmpty()) {
+      throw new ISE("Missing committed appendable segments [%s]", Joiner.on(", ").join(missingAppendableSegments));
     }
 
     totalRows.set(rowsSoFar);
@@ -1373,28 +1405,29 @@ public class AppenderatorImpl implements Appenderator
 
   private ListenableFuture<?> abandonSegment(
       final SegmentIdWithShardSpec identifier,
-      final Sink sink,
+      final AppendableSegment appendableSegment,
       final boolean removeOnDiskData
   )
   {
-    // Ensure no future writes will be made to this sink.
-    if (sink.finishWriting()) {
-      // Decrement this sink's rows from the counters. we only count active sinks so that we don't double decrement,
-      // i.e. those that haven't been persisted for *InMemory counters, or pushed to deep storage for the total counter.
-      rowsCurrentlyInMemory.addAndGet(-sink.getNumRowsInMemory());
-      bytesCurrentlyInMemory.addAndGet(-sink.getBytesInMemory());
-      bytesCurrentlyInMemory.addAndGet(-calculateSinkMemoryInUsed());
-      for (FireHydrant hydrant : sink) {
-        // Decrement memory used by all Memory Mapped Hydrant
-        if (!hydrant.equals(sink.getCurrHydrant())) {
-          bytesCurrentlyInMemory.addAndGet(-calculateMMappedHydrantMemoryInUsed(hydrant));
+    // Ensure no future writes will be made to this appendable segment.
+    if (appendableSegment.finishWriting()) {
+      // Decrement this appendable segment's rows from the counters. we only count active appendable segment so that we
+      // don't double decrement, i.e. those that haven't been persisted for *InMemory counters, or pushed to deep
+      // storage for the total counter.
+      rowsCurrentlyInMemory.addAndGet(-appendableSegment.getNumRowsInMemory());
+      bytesCurrentlyInMemory.addAndGet(-appendableSegment.getBytesInMemory());
+      bytesCurrentlyInMemory.addAndGet(-calculateAppendableSegmentMemoryInUsed());
+      for (PartialSegment partialSegment : appendableSegment) {
+        // Decrement memory used by all Memory Mapped PartialSegment
+        if (!partialSegment.equals(appendableSegment.getCurrentPartialSegment())) {
+          bytesCurrentlyInMemory.addAndGet(-calculateMMappedPartialSegmentMemoryInUsed(partialSegment));
         }
       }
-      totalRows.addAndGet(-sink.getNumRows());
+      totalRows.addAndGet(-appendableSegment.getNumRows());
     }
 
     // Mark this identifier as dropping, so no future push tasks will pick it up.
-    droppingSinks.add(identifier);
+    droppingAppendableSegments.add(identifier);
 
     // Wait for any outstanding pushes to finish, then abandon the segment inside the persist thread.
     return Futures.transform(
@@ -1405,12 +1438,12 @@ public class AppenderatorImpl implements Appenderator
           @Override
           public Void apply(@Nullable Object input)
           {
-            if (!sinks.remove(identifier, sink)) {
-              log.error("Sink for segment[%s] no longer valid, not abandoning.", identifier);
+            if (!appendableSegments.remove(identifier, appendableSegment)) {
+              log.error("Appendable segment[%s] no longer valid, not abandoning.", identifier);
               return null;
             }
 
-            metrics.setSinkCount(sinks.size());
+            metrics.setAppendableSegmentCount(appendableSegments.size());
 
             if (removeOnDiskData) {
               // Remove this segment from the committed list. This must be done from the persist thread.
@@ -1435,7 +1468,7 @@ public class AppenderatorImpl implements Appenderator
 
             // Unannounce the segment.
             try {
-              segmentAnnouncer.unannounceSegment(sink.getSegment());
+              segmentAnnouncer.unannounceSegment(appendableSegment.getSegment());
             }
             catch (Exception e) {
               log.makeAlert(e, "Failed to unannounce segment[%s]", schema.getDataSource())
@@ -1443,19 +1476,19 @@ public class AppenderatorImpl implements Appenderator
                  .emit();
             }
 
-            droppingSinks.remove(identifier);
-            sinkTimeline.remove(
-                sink.getInterval(),
-                sink.getVersion(),
-                identifier.getShardSpec().createChunk(sink)
+            droppingAppendableSegments.remove(identifier);
+            appendableSegmentTimeline.remove(
+                appendableSegment.getInterval(),
+                appendableSegment.getVersion(),
+                identifier.getShardSpec().createChunk(appendableSegment)
             );
-            for (FireHydrant hydrant : sink) {
+            for (PartialSegment partialSegment : appendableSegment) {
               if (cache != null) {
-                cache.close(SinkQuerySegmentWalker.makeHydrantCacheIdentifier(hydrant));
+                cache.close(AppendableSegmentQuerySegmentWalker.makePartialSegmentCacheIdentifier(partialSegment));
               }
-              hydrant.swapSegment(null);
-              // remove hydrant from persisted metadata:
-              persistedHydrantMetadata.remove(hydrant);
+              partialSegment.swapSegment(null);
+              // remove partialSegment from persisted metadata:
+              persistedPartialSegmentMetadata.remove(partialSegment);
             }
 
             if (removeOnDiskData) {
@@ -1477,7 +1510,7 @@ public class AppenderatorImpl implements Appenderator
   {
     final File commitFile = computeCommitFile();
     if (commitFile.exists()) {
-      // merge current hydrants with existing hydrants
+      // merge current partial segments with existing partial segments
       return objectMapper.readValue(commitFile, Committed.class);
     } else {
       return null;
@@ -1526,27 +1559,26 @@ public class AppenderatorImpl implements Appenderator
   }
 
   /**
-   * Persists the given hydrant and returns the number of rows persisted. Must only be called in the single-threaded
-   * persistExecutor.
+   * Persists the given {@link PartialSegment} and returns the number of rows persisted. Must only be called in the
+   * single-threaded persistExecutor.
    *
-   * @param indexToPersist hydrant to persist
-   * @param identifier     the segment this hydrant is going to be part of
-   *
+   * @param indexToPersist {@link PartialSegment} to persist
+   * @param identifier     the segment this {@link PartialSegment} is going to be part of
    * @return the number of rows persisted
    */
-  private int persistHydrant(FireHydrant indexToPersist, SegmentIdWithShardSpec identifier)
+  private int persistPartialSegment(PartialSegment indexToPersist, SegmentIdWithShardSpec identifier)
   {
     synchronized (indexToPersist) {
       if (indexToPersist.hasSwapped()) {
         log.info(
-            "Segment[%s] hydrant[%s] already swapped. Ignoring request to persist.",
+            "Segment[%s] PartialSegment[%s] already swapped. Ignoring request to persist.",
             identifier,
             indexToPersist
         );
         return 0;
       }
 
-      log.debug("Segment[%s], persisting Hydrant[%s]", identifier, indexToPersist);
+      log.debug("Segment[%s], persisting PartialSegment[%s]", identifier, indexToPersist);
 
       try {
         final long startTime = System.nanoTime();
@@ -1576,7 +1608,7 @@ public class AppenderatorImpl implements Appenderator
           segmentToSwap = new QueryableIndexSegment(indexIO.loadIndex(persistedFile), indexToPersist.getSegmentId());
         } else {
           // remember file path & segment id to rebuild the queryable index for merge:
-          persistedHydrantMetadata.put(indexToPersist, new Pair<>(persistedFile, indexToPersist.getSegmentId()));
+          persistedPartialSegmentMetadata.put(indexToPersist, new Pair<>(persistedFile, indexToPersist.getSegmentId()));
         }
         indexToPersist.swapSegment(segmentToSwap);
 
@@ -1608,31 +1640,31 @@ public class AppenderatorImpl implements Appenderator
     }
   }
 
-  private int calculateMMappedHydrantMemoryInUsed(FireHydrant hydrant)
+  private int calculateMMappedPartialSegmentMemoryInUsed(PartialSegment partialSEgment)
   {
     if (skipBytesInMemoryOverheadCheck) {
       return 0;
     }
     // These calculations are approximated from actual heap dumps.
-    // Memory footprint includes count integer in FireHydrant, shorts in ReferenceCountingSegment,
+    // Memory footprint includes count integer in PartialSegment, shorts in ReferenceCountingSegment,
     // Objects in SimpleQueryableIndex (such as SmooshedFileMapper, each ColumnHolder in column map, etc.)
     int total;
-    total = Integer.BYTES + (4 * Short.BYTES) + ROUGH_OVERHEAD_PER_HYDRANT;
+    total = Integer.BYTES + (4 * Short.BYTES) + ROUGH_OVERHEAD_PER_PARTIAL_SEGMENT;
     if (isOpenSegments()) {
       // for real time add references to byte memory mapped references..
-      total += (hydrant.getSegmentNumDimensionColumns() * ROUGH_OVERHEAD_PER_DIMENSION_COLUMN_HOLDER) +
-               (hydrant.getSegmentNumMetricColumns() * ROUGH_OVERHEAD_PER_METRIC_COLUMN_HOLDER) +
+      total += (partialSEgment.getSegmentNumDimensionColumns() * ROUGH_OVERHEAD_PER_DIMENSION_COLUMN_HOLDER) +
+               (partialSEgment.getSegmentNumMetricColumns() * ROUGH_OVERHEAD_PER_METRIC_COLUMN_HOLDER) +
                ROUGH_OVERHEAD_PER_TIME_COLUMN_HOLDER;
     }
     return total;
   }
 
-  private int calculateSinkMemoryInUsed()
+  private int calculateAppendableSegmentMemoryInUsed()
   {
     if (skipBytesInMemoryOverheadCheck) {
       return 0;
     }
-    // Rough estimate of memory footprint of empty Sink based on actual heap dumps
-    return ROUGH_OVERHEAD_PER_SINK;
+    // Rough estimate of memory footprint of empty AppendableSegment based on actual heap dumps
+    return ROUGH_OVERHEAD_PER_APPENDABLE_SEGMENT;
   }
 }

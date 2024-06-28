@@ -44,7 +44,7 @@ import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.incremental.NoopRowIngestionMeters;
 import org.apache.druid.segment.loading.DataSegmentPusher;
-import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
+import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;

@@ -32,7 +32,7 @@ import org.apache.druid.guice.annotations.RemoteChatHandler;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.query.lookup.LookupModule;
-import org.apache.druid.segment.realtime.firehose.ChatHandlerResource;
+import org.apache.druid.segment.realtime.ChatHandlerResource;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.initialization.TLSServerConfig;

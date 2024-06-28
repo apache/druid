@@ -558,7 +558,6 @@ public class TaskQueueTest extends IngestionTestBase
         null
     );
     final ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
-        null,
         new HttpInputSource(Collections.singletonList(URI.create("http://host.org")),
                             "user",
                             new DefaultPasswordProvider(password),

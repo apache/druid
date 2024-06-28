@@ -53,7 +53,7 @@ import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.indexing.OverlordClient;
-import org.apache.druid.segment.realtime.firehose.ChatHandler;
+import org.apache.druid.segment.realtime.ChatHandler;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 

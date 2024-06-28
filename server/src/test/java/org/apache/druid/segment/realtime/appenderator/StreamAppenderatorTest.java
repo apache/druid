@@ -49,7 +49,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.incremental.SimpleRowIngestionMeters;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
-import org.apache.druid.segment.realtime.sink.Committers;
+import org.apache.druid.segment.realtime.Committers;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
@@ -311,7 +311,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testMaxBytesInMemoryInMultipleSinksWithSkipBytesInMemoryOverheadCheckConfig() throws Exception
+  public void testMaxBytesInMemoryInMultipleAppendableSegmentsWithSkipBytesInMemoryOverheadCheckConfig() throws Exception
   {
     try (
         final StreamAppenderatorTester tester =
@@ -392,26 +392,26 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
       //expectedSizeInBytes = 44(map overhead) + 28 (TimeAndDims overhead) + 56 (aggregator metrics) + 54 (dimsKeySize) = 182 + 1 byte when null handling is enabled
       int nullHandlingOverhead = NullHandling.sqlCompatible() ? 1 : 0;
       int currentInMemoryIndexSize = 182 + nullHandlingOverhead;
-      int sinkSizeOverhead = 1 * StreamAppenderator.ROUGH_OVERHEAD_PER_SINK;
-      // currHydrant in the sink still has > 0 bytesInMemory since we do not persist yet
+      int appendableSegmentSizeOverhead = 1 * StreamAppenderator.ROUGH_OVERHEAD_PER_APPENDABLE_SEGMENT;
+      // currPartialSegment in the AppendableSegment still has > 0 bytesInMemory since we do not persist yet
       Assert.assertEquals(
           currentInMemoryIndexSize,
           ((StreamAppenderator) appenderator).getBytesInMemory(IDENTIFIERS.get(0))
       );
       Assert.assertEquals(
-          currentInMemoryIndexSize + sinkSizeOverhead,
+          currentInMemoryIndexSize + appendableSegmentSizeOverhead,
           ((StreamAppenderator) appenderator).getBytesCurrentlyInMemory()
       );
 
-      // We do multiple more adds to the same sink to cause persist.
+      // We do multiple more adds to the same AppendableSegment to cause persist.
       for (int i = 0; i < 53; i++) {
         appenderator.add(IDENTIFIERS.get(0), ir("2000", "bar_" + i, 1), committerSupplier);
       }
-      sinkSizeOverhead = 1 * StreamAppenderator.ROUGH_OVERHEAD_PER_SINK;
-      // currHydrant size is 0 since we just persist all indexes to disk.
+      appendableSegmentSizeOverhead = 1 * StreamAppenderator.ROUGH_OVERHEAD_PER_APPENDABLE_SEGMENT;
+      // currPartialSegment size is 0 since we just persist all indexes to disk.
       currentInMemoryIndexSize = 0;
       // We are now over maxSizeInBytes after the add. Hence, we do a persist.
-      // currHydrant in the sink has 0 bytesInMemory since we just did a persist
+      // currPartialSegment in the AppendableSegment has 0 bytesInMemory since we just did a persist
       Assert.assertEquals(
           currentInMemoryIndexSize,
           ((StreamAppenderator) appenderator).getBytesInMemory(IDENTIFIERS.get(0))
@@ -422,31 +422,31 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
                             StreamAppenderator.ROUGH_OVERHEAD_PER_DIMENSION_COLUMN_HOLDER +
                             StreamAppenderator.ROUGH_OVERHEAD_PER_TIME_COLUMN_HOLDER;
       Assert.assertEquals(
-          currentInMemoryIndexSize + sinkSizeOverhead + mappedIndexSize,
+          currentInMemoryIndexSize + appendableSegmentSizeOverhead + mappedIndexSize,
           ((StreamAppenderator) appenderator).getBytesCurrentlyInMemory()
       );
 
       // Add a single row after persisted
       appenderator.add(IDENTIFIERS.get(0), ir("2000", "bob", 1), committerSupplier);
-      // currHydrant in the sink still has > 0 bytesInMemory since we do not persist yet
+      // currPartialSegment in the AppendableSegment still has > 0 bytesInMemory since we do not persist yet
       currentInMemoryIndexSize = 182 + nullHandlingOverhead;
       Assert.assertEquals(
           currentInMemoryIndexSize,
           ((StreamAppenderator) appenderator).getBytesInMemory(IDENTIFIERS.get(0))
       );
       Assert.assertEquals(
-          currentInMemoryIndexSize + sinkSizeOverhead + mappedIndexSize,
+          currentInMemoryIndexSize + appendableSegmentSizeOverhead + mappedIndexSize,
           ((StreamAppenderator) appenderator).getBytesCurrentlyInMemory()
       );
 
-      // We do multiple more adds to the same sink to cause persist.
+      // We do multiple more adds to the same AppendableSegment to cause persist.
       for (int i = 0; i < 31; i++) {
         appenderator.add(IDENTIFIERS.get(0), ir("2000", "bar_" + i, 1), committerSupplier);
       }
-      // currHydrant size is 0 since we just persist all indexes to disk.
+      // currPartialSegment size is 0 since we just persist all indexes to disk.
       currentInMemoryIndexSize = 0;
       // We are now over maxSizeInBytes after the add. Hence, we do a persist.
-      // currHydrant in the sink has 0 bytesInMemory since we just did a persist
+      // currPartialSegment in the AppendableSegment has 0 bytesInMemory since we just did a persist
       Assert.assertEquals(
           currentInMemoryIndexSize,
           ((StreamAppenderator) appenderator).getBytesInMemory(IDENTIFIERS.get(0))
@@ -458,7 +458,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
                              StreamAppenderator.ROUGH_OVERHEAD_PER_DIMENSION_COLUMN_HOLDER +
                              StreamAppenderator.ROUGH_OVERHEAD_PER_TIME_COLUMN_HOLDER);
       Assert.assertEquals(
-          currentInMemoryIndexSize + sinkSizeOverhead + mappedIndexSize,
+          currentInMemoryIndexSize + appendableSegmentSizeOverhead + mappedIndexSize,
           ((StreamAppenderator) appenderator).getBytesCurrentlyInMemory()
       );
       appenderator.close();
@@ -588,9 +588,9 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
       // Still under maxSizeInBytes after the add. Hence, we do not persist yet
       int nullHandlingOverhead = NullHandling.sqlCompatible() ? 1 : 0;
       int currentInMemoryIndexSize = 182 + nullHandlingOverhead;
-      int sinkSizeOverhead = 1 * StreamAppenderator.ROUGH_OVERHEAD_PER_SINK;
+      int appendableSegmentSizeOverhead = 1 * StreamAppenderator.ROUGH_OVERHEAD_PER_APPENDABLE_SEGMENT;
       Assert.assertEquals(
-          currentInMemoryIndexSize + sinkSizeOverhead,
+          currentInMemoryIndexSize + appendableSegmentSizeOverhead,
           ((StreamAppenderator) appenderator).getBytesCurrentlyInMemory()
       );
 
@@ -603,7 +603,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testMaxBytesInMemoryInMultipleSinks() throws Exception
+  public void testMaxBytesInMemoryInMultipleAppendableSegments() throws Exception
   {
     try (
         final StreamAppenderatorTester tester =
@@ -640,8 +640,8 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
       //expectedSizeInBytes = 44(map overhead) + 28 (TimeAndDims overhead) + 56 (aggregator metrics) + 54 (dimsKeySize) = 182 + 1 byte when null handling is enabled
       int nullHandlingOverhead = NullHandling.sqlCompatible() ? 1 : 0;
       int currentInMemoryIndexSize = 182 + nullHandlingOverhead;
-      int sinkSizeOverhead = 2 * StreamAppenderator.ROUGH_OVERHEAD_PER_SINK;
-      // currHydrant in the sink still has > 0 bytesInMemory since we do not persist yet
+      int appendableSegmentSizeOverhead = 2 * StreamAppenderator.ROUGH_OVERHEAD_PER_APPENDABLE_SEGMENT;
+      // currPartialSegment in the AppendableSegment still has > 0 bytesInMemory since we do not persist yet
       Assert.assertEquals(
           currentInMemoryIndexSize,
           ((StreamAppenderator) appenderator).getBytesInMemory(IDENTIFIERS.get(0))
@@ -651,20 +651,20 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
           ((StreamAppenderator) appenderator).getBytesInMemory(IDENTIFIERS.get(1))
       );
       Assert.assertEquals(
-          (2 * currentInMemoryIndexSize) + sinkSizeOverhead,
+          (2 * currentInMemoryIndexSize) + appendableSegmentSizeOverhead,
           ((StreamAppenderator) appenderator).getBytesCurrentlyInMemory()
       );
 
-      // We do multiple more adds to the same sink to cause persist.
+      // We do multiple more adds to the same AppendableSegment to cause persist.
       for (int i = 0; i < 49; i++) {
         appenderator.add(IDENTIFIERS.get(0), ir("2000", "bar_" + i, 1), committerSupplier);
         appenderator.add(IDENTIFIERS.get(1), ir("2000", "bar_" + i, 1), committerSupplier);
       }
-      sinkSizeOverhead = 2 * StreamAppenderator.ROUGH_OVERHEAD_PER_SINK;
-      // currHydrant size is 0 since we just persist all indexes to disk.
+      appendableSegmentSizeOverhead = 2 * StreamAppenderator.ROUGH_OVERHEAD_PER_APPENDABLE_SEGMENT;
+      // currPartialSegment size is 0 since we just persist all indexes to disk.
       currentInMemoryIndexSize = 0;
       // We are now over maxSizeInBytes after the add. Hence, we do a persist.
-      // currHydrant in the sink has 0 bytesInMemory since we just did a persist
+      // currPartialSegment in the AppendableSegment has 0 bytesInMemory since we just did a persist
       Assert.assertEquals(
           currentInMemoryIndexSize,
           ((StreamAppenderator) appenderator).getBytesInMemory(IDENTIFIERS.get(0))
@@ -679,13 +679,13 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
                                  StreamAppenderator.ROUGH_OVERHEAD_PER_DIMENSION_COLUMN_HOLDER +
                                  StreamAppenderator.ROUGH_OVERHEAD_PER_TIME_COLUMN_HOLDER);
       Assert.assertEquals(
-          currentInMemoryIndexSize + sinkSizeOverhead + mappedIndexSize,
+          currentInMemoryIndexSize + appendableSegmentSizeOverhead + mappedIndexSize,
           ((StreamAppenderator) appenderator).getBytesCurrentlyInMemory()
       );
 
-      // Add a single row after persisted to sink 0
+      // Add a single row after persisted to AppendableSegment 0
       appenderator.add(IDENTIFIERS.get(0), ir("2000", "bob", 1), committerSupplier);
-      // currHydrant in the sink still has > 0 bytesInMemory since we do not persist yet
+      // currPartialSegment in the AppendableSegment still has > 0 bytesInMemory since we do not persist yet
       currentInMemoryIndexSize = 182 + nullHandlingOverhead;
       Assert.assertEquals(
           currentInMemoryIndexSize,
@@ -696,10 +696,10 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
           ((StreamAppenderator) appenderator).getBytesInMemory(IDENTIFIERS.get(1))
       );
       Assert.assertEquals(
-          currentInMemoryIndexSize + sinkSizeOverhead + mappedIndexSize,
+          currentInMemoryIndexSize + appendableSegmentSizeOverhead + mappedIndexSize,
           ((StreamAppenderator) appenderator).getBytesCurrentlyInMemory()
       );
-      // Now add a single row to sink 1
+      // Now add a single row to AppendableSegment 1
       appenderator.add(IDENTIFIERS.get(1), ir("2000", "bob", 1), committerSupplier);
       Assert.assertEquals(
           currentInMemoryIndexSize,
@@ -710,19 +710,19 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
           ((StreamAppenderator) appenderator).getBytesInMemory(IDENTIFIERS.get(1))
       );
       Assert.assertEquals(
-          (2 * currentInMemoryIndexSize) + sinkSizeOverhead + mappedIndexSize,
+          (2 * currentInMemoryIndexSize) + appendableSegmentSizeOverhead + mappedIndexSize,
           ((StreamAppenderator) appenderator).getBytesCurrentlyInMemory()
       );
 
-      // We do multiple more adds to the both sink to cause persist.
+      // We do multiple more adds to the both AppendableSegment to cause persist.
       for (int i = 0; i < 34; i++) {
         appenderator.add(IDENTIFIERS.get(0), ir("2000", "bar_" + i, 1), committerSupplier);
         appenderator.add(IDENTIFIERS.get(1), ir("2000", "bar_" + i, 1), committerSupplier);
       }
-      // currHydrant size is 0 since we just persist all indexes to disk.
+      // currPartialSegment size is 0 since we just persist all indexes to disk.
       currentInMemoryIndexSize = 0;
       // We are now over maxSizeInBytes after the add. Hence, we do a persist.
-      // currHydrant in the sink has 0 bytesInMemory since we just did a persist
+      // currPartialSegment in the AppendableSegment has 0 bytesInMemory since we just did a persist
       Assert.assertEquals(
           currentInMemoryIndexSize,
           ((StreamAppenderator) appenderator).getBytesInMemory(IDENTIFIERS.get(0))
@@ -738,7 +738,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
                                   StreamAppenderator.ROUGH_OVERHEAD_PER_DIMENSION_COLUMN_HOLDER +
                                   StreamAppenderator.ROUGH_OVERHEAD_PER_TIME_COLUMN_HOLDER));
       Assert.assertEquals(
-          currentInMemoryIndexSize + sinkSizeOverhead + mappedIndexSize,
+          currentInMemoryIndexSize + appendableSegmentSizeOverhead + mappedIndexSize,
           ((StreamAppenderator) appenderator).getBytesCurrentlyInMemory()
       );
       appenderator.close();
@@ -789,9 +789,9 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
       );
       Assert.assertEquals(1, ((StreamAppenderator) appenderator).getRowsInMemory());
       appenderator.add(IDENTIFIERS.get(1), ir("2000", "bar", 1), committerSupplier);
-      int sinkSizeOverhead = 2 * StreamAppenderator.ROUGH_OVERHEAD_PER_SINK;
+      int appendableSegmentSizeOverhead = 2 * StreamAppenderator.ROUGH_OVERHEAD_PER_APPENDABLE_SEGMENT;
       Assert.assertEquals(
-          (364 + 2 * nullHandlingOverhead) + sinkSizeOverhead,
+          (364 + 2 * nullHandlingOverhead) + appendableSegmentSizeOverhead,
           ((StreamAppenderator) appenderator).getBytesCurrentlyInMemory()
       );
       Assert.assertEquals(2, ((StreamAppenderator) appenderator).getRowsInMemory());
@@ -1454,7 +1454,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
 
       final ConcurrentMap<String, String> commitMetadata = new ConcurrentHashMap<>();
       final Supplier<Committer> committerSupplier = committerSupplierFromConcurrentMap(commitMetadata);
-      StreamAppenderator.SinkSchemaAnnouncer sinkSchemaAnnouncer = appenderator.getSinkSchemaAnnouncer();
+      StreamAppenderator.AppendableSegmentSchemaAnnouncer appendableSegmentSchemaAnnouncer = appenderator.getAppendableSegmentSchemaAnnouncer();
 
       // startJob
       Assert.assertEquals(null, appenderator.startJob());
@@ -1467,7 +1467,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
       appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 1), committerSupplier);
 
       // trigger schema computation
-      sinkSchemaAnnouncer.computeAndAnnounce();
+      appendableSegmentSchemaAnnouncer.computeAndAnnounce();
 
       // verify schema
       List<Pair<String, SegmentSchemas>> announcedAbsoluteSchema = dataSegmentAnnouncer.getAnnouncedAbsoluteSchema();
@@ -1497,7 +1497,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
       Assert.assertEquals(1, segmentSchemas.size());
       Assert.assertEquals(IDENTIFIERS.get(0).asSegmentId().toString(), deltaSchemaId1Row1.getSegmentId());
       Assert.assertEquals(1, deltaSchemaId1Row1.getNumRows().intValue());
-      // absolute schema is sent for a new sink
+      // absolute schema is sent for a new AppendableSegment
       Assert.assertFalse(deltaSchemaId1Row1.isDelta());
       Assert.assertEquals(Collections.emptyList(), deltaSchemaId1Row1.getUpdatedColumns());
       Assert.assertEquals(Lists.newArrayList("__time", "dim", "count", "met"), deltaSchemaId1Row1.getNewColumns());
@@ -1512,7 +1512,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
       appenderator.add(IDENTIFIERS.get(0), ir("2000", "bar", 2), committerSupplier);
 
       // trigger schema computation
-      sinkSchemaAnnouncer.computeAndAnnounce();
+      appendableSegmentSchemaAnnouncer.computeAndAnnounce();
 
       // verify schema
       announcedAbsoluteSchema = dataSegmentAnnouncer.getAnnouncedAbsoluteSchema();
@@ -1553,7 +1553,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
       commitMetadata.put("x", "3");
       appenderator.add(IDENTIFIERS.get(1), ir("2000", "qux", 4), committerSupplier);
 
-      sinkSchemaAnnouncer.computeAndAnnounce();
+      appendableSegmentSchemaAnnouncer.computeAndAnnounce();
 
       // verify schema
       announcedAbsoluteSchema = dataSegmentAnnouncer.getAnnouncedAbsoluteSchema();

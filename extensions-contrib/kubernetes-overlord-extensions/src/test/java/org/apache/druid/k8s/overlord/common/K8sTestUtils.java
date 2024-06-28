@@ -79,7 +79,6 @@ public class K8sTestUtils
                 null
             ),
             new IndexTask.IndexIOConfig(
-                null,
                 new LocalInputSource(new File("lol"), "rofl"),
                 new NoopInputFormat(),
                 true,

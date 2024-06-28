@@ -136,10 +136,11 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
     final GroupByQueryConfig querySpecificConfig = config.withOverrides(query);
 
     // CTX_KEY_MERGE_RUNNERS_USING_CHAINED_EXECUTION is here because realtime servers use nested mergeRunners calls
-    // (one for the entire query and one for each sink). We only want the outer call to actually do merging with a
-    // merge buffer, otherwise the query will allocate too many merge buffers. This is potentially sub-optimal as it
-    // will involve materializing the results for each sink before starting to feed them into the outer merge buffer.
-    // I'm not sure of a better way to do this without tweaking how realtime servers do queries.
+    // (one for the entire query and one for each appendable segment). We only want the outer call to actually do
+    // merging with a merge buffer, otherwise the query will allocate too many merge buffers. This is potentially
+    // sub-optimal as it will involve materializing the results for each appendable segment before starting to feed
+    // them into the outer merge buffer. I'm not sure of a better way to do this without tweaking how realtime servers
+    // do queries.
     final boolean forceChainedExecution = query.context().getBoolean(
         CTX_KEY_MERGE_RUNNERS_USING_CHAINED_EXECUTION,
         false
