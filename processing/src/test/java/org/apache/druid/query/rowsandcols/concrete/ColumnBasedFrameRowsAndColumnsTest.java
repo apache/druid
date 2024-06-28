@@ -46,4 +46,5 @@ public class ColumnBasedFrameRowsAndColumnsTest extends RowsAndColumnsTestBase
 
     return (ColumnBasedFrameRowsAndColumns) rac.getBase();
   }
+
 }
