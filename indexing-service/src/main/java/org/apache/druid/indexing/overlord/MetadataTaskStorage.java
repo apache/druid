@@ -76,14 +76,6 @@ public class MetadataTaskStorage implements TaskStorage
     }
 
     @Override
-    public TypeReference<TaskAction> getLogType()
-    {
-      return new TypeReference<TaskAction>()
-      {
-      };
-    }
-
-    @Override
     public TypeReference<TaskLock> getLockType()
     {
       return new TypeReference<TaskLock>()
@@ -317,24 +309,6 @@ public class MetadataTaskStorage implements TaskStorage
             Entry::getValue
         )
     );
-  }
-
-  @Deprecated
-  @Override
-  public <T> void addAuditLog(final Task task, final TaskAction<T> taskAction)
-  {
-    Preconditions.checkNotNull(taskAction, "taskAction");
-
-    log.info("Logging action for task[%s]: %s", task.getId(), taskAction);
-
-    handler.addLog(task.getId(), taskAction);
-  }
-
-  @Deprecated
-  @Override
-  public List<TaskAction> getAuditLogs(final String taskId)
-  {
-    return handler.getLogs(taskId);
   }
 
   private Map<Long, TaskLock> getLocksWithIds(final String taskid)

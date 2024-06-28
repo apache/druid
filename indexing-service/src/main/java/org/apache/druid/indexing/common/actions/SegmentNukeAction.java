@@ -102,12 +102,6 @@ public class SegmentNukeAction implements TaskAction<Void>
   }
 
   @Override
-  public boolean isAudited()
-  {
-    return true;
-  }
-
-  @Override
   public String toString()
   {
     return "SegmentNukeAction{" +

@@ -327,24 +327,6 @@ public class HeapMemoryTaskStorage implements TaskStorage
     }
   }
 
-  @Deprecated
-  @Override
-  public <T> void addAuditLog(Task task, TaskAction<T> taskAction)
-  {
-    synchronized (taskActions) {
-      taskActions.put(task.getId(), taskAction);
-    }
-  }
-
-  @Deprecated
-  @Override
-  public List<TaskAction> getAuditLogs(String taskid)
-  {
-    synchronized (taskActions) {
-      return ImmutableList.copyOf(taskActions.get(taskid));
-    }
-  }
-
   private static class TaskStuff
   {
     final Task task;

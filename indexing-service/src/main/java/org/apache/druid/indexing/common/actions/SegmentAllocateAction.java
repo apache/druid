@@ -387,12 +387,6 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
   }
 
   @Override
-  public boolean isAudited()
-  {
-    return false;
-  }
-
-  @Override
   public String toString()
   {
     return "SegmentAllocateAction{" +

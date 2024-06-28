@@ -65,12 +65,6 @@ public class ResetDataSourceMetadataAction implements TaskAction<Boolean>
   }
 
   @Override
-  public boolean isAudited()
-  {
-    return true;
-  }
-
-  @Override
   public String toString()
   {
     return "ResetDataSourceMetadataAction{" +

@@ -24,7 +24,6 @@ import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.common.TaskLock;
-import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.metadata.TaskLookup;
 import org.apache.druid.metadata.TaskLookup.TaskLookupType;
@@ -109,26 +108,6 @@ public interface TaskStorage
 
   @Nullable
   TaskInfo<Task, TaskStatus> getTaskInfo(String taskId);
-
-  /**
-   * Add an action taken by a task to the audit log.
-   *
-   * @param task       task to record action for
-   * @param taskAction task action to record
-   * @param <T>        task action return type
-   */
-  @Deprecated
-  <T> void addAuditLog(Task task, TaskAction<T> taskAction);
-
-  /**
-   * Returns all actions taken by a task.
-   *
-   * @param taskid task ID
-   *
-   * @return list of task actions
-   */
-  @Deprecated
-  List<TaskAction> getAuditLogs(String taskid);
 
   /**
    * Returns a list of currently running or pending tasks as stored in the storage facility. No particular order

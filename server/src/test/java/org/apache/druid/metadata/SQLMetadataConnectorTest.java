@@ -75,7 +75,6 @@ public class SQLMetadataConnectorTest
     tables.add(tablesConfig.getSegmentsTable());
     tables.add(tablesConfig.getRulesTable());
     tables.add(tablesConfig.getLockTable(entryType));
-    tables.add(tablesConfig.getLogTable(entryType));
     tables.add(tablesConfig.getEntryTable(entryType));
     tables.add(tablesConfig.getAuditTable());
     tables.add(tablesConfig.getSupervisorTable());
