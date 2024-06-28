@@ -125,7 +125,7 @@ public class BalanceSegmentsProfiler
 
     DruidCluster druidCluster = DruidCluster
         .builder()
-        .addTier("normal", serverHolderList.toArray(new ServerHolder[0]))
+        .add(serverHolderList.toArray(new ServerHolder[0]))
         .build();
     DruidCoordinatorRuntimeParams params = DruidCoordinatorRuntimeParams
         .newBuilder(DateTimes.nowUtc())
@@ -178,8 +178,7 @@ public class BalanceSegmentsProfiler
         .withDruidCluster(
             DruidCluster
                 .builder()
-                .addTier(
-                    "normal",
+                .add(
                     new ServerHolder(druidServer1, fromPeon),
                     new ServerHolder(druidServer2, toPeon)
                 )

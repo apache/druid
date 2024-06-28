@@ -44,8 +44,8 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
   public void setUp()
   {
     // Setup historicals for 2 tiers, size 10 GB each
-    historicalT11 = createHistorical(1, Tier.T1, 10_000);
-    historicalT12 = createHistorical(2, Tier.T1, 10_000);
+    historicalT11 = createHistorical(Tier.T1, 10_000);
+    historicalT12 = createHistorical(Tier.T1, 10_000);
   }
 
   @Test
@@ -238,7 +238,7 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
     final long size1TB = 1_000_000;
     List<DruidServer> historicals
         = IntStream.range(0, 10)
-                   .mapToObj(i -> createHistorical(i + 1, Tier.T1, size1TB))
+                   .mapToObj(i -> createHistorical(Tier.T1, size1TB))
                    .collect(Collectors.toList());
 
     CoordinatorSimulation sim =
@@ -258,7 +258,7 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
 
     // Run 2: Add 10 more historicals, some segments are moved to them
     for (int i = 11; i <= 20; ++i) {
-      addServer(createHistorical(i, Tier.T1, size1TB));
+      addServer(createHistorical(Tier.T1, size1TB));
     }
 
     runCoordinatorCycle();

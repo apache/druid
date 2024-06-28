@@ -21,6 +21,7 @@ package org.apache.druid.server.coordinator.simulate;
 
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
+import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.timeline.DataSegment;
 import org.junit.Assert;
 import org.junit.Test;
@@ -46,12 +47,12 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
   public void setUp()
   {
     // Setup historicals for 2 tiers, size 10 GB each
-    historicalT11 = createHistorical(1, Tier.T1, 10_000);
-    historicalT12 = createHistorical(2, Tier.T1, 10_000);
-    historicalT13 = createHistorical(3, Tier.T1, 10_000);
+    historicalT11 = createHistorical(Tier.T1, 10_000);
+    historicalT12 = createHistorical(Tier.T1, 10_000);
+    historicalT13 = createHistorical(Tier.T1, 10_000);
 
-    historicalT21 = createHistorical(1, Tier.T2, 10_000);
-    historicalT22 = createHistorical(2, Tier.T2, 10_000);
+    historicalT21 = createHistorical(Tier.T2, 10_000);
+    historicalT22 = createHistorical(Tier.T2, 10_000);
   }
 
   @Test
@@ -85,7 +86,7 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
   public void testLoadingDoesNotOverassignHistorical()
   {
     // historicals = 1(in T1), size 1 GB
-    final DruidServer historicalT11 = createHistorical(1, Tier.T1, 1000);
+    final DruidServer historicalT11 = createHistorical(Tier.T1, 1000);
 
     // segments = 10*1day, size 500 MB
     // strategy = cost, replicas = 1(T1)
@@ -156,7 +157,7 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
 
     // Run 4: Add 3rd server to T2, third replica can now be assigned
     // Add 3rd server to T1 with replica loaded, but it will not be dropped
-    final DruidServer historicalT23 = createHistorical(3, Tier.T2, 10_000);
+    final DruidServer historicalT23 = createHistorical(Tier.T2, 10_000);
     addServer(historicalT23);
     historicalT13.addDataSegment(segment);
     addServer(historicalT13);
@@ -233,7 +234,7 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
   public void testImmediateLoadingDoesNotOverassignHistorical()
   {
     // historicals = 1(in T1), size 1 GB
-    final DruidServer historicalT11 = createHistorical(1, Tier.T1, 1000);
+    final DruidServer historicalT11 = createHistorical(Tier.T1, 1000);
 
     // segments = 10*1day, size 500 MB
     // strategy = cost, replicas = 1(T1)
@@ -409,7 +410,7 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
 
     // Verify that all the segments are broadcast to all historicals
     // irrespective of throttle limit
-    verifyValue(Metric.ASSIGNED_COUNT, filterByDatasource(DS.WIKI), 30L);
+    verifyValue(Metric.ASSIGNED_COUNT, filter(Dimension.DATASOURCE, DS.WIKI), 30L);
     verifyNotEmitted(Metric.DROPPED_COUNT);
   }
 
