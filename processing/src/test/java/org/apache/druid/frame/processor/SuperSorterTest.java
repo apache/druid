@@ -131,7 +131,8 @@ public class SuperSorterTest
           2,
           -1,
           null,
-          superSorterProgressTracker
+          superSorterProgressTracker,
+          false
       );
 
       superSorter.setNoWorkRunnable(() -> outputPartitionsFuture.set(ClusterByPartitions.oneUniversalPartition()));
@@ -306,7 +307,8 @@ public class SuperSorterTest
           maxChannelsPerProcessor,
           -1,
           null,
-          superSorterProgressTracker
+          superSorterProgressTracker,
+          false
       );
 
       superSorter.setNoWorkRunnable(() -> clusterByPartitionsFuture.set(clusterByPartitions));

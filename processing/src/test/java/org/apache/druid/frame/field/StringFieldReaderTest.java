@@ -69,7 +69,7 @@ public class StringFieldReaderTest extends InitializedNullHandlingTest
   public void setUp()
   {
     memory = WritableMemory.allocate(1000);
-    fieldWriter = new StringArrayFieldWriter(writeSelector);
+    fieldWriter = new StringArrayFieldWriter(writeSelector, false);
   }
 
   @After

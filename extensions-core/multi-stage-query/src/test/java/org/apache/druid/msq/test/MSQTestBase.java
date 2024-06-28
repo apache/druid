@@ -834,6 +834,10 @@ public class MSQTestBase extends BaseCalciteQueryTest
         expectedTuningConfig.getRowsPerSegment(),
         tuningConfig.getRowsPerSegment()
     );
+    Assert.assertEquals(
+        expectedTuningConfig.getMaxNumSegments(),
+        tuningConfig.getMaxNumSegments()
+    );
   }
 
   @Nullable

@@ -29,6 +29,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.aggregation.AggregatorAdapters;
+import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -55,7 +56,6 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Collections;
@@ -138,12 +138,22 @@ public class VectorGroupByEngine
             try {
               final VectorColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
               final List<GroupByVectorColumnSelector> dimensions = query.getDimensions().stream().map(
-                  dimensionSpec ->
-                      ColumnProcessors.makeVectorProcessor(
+                  dimensionSpec -> {
+                    if (dimensionSpec instanceof DefaultDimensionSpec) {
+                      // Delegate creation of GroupByVectorColumnSelector to the column selector factory, so that
+                      // virtual columns (like ExpressionVirtualColumn) can control their own grouping behavior.
+                      return columnSelectorFactory.makeGroupByVectorColumnSelector(
+                          dimensionSpec.getDimension(),
+                          config.getDeferExpressionDimensions()
+                      );
+                    } else {
+                      return ColumnProcessors.makeVectorProcessor(
                           dimensionSpec,
                           GroupByVectorColumnProcessorFactory.instance(),
                           columnSelectorFactory
-                      )
+                      );
+                    }
+                  }
               ).collect(Collectors.toList());
 
               return new VectorGroupByEngineIterator(

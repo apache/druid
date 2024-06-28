@@ -24,7 +24,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.inject.Injector;
+import org.apache.druid.client.BootstrapSegmentsResponse;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
+import org.apache.druid.guice.StartupInjectorBuilder;
+import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
@@ -37,6 +42,7 @@ import org.apache.druid.segment.metadata.DataSourceInformation;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.PruneLoadSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
@@ -57,6 +63,24 @@ public class CoordinatorClientImplTest
   private ObjectMapper jsonMapper;
   private MockServiceClient serviceClient;
   private CoordinatorClient coordinatorClient;
+
+  private static final DataSegment SEGMENT1 = DataSegment.builder()
+                                                         .dataSource("xyz")
+                                                         .interval(Intervals.of("1000/2000"))
+                                                         .version("1")
+                                                         .loadSpec(ImmutableMap.of("type", "local", "loc", "foo"))
+                                                         .shardSpec(new NumberedShardSpec(0, 1))
+                                                         .size(1)
+                                                         .build();
+
+  private static final DataSegment SEGMENT2 = DataSegment.builder()
+                                                         .dataSource("xyz")
+                                                         .interval(Intervals.of("2000/3000"))
+                                                         .version("1")
+                                                         .loadSpec(ImmutableMap.of("type", "local", "loc", "bar"))
+                                                         .shardSpec(new NumberedShardSpec(0, 1))
+                                                         .size(1)
+                                                         .build();
 
   @Before
   public void setup()
@@ -178,6 +202,82 @@ public class CoordinatorClientImplTest
     Assert.assertEquals(
         Collections.singletonList(segment),
         coordinatorClient.fetchUsedSegments("xyz", intervals).get()
+    );
+  }
+
+  @Test
+  public void test_fetchBootstrapSegments() throws Exception
+  {
+    final List<DataSegment> expectedSegments = ImmutableList.of(SEGMENT1, SEGMENT2);
+
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.POST, "/druid/coordinator/v1/metadata/bootstrapSegments"),
+        HttpResponseStatus.OK,
+        ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
+        jsonMapper.writeValueAsBytes(expectedSegments)
+    );
+
+    final ListenableFuture<BootstrapSegmentsResponse> response = coordinatorClient.fetchBootstrapSegments();
+    Assert.assertNotNull(response);
+
+    final ImmutableList<DataSegment> observedDataSegments = ImmutableList.copyOf(response.get().getIterator());
+    for (int idx = 0; idx < expectedSegments.size(); idx++) {
+      Assert.assertEquals(expectedSegments.get(idx).getLoadSpec(), observedDataSegments.get(idx).getLoadSpec());
+    }
+  }
+
+  /**
+   * Set up a Guice injector with PruneLoadSpec set to true. This test verifies that the bootstrap segments API
+   * always return segments with load specs present, ensuring they can be loaded anywhere.
+   */
+  @Test
+  public void test_fetchBootstrapSegmentsAreLoadableWhenPruneLoadSpecIsEnabled() throws Exception
+  {
+    final List<DataSegment> expectedSegments = ImmutableList.of(SEGMENT1, SEGMENT2);
+
+    // Set up a coordinator client with PruneLoadSpec set to true in the injector
+    final Injector injector = new CoreInjectorBuilder(new StartupInjectorBuilder().build())
+        .addModule(binder -> binder.bindConstant().annotatedWith(PruneLoadSpec.class).to(true))
+        .build();
+
+    final ObjectMapper objectMapper = injector.getInstance(ObjectMapper.class);
+    final CoordinatorClient coordinatorClient = new CoordinatorClientImpl(serviceClient, objectMapper);
+
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.POST, "/druid/coordinator/v1/metadata/bootstrapSegments"),
+        HttpResponseStatus.OK,
+        ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
+        objectMapper.writeValueAsBytes(expectedSegments)
+    );
+
+    final ListenableFuture<BootstrapSegmentsResponse> response = coordinatorClient.fetchBootstrapSegments();
+    Assert.assertNotNull(response);
+
+    final ImmutableList<DataSegment> observedDataSegments = ImmutableList.copyOf(response.get().getIterator());
+    Assert.assertEquals(expectedSegments, observedDataSegments);
+    for (int idx = 0; idx < expectedSegments.size(); idx++) {
+      Assert.assertEquals(expectedSegments.get(idx).getLoadSpec(), observedDataSegments.get(idx).getLoadSpec());
+    }
+  }
+
+  @Test
+  public void test_fetchEmptyBootstrapSegments() throws Exception
+  {
+    final List<DataSegment> segments = ImmutableList.of();
+
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.POST, "/druid/coordinator/v1/metadata/bootstrapSegments"),
+        HttpResponseStatus.OK,
+        ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
+        jsonMapper.writeValueAsBytes(segments)
+    );
+
+    final ListenableFuture<BootstrapSegmentsResponse> response = coordinatorClient.fetchBootstrapSegments();
+    Assert.assertNotNull(response);
+
+    Assert.assertEquals(
+        segments,
+        ImmutableList.copyOf(response.get().getIterator())
     );
   }
 

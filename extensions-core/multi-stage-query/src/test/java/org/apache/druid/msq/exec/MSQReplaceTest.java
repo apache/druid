@@ -41,7 +41,9 @@ import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.GranularityType;
+import org.apache.druid.msq.indexing.error.TooManySegmentsInTimeChunkFault;
 import org.apache.druid.msq.indexing.report.MSQSegmentReport;
 import org.apache.druid.msq.test.CounterSnapshotMatcher;
 import org.apache.druid.msq.test.MSQTestBase;
@@ -748,6 +750,68 @@ public class MSQReplaceTest extends MSQTestBase
                              Collections.emptyList(),
                              Collections.singletonList(new FloatDimensionSchema("m1")),
                              GranularityType.MONTH
+                         )
+                     )
+                     .verifyResults();
+  }
+
+  @Test
+  public void testReplaceWithTooManySegmentsInTimeChunk()
+  {
+    final Map<String, Object> context = ImmutableMap.<String, Object>builder()
+                                                    .putAll(DEFAULT_MSQ_CONTEXT)
+                                                    .put("maxNumSegments", 1)
+                                                    .put("rowsPerSegment", 1)
+                                                    .build();
+
+    testIngestQuery().setSql("REPLACE INTO foo"
+                             + " OVERWRITE ALL "
+                             + " SELECT TIME_PARSE(ts) AS __time, c1 "
+                             + " FROM (VALUES('2023-01-01 01:00:00', 'day1_1'), ('2023-01-01 01:00:00', 'day1_2'), ('2023-02-01 06:00:00', 'day2')) AS t(ts, c1)"
+                             + " PARTITIONED BY HOUR")
+                     .setExpectedDataSource("foo")
+                     .setExpectedRowSignature(RowSignature.builder().add("__time", ColumnType.LONG).build())
+                     .setQueryContext(context)
+                     .setExpectedMSQFault(
+                         new TooManySegmentsInTimeChunkFault(
+                             DateTimes.of("2023-01-01T01:00:00.000Z"),
+                             2,
+                             1,
+                             Granularities.HOUR
+                         )
+                     )
+                     .verifyResults();
+
+  }
+
+  @Test
+  public void testReplaceWithMaxNumSegments()
+  {
+    final Map<String, Object> context = ImmutableMap.<String, Object>builder()
+                                                    .putAll(DEFAULT_MSQ_CONTEXT)
+                                                    .put("maxNumSegments", 1)
+                                                    .build();
+
+    final RowSignature expectedRowSignature = RowSignature.builder()
+                                                          .add("__time", ColumnType.LONG)
+                                                          .add("c1", ColumnType.STRING)
+                                                          .build();
+
+    // Ingest query should generate at most 1 segment for all the rows.
+    testIngestQuery().setSql("REPLACE INTO foo"
+                             + " OVERWRITE ALL"
+                             + " SELECT TIME_PARSE(ts) AS __time, c1 "
+                             + " FROM (VALUES('2023-01-01', 'day1_1'), ('2023-01-01', 'day1_2'), ('2023-02-01', 'day2')) AS t(ts, c1)"
+                             + " LIMIT 10"
+                             + " PARTITIONED BY ALL")
+                     .setQueryContext(context)
+                     .setExpectedDataSource("foo")
+                     .setExpectedRowSignature(expectedRowSignature)
+                     .setExpectedResultRows(
+                         ImmutableList.of(
+                             new Object[]{1672531200000L, "day1_1"},
+                             new Object[]{1672531200000L, "day1_2"},
+                             new Object[]{1675209600000L, "day2"}
                          )
                      )
                      .verifyResults();

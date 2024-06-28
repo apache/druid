@@ -97,10 +97,4 @@ public class IncrementalIndexAddResult
   {
     return reasonOfNotAdded == null && parseException == null;
   }
-
-  @Nullable
-  public String getReasonOfNotAdded()
-  {
-    return reasonOfNotAdded;
-  }
 }
