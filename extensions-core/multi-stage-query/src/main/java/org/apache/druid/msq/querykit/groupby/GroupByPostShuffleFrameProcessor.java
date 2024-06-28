@@ -25,6 +25,7 @@ import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.channel.FrameWithPartition;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameChannel;
+import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.processor.FrameProcessors;
 import org.apache.druid.frame.processor.FrameRowTooLargeException;
@@ -44,6 +45,7 @@ import org.apache.druid.query.groupby.epinephelinae.RowBasedGrouperHelper;
 import org.apache.druid.query.groupby.having.AlwaysHavingSpec;
 import org.apache.druid.query.groupby.having.DimFilterHavingSpec;
 import org.apache.druid.query.groupby.having.HavingSpec;
+import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
@@ -83,6 +85,7 @@ public class GroupByPostShuffleFrameProcessor implements FrameProcessor<Object>
   private Supplier<ResultRow> rowSupplierFromFrameCursor;
   private ResultRow outputRow = null;
   private FrameWriter frameWriter = null;
+  private long outputRows = 0L;
 
   public GroupByPostShuffleFrameProcessor(
       final GroupByQuery query,
@@ -139,6 +142,7 @@ public class GroupByPostShuffleFrameProcessor implements FrameProcessor<Object>
         }
 
         writeCurrentFrameIfNeeded();
+        writeNullAggregationsFrameIfNeeded();
         return ReturnOrAwait.returnObject(Unit.instance());
       } else {
         final Frame frame = inputChannel.read();
@@ -263,6 +267,30 @@ public class GroupByPostShuffleFrameProcessor implements FrameProcessor<Object>
       outputChannel.write(new FrameWithPartition(frame, FrameWithPartition.NO_PARTITION));
       frameWriter.close();
       frameWriter = null;
+      outputRows += frame.numRows();
+    }
+  }
+
+  /**
+   * Generate a frame containing a single row with default values of all aggregations if needed. This method uses
+   * {@link GroupingEngine#summaryRowPreconditions(GroupByQuery)} to determine if such an operation is needed.
+   *
+   * Note that in cases where {@link GroupingEngine#summaryRowPreconditions(GroupByQuery)} returns true, the
+   * preceding {@link GroupByPreShuffleFrameProcessorFactory} stage would use an empty {@link ClusterBy}. Therefore,
+   * there would only be a single output partition of the prior stage, and therefore a single instance of
+   * this processor. This ensures that only a single null-aggregations row is generated for the entire stage.
+   */
+  private void writeNullAggregationsFrameIfNeeded() throws IOException
+  {
+    // Check isIncludeNullResultRow, which is populated by the SQL planner when doing a query like GROUP BY ().
+    if (outputRows == 0 && GroupingEngine.summaryRowPreconditions(query)) {
+      final int resultRowSize = query.getResultRowSignature().size();
+      this.outputRow = ResultRow.create(resultRowSize);
+      final Object[] nullResultArray = TimeseriesQueryQueryToolChest.getNullAggregations(query.getAggregatorSpecs());
+      System.arraycopy(nullResultArray, 0, outputRow.getArray(), 0, nullResultArray.length);
+      setUpFrameWriterIfNeeded();
+      writeOutputRow();
+      writeCurrentFrameIfNeeded();
     }
   }
 
