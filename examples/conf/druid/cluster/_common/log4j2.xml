@@ -19,11 +19,6 @@
 -->
 
 <Configuration status="WARN">
-  <Properties>
-    <!-- to change log directory, set DRUID_LOG_DIR environment variable to your directory before launching Druid -->
-    <Property name="druid.log.path" value="log" />
-  </Properties>
-
   <Appenders>
     <Console name="Console" target="SYSTEM_OUT">
       <PatternLayout pattern="%d{ISO8601} %p [%t] %c -%notEmpty{ [%markerSimpleName]} %m%n"/>
@@ -31,14 +26,14 @@
 
     <!-- Rolling Files-->
     <RollingRandomAccessFile name="FileAppender"
-                             fileName="${sys:druid.log.path}/${sys:druid.node.type}.log"
-                             filePattern="${sys:druid.log.path}/${sys:druid.node.type}.%d{yyyyMMdd}.log">
+                             fileName="/opt/druid/var/logs/${sys:druid.node.type}/${sys:druid.node.type}.log"
+                             filePattern="/opt/druid/var/logs/${sys:druid.node.type}/${sys:druid.node.type}.%d{yyyyMMdd}.log">
       <PatternLayout pattern="%d{ISO8601} %p [%t] %c -%notEmpty{ [%markerSimpleName]} %m%n"/>
       <Policies>
         <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
       </Policies>
       <DefaultRolloverStrategy>
-        <Delete basePath="${sys:druid.log.path}/" maxDepth="1">
+        <Delete basePath="/opt/druid/var/logs/${sys:druid.node.type}/" maxDepth="1">
           <IfFileName glob="*.log" />
           <IfLastModified age="7d" />
         </Delete>
