@@ -73,7 +73,7 @@ public class FixIncorrectInExpansionTypes extends RelOptRule implements Substitu
     public RexNode visitCall(RexCall call)
     {
       RexNode newNode = super.visitCall(call);
-      if (newNode.getKind() == SqlKind.EQUALS) {
+      if (newNode.getKind() == SqlKind.EQUALS || newNode.getKind() == SqlKind.NOT_EQUALS) {
         RexCall newCall = (RexCall) newNode;
         RexNode op0 = newCall.getOperands().get(0);
         RexNode op1 = newCall.getOperands().get(1);
