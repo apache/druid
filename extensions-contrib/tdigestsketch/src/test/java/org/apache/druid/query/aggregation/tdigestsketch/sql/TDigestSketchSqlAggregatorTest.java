@@ -135,7 +135,7 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
                   .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
                   .granularity(Granularities.ALL)
                   .aggregators(ImmutableList.of(
-                      new TDigestSketchAggregatorFactory("a0:agg", "m1", 200)
+                      new TDigestSketchAggregatorFactory("a0", "m1", 200)
                   ))
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
@@ -205,7 +205,7 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
                   .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
                   .granularity(Granularities.ALL)
                   .aggregators(ImmutableList.of(
-                      new TDigestSketchAggregatorFactory("a0:agg", "m1", 200)
+                      new TDigestSketchAggregatorFactory("a0", "m1", 200)
                   ))
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
@@ -242,7 +242,7 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
                       )
                   )
                   .aggregators(ImmutableList.of(
-                      new TDigestSketchAggregatorFactory("a0:agg", "v0", 200)
+                      new TDigestSketchAggregatorFactory("a0", "v0", 200)
                   ))
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
@@ -275,7 +275,7 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
                   .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
                   .granularity(Granularities.ALL)
                   .aggregators(ImmutableList.of(
-                      new TDigestSketchAggregatorFactory("a0:agg", "m1", TDigestSketchAggregatorFactory.DEFAULT_COMPRESSION)
+                      new TDigestSketchAggregatorFactory("a0", "m1", TDigestSketchAggregatorFactory.DEFAULT_COMPRESSION)
                   ))
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
@@ -357,7 +357,7 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
                                             .setDimensions(new DefaultDimensionSpec("dim1", "d0"))
                                             .setAggregatorSpecs(
                                                 ImmutableList.of(
-                                                    new TDigestSketchAggregatorFactory("a0:agg", "m1", 200)
+                                                    new TDigestSketchAggregatorFactory("a0", "m1", 200)
                                                 )
                                             )
                                             .setContext(QUERY_CONTEXT_DEFAULT)
@@ -368,7 +368,7 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
                         .setGranularity(Granularities.ALL)
                         .setAggregatorSpecs(
                             ImmutableList.of(
-                                new TDigestSketchAggregatorFactory("_a0:agg", "a0:agg", 100)
+                                new TDigestSketchAggregatorFactory("_a0:agg", "a0", 100)
                             )
                         )
                         .setPostAggregatorSpecs(
@@ -534,7 +534,7 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
                   .filters(numericEquality("dim2", 0L, ColumnType.LONG))
                   .granularity(Granularities.ALL)
                   .aggregators(ImmutableList.of(
-                      new TDigestSketchAggregatorFactory("a0:agg", "m1", TDigestSketchAggregatorFactory.DEFAULT_COMPRESSION),
+                      new TDigestSketchAggregatorFactory("a0", "m1", TDigestSketchAggregatorFactory.DEFAULT_COMPRESSION),
                       new TDigestSketchAggregatorFactory("a1:agg", "qsketch_m1", 100)
                   ))
                   .postAggregators(
@@ -571,7 +571,7 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
                         .setAggregatorSpecs(
                             aggregators(
                                 new FilteredAggregatorFactory(
-                                    new TDigestSketchAggregatorFactory("a0:agg", "m1", TDigestSketchAggregatorFactory.DEFAULT_COMPRESSION),
+                                    new TDigestSketchAggregatorFactory("a0", "m1", TDigestSketchAggregatorFactory.DEFAULT_COMPRESSION),
                                     equality("dim1", "nonexistent", ColumnType.STRING)
                                 ),
                                 new FilteredAggregatorFactory(
