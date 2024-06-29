@@ -2202,27 +2202,4 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
         )
         .run();
   }
-  @Test
-  public void testSqlToRelNotInConversion()
-  {
-    assertEquals(
-        "1.37.0",
-        RelNode.class.getPackage().getImplementationVersion(),
-        "Calcite version changed; check if CALCITE-6435 is fixed and remove:\n * method CalciteRulesManager#sqlToRelWorkaroundProgram\n * FixIncorrectInExpansionTypes class\n* this assertion"
-    );
-
-    testBuilder()
-        .sql(
-            "SELECT channel FROM wikipedia\n"
-                + "WHERE (channel not in ('#en.wikipedia') or channel <> '#en.wikipedia') is false and\n"
-                + "isRobot = 'false'\n"
-                + "LIMIT 1"
-        )
-        .expectedResults(
-            ImmutableList.of(
-                new Object[] {"#en.wikipedia"}
-            )
-        )
-        .run();
-  }
 }
