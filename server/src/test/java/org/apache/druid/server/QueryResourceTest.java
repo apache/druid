@@ -316,7 +316,7 @@ public class QueryResourceTest
         testRequestLogger.getNativeQuerylogs().get(0).getQuery().getContext().get(overrideConfigKey)
     );
     Assert.assertEquals(
-        overrideConfigValue,
+        true,
         testRequestLogger.getNativeQuerylogs().get(0).getQuery().getContext().get(QueryContexts.INCLUDE_TRAILER_HEADER)
     );
   }
