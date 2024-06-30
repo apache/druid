@@ -275,14 +275,14 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
 
     Set<DataSegment> allCommittedSegments
         = new HashSet<>(retrieveUsedSegments(derbyConnectorRule.metadataTablesConfigSupplier().get()));
-    Map<String, String> rootSegmentIdMap = coordinator.getRootSegmentIds(
+    Map<String, String> upgradedFromSegmentIdMap = coordinator.getUpgradedFromSegmentIds(
         DS.WIKI,
         allCommittedSegments.stream().map(DataSegment::getId).map(SegmentId::toString).collect(Collectors.toList())
     );
     // Verify the segments present in the metadata store
     Assert.assertTrue(allCommittedSegments.containsAll(appendSegments));
     for (DataSegment segment : appendSegments) {
-      Assert.assertNull(rootSegmentIdMap.get(segment.getId().toString()));
+      Assert.assertNull(upgradedFromSegmentIdMap.get(segment.getId().toString()));
     }
     allCommittedSegments.removeAll(appendSegments);
 
@@ -295,12 +295,12 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     for (DataSegment segment : allCommittedSegments) {
       for (PendingSegmentRecord pendingSegmentRecord : pendingSegmentsForTask) {
         if (pendingSegmentRecord.getId().asSegmentId().toString().equals(segment.getId().toString())) {
-          DataSegment rootSegment = segmentMap.get(pendingSegmentRecord.getUpgradedFromSegmentId());
-          Assert.assertNotNull(rootSegment);
-          Assert.assertEquals(segment.getLoadSpec(), rootSegment.getLoadSpec());
+          DataSegment upgradedFromSegment = segmentMap.get(pendingSegmentRecord.getUpgradedFromSegmentId());
+          Assert.assertNotNull(upgradedFromSegment);
+          Assert.assertEquals(segment.getLoadSpec(), upgradedFromSegment.getLoadSpec());
           Assert.assertEquals(
               pendingSegmentRecord.getUpgradedFromSegmentId(),
-              rootSegmentIdMap.get(segment.getId().toString())
+              upgradedFromSegmentIdMap.get(segment.getId().toString())
           );
         }
       }
@@ -405,20 +405,20 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     final Set<DataSegment> usedSegments
         = new HashSet<>(retrieveUsedSegments(derbyConnectorRule.metadataTablesConfigSupplier().get()));
 
-    final Map<String, String> rootSegmentIdMap = coordinator.getRootSegmentIds(
+    final Map<String, String> upgradedFromSegmentIdMap = coordinator.getUpgradedFromSegmentIds(
         "foo",
         usedSegments.stream().map(DataSegment::getId).map(SegmentId::toString).collect(Collectors.toList())
     );
 
     Assert.assertTrue(usedSegments.containsAll(segmentsAppendedWithReplaceLock));
     for (DataSegment appendSegment : segmentsAppendedWithReplaceLock) {
-      Assert.assertNull(rootSegmentIdMap.get(appendSegment.getId().toString()));
+      Assert.assertNull(upgradedFromSegmentIdMap.get(appendSegment.getId().toString()));
     }
     usedSegments.removeAll(segmentsAppendedWithReplaceLock);
 
     Assert.assertTrue(usedSegments.containsAll(replacingSegments));
     for (DataSegment replaceSegment : replacingSegments) {
-      Assert.assertNull(rootSegmentIdMap.get(replaceSegment.getId().toString()));
+      Assert.assertNull(upgradedFromSegmentIdMap.get(replaceSegment.getId().toString()));
     }
     usedSegments.removeAll(replacingSegments);
 
@@ -429,7 +429,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         if (appendedSegment.getLoadSpec().equals(segmentReplicaWithNewVersion.getLoadSpec())) {
           Assert.assertEquals(
               appendedSegment.getId().toString(),
-              rootSegmentIdMap.get(segmentReplicaWithNewVersion.getId().toString())
+              upgradedFromSegmentIdMap.get(segmentReplicaWithNewVersion.getId().toString())
           );
           hasBeenCarriedForward = true;
           break;
@@ -3444,13 +3444,13 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     );
 
     // Siblings are always referenced unless they're passed together
-    Map<SegmentId, String> rootSegmentIdMap = ImmutableMap.of(
+    Map<SegmentId, String> upgradedFromSegmentIdMap = ImmutableMap.of(
         defaultSegment.getId(),
         "nonExistentRoot",
         defaultSegment2.getId(),
         "nonExistentRoot"
     );
-    insertUsedSegments(ImmutableSet.of(defaultSegment, defaultSegment2), rootSegmentIdMap);
+    insertUsedSegments(ImmutableSet.of(defaultSegment, defaultSegment2), upgradedFromSegmentIdMap);
     Assert.assertTrue(coordinator.determineSegmentsWithUnreferencedLoadSpecs(ImmutableSet.of(defaultSegment)).isEmpty());
     Assert.assertTrue(coordinator.determineSegmentsWithUnreferencedLoadSpecs(ImmutableSet.of(defaultSegment2)).isEmpty());
     Assert.assertEquals(
@@ -3462,13 +3462,13 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     DataSegment root = createSegment(Intervals.of("2024/2025"), "2024-01-01", new NumberedShardSpec(0, 0));
     DataSegment childV1 = createSegment(Intervals.of("2024/2025"), "2024-02-01", new NumberedShardSpec(0, 0));
     DataSegment childV2 = createSegment(Intervals.ETERNITY, "2025-01-01", new NumberedShardSpec(0, 0));
-    rootSegmentIdMap = ImmutableMap.of(
+    upgradedFromSegmentIdMap = ImmutableMap.of(
         childV1.getId(),
         root.getId().toString(),
         childV2.getId(),
         root.getId().toString()
     );
-    insertUsedSegments(ImmutableSet.of(root, childV1, childV2), rootSegmentIdMap);
+    insertUsedSegments(ImmutableSet.of(root, childV1, childV2), upgradedFromSegmentIdMap);
     coordinator.markSegmentsAsUnusedWithinInterval(DS.WIKI, Intervals.of("2024/2025"));
 
     Assert.assertTrue(coordinator.determineSegmentsWithUnreferencedLoadSpecs(ImmutableSet.of(root)).isEmpty());
@@ -3484,15 +3484,15 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   }
 
 
-  private boolean insertUsedSegments(Set<DataSegment> dataSegments, Map<SegmentId, String> rootSegmentIdMap)
+  private boolean insertUsedSegments(Set<DataSegment> dataSegments, Map<SegmentId, String> upgradedFromSegmentIdMap)
   {
     final String table = derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable();
     return derbyConnector.retryWithHandle(
         handle -> {
           PreparedBatch preparedBatch = handle.prepareBatch(
               StringUtils.format(
-                  "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, payload, used_status_last_updated, root_segment_id) "
-                  + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload, :used_status_last_updated, :root_segment_id)",
+                  "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, payload, used_status_last_updated, upgraded_from_segment_id) "
+                  + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload, :used_status_last_updated, :upgraded_from_segment_id)",
                   table,
                   derbyConnector.getQuoteString()
               )
@@ -3510,7 +3510,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
                          .bind("used", true)
                          .bind("payload", mapper.writeValueAsBytes(segment))
                          .bind("used_status_last_updated", DateTimes.nowUtc().toString())
-                         .bind("root_segment_id", rootSegmentIdMap.get(segment.getId()));
+                         .bind("upgraded_from_segment_id", upgradedFromSegmentIdMap.get(segment.getId()));
           }
 
           final int[] affectedRows = preparedBatch.execute();

@@ -40,7 +40,7 @@ import java.sql.ResultSet;
  * <li>  id -> id (Unique identifier for pending segment) <li/>
  * <li>  sequence_name -> sequenceName (sequence name used for segment allocation) <li/>
  * <li>  sequence_prev_id -> sequencePrevId (previous segment id used for segment allocation) <li/>
- * <li>  upgraded_from_segment_id -> upgradedFromSegmentId (Id of the root segment from which this was upgraded) <li/>
+ * <li>  upgraded_from_segment_id -> upgradedFromSegmentId (Id of the first segment from which this was upgraded) <li/>
  * <li>  task_allocator_id -> taskAllocatorId (Associates a task / task group / replica group with the pending segment) <li/>
  * </ul>
  */

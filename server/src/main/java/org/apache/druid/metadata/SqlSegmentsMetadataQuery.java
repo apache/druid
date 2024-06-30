@@ -286,7 +286,7 @@ public class SqlSegmentsMetadataQuery
     if (includeSchemaInfo) {
       final Query<Map<String, Object>> query = handle.createQuery(
           StringUtils.format(
-              "SELECT payload, used, root_segment_id, schema_fingerprint, num_rows FROM %s WHERE dataSource = :dataSource %s",
+              "SELECT payload, used, upgraded_from_segment_id, schema_fingerprint, num_rows FROM %s WHERE dataSource = :dataSource %s",
               dbTables.getSegmentsTable(), getParameterizedInConditionForColumn("id", segmentIds)
           )
       );
@@ -315,7 +315,7 @@ public class SqlSegmentsMetadataQuery
     } else {
       final Query<Map<String, Object>> query = handle.createQuery(
           StringUtils.format(
-              "SELECT payload, used, root_segment_id FROM %s WHERE dataSource = :dataSource %s",
+              "SELECT payload, used, upgraded_from_segment_id FROM %s WHERE dataSource = :dataSource %s",
               dbTables.getSegmentsTable(), getParameterizedInConditionForColumn("id", segmentIds)
           )
       );

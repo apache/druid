@@ -160,7 +160,7 @@ public interface SeekableStreamIndexTaskClient<PartitionIdType, SequenceOffsetTy
    * The update is processed only if the task is serving the original pending segment.
    *
    * @param taskId               - task id
-   * @param pendingSegmentRecord - the ids belonging to the versions to which the root segment needs to be updated
+   * @param pendingSegmentRecord - the ids belonging to the versions to which the first segment needs to be updated
    * @return true if the update succeeds
    */
   ListenableFuture<Boolean> registerNewVersionOfPendingSegmentAsync(

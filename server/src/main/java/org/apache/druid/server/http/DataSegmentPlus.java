@@ -36,7 +36,7 @@ import java.util.Objects;
  * <li>{@link DataSegmentPlus#createdDate} - The time when the segment was created.</li>
  * <li>{@link DataSegmentPlus#usedStatusLastUpdatedDate} - The time when the segments
  * used status was last updated.</li>
- * <li>{@link DataSegmentPlus#rootSegmentId} - The root segment id to which the same load spec originally belonged.
+ * <li>{@link DataSegmentPlus#upgradedFromSegmentId} - The segment id to which the same load spec originally belonged.
  * Load specs can be shared as a result of segment version upgrades.</li>
  * </ul>
  * <p>
@@ -56,7 +56,7 @@ public class DataSegmentPlus
   private final Long numRows;
 
   @Nullable
-  private final String rootSegmentId;
+  private final String upgradedFromSegmentId;
 
   @JsonCreator
   public DataSegmentPlus(
@@ -66,7 +66,7 @@ public class DataSegmentPlus
       @JsonProperty("used") @Nullable final Boolean used,
       @JsonProperty("schemaFingerprint") @Nullable final String schemaFingerprint,
       @JsonProperty("numRows") @Nullable final Long numRows,
-      @JsonProperty("rootSegmentId") @Nullable final String rootSegmentId
+      @JsonProperty("upgradedFromSegmentId") @Nullable final String upgradedFromSegmentId
   )
   {
     this.dataSegment = dataSegment;
@@ -75,7 +75,7 @@ public class DataSegmentPlus
     this.used = used;
     this.schemaFingerprint = schemaFingerprint;
     this.numRows = numRows;
-    this.rootSegmentId = rootSegmentId;
+    this.upgradedFromSegmentId = upgradedFromSegmentId;
   }
 
   @Nullable
@@ -121,9 +121,9 @@ public class DataSegmentPlus
 
   @Nullable
   @JsonProperty
-  public String getRootSegmentId()
+  public String getUpgradedFromSegmentId()
   {
-    return rootSegmentId;
+    return upgradedFromSegmentId;
   }
 
   @Override
@@ -142,7 +142,7 @@ public class DataSegmentPlus
            && Objects.equals(used, that.getUsed())
            && Objects.equals(schemaFingerprint, that.getSchemaFingerprint())
            && Objects.equals(numRows, that.getNumRows())
-           && Objects.equals(rootSegmentId, that.getRootSegmentId());
+           && Objects.equals(upgradedFromSegmentId, that.getUpgradedFromSegmentId());
   }
 
   @Override
@@ -155,7 +155,7 @@ public class DataSegmentPlus
         used,
         schemaFingerprint,
         numRows,
-        rootSegmentId
+        upgradedFromSegmentId
     );
   }
 
@@ -169,7 +169,7 @@ public class DataSegmentPlus
            ", used=" + getUsed() +
            ", schemaFingerprint=" + getSchemaFingerprint() +
            ", numRows=" + getNumRows() +
-           ", rootSegmentId=" + getRootSegmentId() +
+           ", upgradedFromSegmentId=" + getUpgradedFromSegmentId() +
            '}';
   }
 }

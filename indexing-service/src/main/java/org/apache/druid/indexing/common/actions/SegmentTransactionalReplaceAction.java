@@ -52,7 +52,7 @@ import java.util.stream.Collectors;
  *       commit input segments contained within interval
  *       upgrade ids in the upgradeSegments table corresponding to this task to the replace lock's version and commit them
  *       fetch payload, task_allocator_id for pending segments
- *       upgrade each such pending segment to the replace lock's version with the corresponding root segment
+ *       upgrade each such pending segment to the replace lock's version with the corresponding upgraded from segment
  *     }
  * For every pending segment with version == replace lock version:
  *    Fetch payload, group_id or the pending segment and relay them to the supervisor
