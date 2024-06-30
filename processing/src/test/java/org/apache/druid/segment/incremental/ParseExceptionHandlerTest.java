@@ -21,6 +21,7 @@ package org.apache.druid.segment.incremental;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.parsers.MaxParseExceptionExceededException;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.testing.junit.LoggerCaptureRule;
 import org.apache.logging.log4j.core.LogEvent;
@@ -105,7 +106,7 @@ public class ParseExceptionHandlerTest
     IntStream.range(0, maxAllowedParseExceptions).forEach(i -> parseExceptionHandler.handle(parseException));
     Assert.assertEquals(3, rowIngestionMeters.getUnparseable());
 
-    expectedException.expect(RuntimeException.class);
+    expectedException.expect(MaxParseExceptionExceededException.class);
     expectedException.expectMessage("Max parse exceptions[3] exceeded");
     try {
       parseExceptionHandler.handle(parseException);

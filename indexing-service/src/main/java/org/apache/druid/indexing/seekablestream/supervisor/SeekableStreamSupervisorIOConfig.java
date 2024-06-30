@@ -48,6 +48,7 @@ public abstract class SeekableStreamSupervisorIOConfig
   private final Optional<Duration> earlyMessageRejectionPeriod;
   private final Optional<DateTime> lateMessageRejectionStartDateTime;
   @Nullable private final AutoScalerConfig autoScalerConfig;
+  @Nullable private final TaskCreationStopConfig taskCreationStopConfig;
   @Nullable private final IdleConfig idleConfig;
   @Nullable private final Integer stopTaskCount;
 
@@ -66,7 +67,8 @@ public abstract class SeekableStreamSupervisorIOConfig
       @Nullable AutoScalerConfig autoScalerConfig,
       DateTime lateMessageRejectionStartDateTime,
       @Nullable IdleConfig idleConfig,
-      @Nullable Integer stopTaskCount
+      @Nullable Integer stopTaskCount,
+      @Nullable TaskCreationStopConfig taskCreationStopConfig
   )
   {
     this.stream = Preconditions.checkNotNull(stream, "stream cannot be null");
@@ -106,6 +108,7 @@ public abstract class SeekableStreamSupervisorIOConfig
     }
 
     this.idleConfig = idleConfig;
+    this.taskCreationStopConfig = taskCreationStopConfig;
   }
 
   private static Duration defaultDuration(final Period period, final String theDefault)
@@ -210,6 +213,13 @@ public abstract class SeekableStreamSupervisorIOConfig
   public Integer getStopTaskCount()
   {
     return stopTaskCount;
+  }
+
+  @Nullable
+  @JsonProperty
+  public TaskCreationStopConfig getTaskCreationStopConfig()
+  {
+    return taskCreationStopConfig;
   }
 
   public int getMaxAllowedStops()

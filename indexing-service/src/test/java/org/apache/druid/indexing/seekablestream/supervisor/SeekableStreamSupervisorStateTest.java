@@ -507,6 +507,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         new IdleConfig(true, 200L),
+        null,
         null
     )
     {
@@ -799,6 +800,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
             null,
             null,
             new IdleConfig(true, 200L),
+            null,
             null
     ) {};
 
@@ -1006,7 +1008,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         new IdleConfig(true, 200L),
-        stopTaskCount
+        stopTaskCount,
+        null
     )
     {
     };
@@ -1228,6 +1231,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         new IdleConfig(true, 200L),
+        null,
         null
     )
     {
@@ -2264,6 +2268,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         null,
+        null,
         null
     )
     {
@@ -2323,6 +2328,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         OBJECT_MAPPER.convertValue(getProperties(), AutoScalerConfig.class),
+        null,
         null,
         null,
         null

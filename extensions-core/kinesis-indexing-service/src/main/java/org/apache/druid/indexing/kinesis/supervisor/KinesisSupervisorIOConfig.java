@@ -28,6 +28,7 @@ import org.apache.druid.indexing.kinesis.KinesisIndexTaskIOConfig;
 import org.apache.druid.indexing.kinesis.KinesisRegion;
 import org.apache.druid.indexing.seekablestream.supervisor.IdleConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
+import org.apache.druid.indexing.seekablestream.supervisor.TaskCreationStopConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScalerConfig;
 import org.joda.time.DateTime;
 import org.joda.time.Period;
@@ -76,7 +77,8 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
       @JsonProperty("awsAssumedRoleArn") String awsAssumedRoleArn,
       @JsonProperty("awsExternalId") String awsExternalId,
       @Nullable @JsonProperty("autoScalerConfig") AutoScalerConfig autoScalerConfig,
-      @JsonProperty("deaggregate") @Deprecated boolean deaggregate
+      @JsonProperty("deaggregate") @Deprecated boolean deaggregate,
+      @Nullable @JsonProperty("taskCreationStopConfig") TaskCreationStopConfig taskCreationStopConfig
   )
   {
     super(
@@ -94,7 +96,8 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
         autoScalerConfig,
         lateMessageRejectionStartDateTime,
         new IdleConfig(null, null),
-        null
+        null,
+        taskCreationStopConfig
     );
 
     this.endpoint = endpoint != null
@@ -173,6 +176,7 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
            ", awsAssumedRoleArn='" + awsAssumedRoleArn + '\'' +
            ", awsExternalId='" + awsExternalId + '\'' +
            ", deaggregate=" + deaggregate +
+           ", taskCreationStopConfig=" + getTaskCreationStopConfig() +
            '}';
   }
 }

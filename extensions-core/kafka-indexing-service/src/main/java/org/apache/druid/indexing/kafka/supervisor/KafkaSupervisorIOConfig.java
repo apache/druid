@@ -27,6 +27,7 @@ import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.seekablestream.extension.KafkaConfigOverrides;
 import org.apache.druid.indexing.seekablestream.supervisor.IdleConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
+import org.apache.druid.indexing.seekablestream.supervisor.TaskCreationStopConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScalerConfig;
 import org.apache.druid.java.util.common.StringUtils;
 import org.joda.time.DateTime;
@@ -72,7 +73,8 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
       @JsonProperty("lateMessageRejectionStartDateTime") DateTime lateMessageRejectionStartDateTime,
       @JsonProperty("configOverrides") KafkaConfigOverrides configOverrides,
       @JsonProperty("idleConfig") IdleConfig idleConfig,
-      @JsonProperty("stopTaskCount") Integer stopTaskCount
+      @JsonProperty("stopTaskCount") Integer stopTaskCount,
+      @Nullable @JsonProperty("taskCreationStopConfig") TaskCreationStopConfig taskCreationStopConfig
   )
   {
     super(
@@ -90,7 +92,8 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
         autoScalerConfig,
         lateMessageRejectionStartDateTime,
         idleConfig,
-        stopTaskCount
+        stopTaskCount,
+        taskCreationStopConfig
     );
 
     this.consumerProperties = Preconditions.checkNotNull(consumerProperties, "consumerProperties");
@@ -173,6 +176,7 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
            ", configOverrides=" + getConfigOverrides() +
            ", idleConfig=" + getIdleConfig() +
            ", stopTaskCount=" + getStopTaskCount() +
+           ", taskCreationStopConfig=" + getTaskCreationStopConfig() +
            '}';
   }
 
