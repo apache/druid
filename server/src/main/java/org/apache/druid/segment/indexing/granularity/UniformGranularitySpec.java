@@ -21,11 +21,13 @@ package org.apache.druid.segment.indexing.granularity;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.IntervalsByGranularity;
 import org.joda.time.Interval;
 
 import java.util.List;
+import java.util.Objects;
 
 public class UniformGranularitySpec extends BaseGranularitySpec
 {
@@ -45,6 +47,13 @@ public class UniformGranularitySpec extends BaseGranularitySpec
     super(inputIntervals, rollup);
     this.queryGranularity = queryGranularity == null ? DEFAULT_QUERY_GRANULARITY : queryGranularity;
     this.segmentGranularity = segmentGranularity == null ? DEFAULT_SEGMENT_GRANULARITY : segmentGranularity;
+    if (Granularity.IS_FINER_THAN.compare(this.segmentGranularity, this.queryGranularity) < 0) {
+      throw InvalidInput.exception(
+          "segmentGranularity[%s] must not be finer than queryGranularity[%s].",
+          this.segmentGranularity,
+          this.queryGranularity
+      );
+    }
     intervalsByGranularity = new IntervalsByGranularity(this.inputIntervals, segmentGranularity);
     lookupTableBucketByDateTime = new LookupIntervalBuckets(sortedBucketIntervals());
   }
@@ -61,7 +70,7 @@ public class UniformGranularitySpec extends BaseGranularitySpec
   @Override
   public Iterable<Interval> sortedBucketIntervals()
   {
-    return () -> intervalsByGranularity.granularityIntervalsIterator();
+    return intervalsByGranularity::granularityIntervalsIterator;
   }
 
   @Override
@@ -100,11 +109,7 @@ public class UniformGranularitySpec extends BaseGranularitySpec
       return false;
     }
 
-    if (inputIntervals != null ? !inputIntervals.equals(that.inputIntervals) : that.inputIntervals != null) {
-      return false;
-    }
-
-    return true;
+    return Objects.equals(inputIntervals, that.inputIntervals);
   }
 
   @Override
