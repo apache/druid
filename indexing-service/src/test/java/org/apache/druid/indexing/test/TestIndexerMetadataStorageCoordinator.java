@@ -315,7 +315,9 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   }
 
   @Override
-  public Set<DataSegment> findSegmentsWithUnreferencedLoadSpecs(final Set<DataSegment> segments)
+  public Set<DataSegment> determineSegmentsWithUnreferencedLoadSpecs(
+      final Set<DataSegment> segments
+  )
   {
     return segments;
   }

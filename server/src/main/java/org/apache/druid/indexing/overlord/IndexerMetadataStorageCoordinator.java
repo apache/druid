@@ -476,8 +476,10 @@ public interface IndexerMetadataStorageCoordinator
 
   /**
    * Return subset of segments that do not have load specs referenced by segments outside this set
+   * Assumes that all the segments belong to a single datasource
+   *
    * @param segments set of DataSegments
    * @return subset of segments that can safely be killed from deep storage
    */
-  Set<DataSegment> findSegmentsWithUnreferencedLoadSpecs(Set<DataSegment> segments);
+  Set<DataSegment> determineSegmentsWithUnreferencedLoadSpecs(Set<DataSegment> segments);
 }

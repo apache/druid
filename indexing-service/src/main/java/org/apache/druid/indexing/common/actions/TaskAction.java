@@ -42,6 +42,7 @@ import java.util.concurrent.Future;
     @JsonSubTypes.Type(name = "segmentListUsed", value = RetrieveUsedSegmentsAction.class),
     @JsonSubTypes.Type(name = "segmentListUnused", value = RetrieveUnusedSegmentsAction.class),
     @JsonSubTypes.Type(name = "markSegmentsAsUnused", value = MarkSegmentsAsUnusedAction.class),
+    @JsonSubTypes.Type(name = "determineSegmentsToKill", value = DetermineSegmentsToKillAction.class),
     @JsonSubTypes.Type(name = "segmentNuke", value = SegmentNukeAction.class),
     @JsonSubTypes.Type(name = "segmentMetadataUpdate", value = SegmentMetadataUpdateAction.class),
     @JsonSubTypes.Type(name = SegmentAllocateAction.TYPE, value = SegmentAllocateAction.class),

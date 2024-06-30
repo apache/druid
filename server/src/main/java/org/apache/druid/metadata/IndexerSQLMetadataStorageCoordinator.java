@@ -1356,21 +1356,6 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   private static void bindColumnValuesToQueryWithInCondition(
       final String columnName,
       final List<String> values,
-      final Query<Map<String, Object>> query
-  )
-  {
-    if (values == null) {
-      return;
-    }
-
-    for (int i = 0; i < values.size(); i++) {
-      query.bind(StringUtils.format("%s%d", columnName, i), values.get(i));
-    }
-  }
-
-  private static void bindColumnValuesToQueryWithInCondition(
-      final String columnName,
-      final List<String> values,
       final Update query
   )
   {
@@ -2957,7 +2942,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   @Override
-  public Set<DataSegment> findSegmentsWithUnreferencedLoadSpecs(final Set<DataSegment> segments)
+  public Set<DataSegment> determineSegmentsWithUnreferencedLoadSpecs(final Set<DataSegment> segments)
   {
     if (segments.isEmpty()) {
       return segments;
@@ -3011,6 +2996,15 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     return segmentsWithUnreferencedLoadSpecs;
   }
 
+  /**
+   * Gets a map from the input segment id to its root segment id for a given list of segment ids
+   * The map contains the id as a key if it has been upgraded.
+   * The value is the id of the first segment with the same load spec
+   * This method assumes that all the segments belong to the same datasource
+   * @param dataSource data source
+   * @param segmentIds ids of segments
+   * @return Map from input segment ids to their root segment ids
+   */
   @VisibleForTesting
   Map<String, String> getRootSegmentIds(final String dataSource, final List<String> segmentIds)
   {
@@ -3028,7 +3022,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         handle -> {
           Query<Map<String, Object>> query = handle.createQuery(sql)
                                                    .bind("dataSource", dataSource);
-          bindColumnValuesToQueryWithInCondition("id", segmentIds, query);
+          SqlSegmentsMetadataQuery.bindColumnValuesToQueryWithInCondition("id", segmentIds, query);
           query.map(
               (index, r, ctx) -> {
                 final String id = r.getString(1);
@@ -3046,6 +3040,12 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     return rootSegmentIdMap;
   }
 
+  /**
+   * Given a set of datasources root segment ids, return a map from their successors to the corresponding root
+   * @param dataSource data source
+   * @param rootSegmentIds ids of root segments
+   * @return Map from successor to root segment id for every root segment id in the input
+   */
   private Map<String, String> getSegmentsWithRootSegmentIds(final String dataSource, final List<String> rootSegmentIds)
   {
     if (rootSegmentIds.isEmpty()) {
@@ -3062,7 +3062,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         handle -> {
           Query<Map<String, Object>> query = handle.createQuery(sql)
                                                    .bind("dataSource", dataSource);
-          bindColumnValuesToQueryWithInCondition("root_segment_id", rootSegmentIds, query);
+          SqlSegmentsMetadataQuery.bindColumnValuesToQueryWithInCondition("root_segment_id", rootSegmentIds, query);
           query.map(
               (index, r, ctx) -> {
                 final String id = r.getString(1);

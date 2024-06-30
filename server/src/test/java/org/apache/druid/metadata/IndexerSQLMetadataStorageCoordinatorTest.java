@@ -3433,14 +3433,14 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   public void testFindDataSegmentsWithUnreferencedLoadSpecs()
   {
     // Empty set
-    Assert.assertTrue(coordinator.findSegmentsWithUnreferencedLoadSpecs(Collections.emptySet()).isEmpty());
+    Assert.assertTrue(coordinator.determineSegmentsWithUnreferencedLoadSpecs(Collections.emptySet()).isEmpty());
 
     // Lone segment is unreferenced
     insertUsedSegments(Collections.singleton(eternitySegment), Collections.emptyMap());
     coordinator.markSegmentsAsUnusedWithinInterval(eternitySegment.getDataSource(), Intervals.ETERNITY);
     Assert.assertEquals(
         Collections.singleton(eternitySegment),
-        coordinator.findSegmentsWithUnreferencedLoadSpecs(Collections.singleton(eternitySegment))
+        coordinator.determineSegmentsWithUnreferencedLoadSpecs(Collections.singleton(eternitySegment))
     );
 
     // Siblings are always referenced unless they're passed together
@@ -3451,11 +3451,11 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         "nonExistentRoot"
     );
     insertUsedSegments(ImmutableSet.of(defaultSegment, defaultSegment2), rootSegmentIdMap);
-    Assert.assertTrue(coordinator.findSegmentsWithUnreferencedLoadSpecs(ImmutableSet.of(defaultSegment)).isEmpty());
-    Assert.assertTrue(coordinator.findSegmentsWithUnreferencedLoadSpecs(ImmutableSet.of(defaultSegment2)).isEmpty());
+    Assert.assertTrue(coordinator.determineSegmentsWithUnreferencedLoadSpecs(ImmutableSet.of(defaultSegment)).isEmpty());
+    Assert.assertTrue(coordinator.determineSegmentsWithUnreferencedLoadSpecs(ImmutableSet.of(defaultSegment2)).isEmpty());
     Assert.assertEquals(
         ImmutableSet.of(defaultSegment, defaultSegment2),
-        coordinator.findSegmentsWithUnreferencedLoadSpecs(ImmutableSet.of(defaultSegment, defaultSegment2))
+        coordinator.determineSegmentsWithUnreferencedLoadSpecs(ImmutableSet.of(defaultSegment, defaultSegment2))
     );
 
     // The parent and all its children must all be present in the batch for them to be unreferenced
@@ -3471,15 +3471,15 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     insertUsedSegments(ImmutableSet.of(root, childV1, childV2), rootSegmentIdMap);
     coordinator.markSegmentsAsUnusedWithinInterval(DS.WIKI, Intervals.of("2024/2025"));
 
-    Assert.assertTrue(coordinator.findSegmentsWithUnreferencedLoadSpecs(ImmutableSet.of(root)).isEmpty());
-    Assert.assertTrue(coordinator.findSegmentsWithUnreferencedLoadSpecs(ImmutableSet.of(childV1)).isEmpty());
-    Assert.assertTrue(coordinator.findSegmentsWithUnreferencedLoadSpecs(ImmutableSet.of(childV2)).isEmpty());
-    Assert.assertTrue(coordinator.findSegmentsWithUnreferencedLoadSpecs(ImmutableSet.of(root, childV1)).isEmpty());
-    Assert.assertTrue(coordinator.findSegmentsWithUnreferencedLoadSpecs(ImmutableSet.of(root, childV2)).isEmpty());
-    Assert.assertTrue(coordinator.findSegmentsWithUnreferencedLoadSpecs(ImmutableSet.of(childV1, childV2)).isEmpty());
+    Assert.assertTrue(coordinator.determineSegmentsWithUnreferencedLoadSpecs(ImmutableSet.of(root)).isEmpty());
+    Assert.assertTrue(coordinator.determineSegmentsWithUnreferencedLoadSpecs(ImmutableSet.of(childV1)).isEmpty());
+    Assert.assertTrue(coordinator.determineSegmentsWithUnreferencedLoadSpecs(ImmutableSet.of(childV2)).isEmpty());
+    Assert.assertTrue(coordinator.determineSegmentsWithUnreferencedLoadSpecs(ImmutableSet.of(root, childV1)).isEmpty());
+    Assert.assertTrue(coordinator.determineSegmentsWithUnreferencedLoadSpecs(ImmutableSet.of(root, childV2)).isEmpty());
+    Assert.assertTrue(coordinator.determineSegmentsWithUnreferencedLoadSpecs(ImmutableSet.of(childV1, childV2)).isEmpty());
     Assert.assertEquals(
         ImmutableSet.of(root, childV1, childV2),
-        coordinator.findSegmentsWithUnreferencedLoadSpecs(ImmutableSet.of(root, childV1, childV2))
+        coordinator.determineSegmentsWithUnreferencedLoadSpecs(ImmutableSet.of(root, childV1, childV2))
     );
   }
 

@@ -34,6 +34,7 @@ import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
+import org.apache.druid.indexing.common.actions.DetermineSegmentsToKillAction;
 import org.apache.druid.indexing.common.actions.RetrieveUnusedSegmentsAction;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.SegmentNukeAction;
@@ -203,11 +204,9 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
     );
     // Fetch the load specs of all segments overlapping with the unused segment intervals
     final Set<Map<String, Object>> usedSegmentLoadSpecs =
-            new HashSet<>(toolbox.getTaskActionClient().submit(retrieveUsedSegmentsAction)
-                    .stream()
-                    .map(DataSegment::getLoadSpec)
-                    .collect(Collectors.toSet())
-            );
+        toolbox.getTaskActionClient().submit(retrieveUsedSegmentsAction)
+               .stream()
+               .map(DataSegment::getLoadSpec).collect(Collectors.toSet());
 
     do {
       if (nextBatchSize <= 0) {
@@ -231,32 +230,34 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
         );
       }
 
-      // Kill segments
-      // Order is important here: we want the nuke action to clean up the metadata records _before_ the
-      // segments are removed from storage, this helps maintain that we will always have a storage segment if
-      // the metadata segment is present. If the segment nuke throws an exception, then the segment cleanup is
-      // abandoned.
+      // Kill segments. Order is important here:
+      // Determine the set of segments to be killed from deep storage _before_ nuking segments from deep storage
+      // We then want the nuke action to clean up the metadata records _before_ the segments are removed from storage.
+      // This helps maintain that we will always have a storage segment if the metadata segment is present.
+      // If the segment nuke throws an exception, then the segment cleanup is abandoned.
 
-      final List<DataSegment> segmentsToBeKilled;
-
-      Set<DataSegment> segmentsWithUnreferencedLoadSpecs
-          = toolbox.getTaskActionClient().submit(new SegmentNukeAction(new HashSet<>(unusedSegments)));
-      if (segmentsWithUnreferencedLoadSpecs != null) {
-        // New task action that returns the exact set of segments to be killed from deep storage
-        // We still need to check used segment load specs as segment upgrades pre-date this change
-        segmentsToBeKilled = segmentsWithUnreferencedLoadSpecs
-            .stream()
-            .filter(unusedSegment -> unusedSegment.getLoadSpec() == null
-                                     || !usedSegmentLoadSpecs.contains(unusedSegment.getLoadSpec()))
-            .collect(Collectors.toList());
-      } else {
-        // Kill segments from the deep storage only if their load specs are not being used by any used segments
-        segmentsToBeKilled = unusedSegments
-            .stream()
-            .filter(unusedSegment -> unusedSegment.getLoadSpec() == null
-                                     || !usedSegmentLoadSpecs.contains(unusedSegment.getLoadSpec()))
-            .collect(Collectors.toList());
+      Set<DataSegment> segmentsWithUnreferencedLoadSpecs = new HashSet<>(unusedSegments);
+      try {
+        segmentsWithUnreferencedLoadSpecs
+            = toolbox.getTaskActionClient()
+                     .submit(new DetermineSegmentsToKillAction(segmentsWithUnreferencedLoadSpecs));
       }
+      catch (Exception e) {
+        LOG.warn(
+            e,
+            "Could not determine segments with unreferenced load specs using task action[determineSegmentsToKill]."
+            + " Overlord maybe on an older version."
+        );
+      }
+
+      toolbox.getTaskActionClient().submit(new SegmentNukeAction(new HashSet<>(unusedSegments)));
+
+      // Kill segments from the deep storage only if their load specs are not being used by any other segments
+      final List<DataSegment> segmentsToBeKilled = segmentsWithUnreferencedLoadSpecs
+          .stream()
+          .filter(unusedSegment -> unusedSegment.getLoadSpec() == null
+                                   || !usedSegmentLoadSpecs.contains(unusedSegment.getLoadSpec()))
+          .collect(Collectors.toList());
 
       toolbox.getDataSegmentKiller().kill(segmentsToBeKilled);
       numBatchesProcessed++;
@@ -265,7 +266,7 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
       LOG.info("Processed [%d] batches for kill task[%s].", numBatchesProcessed, getId());
 
       nextBatchSize = computeNextBatchSize(numSegmentsKilled);
-    } while (unusedSegments.size() != 0 && (null == numTotalBatches || numBatchesProcessed < numTotalBatches));
+    } while (!unusedSegments.isEmpty() && (null == numTotalBatches || numBatchesProcessed < numTotalBatches));
 
     final String taskId = getId();
     LOG.info(

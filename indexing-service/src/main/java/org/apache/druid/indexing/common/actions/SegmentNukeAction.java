@@ -26,18 +26,16 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.CriticalAction;
-import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.timeline.DataSegment;
 
-import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-public class SegmentNukeAction implements TaskAction<Set<DataSegment>>
+public class SegmentNukeAction implements TaskAction<Void>
 {
   private final Set<DataSegment> segments;
 
@@ -56,18 +54,18 @@ public class SegmentNukeAction implements TaskAction<Set<DataSegment>>
   }
 
   @Override
-  public TypeReference<Set<DataSegment>> getReturnTypeReference()
+  public TypeReference<Void> getReturnTypeReference()
   {
-    return new TypeReference<Set<DataSegment>>()
+    return new TypeReference<Void>()
     {
     };
   }
 
   @Override
-  public Set<DataSegment> perform(Task task, TaskActionToolbox toolbox)
+  public Void perform(Task task, TaskActionToolbox toolbox)
   {
     TaskLocks.checkLockCoversSegments(task, toolbox.getTaskLockbox(), segments);
-    final Set<DataSegment> segmentsToKill = new HashSet<>();
+
     try {
       toolbox.getTaskLockbox().doInCriticalSection(
           task,
@@ -75,14 +73,7 @@ public class SegmentNukeAction implements TaskAction<Set<DataSegment>>
           CriticalAction.builder()
                         .onValidLocks(
                             () -> {
-                              final IndexerMetadataStorageCoordinator coordinator
-                                  = toolbox.getIndexerMetadataStorageCoordinator();
-
-                              // Find subset of segments with unreferenced load specs assuming successful nuking
-                              segmentsToKill.addAll(coordinator.findSegmentsWithUnreferencedLoadSpecs(segments));
-
-                              // Nuke segments from metadata store
-                              coordinator.deleteSegments(segments);
+                              toolbox.getIndexerMetadataStorageCoordinator().deleteSegments(segments);
                               return null;
                             }
                         )
@@ -107,7 +98,7 @@ public class SegmentNukeAction implements TaskAction<Set<DataSegment>>
       toolbox.getEmitter().emit(metricBuilder.setMetric("segment/nuked/bytes", segment.getSize()));
     }
 
-    return segmentsToKill;
+    return null;
   }
 
   @Override

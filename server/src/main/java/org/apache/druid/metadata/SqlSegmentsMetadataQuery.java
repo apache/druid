@@ -983,7 +983,7 @@ public class SqlSegmentsMetadataQuery
    *
    * @see #getParameterizedInConditionForColumn(String, List)
    */
-  private static void bindColumnValuesToQueryWithInCondition(
+  static void bindColumnValuesToQueryWithInCondition(
       final String columnName,
       final List<String> values,
       final SQLStatement<?> query
