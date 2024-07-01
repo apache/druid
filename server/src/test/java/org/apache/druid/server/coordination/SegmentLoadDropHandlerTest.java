@@ -22,9 +22,6 @@ package org.apache.druid.server.coordination;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.client.coordinator.CoordinatorClient;
-import org.apache.druid.client.coordinator.NoopCoordinatorClient;
-import org.apache.druid.guice.ServerTypeConfig;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -56,7 +53,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -67,15 +63,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class SegmentLoadDropHandlerTest
 {
-  private static final int COUNT = 50;
-
   private TestDataSegmentAnnouncer segmentAnnouncer;
-  private TestDataServerAnnouncer serverAnnouncer;
   private List<Runnable> scheduledRunnable;
   private SegmentLoaderConfig segmentLoaderConfig;
   private ScheduledExecutorFactory scheduledExecutorFactory;
-  private TestCoordinatorClient coordinatorClient;
-  private StubServiceEmitter serviceEmitter;
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
@@ -90,7 +81,6 @@ public class SegmentLoadDropHandlerTest
 
     scheduledRunnable = new ArrayList<>();
     segmentAnnouncer = new TestDataSegmentAnnouncer();
-    serverAnnouncer = new TestDataServerAnnouncer();
     segmentLoaderConfig = new SegmentLoaderConfig()
     {
       @Override
@@ -140,9 +130,7 @@ public class SegmentLoadDropHandlerTest
       };
     };
 
-    coordinatorClient = new TestCoordinatorClient();
-    serviceEmitter = new StubServiceEmitter();
-    EmittingLogger.registerEmitter(serviceEmitter);
+    EmittingLogger.registerEmitter(new StubServiceEmitter());
   }
 
   /**
@@ -154,15 +142,11 @@ public class SegmentLoadDropHandlerTest
    * </ul>
    */
   @Test
-  public void testSegmentLoading1() throws Exception
+  public void testSegmentLoading1()
   {
     final TestSegmentCacheManager cacheManager = new TestSegmentCacheManager();
     final SegmentManager segmentManager = new SegmentManager(cacheManager);
     final SegmentLoadDropHandler handler = initSegmentLoadDropHandler(segmentManager);
-
-    handler.start();
-
-    Assert.assertEquals(1, serverAnnouncer.getObservedCount());
 
     final DataSegment segment = makeSegment("test", "1", Intervals.of("P1d/2011-04-01"));
 
@@ -188,9 +172,6 @@ public class SegmentLoadDropHandlerTest
         "segment files shouldn't be deleted",
         cacheManager.observedSegmentsRemovedFromCache.contains(segment)
     );
-
-    handler.stop();
-    Assert.assertEquals(0, serverAnnouncer.getObservedCount());
   }
 
   /**
@@ -209,9 +190,9 @@ public class SegmentLoadDropHandlerTest
     final SegmentManager segmentManager = new SegmentManager(cacheManager);
     final SegmentLoadDropHandler handler = initSegmentLoadDropHandler(segmentManager);
 
-    handler.start();
+    // handler.start();
 
-    Assert.assertEquals(1, serverAnnouncer.getObservedCount());
+    // Assert.assertEquals(1, serverAnnouncer.getObservedCount());
 
     final DataSegment segment = makeSegment("test", "1", Intervals.of("P1d/2011-04-01"));
 
@@ -244,166 +225,6 @@ public class SegmentLoadDropHandlerTest
         "segment files shouldn't be deleted",
         cacheManager.observedSegmentsRemovedFromCache.contains(segment)
     );
-
-    handler.stop();
-    Assert.assertEquals(0, serverAnnouncer.getObservedCount());
-  }
-
-  @Test
-  public void testLoadCache() throws Exception
-  {
-    Set<DataSegment> segments = new HashSet<>();
-    for (int i = 0; i < COUNT; ++i) {
-      segments.add(makeSegment("test" + i, "1", Intervals.of("P1d/2011-04-01")));
-      segments.add(makeSegment("test" + i, "1", Intervals.of("P1d/2011-04-02")));
-      segments.add(makeSegment("test" + i, "2", Intervals.of("P1d/2011-04-02")));
-      segments.add(makeSegment("test" + i, "1", Intervals.of("P1d/2011-04-03")));
-      segments.add(makeSegment("test" + i, "1", Intervals.of("P1d/2011-04-04")));
-      segments.add(makeSegment("test" + i, "1", Intervals.of("P1d/2011-04-05")));
-      segments.add(makeSegment("test" + i, "2", Intervals.of("PT1h/2011-04-04T01")));
-      segments.add(makeSegment("test" + i, "2", Intervals.of("PT1h/2011-04-04T02")));
-      segments.add(makeSegment("test" + i, "2", Intervals.of("PT1h/2011-04-04T03")));
-      segments.add(makeSegment("test" + i, "2", Intervals.of("PT1h/2011-04-04T05")));
-      segments.add(makeSegment("test" + i, "2", Intervals.of("PT1h/2011-04-04T06")));
-      segments.add(makeSegment("test_two" + i, "1", Intervals.of("P1d/2011-04-01")));
-      segments.add(makeSegment("test_two" + i, "1", Intervals.of("P1d/2011-04-02")));
-    }
-
-    final TestSegmentCacheManager cacheManager = new TestSegmentCacheManager(segments);
-    final SegmentManager segmentManager = new SegmentManager(cacheManager);
-    final SegmentLoadDropHandler handler = initSegmentLoadDropHandler(segmentManager);
-
-    Assert.assertTrue(segmentManager.getDataSourceCounts().isEmpty());
-
-    handler.start();
-
-    Assert.assertEquals(1, serverAnnouncer.getObservedCount());
-    Assert.assertFalse(segmentManager.getDataSourceCounts().isEmpty());
-
-    for (int i = 0; i < COUNT; ++i) {
-      Assert.assertEquals(11L, segmentManager.getDataSourceCounts().get("test" + i).longValue());
-      Assert.assertEquals(2L, segmentManager.getDataSourceCounts().get("test_two" + i).longValue());
-    }
-
-    Assert.assertEquals(ImmutableList.copyOf(segments), segmentAnnouncer.getObservedSegments());
-
-    final ImmutableList<DataSegment> expectedBootstrapSegments = ImmutableList.copyOf(segments);
-    Assert.assertEquals(expectedBootstrapSegments, cacheManager.observedBootstrapSegments);
-    Assert.assertEquals(expectedBootstrapSegments, cacheManager.observedBootstrapSegmentsLoadedIntoPageCache);
-    Assert.assertEquals(ImmutableList.of(), cacheManager.observedSegments);
-    Assert.assertEquals(ImmutableList.of(), cacheManager.observedSegmentsLoadedIntoPageCache);
-
-    handler.stop();
-
-    Assert.assertEquals(0, serverAnnouncer.getObservedCount());
-    Assert.assertEquals(1, cacheManager.observedShutdownBootstrapCount.get());
-  }
-
-  @Test
-  public void testLoadBootstrapSegments() throws Exception
-  {
-    final Set<DataSegment> segments = new HashSet<>();
-    for (int i = 0; i < COUNT; ++i) {
-      segments.add(makeSegment("test" + i, "1", Intervals.of("P1d/2011-04-01")));
-      segments.add(makeSegment("test" + i, "1", Intervals.of("P1d/2011-04-02")));
-      segments.add(makeSegment("test_two" + i, "1", Intervals.of("P1d/2011-04-01")));
-      segments.add(makeSegment("test_two" + i, "1", Intervals.of("P1d/2011-04-02")));
-    }
-
-    final TestCoordinatorClient coordinatorClient = new TestCoordinatorClient(segments);
-    final TestSegmentCacheManager cacheManager = new TestSegmentCacheManager();
-    final SegmentManager segmentManager = new SegmentManager(cacheManager);
-
-    final SegmentLoadDropHandler handler = initSegmentLoadDropHandler(segmentManager, coordinatorClient);
-
-    Assert.assertTrue(segmentManager.getDataSourceCounts().isEmpty());
-
-    handler.start();
-
-    Assert.assertEquals(1, serverAnnouncer.getObservedCount());
-    Assert.assertFalse(segmentManager.getDataSourceCounts().isEmpty());
-
-    for (int i = 0; i < COUNT; ++i) {
-      Assert.assertEquals(2L, segmentManager.getDataSourceCounts().get("test" + i).longValue());
-      Assert.assertEquals(2L, segmentManager.getDataSourceCounts().get("test_two" + i).longValue());
-    }
-
-    final ImmutableList<DataSegment> expectedBootstrapSegments = ImmutableList.copyOf(segments);
-
-    Assert.assertEquals(expectedBootstrapSegments, segmentAnnouncer.getObservedSegments());
-
-    Assert.assertEquals(expectedBootstrapSegments, cacheManager.observedBootstrapSegments);
-    Assert.assertEquals(expectedBootstrapSegments, cacheManager.observedBootstrapSegmentsLoadedIntoPageCache);
-    serviceEmitter.verifyValue("segment/bootstrap/count", expectedBootstrapSegments.size());
-    serviceEmitter.verifyEmitted("segment/bootstrap/time", 1);
-
-    handler.stop();
-  }
-
-  @Test
-  public void testLoadBootstrapSegmentsWhenExceptionThrown() throws Exception
-  {
-    final TestSegmentCacheManager cacheManager = new TestSegmentCacheManager();
-    final SegmentManager segmentManager = new SegmentManager(cacheManager);
-
-    final SegmentLoadDropHandler handler = initSegmentLoadDropHandler(segmentManager, new NoopCoordinatorClient());
-
-    Assert.assertTrue(segmentManager.getDataSourceCounts().isEmpty());
-
-    handler.start();
-
-    Assert.assertEquals(1, serverAnnouncer.getObservedCount());
-    Assert.assertTrue(segmentManager.getDataSourceCounts().isEmpty());
-
-    Assert.assertEquals(ImmutableList.of(), segmentAnnouncer.getObservedSegments());
-    Assert.assertEquals(ImmutableList.of(), cacheManager.observedBootstrapSegments);
-    Assert.assertEquals(ImmutableList.of(), cacheManager.observedBootstrapSegmentsLoadedIntoPageCache);
-    serviceEmitter.verifyValue("segment/bootstrap/count", 0);
-    serviceEmitter.verifyEmitted("segment/bootstrap/time", 1);
-
-    handler.stop();
-  }
-
-  @Test
-  public void testStartStop() throws Exception
-  {
-    final Set<DataSegment> segments = new HashSet<>();
-    for (int i = 0; i < COUNT; ++i) {
-      segments.add(makeSegment("test" + i, "1", Intervals.of("P1d/2011-04-01")));
-      segments.add(makeSegment("test" + i, "1", Intervals.of("P1d/2011-04-02")));
-      segments.add(makeSegment("test" + i, "2", Intervals.of("P1d/2011-04-02")));
-      segments.add(makeSegment("test_two" + i, "1", Intervals.of("P1d/2011-04-01")));
-      segments.add(makeSegment("test_two" + i, "1", Intervals.of("P1d/2011-04-02")));
-    }
-
-    final TestSegmentCacheManager cacheManager = new TestSegmentCacheManager(segments);
-    final SegmentManager segmentManager = new SegmentManager(cacheManager);
-    final SegmentLoadDropHandler handler = initSegmentLoadDropHandler(segmentManager);
-
-    Assert.assertTrue(segmentManager.getDataSourceCounts().isEmpty());
-
-    handler.start();
-
-    Assert.assertEquals(1, serverAnnouncer.getObservedCount());
-    Assert.assertFalse(segmentManager.getDataSourceCounts().isEmpty());
-
-    for (int i = 0; i < COUNT; ++i) {
-      Assert.assertEquals(3L, segmentManager.getDataSourceCounts().get("test" + i).longValue());
-      Assert.assertEquals(2L, segmentManager.getDataSourceCounts().get("test_two" + i).longValue());
-    }
-
-    Assert.assertEquals(ImmutableList.copyOf(segments), segmentAnnouncer.getObservedSegments());
-
-    final ImmutableList<DataSegment> expectedBootstrapSegments = ImmutableList.copyOf(segments);
-    Assert.assertEquals(expectedBootstrapSegments, cacheManager.observedBootstrapSegments);
-    Assert.assertEquals(expectedBootstrapSegments, cacheManager.observedBootstrapSegmentsLoadedIntoPageCache);
-    Assert.assertEquals(ImmutableList.of(), cacheManager.observedSegments);
-    Assert.assertEquals(ImmutableList.of(), cacheManager.observedSegmentsLoadedIntoPageCache);
-
-    handler.stop();
-
-    Assert.assertEquals(0, serverAnnouncer.getObservedCount());
-    Assert.assertEquals(1, cacheManager.observedShutdownBootstrapCount.get());
   }
 
   @Test(timeout = 60_000L)
@@ -412,10 +233,6 @@ public class SegmentLoadDropHandlerTest
     final TestSegmentCacheManager cacheManager = new TestSegmentCacheManager();
     final SegmentManager segmentManager = new SegmentManager(cacheManager);
     final SegmentLoadDropHandler handler = initSegmentLoadDropHandler(segmentManager);
-
-    handler.start();
-
-    Assert.assertEquals(1, serverAnnouncer.getObservedCount());
 
     DataSegment segment1 = makeSegment("batchtest1", "1", Intervals.of("P1d/2011-04-01"));
     DataSegment segment2 = makeSegment("batchtest2", "1", Intervals.of("P1d/2011-04-01"));
@@ -449,9 +266,6 @@ public class SegmentLoadDropHandlerTest
     Assert.assertEquals(expectedSegments, cacheManager.observedSegmentsLoadedIntoPageCache);
     Assert.assertEquals(ImmutableList.of(), cacheManager.observedBootstrapSegments);
     Assert.assertEquals(ImmutableList.of(), cacheManager.observedBootstrapSegmentsLoadedIntoPageCache);
-
-    handler.stop();
-    Assert.assertEquals(0, serverAnnouncer.getObservedCount());
   }
 
   @Test(timeout = 60_000L)
@@ -465,9 +279,6 @@ public class SegmentLoadDropHandlerTest
 
     final SegmentLoadDropHandler handler = initSegmentLoadDropHandler(segmentManager);
 
-    handler.start();
-
-    Assert.assertEquals(1, serverAnnouncer.getObservedCount());
 
     DataSegment segment1 = makeSegment("batchtest1", "1", Intervals.of("P1d/2011-04-01"));
     List<DataSegmentChangeRequest> batch = ImmutableList.of(new SegmentChangeRequestLoad(segment1));
@@ -489,8 +300,6 @@ public class SegmentLoadDropHandlerTest
     Assert.assertEquals(State.SUCCESS, result.get(0).getStatus().getState());
     Assert.assertEquals(ImmutableList.of(segment1, segment1), segmentAnnouncer.getObservedSegments());
 
-    handler.stop();
-    Assert.assertEquals(0, serverAnnouncer.getObservedCount());
   }
 
   @Test(timeout = 60_000L)
@@ -538,13 +347,9 @@ public class SegmentLoadDropHandlerTest
 
     final SegmentLoadDropHandler handler = initSegmentLoadDropHandler(
         noAnnouncerSegmentLoaderConfig,
-        segmentManager,
-        coordinatorClient
+        segmentManager
     );
 
-    handler.start();
-
-    Assert.assertEquals(1, serverAnnouncer.getObservedCount());
 
     final DataSegment segment1 = makeSegment("batchtest1", "1", Intervals.of("P1d/2011-04-01"));
     List<DataSegmentChangeRequest> batch = ImmutableList.of(new SegmentChangeRequestLoad(segment1));
@@ -611,35 +416,23 @@ public class SegmentLoadDropHandlerTest
     Mockito.verify(segmentManager, Mockito.times(1))
            .dropSegment(ArgumentMatchers.any());
 
-    handler.stop();
-    Assert.assertEquals(0, serverAnnouncer.getObservedCount());
-  }
-
-  private SegmentLoadDropHandler initSegmentLoadDropHandler(SegmentManager segmentManager, CoordinatorClient coordinatorClient)
-  {
-    return initSegmentLoadDropHandler(segmentLoaderConfig, segmentManager, coordinatorClient);
   }
 
   private SegmentLoadDropHandler initSegmentLoadDropHandler(SegmentManager segmentManager)
   {
-    return initSegmentLoadDropHandler(segmentLoaderConfig, segmentManager, coordinatorClient);
+    return initSegmentLoadDropHandler(segmentLoaderConfig, segmentManager);
   }
 
   private SegmentLoadDropHandler initSegmentLoadDropHandler(
       SegmentLoaderConfig config,
-      SegmentManager segmentManager,
-      CoordinatorClient coordinatorClient
+      SegmentManager segmentManager
   )
   {
     return new SegmentLoadDropHandler(
         config,
         segmentAnnouncer,
-        serverAnnouncer,
         segmentManager,
-        scheduledExecutorFactory.create(5, "SegmentLoadDropHandlerTest-[%d]"),
-        new ServerTypeConfig(ServerType.HISTORICAL),
-        coordinatorClient,
-        serviceEmitter
+        scheduledExecutorFactory.create(5, "SegmentLoadDropHandlerTest-[%d]")
     );
   }
 
