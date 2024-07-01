@@ -171,7 +171,6 @@ if [ -n "$DRUID_MAXDIRECTMEMORYSIZE" ]; then setJavaKey ${SERVICE} -XX:MaxDirect
 # If a value is specified in both then JAVA_OPTS will take precedence when using OpenJDK
 # However this behavior is not part of the spec and is thus implementation specific
 JAVA_OPTS="$(cat $SERVICE_CONF_DIR/jvm.config | xargs) $JAVA_OPTS"
-SYS_OPTS="-Ddruid.node.type=$1"
 
 if [ -n "$DRUID_LOG_LEVEL" ]
 then
@@ -201,4 +200,4 @@ then
     mkdir -p ${DRUID_DIRS_TO_CREATE}
 fi
 
-exec bin/run-java ${JAVA_OPTS} ${SYS_OPTS} -cp $COMMON_CONF_DIR:$SERVICE_CONF_DIR:lib/*:$DRUID_ADDITIONAL_CLASSPATH org.apache.druid.cli.Main server $@
+exec bin/run-java ${JAVA_OPTS} -cp $COMMON_CONF_DIR:$SERVICE_CONF_DIR:lib/*:$DRUID_ADDITIONAL_CLASSPATH org.apache.druid.cli.Main server $@
