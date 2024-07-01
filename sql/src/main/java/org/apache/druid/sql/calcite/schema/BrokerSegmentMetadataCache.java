@@ -196,6 +196,11 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
     // segmentMetadataInfo keys should be a superset of all other sets including datasources to refresh
     final Set<String> dataSourcesToQuery = new HashSet<>(segmentMetadataInfo.keySet());
 
+    // this is the complete set of datasources polled from the Coordinator
+    final List<String> polledDatasources = queryDataSources();
+
+    dataSourcesToQuery.addAll(polledDatasources);
+
     log.debug("Querying schema for [%s] datasources from Coordinator.", dataSourcesToQuery);
 
     // Fetch datasource information from the Coordinator
@@ -255,6 +260,20 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
   protected void removeSegmentAction(SegmentId segmentId)
   {
     // noop, no additional action needed when segment is removed.
+  }
+
+  private List<String> queryDataSources()
+  {
+    List<String> dataSources = null;
+
+    try {
+      dataSources = FutureUtils.getUnchecked(coordinatorClient.fetchDataSources(), true);
+    }
+    catch (Exception e) {
+      log.debug(e, "Failed to query datasources from the Coordinator.");
+    }
+
+    return dataSources;
   }
 
   private Map<String, PhysicalDatasourceMetadata> queryDataSourceInformation(Set<String> dataSourcesToQuery)

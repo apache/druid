@@ -59,6 +59,11 @@ public interface CoordinatorClient
   ListenableFuture<List<DataSourceInformation>> fetchDataSourceInformation(Set<String> datasources);
 
   /**
+   * Retrieves list of used datasources.
+   */
+  ListenableFuture<List<String>> fetchDataSources();
+
+  /**
    * Returns a new instance backed by a ServiceClient which follows the provided retryPolicy
    */
   CoordinatorClient withRetryPolicy(ServiceRetryPolicy retryPolicy);
