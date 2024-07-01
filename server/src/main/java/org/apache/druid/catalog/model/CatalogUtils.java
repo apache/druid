@@ -68,12 +68,20 @@ public class CatalogUtils
     if (Strings.isNullOrEmpty(value) || value.equalsIgnoreCase(DatasourceDefn.ALL_GRANULARITY)) {
       return Granularities.ALL;
     }
+    Granularity granularity;
     try {
-      return new PeriodGranularity(new Period(value), null, null);
+      granularity = Granularity.fromString(value);
     }
     catch (IllegalArgumentException e) {
-      throw new IAE(StringUtils.format("'%s' is an invalid period string", value));
+      try {
+        granularity = new PeriodGranularity(new Period(value), null, null);
+      }
+      catch (IllegalArgumentException e2) {
+        throw new IAE(StringUtils.format("[%s] is an invalid granularity string", value));
+      }
     }
+
+    return granularity;
   }
 
   /**
@@ -275,18 +283,12 @@ public class CatalogUtils
     return merged;
   }
 
-  public static void validateGranularity(String value)
+  public static void validateGranularity(final String value)
   {
     if (value == null) {
       return;
     }
-    Granularity granularity;
-    try {
-      granularity = new PeriodGranularity(new Period(value), null, null);
-    }
-    catch (IllegalArgumentException e) {
-      throw new IAE(StringUtils.format("[%s] is an invalid granularity string", value));
-    }
+    final Granularity granularity = asDruidGranularity(value);
     if (!GranularityType.isStandard(granularity)) {
       throw new IAE(
           "Unsupported segment graularity. "
