@@ -24,8 +24,10 @@ import com.google.common.collect.ImmutableMap;
 import com.google.inject.Injector;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.DruidInjectorBuilder;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -33,6 +35,7 @@ import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
+import org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.SketchQueryContext;
 import org.apache.druid.query.aggregation.datasketches.quantiles.DoublesSketchAggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.quantiles.DoublesSketchModule;
@@ -43,6 +46,7 @@ import org.apache.druid.query.aggregation.datasketches.quantiles.DoublesSketchTo
 import org.apache.druid.query.aggregation.datasketches.quantiles.DoublesSketchToRankPostAggregator;
 import org.apache.druid.query.aggregation.datasketches.quantiles.DoublesSketchToStringPostAggregator;
 import org.apache.druid.query.aggregation.datasketches.quantiles.sql.DoublesSketchSqlAggregatorTest.DoublesSketchComponentSupplier;
+import org.apache.druid.query.aggregation.hyperloglog.HyperUniqueFinalizingPostAggregator;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
@@ -53,6 +57,7 @@ import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
+import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
@@ -267,88 +272,128 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
   public void testSubqueryWithNestedGroupBy()
   {
     final List<Object[]> expectedResults = ImmutableList.of(
-        new Object[]{946684800000L, "", 1L, "High_NB_DAYS"},
-        new Object[]{946684800000L, "1", 1L, "High_NB_DAYS"},
-        new Object[]{946684800000L, "10.1", 1L, "High_NB_DAYS"},
-        new Object[]{946684800000L, "2", 1L, "High_NB_DAYS"},
-        new Object[]{946684800000L, "abc", 1L, "High_NB_DAYS"},
-        new Object[]{946684800000L, "def", 1L, "High_NB_DAYS"}
+        new Object[]{946684800000L, "", 1L, "val1"},
+        new Object[]{946684800000L, "1", 1L, "val1"},
+        new Object[]{946684800000L, "10.1", 1L, "val1"},
+        new Object[]{946684800000L, "2", 1L, "val1"},
+        new Object[]{946684800000L, "abc", 1L, "val1"},
+        new Object[]{946684800000L, "def", 1L, "val1"}
     );
 
     testQuery(
         "SELECT\n"
-        + "  DATE_TRUNC('DAY', CURRENT_TIMESTAMP) AS __time,\n"
-        + "  table_nb_days.\"user\",\n"
-        + "  table_nb_days.number_days_interactions,\n"
-        + "  (CASE WHEN table_nb_days.number_days_interactions < table_quantiles.first_quartile THEN 'Low_NB_DAYS' \n"
-        + "  WHEN table_nb_days.number_days_interactions >= table_quantiles.first_quartile AND table_nb_days.number_days_interactions < table_quantiles.third_quartile THEN 'Medium_NB_DAYS' \n"
-        + "  WHEN table_nb_days.number_days_interactions >= table_quantiles.third_quartile THEN 'High_NB_DAYS' END) AS NB_Days_Segment\n"
+        + "  MILLIS_TO_TIMESTAMP(946684800000) AS __time,\n"
+        + "  alias.\"user\",\n"
+        + "  alias.days,\n"
+        + "  (CASE WHEN alias.days < quantiles.first_quartile THEN 'val2' \n"
+        + "  WHEN alias.days >= quantiles.first_quartile AND alias.days < quantiles.third_quartile THEN 'val3' \n"
+        + "  WHEN alias.days >= quantiles.third_quartile THEN 'val1' END) AS val4\n"
         + "FROM (\n"
         + "  SELECT\n"
-        + "    APPROX_QUANTILE_DS(table_nb_days.number_days_interactions, 0.25) AS first_quartile,\n"
-        + "    APPROX_QUANTILE_DS(table_nb_days.number_days_interactions, 0.75) AS third_quartile\n"
+        + "    APPROX_QUANTILE_DS(alias.days, 0.25) AS first_quartile,\n"
+        + "    APPROX_QUANTILE_DS(alias.days, 0.75) AS third_quartile\n"
         + "  FROM (\n"
         + "    SELECT\n"
         + "      dim1 \"user\",\n"
-        + "      COUNT(DISTINCT __time) AS number_days_interactions\n"
+        + "      COUNT(DISTINCT __time) AS days\n"
         + "    FROM \"foo\"\n"
-        + "    WHERE __time >= TIMESTAMP '1990-01-23' AND __time <= TIMESTAMP '2024-03-23'\n"
         + "    GROUP BY 1\n"
-        + "  ) AS table_nb_days\n"
-        + ") AS table_quantiles, (\n"
+        + "  ) AS alias\n"
+        + ") AS quantiles, (\n"
         + "  SELECT\n"
         + "    dim1 \"user\",\n"
-        + "    COUNT(DISTINCT __time) AS number_days_interactions\n"
+        + "    COUNT(DISTINCT __time) AS days\n"
         + "  FROM \"foo\"\n"
-        + "  WHERE __time >= TIMESTAMP '1990-01-23' AND __time <= TIMESTAMP '2024-03-23' \n"
         + "  GROUP BY 1\n"
-        + ") AS table_nb_days\n",
+        + ") AS alias\n",
         QUERY_CONTEXT_WITH_SUBQUERY_MEMORY_LIMIT,
         ImmutableList.of(
-            Druids.newTimeseriesQueryBuilder()
-                  .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
-                  .granularity(Granularities.ALL)
-                  .virtualColumns(
-                      new ExpressionVirtualColumn(
-                          "v0",
-                          "CAST(\"dim1\", 'DOUBLE')",
-                          ColumnType.FLOAT,
-                          TestExprMacroTable.INSTANCE
-                      ),
-                      new ExpressionVirtualColumn(
-                          "v1",
-                          "(CAST(\"dim1\", 'DOUBLE') * 2)",
-                          ColumnType.FLOAT,
-                          TestExprMacroTable.INSTANCE
-                      )
-                  )
-                  .aggregators(ImmutableList.of(
-                      new DoublesSketchAggregatorFactory("a0:agg", "v0", 128),
-                      new DoublesSketchAggregatorFactory("a1:agg", "v0", 64),
-                      new DoublesSketchAggregatorFactory("a2:agg", "v0", 256),
-                      new DoublesSketchAggregatorFactory("a4:agg", "v1", 128),
-                      new FilteredAggregatorFactory(
-                          new DoublesSketchAggregatorFactory("a5:agg", "v0", 128),
-                          equality("dim2", "abc", ColumnType.STRING)
-                      ),
-                      new FilteredAggregatorFactory(
-                          new DoublesSketchAggregatorFactory("a6:agg", "v0", 128),
-                          not(equality("dim2", "abc", ColumnType.STRING))
-                      )
-                  ))
-                  .postAggregators(
-                      new DoublesSketchToQuantilePostAggregator("a0", makeFieldAccessPostAgg("a0:agg"), 0.01f),
-                      new DoublesSketchToQuantilePostAggregator("a1", makeFieldAccessPostAgg("a1:agg"), 0.50f),
-                      new DoublesSketchToQuantilePostAggregator("a2", makeFieldAccessPostAgg("a2:agg"), 0.98f),
-                      new DoublesSketchToQuantilePostAggregator("a3", makeFieldAccessPostAgg("a0:agg"), 0.99f),
-                      new DoublesSketchToQuantilePostAggregator("a4", makeFieldAccessPostAgg("a4:agg"), 0.97f),
-                      new DoublesSketchToQuantilePostAggregator("a5", makeFieldAccessPostAgg("a5:agg"), 0.99f),
-                      new DoublesSketchToQuantilePostAggregator("a6", makeFieldAccessPostAgg("a6:agg"), 0.999f),
-                      new DoublesSketchToQuantilePostAggregator("a7", makeFieldAccessPostAgg("a5:agg"), 0.999f)
-                  )
-                  .context(QUERY_CONTEXT_DEFAULT)
-                  .build()
+            newScanQueryBuilder()
+                .dataSource(
+                    JoinDataSource.create(
+                        new QueryDataSource(
+                            GroupByQuery.builder()
+                                        .setDataSource(
+                                            new QueryDataSource(
+                                                GroupByQuery.builder()
+                                                            .setDataSource("foo")
+                                                            .setQuerySegmentSpec(querySegmentSpec(Intervals.ETERNITY))
+                                                            .setGranularity(Granularities.ALL)
+                                                            .addDimension(new DefaultDimensionSpec(
+                                                                "dim1",
+                                                                "d0",
+                                                                ColumnType.STRING
+                                                            ))
+                                                            .addAggregator(new CardinalityAggregatorFactory(
+                                                                "a0:a",
+                                                                null,
+                                                                Collections.singletonList(new DefaultDimensionSpec(
+                                                                    "__time",
+                                                                    "__time",
+                                                                    ColumnType.LONG
+                                                                )),
+                                                                false,
+                                                                true
+                                                            ))
+                                                            .setPostAggregatorSpecs(new HyperUniqueFinalizingPostAggregator(
+                                                                "a0",
+                                                                "a0:a"
+                                                            ))
+                                                            .build()
+                                            )
+                                        )
+                                        .setQuerySegmentSpec(querySegmentSpec(Intervals.ETERNITY))
+                                        .setGranularity(Granularities.ALL)
+                                        .addAggregator(new DoublesSketchAggregatorFactory("_a0:agg", "a0", 128))
+                                        .setPostAggregatorSpecs(
+                                            new DoublesSketchToQuantilePostAggregator(
+                                                "_a0",
+                                                new FieldAccessPostAggregator("_a0:agg", "_a0:agg"),
+                                                0.25
+                                            ),
+                                            new DoublesSketchToQuantilePostAggregator(
+                                                "_a1",
+                                                new FieldAccessPostAggregator("_a0:agg", "_a0:agg"),
+                                                0.75
+                                            )
+                                        )
+                                        .build()
+
+                        ),
+                        new QueryDataSource(
+                            GroupByQuery.builder()
+                                        .setDataSource("foo")
+                                        .setQuerySegmentSpec(querySegmentSpec(Intervals.ETERNITY))
+                                        .setGranularity(Granularities.ALL)
+                                        .addDimension(new DefaultDimensionSpec("dim1", "d0", ColumnType.STRING))
+                                        .addAggregator(new CardinalityAggregatorFactory(
+                                            "a0",
+                                            null,
+                                            Collections.singletonList(new DefaultDimensionSpec(
+                                                "__time",
+                                                "__time",
+                                                ColumnType.LONG
+                                            )),
+                                            false,
+                                            true
+                                        ))
+                                        .build()
+                        ),
+                        "j0.",
+                        "1",
+                        JoinType.INNER,
+                        null,
+                        TestExprMacroTable.INSTANCE,
+                        null
+                    )
+                )
+                .intervals(querySegmentSpec(Intervals.ETERNITY))
+                .virtualColumns(
+                    new ExpressionVirtualColumn("v0", "946684800000", ColumnType.LONG, TestExprMacroTable.INSTANCE),
+                    new ExpressionVirtualColumn("v1", "case_searched((\"j0.a0\" < \"_a0\"),'val2',((\"j0.a0\" >= \"_a0\") && (\"j0.a0\" < \"_a1\")),'val3',(\"j0.a0\" >= \"_a1\"),'val1',null)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+                )
+                .columns("j0.a0", "j0.d0", "v0", "v1")
+                .build()
         ),
         expectedResults
     );
@@ -1055,32 +1100,9 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
     );
     testQuery(
         "SELECT\n"
-        + "  DATE_TRUNC('DAY', CURRENT_TIMESTAMP) AS __time,\n"
-        + "  table_nb_days.\"user\",\n"
-        + "  table_nb_days.number_days_interactions,\n"
-        + "  (CASE WHEN table_nb_days.number_days_interactions < table_quantiles.first_quartile THEN 'Low_NB_DAYS' \n"
-        + "  WHEN table_nb_days.number_days_interactions >= table_quantiles.first_quartile AND table_nb_days.number_days_interactions < table_quantiles.third_quartile THEN 'Medium_NB_DAYS' \n"
-        + "  WHEN table_nb_days.number_days_interactions >= table_quantiles.third_quartile THEN 'High_NB_DAYS' END) AS NB_Days_Segment\n"
-        + "FROM (\n"
-        + "  SELECT\n"
-        + "    APPROX_QUANTILE_DS(table_nb_days.number_days_interactions, 0.25) AS first_quartile,\n"
-        + "    APPROX_QUANTILE_DS(table_nb_days.number_days_interactions, 0.75) AS third_quartile\n"
-        + "  FROM (\n"
-        + "    SELECT\n"
-        + "      dim1,\n"
-        + "      COUNT(DISTINCT __time) AS number_days_interactions\n"
-        + "    FROM \"foo\"\n"
-        + "    WHERE __time >= TIMESTAMP '2010-01-23' AND __time <= TIMESTAMP '2024-03-23'\n"
-        + "    GROUP BY 1\n"
-        + "  ) AS table_nb_days\n"
-        + ") AS table_quantiles, (\n"
-        + "  SELECT\n"
-        + "    dim1,\n"
-        + "    COUNT(DISTINCT __time) AS number_days_interactions\n"
-        + "  FROM \"foo\"\n"
-        + "  WHERE __time >= TIMESTAMP '2010-01-23' AND __time <= TIMESTAMP '2024-03-23' \n"
-        + "  GROUP BY 1\n"
-        + ") AS table_nb_days\n",
+        + "APPROX_QUANTILE_DS(m1, 0.01),\n"
+        + "APPROX_QUANTILE_DS(cnt, 0.5)\n"
+        + "FROM foo",
         context,
         Collections.singletonList(
             Druids.newTimeseriesQueryBuilder()
