@@ -29,15 +29,12 @@ import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.server.SegmentManager;
-import org.apache.druid.server.TestSegmentUtils;
 import org.apache.druid.server.coordination.SegmentChangeStatus.State;
 import org.apache.druid.timeline.DataSegment;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
@@ -53,15 +50,14 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import static org.apache.druid.server.TestSegmentUtils.makeSegment;
+
 public class SegmentLoadDropHandlerTest
 {
   private TestDataSegmentAnnouncer segmentAnnouncer;
   private List<Runnable> scheduledRunnable;
   private SegmentLoaderConfig segmentLoaderConfig;
   private ScheduledExecutorFactory scheduledExecutorFactory;
-
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
 
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -426,10 +422,5 @@ public class SegmentLoadDropHandlerTest
         segmentManager,
         scheduledExecutorFactory.create(5, "SegmentLoadDropHandlerTest-[%d]")
     );
-  }
-
-  private DataSegment makeSegment(String dataSource, String version, Interval interval)
-  {
-    return TestSegmentUtils.makeSegment(dataSource, version, interval);
   }
 }

@@ -27,13 +27,11 @@ import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.server.SegmentManager;
-import org.apache.druid.server.TestSegmentUtils;
 import org.apache.druid.timeline.DataSegment;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
@@ -42,6 +40,8 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+
+import static org.apache.druid.server.TestSegmentUtils.makeSegment;
 
 public class SegmentBootstrapperTest
 {
@@ -52,9 +52,6 @@ public class SegmentBootstrapperTest
   private SegmentLoaderConfig segmentLoaderConfig;
   private TestCoordinatorClient coordinatorClient;
   private StubServiceEmitter serviceEmitter;
-
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
 
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -93,12 +90,6 @@ public class SegmentBootstrapperTest
             new StorageLocationConfig(segmentCacheDir, null, null)
         );
       }
-
-      @Override
-      public int getDropSegmentDelayMillis()
-      {
-        return 0;
-      }
     };
 
     coordinatorClient = new TestCoordinatorClient();
@@ -112,11 +103,11 @@ public class SegmentBootstrapperTest
   {
     final Set<DataSegment> segments = new HashSet<>();
     for (int i = 0; i < COUNT; ++i) {
-      segments.add(TestSegmentUtils.makeSegment("test" + i, "1", Intervals.of("P1d/2011-04-01")));
-      segments.add(TestSegmentUtils.makeSegment("test" + i, "1", Intervals.of("P1d/2011-04-02")));
-      segments.add(TestSegmentUtils.makeSegment("test" + i, "2", Intervals.of("P1d/2011-04-02")));
-      segments.add(TestSegmentUtils.makeSegment("test_two" + i, "1", Intervals.of("P1d/2011-04-01")));
-      segments.add(TestSegmentUtils.makeSegment("test_two" + i, "1", Intervals.of("P1d/2011-04-02")));
+      segments.add(makeSegment("test" + i, "1", Intervals.of("P1d/2011-04-01")));
+      segments.add(makeSegment("test" + i, "1", Intervals.of("P1d/2011-04-02")));
+      segments.add(makeSegment("test" + i, "2", Intervals.of("P1d/2011-04-02")));
+      segments.add(makeSegment("test_two" + i, "1", Intervals.of("P1d/2011-04-01")));
+      segments.add(makeSegment("test_two" + i, "1", Intervals.of("P1d/2011-04-02")));
     }
 
     final TestSegmentCacheManager cacheManager = new TestSegmentCacheManager(segments);
@@ -158,37 +149,33 @@ public class SegmentBootstrapperTest
 
     bootstrapper.stop();
 
-    // Assert.assertEquals(0, serverAnnouncer.getObservedCount());
+    Assert.assertEquals(0, serverAnnouncer.getObservedCount());
     Assert.assertEquals(1, cacheManager.observedShutdownBootstrapCount.get());
   }
 
   @Test
-  public void testLoadCache() throws Exception
+  public void testLoadCachedSegments() throws Exception
   {
     final Set<DataSegment> segments = new HashSet<>();
     for (int i = 0; i < COUNT; ++i) {
-      segments.add(TestSegmentUtils.makeSegment("test" + i, "1", Intervals.of("P1d/2011-04-01")));
-      segments.add(TestSegmentUtils.makeSegment("test" + i, "1", Intervals.of("P1d/2011-04-02")));
-      segments.add(TestSegmentUtils.makeSegment("test" + i, "2", Intervals.of("P1d/2011-04-02")));
-      segments.add(TestSegmentUtils.makeSegment("test" + i, "1", Intervals.of("P1d/2011-04-03")));
-      segments.add(TestSegmentUtils.makeSegment("test" + i, "1", Intervals.of("P1d/2011-04-04")));
-      segments.add(TestSegmentUtils.makeSegment("test" + i, "1", Intervals.of("P1d/2011-04-05")));
-      segments.add(TestSegmentUtils.makeSegment("test" + i, "2", Intervals.of("PT1h/2011-04-04T01")));
-      segments.add(TestSegmentUtils.makeSegment("test" + i, "2", Intervals.of("PT1h/2011-04-04T02")));
-      segments.add(TestSegmentUtils.makeSegment("test" + i, "2", Intervals.of("PT1h/2011-04-04T03")));
-      segments.add(TestSegmentUtils.makeSegment("test" + i, "2", Intervals.of("PT1h/2011-04-04T05")));
-      segments.add(TestSegmentUtils.makeSegment("test" + i, "2", Intervals.of("PT1h/2011-04-04T06")));
-      segments.add(TestSegmentUtils.makeSegment("test_two" + i, "1", Intervals.of("P1d/2011-04-01")));
-      segments.add(TestSegmentUtils.makeSegment("test_two" + i, "1", Intervals.of("P1d/2011-04-02")));
+      segments.add(makeSegment("test" + i, "1", Intervals.of("P1d/2011-04-01")));
+      segments.add(makeSegment("test" + i, "1", Intervals.of("P1d/2011-04-02")));
+      segments.add(makeSegment("test" + i, "2", Intervals.of("P1d/2011-04-02")));
+      segments.add(makeSegment("test" + i, "1", Intervals.of("P1d/2011-04-03")));
+      segments.add(makeSegment("test" + i, "1", Intervals.of("P1d/2011-04-04")));
+      segments.add(makeSegment("test" + i, "1", Intervals.of("P1d/2011-04-05")));
+      segments.add(makeSegment("test" + i, "2", Intervals.of("PT1h/2011-04-04T01")));
+      segments.add(makeSegment("test" + i, "2", Intervals.of("PT1h/2011-04-04T02")));
+      segments.add(makeSegment("test" + i, "2", Intervals.of("PT1h/2011-04-04T03")));
+      segments.add(makeSegment("test" + i, "2", Intervals.of("PT1h/2011-04-04T05")));
+      segments.add(makeSegment("test" + i, "2", Intervals.of("PT1h/2011-04-04T06")));
+      segments.add(makeSegment("test_two" + i, "1", Intervals.of("P1d/2011-04-01")));
+      segments.add(makeSegment("test_two" + i, "1", Intervals.of("P1d/2011-04-02")));
     }
 
     final TestSegmentCacheManager cacheManager = new TestSegmentCacheManager(segments);
     final SegmentManager segmentManager = new SegmentManager(cacheManager);
-    final SegmentLoadDropHandler handler = new SegmentLoadDropHandler(
-        segmentLoaderConfig,
-        segmentAnnouncer,
-        segmentManager
-    );
+    final SegmentLoadDropHandler handler = new SegmentLoadDropHandler(segmentLoaderConfig, segmentAnnouncer, segmentManager);
     final SegmentBootstrapper bootstrapper = new SegmentBootstrapper(
         handler,
         segmentLoaderConfig,
@@ -231,10 +218,10 @@ public class SegmentBootstrapperTest
   {
     final Set<DataSegment> segments = new HashSet<>();
     for (int i = 0; i < COUNT; ++i) {
-      segments.add(TestSegmentUtils.makeSegment("test" + i, "1", Intervals.of("P1d/2011-04-01")));
-      segments.add(TestSegmentUtils.makeSegment("test" + i, "1", Intervals.of("P1d/2011-04-02")));
-      segments.add(TestSegmentUtils.makeSegment("test_two" + i, "1", Intervals.of("P1d/2011-04-01")));
-      segments.add(TestSegmentUtils.makeSegment("test_two" + i, "1", Intervals.of("P1d/2011-04-02")));
+      segments.add(makeSegment("test" + i, "1", Intervals.of("P1d/2011-04-01")));
+      segments.add(makeSegment("test" + i, "1", Intervals.of("P1d/2011-04-02")));
+      segments.add(makeSegment("test_two" + i, "1", Intervals.of("P1d/2011-04-01")));
+      segments.add(makeSegment("test_two" + i, "1", Intervals.of("P1d/2011-04-02")));
     }
 
     final TestCoordinatorClient coordinatorClient = new TestCoordinatorClient(segments);

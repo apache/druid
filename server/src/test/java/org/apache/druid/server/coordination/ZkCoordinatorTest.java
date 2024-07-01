@@ -41,7 +41,6 @@ import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ScheduledExecutorService;
 
 /**
  */
@@ -102,8 +101,7 @@ public class ZkCoordinatorTest extends CuratorTestBase
     SegmentLoadDropHandler segmentLoadDropHandler = new SegmentLoadDropHandler(
         new SegmentLoaderConfig(),
         EasyMock.createNiceMock(DataSegmentAnnouncer.class),
-        EasyMock.createNiceMock(SegmentManager.class),
-        EasyMock.createNiceMock(ScheduledExecutorService.class)
+        EasyMock.createNiceMock(SegmentManager.class)
     )
     {
       @Override

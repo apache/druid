@@ -40,7 +40,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * methods to support these operations; any other method invoked will throw an exception from the base class,
  * {@link NoopSegmentCacheManager}.
  */
-public class TestSegmentCacheManager extends NoopSegmentCacheManager
+class TestSegmentCacheManager extends NoopSegmentCacheManager
 {
   private final List<DataSegment> cachedSegments;
 
