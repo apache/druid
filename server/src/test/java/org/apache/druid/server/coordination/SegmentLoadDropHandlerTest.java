@@ -20,20 +20,14 @@
 package org.apache.druid.server.coordination;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
-import org.apache.druid.segment.ReferenceCountingSegment;
-import org.apache.druid.segment.SegmentLazyLoadFailCallback;
-import org.apache.druid.segment.loading.NoopSegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.StorageLocationConfig;
-import org.apache.druid.segment.loading.TombstoneSegmentizerFactory;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.TestSegmentUtils;
 import org.apache.druid.server.coordination.SegmentChangeStatus.State;
@@ -55,11 +49,9 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class SegmentLoadDropHandlerTest
 {
@@ -439,114 +431,5 @@ public class SegmentLoadDropHandlerTest
   private DataSegment makeSegment(String dataSource, String version, Interval interval)
   {
     return TestSegmentUtils.makeSegment(dataSource, version, interval);
-  }
-
-  /**
-   * A local cache manager to test the bootstrapping and segment add/remove operations. It stubs only the necessary
-   * methods to support these operations; any other method invoked will throw an exception from the base class,
-   * {@link NoopSegmentCacheManager}.
-   */
-  private static class TestSegmentCacheManager extends NoopSegmentCacheManager
-  {
-    private final List<DataSegment> cachedSegments;
-
-    private final List<DataSegment> observedBootstrapSegments;
-    private final List<DataSegment> observedBootstrapSegmentsLoadedIntoPageCache;
-    private final List<DataSegment> observedSegments;
-    private final List<DataSegment> observedSegmentsLoadedIntoPageCache;
-    private final List<DataSegment> observedSegmentsRemovedFromCache;
-    private final AtomicInteger observedShutdownBootstrapCount;
-
-    TestSegmentCacheManager()
-    {
-      this(ImmutableSet.of());
-    }
-
-    TestSegmentCacheManager(final Set<DataSegment> segmentsToCache)
-    {
-      this.cachedSegments = ImmutableList.copyOf(segmentsToCache);
-      this.observedBootstrapSegments = new ArrayList<>();
-      this.observedBootstrapSegmentsLoadedIntoPageCache = new ArrayList<>();
-      this.observedSegments = new ArrayList<>();
-      this.observedSegmentsLoadedIntoPageCache = new ArrayList<>();
-      this.observedSegmentsRemovedFromCache = new ArrayList<>();
-      this.observedShutdownBootstrapCount = new AtomicInteger(0);
-    }
-
-    @Override
-    public boolean canHandleSegments()
-    {
-      return true;
-    }
-
-    @Override
-    public List<DataSegment> getCachedSegments()
-    {
-      return cachedSegments;
-    }
-
-    @Override
-    public ReferenceCountingSegment getBootstrapSegment(DataSegment segment, SegmentLazyLoadFailCallback loadFailed)
-    {
-      observedBootstrapSegments.add(segment);
-      return getSegmentInternal(segment);
-    }
-
-    @Override
-    public ReferenceCountingSegment getSegment(final DataSegment segment)
-    {
-      observedSegments.add(segment);
-      return getSegmentInternal(segment);
-    }
-
-    private ReferenceCountingSegment getSegmentInternal(final DataSegment segment)
-    {
-      if (segment.isTombstone()) {
-        return ReferenceCountingSegment
-            .wrapSegment(TombstoneSegmentizerFactory.segmentForTombstone(segment), segment.getShardSpec());
-      } else {
-        return ReferenceCountingSegment.wrapSegment(
-            new TestSegmentUtils.SegmentForTesting(
-                segment.getDataSource(),
-                (Interval) segment.getLoadSpec().get("interval"),
-                MapUtils.getString(segment.getLoadSpec(), "version")
-            ), segment.getShardSpec()
-        );
-      }
-    }
-
-    @Override
-    public void loadSegmentIntoPageCache(DataSegment segment)
-    {
-      observedSegmentsLoadedIntoPageCache.add(segment);
-    }
-
-    @Override
-    public void loadSegmentIntoPageCacheOnBootstrap(DataSegment segment)
-    {
-      observedBootstrapSegmentsLoadedIntoPageCache.add(segment);
-    }
-
-    @Override
-    public void shutdownBootstrap()
-    {
-      observedShutdownBootstrapCount.incrementAndGet();
-    }
-
-    @Override
-    public void storeInfoFile(DataSegment segment)
-    {
-    }
-
-    @Override
-    public void removeInfoFile(DataSegment segment)
-    {
-    }
-
-    @Override
-    public void cleanup(DataSegment segment)
-    {
-      observedSegmentsRemovedFromCache.add(segment);
-    }
   }
 }

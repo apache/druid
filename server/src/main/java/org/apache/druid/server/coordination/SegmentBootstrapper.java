@@ -79,7 +79,6 @@ public class SegmentBootstrapper
   // Synchronizes start/stop of this object.
   private final Object startStopLock = new Object();
 
-
   private static final EmittingLogger log = new EmittingLogger(SegmentBootstrapper.class);
 
   @Inject

@@ -49,7 +49,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- *
+ * Responsible for loading and dropping of segments that are assigned to a process.
  */
 public class SegmentLoadDropHandler implements DataSegmentChangeHandler
 {
