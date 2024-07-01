@@ -35,6 +35,8 @@ import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.RetrieveUnusedSegmentsAction;
+import org.apache.druid.indexing.common.actions.RetrieveUpgradedFromSegmentsIdsAction;
+import org.apache.druid.indexing.common.actions.RetrieveUpgradedToSegmentsIdsAction;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.SegmentNukeAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
@@ -47,6 +49,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -97,13 +100,15 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
   /**
    * Maximum number of segments that can be killed.
    */
-  @Nullable private final Integer limit;
+  @Nullable
+  private final Integer limit;
 
   /**
    * The maximum used status last updated time. Any segments with
    * {@code used_status_last_updated} no later than this time will be included in the kill task.
    */
-  @Nullable private final DateTime maxUsedStatusLastUpdatedTime;
+  @Nullable
+  private final DateTime maxUsedStatusLastUpdatedTime;
 
   @JsonCreator
   public KillUnusedSegmentsTask(
@@ -203,11 +208,9 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
     );
     // Fetch the load specs of all segments overlapping with the unused segment intervals
     final Set<Map<String, Object>> usedSegmentLoadSpecs =
-            new HashSet<>(toolbox.getTaskActionClient().submit(retrieveUsedSegmentsAction)
-                    .stream()
-                    .map(DataSegment::getLoadSpec)
-                    .collect(Collectors.toSet())
-            );
+        toolbox.getTaskActionClient().submit(retrieveUsedSegmentsAction)
+               .stream()
+               .map(DataSegment::getLoadSpec).collect(Collectors.toSet());
 
     do {
       if (nextBatchSize <= 0) {
@@ -231,16 +234,57 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
         );
       }
 
-      // Kill segments
-      // Order is important here: we want the nuke action to clean up the metadata records _before_ the
-      // segments are removed from storage, this helps maintain that we will always have a storage segment if
-      // the metadata segment is present. If the segment nuke throws an exception, then the segment cleanup is
-      // abandoned.
+      // Kill segments. Order is important here:
+      // Retrieve the segment upgrade infos for the batch _before_ the segments are nuked
+      // We then want the nuke action to clean up the metadata records _before_ the segments are removed from storage.
+      // This helps maintain that we will always have a storage segment if the metadata segment is present.
+      // Determine the subset of segments to be killed from deep storage based on loadspecs.
+      // If the segment nuke throws an exception, then the segment cleanup is abandoned.
 
-      toolbox.getTaskActionClient().submit(new SegmentNukeAction(new HashSet<>(unusedSegments)));
+      // Determine upgraded_from_segment_id before nuking
+      final TaskActionClient taskActionClient = toolbox.getTaskActionClient();
+      final Set<String> upgradedSegmentIds = unusedSegments.stream()
+                                                           .map(DataSegment::getId)
+                                                           .map(SegmentId::toString).collect(Collectors.toSet());
+      try {
+        taskActionClient.submit(new RetrieveUpgradedFromSegmentsIdsAction(getDataSource(), upgradedSegmentIds))
+                        .stream()
+                        .filter(upgradeInfo -> upgradeInfo.getUpgradedFromSegmentId() != null)
+                        .forEach(upgradeInfo -> upgradedSegmentIds.add(upgradeInfo.getUpgradedFromSegmentId()));
+      }
+      catch (Exception e) {
+        LOG.warn(
+            e,
+            "Could not retrieve segment upgrade infos using task action[retrieveUpgradedFromSegmentIds]."
+            + " Overlord maybe on an older version."
+        );
+      }
 
-      // Kill segments from the deep storage only if their load specs are not being used by any used segments
-      final List<DataSegment> segmentsToBeKilled = unusedSegments
+      // Nuke Segments
+      taskActionClient.submit(new SegmentNukeAction(new HashSet<>(unusedSegments)));
+
+      // Determine unreferenced segments
+      final Set<String> referencedSegmentIds = new HashSet<>();
+      try {
+        taskActionClient.submit(new RetrieveUpgradedToSegmentsIdsAction(getDataSource(), upgradedSegmentIds))
+                        .forEach(upgradeInfo -> referencedSegmentIds.add(upgradeInfo.getId()));
+      }
+      catch (Exception e) {
+        LOG.warn(
+            e,
+            "Could not retrieve segment upgrade infos using task action[retrieveUpgradedFromSegmentIds]."
+            + " Overlord maybe on an older version."
+        );
+      }
+      final Set<DataSegment> unreferencedDataSegments
+          = unusedSegments.stream()
+                          .filter(unusedSegment -> !referencedSegmentIds.contains(unusedSegment.getId().toString()))
+                          .collect(Collectors.toSet());
+
+
+      // Kill segments from the deep storage only if their load specs are not being used by any other segments
+      // We still need to check with used load specs as segment upgrades were introduced before this change
+      final List<DataSegment> segmentsToBeKilled = unreferencedDataSegments
           .stream()
           .filter(unusedSegment -> unusedSegment.getLoadSpec() == null
                                    || !usedSegmentLoadSpecs.contains(unusedSegment.getLoadSpec()))
@@ -253,7 +297,7 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
       LOG.info("Processed [%d] batches for kill task[%s].", numBatchesProcessed, getId());
 
       nextBatchSize = computeNextBatchSize(numSegmentsKilled);
-    } while (unusedSegments.size() != 0 && (null == numTotalBatches || numBatchesProcessed < numTotalBatches));
+    } while (!unusedSegments.isEmpty() && (null == numTotalBatches || numBatchesProcessed < numTotalBatches));
 
     final String taskId = getId();
     LOG.info(
