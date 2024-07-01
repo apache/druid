@@ -2945,75 +2945,13 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   @Override
-  public Set<DataSegment> determineSegmentsWithUnreferencedLoadSpecs(final Set<DataSegment> segments)
-  {
-    if (segments.isEmpty()) {
-      return segments;
-    }
-    final String dataSource = segments.stream()
-                                      .findFirst()
-                                      .get()
-                                      .getDataSource();
-    final List<String> segmentIds = segments.stream()
-                                            .map(DataSegment::getId)
-                                            .map(SegmentId::toString)
-                                            .collect(Collectors.toList());
-    Map<String, String> idToUpgradedMap = new HashMap<>(getUpgradedFromSegmentIds(dataSource, segmentIds));
-    final Set<String> upgradedFromSegmentIds = new HashSet<>(segmentIds);
-    upgradedFromSegmentIds.addAll(idToUpgradedMap.values());
-    idToUpgradedMap.putAll(getSegmentsWithUpgradedFromSegmentIds(dataSource, new ArrayList<>(upgradedFromSegmentIds)));
-    final Map<String, Set<String>> upgradedToIdsMap = new HashMap<>();
-    for (Map.Entry<String, String> idAndAncestor : idToUpgradedMap.entrySet()) {
-      upgradedToIdsMap.computeIfAbsent(idAndAncestor.getValue(), ancestor -> new HashSet<>())
-                      .add(idAndAncestor.getKey());
-    }
-    final Set<DataSegment> segmentsWithUnreferencedLoadSpecs = new HashSet<>();
-    final Set<String> existingSegmentIds
-        = retrieveSegmentsById(dataSource, upgradedFromSegmentIds).stream()
-                                                                  .map(DataSegment::getId)
-                                                                  .map(SegmentId::toString)
-                                                                  .collect(Collectors.toSet());
-    for (DataSegment segment : segments) {
-      final String id = segment.getId().toString();
-      final Set<String> conflicts = new HashSet<>();
-      if (upgradedToIdsMap.containsKey(id)) {
-        // Add children
-        conflicts.addAll(upgradedToIdsMap.get(id));
-      }
-      final String parent = idToUpgradedMap.get(id);
-      if (parent != null) {
-        // add parent if it exists
-        if (existingSegmentIds.contains(parent)) {
-          conflicts.add(parent);
-        }
-        // add siblings
-        if (upgradedToIdsMap.containsKey(parent)) {
-          conflicts.addAll(upgradedToIdsMap.get(parent));
-        }
-      }
-      // Remove segments being deleted
-      segmentIds.forEach(conflicts::remove);
-      if (conflicts.isEmpty()) {
-        segmentsWithUnreferencedLoadSpecs.add(segment);
-      }
-    }
-    return segmentsWithUnreferencedLoadSpecs;
-  }
-
-  /**
-   * Gets a map from the input segment id to its upgraded from segment id for a given list of segment ids
-   * The map contains the id as a key if it has been upgraded.
-   * The value is the id of the first segment with the same load spec
-   * This method assumes that all the segments belong to the same datasource
-   * @param dataSource data source
-   * @param segmentIds ids of segments
-   * @return Map from input segment ids to their upgraded_from_segment ids
-   */
-  @VisibleForTesting
-  Map<String, String> getUpgradedFromSegmentIds(final String dataSource, final List<String> segmentIds)
+  public List<SegmentUpgradeInfo> retrieveUpgradedFromSegmentIds(
+      final String dataSource,
+      final List<String> segmentIds
+  )
   {
     if (segmentIds.isEmpty()) {
-      return Collections.emptyMap();
+      return Collections.emptyList();
     }
 
     final String sql = StringUtils.format(
@@ -3021,42 +2959,31 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         dbTables.getSegmentsTable(),
         SqlSegmentsMetadataQuery.getParameterizedInConditionForColumn("id", segmentIds)
     );
-    Map<String, String> upgradedFromSegmentIdMap = new HashMap<>();
-    connector.retryWithHandle(
+    return connector.retryWithHandle(
         handle -> {
           Query<Map<String, Object>> query = handle.createQuery(sql)
                                                    .bind("dataSource", dataSource);
           SqlSegmentsMetadataQuery.bindColumnValuesToQueryWithInCondition("id", segmentIds, query);
-          query.map(
+          return query.map(
               (index, r, ctx) -> {
                 final String id = r.getString(1);
                 final String upgradedFromSegmentId = r.getString(2);
-                if (upgradedFromSegmentId != null) {
-                  upgradedFromSegmentIdMap.put(id, upgradedFromSegmentId);
-                }
-                return null;
+                return new SegmentUpgradeInfo(id, upgradedFromSegmentId);
               }
                )
                .list();
-          return null;
         }
     );
-    return upgradedFromSegmentIdMap;
   }
 
-  /**
-   * Given a set of datasources upgraded_from_segment ids, return a map from their successors to the corresponding root
-   * @param dataSource data source
-   * @param upgradedFromSegmentIds ids of the first segments which had the corresponding load spec
-   * @return Map from successor to (upgraded from) segment id for every id in the input
-   */
-  private Map<String, String> getSegmentsWithUpgradedFromSegmentIds(
+  @Override
+  public List<SegmentUpgradeInfo> retrieveUpgradedToSegmentIds(
       final String dataSource,
       final List<String> upgradedFromSegmentIds
   )
   {
     if (upgradedFromSegmentIds.isEmpty()) {
-      return Collections.emptyMap();
+      return Collections.emptyList();
     }
 
     final String sql = StringUtils.format(
@@ -3067,8 +2994,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             upgradedFromSegmentIds
         )
     );
-    Map<String, String> upgradedFromSegmentIdMap = new HashMap<>();
-    connector.retryWithHandle(
+    return connector.retryWithHandle(
         handle -> {
           Query<Map<String, Object>> query = handle.createQuery(sql)
                                                    .bind("dataSource", dataSource);
@@ -3077,21 +3003,16 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
               upgradedFromSegmentIds,
               query
           );
-          query.map(
+          return query.map(
               (index, r, ctx) -> {
                 final String id = r.getString(1);
                 final String upgradedFromSegmentId = r.getString(2);
-                if (upgradedFromSegmentId != null) {
-                  upgradedFromSegmentIdMap.put(id, upgradedFromSegmentId);
-                }
-                return null;
+                return new SegmentUpgradeInfo(id, upgradedFromSegmentId);
               }
                )
                .list();
-          return null;
         }
     );
-    return upgradedFromSegmentIdMap;
   }
 
   private static class PendingSegmentsRecord

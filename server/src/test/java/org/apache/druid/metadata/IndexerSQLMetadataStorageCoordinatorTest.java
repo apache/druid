@@ -275,9 +275,16 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
 
     Set<DataSegment> allCommittedSegments
         = new HashSet<>(retrieveUsedSegments(derbyConnectorRule.metadataTablesConfigSupplier().get()));
-    Map<String, String> upgradedFromSegmentIdMap = coordinator.getUpgradedFromSegmentIds(
+    Map<String, String> upgradedFromSegmentIdMap = new HashMap<>();
+    coordinator.retrieveUpgradedFromSegmentIds(
         DS.WIKI,
         allCommittedSegments.stream().map(DataSegment::getId).map(SegmentId::toString).collect(Collectors.toList())
+    ).forEach(
+        segmentUpgradeInfo -> {
+          if (segmentUpgradeInfo.getUpgradedFromSegmentId() != null) {
+            upgradedFromSegmentIdMap.put(segmentUpgradeInfo.getId(), segmentUpgradeInfo.getUpgradedFromSegmentId());
+          }
+        }
     );
     // Verify the segments present in the metadata store
     Assert.assertTrue(allCommittedSegments.containsAll(appendSegments));
@@ -405,9 +412,16 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     final Set<DataSegment> usedSegments
         = new HashSet<>(retrieveUsedSegments(derbyConnectorRule.metadataTablesConfigSupplier().get()));
 
-    final Map<String, String> upgradedFromSegmentIdMap = coordinator.getUpgradedFromSegmentIds(
+    final Map<String, String> upgradedFromSegmentIdMap = new HashMap<>();
+    coordinator.retrieveUpgradedFromSegmentIds(
         "foo",
         usedSegments.stream().map(DataSegment::getId).map(SegmentId::toString).collect(Collectors.toList())
+    ).forEach(
+        segmentUpgradeInfo -> {
+          if (segmentUpgradeInfo.getUpgradedFromSegmentId() != null) {
+            upgradedFromSegmentIdMap.put(segmentUpgradeInfo.getId(), segmentUpgradeInfo.getUpgradedFromSegmentId());
+          }
+        }
     );
 
     Assert.assertTrue(usedSegments.containsAll(segmentsAppendedWithReplaceLock));
@@ -3430,59 +3444,54 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   }
 
   @Test
-  public void testFindDataSegmentsWithUnreferencedLoadSpecs()
+  public void testRetrieveUpgradedFromSegmentIds()
   {
-    // Empty set
-    Assert.assertTrue(coordinator.determineSegmentsWithUnreferencedLoadSpecs(Collections.emptySet()).isEmpty());
-
-    // Lone segment is unreferenced
-    insertUsedSegments(Collections.singleton(eternitySegment), Collections.emptyMap());
-    coordinator.markSegmentsAsUnusedWithinInterval(eternitySegment.getDataSource(), Intervals.ETERNITY);
-    Assert.assertEquals(
-        Collections.singleton(eternitySegment),
-        coordinator.determineSegmentsWithUnreferencedLoadSpecs(Collections.singleton(eternitySegment))
-    );
-
-    // Siblings are always referenced unless they're passed together
-    Map<SegmentId, String> upgradedFromSegmentIdMap = ImmutableMap.of(
-        defaultSegment.getId(),
-        "nonExistentRoot",
-        defaultSegment2.getId(),
-        "nonExistentRoot"
-    );
+    final String datasource = defaultSegment.getDataSource();
+    final Map<SegmentId, String> upgradedFromSegmentIdMap = new HashMap<>();
+    upgradedFromSegmentIdMap.put(defaultSegment2.getId(), defaultSegment.getId().toString());
     insertUsedSegments(ImmutableSet.of(defaultSegment, defaultSegment2), upgradedFromSegmentIdMap);
-    Assert.assertTrue(coordinator.determineSegmentsWithUnreferencedLoadSpecs(ImmutableSet.of(defaultSegment)).isEmpty());
-    Assert.assertTrue(coordinator.determineSegmentsWithUnreferencedLoadSpecs(ImmutableSet.of(defaultSegment2)).isEmpty());
-    Assert.assertEquals(
-        ImmutableSet.of(defaultSegment, defaultSegment2),
-        coordinator.determineSegmentsWithUnreferencedLoadSpecs(ImmutableSet.of(defaultSegment, defaultSegment2))
-    );
+    coordinator.markSegmentsAsUnusedWithinInterval(datasource, Intervals.ETERNITY);
+    upgradedFromSegmentIdMap.clear();
+    upgradedFromSegmentIdMap.put(defaultSegment3.getId(), defaultSegment.getId().toString());
+    insertUsedSegments(ImmutableSet.of(defaultSegment3, defaultSegment4), upgradedFromSegmentIdMap);
 
-    // The parent and all its children must all be present in the batch for them to be unreferenced
-    DataSegment root = createSegment(Intervals.of("2024/2025"), "2024-01-01", new NumberedShardSpec(0, 0));
-    DataSegment childV1 = createSegment(Intervals.of("2024/2025"), "2024-02-01", new NumberedShardSpec(0, 0));
-    DataSegment childV2 = createSegment(Intervals.ETERNITY, "2025-01-01", new NumberedShardSpec(0, 0));
-    upgradedFromSegmentIdMap = ImmutableMap.of(
-        childV1.getId(),
-        root.getId().toString(),
-        childV2.getId(),
-        root.getId().toString()
-    );
-    insertUsedSegments(ImmutableSet.of(root, childV1, childV2), upgradedFromSegmentIdMap);
-    coordinator.markSegmentsAsUnusedWithinInterval(DS.WIKI, Intervals.of("2024/2025"));
+    Set<SegmentUpgradeInfo> expected = new HashSet<>();
+    expected.add(new SegmentUpgradeInfo(defaultSegment.getId().toString(), null));
+    expected.add(new SegmentUpgradeInfo(defaultSegment2.getId().toString(), defaultSegment.getId().toString()));
+    expected.add(new SegmentUpgradeInfo(defaultSegment3.getId().toString(), defaultSegment.getId().toString()));
+    expected.add(new SegmentUpgradeInfo(defaultSegment4.getId().toString(), null));
 
-    Assert.assertTrue(coordinator.determineSegmentsWithUnreferencedLoadSpecs(ImmutableSet.of(root)).isEmpty());
-    Assert.assertTrue(coordinator.determineSegmentsWithUnreferencedLoadSpecs(ImmutableSet.of(childV1)).isEmpty());
-    Assert.assertTrue(coordinator.determineSegmentsWithUnreferencedLoadSpecs(ImmutableSet.of(childV2)).isEmpty());
-    Assert.assertTrue(coordinator.determineSegmentsWithUnreferencedLoadSpecs(ImmutableSet.of(root, childV1)).isEmpty());
-    Assert.assertTrue(coordinator.determineSegmentsWithUnreferencedLoadSpecs(ImmutableSet.of(root, childV2)).isEmpty());
-    Assert.assertTrue(coordinator.determineSegmentsWithUnreferencedLoadSpecs(ImmutableSet.of(childV1, childV2)).isEmpty());
-    Assert.assertEquals(
-        ImmutableSet.of(root, childV1, childV2),
-        coordinator.determineSegmentsWithUnreferencedLoadSpecs(ImmutableSet.of(root, childV1, childV2))
-    );
+    List<String> segmentIds = new ArrayList<>();
+    segmentIds.add(defaultSegment.getId().toString());
+    segmentIds.add(defaultSegment2.getId().toString());
+    segmentIds.add(defaultSegment3.getId().toString());
+    segmentIds.add(defaultSegment4.getId().toString());
+    Assert.assertEquals(expected, new HashSet<>(coordinator.retrieveUpgradedFromSegmentIds(datasource, segmentIds)));
   }
 
+  @Test
+  public void testRetrieveUpgradedToSegmentIds()
+  {
+    final String datasource = defaultSegment.getDataSource();
+    final Map<SegmentId, String> upgradedFromSegmentIdMap = new HashMap<>();
+    upgradedFromSegmentIdMap.put(defaultSegment2.getId(), defaultSegment.getId().toString());
+    insertUsedSegments(ImmutableSet.of(defaultSegment, defaultSegment2), upgradedFromSegmentIdMap);
+    coordinator.markSegmentsAsUnusedWithinInterval(datasource, Intervals.ETERNITY);
+    upgradedFromSegmentIdMap.clear();
+    upgradedFromSegmentIdMap.put(defaultSegment3.getId(), defaultSegment.getId().toString());
+    insertUsedSegments(ImmutableSet.of(defaultSegment3, defaultSegment4), upgradedFromSegmentIdMap);
+
+    Set<SegmentUpgradeInfo> expected = new HashSet<>();
+    expected.add(new SegmentUpgradeInfo(defaultSegment2.getId().toString(), defaultSegment.getId().toString()));
+    expected.add(new SegmentUpgradeInfo(defaultSegment3.getId().toString(), defaultSegment.getId().toString()));
+
+    List<String> upgradedIds = new ArrayList<>();
+    upgradedIds.add(defaultSegment.getId().toString());
+    upgradedIds.add(defaultSegment2.getId().toString());
+    upgradedIds.add(defaultSegment3.getId().toString());
+    upgradedIds.add(defaultSegment4.getId().toString());
+    Assert.assertEquals(expected, new HashSet<>(coordinator.retrieveUpgradedToSegmentIds(datasource, upgradedIds)));
+  }
 
   private boolean insertUsedSegments(Set<DataSegment> dataSegments, Map<SegmentId, String> upgradedFromSegmentIdMap)
   {

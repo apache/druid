@@ -22,45 +22,57 @@ package org.apache.druid.indexing.common.actions;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.metadata.SegmentUpgradeInfo;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
 /**
- * Given a set of segments, this task action determines the subset that can be killed from deep storage
- * This task action assumes that the all the segments provided are unused and belong to the same datasource.
+ * Task action to retrieve the segment upgrade infos of a given set of used or unused segment ids.
  */
-public class DetermineSegmentsToKillAction implements TaskAction<Set<DataSegment>>
+public class RetrieveUpgradedFromSegmentsIdsAction implements TaskAction<List<SegmentUpgradeInfo>>
 {
-  private final Set<DataSegment> segments;
+  private final String dataSource;
+  private final Set<String> segmentIds;
 
   @JsonCreator
-  public DetermineSegmentsToKillAction(@JsonProperty("segments") Set<DataSegment> segments)
+  public RetrieveUpgradedFromSegmentsIdsAction(
+      @JsonProperty("dataSource") String dataSource,
+      @JsonProperty("segmentIds") Set<String> segmentIds
+  )
   {
-    this.segments = segments;
+    this.dataSource = dataSource;
+    this.segmentIds = segmentIds;
   }
 
   @JsonProperty
-  public Set<DataSegment> getSegments()
+  public String getDataSource()
   {
-    return segments;
+    return dataSource;
+  }
+
+  @JsonProperty
+  public Set<String> getSegmentIds()
+  {
+    return segmentIds;
   }
 
   @Override
-  public TypeReference<Set<DataSegment>> getReturnTypeReference()
+  public TypeReference<List<SegmentUpgradeInfo>> getReturnTypeReference()
   {
-    return new TypeReference<Set<DataSegment>>()
+    return new TypeReference<List<SegmentUpgradeInfo>>()
     {
     };
   }
 
   @Override
-  public Set<DataSegment> perform(Task task, TaskActionToolbox toolbox)
+  public List<SegmentUpgradeInfo> perform(Task task, TaskActionToolbox toolbox)
   {
     return toolbox.getIndexerMetadataStorageCoordinator()
-                  .determineSegmentsWithUnreferencedLoadSpecs(segments);
+                  .retrieveUpgradedFromSegmentIds(dataSource, ImmutableList.copyOf(segmentIds));
   }
 
   @Override
@@ -78,21 +90,22 @@ public class DetermineSegmentsToKillAction implements TaskAction<Set<DataSegment
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    DetermineSegmentsToKillAction that = (DetermineSegmentsToKillAction) o;
-    return Objects.equals(segments, that.segments);
+    RetrieveUpgradedFromSegmentsIdsAction that = (RetrieveUpgradedFromSegmentsIdsAction) o;
+    return Objects.equals(dataSource, that.dataSource) && Objects.equals(segmentIds, that.segmentIds);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(segments);
+    return Objects.hash(dataSource, segmentIds);
   }
 
   @Override
   public String toString()
   {
     return getClass().getSimpleName() + "{" +
-           "segments=" + segments +
+           "dataSource='" + dataSource + '\'' +
+           ", segmentIds=" + segmentIds +
            '}';
   }
 }
