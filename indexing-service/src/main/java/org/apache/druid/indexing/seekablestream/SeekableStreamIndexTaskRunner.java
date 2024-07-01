@@ -1626,6 +1626,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     payload.put("ingestionState", ingestionState);
     payload.put("unparseableEvents", events);
     payload.put("rowStats", doGetRowStats());
+    payload.put("recordsProcessed", getPartitionStats());
 
     ingestionStatsAndErrors.put("taskId", task.getId());
     ingestionStatsAndErrors.put("payload", payload);
