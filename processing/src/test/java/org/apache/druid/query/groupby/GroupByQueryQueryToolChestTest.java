@@ -51,6 +51,7 @@ import org.apache.druid.query.aggregation.SerializablePairLongDouble;
 import org.apache.druid.query.aggregation.SerializablePairLongFloat;
 import org.apache.druid.query.aggregation.SerializablePairLongLong;
 import org.apache.druid.query.aggregation.SerializablePairLongString;
+import org.apache.druid.query.aggregation.SerializablePairLongStringComplexMetricSerde;
 import org.apache.druid.query.aggregation.firstlast.last.DoubleLastAggregatorFactory;
 import org.apache.druid.query.aggregation.firstlast.last.FloatLastAggregatorFactory;
 import org.apache.druid.query.aggregation.firstlast.last.LongLastAggregatorFactory;
@@ -646,6 +647,87 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testResultSerdeWithComplexDimension() throws Exception
+  {
+    final GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(ImmutableList.of(
+            DefaultDimensionSpec.of("test"),
+            new DefaultDimensionSpec(
+                "test2",
+                "test2",
+                ColumnType.ofComplex(SerializablePairLongStringComplexMetricSerde.TYPE_NAME)
+            )
+        ))
+        .setAggregatorSpecs(Collections.singletonList(QueryRunnerTestHelper.ROWS_COUNT))
+        .setPostAggregatorSpecs(Collections.singletonList(new ConstantPostAggregator("post", 10)))
+        .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
+        .build();
+
+    final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(null, null);
+
+    final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
+    final ObjectMapper arraysObjectMapper = toolChest.decorateObjectMapper(
+        objectMapper,
+        query.withOverriddenContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_ARRAY_RESULT_ROWS, true))
+    );
+    final ObjectMapper mapsObjectMapper = toolChest.decorateObjectMapper(
+        objectMapper,
+        query.withOverriddenContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_ARRAY_RESULT_ROWS, false))
+    );
+
+    final Object[] rowObjects = {
+        DateTimes.of("2000").getMillis(),
+        "foo",
+        new SerializablePairLongString(1L, "test"),
+        100,
+        10.0
+    };
+    final ResultRow resultRow = ResultRow.of(rowObjects);
+
+    // There are no tests with the standard mapper since it cannot convert the generic deserialized type for Pair class
+    // into the Pair class
+
+    Assert.assertEquals(
+        "array mapper reads arrays",
+        resultRow,
+        arraysObjectMapper.readValue(
+            arraysObjectMapper.writeValueAsBytes(resultRow),
+            ResultRow.class
+        )
+    );
+
+    Assert.assertEquals(
+        "array mapper reads arrays (2)",
+        resultRow,
+        arraysObjectMapper.readValue(
+            StringUtils.format("[%s, \"foo\", {\"lhs\":1,\"rhs\":\"test\"}, 100, 10.0]", DateTimes.of("2000").getMillis()),
+            ResultRow.class
+        )
+    );
+
+    Assert.assertEquals(
+        "map mapper reads arrays",
+        resultRow,
+        mapsObjectMapper.readValue(
+            arraysObjectMapper.writeValueAsBytes(resultRow),
+            ResultRow.class
+        )
+    );
+
+    Assert.assertEquals(
+        "map mapper reads maps",
+        resultRow,
+        mapsObjectMapper.readValue(
+            mapsObjectMapper.writeValueAsBytes(resultRow),
+            ResultRow.class
+        )
+    );
+  }
+
+  @Test
   public void testResultSerdeIntermediateResultAsMapCompat() throws Exception
   {
     final GroupByQuery query = GroupByQuery
@@ -658,19 +740,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
         .build();
 
-    final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(
-        null,
-        () -> new GroupByQueryConfig()
-        {
-          @Override
-          public boolean isIntermediateResultAsMapCompat()
-          {
-            return true;
-          }
-        },
-        null,
-        null
-    );
+    final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(null, null, null);
 
     final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
     final ObjectMapper arraysObjectMapper = toolChest.decorateObjectMapper(

@@ -19,11 +19,11 @@
 
 package org.apache.druid.sql.calcite.planner;
 
-import org.apache.calcite.util.Pair;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map.Entry;
 
 /**
  * Utility class for queries
@@ -42,12 +42,12 @@ public class QueryUtils
    * @return Mappings for queryColumn to outputColumn
    */
   public static List<ColumnMapping> buildColumnMappings(
-      final List<Pair<Integer, String>> fieldMapping,
+      final List<Entry<Integer, String>> fieldMapping,
       final DruidQuery druidQuery
   )
   {
     final List<ColumnMapping> columnMappings = new ArrayList<>();
-    for (final Pair<Integer, String> entry : fieldMapping) {
+    for (final Entry<Integer, String> entry : fieldMapping) {
       final String queryColumn = druidQuery.getOutputRowSignature().getColumnName(entry.getKey());
       final String outputColumn = entry.getValue();
       columnMappings.add(new ColumnMapping(queryColumn, outputColumn));

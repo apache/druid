@@ -1648,8 +1648,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                             .setGranularity(Granularities.ALL)
                             .setDimFilter(
                                 or(
-                                    isNull("arrayLongNulls"),
-                                    equality("arrayLongNulls", new Object[]{null, 2L, 9L}, ColumnType.LONG_ARRAY)
+                                    equality("arrayLongNulls", new Object[]{null, 2L, 9L}, ColumnType.LONG_ARRAY),
+                                    isNull("arrayLongNulls")
                                 )
                             )
                             .setDimensions(
@@ -1689,27 +1689,25 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
             + "FROM druid.arrays, UNNEST(arrayLongNulls) as u (longs) GROUP BY 1"
         )
         .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
-        .expectedQueries(
-            ImmutableList.of(
-                GroupByQuery.builder()
-                            .setDataSource(
-                                UnnestDataSource.create(
-                                    TableDataSource.create(DATA_SOURCE_ARRAYS),
-                                    expressionVirtualColumn("j0.unnest", "\"arrayLongNulls\"", ColumnType.LONG_ARRAY),
-                                    null
-                                )
-                            )
-                            .setInterval(querySegmentSpec(Filtration.eternity()))
-                            .setGranularity(Granularities.ALL)
-                            .setDimensions(
-                                dimensions(
-                                    new DefaultDimensionSpec("j0.unnest", "d0", ColumnType.LONG)
-                                )
-                            )
-                            .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
-                            .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
-                            .build()
-            )
+        .expectedQuery(
+            GroupByQuery.builder()
+                .setDataSource(
+                    UnnestDataSource.create(
+                        TableDataSource.create(DATA_SOURCE_ARRAYS),
+                        expressionVirtualColumn("j0.unnest", "\"arrayLongNulls\"", ColumnType.LONG_ARRAY),
+                        null
+                    )
+                )
+                .setInterval(querySegmentSpec(Filtration.eternity()))
+                .setGranularity(Granularities.ALL)
+                .setDimensions(
+                    dimensions(
+                        new DefaultDimensionSpec("j0.unnest", "d0", ColumnType.LONG)
+                    )
+                )
+                .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                .build()
         )
         .expectedResults(
             ImmutableList.of(
@@ -6681,39 +6679,52 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testCoalesceOnNestedColumns()
   {
-    // jo.unnest is first entry in coalesce
-    // so Calcite removes the coalesce to be used here
-    testQuery(
-        "select coalesce(c,long) as col "
-        + " from druid.all_auto, unnest(json_value(arrayNestedLong, '$[1]' returning bigint array)) as u(c) ",
-        ImmutableList.of(
-            Druids.newScanQueryBuilder()
-                  .dataSource(UnnestDataSource.create(
-                      new TableDataSource(DATA_SOURCE_ALL),
-                      new NestedFieldVirtualColumn("arrayNestedLong", "$[1]", "j0.unnest", ColumnType.LONG_ARRAY),
-                      null
-                  ))
-                  .intervals(querySegmentSpec(Filtration.eternity()))
-                  .columns("j0.unnest")
-                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .legacy(false)
-                  .context(QUERY_CONTEXT_DEFAULT)
-                  .build()
-        ),
-        ImmutableList.of(
-            new Object[]{null},
-            new Object[]{3L},
-            new Object[]{4L},
-            new Object[]{3L},
-            new Object[]{4L},
-            new Object[]{1L},
-            new Object[]{2L},
-            new Object[]{null}
-        ),
-        RowSignature.builder()
-                    .add("col", ColumnType.LONG)
+    testBuilder()
+        .sql(
+            "select c,long,coalesce(c,long) as col "
+                + " from druid.all_auto, unnest(json_value(arrayNestedLong, '$[1]' returning bigint array)) as u(c) "
+        )
+        .expectedQueries(
+            ImmutableList.of(
+                Druids.newScanQueryBuilder()
+                    .dataSource(
+                        UnnestDataSource.create(
+                            new TableDataSource(DATA_SOURCE_ALL),
+                            new NestedFieldVirtualColumn("arrayNestedLong", "$[1]", "j0.unnest", ColumnType.LONG_ARRAY),
+                            null
+                        )
+                    )
+                    .virtualColumns(expressionVirtualColumn("v0", "nvl(\"j0.unnest\",\"long\")", ColumnType.LONG))
+                    .intervals(querySegmentSpec(Filtration.eternity()))
+                    .columns("j0.unnest", "long", "v0")
+                    .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                    .legacy(false)
+                    .context(QUERY_CONTEXT_DEFAULT)
                     .build()
-    );
+            )
+        )
+        .expectedResults(
+            ImmutableList.of(
+                // with NullHandling.replaceWithDefault; isNull is not handled
+                // so COALESCE may never see `null`
+                new Object[]{null, 2L, NullHandling.sqlCompatible() ? 2L : 0L},
+                new Object[]{3L, 1L, 3L},
+                new Object[]{4L, 1L, 4L},
+                new Object[]{3L, 4L, 3L},
+                new Object[]{4L, 4L, 4L},
+                new Object[]{1L, 5L, 1L},
+                new Object[]{2L, 5L, 2L},
+                new Object[]{null, 5L, NullHandling.sqlCompatible() ? 5L : 0L}
+            )
+        )
+        .expectedSignature(
+            RowSignature.builder()
+                .add("c", ColumnType.LONG)
+                .add("long", ColumnType.LONG)
+                .add("col", ColumnType.LONG)
+                .build()
+        )
+        .run();
   }
 
   @Test
@@ -6859,6 +6870,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testJsonQueryArrays()
   {
+    msqIncompatible();
     testBuilder()
         .sql("SELECT JSON_QUERY_ARRAY(arrayObject, '$') FROM druid.arrays")
         .queryContext(QUERY_CONTEXT_DEFAULT)
