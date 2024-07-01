@@ -20,51 +20,50 @@
 package org.apache.druid.query.aggregation;
 
 import org.apache.druid.java.util.common.Numbers;
-import org.apache.druid.segment.BaseLongColumnValueSelector;
+import org.apache.druid.segment.BaseFloatColumnValueSelector;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
-import org.apache.druid.segment.selector.settable.SettableValueLongColumnValueSelector;
+import org.apache.druid.segment.selector.settable.SettableValueFloatColumnValueSelector;
 
-import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.function.Function;
 
 /**
- * This class can be used to wrap Long BufferAggregator that consume long type columns to handle String type.
+ * This class can be used to wrap Float Aggregator that consume float type columns to handle Object type.
  */
-public class StringColumnLongBufferAggregatorWrapper extends DelegatingBufferAggregator
+public class ObjectColumnFloatAggregatorWrapper extends DelegatingAggregator
 {
   private final BaseObjectColumnValueSelector selector;
-  private final long nullValue;
-  private final SettableValueLongColumnValueSelector longSelector;
+  private final float nullValue;
+  private final SettableValueFloatColumnValueSelector floatSelector;
 
-  public StringColumnLongBufferAggregatorWrapper(
+  public ObjectColumnFloatAggregatorWrapper(
       BaseObjectColumnValueSelector selector,
-      Function<BaseLongColumnValueSelector, BufferAggregator> delegateBuilder,
-      long nullValue
+      Function<BaseFloatColumnValueSelector, Aggregator> delegateBuilder,
+      float nullValue
   )
   {
-    this.longSelector = new SettableValueLongColumnValueSelector();
+    this.floatSelector = new SettableValueFloatColumnValueSelector();
     this.selector = selector;
     this.nullValue = nullValue;
-    this.delegate = delegateBuilder.apply(longSelector);
+    this.delegate = delegateBuilder.apply(floatSelector);
   }
 
   @Override
-  public void aggregate(ByteBuffer buf, int position)
+  public void aggregate()
   {
     Object update = selector.getObject();
 
     if (update == null) {
-      longSelector.setValue(nullValue);
-      delegate.aggregate(buf, position);
+      floatSelector.setValue(nullValue);
+      delegate.aggregate();
     } else if (update instanceof List) {
       for (Object o : (List) update) {
-        longSelector.setValue(Numbers.tryParseLong(o, nullValue));
-        delegate.aggregate(buf, position);
+        floatSelector.setValue(Numbers.tryParseFloat(o, nullValue));
+        delegate.aggregate();
       }
     } else {
-      longSelector.setValue(Numbers.tryParseLong(update, nullValue));
-      delegate.aggregate(buf, position);
+      floatSelector.setValue(Numbers.tryParseFloat(update, nullValue));
+      delegate.aggregate();
     }
   }
 }

@@ -23,7 +23,7 @@ import javax.annotation.Nullable;
 
 /**
  * An Aggregator that delegates everything. It is used by Aggregator wrappers e.g.
- * {@link StringColumnDoubleAggregatorWrapper} that modify some behavior of a delegate.
+ * {@link ObjectColumnDoubleAggregatorWrapper} that modify some behavior of a delegate.
  */
 public abstract class DelegatingAggregator implements Aggregator
 {

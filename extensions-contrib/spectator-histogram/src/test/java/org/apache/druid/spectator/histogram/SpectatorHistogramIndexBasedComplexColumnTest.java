@@ -19,45 +19,24 @@
 
 package org.apache.druid.spectator.histogram;
 
-import org.apache.druid.segment.column.ComplexColumn;
+import org.easymock.EasyMock;
+import org.junit.Assert;
+import org.junit.Test;
 
-public class SpectatorHistogramIndexBasedComplexColumn implements ComplexColumn
+public class SpectatorHistogramIndexBasedComplexColumnTest
 {
-  private final SpectatorHistogramIndexed index;
-  private final String typeName;
-
-  public SpectatorHistogramIndexBasedComplexColumn(String typeName, SpectatorHistogramIndexed index)
+  @Test
+  public void testComplexColumn()
   {
-    this.index = index;
-    this.typeName = typeName;
-  }
+    final SpectatorHistogramIndexed mockIndexed = EasyMock.createMock(SpectatorHistogramIndexed.class);
+    EasyMock.replay(mockIndexed);
 
-  @Override
-  public Class<?> getClazz()
-  {
-    return index.getClazz();
-  }
+    final String typeName = "type";
+    final SpectatorHistogramIndexBasedComplexColumn column =
+        new SpectatorHistogramIndexBasedComplexColumn("type", mockIndexed);
+    Assert.assertEquals(typeName, column.getTypeName());
+    Assert.assertEquals(-1, column.getLength());
 
-  @Override
-  public String getTypeName()
-  {
-    return typeName;
-  }
-
-  @Override
-  public Object getRowValue(int rowNum)
-  {
-    return index.get(rowNum);
-  }
-
-  @Override
-  public int getLength()
-  {
-    return -1;
-  }
-
-  @Override
-  public void close()
-  {
+    EasyMock.verify(mockIndexed);
   }
 }

@@ -28,15 +28,15 @@ import java.util.List;
 import java.util.function.Function;
 
 /**
- * This class can be used to wrap Double Aggregator that consume double type columns to handle String type.
+ * This class can be used to wrap Double Aggregator that consume double type columns to handle Object type.
  */
-public class StringColumnDoubleAggregatorWrapper extends DelegatingAggregator
+public class ObjectColumnDoubleAggregatorWrapper extends DelegatingAggregator
 {
   private final BaseObjectColumnValueSelector selector;
   private final double nullValue;
   private final SettableValueDoubleColumnValueSelector doubleSelector;
 
-  public StringColumnDoubleAggregatorWrapper(
+  public ObjectColumnDoubleAggregatorWrapper(
       BaseObjectColumnValueSelector selector,
       Function<BaseDoubleColumnValueSelector, Aggregator> delegateBuilder,
       double nullValue
