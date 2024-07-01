@@ -20,10 +20,13 @@
 package org.apache.druid.segment.metadata;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Supplier;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Inject;
 import org.apache.druid.client.CoordinatorServerView;
+import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.InternalQueryConfig;
 import org.apache.druid.client.ServerView;
 import org.apache.druid.client.TimelineServerView;
@@ -33,6 +36,8 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
+import org.apache.druid.metadata.SqlSegmentsMetadataManager;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.metadata.metadata.SegmentAnalysis;
 import org.apache.druid.segment.SchemaPayloadPlus;
@@ -41,12 +46,16 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.coordination.DruidServerMetadata;
+import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.security.Escalator;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
+import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -54,8 +63,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -81,7 +95,13 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
   private final ColumnTypeMergePolicy columnTypeMergePolicy;
   private final SegmentSchemaCache segmentSchemaCache;
   private final SegmentSchemaBackFillQueue segmentSchemaBackfillQueue;
+  private final SqlSegmentsMetadataManager sqlSegmentsMetadataManager;
+  private final DruidCoordinator druidCoordinator;
+  private final ConcurrentMap<String, RowSignature> coldDatasourceSchema = new ConcurrentHashMap<>();
+  private final long coldDatasourceSchemaExecDurationMillis;
+  private final ScheduledExecutorService coldDSScehmaExec;
   private @Nullable Future<?> cacheExecFuture = null;
+  private @Nullable Future<?> coldDSSchemaExecFuture = null;
 
   @Inject
   public CoordinatorSegmentMetadataCache(
@@ -92,7 +112,10 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
       InternalQueryConfig internalQueryConfig,
       ServiceEmitter emitter,
       SegmentSchemaCache segmentSchemaCache,
-      SegmentSchemaBackFillQueue segmentSchemaBackfillQueue
+      SegmentSchemaBackFillQueue segmentSchemaBackfillQueue,
+      SqlSegmentsMetadataManager sqlSegmentsMetadataManager,
+      DruidCoordinator druidCoordinator,
+      Supplier<SegmentsMetadataManagerConfig> segmentsMetadataManagerConfigSupplier
   )
   {
     super(queryLifecycleFactory, config, escalator, internalQueryConfig, emitter);
@@ -100,6 +123,16 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
     this.columnTypeMergePolicy = config.getMetadataColumnTypeMergePolicy();
     this.segmentSchemaCache = segmentSchemaCache;
     this.segmentSchemaBackfillQueue = segmentSchemaBackfillQueue;
+    this.sqlSegmentsMetadataManager = sqlSegmentsMetadataManager;
+    this.druidCoordinator = druidCoordinator;
+    this.coldDatasourceSchemaExecDurationMillis =
+        segmentsMetadataManagerConfigSupplier.get().getPollDuration().getMillis();
+    coldDSScehmaExec = Executors.newSingleThreadScheduledExecutor(
+        new ThreadFactoryBuilder()
+            .setNameFormat("DruidColdDSSchema-ScheduledExecutor-%d")
+            .setDaemon(true)
+            .build()
+    );
 
     initServerViewTimelineCallback(serverView);
   }
@@ -168,6 +201,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
   {
     callbackExec.shutdownNow();
     cacheExec.shutdownNow();
+    coldDSScehmaExec.shutdownNow();
     segmentSchemaCache.onLeaderStop();
     segmentSchemaBackfillQueue.onLeaderStop();
     if (cacheExecFuture != null) {
@@ -181,6 +215,12 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
     try {
       segmentSchemaBackfillQueue.onLeaderStart();
       cacheExecFuture = cacheExec.submit(this::cacheExecLoop);
+      coldDSSchemaExecFuture = coldDSScehmaExec.schedule(
+          this::coldDatasourceSchemaExec,
+          coldDatasourceSchemaExecDurationMillis,
+          TimeUnit.MILLISECONDS
+      );
+
       if (config.isAwaitInitializationOnStart()) {
         awaitInitialization();
       }
@@ -195,6 +235,9 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
     log.info("No longer leader, stopping cache.");
     if (cacheExecFuture != null) {
       cacheExecFuture.cancel(true);
+    }
+    if (coldDSSchemaExecFuture != null) {
+      coldDSSchemaExecFuture.cancel(true);
     }
     segmentSchemaCache.onLeaderStop();
     segmentSchemaBackfillQueue.onLeaderStop();
@@ -382,13 +425,25 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
     // Rebuild the datasources.
     for (String dataSource : dataSourcesToRebuild) {
       final RowSignature rowSignature = buildDataSourceRowSignature(dataSource);
-      if (rowSignature == null) {
+
+      RowSignature mergedSignature = rowSignature;
+
+      RowSignature coldDatasourceSignature = coldDatasourceSchema.get(dataSource);
+      if (coldDatasourceSignature != null) {
+        if (rowSignature == null) {
+          mergedSignature = coldDatasourceSignature;
+        } else {
+          mergedSignature = mergeHotAndColdSchema(rowSignature, coldDatasourceSignature);
+        }
+      }
+
+      if (mergedSignature == null) {
         log.info("RowSignature null for dataSource [%s], implying that it no longer exists. All metadata removed.", dataSource);
         tables.remove(dataSource);
         continue;
       }
 
-      DataSourceInformation druidTable = new DataSourceInformation(dataSource, rowSignature);
+      DataSourceInformation druidTable = new DataSourceInformation(dataSource, mergedSignature);
       final DataSourceInformation oldTable = tables.put(dataSource, druidTable);
 
       if (oldTable == null || !oldTable.getRowSignature().equals(druidTable.getRowSignature())) {
@@ -417,6 +472,78 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
 
     segmentIds.removeAll(cachedSegments);
     return cachedSegments;
+  }
+
+  protected void coldDatasourceSchemaExec()
+  {
+    Collection<ImmutableDruidDataSource> dataSources =
+        sqlSegmentsMetadataManager.getImmutableDataSourcesWithAllUsedSegments();
+
+    final Map<String, ColumnType> columnTypes = new LinkedHashMap<>();
+
+    for (ImmutableDruidDataSource dataSource : dataSources) {
+      String dataSourceName = dataSource.getName();
+      Collection<DataSegment> dataSegments = dataSource.getSegments();
+
+      for (DataSegment segment : dataSegments) {
+        if (druidCoordinator.getReplicationFactor(segment.getId()) != null && druidCoordinator.getReplicationFactor(segment.getId()) != 0) {
+          continue;
+        }
+        Optional<SchemaPayloadPlus> optionalSchema = segmentSchemaCache.getSchemaForSegment(segment.getId());
+        if (optionalSchema.isPresent()) {
+          RowSignature rowSignature = optionalSchema.get().getSchemaPayload().getRowSignature();
+          for (String column : rowSignature.getColumnNames()) {
+            final ColumnType columnType =
+                rowSignature.getColumnType(column)
+                            .orElseThrow(() -> new ISE("Encountered null type for column [%s]", column));
+
+            columnTypes.compute(column, (c, existingType) -> columnTypeMergePolicy.merge(existingType, columnType));
+          }
+        }
+      }
+
+      final RowSignature.Builder builder = RowSignature.builder();
+      columnTypes.forEach(builder::add);
+
+      RowSignature signature = builder.build();
+      coldDatasourceSchema.put(dataSourceName, signature);
+
+      // merge cold schema with hot schema
+      if (tables.containsKey(dataSourceName)) {
+        tables.put(
+            dataSourceName,
+            new DataSourceInformation(dataSourceName,
+                                      mergeHotAndColdSchema(
+                tables.get(dataSourceName).getRowSignature(),
+                signature
+            )
+        ));
+      }
+    }
+  }
+
+  private RowSignature mergeHotAndColdSchema(RowSignature hot, RowSignature cold)
+  {
+    final Map<String, ColumnType> columnTypes = new LinkedHashMap<>();
+
+    List<RowSignature> signatures = new ArrayList<>();
+    signatures.add(hot);
+    signatures.add(cold);
+
+    for (RowSignature signature : signatures) {
+      for (String column : signature.getColumnNames()) {
+        final ColumnType columnType =
+            signature.getColumnType(column)
+                        .orElseThrow(() -> new ISE("Encountered null type for column [%s]", column));
+
+        columnTypes.compute(column, (c, existingType) -> columnTypeMergePolicy.merge(existingType, columnType));
+      }
+    }
+
+    final RowSignature.Builder builder = RowSignature.builder();
+    columnTypes.forEach(builder::add);
+
+    return builder.build();
   }
 
   @VisibleForTesting
