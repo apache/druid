@@ -28,6 +28,7 @@ elif [ -x "$(command -v python2)" ]
 then
   exec python2 "$WHEREAMI/dsql-main-py2" "$@"
 elif [ -x "$(command -v python)" ]
+then
   exec python "$WHEREAMI/dsql-main-py3" "$@"
 else
   echo "python interepreter not found"
