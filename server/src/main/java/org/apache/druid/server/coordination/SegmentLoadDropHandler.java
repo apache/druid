@@ -49,7 +49,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * Responsible for loading and dropping of segments that are assigned to a process.
+ * Responsible for loading and dropping of segments by a process that can serve segments.
  */
 public class SegmentLoadDropHandler implements DataSegmentChangeHandler
 {
@@ -104,7 +104,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     this.config = config;
     this.announcer = announcer;
     this.segmentManager = segmentManager;
-    this.exec = exec;
+    this.exec = exec; // TODO: exec is double initialized; in the above injected constructor & by the bootstrapper.
 
     this.segmentsToDelete = new ConcurrentSkipListSet<>();
     requestStatuses = CacheBuilder.newBuilder().maximumSize(config.getStatusQueueMaxSize()).initialCapacity(8).build();

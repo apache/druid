@@ -57,7 +57,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Responsible for bootstrapping any cached segments and additional bootstrap segments from the coordinator.
+ * Responsible for bootstrapping cached segments from disk and bootstrap segments from the coordinator.
  * Also, responsible for announcing itself as a data server if applicable once the bootstrapping functions
  * are complete.
  */
@@ -321,7 +321,7 @@ public class SegmentBootstrapper
     @Nullable
     private volatile ScheduledFuture nextAnnoucement = null;
 
-    public BackgroundSegmentAnnouncer(
+    BackgroundSegmentAnnouncer(
         DataSegmentAnnouncer segmentAnnouncer,
         ScheduledExecutorService exec,
         int intervalMillis

@@ -208,7 +208,6 @@ public class SegmentBootstrapperCacheTest
         emitter
     );
 
-    // Start the load drop handler
     bootstrapper.start();
     Assert.assertEquals(1, serverAnnouncer.getObservedCount());
 
