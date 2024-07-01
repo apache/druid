@@ -23,7 +23,7 @@ import axios from 'axios';
 import { Api } from '../singletons';
 
 import type { RowColumn } from './general';
-import { assemble } from './general';
+import { assemble, lookupBy } from './general';
 
 const CANCELED_MESSAGE = 'Query canceled by user.';
 
@@ -345,10 +345,24 @@ export async function queryDruidSql<T = any>(
 export interface QueryExplanation {
   query: any;
   signature: { name: string; type: string }[];
+  columnMappings: {
+    queryColumn: string;
+    outputColumn: string;
+  }[];
 }
 
-export function formatSignature(queryExplanation: QueryExplanation): string {
-  return queryExplanation.signature
-    .map(({ name, type }) => `${C.optionalQuotes(name)}::${type}`)
+export function formatColumnMappingsAndSignature(queryExplanation: QueryExplanation): string {
+  const columnNameToType = lookupBy(
+    queryExplanation.signature,
+    c => c.name,
+    c => c.type,
+  );
+  return queryExplanation.columnMappings
+    .map(({ queryColumn, outputColumn }) => {
+      const type = columnNameToType[queryColumn];
+      return `${C.optionalQuotes(queryColumn)}${type ? `::${type}` : ''}→${C.optionalQuotes(
+        outputColumn,
+      )}`;
+    })
     .join(', ');
 }
