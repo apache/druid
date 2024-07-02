@@ -17,6 +17,11 @@
 # specific language governing permissions and limitations
 # under the License.
 
+# NOTE:
+# Any feature updates to this script must also be reflected in
+# `dsql-main-py3` so that intended changes work for users using
+# Python 2 or 3.
+
 from __future__ import print_function
 
 import argparse
