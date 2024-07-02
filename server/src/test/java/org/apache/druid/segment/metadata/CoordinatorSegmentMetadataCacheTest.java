@@ -1803,8 +1803,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     Assert.assertEquals(existingMetadata.getNumReplicas(), currentMetadata.getNumReplicas());
   }
 
-  @Test
-  public void testColdDatasourceSchema() throws IOException
+  private CoordinatorSegmentMetadataCache setupForColdDatasourceSchemaTest()
   {
     DataSegment coldSegment =
         DataSegment.builder()
@@ -1840,7 +1839,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
 
     Mockito.when(sqlSegmentsMetadataManager.getImmutableDataSourcesWithAllUsedSegments()).thenReturn(Collections.singletonList(druidDataSource));
 
-    CoordinatorSegmentMetadataCache schema = new CoordinatorSegmentMetadataCache(
+    return new CoordinatorSegmentMetadataCache(
         getQueryLifecycleFactory(walker),
         serverView,
         SEGMENT_CACHE_CONFIG_DEFAULT,
@@ -1853,6 +1852,12 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         segmentReplicationStatusManager,
         segmentsMetadataManagerConfigSupplier
     );
+  }
+
+  @Test
+  public void testColdDatasourceSchema_mergeSchemaInRefresh() throws IOException
+  {
+    CoordinatorSegmentMetadataCache schema = setupForColdDatasourceSchemaTest();
 
     schema.coldDatasourceSchemaExec();
 
@@ -1861,6 +1866,29 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     segmentIds.add(segment2.getId());
 
     schema.refresh(segmentIds, new HashSet<>());
+
+    verifyFooDSSchema(schema, 8);
+    RowSignature rowSignature = schema.getDatasource("foo").getRowSignature();
+
+    List<String> columnNames = rowSignature.getColumnNames();
+    Assert.assertEquals("c1", columnNames.get(6));
+    Assert.assertEquals(ColumnType.STRING, rowSignature.getColumnType(columnNames.get(6)).get());
+
+    Assert.assertEquals("c2", columnNames.get(7));
+    Assert.assertEquals(ColumnType.LONG, rowSignature.getColumnType(columnNames.get(7)).get());
+  }
+
+  @Test
+  public void testColdDatasourceSchema_mergeSchemaInColdSchemaExec() throws IOException
+  {
+    CoordinatorSegmentMetadataCache schema = setupForColdDatasourceSchemaTest();
+
+    Set<SegmentId> segmentIds = new HashSet<>();
+    segmentIds.add(segment1.getId());
+    segmentIds.add(segment2.getId());
+
+    schema.refresh(segmentIds, new HashSet<>());
+    schema.coldDatasourceSchemaExec();
 
     verifyFooDSSchema(schema, 8);
     RowSignature rowSignature = schema.getDatasource("foo").getRowSignature();

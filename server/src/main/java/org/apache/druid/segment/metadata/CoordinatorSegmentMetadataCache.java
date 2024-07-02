@@ -99,7 +99,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
   private final SqlSegmentsMetadataManager sqlSegmentsMetadataManager;
   private final SegmentReplicationStatusManager segmentReplicationStatusManager;
 
-  // Datasource schema for
+  // Schema for datasources from cold segments
   private final ConcurrentMap<String, DataSourceInformation> coldDatasourceSchema = new ConcurrentHashMap<>();
   private final long coldDatasourceSchemaExecDurationMillis;
   private final ScheduledExecutorService coldDSScehmaExec;
@@ -500,7 +500,6 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
 
   protected void coldDatasourceSchemaExec()
   {
-    log.info("ColdDatasourceSchemaExec");
     Collection<ImmutableDruidDataSource> immutableDataSources =
         sqlSegmentsMetadataManager.getImmutableDataSourcesWithAllUsedSegments();
 
@@ -534,18 +533,29 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
       final RowSignature.Builder builder = RowSignature.builder();
       columnTypes.forEach(builder::add);
 
-      RowSignature coldDSSignature = builder.build();
-      log.info("Schema for cold ds is %s %s", dataSourceName, coldDSSignature);
-      coldDatasourceSchema.put(dataSourceName, new DataSourceInformation(dataSourceName, coldDSSignature));
+      RowSignature coldSignature = builder.build();
+
+      log.debug("[%s] signature from cold segments is [%s]", dataSourceName, coldSignature);
+
+      coldDatasourceSchema.put(dataSourceName, new DataSourceInformation(dataSourceName, coldSignature));
 
       // update tables map with merged schema
       tables.computeIfPresent(
           dataSourceName,
-          (ds, info) ->
-              new DataSourceInformation(
-                  dataSourceName,
-                  mergeHotAndColdSchema(info.getRowSignature(), coldDSSignature)
-              )
+          (ds, info) -> {
+            RowSignature mergedSignature = mergeHotAndColdSchema(info.getRowSignature(), coldSignature);
+
+            if (!info.getRowSignature().equals(mergedSignature)) {
+              log.info(
+                  "[%s] has new merged signature: %s. hot signature [%s], cold signature [%s].",
+                  ds, mergedSignature, info.getRowSignature(), coldSignature
+              );
+            } else {
+              log.debug("[%s] merged signature is unchanged.", ds);
+            }
+
+            return new DataSourceInformation(ds, mergedSignature);
+          }
       );
     }
 

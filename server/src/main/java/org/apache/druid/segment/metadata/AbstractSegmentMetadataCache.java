@@ -271,13 +271,10 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
                                                         .plus(config.getMetadataRefreshPeriod())
                                                         .isAfterNow();
 
-              boolean refresh = refreshCondition();
-              boolean shouldRefresh =
-                  isServerViewInitialized &&
+              if (isServerViewInitialized &&
                   !wasRecentFailure &&
                   refreshCondition() &&
-                  (refreshImmediately || nextRefresh < System.currentTimeMillis());
-              if (shouldRefresh) {
+                  (refreshImmediately || nextRefresh < System.currentTimeMillis())) {
                 // We need to do a refresh. Break out of the waiting loop.
                 break;
               }
