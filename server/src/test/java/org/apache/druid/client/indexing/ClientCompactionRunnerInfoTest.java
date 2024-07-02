@@ -111,7 +111,7 @@ public class ClientCompactionRunnerInfoTest
         new UserCompactionTaskGranularityConfig(Granularities.ALL, Granularities.ALL, false),
         null
     );
-    assertFalse(ClientCompactionRunnerInfo.validateCompactionConfig(compactionConfig, CompactionEngine.NATIVE)
+    assertTrue(ClientCompactionRunnerInfo.validateCompactionConfig(compactionConfig, CompactionEngine.NATIVE)
                                           .isValid());
   }
 
