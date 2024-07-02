@@ -28,7 +28,7 @@ In general, when we introduce new features and behaviors into Apache Druid, we m
 The guides in this section outline breaking changes introduced in Druid 25.0.0 and later. Each guide provides instructions to migrate to new features.
 
 
-## Migrate to arrays from multi-value dimensions
+## Migrate from multi-value dimensions to arrays
 
 Druid now supports SQL-compliant array types. Whenever possible, you should use the array type over multi-value dimensions. See [Migration guide: MVDs to arrays](migr-mvd-array.md).
 
