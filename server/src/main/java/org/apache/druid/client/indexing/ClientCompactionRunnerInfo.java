@@ -172,7 +172,8 @@ public class ClientCompactionRunnerInfo
    * @param context
    * @return
    */
-  public static CompactionConfigValidationResult validateMaxNumTasksForMsq(Map<String, Object> context){
+  public static CompactionConfigValidationResult validateMaxNumTasksForMsq(Map<String, Object> context)
+  {
     if (context != null) {
       int maxNumTasks = QueryContext.of(context)
                                     .getInt(ClientMsqContext.CTX_MAX_NUM_TASKS, ClientMsqContext.DEFAULT_MAX_NUM_TASKS);
