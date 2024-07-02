@@ -46,6 +46,7 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
   private final AggregatorFactory[] metricsSpec;
   private final ClientCompactionTaskTransformSpec transformSpec;
   private final Map<String, Object> context;
+  private final ClientCompactionRunnerInfo compactionRunner;
 
   @JsonCreator
   public ClientCompactionTaskQuery(
@@ -57,7 +58,8 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
       @JsonProperty("dimensionsSpec") ClientCompactionTaskDimensionsSpec dimensionsSpec,
       @JsonProperty("metricsSpec") AggregatorFactory[] metrics,
       @JsonProperty("transformSpec") ClientCompactionTaskTransformSpec transformSpec,
-      @JsonProperty("context") Map<String, Object> context
+      @JsonProperty("context") Map<String, Object> context,
+      @JsonProperty("compactionRunner") @Nullable ClientCompactionRunnerInfo compactionRunner
   )
   {
     this.id = Preconditions.checkNotNull(id, "id");
@@ -69,6 +71,7 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
     this.metricsSpec = metrics;
     this.transformSpec = transformSpec;
     this.context = context;
+    this.compactionRunner = compactionRunner;
   }
 
   @JsonProperty
@@ -135,6 +138,13 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
     return context;
   }
 
+  @JsonProperty("compactionRunner")
+  @Nullable
+  public ClientCompactionRunnerInfo getCompactionRunner()
+  {
+    return compactionRunner;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -153,7 +163,8 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
            Objects.equals(dimensionsSpec, that.dimensionsSpec) &&
            Arrays.equals(metricsSpec, that.metricsSpec) &&
            Objects.equals(transformSpec, that.transformSpec) &&
-           Objects.equals(context, that.context);
+           Objects.equals(context, that.context) &&
+           Objects.equals(compactionRunner, that.compactionRunner);
   }
 
   @Override
@@ -167,7 +178,8 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
         granularitySpec,
         dimensionsSpec,
         transformSpec,
-        context
+        context,
+        compactionRunner
     );
     result = 31 * result + Arrays.hashCode(metricsSpec);
     return result;
@@ -186,6 +198,7 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
            ", metricsSpec=" + Arrays.toString(metricsSpec) +
            ", transformSpec=" + transformSpec +
            ", context=" + context +
+           ", compactionRunner=" + compactionRunner +
            '}';
   }
 }

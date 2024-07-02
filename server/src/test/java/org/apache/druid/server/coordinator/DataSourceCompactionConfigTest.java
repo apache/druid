@@ -69,6 +69,7 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
         null,
         null,
         null,
+        null,
         ImmutableMap.of("key", "val")
     );
     final String json = OBJECT_MAPPER.writeValueAsString(config);
@@ -93,6 +94,7 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
         500L,
         30,
         new Period(3600),
+        null,
         null,
         null,
         null,
@@ -148,6 +150,7 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
         null,
         null,
         null,
+        null,
         ImmutableMap.of("key", "val")
     );
     final String json = OBJECT_MAPPER.writeValueAsString(config);
@@ -192,6 +195,7 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
             null,
             null
         ),
+        null,
         null,
         null,
         null,
@@ -305,6 +309,7 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
         null,
         null,
         null,
+        null,
         ImmutableMap.of("key", "val")
     );
     final String json = OBJECT_MAPPER.writeValueAsString(config);
@@ -331,6 +336,7 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
         new Period(3600),
         null,
         new UserCompactionTaskGranularityConfig(null, Granularities.YEAR, null),
+        null,
         null,
         null,
         null,
@@ -368,6 +374,7 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
         null,
         null,
         null,
+        null,
         ImmutableMap.of("key", "val")
     );
     final String json = OBJECT_MAPPER.writeValueAsString(config);
@@ -398,6 +405,7 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
         null,
         null,
         null,
+        null,
         ImmutableMap.of("key", "val")
     );
     final String json = OBJECT_MAPPER.writeValueAsString(config);
@@ -424,6 +432,7 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
         new Period(3600),
         null,
         new UserCompactionTaskGranularityConfig(null, null, true),
+        null,
         null,
         null,
         null,
@@ -461,6 +470,7 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
         null,
         null,
         new UserCompactionTaskIOConfig(true),
+        null,
         ImmutableMap.of("key", "val")
     );
     final String json = OBJECT_MAPPER.writeValueAsString(config);
@@ -492,6 +502,7 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
         null,
         null,
         new UserCompactionTaskIOConfig(null),
+        null,
         ImmutableMap.of("key", "val")
     );
     final String json = OBJECT_MAPPER.writeValueAsString(config);
@@ -520,6 +531,7 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
         null,
         null,
         new UserCompactionTaskDimensionsConfig(DimensionsSpec.getDefaultSchemas(ImmutableList.of("foo"))),
+        null,
         null,
         null,
         null,
@@ -554,6 +566,7 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
         null,
         new UserCompactionTaskTransformConfig(new SelectorDimFilter("dim1", "foo", null)),
         null,
+        null,
         ImmutableMap.of("key", "val")
     );
     final String json = OBJECT_MAPPER.writeValueAsString(config);
@@ -582,6 +595,7 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
         null,
         null,
         new AggregatorFactory[] {new CountAggregatorFactory("cnt")},
+        null,
         null,
         null,
         ImmutableMap.of("key", "val")

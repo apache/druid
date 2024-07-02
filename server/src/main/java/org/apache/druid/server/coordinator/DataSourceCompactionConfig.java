@@ -22,6 +22,7 @@ package org.apache.druid.server.coordinator;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.joda.time.Period;
 
@@ -55,6 +56,7 @@ public class DataSourceCompactionConfig
   private final UserCompactionTaskTransformConfig transformSpec;
   private final UserCompactionTaskIOConfig ioConfig;
   private final Map<String, Object> taskContext;
+  private final CompactionEngine engine;
 
   @JsonCreator
   public DataSourceCompactionConfig(
@@ -69,6 +71,7 @@ public class DataSourceCompactionConfig
       @JsonProperty("metricsSpec") @Nullable AggregatorFactory[] metricsSpec,
       @JsonProperty("transformSpec") @Nullable UserCompactionTaskTransformConfig transformSpec,
       @JsonProperty("ioConfig") @Nullable UserCompactionTaskIOConfig ioConfig,
+      @JsonProperty("engine") @Nullable CompactionEngine engine,
       @JsonProperty("taskContext") @Nullable Map<String, Object> taskContext
   )
   {
@@ -88,6 +91,7 @@ public class DataSourceCompactionConfig
     this.dimensionsSpec = dimensionsSpec;
     this.transformSpec = transformSpec;
     this.taskContext = taskContext;
+    this.engine = engine;
   }
 
   @JsonProperty
@@ -171,6 +175,13 @@ public class DataSourceCompactionConfig
     return taskContext;
   }
 
+  @JsonProperty
+  @Nullable
+  public CompactionEngine getEngine()
+  {
+    return engine;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -192,6 +203,7 @@ public class DataSourceCompactionConfig
            Arrays.equals(metricsSpec, that.metricsSpec) &&
            Objects.equals(transformSpec, that.transformSpec) &&
            Objects.equals(ioConfig, that.ioConfig) &&
+           this.engine == that.engine &&
            Objects.equals(taskContext, that.taskContext);
   }
 
@@ -209,7 +221,8 @@ public class DataSourceCompactionConfig
         dimensionsSpec,
         transformSpec,
         ioConfig,
-        taskContext
+        taskContext,
+        engine
     );
     result = 31 * result + Arrays.hashCode(metricsSpec);
     return result;

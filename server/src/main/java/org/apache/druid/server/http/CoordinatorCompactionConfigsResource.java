@@ -26,9 +26,12 @@ import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.audit.AuditManager;
+import org.apache.druid.client.indexing.ClientCompactionRunnerInfo;
 import org.apache.druid.common.config.ConfigManager.SetResult;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
 import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
@@ -119,6 +122,11 @@ public class CoordinatorCompactionConfigsResource
           .getCompactionConfigs()
           .stream()
           .collect(Collectors.toMap(DataSourceCompactionConfig::getDataSource, Function.identity()));
+      CompactionConfigValidationResult validationResult =
+          ClientCompactionRunnerInfo.validateCompactionConfig(newConfig, current.getEngine());
+      if (!validationResult.isValid()) {
+        throw InvalidInput.exception("Compaction config not supported. Reason[%s].", validationResult.getReason());
+      }
       newConfigs.put(newConfig.getDataSource(), newConfig);
       newCompactionConfig = CoordinatorCompactionConfig.from(current, ImmutableList.copyOf(newConfigs.values()));
 

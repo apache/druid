@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 
+import javax.annotation.Nullable;
 import java.util.Objects;
 
 /**
@@ -44,9 +45,9 @@ public class ClientCompactionTaskGranularitySpec
 
   @JsonCreator
   public ClientCompactionTaskGranularitySpec(
-      @JsonProperty("segmentGranularity") Granularity segmentGranularity,
-      @JsonProperty("queryGranularity") Granularity queryGranularity,
-      @JsonProperty("rollup") Boolean rollup
+      @JsonProperty("segmentGranularity") @Nullable Granularity segmentGranularity,
+      @JsonProperty("queryGranularity") @Nullable Granularity queryGranularity,
+      @JsonProperty("rollup") @Nullable Boolean rollup
   )
   {
     this.queryGranularity = queryGranularity;
@@ -55,18 +56,21 @@ public class ClientCompactionTaskGranularitySpec
   }
 
   @JsonProperty
+  @Nullable
   public Granularity getSegmentGranularity()
   {
     return segmentGranularity;
   }
 
   @JsonProperty
+  @Nullable
   public Granularity getQueryGranularity()
   {
     return queryGranularity;
   }
 
   @JsonProperty
+  @Nullable
   public Boolean isRollup()
   {
     return rollup;

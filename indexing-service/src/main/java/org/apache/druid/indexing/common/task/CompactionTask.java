@@ -34,7 +34,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.curator.shaded.com.google.common.base.Verify;
-import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
 import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
@@ -43,12 +42,11 @@ import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexer.Checks;
 import org.apache.druid.indexer.Property;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
-import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
@@ -56,11 +54,7 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.IndexTask.IndexTuningConfig;
-import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexIOConfig;
-import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexIngestionSpec;
-import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTask;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
-import org.apache.druid.indexing.input.DruidInputSource;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -91,6 +85,7 @@ import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
+import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.security.ResourceAction;
@@ -98,7 +93,6 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
-import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 
@@ -116,7 +110,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.function.Supplier;
@@ -147,8 +140,6 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
    */
   public static final String CTX_KEY_APPENDERATOR_TRACKING_TASK_ID = "appenderatorTrackingTaskId";
 
-  private static final boolean STORE_COMPACTION_STATE = true;
-
   static {
     Verify.verify(TYPE.equals(CompactSegments.COMPACTION_TASK_TYPE));
   }
@@ -164,21 +155,12 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
   private final ClientCompactionTaskGranularitySpec granularitySpec;
   @Nullable
   private final CompactionTuningConfig tuningConfig;
+  @Nullable
+  private final CompactionRunner compactionRunner;
   @JsonIgnore
   private final SegmentProvider segmentProvider;
   @JsonIgnore
-  private final PartitionConfigurationManager partitionConfigurationManager;
-
-  @JsonIgnore
-  private final SegmentCacheManagerFactory segmentCacheManagerFactory;
-
-  @JsonIgnore
-  private final CurrentSubTaskHolder currentSubTaskHolder = new CurrentSubTaskHolder(
-      (taskObject, config) -> {
-        final ParallelIndexSupervisorTask indexTask = (ParallelIndexSupervisorTask) taskObject;
-        indexTask.stopGracefully(config);
-      }
-  );
+  private final CurrentSubTaskHolder currentSubTaskHolder;
 
   @JsonCreator
   public CompactionTask(
@@ -196,6 +178,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       @JsonProperty("granularitySpec") @Nullable final ClientCompactionTaskGranularitySpec granularitySpec,
       @JsonProperty("tuningConfig") @Nullable final TuningConfig tuningConfig,
       @JsonProperty("context") @Nullable final Map<String, Object> context,
+      @JsonProperty("compactionRunner") final CompactionRunner compactionRunner,
       @JacksonInject SegmentCacheManagerFactory segmentCacheManagerFactory
   )
   {
@@ -248,8 +231,12 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     }
     this.tuningConfig = tuningConfig != null ? getTuningConfig(tuningConfig) : null;
     this.segmentProvider = new SegmentProvider(dataSource, this.ioConfig.getInputSpec());
-    this.partitionConfigurationManager = new PartitionConfigurationManager(this.tuningConfig);
-    this.segmentCacheManagerFactory = segmentCacheManagerFactory;
+    // Note: The default compactionRunnerType used here should match the default runner used in CompactSegments#run
+    // when no runner is detected in the returned compactionTaskQuery.
+    this.compactionRunner = compactionRunner == null
+                            ? new NativeCompactionRunner(segmentCacheManagerFactory)
+                            : compactionRunner;
+    this.currentSubTaskHolder = this.compactionRunner.getCurrentSubTaskHolder();
 
     // Do not load any lookups in sub-tasks launched by compaction task, unless transformSpec is present.
     // If transformSpec is present, we will not modify the context so that the sub-tasks can make the
@@ -397,9 +384,15 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
 
   @Nullable
   @JsonProperty
-  public ParallelIndexTuningConfig getTuningConfig()
+  public CompactionTuningConfig getTuningConfig()
   {
     return tuningConfig;
+  }
+
+  @JsonProperty
+  public CompactionRunner getCompactionRunner()
+  {
+    return compactionRunner;
   }
 
   @Override
@@ -472,144 +465,44 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
   @Override
   public TaskStatus runTask(TaskToolbox toolbox) throws Exception
   {
-
     // emit metric for compact ingestion mode:
     emitCompactIngestionModeMetrics(toolbox.getEmitter(), ioConfig.isDropExisting());
 
-    final List<ParallelIndexIngestionSpec> ingestionSpecs = createIngestionSchema(
+    final Map<Interval, DataSchema> intervalDataSchemas = createDataSchemasForIntervals(
         UTC_CLOCK,
         toolbox,
         getTaskLockHelper().getLockGranularityToUse(),
-        ioConfig,
         segmentProvider,
-        partitionConfigurationManager,
         dimensionsSpec,
         transformSpec,
         metricsSpec,
         granularitySpec,
-        toolbox.getCoordinatorClient(),
-        segmentCacheManagerFactory,
         getMetricBuilder()
     );
-    final List<ParallelIndexSupervisorTask> indexTaskSpecs = IntStream
-        .range(0, ingestionSpecs.size())
-        .mapToObj(i -> {
-          // The ID of SubtaskSpecs is used as the base sequenceName in segment allocation protocol.
-          // The indexing tasks generated by the compaction task should use different sequenceNames
-          // so that they can allocate valid segment IDs with no duplication.
-          ParallelIndexIngestionSpec ingestionSpec = ingestionSpecs.get(i);
-          final String baseSequenceName = createIndexTaskSpecId(i);
-          return newTask(baseSequenceName, ingestionSpec);
-        })
-        .collect(Collectors.toList());
 
-    if (indexTaskSpecs.isEmpty()) {
-      String msg = StringUtils.format(
-          "Can't find segments from inputSpec[%s], nothing to do.",
-          ioConfig.getInputSpec()
-      );
-      log.warn(msg);
-      return TaskStatus.failure(getId(), msg);
-    } else {
-      registerResourceCloserOnAbnormalExit(currentSubTaskHolder);
-      final int totalNumSpecs = indexTaskSpecs.size();
-      log.info("Generated [%d] compaction task specs", totalNumSpecs);
-
-      int failCnt = 0;
-      final TaskReport.ReportMap completionReports = new TaskReport.ReportMap();
-      for (int i = 0; i < indexTaskSpecs.size(); i++) {
-        ParallelIndexSupervisorTask eachSpec = indexTaskSpecs.get(i);
-        final String json = toolbox.getJsonMapper().writerWithDefaultPrettyPrinter().writeValueAsString(eachSpec);
-        if (!currentSubTaskHolder.setTask(eachSpec)) {
-          String errMsg = "Task was asked to stop. Finish as failed.";
-          log.info(errMsg);
-          return TaskStatus.failure(getId(), errMsg);
-        }
-        try {
-          if (eachSpec.isReady(toolbox.getTaskActionClient())) {
-            log.info("Running indexSpec: " + json);
-            final TaskStatus eachResult = eachSpec.run(toolbox);
-            if (!eachResult.isSuccess()) {
-              failCnt++;
-              log.warn("Failed to run indexSpec: [%s].\nTrying the next indexSpec.", json);
-            }
-
-            String reportKeySuffix = "_" + i;
-            Optional.ofNullable(eachSpec.getCompletionReports()).ifPresent(
-                reports -> completionReports.putAll(
-                    CollectionUtils.mapKeys(reports, key -> key + reportKeySuffix)
-                )
-            );
-          } else {
-            failCnt++;
-            log.warn("indexSpec is not ready: [%s].\nTrying the next indexSpec.", json);
-          }
-        }
-        catch (Exception e) {
-          failCnt++;
-          log.warn(e, "Failed to run indexSpec: [%s].\nTrying the next indexSpec.", json);
-        }
-      }
-
-      String msg = StringUtils.format("Ran [%d] specs, [%d] succeeded, [%d] failed",
-                                      totalNumSpecs, totalNumSpecs - failCnt, failCnt
-      );
-
-      toolbox.getTaskReportFileWriter().write(getId(), completionReports);
-      log.info(msg);
-      return failCnt == 0 ? TaskStatus.success(getId()) : TaskStatus.failure(getId(), msg);
+    registerResourceCloserOnAbnormalExit(compactionRunner.getCurrentSubTaskHolder());
+    CompactionConfigValidationResult supportsCompactionConfig = compactionRunner.validateCompactionTask(this);
+    if (!supportsCompactionConfig.isValid()) {
+      throw InvalidInput.exception("Compaction spec not supported. Reason[%s].", supportsCompactionConfig.getReason());
     }
-  }
-
-  @VisibleForTesting
-  ParallelIndexSupervisorTask newTask(String baseSequenceName, ParallelIndexIngestionSpec ingestionSpec)
-  {
-    return new ParallelIndexSupervisorTask(
-        getId(),
-        getGroupId(),
-        getTaskResource(),
-        ingestionSpec,
-        baseSequenceName,
-        createContextForSubtask(),
-        true
-    );
-  }
-
-  @VisibleForTesting
-  Map<String, Object> createContextForSubtask()
-  {
-    final Map<String, Object> newContext = new HashMap<>(getContext());
-    newContext.put(CTX_KEY_APPENDERATOR_TRACKING_TASK_ID, getId());
-    newContext.putIfAbsent(CompactSegments.STORE_COMPACTION_STATE_KEY, STORE_COMPACTION_STATE);
-    // Set the priority of the compaction task.
-    newContext.put(Tasks.PRIORITY_KEY, getPriority());
-    return newContext;
-  }
-
-  private String createIndexTaskSpecId(int i)
-  {
-    return StringUtils.format("%s_%d", getId(), i);
+    return compactionRunner.runCompactionTasks(this, intervalDataSchemas, toolbox);
   }
 
   /**
-   * Generate {@link ParallelIndexIngestionSpec} from input segments.
-   *
-   * @return an empty list if input segments don't exist. Otherwise, a generated ingestionSpec.
+   * Generate dataschema for segments in each interval
+   * @return
+   * @throws IOException
    */
   @VisibleForTesting
-  static List<ParallelIndexIngestionSpec> createIngestionSchema(
+  static Map<Interval, DataSchema> createDataSchemasForIntervals(
       final Clock clock,
       final TaskToolbox toolbox,
       final LockGranularity lockGranularityInUse,
-      final CompactionIOConfig ioConfig,
       final SegmentProvider segmentProvider,
-      final PartitionConfigurationManager partitionConfigurationManager,
       @Nullable final DimensionsSpec dimensionsSpec,
       @Nullable final ClientCompactionTaskTransformSpec transformSpec,
       @Nullable final AggregatorFactory[] metricsSpec,
       @Nullable final ClientCompactionTaskGranularitySpec granularitySpec,
-      final CoordinatorClient coordinatorClient,
-      final SegmentCacheManagerFactory segmentCacheManagerFactory,
       final ServiceMetricEvent.Builder metricBuilder
   ) throws IOException
   {
@@ -619,14 +512,12 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
         lockGranularityInUse
     );
 
-    if (timelineSegments.size() == 0) {
-      return Collections.emptyList();
+    if (timelineSegments.isEmpty()) {
+      return Collections.emptyMap();
     }
 
-    final CompactionTuningConfig compactionTuningConfig = partitionConfigurationManager.computeTuningConfig();
-
     if (granularitySpec == null || granularitySpec.getSegmentGranularity() == null) {
-      final List<ParallelIndexIngestionSpec> specs = new ArrayList<>();
+      Map<Interval, DataSchema> intervalDataSchemaMap = new HashMap<>();
 
       // original granularity
       final Map<Interval, List<DataSegment>> intervalToSegments = new TreeMap<>(
@@ -679,24 +570,9 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
             ? new ClientCompactionTaskGranularitySpec(segmentGranularityToUse, null, null)
             : granularitySpec.withSegmentGranularity(segmentGranularityToUse)
         );
-
-        specs.add(
-            new ParallelIndexIngestionSpec(
-                dataSchema,
-                createIoConfig(
-                    toolbox,
-                    dataSchema,
-                    interval,
-                    coordinatorClient,
-                    segmentCacheManagerFactory,
-                    ioConfig
-                ),
-                compactionTuningConfig
-            )
-        );
+        intervalDataSchemaMap.put(interval, dataSchema);
       }
-
-      return specs;
+      return intervalDataSchemaMap;
     } else {
       // given segment granularity
       final DataSchema dataSchema = createDataSchema(
@@ -720,68 +596,8 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
           metricsSpec,
           granularitySpec
       );
-
-      return Collections.singletonList(
-          new ParallelIndexIngestionSpec(
-              dataSchema,
-              createIoConfig(
-                  toolbox,
-                  dataSchema,
-                  segmentProvider.interval,
-                  coordinatorClient,
-                  segmentCacheManagerFactory,
-                  ioConfig
-              ),
-              compactionTuningConfig
-          )
-      );
+      return Collections.singletonMap(segmentProvider.interval, dataSchema);
     }
-  }
-
-  private static ParallelIndexIOConfig createIoConfig(
-      TaskToolbox toolbox,
-      DataSchema dataSchema,
-      Interval interval,
-      CoordinatorClient coordinatorClient,
-      SegmentCacheManagerFactory segmentCacheManagerFactory,
-      CompactionIOConfig compactionIOConfig
-  )
-  {
-    if (!compactionIOConfig.isAllowNonAlignedInterval()) {
-      // Validate interval alignment.
-      final Granularity segmentGranularity = dataSchema.getGranularitySpec().getSegmentGranularity();
-      final Interval widenedInterval = Intervals.utc(
-          segmentGranularity.bucketStart(interval.getStart()).getMillis(),
-          segmentGranularity.bucketEnd(interval.getEnd().minus(1)).getMillis()
-      );
-
-      if (!interval.equals(widenedInterval)) {
-        throw new IAE(
-            "Interval[%s] to compact is not aligned with segmentGranularity[%s]",
-            interval,
-            segmentGranularity
-        );
-      }
-    }
-
-    return new ParallelIndexIOConfig(
-        null,
-        new DruidInputSource(
-            dataSchema.getDataSource(),
-            interval,
-            null,
-            null,
-            null,
-            null,
-            toolbox.getIndexIO(),
-            coordinatorClient,
-            segmentCacheManagerFactory,
-            toolbox.getConfig()
-        ).withTaskToolbox(toolbox),
-        null,
-        false,
-        compactionIOConfig.isDropExisting()
-    );
   }
 
   private static List<TimelineObjectHolder<String, DataSegment>> retrieveRelevantTimelineHolders(
@@ -1213,35 +1029,6 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     }
   }
 
-  @VisibleForTesting
-  static class PartitionConfigurationManager
-  {
-    @Nullable
-    private final CompactionTuningConfig tuningConfig;
-
-    PartitionConfigurationManager(@Nullable CompactionTuningConfig tuningConfig)
-    {
-      this.tuningConfig = tuningConfig;
-    }
-
-    @Nullable
-    CompactionTuningConfig computeTuningConfig()
-    {
-      CompactionTuningConfig newTuningConfig = tuningConfig == null
-                                               ? CompactionTuningConfig.defaultConfig()
-                                               : tuningConfig;
-      PartitionsSpec partitionsSpec = newTuningConfig.getGivenOrDefaultPartitionsSpec();
-      if (partitionsSpec instanceof DynamicPartitionsSpec) {
-        final DynamicPartitionsSpec dynamicPartitionsSpec = (DynamicPartitionsSpec) partitionsSpec;
-        partitionsSpec = new DynamicPartitionsSpec(
-            dynamicPartitionsSpec.getMaxRowsPerSegment(),
-            dynamicPartitionsSpec.getMaxTotalRowsOr(DynamicPartitionsSpec.DEFAULT_COMPACTION_MAX_TOTAL_ROWS)
-        );
-      }
-      return newTuningConfig.withPartitionsSpec(partitionsSpec);
-    }
-  }
-
   public static class Builder
   {
     private final String dataSource;
@@ -1263,6 +1050,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     private TuningConfig tuningConfig;
     @Nullable
     private Map<String, Object> context;
+    private CompactionRunner compactionRunner;
 
     public Builder(
         String dataSource,
@@ -1345,6 +1133,12 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       return this;
     }
 
+    public Builder compactionRunner(CompactionRunner compactionRunner)
+    {
+      this.compactionRunner = compactionRunner;
+      return this;
+    }
+
     public CompactionTask build()
     {
       return new CompactionTask(
@@ -1362,6 +1156,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
           granularitySpec,
           tuningConfig,
           context,
+          compactionRunner,
           segmentCacheManagerFactory
       );
     }

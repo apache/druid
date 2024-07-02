@@ -2023,6 +2023,7 @@ public class NewestSegmentFirstPolicyTest
         metricsSpec,
         transformSpec,
         null,
+        null,
         null
     );
   }

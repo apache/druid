@@ -712,6 +712,7 @@ public class CompactSegmentsTest
             null,
             null,
             null,
+            null,
             null
         )
     );
@@ -769,6 +770,7 @@ public class CompactSegmentsTest
             null,
             null,
             new UserCompactionTaskIOConfig(true),
+            null,
             null
         )
     );
@@ -813,6 +815,7 @@ public class CompactSegmentsTest
                 null,
                 null
             ),
+            null,
             null,
             null,
             null,
@@ -863,6 +866,7 @@ public class CompactSegmentsTest
                 null
             ),
             new UserCompactionTaskGranularityConfig(Granularities.YEAR, null, null),
+            null,
             null,
             null,
             null,
@@ -927,6 +931,7 @@ public class CompactSegmentsTest
             null,
             null,
             null,
+            null,
             null
         )
     );
@@ -979,6 +984,7 @@ public class CompactSegmentsTest
             null,
             null,
             null,
+            null,
             null
         )
     );
@@ -1024,6 +1030,7 @@ public class CompactSegmentsTest
                 null
             ),
             new UserCompactionTaskGranularityConfig(Granularities.YEAR, null, true),
+            null,
             null,
             null,
             null,
@@ -1081,6 +1088,7 @@ public class CompactSegmentsTest
             null,
             null,
             null,
+            null,
             null
         )
     );
@@ -1133,6 +1141,7 @@ public class CompactSegmentsTest
                 null
             ),
             new UserCompactionTaskGranularityConfig(Granularities.YEAR, null, null),
+            null,
             null,
             null,
             null,
@@ -1252,6 +1261,7 @@ public class CompactSegmentsTest
             null,
             new UserCompactionTaskTransformConfig(new SelectorDimFilter("dim1", "foo", null)),
             null,
+            null,
             null
         )
     );
@@ -1297,6 +1307,7 @@ public class CompactSegmentsTest
                 null,
                 null
             ),
+            null,
             null,
             null,
             null,
@@ -1352,6 +1363,7 @@ public class CompactSegmentsTest
             null,
             null,
             aggregatorFactories,
+            null,
             null,
             null,
             null
@@ -1429,6 +1441,7 @@ public class CompactSegmentsTest
                 null,
                 null
             ),
+            null,
             null,
             null,
             null,
@@ -1520,6 +1533,7 @@ public class CompactSegmentsTest
             null,
             null,
             null,
+            null,
             null
         )
     );
@@ -1577,6 +1591,7 @@ public class CompactSegmentsTest
             new AggregatorFactory[] {new CountAggregatorFactory("cnt")},
             null,
             null,
+            null,
             null
         )
     );
@@ -1624,6 +1639,7 @@ public class CompactSegmentsTest
                 null,
                 null
             ),
+            null,
             null,
             null,
             null,
@@ -1781,7 +1797,8 @@ public class CompactSegmentsTest
                 compactionConfigs,
                 numCompactionTaskSlots == null ? null : 1.0, // 100% when numCompactionTaskSlots is not null
                 numCompactionTaskSlots,
-                useAutoScaleSlots
+                useAutoScaleSlots,
+                null
             )
         )
         .build();
@@ -1937,6 +1954,7 @@ public class CompactSegmentsTest
                   null,
                   null
               ),
+              null,
               null,
               null,
               null,
@@ -2172,7 +2190,7 @@ public class CompactSegmentsTest
       ClientCompactionTaskQueryTuningConfig tuningConfig = Mockito.mock(ClientCompactionTaskQueryTuningConfig.class);
       Mockito.when(tuningConfig.getPartitionsSpec()).thenReturn(Mockito.mock(PartitionsSpec.class));
       Mockito.when(tuningConfig.getMaxNumConcurrentSubTasks()).thenReturn(2);
-      Assert.assertEquals(3, CompactSegments.findMaxNumTaskSlotsUsedByOneCompactionTask(tuningConfig));
+      Assert.assertEquals(3, CompactSegments.findMaxNumTaskSlotsUsedByOneNativeCompactionTask(tuningConfig));
     }
 
     @Test
@@ -2181,7 +2199,7 @@ public class CompactSegmentsTest
       ClientCompactionTaskQueryTuningConfig tuningConfig = Mockito.mock(ClientCompactionTaskQueryTuningConfig.class);
       Mockito.when(tuningConfig.getPartitionsSpec()).thenReturn(Mockito.mock(PartitionsSpec.class));
       Mockito.when(tuningConfig.getMaxNumConcurrentSubTasks()).thenReturn(1);
-      Assert.assertEquals(1, CompactSegments.findMaxNumTaskSlotsUsedByOneCompactionTask(tuningConfig));
+      Assert.assertEquals(1, CompactSegments.findMaxNumTaskSlotsUsedByOneNativeCompactionTask(tuningConfig));
     }
   }
 

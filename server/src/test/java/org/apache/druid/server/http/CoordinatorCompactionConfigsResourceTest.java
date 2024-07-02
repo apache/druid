@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.common.config.ConfigManager;
 import org.apache.druid.common.config.JacksonConfigManager;
+import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.metadata.MetadataStorageConnector;
@@ -62,6 +63,7 @@ public class CoordinatorCompactionConfigsResourceTest
       null,
       null,
       null,
+      null,
       ImmutableMap.of("key", "val")
   );
   private static final DataSourceCompactionConfig NEW_CONFIG = new DataSourceCompactionConfig(
@@ -72,6 +74,7 @@ public class CoordinatorCompactionConfigsResourceTest
       new Period(1800),
       null,
       new UserCompactionTaskGranularityConfig(Granularities.DAY, null, null),
+      null,
       null,
       null,
       null,
@@ -189,6 +192,7 @@ public class CoordinatorCompactionConfigsResourceTest
         null,
         null,
         null,
+        CompactionEngine.NATIVE,
         ImmutableMap.of("key", "val")
     );
     Response result = coordinatorCompactionConfigsResource.addOrUpdateCompactionConfig(
@@ -226,6 +230,7 @@ public class CoordinatorCompactionConfigsResourceTest
         new Period(3600),
         null,
         new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null),
+        null,
         null,
         null,
         null,
@@ -388,6 +393,7 @@ public class CoordinatorCompactionConfigsResourceTest
         null,
         null,
         null,
+        CompactionEngine.MSQ,
         ImmutableMap.of("key", "val")
     );
     String author = "maytas";
