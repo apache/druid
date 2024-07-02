@@ -365,7 +365,12 @@ public class MSQCompactionRunner implements CompactionRunner
 
   private static boolean isGroupBy(DataSchema dataSchema)
   {
-    // rollup=true with no metrics is a no-op.
+    if (dataSchema.getGranularitySpec() != null) {
+      // If rollup is true without any metrics, all columns are treated as dimensions and
+      // duplicate rows are removed in line with native compaction.
+      return dataSchema.getGranularitySpec().isRollup();
+    }
+    // If no rollup specified, decide based on whether metrics are present.
     return dataSchema.getAggregators().length > 0;
   }
 
@@ -379,6 +384,10 @@ public class MSQCompactionRunner implements CompactionRunner
     );
   }
 
+  /**
+   * Creates a virtual timestamp column to create a new __time field according to the provided queryGranularity, as
+   * queryGranularity field itself is mandated to be ALL in MSQControllerTask.
+   */
   private static VirtualColumns getVirtualColumns(DataSchema dataSchema, Interval interval)
   {
     if (isQueryGranularityEmptyOrNone(dataSchema)) {
@@ -388,12 +397,13 @@ public class MSQCompactionRunner implements CompactionRunner
     if (dataSchema.getGranularitySpec()
                   .getQueryGranularity()
                   .equals(Granularities.ALL)) {
+      // For ALL query granularity, all records in a segment are assigned the interval start timestamp of the segment.
+      // It's the same behaviour in native compaction.
       virtualColumnExpr = StringUtils.format("timestamp_parse('%s')", interval.getStart());
-
     } else {
       PeriodGranularity periodQueryGranularity = (PeriodGranularity) dataSchema.getGranularitySpec()
                                                                                .getQueryGranularity();
-      // Need to create a virtual column for time as that's the only way to support query granularity
+      // Round of the __time column according to the required granularity.
       virtualColumnExpr =
           StringUtils.format(
               "timestamp_floor(\"%s\", '%s')",
@@ -429,25 +439,36 @@ public class MSQCompactionRunner implements CompactionRunner
     return builder.build();
   }
 
+  private String serializeGranularity(Granularity granularity, ObjectMapper jsonMapper) throws JsonProcessingException
+  {
+    if (granularity != null) {
+      // AllGranularity by default gets deserialized into {"type": "all"} since there is no custom serialize impl -- as
+      // is there for PeriodGranularity. Not implementing the serializer itself to avoid things breaking elsewhere.
+      return granularity.equals(Granularities.ALL) ? "ALL" : jsonMapper.writeValueAsString(granularity);
+    }
+    return null;
+  }
+
   private Map<String, Object> createMSQTaskContext(CompactionTask compactionTask, DataSchema dataSchema)
       throws JsonProcessingException
   {
     Map<String, Object> context = new HashMap<>(compactionTask.getContext());
     context.put(
         DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY,
-        jsonMapper.writeValueAsString(dataSchema.getGranularitySpec() != null
-                                      ? dataSchema.getGranularitySpec()
-                                                  .getSegmentGranularity()
-                                      : DEFAULT_SEGMENT_GRANULARITY)
+        serializeGranularity(dataSchema.getGranularitySpec() != null
+                             ? dataSchema.getGranularitySpec()
+                                         .getSegmentGranularity()
+                             : DEFAULT_SEGMENT_GRANULARITY, jsonMapper)
     );
     if (!isQueryGranularityEmptyOrNone(dataSchema)) {
       context.put(
           DruidSqlInsert.SQL_INSERT_QUERY_GRANULARITY,
-          jsonMapper.writeValueAsString(dataSchema.getGranularitySpec().getQueryGranularity())
+          serializeGranularity(dataSchema.getGranularitySpec().getQueryGranularity(), jsonMapper)
       );
     }
     // Similar to compaction using the native engine, don't finalize aggregations.
     context.putIfAbsent(MultiStageQueryContext.CTX_FINALIZE_AGGREGATIONS, false);
+    // Only scalar or array-type dimensions are allowed as grouping keys.
     context.putIfAbsent(GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING, false);
     return context;
   }
