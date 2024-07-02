@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.Aggregator;
@@ -134,6 +135,14 @@ public class HyperUniquesAggregatorFactory extends AggregatorFactory
   public VectorAggregator factorizeVector(final VectorColumnSelectorFactory selectorFactory)
   {
     final ColumnCapabilities capabilities = selectorFactory.getColumnCapabilities(fieldName);
+    if (capabilities != null && !Objects.equals(capabilities.toColumnType().getComplexTypeName(), TYPE.getComplexTypeName())
+        && !Objects.equals(capabilities.toColumnType().getComplexTypeName(), PRECOMPUTED_TYPE.getComplexTypeName())) {
+      throw new UOE("Using aggregation type %s is not supported for %s<%s> column. "
+                    + "Use a different aggregator type and run the query again.",
+                    getIntermediateType().getComplexTypeName(),
+                    capabilities.getType(),
+                    capabilities.getComplexTypeName());
+    }
     if (!Types.is(capabilities, ValueType.COMPLEX)) {
       return NoopVectorAggregator.instance();
     } else {

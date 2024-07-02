@@ -53,6 +53,7 @@ import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 public class BuiltinApproxCountDistinctSqlAggregator implements SqlAggregator
 {
@@ -88,13 +89,15 @@ public class BuiltinApproxCountDistinctSqlAggregator implements SqlAggregator
       return null;
     }
 
-    final AggregatorFactory aggregatorFactory;
+    AggregatorFactory aggregatorFactory = null;
     final String aggregatorName = finalizeAggregations ? Calcites.makePrefixedName(name, "a") : name;
 
     if (arg.isDirectColumnAccess()
         && inputAccessor.getInputRowSignature()
             .getColumnType(arg.getDirectColumn())
-            .map(type -> type.is(ValueType.COMPLEX))
+            .map(type -> type.is(ValueType.COMPLEX)
+                         && (Objects.equals(type.getComplexTypeName(), HyperUniquesAggregatorFactory.TYPE.getComplexTypeName()) || Objects.equals(type.getComplexTypeName(), HyperUniquesAggregatorFactory.PRECOMPUTED_TYPE.getComplexTypeName()))
+            )
             .orElse(false)) {
       aggregatorFactory = new HyperUniquesAggregatorFactory(aggregatorName, arg.getDirectColumn(), false, true);
     } else {
@@ -118,12 +121,14 @@ public class BuiltinApproxCountDistinctSqlAggregator implements SqlAggregator
       }
 
       if (inputType.is(ValueType.COMPLEX)) {
-        aggregatorFactory = new HyperUniquesAggregatorFactory(
-            aggregatorName,
-            dimensionSpec.getOutputName(),
-            false,
-            true
-        );
+        if ((Objects.equals(inputType.getComplexTypeName(), HyperUniquesAggregatorFactory.TYPE.getComplexTypeName()) || Objects.equals(inputType.getComplexTypeName(), HyperUniquesAggregatorFactory.PRECOMPUTED_TYPE.getComplexTypeName()))) {
+          aggregatorFactory = new HyperUniquesAggregatorFactory(
+              aggregatorName,
+              dimensionSpec.getOutputName(),
+              false,
+              true
+          );
+        }
       } else {
         aggregatorFactory = new CardinalityAggregatorFactory(
             aggregatorName,
@@ -133,6 +138,11 @@ public class BuiltinApproxCountDistinctSqlAggregator implements SqlAggregator
             true
         );
       }
+    }
+
+    if (aggregatorFactory == null) {
+      plannerContext.setPlanningError("Using APPROX_COUNT_DISTINCT() or enabling approximation with COUNT(DISTINCT) is not supported for %s column. You can disable approximation and use COUNT(DISTINCT %s) and run the query again.", arg.getDruidType(), arg.getSimpleExtraction().getColumn());
+      return null;
     }
 
     return Aggregation.create(
