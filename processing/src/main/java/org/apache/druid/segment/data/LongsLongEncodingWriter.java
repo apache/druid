@@ -22,7 +22,6 @@ package org.apache.druid.segment.data;
 import org.apache.druid.segment.writeout.WriteOutBytes;
 
 import javax.annotation.Nullable;
-
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
@@ -72,6 +71,19 @@ public class LongsLongEncodingWriter implements CompressionFactory.LongEncodingW
       orderBuffer.rewind();
       orderBuffer.putLong(value);
       outStream.write(orderBuffer.array());
+    }
+  }
+
+  @Override
+  public void write(long[] values, int offset, int length) throws IOException
+  {
+    if (outBuffer != null) {
+      outBuffer.asLongBuffer().put(values, offset, length);
+      outBuffer.position(outBuffer.position() + (length * Long.BYTES));
+    } else {
+      for (int i = offset; i < length; ++i) {
+        write(values[i]);
+      }
     }
   }
 

@@ -195,7 +195,7 @@ public class IntArrayColumn implements Column
     @Override
     public FindResult findComplex(int startIndex, int endIndex, Object val)
     {
-      return findDouble(startIndex, endIndex, (int) Numbers.tryParseLong(val, 0));
+      return findInt(startIndex, endIndex, (int) Numbers.tryParseLong(val, 0));
     }
   }
 }
