@@ -489,6 +489,35 @@ public class MetadataResourceTest
     );
   }
 
+  @Test
+  public void testGetBootstrapSegments()
+  {
+    Mockito.doReturn(ImmutableSet.of(segments[0], segments[1])).when(coordinator).getBroadcastSegments();
+
+    Response response = metadataResource.getBootstrapSegments();
+    final List<DataSegment> observedSegments = extractResponseList(response);
+    Assert.assertEquals(2, observedSegments.size());
+  }
+
+  @Test
+  public void testEmptyGetBootstrapSegments()
+  {
+    Mockito.doReturn(ImmutableSet.of()).when(coordinator).getBroadcastSegments();
+
+    Response response = metadataResource.getBootstrapSegments();
+    final List<DataSegment> observedSegments = extractResponseList(response);
+    Assert.assertEquals(0, observedSegments.size());
+  }
+
+  @Test
+  public void testNullGetBootstrapSegments()
+  {
+    Mockito.doReturn(null).when(coordinator).getBroadcastSegments();
+
+    Response response = metadataResource.getBootstrapSegments();
+    Assert.assertEquals(503, response.getStatus());
+  }
+
   private <T> List<T> extractResponseList(Response response)
   {
     return Lists.newArrayList(

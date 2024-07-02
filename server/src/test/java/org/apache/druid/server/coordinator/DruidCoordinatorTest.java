@@ -82,6 +82,7 @@ import org.junit.Test;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
@@ -270,6 +271,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
     coordinator.start();
 
     Assert.assertNull(segmentReplicationStatusManager.getReplicationFactor(dataSegment.getId()));
+    Assert.assertNull(segmentReplicationStatusManager.getBroadcastSegments());
 
     // Wait for this coordinator to become leader
     leaderAnnouncerLatch.await();
@@ -297,6 +299,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         segmentReplicationStatusManager.getDatasourceToUnavailableSegmentCount();
     Assert.assertEquals(1, numsUnavailableUsedSegmentsPerDataSource.size());
     Assert.assertEquals(0, numsUnavailableUsedSegmentsPerDataSource.getInt(dataSource));
+    Assert.assertEquals(0, segmentReplicationStatusManager.getBroadcastSegments().size());
 
     Map<String, Object2LongMap<String>> underReplicationCountsPerDataSourcePerTier =
         segmentReplicationStatusManager.getTierToDatasourceToUnderReplicatedCount(false);
@@ -579,6 +582,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
     coordinatorRunLatch.await();
 
     Assert.assertEquals(ImmutableMap.of(dataSource, 100.0), coordinator.getDatasourceToLoadStatus());
+    Assert.assertEquals(new HashSet<>(dataSegments.values()), segmentReplicationStatusManager.getBroadcastSegments());
 
     // Under-replicated counts are updated only after the next coordinator run
     Map<String, Object2LongMap<String>> underReplicationCountsPerDataSourcePerTier =

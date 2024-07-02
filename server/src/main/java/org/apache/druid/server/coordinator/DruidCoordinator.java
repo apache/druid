@@ -691,6 +691,4 @@ public class DruidCoordinator
       return "DutiesRunnable{group='" + dutyGroupName + '\'' + '}';
     }
   }
-
-
 }

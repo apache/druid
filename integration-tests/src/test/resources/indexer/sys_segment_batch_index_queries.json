@@ -1,7 +1,7 @@
 [
   {
     "query": {
-      "query": "SELECT count(*) FROM sys.segments WHERE datasource LIKE 'wikipedia_index_test%'"
+      "query": "SELECT count(*) FROM sys.segments WHERE datasource LIKE 'sys_segment_wikipedia_index_test%'"
     },
     "expectedResults": [
       {
@@ -24,7 +24,7 @@
   },
   {
     "query": {
-      "query": "SELECT status AS status FROM sys.tasks WHERE datasource LIKE 'wikipedia_index_test%' GROUP BY 1"
+      "query": "SELECT status AS status FROM sys.tasks WHERE datasource LIKE 'sys_segment_wikipedia_index_test%' GROUP BY 1"
     },
     "expectedResults": [
       {

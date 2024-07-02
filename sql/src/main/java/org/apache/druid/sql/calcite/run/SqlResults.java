@@ -114,21 +114,21 @@ public class SqlResults
       }
     } else if (sqlTypeName == SqlTypeName.BIGINT) {
       try {
-        coercedValue = DimensionHandlerUtils.convertObjectToLong(value);
+        coercedValue = DimensionHandlerUtils.convertObjectToLong(value, fieldName);
       }
       catch (Exception e) {
         throw cannotCoerce(value, sqlTypeName, fieldName);
       }
     } else if (sqlTypeName == SqlTypeName.FLOAT) {
       try {
-        coercedValue = DimensionHandlerUtils.convertObjectToFloat(value);
+        coercedValue = DimensionHandlerUtils.convertObjectToFloat(value, fieldName);
       }
       catch (Exception e) {
         throw cannotCoerce(value, sqlTypeName, fieldName);
       }
     } else if (SqlTypeName.FRACTIONAL_TYPES.contains(sqlTypeName)) {
       try {
-        coercedValue = DimensionHandlerUtils.convertObjectToDouble(value);
+        coercedValue = DimensionHandlerUtils.convertObjectToDouble(value, fieldName);
       }
       catch (Exception e) {
         throw cannotCoerce(value, sqlTypeName, fieldName);

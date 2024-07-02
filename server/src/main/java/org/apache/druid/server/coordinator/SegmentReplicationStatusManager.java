@@ -40,6 +40,7 @@ import javax.annotation.Nullable;
 import javax.inject.Inject;
 import java.util.Collections;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Manages information about replication status of segments in a cluster.
@@ -48,6 +49,12 @@ import java.util.Map;
 public class SegmentReplicationStatusManager
 {
   private final MetadataManager metadataManager;
+
+  /**
+   * Set of broadcast segments determined in the latest coordinator run of the {@link RunRules} duty.
+   * This might contain stale information if the Coordinator duties haven't run or are delayed.
+   */
+  private volatile Set<DataSegment> broadcastSegments = null;
 
   /**
    * Used to determine count of under-replicated or unavailable segments.
@@ -66,6 +73,16 @@ public class SegmentReplicationStatusManager
   public SegmentReplicationStatusManager(MetadataManager metadataManager)
   {
     this.metadataManager = metadataManager;
+  }
+
+  /**
+   * @return Set of broadcast segments determined by the latest run of the {@link RunRules} duty.
+   * If the coordinator runs haven't triggered or are delayed, this information may be stale.
+   */
+  @Nullable
+  public Set<DataSegment> getBroadcastSegments()
+  {
+    return broadcastSegments;
   }
 
   public Object2IntMap<String> getDatasourceToUnavailableSegmentCount()
@@ -155,6 +172,7 @@ public class SegmentReplicationStatusManager
     @Override
     public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
     {
+      broadcastSegments = params.getBroadcastSegments();
       segmentReplicationStatus = params.getSegmentReplicationStatus();
 
       // Collect stats for unavailable and under-replicated segments

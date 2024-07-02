@@ -709,7 +709,6 @@ public class ConcurrentReplaceAndStreamingAppendTest extends IngestionTestBase
       Collection<DataSegment> allUsedSegments = dummyTaskActionClient.submit(
           new RetrieveUsedSegmentsAction(
               WIKI,
-              null,
               ImmutableList.of(interval),
               visibility
           )
@@ -829,7 +828,6 @@ public class ConcurrentReplaceAndStreamingAppendTest extends IngestionTestBase
       return dummyTaskActionClient.submit(
           new RetrieveUsedSegmentsAction(
               WIKI,
-              null,
               ImmutableList.of(Intervals.ETERNITY),
               Segments.INCLUDING_OVERSHADOWED
           )
