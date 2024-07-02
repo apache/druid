@@ -23,7 +23,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.base.Strings;
 import org.apache.druid.catalog.model.ModelProperties.PropertyDefn;
 import org.apache.druid.catalog.model.table.DatasourceDefn;
-import org.apache.druid.error.InvalidInput;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -79,7 +78,7 @@ public class CatalogUtils
         granularity = new PeriodGranularity(new Period(value), null, null);
       }
       catch (IllegalArgumentException e2) {
-        throw InvalidInput.exception("[%s] is an invalid granularity string.", value);
+        throw new IAE("[%s] is an invalid granularity string.", value);
       }
     }
 
