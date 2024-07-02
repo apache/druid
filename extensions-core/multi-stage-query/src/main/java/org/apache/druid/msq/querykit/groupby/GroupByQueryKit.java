@@ -185,13 +185,14 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
       );
 
       if (doLimitOrOffset) {
+        final ShuffleSpec finalShuffleSpec = resultShuffleSpecFactory.build(resultClusterBy, false);
         final DefaultLimitSpec limitSpec = (DefaultLimitSpec) queryToRun.getLimitSpec();
         queryDefBuilder.add(
             StageDefinition.builder(firstStageNumber + 2)
                            .inputs(new StageInputSpec(firstStageNumber + 1))
                            .signature(resultSignature)
                            .maxWorkerCount(1)
-                           .shuffleSpec(null) // no shuffling should be required after a limit processor.
+                           .shuffleSpec(finalShuffleSpec)
                            .processorFactory(
                                new OffsetLimitFrameProcessorFactory(
                                    limitSpec.getOffset(),
@@ -224,12 +225,13 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
       );
       if (doLimitOrOffset) {
         final DefaultLimitSpec limitSpec = (DefaultLimitSpec) queryToRun.getLimitSpec();
+        final ShuffleSpec finalShuffleSpec = resultShuffleSpecFactory.build(resultClusterBy, false);
         queryDefBuilder.add(
             StageDefinition.builder(firstStageNumber + 2)
                            .inputs(new StageInputSpec(firstStageNumber + 1))
                            .signature(resultSignature)
                            .maxWorkerCount(1)
-                           .shuffleSpec(null)
+                           .shuffleSpec(finalShuffleSpec)
                            .processorFactory(
                                new OffsetLimitFrameProcessorFactory(
                                    limitSpec.getOffset(),

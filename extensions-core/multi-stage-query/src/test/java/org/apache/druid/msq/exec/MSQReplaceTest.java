@@ -908,6 +908,51 @@ public class MSQReplaceTest extends MSQTestBase
 
   @MethodSource("data")
   @ParameterizedTest(name = "{index}:with context {0}")
+  public void testReplaceOnFoo1WithLimit(String contextName, Map<String, Object> context)
+  {
+    Map<String, Object> queryContext = ImmutableMap.<String, Object>builder()
+                                                   .putAll(context)
+                                                   .put(MultiStageQueryContext.CTX_ROWS_PER_SEGMENT, 2)
+                                                   .build();
+
+    List<Object[]> expectedRows = ImmutableList.of(
+        new Object[]{946684800000L, NullHandling.sqlCompatible() ? "" : null},
+        new Object[]{978307200000L, "1"},
+        new Object[]{946771200000L, "10.1"},
+        new Object[]{946857600000L, "2"}
+    );
+
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("dim1", ColumnType.STRING)
+                                            .build();
+
+    testIngestQuery().setSql(
+                         "REPLACE INTO \"foo1\" OVERWRITE ALL\n"
+                         + "SELECT\n"
+                         + "  \"__time\",\n"
+                         + "  \"dim1\"\n"
+                         + "FROM foo\n"
+                         + "LIMIT 4\n"
+                         + "PARTITIONED BY ALL\n"
+                         + "CLUSTERED BY dim1")
+                     .setExpectedDataSource("foo1")
+                     .setQueryContext(queryContext)
+                     .setExpectedRowSignature(rowSignature)
+                     .setExpectedShardSpec(DimensionRangeShardSpec.class)
+                     .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0), SegmentId.of("foo1", Intervals.ETERNITY, "test", 1)))
+                     .setExpectedResultRows(expectedRows)
+                     .setExpectedMSQSegmentReport(
+                         new MSQSegmentReport(
+                             DimensionRangeShardSpec.class.getSimpleName(),
+                             "Using RangeShardSpec to generate segments."
+                         )
+                     )
+                     .verifyResults();
+  }
+
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
   public void testReplaceTimeChunksLargerThanData(String contextName, Map<String, Object> context)
   {
     RowSignature rowSignature = RowSignature.builder()
