@@ -1148,7 +1148,7 @@ public class SupervisorResourceTest extends EasyMockSupport
     auditManager.doAudit(EasyMock.anyObject());
     EasyMock.expectLastCall().once();
     replayAll();
-    Response response = supervisorResource.setTaskCount(
+    Response response = supervisorResource.updateTaskCount(
         "my-id",
         new SupervisorResource.SetTaskCountRequest(2),
         request

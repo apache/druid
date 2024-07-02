@@ -514,10 +514,10 @@ public class SupervisorResource
   }
 
   @POST
-  @Path("/{id}/setTaskCount")
+  @Path("/{id}/updateTaskCount")
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(SupervisorResourceFilter.class)
-  public Response setTaskCount(
+  public Response updateTaskCount(
       @PathParam("id") final String supervisorId,
       @Nonnull SetTaskCountRequest taskCount,
       @Context final HttpServletRequest req
