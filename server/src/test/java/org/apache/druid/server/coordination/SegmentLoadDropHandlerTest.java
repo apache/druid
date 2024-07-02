@@ -172,7 +172,7 @@ public class SegmentLoadDropHandlerTest
    * </ul>
    */
   @Test
-  public void testSegmentLoading2() throws Exception
+  public void testSegmentLoading2()
   {
     final TestSegmentCacheManager cacheManager = new TestSegmentCacheManager();
     final SegmentManager segmentManager = new SegmentManager(cacheManager);
