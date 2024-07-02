@@ -721,26 +721,7 @@ public class NestedDataOperatorConversions
 
   public static class JsonObjectOperatorConversion implements SqlOperatorConversion
   {
-    private static final String FUNCTION_NAME = "json_object";
-    private static final SqlFunction SQL_FUNCTION = OperatorConversions
-        .operatorBuilder(FUNCTION_NAME)
-        .operandTypeChecker(OperandTypes.variadic(SqlOperandCountRanges.from(1)))
-        .operandTypeInference((callBinding, returnType, operandTypes) -> {
-          RelDataTypeFactory typeFactory = callBinding.getTypeFactory();
-          for (int i = 0; i < operandTypes.length; i++) {
-            if (i % 2 == 0) {
-              operandTypes[i] = typeFactory.createSqlType(SqlTypeName.VARCHAR);
-              continue;
-            }
-            operandTypes[i] = typeFactory.createTypeWithNullability(
-                typeFactory.createSqlType(SqlTypeName.ANY),
-                true
-            );
-          }
-        })
-        .returnTypeInference(NESTED_RETURN_TYPE_INFERENCE)
-        .functionCategory(SqlFunctionCategory.SYSTEM)
-        .build();
+    private static final SqlFunction SQL_FUNCTION = SqlStdOperatorTable.JSON_OBJECT;
 
     @Override
     public SqlOperator calciteOperator()
