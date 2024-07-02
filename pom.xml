@@ -70,6 +70,7 @@
     </scm>
 
     <properties>
+        <python.exec>python3</python.exec>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
         <java.version>8</java.version>
