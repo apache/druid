@@ -77,7 +77,7 @@ public class NoopCoordinatorClient implements CoordinatorClient
   }
 
   @Override
-  public ListenableFuture<List<String>> fetchDataSources()
+  public ListenableFuture<Set<String>> fetchUsedDataSources()
   {
     throw new UnsupportedOperationException();
   }

@@ -73,5 +73,5 @@ public interface CoordinatorClient
   /**
    * Retrieves list of used datasources.
    */
-  ListenableFuture<List<String>> fetchDataSources();
+  ListenableFuture<Set<String>> fetchUsedDataSources();
 }

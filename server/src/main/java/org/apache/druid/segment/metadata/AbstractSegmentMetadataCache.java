@@ -273,7 +273,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
 
               if (isServerViewInitialized &&
                   !wasRecentFailure &&
-                  refreshCondition() &&
+                  shouldRefresh() &&
                   (refreshImmediately || nextRefresh < System.currentTimeMillis())) {
                 // We need to do a refresh. Break out of the waiting loop.
                 break;
@@ -364,11 +364,10 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
     // noop
   }
 
-  public boolean refreshCondition()
+  @SuppressWarnings("GuardedBy")
+  public boolean shouldRefresh()
   {
-    synchronized (lock) {
-      return (!segmentsNeedingRefresh.isEmpty() || !dataSourcesNeedingRebuild.isEmpty());
-    }
+    return (!segmentsNeedingRefresh.isEmpty() || !dataSourcesNeedingRebuild.isEmpty());
   }
 
   public void awaitInitialization() throws InterruptedException

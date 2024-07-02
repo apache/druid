@@ -174,12 +174,13 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
   }
 
   /**
-   * Execute refresh on the broker in each cycle if CentralizedDatasourceSchema is enabled.
+   * Execute refresh on the broker in each cycle if CentralizedDatasourceSchema is enabled
+   * else if there are segments or datasources to be refreshed.
    */
   @Override
-  public boolean refreshCondition()
+  public boolean shouldRefresh()
   {
-    return centralizedDatasourceSchemaConfig.isEnabled();
+    return centralizedDatasourceSchemaConfig.isEnabled() || super.shouldRefresh();
   }
 
   /**
@@ -206,7 +207,7 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
     final Set<String> dataSourcesToQuery = new HashSet<>(segmentMetadataInfo.keySet());
 
     // this is the complete set of datasources polled from the Coordinator
-    final List<String> polledDatasources = queryDataSources();
+    final Set<String> polledDatasources = queryDataSources();
 
     dataSourcesToQuery.addAll(polledDatasources);
 
@@ -274,12 +275,15 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
     // noop, no additional action needed when segment is removed.
   }
 
-  private List<String> queryDataSources()
+  private Set<String> queryDataSources()
   {
-    List<String> dataSources = null;
+    Set<String> dataSources = new HashSet<>();
 
     try {
-      dataSources = FutureUtils.getUnchecked(coordinatorClient.fetchDataSources(), true);
+      Set<String> polled = FutureUtils.getUnchecked(coordinatorClient.fetchUsedDataSources(), true);
+      if (polled != null) {
+        dataSources.addAll(polled);
+      }
     }
     catch (Exception e) {
       log.debug(e, "Failed to query datasources from the Coordinator.");

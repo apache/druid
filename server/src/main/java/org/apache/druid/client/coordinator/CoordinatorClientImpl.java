@@ -190,7 +190,7 @@ public class CoordinatorClientImpl implements CoordinatorClient
   }
 
   @Override
-  public ListenableFuture<List<String>> fetchDataSources()
+  public ListenableFuture<Set<String>> fetchUsedDataSources()
   {
     final String path = "/druid/coordinator/v1/metadata/datasources";
     return FutureUtils.transform(
@@ -198,7 +198,7 @@ public class CoordinatorClientImpl implements CoordinatorClient
             new RequestBuilder(HttpMethod.GET, path),
             new BytesFullResponseHandler()
         ),
-        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), new TypeReference<List<String>>() {})
+        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), new TypeReference<Set<String>>() {})
     );
   }
 }
