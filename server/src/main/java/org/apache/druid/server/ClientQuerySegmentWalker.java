@@ -788,7 +788,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     catch (Exception e) {
       if (startedAccumulating) {
         // If we have opened the resultSequence, we can't fall back safely as the resultSequence might hold some resources
-        // somewhere, due to which we need to surface the exception.
+        // that we release on exception, and we need to throw the exception to disable the 'maxSubqueryBytes' configuration
         throw DruidException.defensive()
                             .build(
                                 e,
