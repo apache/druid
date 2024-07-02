@@ -68,3 +68,17 @@ properties, and the `indexSpec` [`tuningConfig`](../ingestion/ingestion-spec.md#
 - The maximum number of elements in a window cannot exceed a value of 100,000. 
 - To avoid `leafOperators` in MSQ engine, window functions have an extra scan stage after the window stage for cases 
 where native engine has a non-empty `leafOperator`.
+
+## Automatic compaction
+
+<!--This list also exists in data-management/automatic-compaction-->
+
+The following known issues and limitations affect automatic compaction with the MSQ task engine:
+
+- Only range-based partitioning is supported
+- You cannot group or roll up metrics for dimensions 
+- You cannot group on multi-value dimensions
+- The `maxTotalRows` config is not supported. Use `maxRowsPerSegment` instead.
+- `queryGranularity` cannot be set to `all`
+
+

@@ -42,7 +42,6 @@ If a compaction task takes longer than the indexing period, the Coordinator wait
 
 As a best practice, you should set up auto-compaction for all Druid datasources. You can run compaction tasks manually for cases where you want to allocate more system resources. For example, you may choose to run multiple compaction tasks in parallel to compact an existing datasource for the first time. See [Compaction](compaction.md) for additional details and use cases.
 
-
 ## Enable automatic compaction
 
 You can enable automatic compaction for a datasource using the web console or programmatically via an API.
@@ -104,7 +103,8 @@ The automatic compaction system uses the following syntax:
     "granularitySpec": <compaction task granularitySpec>,
     "skipOffsetFromLatest": <time period to avoid compaction>,
     "taskPriority": <compaction task priority>,
-    "taskContext": <task context>
+    "taskContext": <task context>,
+    "engine": <native|msq>
 }
 ```
 
@@ -130,6 +130,49 @@ maximize performance and minimize disk usage of the `compact` tasks launched by 
 - `metricsSpec`
 
 For more details on each of the specs in an auto-compaction configuration, see [Automatic compaction dynamic configuration](../configuration/index.md#automatic-compaction-dynamic-configuration).
+
+### Compaction engine
+
+When you configure automatic compaction, you can specify whether Druid uses the native engine or the multi-stage query (MSQ) task engine to perform the compaction.  The native engine was the only engine available for compaction prior to the introduction of the MSQ task engine and the corresponding `engine` context parameter. For more information about the MSQ task engine, see [MSQ task engine concepts](../multi-stage-query/concepts.md).
+
+To use the native compaction engine, either omit the `engine` config when submitting your compaction task spec or set it to `native`.
+
+To use the MSQ task engine for automatic compaction, do the following:
+
+* Have the [MSQ  task engine extension loaded](../multi-stage-query/index.md#load-the-extension)
+* In the compaction task spec for a datasource, set `compactionConfigs.engine` to `msq`. The default is `native`.
+* Have at least two compaction task slots available or set `compactionConfig.taskContext.maxNumTasks` to two or more. The MSQ task engine requires at least two tasks to run, one controller task and one worker task.
+
+Using the MSQ task engine for compaction provides faster compaction times as well as better memory tuning and usage.
+
+Keep the following limitations in mind MSQ task engine for auto-compaction:
+
+- Only range-based partitioning is supported
+- You cannot group or roll up metrics for dimensions 
+- You cannot group on multi-value dimensions
+- The `maxTotalRows` config is not supported. Use `maxRowsPerSegment` instead.
+- `queryGranularity` cannot be set to `all`
+
+#### MSQ task engine context parameters
+
+You can use [MSQ task engine context parameters](../multi-stage-query/) in `compactionConfig.taskContext` when configuring your datasource for automatic compaction, such as `compactionConfig.taskContext.maxNumTasks`. Some of the MSQ task engine context parameters overlap with automatic compaction parameters. When these settings overlap, set one or the other.
+
+The following list has the MSQ task engine context parameter first with the native context parameter in parenthesis:
+
+- `context.priority` (`taskPriority`)
+- `context.rowsPerSegment` (`tuningConfig.targetRowsPerSegment`)
+- `context.priority` (`taskContext.priority`)
+- `context.storeCompactionState` (`taskContext.storeCompactionState`)
+- `sqlQueryContext.sqlInsertSegmentGranularity` (`granularitySpec.segmentGranularity`)
+- `spec.query.dataSource` or `dataSource` (`dataSource`)
+- `spec.tuningConfig.indexSpec` (`tuningConfig.indexSpec`)
+- `spec.query.orederBy` (`tuningConfig.indexSpec`)
+- `spec.query.granularity` (`granularitySpec.queryGranularity`)
+- `spec.query.dimensions` (`dimensionsSpec`)
+- `spec.query.filter` (`transformSpec.filter`)
+- `spec.query.aggregations` (`metricsSpec`)
+
+
 
 ### Set frequency of compaction runs
 
