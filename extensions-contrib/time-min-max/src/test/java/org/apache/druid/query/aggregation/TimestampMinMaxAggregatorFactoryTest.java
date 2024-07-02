@@ -36,6 +36,10 @@ import org.junit.Test;
 
 public class TimestampMinMaxAggregatorFactoryTest
 {
+  {
+    TimestampMinMaxModule.registerSerde();
+  }
+
   private static final ObjectMapper JSON_MAPPER = TestHelper.makeJsonMapper();
 
   @Test
@@ -73,49 +77,48 @@ public class TimestampMinMaxAggregatorFactoryTest
   public void testEqualsAndHashcode()
   {
     EqualsVerifier.forClass(TimestampMinAggregatorFactory.class)
-                  .withNonnullFields("name", "comparator", "initValue")
-                  .withIgnoredFields("timestampSpec")
-                  .usingGetClass()
-                  .verify();
+        .withNonnullFields("name", "comparator", "initValue")
+        .withIgnoredFields("timestampSpec")
+        .usingGetClass()
+        .verify();
     EqualsVerifier.forClass(TimestampMaxAggregatorFactory.class)
-                  .withNonnullFields("name", "comparator", "initValue")
-                  .withIgnoredFields("timestampSpec")
-                  .usingGetClass()
-                  .verify();
+        .withNonnullFields("name", "comparator", "initValue")
+        .withIgnoredFields("timestampSpec")
+        .usingGetClass()
+        .verify();
   }
 
   @Test
   public void testResultArraySignature()
   {
-    final TimeseriesQuery query =
-        Druids.newTimeseriesQueryBuilder()
-              .dataSource("dummy")
-              .intervals("2000/3000")
-              .granularity(Granularities.HOUR)
-              .aggregators(
-                  new CountAggregatorFactory("count"),
-                  new TimestampMaxAggregatorFactory("timeMax", "__time", null),
-                  new TimestampMinAggregatorFactory("timeMin", "__time", null)
-              )
-              .postAggregators(
-                  new FieldAccessPostAggregator("timeMax-access", "timeMax"),
-                  new FinalizingFieldAccessPostAggregator("timeMax-finalize", "timeMax"),
-                  new FieldAccessPostAggregator("timeMin-access", "timeMin"),
-                  new FinalizingFieldAccessPostAggregator("timeMin-finalize", "timeMin")
-              )
-              .build();
+    final TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+        .dataSource("dummy")
+        .intervals("2000/3000")
+        .granularity(Granularities.HOUR)
+        .aggregators(
+            new CountAggregatorFactory("count"),
+            new TimestampMaxAggregatorFactory("timeMax", "__time", null),
+            new TimestampMinAggregatorFactory("timeMin", "__time", null)
+        )
+        .postAggregators(
+            new FieldAccessPostAggregator("timeMax-access", "timeMax"),
+            new FinalizingFieldAccessPostAggregator("timeMax-finalize", "timeMax"),
+            new FieldAccessPostAggregator("timeMin-access", "timeMin"),
+            new FinalizingFieldAccessPostAggregator("timeMin-finalize", "timeMin")
+        )
+        .build();
 
     Assert.assertEquals(
         RowSignature.builder()
-                    .addTimeColumn()
-                    .add("count", ColumnType.LONG)
-                    .add("timeMax", null)
-                    .add("timeMin", null)
-                    .add("timeMax-access", ColumnType.LONG)
-                    .add("timeMax-finalize", TimestampAggregatorFactory.FINALIZED_TYPE)
-                    .add("timeMin-access", ColumnType.LONG)
-                    .add("timeMin-finalize", TimestampAggregatorFactory.FINALIZED_TYPE)
-                    .build(),
+            .addTimeColumn()
+            .add("count", ColumnType.LONG)
+            .add("timeMax", null)
+            .add("timeMin", null)
+            .add("timeMax-access", ColumnType.LONG)
+            .add("timeMax-finalize", TimestampAggregatorFactory.FINALIZED_TYPE)
+            .add("timeMin-access", ColumnType.LONG)
+            .add("timeMin-finalize", TimestampAggregatorFactory.FINALIZED_TYPE)
+            .build(),
         new TimeseriesQueryQueryToolChest().resultArraySignature(query)
     );
   }

@@ -22,11 +22,14 @@ package org.apache.druid.query.aggregation;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.druid.segment.column.ColumnType;
 
 import java.util.Arrays;
 
 public class HistogramVisual
 {
+  public static final ColumnType TYPE = ColumnType.ofComplex("histogramVisual");
+
   @JsonProperty public final double[] breaks;
   @JsonProperty
   public final double[] counts;

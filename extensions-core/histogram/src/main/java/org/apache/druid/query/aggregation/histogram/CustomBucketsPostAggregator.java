@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.collect.Sets;
 import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.query.aggregation.HistogramAggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.PostAggregatorIds;
 import org.apache.druid.query.cache.CacheKeyBuilder;
@@ -71,7 +70,7 @@ public class CustomBucketsPostAggregator extends ApproximateHistogramPostAggrega
   @Override
   public ColumnType getType(ColumnInspector signature)
   {
-    return HistogramAggregatorFactory.TYPE;
+    return Histogram.TYPE;
   }
 
   @Override

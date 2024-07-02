@@ -1,0 +1,117 @@
+!use druidtest:///
+!set outputformat mysql
+
+# relates to issue: https://github.com/apache/druid/issues/16554
+
+select dim1,e
+from (SELECT dim1, EARLIEST(f1) e FROM druid.numfoo GROUP BY 1 ORDER BY 2 LIMIT 10) t
+order by 1 limit 2;
++------+-----+
+| dim1 | e   |
++------+-----+
+|      | 1.0 |
+| 1    |     |
++------+-----+
+(2 rows)
+
+!ok
+
+LogicalSort(sort0=[$0], dir0=[ASC], fetch=[2])
+  LogicalSort(sort0=[$1], dir0=[ASC], fetch=[10])
+    LogicalAggregate(group=[{0}], e=[EARLIEST_BY($1, $2)])
+      LogicalProject(dim1=[$1], f1=[$9], __time=[$0])
+        LogicalTableScan(table=[[druid, numfoo]])
+
+!druidPlan
+
+{
+  "queryType" : "windowOperator",
+  "dataSource" : {
+    "type" : "query",
+    "query" : {
+      "queryType" : "topN",
+      "dataSource" : {
+        "type" : "table",
+        "name" : "numfoo"
+      },
+      "dimension" : {
+        "type" : "default",
+        "dimension" : "dim1",
+        "outputName" : "_d0",
+        "outputType" : "STRING"
+      },
+      "metric" : {
+        "type" : "inverted",
+        "metric" : {
+          "type" : "numeric",
+          "metric" : "a0"
+        }
+      },
+      "threshold" : 10,
+      "intervals" : {
+        "type" : "intervals",
+        "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      },
+      "granularity" : {
+        "type" : "all"
+      },
+      "aggregations" : [ {
+        "type" : "floatFirst",
+        "name" : "a0:a",
+        "fieldName" : "f1",
+        "timeColumn" : "__time"
+      } ],
+      "postAggregations" : [ {
+        "type" : "finalizingFieldAccess",
+        "name" : "a0",
+        "fieldName" : "a0:a"
+      } ]
+    }
+  },
+  "intervals" : {
+    "type" : "LegacySegmentSpec",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "outputSignature" : [ {
+    "name" : "_d0",
+    "type" : "STRING"
+  }, {
+    "name" : "a0",
+    "type" : "FLOAT"
+  } ],
+  "operatorDefinition" : [ {
+    "type" : "naiveSort",
+    "columns" : [ {
+      "column" : "_d0",
+      "direction" : "ASC"
+    } ]
+  }, {
+    "type" : "scan",
+    "timeRange" : null,
+    "filter" : null,
+    "offsetLimit" : {
+      "offset" : 0,
+      "limit" : 2
+    },
+    "projectedColumns" : null,
+    "virtualColumns" : null,
+    "ordering" : null
+  } ],
+  "leafOperators" : [ {
+    "type" : "scan",
+    "timeRange" : null,
+    "filter" : null,
+    "offsetLimit" : {
+      "offset" : 0,
+      "limit" : 9223372036854775807
+    },
+    "projectedColumns" : [ "_d0", "a0" ],
+    "virtualColumns" : null,
+    "ordering" : null
+  } ],
+  "granularity" : {
+    "type" : "all"
+  }
+}
+!nativePlan
+

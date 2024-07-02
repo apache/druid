@@ -22,12 +22,14 @@ package org.apache.druid.query.aggregation.post;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Sets;
+import org.apache.commons.collections.comparators.NullComparator;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.ColumnTypeFactory;
 
 import javax.annotation.Nullable;
 import java.util.Comparator;
@@ -120,12 +122,11 @@ public class FinalizingFieldAccessPostAggregator implements PostAggregator
     final ColumnType finalizedType;
 
     if (aggregators != null && aggregators.containsKey(fieldName)) {
-      //noinspection unchecked
-      theComparator = aggregators.get(fieldName).getComparator();
       theFinalizer = aggregators.get(fieldName)::finalizeComputation;
       finalizedType = aggregators.get(fieldName).getResultType();
+      theComparator = new NullComparator(ColumnTypeFactory.getInstance().getTypeStrategy(finalizedType));
     } else {
-      //noinspection unchecked
+      // noinspection unchecked
       theComparator = (Comparator) Comparators.naturalNullsFirst();
       theFinalizer = Function.identity();
       finalizedType = null;
