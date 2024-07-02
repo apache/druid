@@ -27,6 +27,9 @@ import org.apache.druid.query.rowsandcols.column.IntArrayColumn;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Collections;
+import java.util.List;
+
 public class WindowProcessorOperatorTest
 {
   @Test
@@ -52,6 +55,12 @@ public class WindowProcessorOperatorTest
           public boolean validateEquivalent(Processor otherProcessor)
           {
             return true;
+          }
+
+          @Override
+          public List<String> getOutputColumnNames()
+          {
+            return Collections.emptyList();
           }
         },
         InlineScanOperator.make(rac)

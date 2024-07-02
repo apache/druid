@@ -28,11 +28,19 @@ import org.apache.druid.query.rowsandcols.column.IntArrayColumn;
 import org.apache.druid.query.rowsandcols.semantic.AppendableRowsAndColumns;
 
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
 public class WindowPercentileProcessor implements Processor
 {
   private final int numBuckets;
   private final String outputColumn;
+
+  @Override
+  public List<String> getOutputColumnNames()
+  {
+    return Collections.singletonList(outputColumn);
+  }
 
   @JsonCreator
   public WindowPercentileProcessor(

@@ -23,6 +23,9 @@ import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Collections;
+import java.util.List;
+
 public class ComposingProcessorTest
 {
   @Test
@@ -69,6 +72,12 @@ public class ComposingProcessorTest
     {
       ++validateCounter;
       return validationResult;
+    }
+
+    @Override
+    public List<String> getOutputColumnNames()
+    {
+      return Collections.emptyList();
     }
   }
 }

@@ -19,64 +19,15 @@
 
 package org.apache.druid.sql.calcite;
 
-import com.google.common.base.Function;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.io.ByteStreams;
-import com.google.inject.Injector;
-import org.apache.calcite.sql.SqlNode;
-import org.apache.calcite.sql2rel.SqlToRelConverter;
-import org.apache.commons.io.FileUtils;
-import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.java.util.common.Numbers;
-import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.parsers.TimestampParser;
-import org.apache.druid.query.QueryContexts;
-import org.apache.druid.query.QueryRunnerFactoryConglomerate;
-import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.join.JoinableFactoryWrapper;
-import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
-import org.apache.druid.sql.calcite.DisableUnless.DisableUnlessRule;
-import org.apache.druid.sql.calcite.DrillWindowQueryTest.DrillComponentSupplier;
 import org.apache.druid.sql.calcite.NotYetSupported.Modes;
-import org.apache.druid.sql.calcite.NotYetSupported.NotYetSupportedProcessor;
-import org.apache.druid.sql.calcite.QueryTestRunner.QueryResults;
-import org.apache.druid.sql.calcite.planner.PlannerCaptureHook;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
-import org.apache.druid.sql.calcite.util.TestDataBuilder;
-import org.joda.time.DateTime;
-import org.joda.time.LocalTime;
-import org.junit.Assert;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.BeforeEachCallback;
-import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.lang.reflect.Method;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Locale;
-import java.util.Set;
-import java.util.stream.Collectors;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.fail;
 
 /**
  * These test cases are borrowed from the drill-test-framework at
@@ -92,58 +43,20 @@ import static org.junit.Assert.fail;
  * so it is believed that most iteration on tests will happen through the
  * CalciteWindowQueryTest instead of this class.
  */
-@SqlTestFrameworkConfig.ComponentSupplier(DrillComponentSupplier.class)
-public class DrillWindowQueryTest extends BaseCalciteQueryTest
+public class DrillWindowQueryTest extends WindowQueryTestBase
 {
-  static {
-    NullHandling.initializeForTests();
+  @RegisterExtension
+  private final DrillTestCaseLoaderRule drillTestCaseRule = new DrillTestCaseLoaderRule();
+
+  public DrillWindowQueryTest()
+  {
+    this.testCaseLoaderRule = new DrillTestCaseLoaderRule();
   }
 
-  @RegisterExtension
-  public DisableUnlessRule disableWhenNonSqlCompat = DisableUnless.SQL_COMPATIBLE;
-
-  @RegisterExtension
-  public NotYetSupportedProcessor ignoreProcessor = new NotYetSupportedProcessor();
-
-  @RegisterExtension
-  public DrillTestCaseLoaderRule drillTestCaseRule = new DrillTestCaseLoaderRule();
-
-  @Test
-  public void ensureAllDeclared() throws Exception
+  @Override
+  protected WindowTestCase getCurrentTestCase()
   {
-    final URL windowQueriesUrl = ClassLoader.getSystemResource("drill/window/queries/");
-    Path windowFolder = new File(windowQueriesUrl.toURI()).toPath();
-
-    Set<String> allCases = FileUtils
-        .streamFiles(windowFolder.toFile(), true, "q")
-        .map(file -> {
-          return windowFolder.relativize(file.toPath()).toString();
-        })
-        .sorted().collect(Collectors.toSet());
-
-    for (Method method : DrillWindowQueryTest.class.getDeclaredMethods()) {
-      DrillTest ann = method.getAnnotation(DrillTest.class);
-      if (method.getAnnotation(Test.class) == null || ann == null) {
-        continue;
-      }
-      if (allCases.remove(ann.value() + ".q")) {
-        continue;
-      }
-      fail(String.format(Locale.ENGLISH, "Testcase [%s] references invalid file [%s].", method.getName(), ann.value()));
-    }
-
-    for (String string : allCases) {
-      string = string.substring(0, string.lastIndexOf('.'));
-      System.out.printf(Locale.ENGLISH, "@%s( \"%s\" )\n"
-          + "@Test\n"
-          + "public void test_%s() {\n"
-          + "    windowQueryTest();\n"
-          + "}\n",
-          DrillTest.class.getSimpleName(),
-          string,
-          string.replace('/', '_'));
-    }
-    assertEquals("Found some non-declared testcases; please add the new testcases printed to the console!", 0, allCases.size());
+    return drillTestCaseRule.testCase;
   }
 
   @Retention(RetentionPolicy.RUNTIME)
@@ -156,254 +69,29 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     String value();
   }
 
-  static class DrillTestCaseLoaderRule implements BeforeEachCallback
+  private static class DrillTestCaseLoaderRule extends TestCaseLoaderRule
   {
-    public DrillTestCase testCase = null;
-
     @Override
-    public void beforeEach(ExtensionContext context)
+    protected WindowTestCase loadTestCase(Method method)
     {
-      Method method = context.getTestMethod().get();
       DrillTest annotation = method.getAnnotation(DrillTest.class);
-      testCase = (annotation == null) ? null : new DrillTestCase(annotation.value());
+      return (annotation == null) ? null : new DrillTestCase(annotation.value());
     }
   }
 
-  static class DrillTestCase
+  static class DrillTestCase extends WindowTestCase
   {
-    private final String query;
-    private final List<String[]> results;
-    private String filename;
-
     public DrillTestCase(String filename)
     {
-      try {
-        this.filename = filename;
-        this.query = readStringFromResource(".q");
-        String resultsStr = readStringFromResource(".e");
-        String[] lines = resultsStr.split("\n");
-        results = new ArrayList<>();
-        if (resultsStr.length() > 0) {
-          for (String string : lines) {
-            String[] cols = string.split("\t");
-            results.add(cols);
-          }
-        }
-      }
-      catch (Exception e) {
-        throw new RuntimeException(
-            String.format(Locale.ENGLISH, "Encountered exception while loading testcase [%s]", filename),
-            e);
-      }
-    }
-
-    @Nonnull
-    private String getQueryString()
-    {
-      return query;
-    }
-
-    @Nonnull
-    private List<String[]> getExpectedResults()
-    {
-      return results;
-    }
-
-    @Nonnull
-    private String readStringFromResource(String s) throws IOException
-    {
-      final String query;
-      try (InputStream queryIn = ClassLoader.getSystemResourceAsStream("drill/window/queries/" + filename + s)) {
-        query = new String(ByteStreams.toByteArray(queryIn), StandardCharsets.UTF_8);
-      }
-      return query;
+      super(filename, "drill/window/queries/");
     }
   }
 
-  protected static class DrillComponentSupplier extends StandardComponentSupplier
+  @Test
+  public void ensureAllDeclared() throws Exception
   {
-    public DrillComponentSupplier(TempDirProducer tempFolderProducer)
-    {
-      super(tempFolderProducer);
-    }
-
-    @Override
-    public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
-        QueryRunnerFactoryConglomerate conglomerate,
-        JoinableFactoryWrapper joinableFactory,
-        Injector injector
-    )
-    {
-      final SpecificSegmentsQuerySegmentWalker retVal = super.createQuerySegmentWalker(
-          conglomerate,
-          joinableFactory,
-          injector);
-
-      final File tmpFolder = tempDirProducer.newTempFolder();
-      TestDataBuilder.attachIndexesForDrillTestDatasources(retVal, tmpFolder);
-      return retVal;
-    }
+    super.ensureAllDeclared("drill/window/queries/", DrillWindowQueryTest.class, DrillTest.class);
   }
-
-  public class TextualResultsVerifier implements ResultsVerifier
-  {
-    protected final List<String[]> expectedResultsText;
-    @Nullable
-    protected final RowSignature expectedResultRowSignature;
-    private RowSignature currentRowSignature;
-
-    public TextualResultsVerifier(List<String[]> expectedResultsString, RowSignature expectedSignature)
-    {
-      this.expectedResultsText = expectedResultsString;
-      this.expectedResultRowSignature = expectedSignature;
-    }
-
-    @Override
-    public void verifyRowSignature(RowSignature rowSignature)
-    {
-      if (expectedResultRowSignature != null) {
-        Assert.assertEquals(expectedResultRowSignature, rowSignature);
-      }
-      currentRowSignature = rowSignature;
-    }
-
-    @Override
-    public void verify(String sql, QueryResults queryResults)
-    {
-      List<Object[]> results = queryResults.results;
-      List<Object[]> expectedResults = parseResults(currentRowSignature, expectedResultsText);
-      try {
-        Assert.assertEquals(StringUtils.format("result count: %s", sql), expectedResultsText.size(), results.size());
-        if (!isOrdered(queryResults)) {
-          // in case the resultset is not ordered; order via the same comparator before comparison
-          results.sort(new ArrayRowCmp());
-          expectedResults.sort(new ArrayRowCmp());
-        }
-        assertResultsValid(ResultMatchMode.EQUALS_RELATIVE_1000_ULPS, expectedResults, queryResults);
-      }
-      catch (AssertionError e) {
-        log.info("query: %s", sql);
-        log.info(resultsToString("Expected", expectedResults));
-        log.info(resultsToString("Actual", results));
-        throw new AssertionError(StringUtils.format("%s while processing: %s", e.getMessage(), sql), e);
-      }
-    }
-
-    private boolean isOrdered(QueryResults queryResults)
-    {
-      SqlNode sqlNode = queryResults.capture.getSqlNode();
-      return SqlToRelConverter.isOrdered(sqlNode);
-    }
-  }
-
-  static class ArrayRowCmp implements Comparator<Object[]>
-  {
-    @Override
-    public int compare(Object[] arg0, Object[] arg1)
-    {
-      String s0 = Arrays.toString(arg0);
-      String s1 = Arrays.toString(arg1);
-      return s0.compareTo(s1);
-    }
-  }
-
-  private static List<Object[]> parseResults(RowSignature rs, List<String[]> results)
-  {
-    List<Object[]> ret = new ArrayList<>();
-    for (String[] row : results) {
-      Object[] newRow = new Object[row.length];
-      List<String> cc = rs.getColumnNames();
-      for (int i = 0; i < cc.size(); i++) {
-        ColumnType type = rs.getColumnType(i).get();
-        assertNull(type.getComplexTypeName());
-        final String val = row[i];
-        Object newVal;
-        if ("null".equals(val)) {
-          newVal = null;
-        } else {
-          switch (type.getType()) {
-            case STRING:
-              newVal = val;
-              break;
-            case LONG:
-              newVal = parseLongValue(val);
-              break;
-            case DOUBLE:
-              newVal = Numbers.parseDoubleObject(val);
-              break;
-            default:
-              throw new RuntimeException("unimplemented");
-          }
-        }
-        newRow[i] = newVal;
-      }
-      ret.add(newRow);
-    }
-    return ret;
-  }
-
-  private static Object parseLongValue(final String val)
-  {
-    if ("".equals(val)) {
-      return null;
-    }
-    try {
-      return Long.parseLong(val);
-    }
-    catch (NumberFormatException e) {
-    }
-    try {
-      double d = Double.parseDouble(val);
-      return (long) d;
-    }
-    catch (NumberFormatException e) {
-    }
-    try {
-      LocalTime v = LocalTime.parse(val);
-      Long l = (long) v.getMillisOfDay();
-      return l;
-    }
-    catch (Exception e) {
-    }
-    Function<String, DateTime> parser = TimestampParser.createTimestampParser("auto");
-    try {
-      DateTime v = parser.apply(val);
-      return v.getMillis();
-    }
-    catch (IllegalArgumentException iae) {
-    }
-    throw new RuntimeException("Can't parse input!");
-  }
-
-  public void windowQueryTest()
-  {
-    Thread thread = null;
-    String oldName = null;
-    try {
-      thread = Thread.currentThread();
-      oldName = thread.getName();
-      DrillTestCase testCase = drillTestCaseRule.testCase;
-      thread.setName("drillWindowQuery-" + testCase.filename);
-
-      testBuilder()
-          .skipVectorize(true)
-          .queryContext(ImmutableMap.of(
-                            PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
-                            PlannerCaptureHook.NEED_CAPTURE_HOOK, true,
-                            QueryContexts.ENABLE_DEBUG, true
-                        )
-          )
-          .sql(testCase.getQueryString())
-          .expectedResults(new TextualResultsVerifier(testCase.getExpectedResults(), null))
-          .run();
-    }
-    finally {
-      if (thread != null && oldName != null) {
-        thread.setName(oldName);
-      }
-    }
-  }
-
 
   // testcases_start
   @DrillTest("aggregates/aggOWnFn_11")
