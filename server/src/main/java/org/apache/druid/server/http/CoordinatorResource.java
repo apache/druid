@@ -25,6 +25,7 @@ import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.server.coordinator.DruidCoordinator;
+import org.apache.druid.server.coordinator.SegmentReplicationStatusManager;
 import org.apache.druid.server.http.security.StateResourceFilter;
 import org.apache.druid.timeline.DataSegment;
 
@@ -43,11 +44,13 @@ import java.util.Map;
 public class CoordinatorResource
 {
   private final DruidCoordinator coordinator;
+  private final SegmentReplicationStatusManager replicationStatusManager;
 
   @Inject
-  public CoordinatorResource(DruidCoordinator coordinator)
+  public CoordinatorResource(DruidCoordinator coordinator, SegmentReplicationStatusManager replicationStatusManager)
   {
     this.coordinator = coordinator;
+    this.replicationStatusManager = replicationStatusManager;
   }
 
   @GET
@@ -87,12 +90,12 @@ public class CoordinatorResource
   )
   {
     if (simple != null) {
-      return Response.ok(coordinator.getDatasourceToUnavailableSegmentCount()).build();
+      return Response.ok(replicationStatusManager.getDatasourceToUnavailableSegmentCount()).build();
     }
 
     if (full != null) {
       return Response.ok(
-          coordinator.getTierToDatasourceToUnderReplicatedCount(computeUsingClusterView != null)
+          replicationStatusManager.getTierToDatasourceToUnderReplicatedCount(computeUsingClusterView != null)
       ).build();
     }
     return Response.ok(coordinator.getDatasourceToLoadStatus()).build();

@@ -75,4 +75,10 @@ public class NoopCoordinatorClient implements CoordinatorClient
     // Ignore retryPolicy for the test client.
     return this;
   }
+
+  @Override
+  public ListenableFuture<List<String>> fetchDataSources()
+  {
+    throw new UnsupportedOperationException();
+  }
 }

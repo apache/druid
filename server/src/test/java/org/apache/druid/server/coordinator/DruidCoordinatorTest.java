@@ -98,6 +98,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
   private static final long COORDINATOR_PERIOD = 100;
 
   private DruidCoordinator coordinator;
+  private SegmentReplicationStatusManager segmentReplicationStatusManager;
   private SegmentsMetadataManager segmentsMetadataManager;
   private DataSourcesSnapshot dataSourcesSnapshot;
 
@@ -175,6 +176,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
     scheduledExecutorFactory = ScheduledExecutors::fixed;
     leaderAnnouncerLatch = new CountDownLatch(1);
     leaderUnannouncerLatch = new CountDownLatch(1);
+    MetadataManager metadataManager = createMetadataManager(configManager);
+    segmentReplicationStatusManager = new SegmentReplicationStatusManager(metadataManager);
     coordinator = new DruidCoordinator(
         druidCoordinatorConfig,
         createMetadataManager(configManager),
@@ -191,7 +194,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
         new TestDruidLeaderSelector(),
         null,
         null,
-        CentralizedDatasourceSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig.create(),
+        segmentReplicationStatusManager
     );
   }
 
@@ -266,8 +270,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
 
     coordinator.start();
 
-    Assert.assertNull(coordinator.getReplicationFactor(dataSegment.getId()));
-    Assert.assertNull(coordinator.getBroadcastSegments());
+    Assert.assertNull(segmentReplicationStatusManager.getReplicationFactor(dataSegment.getId()));
+    Assert.assertNull(segmentReplicationStatusManager.getBroadcastSegments());
 
     // Wait for this coordinator to become leader
     leaderAnnouncerLatch.await();
@@ -292,13 +296,13 @@ public class DruidCoordinatorTest extends CuratorTestBase
     Assert.assertEquals(ImmutableMap.of(dataSource, 100.0), coordinator.getDatasourceToLoadStatus());
 
     Object2IntMap<String> numsUnavailableUsedSegmentsPerDataSource =
-        coordinator.getDatasourceToUnavailableSegmentCount();
+        segmentReplicationStatusManager.getDatasourceToUnavailableSegmentCount();
     Assert.assertEquals(1, numsUnavailableUsedSegmentsPerDataSource.size());
     Assert.assertEquals(0, numsUnavailableUsedSegmentsPerDataSource.getInt(dataSource));
-    Assert.assertEquals(0, coordinator.getBroadcastSegments().size());
+    Assert.assertEquals(0, segmentReplicationStatusManager.getBroadcastSegments().size());
 
     Map<String, Object2LongMap<String>> underReplicationCountsPerDataSourcePerTier =
-        coordinator.getTierToDatasourceToUnderReplicatedCount(false);
+        segmentReplicationStatusManager.getTierToDatasourceToUnderReplicatedCount(false);
     Assert.assertNotNull(underReplicationCountsPerDataSourcePerTier);
     Assert.assertEquals(1, underReplicationCountsPerDataSourcePerTier.size());
 
@@ -312,7 +316,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
     Assert.assertEquals(1L, underRepliicationCountsPerDataSource.getLong(dataSource));
 
     Map<String, Object2LongMap<String>> underReplicationCountsPerDataSourcePerTierUsingClusterView =
-        coordinator.getTierToDatasourceToUnderReplicatedCount(true);
+        segmentReplicationStatusManager.getTierToDatasourceToUnderReplicatedCount(true);
     Assert.assertNotNull(underReplicationCountsPerDataSourcePerTier);
     Assert.assertEquals(1, underReplicationCountsPerDataSourcePerTier.size());
 
@@ -327,7 +331,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
     // the segments are replicated as many times as they can be given state of cluster, therefore should not be
     // under-replicated.
     Assert.assertEquals(0L, underRepliicationCountsPerDataSourceUsingClusterView.getLong(dataSource));
-    Assert.assertEquals(Integer.valueOf(2), coordinator.getReplicationFactor(dataSegment.getId()));
+    Assert.assertEquals(Integer.valueOf(2), segmentReplicationStatusManager.getReplicationFactor(dataSegment.getId()));
 
     coordinator.stop();
     leaderUnannouncerLatch.await();
@@ -409,18 +413,22 @@ public class DruidCoordinatorTest extends CuratorTestBase
     Assert.assertEquals(ImmutableMap.of(dataSource, 100.0), coordinator.getDatasourceToLoadStatus());
 
     Map<String, Object2LongMap<String>> underReplicationCountsPerDataSourcePerTier =
-        coordinator.getTierToDatasourceToUnderReplicatedCount(false);
+        segmentReplicationStatusManager.getTierToDatasourceToUnderReplicatedCount(false);
     Assert.assertEquals(2, underReplicationCountsPerDataSourcePerTier.size());
     Assert.assertEquals(0L, underReplicationCountsPerDataSourcePerTier.get(hotTierName).getLong(dataSource));
     Assert.assertEquals(0L, underReplicationCountsPerDataSourcePerTier.get(coldTierName).getLong(dataSource));
 
     Map<String, Object2LongMap<String>> underReplicationCountsPerDataSourcePerTierUsingClusterView =
-        coordinator.getTierToDatasourceToUnderReplicatedCount(true);
+        segmentReplicationStatusManager.getTierToDatasourceToUnderReplicatedCount(true);
     Assert.assertEquals(2, underReplicationCountsPerDataSourcePerTierUsingClusterView.size());
     Assert.assertEquals(0L, underReplicationCountsPerDataSourcePerTierUsingClusterView.get(hotTierName).getLong(dataSource));
     Assert.assertEquals(0L, underReplicationCountsPerDataSourcePerTierUsingClusterView.get(coldTierName).getLong(dataSource));
 
-    dataSegments.values().forEach(dataSegment -> Assert.assertEquals(Integer.valueOf(1), coordinator.getReplicationFactor(dataSegment.getId())));
+    dataSegments.values().forEach(
+        dataSegment -> Assert.assertEquals(
+            Integer.valueOf(1),
+            segmentReplicationStatusManager.getReplicationFactor(dataSegment.getId())
+        ));
 
     coordinator.stop();
     leaderUnannouncerLatch.await();
@@ -574,11 +582,11 @@ public class DruidCoordinatorTest extends CuratorTestBase
     coordinatorRunLatch.await();
 
     Assert.assertEquals(ImmutableMap.of(dataSource, 100.0), coordinator.getDatasourceToLoadStatus());
-    Assert.assertEquals(new HashSet<>(dataSegments.values()), coordinator.getBroadcastSegments());
+    Assert.assertEquals(new HashSet<>(dataSegments.values()), segmentReplicationStatusManager.getBroadcastSegments());
 
     // Under-replicated counts are updated only after the next coordinator run
     Map<String, Object2LongMap<String>> underReplicationCountsPerDataSourcePerTier =
-        coordinator.getTierToDatasourceToUnderReplicatedCount(false);
+        segmentReplicationStatusManager.getTierToDatasourceToUnderReplicatedCount(false);
     Assert.assertEquals(4, underReplicationCountsPerDataSourcePerTier.size());
     Assert.assertEquals(0L, underReplicationCountsPerDataSourcePerTier.get(hotTierName).getLong(dataSource));
     Assert.assertEquals(0L, underReplicationCountsPerDataSourcePerTier.get(coldTierName).getLong(dataSource));
@@ -586,7 +594,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
     Assert.assertEquals(0L, underReplicationCountsPerDataSourcePerTier.get(tierName2).getLong(dataSource));
 
     Map<String, Object2LongMap<String>> underReplicationCountsPerDataSourcePerTierUsingClusterView =
-        coordinator.getTierToDatasourceToUnderReplicatedCount(true);
+        segmentReplicationStatusManager.getTierToDatasourceToUnderReplicatedCount(true);
     Assert.assertEquals(4, underReplicationCountsPerDataSourcePerTierUsingClusterView.size());
     Assert.assertEquals(0L, underReplicationCountsPerDataSourcePerTierUsingClusterView.get(hotTierName).getLong(dataSource));
     Assert.assertEquals(0L, underReplicationCountsPerDataSourcePerTierUsingClusterView.get(coldTierName).getLong(dataSource));
@@ -606,9 +614,11 @@ public class DruidCoordinatorTest extends CuratorTestBase
   public void testCompactSegmentsDutyWhenCustomDutyGroupEmpty()
   {
     CoordinatorCustomDutyGroups emptyCustomDutyGroups = new CoordinatorCustomDutyGroups(ImmutableSet.of());
+    MetadataManager metadataManager = createMetadataManager(null);
+    segmentReplicationStatusManager = new SegmentReplicationStatusManager(metadataManager);
     coordinator = new DruidCoordinator(
         druidCoordinatorConfig,
-        createMetadataManager(null),
+        metadataManager,
         serverInventoryView,
         serviceEmitter,
         scheduledExecutorFactory,
@@ -622,7 +632,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
         new TestDruidLeaderSelector(),
         null,
         null,
-        CentralizedDatasourceSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig.create(),
+        segmentReplicationStatusManager
     );
     // Since CompactSegments is not enabled in Custom Duty Group, then CompactSegments must be created in IndexingServiceDuties
     List<CoordinatorDuty> indexingDuties = coordinator.makeIndexingServiceDuties();
@@ -646,9 +657,11 @@ public class DruidCoordinatorTest extends CuratorTestBase
         ImmutableList.of(new KillSupervisorsCustomDuty(new Duration("PT1S"), null))
     );
     CoordinatorCustomDutyGroups customDutyGroups = new CoordinatorCustomDutyGroups(ImmutableSet.of(group));
+    MetadataManager metadataManager = createMetadataManager(null);
+    segmentReplicationStatusManager = new SegmentReplicationStatusManager(metadataManager);
     coordinator = new DruidCoordinator(
         druidCoordinatorConfig,
-        createMetadataManager(null),
+        metadataManager,
         serverInventoryView,
         serviceEmitter,
         scheduledExecutorFactory,
@@ -662,7 +675,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
         new TestDruidLeaderSelector(),
         null,
         null,
-        CentralizedDatasourceSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig.create(),
+        segmentReplicationStatusManager
     );
     // Since CompactSegments is not enabled in Custom Duty Group, then CompactSegments must be created in IndexingServiceDuties
     List<CoordinatorDuty> indexingDuties = coordinator.makeIndexingServiceDuties();
@@ -686,9 +700,11 @@ public class DruidCoordinatorTest extends CuratorTestBase
         ImmutableList.of(new CompactSegments(null, null))
     );
     CoordinatorCustomDutyGroups customDutyGroups = new CoordinatorCustomDutyGroups(ImmutableSet.of(compactSegmentCustomGroup));
+    MetadataManager metadataManager = createMetadataManager(null);
+    segmentReplicationStatusManager = new SegmentReplicationStatusManager(metadataManager);
     coordinator = new DruidCoordinator(
         druidCoordinatorConfig,
-        createMetadataManager(null),
+        metadataManager,
         serverInventoryView,
         serviceEmitter,
         scheduledExecutorFactory,
@@ -702,7 +718,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
         new TestDruidLeaderSelector(),
         null,
         null,
-        CentralizedDatasourceSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig.create(),
+        segmentReplicationStatusManager
     );
     // Since CompactSegments is enabled in Custom Duty Group, then CompactSegments must not be created in IndexingServiceDuties
     List<CoordinatorDuty> indexingDuties = coordinator.makeIndexingServiceDuties();
@@ -791,9 +808,11 @@ public class DruidCoordinatorTest extends CuratorTestBase
     );
     CoordinatorCustomDutyGroups groups = new CoordinatorCustomDutyGroups(ImmutableSet.of(group1, group2));
 
+    MetadataManager metadataManager = createMetadataManager(configManager);
+    segmentReplicationStatusManager = new SegmentReplicationStatusManager(metadataManager);
     coordinator = new DruidCoordinator(
         druidCoordinatorConfig,
-        createMetadataManager(configManager),
+        metadataManager,
         serverInventoryView,
         serviceEmitter,
         scheduledExecutorFactory,
@@ -807,7 +826,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
         new TestDruidLeaderSelector(),
         null,
         null,
-        CentralizedDatasourceSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig.create(),
+        segmentReplicationStatusManager
     );
     coordinator.start();
 
@@ -896,13 +916,13 @@ public class DruidCoordinatorTest extends CuratorTestBase
     coordinatorRunLatch.await();
 
     Object2IntMap<String> numsUnavailableUsedSegmentsPerDataSource =
-        coordinator.getDatasourceToUnavailableSegmentCount();
+        segmentReplicationStatusManager.getDatasourceToUnavailableSegmentCount();
     Assert.assertEquals(1, numsUnavailableUsedSegmentsPerDataSource.size());
     // The cold tier segment should not be unavailable, the hot one should be unavailable
     Assert.assertEquals(1, numsUnavailableUsedSegmentsPerDataSource.getInt(dataSource));
 
     Map<String, Object2LongMap<String>> underReplicationCountsPerDataSourcePerTier =
-        coordinator.getTierToDatasourceToUnderReplicatedCount(false);
+        segmentReplicationStatusManager.getTierToDatasourceToUnderReplicatedCount(false);
     Assert.assertNotNull(underReplicationCountsPerDataSourcePerTier);
     Assert.assertEquals(2, underReplicationCountsPerDataSourcePerTier.size());
 
@@ -915,7 +935,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
     Assert.assertEquals(0, underRepliicationCountsPerDataSourceColdTier.getLong(dataSource));
 
     Object2IntMap<String> numsDeepStorageOnlySegmentsPerDataSource =
-            coordinator.getDatasourceToDeepStorageQueryOnlySegmentCount();
+            segmentReplicationStatusManager.getDatasourceToDeepStorageQueryOnlySegmentCount();
 
     Assert.assertEquals(1, numsDeepStorageOnlySegmentsPerDataSource.getInt(dataSource));
 

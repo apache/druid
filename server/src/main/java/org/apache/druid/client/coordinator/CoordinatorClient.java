@@ -69,4 +69,9 @@ public interface CoordinatorClient
    * Returns a new instance backed by a ServiceClient which follows the provided retryPolicy
    */
   CoordinatorClient withRetryPolicy(ServiceRetryPolicy retryPolicy);
+
+  /**
+   * Retrieves list of used datasources.
+   */
+  ListenableFuture<List<String>> fetchDataSources();
 }
