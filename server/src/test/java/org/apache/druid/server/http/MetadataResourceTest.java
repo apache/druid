@@ -40,6 +40,7 @@ import org.apache.druid.segment.metadata.CoordinatorSegmentMetadataCache;
 import org.apache.druid.segment.metadata.DataSourceInformation;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.DruidCoordinator;
+import org.apache.druid.server.coordinator.SegmentReplicationStatusManager;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthenticationResult;
@@ -83,6 +84,7 @@ public class MetadataResourceTest
   private SegmentsMetadataManager segmentsMetadataManager;
   private IndexerMetadataStorageCoordinator storageCoordinator;
   private DruidCoordinator coordinator;
+  private SegmentReplicationStatusManager segmentReplicationStatusManager;
 
 
   private MetadataResource metadataResource;
@@ -111,10 +113,11 @@ public class MetadataResourceTest
            .getImmutableDataSourceWithUsedSegments(DATASOURCE1);
 
     coordinator = Mockito.mock(DruidCoordinator.class);
-    Mockito.doReturn(2).when(coordinator).getReplicationFactor(segments[0].getId());
-    Mockito.doReturn(null).when(coordinator).getReplicationFactor(segments[1].getId());
-    Mockito.doReturn(1).when(coordinator).getReplicationFactor(segments[2].getId());
-    Mockito.doReturn(1).when(coordinator).getReplicationFactor(segments[3].getId());
+    segmentReplicationStatusManager = Mockito.mock(SegmentReplicationStatusManager.class);
+    Mockito.doReturn(2).when(segmentReplicationStatusManager).getReplicationFactor(segments[0].getId());
+    Mockito.doReturn(null).when(segmentReplicationStatusManager).getReplicationFactor(segments[1].getId());
+    Mockito.doReturn(1).when(segmentReplicationStatusManager).getReplicationFactor(segments[2].getId());
+    Mockito.doReturn(1).when(segmentReplicationStatusManager).getReplicationFactor(segments[3].getId());
     Mockito.doReturn(ImmutableSet.of(segments[3]))
            .when(dataSourcesSnapshot).getOvershadowedSegments();
 
@@ -142,8 +145,8 @@ public class MetadataResourceTest
         segmentsMetadataManager,
         storageCoordinator,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        coordinator,
-        null
+        null,
+        segmentReplicationStatusManager
     );
   }
 
@@ -175,8 +178,8 @@ public class MetadataResourceTest
                           .eachOfSizeInMb(500)
                           .toArray(new DataSegment[0]);
 
-    Mockito.doReturn(null).when(coordinator).getReplicationFactor(realTimeSegments[0].getId());
-    Mockito.doReturn(null).when(coordinator).getReplicationFactor(realTimeSegments[1].getId());
+    Mockito.doReturn(null).when(segmentReplicationStatusManager).getReplicationFactor(realTimeSegments[0].getId());
+    Mockito.doReturn(null).when(segmentReplicationStatusManager).getReplicationFactor(realTimeSegments[1].getId());
     Map<SegmentId, AvailableSegmentMetadata> availableSegments = new HashMap<>();
     availableSegments.put(
         segments[0].getId(),
@@ -243,8 +246,8 @@ public class MetadataResourceTest
         segmentsMetadataManager,
         storageCoordinator,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        coordinator,
-        coordinatorSegmentMetadataCache
+        coordinatorSegmentMetadataCache,
+        segmentReplicationStatusManager
     );
 
     Response response = metadataResource.getAllUsedSegments(request, null, "includeOvershadowedStatus", "includeRealtimeSegments");
@@ -450,8 +453,8 @@ public class MetadataResourceTest
         segmentsMetadataManager,
         storageCoordinator,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        coordinator,
-        coordinatorSegmentMetadataCache
+        coordinatorSegmentMetadataCache,
+        segmentReplicationStatusManager
     );
 
     Response response = metadataResource.getDataSourceInformation(request, Collections.singletonList(DATASOURCE1));

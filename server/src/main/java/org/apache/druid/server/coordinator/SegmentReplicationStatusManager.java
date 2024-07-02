@@ -23,6 +23,7 @@ import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMaps;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
+import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.server.coordinator.duty.CoordinatorDuty;
 import org.apache.druid.server.coordinator.duty.RunRules;
@@ -43,6 +44,7 @@ import java.util.Map;
 /**
  * Manages information about replication status of segments in a cluster.
  */
+@LazySingleton
 public class SegmentReplicationStatusManager
 {
   private final MetadataManager metadataManager;

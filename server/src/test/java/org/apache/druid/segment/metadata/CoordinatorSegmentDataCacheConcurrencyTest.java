@@ -57,7 +57,7 @@ import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
-import org.apache.druid.server.coordinator.DruidCoordinator;
+import org.apache.druid.server.coordinator.SegmentReplicationStatusManager;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.NoopEscalator;
@@ -110,7 +110,7 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
   private SegmentSchemaCache segmentSchemaCache;
   private SegmentSchemaBackFillQueue backFillQueue;
   private SqlSegmentsMetadataManager sqlSegmentsMetadataManager;
-  private DruidCoordinator druidCoordinator;
+  private SegmentReplicationStatusManager segmentReplicationStatusManager;
   private Supplier<SegmentsMetadataManagerConfig> segmentsMetadataManagerConfigSupplier;
   private final ObjectMapper mapper = TestHelper.makeJsonMapper();
 
@@ -206,7 +206,7 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
     SegmentsMetadataManagerConfig metadataManagerConfig = Mockito.mock(SegmentsMetadataManagerConfig.class);
     Mockito.when(metadataManagerConfig.getPollDuration()).thenReturn(Period.millis(1000));
     segmentsMetadataManagerConfigSupplier = Suppliers.ofInstance(metadataManagerConfig);
-    druidCoordinator = Mockito.mock(druidCoordinator);
+    segmentReplicationStatusManager = Mockito.mock(segmentReplicationStatusManager);
 
     inventoryView.init();
     initLatch.await();
@@ -247,7 +247,7 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
         segmentSchemaCache,
         backFillQueue,
         sqlSegmentsMetadataManager,
-        druidCoordinator,
+        segmentReplicationStatusManager,
         segmentsMetadataManagerConfigSupplier
     )
     {
@@ -364,7 +364,7 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
         segmentSchemaCache,
         backFillQueue,
         sqlSegmentsMetadataManager,
-        druidCoordinator,
+        segmentReplicationStatusManager,
         segmentsMetadataManagerConfigSupplier
     )
     {

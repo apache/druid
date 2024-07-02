@@ -71,7 +71,7 @@ import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
-import org.apache.druid.server.coordinator.DruidCoordinator;
+import org.apache.druid.server.coordinator.SegmentReplicationStatusManager;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AllowAllAuthenticator;
@@ -116,7 +116,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
   private CountDownLatch buildTableLatch = new CountDownLatch(1);
   private CountDownLatch markDataSourceLatch = new CountDownLatch(1);
   private SqlSegmentsMetadataManager sqlSegmentsMetadataManager;
-  private DruidCoordinator druidCoordinator;
+  private SegmentReplicationStatusManager segmentReplicationStatusManager;
   private Supplier<SegmentsMetadataManagerConfig> segmentsMetadataManagerConfigSupplier;
 
   @Before
@@ -129,7 +129,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     SegmentsMetadataManagerConfig metadataManagerConfig = Mockito.mock(SegmentsMetadataManagerConfig.class);
     Mockito.when(metadataManagerConfig.getPollDuration()).thenReturn(Period.millis(1000));
     segmentsMetadataManagerConfigSupplier = Suppliers.ofInstance(metadataManagerConfig);
-    druidCoordinator = Mockito.mock(DruidCoordinator.class);
+    segmentReplicationStatusManager = Mockito.mock(SegmentReplicationStatusManager.class);
   }
 
   @After
@@ -161,7 +161,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         segmentSchemaCache,
         backFillQueue,
         sqlSegmentsMetadataManager,
-        druidCoordinator,
+        segmentReplicationStatusManager,
         segmentsMetadataManagerConfigSupplier
     )
     {
@@ -336,7 +336,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         segmentSchemaCache,
         backFillQueue,
         sqlSegmentsMetadataManager,
-        druidCoordinator,
+        segmentReplicationStatusManager,
         segmentsMetadataManagerConfigSupplier
     )
     {
@@ -550,7 +550,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         segmentSchemaCache,
         backFillQueue,
         sqlSegmentsMetadataManager,
-        druidCoordinator,
+        segmentReplicationStatusManager,
         segmentsMetadataManagerConfigSupplier
     )
     {
@@ -601,7 +601,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         segmentSchemaCache,
         backFillQueue,
         sqlSegmentsMetadataManager,
-        Mockito.mock(DruidCoordinator.class),
+        Mockito.mock(SegmentReplicationStatusManager.class),
         segmentsMetadataManagerConfigSupplier
     )
     {
@@ -656,7 +656,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         segmentSchemaCache,
         backFillQueue,
         sqlSegmentsMetadataManager,
-        Mockito.mock(DruidCoordinator.class),
+        Mockito.mock(SegmentReplicationStatusManager.class),
         segmentsMetadataManagerConfigSupplier
     )
     {
@@ -708,7 +708,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         segmentSchemaCache,
         backFillQueue,
         sqlSegmentsMetadataManager,
-        druidCoordinator,
+        segmentReplicationStatusManager,
         segmentsMetadataManagerConfigSupplier
     )
     {
@@ -752,7 +752,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         segmentSchemaCache,
         backFillQueue,
         sqlSegmentsMetadataManager,
-        druidCoordinator,
+        segmentReplicationStatusManager,
         segmentsMetadataManagerConfigSupplier
     )
     {
@@ -813,7 +813,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         segmentSchemaCache,
         backFillQueue,
         sqlSegmentsMetadataManager,
-        druidCoordinator,
+        segmentReplicationStatusManager,
         segmentsMetadataManagerConfigSupplier
     )
     {
@@ -877,7 +877,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         segmentSchemaCache,
         backFillQueue,
         sqlSegmentsMetadataManager,
-        druidCoordinator,
+        segmentReplicationStatusManager,
         segmentsMetadataManagerConfigSupplier
     )
     {
@@ -915,7 +915,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         segmentSchemaCache,
         backFillQueue,
         sqlSegmentsMetadataManager,
-        druidCoordinator,
+        segmentReplicationStatusManager,
         segmentsMetadataManagerConfigSupplier
     )
     {
@@ -966,7 +966,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         segmentSchemaCache,
         backFillQueue,
         sqlSegmentsMetadataManager,
-        druidCoordinator,
+        segmentReplicationStatusManager,
         segmentsMetadataManagerConfigSupplier
     )
     {
@@ -1041,7 +1041,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         segmentSchemaCache,
         backFillQueue,
         sqlSegmentsMetadataManager,
-        druidCoordinator,
+        segmentReplicationStatusManager,
         segmentsMetadataManagerConfigSupplier
     );
 
@@ -1213,7 +1213,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         segmentSchemaCache,
         backFillQueue,
         sqlSegmentsMetadataManager,
-        druidCoordinator,
+        segmentReplicationStatusManager,
         segmentsMetadataManagerConfigSupplier
     )
     {
@@ -1381,7 +1381,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         segmentSchemaCache,
         backFillQueue,
         sqlSegmentsMetadataManager,
-        druidCoordinator,
+        segmentReplicationStatusManager,
         segmentsMetadataManagerConfigSupplier
     ) {
       @Override
@@ -1463,7 +1463,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         segmentSchemaCache,
         backFillQueue,
         sqlSegmentsMetadataManager,
-        druidCoordinator,
+        segmentReplicationStatusManager,
         segmentsMetadataManagerConfigSupplier
     ) {
       @Override
@@ -1646,7 +1646,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         segmentSchemaCache,
         backFillQueue,
         sqlSegmentsMetadataManager,
-        druidCoordinator,
+        segmentReplicationStatusManager,
         segmentsMetadataManagerConfigSupplier
     ) {
       @Override
@@ -1829,7 +1829,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new SegmentSchemaCache.FinalizedSegmentSchemaInfo(segmentStatsMap.build(), schemaPayloadMap.build())
     );
 
-    Mockito.when(druidCoordinator.getReplicationFactor(ArgumentMatchers.eq(coldSegment.getId()))).thenReturn(0);
+    Mockito.when(segmentReplicationStatusManager.getReplicationFactor(ArgumentMatchers.eq(coldSegment.getId()))).thenReturn(0);
 
     ImmutableDruidDataSource druidDataSource =
         new ImmutableDruidDataSource(
@@ -1850,7 +1850,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         segmentSchemaCache,
         backFillQueue,
         sqlSegmentsMetadataManager,
-        druidCoordinator,
+        segmentReplicationStatusManager,
         segmentsMetadataManagerConfigSupplier
     );
 

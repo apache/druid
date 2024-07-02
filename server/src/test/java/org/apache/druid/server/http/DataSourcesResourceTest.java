@@ -47,7 +47,7 @@ import org.apache.druid.query.TableDataSource;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
-import org.apache.druid.server.coordinator.DruidCoordinator;
+import org.apache.druid.server.coordinator.SegmentReplicationStatusManager;
 import org.apache.druid.server.coordinator.rules.IntervalDropRule;
 import org.apache.druid.server.coordinator.rules.IntervalLoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
@@ -261,7 +261,7 @@ public class DataSourcesResourceTest
     };
 
     DataSourcesResource dataSourcesResource =
-        new DataSourcesResource(inventoryView, null, null, null, authMapper, null, auditManager);
+        new DataSourcesResource(inventoryView, null, null, null, authMapper, auditManager, null);
     Response response = dataSourcesResource.getQueryableDataSources("full", null, request);
     Set<ImmutableDruidDataSource> result = (Set<ImmutableDruidDataSource>) response.getEntity();
 
@@ -598,7 +598,7 @@ public class DataSourcesResourceTest
     EasyMock.replay(overlordClient, server);
 
     DataSourcesResource dataSourcesResource =
-        new DataSourcesResource(inventoryView, null, null, overlordClient, null, null, auditManager);
+        new DataSourcesResource(inventoryView, null, null, overlordClient, null, auditManager, null);
     prepareRequestForAudit();
     Response response = dataSourcesResource.killUnusedSegmentsInInterval("datasource1", interval, request);
 
@@ -613,7 +613,7 @@ public class DataSourcesResourceTest
     OverlordClient overlordClient = EasyMock.createStrictMock(OverlordClient.class);
     EasyMock.replay(overlordClient, server);
     DataSourcesResource dataSourcesResource =
-        new DataSourcesResource(inventoryView, null, null, overlordClient, null, null, auditManager);
+        new DataSourcesResource(inventoryView, null, null, overlordClient, null, auditManager, null);
     DruidExceptionMatcher.invalidInput().assertThrowsAndMatches(
         () -> dataSourcesResource.markAsUnusedAllSegmentsOrKillUnusedSegmentsInInterval("datasource", "true", "???", request)
     );
@@ -627,7 +627,7 @@ public class DataSourcesResourceTest
     OverlordClient overlordClient = EasyMock.createStrictMock(OverlordClient.class);
     EasyMock.replay(overlordClient, server);
     DataSourcesResource dataSourcesResource =
-        new DataSourcesResource(inventoryView, segmentsMetadataManager, null, overlordClient, null, null, auditManager);
+        new DataSourcesResource(inventoryView, segmentsMetadataManager, null, overlordClient, null, auditManager, null);
     Response response = dataSourcesResource
         .markAsUnusedAllSegmentsOrKillUnusedSegmentsInInterval("datasource", null, null, request);
     Assert.assertEquals(200, response.getStatus());
@@ -642,7 +642,7 @@ public class DataSourcesResourceTest
     Rule loadRule = new IntervalLoadRule(Intervals.of("2013-01-02T00:00:00Z/2013-01-03T00:00:00Z"), null, null);
     Rule dropRule = new IntervalDropRule(Intervals.of("2013-01-01T00:00:00Z/2013-01-02T00:00:00Z"));
     DataSourcesResource dataSourcesResource =
-        new DataSourcesResource(inventoryView, null, databaseRuleManager, null, null, null, auditManager);
+        new DataSourcesResource(inventoryView, null, databaseRuleManager, null, null, auditManager, null);
 
     // test dropped
     EasyMock.expect(databaseRuleManager.getRulesWithDefault("dataSource1"))
@@ -1634,14 +1634,14 @@ public class DataSourcesResourceTest
     // Test when datasource fully loaded
     EasyMock.expect(segmentsMetadataManager.iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(EasyMock.eq("datasource1"), EasyMock.anyObject(Interval.class), EasyMock.anyBoolean()))
             .andReturn(Optional.of(segments)).once();
-    DruidCoordinator druidCoordinator = EasyMock.createMock(DruidCoordinator.class);
-    EasyMock.expect(druidCoordinator.getTierToDatasourceToUnderReplicatedCount(segments, false))
+    SegmentReplicationStatusManager segmentReplicationStatusManager = EasyMock.createMock(SegmentReplicationStatusManager.class);
+    EasyMock.expect(segmentReplicationStatusManager.getTierToDatasourceToUnderReplicatedCount(segments, false))
             .andReturn(underReplicationCountsPerDataSourcePerTier).once();
 
-    EasyMock.replay(segmentsMetadataManager, druidCoordinator);
+    EasyMock.replay(segmentsMetadataManager, segmentReplicationStatusManager);
 
     DataSourcesResource dataSourcesResource =
-        new DataSourcesResource(null, segmentsMetadataManager, null, null, null, druidCoordinator, auditManager);
+        new DataSourcesResource(null, segmentsMetadataManager, null, null, null, auditManager, segmentReplicationStatusManager);
     Response response = dataSourcesResource.getDatasourceLoadstatus("datasource1", true, null, null, "full", null);
     Assert.assertEquals(200, response.getStatus());
     Assert.assertNotNull(response.getEntity());
@@ -1692,14 +1692,14 @@ public class DataSourcesResourceTest
     // Test when datasource fully loaded
     EasyMock.expect(segmentsMetadataManager.iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(EasyMock.eq("datasource1"), EasyMock.anyObject(Interval.class), EasyMock.anyBoolean()))
             .andReturn(Optional.of(segments)).once();
-    DruidCoordinator druidCoordinator = EasyMock.createMock(DruidCoordinator.class);
-    EasyMock.expect(druidCoordinator.getTierToDatasourceToUnderReplicatedCount(segments, true))
+    SegmentReplicationStatusManager segmentReplicationStatusManager = EasyMock.createMock(SegmentReplicationStatusManager.class);
+    EasyMock.expect(segmentReplicationStatusManager.getTierToDatasourceToUnderReplicatedCount(segments, true))
             .andReturn(underReplicationCountsPerDataSourcePerTier).once();
 
-    EasyMock.replay(segmentsMetadataManager, druidCoordinator);
+    EasyMock.replay(segmentsMetadataManager, segmentReplicationStatusManager);
 
     DataSourcesResource dataSourcesResource =
-        new DataSourcesResource(null, segmentsMetadataManager, null, null, null, druidCoordinator, auditManager);
+        new DataSourcesResource(null, segmentsMetadataManager, null, null, null, auditManager, segmentReplicationStatusManager);
     Response response = dataSourcesResource.getDatasourceLoadstatus("datasource1", true, null, null, "full", "computeUsingClusterView");
     Assert.assertEquals(200, response.getStatus());
     Assert.assertNotNull(response.getEntity());
@@ -1762,8 +1762,8 @@ public class DataSourcesResourceTest
         null,
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null,
-        auditManager
+        auditManager,
+        null
     );
   }
 }
