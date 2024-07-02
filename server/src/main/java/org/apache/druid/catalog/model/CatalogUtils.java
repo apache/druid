@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.base.Strings;
 import org.apache.druid.catalog.model.ModelProperties.PropertyDefn;
 import org.apache.druid.catalog.model.table.DatasourceDefn;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -33,6 +34,7 @@ import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.joda.time.Period;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import java.net.URI;
@@ -63,9 +65,9 @@ public class CatalogUtils
    * For the odd interval, the interval name is also accepted (for the other
    * intervals, the interval name is the descriptive string).
    */
-  public static Granularity asDruidGranularity(String value)
+  public static Granularity asDruidGranularity(@Nonnull String value)
   {
-    if (Strings.isNullOrEmpty(value) || value.equalsIgnoreCase(DatasourceDefn.ALL_GRANULARITY)) {
+    if (value.equalsIgnoreCase(DatasourceDefn.ALL_GRANULARITY)) {
       return Granularities.ALL;
     }
     Granularity granularity;
@@ -77,7 +79,7 @@ public class CatalogUtils
         granularity = new PeriodGranularity(new Period(value), null, null);
       }
       catch (IllegalArgumentException e2) {
-        throw new IAE(StringUtils.format("[%s] is an invalid granularity string", value));
+        throw InvalidInput.exception("[%s] is an invalid granularity string.", value);
       }
     }
 
