@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.JoinDataSource;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -306,7 +307,12 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
         + "  FROM \"foo\"\n"
         + "  GROUP BY 1\n"
         + ") AS alias\n",
-        QUERY_CONTEXT_WITH_SUBQUERY_MEMORY_LIMIT,
+        ImmutableMap.<String, Object>builder()
+                    .putAll(QUERY_CONTEXT_DEFAULT)
+                    .put(QueryContexts.MAX_SUBQUERY_BYTES_KEY, "100000")
+                    // Disallows the fallback to row based limiting
+                    .put(QueryContexts.MAX_SUBQUERY_ROWS_KEY, "1")
+                    .build(),
         ImmutableList.of(
             newScanQueryBuilder()
                 .dataSource(
