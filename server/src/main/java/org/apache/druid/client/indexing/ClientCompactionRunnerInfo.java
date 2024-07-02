@@ -25,8 +25,7 @@ import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
-import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
@@ -34,6 +33,7 @@ import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 
@@ -117,8 +117,8 @@ public class ClientCompactionRunnerInfo
           newConfig.getMetricsSpec(),
           newConfig.getGranularitySpec().isRollup()
       ));
-      validationResults.add(validateQueryGranularityForMsq(newConfig.getGranularitySpec().getQueryGranularity()));
     }
+    validationResults.add(validateMaxNumTasksForMsq(newConfig.getTaskContext()));
     return validationResults.stream()
                             .filter(result -> !result.isValid())
                             .findFirst()
@@ -168,15 +168,21 @@ public class ClientCompactionRunnerInfo
   }
 
   /**
-   * Validate query granularity is not set to ALL.
+   * Validate maxNumTasks >= 2 in context.
+   * @param context
+   * @return
    */
-  public static CompactionConfigValidationResult validateQueryGranularityForMsq(Granularity queryGranularity)
-  {
-    if (queryGranularity != null && queryGranularity.equals(Granularities.ALL)) {
-      return new CompactionConfigValidationResult(
-          false,
-          "queryGranularity[ALL] in granularitySpec not supported for MSQ engine"
-      );
+  public static CompactionConfigValidationResult validateMaxNumTasksForMsq(Map<String, Object> context){
+    if (context != null) {
+      int maxNumTasks = QueryContext.of(context)
+                                    .getInt(ClientMsqContext.CTX_MAX_NUM_TASKS, ClientMsqContext.DEFAULT_MAX_NUM_TASKS);
+      if (maxNumTasks < 2) {
+        return new CompactionConfigValidationResult(false,
+                                                    "MSQ context maxNumTasks [%,d] cannot be less than 2, "
+                                                    + "since at least 1 controller and 1 worker is necessary.",
+                                                    maxNumTasks
+        );
+      }
     }
     return new CompactionConfigValidationResult(true, null);
   }

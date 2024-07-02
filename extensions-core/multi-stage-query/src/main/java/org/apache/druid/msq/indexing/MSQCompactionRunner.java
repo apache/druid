@@ -28,7 +28,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.Injector;
 import org.apache.druid.client.indexing.ClientCompactionRunnerInfo;
 import org.apache.druid.data.input.impl.DimensionSchema;
-import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
@@ -54,12 +53,12 @@ import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.expression.TimestampFloorExprMacro;
+import org.apache.druid.query.expression.TimestampParseExprMacro;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
-import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
@@ -137,10 +136,8 @@ public class MSQCompactionRunner implements CompactionRunner
           compactionTask.getMetricsSpec(),
           compactionTask.getGranularitySpec().isRollup()
       ));
-      validationResults.add(ClientCompactionRunnerInfo.validateQueryGranularityForMsq(
-          compactionTask.getGranularitySpec().getQueryGranularity()
-      ));
     }
+    validationResults.add(ClientCompactionRunnerInfo.validateMaxNumTasksForMsq(compactionTask.getContext()));
     return validationResults.stream()
                             .filter(result -> !result.isValid())
                             .findFirst()
@@ -241,18 +238,13 @@ public class MSQCompactionRunner implements CompactionRunner
 
   private static MSQTuningConfig buildMSQTuningConfig(CompactionTask compactionTask, QueryContext compactionTaskContext)
   {
-
     // Transfer MSQ-related context params, if any, from the compaction context itself.
+
     final int maxNumTasks = MultiStageQueryContext.getMaxNumTasks(compactionTaskContext);
-    if (maxNumTasks < 2) {
-      throw InvalidInput.exception(
-          "MSQ context maxNumTasks [%,d] cannot be less than 2, "
-          + "since at least 1 controller and 1 worker is necessary.",
-          maxNumTasks
-      );
-    }
+
     // This parameter is used internally for the number of worker tasks only, so we subtract 1
     final int maxNumWorkers = maxNumTasks - 1;
+
     // We don't consider maxRowsInMemory coming via CompactionTuningConfig since it always sets a default value if no
     // value specified by user.
     final int maxRowsInMemory = MultiStageQueryContext.getRowsInMemory(compactionTaskContext);
@@ -290,6 +282,10 @@ public class MSQCompactionRunner implements CompactionRunner
   {
     RowSignature.Builder rowSignatureBuilder = RowSignature.builder();
     rowSignatureBuilder.add(dataSchema.getTimestampSpec().getTimestampColumn(), ColumnType.LONG);
+    if (!isQueryGranularityEmptyOrNone(dataSchema)) {
+      // A virtual column for query granularity would have been added. Add corresponding column type.
+      rowSignatureBuilder.add(TIME_VIRTUAL_COLUMN, ColumnType.LONG);
+    }
     for (DimensionSchema dimensionSchema : dataSchema.getDimensionsSpec().getDimensions()) {
       rowSignatureBuilder.add(dimensionSchema.getName(), ColumnType.fromString(dimensionSchema.getTypeName()));
     }
@@ -315,7 +311,6 @@ public class MSQCompactionRunner implements CompactionRunner
                                         dim.getColumnType()
                                     ))
                                     .collect(Collectors.toList()));
-
     return dimensionSpecs;
   }
 
@@ -331,10 +326,11 @@ public class MSQCompactionRunner implements CompactionRunner
                                 .map(agg -> new ColumnMapping(agg.getName(), agg.getName()))
                                 .collect(
                                     Collectors.toList()));
-    if (isGroupBy(dataSchema)) {
-      // For group-by queries, time will always be one of the dimension. Since dimensions in groupby aren't allowed to
-      // have time column as the output name, we map time dimension to a fixed column name in dimensions, and map it
-      // back to the time column here.
+    if (isGroupBy(dataSchema) || !isQueryGranularityEmptyOrNone(dataSchema)) {
+      // For scan queries, a virtual column is created from __time if a custom query granularity is provided. For
+      // group-by queries, as insert needs __time, it will always be one of the dimensions. Since dimensions in groupby
+      // aren't allowed to have time column as the output name, we map time dimension to TIME_VIRTUAL_COLUMN in
+      // dimensions, and map it back to the time column here.
       columnMappings.add(new ColumnMapping(TIME_VIRTUAL_COLUMN, ColumnHolder.TIME_COLUMN_NAME));
     } else {
       columnMappings.add(new ColumnMapping(ColumnHolder.TIME_COLUMN_NAME, ColumnHolder.TIME_COLUMN_NAME));
@@ -358,6 +354,7 @@ public class MSQCompactionRunner implements CompactionRunner
     RowSignature rowSignature = getRowSignature(dataSchema);
     return new Druids.ScanQueryBuilder().dataSource(dataSchema.getDataSource())
                                         .columns(rowSignature.getColumnNames())
+                                        .virtualColumns(getVirtualColumns(dataSchema, interval))
                                         .columnTypes(rowSignature.getColumnTypes())
                                         .intervals(new MultipleIntervalSegmentSpec(Collections.singletonList(interval)))
                                         .legacy(false)
@@ -368,6 +365,7 @@ public class MSQCompactionRunner implements CompactionRunner
 
   private static boolean isGroupBy(DataSchema dataSchema)
   {
+    // rollup=true with no metrics is a no-op.
     return dataSchema.getAggregators().length > 0;
   }
 
@@ -381,29 +379,34 @@ public class MSQCompactionRunner implements CompactionRunner
     );
   }
 
-  private static VirtualColumns getVirtualColumns(DataSchema dataSchema)
+  private static VirtualColumns getVirtualColumns(DataSchema dataSchema, Interval interval)
   {
-    VirtualColumns virtualColumns = VirtualColumns.EMPTY;
+    if (isQueryGranularityEmptyOrNone(dataSchema)) {
+      return VirtualColumns.EMPTY;
+    }
+    String virtualColumnExpr;
+    if (dataSchema.getGranularitySpec()
+                  .getQueryGranularity()
+                  .equals(Granularities.ALL)) {
+      virtualColumnExpr = StringUtils.format("timestamp_parse('%s')", interval.getStart());
 
-    if (!isQueryGranularityEmptyOrNone(dataSchema) && !dataSchema.getGranularitySpec()
-                                                                 .getQueryGranularity()
-                                                                 .equals(Granularities.ALL)) {
+    } else {
       PeriodGranularity periodQueryGranularity = (PeriodGranularity) dataSchema.getGranularitySpec()
                                                                                .getQueryGranularity();
       // Need to create a virtual column for time as that's the only way to support query granularity
-      VirtualColumn virtualColumn = new ExpressionVirtualColumn(
-          TIME_VIRTUAL_COLUMN,
+      virtualColumnExpr =
           StringUtils.format(
               "timestamp_floor(\"%s\", '%s')",
               ColumnHolder.TIME_COLUMN_NAME,
               periodQueryGranularity.getPeriod().toString()
-          ),
-          ColumnType.LONG,
-          new ExprMacroTable(Collections.singletonList(new TimestampFloorExprMacro()))
-      );
-      virtualColumns = VirtualColumns.create(virtualColumn);
+          );
     }
-    return virtualColumns;
+    return VirtualColumns.create(new ExpressionVirtualColumn(
+        TIME_VIRTUAL_COLUMN,
+        virtualColumnExpr,
+        ColumnType.LONG,
+        new ExprMacroTable(ImmutableList.of(new TimestampFloorExprMacro(), new TimestampParseExprMacro()))
+    ));
   }
 
   private static Query<?> buildGroupByQuery(CompactionTask compactionTask, Interval interval, DataSchema dataSchema)
@@ -412,7 +415,7 @@ public class MSQCompactionRunner implements CompactionRunner
 
     GroupByQuery.Builder builder = new GroupByQuery.Builder()
         .setDataSource(new TableDataSource(compactionTask.getDataSource()))
-        .setVirtualColumns(getVirtualColumns(dataSchema))
+        .setVirtualColumns(getVirtualColumns(dataSchema, interval))
         .setDimFilter(dimFilter)
         .setGranularity(new AllGranularity())
         .setDimensions(getAggregateDimensions(dataSchema))
