@@ -120,7 +120,7 @@ public class SupervisorResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response specPost(final SupervisorSpec spec, @Context final HttpServletRequest req)
   {
-    return asLeaderWithSupervisorManager(manager -> postLogic(spec, manager, req));
+    return asLeaderWithSupervisorManager(manager -> updateSupervisorSpec(spec, manager, req));
   }
 
   private Set<ResourceAction> getNeededResourceActionsForTask(final SupervisorSpec spec)
@@ -534,7 +534,7 @@ public class SupervisorResource
 
           SupervisorSpec modifiedSpec = existingSpec.get();
           modifiedSpec.updateTaskCount(taskCount.getTaskCount());
-          return postLogic(modifiedSpec, manager, req);
+          return updateSupervisorSpec(modifiedSpec, manager, req);
         }
     );
   }
@@ -570,7 +570,7 @@ public class SupervisorResource
     );
   }
 
-  private Response postLogic(SupervisorSpec spec, SupervisorManager manager, HttpServletRequest req)
+  private Response updateSupervisorSpec(SupervisorSpec spec, SupervisorManager manager, HttpServletRequest req)
   {
     Preconditions.checkArgument(
         spec.getDataSources() != null && spec.getDataSources().size() > 0,
