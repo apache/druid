@@ -83,9 +83,7 @@ public class MetadataResourceTest
   private HttpServletRequest request;
   private SegmentsMetadataManager segmentsMetadataManager;
   private IndexerMetadataStorageCoordinator storageCoordinator;
-  private DruidCoordinator coordinator;
   private SegmentReplicationStatusManager segmentReplicationStatusManager;
-
 
   private MetadataResource metadataResource;
 
@@ -112,7 +110,6 @@ public class MetadataResourceTest
            .when(segmentsMetadataManager)
            .getImmutableDataSourceWithUsedSegments(DATASOURCE1);
 
-    coordinator = Mockito.mock(DruidCoordinator.class);
     segmentReplicationStatusManager = Mockito.mock(SegmentReplicationStatusManager.class);
     Mockito.doReturn(2).when(segmentReplicationStatusManager).getReplicationFactor(segments[0].getId());
     Mockito.doReturn(null).when(segmentReplicationStatusManager).getReplicationFactor(segments[1].getId());
@@ -492,7 +489,7 @@ public class MetadataResourceTest
   @Test
   public void testGetBootstrapSegments()
   {
-    Mockito.doReturn(ImmutableSet.of(segments[0], segments[1])).when(coordinator).getBroadcastSegments();
+    Mockito.doReturn(ImmutableSet.of(segments[0], segments[1])).when(segmentReplicationStatusManager).getBroadcastSegments();
 
     Response response = metadataResource.getBootstrapSegments();
     final List<DataSegment> observedSegments = extractResponseList(response);
@@ -502,7 +499,7 @@ public class MetadataResourceTest
   @Test
   public void testEmptyGetBootstrapSegments()
   {
-    Mockito.doReturn(ImmutableSet.of()).when(coordinator).getBroadcastSegments();
+    Mockito.doReturn(ImmutableSet.of()).when(segmentReplicationStatusManager).getBroadcastSegments();
 
     Response response = metadataResource.getBootstrapSegments();
     final List<DataSegment> observedSegments = extractResponseList(response);
@@ -512,7 +509,7 @@ public class MetadataResourceTest
   @Test
   public void testNullGetBootstrapSegments()
   {
-    Mockito.doReturn(null).when(coordinator).getBroadcastSegments();
+    Mockito.doReturn(null).when(segmentReplicationStatusManager).getBroadcastSegments();
 
     Response response = metadataResource.getBootstrapSegments();
     Assert.assertEquals(503, response.getStatus());
