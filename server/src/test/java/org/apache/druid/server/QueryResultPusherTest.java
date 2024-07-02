@@ -114,7 +114,8 @@ public class QueryResultPusherTest
         counter,
         queryId,
         contentType,
-        extraHeaders)
+        extraHeaders,
+        false)
     {
 
       @Override
