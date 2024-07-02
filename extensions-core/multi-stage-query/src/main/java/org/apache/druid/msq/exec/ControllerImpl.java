@@ -146,6 +146,7 @@ import org.apache.druid.msq.input.stage.StageInputSlice;
 import org.apache.druid.msq.input.stage.StageInputSpec;
 import org.apache.druid.msq.input.stage.StageInputSpecSlicer;
 import org.apache.druid.msq.input.table.TableInputSpec;
+import org.apache.druid.msq.kernel.FrameProcessorFactory;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.QueryDefinitionBuilder;
 import org.apache.druid.msq.kernel.StageDefinition;
@@ -1193,8 +1194,35 @@ public class ControllerImpl implements Controller
   {
     if (MSQControllerTask.isIngestion(querySpec) &&
         stageNumber == queryDef.getFinalStageDefinition().getStageNumber()) {
-      // noinspection unchecked,rawtypes
-      return (Int2ObjectMap) makeSegmentGeneratorWorkerFactoryInfos(workerInputs, segmentsToGenerate);
+      final DataSourceMSQDestination destination = (DataSourceMSQDestination) querySpec.getDestination();
+      if (!destination.doesSegmentMorphing()) {
+        // noinspection unchecked,rawtypes
+        return (Int2ObjectMap) makeSegmentGeneratorWorkerFactoryInfos(workerInputs, segmentsToGenerate);
+      } else {
+        // worker info is the new lock version
+        if (destination.getReplaceTimeChunks().size() != 1) {
+          throw new ISE(
+              "Must have single interval in replaceTimeChunks, but got[%s]",
+              destination.getReplaceTimeChunks()
+          );
+        }
+        try {
+          final List<TaskLock> locks;
+          locks = context.taskActionClient().submit(new LockListAction());
+          if (locks.size() == 1) {
+            final Int2ObjectMap<Object> retVal = new Int2ObjectAVLTreeMap<>();
+            for (int worker : workerInputs.workers()) {
+              retVal.put(worker, locks.get(0).getVersion());
+            }
+            return retVal;
+          } else {
+            throw new ISE("Got number of locks other than one: [%s]", locks);
+          }
+        }
+        catch (IOException e) {
+          throw new RuntimeException(e);
+        }
+      }
     } else {
       return null;
     }
@@ -1808,6 +1836,35 @@ public class ControllerImpl implements Controller
         } else {
           builder.add(StageDefinition.builder(stageDef));
         }
+      }
+
+      // Possibly add a segment morpher stage.
+      if (((DataSourceMSQDestination) querySpec.getDestination()).doesSegmentMorphing()) {
+        final DataSourceMSQDestination destination = (DataSourceMSQDestination) querySpec.getDestination();
+        final FrameProcessorFactory segmentMorphFactory = destination.getSegmentMorphFactory();
+
+        if (!destination.isReplaceTimeChunks()) {
+          throw new MSQException(UnknownFault.forMessage("segmentMorphFactory requires replaceTimeChunks"));
+        }
+
+        builder.add(
+            StageDefinition.builder(queryDef.getNextStageNumber())
+                           .inputs(
+                               new TableInputSpec(
+                                   destination.getDataSource(),
+                                   destination.getReplaceTimeChunks(),
+                                   null,
+                                   null
+                               ),
+                               new StageInputSpec(queryDef.getFinalStageDefinition().getStageNumber())
+                           )
+                           .broadcastInputs(IntSet.of(1))
+                           .maxWorkerCount(tuningConfig.getMaxNumWorkers())
+                           .processorFactory(segmentMorphFactory)
+        );
+
+        // If there was a segment morpher, return immediately; don't add a segment-generation stage.
+        return builder.build();
       }
 
       // Then, add a segment-generation stage.
@@ -2723,7 +2780,8 @@ public class ControllerImpl implements Controller
         for (final StageId stageId : newStageIds) {
           // Allocate segments, if this is the final stage of an ingestion.
           if (MSQControllerTask.isIngestion(querySpec)
-              && stageId.getStageNumber() == queryDef.getFinalStageDefinition().getStageNumber()) {
+              && stageId.getStageNumber() == queryDef.getFinalStageDefinition().getStageNumber()
+              && !((DataSourceMSQDestination) querySpec.getDestination()).doesSegmentMorphing()) {
             populateSegmentsToGenerate();
           }
 
