@@ -262,8 +262,9 @@ public class SchemaRegistryBasedAvroBytesDecoderTest
   }
 
   @Test
-  public void testUnauthenticatedRestClientException() throws IOException, RestClientException
+  public void testParseWhenUnauthenticatedException() throws IOException, RestClientException
   {
+    // Given
     Mockito.when(registry.getSchemaById(ArgumentMatchers.eq(1234)))
            .thenThrow(new RestClientException("unauthenticated", 401, 401));
     GenericRecord someAvroDatum = AvroStreamInputRowParserTest.buildSomeAvroDatum();
@@ -288,8 +289,9 @@ public class SchemaRegistryBasedAvroBytesDecoderTest
   }
 
   @Test
-  public void testRestClientException() throws IOException, RestClientException
+  public void testParseWhenResourceNotFoundException() throws IOException, RestClientException
   {
+    // Given
     Mockito.when(registry.getSchemaById(ArgumentMatchers.eq(1234)))
            .thenThrow(new RestClientException("resource doesn't exist", 404, 404));
     GenericRecord someAvroDatum = AvroStreamInputRowParserTest.buildSomeAvroDatum();
