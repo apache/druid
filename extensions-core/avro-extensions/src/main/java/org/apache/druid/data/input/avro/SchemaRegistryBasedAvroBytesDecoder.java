@@ -36,10 +36,7 @@ import org.apache.avro.io.DatumReader;
 import org.apache.avro.io.DecoderFactory;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.parsers.ParseException;
-import org.apache.druid.java.util.http.client.HttpClient;
-import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.druid.utils.DynamicConfigProviderUtils;
-import org.asynchttpclient.util.HttpConstants;
 
 import javax.annotation.Nullable;
 import java.io.IOException;

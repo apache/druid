@@ -33,10 +33,7 @@ import org.apache.avro.io.EncoderFactory;
 import org.apache.avro.specific.SpecificDatumWriter;
 import org.apache.druid.data.input.AvroStreamInputRowParserTest;
 import org.apache.druid.data.input.SomeAvroDatum;
-import org.apache.druid.error.DruidException;
-import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.utils.DynamicConfigProviderUtils;
 import org.hamcrest.CoreMatchers;
@@ -124,11 +121,12 @@ public class SchemaRegistryBasedAvroBytesDecoderTest
     byte[] bytes = getAvroDatum(schema, someAvroDatum);
     ByteBuffer bb = ByteBuffer.allocate(bytes.length + 5).put((byte) 0).putInt(1234).put(bytes);
     bb.rewind();
+
     // When
     GenericRecord parse = new SchemaRegistryBasedAvroBytesDecoder(registry).parse(bb);
 
     // Then
-    Assert.assertEquals(schema, parse.getSchema());;
+    Assert.assertEquals(schema, parse.getSchema());
   }
 
   @Test
