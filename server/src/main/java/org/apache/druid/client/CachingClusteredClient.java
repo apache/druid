@@ -275,7 +275,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       this.responseContext = responseContext;
       this.query = queryPlus.getQuery();
       this.toolChest = warehouse.getToolChest(query);
-      this.strategy = toolChest.getCacheStrategy(query);
+      this.strategy = toolChest.getCacheStrategy(query, objectMapper);
       this.dataSourceAnalysis = query.getDataSource().getAnalysis();
 
       this.useCache = CacheUtil.isUseSegmentCache(query, strategy, cacheConfig, CacheUtil.ServerType.BROKER);

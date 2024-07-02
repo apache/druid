@@ -86,7 +86,7 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
   public Sequence<T> run(QueryPlus<T> queryPlus, ResponseContext responseContext)
   {
     Query<T> query = queryPlus.getQuery();
-    final CacheStrategy strategy = toolChest.getCacheStrategy(query);
+    final CacheStrategy strategy = toolChest.getCacheStrategy(query, mapper);
     final boolean populateCache = canPopulateCache(query, strategy);
     final boolean useCache = canUseCache(query, strategy);
 

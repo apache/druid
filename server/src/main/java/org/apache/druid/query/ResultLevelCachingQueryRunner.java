@@ -73,7 +73,7 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
     this.cache = cache;
     this.cacheConfig = cacheConfig;
     this.query = query;
-    this.strategy = queryToolChest.getCacheStrategy(query);
+    this.strategy = queryToolChest.getCacheStrategy(query, objectMapper);
     this.populateResultCache = CacheUtil.isPopulateResultCache(
         query,
         strategy,

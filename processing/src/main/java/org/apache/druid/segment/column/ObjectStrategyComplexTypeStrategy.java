@@ -123,7 +123,7 @@ public class ObjectStrategyComplexTypeStrategy<T> implements TypeStrategy<T>
   public int hashCode(T o)
   {
     if (hashStrategy == null) {
-      throw DruidException.defensive("hashStrategy not provided");
+      throw DruidException.defensive("Type [%s] is not groupable", typeSignature.asTypeString());
     }
     return hashStrategy.hashCode(o);
   }
@@ -132,7 +132,7 @@ public class ObjectStrategyComplexTypeStrategy<T> implements TypeStrategy<T>
   public boolean equals(T a, T b)
   {
     if (hashStrategy == null) {
-      throw DruidException.defensive("hashStrategy not provided");
+      throw DruidException.defensive("Type [%s] is not groupable", typeSignature.asTypeString());
     }
     return hashStrategy.equals(a, b);
   }
@@ -141,7 +141,7 @@ public class ObjectStrategyComplexTypeStrategy<T> implements TypeStrategy<T>
   public Class<?> getClazz()
   {
     if (clazz == null) {
-      throw DruidException.defensive("hashStrategy not provided");
+      throw DruidException.defensive("Type [%s] is not groupable", typeSignature.asTypeString());
     }
     return clazz;
   }

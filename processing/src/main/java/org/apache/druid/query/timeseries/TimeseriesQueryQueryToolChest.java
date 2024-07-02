@@ -20,6 +20,7 @@
 package org.apache.druid.query.timeseries;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
@@ -65,6 +66,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -276,6 +278,16 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
 
   @Override
   public CacheStrategy<Result<TimeseriesResultValue>, Object, TimeseriesQuery> getCacheStrategy(final TimeseriesQuery query)
+  {
+    return getCacheStrategy(query, null);
+  }
+
+
+  @Override
+  public CacheStrategy<Result<TimeseriesResultValue>, Object, TimeseriesQuery> getCacheStrategy(
+      final TimeseriesQuery query,
+      @Nullable final ObjectMapper objectMapper
+  )
   {
     return new CacheStrategy<Result<TimeseriesResultValue>, Object, TimeseriesQuery>()
     {

@@ -79,6 +79,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -471,7 +472,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
     // Deserializer that can deserialize either array- or map-based rows.
     final JsonDeserializer<ResultRow> deserializer = new JsonDeserializer<ResultRow>()
     {
-      final Class<?>[] dimensionClasses = createDimensionClasses();
+      final Class<?>[] dimensionClasses = createDimensionClasses(query);
       boolean containsComplexDimensions = query.getDimensions()
                                                .stream()
                                                .anyMatch(
@@ -524,30 +525,6 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
           return ResultRow.of(objectArray);
         }
       }
-
-      private Class<?>[] createDimensionClasses()
-      {
-        final List<DimensionSpec> queryDimensions = query.getDimensions();
-        final Class<?>[] classes = new Class[queryDimensions.size()];
-        for (int i = 0; i < queryDimensions.size(); ++i) {
-          final ColumnType dimensionOutputType = queryDimensions.get(i).getOutputType();
-          if (dimensionOutputType.is(ValueType.COMPLEX)) {
-            NullableTypeStrategy nullableTypeStrategy = dimensionOutputType.getNullableStrategy();
-            if (!nullableTypeStrategy.groupable()) {
-              throw DruidException.defensive(
-                  "Ungroupable dimension [%s] with type [%s] found in the query.",
-                  queryDimensions.get(i).getDimension(),
-                  dimensionOutputType
-              );
-            }
-            classes[i] = nullableTypeStrategy.getClazz();
-          } else {
-            classes[i] = Object.class;
-          }
-        }
-        return classes;
-      }
-
     };
 
     class GroupByResultRowModule extends SimpleModule
@@ -597,14 +574,25 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
     );
   }
 
+  @Nullable
   @Override
-  public CacheStrategy<ResultRow, Object, GroupByQuery> getCacheStrategy(final GroupByQuery query)
+  public CacheStrategy<ResultRow, Object, GroupByQuery> getCacheStrategy(GroupByQuery query)
+  {
+    return getCacheStrategy(query, null);
+  }
+
+  @Override
+  public CacheStrategy<ResultRow, Object, GroupByQuery> getCacheStrategy(
+      final GroupByQuery query,
+      @Nullable final ObjectMapper mapper
+  )
   {
     return new CacheStrategy<ResultRow, Object, GroupByQuery>()
     {
       private static final byte CACHE_STRATEGY_VERSION = 0x1;
       private final List<AggregatorFactory> aggs = query.getAggregatorSpecs();
       private final List<DimensionSpec> dims = query.getDimensions();
+      private final Class<?>[] dimensionClasses = createDimensionClasses(query);
 
       @Override
       public boolean isCacheable(GroupByQuery query, boolean willMergeRunners, boolean bySegment)
@@ -726,13 +714,20 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
             int dimPos = 0;
             while (dimsIter.hasNext() && results.hasNext()) {
               final DimensionSpec dimensionSpec = dimsIter.next();
+              final Object dimensionObject = results.next();
+              final Object dimensionObjectCasted;
 
               // Must convert generic Jackson-deserialized type into the proper type.
-              resultRow.set(
-                  dimensionStart + dimPos,
-                  DimensionHandlerUtils.convertObjectToType(results.next(), dimensionSpec.getOutputType())
-              );
-
+              if (dimensionSpec.getOutputType().is(ValueType.COMPLEX)) {
+                DruidException.conditionalDefensive(
+                    mapper != null,
+                    "Cannot deserialize complex dimension from if object mapper is not provided"
+                );
+                dimensionObjectCasted = mapper.convertValue(dimensionObject, dimensionClasses[dimPos]);
+              } else {
+                dimensionObjectCasted = DimensionHandlerUtils.convertObjectToType(dimensionObject, dimensionSpec.getOutputType());
+              }
+              resultRow.set(dimensionStart + dimPos, dimensionObjectCasted);
               dimPos++;
             }
 
@@ -858,5 +853,28 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
     }
 
     return retVal;
+  }
+
+  private static Class<?>[] createDimensionClasses(final GroupByQuery query)
+  {
+    final List<DimensionSpec> queryDimensions = query.getDimensions();
+    final Class<?>[] classes = new Class[queryDimensions.size()];
+    for (int i = 0; i < queryDimensions.size(); ++i) {
+      final ColumnType dimensionOutputType = queryDimensions.get(i).getOutputType();
+      if (dimensionOutputType.is(ValueType.COMPLEX)) {
+        NullableTypeStrategy nullableTypeStrategy = dimensionOutputType.getNullableStrategy();
+        if (!nullableTypeStrategy.groupable()) {
+          throw DruidException.defensive(
+              "Ungroupable dimension [%s] with type [%s] found in the query.",
+              queryDimensions.get(i).getDimension(),
+              dimensionOutputType
+          );
+        }
+        classes[i] = nullableTypeStrategy.getClazz();
+      } else {
+        classes[i] = Object.class;
+      }
+    }
+    return classes;
   }
 }
