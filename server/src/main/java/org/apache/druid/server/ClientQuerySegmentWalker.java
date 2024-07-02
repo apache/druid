@@ -746,6 +746,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   {
     Optional<Sequence<FrameSignaturePair>> framesOptional;
 
+    boolean startedAccumulating = false;
     try {
       framesOptional = toolChest.resultsAsFrames(
           query,
@@ -760,6 +761,9 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
 
       Sequence<FrameSignaturePair> frames = framesOptional.get();
       List<FrameSignaturePair> frameSignaturePairs = new ArrayList<>();
+
+      startedAccumulating = true;
+
       frames.forEach(
           frame -> {
             limitAccumulator.addAndGet(frame.getFrame().numRows());
@@ -772,21 +776,29 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
           }
       );
       return Optional.of(new FrameBasedInlineDataSource(frameSignaturePairs, toolChest.resultArraySignature(query)));
-
-    }
-    catch (ResourceLimitExceededException e) {
-      throw e;
     }
     catch (UnsupportedColumnTypeException e) {
       subqueryStatsProvider.incrementSubqueriesFallingBackDueToUnsufficientTypeInfo();
       log.debug(e, "Type info in signature insufficient to materialize rows as frames.");
       return Optional.empty();
     }
+    catch (ResourceLimitExceededException e) {
+      throw e;
+    }
     catch (Exception e) {
-      subqueryStatsProvider.incrementSubqueriesFallingBackDueToUnknownReason();
-      log.debug(e, "Unable to materialize the results as frames due to an unhandleable exception "
-                   + "while conversion. Defaulting to materializing the results as rows");
-      return Optional.empty();
+      if (startedAccumulating) {
+        // If we have opened the resultSequence, we can't fall back safely as the resultSequence might hold some resources
+        // that we release on exception, and we need to throw the exception to disable the 'maxSubqueryBytes' configuration
+        throw DruidException.defensive()
+                            .build(
+                                e,
+                                "Unable to materialize the results as frames for estimating the byte footprint. "
+                                + "Please disable the 'maxSubqueryBytes' by setting it to 'disabled' in the query context or removing it altogether "
+                                + "from the query context and/or the server config."
+                            );
+      } else {
+        return Optional.empty();
+      }
     }
   }
 
