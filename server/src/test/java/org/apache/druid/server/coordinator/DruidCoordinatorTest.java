@@ -97,6 +97,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
   private static final long COORDINATOR_PERIOD = 100;
 
   private DruidCoordinator coordinator;
+  private SegmentReplicationStatusManager segmentReplicationStatusManager;
   private SegmentsMetadataManager segmentsMetadataManager;
   private DataSourcesSnapshot dataSourcesSnapshot;
 

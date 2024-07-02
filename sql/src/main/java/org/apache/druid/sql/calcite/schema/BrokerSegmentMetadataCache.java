@@ -174,6 +174,15 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
   }
 
   /**
+   * Execute refresh on the broker in each cycle if CentralizedDatasourceSchema is enabled.
+   */
+  @Override
+  public boolean refreshCondition()
+  {
+    return centralizedDatasourceSchemaConfig.isEnabled();
+  }
+
+  /**
    * Refreshes the set of segments in two steps:
    * <ul>
    *  <li>Polls the coordinator for the datasource schema.</li>
@@ -232,14 +241,7 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
       // Remove those datasource for which we received schema from the Coordinator.
       dataSourcesToRebuild.removeAll(polledDataSourceMetadata.keySet());
 
-      if (centralizedDatasourceSchemaConfig.isEnabled()) {
-        // this is a hacky way to ensure refresh is executed even if there are no new segments to refresh
-        // once, CentralizedDatasourceSchema feature is GA, brokers should simply poll schema for all datasources
-        dataSourcesNeedingRebuild.addAll(segmentMetadataInfo.keySet());
-      } else {
-        dataSourcesNeedingRebuild.clear();
-      }
-      log.debug("DatasourcesNeedingRebuild are [%s]", dataSourcesNeedingRebuild);
+      dataSourcesNeedingRebuild.clear();
     }
 
     // Rebuild the datasources.

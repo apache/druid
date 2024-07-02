@@ -25,10 +25,6 @@ import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
-import it.unimi.dsi.fastutil.objects.Object2IntMap;
-import it.unimi.dsi.fastutil.objects.Object2IntMaps;
-import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
-import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.DruidDataSource;
 import org.apache.druid.client.DruidServer;
@@ -49,7 +45,6 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
-import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.CoordinatorSegmentMetadataCache;
@@ -81,8 +76,6 @@ import org.apache.druid.server.coordinator.duty.UnloadUnusedSegments;
 import org.apache.druid.server.coordinator.loading.LoadQueuePeon;
 import org.apache.druid.server.coordinator.loading.LoadQueueTaskMaster;
 import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
-import org.apache.druid.server.coordinator.loading.SegmentReplicaCount;
-import org.apache.druid.server.coordinator.loading.SegmentReplicationStatus;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.CoordinatorStat;
 import org.apache.druid.server.coordinator.stats.Dimension;
@@ -90,7 +83,6 @@ import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
@@ -157,22 +149,9 @@ public class DruidCoordinator
   @Nullable
   private final CoordinatorSegmentMetadataCache coordinatorSegmentMetadataCache;
   private final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
-
+  private final SegmentReplicationStatusManager segmentReplicationStatusManager;
 
   private volatile boolean started = false;
-
-  /**
-   * Used to determine count of under-replicated or unavailable segments.
-   * Updated in each coordinator run in the {@link UpdateReplicationStatus} duty.
-   * <p>
-   * This might have stale information if coordinator runs are delayed. But as
-   * long as the {@link SegmentsMetadataManager} has the latest information of
-   * used segments, we would only have false negatives and not false positives.
-   * In other words, we might report some segments as under-replicated or
-   * unavailable even if they are fully replicated. But if a segment is reported
-   * as fully replicated, it is guaranteed to be so.
-   */
-  private volatile SegmentReplicationStatus segmentReplicationStatus = null;
 
   public static final String HISTORICAL_MANAGEMENT_DUTIES_DUTY_GROUP = "HistoricalManagementDuties";
   private static final String METADATA_STORE_MANAGEMENT_DUTIES_DUTY_GROUP = "MetadataStoreManagementDuties";
@@ -196,7 +175,8 @@ public class DruidCoordinator
       @Coordinator DruidLeaderSelector coordLeaderSelector,
       CompactionSegmentSearchPolicy compactionSegmentSearchPolicy,
       @Nullable CoordinatorSegmentMetadataCache coordinatorSegmentMetadataCache,
-      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig,
+      SegmentReplicationStatusManager segmentReplicationStatusManager
   )
   {
     this.config = config;
@@ -218,6 +198,7 @@ public class DruidCoordinator
     this.loadQueueManager = loadQueueManager;
     this.coordinatorSegmentMetadataCache = coordinatorSegmentMetadataCache;
     this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
+    this.segmentReplicationStatusManager = segmentReplicationStatusManager;
   }
 
   public boolean isLeader()
@@ -228,60 +209,6 @@ public class DruidCoordinator
   public Map<String, LoadQueuePeon> getLoadManagementPeons()
   {
     return taskMaster.getAllPeons();
-  }
-
-  public Map<String, Object2LongMap<String>> getTierToDatasourceToUnderReplicatedCount(boolean useClusterView)
-  {
-    final Iterable<DataSegment> dataSegments = metadataManager.segments().iterateAllUsedSegments();
-    return computeUnderReplicated(dataSegments, useClusterView);
-  }
-
-  public Map<String, Object2LongMap<String>> getTierToDatasourceToUnderReplicatedCount(
-      Iterable<DataSegment> dataSegments,
-      boolean useClusterView
-  )
-  {
-    return computeUnderReplicated(dataSegments, useClusterView);
-  }
-
-  public Object2IntMap<String> getDatasourceToUnavailableSegmentCount()
-  {
-    if (segmentReplicationStatus == null) {
-      return Object2IntMaps.emptyMap();
-    }
-
-    final Object2IntOpenHashMap<String> datasourceToUnavailableSegments = new Object2IntOpenHashMap<>();
-
-    final Iterable<DataSegment> dataSegments = metadataManager.segments().iterateAllUsedSegments();
-    for (DataSegment segment : dataSegments) {
-      SegmentReplicaCount replicaCount = segmentReplicationStatus.getReplicaCountsInCluster(segment.getId());
-      if (replicaCount != null && (replicaCount.totalLoaded() > 0 || replicaCount.required() == 0)) {
-        datasourceToUnavailableSegments.addTo(segment.getDataSource(), 0);
-      } else {
-        datasourceToUnavailableSegments.addTo(segment.getDataSource(), 1);
-      }
-    }
-
-    return datasourceToUnavailableSegments;
-  }
-
-  public Object2IntMap<String> getDatasourceToDeepStorageQueryOnlySegmentCount()
-  {
-    if (segmentReplicationStatus == null) {
-      return Object2IntMaps.emptyMap();
-    }
-
-    final Object2IntOpenHashMap<String> datasourceToDeepStorageOnlySegments = new Object2IntOpenHashMap<>();
-
-    final Iterable<DataSegment> dataSegments = metadataManager.segments().iterateAllUsedSegments();
-    for (DataSegment segment : dataSegments) {
-      SegmentReplicaCount replicaCount = segmentReplicationStatus.getReplicaCountsInCluster(segment.getId());
-      if (replicaCount != null && replicaCount.totalLoaded() == 0 && replicaCount.required() == 0) {
-        datasourceToDeepStorageOnlySegments.addTo(segment.getDataSource(), 1);
-      }
-    }
-
-    return datasourceToDeepStorageOnlySegments;
   }
 
   public Map<String, Double> getDatasourceToLoadStatus()
@@ -313,16 +240,6 @@ public class DruidCoordinator
     }
 
     return loadStatus;
-  }
-
-  @Nullable
-  public Integer getReplicationFactor(SegmentId segmentId)
-  {
-    if (segmentReplicationStatus == null) {
-      return null;
-    }
-    SegmentReplicaCount replicaCountsInCluster = segmentReplicationStatus.getReplicaCountsInCluster(segmentId);
-    return replicaCountsInCluster == null ? null : replicaCountsInCluster.required();
   }
 
   @Nullable
@@ -402,18 +319,6 @@ public class DruidCoordinator
         null
     );
     compactSegmentsDuty.run();
-  }
-
-  private Map<String, Object2LongMap<String>> computeUnderReplicated(
-      Iterable<DataSegment> dataSegments,
-      boolean computeUsingClusterView
-  )
-  {
-    if (segmentReplicationStatus == null) {
-      return Collections.emptyMap();
-    } else {
-      return segmentReplicationStatus.getTierToDatasourceToUnderReplicated(dataSegments, !computeUsingClusterView);
-    }
   }
 
   private void becomeLeader()
@@ -551,7 +456,7 @@ public class DruidCoordinator
             serverInventoryView
         ),
         new RunRules(segments -> metadataManager.segments().markSegmentsAsUnused(segments)),
-        new UpdateReplicationStatus(),
+        segmentReplicationStatusManager.new UpdateReplicationStatus(),
         new UnloadUnusedSegments(loadQueueManager),
         new MarkOvershadowedSegmentsAsUnused(segments -> metadataManager.segments().markSegmentsAsUnused(segments)),
         new MarkEternityTombstonesAsUnused(segments -> metadataManager.segments().markSegmentsAsUnused(segments)),
@@ -787,43 +692,5 @@ public class DruidCoordinator
     }
   }
 
-  /**
-   * Updates replication status of all used segments. This duty must run after
-   * {@link RunRules} so that the number of required replicas for all segments
-   * has been determined.
-   */
-  private class UpdateReplicationStatus implements CoordinatorDuty
-  {
 
-    @Override
-    public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
-    {
-      segmentReplicationStatus = params.getSegmentReplicationStatus();
-
-      // Collect stats for unavailable and under-replicated segments
-      final CoordinatorRunStats stats = params.getCoordinatorStats();
-      getDatasourceToUnavailableSegmentCount().forEach(
-          (dataSource, numUnavailable) -> stats.add(
-              Stats.Segments.UNAVAILABLE,
-              RowKey.of(Dimension.DATASOURCE, dataSource),
-              numUnavailable
-          )
-      );
-      getTierToDatasourceToUnderReplicatedCount(false).forEach(
-          (tier, countsPerDatasource) -> countsPerDatasource.forEach(
-              (dataSource, underReplicatedCount) ->
-                  stats.addToSegmentStat(Stats.Segments.UNDER_REPLICATED, tier, dataSource, underReplicatedCount)
-          )
-      );
-      getDatasourceToDeepStorageQueryOnlySegmentCount().forEach(
-          (dataSource, numDeepStorageOnly) -> stats.add(
-              Stats.Segments.DEEP_STORAGE_ONLY,
-              RowKey.of(Dimension.DATASOURCE, dataSource),
-              numDeepStorageOnly
-          )
-      );
-
-      return params;
-    }
-  }
 }
