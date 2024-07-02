@@ -133,19 +133,21 @@ For more details on each of the specs in an auto-compaction configuration, see [
 
 ### Compaction engine
 
-When you configure automatic compaction, you can specify whether Druid uses the native engine or the multi-stage query (MSQ) task engine to perform the compaction.  The native engine was the only engine available for compaction prior to the introduction of the MSQ task engine and the corresponding `engine` context parameter. For more information about the MSQ task engine, see [MSQ task engine concepts](../multi-stage-query/concepts.md).
+When you configure automatic compaction, you can specify whether Druid uses the native engine or the multi-stage query (MSQ) task engine to perform the compaction.  The native engine was the only engine available for compaction prior to the introduction of the MSQ task engine and the corresponding `engine` context parameter. 
+
+Using the MSQ task engine for compaction provides faster compaction times as well as better memory tuning and usage. For more information about the MSQ task engine, see [MSQ task engine concepts](../multi-stage-query/concepts.md).
 
 To use the native compaction engine, either omit the `engine` config when submitting your compaction task spec or set it to `native`.
 
 To use the MSQ task engine for automatic compaction, do the following:
 
-* Have the [MSQ  task engine extension loaded](../multi-stage-query/index.md#load-the-extension)
+* Have the [MSQ  task engine extension loaded](../multi-stage-query/index.md#load-the-extension).
 * In the compaction task spec for a datasource, set `compactionConfigs.engine` to `msq`. The default is `native`.
 * Have at least two compaction task slots available or set `compactionConfig.taskContext.maxNumTasks` to two or more. The MSQ task engine requires at least two tasks to run, one controller task and one worker task.
 
-Using the MSQ task engine for compaction provides faster compaction times as well as better memory tuning and usage.
-
 Keep the following limitations in mind MSQ task engine for auto-compaction:
+
+<!--Duplicated in multi-stage-query/known-issues.md-->
 
 - Only range-based partitioning is supported
 - You cannot group or roll up metrics for dimensions 
@@ -155,23 +157,24 @@ Keep the following limitations in mind MSQ task engine for auto-compaction:
 
 #### MSQ task engine context parameters
 
-You can use [MSQ task engine context parameters](../multi-stage-query/) in `compactionConfig.taskContext` when configuring your datasource for automatic compaction, such as `compactionConfig.taskContext.maxNumTasks`. Some of the MSQ task engine context parameters overlap with automatic compaction parameters. When these settings overlap, set one or the other.
+You can use [MSQ task engine context parameters](../multi-stage-query/) in `compactionConfig.taskContext` when configuring your datasource for automatic compaction, such as setting the maximum number of tasks using the `compactionConfig.taskContext.maxNumTasks` parameter. Some of the MSQ task engine context parameters overlap with automatic compaction parameters. When these settings overlap, set one or the other.
 
-The following list has the MSQ task engine context parameter first with the native context parameter in parenthesis:
+The following table has the MSQ task engine context parameter first with the native context parameter in parenthesis:
 
-- `context.priority` (`taskPriority`)
-- `context.rowsPerSegment` (`tuningConfig.targetRowsPerSegment`)
-- `context.priority` (`taskContext.priority`)
-- `context.storeCompactionState` (`taskContext.storeCompactionState`)
-- `sqlQueryContext.sqlInsertSegmentGranularity` (`granularitySpec.segmentGranularity`)
-- `spec.query.dataSource` or `dataSource` (`dataSource`)
-- `spec.tuningConfig.indexSpec` (`tuningConfig.indexSpec`)
-- `spec.query.orederBy` (`tuningConfig.indexSpec`)
-- `spec.query.granularity` (`granularitySpec.queryGranularity`)
-- `spec.query.dimensions` (`dimensionsSpec`)
-- `spec.query.filter` (`transformSpec.filter`)
-- `spec.query.aggregations` (`metricsSpec`)
-
+| MSQ task engine context parameter | Automatic compaction config |
+|--------------------------------------------|---------------------------------------------|
+| `context.priority`                         | `taskPriority`                              |
+| `context.rowsPerSegment`                   | `tuningConfig.targetRowsPerSegment`         |
+| `context.priority`                         | `taskContext.priority`                      |
+| `context.storeCompactionState`             | `taskContext.storeCompactionState`          |
+| `sqlQueryContext.sqlInsertSegmentGranularity` | `granularitySpec.segmentGranularity`      |
+| `spec.query.dataSource` or `dataSource`    | `dataSource`                                |
+| `spec.tuningConfig.indexSpec`              | `tuningConfig.indexSpec`                    |
+| `spec.query.orederBy`                      | `tuningConfig.indexSpec`                    |
+| `spec.query.granularity`                   | `granularitySpec.queryGranularity`          |
+| `spec.query.dimensions`                    | `dimensionsSpec`                            |
+| `spec.query.filter`                        | `transformSpec.filter`                      |
+| `spec.query.aggregations`                  | `metricsSpec`                               |
 
 
 ### Set frequency of compaction runs
