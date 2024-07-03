@@ -37,9 +37,11 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
+import java.util.Objects;
 
 /**
  * This aggregator factory is for merging existing sketches.
@@ -112,9 +114,10 @@ public class HllSketchMergeAggregatorFactory extends HllSketchAggregatorFactory
     ColumnCapabilities columnCapabilities = columnSelectorFactory.getColumnCapabilities(getFieldName());
     if (columnCapabilities != null) {
       final ColumnType type = columnCapabilities.toColumnType();
-      System.out.println("type = " + type);
-      System.out.println("type.getComplexTypeName() = " + type.getComplexTypeName());
-      if (!ColumnType.UNKNOWN_COMPLEX.equals(type) && !TYPE.equals(type)) {
+      if (!ColumnType.UNKNOWN_COMPLEX.equals(type) && !TYPE.equals(type) &&
+          !(ValueType.COMPLEX.equals(type.getType()) &&
+            (Objects.equals(type.getComplexTypeName(), "HLLSketch") ||
+             Objects.equals(type.getComplexTypeName(), "HLLSketchBuild")))) {
         throw new UOE("Using aggregation type %s is not supported for %s column. "
                       + "Use a different aggregator type and run the query again.",
                       getIntermediateType().getComplexTypeName(),
@@ -133,9 +136,10 @@ public class HllSketchMergeAggregatorFactory extends HllSketchAggregatorFactory
     ColumnCapabilities columnCapabilities = columnSelectorFactory.getColumnCapabilities(getFieldName());
     if (columnCapabilities != null) {
       final ColumnType type = columnCapabilities.toColumnType();
-      System.out.println("type = " + type);
-      System.out.println("type.getComplexTypeName() = " + type.getComplexTypeName());
-      if (!ColumnType.UNKNOWN_COMPLEX.equals(type) && !TYPE.equals(type)) {
+      if (!ColumnType.UNKNOWN_COMPLEX.equals(type) && !TYPE.equals(type) &&
+          !(ValueType.COMPLEX.equals(type.getType()) &&
+            (Objects.equals(type.getComplexTypeName(), "HLLSketch") ||
+             Objects.equals(type.getComplexTypeName(), "HLLSketchBuild")))) {
         throw new UOE("Using aggregation type %s is not supported for %s column. "
                       + "Use a different aggregator type and run the query again.",
                       getIntermediateType().getComplexTypeName(),
@@ -164,7 +168,10 @@ public class HllSketchMergeAggregatorFactory extends HllSketchAggregatorFactory
     ColumnCapabilities columnCapabilities = selectorFactory.getColumnCapabilities(getFieldName());
     if (columnCapabilities != null) {
       final ColumnType type = columnCapabilities.toColumnType();
-      if (!ColumnType.UNKNOWN_COMPLEX.equals(type) && !TYPE.equals(type)) {
+      if (!ColumnType.UNKNOWN_COMPLEX.equals(type) && !TYPE.equals(type) &&
+          !(ValueType.COMPLEX.equals(type.getType()) &&
+            (Objects.equals(type.getComplexTypeName(), "HLLSketch") ||
+             Objects.equals(type.getComplexTypeName(), "HLLSketchBuild")))) {
         throw new UOE("Using aggregation type %s is not supported for %s column. "
                       + "Use a different aggregator type and run the query again.",
                       getIntermediateType().getComplexTypeName(),

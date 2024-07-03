@@ -57,13 +57,7 @@ public class HllSketchApproxCountDistinctSqlAggregator extends HllSketchBaseSqlA
                          .operandTypeChecker(
                              OperandTypes.or(
                                  // APPROX_COUNT_DISTINCT_DS_HLL(column)
-                                 OperandTypes.and(
-                                     OperandTypes.sequence(
-                                         StringUtils.format("'%s(column)'", NAME),
-                                         COLUMN_ALLOWED_TYPES
-                                     ),
-                                     OperandTypes.family(SqlTypeFamily.ANY)
-                                 ),
+                                 OperandTypes.and(COLUMN_ALLOWED_TYPES, OperandTypes.family(SqlTypeFamily.ANY)),
                                  // APPROX_COUNT_DISTINCT_DS_HLL(column, lgk)
                                  OperandTypes.and(
                                      OperandTypes.sequence(
@@ -81,7 +75,7 @@ public class HllSketchApproxCountDistinctSqlAggregator extends HllSketchBaseSqlA
                                          CastedLiteralOperandTypeCheckers.POSITIVE_INTEGER_LITERAL,
                                          OperandTypes.STRING
                                      ),
-                                     OperandTypes.family(SqlTypeFamily.ANY, SqlTypeFamily.EXACT_NUMERIC, SqlTypeFamily.EXACT_NUMERIC)
+                                     OperandTypes.family(SqlTypeFamily.ANY, SqlTypeFamily.EXACT_NUMERIC, SqlTypeFamily.STRING)
                                  )
                              )
                          )
