@@ -20,6 +20,7 @@
 package org.apache.druid.segment.loading;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.google.common.base.Preconditions;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.QueryableIndexSegment;
@@ -34,9 +35,29 @@ import java.io.IOException;
  */
 public class MMappedQueryableSegmentizerFactory implements SegmentizerFactory
 {
+  /**
+   * A static method to make a segmentizer factory that can be serialized by Jackson.  This exists because the object
+   * doesn't actually need the IndexIO object in order to be serialized by Jackson, but the public constructor
+   * *does* require it.  We leave the public constructor alone because if indexIO is null, this SegmentizerFactory
+   * is largely useless, so we just create this one static method to enable creating the object for this singular
+   * use case.
+   *
+   * @return a SegmentizerFactory that can be used to be serialized by Jackson
+   */
+  @SuppressWarnings("unused")
+  public static MMappedQueryableSegmentizerFactory makeForSerialization()
+  {
+    return new MMappedQueryableSegmentizerFactory();
+  }
 
   private final IndexIO indexIO;
 
+  private MMappedQueryableSegmentizerFactory()
+  {
+    this.indexIO = null;
+  }
+
+  @JsonCreator
   public MMappedQueryableSegmentizerFactory(@JacksonInject IndexIO indexIO)
   {
     this.indexIO = Preconditions.checkNotNull(indexIO, "Null IndexIO");
