@@ -22,7 +22,6 @@ package org.apache.druid.query.aggregation.hyperloglog;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.hll.HyperLogLogCollector;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.guava.Comparators;
@@ -104,46 +103,63 @@ public class HyperUniquesAggregatorFactory extends AggregatorFactory
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
+    ColumnCapabilities columnCapabilities = metricFactory.getColumnCapabilities(fieldName);
+    if (columnCapabilities != null) {
+      final ColumnType type = columnCapabilities.toColumnType();
+      if (!ColumnType.UNKNOWN_COMPLEX.equals(type) && !TYPE.equals(type) && !PRECOMPUTED_TYPE.equals(type)) {
+        throw new UOE("Using aggregation type %s is not supported for %s<%s> column. "
+                      + "Use a different aggregator type and run the query again.",
+                      getIntermediateType().getComplexTypeName(),
+                      type,
+                      type.getComplexTypeName());
+      }
+    }
+
     BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(fieldName);
     if (selector instanceof NilColumnValueSelector) {
       return NoopAggregator.instance();
     }
-    final Class classOfObject = selector.classOfObject();
-    if (classOfObject.equals(Object.class) || HyperLogLogCollector.class.isAssignableFrom(classOfObject)) {
-      return new HyperUniquesAggregator(selector);
-    }
-
-    throw new IAE("Incompatible type for metric[%s], expected a HyperUnique, got a %s", fieldName, classOfObject);
+    return new HyperUniquesAggregator(selector);
   }
 
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
+    ColumnCapabilities columnCapabilities = metricFactory.getColumnCapabilities(fieldName);
+    if (columnCapabilities != null) {
+      final ColumnType type = columnCapabilities.toColumnType();
+      if (!ColumnType.UNKNOWN_COMPLEX.equals(type) && !TYPE.equals(type) && !PRECOMPUTED_TYPE.equals(type)) {
+        throw new UOE("Using aggregation type %s is not supported for %s<%s> column. "
+                      + "Use a different aggregator type and run the query again.",
+                      getIntermediateType().getComplexTypeName(),
+                      type,
+                      type.getComplexTypeName());
+      }
+    }
+
     BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(fieldName);
     if (selector instanceof NilColumnValueSelector) {
       return NoopBufferAggregator.instance();
     }
-    final Class classOfObject = selector.classOfObject();
-    if (classOfObject.equals(Object.class) || HyperLogLogCollector.class.isAssignableFrom(classOfObject)) {
-      return new HyperUniquesBufferAggregator(selector);
-    }
-
-    throw new IAE("Incompatible type for metric[%s], expected a HyperUnique, got a %s", fieldName, classOfObject);
+    return new HyperUniquesBufferAggregator(selector);
   }
 
   @Override
   public VectorAggregator factorizeVector(final VectorColumnSelectorFactory selectorFactory)
   {
-    final ColumnCapabilities capabilities = selectorFactory.getColumnCapabilities(fieldName);
-    if (capabilities != null && !Objects.equals(capabilities.toColumnType().getComplexTypeName(), TYPE.getComplexTypeName())
-        && !Objects.equals(capabilities.toColumnType().getComplexTypeName(), PRECOMPUTED_TYPE.getComplexTypeName())) {
-      throw new UOE("Using aggregation type %s is not supported for %s<%s> column. "
-                    + "Use a different aggregator type and run the query again.",
-                    getIntermediateType().getComplexTypeName(),
-                    capabilities.getType(),
-                    capabilities.getComplexTypeName());
+    final ColumnCapabilities columnCapabilities = selectorFactory.getColumnCapabilities(fieldName);
+    if (columnCapabilities != null) {
+      final ColumnType type = columnCapabilities.toColumnType();
+      if (!ColumnType.UNKNOWN_COMPLEX.equals(type) && !TYPE.equals(type) && !PRECOMPUTED_TYPE.equals(type)) {
+        throw new UOE("Using aggregation type %s is not supported for %s<%s> column. "
+                      + "Use a different aggregator type and run the query again.",
+                      getIntermediateType().getComplexTypeName(),
+                      type,
+                      type.getComplexTypeName());
+      }
     }
-    if (!Types.is(capabilities, ValueType.COMPLEX)) {
+
+    if (!Types.is(columnCapabilities, ValueType.COMPLEX)) {
       return NoopVectorAggregator.instance();
     } else {
       return new HyperUniquesVectorAggregator(selectorFactory.makeObjectSelector(fieldName));

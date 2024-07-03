@@ -49,6 +49,7 @@ import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.InputAccessor;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
+import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -161,7 +162,11 @@ public class BuiltinApproxCountDistinctSqlAggregator implements SqlAggregator
           SqlKind.OTHER_FUNCTION,
           ReturnTypes.explicit(SqlTypeName.BIGINT),
           InferTypes.VARCHAR_1024,
-          OperandTypes.ANY,
+          OperandTypes.or(
+              OperandTypes.STRING,
+              OperandTypes.NUMERIC,
+              RowSignatures.complexTypeChecker(HyperUniquesAggregatorFactory.TYPE)
+          ),
           SqlFunctionCategory.STRING,
           false,
           false,
