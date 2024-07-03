@@ -278,7 +278,7 @@ public class IndexIO
           }
         }
       } else if (vals1 instanceof Object[]) {
-        if (!Arrays.deepEquals((Object[]) vals1, (Object[]) vals2)) {
+        if (!(vals2 instanceof Object[] && Arrays.deepEquals((Object[]) vals1, (Object[]) vals2))) {
           throw notEqualValidationException(dim1Name, vals1, vals2);
         }
       } else {
@@ -510,7 +510,7 @@ public class IndexIO
           new ConciseBitmapFactory(),
           columns,
           index.getFileMapper(),
-          null,
+          () -> null,
           lazy
       );
     }
@@ -604,24 +604,32 @@ public class IndexIO
         allDims = null;
       }
 
-      Metadata metadata = null;
-      ByteBuffer metadataBB = smooshedFiles.mapFile("metadata.drd");
-      if (metadataBB != null) {
-        try {
-          metadata = mapper.readValue(
-              SERIALIZER_UTILS.readBytes(metadataBB, metadataBB.remaining()),
-              Metadata.class
-          );
+      Supplier<Metadata> metadataSupplier = new Supplier<Metadata>()
+      {
+        @Override
+        @Nullable
+        public Metadata get()
+        {
+          try {
+            ByteBuffer metadataBB = smooshedFiles.mapFile("metadata.drd");
+            if (metadataBB != null) {
+              return mapper.readValue(
+                  SERIALIZER_UTILS.readBytes(metadataBB, metadataBB.remaining()),
+                  Metadata.class
+              );
+            }
+          }
+          catch (JsonParseException | JsonMappingException ex) {
+            // Any jackson deserialization errors are ignored e.g. if metadata contains some aggregator which
+            // is no longer supported then it is OK to not use the metadata instead of failing segment loading
+            log.warn(ex, "Failed to load metadata for segment [%s]", inDir);
+          }
+          catch (IOException ex) {
+            log.warn(ex, "Failed to read metadata for segment [%s]", inDir);
+          }
+          return null;
         }
-        catch (JsonParseException | JsonMappingException ex) {
-          // Any jackson deserialization errors are ignored e.g. if metadata contains some aggregator which
-          // is no longer supported then it is OK to not use the metadata instead of failing segment loading
-          log.warn(ex, "Failed to load metadata for segment [%s]", inDir);
-        }
-        catch (IOException ex) {
-          throw new IOException("Failed to read metadata", ex);
-        }
-      }
+      };
 
       Map<String, Supplier<ColumnHolder>> columns = new LinkedHashMap<>();
 
@@ -663,7 +671,7 @@ public class IndexIO
           segmentBitmapSerdeFactory.getBitmapFactory(),
           columns,
           smooshedFiles,
-          metadata,
+          metadataSupplier,
           lazy
       );
 

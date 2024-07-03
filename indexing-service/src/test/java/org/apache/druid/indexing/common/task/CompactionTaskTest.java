@@ -2033,14 +2033,6 @@ public class CompactionTaskTest
           }
         }
 
-        final Metadata metadata = new Metadata(
-            null,
-            aggregatorFactories.toArray(new AggregatorFactory[0]),
-            null,
-            null,
-            null
-        );
-
         queryableIndexMap.put(
             entry.getValue(),
             new SimpleQueryableIndex(
@@ -2049,7 +2041,13 @@ public class CompactionTaskTest
                 null,
                 columnMap,
                 null,
-                metadata,
+                () -> new Metadata(
+                    null,
+                    aggregatorFactories.toArray(new AggregatorFactory[0]),
+                    null,
+                    null,
+                    null
+                ),
                 false
             )
         );
@@ -2074,7 +2072,7 @@ public class CompactionTaskTest
                 index.getBitmapFactoryForDimensions(),
                 index.getColumns(),
                 index.getFileMapper(),
-                null,
+                () -> null,
                 false
             )
         );
