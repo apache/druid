@@ -17,7 +17,10 @@
 # specific language governing permissions and limitations
 # under the License.
 
-from __future__ import print_function
+# NOTE:
+# Any feature updates to this script must also be reflected in
+# `dsql-main-py2` so that intended changes work for users using
+# Python 2 or 3.
 
 import argparse
 import base64
@@ -33,11 +36,12 @@ import ssl
 import sys
 import time
 import unicodedata
-import urllib2
+import urllib.request
+import urllib.error
 
 class DruidSqlException(Exception):
   def friendly_message(self):
-    return self.message if self.message else "Query failed"
+    return getattr(self, 'message', 'Query failed')
 
   def write_to(self, f):
     f.write('\x1b[31m')
@@ -73,12 +77,12 @@ def do_query(url, sql, context, timeout, user, ignore_ssl_verification, ca_file,
       else:
         ssl_context.load_cert_chain(certfile=cert_chain, keyfile=key_file, password=key_pass)
 
-    req = urllib2.Request(url, sql_json, {'Content-Type' : 'application/json'})
+    req = urllib.request.Request(url, sql_json.encode('utf-8'), {'Content-Type' : 'application/json'})
 
     if user:
-      req.add_header("Authorization", "Basic %s" % base64.b64encode(user))
+      req.add_header("Authorization", "Basic %s" % base64.b64encode(user.encode('utf-8')).decode('utf-8'))
 
-    response = urllib2.urlopen(req, None, timeout, context=ssl_context)
+    response = urllib.request.urlopen(req, None, timeout, context=ssl_context)
 
     first_chunk = True
     eof = False
@@ -107,7 +111,7 @@ def do_query(url, sql, context, timeout, user, ignore_ssl_verification, ca_file,
 
       # Read more from the http stream
       if not eof:
-        chunk = response.read(8192)
+        chunk = response.read(8192).decode('utf-8')
         if chunk:
           buf = buf + chunk
           if first_chunk:
@@ -117,11 +121,11 @@ def do_query(url, sql, context, timeout, user, ignore_ssl_verification, ca_file,
           # Stream done. Keep reading objects out of buf though.
           eof = True
 
-  except urllib2.URLError as e:
+  except urllib.error.URLError as e:
     raise_friendly_error(e)
 
 def raise_friendly_error(e):
-  if isinstance(e, urllib2.HTTPError):
+  if isinstance(e, urllib.error.HTTPError):
     text = e.read().strip()
     error_obj = {}
     try:
@@ -149,11 +153,12 @@ def raise_friendly_error(e):
 
 def to_utf8(value):
   if value is None:
-    return ""
-  elif isinstance(value, unicode):
+    return b""
+  elif isinstance(value, str):
     return value.encode("utf-8")
   else:
-    return str(value)
+    return str(value).encode("utf-8")
+
 
 def to_tsv(values, delimiter):
   return delimiter.join(to_utf8(v).replace(delimiter, '') for v in values)
@@ -227,23 +232,23 @@ def table_compute_column_widths(row_buffer):
   return widths
 
 def table_print_row(values, column_widths, column_types):
-  vertical_line = u'\u2502'.encode('utf-8')
-  for i in xrange(0, len(values)):
-    padding = ' ' * max(0, column_widths[i] - table_compute_string_width(values[i]))
-    if column_types and column_types[i] == 'n':
-      print(vertical_line + ' ' + padding + values[i].encode('utf-8') + ' ', end="")
-    else:
-      print(vertical_line + ' ' + values[i].encode('utf-8') + padding + ' ', end="")
-  print(vertical_line)
+    vertical_line = '\u2502'
+    for i in range(len(values)):
+        padding = ' ' * max(0, column_widths[i] - table_compute_string_width(values[i]))
+        if column_types and column_types[i] == 'n':
+            print(vertical_line + ' ' + padding + values[i] + ' ', end="")
+        else:
+            print(vertical_line + ' ' + values[i] + padding + ' ', end="")
+    print(vertical_line)
 
 def table_print_header(values, column_widths):
   # Line 1
-  left_corner = u'\u250C'.encode('utf-8')
-  horizontal_line = u'\u2500'.encode('utf-8')
-  top_tee = u'\u252C'.encode('utf-8')
-  right_corner = u'\u2510'.encode('utf-8')
+  left_corner = '\u250C'
+  horizontal_line = '\u2500'
+  top_tee = '\u252C'
+  right_corner = '\u2510'
   print(left_corner, end="")
-  for i in xrange(0, len(column_widths)):
+  for i in range(0, len(column_widths)):
     print(horizontal_line * max(0, column_widths[i] + 2), end="")
     if i + 1 < len(column_widths):
       print(top_tee, end="")
@@ -253,27 +258,29 @@ def table_print_header(values, column_widths):
   table_print_row(values, column_widths, None)
 
   # Line 3
-  left_tee = u'\u251C'.encode('utf-8')
-  cross = u'\u253C'.encode('utf-8')
-  right_tee = u'\u2524'.encode('utf-8')
+  left_tee = '\u251C'
+  cross = '\u253C'
+  right_tee = '\u2524'
   print(left_tee, end="")
-  for i in xrange(0, len(column_widths)):
+  for i in range(0, len(column_widths)):
     print(horizontal_line * max(0, column_widths[i] + 2), end="")
     if i + 1 < len(column_widths):
       print(cross, end="")
   print(right_tee)
 
+
 def table_print_bottom(column_widths):
-  left_corner = u'\u2514'.encode('utf-8')
-  right_corner = u'\u2518'.encode('utf-8')
-  bottom_tee = u'\u2534'.encode('utf-8')
-  horizontal_line = u'\u2500'.encode('utf-8')
+  left_corner = '\u2514'
+  right_corner = '\u2518'
+  bottom_tee = '\u2534'
+  horizontal_line = '\u2500'
   print(left_corner, end="")
-  for i in xrange(0, len(column_widths)):
+  for i in range(0, len(column_widths)):
     print(horizontal_line * max(0, column_widths[i] + 2), end="")
     if i + 1 < len(column_widths):
       print(bottom_tee, end="")
   print(right_corner)
+
 
 def table_print_row_buffer(row_buffer, column_widths, column_types):
   first = True
@@ -307,7 +314,7 @@ def print_table(rows):
           column_types.append('s')
       first = False
 
-    values = [table_to_printable_value(v) for k, v in row.iteritems()]
+    values = [table_to_printable_value(v) for k, v in row.items()]
     if rows_to_buffer > 0:
       row_buffer.append(values)
       rows_to_buffer = rows_to_buffer - 1
@@ -343,12 +350,12 @@ def display_query(url, sql, context, args):
 def sql_literal_escape(s):
   if s is None:
     return "''"
-  elif isinstance(s, unicode):
+  elif isinstance(s, str):
     ustr = s
   else:
-    ustr = str(s).decode('utf-8')
+    ustr = str(s)
 
-  escaped = [u"U&'"]
+  escaped = ["U&'"]
 
   for c in ustr:
     ccategory = unicodedata.category(c)
@@ -396,17 +403,17 @@ def main():
   parser_cnn.add_argument('--host', '-H', type=str, default='http://localhost:8082/', help='Druid query host or url, like https://localhost:8282/')
   parser_cnn.add_argument('--user', '-u', type=str, help='HTTP basic authentication credentials, like user:password')
   parser_cnn.add_argument('--timeout', type=int, default=0, help='Timeout in seconds')
-  parser_cnn.add_argument('--cafile', type=str, help='Path to SSL CA file for validating server certificates. See load_verify_locations() in https://docs.python.org/2/library/ssl.html#ssl.SSLContext.')
-  parser_cnn.add_argument('--capath', type=str, help='SSL CA path for validating server certificates. See load_verify_locations() in https://docs.python.org/2/library/ssl.html#ssl.SSLContext.')
+  parser_cnn.add_argument('--cafile', type=str, help='Path to SSL CA file for validating server certificates. See load_verify_locations() in https://docs.python.org/3/library/ssl.html#ssl.SSLContext.')
+  parser_cnn.add_argument('--capath', type=str, help='SSL CA path for validating server certificates. See load_verify_locations() in https://docs.python.org/3/library/ssl.html#ssl.SSLContext.')
   parser_cnn.add_argument('--ignore-ssl-verification', '-k', action='store_true', default=False, help='Skip verification of SSL certificates.')
   parser_fmt.add_argument('--format', type=str, default='table', choices=('csv', 'tsv', 'json', 'table'), help='Result format')
   parser_fmt.add_argument('--header', action='store_true', help='Include header row for formats "csv" and "tsv"')
   parser_fmt.add_argument('--tsv-delimiter', type=str, default='\t', help='Delimiter for format "tsv"')
   parser_oth.add_argument('--context-option', '-c', type=str, action='append', help='Set context option for this connection, see https://druid.apache.org/docs/latest/querying/sql.html#connection-context for options')
   parser_oth.add_argument('--execute', '-e', type=str, help='Execute single SQL query')
-  parser_cnn.add_argument('--certchain', type=str, help='Path to SSL certificate used to connect to server. See load_cert_chain() in https://docs.python.org/2/library/ssl.html#ssl.SSLContext.')
-  parser_cnn.add_argument('--keyfile', type=str, help='Path to private SSL key used to connect to server. See load_cert_chain() in https://docs.python.org/2/library/ssl.html#ssl.SSLContext.')
-  parser_cnn.add_argument('--keypass', type=str, help='Password to private SSL key file used to connect to server. See load_cert_chain() in https://docs.python.org/2/library/ssl.html#ssl.SSLContext.')
+  parser_cnn.add_argument('--certchain', type=str, help='Path to SSL certificate used to connect to server. See load_cert_chain() in https://docs.python.org/3/library/ssl.html#ssl.SSLContext.')
+  parser_cnn.add_argument('--keyfile', type=str, help='Path to private SSL key used to connect to server. See load_cert_chain() in https://docs.python.org/3/library/ssl.html#ssl.SSLContext.')
+  parser_cnn.add_argument('--keypass', type=str, help='Password to private SSL key file used to connect to server. See load_cert_chain() in https://docs.python.org/3/library/ssl.html#ssl.SSLContext.')
   args = parser.parse_args()
 
   # Build broker URL
@@ -422,7 +429,7 @@ def main():
       if len(kv) != 2:
         raise ValueError('Invalid context option, should be key=value: ' + opt)
       if re.match(r"^\d+$", kv[1]):
-        context[kv[0]] = long(kv[1])
+        context[kv[0]] = int(kv[1])
       else:
         context[kv[0]] = kv[1]
 
@@ -450,7 +457,7 @@ def main():
       while not sql.endswith(';'):
         prompt = "dsql> " if sql == '' else 'more> '
         try:
-          more_sql = raw_input(prompt)
+          more_sql = input(prompt)
         except EOFError:
           sys.stdout.write('\n')
           sys.exit(1)
