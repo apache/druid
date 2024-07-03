@@ -107,11 +107,10 @@ public class HyperUniquesAggregatorFactory extends AggregatorFactory
     if (columnCapabilities != null) {
       final ColumnType type = columnCapabilities.toColumnType();
       if (!ColumnType.UNKNOWN_COMPLEX.equals(type) && !TYPE.equals(type) && !PRECOMPUTED_TYPE.equals(type)) {
-        throw new UOE("Using aggregation type %s is not supported for %s<%s> column. "
+        throw new UOE("Using aggregation type %s is not supported for %s column. "
                       + "Use a different aggregator type and run the query again.",
                       getIntermediateType().getComplexTypeName(),
-                      type,
-                      type.getComplexTypeName());
+                      type);
       }
     }
 
@@ -129,11 +128,10 @@ public class HyperUniquesAggregatorFactory extends AggregatorFactory
     if (columnCapabilities != null) {
       final ColumnType type = columnCapabilities.toColumnType();
       if (!ColumnType.UNKNOWN_COMPLEX.equals(type) && !TYPE.equals(type) && !PRECOMPUTED_TYPE.equals(type)) {
-        throw new UOE("Using aggregation type %s is not supported for %s<%s> column. "
+        throw new UOE("Using aggregation type %s is not supported for %s column. "
                       + "Use a different aggregator type and run the query again.",
                       getIntermediateType().getComplexTypeName(),
-                      type,
-                      type.getComplexTypeName());
+                      type);
       }
     }
 
@@ -151,11 +149,10 @@ public class HyperUniquesAggregatorFactory extends AggregatorFactory
     if (columnCapabilities != null) {
       final ColumnType type = columnCapabilities.toColumnType();
       if (!ColumnType.UNKNOWN_COMPLEX.equals(type) && !TYPE.equals(type) && !PRECOMPUTED_TYPE.equals(type)) {
-        throw new UOE("Using aggregation type %s is not supported for %s<%s> column. "
+        throw new UOE("Using aggregation type %s is not supported for %s column. "
                       + "Use a different aggregator type and run the query again.",
                       getIntermediateType().getComplexTypeName(),
-                      type,
-                      type.getComplexTypeName());
+                      type);
       }
     }
 
