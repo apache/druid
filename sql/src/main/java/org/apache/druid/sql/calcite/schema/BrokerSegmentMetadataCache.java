@@ -178,7 +178,7 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
    * else if there are segments or datasources to be refreshed.
    */
   @Override
-  public boolean shouldRefresh()
+  protected boolean shouldRefresh()
   {
     return centralizedDatasourceSchemaConfig.isEnabled() || super.shouldRefresh();
   }

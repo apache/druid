@@ -1820,6 +1820,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     schemaPayloadMap.put(
         "fp",
         new SchemaPayload(RowSignature.builder()
+                                      .add("dim1", ColumnType.STRING)
                                       .add("c1", ColumnType.STRING)
                                       .add("c2", ColumnType.LONG)
                                       .build())
@@ -1899,6 +1900,89 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
 
     Assert.assertEquals("c2", columnNames.get(7));
     Assert.assertEquals(ColumnType.LONG, rowSignature.getColumnType(columnNames.get(7)).get());
+  }
+
+  @Test
+  public void testColdDatasourceSchema_verifyStaleDatasourceRemoved()
+  {
+    DataSegment coldSegmentAlpha =
+        DataSegment.builder()
+                   .dataSource("alpha")
+                   .interval(Intervals.of("2000/P2Y"))
+                   .version("1")
+                   .shardSpec(new LinearShardSpec(0))
+                   .size(0)
+                   .build();
+
+    DataSegment coldSegmentBeta =
+        DataSegment.builder()
+                   .dataSource("beta")
+                   .interval(Intervals.of("2000/P2Y"))
+                   .version("1")
+                   .shardSpec(new LinearShardSpec(0))
+                   .size(0)
+                   .build();
+
+    ImmutableMap.Builder<SegmentId, SegmentMetadata> segmentStatsMap = new ImmutableMap.Builder<>();
+    segmentStatsMap.put(coldSegmentAlpha.getId(), new SegmentMetadata(20L, "fp"));
+    segmentStatsMap.put(coldSegmentBeta.getId(), new SegmentMetadata(20L, "fp"));
+
+    ImmutableMap.Builder<String, SchemaPayload> schemaPayloadMap = new ImmutableMap.Builder<>();
+    schemaPayloadMap.put(
+        "fp",
+        new SchemaPayload(RowSignature.builder()
+                                      .add("dim1", ColumnType.STRING)
+                                      .add("c1", ColumnType.STRING)
+                                      .add("c2", ColumnType.LONG)
+                                      .build())
+    );
+    segmentSchemaCache.updateFinalizedSegmentSchema(
+        new SegmentSchemaCache.FinalizedSegmentSchemaInfo(segmentStatsMap.build(), schemaPayloadMap.build())
+    );
+
+    Mockito.when(segmentReplicationStatusManager.getReplicationFactor(ArgumentMatchers.eq(coldSegmentAlpha.getId()))).thenReturn(0);
+    Mockito.when(segmentReplicationStatusManager.getReplicationFactor(ArgumentMatchers.eq(coldSegmentBeta.getId()))).thenReturn(0);
+
+    ImmutableDruidDataSource druidDataSource =
+        new ImmutableDruidDataSource(
+            coldSegmentAlpha.getDataSource(),
+            Collections.emptyMap(),
+            Collections.singletonMap(coldSegmentAlpha.getId(), coldSegmentAlpha)
+        );
+
+    Mockito.when(sqlSegmentsMetadataManager.getImmutableDataSourcesWithAllUsedSegments())
+           .thenReturn(Collections.singletonList(druidDataSource));
+
+    CoordinatorSegmentMetadataCache schema = new CoordinatorSegmentMetadataCache(
+        getQueryLifecycleFactory(walker),
+        serverView,
+        SEGMENT_CACHE_CONFIG_DEFAULT,
+        new NoopEscalator(),
+        new InternalQueryConfig(),
+        new NoopServiceEmitter(),
+        segmentSchemaCache,
+        backFillQueue,
+        sqlSegmentsMetadataManager,
+        segmentReplicationStatusManager,
+        segmentsMetadataManagerConfigSupplier
+    );
+
+    schema.coldDatasourceSchemaExec();
+    Assert.assertNotNull(schema.getDatasource("alpha"));
+
+    druidDataSource =
+        new ImmutableDruidDataSource(
+            coldSegmentBeta.getDataSource(),
+            Collections.emptyMap(),
+            Collections.singletonMap(coldSegmentBeta.getId(), coldSegmentBeta)
+        );
+
+    Mockito.when(sqlSegmentsMetadataManager.getImmutableDataSourcesWithAllUsedSegments())
+           .thenReturn(Collections.singletonList(druidDataSource));
+
+    schema.coldDatasourceSchemaExec();
+    Assert.assertNotNull(schema.getDatasource("beta"));
+    Assert.assertNull(schema.getDatasource("alpha"));
   }
 
   private void verifyFooDSSchema(CoordinatorSegmentMetadataCache schema, int columns)

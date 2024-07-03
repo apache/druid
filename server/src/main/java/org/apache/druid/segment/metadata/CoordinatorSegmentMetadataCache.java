@@ -65,7 +65,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -100,11 +99,11 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
   private final SegmentReplicationStatusManager segmentReplicationStatusManager;
 
   // Schema for datasources from cold segments
-  private final ConcurrentMap<String, DataSourceInformation> coldDatasourceSchema = new ConcurrentHashMap<>();
-  private final long coldDatasourceSchemaExecDurationMillis;
-  private final ScheduledExecutorService coldDSScehmaExec;
+  private final ConcurrentHashMap<String, DataSourceInformation> coldSchemaTable = new ConcurrentHashMap<>();
+  private final long coldSchemaExecPeriodMillis;
+  private final ScheduledExecutorService coldScehmaExec;
   private @Nullable Future<?> cacheExecFuture = null;
-  private @Nullable Future<?> coldDSSchemaExecFuture = null;
+  private @Nullable Future<?> coldSchemaExecFuture = null;
 
   @Inject
   public CoordinatorSegmentMetadataCache(
@@ -128,11 +127,11 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
     this.segmentSchemaBackfillQueue = segmentSchemaBackfillQueue;
     this.sqlSegmentsMetadataManager = sqlSegmentsMetadataManager;
     this.segmentReplicationStatusManager = segmentReplicationStatusManager;
-    this.coldDatasourceSchemaExecDurationMillis =
+    this.coldSchemaExecPeriodMillis =
         segmentsMetadataManagerConfigSupplier.get().getPollDuration().getMillis();
-    coldDSScehmaExec = Executors.newSingleThreadScheduledExecutor(
+    coldScehmaExec = Executors.newSingleThreadScheduledExecutor(
         new ThreadFactoryBuilder()
-            .setNameFormat("DruidColdDSSchema-ScheduledExecutor-%d")
+            .setNameFormat("DruidColdSchema-ScheduledExecutor-%d")
             .setDaemon(true)
             .build()
     );
@@ -204,11 +203,14 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
   {
     callbackExec.shutdownNow();
     cacheExec.shutdownNow();
-    coldDSScehmaExec.shutdownNow();
+    coldScehmaExec.shutdownNow();
     segmentSchemaCache.onLeaderStop();
     segmentSchemaBackfillQueue.onLeaderStop();
     if (cacheExecFuture != null) {
       cacheExecFuture.cancel(true);
+    }
+    if (coldSchemaExecFuture != null) {
+      coldSchemaExecFuture.cancel(true);
     }
   }
 
@@ -218,9 +220,9 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
     try {
       segmentSchemaBackfillQueue.onLeaderStart();
       cacheExecFuture = cacheExec.submit(this::cacheExecLoop);
-      coldDSSchemaExecFuture = coldDSScehmaExec.schedule(
+      coldSchemaExecFuture = coldScehmaExec.schedule(
           this::coldDatasourceSchemaExec,
-          coldDatasourceSchemaExecDurationMillis,
+          coldSchemaExecPeriodMillis,
           TimeUnit.MILLISECONDS
       );
 
@@ -239,8 +241,8 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
     if (cacheExecFuture != null) {
       cacheExecFuture.cancel(true);
     }
-    if (coldDSSchemaExecFuture != null) {
-      coldDSSchemaExecFuture.cancel(true);
+    if (coldSchemaExecFuture != null) {
+      coldSchemaExecFuture.cancel(true);
     }
     segmentSchemaCache.onLeaderStop();
     segmentSchemaBackfillQueue.onLeaderStop();
@@ -387,9 +389,10 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
   {
     DataSourceInformation dataSourceInformation = tables.get(name);
     if (dataSourceInformation != null) {
+      // implies that the datasource is entirely cold
       return dataSourceInformation;
     }
-    return coldDatasourceSchema.get(name);
+    return coldSchemaTable.get(name);
   }
 
   @Override
@@ -397,7 +400,8 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
   {
     Map<String, DataSourceInformation> copy = new HashMap<>(tables);
 
-    for (Map.Entry<String, DataSourceInformation> entry : coldDatasourceSchema.entrySet()) {
+    for (Map.Entry<String, DataSourceInformation> entry : coldSchemaTable.entrySet()) {
+      // add entirely cold datasource schema
       copy.computeIfAbsent(entry.getKey(), value -> entry.getValue());
     }
     return ImmutableMap.copyOf(copy);
@@ -452,7 +456,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
 
       RowSignature mergedSignature = rowSignature;
 
-      DataSourceInformation coldDatasourceInformation = coldDatasourceSchema.get(dataSource);
+      DataSourceInformation coldDatasourceInformation = coldSchemaTable.get(dataSource);
       if (coldDatasourceInformation != null) {
         if (rowSignature == null) {
           mergedSignature = coldDatasourceInformation.getRowSignature();
@@ -498,6 +502,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
     return cachedSegments;
   }
 
+  @VisibleForTesting
   protected void coldDatasourceSchemaExec()
   {
     Collection<ImmutableDruidDataSource> immutableDataSources =
@@ -513,8 +518,8 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
       Collection<DataSegment> dataSegments = dataSource.getSegments();
 
       for (DataSegment segment : dataSegments) {
-        if (segmentReplicationStatusManager.getReplicationFactor(segment.getId()) != null
-            && segmentReplicationStatusManager.getReplicationFactor(segment.getId()) != 0) {
+        Integer replicationFactor = segmentReplicationStatusManager.getReplicationFactor(segment.getId());
+        if (replicationFactor != null && replicationFactor != 0) {
           continue;
         }
         Optional<SchemaPayloadPlus> optionalSchema = segmentSchemaCache.getSchemaForSegment(segment.getId());
@@ -537,9 +542,10 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
 
       log.debug("[%s] signature from cold segments is [%s]", dataSourceName, coldSignature);
 
-      coldDatasourceSchema.put(dataSourceName, new DataSourceInformation(dataSourceName, coldSignature));
+      coldSchemaTable.put(dataSourceName, new DataSourceInformation(dataSourceName, coldSignature));
 
-      // update tables map with merged schema
+      // update tables map with merged schema, if signature doesn't exist we do not add entry in this table
+      // schema for entirely cold datasource is maintained separately
       tables.computeIfPresent(
           dataSourceName,
           (ds, info) -> {
@@ -560,7 +566,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
     }
 
     // remove any stale datasource from the map
-    coldDatasourceSchema.keySet().retainAll(dataSources);
+    coldSchemaTable.keySet().retainAll(dataSources);
   }
 
   private RowSignature mergeHotAndColdSchema(RowSignature hot, RowSignature cold)
@@ -568,6 +574,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
     final Map<String, ColumnType> columnTypes = new LinkedHashMap<>();
 
     List<RowSignature> signatures = new ArrayList<>();
+    // hot datasource schema takes precedence
     signatures.add(hot);
     signatures.add(cold);
 

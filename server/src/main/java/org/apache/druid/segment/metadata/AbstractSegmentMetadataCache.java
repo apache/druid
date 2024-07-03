@@ -364,8 +364,11 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
     // noop
   }
 
+  /**
+   * Refresh is executed only when there are segments or datasources needing refresh.
+   */
   @SuppressWarnings("GuardedBy")
-  public boolean shouldRefresh()
+  protected boolean shouldRefresh()
   {
     return (!segmentsNeedingRefresh.isEmpty() || !dataSourcesNeedingRebuild.isEmpty());
   }
