@@ -25,6 +25,7 @@ import org.apache.datasketches.hll.HllSketch;
 import org.apache.datasketches.hll.TgtHllType;
 import org.apache.datasketches.hll.Union;
 import org.apache.druid.java.util.common.StringEncoding;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorFactoryNotMergeableException;
@@ -34,6 +35,7 @@ import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
@@ -107,6 +109,19 @@ public class HllSketchMergeAggregatorFactory extends HllSketchAggregatorFactory
   @Override
   public Aggregator factorize(final ColumnSelectorFactory columnSelectorFactory)
   {
+    ColumnCapabilities columnCapabilities = columnSelectorFactory.getColumnCapabilities(getFieldName());
+    if (columnCapabilities != null) {
+      final ColumnType type = columnCapabilities.toColumnType();
+      System.out.println("type = " + type);
+      System.out.println("type.getComplexTypeName() = " + type.getComplexTypeName());
+      if (!ColumnType.UNKNOWN_COMPLEX.equals(type) && !TYPE.equals(type)) {
+        throw new UOE("Using aggregation type %s is not supported for %s column. "
+                      + "Use a different aggregator type and run the query again.",
+                      getIntermediateType().getComplexTypeName(),
+                      type);
+      }
+    }
+
     final ColumnValueSelector<HllSketchHolder> selector = columnSelectorFactory.makeColumnValueSelector(getFieldName());
     return new HllSketchMergeAggregator(selector, getLgK(), TgtHllType.valueOf(getTgtHllType()));
   }
@@ -115,6 +130,19 @@ public class HllSketchMergeAggregatorFactory extends HllSketchAggregatorFactory
   @Override
   public BufferAggregator factorizeBuffered(final ColumnSelectorFactory columnSelectorFactory)
   {
+    ColumnCapabilities columnCapabilities = columnSelectorFactory.getColumnCapabilities(getFieldName());
+    if (columnCapabilities != null) {
+      final ColumnType type = columnCapabilities.toColumnType();
+      System.out.println("type = " + type);
+      System.out.println("type.getComplexTypeName() = " + type.getComplexTypeName());
+      if (!ColumnType.UNKNOWN_COMPLEX.equals(type) && !TYPE.equals(type)) {
+        throw new UOE("Using aggregation type %s is not supported for %s column. "
+                      + "Use a different aggregator type and run the query again.",
+                      getIntermediateType().getComplexTypeName(),
+                      type);
+      }
+    }
+
     final ColumnValueSelector<HllSketchHolder> selector = columnSelectorFactory.makeColumnValueSelector(getFieldName());
     return new HllSketchMergeBufferAggregator(
         selector,
@@ -133,6 +161,17 @@ public class HllSketchMergeAggregatorFactory extends HllSketchAggregatorFactory
   @Override
   public VectorAggregator factorizeVector(VectorColumnSelectorFactory selectorFactory)
   {
+    ColumnCapabilities columnCapabilities = selectorFactory.getColumnCapabilities(getFieldName());
+    if (columnCapabilities != null) {
+      final ColumnType type = columnCapabilities.toColumnType();
+      if (!ColumnType.UNKNOWN_COMPLEX.equals(type) && !TYPE.equals(type)) {
+        throw new UOE("Using aggregation type %s is not supported for %s column. "
+                      + "Use a different aggregator type and run the query again.",
+                      getIntermediateType().getComplexTypeName(),
+                      type);
+      }
+    }
+
     return new HllSketchMergeVectorAggregator(
         selectorFactory,
         getFieldName(),
