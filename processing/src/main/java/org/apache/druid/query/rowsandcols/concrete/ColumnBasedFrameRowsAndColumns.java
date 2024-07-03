@@ -80,7 +80,6 @@ public class ColumnBasedFrameRowsAndColumns implements RowsAndColumns, AutoClose
       }
     }
     return colCache.get(name);
-
   }
 
   @SuppressWarnings("unchecked")
