@@ -152,7 +152,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   @Override
-  public Collection<DataSegment> retrieveUsedSegmentsForIntervals(
+  public Set<DataSegment> retrieveUsedSegmentsForIntervals(
       final String dataSource,
       final List<Interval> intervals,
       final Segments visibility
@@ -165,7 +165,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   @Override
-  public Collection<DataSegment> retrieveAllUsedSegments(String dataSource, Segments visibility)
+  public Set<DataSegment> retrieveAllUsedSegments(String dataSource, Segments visibility)
   {
     return doRetrieveUsedSegments(dataSource, Collections.emptyList(), visibility);
   }
@@ -173,7 +173,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   /**
    * @param intervals empty list means unrestricted interval.
    */
-  private Collection<DataSegment> doRetrieveUsedSegments(
+  private Set<DataSegment> doRetrieveUsedSegments(
       final String dataSource,
       final List<Interval> intervals,
       final Segments visibility
@@ -249,6 +249,44 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     );
   }
 
+  List<String> retrieveUnusedSegmentIdsForExactIntervalAndVersion(
+      String dataSource,
+      Interval interval,
+      String version
+  )
+  {
+    final String sql = "SELECT id FROM %1$s"
+                       + " WHERE used = :used"
+                       + " AND dataSource = :dataSource"
+                       + " AND version = :version"
+                       + " AND start = :start AND %2$send%2$s = :end";
+
+    final List<String> matchingSegments = connector.inReadOnlyTransaction(
+        (handle, status) -> {
+          final Query<Map<String, Object>> query = handle
+              .createQuery(StringUtils.format(
+                  sql,
+                  dbTables.getSegmentsTable(),
+                  connector.getQuoteString()
+              ))
+              .setFetchSize(connector.getStreamingFetchSize())
+              .bind("used", false)
+              .bind("dataSource", dataSource)
+              .bind("version", version)
+              .bind("start", interval.getStart().toString())
+              .bind("end", interval.getEnd().toString());
+
+          try (final ResultIterator<String> iterator = query.map((index, r, ctx) -> r.getString(1)).iterator()) {
+            return ImmutableList.copyOf(iterator);
+          }
+        }
+    );
+
+    log.debug("Found [%,d] unused segments for datasource[%s] for interval[%s] and version[%s].",
+             matchingSegments.size(), dataSource, interval, version);
+    return matchingSegments;
+  }
+
   @Override
   public List<DataSegment> retrieveUnusedSegmentsForInterval(
       String dataSource,
@@ -280,6 +318,18 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     log.info("Found [%,d] unused segments for datasource[%s] in interval[%s] and versions[%s] with maxUsedStatusLastUpdatedTime[%s].",
              matchingSegments.size(), dataSource, interval, versions, maxUsedStatusLastUpdatedTime);
     return matchingSegments;
+  }
+
+  @Override
+  public Set<DataSegment> retrieveSegmentsById(String dataSource, Set<String> segmentIds)
+  {
+    return connector.inReadOnlyTransaction(
+        (handle, transactionStatus) ->
+            retrieveSegmentsById(handle, dataSource, segmentIds)
+                .stream()
+                .map(DataSegmentPlus::getDataSegment)
+                .collect(Collectors.toSet())
+    );
   }
 
   @Override
@@ -381,7 +431,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     }
   }
 
-  private Collection<DataSegment> retrieveAllUsedSegmentsForIntervalsWithHandle(
+  private Set<DataSegment> retrieveAllUsedSegmentsForIntervalsWithHandle(
       final Handle handle,
       final String dataSource,
       final List<Interval> intervals
@@ -390,7 +440,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     try (final CloseableIterator<DataSegment> iterator =
              SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables, jsonMapper)
                                      .retrieveUsedSegments(dataSource, intervals)) {
-      final List<DataSegment> retVal = new ArrayList<>();
+      final Set<DataSegment> retVal = new HashSet<>();
       iterator.forEachRemaining(retVal::add);
       return retVal;
     }
@@ -400,7 +450,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   public Set<DataSegment> commitSegments(
       final Set<DataSegment> segments,
       @Nullable final SegmentSchemaMapping segmentSchemaMapping
-  ) throws IOException
+  )
   {
     final SegmentPublishResult result =
         commitSegmentsAndMetadata(
@@ -424,7 +474,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       @Nullable final DataSourceMetadata startMetadata,
       @Nullable final DataSourceMetadata endMetadata,
       @Nullable final SegmentSchemaMapping segmentSchemaMapping
-  ) throws IOException
+  )
   {
     verifySegmentsToCommit(segments);
 
@@ -1460,8 +1510,12 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         ));
 
     final String now = DateTimes.nowUtc().toString();
+    final Set<SegmentIdWithShardSpec> processedSegmentIds = new HashSet<>();
     for (PendingSegmentRecord pendingSegment : pendingSegments) {
       final SegmentIdWithShardSpec segmentId = pendingSegment.getId();
+      if (processedSegmentIds.contains(segmentId)) {
+        continue;
+      }
       final Interval interval = segmentId.getInterval();
 
       insertBatch.add()
@@ -1479,6 +1533,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                  .bind("payload", jsonMapper.writeValueAsBytes(segmentId))
                  .bind("task_allocator_id", pendingSegment.getTaskAllocatorId())
                  .bind("upgraded_from_segment_id", pendingSegment.getUpgradedFromSegmentId());
+
+      processedSegmentIds.add(segmentId);
     }
     int[] updated = insertBatch.execute();
     return Arrays.stream(updated).sum();
@@ -1875,7 +1931,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     }
 
     // If yes, try to compute allocated partition num using the max unused segment shard spec
-    SegmentIdWithShardSpec unusedMaxId = getUnusedMaxId(
+    SegmentId unusedMaxId = getUnusedMaxId(
         allocatedId.getDataSource(),
         allocatedId.getInterval(),
         allocatedId.getVersion()
@@ -1887,7 +1943,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
     int maxPartitionNum = Math.max(
         allocatedId.getShardSpec().getPartitionNum(),
-        unusedMaxId.getShardSpec().getPartitionNum() + 1
+        unusedMaxId.getPartitionNum() + 1
     );
     return new SegmentIdWithShardSpec(
         allocatedId.getDataSource(),
@@ -1900,25 +1956,25 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     );
   }
 
-  private SegmentIdWithShardSpec getUnusedMaxId(String datasource, Interval interval, String version)
+  private SegmentId getUnusedMaxId(String datasource, Interval interval, String version)
   {
-    List<DataSegment> unusedSegments = retrieveUnusedSegmentsForInterval(
+    List<String> unusedSegmentIds = retrieveUnusedSegmentIdsForExactIntervalAndVersion(
         datasource,
         interval,
-        ImmutableList.of(version),
-        null,
-        null
+        version
     );
 
-    SegmentIdWithShardSpec unusedMaxId = null;
+    SegmentId unusedMaxId = null;
     int maxPartitionNum = -1;
-    for (DataSegment unusedSegment : unusedSegments) {
-      if (unusedSegment.getInterval().equals(interval)) {
-        int partitionNum = unusedSegment.getShardSpec().getPartitionNum();
-        if (maxPartitionNum < partitionNum) {
-          maxPartitionNum = partitionNum;
-          unusedMaxId = SegmentIdWithShardSpec.fromDataSegment(unusedSegment);
-        }
+    for (String id : unusedSegmentIds) {
+      final SegmentId segmentId = SegmentId.tryParse(datasource, id);
+      if (segmentId == null) {
+        continue;
+      }
+      int partitionNum = segmentId.getPartitionNum();
+      if (maxPartitionNum < partitionNum) {
+        maxPartitionNum = partitionNum;
+        unusedMaxId = segmentId;
       }
     }
     return unusedMaxId;
@@ -2508,8 +2564,6 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
    * oldCommitMetadata when this function is called (based on T.equals). This method is idempotent in that if
    * the metadata already equals newCommitMetadata, it will return true.
    *
-   * @param handle        database handle
-   * @param dataSource    druid dataSource
    * @param startMetadata dataSource metadata pre-insert must match this startMetadata according to
    *                      {@link DataSourceMetadata#matches(DataSourceMetadata)}
    * @param endMetadata   dataSource metadata post-insert will have this endMetadata merged in with
@@ -2571,15 +2625,16 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
     if (startMetadataGreaterThanExisting && !startMetadataMatchesExisting) {
       // Offsets stored in startMetadata is greater than the last commited metadata.
-      return new DataStoreMetadataUpdateResult(true, false,
-          "The new start metadata state[%s] is ahead of the last commited"
-          + " end state[%s]. Try resetting the supervisor.", startMetadata, oldCommitMetadataFromDb
+      return DataStoreMetadataUpdateResult.failure(
+          "The new start metadata state[%s] is ahead of the last committed"
+          + " end state[%s]. Try resetting the supervisor.",
+          startMetadata, oldCommitMetadataFromDb
       );
     }
 
     if (!startMetadataMatchesExisting) {
       // Not in the desired start state.
-      return new DataStoreMetadataUpdateResult(true, false,
+      return DataStoreMetadataUpdateResult.failure(
           "Inconsistency between stored metadata state[%s] and target state[%s]. Try resetting the supervisor.",
           oldCommitMetadataFromDb, startMetadata
       );
@@ -2612,11 +2667,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
       retVal = numRows == 1
           ? DataStoreMetadataUpdateResult.SUCCESS
-          : new DataStoreMetadataUpdateResult(
-              true,
-          true,
-          "Failed to insert metadata for datasource [%s]",
-          dataSource);
+          : DataStoreMetadataUpdateResult.retryableFailure("Failed to insert metadata for datasource[%s]", dataSource);
     } else {
       // Expecting a particular old metadata; use the SHA1 in a compare-and-swap UPDATE
       final int numRows = handle.createStatement(
@@ -2636,11 +2687,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
       retVal = numRows == 1
           ? DataStoreMetadataUpdateResult.SUCCESS
-          : new DataStoreMetadataUpdateResult(
-          true,
-          true,
-          "Failed to update metadata for datasource [%s]",
-          dataSource);
+          : DataStoreMetadataUpdateResult.retryableFailure("Failed to update metadata for datasource[%s]", dataSource);
     }
 
     if (retVal.isSuccess()) {
@@ -2656,19 +2703,12 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   public boolean deleteDataSourceMetadata(final String dataSource)
   {
     return connector.retryWithHandle(
-        new HandleCallback<Boolean>()
-        {
-          @Override
-          public Boolean withHandle(Handle handle)
-          {
-            int rows = handle.createStatement(
-                StringUtils.format("DELETE from %s WHERE dataSource = :dataSource", dbTables.getDataSourceTable())
-            )
-                             .bind("dataSource", dataSource)
-                             .execute();
+        handle -> {
+          int rows = handle.createStatement(
+              StringUtils.format("DELETE from %s WHERE dataSource = :dataSource", dbTables.getDataSourceTable())
+          ).bind("dataSource", dataSource).execute();
 
-            return rows > 0;
-          }
+          return rows > 0;
         }
     );
   }
@@ -2711,17 +2751,12 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   public void updateSegmentMetadata(final Set<DataSegment> segments)
   {
     connector.getDBI().inTransaction(
-        new TransactionCallback<Void>()
-        {
-          @Override
-          public Void inTransaction(Handle handle, TransactionStatus transactionStatus) throws Exception
-          {
-            for (final DataSegment segment : segments) {
-              updatePayload(handle, segment);
-            }
-
-            return null;
+        (handle, transactionStatus) -> {
+          for (final DataSegment segment : segments) {
+            updatePayload(handle, segment);
           }
+
+          return 0;
         }
     );
   }
@@ -2934,9 +2969,20 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   {
     private final boolean failed;
     private final boolean canRetry;
-    @Nullable private final String errorMsg;
+    @Nullable
+    private final String errorMsg;
 
     public static final DataStoreMetadataUpdateResult SUCCESS = new DataStoreMetadataUpdateResult(false, false, null);
+
+    public static DataStoreMetadataUpdateResult failure(String errorMsgFormat, Object... messageArgs)
+    {
+      return new DataStoreMetadataUpdateResult(true, false, errorMsgFormat, messageArgs);
+    }
+
+    public static DataStoreMetadataUpdateResult retryableFailure(String errorMsgFormat, Object... messageArgs)
+    {
+      return new DataStoreMetadataUpdateResult(true, true, errorMsgFormat, messageArgs);
+    }
 
     DataStoreMetadataUpdateResult(boolean failed, boolean canRetry, @Nullable String errorMsg, Object... errorFormatArgs)
     {
@@ -2965,35 +3011,6 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     public String getErrorMsg()
     {
       return errorMsg;
-    }
-
-    @Override
-    public boolean equals(Object o)
-    {
-      if (this == o) {
-        return true;
-      }
-      if (o == null || getClass() != o.getClass()) {
-        return false;
-      }
-      DataStoreMetadataUpdateResult that = (DataStoreMetadataUpdateResult) o;
-      return failed == that.failed && canRetry == that.canRetry && Objects.equals(errorMsg, that.errorMsg);
-    }
-
-    @Override
-    public int hashCode()
-    {
-      return Objects.hash(failed, canRetry, errorMsg);
-    }
-
-    @Override
-    public String toString()
-    {
-      return "DataStoreMetadataUpdateResult{" +
-          "failed=" + failed +
-          ", canRetry=" + canRetry +
-          ", errorMsg='" + errorMsg + '\'' +
-          '}';
     }
   }
 }

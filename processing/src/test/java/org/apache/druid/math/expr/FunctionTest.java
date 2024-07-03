@@ -677,6 +677,7 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertExpr("greatest()", null);
     assertExpr("greatest(null, null)", null);
     assertExpr("greatest(1, null, 'A')", "A");
+    assertExpr("greatest(1.0, 1, null)", 1.0);
   }
 
   @Test
@@ -703,6 +704,7 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertExpr("least()", null);
     assertExpr("least(null, null)", null);
     assertExpr("least(1, null, 'A')", "1");
+    assertExpr("least(1.0, 1, null)", 1.0);
   }
 
   @Test

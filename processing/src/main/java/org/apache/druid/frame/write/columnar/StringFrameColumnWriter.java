@@ -164,12 +164,11 @@ public abstract class StringFrameColumnWriter<T extends ColumnValueSelector> imp
         assert stringDataCursor != null; // Won't be null when len > 0, since utf8DataByteLength would be > 0.
 
         // Since we allow null bytes, this call wouldn't throw InvalidNullByteException
-        FrameWriterUtils.copyByteBufferToMemory(
+        FrameWriterUtils.copyByteBufferToMemoryAllowingNullBytes(
             utf8Datum,
             stringDataCursor.memory(),
             stringDataCursor.start() + lastStringLength,
-            len,
-            true
+            len
         );
       }
 
