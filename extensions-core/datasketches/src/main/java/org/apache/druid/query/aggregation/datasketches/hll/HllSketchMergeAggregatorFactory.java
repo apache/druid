@@ -111,19 +111,7 @@ public class HllSketchMergeAggregatorFactory extends HllSketchAggregatorFactory
   @Override
   public Aggregator factorize(final ColumnSelectorFactory columnSelectorFactory)
   {
-    ColumnCapabilities columnCapabilities = columnSelectorFactory.getColumnCapabilities(getFieldName());
-    if (columnCapabilities != null) {
-      final ColumnType type = columnCapabilities.toColumnType();
-      if (!ColumnType.UNKNOWN_COMPLEX.equals(type) && !TYPE.equals(type) &&
-          !(ValueType.COMPLEX.equals(type.getType()) &&
-            (Objects.equals(type.getComplexTypeName(), "HLLSketch") ||
-             Objects.equals(type.getComplexTypeName(), "HLLSketchBuild")))) {
-        throw new UOE("Using aggregation type %s is not supported for %s column. "
-                      + "Use a different aggregator type and run the query again.",
-                      getIntermediateType().getComplexTypeName(),
-                      type);
-      }
-    }
+    validateInputs(columnSelectorFactory.getColumnCapabilities(getFieldName()));
 
     final ColumnValueSelector<HllSketchHolder> selector = columnSelectorFactory.makeColumnValueSelector(getFieldName());
     return new HllSketchMergeAggregator(selector, getLgK(), TgtHllType.valueOf(getTgtHllType()));
@@ -133,19 +121,7 @@ public class HllSketchMergeAggregatorFactory extends HllSketchAggregatorFactory
   @Override
   public BufferAggregator factorizeBuffered(final ColumnSelectorFactory columnSelectorFactory)
   {
-    ColumnCapabilities columnCapabilities = columnSelectorFactory.getColumnCapabilities(getFieldName());
-    if (columnCapabilities != null) {
-      final ColumnType type = columnCapabilities.toColumnType();
-      if (!ColumnType.UNKNOWN_COMPLEX.equals(type) && !TYPE.equals(type) &&
-          !(ValueType.COMPLEX.equals(type.getType()) &&
-            (Objects.equals(type.getComplexTypeName(), "HLLSketch") ||
-             Objects.equals(type.getComplexTypeName(), "HLLSketchBuild")))) {
-        throw new UOE("Using aggregation type %s is not supported for %s column. "
-                      + "Use a different aggregator type and run the query again.",
-                      getIntermediateType().getComplexTypeName(),
-                      type);
-      }
-    }
+    validateInputs(columnSelectorFactory.getColumnCapabilities(getFieldName()));
 
     final ColumnValueSelector<HllSketchHolder> selector = columnSelectorFactory.makeColumnValueSelector(getFieldName());
     return new HllSketchMergeBufferAggregator(
@@ -165,9 +141,20 @@ public class HllSketchMergeAggregatorFactory extends HllSketchAggregatorFactory
   @Override
   public VectorAggregator factorizeVector(VectorColumnSelectorFactory selectorFactory)
   {
-    ColumnCapabilities columnCapabilities = selectorFactory.getColumnCapabilities(getFieldName());
-    if (columnCapabilities != null) {
-      final ColumnType type = columnCapabilities.toColumnType();
+    validateInputs(selectorFactory.getColumnCapabilities(getFieldName()));
+    return new HllSketchMergeVectorAggregator(
+        selectorFactory,
+        getFieldName(),
+        getLgK(),
+        TgtHllType.valueOf(getTgtHllType()),
+        getMaxIntermediateSize()
+    );
+  }
+
+  private void validateInputs(@Nullable ColumnCapabilities capabilities)
+  {
+    if (capabilities != null) {
+      final ColumnType type = capabilities.toColumnType();
       if (!ColumnType.UNKNOWN_COMPLEX.equals(type) && !TYPE.equals(type) &&
           !(ValueType.COMPLEX.equals(type.getType()) &&
             (Objects.equals(type.getComplexTypeName(), "HLLSketch") ||
@@ -178,14 +165,6 @@ public class HllSketchMergeAggregatorFactory extends HllSketchAggregatorFactory
                       type);
       }
     }
-
-    return new HllSketchMergeVectorAggregator(
-        selectorFactory,
-        getFieldName(),
-        getLgK(),
-        TgtHllType.valueOf(getTgtHllType()),
-        getMaxIntermediateSize()
-    );
   }
 
   @Override
