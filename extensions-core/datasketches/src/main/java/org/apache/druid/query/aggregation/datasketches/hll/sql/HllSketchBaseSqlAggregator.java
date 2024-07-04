@@ -46,6 +46,7 @@ import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Objects;
 
 public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
 {
@@ -109,13 +110,18 @@ public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
       tgtHllType = HllSketchAggregatorFactory.DEFAULT_TGT_HLL_TYPE.name();
     }
 
-    final AggregatorFactory aggregatorFactory;
+    AggregatorFactory aggregatorFactory = null;
     final String aggregatorName = finalizeAggregations ? Calcites.makePrefixedName(name, "a") : name;
 
     if (columnArg.isDirectColumnAccess()
         && inputAccessor.getInputRowSignature()
                         .getColumnType(columnArg.getDirectColumn())
-                        .map(type -> type.is(ValueType.COMPLEX))
+                        .map(type -> type.is(ValueType.COMPLEX) &&
+                                     (
+                                         HllSketchMergeAggregatorFactory.TYPE.equals(type) ||
+                                         Objects.equals(type.getComplexTypeName(), "HLLSketch") ||
+                                         Objects.equals(type.getComplexTypeName(), "HLLSketchBuild"))
+                        )
                         .orElse(false)) {
       aggregatorFactory = new HllSketchMergeAggregatorFactory(
           aggregatorName,
@@ -154,19 +160,23 @@ public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
       }
 
       if (inputType.is(ValueType.COMPLEX)) {
-        aggregatorFactory = new HllSketchMergeAggregatorFactory(
-            aggregatorName,
-            dimensionSpec.getOutputName(),
-            logK,
-            tgtHllType,
+        if (HllSketchMergeAggregatorFactory.TYPE.equals(inputType) ||
+            Objects.equals(inputType.getComplexTypeName(), "HLLSketch") ||
+            Objects.equals(inputType.getComplexTypeName(), "HLLSketchBuild")) {
+          aggregatorFactory = new HllSketchMergeAggregatorFactory(
+              aggregatorName,
+              dimensionSpec.getOutputName(),
+              logK,
+              tgtHllType,
 
-            // For HllSketchMergeAggregatorFactory, stringEncoding is only advisory to aid in detection of mismatched
-            // merges. It does not affect the results of the aggregator. At this point in the code, we do not know what
-            // the input encoding of the original sketches was, so we set it to the default.
-            HllSketchAggregatorFactory.DEFAULT_STRING_ENCODING,
-            finalizeSketch || SketchQueryContext.isFinalizeOuterSketches(plannerContext),
-            ROUND
-        );
+              // For HllSketchMergeAggregatorFactory, stringEncoding is only advisory to aid in detection of mismatched
+              // merges. It does not affect the results of the aggregator. At this point in the code, we do not know what
+              // the input encoding of the original sketches was, so we set it to the default.
+              HllSketchAggregatorFactory.DEFAULT_STRING_ENCODING,
+              finalizeSketch || SketchQueryContext.isFinalizeOuterSketches(plannerContext),
+              ROUND
+          );
+        }
       } else {
         aggregatorFactory = new HllSketchBuildAggregatorFactory(
             aggregatorName,
@@ -178,6 +188,11 @@ public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
             ROUND
         );
       }
+    }
+
+    if (aggregatorFactory == null) {
+      plannerContext.setPlanningError("Using APPROX_COUNT_DISTINCT() or enabling approximation with COUNT(DISTINCT) is not supported for %s column. You can disable approximation and use COUNT(DISTINCT %s) and run the query again.", columnArg.getDruidType(), columnArg.getSimpleExtraction().getColumn());
+      return null;
     }
 
     return toAggregation(
