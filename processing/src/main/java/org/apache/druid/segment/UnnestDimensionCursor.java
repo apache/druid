@@ -27,6 +27,7 @@ import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.data.IndexedInts;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
@@ -69,7 +70,7 @@ public class UnnestDimensionCursor implements Cursor
   private final String outputName;
   private final ColumnSelectorFactory baseColumnSelectorFactory;
   private int index;
-  @Nullable
+  @MonotonicNonNull
   private IndexedInts indexedIntsForCurrentRow;
   private boolean needInitialization;
   private SingleIndexInts indexIntsForRow;
@@ -96,6 +97,7 @@ public class UnnestDimensionCursor implements Cursor
   @Override
   public ColumnSelectorFactory getColumnSelectorFactory()
   {
+
     return new ColumnSelectorFactory()
     {
       @Override
@@ -110,8 +112,6 @@ public class UnnestDimensionCursor implements Cursor
           @Override
           public IndexedInts getRow()
           {
-            // This object reference has been created
-            // during the call to initialize and referenced henceforth
             return indexIntsForRow;
           }
 
@@ -183,7 +183,7 @@ public class UnnestDimensionCursor implements Cursor
           @Override
           public Object getObject()
           {
-            if (indexedIntsForCurrentRow == null || indexedIntsForCurrentRow.size() == 0) {
+            if (indexedIntsForCurrentRow.size() == 0) {
               return null;
             }
             return lookupName(indexedIntsForCurrentRow.get(index));
@@ -223,16 +223,14 @@ public class UnnestDimensionCursor implements Cursor
         };
       }
 
-      /*
-      This ideally should not be called. If called delegate using the makeDimensionSelector
-       */
       @Override
       public ColumnValueSelector makeColumnValueSelector(String columnName)
       {
-        if (!outputName.equals(columnName)) {
-          return baseColumnSelectorFactory.makeColumnValueSelector(columnName);
+        if (outputName.equals(columnName)) {
+          return makeDimensionSelector(DefaultDimensionSpec.of(columnName));
         }
-        return makeDimensionSelector(DefaultDimensionSpec.of(columnName));
+
+        return baseColumnSelectorFactory.makeColumnValueSelector(columnName);
       }
 
       @Nullable
@@ -304,11 +302,7 @@ public class UnnestDimensionCursor implements Cursor
   {
     index = 0;
     this.indexIntsForRow = new SingleIndexInts();
-
-    if (dimSelector.getObject() != null) {
-      this.indexedIntsForCurrentRow = dimSelector.getRow();
-    }
-
+    this.indexedIntsForCurrentRow = dimSelector.getRow();
     needInitialization = false;
   }
 
@@ -320,26 +314,16 @@ public class UnnestDimensionCursor implements Cursor
    */
   private void advanceAndUpdate()
   {
-    if (indexedIntsForCurrentRow == null) {
-      index = 0;
+    if (index >= indexedIntsForCurrentRow.size() - 1) {
       if (!baseCursor.isDone()) {
         baseCursor.advanceUninterruptibly();
-        if (!baseCursor.isDone()) {
-          indexedIntsForCurrentRow = dimSelector.getRow();
-        }
       }
+      if (!baseCursor.isDone()) {
+        indexedIntsForCurrentRow = dimSelector.getRow();
+      }
+      index = 0;
     } else {
-      if (index >= indexedIntsForCurrentRow.size() - 1) {
-        if (!baseCursor.isDone()) {
-          baseCursor.advanceUninterruptibly();
-        }
-        if (!baseCursor.isDone()) {
-          indexedIntsForCurrentRow = dimSelector.getRow();
-        }
-        index = 0;
-      } else {
-        ++index;
-      }
+      ++index;
     }
   }
 
@@ -359,6 +343,9 @@ public class UnnestDimensionCursor implements Cursor
     @Override
     public int size()
     {
+      if (indexedIntsForCurrentRow.size() == 0) {
+        return 0;
+      }
       // After unnest each row will have a single element
       return 1;
     }
@@ -366,12 +353,8 @@ public class UnnestDimensionCursor implements Cursor
     @Override
     public int get(int idx)
     {
-      // need to get value from the indexed ints
-      // only if it is non null and has at least 1 value
-      if (indexedIntsForCurrentRow != null && indexedIntsForCurrentRow.size() > 0) {
-        return indexedIntsForCurrentRow.get(index);
-      }
-      return 0;
+      // everything that calls get also checks size
+      return indexedIntsForCurrentRow.get(index);
     }
   }
 }

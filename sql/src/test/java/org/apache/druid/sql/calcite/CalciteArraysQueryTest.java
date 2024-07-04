@@ -5137,13 +5137,13 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         ),
         useDefault ?
         ImmutableList.of(
-            new Object[]{"", 3L},
+            new Object[]{"", 2L},
             new Object[]{"a", 1L},
             new Object[]{"b", 2L},
             new Object[]{"c", 1L}
         ) :
         ImmutableList.of(
-            new Object[]{null, 2L},
+            new Object[]{null, 1L},
             new Object[]{"", 1L},
             new Object[]{"a", 1L},
             new Object[]{"b", 2L}
