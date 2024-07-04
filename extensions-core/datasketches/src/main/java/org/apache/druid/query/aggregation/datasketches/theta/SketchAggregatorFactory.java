@@ -28,6 +28,7 @@ import org.apache.datasketches.theta.SetOperation;
 import org.apache.datasketches.theta.Union;
 import org.apache.datasketches.thetacommon.ThetaUtil;
 import org.apache.druid.error.InvalidInput;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.Aggregator;
@@ -41,6 +42,7 @@ import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
@@ -80,6 +82,7 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
+    validateInputs(metricFactory.getColumnCapabilities(fieldName));
     ColumnCapabilities capabilities = metricFactory.getColumnCapabilities(fieldName);
     if (capabilities != null && capabilities.isArray()) {
       throw InvalidInput.exception("ARRAY types are not supported for theta sketch");
@@ -91,6 +94,7 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
   @Override
   public AggregatorAndSize factorizeWithSize(ColumnSelectorFactory metricFactory)
   {
+    validateInputs(metricFactory.getColumnCapabilities(fieldName));
     ColumnCapabilities capabilities = metricFactory.getColumnCapabilities(fieldName);
     if (capabilities != null && capabilities.isArray()) {
       throw InvalidInput.exception("ARRAY types are not supported for theta sketch");
@@ -104,6 +108,7 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
+    validateInputs(metricFactory.getColumnCapabilities(fieldName));
     ColumnCapabilities capabilities = metricFactory.getColumnCapabilities(fieldName);
     if (capabilities != null && capabilities.isArray()) {
       throw InvalidInput.exception("ARRAY types are not supported for theta sketch");
@@ -115,7 +120,27 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
   @Override
   public VectorAggregator factorizeVector(VectorColumnSelectorFactory selectorFactory)
   {
+    validateInputs(selectorFactory.getColumnCapabilities(fieldName));
     return new SketchVectorAggregator(selectorFactory, fieldName, size, getMaxIntermediateSizeWithNulls());
+  }
+
+  private void validateInputs(@Nullable ColumnCapabilities capabilities)
+  {
+    if (capabilities != null) {
+      if (capabilities.isArray() || (capabilities.is(ValueType.COMPLEX) && !(
+          SketchModule.THETA_SKETCH_TYPE.equals(capabilities.toColumnType()) ||
+          SketchModule.MERGE_TYPE.equals(capabilities.toColumnType()) ||
+          SketchModule.BUILD_TYPE.equals(capabilities.toColumnType())))
+      ) {
+        throw new ISE(
+            "Invalid input [%s] of type [%s] for [%s] aggregator [%s]",
+            getFieldName(),
+            capabilities.asTypeString(),
+            getIntermediateType(),
+            getName()
+        );
+      }
+    }
   }
 
   @Override

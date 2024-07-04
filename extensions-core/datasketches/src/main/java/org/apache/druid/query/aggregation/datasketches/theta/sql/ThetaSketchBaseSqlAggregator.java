@@ -29,6 +29,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.SketchQueryContext;
 import org.apache.druid.query.aggregation.datasketches.theta.SketchAggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.theta.SketchMergeAggregatorFactory;
+import org.apache.druid.query.aggregation.datasketches.theta.SketchModule;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.column.ColumnType;
@@ -89,13 +90,17 @@ public abstract class ThetaSketchBaseSqlAggregator implements SqlAggregator
       sketchSize = SketchAggregatorFactory.DEFAULT_MAX_SKETCH_SIZE;
     }
 
-    final AggregatorFactory aggregatorFactory;
+    AggregatorFactory aggregatorFactory = null;
     final String aggregatorName = finalizeAggregations ? Calcites.makePrefixedName(name, "a") : name;
 
     if (columnArg.isDirectColumnAccess()
         && inputAccessor.getInputRowSignature()
                         .getColumnType(columnArg.getDirectColumn())
-                        .map(type -> type.is(ValueType.COMPLEX))
+                        .map(type -> type.is(ValueType.COMPLEX) && (
+                            SketchModule.THETA_SKETCH_TYPE.equals(type) ||
+                            SketchModule.MERGE_TYPE.equals(type) ||
+                            SketchModule.BUILD_TYPE.equals(type)
+                            ))
                         .orElse(false)) {
       aggregatorFactory = new SketchMergeAggregatorFactory(
           aggregatorName,
@@ -116,26 +121,33 @@ public abstract class ThetaSketchBaseSqlAggregator implements SqlAggregator
         );
       }
 
-      final DimensionSpec dimensionSpec;
+      if (!inputType.is(ValueType.COMPLEX)) {
+        final DimensionSpec dimensionSpec;
 
-      if (columnArg.isDirectColumnAccess()) {
-        dimensionSpec = columnArg.getSimpleExtraction().toDimensionSpec(null, inputType);
-      } else {
-        String virtualColumnName = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
-            columnArg,
-            dataType
+        if (columnArg.isDirectColumnAccess()) {
+          dimensionSpec = columnArg.getSimpleExtraction().toDimensionSpec(null, inputType);
+        } else {
+          String virtualColumnName = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
+              columnArg,
+              dataType
+          );
+          dimensionSpec = new DefaultDimensionSpec(virtualColumnName, null, inputType);
+        }
+
+        aggregatorFactory = new SketchMergeAggregatorFactory(
+            aggregatorName,
+            dimensionSpec.getDimension(),
+            sketchSize,
+            finalizeSketch || SketchQueryContext.isFinalizeOuterSketches(plannerContext),
+            null,
+            null
         );
-        dimensionSpec = new DefaultDimensionSpec(virtualColumnName, null, inputType);
       }
+    }
 
-      aggregatorFactory = new SketchMergeAggregatorFactory(
-          aggregatorName,
-          dimensionSpec.getDimension(),
-          sketchSize,
-          finalizeSketch || SketchQueryContext.isFinalizeOuterSketches(plannerContext),
-          null,
-          null
-      );
+    if (aggregatorFactory == null) {
+      plannerContext.setPlanningError("Using APPROX_COUNT_DISTINCT() or enabling approximation with COUNT(DISTINCT) is not supported for %s column. You can disable approximation and use COUNT(DISTINCT %s) and run the query again.", columnArg.getDruidType(), columnArg.getSimpleExtraction().getColumn());
+      return null;
     }
 
     return toAggregation(
