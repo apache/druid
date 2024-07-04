@@ -499,11 +499,6 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
   @Override
   public CoordinatorRunStats getAndResetStats()
   {
-    stats.get().updateMax(
-        Stats.SegmentQueue.LOAD_RATE_KBPS,
-        RowKey.empty(),
-        loadingRateTracker.getMovingAverageLoadRateKbps()
-    );
     return stats.getAndSet(new CoordinatorRunStats());
   }
 
