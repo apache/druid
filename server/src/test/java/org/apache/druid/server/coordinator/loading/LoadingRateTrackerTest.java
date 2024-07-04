@@ -36,7 +36,7 @@ public class LoadingRateTrackerTest
   }
 
   @Test
-  public void testCurrentRateIsZeroWhenEmpty()
+  public void testRateIsZeroWhenEmpty()
   {
     Assert.assertEquals(0, tracker.getMovingAverageLoadRateKbps());
 
@@ -48,7 +48,7 @@ public class LoadingRateTrackerTest
   }
 
   @Test
-  public void testCurrentRateAfter2Updates()
+  public void testRateAfter2Updates()
   {
     tracker.updateProgress(1000, 10);
     Assert.assertEquals(8 * 1000 / 10, tracker.getMovingAverageLoadRateKbps());
@@ -58,7 +58,7 @@ public class LoadingRateTrackerTest
   }
 
   @Test
-  public void testCurrentRateIsAMovingAverage()
+  public void testRateIsMovingAverage()
   {
     final Random random = new Random(1001);
     final int windowSize = LoadingRateTracker.MOVING_AVERAGE_WINDOW_SIZE;
@@ -99,7 +99,7 @@ public class LoadingRateTrackerTest
   }
 
   @Test
-  public void testCurrentRateWindowMovesOnlyAfterMinSizeUpdates()
+  public void testWindowMovesOnlyAfterMinSizeUpdates()
   {
     final Random random = new Random(1001);
 
@@ -127,7 +127,7 @@ public class LoadingRateTrackerTest
   }
 
   @Test
-  public void testCurrentRateIsUnchangedWithZeroProgressTime()
+  public void testRateIsUnchangedIfUpdateHasZeroTime()
   {
     tracker.updateProgress(1000, 10);
     Assert.assertEquals(8 * 1000 / 10, tracker.getMovingAverageLoadRateKbps());
