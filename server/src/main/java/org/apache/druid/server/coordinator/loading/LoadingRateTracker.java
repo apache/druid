@@ -37,57 +37,47 @@ public class LoadingRateTracker
   public static final int MOVING_AVERAGE_WINDOW_SIZE = 10;
   public static final long MIN_ENTRY_SIZE_BYTES = 1_000_000_000;
 
-  private final EvictingQueue<Entry> latestEntries = EvictingQueue.create(MOVING_AVERAGE_WINDOW_SIZE);
-
-  private final Entry windowTotal = new Entry();
-  private final AtomicReference<Entry> movingAverage = new AtomicReference<>();
-
+  private final EvictingQueue<Entry> window = EvictingQueue.create(MOVING_AVERAGE_WINDOW_SIZE);
+  private final AtomicReference<Entry> windowTotal = new AtomicReference<>(new Entry());
   private Entry currentTail;
 
   public synchronized void updateProgress(long bytes, long millisElapsed)
   {
     if (bytes >= 0 && millisElapsed > 0) {
-      windowTotal.increment(bytes, millisElapsed);
+      final Entry updatedTotal = new Entry();
+      final Entry currentTotal = windowTotal.get();
+      if (currentTotal != null) {
+        updatedTotal.increment(currentTotal.bytes, currentTotal.millisElapsed);
+      }
+
+      updatedTotal.increment(bytes, millisElapsed);
 
       final Entry evictedHead = addToTail(bytes, millisElapsed);
       if (evictedHead != null) {
-        windowTotal.increment(-evictedHead.bytes, -evictedHead.millisElapsed);
+        updatedTotal.increment(-evictedHead.bytes, -evictedHead.millisElapsed);
       }
 
-      if (windowTotal.bytes > 0 && windowTotal.millisElapsed > 0) {
-        final Entry updatedMovingAverage = new Entry();
-        updatedMovingAverage.increment(windowTotal.bytes, windowTotal.millisElapsed);
-        movingAverage.set(updatedMovingAverage);
+      if (updatedTotal.bytes > 0 && updatedTotal.millisElapsed > 0) {
+        windowTotal.set(updatedTotal);
       }
     }
   }
 
   public synchronized void reset()
   {
-    latestEntries.clear();
-    movingAverage.set(null);
+    window.clear();
+    windowTotal.set(null);
   }
 
   /**
-   * Moving average load rate in kbps (kilobits per second).
+   * Moving average load rate in kbps (1000 bits per second).
    */
   public long getMovingAverageLoadRateKbps()
   {
-    final Entry movingAverage = this.movingAverage.get();
-    return movingAverage == null || movingAverage.millisElapsed <= 0
+    final Entry windowTotal = this.windowTotal.get();
+    return windowTotal == null || windowTotal.millisElapsed <= 0
            ? 0
-           : (8 * movingAverage.bytes) / movingAverage.millisElapsed;
-  }
-
-  /**
-   * Moving average load rate in kBps (kilobytes per second).
-   */
-  public long getMovingAverageLoadRateKilobytesPerSecond()
-  {
-    final Entry movingAverage = this.movingAverage.get();
-    return movingAverage == null || movingAverage.millisElapsed <= 0
-           ? 0
-           : movingAverage.bytes / movingAverage.millisElapsed;
+           : (8 * windowTotal.bytes) / windowTotal.millisElapsed;
   }
 
   /**
@@ -97,11 +87,11 @@ public class LoadingRateTracker
    */
   private synchronized Entry addToTail(long bytes, long millisElapsed)
   {
-    final Entry oldHead = latestEntries.peek();
+    final Entry oldHead = window.peek();
 
     if (currentTail == null) {
       currentTail = new Entry();
-      latestEntries.add(currentTail);
+      window.add(currentTail);
     }
 
     currentTail.increment(bytes, millisElapsed);
@@ -110,7 +100,7 @@ public class LoadingRateTracker
     }
 
     // Compare if the oldHead and the newHead are the same object (not equals)
-    final Entry newHead = latestEntries.peek();
+    final Entry newHead = window.peek();
     return newHead == oldHead ? null : oldHead;
   }
 

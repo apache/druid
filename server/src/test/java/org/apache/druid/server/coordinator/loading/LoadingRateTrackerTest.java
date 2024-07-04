@@ -38,24 +38,22 @@ public class LoadingRateTrackerTest
   @Test
   public void testCurrentRateIsZeroWhenEmpty()
   {
-    Assert.assertEquals(0, tracker.getMovingAverageLoadRateKilobytesPerSecond());
+    Assert.assertEquals(0, tracker.getMovingAverageLoadRateKbps());
 
     tracker.updateProgress(1000, 10);
-    Assert.assertEquals(1000 / 10, tracker.getMovingAverageLoadRateKilobytesPerSecond());
     Assert.assertEquals(8 * 1000 / 10, tracker.getMovingAverageLoadRateKbps());
 
     tracker.reset();
-    Assert.assertEquals(0, tracker.getMovingAverageLoadRateKilobytesPerSecond());
+    Assert.assertEquals(0, tracker.getMovingAverageLoadRateKbps());
   }
 
   @Test
   public void testCurrentRateAfter2Updates()
   {
     tracker.updateProgress(1000, 10);
-    Assert.assertEquals(1000 / 10, tracker.getMovingAverageLoadRateKilobytesPerSecond());
+    Assert.assertEquals(8 * 1000 / 10, tracker.getMovingAverageLoadRateKbps());
 
     tracker.updateProgress(1000, 5);
-    Assert.assertEquals(2000 / 15, tracker.getMovingAverageLoadRateKilobytesPerSecond());
     Assert.assertEquals(8 * 2000 / 15, tracker.getMovingAverageLoadRateKbps());
   }
 
@@ -80,7 +78,10 @@ public class LoadingRateTrackerTest
       totalMillis += updateMillis[i];
 
       tracker.updateProgress(updateBytes[i], updateMillis[i]);
-      Assert.assertEquals(totalBytes / totalMillis, tracker.getMovingAverageLoadRateKilobytesPerSecond());
+      Assert.assertEquals(
+          8 * totalBytes / totalMillis,
+          tracker.getMovingAverageLoadRateKbps()
+      );
     }
 
     // Add another update
@@ -91,7 +92,10 @@ public class LoadingRateTrackerTest
     // Verify that the average window has moved
     totalBytes = totalBytes - updateBytes[0] + latestUpdateBytes;
     totalMillis = totalMillis - updateMillis[0] + latestUpdateMillis;
-    Assert.assertEquals(totalBytes / totalMillis, tracker.getMovingAverageLoadRateKilobytesPerSecond());
+    Assert.assertEquals(
+        8 * totalBytes / totalMillis,
+        tracker.getMovingAverageLoadRateKbps()
+    );
   }
 
   @Test
@@ -115,7 +119,10 @@ public class LoadingRateTrackerTest
       tracker.updateProgress(updateBytes, updateMillis);
 
       // Verify that the average window doesn't move
-      Assert.assertEquals(totalBytes / totalMillis, tracker.getMovingAverageLoadRateKilobytesPerSecond());
+      Assert.assertEquals(
+          8 * totalBytes / totalMillis,
+          tracker.getMovingAverageLoadRateKbps()
+      );
     }
   }
 
@@ -123,9 +130,9 @@ public class LoadingRateTrackerTest
   public void testCurrentRateIsUnchangedWithZeroProgressTime()
   {
     tracker.updateProgress(1000, 10);
-    Assert.assertEquals(1000 / 10, tracker.getMovingAverageLoadRateKilobytesPerSecond());
+    Assert.assertEquals(8 * 1000 / 10, tracker.getMovingAverageLoadRateKbps());
 
     tracker.updateProgress(1000, 0);
-    Assert.assertEquals(1000 / 10, tracker.getMovingAverageLoadRateKilobytesPerSecond());
+    Assert.assertEquals(8 * 1000 / 10, tracker.getMovingAverageLoadRateKbps());
   }
 }
