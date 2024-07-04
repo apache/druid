@@ -89,7 +89,7 @@ import java.util.Map;
 @SqlTestFrameworkConfig.ComponentSupplier(ArraysComponentSupplier.class)
 public class CalciteArraysQueryTest extends BaseCalciteQueryTest
 {
-  private static final Map<String, Object> QUERY_CONTEXT_UNNEST =
+  public static final Map<String, Object> QUERY_CONTEXT_UNNEST =
       ImmutableMap.<String, Object>builder()
                   .putAll(QUERY_CONTEXT_DEFAULT)
                   .put(QueryContexts.CTX_SQL_STRINGIFY_ARRAYS, false)
