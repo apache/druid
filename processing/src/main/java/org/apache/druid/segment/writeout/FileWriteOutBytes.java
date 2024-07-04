@@ -39,8 +39,11 @@ public final class FileWriteOutBytes extends WriteOutBytes
   private final FileChannel ch;
   private long writeOutBytes;
 
-  /** Purposely big-endian, for {@link #writeInt(int)} implementation */
-  private final ByteBuffer buffer = ByteBuffer.allocate(4096); // 4K page sized buffer
+  /**
+   * Purposely big-endian, for {@link #writeInt(int)} implementation.
+   * Direct because there is a material difference in performance when writing direct buffers
+   */
+  private final ByteBuffer buffer = ByteBuffer.allocateDirect(32768); // 32K page sized buffer
 
   FileWriteOutBytes(File file, FileChannel ch)
   {
