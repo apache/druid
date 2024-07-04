@@ -28,7 +28,7 @@ In general, when we introduce new features and behaviors into Apache Druid, we m
 The guides in this section outline breaking changes introduced in Druid 25.0.0 and later. Each guide provides instructions to migrate to new features.
 
 
-## Migrate to arrays from multi-value dimensions
+## Migrate from multi-value dimensions to arrays
 
 Druid now supports SQL-compliant array types. Whenever possible, you should use the array type over multi-value dimensions. See [Migration guide: MVDs to arrays](migr-mvd-array.md).
 
@@ -36,6 +36,6 @@ Druid now supports SQL-compliant array types. Whenever possible, you should use 
 
 Druid encodes string columns into dictionaries for better compression. Front-coded dictionary encoding reduces storage and improves performance by optimizing for strings that share similar beginning substrings. See [Migration guide: front-coded dictionaries](migr-front-coded-dict.md) for more information.
 
-## Migrate to `maxSubqueryBytes` from `maxSubqueryRows`
+## Migrate from `maxSubqueryRows` to `maxSubqueryBytes`
 
 Druid allows you to set a byte-based limit on subquery size to prevent Brokers from running out of memory when handling large subqueries. The byte-based subquery limit overrides Druid's row-based subquery limit. We recommend that you move towards using byte-based limits starting in Druid 30.0.0. See [Migration guide: subquery limit](migr-subquery-limit.md) for more information.
