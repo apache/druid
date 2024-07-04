@@ -111,14 +111,23 @@ public class CoordinatorResource
       return Response.ok(
           Maps.transformValues(
               coordinator.getLoadManagementPeons(),
-              input -> {
-                long loadSize = input.getSizeOfSegmentsToLoad();
-                long dropSize = input.getSegmentsToDrop().stream().mapToLong(DataSegment::getSize).sum();
+              peon -> {
+                long loadSize = peon.getSizeOfSegmentsToLoad();
+                long dropSize = peon.getSegmentsToDrop().stream().mapToLong(DataSegment::getSize).sum();
+
+                // 1 kbps = 1/8 kB/s = 1/8 B/ms
+                long loadRateKbps = peon.getLoadRateKbps();
+                long expectedLoadTimeMillis
+                    = loadRateKbps > 0 && loadSize > 0
+                      ? (8 * loadSize) / loadRateKbps
+                      : 0;
+
                 return new ImmutableMap.Builder<>()
-                    .put("segmentsToLoad", input.getSegmentsToLoad().size())
-                    .put("segmentsToDrop", input.getSegmentsToDrop().size())
+                    .put("segmentsToLoad", peon.getSegmentsToLoad().size())
+                    .put("segmentsToDrop", peon.getSegmentsToDrop().size())
                     .put("segmentsToLoadSize", loadSize)
                     .put("segmentsToDropSize", dropSize)
+                    .put("expectedLoadTimeMillis", expectedLoadTimeMillis)
                     .build();
               }
           )

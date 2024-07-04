@@ -25,8 +25,10 @@ import com.fasterxml.jackson.databind.ObjectWriter;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
+import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -36,6 +38,7 @@ import org.apache.druid.server.coordination.DataSegmentChangeCallback;
 import org.apache.druid.server.coordination.DataSegmentChangeHandler;
 import org.apache.druid.server.coordination.DataSegmentChangeRequest;
 import org.apache.druid.server.coordination.DataSegmentChangeResponse;
+import org.apache.druid.server.coordination.SegmentChangeRequestLoad;
 import org.apache.druid.server.coordination.SegmentChangeStatus;
 import org.apache.druid.server.coordinator.BytesAccumulatingResponseHandler;
 import org.apache.druid.server.coordinator.config.HttpLoadQueuePeonConfig;
@@ -92,6 +95,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
   private final ConcurrentMap<DataSegment, SegmentHolder> segmentsToLoad = new ConcurrentHashMap<>();
   private final ConcurrentMap<DataSegment, SegmentHolder> segmentsToDrop = new ConcurrentHashMap<>();
   private final Set<DataSegment> segmentsMarkedToDrop = ConcurrentHashMap.newKeySet();
+  private final LoadingRateTracker loadingRateTracker = new LoadingRateTracker();
 
   /**
    * Segments currently in queue ordered by priority and interval. This includes
@@ -190,7 +194,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
       }
     }
 
-    if (newRequests.size() == 0) {
+    if (newRequests.isEmpty()) {
       log.trace(
           "[%s]Found no load/drop requests. SegmentsToLoad[%d], SegmentsToDrop[%d], batchSize[%d].",
           serverId, segmentsToLoad.size(), segmentsToDrop.size(), config.getBatchSize()
@@ -201,6 +205,8 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
 
     try {
       log.trace("Sending [%d] load/drop requests to Server[%s].", newRequests.size(), serverId);
+      final Stopwatch requestCompleteTime = Stopwatch.createStarted();
+
       BytesAccumulatingResponseHandler responseHandler = new BytesAccumulatingResponseHandler();
       ListenableFuture<InputStream> future = httpClient.go(
           new Request(HttpMethod.POST, changeRequestURL)
@@ -218,6 +224,8 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
             @Override
             public void onSuccess(InputStream result)
             {
+              requestCompleteTime.stop();
+
               boolean scheduleNextRunImmediately = true;
               try {
                 if (responseHandler.getStatus() == HttpServletResponse.SC_NO_CONTENT) {
@@ -248,6 +256,8 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
                             log.error("Server[%s] returned unknown state in status[%s].", serverId, e.getStatus());
                         }
                       }
+
+                      updateLoadProgress(statuses, requestCompleteTime.millisElapsed());
                     }
                   }
                   catch (Exception ex) {
@@ -284,9 +294,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
               log.error(
                   t,
                   "Request[%s] Failed with status[%s]. Reason[%s].",
-                  changeRequestURL,
-                  responseHandler.getStatus(),
-                  responseHandler.getDescription()
+                  changeRequestURL, responseHandler.getStatus(), responseHandler.getDescription()
               );
             }
           },
@@ -367,7 +375,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
       if (stopped) {
         return;
       }
-      log.info("Stopping load queue peon for server [%s].", serverId);
+      log.info("Stopping load queue peon for server[%s].", serverId);
       stopped = true;
 
       // Cancel all queued requests
@@ -379,6 +387,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
       queuedSegments.clear();
       activeRequestSegments.clear();
       queuedSize.set(0L);
+      loadingRateTracker.reset();
       stats.get().clear();
     }
   }
@@ -387,7 +396,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
   public void loadSegment(DataSegment segment, SegmentAction action, LoadPeonCallback callback)
   {
     if (!action.isLoad()) {
-      log.warn("Invalid load action [%s] for segment [%s] on server [%s].", action, segment.getId(), serverId);
+      log.warn("Invalid load action[%s] for segment[%s] on server[%s].", action, segment.getId(), serverId);
       return;
     }
 
@@ -482,8 +491,19 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
   }
 
   @Override
+  public long getLoadRateKbps()
+  {
+    return loadingRateTracker.getMovingAverageLoadRateKbps();
+  }
+
+  @Override
   public CoordinatorRunStats getAndResetStats()
   {
+    stats.get().updateMax(
+        Stats.SegmentQueue.LOAD_RATE_KBPS,
+        RowKey.empty(),
+        loadingRateTracker.getMovingAverageLoadRateKbps()
+    );
     return stats.getAndSet(new CoordinatorRunStats());
   }
 
@@ -540,6 +560,24 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
     }
     incrementStat(holder, status);
     executeCallbacks(holder, status == RequestStatus.SUCCESS);
+  }
+
+  @GuardedBy("lock")
+  private void updateLoadProgress(
+      List<DataSegmentChangeResponse> responses,
+      long requestCompleteTimeMillis
+  )
+  {
+    final long loadSize =
+        responses.stream()
+                 .filter(response -> response.getStatus().getState() == SegmentChangeStatus.State.SUCCESS)
+                 .map(DataSegmentChangeResponse::getRequest)
+                 .filter(req -> req instanceof SegmentChangeRequestLoad)
+                 .mapToLong(req -> ((SegmentChangeRequestLoad) req).getSegment().getSize())
+                 .sum();
+    if (loadSize > 0) {
+      loadingRateTracker.updateProgress(loadSize, requestCompleteTimeMillis);
+    }
   }
 
   private void incrementStat(SegmentHolder holder, RequestStatus status)
