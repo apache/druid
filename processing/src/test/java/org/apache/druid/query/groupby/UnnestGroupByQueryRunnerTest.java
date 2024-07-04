@@ -56,6 +56,7 @@ import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndex;
+import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.DateTime;
@@ -727,6 +728,11 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
     List<String> dims = Collections.singletonList(dim);
     IndexBuilder bob =
         IndexBuilder.create()
+                    .schema(
+                        IncrementalIndexSchema.builder()
+                                              .withRollup(false)
+                                              .build()
+                    )
                     .rows(
                         ImmutableList.of(
                             new ListBasedInputRow(signature, timestamp, dims, ImmutableList.of(ImmutableList.of("a", "b", "c"))),
@@ -756,13 +762,13 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
         .build();
 
     List<ResultRow> expectedResults = NullHandling.sqlCompatible() ? Arrays.asList(
-        makeRow(query, timestamp, "v0", null, "rows", 1L),
+        makeRow(query, timestamp, "v0", null, "rows", 2L),
         makeRow(query, timestamp, "v0", "", "rows", 1L),
         makeRow(query, timestamp, "v0", "a", "rows", 1L),
         makeRow(query, timestamp, "v0", "b", "rows", 1L),
         makeRow(query, timestamp, "v0", "c", "rows", 1L)
     ) : Arrays.asList(
-        makeRow(query, timestamp, "v0", null, "rows", 1L),
+        makeRow(query, timestamp, "v0", null, "rows", 3L),
         makeRow(query, timestamp, "v0", "a", "rows", 1L),
         makeRow(query, timestamp, "v0", "b", "rows", 1L),
         makeRow(query, timestamp, "v0", "c", "rows", 1L)
@@ -788,6 +794,11 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
     List<String> dims = Collections.singletonList(dim);
     IndexBuilder bob =
         IndexBuilder.create()
+                    .schema(
+                        IncrementalIndexSchema.builder()
+                                              .withRollup(false)
+                                              .build()
+                    )
                     .rows(
                         ImmutableList.of(
                             new ListBasedInputRow(signature, timestamp, dims, Collections.singletonList(Arrays.asList("a", "b", "c"))),
@@ -819,20 +830,32 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
         .build();
 
+    // make sure results are consistent with grouping directly on the column with implicit unnest
+    GroupByQuery regularQuery = makeQueryBuilder()
+        .setDataSource(new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE))
+        .setQuerySegmentSpec(new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.ETERNITY)))
+        .setDimensions(new DefaultDimensionSpec("mvd", "v0"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT)
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .build();
+
     List<ResultRow> expectedResults = NullHandling.sqlCompatible() ? Arrays.asList(
-        makeRow(query, timestamp, "v0", null, "rows", 3L),
+        makeRow(query, timestamp, "v0", null, "rows", 6L),
         makeRow(query, timestamp, "v0", "", "rows", 1L),
         makeRow(query, timestamp, "v0", "a", "rows", 1L),
         makeRow(query, timestamp, "v0", "b", "rows", 1L),
         makeRow(query, timestamp, "v0", "c", "rows", 1L)
     ) : Arrays.asList(
-        makeRow(query, timestamp, "v0", null, "rows", 3L),
+        makeRow(query, timestamp, "v0", null, "rows", 7L),
         makeRow(query, timestamp, "v0", "a", "rows", 1L),
         makeRow(query, timestamp, "v0", "b", "rows", 1L),
         makeRow(query, timestamp, "v0", "c", "rows", 1L)
     );
 
     Iterable<ResultRow> results = runQuery(query, bob.buildIncrementalIndex());
+    TestHelper.assertExpectedObjects(expectedResults, results, "group-by-unnested-string-nulls");
+
+    results = runQuery(regularQuery, bob.buildIncrementalIndex());
     TestHelper.assertExpectedObjects(expectedResults, results, "group-by-unnested-string-nulls");
 
     results = runQuery(query, bob.tmpDir(tempFolder.newFolder()).buildMMappedIndex());
@@ -875,6 +898,70 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testGroupByOnUnnestEmptyRows()
+  {
+    cannotVectorize();
+    final String dim = "mvd";
+    final DateTime timestamp = DateTimes.nowUtc();
+    final RowSignature signature = RowSignature.builder()
+                                               .add(dim, ColumnType.STRING)
+                                               .build();
+    List<String> dims = Collections.singletonList(dim);
+    IndexBuilder bob =
+        IndexBuilder.create()
+                    .schema(
+                        IncrementalIndexSchema.builder()
+                                              .withRollup(false)
+                                              .build()
+                    )
+                    .rows(
+                        ImmutableList.of(
+                            new ListBasedInputRow(signature, timestamp, dims, Collections.singletonList(Collections.emptyList()))
+                        )
+                    );
+
+    final DataSource unnestDataSource = UnnestDataSource.create(
+        new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
+        new ExpressionVirtualColumn(
+            "v0",
+            "mvd",
+            ColumnType.STRING,
+            TestExprMacroTable.INSTANCE
+        ),
+        null
+    );
+
+    GroupByQuery query = makeQueryBuilder()
+        .setDataSource(unnestDataSource)
+        .setQuerySegmentSpec(new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.ETERNITY)))
+        .setDimensions(new DefaultDimensionSpec("v0", "v0"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT)
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .build();
+
+    // make sure results are consistent with grouping directly on the column with implicit unnest
+    GroupByQuery regularQuery = makeQueryBuilder()
+        .setDataSource(new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE))
+        .setQuerySegmentSpec(new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.ETERNITY)))
+        .setDimensions(new DefaultDimensionSpec("mvd", "v0"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT)
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .build();
+
+    List<ResultRow> expectedResults = Collections.singletonList(
+        makeRow(query, timestamp, "v0", null, "rows", 1L)
+    );
+
+    Iterable<ResultRow> results = runQuery(query, bob.buildIncrementalIndex());
+    TestHelper.assertExpectedObjects(expectedResults, results, "group-by-unnested-empty");
+
+    results = runQuery(regularQuery, bob.buildIncrementalIndex());
+    TestHelper.assertExpectedObjects(expectedResults, results, "group-by-unnested-empty");
+
+    // can only test realtime since empty cannot be persisted
+  }
+
+  @Test
   public void testGroupByOnUnnestedStringColumnDoubleUnnest() throws IOException
   {
     // not really a sane query to write, but it shouldn't behave differently than a single unnest
@@ -891,6 +978,11 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
     List<String> dims = Collections.singletonList(dim);
     IndexBuilder bob =
         IndexBuilder.create()
+                    .schema(
+                        IncrementalIndexSchema.builder()
+                                              .withRollup(false)
+                                              .build()
+                    )
                     .rows(
                         ImmutableList.of(
                             new ListBasedInputRow(signature, timestamp, dims, ImmutableList.of(ImmutableList.of("a", "b", "c"))),
@@ -930,13 +1022,13 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
         .build();
 
     List<ResultRow> expectedResults = NullHandling.sqlCompatible() ? Arrays.asList(
-        makeRow(query, timestamp, "v1", null, "rows", 1L),
+        makeRow(query, timestamp, "v1", null, "rows", 2L),
         makeRow(query, timestamp, "v1", "", "rows", 1L),
         makeRow(query, timestamp, "v1", "a", "rows", 1L),
         makeRow(query, timestamp, "v1", "b", "rows", 1L),
         makeRow(query, timestamp, "v1", "c", "rows", 1L)
     ) : Arrays.asList(
-        makeRow(query, timestamp, "v1", null, "rows", 1L),
+        makeRow(query, timestamp, "v1", null, "rows", 3L),
         makeRow(query, timestamp, "v1", "a", "rows", 1L),
         makeRow(query, timestamp, "v1", "b", "rows", 1L),
         makeRow(query, timestamp, "v1", "c", "rows", 1L)
