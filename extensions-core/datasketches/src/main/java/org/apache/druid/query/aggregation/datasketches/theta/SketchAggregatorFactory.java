@@ -27,7 +27,6 @@ import org.apache.datasketches.common.Util;
 import org.apache.datasketches.theta.SetOperation;
 import org.apache.datasketches.theta.Union;
 import org.apache.datasketches.thetacommon.ThetaUtil;
-import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.AggregateCombiner;
@@ -83,10 +82,6 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
     validateInputs(metricFactory.getColumnCapabilities(fieldName));
-    ColumnCapabilities capabilities = metricFactory.getColumnCapabilities(fieldName);
-    if (capabilities != null && capabilities.isArray()) {
-      throw InvalidInput.exception("ARRAY types are not supported for theta sketch");
-    }
     BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(fieldName);
     return new SketchAggregator(selector, size);
   }
@@ -95,10 +90,6 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
   public AggregatorAndSize factorizeWithSize(ColumnSelectorFactory metricFactory)
   {
     validateInputs(metricFactory.getColumnCapabilities(fieldName));
-    ColumnCapabilities capabilities = metricFactory.getColumnCapabilities(fieldName);
-    if (capabilities != null && capabilities.isArray()) {
-      throw InvalidInput.exception("ARRAY types are not supported for theta sketch");
-    }
     BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(fieldName);
     final SketchAggregator aggregator = new SketchAggregator(selector, size);
     return new AggregatorAndSize(aggregator, aggregator.getInitialSizeBytes());
@@ -109,10 +100,6 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
     validateInputs(metricFactory.getColumnCapabilities(fieldName));
-    ColumnCapabilities capabilities = metricFactory.getColumnCapabilities(fieldName);
-    if (capabilities != null && capabilities.isArray()) {
-      throw InvalidInput.exception("ARRAY types are not supported for theta sketch");
-    }
     BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(fieldName);
     return new SketchBufferAggregator(selector, size, getMaxIntermediateSizeWithNulls());
   }
