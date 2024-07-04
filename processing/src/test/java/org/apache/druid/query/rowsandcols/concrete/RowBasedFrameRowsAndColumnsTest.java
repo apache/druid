@@ -37,9 +37,9 @@ import java.util.function.Function;
 public class RowBasedFrameRowsAndColumnsTest extends RowsAndColumnsTestBase
 {
   public RowBasedFrameRowsAndColumnsTest()
-{
-  super(RowBasedFrameRowsAndColumns.class);
-}
+  {
+    super(RowBasedFrameRowsAndColumns.class);
+  }
 
   public static Function<MapOfColumnsRowsAndColumns, RowBasedFrameRowsAndColumns> MAKER = RowBasedFrameRowsAndColumnsTest::buildFrame;
 
