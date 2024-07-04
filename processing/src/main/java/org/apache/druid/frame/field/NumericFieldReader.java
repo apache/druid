@@ -50,6 +50,11 @@ public abstract class NumericFieldReader implements FieldReader
     }
   }
 
+  public byte getNullIndicatorByte()
+  {
+    return nullIndicatorByte;
+  }
+
   @Override
   public ColumnValueSelector<?> makeColumnValueSelector(Memory memory, ReadableFieldPointer fieldPointer)
   {
