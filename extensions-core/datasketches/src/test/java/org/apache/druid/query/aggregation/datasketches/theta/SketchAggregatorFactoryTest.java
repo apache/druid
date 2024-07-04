@@ -20,6 +20,7 @@
 package org.apache.druid.query.aggregation.datasketches.theta;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.aggregation.AggregatorAndSize;
@@ -32,10 +33,14 @@ import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.easymock.EasyMock;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 public class SketchAggregatorFactoryTest
@@ -45,6 +50,22 @@ public class SketchAggregatorFactoryTest
 
   private static final SketchMergeAggregatorFactory AGGREGATOR_32768 =
       new SketchMergeAggregatorFactory("x", "x", 32768, null, false, null);
+
+  private final ColumnSelectorFactory metricFactory = EasyMock.mock(ColumnSelectorFactory.class);
+  private final VectorColumnSelectorFactory vectorFactory = EasyMock.mock(VectorColumnSelectorFactory.class);
+  private final ColumnCapabilities capabilities = EasyMock.mock(ColumnCapabilities.class);
+
+  @Before
+  public void setup()
+  {
+    EasyMock.expect(metricFactory.getColumnCapabilities(EasyMock.anyString())).andReturn(capabilities).anyTimes();
+    EasyMock.expect(vectorFactory.getColumnCapabilities(EasyMock.anyString())).andReturn(capabilities).anyTimes();
+    EasyMock.expect(capabilities.toColumnType()).andReturn(ColumnType.NESTED_DATA).anyTimes();
+    EasyMock.expect(capabilities.isArray()).andReturn(false).anyTimes();
+    EasyMock.expect(capabilities.is(EasyMock.eq(ValueType.COMPLEX))).andReturn(true).anyTimes();
+    EasyMock.expect(capabilities.asTypeString()).andReturn(ColumnType.NESTED_DATA.asTypeString()).anyTimes();
+    EasyMock.replay(metricFactory, vectorFactory, capabilities);
+  }
 
   @Test
   public void testGuessAggregatorHeapFootprint()
@@ -167,5 +188,37 @@ public class SketchAggregatorFactoryTest
   {
     Assert.assertEquals(AGGREGATOR_16384, AGGREGATOR_16384.withName("x"));
     Assert.assertEquals("newTest", AGGREGATOR_16384.withName("newTest").getName());
+  }
+
+  @Test
+  public void testFactorizeOnUnsupportedComplexColumn()
+  {
+    Throwable exception = Assert.assertThrows(ISE.class, () -> AGGREGATOR_16384.factorize(metricFactory));
+    Assert.assertEquals("Invalid input [x] of type [COMPLEX<json>] for [COMPLEX<thetaSketchBuild>] aggregator [x]", exception.getMessage());
+    EasyMock.verify(metricFactory, capabilities);
+  }
+
+  @Test
+  public void testFactorizeWithSizeOnUnsupportedComplexColumn()
+  {
+    Throwable exception = Assert.assertThrows(ISE.class, () -> AGGREGATOR_16384.factorizeWithSize(metricFactory));
+    Assert.assertEquals("Invalid input [x] of type [COMPLEX<json>] for [COMPLEX<thetaSketchBuild>] aggregator [x]", exception.getMessage());
+    EasyMock.verify(metricFactory, capabilities);
+  }
+
+  @Test
+  public void testFactorizeBufferedOnUnsupportedComplexColumn()
+  {
+    Throwable exception = Assert.assertThrows(ISE.class, () -> AGGREGATOR_16384.factorizeBuffered(metricFactory));
+    Assert.assertEquals("Invalid input [x] of type [COMPLEX<json>] for [COMPLEX<thetaSketchBuild>] aggregator [x]", exception.getMessage());
+    EasyMock.verify(metricFactory, capabilities);
+  }
+
+  @Test
+  public void testFactorizeVectorOnUnsupportedComplexColumn()
+  {
+    Throwable exception = Assert.assertThrows(ISE.class, () -> AGGREGATOR_16384.factorizeVector(vectorFactory));
+    Assert.assertEquals("Invalid input [x] of type [COMPLEX<json>] for [COMPLEX<thetaSketchBuild>] aggregator [x]", exception.getMessage());
+    EasyMock.verify(vectorFactory, capabilities);
   }
 }

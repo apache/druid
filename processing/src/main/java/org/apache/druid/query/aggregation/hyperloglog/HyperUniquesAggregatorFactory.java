@@ -103,17 +103,7 @@ public class HyperUniquesAggregatorFactory extends AggregatorFactory
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    ColumnCapabilities columnCapabilities = metricFactory.getColumnCapabilities(fieldName);
-    if (columnCapabilities != null) {
-      final ColumnType type = columnCapabilities.toColumnType();
-      if (!ColumnType.UNKNOWN_COMPLEX.equals(type) && !TYPE.equals(type) && !PRECOMPUTED_TYPE.equals(type)) {
-        throw new UOE("Using aggregation type %s is not supported for %s column. "
-                      + "Use a different aggregator type and run the query again.",
-                      getIntermediateType().getComplexTypeName(),
-                      type);
-      }
-    }
-
+    validateInputs(metricFactory.getColumnCapabilities(fieldName));
     BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(fieldName);
     if (selector instanceof NilColumnValueSelector) {
       return NoopAggregator.instance();
@@ -124,17 +114,7 @@ public class HyperUniquesAggregatorFactory extends AggregatorFactory
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
-    ColumnCapabilities columnCapabilities = metricFactory.getColumnCapabilities(fieldName);
-    if (columnCapabilities != null) {
-      final ColumnType type = columnCapabilities.toColumnType();
-      if (!ColumnType.UNKNOWN_COMPLEX.equals(type) && !TYPE.equals(type) && !PRECOMPUTED_TYPE.equals(type)) {
-        throw new UOE("Using aggregation type %s is not supported for %s column. "
-                      + "Use a different aggregator type and run the query again.",
-                      getIntermediateType().getComplexTypeName(),
-                      type);
-      }
-    }
-
+    validateInputs(metricFactory.getColumnCapabilities(fieldName));
     BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(fieldName);
     if (selector instanceof NilColumnValueSelector) {
       return NoopBufferAggregator.instance();
@@ -146,20 +126,25 @@ public class HyperUniquesAggregatorFactory extends AggregatorFactory
   public VectorAggregator factorizeVector(final VectorColumnSelectorFactory selectorFactory)
   {
     final ColumnCapabilities columnCapabilities = selectorFactory.getColumnCapabilities(fieldName);
-    if (columnCapabilities != null) {
-      final ColumnType type = columnCapabilities.toColumnType();
+    validateInputs(columnCapabilities);
+
+    if (!Types.is(columnCapabilities, ValueType.COMPLEX)) {
+      return NoopVectorAggregator.instance();
+    } else {
+      return new HyperUniquesVectorAggregator(selectorFactory.makeObjectSelector(fieldName));
+    }
+  }
+
+  private void validateInputs(@Nullable ColumnCapabilities capabilities)
+  {
+    if (capabilities != null) {
+      final ColumnType type = capabilities.toColumnType();
       if (!ColumnType.UNKNOWN_COMPLEX.equals(type) && !TYPE.equals(type) && !PRECOMPUTED_TYPE.equals(type)) {
         throw new UOE("Using aggregation type %s is not supported for %s column. "
                       + "Use a different aggregator type and run the query again.",
                       getIntermediateType().getComplexTypeName(),
                       type);
       }
-    }
-
-    if (!Types.is(columnCapabilities, ValueType.COMPLEX)) {
-      return NoopVectorAggregator.instance();
-    } else {
-      return new HyperUniquesVectorAggregator(selectorFactory.makeObjectSelector(fieldName));
     }
   }
 

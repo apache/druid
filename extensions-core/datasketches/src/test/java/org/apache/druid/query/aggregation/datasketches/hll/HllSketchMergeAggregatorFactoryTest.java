@@ -23,9 +23,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.datasketches.hll.TgtHllType;
 import org.apache.druid.java.util.common.StringEncoding;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorFactoryNotMergeableException;
+import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
+import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -44,6 +50,10 @@ public class HllSketchMergeAggregatorFactoryTest
 
   private HllSketchMergeAggregatorFactory targetRound;
   private HllSketchMergeAggregatorFactory targetNoRound;
+
+  private final ColumnSelectorFactory metricFactory = EasyMock.mock(ColumnSelectorFactory.class);
+  private final VectorColumnSelectorFactory vectorFactory = EasyMock.mock(VectorColumnSelectorFactory.class);
+  private final ColumnCapabilities capabilities = EasyMock.mock(ColumnCapabilities.class);
 
   @Before
   public void setUp()
@@ -66,6 +76,11 @@ public class HllSketchMergeAggregatorFactoryTest
         SHOULD_FINALIZE,
         !ROUND
     );
+
+    EasyMock.expect(metricFactory.getColumnCapabilities(EasyMock.anyString())).andReturn(capabilities).anyTimes();
+    EasyMock.expect(vectorFactory.getColumnCapabilities(EasyMock.anyString())).andReturn(capabilities).anyTimes();
+    EasyMock.expect(capabilities.toColumnType()).andReturn(ColumnType.NESTED_DATA).anyTimes();
+    EasyMock.replay(metricFactory, vectorFactory, capabilities);
   }
 
   @Test(expected = AggregatorFactoryNotMergeableException.class)
@@ -290,5 +305,32 @@ public class HllSketchMergeAggregatorFactoryTest
     HllSketchAggregatorFactory factory = (HllSketchAggregatorFactory) targetRound.getMergingFactory(targetRound);
     Assert.assertEquals(factory, factory.withName(targetRound.getName()));
     Assert.assertEquals("newTest", factory.withName("newTest").getName());
+  }
+
+  @Test
+  public void testFactorizeOnUnsupportedComplexColumn()
+  {
+    Throwable exception = Assert.assertThrows(UOE.class, () -> targetRound.factorize(metricFactory));
+    Assert.assertEquals("Using aggregation type HLLSketchMerge is not supported for COMPLEX<json> column. Use a different aggregator type and run the query again.", exception.getMessage());
+
+    EasyMock.verify(metricFactory, capabilities);
+  }
+
+  @Test
+  public void testFactorizeBufferedOnUnsupportedComplexColumn()
+  {
+    Throwable exception = Assert.assertThrows(UOE.class, () -> targetRound.factorizeBuffered(metricFactory));
+    Assert.assertEquals("Using aggregation type HLLSketchMerge is not supported for COMPLEX<json> column. Use a different aggregator type and run the query again.", exception.getMessage());
+
+    EasyMock.verify(metricFactory, capabilities);
+  }
+
+  @Test
+  public void testFactorizeVectorOnUnsupportedComplexColumn()
+  {
+    Throwable exception = Assert.assertThrows(UOE.class, () -> targetRound.factorizeVector(vectorFactory));
+    Assert.assertEquals("Using aggregation type HLLSketchMerge is not supported for COMPLEX<json> column. Use a different aggregator type and run the query again.", exception.getMessage());
+
+    EasyMock.verify(vectorFactory, capabilities);
   }
 }
