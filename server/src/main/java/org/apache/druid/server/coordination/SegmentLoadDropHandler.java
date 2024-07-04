@@ -27,6 +27,7 @@ import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.AbstractFuture;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
+import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
@@ -51,6 +52,7 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * Responsible for loading and dropping of segments by a process that can serve segments.
  */
+@ManageLifecycle
 public class SegmentLoadDropHandler implements DataSegmentChangeHandler
 {
   private static final EmittingLogger log = new EmittingLogger(SegmentLoadDropHandler.class);
