@@ -31,11 +31,11 @@ import com.google.common.collect.TreeRangeSet;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.query.filter.vector.VectorValueMatcherColumnProcessorFactory;
-import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.BaseDoubleColumnValueSelector;
 import org.apache.druid.segment.BaseFloatColumnValueSelector;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
@@ -44,6 +44,7 @@ import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnProcessorFactory;
 import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
@@ -304,8 +305,7 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
   /**
    * Can the match value type be cast directly to column type for equality comparison? For non-numeric match types, we
    * just use exact string equality regardless of the column type. For numeric match value types against string columns,
-   * we instead use {@link StringComparators#NUMERIC} for matching equality, which effectively allows implicit casting
-   * of the string column to the numeric type for classic druid style behavior.
+   * we instead cast the string to the match value type number for matching equality.
    */
   public static boolean useSimpleEquality(TypeSignature<ValueType> columnType, ColumnType matchValueType)
   {
@@ -315,6 +315,7 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
     return true;
   }
 
+  @Nullable
   public static BitmapColumnIndex getEqualityIndex(
       String column,
       ExprEval<?> matchValueEval,
@@ -427,19 +428,36 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
     private Supplier<DruidObjectPredicate<String>> makeStringPredicateSupplier()
     {
       return Suppliers.memoize(() -> {
-        final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(matchValue, ExpressionType.STRING);
-        if (castForComparison == null) {
-          return DruidObjectPredicate.alwaysFalseWithNullUnknown();
-        }
         // when matching strings to numeric match values, use numeric comparator to implicitly cast the string to number
         if (matchValue.type().isNumeric()) {
-          return value -> {
-            if (value == null) {
-              return DruidPredicateMatch.UNKNOWN;
-            }
-            return DruidPredicateMatch.of(StringComparators.NUMERIC.compare(value, castForComparison.asString()) == 0);
-          };
+          if (matchValue.type().is(ExprType.LONG)) {
+            return value -> {
+              if (value == null) {
+                return DruidPredicateMatch.UNKNOWN;
+              }
+              final Long l = DimensionHandlerUtils.convertObjectToLong(value);
+              if (l == null) {
+                return DruidPredicateMatch.FALSE;
+              }
+              return DruidPredicateMatch.of(matchValue.asLong() == l);
+            };
+          } else {
+            return value -> {
+              if (value == null) {
+                return DruidPredicateMatch.UNKNOWN;
+              }
+              final Double d = DimensionHandlerUtils.convertObjectToDouble(value);
+              if (d == null) {
+                return DruidPredicateMatch.FALSE;
+              }
+              return DruidPredicateMatch.of(matchValue.asDouble() == d);
+            };
+          }
         } else {
+          final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(matchValue, ExpressionType.STRING);
+          if (castForComparison == null) {
+            return DruidObjectPredicate.alwaysFalseWithNullUnknown();
+          }
           return DruidObjectPredicate.equalTo(castForComparison.asString());
         }
       });
@@ -577,7 +595,7 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
     @Override
     public ValueMatcher makeDimensionProcessor(DimensionSelector selector, boolean multiValue)
     {
-      // use the predicate matcher when matching numeric values since it uses StringComparators.NUMERIC
+      // use the predicate matcher when matching numeric values since it casts the strings to numeric types
       if (matchValue.type().isNumeric()) {
         return predicateMatcherFactory.makeDimensionProcessor(selector, multiValue);
       }
