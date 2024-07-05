@@ -63,7 +63,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
   private final SegmentLoaderConfig config;
   private final DataSegmentAnnouncer announcer;
   private final SegmentManager segmentManager;
-  private final ScheduledExecutorService loadingExecutor;
+  private final ScheduledExecutorService exec;
 
   private final ConcurrentSkipListSet<DataSegment> segmentsToDelete;
 
@@ -100,21 +100,16 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
       SegmentLoaderConfig config,
       DataSegmentAnnouncer announcer,
       SegmentManager segmentManager,
-      ScheduledExecutorService loadingExecutor
+      ScheduledExecutorService exec
   )
   {
     this.config = config;
     this.announcer = announcer;
     this.segmentManager = segmentManager;
-    this.loadingExecutor = loadingExecutor;
+    this.exec = exec;
 
     this.segmentsToDelete = new ConcurrentSkipListSet<>();
     requestStatuses = CacheBuilder.newBuilder().maximumSize(config.getStatusQueueMaxSize()).initialCapacity(8).build();
-  }
-
-  ScheduledExecutorService getLoadingExecutor()
-  {
-    return loadingExecutor;
   }
 
   public Map<String, Long> getAverageNumOfRowsPerSegmentForDatasource()
@@ -219,7 +214,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
             "Completely removing segment[%s] in [%,d]ms.",
             segment.getId(), config.getDropSegmentDelayMillis()
         );
-        loadingExecutor.schedule(
+        exec.schedule(
             runnable,
             config.getDropSegmentDelayMillis(),
             TimeUnit.MILLISECONDS
@@ -290,7 +285,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
               public void addSegment(DataSegment segment, @Nullable DataSegmentChangeCallback callback)
               {
                 requestStatuses.put(changeRequest, new AtomicReference<>(SegmentChangeStatus.PENDING));
-                loadingExecutor.submit(
+                exec.submit(
                     () -> SegmentLoadDropHandler.this.addSegment(
                         ((SegmentChangeRequestLoad) changeRequest).getSegment(),
                         () -> resolveWaitingFutures()

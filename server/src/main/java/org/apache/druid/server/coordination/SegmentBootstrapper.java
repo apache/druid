@@ -49,6 +49,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -175,8 +176,13 @@ public class SegmentBootstrapper
         config.getNumBootstrapThreads(), "Segment-Bootstrap-%s"
     );
 
+    // Start a temporary scheduled executor for background segment announcing
+    final ScheduledExecutorService backgroundAnnouncerExecutor = Executors.newScheduledThreadPool(
+        config.getNumLoadingThreads(), Execs.makeThreadFactory("Background-Segment-Announcer-%s")
+    );
+
     try (final BackgroundSegmentAnnouncer backgroundSegmentAnnouncer =
-             new BackgroundSegmentAnnouncer(segmentAnnouncer, loadDropHandler.getLoadingExecutor(), config.getAnnounceIntervalMillis())) {
+             new BackgroundSegmentAnnouncer(segmentAnnouncer, backgroundAnnouncerExecutor, config.getAnnounceIntervalMillis())) {
 
       backgroundSegmentAnnouncer.startAnnouncing();
 
@@ -244,6 +250,7 @@ public class SegmentBootstrapper
     }
     finally {
       bootstrapExecutor.shutdownNow();
+      backgroundAnnouncerExecutor.shutdownNow();
       stopwatch.stop();
       // At this stage, all tasks have been submitted, send a shutdown command to cleanup any resources alloted
       // for the bootstrapping function.
