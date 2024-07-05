@@ -26,6 +26,7 @@ import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.frame.key.KeyOrder;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.msq.input.stage.StageInputSpec;
+import org.apache.druid.msq.kernel.MixShuffleSpec;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.QueryDefinitionBuilder;
 import org.apache.druid.msq.kernel.ShuffleSpec;
@@ -149,7 +150,6 @@ public class ScanQueryKit implements QueryKit<ScanQuery>
       signatureBuilder.add(QueryKitUtils.PARTITION_BOOST_COLUMN, ColumnType.LONG);
     }
 
-
     final ClusterBy clusterBy =
         QueryKitUtils.clusterByWithSegmentGranularity(new ClusterBy(clusterByColumns, 0), segmentGranularity);
     final ShuffleSpec finalShuffleSpec = resultShuffleSpecFactory.build(clusterBy, false);
@@ -159,14 +159,30 @@ public class ScanQueryKit implements QueryKit<ScanQuery>
         clusterBy.getColumns()
     );
 
-    // If there is no limit spec, apply the final shuffling here itself. This will ensure partition sizes etc are respected.
-    // If there is a limit spec, it would write everything into one partition anyway, so the final shuffling should be
-    // applied after that.
+    ShuffleSpec scanShuffleSpec;
+    if (!hasLimitOrOffset) {
+      // If there is no limit spec, apply the final shuffling here itself. This will ensure partition sizes etc are respected.
+      scanShuffleSpec = finalShuffleSpec;
+    } else {
+      // If there is a limit spec, check if there are any non-boost columns to sort in.
+      boolean requiresSort = clusterByColumns.stream()
+                                             .anyMatch(keyColumn -> !QueryKitUtils.PARTITION_BOOST_COLUMN.equals(keyColumn.columnName()));
+      if (requiresSort) {
+        // If yes, do a sort into a single partition.
+        scanShuffleSpec = ShuffleSpecFactories.singlePartition().build(clusterBy, false);
+      } else {
+        // If the only clusterBy column is the boost column, we just use a mix shuffle to avoid unused shuffling.
+        // Note that we still need the boost column to be present in the row signature, since the limit stage would
+        // need it to be populated to do its own shuffling later.
+        scanShuffleSpec = MixShuffleSpec.instance();
+      }
+    }
+
     queryDefBuilder.add(
         StageDefinition.builder(Math.max(minStageNumber, queryDefBuilder.getNextStageNumber()))
                        .inputs(dataSourcePlan.getInputSpecs())
                        .broadcastInputs(dataSourcePlan.getBroadcastInputs())
-                       .shuffleSpec(hasLimitOrOffset ? ShuffleSpecFactories.singlePartition().build(clusterBy, false) : finalShuffleSpec)
+                       .shuffleSpec(scanShuffleSpec)
                        .signature(signatureToUse)
                        .maxWorkerCount(dataSourcePlan.isSingleWorker() ? 1 : maxWorkerCount)
                        .processorFactory(new ScanQueryFrameProcessorFactory(queryToRun))
