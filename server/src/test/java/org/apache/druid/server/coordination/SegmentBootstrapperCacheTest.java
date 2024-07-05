@@ -51,8 +51,7 @@ import java.util.List;
 
 /**
  * Similar to {@link SegmentBootstrapperTest}. This class includes tests that cover the
- * storage location layer as well. TODO: there's testLoadLocalCache that needs to be moved to
- * SegmentLoadDropHandlerTest. Maybe this test should go away into the actual test classes.
+ * storage location layer as well.
  */
 public class SegmentBootstrapperCacheTest
 {
