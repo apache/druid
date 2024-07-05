@@ -59,6 +59,7 @@ import org.apache.druid.msq.indexing.error.TooManyColumnsFault;
 import org.apache.druid.msq.indexing.error.TooManyInputFilesFault;
 import org.apache.druid.msq.indexing.error.TooManyPartitionsFault;
 import org.apache.druid.msq.indexing.error.TooManyRowsWithSameKeyFault;
+import org.apache.druid.msq.indexing.error.TooManySegmentsInTimeChunkFault;
 import org.apache.druid.msq.indexing.error.TooManyWarningsFault;
 import org.apache.druid.msq.indexing.error.TooManyWorkersFault;
 import org.apache.druid.msq.indexing.error.UnknownFault;
@@ -126,6 +127,7 @@ public class MSQIndexingModule implements DruidModule
       TooManyInputFilesFault.class,
       TooManyPartitionsFault.class,
       TooManyRowsWithSameKeyFault.class,
+      TooManySegmentsInTimeChunkFault.class,
       TooManyWarningsFault.class,
       TooManyWorkersFault.class,
       TooManyAttemptsForJob.class,

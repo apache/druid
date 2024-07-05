@@ -149,6 +149,8 @@ public class MultiStageQueryContext
 
   public static final String CTX_IS_REINDEX = "isReindex";
 
+  public static final String CTX_MAX_NUM_SEGMENTS = "maxNumSegments";
+
   /**
    * Controls sort order within segments. Normally, this is the same as the overall order of the query (from the
    * CLUSTERED BY clause) but it can be overridden.
@@ -322,6 +324,12 @@ public class MultiStageQueryContext
   public static int getRowsInMemory(final QueryContext queryContext)
   {
     return queryContext.getInt(CTX_ROWS_IN_MEMORY, DEFAULT_ROWS_IN_MEMORY);
+  }
+
+  public static Integer getMaxNumSegments(final QueryContext queryContext)
+  {
+    // The default is null, if the context is not set.
+    return queryContext.getInt(CTX_MAX_NUM_SEGMENTS);
   }
 
   public static List<String> getSortOrder(final QueryContext queryContext)

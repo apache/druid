@@ -1027,4 +1027,28 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTe
     buildSchemaMarkAndTableLatch();
     serverView.invokeSegmentSchemasAnnouncedDummy();
   }
+
+  @Test
+  public void testNoDatasourceSchemaWhenNoSegmentMetadata() throws InterruptedException, IOException
+  {
+    BrokerSegmentMetadataCacheConfig config = new BrokerSegmentMetadataCacheConfig();
+    config.setDisableSegmentMetadataQueries(true);
+
+    BrokerSegmentMetadataCache schema = buildSchemaMarkAndTableLatch(
+        config,
+        new NoopCoordinatorClient()
+    );
+
+    schema.start();
+    schema.awaitInitialization();
+
+    List<DataSegment> segments = schema.getSegmentMetadataSnapshot().values()
+                                .stream()
+                                .map(AvailableSegmentMetadata::getSegment)
+                                .collect(Collectors.toList());
+
+    schema.refresh(segments.stream().map(DataSegment::getId).collect(Collectors.toSet()), Collections.singleton("foo"));
+
+    Assert.assertNull(schema.getDatasource("foo"));
+  }
 }
