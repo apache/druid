@@ -410,7 +410,7 @@ To solve this issue, explicitly provide the type of the dynamic parameter using 
 SELECT * FROM druid.foo WHERE dim1 like CONCAT('%', CAST (? AS VARCHAR), '%')
 ```
 
-Arrays can also be passed as dynamic parameters.
+Dynamic parameters can also replace arrays, reducing the parsing time.
 
 for example:
 ```json
