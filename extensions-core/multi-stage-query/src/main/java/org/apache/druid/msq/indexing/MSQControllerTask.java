@@ -325,7 +325,7 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery, 
   /**
    * Checks whether the task is an async query which writes frame files containing the final results into durable storage.
    */
-  public static boolean writeResultsToDurableStorage(final MSQSpec querySpec)
+  public static boolean writeFinalStageResultsToDurableStorage(final MSQSpec querySpec)
   {
     return querySpec.getDestination() instanceof DurableStorageMSQDestination;
   }
@@ -333,7 +333,7 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery, 
   /**
    * Checks whether the task is an async query which writes frame files containing the final results into durable storage.
    */
-  public static boolean writeResultsToTaskReport(final MSQSpec querySpec)
+  public static boolean writeFinalResultsToTaskReport(final MSQSpec querySpec)
   {
     return querySpec.getDestination() instanceof TaskReportMSQDestination;
   }

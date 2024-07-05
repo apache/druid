@@ -1826,9 +1826,9 @@ public class ControllerImpl implements Controller
       );
 
       return builder.build();
-    } else if (MSQControllerTask.writeResultsToTaskReport(querySpec)) {
+    } else if (MSQControllerTask.writeFinalResultsToTaskReport(querySpec)) {
       return queryDef;
-    } else if (MSQControllerTask.writeResultsToDurableStorage(querySpec)) {
+    } else if (MSQControllerTask.writeFinalStageResultsToDurableStorage(querySpec)) {
 
       // attaching new query results stage if the final stage does sort during shuffle so that results are ordered.
       StageDefinition finalShuffleStageDef = queryDef.getFinalStageDefinition();
@@ -2931,12 +2931,12 @@ public class ControllerImpl implements Controller
 
       final InputChannelFactory inputChannelFactory;
 
-      if (queryKernelConfig.isDurableStorage() || MSQControllerTask.writeResultsToDurableStorage(querySpec)) {
+      if (queryKernelConfig.isDurableStorage() || MSQControllerTask.writeFinalStageResultsToDurableStorage(querySpec)) {
         inputChannelFactory = DurableStorageInputChannelFactory.createStandardImplementation(
             queryId(),
             MSQTasks.makeStorageConnector(context.injector()),
             closer,
-            MSQControllerTask.writeResultsToDurableStorage(querySpec)
+            MSQControllerTask.writeFinalStageResultsToDurableStorage(querySpec)
         );
       } else {
         inputChannelFactory = new WorkerInputChannelFactory(netClient, () -> taskIds);
