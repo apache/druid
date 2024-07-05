@@ -49,7 +49,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -69,7 +68,6 @@ public class SegmentBootstrapper
   private final DataSegmentAnnouncer segmentAnnouncer;
   private final DataSegmentServerAnnouncer serverAnnouncer;
   private final SegmentManager segmentManager;
-  private final ScheduledExecutorService exec;
   private final ServerTypeConfig serverTypeConfig;
   private final CoordinatorClient coordinatorClient;
   private final ServiceEmitter emitter;
@@ -98,10 +96,6 @@ public class SegmentBootstrapper
     this.segmentAnnouncer = segmentAnnouncer;
     this.serverAnnouncer = serverAnnouncer;
     this.segmentManager = segmentManager;
-    this.exec = Executors.newScheduledThreadPool(
-        config.getNumLoadingThreads(),
-        Execs.makeThreadFactory("SimpleDataSegmentChangeHandler-%s")
-    );
     this.serverTypeConfig = serverTypeConfig;
     this.coordinatorClient = coordinatorClient;
     this.emitter = emitter;
@@ -177,12 +171,12 @@ public class SegmentBootstrapper
     final Stopwatch stopwatch = Stopwatch.createStarted();
 
     // Start a temporary thread pool to load segments into page cache during bootstrap
-    final ExecutorService loadingExecutor = Execs.multiThreaded(
-        config.getNumBootstrapThreads(), "Segment-Load-Startup-%s"
+    final ExecutorService bootstrapExecutor = Execs.multiThreaded(
+        config.getNumBootstrapThreads(), "Segment-Bootstrap-%s"
     );
 
     try (final BackgroundSegmentAnnouncer backgroundSegmentAnnouncer =
-             new BackgroundSegmentAnnouncer(segmentAnnouncer, exec, config.getAnnounceIntervalMillis())) {
+             new BackgroundSegmentAnnouncer(segmentAnnouncer, loadDropHandler.getLoadingExecutor(), config.getAnnounceIntervalMillis())) {
 
       backgroundSegmentAnnouncer.startAnnouncing();
 
@@ -191,7 +185,7 @@ public class SegmentBootstrapper
       final AtomicInteger counter = new AtomicInteger(0);
       final CopyOnWriteArrayList<DataSegment> failedSegments = new CopyOnWriteArrayList<>();
       for (final DataSegment segment : segmentsOnStartup) {
-        loadingExecutor.submit(
+        bootstrapExecutor.submit(
             () -> {
               try {
                 log.info(
@@ -249,7 +243,7 @@ public class SegmentBootstrapper
          .emit();
     }
     finally {
-      loadingExecutor.shutdownNow();
+      bootstrapExecutor.shutdownNow();
       stopwatch.stop();
       // At this stage, all tasks have been submitted, send a shutdown command to cleanup any resources alloted
       // for the bootstrapping function.
@@ -263,7 +257,6 @@ public class SegmentBootstrapper
    */
   private List<DataSegment> getBootstrapSegments()
   {
-    // We will also a need separate mode for tasks; with a different custom property.
     log.info("Fetching bootstrap segments from the coordinator.");
     final Stopwatch stopwatch = Stopwatch.createStarted();
 
@@ -307,7 +300,7 @@ public class SegmentBootstrapper
   {
     private static final EmittingLogger log = new EmittingLogger(BackgroundSegmentAnnouncer.class);
 
-    private final int intervalMillis;
+    private final int announceIntervalMillis;
     private final DataSegmentAnnouncer segmentAnnouncer;
     private final ScheduledExecutorService exec;
     private final LinkedBlockingQueue<DataSegment> queue;
@@ -324,12 +317,12 @@ public class SegmentBootstrapper
     BackgroundSegmentAnnouncer(
         DataSegmentAnnouncer segmentAnnouncer,
         ScheduledExecutorService exec,
-        int intervalMillis
+        int announceIntervalMillis
     )
     {
       this.segmentAnnouncer = segmentAnnouncer;
       this.exec = exec;
-      this.intervalMillis = intervalMillis;
+      this.announceIntervalMillis = announceIntervalMillis;
       this.queue = new LinkedBlockingQueue<>();
       this.doneAnnouncing = SettableFuture.create();
     }
@@ -344,7 +337,8 @@ public class SegmentBootstrapper
 
     public void startAnnouncing()
     {
-      if (intervalMillis <= 0) {
+      if (announceIntervalMillis <= 0) {
+        log.info("Skipping background segment announcing as announceIntervalMillis is [%d].", announceIntervalMillis);
         return;
       }
 
@@ -364,7 +358,7 @@ public class SegmentBootstrapper
                     queue.drainTo(segments);
                     try {
                       segmentAnnouncer.announceSegments(segments);
-                      nextAnnoucement = exec.schedule(this, intervalMillis, TimeUnit.MILLISECONDS);
+                      nextAnnoucement = exec.schedule(this, announceIntervalMillis, TimeUnit.MILLISECONDS);
                     }
                     catch (IOException e) {
                       doneAnnouncing.setException(
@@ -381,7 +375,7 @@ public class SegmentBootstrapper
               }
             }
           },
-          intervalMillis,
+          announceIntervalMillis,
           TimeUnit.MILLISECONDS
       );
     }
