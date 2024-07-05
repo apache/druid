@@ -41,103 +41,13 @@ import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 
-public class ColumnBasedFrameRowsAndColumns implements RowsAndColumns, AutoCloseable, CloseableShapeshifter
+public class ColumnBasedFrameRowsAndColumns extends FrameRowsAndColumns
 {
-  private final Frame frame;
-  private final RowSignature signature;
-  private final LinkedHashMap<String, Column> colCache = new LinkedHashMap<>();
-
   @JsonCreator
   public ColumnBasedFrameRowsAndColumns(
       @JsonProperty("frame") Frame frame,
       @JsonProperty("signature") RowSignature signature)
   {
-    this.frame = FrameType.COLUMNAR.ensureType(frame);
-    this.signature = signature;
-  }
-
-  @JsonProperty("frame")
-  public Frame getFrame()
-  {
-    return frame;
-  }
-
-  @JsonProperty("signature")
-  public RowSignature getSignature()
-  {
-    return signature;
-  }
-
-  @Override
-  public Collection<String> getColumnNames()
-  {
-    return signature.getColumnNames();
-  }
-
-  @Override
-  public int numRows()
-  {
-    return frame.numRows();
-  }
-
-  @Nullable
-  @Override
-  public Column findColumn(String name)
-  {
-    // Use contains so that we can negative cache.
-    if (!colCache.containsKey(name)) {
-      final int columnIndex = signature.indexOf(name);
-      if (columnIndex < 0) {
-        colCache.put(name, null);
-      } else {
-        final ColumnType columnType = signature
-            .getColumnType(columnIndex)
-            .orElseThrow(() -> new ISE("just got the id, why is columnType not there?"));
-
-        colCache.put(name, FrameColumnReaders.create(name, columnIndex, columnType).readRACColumn(frame));
-      }
-    }
-    return colCache.get(name);
-
-  }
-
-  @SuppressWarnings("unchecked")
-  @Nullable
-  @Override
-  public <T> T as(Class<T> clazz)
-  {
-    if (StorageAdapter.class.equals(clazz)) {
-      return (T) new FrameStorageAdapter(frame, FrameReader.create(signature), Intervals.ETERNITY);
-    }
-    if (WireTransferable.class.equals(clazz)) {
-      return (T) this;
-    }
-    return null;
-  }
-
-  @Override
-  public void close()
-  {
-    // nothing to close
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return Objects.hashCode(frame, signature);
-  }
-
-  @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (!(o instanceof ColumnBasedFrameRowsAndColumns)) {
-      return false;
-    }
-    ColumnBasedFrameRowsAndColumns otherFrame = (ColumnBasedFrameRowsAndColumns) o;
-
-    return frame.writableMemory().equals(otherFrame.frame.writableMemory()) && signature.equals(otherFrame.signature);
+    super(FrameType.COLUMNAR.ensureType(frame), signature);
   }
 }

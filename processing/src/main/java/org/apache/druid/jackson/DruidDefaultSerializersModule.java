@@ -42,7 +42,9 @@ import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.context.ResponseContextDeserializer;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.concrete.ColumnBasedFrameRowsAndColumns;
+import org.apache.druid.query.rowsandcols.concrete.FrameRowsAndColumns;
 import org.apache.druid.query.rowsandcols.concrete.RowBasedFrameRowsAndColumns;
+import org.apache.druid.query.rowsandcols.semantic.WireTransferable;
 import org.apache.druid.segment.column.RowSignature;
 import org.joda.time.DateTimeZone;
 
@@ -210,35 +212,27 @@ public class DruidDefaultSerializersModule extends SimpleModule
         // It would be really cool if jackson offered an output stream that would allow us to push bytes
         // through, but it doesn't right now, so we have to build a byte[] instead.  Maybe something to contribute
         // back to Jackson at some point.
-
-        if (value instanceof ColumnBasedFrameRowsAndColumns) {
-
-          ColumnBasedFrameRowsAndColumns frc = (ColumnBasedFrameRowsAndColumns) value;
-          JacksonUtils.writeObjectUsingSerializerProvider(gen, serializers, frc.getSignature());
-
-          this.writeFrameToGenerator(frc.getFrame(), gen);
-        } else if (value instanceof RowBasedFrameRowsAndColumns) {
-          RowBasedFrameRowsAndColumns frc = (RowBasedFrameRowsAndColumns) value;
-          JacksonUtils.writeObjectUsingSerializerProvider(gen, serializers, frc.getSignature());
-
-          this.writeFrameToGenerator(frc.getFrame(), gen);
-        } else {
-          throw DruidException.defensive("expected frame RowsAndColumns");
+        if (value instanceof FrameRowsAndColumns) {
+          gen.writeBinary(WireTransferable.fromRAC(value).bytesToTransfer());
         }
-
-      }
-
-      private void writeFrameToGenerator(Frame frame, JsonGenerator generator) throws IOException
-      {
-        final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        frame.writeTo(
-            Channels.newChannel(baos),
-            false,
-            ByteBuffer.allocate(Frame.compressionBufferSize((int) frame.numBytes())),
-            ByteTracker.unboundedTracker()
-        );
-
-        generator.writeBinary(baos.toByteArray());
+//        if (value instanceof FrameRowsAndColumns) {
+//
+//          FrameRowsAndColumns frc = (FrameRowsAndColumns) value;
+//          JacksonUtils.writeObjectUsingSerializerProvider(gen, serializers, frc.getSignature());
+//
+//          Frame frame = frc.getFrame();
+//          final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+//          frame.writeTo(
+//              Channels.newChannel(baos),
+//              false,
+//              ByteBuffer.allocate(Frame.compressionBufferSize((int) frame.numBytes())),
+//              ByteTracker.unboundedTracker()
+//          );
+//
+//          gen.writeBinary(baos.toByteArray());
+//        } else {
+//          throw DruidException.defensive("expected frame RowsAndColumns");
+//        }
       }
     });
 
@@ -250,6 +244,8 @@ public class DruidDefaultSerializersModule extends SimpleModule
           DeserializationContext ctxt
       ) throws IOException
       {
+       // WireTransferable.deserialzied(RowsAndColumns.class, p, ctxt);
+
         RowSignature sig = p.readValueAs(RowSignature.class);
         p.nextValue();
         ByteArrayOutputStream baos = new ByteArrayOutputStream();

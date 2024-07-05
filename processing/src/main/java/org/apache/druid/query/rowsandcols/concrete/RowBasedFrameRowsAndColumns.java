@@ -42,101 +42,13 @@ import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 
-public class RowBasedFrameRowsAndColumns implements RowsAndColumns, AutoCloseable, CloseableShapeshifter
+public class RowBasedFrameRowsAndColumns extends FrameRowsAndColumns
 {
-  private final Frame frame;
-  private final RowSignature signature;
-  private final LinkedHashMap<String, Column> colCache = new LinkedHashMap<>();
-
-  @JsonCreator
-  public RowBasedFrameRowsAndColumns(
-      @JsonProperty("frame") Frame frame,
-      @JsonProperty("signature") RowSignature signature)
+  //@JsonCreator
+  public RowBasedFrameRowsAndColumns( Frame frame, RowSignature signature)
+      //@JsonProperty("frame") Frame frame,
+      //@JsonProperty("signature") RowSignature signature)
   {
-    this.frame = FrameType.ROW_BASED.ensureType(frame);
-    this.signature = signature;
-  }
-
-  @Override
-  public Collection<String> getColumnNames()
-  {
-    return signature.getColumnNames();
-  }
-
-  @JsonProperty("frame")
-  public Frame getFrame()
-  {
-    return frame;
-  }
-
-  @JsonProperty("signature")
-  public RowSignature getSignature()
-  {
-    return signature;
-  }
-
-  @Override
-  public int numRows()
-  {
-    return frame.numRows();
-  }
-
-  @Nullable
-  @Override
-  public Column findColumn(String name)
-  {
-    if (!colCache.containsKey(name)) {
-      final int columnIndex = signature.indexOf(name);
-      if (columnIndex < 0) {
-        colCache.put(name, null);
-      } else {
-        final ColumnType columnType = signature
-            .getColumnType(columnIndex)
-            .orElseThrow(() -> new ISE("just got the id, why is columnType not there?"));
-
-        colCache.put(name, FrameColumnReaders.create(name, columnIndex, columnType).readRACColumn(frame));
-      }
-    }
-    return colCache.get(name);
-  }
-
-  @SuppressWarnings("unchecked")
-  @Nullable
-  @Override
-  public <T> T as(Class<T> clazz)
-  {
-    if (StorageAdapter.class.equals(clazz)) {
-      return (T) new FrameStorageAdapter(frame, FrameReader.create(signature), Intervals.ETERNITY);
-    }
-    if (WireTransferable.class.equals(clazz)) {
-      return (T) this;
-    }
-    return null;
-  }
-
-  @Override
-  public void close()
-  {
-    // nothing to close
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return Objects.hashCode(frame, signature);
-  }
-
-  @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (!(o instanceof RowBasedFrameRowsAndColumns)) {
-      return false;
-    }
-    RowBasedFrameRowsAndColumns otherFrame = (RowBasedFrameRowsAndColumns) o;
-
-    return frame.writableMemory().equals(otherFrame.frame.writableMemory()) && signature.equals(otherFrame.signature);
+    super(FrameType.ROW_BASED.ensureType(frame), signature);
   }
 }
