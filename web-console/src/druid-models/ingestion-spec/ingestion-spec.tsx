@@ -212,8 +212,10 @@ export function getIngestionTitle(ingestionType: IngestionComboTypeWithExtra): s
 
 export function getIngestionImage(ingestionType: IngestionComboTypeWithExtra): string {
   const parts = ingestionType.split(':');
-  if (parts.length === 2) return parts[1];
-  return ingestionType;
+  return parts[parts.length - 1]
+    .split(/(?=[A-Z])/)
+    .join('-')
+    .toLowerCase();
 }
 
 export function getIngestionDocLink(spec: Partial<IngestionSpec>): string {

@@ -331,6 +331,7 @@ export class ConsoleApplication extends React.PureComponent<
         capabilities={capabilities}
         goToQuery={this.goToQuery}
         goToTask={this.goToTasksWithTaskId}
+        goToTaskGroup={this.goToTasksWithTaskGroupId}
       />,
     );
   };

@@ -58,12 +58,13 @@ export interface SqlDataLoaderViewProps {
   capabilities: Capabilities;
   goToQuery(queryWithContext: QueryWithContext): void;
   goToTask(taskId: string): void;
+  goToTaskGroup(taskGroupId: string): void;
 }
 
 export const SqlDataLoaderView = React.memo(function SqlDataLoaderView(
   props: SqlDataLoaderViewProps,
 ) {
-  const { capabilities, goToQuery, goToTask } = props;
+  const { capabilities, goToQuery, goToTask, goToTaskGroup } = props;
   const [alertElement, setAlertElement] = useState<JSX.Element | undefined>();
   const [externalConfigStep, setExternalConfigStep] = useState<Partial<ExternalConfig>>({});
   const [content, setContent] = useLocalStorageState<LoaderContent | undefined>(
@@ -239,7 +240,11 @@ export const SqlDataLoaderView = React.memo(function SqlDataLoaderView(
           taskId={content.id}
           goToQuery={goToQuery}
           goToTask={goToTask}
-          onReset={() => setContent(undefined)}
+          goToTaskGroup={goToTaskGroup}
+          onReset={() => {
+            setExternalConfigStep({});
+            setContent(undefined);
+          }}
           onClose={() => setContent(deepDelete(content, 'id'))}
         />
       )}
