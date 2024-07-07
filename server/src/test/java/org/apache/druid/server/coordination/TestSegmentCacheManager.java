@@ -44,12 +44,12 @@ class TestSegmentCacheManager extends NoopSegmentCacheManager
 {
   private final List<DataSegment> cachedSegments;
 
-  final List<DataSegment> observedBootstrapSegments;
-  final List<DataSegment> observedBootstrapSegmentsLoadedIntoPageCache;
-  final List<DataSegment> observedSegments;
-  final List<DataSegment> observedSegmentsLoadedIntoPageCache;
-  final List<DataSegment> observedSegmentsRemovedFromCache;
-  final AtomicInteger observedShutdownBootstrapCount;
+  private final List<DataSegment> observedBootstrapSegments;
+  private final List<DataSegment> observedBootstrapSegmentsLoadedIntoPageCache;
+  private final List<DataSegment> observedSegments;
+  private final List<DataSegment> observedSegmentsLoadedIntoPageCache;
+  private final List<DataSegment> observedSegmentsRemovedFromCache;
+  private final AtomicInteger observedShutdownBootstrapCount;
 
   TestSegmentCacheManager()
   {
@@ -141,5 +141,35 @@ class TestSegmentCacheManager extends NoopSegmentCacheManager
   public void cleanup(DataSegment segment)
   {
     observedSegmentsRemovedFromCache.add(segment);
+  }
+
+  public List<DataSegment> getObservedBootstrapSegments()
+  {
+    return observedBootstrapSegments;
+  }
+
+  public List<DataSegment> getObservedBootstrapSegmentsLoadedIntoPageCache()
+  {
+    return observedBootstrapSegmentsLoadedIntoPageCache;
+  }
+
+  public List<DataSegment> getObservedSegments()
+  {
+    return observedSegments;
+  }
+
+  public List<DataSegment> getObservedSegmentsLoadedIntoPageCache()
+  {
+    return observedSegmentsLoadedIntoPageCache;
+  }
+
+  public List<DataSegment> getObservedSegmentsRemovedFromCache()
+  {
+    return observedSegmentsRemovedFromCache;
+  }
+
+  public AtomicInteger getObservedShutdownBootstrapCount()
+  {
+    return observedShutdownBootstrapCount;
   }
 }

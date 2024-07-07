@@ -57,8 +57,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Responsible for bootstrapping cached segments from disk and bootstrap segments from the coordinator.
- * Also, responsible for announcing itself as a data server if applicable once the bootstrapping functions
+ * Responsible for bootstrapping segments already cached on disk and bootstrap segments fetched from the coordinator.
+ * Also responsible for announcing the node as a data server if applicable, once the bootstrapping operations
  * are complete.
  */
 @ManageLifecycle
@@ -73,7 +73,7 @@ public class SegmentBootstrapper
   private final CoordinatorClient coordinatorClient;
   private final ServiceEmitter emitter;
 
-  private volatile boolean started = false;
+  private volatile boolean isComplete = false;
 
   // Synchronizes start/stop of this object.
   private final Object startStopLock = new Object();
@@ -81,7 +81,7 @@ public class SegmentBootstrapper
   private static final EmittingLogger log = new EmittingLogger(SegmentBootstrapper.class);
 
   @Inject
-  SegmentBootstrapper(
+  public SegmentBootstrapper(
       SegmentLoadDropHandler loadDropHandler,
       SegmentLoaderConfig config,
       DataSegmentAnnouncer segmentAnnouncer,
@@ -106,7 +106,7 @@ public class SegmentBootstrapper
   public void start() throws IOException
   {
     synchronized (startStopLock) {
-      if (started) {
+      if (isComplete) {
         return;
       }
 
@@ -124,7 +124,7 @@ public class SegmentBootstrapper
         Throwables.propagateIfPossible(e, IOException.class);
         throw new RuntimeException(e);
       }
-      started = true;
+      isComplete = true;
       log.info("Started.");
     }
   }
@@ -133,7 +133,7 @@ public class SegmentBootstrapper
   public void stop()
   {
     synchronized (startStopLock) {
-      if (!started) {
+      if (!isComplete) {
         return;
       }
 
@@ -147,15 +147,15 @@ public class SegmentBootstrapper
         throw new RuntimeException(e);
       }
       finally {
-        started = false;
+        isComplete = false;
       }
       log.info("Stopped.");
     }
   }
 
-  public boolean isStarted()
+  public boolean isBootstrappingComplete()
   {
-    return started;
+    return isComplete;
   }
 
   /**

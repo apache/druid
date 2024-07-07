@@ -50,14 +50,14 @@ public class HistoricalResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response getLoadStatus()
   {
-    return Response.ok(ImmutableMap.of("cacheInitialized", segmentBootstrapper.isStarted())).build();
+    return Response.ok(ImmutableMap.of("cacheInitialized", segmentBootstrapper.isBootstrappingComplete())).build();
   }
 
   @GET
   @Path("/readiness")
   public Response getReadiness()
   {
-    if (segmentBootstrapper.isStarted()) {
+    if (segmentBootstrapper.isBootstrappingComplete()) {
       return Response.ok().build();
     } else {
       return Response.status(Response.Status.SERVICE_UNAVAILABLE).build();
