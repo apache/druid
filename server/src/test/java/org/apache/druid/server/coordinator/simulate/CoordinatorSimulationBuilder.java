@@ -42,7 +42,6 @@ import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.MetadataManager;
-import org.apache.druid.server.coordinator.SegmentReplicationStatusManager;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategyFactory;
 import org.apache.druid.server.coordinator.balancer.CachingCostBalancerStrategyConfig;
 import org.apache.druid.server.coordinator.balancer.CachingCostBalancerStrategyFactory;
@@ -215,8 +214,7 @@ public class CoordinatorSimulationBuilder
         env.leaderSelector,
         COMPACTION_SEGMENT_SEARCH_POLICY,
         null,
-        CentralizedDatasourceSchemaConfig.create(),
-        env.segmentReplicationStatusManager
+        CentralizedDatasourceSchemaConfig.create()
     );
 
     return new SimulationImpl(coordinator, env);
@@ -416,7 +414,6 @@ public class CoordinatorSimulationBuilder
     private final MetadataManager metadataManager;
     private final LookupCoordinatorManager lookupCoordinatorManager;
     private final DruidCoordinatorConfig coordinatorConfig;
-    private final SegmentReplicationStatusManager segmentReplicationStatusManager;
 
     private final boolean loadImmediately;
     private final boolean autoSyncInventory;
@@ -477,7 +474,6 @@ public class CoordinatorSimulationBuilder
           null,
           null
       );
-      this.segmentReplicationStatusManager = new SegmentReplicationStatusManager(metadataManager);
     }
 
     private void setUp() throws Exception

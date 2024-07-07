@@ -40,7 +40,7 @@ import org.apache.druid.segment.metadata.AvailableSegmentMetadata;
 import org.apache.druid.segment.metadata.CoordinatorSegmentMetadataCache;
 import org.apache.druid.segment.metadata.DataSourceInformation;
 import org.apache.druid.server.JettyUtils;
-import org.apache.druid.server.coordinator.SegmentReplicationStatusManager;
+import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.http.security.DatasourceResourceFilter;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -82,23 +82,23 @@ public class MetadataResource
   private final SegmentsMetadataManager segmentsMetadataManager;
   private final IndexerMetadataStorageCoordinator metadataStorageCoordinator;
   private final AuthorizerMapper authorizerMapper;
+  private final DruidCoordinator coordinator;
   private final @Nullable CoordinatorSegmentMetadataCache coordinatorSegmentMetadataCache;
-  private final SegmentReplicationStatusManager segmentReplicationStatusManager;
 
   @Inject
   public MetadataResource(
       SegmentsMetadataManager segmentsMetadataManager,
       IndexerMetadataStorageCoordinator metadataStorageCoordinator,
       AuthorizerMapper authorizerMapper,
-      @Nullable CoordinatorSegmentMetadataCache coordinatorSegmentMetadataCache,
-      SegmentReplicationStatusManager segmentReplicationStatusManager
+      DruidCoordinator coordinator,
+      @Nullable CoordinatorSegmentMetadataCache coordinatorSegmentMetadataCache
   )
   {
     this.segmentsMetadataManager = segmentsMetadataManager;
     this.metadataStorageCoordinator = metadataStorageCoordinator;
     this.authorizerMapper = authorizerMapper;
+    this.coordinator = coordinator;
     this.coordinatorSegmentMetadataCache = coordinatorSegmentMetadataCache;
-    this.segmentReplicationStatusManager = segmentReplicationStatusManager;
   }
 
   @GET
@@ -224,7 +224,7 @@ public class MetadataResource
           // The replication factor for unloaded segments is 0 as they will be unloaded soon
           boolean isOvershadowed = overshadowedSegments.contains(segment);
           Integer replicationFactor = isOvershadowed ? (Integer) 0
-                                                     : segmentReplicationStatusManager.getReplicationFactor(segment.getId());
+                                                     : coordinator.getReplicationFactor(segment.getId());
 
           Long numRows = null;
           if (coordinatorSegmentMetadataCache != null) {
@@ -481,7 +481,7 @@ public class MetadataResource
   @ResourceFilters(DatasourceResourceFilter.class)
   public Response getBootstrapSegments()
   {
-    final Set<DataSegment> broadcastSegments = segmentReplicationStatusManager.getBroadcastSegments();
+    final Set<DataSegment> broadcastSegments = coordinator.getBroadcastSegments();
     if (broadcastSegments == null) {
       return Response.status(Response.Status.SERVICE_UNAVAILABLE)
                      .entity("Bootstrap segments are not initialized yet."

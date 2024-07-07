@@ -55,7 +55,7 @@ import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.coordination.DruidServerMetadata;
-import org.apache.druid.server.coordinator.SegmentReplicationStatusManager;
+import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.rules.LoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.http.security.DatasourceResourceFilter;
@@ -114,8 +114,8 @@ public class DataSourcesResource
   private final MetadataRuleManager metadataRuleManager;
   private final OverlordClient overlordClient;
   private final AuthorizerMapper authorizerMapper;
+  private final DruidCoordinator coordinator;
   private final AuditManager auditManager;
-  private final SegmentReplicationStatusManager segmentReplicationStatusManager;
 
   @Inject
   public DataSourcesResource(
@@ -124,8 +124,8 @@ public class DataSourcesResource
       MetadataRuleManager metadataRuleManager,
       @Nullable OverlordClient overlordClient,
       AuthorizerMapper authorizerMapper,
-      AuditManager auditManager,
-      SegmentReplicationStatusManager segmentReplicationStatusManager
+      DruidCoordinator coordinator,
+      AuditManager auditManager
   )
   {
     this.serverInventoryView = serverInventoryView;
@@ -133,7 +133,7 @@ public class DataSourcesResource
     this.metadataRuleManager = metadataRuleManager;
     this.overlordClient = overlordClient;
     this.authorizerMapper = authorizerMapper;
-    this.segmentReplicationStatusManager = segmentReplicationStatusManager;
+    this.coordinator = coordinator;
     this.auditManager = auditManager;
   }
 
@@ -523,10 +523,7 @@ public class DataSourcesResource
     } else if (full != null) {
       // Calculate response for full mode
       Map<String, Object2LongMap<String>> segmentLoadMap =
-          segmentReplicationStatusManager.getTierToDatasourceToUnderReplicatedCount(
-              segments.get(),
-              computeUsingClusterView != null
-          );
+          coordinator.getTierToDatasourceToUnderReplicatedCount(segments.get(), computeUsingClusterView != null);
       if (segmentLoadMap.isEmpty()) {
         return Response.serverError()
                        .entity("Coordinator segment replicant lookup is not initialized yet. Try again later.")

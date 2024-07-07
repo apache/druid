@@ -21,7 +21,6 @@ package org.apache.druid.server.http;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.server.coordinator.DruidCoordinator;
-import org.apache.druid.server.coordinator.SegmentReplicationStatusManager;
 import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Assert;
@@ -32,30 +31,27 @@ import javax.ws.rs.core.Response;
 
 public class CoordinatorResourceTest
 {
-  private SegmentReplicationStatusManager segmentReplicationStatusManager;
-  private DruidCoordinator coordinator;
+  private DruidCoordinator mock;
 
   @Before
   public void setUp()
   {
-    coordinator = EasyMock.createStrictMock(DruidCoordinator.class);
-    segmentReplicationStatusManager = EasyMock.createStrictMock(SegmentReplicationStatusManager.class);
+    mock = EasyMock.createStrictMock(DruidCoordinator.class);
   }
 
   @After
   public void tearDown()
   {
-    EasyMock.verify(coordinator);
-    EasyMock.verify(segmentReplicationStatusManager);
+    EasyMock.verify(mock);
   }
 
   @Test
   public void testLeader()
   {
-    EasyMock.expect(coordinator.getCurrentLeader()).andReturn("boz").once();
-    EasyMock.replay(coordinator, segmentReplicationStatusManager);
+    EasyMock.expect(mock.getCurrentLeader()).andReturn("boz").once();
+    EasyMock.replay(mock);
 
-    final Response response = new CoordinatorResource(coordinator, segmentReplicationStatusManager).getLeader();
+    final Response response = new CoordinatorResource(mock).getLeader();
     Assert.assertEquals("boz", response.getEntity());
     Assert.assertEquals(200, response.getStatus());
   }
@@ -63,17 +59,17 @@ public class CoordinatorResourceTest
   @Test
   public void testIsLeader()
   {
-    EasyMock.expect(coordinator.isLeader()).andReturn(true).once();
-    EasyMock.expect(coordinator.isLeader()).andReturn(false).once();
-    EasyMock.replay(coordinator, segmentReplicationStatusManager);
+    EasyMock.expect(mock.isLeader()).andReturn(true).once();
+    EasyMock.expect(mock.isLeader()).andReturn(false).once();
+    EasyMock.replay(mock);
 
     // true
-    final Response response1 = new CoordinatorResource(coordinator, segmentReplicationStatusManager).isLeader();
+    final Response response1 = new CoordinatorResource(mock).isLeader();
     Assert.assertEquals(ImmutableMap.of("leader", true), response1.getEntity());
     Assert.assertEquals(200, response1.getStatus());
 
     // false
-    final Response response2 = new CoordinatorResource(coordinator, segmentReplicationStatusManager).isLeader();
+    final Response response2 = new CoordinatorResource(mock).isLeader();
     Assert.assertEquals(ImmutableMap.of("leader", false), response2.getEntity());
     Assert.assertEquals(404, response2.getStatus());
   }

@@ -48,6 +48,7 @@ import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordinator.SegmentReplicationStatusManager;
+import org.apache.druid.server.coordinator.loading.SegmentReplicationStatus;
 import org.apache.druid.server.security.Escalator;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -96,9 +97,9 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
   private final SegmentSchemaCache segmentSchemaCache;
   private final SegmentSchemaBackFillQueue segmentSchemaBackfillQueue;
   private final SqlSegmentsMetadataManager sqlSegmentsMetadataManager;
-  private final SegmentReplicationStatusManager segmentReplicationStatusManager;
+  private volatile SegmentReplicationStatus segmentReplicationStatus = null;
 
-  // Schema for datasources from cold segments
+  // Schema for datasources built from cold segments
   private final ConcurrentHashMap<String, DataSourceInformation> coldSchemaTable = new ConcurrentHashMap<>();
   private final long coldSchemaExecPeriodMillis;
   private final ScheduledExecutorService coldScehmaExec;
@@ -116,7 +117,6 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
       SegmentSchemaCache segmentSchemaCache,
       SegmentSchemaBackFillQueue segmentSchemaBackfillQueue,
       SqlSegmentsMetadataManager sqlSegmentsMetadataManager,
-      SegmentReplicationStatusManager segmentReplicationStatusManager,
       Supplier<SegmentsMetadataManagerConfig> segmentsMetadataManagerConfigSupplier
   )
   {
@@ -126,13 +126,12 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
     this.segmentSchemaCache = segmentSchemaCache;
     this.segmentSchemaBackfillQueue = segmentSchemaBackfillQueue;
     this.sqlSegmentsMetadataManager = sqlSegmentsMetadataManager;
-    this.segmentReplicationStatusManager = segmentReplicationStatusManager;
     this.coldSchemaExecPeriodMillis =
         segmentsMetadataManagerConfigSupplier.get().getPollDuration().getMillis();
     coldScehmaExec = Executors.newSingleThreadScheduledExecutor(
         new ThreadFactoryBuilder()
             .setNameFormat("DruidColdSchema-ScheduledExecutor-%d")
-            .setDaemon(true)
+            .setDaemon(false)
             .build()
     );
 
@@ -255,6 +254,11 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
   public synchronized void refreshWaitCondition() throws InterruptedException
   {
     segmentSchemaCache.awaitInitialization();
+  }
+
+  public void updateSegmentReplicationStatus(SegmentReplicationStatus segmentReplicationStatus)
+  {
+    this.segmentReplicationStatus = segmentReplicationStatus;
   }
 
   @Override
@@ -525,13 +529,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
         Optional<SchemaPayloadPlus> optionalSchema = segmentSchemaCache.getSchemaForSegment(segment.getId());
         if (optionalSchema.isPresent()) {
           RowSignature rowSignature = optionalSchema.get().getSchemaPayload().getRowSignature();
-          for (String column : rowSignature.getColumnNames()) {
-            final ColumnType columnType =
-                rowSignature.getColumnType(column)
-                            .orElseThrow(() -> new ISE("Encountered null type for column [%s]", column));
-
-            columnTypes.compute(column, (c, existingType) -> columnTypeMergePolicy.merge(existingType, columnType));
-          }
+          mergeRowSignature(columnTypes, rowSignature);
         }
       }
 
@@ -569,7 +567,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
     coldSchemaTable.keySet().retainAll(dataSources);
   }
 
-  private RowSignature mergeHotAndColdSchema(RowSignature hot, RowSignature cold)
+  private RowSignature mergeHotAndColdSchema(final RowSignature hot, final RowSignature cold)
   {
     final Map<String, ColumnType> columnTypes = new LinkedHashMap<>();
 
@@ -579,19 +577,24 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
     signatures.add(cold);
 
     for (RowSignature signature : signatures) {
-      for (String column : signature.getColumnNames()) {
-        final ColumnType columnType =
-            signature.getColumnType(column)
-                        .orElseThrow(() -> new ISE("Encountered null type for column [%s]", column));
-
-        columnTypes.compute(column, (c, existingType) -> columnTypeMergePolicy.merge(existingType, columnType));
-      }
+      mergeRowSignature(columnTypes, signature);
     }
 
     final RowSignature.Builder builder = RowSignature.builder();
     columnTypes.forEach(builder::add);
 
     return builder.build();
+  }
+
+  private void mergeRowSignature(final Map<String, ColumnType> columnTypes, final RowSignature signature)
+  {
+    for (String column : signature.getColumnNames()) {
+      final ColumnType columnType =
+          signature.getColumnType(column)
+                   .orElseThrow(() -> new ISE("Encountered null type for column [%s]", column));
+
+      columnTypes.compute(column, (c, existingType) -> columnTypeMergePolicy.merge(existingType, columnType));
+    }
   }
 
   @VisibleForTesting
@@ -609,13 +612,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
         Optional<SchemaPayloadPlus> optionalSchema = segmentSchemaCache.getSchemaForSegment(segmentId);
         if (optionalSchema.isPresent()) {
           RowSignature rowSignature = optionalSchema.get().getSchemaPayload().getRowSignature();
-          for (String column : rowSignature.getColumnNames()) {
-            final ColumnType columnType =
-                rowSignature.getColumnType(column)
-                            .orElseThrow(() -> new ISE("Encountered null type for column [%s]", column));
-
-            columnTypes.compute(column, (c, existingType) -> columnTypeMergePolicy.merge(existingType, columnType));
-          }
+          mergeRowSignature(columnTypes, rowSignature);
         } else {
           // mark it for refresh, however, this case shouldn't arise by design
           markSegmentAsNeedRefresh(segmentId);
