@@ -331,7 +331,8 @@ public class ClusterByStatisticsCollectorImpl implements ClusterByStatisticsColl
     return ranges;
   }
 
-  private void logSketches()
+  @Override
+  public void logSketches()
   {
     if (log.isDebugEnabled()) {
       // Log all sketches
