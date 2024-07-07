@@ -47,7 +47,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.coordination.DruidServerMetadata;
-import org.apache.druid.server.coordinator.SegmentReplicationStatusManager;
+import org.apache.druid.server.coordinator.loading.SegmentReplicaCount;
 import org.apache.druid.server.coordinator.loading.SegmentReplicationStatus;
 import org.apache.druid.server.security.Escalator;
 import org.apache.druid.timeline.DataSegment;
@@ -506,6 +506,16 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
     return cachedSegments;
   }
 
+  @Nullable
+  private Integer getReplicationFactor(SegmentId segmentId)
+  {
+    if (segmentReplicationStatus == null) {
+      return null;
+    }
+    SegmentReplicaCount replicaCountsInCluster = segmentReplicationStatus.getReplicaCountsInCluster(segmentId);
+    return replicaCountsInCluster == null ? null : replicaCountsInCluster.required();
+  }
+
   @VisibleForTesting
   protected void coldDatasourceSchemaExec()
   {
@@ -522,7 +532,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
       Collection<DataSegment> dataSegments = dataSource.getSegments();
 
       for (DataSegment segment : dataSegments) {
-        Integer replicationFactor = segmentReplicationStatusManager.getReplicationFactor(segment.getId());
+        Integer replicationFactor = getReplicationFactor(segment.getId());
         if (replicationFactor != null && replicationFactor != 0) {
           continue;
         }

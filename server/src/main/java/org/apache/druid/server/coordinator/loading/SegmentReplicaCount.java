@@ -79,7 +79,7 @@ public class SegmentReplicaCount
    * @param required          Number of replicas as required by load or broadcast rules.
    * @param numLoadingServers Number of servers that can load replicas of this segment.
    */
-  void setRequired(int required, int numLoadingServers)
+  public void setRequired(int required, int numLoadingServers)
   {
     this.required = required;
     this.requiredAndLoadable = Math.min(required, numLoadingServers);
