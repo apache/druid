@@ -1384,24 +1384,34 @@ public class RowBasedGrouperHelper
           int dimsReadSoFar = 0;
           final Object[] objects = new Object[dimsToRead];
 
-          while (jp.currentToken() != JsonToken.END_ARRAY) {
-            if (dimsReadSoFar >= dimsToRead) {
-              throw DruidException.defensive("More dimensions encountered than expected [%d]", dimsToRead);
-            }
+          if (includeTimestamp) {
+            DruidException.conditionalDefensive(
+                jp.currentToken() != JsonToken.END_ARRAY,
+                "Unexpected end of array when deserializing timestamp from the spilled files"
+            );
+            objects[dimsReadSoFar] = codec.readValue(jp, Long.class);
 
-            if (includeTimestamp && dimsReadSoFar == 0) {
-              // Read the timestamp
-              objects[dimsReadSoFar] = codec.readValue(jp, Long.class);
-            } else {
-              DruidException.conditionalDefensive(
-                  dimsReadSoFar - timestampAdjustment < serdeHelpers.length,
-                  "Insufficient serde helpers present"
-              );
-              // Read the dimension
-              serdeHelpers[dimsReadSoFar - timestampAdjustment].getClazz();
-              objects[dimsReadSoFar] =
-                  codec.readValue(jp, serdeHelpers[dimsReadSoFar - timestampAdjustment].getClazz());
-            }
+            ++dimsReadSoFar;
+            jp.nextToken();
+          }
+
+          while (jp.currentToken() != JsonToken.END_ARRAY) {
+
+            DruidException.conditionalDefensive(
+                dimsReadSoFar < dimsToRead,
+                "More dimensions encountered than expected [%d]",
+                dimsToRead
+            );
+
+            DruidException.conditionalDefensive(
+                dimsReadSoFar - timestampAdjustment < serdeHelpers.length,
+                "Insufficient serde helpers present"
+            );
+
+            // Read the dimension
+            serdeHelpers[dimsReadSoFar - timestampAdjustment].getClazz();
+            objects[dimsReadSoFar] =
+                codec.readValue(jp, serdeHelpers[dimsReadSoFar - timestampAdjustment].getClazz());
 
             ++dimsReadSoFar;
             jp.nextToken();
@@ -1667,11 +1677,7 @@ public class RowBasedGrouperHelper
                 dictionary.get(lhsBuffer.getInt(lhsPosition + keyBufferPosition)),
                 dictionary.get(rhsBuffer.getInt(rhsPosition + keyBufferPosition))
             );
-        if (columnType.is(ValueType.COMPLEX)) {
-          clazz = columnType.getNullableStrategy().getClazz();
-        } else {
-          clazz = Object.class;
-        }
+        clazz = columnType.getNullableStrategy().getClazz();
       }
 
       // Asserts that we don't entertain any complex types without a typename, to prevent intermixing dictionaries of
@@ -1795,6 +1801,8 @@ public class RowBasedGrouperHelper
       @Override
       public Class<?> getClazz()
       {
+        // Jackson deserializes Object[] containing longs to Object[] containing string if Object[].class is returned
+        // Therefore we are using Object.class
         return Object.class;
       }
     }
@@ -1845,7 +1853,7 @@ public class RowBasedGrouperHelper
       @Override
       public Class<?> getClazz()
       {
-        return Object.class;
+        return Object[].class;
       }
     }
 
@@ -1900,7 +1908,7 @@ public class RowBasedGrouperHelper
       @Override
       public Class<?> getClazz()
       {
-        return Object.class;
+        return String.class;
       }
     }
 

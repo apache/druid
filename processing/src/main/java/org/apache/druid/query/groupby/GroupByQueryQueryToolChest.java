@@ -78,6 +78,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.NullableTypeStrategy;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.nested.StructuredData;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
@@ -718,15 +719,28 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
               final Object dimensionObject = results.next();
               final Object dimensionObjectCasted;
 
-              // Must convert generic Jackson-deserialized type into the proper type.
-              if (dimensionSpec.getOutputType().is(ValueType.COMPLEX)) {
-                DruidException.conditionalDefensive(
-                    mapper != null,
-                    "Cannot deserialize complex dimension from if object mapper is not provided"
-                );
-                dimensionObjectCasted = mapper.convertValue(dimensionObject, dimensionClasses[dimPos]);
+              final ColumnType outputType = dimensionSpec.getOutputType();
+
+              // Must convert generic Jackson-deserialized type into the proper type. The downstream functions expect the
+              // dimensions to be of appropriate types for further processing like merging and comparing.
+              if (outputType.is(ValueType.COMPLEX)) {
+                // Json columns can interpret generic data objects appropriately, hence they are wrapped as is in StructuredData.
+                // They don't need to converted them from Object.class to StructuredData.class using object mapper as that is an
+                // expensive operation that will be wasteful.
+                if (outputType.equals(ColumnType.NESTED_DATA)) {
+                  dimensionObjectCasted = StructuredData.wrap(dimensionObject);
+                } else {
+                  DruidException.conditionalDefensive(
+                      mapper != null,
+                      "Cannot deserialize complex dimension from if object mapper is not provided"
+                  );
+                  dimensionObjectCasted = mapper.convertValue(dimensionObject, dimensionClasses[dimPos]);
+                }
               } else {
-                dimensionObjectCasted = DimensionHandlerUtils.convertObjectToType(dimensionObject, dimensionSpec.getOutputType());
+                dimensionObjectCasted = DimensionHandlerUtils.convertObjectToType(
+                    dimensionObject,
+                    dimensionSpec.getOutputType()
+                );
               }
               resultRow.set(dimensionStart + dimPos, dimensionObjectCasted);
               dimPos++;
