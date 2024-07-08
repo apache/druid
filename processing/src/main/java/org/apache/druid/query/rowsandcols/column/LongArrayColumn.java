@@ -28,12 +28,12 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Arrays;
 
-public class IntArrayColumn implements Column
+public class LongArrayColumn implements Column
 {
-  private final int[] vals;
+  private final long[] vals;
 
-  public IntArrayColumn(
-      int[] vals
+  public LongArrayColumn(
+      long[] vals
   )
   {
     this.vals = vals;
@@ -67,7 +67,7 @@ public class IntArrayColumn implements Column
     }
     if (ColumnValueSwapper.class.equals(clazz)) {
       return (T) (ColumnValueSwapper) (lhs, rhs) -> {
-        int tmp = vals[lhs];
+        long tmp = vals[lhs];
         vals[lhs] = vals[rhs];
         vals[rhs] = tmp;
       };
@@ -122,13 +122,13 @@ public class IntArrayColumn implements Column
     @Override
     public int getInt(int rowNum)
     {
-      return vals[rowNum];
+      return (int) vals[rowNum];
     }
 
     @Override
     public int compareRows(int lhsRowNum, int rhsRowNum)
     {
-      return Integer.compare(vals[lhsRowNum], vals[rhsRowNum]);
+      return Long.compare(vals[lhsRowNum], vals[rhsRowNum]);
     }
 
 
@@ -141,22 +141,17 @@ public class IntArrayColumn implements Column
     @Override
     public FindResult findDouble(int startIndex, int endIndex, double val)
     {
-      return findInt(startIndex, endIndex, (int) val);
+      return findLong(startIndex, endIndex, (int) val);
     }
 
     @Override
     public FindResult findFloat(int startIndex, int endIndex, float val)
     {
-      return findInt(startIndex, endIndex, (int) val);
+      return findLong(startIndex, endIndex, (int) val);
     }
 
     @Override
     public FindResult findLong(int startIndex, int endIndex, long val)
-    {
-      return findInt(startIndex, endIndex, (int) val);
-    }
-
-    public FindResult findInt(int startIndex, int endIndex, int val)
     {
       if (vals[startIndex] == val) {
         int end = startIndex + 1;
@@ -186,16 +181,21 @@ public class IntArrayColumn implements Column
       }
     }
 
+    public FindResult findInt(int startIndex, int endIndex, int val)
+    {
+      return findLong(startIndex, endIndex, val);
+    }
+
     @Override
     public FindResult findString(int startIndex, int endIndex, String val)
     {
-      return findInt(startIndex, endIndex, (int) Numbers.tryParseLong(val, 0));
+      return findLong(startIndex, endIndex, (int) Numbers.tryParseLong(val, 0));
     }
 
     @Override
     public FindResult findComplex(int startIndex, int endIndex, Object val)
     {
-      return findInt(startIndex, endIndex, (int) Numbers.tryParseLong(val, 0));
+      return findLong(startIndex, endIndex, Numbers.tryParseLong(val, 0));
     }
   }
 }

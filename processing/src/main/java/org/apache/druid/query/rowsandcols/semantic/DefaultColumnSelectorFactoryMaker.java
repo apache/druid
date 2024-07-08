@@ -210,6 +210,7 @@ public class DefaultColumnSelectorFactoryMaker implements ColumnSelectorFactoryM
             break;
           case ARRAY:
             myClazz = List.class;
+            break;
           default:
             throw DruidException.defensive("this class cannot handle type [%s]", columnAccessor.getType());
         }
