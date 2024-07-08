@@ -426,7 +426,7 @@ Also, an IN filter being supplied with a lot of values, can be replaced by a dyn
 ```json
 {
     "query": "SELECT count(city) from druid.table where SCALAR_IN_ARRAY(city, ?)",
-    "parameters":[
+    "parameters": [
       {"type":"ARRAY", "value":["Vienna", "Seoul", "San Francisco"]}
     ]
 }
