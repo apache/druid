@@ -69,8 +69,8 @@ import java.util.Set;
  *
  * The result of this pre-analysis method should be passed into the next step of join filter analysis, described below.
  *
- * The {@link #splitFilter(JoinFilterPreAnalysis, Filter)} method takes the pre-analysis result
- * and optionally applies the filter rewrite and push down operations on a per-segment level.
+ * The {@link #splitFilter(JoinFilterPreAnalysis, Filter)} method takes the pre-analysis result and optionally applies
+ * the filter rewrite and push down operations on a per-segment level.
  */
 public class JoinFilterAnalyzer
 {

@@ -130,11 +130,17 @@ public class JoinVirtualColumnSplit
     this.postJoinVirtualColumns = postJoinVirtualColumns;
   }
 
+  /**
+   * List of {@link VirtualColumn} to compute on the base table
+   */
   public List<VirtualColumn> getPreJoinVirtualColumns()
   {
     return preJoinVirtualColumns;
   }
 
+  /**
+   * List of {@link VirtualColumn} to compute on the join table
+   */
   public List<VirtualColumn> getPostJoinVirtualColumns()
   {
     return postJoinVirtualColumns;
