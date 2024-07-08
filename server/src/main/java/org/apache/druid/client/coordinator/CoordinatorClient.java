@@ -71,7 +71,7 @@ public interface CoordinatorClient
   CoordinatorClient withRetryPolicy(ServiceRetryPolicy retryPolicy);
 
   /**
-   * Retrieves list of used datasources.
+   * Retrieves list of datasources with used segments.
    */
   ListenableFuture<Set<String>> fetchUsedDataSources();
 }
