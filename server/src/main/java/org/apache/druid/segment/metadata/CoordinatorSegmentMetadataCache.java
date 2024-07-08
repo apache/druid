@@ -99,6 +99,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
 {
   private static final EmittingLogger log = new EmittingLogger(CoordinatorSegmentMetadataCache.class);
   private static final Long COLD_SCHEMA_PERIOD_MULTIPLIER = 3L;
+  private static final Long COLD_SCHEMA_SLOWNESS_THRESHOLD_MILLIS = TimeUnit.MINUTES.toMillis(1);
 
   private final SegmentMetadataCacheConfig config;
   private final ColumnTypeMergePolicy columnTypeMergePolicy;
@@ -113,6 +114,8 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
   private final ConcurrentHashMap<String, DataSourceInformation> coldSchemaTable = new ConcurrentHashMap<>();
 
   // Period for cold schema processing thread. This is a multiple of segment polling period.
+  // Cold schema processing runs slower than the segment poll to save processing cost of all segments.
+  // The downside is a delay in columns from cold segment reflecting in the datasource schema.
   private final long coldSchemaExecPeriodMillis;
   private final ScheduledExecutorService coldScehmaExec;
   private @Nullable Future<?> cacheExecFuture = null;
@@ -603,7 +606,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
     // remove any stale datasource from the map
     coldSchemaTable.keySet().retainAll(dataSources);
 
-    if (stopwatch.millisElapsed() > coldSchemaExecPeriodMillis * 0.80) {
+    if (stopwatch.millisElapsed() > COLD_SCHEMA_SLOWNESS_THRESHOLD_MILLIS) {
       log.info("Cold schema processing was slow, taking [%d] millis. "
                + "Processed [%d] datasources, [%d] segments & [%d] datasourceWithColdSegments.",
                stopwatch.millisElapsed(), datasources, segments, datasourceWithColdSegments
