@@ -185,7 +185,7 @@ public class ScanQueryKit implements QueryKit<ScanQuery>
                          .inputs(new StageInputSpec(firstStageNumber))
                          .signature(signatureToUse)
                          .maxWorkerCount(1)
-                         .shuffleSpec(null) // no shuffling should be required after a limit processor.
+                         .shuffleSpec(MixShuffleSpec.instance()) // no shuffling should be required after a limit processor.
                          .processorFactory(
                              new OffsetLimitFrameProcessorFactory(
                                  queryToRun.getScanRowsOffset(),
