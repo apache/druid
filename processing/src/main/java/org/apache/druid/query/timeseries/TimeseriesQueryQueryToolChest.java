@@ -427,14 +427,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
   @Override
   public RowSignature resultArraySignature(TimeseriesQuery query)
   {
-    RowSignature.Builder rowSignatureBuilder = RowSignature.builder();
-    rowSignatureBuilder.addTimeColumn();
-    if (StringUtils.isNotEmpty(query.getTimestampResultField())) {
-      rowSignatureBuilder.add(query.getTimestampResultField(), ColumnType.LONG);
-    }
-    rowSignatureBuilder.addAggregators(query.getAggregatorSpecs(), RowSignature.Finalization.UNKNOWN);
-    rowSignatureBuilder.addPostAggregators(query.getPostAggregatorSpecs());
-    return rowSignatureBuilder.build();
+    return resultSignature(query, RowSignature.Finalization.UNKNOWN);
   }
 
   @Override
@@ -474,7 +467,11 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
       boolean useNestedForUnknownTypes
   )
   {
-    final RowSignature rowSignature = resultArraySignature(query);
+    final RowSignature rowSignature =
+        resultSignature(
+            query,
+            query.context().isFinalize(true) ? RowSignature.Finalization.YES : RowSignature.Finalization.NO
+        );
     final Pair<Cursor, Closeable> cursorAndCloseable = IterableRowsCursorHelper.getCursorFromSequence(
         resultsAsArrays(query, resultSequence),
         rowSignature
@@ -534,5 +531,17 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
           new TimeseriesResultValue(values)
       );
     };
+  }
+
+  private RowSignature resultSignature(final TimeseriesQuery query, final RowSignature.Finalization finalization)
+  {
+    RowSignature.Builder rowSignatureBuilder = RowSignature.builder();
+    rowSignatureBuilder.addTimeColumn();
+    if (StringUtils.isNotEmpty(query.getTimestampResultField())) {
+      rowSignatureBuilder.add(query.getTimestampResultField(), ColumnType.LONG);
+    }
+    rowSignatureBuilder.addAggregators(query.getAggregatorSpecs(), finalization);
+    rowSignatureBuilder.addPostAggregators(query.getPostAggregatorSpecs());
+    return rowSignatureBuilder.build();
   }
 }

@@ -51,10 +51,12 @@ import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMinAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.SingleValueAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.first.StringFirstAggregatorFactory;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.ExtractionDimensionSpec;
+import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
@@ -1385,6 +1387,220 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         ImmutableList.of()
+    );
+  }
+
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testGroupBySubqueryWithEarliestAggregator(String testName, Map<String, Object> queryContext)
+  {
+    cannotVectorize();
+
+    // Note: EARLIEST aggregator is used because the intermediate type "serializablePair" is different from the finalized type
+    final List<Object[]> expectedResults;
+    if (NullHandling.replaceWithDefault()) {
+      expectedResults = ImmutableList.of(
+          new Object[]{"1", "", "a", "1"},
+          new Object[]{"10.1", "b", "", "10.1"},
+          new Object[]{"10.1", "c", "", "10.1"},
+          new Object[]{"2", "d", "", "2"},
+          new Object[]{"abc", "", "", "abc"},
+          new Object[]{"def", "", "abc", "def"}
+      );
+    } else {
+      expectedResults = ImmutableList.of(
+          new Object[]{"", "a", "a", ""},
+          new Object[]{"", "b", "a", ""},
+          new Object[]{"1", "", "a", "1"},
+          new Object[]{"10.1", "b", null, "10.1"},
+          new Object[]{"10.1", "c", null, "10.1"},
+          new Object[]{"2", "d", "", "2"},
+          new Object[]{"abc", null, null, "abc"},
+          new Object[]{"def", null, "abc", "def"}
+      );
+    }
+
+    testQuery(
+        "SELECT a.dim1, a.dim3, a.e_dim2, b.dim1 "
+        + "FROM ("
+        + " SELECT dim1, dim3, EARLIEST(dim2) AS e_dim2 "
+        + " FROM foo GROUP BY 1, 2 LIMIT 100"
+        + ") a "
+        + "INNER JOIN foo b ON a.dim1 = b.dim1",
+        queryContext,
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(
+                    JoinDataSource.create(
+                        new QueryDataSource(
+                            GroupByQuery.builder()
+                                        .setDataSource("foo")
+                                        .setInterval(querySegmentSpec(Intervals.ETERNITY))
+                                        .setGranularity(Granularities.ALL)
+                                        .setDimensions(
+                                            new DefaultDimensionSpec("dim1", "d0", ColumnType.STRING),
+                                            new DefaultDimensionSpec("dim3", "d1", ColumnType.STRING)
+                                        )
+                                        .addAggregator(new StringFirstAggregatorFactory("a0", "dim2", "__time", 1024))
+                                        .setLimitSpec(new DefaultLimitSpec(Collections.emptyList(), 100))
+                                        .build()
+                        ),
+                        new QueryDataSource(
+                            newScanQueryBuilder()
+                                .dataSource("foo")
+                                .intervals(querySegmentSpec(Intervals.ETERNITY))
+                                .columns("dim1")
+                                .build()
+                        ),
+                        "j0.",
+                        "(\"d0\" == \"j0.dim1\")",
+                        JoinType.INNER,
+                        null,
+                        TestExprMacroTable.INSTANCE,
+                        null
+                    )
+                )
+                .intervals(querySegmentSpec(Intervals.ETERNITY))
+                .columns("a0", "d0", "d1", "j0.dim1")
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        expectedResults
+    );
+  }
+
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testTopNSubqueryWithEarliestAggregator(String testName, Map<String, Object> queryContext)
+  {
+    final List<Object[]> expectedResults;
+    if (NullHandling.replaceWithDefault()) {
+      expectedResults = ImmutableList.of(
+          new Object[]{"1", "a", "1"},
+          new Object[]{"10.1", "", "10.1"},
+          new Object[]{"2", "", "2"},
+          new Object[]{"abc", "", "abc"},
+          new Object[]{"def", "abc", "def"}
+      );
+    } else {
+      expectedResults = ImmutableList.of(
+          new Object[]{"", "a", ""},
+          new Object[]{"1", "a", "1"},
+          new Object[]{"10.1", null, "10.1"},
+          new Object[]{"2", "", "2"},
+          new Object[]{"abc", null, "abc"},
+          new Object[]{"def", "abc", "def"}
+      );
+    }
+
+    testQuery(
+        "SELECT a.dim1, a.e_dim2, b.dim1 "
+        + "FROM ("
+        + " SELECT dim1, EARLIEST(dim2) AS e_dim2 "
+        + " FROM foo "
+        + " GROUP BY 1 "
+        + " LIMIT 100"
+        + ") a "
+        + "INNER JOIN foo b ON a.dim1 = b.dim1",
+        queryContext,
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(
+                    JoinDataSource.create(
+                        new QueryDataSource(
+                            new TopNQueryBuilder()
+                                .dataSource("foo")
+                                .dimension(new DefaultDimensionSpec("dim1", "d0", ColumnType.STRING))
+                                .metric(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC))
+                                .threshold(100)
+                                .intervals(querySegmentSpec(Intervals.ETERNITY))
+                                .granularity(Granularities.ALL)
+                                .aggregators(
+                                    new StringFirstAggregatorFactory("a0", "dim2", "__time", 1024)
+                                )
+                                .build()
+                        ),
+                        new QueryDataSource(
+                            newScanQueryBuilder()
+                                .dataSource("foo")
+                                .intervals(querySegmentSpec(Intervals.ETERNITY))
+                                .columns("dim1")
+                                .build()
+                        ),
+                        "j0.",
+                        "(\"d0\" == \"j0.dim1\")",
+                        JoinType.INNER,
+                        null,
+                        TestExprMacroTable.INSTANCE,
+                        null
+                    )
+                )
+                .intervals(querySegmentSpec(Intervals.ETERNITY))
+                .columns("a0", "d0", "j0.dim1")
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        expectedResults
+    );
+  }
+
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testTimeseriesSubqueryWithEarliestAggregator(String testName, Map<String, Object> queryContext)
+  {
+    testQuery(
+        "SELECT a.__time, a.e_dim2, b.__time "
+        + "FROM ("
+        + " SELECT TIME_FLOOR(\"__time\", 'PT24H') as __time, EARLIEST(dim2) AS e_dim2 "
+        + " FROM foo "
+        + " GROUP BY 1 "
+        + ") a "
+        + "INNER JOIN foo b ON a.__time = b.__time",
+        queryContext,
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(
+                    JoinDataSource.create(
+                        new QueryDataSource(
+                            Druids.newTimeseriesQueryBuilder()
+                                  .dataSource("foo")
+                                  .intervals(querySegmentSpec(Intervals.ETERNITY))
+                                  .granularity(new PeriodGranularity(
+                                      new Period("PT24H"),
+                                      null,
+                                      DateTimeZone.UTC
+                                  ))
+                                  .aggregators(new StringFirstAggregatorFactory("a0", "dim2", "__time", 1024))
+                                  .build()
+                        ),
+                        new QueryDataSource(
+                            newScanQueryBuilder()
+                                .dataSource("foo")
+                                .intervals(querySegmentSpec(Intervals.ETERNITY))
+                                .columns("__time")
+                                .build()
+                        ),
+                        "j0.",
+                        "(\"d0\" == \"j0.__time\")",
+                        JoinType.INNER,
+                        null,
+                        TestExprMacroTable.INSTANCE,
+                        null
+                    )
+                )
+                .intervals(querySegmentSpec(Intervals.ETERNITY))
+                .columns("a0", "d0", "j0.__time")
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{946684800000L, "a", 946684800000L},
+            new Object[]{946771200000L, NullHandling.defaultStringValue(), 946771200000L},
+            new Object[]{946857600000L, "", 946857600000L},
+            new Object[]{978307200000L, "a", 978307200000L},
+            new Object[]{978393600000L, "abc", 978393600000L},
+            new Object[]{978480000000L, NullHandling.defaultStringValue(), 978480000000L}
+        )
     );
   }
 

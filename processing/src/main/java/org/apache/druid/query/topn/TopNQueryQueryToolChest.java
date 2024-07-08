@@ -558,7 +558,16 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
       boolean useNestedForUnknownTypes
   )
   {
-    final RowSignature rowSignature = resultArraySignature(query);
+    final RowSignature rowSignature =
+        RowSignature.builder()
+                    .addTimeColumn()
+                    .addDimensions(Collections.singletonList(query.getDimensionSpec()))
+                    .addAggregators(
+                        query.getAggregatorSpecs(),
+                        query.context().isFinalize(true) ? RowSignature.Finalization.YES : RowSignature.Finalization.NO
+                    )
+                    .addPostAggregators(query.getPostAggregatorSpecs())
+                    .build();
     final Pair<Cursor, Closeable> cursorAndCloseable = IterableRowsCursorHelper.getCursorFromSequence(
         resultsAsArrays(query, resultSequence),
         rowSignature

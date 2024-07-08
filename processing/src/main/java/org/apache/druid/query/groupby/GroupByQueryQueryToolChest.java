@@ -811,7 +811,11 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
       boolean useNestedForUnknownTypes
   )
   {
-    RowSignature rowSignature = resultArraySignature(query);
+    RowSignature rowSignature = query.getResultRowSignature(
+        query.context().isFinalize(true)
+        ? RowSignature.Finalization.YES
+        : RowSignature.Finalization.NO
+    );
     RowSignature modifiedRowSignature = useNestedForUnknownTypes
                                         ? FrameWriterUtils.replaceUnknownTypesWithNestedColumns(rowSignature)
                                         : rowSignature;
