@@ -416,7 +416,7 @@ for example:
 ```json
 {
     "query": "SELECT doubleArrayColumn from druid.table where ARRAY_CONTAINS(?, doubleArrayColumn)",
-    "parameters":[
+    "parameters": [
       {"type":"ARRAY", "value":[-25.7, null, 36.85]}
     ]
 }
