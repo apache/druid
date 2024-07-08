@@ -20,6 +20,8 @@
 package org.apache.druid.query.rowsandcols;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.common.semantic.SemanticCreator;
+import org.apache.druid.common.semantic.SemanticUtils;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocatorFactory;
 import org.apache.druid.frame.key.KeyColumn;
@@ -66,7 +68,7 @@ import java.util.function.Function;
 
 public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
 {
-  private static final Map<Class<?>, Function<LazilyDecoratedRowsAndColumns, ?>> AS_MAP = RowsAndColumns
+  private static final Map<Class<?>, Function<LazilyDecoratedRowsAndColumns, ?>> AS_MAP = SemanticUtils
       .makeAsMap(LazilyDecoratedRowsAndColumns.class);
 
   private RowsAndColumns base;

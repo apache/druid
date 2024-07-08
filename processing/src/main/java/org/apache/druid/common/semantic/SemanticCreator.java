@@ -17,7 +17,9 @@
  * under the License.
  */
 
-package org.apache.druid.query.rowsandcols;
+package org.apache.druid.common.semantic;
+
+import org.apache.druid.query.rowsandcols.RowsAndColumns;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -26,8 +28,8 @@ import java.lang.annotation.Target;
 
 /**
  * Annotation used to indicate that the method is used as a creator for a semantic interface.
- *
- * Used in conjuction with {@link RowsAndColumns#makeAsMap(Class)} to build maps for simplified implementation of
+ * <p>
+ * Used in conjuction with {@link SemanticUtils#makeAsMap(Class)} to build maps for simplified implementation of
  * the {@link RowsAndColumns#as(Class)} method.
  */
 @Retention(RetentionPolicy.RUNTIME)
