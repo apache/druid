@@ -20,12 +20,14 @@
 package org.apache.druid.msq.indexing.destination;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.msq.kernel.FrameProcessorFactory;
 import org.apache.druid.msq.querykit.ShuffleSpecFactories;
 import org.apache.druid.msq.querykit.ShuffleSpecFactory;
 import org.apache.druid.server.security.Resource;
@@ -49,18 +51,24 @@ public class DataSourceMSQDestination implements MSQDestination
   @Nullable
   private final List<Interval> replaceTimeChunks;
 
+  @Nullable
+  @SuppressWarnings("rawtypes")
+  private final FrameProcessorFactory segmentMorphFactory;
+
   @JsonCreator
   public DataSourceMSQDestination(
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("segmentGranularity") Granularity segmentGranularity,
       @JsonProperty("segmentSortOrder") @Nullable List<String> segmentSortOrder,
-      @JsonProperty("replaceTimeChunks") @Nullable List<Interval> replaceTimeChunks
+      @JsonProperty("replaceTimeChunks") @Nullable List<Interval> replaceTimeChunks,
+      @JsonProperty("segmentMorphFactory") @Nullable FrameProcessorFactory segmentMorphFactory
   )
   {
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
     this.segmentGranularity = Preconditions.checkNotNull(segmentGranularity, "segmentGranularity");
     this.segmentSortOrder = segmentSortOrder != null ? segmentSortOrder : Collections.emptyList();
     this.replaceTimeChunks = replaceTimeChunks;
+    this.segmentMorphFactory = segmentMorphFactory;
 
     if (replaceTimeChunks != null) {
       // Verify that if replaceTimeChunks is provided, it is nonempty.
@@ -96,6 +104,30 @@ public class DataSourceMSQDestination implements MSQDestination
   public String getDataSource()
   {
     return dataSource;
+  }
+
+  /**
+   * Returns the segment morph factory, if one is present, else null.
+   * <p>
+   * The segment morph factory if present, is a way to tell the MSQ task to funnel the results at the final stage to
+   * the {@link FrameProcessorFactory} instead of a segment generation stage.
+   */
+  @Nullable
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public FrameProcessorFactory getSegmentMorphFactory()
+  {
+    return segmentMorphFactory;
+  }
+
+  /**
+   * Checks if the destination uses a segmentMorphFactory. If one is present, that means that the query would modify
+   * existing segments instead of generating new ones.
+   */
+  @JsonIgnore
+  public boolean doesSegmentMorphing()
+  {
+    return segmentMorphFactory != null;
   }
 
   @JsonProperty
@@ -158,13 +190,14 @@ public class DataSourceMSQDestination implements MSQDestination
     return Objects.equals(dataSource, that.dataSource)
            && Objects.equals(segmentGranularity, that.segmentGranularity)
            && Objects.equals(segmentSortOrder, that.segmentSortOrder)
-           && Objects.equals(replaceTimeChunks, that.replaceTimeChunks);
+           && Objects.equals(replaceTimeChunks, that.replaceTimeChunks)
+           && Objects.equals(segmentMorphFactory, that.segmentMorphFactory);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(dataSource, segmentGranularity, segmentSortOrder, replaceTimeChunks);
+    return Objects.hash(dataSource, segmentGranularity, segmentSortOrder, replaceTimeChunks, segmentMorphFactory);
   }
 
   @Override
@@ -175,6 +208,7 @@ public class DataSourceMSQDestination implements MSQDestination
            ", segmentGranularity=" + segmentGranularity +
            ", segmentSortOrder=" + segmentSortOrder +
            ", replaceTimeChunks=" + replaceTimeChunks +
+           (segmentMorphFactory != null ? ", segmentMorphFactory=" + segmentMorphFactory : "") +
            '}';
   }
 
