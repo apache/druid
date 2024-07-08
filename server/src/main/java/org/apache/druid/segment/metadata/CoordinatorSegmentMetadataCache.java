@@ -99,7 +99,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
 {
   private static final EmittingLogger log = new EmittingLogger(CoordinatorSegmentMetadataCache.class);
   private static final Long COLD_SCHEMA_PERIOD_MULTIPLIER = 3L;
-  private static final Long COLD_SCHEMA_SLOWNESS_THRESHOLD_MILLIS = TimeUnit.MINUTES.toMillis(1);
+  private static final Long COLD_SCHEMA_SLOWNESS_THRESHOLD_MILLIS = TimeUnit.SECONDS.toMillis(50);
 
   private final SegmentMetadataCacheConfig config;
   private final ColumnTypeMergePolicy columnTypeMergePolicy;
