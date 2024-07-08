@@ -1398,7 +1398,7 @@ public class RowBasedGrouperHelper
           while (jp.currentToken() != JsonToken.END_ARRAY) {
 
             DruidException.conditionalDefensive(
-                dimsReadSoFar < dimsToRead,
+                dimsReadSoFar >= dimsToRead,
                 "More dimensions encountered than expected [%d]",
                 dimsToRead
             );
