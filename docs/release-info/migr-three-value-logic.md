@@ -1,7 +1,7 @@
 ---
-id: migr-front-coded-dict
-title: "Migration guide: front-coded dictionaries"
-sidebar_label: Front-coded dictionaries
+id: migr-three-value-logic
+title: "Migration guide: three-value logic and null handling"
+sidebar_label: Three-value logic
 ---
 
 <!--
@@ -23,67 +23,47 @@ sidebar_label: Front-coded dictionaries
   ~ under the License.
 -->
 
-:::info
-Front coding is an [experimental feature](../development/experimental.md) introduced in Druid 25.0.0.
-:::
+In Apache Druid 28.0.0, the default null handling mode changed.
+Now, to be compliant with the SQL standard, Druid stores segments in a SQL compatible null handling mode by default.
 
-Apache Druid encodes string columns into dictionaries for better compression.
-Front coding is an incremental encoding strategy that lets you store STRING and [COMPLEX&lt;json&gt;](../querying/nested-columns.md) columns in Druid with minimal performance impact.
-Front-coded dictionaries reduce storage and improve performance by optimizing for strings where the front part looks similar.
-For example, if you are tracking website visits, most URLs start with `https://domain.xyz/`, and front coding is able to exploit this pattern for more optimal compression when storing such datasets.
-Druid performs the optimization automatically, which means that the performance of string columns is generally not affected when they don't match the front-coded pattern.
-Consequently, you can enable this feature universally without having to know the underlying data shapes of the columns.
+The SQL standard defines any comparison to null to be unknown.
+Therefore, according to this three-value logic, `x <> 'some value'` only returns non-null values.
 
-You can use front coding with all types of ingestion.
+For Druid's columnar format, this means string columns always store the null value as id 0, the first position in the value dictionary and an associated entry in the bitmap value indexes used to filter null values.
+Numeric columns also store a null value bitmap index to indicate the null valued rows, which is used to null check aggregations and for filter matching null values.
 
-## Enable front coding
+The default Druid configurations for SQL compatible null handling mode is as follows:
 
-To enable front coding, set `indexSpec.stringDictionaryEncoding.type` to `frontCoded` in the `tuningConfig` object of your [ingestion spec](../ingestion/ingestion-spec.md).
+* `druid.generic.useDefaultValueForNull=false`
+* `druid.expressions.useStrictBooleans=true`
+* `druid.generic.useThreeValueLogicForNativeFilters=true` 
 
-You can specify the following optional properties:
+Note Druid has always applied three-value logic by default to expressions.
+Therefore, queries such as `(x+y) <> ‘some value’` already exclude null values prior.
 
-* `bucketSize`: Number of values to place in a bucket to perform delta encoding. Setting this property instructs indexing tasks to write segments using compressed dictionaries of the specified bucket size. You can set it to any power of 2 less than or equal to 128. `bucketSize` defaults to 4.
-* `formatVersion`: Specifies which front coding version to use. Options are 0 and 1 (supported for Druid versions 26.0.0 and higher). `formatVersion` defaults to 0.
+Follow the [Null handling tutorial](../tutorials/tutorial-sql-null.md) to learn how the default null handling works in Druid.
 
-For example:
+## Legacy null handling and two-value logic
+Prior to Druid 28.0.0, Druid defaulted to a legacy mode which used default values instead of nulls.
+In legacy mode, Druid segments created at ingestion time have the following characteristics:
 
-```
-"tuningConfig": {
-  "indexSpec": {
-    "stringDictionaryEncoding": {
-      "type":"frontCoded",
-      "bucketSize": 4,
-      "formatVersion": 0
-    }
-  }
-}
-```
+- String columns can not distinguish an empty string, '', from null, so Druid treats them as an interchangeable value.
+- Numeric columns can not represent null valued rows, and, therefore, store 0 instead of null.
 
-## Upgrade from Druid 25.0.0
+In legacy mode, numeric columns do not have a null value bitmap, and so can have slightly decreased segment sizes.
 
-Druid 26.0.0 introduced a new version of the front-coded dictionary, version 1, offering typically faster read speeds and smaller storage sizes.
-When upgrading to versions Druid 26.0.0 and higher, Druid continues to default front coding settings to version 0.
-This default enables seamless downgrades to Druid 25.0.0.
+The Druid configurations for the deprecated legacy mode are as follows:
 
-To use the newer version, set the `formatVersion` property to 1:
+* `druid.generic.useDefaultValueForNull=true`
+* `druid.expressions.useStrictBooleans=false`
+* `druid.generic.useThreeValueLogicForNativeFilters=true`
 
-```
-"tuningConfig": {
-  "indexSpec": {
-    "stringDictionaryEncoding": {
-      "type":"frontCoded",
-      "bucketSize": 4,
-      "formatVersion": 1
-    }
-  }
-}
-```
+Note that these configurations are deprecated and scheduled for removal.
 
-## Downgrade to Druid 25.0.0
+## Replicate Legacy null handling and two-value logic
 
-After upgrading to version 1, you can no longer downgrade to Druid 25.0.0 seamlessly.
-To downgrade to Druid 25.0.0, re-ingest your data with the `stringDictionaryEncoding.formatVersion` property set to 0.
+To replicate the  legacy behavior which is not compliant with the SQL standard, you should rewrite affected queries as follows:
 
-## Downgrade to a version preceding Druid 25.0.0
+Change `x <> 'some value'` to `(x <> 'some value' OR x IS NULL)`.
 
-Druid versions preceding 25.0.0 can't read segments with front-coded dictionaries. To downgrade to an older version, you must either delete the segments containing front-coded dictionaries or re-ingest them with `stringDictionaryEncoding.type` set to `utf8`.
+In this case, Druid treats the filter on x as a native filter.
