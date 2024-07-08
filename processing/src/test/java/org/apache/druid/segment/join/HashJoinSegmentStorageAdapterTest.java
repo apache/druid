@@ -2315,19 +2315,16 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         makeExpressionVirtualColumn("concat(countryIsoCode, dummyColumn)", "v4"),
         makeExpressionVirtualColumn("dummyMetric - __time", "v5")
     );
-    List<VirtualColumn> actualPreJoin = new ArrayList<>();
-    List<VirtualColumn> actualPostJoin = new ArrayList<>();
     List<VirtualColumn> allVirtualColumns = new ArrayList<>();
     allVirtualColumns.addAll(expectedPreJoin);
     allVirtualColumns.addAll(expectedPostJoin);
-    adapter.determineBaseColumnsWithPreAndPostJoinVirtualColumns(
+    JoinVirtualColumnSplit virtualColumnSplit = JoinVirtualColumnSplit.split(
+        adapter.getRowSignature(),
         VirtualColumns.create(allVirtualColumns),
-        actualPreJoin,
-        actualPostJoin
+        null
     );
-
-    Assert.assertEquals(expectedPreJoin, actualPreJoin);
-    Assert.assertEquals(expectedPostJoin, actualPostJoin);
+    Assert.assertEquals(expectedPreJoin, virtualColumnSplit.getPreJoinVirtualColumns());
+    Assert.assertEquals(expectedPostJoin, virtualColumnSplit.getPostJoinVirtualColumns());
   }
 
   @Test

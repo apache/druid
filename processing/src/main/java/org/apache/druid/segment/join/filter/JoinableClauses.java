@@ -88,19 +88,20 @@ public class JoinableClauses
     return joinableClauses;
   }
 
-  public void splitVirtualColumns(
-      final VirtualColumns virtualColumns,
-      final List<VirtualColumn> preJoinVirtualColumns,
-      final List<VirtualColumn> postJoinVirtualColumns
+  /**
+   * Retrieve subset of virtual columns which require inputs which are only present on the join table
+   */
+  public List<VirtualColumn> getPostJoinVirtualColumns(
+      final VirtualColumns virtualColumns
   )
   {
+    final List<VirtualColumn> postJoinVirtualColumns = new ArrayList<>();
     for (VirtualColumn virtualColumn : virtualColumns.getVirtualColumns()) {
       if (areSomeColumnsFromJoin(virtualColumn.requiredColumns())) {
         postJoinVirtualColumns.add(virtualColumn);
-      } else {
-        preJoinVirtualColumns.add(virtualColumn);
       }
     }
+    return postJoinVirtualColumns;
   }
 
   public boolean areSomeColumnsFromJoin(
