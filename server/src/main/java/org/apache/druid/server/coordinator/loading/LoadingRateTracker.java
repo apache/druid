@@ -29,7 +29,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * <p>
  * The loading rate is computed as a moving average of the last
  * {@link #MOVING_AVERAGE_WINDOW_SIZE} progress updates (or more if any of the
- * updates was smaller than {@link #MIN_ENTRY_SIZE_BYTES}).
+ * updates were smaller than {@link #MIN_ENTRY_SIZE_BYTES}).
  */
 @ThreadSafe
 public class LoadingRateTracker
@@ -43,7 +43,7 @@ public class LoadingRateTracker
 
   public synchronized void updateProgress(long bytes, long millisElapsed)
   {
-    if (bytes >= 0 && millisElapsed > 0) {
+    if (bytes > 0 && millisElapsed > 0) {
       final Entry updatedTotal = new Entry();
       final Entry currentTotal = windowTotal.get();
       if (currentTotal != null) {
@@ -57,9 +57,7 @@ public class LoadingRateTracker
         updatedTotal.increment(-evictedHead.bytes, -evictedHead.millisElapsed);
       }
 
-      if (updatedTotal.bytes > 0 && updatedTotal.millisElapsed > 0) {
-        windowTotal.set(updatedTotal);
-      }
+      windowTotal.set(updatedTotal);
     }
   }
 

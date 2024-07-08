@@ -80,7 +80,7 @@ public class CoordinatorResourceTest
   {
     EasyMock.expect(mock.getLoadManagementPeons())
             .andReturn(ImmutableMap.of("hist1", new TestLoadQueuePeon()))
-            .anyTimes();
+            .once();
     EasyMock.replay(mock);
 
     final Response response = new CoordinatorResource(mock).getLoadQueue("true", null);
