@@ -28,4 +28,10 @@ import java.io.Closeable;
  */
 public interface ColumnarInts extends IndexedInts, Closeable
 {
+  default void get(int[] out, int offset, int start, int length)
+  {
+    for (int i = 0; i < length; i++) {
+      out[offset + i] = get(i + start);
+    }
+  }
 }
