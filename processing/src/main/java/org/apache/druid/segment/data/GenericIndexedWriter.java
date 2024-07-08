@@ -242,7 +242,7 @@ public class GenericIndexedWriter<T> implements DictionaryWriter<T>
   }
 
   @Override
-  public void write(@Nullable T objectToWrite) throws IOException
+  public int write(@Nullable T objectToWrite) throws IOException
   {
     if (objectsSorted && prevObject != null && strategy.compare(prevObject, objectToWrite) >= 0) {
       objectsSorted = false;
@@ -263,7 +263,7 @@ public class GenericIndexedWriter<T> implements DictionaryWriter<T>
 
     // Increment number of values written. Important to do this after the check above, since numWritten is
     // accessed during "initializeHeaderOutLong" to determine the length of the header.
-    ++numWritten;
+    int retVal = numWritten++;
 
     if (!requireMultipleFiles) {
       headerOut.writeInt(checkedCastNonnegativeLongToInt(valuesOut.size()));
@@ -280,6 +280,7 @@ public class GenericIndexedWriter<T> implements DictionaryWriter<T>
     if (objectsSorted) {
       prevObject = objectToWrite;
     }
+    return retVal;
   }
 
   @Nullable

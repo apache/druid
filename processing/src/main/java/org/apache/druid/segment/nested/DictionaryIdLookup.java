@@ -51,7 +51,7 @@ import java.util.EnumSet;
 
 /**
  * Value to dictionary id lookup, backed with memory mapped dictionaries populated lazily by the supplied
- * @link DictionaryWriter}.
+ * {@link DictionaryWriter}.
  */
 public final class DictionaryIdLookup implements Closeable
 {
