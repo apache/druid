@@ -391,6 +391,13 @@ public class CalciteMSQTestsHelper
       case CalciteTests.WIKIPEDIA_FIRST_LAST:
         index = TestDataBuilder.makeWikipediaIndexWithAggregation(tempFolderProducer.apply("tmpDir"));
         break;
+      case CalciteTests.TBL_WITH_NULLS_PARQUET:
+      case CalciteTests.SML_TBL_PARQUET:
+      case CalciteTests.ALL_TYPES_UNIQ_PARQUET:
+      case CalciteTests.FEW_ROWS_ALL_DATA_PARQUET:
+      case CalciteTests.T_ALL_TYPE_PARQUET:
+        index = TestDataBuilder.getQueryableIndexForDrillDatasource(segmentId.getDataSource(), tempFolderProducer.apply("tmpDir"));
+        break;
       default:
         throw new ISE("Cannot query segment %s in test runner", segmentId);
 

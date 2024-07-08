@@ -246,6 +246,16 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
         continue;
       }
 
+      if (rowSignature.getColumnNames().isEmpty()) {
+        // this case could arise when metadata refresh is disabled on broker
+        // and a new datasource is added
+        log.info("datasource [%s] schema has not been initialized yet, "
+                 + "check coordinator logs if this message is persistent.", dataSource);
+        // this is a harmless call
+        tables.remove(dataSource);
+        continue;
+      }
+
       final PhysicalDatasourceMetadata physicalDatasourceMetadata = dataSourceMetadataFactory.build(dataSource, rowSignature);
       updateDSMetadata(dataSource, physicalDatasourceMetadata);
     }
