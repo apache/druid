@@ -39,6 +39,7 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.filter.SelectorFilter;
+import org.apache.druid.segment.join.filter.JoinFilterAnalyzer;
 import org.apache.druid.segment.join.filter.JoinFilterPreAnalysis;
 import org.apache.druid.segment.join.lookup.LookupJoinable;
 import org.apache.druid.segment.join.table.IndexedTableJoinable;
@@ -2321,7 +2322,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
     JoinVirtualColumnSplit virtualColumnSplit = JoinVirtualColumnSplit.split(
         adapter.getRowSignature(),
         VirtualColumns.create(allVirtualColumns),
-        null
+        JoinFilterAnalyzer.splitFilter(analysis, null)
     );
     Assert.assertEquals(expectedPreJoin, virtualColumnSplit.getPreJoinVirtualColumns());
     Assert.assertEquals(expectedPostJoin, virtualColumnSplit.getPostJoinVirtualColumns());

@@ -23,8 +23,8 @@ import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.join.filter.JoinFilterSplit;
 
-import javax.annotation.Nullable;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -45,16 +45,16 @@ public class JoinVirtualColumnSplit
   public static JoinVirtualColumnSplit split(
       RowSignature baseTableSignature,
       VirtualColumns virtualColumns,
-      @Nullable Filter baseTableFilter
+      JoinFilterSplit filterSplit
   )
   {
     final Comparator<VirtualColumn> sorter = Comparator.comparing(VirtualColumn::getOutputName);
     final SortedSet<VirtualColumn> preJoinVirtualColumns = new TreeSet<>(sorter);
     final SortedSet<VirtualColumn> postJoinVirtualColumns = new TreeSet<>(sorter);
     final Set<String> baseColumnNames = new HashSet<>(baseTableSignature.getColumnNames());
-    final Set<String> baseFilterColumns = baseTableFilter == null
-                                                       ? Collections.emptySet()
-                                                       : new HashSet<>(baseTableFilter.getRequiredColumns());
+    final Set<String> baseFilterColumns = filterSplit.getBaseTableFilter()
+                                                     .map(Filter::getRequiredColumns)
+                                                     .orElse(Collections.emptySet());
     final Set<String> unresolvedNames = new HashSet<>();
 
     final Set<VirtualColumn> unresolvedSet = new HashSet<>();

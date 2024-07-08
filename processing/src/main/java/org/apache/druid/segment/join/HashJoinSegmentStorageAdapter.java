@@ -299,17 +299,18 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
       preAnalysis = JoinFilterAnalyzer.computeJoinFilterPreAnalysis(keyIn);
     }
 
+
+    final JoinFilterSplit joinFilterSplit = JoinFilterAnalyzer.splitFilter(
+        preAnalysis,
+        baseFilter
+    );
+
     // check for virtual columns which reference stuff that isn't present on the base table, we can move
     // them to the join table
     final JoinVirtualColumnSplit virtualColumnSplit = JoinVirtualColumnSplit.split(
         baseAdapter.getRowSignature(),
         virtualColumns,
-        baseFilter
-    );
-
-    final JoinFilterSplit joinFilterSplit = JoinFilterAnalyzer.splitFilter(
-        preAnalysis,
-        baseFilter
+        joinFilterSplit
     );
 
     final Sequence<Cursor> baseCursorSequence = baseAdapter.makeCursors(

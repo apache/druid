@@ -27,6 +27,7 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.filter.SelectorFilter;
+import org.apache.druid.segment.join.filter.JoinFilterSplit;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
@@ -79,7 +80,7 @@ public class JoinVirtualColumnSplitTest extends InitializedNullHandlingTest
     final JoinVirtualColumnSplit split = JoinVirtualColumnSplit.split(
         BASE_TABLE,
         VirtualColumns.create(virtualColumns),
-        null
+        new JoinFilterSplit(null, null, Collections.emptySet())
     );
     Assert.assertEquals(Collections.singletonList(virtualColumns.get(0)), split.getPreJoinVirtualColumns());
     Assert.assertEquals(Collections.singletonList(virtualColumns.get(1)), split.getPostJoinVirtualColumns());
@@ -95,7 +96,7 @@ public class JoinVirtualColumnSplitTest extends InitializedNullHandlingTest
     final JoinVirtualColumnSplit split = JoinVirtualColumnSplit.split(
         BASE_TABLE,
         VirtualColumns.create(virtualColumns),
-        new SelectorFilter("v1", "xfoo")
+        new JoinFilterSplit(new SelectorFilter("v1", "xfoo"), null, Collections.emptySet())
     );
     Assert.assertEquals(virtualColumns, split.getPreJoinVirtualColumns());
     Assert.assertEquals(Collections.emptyList(), split.getPostJoinVirtualColumns());
@@ -111,7 +112,7 @@ public class JoinVirtualColumnSplitTest extends InitializedNullHandlingTest
     final JoinVirtualColumnSplit split = JoinVirtualColumnSplit.split(
         BASE_TABLE,
         VirtualColumns.create(virtualColumns),
-        null
+        new JoinFilterSplit(null, null, Collections.emptySet())
     );
     // order is switched from resolving dependencies
     Assert.assertEquals(
@@ -132,7 +133,7 @@ public class JoinVirtualColumnSplitTest extends InitializedNullHandlingTest
     final JoinVirtualColumnSplit split = JoinVirtualColumnSplit.split(
         BASE_TABLE,
         VirtualColumns.create(virtualColumns),
-        null
+        new JoinFilterSplit(null, null, Collections.emptySet())
     );
     // order is switched from resolving dependencies
     Assert.assertEquals(
@@ -152,7 +153,7 @@ public class JoinVirtualColumnSplitTest extends InitializedNullHandlingTest
     final JoinVirtualColumnSplit split = JoinVirtualColumnSplit.split(
         BASE_TABLE,
         VirtualColumns.create(virtualColumns),
-        null
+        new JoinFilterSplit(null, null, Collections.emptySet())
     );
     Assert.assertEquals(Collections.emptyList(), split.getPreJoinVirtualColumns());
     Assert.assertEquals(virtualColumns, split.getPostJoinVirtualColumns());
@@ -169,7 +170,7 @@ public class JoinVirtualColumnSplitTest extends InitializedNullHandlingTest
     final JoinVirtualColumnSplit split = JoinVirtualColumnSplit.split(
         BASE_TABLE,
         VirtualColumns.create(virtualColumns),
-        null
+        new JoinFilterSplit(null, null, Collections.emptySet())
     );
     Assert.assertEquals(Collections.emptyList(), split.getPreJoinVirtualColumns());
     Assert.assertEquals(
@@ -188,7 +189,7 @@ public class JoinVirtualColumnSplitTest extends InitializedNullHandlingTest
     final JoinVirtualColumnSplit split = JoinVirtualColumnSplit.split(
         BASE_TABLE,
         VirtualColumns.create(virtualColumns),
-        new SelectorFilter("v1", "xfoobar")
+        new JoinFilterSplit(new SelectorFilter("v1", "xfoobar"), null, Collections.emptySet())
     );
     Assert.assertEquals(
         virtualColumns,
@@ -207,7 +208,8 @@ public class JoinVirtualColumnSplitTest extends InitializedNullHandlingTest
     final JoinVirtualColumnSplit split = JoinVirtualColumnSplit.split(
         BASE_TABLE,
         VirtualColumns.create(virtualColumns),
-        new SelectorFilter("v0", "xfoo")
+        new JoinFilterSplit(new SelectorFilter("v0", "xfoo"), null, Collections.emptySet())
+
     );
     // we could technically skip pushing down v1 since v0 is a constant because of non-existent input, but the
     // dependency resolution logic isn't cool enough to determine the differece
