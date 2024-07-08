@@ -23,7 +23,7 @@ sidebar_label: Three-value logic
   ~ under the License.
 -->
 
-In Apache Druid 28.0.0, the default null handling mode changed.
+In Apache Druid 28.0.0, the default [null handling](../querying/sql-data-types.md#null-values) mode changed.
 Now, to be compliant with the SQL standard, Druid stores segments in a SQL compatible null handling mode by default.
 
 The SQL standard defines any comparison to null to be unknown.
@@ -40,6 +40,10 @@ The default Druid configurations for SQL compatible null handling mode is as fol
 
 Note Druid has always applied three-value logic by default to expressions.
 Therefore, queries such as `(x+y) <> ‘some value’` already exclude null values prior.
+
+At query time, Druid treats data from segments written with the legacy two-value logic as follows:
+- Empty strings, `''` are non-null values.
+- 0 is a non-null value.
 
 Follow the [Null handling tutorial](../tutorials/tutorial-sql-null.md) to learn how the default null handling works in Druid.
 
@@ -62,8 +66,11 @@ Note that these configurations are deprecated and scheduled for removal.
 
 ## Replicate Legacy null handling and two-value logic
 
-To replicate the  legacy behavior which is not compliant with the SQL standard, you should rewrite affected queries as follows:
+If you want to reatain Druid's legacy behavior, which is not compliant with the SQL standard, update your queries.
 
-Change `x <> 'some value'` to `(x <> 'some value' OR x IS NULL)`.
+The following indicate some strategies to include null values when querying for inequality:
 
-In this case, Druid treats the filter on x as a native filter.
+- Modify inequality queries to include nulls. For example:
+  `x <> 'some value'` becomes `(x <> 'some value' OR x IS NULL)`.
+- Use COALESCE to replace nulls with a value:
+  `x + 1` becomes ` COALESCE(numeric_value, 0)=1`
