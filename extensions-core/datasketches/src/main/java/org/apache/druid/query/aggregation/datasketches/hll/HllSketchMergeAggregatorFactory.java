@@ -24,8 +24,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.datasketches.hll.HllSketch;
 import org.apache.datasketches.hll.TgtHllType;
 import org.apache.datasketches.hll.Union;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringEncoding;
-import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorFactoryNotMergeableException;
@@ -41,7 +41,6 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
-import java.util.Objects;
 
 /**
  * This aggregator factory is for merging existing sketches.
@@ -151,18 +150,22 @@ public class HllSketchMergeAggregatorFactory extends HllSketchAggregatorFactory
     );
   }
 
+  /**
+   * Validates whether the aggregator supports the input column type.
+   * @param capabilities
+   */
   private void validateInputs(@Nullable ColumnCapabilities capabilities)
   {
     if (capabilities != null) {
       final ColumnType type = capabilities.toColumnType();
-      if (!ColumnType.UNKNOWN_COMPLEX.equals(type) && !TYPE.equals(type) &&
-          !(ValueType.COMPLEX.equals(type.getType()) &&
-            (Objects.equals(type.getComplexTypeName(), "HLLSketch") ||
-             Objects.equals(type.getComplexTypeName(), "HLLSketchBuild")))) {
-        throw new UOE("Using aggregation type %s is not supported for %s column. "
-                      + "Use a different aggregator type and run the query again.",
-                      getIntermediateType().getComplexTypeName(),
-                      type);
+      boolean isUnsupportedComplexType = ValueType.COMPLEX.equals(type.getType()) &&
+                                          (HllSketchModule.TYPE_NAME.equals(type.getComplexTypeName()) ||
+                                           HllSketchModule.BUILD_TYPE_NAME.equals(type.getComplexTypeName()));
+      if (!ColumnType.UNKNOWN_COMPLEX.equals(type) && !TYPE.equals(type) && !isUnsupportedComplexType) {
+        throw DruidException.forPersona(DruidException.Persona.USER)
+                            .ofCategory(DruidException.Category.UNSUPPORTED)
+                            .build("Using aggregator [%s] is not supported for complex columns with type [%s].",
+                                   getIntermediateType().getComplexTypeName(), type);
       }
     }
   }

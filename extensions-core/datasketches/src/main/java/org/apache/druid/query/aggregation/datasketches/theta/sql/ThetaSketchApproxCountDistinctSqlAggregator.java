@@ -38,11 +38,15 @@ import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import java.util.Collections;
 
+/**
+ * Approximate count distinct aggregator using theta sketches.
+ * Supported column types: String, Numeric, Theta Sketch.
+ */
 public class ThetaSketchApproxCountDistinctSqlAggregator extends ThetaSketchBaseSqlAggregator implements SqlAggregator
 {
   public static final String NAME = "APPROX_COUNT_DISTINCT_DS_THETA";
 
-  private static final SqlSingleOperandTypeChecker COLUMN_ALLOWED_TYPES = OperandTypes.or(
+  private static final SqlSingleOperandTypeChecker AGGREGATED_COLUMN_TYPE_CHECKER = OperandTypes.or(
       OperandTypes.STRING,
       OperandTypes.NUMERIC,
       RowSignatures.complexTypeChecker(SketchModule.THETA_SKETCH_TYPE)
@@ -54,12 +58,12 @@ public class ThetaSketchApproxCountDistinctSqlAggregator extends ThetaSketchBase
                          .operandTypeChecker(
                              OperandTypes.or(
                                  // APPROX_COUNT_DISTINCT_DS_THETA(expr)
-                                 OperandTypes.and(COLUMN_ALLOWED_TYPES, OperandTypes.family(SqlTypeFamily.ANY)),
+                                 OperandTypes.and(AGGREGATED_COLUMN_TYPE_CHECKER, OperandTypes.family(SqlTypeFamily.ANY)),
                                  // APPROX_COUNT_DISTINCT_DS_THETA(expr, size)
                                  OperandTypes.and(
                                      OperandTypes.sequence(
                                          StringUtils.format("'%s(expr, size)'", NAME),
-                                         COLUMN_ALLOWED_TYPES,
+                                         AGGREGATED_COLUMN_TYPE_CHECKER,
                                          CastedLiteralOperandTypeCheckers.POSITIVE_INTEGER_LITERAL
                                      ),
                                      OperandTypes.family(SqlTypeFamily.ANY, SqlTypeFamily.EXACT_NUMERIC)

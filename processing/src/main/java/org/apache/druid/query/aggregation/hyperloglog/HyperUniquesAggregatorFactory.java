@@ -21,9 +21,9 @@ package org.apache.druid.query.aggregation.hyperloglog;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.Aggregator;
@@ -135,15 +135,19 @@ public class HyperUniquesAggregatorFactory extends AggregatorFactory
     }
   }
 
+  /**
+   * Validates whether the aggregator supports the input column type.
+   * @param capabilities
+   */
   private void validateInputs(@Nullable ColumnCapabilities capabilities)
   {
     if (capabilities != null) {
       final ColumnType type = capabilities.toColumnType();
       if (!ColumnType.UNKNOWN_COMPLEX.equals(type) && !TYPE.equals(type) && !PRECOMPUTED_TYPE.equals(type)) {
-        throw new UOE("Using aggregation type %s is not supported for %s column. "
-                      + "Use a different aggregator type and run the query again.",
-                      getIntermediateType().getComplexTypeName(),
-                      type);
+        throw DruidException.forPersona(DruidException.Persona.USER)
+                            .ofCategory(DruidException.Category.UNSUPPORTED)
+                            .build("Using aggregator [%s] is not supported for complex columns with type [%s].",
+                                   getIntermediateType().getComplexTypeName(), type);
       }
     }
   }

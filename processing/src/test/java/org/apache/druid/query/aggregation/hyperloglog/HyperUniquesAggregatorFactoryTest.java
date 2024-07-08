@@ -22,24 +22,21 @@ package org.apache.druid.query.aggregation.hyperloglog;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.hll.VersionZeroHyperLogLogCollector;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.TestColumnSelectorFactory;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.vector.TestVectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.ArgumentMatchers;
-import org.mockito.Mock;
-import org.mockito.Mockito;
-import org.mockito.junit.MockitoJUnitRunner;
 
 import java.nio.ByteBuffer;
 import java.util.Comparator;
@@ -47,7 +44,6 @@ import java.util.Random;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-@RunWith(MockitoJUnitRunner.class)
 public class HyperUniquesAggregatorFactoryTest
 {
   static final HyperUniquesAggregatorFactory AGGREGATOR_FACTORY = new HyperUniquesAggregatorFactory(
@@ -58,16 +54,15 @@ public class HyperUniquesAggregatorFactoryTest
 
   private final HashFunction fn = Hashing.murmur3_128();
 
-  @Mock private ColumnCapabilities capabilities;
-  @Mock private ColumnSelectorFactory metricFactory;
-  @Mock private VectorColumnSelectorFactory selectorFactory;
+  private ColumnSelectorFactory metricFactory;
+  private VectorColumnSelectorFactory vectorFactory;
 
   @Before
   public void setup()
   {
-    Mockito.doReturn(ColumnType.NESTED_DATA).when(capabilities).toColumnType();
-    Mockito.doReturn(capabilities).when(metricFactory).getColumnCapabilities(ArgumentMatchers.any());
-    Mockito.doReturn(capabilities).when(selectorFactory).getColumnCapabilities(ArgumentMatchers.any());
+    final ColumnCapabilitiesImpl columnCapabilities = ColumnCapabilitiesImpl.createDefault().setType(ColumnType.NESTED_DATA);
+    metricFactory = new TestColumnSelectorFactory().addCapabilities("uniques", columnCapabilities);
+    vectorFactory = new TestVectorColumnSelectorFactory().addCapabilities("uniques", columnCapabilities);
   }
 
   @Test
@@ -246,21 +241,21 @@ public class HyperUniquesAggregatorFactoryTest
   @Test
   public void testFactorizeOnUnsupportedComplexColumn()
   {
-    Throwable exception = assertThrows(UOE.class, () -> AGGREGATOR_FACTORY.factorize(metricFactory));
-    Assert.assertEquals("Using aggregation type hyperUnique is not supported for COMPLEX<json> column. Use a different aggregator type and run the query again.", exception.getMessage());
+    Throwable exception = assertThrows(DruidException.class, () -> AGGREGATOR_FACTORY.factorize(metricFactory));
+    Assert.assertEquals("Using aggregator [hyperUnique] is not supported for complex columns with type [COMPLEX<json>].", exception.getMessage());
   }
 
   @Test
   public void testFactorizeBufferedOnUnsupportedComplexColumn()
   {
-    Throwable exception = assertThrows(UOE.class, () -> AGGREGATOR_FACTORY.factorizeBuffered(metricFactory));
-    Assert.assertEquals("Using aggregation type hyperUnique is not supported for COMPLEX<json> column. Use a different aggregator type and run the query again.", exception.getMessage());
+    Throwable exception = assertThrows(DruidException.class, () -> AGGREGATOR_FACTORY.factorizeBuffered(metricFactory));
+    Assert.assertEquals("Using aggregator [hyperUnique] is not supported for complex columns with type [COMPLEX<json>].", exception.getMessage());
   }
 
   @Test
   public void testFactorizeVectorOnUnsupportedComplexColumn()
   {
-    Throwable exception = assertThrows(UOE.class, () -> AGGREGATOR_FACTORY.factorizeVector(selectorFactory));
-    Assert.assertEquals("Using aggregation type hyperUnique is not supported for COMPLEX<json> column. Use a different aggregator type and run the query again.", exception.getMessage());
+    Throwable exception = assertThrows(DruidException.class, () -> AGGREGATOR_FACTORY.factorizeVector(vectorFactory));
+    Assert.assertEquals("Using aggregator [hyperUnique] is not supported for complex columns with type [COMPLEX<json>].", exception.getMessage());
   }
 }

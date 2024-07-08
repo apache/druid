@@ -142,7 +142,10 @@ public class BuiltinApproxCountDistinctSqlAggregator implements SqlAggregator
     }
 
     if (aggregatorFactory == null) {
-      plannerContext.setPlanningError("Using APPROX_COUNT_DISTINCT() or enabling approximation with COUNT(DISTINCT) is not supported for %s column. You can disable approximation and use COUNT(DISTINCT %s) and run the query again.", arg.getDruidType(), arg.getSimpleExtraction().getColumn());
+      plannerContext.setPlanningError("Using APPROX_COUNT_DISTINCT() or enabling approximation with COUNT(DISTINCT) "
+                                      + "is not supported for %s column. You can disable approximation and use "
+                                      + "COUNT(DISTINCT %s) and run the query again.",
+                                      arg.getDruidType(), arg.getSimpleExtraction().getColumn());
       return null;
     }
 

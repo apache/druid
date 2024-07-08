@@ -27,7 +27,7 @@ import org.apache.datasketches.common.Util;
 import org.apache.datasketches.theta.SetOperation;
 import org.apache.datasketches.theta.Union;
 import org.apache.datasketches.thetacommon.ThetaUtil;
-import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.Aggregator;
@@ -111,6 +111,10 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
     return new SketchVectorAggregator(selectorFactory, fieldName, size, getMaxIntermediateSizeWithNulls());
   }
 
+  /**
+   * Validates whether the aggregator supports the input column type.
+   * @param capabilities
+   */
   private void validateInputs(@Nullable ColumnCapabilities capabilities)
   {
     if (capabilities != null) {
@@ -119,13 +123,12 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
           SketchModule.MERGE_TYPE.equals(capabilities.toColumnType()) ||
           SketchModule.BUILD_TYPE.equals(capabilities.toColumnType())))
       ) {
-        throw new ISE(
-            "Invalid input [%s] of type [%s] for [%s] aggregator [%s]",
-            getFieldName(),
-            capabilities.asTypeString(),
-            getIntermediateType(),
-            getName()
-        );
+        throw DruidException.forPersona(DruidException.Persona.USER)
+                            .ofCategory(DruidException.Category.UNSUPPORTED)
+                            .build("Unsupported input [%s] of type [%s] for aggregator [%s].",
+                                getFieldName(),
+                                capabilities.asTypeString(),
+                                getIntermediateType());
       }
     }
   }

@@ -31,6 +31,7 @@ import org.apache.druid.query.aggregation.datasketches.SketchQueryContext;
 import org.apache.druid.query.aggregation.datasketches.hll.HllSketchAggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.hll.HllSketchBuildAggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.hll.HllSketchMergeAggregatorFactory;
+import org.apache.druid.query.aggregation.datasketches.hll.HllSketchModule;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.column.ColumnType;
@@ -46,7 +47,6 @@ import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
 import java.util.List;
-import java.util.Objects;
 
 public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
 {
@@ -119,8 +119,9 @@ public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
                         .map(type -> type.is(ValueType.COMPLEX) &&
                                      (
                                          HllSketchMergeAggregatorFactory.TYPE.equals(type) ||
-                                         Objects.equals(type.getComplexTypeName(), "HLLSketch") ||
-                                         Objects.equals(type.getComplexTypeName(), "HLLSketchBuild"))
+                                         HllSketchModule.TYPE_NAME.equals(type.getComplexTypeName()) ||
+                                         HllSketchModule.BUILD_TYPE_NAME.equals(type.getComplexTypeName())
+                                     )
                         )
                         .orElse(false)) {
       aggregatorFactory = new HllSketchMergeAggregatorFactory(
@@ -161,8 +162,8 @@ public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
 
       if (inputType.is(ValueType.COMPLEX)) {
         if (HllSketchMergeAggregatorFactory.TYPE.equals(inputType) ||
-            Objects.equals(inputType.getComplexTypeName(), "HLLSketch") ||
-            Objects.equals(inputType.getComplexTypeName(), "HLLSketchBuild")) {
+            HllSketchModule.TYPE_NAME.equals(inputType.getComplexTypeName()) ||
+            HllSketchModule.BUILD_TYPE_NAME.equals(inputType.getComplexTypeName())) {
           aggregatorFactory = new HllSketchMergeAggregatorFactory(
               aggregatorName,
               dimensionSpec.getOutputName(),
@@ -191,7 +192,10 @@ public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
     }
 
     if (aggregatorFactory == null) {
-      plannerContext.setPlanningError("Using APPROX_COUNT_DISTINCT() or enabling approximation with COUNT(DISTINCT) is not supported for %s column. You can disable approximation and use COUNT(DISTINCT %s) and run the query again.", columnArg.getDruidType(), columnArg.getSimpleExtraction().getColumn());
+      plannerContext.setPlanningError("Using APPROX_COUNT_DISTINCT() or enabling approximation with COUNT(DISTINCT) "
+                                      + "is not supported for %s column. You can disable approximation and use "
+                                      + "COUNT(DISTINCT %s) and run the query again.",
+                                      columnArg.getDruidType(), columnArg.getSimpleExtraction().getColumn());
       return null;
     }
 

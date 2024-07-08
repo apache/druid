@@ -40,11 +40,15 @@ import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import java.util.Collections;
 
+/**
+ * Approximate count distinct aggregator using HLL sketches.
+ * Supported column types: String, Numeric, HLLSketchMerge, HLLSketchBuild.
+ */
 public class HllSketchApproxCountDistinctSqlAggregator extends HllSketchBaseSqlAggregator implements SqlAggregator
 {
   public static final String NAME = "APPROX_COUNT_DISTINCT_DS_HLL";
 
-  private static final SqlSingleOperandTypeChecker COLUMN_ALLOWED_TYPES = OperandTypes.or(
+  private static final SqlSingleOperandTypeChecker AGGREGATED_COLUMN_TYPE_CHECKER = OperandTypes.or(
       OperandTypes.STRING,
       OperandTypes.NUMERIC,
       RowSignatures.complexTypeChecker(HllSketchMergeAggregatorFactory.TYPE),
@@ -57,12 +61,12 @@ public class HllSketchApproxCountDistinctSqlAggregator extends HllSketchBaseSqlA
                          .operandTypeChecker(
                              OperandTypes.or(
                                  // APPROX_COUNT_DISTINCT_DS_HLL(column)
-                                 OperandTypes.and(COLUMN_ALLOWED_TYPES, OperandTypes.family(SqlTypeFamily.ANY)),
+                                 OperandTypes.and(AGGREGATED_COLUMN_TYPE_CHECKER, OperandTypes.family(SqlTypeFamily.ANY)),
                                  // APPROX_COUNT_DISTINCT_DS_HLL(column, lgk)
                                  OperandTypes.and(
                                      OperandTypes.sequence(
                                          StringUtils.format("'%s(column, lgk)'", NAME),
-                                         COLUMN_ALLOWED_TYPES,
+                                         AGGREGATED_COLUMN_TYPE_CHECKER,
                                          CastedLiteralOperandTypeCheckers.POSITIVE_INTEGER_LITERAL
                                      ),
                                      OperandTypes.family(SqlTypeFamily.ANY, SqlTypeFamily.EXACT_NUMERIC)
@@ -71,7 +75,7 @@ public class HllSketchApproxCountDistinctSqlAggregator extends HllSketchBaseSqlA
                                  OperandTypes.and(
                                      OperandTypes.sequence(
                                          StringUtils.format("'%s(column, lgk, tgtHllType)'", NAME),
-                                         COLUMN_ALLOWED_TYPES,
+                                         AGGREGATED_COLUMN_TYPE_CHECKER,
                                          CastedLiteralOperandTypeCheckers.POSITIVE_INTEGER_LITERAL,
                                          OperandTypes.STRING
                                      ),
