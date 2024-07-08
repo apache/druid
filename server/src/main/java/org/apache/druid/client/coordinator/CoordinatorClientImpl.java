@@ -190,7 +190,7 @@ public class CoordinatorClientImpl implements CoordinatorClient
   }
 
   @Override
-  public ListenableFuture<Set<String>> fetchUsedDataSources()
+  public ListenableFuture<Set<String>> fetchDataSourcesWithUsedSegments()
   {
     final String path = "/druid/coordinator/v1/metadata/datasources";
     return FutureUtils.transform(

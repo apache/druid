@@ -280,7 +280,7 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
     Set<String> dataSources = new HashSet<>();
 
     try {
-      Set<String> polled = FutureUtils.getUnchecked(coordinatorClient.fetchUsedDataSources(), true);
+      Set<String> polled = FutureUtils.getUnchecked(coordinatorClient.fetchDataSourcesWithUsedSegments(), true);
       if (polled != null) {
         dataSources.addAll(polled);
       }

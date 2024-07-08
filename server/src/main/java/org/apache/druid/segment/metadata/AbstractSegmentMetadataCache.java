@@ -199,7 +199,9 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
   /**
    * Map of datasource and generic object extending DataSourceInformation.
    * This structure can be accessed by {@link #cacheExec} and {@link #callbackExec} threads.
-   * It contains schema for datasources with atleast 1 available segment.
+   * It contains schema for datasources with at least 1 available segment.
+   * The schema for a datasource in this table includes column information from both hot and cold segments.
+   * Columns present only in the cold segments would be present at the end in the datasource schema.
    */
   protected final ConcurrentHashMap<String, T> tables = new ConcurrentHashMap<>();
 

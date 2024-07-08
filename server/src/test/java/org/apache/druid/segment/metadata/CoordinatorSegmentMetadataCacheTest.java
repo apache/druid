@@ -1819,7 +1819,9 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
             Collections.singletonMap(coldSegment.getId(), coldSegment)
         );
 
-    Mockito.when(sqlSegmentsMetadataManager.getImmutableDataSourcesWithAllUsedSegments()).thenReturn(Collections.singletonList(druidDataSource));
+    Mockito.when(
+               sqlSegmentsMetadataManager.getImmutableDataSourcesWithAllUsedSegments())
+           .thenReturn(Collections.singletonList(druidDataSource));
 
     CoordinatorSegmentMetadataCache schema = new CoordinatorSegmentMetadataCache(
         getQueryLifecycleFactory(walker),
@@ -1834,10 +1836,14 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         segmentsMetadataManagerConfigSupplier
     );
 
-    SegmentReplicaCount segmentReplicaCount = new SegmentReplicaCount();
-    segmentReplicaCount.setRequired(0, 0);
+    // Cold segment with 0 replication factor.
+    SegmentReplicationStatus segmentReplicationStatus =
+        new SegmentReplicationStatus(
+            Collections.singletonMap(
+                coldSegment.getId(),
+                Collections.singletonMap("default", new SegmentReplicaCount())
+            ));
 
-    SegmentReplicationStatus segmentReplicationStatus = new SegmentReplicationStatus(Collections.singletonMap(coldSegment.getId(), Collections.singletonMap("default", segmentReplicaCount)));
     schema.updateSegmentReplicationStatus(segmentReplicationStatus);
 
     return schema;
@@ -1951,12 +1957,11 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         segmentsMetadataManagerConfigSupplier
     );
 
+    // The required segment count is 0 in a new instance.
     SegmentReplicaCount segmentReplicaCount = new SegmentReplicaCount();
-    segmentReplicaCount.setRequired(0, 0);
-
     Map<SegmentId, Map<String, SegmentReplicaCount>> segmentIdSegmentReplicaCountMap = new HashMap<>();
-
     Map<String, SegmentReplicaCount> segmentReplicaCountMap = Collections.singletonMap("default", segmentReplicaCount);
+    // Cold segments with 0 replication factor.
     segmentIdSegmentReplicaCountMap.put(coldSegmentAlpha.getId(), segmentReplicaCountMap);
     segmentIdSegmentReplicaCountMap.put(coldSegmentBeta.getId(), segmentReplicaCountMap);
     SegmentReplicationStatus segmentReplicationStatus = new SegmentReplicationStatus(segmentIdSegmentReplicaCountMap);
