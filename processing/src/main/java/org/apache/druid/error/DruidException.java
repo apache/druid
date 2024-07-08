@@ -167,13 +167,24 @@ public class DruidException extends RuntimeException
 
   /**
    * Build a "defensive" exception, this is an exception that should never actually be triggered, but we are
-   * throwing it inside of a defensive check.
+   * throwing it inside a defensive check.
    *
    * @return A builder for a defensive exception.
    */
   public static DruidException defensive(String format, Object... args)
   {
     return defensive().build(format, args);
+  }
+
+  /**
+   * Build a "defensive" exception, this is an exception that should never actually be triggered, but we are
+   * throwing it inside a defensive check.
+   *
+   * @return A builder for a defensive exception.
+   */
+  public static DruidException defensive(Throwable cause, String format, Object... args)
+  {
+    return defensive().build(cause, format, args);
   }
 
   /**
