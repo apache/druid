@@ -1006,7 +1006,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         return (
           <p>
             If you do not see your source of raw data here, you can try to ingest it by submitting a{' '}
-            <ExternalLink href={`${getLink('DOCS')}/ingestion/index.html`}>
+            <ExternalLink href={`${getLink('DOCS')}/ingestion/`}>
               JSON task or supervisor spec
             </ExternalLink>
             .
@@ -1707,7 +1707,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           />
           <AnchorButton
             icon={IconNames.INFO_SIGN}
-            href={`${getLink('DOCS')}/ingestion/data-formats.html#flattenspec`}
+            href={`${getLink('DOCS')}/ingestion/data-formats#flattenspec`}
             target="_blank"
             minimal
           />
@@ -2377,12 +2377,12 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                     <p>
                       Select whether or not you want to set an explicit list of{' '}
                       <ExternalLink
-                        href={`${getLink('DOCS')}/ingestion/ingestion-spec.html#dimensionsspec`}
+                        href={`${getLink('DOCS')}/ingestion/ingestion-spec#dimensionsspec`}
                       >
                         dimensions
                       </ExternalLink>{' '}
                       and{' '}
-                      <ExternalLink href={`${getLink('DOCS')}/querying/aggregations.html`}>
+                      <ExternalLink href={`${getLink('DOCS')}/querying/aggregations`}>
                         metrics
                       </ExternalLink>
                       . Explicitly setting dimensions and metrics can lead to better compression and
@@ -2437,7 +2437,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                   <PopoverText>
                     <p>
                       If you enable{' '}
-                      <ExternalLink href={`${getLink('DOCS')}/tutorials/tutorial-rollup.html`}>
+                      <ExternalLink href={`${getLink('DOCS')}/tutorials/tutorial-rollup`}>
                         roll-up
                       </ExternalLink>
                       , Druid will try to pre-aggregate data before indexing it to conserve storage.
@@ -2446,12 +2446,12 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                     </p>
                     <p>
                       If you enable rollup, you must specify which columns are{' '}
-                      <a href={`${getLink('DOCS')}/ingestion/ingestion-spec.html#dimensionsspec`}>
+                      <a href={`${getLink('DOCS')}/ingestion/ingestion-spec#dimensionsspec`}>
                         dimensions
                       </a>{' '}
                       (fields you want to group and filter on), and which are{' '}
-                      <a href={`${getLink('DOCS')}/querying/aggregations.html`}>metrics</a> (fields
-                      you want to aggregate on).
+                      <a href={`${getLink('DOCS')}/querying/aggregations`}>metrics</a> (fields you
+                      want to aggregate on).
                     </p>
                   </PopoverText>
                 }
@@ -2708,7 +2708,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               <ExternalLink
                 href={`${getLink(
                   'DOCS',
-                )}/ingestion/schema-design.html#schema-auto-discovery-for-dimensions`}
+                )}/ingestion/schema-design#schema-auto-discovery-for-dimensions`}
               >
                 documentation
               </ExternalLink>
@@ -3283,9 +3283,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 </p>
                 <p>
                   For more information refer to the{' '}
-                  <ExternalLink
-                    href={`${getLink('DOCS')}/ingestion/concurrent-append-replace.html`}
-                  >
+                  <ExternalLink href={`${getLink('DOCS')}/ingestion/concurrent-append-replace`}>
                     documentation
                   </ExternalLink>
                   .
@@ -3465,7 +3463,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                     <ExternalLink
                       href={`${getLink(
                         'DOCS',
-                      )}/ingestion/schema-design.html#schema-auto-discovery-for-dimensions`}
+                      )}/ingestion/schema-design#schema-auto-discovery-for-dimensions`}
                     >
                       documentation
                     </ExternalLink>

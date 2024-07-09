@@ -223,13 +223,13 @@ export function getIngestionDocLink(spec: Partial<IngestionSpec>): string {
 
   switch (type) {
     case 'kafka':
-      return `${getLink('DOCS')}/development/extensions-core/kafka-ingestion.html`;
+      return `${getLink('DOCS')}/development/extensions-core/kafka-ingestion`;
 
     case 'kinesis':
-      return `${getLink('DOCS')}/development/extensions-core/kinesis-ingestion.html`;
+      return `${getLink('DOCS')}/development/extensions-core/kinesis-ingestion`;
 
     default:
-      return `${getLink('DOCS')}/ingestion/native-batch.html#input-sources`;
+      return `${getLink('DOCS')}/ingestion/native-batch#input-sources`;
   }
 }
 
@@ -585,7 +585,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
     info: (
       <p>
         Druid connects to raw data through{' '}
-        <ExternalLink href={`${getLink('DOCS')}/ingestion/native-batch.html#input-sources`}>
+        <ExternalLink href={`${getLink('DOCS')}/ingestion/native-batch#input-sources`}>
           inputSources
         </ExternalLink>
         . You can change your selected inputSource here.
@@ -610,7 +610,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
         </p>
         <p>
           For more information, refer to the documentation for{' '}
-          <ExternalLink href="https://docs.oracle.com/javase/8/docs/api/java/nio/file/FileSystem.html#getPathMatcher-java.lang.String-">
+          <ExternalLink href="https://docs.oracle.com/javase/8/docs/api/java/nio/file/FileSystem#getPathMatcher-java.lang.String-">
             FileSystem#getPathMatcher
           </ExternalLink>
           .
@@ -664,7 +664,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           required: true,
           info: (
             <>
-              <ExternalLink href={`${getLink('DOCS')}/ingestion/native-batch.html#input-sources`}>
+              <ExternalLink href={`${getLink('DOCS')}/ingestion/native-batch#input-sources`}>
                 inputSource.baseDir
               </ExternalLink>
               <p>Specifies the directory to search recursively for files to be ingested.</p>
@@ -679,14 +679,12 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           suggestions: FILTER_SUGGESTIONS,
           info: (
             <>
-              <ExternalLink
-                href={`${getLink('DOCS')}/ingestion/native-batch.html#local-input-source`}
-              >
+              <ExternalLink href={`${getLink('DOCS')}/ingestion/native-batch#local-input-source`}>
                 inputSource.filter
               </ExternalLink>
               <p>
                 A wildcard filter for files. See{' '}
-                <ExternalLink href="https://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/filefilter/WildcardFileFilter.html">
+                <ExternalLink href="https://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/filefilter/WildcardFileFilter">
                   here
                 </ExternalLink>{' '}
                 for format information. Files matching the filter criteria are considered for
@@ -728,8 +726,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           hideInMore: true,
           info: (
             <p>
-              The{' '}
-              <ExternalLink href={`${getLink('DOCS')}/querying/filters.html`}>filter</ExternalLink>{' '}
+              The <ExternalLink href={`${getLink('DOCS')}/querying/filters`}>filter</ExternalLink>{' '}
               to apply to the data as part of querying.
             </p>
           ),
@@ -789,7 +786,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
             <>
               <p>
                 JSON array of{' '}
-                <ExternalLink href={`${getLink('DOCS')}/development/extensions-core/s3.html`}>
+                <ExternalLink href={`${getLink('DOCS')}/development/extensions-core/s3`}>
                   S3 Objects
                 </ExternalLink>
                 .
@@ -952,7 +949,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
             <>
               <p>
                 JSON array of{' '}
-                <ExternalLink href={`${getLink('DOCS')}/development/extensions-core/azure.html`}>
+                <ExternalLink href={`${getLink('DOCS')}/development/extensions-core/azure`}>
                   S3 Objects
                 </ExternalLink>
                 .
@@ -1026,7 +1023,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
             <>
               <p>
                 JSON array of{' '}
-                <ExternalLink href={`${getLink('DOCS')}/development/extensions-core/google.html`}>
+                <ExternalLink href={`${getLink('DOCS')}/development/extensions-core/google`}>
                   Google Cloud Storage Objects
                 </ExternalLink>
                 .
@@ -1256,7 +1253,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           info: (
             <>
               The Amazon Kinesis stream endpoint for a region. You can find a list of endpoints{' '}
-              <ExternalLink href="https://docs.aws.amazon.com/general/latest/gr/ak.html">
+              <ExternalLink href="https://docs.aws.amazon.com/general/latest/gr/ak">
                 here
               </ExternalLink>
               .
@@ -1886,7 +1883,7 @@ export function getSecondaryPartitionRelatedFormFields(
               <p>
                 This should be the first dimension in your schema which would make it first in the
                 sort order. As{' '}
-                <ExternalLink href={`${getLink('DOCS')}/ingestion/index.html#why-partition`}>
+                <ExternalLink href={`${getLink('DOCS')}/ingestion/#why-partition`}>
                   Partitioning and sorting are best friends!
                 </ExternalLink>
               </p>
@@ -2513,7 +2510,7 @@ export function guessSimpleInputFormat(
     if (sampleDatum.startsWith('ORC')) {
       return inputFormatFromType({ type: 'orc' });
     }
-    // Avro OCF 4 byte magic header: https://avro.apache.org/docs/current/spec.html#Object+Container+Files
+    // Avro OCF 4 byte magic header: https://avro.apache.org/docs/current/spec#Object+Container+Files
     if (sampleDatum.startsWith('Obj\x01')) {
       return inputFormatFromType({ type: 'avro_ocf' });
     }
