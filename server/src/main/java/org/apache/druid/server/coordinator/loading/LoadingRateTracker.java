@@ -19,9 +19,12 @@
 
 package org.apache.druid.server.coordinator.loading;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.EvictingQueue;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.java.util.common.Stopwatch;
 
-import javax.annotation.concurrent.ThreadSafe;
+import javax.annotation.concurrent.NotThreadSafe;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -30,41 +33,91 @@ import java.util.concurrent.atomic.AtomicReference;
  * The loading rate is computed as a moving average of the last
  * {@link #MOVING_AVERAGE_WINDOW_SIZE} progress updates (or more if any of the
  * updates were smaller than {@link #MIN_ENTRY_SIZE_BYTES}).
+ * <p>
+ * This class is currently not required to be thread-safe as the caller
+ * {@link HttpLoadQueuePeon} itself ensures that the write methods of this class
+ * are only accessed by one thread at a time.
  */
-@ThreadSafe
+@NotThreadSafe
 public class LoadingRateTracker
 {
   public static final int MOVING_AVERAGE_WINDOW_SIZE = 10;
   public static final long MIN_ENTRY_SIZE_BYTES = 1_000_000_000;
 
   private final EvictingQueue<Entry> window = EvictingQueue.create(MOVING_AVERAGE_WINDOW_SIZE);
-  private final AtomicReference<Entry> windowTotal = new AtomicReference<>(new Entry());
+
+  /**
+   * Total stats for the whole window. This includes the total from the current batch as well.
+   */
+  private final AtomicReference<Entry> windowTotal = new AtomicReference<>(null);
+
+  private final AtomicReference<Entry> currentBatchTotal = new AtomicReference<>(null);
+
   private Entry currentTail;
 
-  public synchronized void updateProgress(long bytes, long millisElapsed)
+  private final Stopwatch currentBatchDuration = Stopwatch.createUnstarted();
+
+  public void startBatch()
   {
-    if (bytes > 0 && millisElapsed > 0) {
-      final Entry updatedTotal = new Entry();
-      final Entry currentTotal = windowTotal.get();
-      if (currentTotal != null) {
-        updatedTotal.increment(currentTotal.bytes, currentTotal.millisElapsed);
-      }
-
-      updatedTotal.increment(bytes, millisElapsed);
-
-      final Entry evictedHead = addToTail(bytes, millisElapsed);
-      if (evictedHead != null) {
-        updatedTotal.increment(-evictedHead.bytes, -evictedHead.millisElapsed);
-      }
-
-      windowTotal.set(updatedTotal);
+    if (isTrackingBatch()) {
+      // Do nothing
+    } else {
+      currentBatchDuration.restart();
+      currentBatchTotal.set(null);
     }
   }
 
-  public synchronized void reset()
+  public boolean isTrackingBatch()
+  {
+    return currentBatchDuration.isRunning();
+  }
+
+  public void updateBatchProgress(long bytes)
+  {
+    updateBatchProgress(bytes, currentBatchDuration.millisElapsed());
+  }
+
+  @VisibleForTesting
+  void updateBatchProgress(final long bytes, final long batchDurationMillis)
+  {
+    if (!isTrackingBatch()) {
+      throw DruidException.defensive("startBatch() must be called before tracking load progress.");
+    }
+
+    final Entry oldbatchTotal = currentBatchTotal.get();
+
+    // Update the batch total. Increment the bytes and update the batch duration.
+    final Entry updatedBatchTotal = new Entry();
+    updatedBatchTotal.bytes = bytes + (oldbatchTotal == null ? 0 : oldbatchTotal.bytes);
+    updatedBatchTotal.millisElapsed = batchDurationMillis;
+    currentBatchTotal.set(updatedBatchTotal);
+
+    // Update the overall window total. Subtract the old batch total, add the new batch total
+    final Entry updatedWindowTotal = new Entry();
+    updatedWindowTotal.incrementBy(windowTotal.get());
+    updatedWindowTotal.incrementBy(updatedBatchTotal);
+
+    if (oldbatchTotal != null) {
+      updatedWindowTotal.bytes -= oldbatchTotal.bytes;
+      updatedWindowTotal.millisElapsed -= oldbatchTotal.millisElapsed;
+    }
+
+    windowTotal.set(updatedWindowTotal);
+  }
+
+  public void completeBatch()
+  {
+    if (isTrackingBatch()) {
+      currentBatchDuration.reset();
+      addCurrentBatchToWindow();
+    }
+  }
+
+  public void reset()
   {
     window.clear();
     windowTotal.set(null);
+    currentBatchTotal.set(null);
   }
 
   /**
@@ -72,10 +125,27 @@ public class LoadingRateTracker
    */
   public long getMovingAverageLoadRateKbps()
   {
-    final Entry windowTotal = this.windowTotal.get();
-    return windowTotal == null || windowTotal.millisElapsed <= 0
-           ? 0
-           : (8 * windowTotal.bytes) / windowTotal.millisElapsed;
+    final Entry overallTotal = windowTotal.get();
+    if (overallTotal == null || overallTotal.millisElapsed <= 0) {
+      return 0;
+    } else {
+      return (8 * overallTotal.bytes) / overallTotal.millisElapsed;
+    }
+  }
+
+  private void addCurrentBatchToWindow()
+  {
+    final Entry updatedWindowTotal = new Entry();
+    updatedWindowTotal.incrementBy(windowTotal.get());
+
+    final Entry evictedHead = addToTail(currentBatchTotal.get());
+    if (evictedHead != null) {
+      updatedWindowTotal.bytes -= evictedHead.bytes;
+      updatedWindowTotal.millisElapsed -= evictedHead.millisElapsed;
+    }
+
+    windowTotal.set(updatedWindowTotal);
+    currentBatchTotal.set(null);
   }
 
   /**
@@ -83,7 +153,7 @@ public class LoadingRateTracker
    *
    * @return Old head of the queue if it was evicted, null otherwise.
    */
-  private synchronized Entry addToTail(long bytes, long millisElapsed)
+  private Entry addToTail(Entry value)
   {
     final Entry oldHead = window.peek();
 
@@ -92,7 +162,7 @@ public class LoadingRateTracker
       window.add(currentTail);
     }
 
-    currentTail.increment(bytes, millisElapsed);
+    currentTail.incrementBy(value);
     if (currentTail.bytes >= MIN_ENTRY_SIZE_BYTES) {
       currentTail = null;
     }
@@ -107,10 +177,12 @@ public class LoadingRateTracker
     long bytes;
     long millisElapsed;
 
-    void increment(long bytes, long millisElapsed)
+    void incrementBy(Entry other)
     {
-      this.bytes += bytes;
-      this.millisElapsed += millisElapsed;
+      if (other != null) {
+        this.bytes += other.bytes;
+        this.millisElapsed += other.millisElapsed;
+      }
     }
   }
 }

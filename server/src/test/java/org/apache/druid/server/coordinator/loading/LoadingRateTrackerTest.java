@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.coordinator.loading;
 
+import org.apache.druid.error.DruidException;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -36,11 +37,29 @@ public class LoadingRateTrackerTest
   }
 
   @Test
+  public void testUpdateThrowsExceptionIfBatchNotStarted()
+  {
+    DruidException e = Assert.assertThrows(
+        DruidException.class,
+        () -> tracker.updateBatchProgress(1000, 10)
+    );
+    Assert.assertEquals(
+        "startBatch() must be called before tracking load progress.",
+        e.getMessage()
+    );
+  }
+
+  @Test
   public void testRateIsZeroWhenEmpty()
   {
     Assert.assertEquals(0, tracker.getMovingAverageLoadRateKbps());
+  }
 
-    tracker.updateProgress(1000, 10);
+  @Test
+  public void testRateIsZeroAfterReset()
+  {
+    tracker.startBatch();
+    tracker.updateBatchProgress(1000, 10);
     Assert.assertEquals(8 * 1000 / 10, tracker.getMovingAverageLoadRateKbps());
 
     tracker.reset();
@@ -50,10 +69,11 @@ public class LoadingRateTrackerTest
   @Test
   public void testRateAfter2Updates()
   {
-    tracker.updateProgress(1000, 10);
+    tracker.startBatch();
+    tracker.updateBatchProgress(1000, 10);
     Assert.assertEquals(8 * 1000 / 10, tracker.getMovingAverageLoadRateKbps());
 
-    tracker.updateProgress(1000, 5);
+    tracker.updateBatchProgress(1000, 15);
     Assert.assertEquals(8 * 2000 / 15, tracker.getMovingAverageLoadRateKbps());
   }
 
@@ -64,7 +84,7 @@ public class LoadingRateTrackerTest
     final int windowSize = LoadingRateTracker.MOVING_AVERAGE_WINDOW_SIZE;
     final long minEntrySizeBytes = LoadingRateTracker.MIN_ENTRY_SIZE_BYTES;
 
-    // Add updates to fill up the window size
+    // Add batch updates to fill up the window size
     long[] updateBytes = new long[windowSize];
     long[] updateMillis = new long[windowSize];
 
@@ -77,17 +97,21 @@ public class LoadingRateTrackerTest
       totalBytes += updateBytes[i];
       totalMillis += updateMillis[i];
 
-      tracker.updateProgress(updateBytes[i], updateMillis[i]);
+      tracker.startBatch();
+      tracker.updateBatchProgress(updateBytes[i], updateMillis[i]);
       Assert.assertEquals(
           8 * totalBytes / totalMillis,
           tracker.getMovingAverageLoadRateKbps()
       );
+      tracker.completeBatch();
     }
 
-    // Add another update
+    // Add another batch update
     long latestUpdateBytes = 1;
     long latestUpdateMillis = 1 + random.nextInt(1000);
-    tracker.updateProgress(latestUpdateBytes, latestUpdateMillis);
+    tracker.startBatch();
+    tracker.updateBatchProgress(latestUpdateBytes, latestUpdateMillis);
+    tracker.completeBatch();
 
     // Verify that the average window has moved
     totalBytes = totalBytes - updateBytes[0] + latestUpdateBytes;
@@ -116,7 +140,9 @@ public class LoadingRateTrackerTest
       totalBytes += updateBytes;
       totalMillis += updateMillis;
 
-      tracker.updateProgress(updateBytes, updateMillis);
+      tracker.startBatch();
+      tracker.updateBatchProgress(updateBytes, updateMillis);
+      tracker.completeBatch();
 
       // Verify that the average window doesn't move
       Assert.assertEquals(
@@ -124,15 +150,5 @@ public class LoadingRateTrackerTest
           tracker.getMovingAverageLoadRateKbps()
       );
     }
-  }
-
-  @Test
-  public void testRateIsUnchangedIfUpdateHasZeroTime()
-  {
-    tracker.updateProgress(1000, 10);
-    Assert.assertEquals(8 * 1000 / 10, tracker.getMovingAverageLoadRateKbps());
-
-    tracker.updateProgress(1000, 0);
-    Assert.assertEquals(8 * 1000 / 10, tracker.getMovingAverageLoadRateKbps());
   }
 }
