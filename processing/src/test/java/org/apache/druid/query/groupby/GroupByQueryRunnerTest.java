@@ -356,13 +356,12 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         configSupplier,
         bufferPools.getProcessingPool(),
         groupByResourcesReservationPool,
-        TestHelper.makeJsonMapper(),
+        mapper,
         mapper,
         QueryRunnerTestHelper.NOOP_QUERYWATCHER
     );
     final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(
         groupingEngine,
-        () -> config,
         DefaultGroupByQueryMetricsFactory.instance(),
         groupByResourcesReservationPool
     );
@@ -9841,6 +9840,40 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             "numVals",
             13.041435202975777d
         )
+    );
+
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "cardinality-agg");
+  }
+
+  @Test
+  public void testGroupByDimensionOnMultiStringExpression()
+  {
+    GroupByQuery query = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setVirtualColumns(
+            new ExpressionVirtualColumn("v0", "concat(quality,market)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+        )
+        .setDimensions(new DefaultDimensionSpec("v0", "d0"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT)
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .build();
+
+    List<ResultRow> expectedResults = ImmutableList.of(
+        makeRow(query, "2011-04-01", "d0", "automotivespot", "rows", 2L),
+        makeRow(query, "2011-04-01", "d0", "businessspot", "rows", 2L),
+        makeRow(query, "2011-04-01", "d0", "entertainmentspot", "rows", 2L),
+        makeRow(query, "2011-04-01", "d0", "healthspot", "rows", 2L),
+        makeRow(query, "2011-04-01", "d0", "mezzaninespot", "rows", 2L),
+        makeRow(query, "2011-04-01", "d0", "mezzaninetotal_market", "rows", 2L),
+        makeRow(query, "2011-04-01", "d0", "mezzanineupfront", "rows", 2L),
+        makeRow(query, "2011-04-01", "d0", "newsspot", "rows", 2L),
+        makeRow(query, "2011-04-01", "d0", "premiumspot", "rows", 2L),
+        makeRow(query, "2011-04-01", "d0", "premiumtotal_market", "rows", 2L),
+        makeRow(query, "2011-04-01", "d0", "premiumupfront", "rows", 2L),
+        makeRow(query, "2011-04-01", "d0", "technologyspot", "rows", 2L),
+        makeRow(query, "2011-04-01", "d0", "travelspot", "rows", 2L)
     );
 
     Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);

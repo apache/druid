@@ -668,14 +668,12 @@ Store task logs in S3. Note that the `druid-s3-extensions` extension must be loa
 
 ##### Azure Blob Store task logs
 
-Store task logs in Azure Blob Store.
+Store task logs in Azure Blob Store. To enable this feature, load the `druid-azure-extensions` extension, and configure deep storage for Azure. Druid uses the same authentication method configured for deep storage and stores task logs in the same storage account (set in `druid.azure.account`).
 
-Note: The `druid-azure-extensions` extension must be loaded, and this uses the same storage account as the deep storage module for azure.
-
-|Property|Description|Default|
-|--------|-----------|-------|
-|`druid.indexer.logs.container`|The Azure Blob Store container to write logs to|none|
-|`druid.indexer.logs.prefix`|The path to prepend to logs|none|
+| Property | Description | Default |
+|---|---|---|
+| `druid.indexer.logs.container` | The Azure Blob Store container to write logs to. | Must be set. |
+| `druid.indexer.logs.prefix` | The path to prepend to logs. | Must be set. |
 
 ##### Google Cloud Storage task logs
 
@@ -714,7 +712,7 @@ You can configure Druid API error responses to hide internal information like th
 |`druid.server.http.showDetailedJettyErrors`|When set to true, any error from the Jetty layer / Jetty filter includes the following fields  in the JSON response: `servlet`, `message`, `url`, `status`, and `cause`, if it exists. When set to false, the JSON response only includes `message`, `url`, and `status`. The field values remain unchanged.|true|
 |`druid.server.http.errorResponseTransform.strategy`|Error response transform strategy. The strategy controls how Druid transforms error responses from Druid services. When unset or set to `none`, Druid leaves error responses unchanged.|`none`|
 
-##### Error response transform strategy
+#### Error response transform strategy
 
 You can use an error response transform strategy to transform error responses from within Druid services to hide internal information.
 When you specify an error response transform strategy other than `none`, Druid transforms the error responses from Druid services as follows:
@@ -723,12 +721,12 @@ When you specify an error response transform strategy other than `none`, Druid t
 * For any SQL query API that fails, for example `POST /druid/v2/sql/...`, Druid sets the fields `errorClass` and `host` to null. Druid applies the transformation strategy to the `errorMessage` field.
 * For any JDBC related exceptions, Druid will turn all checked exceptions into `QueryInterruptedException` otherwise druid will attempt to keep the exception as the same type. For example if the original exception isn't owned by Druid it will become `QueryInterruptedException`. Druid applies the transformation strategy to the `errorMessage` field.
 
-###### No error response transform strategy
+##### No error response transform strategy
 
 In this mode, Druid leaves error responses from underlying services unchanged and returns the unchanged errors to the API client.
 This is the default Druid error response mode. To explicitly enable this strategy, set `druid.server.http.errorResponseTransform.strategy` to `none`.
 
-###### Allowed regular expression error response transform strategy
+##### Allowed regular expression error response transform strategy
 
 In this mode, Druid validates the error responses from underlying services against a list of regular expressions. Only error messages that match a configured regular expression are returned. To enable this strategy, set `druid.server.http.errorResponseTransform.strategy` to `allowedRegex`.
 
@@ -774,7 +772,7 @@ This config is used to find the [Coordinator](../design/coordinator.md) using Cu
 
 You can configure how to announce and unannounce Znodes in ZooKeeper (using Curator). For normal operations you do not need to override any of these configs.
 
-##### Batch data segment announcer
+#### Batch data segment announcer
 
 In current Druid, multiple data segments may be announced under the same Znode.
 
@@ -1562,7 +1560,7 @@ For most types of tasks, `SegmentWriteOutMediumFactory` can be configured per-ta
 |`druid.worker.capacity`|Maximum number of tasks the Indexer can accept.|Number of available processors - 1|
 |`druid.worker.baseTaskDirs`|List of base temporary working directories, one of which is assigned per task in a round-robin fashion. This property can be used to allow usage of multiple disks for indexing. This property is recommended in place of and takes precedence over `${druid.indexer.task.baseTaskDir}`.  If this configuration is not set, `${druid.indexer.task.baseTaskDir}` is used. Example: `druid.worker.baseTaskDirs=[\"PATH1\",\"PATH2\",...]`.|null|
 |`druid.worker.baseTaskDirSize`|The total amount of bytes that can be used by tasks on any single task dir. This value is treated symmetrically across all directories, that is, if this is 500 GB and there are 3 `baseTaskDirs`, then each of those task directories is assumed to allow for 500 GB to be used and a total of 1.5 TB will potentially be available across all tasks. The actual amount of memory assigned to each task is discussed in [Configuring task storage sizes](../ingestion/tasks.md#configuring-task-storage-sizes)|`Long.MAX_VALUE`|
-|`druid.worker.globalIngestionHeapLimitBytes`|Total amount of heap available for ingestion processing. This is applied by automatically setting the `maxBytesInMemory` property on tasks.|60% of configured JVM heap|
+|`druid.worker.globalIngestionHeapLimitBytes`|Total amount of heap available for ingestion processing. This is applied by automatically setting the `maxBytesInMemory` property on tasks.|Configured max JVM heap size / 6|
 |`druid.worker.numConcurrentMerges`|Maximum number of segment persist or merge operations that can run concurrently across all tasks.|`druid.worker.capacity` / 2, rounded down|
 |`druid.indexer.task.baseDir`|Base temporary working directory.|`System.getProperty("java.io.tmpdir")`|
 |`druid.indexer.task.baseTaskDir`|Base temporary working directory for tasks.|`${druid.indexer.task.baseDir}/persistent/tasks`|
@@ -2037,7 +2035,7 @@ A simple in-memory LRU cache. Local cache resides in JVM heap memory, so if you 
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.cache.sizeInBytes`|Maximum cache size in bytes. Zero disables caching.|0|
-|`druid.cache.initialSize`|Initial size of the hashtable backing the cache.|500000|
+|`druid.cache.initialSize`|Initial size of the hash table backing the cache.|500000|
 |`druid.cache.logEvictionCount`|If non-zero, log cache eviction every `logEvictionCount` items.|0|
 
 #### Caffeine cache

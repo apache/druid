@@ -25,16 +25,16 @@ GROUP BY ();
 LogicalProject(EXPR$0=[/(CAST($0):DECIMAL(19, 1), $1)])
   LogicalAggregate(group=[{}], agg#0=[MIN($1) FILTER $3], agg#1=[COUNT($0) FILTER $2])
     LogicalProject($f1=[$0], $f0=[$1], $g_0=[=($2, 0)], $g_1=[=($2, 1)])
-      LogicalAggregate(group=[{0}], groups=[[{0}, {}]], $f0=[COUNT() FILTER $1], $g=[GROUPING($0)])
-        LogicalProject($f1=[CASE(SEARCH($0, Sarg[[2000-01-04 17:00:00..2022-01-05 17:00:00)]), $1, null:VARCHAR)], $f2=[SEARCH($0, Sarg[[2000-01-04 17:00:00..2022-01-05 17:00:00)])])
+      LogicalAggregate(group=[{1}], groups=[[{1}, {}]], $f0=[SUM($0)], $g=[GROUPING($1)])
+        LogicalProject($f0=[CASE(SEARCH($0, Sarg[[2000-01-04 17:00:00..2022-01-05 17:00:00)]), 1, 0)], $f1=[CASE(SEARCH($0, Sarg[[2000-01-04 17:00:00..2022-01-05 17:00:00)]), $1, null:VARCHAR)])
           LogicalTableScan(table=[[druid, foo]])
 
 !logicalPlan
 DruidProject(EXPR$0=[/(CAST($0):DECIMAL(19, 1), $1)], druid=[logical])
   DruidAggregate(group=[{}], agg#0=[MIN($1) FILTER $3], agg#1=[COUNT($0) FILTER $2], druid=[logical])
     DruidProject($f1=[$0], $f0=[$1], $g_0=[=($2, 0)], $g_1=[=($2, 1)], druid=[logical])
-      DruidAggregate(group=[{0}], groups=[[{0}, {}]], $f0=[COUNT() FILTER $1], $g=[GROUPING($0)], druid=[logical])
-        DruidProject($f1=[CASE(SEARCH($0, Sarg[[2000-01-04 17:00:00..2022-01-05 17:00:00)]), $1, null:VARCHAR)], $f2=[SEARCH($0, Sarg[[2000-01-04 17:00:00..2022-01-05 17:00:00)])], druid=[logical])
+      DruidAggregate(group=[{1}], groups=[[{1}, {}]], $f0=[SUM($0)], $g=[GROUPING($1)], druid=[logical])
+        DruidProject($f0=[CASE(SEARCH($0, Sarg[[2000-01-04 17:00:00..2022-01-05 17:00:00)]), 1, 0)], $f1=[CASE(SEARCH($0, Sarg[[2000-01-04 17:00:00..2022-01-05 17:00:00)]), $1, null:VARCHAR)], druid=[logical])
           DruidTableScan(table=[[druid, foo]], druid=[logical])
 
 !druidPlan
@@ -57,6 +57,11 @@ DruidProject(EXPR$0=[/(CAST($0):DECIMAL(19, 1), $1)], druid=[logical])
         "name" : "v0",
         "expression" : "case_searched(((\"__time\" >= 947005200000) && (\"__time\" < 1641402000000)),\"dim1\",null)",
         "outputType" : "STRING"
+      }, {
+        "type" : "expression",
+        "name" : "v1",
+        "expression" : "case_searched(((\"__time\" >= 947005200000) && (\"__time\" < 1641402000000)),1,0)",
+        "outputType" : "LONG"
       } ],
       "granularity" : {
         "type" : "all"
@@ -68,22 +73,9 @@ DruidProject(EXPR$0=[/(CAST($0):DECIMAL(19, 1), $1)], druid=[logical])
         "outputType" : "STRING"
       } ],
       "aggregations" : [ {
-        "type" : "filtered",
-        "aggregator" : {
-          "type" : "count",
-          "name" : "a0"
-        },
-        "filter" : {
-          "type" : "bound",
-          "dimension" : "__time",
-          "lower" : "947005200000",
-          "upper" : "1641402000000",
-          "upperStrict" : true,
-          "ordering" : {
-            "type" : "numeric"
-          }
-        },
-        "name" : "a0"
+        "type" : "longSum",
+        "name" : "a0",
+        "fieldName" : "v1"
       }, {
         "type" : "grouping",
         "name" : "a1",

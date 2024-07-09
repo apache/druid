@@ -263,12 +263,14 @@ public class IndexerControllerContext implements ControllerContext
   {
     final ImmutableMap.Builder<String, Object> taskContextOverridesBuilder = ImmutableMap.builder();
     final long maxParseExceptions = MultiStageQueryContext.getMaxParseExceptions(querySpec.getQuery().context());
+    final boolean removeNullBytes = MultiStageQueryContext.removeNullBytes(querySpec.getQuery().context());
 
     taskContextOverridesBuilder
         .put(MultiStageQueryContext.CTX_DURABLE_SHUFFLE_STORAGE, queryKernelConfig.isDurableStorage())
         .put(MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED, maxParseExceptions)
         .put(MultiStageQueryContext.CTX_IS_REINDEX, MSQControllerTask.isReplaceInputDataSourceTask(querySpec))
-        .put(MultiStageQueryContext.CTX_MAX_CONCURRENT_STAGES, queryKernelConfig.getMaxConcurrentStages());
+        .put(MultiStageQueryContext.CTX_MAX_CONCURRENT_STAGES, queryKernelConfig.getMaxConcurrentStages())
+        .put(MultiStageQueryContext.CTX_REMOVE_NULL_BYTES, removeNullBytes);
 
     // Put the lookup loading info in the task context to facilitate selective loading of lookups.
     if (controllerTaskContext.get(LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE) != null) {

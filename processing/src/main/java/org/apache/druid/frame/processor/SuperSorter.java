@@ -37,7 +37,6 @@ import it.unimi.dsi.fastutil.longs.LongRBTreeSet;
 import it.unimi.dsi.fastutil.longs.LongSortedSet;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.frame.Frame;
-import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.MemoryAllocatorFactory;
 import org.apache.druid.frame.allocation.SingleMemoryAllocatorFactory;
 import org.apache.druid.frame.channel.BlockingQueueFrameChannel;
@@ -129,6 +128,7 @@ public class SuperSorter
   private final int maxActiveProcessors;
   private final long rowLimit;
   private final String cancellationId;
+  private final boolean removeNullBytes;
 
   private final Object runWorkersLock = new Object();
 
@@ -219,7 +219,8 @@ public class SuperSorter
       final int maxChannelsPerProcessor,
       final long rowLimit,
       @Nullable final String cancellationId,
-      final SuperSorterProgressTracker superSorterProgressTracker
+      final SuperSorterProgressTracker superSorterProgressTracker,
+      final boolean removeNullBytes
   )
   {
     this.inputChannels = inputChannels;
@@ -234,6 +235,7 @@ public class SuperSorter
     this.rowLimit = rowLimit;
     this.cancellationId = cancellationId;
     this.superSorterProgressTracker = superSorterProgressTracker;
+    this.removeNullBytes = removeNullBytes;
 
     for (int i = 0; i < inputChannels.size(); i++) {
       inputChannelsToRead.add(i);
@@ -623,12 +625,13 @@ public class SuperSorter
               in,
               frameReader,
               writableChannel,
-              FrameWriters.makeFrameWriterFactory(
-                  FrameType.ROW_BASED, // Row-based frames are generally preferred as inputs to mergers
+              FrameWriters.makeRowBasedFrameWriterFactory(
+                  // Row-based frames are generally preferred as inputs to mergers
                   frameAllocatorFactory,
                   frameReader.signature(),
                   // No sortColumns, because FrameChannelMerger generates frames that are sorted all on its own
-                  Collections.emptyList()
+                  Collections.emptyList(),
+                  removeNullBytes
               ),
               sortKey,
               partitions,

@@ -1616,7 +1616,7 @@ name: Apache Calcite
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.35.0
+version: 1.37.0
 libraries:
   - org.apache.calcite: calcite-core
   - org.apache.calcite: calcite-linq4j
@@ -1634,7 +1634,7 @@ name: Apache Calcite Avatica
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.23.0
+version: 1.25.0
 libraries:
   - org.apache.calcite.avatica: avatica-core
   - org.apache.calcite.avatica: avatica-metrics
@@ -1655,7 +1655,7 @@ name: Apache Curator
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 5.3.0
+version: 5.5.0
 libraries:
   - org.apache.curator: curator-client
   - org.apache.curator: curator-framework
@@ -5094,7 +5094,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Imply Data
-version: 0.22.15
+version: 0.22.20
 
 ---
 
