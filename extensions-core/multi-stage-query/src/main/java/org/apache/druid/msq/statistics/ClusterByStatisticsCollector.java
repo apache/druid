@@ -91,6 +91,11 @@ public interface ClusterByStatisticsCollector
   ClusterByPartitions generatePartitionsWithMaxCount(int maxNumPartitions);
 
   /**
+   * Logs some information regarding the collector. This is useful in seeing which sketches were downsampled the most.
+   */
+  void logSketches();
+
+  /**
    * Returns an immutable, JSON-serializable snapshot of this collector.
    */
   ClusterByStatisticsSnapshot snapshot();
