@@ -32,6 +32,10 @@ public class SemanticUtils
 {
   private static final Map<Class<?>, Map<Class<?>, Function<?, ?>>> OVERRIDES = new LinkedHashMap<>();
 
+  /**
+   * Allows the registration of overrides, which allows overriding of already existing mappings.
+   * This allows extensions to register mappings.
+   */
   @SuppressWarnings("unused")
   public static <C, T> void registerAsOverride(Class<C> clazz, Class<T> asInterface, Function<C, T> fn)
   {

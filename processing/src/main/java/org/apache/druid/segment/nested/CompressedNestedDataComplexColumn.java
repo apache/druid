@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Doubles;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
@@ -537,9 +538,9 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
       if (arrayFieldIndex >= 0) {
         final int elementNumber = ((NestedPathArrayElement) lastPath).getIndex();
         if (elementNumber < 0) {
-          throw new IAE(
-              "Cannot make array element selector for path [%s], negative array index not supported for this selector",
-              path);
+          throw DruidException.forPersona(DruidException.Persona.USER)
+                              .ofCategory(DruidException.Category.INVALID_INPUT)
+                              .build("Cannot make array element selector for path [%s], negative array index not supported for this selector", path);
         }
         DictionaryEncodedColumn<?> col = (DictionaryEncodedColumn<?>) getColumnHolder(
             arrayField,
@@ -641,10 +642,9 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
       if (arrayFieldIndex >= 0) {
         final int elementNumber = ((NestedPathArrayElement) lastPath).getIndex();
         if (elementNumber < 0) {
-          throw new IAE(
-              "Cannot make array element selector for path [%s], negative array index not supported for this selector",
-              path
-          );
+          throw DruidException.forPersona(DruidException.Persona.USER)
+                              .ofCategory(DruidException.Category.INVALID_INPUT)
+                              .build("Cannot make array element selector for path [%s], negative array index not supported for this selector", path);
         }
         DictionaryEncodedColumn<?> col = (DictionaryEncodedColumn<?>) getColumnHolder(
             arrayField,
@@ -715,10 +715,9 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
       if (arrayFieldIndex >= 0) {
         final int elementNumber = ((NestedPathArrayElement) lastPath).getIndex();
         if (elementNumber < 0) {
-          throw new IAE(
-              "Cannot make array element selector for path [%s], negative array index not supported for this selector",
-              path
-          );
+          throw DruidException.forPersona(DruidException.Persona.USER)
+                              .ofCategory(DruidException.Category.INVALID_INPUT)
+                              .build("Cannot make array element selector for path [%s], negative array index not supported for this selector", path);
         }
         DictionaryEncodedColumn<?> col = (DictionaryEncodedColumn<?>) getColumnHolder(
             arrayField,
