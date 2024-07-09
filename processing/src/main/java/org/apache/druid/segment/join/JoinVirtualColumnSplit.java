@@ -58,12 +58,18 @@ public class JoinVirtualColumnSplit
     final Set<String> unresolvedNames = new HashSet<>();
 
     final Set<VirtualColumn> unresolvedSet = new HashSet<>();
-    // do a first pass to eliminate those which depend directly on the base table
-    for (VirtualColumn vc : virtualColumns.getVirtualColumns()) {
-      if (baseColumnNames.containsAll(vc.requiredColumns()) || baseFilterColumns.contains(vc.getOutputName())) {
-        preJoinVirtualColumns.add(vc);
-        baseColumnNames.add(vc.getOutputName());
-        final Set<VirtualColumn> dependencies = resolveDependencies(virtualColumns, vc);
+    // do a first pass to eliminate those which depend directly on the base table or are required by base table filters
+    for (VirtualColumn virtualColumn : virtualColumns.getVirtualColumns()) {
+      if (baseColumnNames.containsAll(virtualColumn.requiredColumns())) {
+        // virtual column depends on physical columns, or virtual columns which have already been added to the 'pre' set
+        preJoinVirtualColumns.add(virtualColumn);
+        baseColumnNames.add(virtualColumn.getOutputName());
+      } else if (baseFilterColumns.contains(virtualColumn.getOutputName())) {
+        // virtual column is required by a base table filter clause
+        preJoinVirtualColumns.add(virtualColumn);
+        baseColumnNames.add(virtualColumn.getOutputName());
+        // also resolve all virtual column dependencies it has and add them to the base table set
+        final Set<VirtualColumn> dependencies = resolveDependencies(virtualColumns, virtualColumn);
         for (VirtualColumn dep : dependencies) {
           preJoinVirtualColumns.add(dep);
           postJoinVirtualColumns.remove(dep);
@@ -71,22 +77,29 @@ public class JoinVirtualColumnSplit
           baseColumnNames.add(dep.getOutputName());
         }
       } else {
-        unresolvedSet.add(vc);
-        unresolvedNames.add(vc.getOutputName());
+        unresolvedSet.add(virtualColumn);
+        unresolvedNames.add(virtualColumn.getOutputName());
       }
     }
     final Deque<VirtualColumn> unresolved = new ArrayDeque<>(unresolvedSet);
+    // divide any remaining virtual columns into the 'pre' and 'post' sets.
     while (!unresolved.isEmpty()) {
       final VirtualColumn virtualColumn = unresolved.poll();
+      // when a virtual column is added to the 'pre' group, it is also added to baseColumnNames, so if all the inputs
+      // are available there we add to that group
       if (baseColumnNames.containsAll(virtualColumn.requiredColumns())) {
         preJoinVirtualColumns.add(virtualColumn);
         baseColumnNames.add(virtualColumn.getOutputName());
         unresolvedNames.remove(virtualColumn.getOutputName());
       } else {
+        // if no required inputs are still pending resolution, we add them to the 'post' join set. However, if
+        // there are still pending dependency virtual columns to resolve, add back to the queue to try to resolve
+        // the next virtual column into the 'pre' or 'post' sets and come back to this one later
         boolean hasUndecidedDepencies = false;
         for (String columnName : virtualColumn.requiredColumns()) {
           if (unresolvedNames.contains(columnName)) {
             hasUndecidedDepencies = true;
+            break;
           }
         }
         if (hasUndecidedDepencies) {
