@@ -1797,31 +1797,56 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
                    .size(0)
                    .build();
 
+    DataSegment singleColdSegment =
+        DataSegment.builder()
+                   .dataSource("cold")
+                   .interval(Intervals.of("2000/P2Y"))
+                   .version("1")
+                   .shardSpec(new LinearShardSpec(0))
+                   .size(0)
+                   .build();
+
     ImmutableMap.Builder<SegmentId, SegmentMetadata> segmentStatsMap = new ImmutableMap.Builder<>();
-    segmentStatsMap.put(coldSegment.getId(), new SegmentMetadata(20L, "fp"));
+    segmentStatsMap.put(coldSegment.getId(), new SegmentMetadata(20L, "foo"));
+    segmentStatsMap.put(singleColdSegment.getId(), new SegmentMetadata(20L, "cold"));
     ImmutableMap.Builder<String, SchemaPayload> schemaPayloadMap = new ImmutableMap.Builder<>();
     schemaPayloadMap.put(
-        "fp",
+        "foo",
         new SchemaPayload(RowSignature.builder()
                                       .add("dim1", ColumnType.STRING)
                                       .add("c1", ColumnType.STRING)
                                       .add("c2", ColumnType.LONG)
                                       .build())
     );
+    schemaPayloadMap.put(
+        "cold",
+        new SchemaPayload(
+            RowSignature.builder()
+                              .add("f1", ColumnType.STRING)
+                              .add("f2", ColumnType.DOUBLE)
+                              .build()
+        )
+    );
+
     segmentSchemaCache.updateFinalizedSegmentSchema(
         new SegmentSchemaCache.FinalizedSegmentSchemaInfo(segmentStatsMap.build(), schemaPayloadMap.build())
     );
 
-    ImmutableDruidDataSource druidDataSource =
-        new ImmutableDruidDataSource(
-            coldSegment.getDataSource(),
-            Collections.emptyMap(),
-            Collections.singletonMap(coldSegment.getId(), coldSegment)
-        );
+    List<ImmutableDruidDataSource> druidDataSources = new ArrayList<>();
+    druidDataSources.add(new ImmutableDruidDataSource(
+        coldSegment.getDataSource(),
+        Collections.emptyMap(),
+        Collections.singletonMap(coldSegment.getId(), coldSegment)
+    ));
+    druidDataSources.add(new ImmutableDruidDataSource(
+        singleColdSegment.getDataSource(),
+        Collections.emptyMap(),
+        Collections.singletonMap(singleColdSegment.getId(), singleColdSegment)
+    ));
 
     Mockito.when(
                sqlSegmentsMetadataManager.getImmutableDataSourcesWithAllUsedSegments())
-           .thenReturn(Collections.singletonList(druidDataSource));
+           .thenReturn(druidDataSources);
 
     CoordinatorSegmentMetadataCache schema = new CoordinatorSegmentMetadataCache(
         getQueryLifecycleFactory(walker),
@@ -1836,13 +1861,11 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         segmentsMetadataManagerConfigSupplier
     );
 
+    Map<SegmentId, Map<String, SegmentReplicaCount>> replicationCountMap = new HashMap<>();
     // Cold segment with 0 replication factor.
-    SegmentReplicationStatus segmentReplicationStatus =
-        new SegmentReplicationStatus(
-            Collections.singletonMap(
-                coldSegment.getId(),
-                Collections.singletonMap("default", new SegmentReplicaCount())
-            ));
+    replicationCountMap.put(coldSegment.getId(), Collections.singletonMap("default", new SegmentReplicaCount()));
+    replicationCountMap.put(singleColdSegment.getId(), Collections.singletonMap("default", new SegmentReplicaCount()));
+    SegmentReplicationStatus segmentReplicationStatus = new SegmentReplicationStatus(replicationCountMap);
 
     schema.updateSegmentReplicationStatus(segmentReplicationStatus);
 
@@ -1856,16 +1879,44 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
 
     schema.coldDatasourceSchemaExec();
 
+    // verify that cold schema for both `foo` and `cold` is present
+    RowSignature fooSignature = schema.getDatasource("foo").getRowSignature();
+    List<String> columnNames = fooSignature.getColumnNames();
+    Assert.assertEquals("dim1", columnNames.get(0));
+    Assert.assertEquals(ColumnType.STRING, fooSignature.getColumnType(columnNames.get(0)).get());
+
+    Assert.assertEquals("c1", columnNames.get(1));
+    Assert.assertEquals(ColumnType.STRING, fooSignature.getColumnType(columnNames.get(1)).get());
+
+    Assert.assertEquals("c2", columnNames.get(2));
+    Assert.assertEquals(ColumnType.LONG, fooSignature.getColumnType(columnNames.get(2)).get());
+
+    RowSignature coldSignature = schema.getDatasource("cold").getRowSignature();
+    columnNames = coldSignature.getColumnNames();
+    Assert.assertEquals("f1", columnNames.get(0));
+    Assert.assertEquals(ColumnType.STRING, coldSignature.getColumnType(columnNames.get(0)).get());
+
+    Assert.assertEquals("f2", columnNames.get(1));
+    Assert.assertEquals(ColumnType.DOUBLE, coldSignature.getColumnType(columnNames.get(1)).get());
+
     Set<SegmentId> segmentIds = new HashSet<>();
     segmentIds.add(segment1.getId());
     segmentIds.add(segment2.getId());
 
     schema.refresh(segmentIds, new HashSet<>());
 
+    coldSignature = schema.getDatasource("cold").getRowSignature();
+    columnNames = coldSignature.getColumnNames();
+    Assert.assertEquals("f1", columnNames.get(0));
+    Assert.assertEquals(ColumnType.STRING, coldSignature.getColumnType(columnNames.get(0)).get());
+
+    Assert.assertEquals("f2", columnNames.get(1));
+    Assert.assertEquals(ColumnType.DOUBLE, coldSignature.getColumnType(columnNames.get(1)).get());
+
     verifyFooDSSchema(schema, 8);
     RowSignature rowSignature = schema.getDatasource("foo").getRowSignature();
 
-    List<String> columnNames = rowSignature.getColumnNames();
+    columnNames = rowSignature.getColumnNames();
     Assert.assertEquals("c1", columnNames.get(6));
     Assert.assertEquals(ColumnType.STRING, rowSignature.getColumnType(columnNames.get(6)).get());
 
@@ -1883,12 +1934,24 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     segmentIds.add(segment2.getId());
 
     schema.refresh(segmentIds, new HashSet<>());
+    verifyFooDSSchema(schema, 6);
+
+    Assert.assertNull(schema.getDatasource("cold"));
+
     schema.coldDatasourceSchemaExec();
+
+    RowSignature coldSignature = schema.getDatasource("cold").getRowSignature();
+    List<String> columnNames = coldSignature.getColumnNames();
+    Assert.assertEquals("f1", columnNames.get(0));
+    Assert.assertEquals(ColumnType.STRING, coldSignature.getColumnType(columnNames.get(0)).get());
+
+    Assert.assertEquals("f2", columnNames.get(1));
+    Assert.assertEquals(ColumnType.DOUBLE, coldSignature.getColumnType(columnNames.get(1)).get());
 
     verifyFooDSSchema(schema, 8);
     RowSignature rowSignature = schema.getDatasource("foo").getRowSignature();
 
-    List<String> columnNames = rowSignature.getColumnNames();
+    columnNames = rowSignature.getColumnNames();
     Assert.assertEquals("c1", columnNames.get(6));
     Assert.assertEquals(ColumnType.STRING, rowSignature.getColumnType(columnNames.get(6)).get());
 

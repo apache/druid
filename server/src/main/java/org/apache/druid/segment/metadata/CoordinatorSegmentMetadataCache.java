@@ -538,7 +538,6 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
     Collection<ImmutableDruidDataSource> immutableDataSources =
         sqlSegmentsMetadataManager.getImmutableDataSourcesWithAllUsedSegments();
 
-
     Set<String> dataSources = new HashSet<>();
 
     int datasources = 0;
