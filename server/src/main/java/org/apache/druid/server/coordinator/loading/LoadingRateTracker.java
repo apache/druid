@@ -51,65 +51,75 @@ public class LoadingRateTracker
    */
   private final AtomicReference<Entry> windowTotal = new AtomicReference<>(null);
 
-  private final AtomicReference<Entry> currentBatchTotal = new AtomicReference<>(null);
-
+  private Entry currentBatchTotal;
   private Entry currentTail;
 
   private final Stopwatch currentBatchDuration = Stopwatch.createUnstarted();
 
-  public void startBatch()
+  /**
+   * Marks the start of loading of a batch of segments. This should be called when
+   * the first request in a batch is sent to the server.
+   */
+  public void markBatchLoadingStarted()
   {
-    if (isTrackingBatch()) {
+    if (isLoadingBatch()) {
       // Do nothing
-    } else {
-      currentBatchDuration.restart();
-      currentBatchTotal.set(null);
+      return;
+    }
+
+    currentBatchDuration.restart();
+    currentBatchTotal = new Entry();
+
+    // Add a fresh entry at the tail for this batch
+    final Entry evictedHead = addNewEntryIfTailIsFull();
+    if (evictedHead != null) {
+      final Entry delta = new Entry();
+      delta.bytes -= evictedHead.bytes;
+      delta.millisElapsed -= evictedHead.millisElapsed;
+
+      windowTotal.updateAndGet(total -> total.incrementBy(delta));
     }
   }
 
-  public boolean isTrackingBatch()
+  public boolean isLoadingBatch()
   {
     return currentBatchDuration.isRunning();
   }
 
-  public void updateBatchProgress(long bytes)
+  /**
+   * Adds the given number of bytes to the total data successfully loaded in the
+   * current batch. This causes an update of the current load rate.
+   */
+  public void incrementBytesLoadedInBatch(long loadedBytes)
   {
-    updateBatchProgress(bytes, currentBatchDuration.millisElapsed());
+    incrementBytesLoadedInBatch(loadedBytes, currentBatchDuration.millisElapsed());
   }
 
   @VisibleForTesting
-  void updateBatchProgress(final long bytes, final long batchDurationMillis)
+  void incrementBytesLoadedInBatch(final long bytes, final long batchDurationMillis)
   {
-    if (!isTrackingBatch()) {
-      throw DruidException.defensive("startBatch() must be called before tracking load progress.");
+    if (!isLoadingBatch()) {
+      throw DruidException.defensive("markBatchLoadingStarted() must be called before tracking load progress.");
     }
 
-    final Entry oldbatchTotal = currentBatchTotal.get();
+    final Entry delta = new Entry();
+    delta.bytes = bytes;
+    delta.millisElapsed = batchDurationMillis - currentBatchTotal.millisElapsed;
 
-    // Update the batch total. Increment the bytes and update the batch duration.
-    final Entry updatedBatchTotal = new Entry();
-    updatedBatchTotal.bytes = bytes + (oldbatchTotal == null ? 0 : oldbatchTotal.bytes);
-    updatedBatchTotal.millisElapsed = batchDurationMillis;
-    currentBatchTotal.set(updatedBatchTotal);
-
-    // Update the overall window total. Subtract the old batch total, add the new batch total
-    final Entry updatedWindowTotal = new Entry();
-    updatedWindowTotal.incrementBy(windowTotal.get());
-    updatedWindowTotal.incrementBy(updatedBatchTotal);
-
-    if (oldbatchTotal != null) {
-      updatedWindowTotal.bytes -= oldbatchTotal.bytes;
-      updatedWindowTotal.millisElapsed -= oldbatchTotal.millisElapsed;
-    }
-
-    windowTotal.set(updatedWindowTotal);
+    currentTail.incrementBy(delta);
+    currentBatchTotal.incrementBy(delta);
+    windowTotal.updateAndGet(total -> total.incrementBy(delta));
   }
 
-  public void completeBatch()
+  /**
+   * Marks the end of loading of a batch of segments. This method should be called
+   * when all the requests in the batch have been processed by the server.
+   */
+  public void markBatchLoadingFinished()
   {
-    if (isTrackingBatch()) {
+    if (isLoadingBatch()) {
       currentBatchDuration.reset();
-      addCurrentBatchToWindow();
+      currentBatchTotal = null;
     }
   }
 
@@ -117,7 +127,9 @@ public class LoadingRateTracker
   {
     window.clear();
     windowTotal.set(null);
-    currentBatchTotal.set(null);
+    currentTail = null;
+    currentBatchTotal = null;
+    currentBatchDuration.reset();
   }
 
   /**
@@ -133,38 +145,18 @@ public class LoadingRateTracker
     }
   }
 
-  private void addCurrentBatchToWindow()
-  {
-    final Entry updatedWindowTotal = new Entry();
-    updatedWindowTotal.incrementBy(windowTotal.get());
-
-    final Entry evictedHead = addToTail(currentBatchTotal.get());
-    if (evictedHead != null) {
-      updatedWindowTotal.bytes -= evictedHead.bytes;
-      updatedWindowTotal.millisElapsed -= evictedHead.millisElapsed;
-    }
-
-    windowTotal.set(updatedWindowTotal);
-    currentBatchTotal.set(null);
-  }
-
   /**
-   * Adds the given value at the tail of the queue.
+   * Adds a fresh entry to the queue if the current tail entry is already full.
    *
    * @return Old head of the queue if it was evicted, null otherwise.
    */
-  private Entry addToTail(Entry value)
+  private Entry addNewEntryIfTailIsFull()
   {
     final Entry oldHead = window.peek();
 
-    if (currentTail == null) {
+    if (currentTail == null || currentTail.bytes >= MIN_ENTRY_SIZE_BYTES) {
       currentTail = new Entry();
       window.add(currentTail);
-    }
-
-    currentTail.incrementBy(value);
-    if (currentTail.bytes >= MIN_ENTRY_SIZE_BYTES) {
-      currentTail = null;
     }
 
     // Compare if the oldHead and the newHead are the same object (not equals)
@@ -177,12 +169,13 @@ public class LoadingRateTracker
     long bytes;
     long millisElapsed;
 
-    void incrementBy(Entry other)
+    Entry incrementBy(Entry delta)
     {
-      if (other != null) {
-        this.bytes += other.bytes;
-        this.millisElapsed += other.millisElapsed;
+      if (delta != null) {
+        this.bytes += delta.bytes;
+        this.millisElapsed += delta.millisElapsed;
       }
+      return this;
     }
   }
 }

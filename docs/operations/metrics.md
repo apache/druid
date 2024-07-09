@@ -325,7 +325,7 @@ These metrics are emitted by the Druid Coordinator in every run of the correspon
 |`segment/dropSkipped/count`|Number of segments that could not be dropped from any server.|`dataSource`, `tier`, `description`|Varies|
 |`segment/loadQueue/size`|Size in bytes of segments to load.|`server`|Varies|
 |`segment/loadQueue/count`|Number of segments to load.|`server`|Varies|
-|`segment/loading/rateKbps`|Moving average rate of segment loading on a server in kbps.|`server`|Varies|
+|`segment/loading/rateKbps`|Moving average rate of segment loading on a server in kbps (1000 bits per second).|`server`|Varies|
 |`segment/dropQueue/count`|Number of segments to drop.|`server`|Varies|
 |`segment/loadQueue/assigned`|Number of segments assigned for load or drop to the load queue of a server.|`dataSource`, `server`|Varies|
 |`segment/loadQueue/success`|Number of segment assignments that completed successfully.|`dataSource`, `server`|Varies|

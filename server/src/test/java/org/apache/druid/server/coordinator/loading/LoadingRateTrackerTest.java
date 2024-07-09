@@ -41,10 +41,10 @@ public class LoadingRateTrackerTest
   {
     DruidException e = Assert.assertThrows(
         DruidException.class,
-        () -> tracker.updateBatchProgress(1000, 10)
+        () -> tracker.incrementBytesLoadedInBatch(1000, 10)
     );
     Assert.assertEquals(
-        "startBatch() must be called before tracking load progress.",
+        "markBatchLoadingStarted() must be called before tracking load progress.",
         e.getMessage()
     );
   }
@@ -58,8 +58,8 @@ public class LoadingRateTrackerTest
   @Test
   public void testRateIsZeroAfterReset()
   {
-    tracker.startBatch();
-    tracker.updateBatchProgress(1000, 10);
+    tracker.markBatchLoadingStarted();
+    tracker.incrementBytesLoadedInBatch(1000, 10);
     Assert.assertEquals(8 * 1000 / 10, tracker.getMovingAverageLoadRateKbps());
 
     tracker.reset();
@@ -67,14 +67,51 @@ public class LoadingRateTrackerTest
   }
 
   @Test
-  public void testRateAfter2Updates()
+  public void testRateAfter2UpdatesInBatch()
   {
-    tracker.startBatch();
-    tracker.updateBatchProgress(1000, 10);
+    tracker.markBatchLoadingStarted();
+    tracker.incrementBytesLoadedInBatch(1000, 10);
     Assert.assertEquals(8 * 1000 / 10, tracker.getMovingAverageLoadRateKbps());
 
-    tracker.updateBatchProgress(1000, 15);
+    tracker.incrementBytesLoadedInBatch(1000, 15);
     Assert.assertEquals(8 * 2000 / 15, tracker.getMovingAverageLoadRateKbps());
+  }
+
+  @Test
+  public void testRateAfter2Batches()
+  {
+    tracker.markBatchLoadingStarted();
+    tracker.incrementBytesLoadedInBatch(1000, 10);
+    Assert.assertEquals(8 * 1000 / 10, tracker.getMovingAverageLoadRateKbps());
+    tracker.markBatchLoadingFinished();
+
+    tracker.markBatchLoadingStarted();
+    tracker.incrementBytesLoadedInBatch(1000, 5);
+    Assert.assertEquals(8 * 2000 / 15, tracker.getMovingAverageLoadRateKbps());
+    tracker.markBatchLoadingFinished();
+  }
+
+  @Test
+  public void test100UpdatesInABatch()
+  {
+    final Random random = new Random(1001);
+
+    tracker.markBatchLoadingStarted();
+
+    long totalUpdateBytes = 0;
+    long monoticBatchDuration = 0;
+    for (int i = 0; i < 100; ++i) {
+      long updateBytes = 1 + random.nextInt(1000);
+      monoticBatchDuration = 1 + random.nextInt(10);
+
+      tracker.incrementBytesLoadedInBatch(updateBytes, monoticBatchDuration);
+
+      totalUpdateBytes += updateBytes;
+      Assert.assertEquals(8 * totalUpdateBytes / monoticBatchDuration, tracker.getMovingAverageLoadRateKbps());
+    }
+
+    tracker.markBatchLoadingFinished();
+    Assert.assertEquals(8 * totalUpdateBytes / monoticBatchDuration, tracker.getMovingAverageLoadRateKbps());
   }
 
   @Test
@@ -97,21 +134,21 @@ public class LoadingRateTrackerTest
       totalBytes += updateBytes[i];
       totalMillis += updateMillis[i];
 
-      tracker.startBatch();
-      tracker.updateBatchProgress(updateBytes[i], updateMillis[i]);
+      tracker.markBatchLoadingStarted();
+      tracker.incrementBytesLoadedInBatch(updateBytes[i], updateMillis[i]);
       Assert.assertEquals(
           8 * totalBytes / totalMillis,
           tracker.getMovingAverageLoadRateKbps()
       );
-      tracker.completeBatch();
+      tracker.markBatchLoadingFinished();
     }
 
     // Add another batch update
     long latestUpdateBytes = 1;
     long latestUpdateMillis = 1 + random.nextInt(1000);
-    tracker.startBatch();
-    tracker.updateBatchProgress(latestUpdateBytes, latestUpdateMillis);
-    tracker.completeBatch();
+    tracker.markBatchLoadingStarted();
+    tracker.incrementBytesLoadedInBatch(latestUpdateBytes, latestUpdateMillis);
+    tracker.markBatchLoadingFinished();
 
     // Verify that the average window has moved
     totalBytes = totalBytes - updateBytes[0] + latestUpdateBytes;
@@ -140,9 +177,9 @@ public class LoadingRateTrackerTest
       totalBytes += updateBytes;
       totalMillis += updateMillis;
 
-      tracker.startBatch();
-      tracker.updateBatchProgress(updateBytes, updateMillis);
-      tracker.completeBatch();
+      tracker.markBatchLoadingStarted();
+      tracker.incrementBytesLoadedInBatch(updateBytes, updateMillis);
+      tracker.markBatchLoadingFinished();
 
       // Verify that the average window doesn't move
       Assert.assertEquals(

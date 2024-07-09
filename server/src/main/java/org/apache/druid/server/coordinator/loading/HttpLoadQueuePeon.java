@@ -192,7 +192,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
       }
 
       if (segmentsToLoad.isEmpty()) {
-        loadingRateTracker.completeBatch();
+        loadingRateTracker.markBatchLoadingFinished();
       }
     }
 
@@ -207,8 +207,8 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
 
     try {
       log.trace("Sending [%d] load/drop requests to Server[%s].", newRequests.size(), serverId);
-      if (!loadingRateTracker.isTrackingBatch()) {
-        loadingRateTracker.startBatch();
+      if (!loadingRateTracker.isLoadingBatch()) {
+        loadingRateTracker.markBatchLoadingStarted();
       }
 
       BytesAccumulatingResponseHandler responseHandler = new BytesAccumulatingResponseHandler();
@@ -264,7 +264,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
                         }
                       }
 
-                      loadingRateTracker.updateBatchProgress(successfulLoadSize);
+                      loadingRateTracker.incrementBytesLoadedInBatch(successfulLoadSize);
                     }
                   }
                   catch (Exception ex) {
