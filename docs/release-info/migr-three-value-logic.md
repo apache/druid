@@ -23,12 +23,12 @@ sidebar_label: Three-value logic
   ~ under the License.
 -->
 
-In Apache Druid 28.0.0, the default [null handling](../querying/sql-data-types.md#null-values) mode changed.
-Now, to be compliant with the SQL standard, Druid stores segments in a SQL compatible null handling mode by default.
+In Apache Druid 28.0.0, the default [null handling](../querying/sql-data-types.md#null-values) mode changed to be compliant with the SQL standard:
 
 The SQL standard defines any comparison to null to be unknown.
 Therefore, according to this three-value logic, `x <> 'some value'` only returns non-null values.
 
+Now, Druid stores segments in a SQL compatible null handling mode by default.
 For Druid's columnar format, this means string columns always store the null value as id 0, the first position in the value dictionary and an associated entry in the bitmap value indexes used to filter null values.
 Numeric columns also store a null value bitmap index to indicate the null valued rows, which is used to null check aggregations and for filter matching null values.
 
@@ -39,7 +39,7 @@ The default Druid configurations for SQL compatible null handling mode is as fol
 * `druid.generic.useThreeValueLogicForNativeFilters=true` 
 
 Note Druid has always applied three-value logic by default to expressions.
-Therefore, queries such as `(x+y) <> ‘some value’` already exclude null values prior.
+Therefore, queries such as `(x+y) <> ‘some value’` exclude null values even prior to Druid 28.0.0.
 
 At query time, Druid treats data from segments written with the legacy two-value logic as follows:
 - Empty strings, `''` are non-null values.
@@ -66,7 +66,7 @@ Note that these configurations are deprecated and scheduled for removal.
 
 ## Replicate Legacy null handling and two-value logic
 
-If you want to reatain Druid's legacy behavior, which is not compliant with the SQL standard, update your queries.
+If you want to retain Druid's legacy behavior, which is not compliant with the SQL standard, update your queries.
 
 The following indicate some strategies to include null values when querying for inequality:
 
