@@ -22,10 +22,14 @@ package org.apache.druid.server.http;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.audit.AuditManager;
+import org.apache.druid.client.indexing.ClientMSQContext;
 import org.apache.druid.common.config.ConfigManager;
 import org.apache.druid.common.config.JacksonConfigManager;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.ErrorResponse;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.metadata.MetadataStorageConnector;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
@@ -206,6 +210,7 @@ public class CoordinatorCompactionConfigsResourceTest
     Assert.assertEquals(2, newConfigCaptor.getValue().getCompactionConfigs().size());
     Assert.assertEquals(OLD_CONFIG, newConfigCaptor.getValue().getCompactionConfigs().get(0));
     Assert.assertEquals(newConfig, newConfigCaptor.getValue().getCompactionConfigs().get(1));
+    Assert.assertEquals(newConfig.getEngine(), newConfigCaptor.getValue().getEngine());
   }
 
   @Test
@@ -407,6 +412,115 @@ public class CoordinatorCompactionConfigsResourceTest
     Assert.assertNotNull(newConfigCaptor.getValue());
     Assert.assertEquals(1, newConfigCaptor.getValue().getCompactionConfigs().size());
     Assert.assertEquals(newConfig, newConfigCaptor.getValue().getCompactionConfigs().get(0));
+    Assert.assertEquals(newConfig.getEngine(), newConfigCaptor.getValue().getCompactionConfigs().get(0).getEngine());
+  }
+
+  @Test
+  public void testAddOrUpdateCompactionConfigWithoutExistingConfigAndEngineAsNull()
+  {
+    Mockito.when(mockConnector.lookup(
+                     ArgumentMatchers.anyString(),
+                     ArgumentMatchers.eq("name"),
+                     ArgumentMatchers.eq("payload"),
+                     ArgumentMatchers.eq(CoordinatorCompactionConfig.CONFIG_KEY)
+                 )
+    ).thenReturn(null);
+    Mockito.when(mockJacksonConfigManager.convertByteToConfig(
+                     ArgumentMatchers.eq(null),
+                     ArgumentMatchers.eq(CoordinatorCompactionConfig.class),
+                     ArgumentMatchers.eq(CoordinatorCompactionConfig.empty())
+                 )
+    ).thenReturn(CoordinatorCompactionConfig.empty());
+    final ArgumentCaptor<byte[]> oldConfigCaptor = ArgumentCaptor.forClass(byte[].class);
+    final ArgumentCaptor<CoordinatorCompactionConfig> newConfigCaptor = ArgumentCaptor.forClass(
+        CoordinatorCompactionConfig.class);
+    Mockito.when(mockJacksonConfigManager.set(
+                     ArgumentMatchers.eq(CoordinatorCompactionConfig.CONFIG_KEY),
+                     oldConfigCaptor.capture(),
+                     newConfigCaptor.capture(),
+                     ArgumentMatchers.any()
+                 )
+    ).thenReturn(ConfigManager.SetResult.ok());
+
+    final DataSourceCompactionConfig newConfig = new DataSourceCompactionConfig(
+        "dataSource",
+        null,
+        500L,
+        null,
+        new Period(3600),
+        null,
+        new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null),
+        null,
+        null,
+        null,
+        null,
+        null,
+        ImmutableMap.of("key", "val")
+    );
+    Response ignore = coordinatorCompactionConfigsResource.addOrUpdateCompactionConfig(
+        newConfig,
+        mockHttpServletRequest
+    );
+    Assert.assertEquals(null, newConfigCaptor.getValue().getCompactionConfigs().get(0).getEngine());
+  }
+
+  @Test
+  public void testAddOrUpdateCompactionConfigWithInvalidMaxNumTasksForMSQEngine()
+  {
+    Mockito.when(mockConnector.lookup(
+                     ArgumentMatchers.anyString(),
+                     ArgumentMatchers.eq("name"),
+                     ArgumentMatchers.eq("payload"),
+                     ArgumentMatchers.eq(CoordinatorCompactionConfig.CONFIG_KEY)
+                 )
+    ).thenReturn(null);
+    Mockito.when(mockJacksonConfigManager.convertByteToConfig(
+                     ArgumentMatchers.eq(null),
+                     ArgumentMatchers.eq(CoordinatorCompactionConfig.class),
+                     ArgumentMatchers.eq(CoordinatorCompactionConfig.empty())
+                 )
+    ).thenReturn(CoordinatorCompactionConfig.empty());
+    final ArgumentCaptor<byte[]> oldConfigCaptor = ArgumentCaptor.forClass(byte[].class);
+    final ArgumentCaptor<CoordinatorCompactionConfig> newConfigCaptor = ArgumentCaptor.forClass(
+        CoordinatorCompactionConfig.class);
+    Mockito.when(mockJacksonConfigManager.set(
+                     ArgumentMatchers.eq(CoordinatorCompactionConfig.CONFIG_KEY),
+                     oldConfigCaptor.capture(),
+                     newConfigCaptor.capture(),
+                     ArgumentMatchers.any()
+                 )
+    ).thenReturn(ConfigManager.SetResult.ok());
+
+    int maxNumTasks = 1;
+
+    final DataSourceCompactionConfig newConfig = new DataSourceCompactionConfig(
+        "dataSource",
+        null,
+        500L,
+        null,
+        new Period(3600),
+        null,
+        new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null),
+        null,
+        null,
+        null,
+        null,
+        CompactionEngine.MSQ,
+        ImmutableMap.of(ClientMSQContext.CTX_MAX_NUM_TASKS, maxNumTasks)
+    );
+    Response response = coordinatorCompactionConfigsResource.addOrUpdateCompactionConfig(
+        newConfig,
+        mockHttpServletRequest
+    );
+    Assert.assertEquals(DruidException.Category.INVALID_INPUT.getExpectedStatus(), response.getStatus());
+    Assert.assertEquals(
+        StringUtils.format(
+            "Compaction config not supported. Reason[MSQ context maxNumTasks [%,d] cannot be less than 2, "
+            + "since at least 1 controller and 1 worker is necessary.].",
+            maxNumTasks
+        ),
+        ((ErrorResponse) response.getEntity()).getUnderlyingException().getMessage()
+    );
   }
 
   @Test

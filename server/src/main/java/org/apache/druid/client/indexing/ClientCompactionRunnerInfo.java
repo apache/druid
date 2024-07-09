@@ -32,6 +32,7 @@ import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -93,7 +94,7 @@ public class ClientCompactionRunnerInfo
     if (compactionEngine == CompactionEngine.NATIVE) {
       return new CompactionConfigValidationResult(true, null);
     } else {
-      return msqEngineSupportsCompactionConfig(newConfig);
+      return compactionConfigSupportedByMSQEngine(newConfig);
     }
   }
 
@@ -104,21 +105,23 @@ public class ClientCompactionRunnerInfo
    * <li>maxTotalRows in DynamicPartitionsSpec.</li>
    * <li>rollup set to false in granularitySpec when metricsSpec is specified. Null is treated as true.</li>
    * <li>queryGranularity set to ALL in granularitySpec.</li>
+   * <li>Each metric has output column name same as the input name.</li>
    * </ul>
    */
-  private static CompactionConfigValidationResult msqEngineSupportsCompactionConfig(DataSourceCompactionConfig newConfig)
+  private static CompactionConfigValidationResult compactionConfigSupportedByMSQEngine(DataSourceCompactionConfig newConfig)
   {
     List<CompactionConfigValidationResult> validationResults = new ArrayList<>();
     if (newConfig.getTuningConfig() != null) {
-      validationResults.add(validatePartitionsSpecForMsq(newConfig.getTuningConfig().getPartitionsSpec()));
+      validationResults.add(validatePartitionsSpecForMSQ(newConfig.getTuningConfig().getPartitionsSpec()));
     }
     if (newConfig.getGranularitySpec() != null) {
-      validationResults.add(validateRollupForMsq(
+      validationResults.add(validateRollupForMSQ(
           newConfig.getMetricsSpec(),
           newConfig.getGranularitySpec().isRollup()
       ));
     }
-    validationResults.add(validateMaxNumTasksForMsq(newConfig.getTaskContext()));
+    validationResults.add(validateMaxNumTasksForMSQ(newConfig.getTaskContext()));
+    validationResults.add(validateMetricsSpecForMSQ(newConfig.getMetricsSpec()));
     return validationResults.stream()
                             .filter(result -> !result.isValid())
                             .findFirst()
@@ -128,7 +131,7 @@ public class ClientCompactionRunnerInfo
   /**
    * Validate that partitionSpec is either 'dynamic` or 'range', and if 'dynamic', ensure 'maxTotalRows' is null.
    */
-  public static CompactionConfigValidationResult validatePartitionsSpecForMsq(PartitionsSpec partitionsSpec)
+  public static CompactionConfigValidationResult validatePartitionsSpecForMSQ(PartitionsSpec partitionsSpec)
   {
     if (!(partitionsSpec instanceof DimensionRangePartitionsSpec
           || partitionsSpec instanceof DynamicPartitionsSpec)) {
@@ -153,7 +156,7 @@ public class ClientCompactionRunnerInfo
   /**
    * Validate rollup is set to false in granularitySpec when metricsSpec is specified.
    */
-  public static CompactionConfigValidationResult validateRollupForMsq(
+  public static CompactionConfigValidationResult validateRollupForMSQ(
       AggregatorFactory[] metricsSpec,
       @Nullable Boolean isRollup
   )
@@ -169,14 +172,12 @@ public class ClientCompactionRunnerInfo
 
   /**
    * Validate maxNumTasks >= 2 in context.
-   * @param context
-   * @return
    */
-  public static CompactionConfigValidationResult validateMaxNumTasksForMsq(Map<String, Object> context)
+  public static CompactionConfigValidationResult validateMaxNumTasksForMSQ(Map<String, Object> context)
   {
     if (context != null) {
       int maxNumTasks = QueryContext.of(context)
-                                    .getInt(ClientMsqContext.CTX_MAX_NUM_TASKS, ClientMsqContext.DEFAULT_MAX_NUM_TASKS);
+                                    .getInt(ClientMSQContext.CTX_MAX_NUM_TASKS, ClientMSQContext.DEFAULT_MAX_NUM_TASKS);
       if (maxNumTasks < 2) {
         return new CompactionConfigValidationResult(false,
                                                     "MSQ context maxNumTasks [%,d] cannot be less than 2, "
@@ -186,5 +187,30 @@ public class ClientCompactionRunnerInfo
       }
     }
     return new CompactionConfigValidationResult(true, null);
+  }
+
+  /**
+   * Validate each metric has output column name same as the input name.
+   */
+  public static CompactionConfigValidationResult validateMetricsSpecForMSQ(AggregatorFactory[] metricsSpec)
+  {
+    if (metricsSpec == null) {
+      return new CompactionConfigValidationResult(true, null);
+    }
+    return Arrays.stream(metricsSpec)
+                 .filter(aggregatorFactory ->
+                             !(aggregatorFactory.requiredFields().isEmpty()
+                               || aggregatorFactory.requiredFields().size() == 1
+                                  && aggregatorFactory.requiredFields()
+                                                      .get(0)
+                                                      .equals(aggregatorFactory.getName())))
+                 .findFirst()
+                 .map(aggregatorFactory ->
+                          new CompactionConfigValidationResult(
+                              false,
+                              "Different name[%s] and fieldName(s)[%s] for aggregator unsupported for MSQ engine.",
+                              aggregatorFactory.getName(),
+                              aggregatorFactory.requiredFields()
+                          )).orElse(new CompactionConfigValidationResult(true, null));
   }
 }

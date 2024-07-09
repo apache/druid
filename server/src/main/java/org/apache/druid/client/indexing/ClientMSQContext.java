@@ -24,7 +24,7 @@ package org.apache.druid.client.indexing;
  * compaction config at the coordinator. The values used here should be kept in sync with those in
  * {@link org.apache.druid.msq.util.MultiStageQueryContext}
  */
-public class ClientMsqContext
+public class ClientMSQContext
 {
   public static final String CTX_MAX_NUM_TASKS = "maxNumTasks";
   public static final int DEFAULT_MAX_NUM_TASKS = 2;

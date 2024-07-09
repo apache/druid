@@ -299,6 +299,13 @@ public class CompactionStatus
       }
     }
 
+    /**
+     * Compares combining factories of configured and actual metricsSpec as MSQ engine in particular persists
+     * the combining factory in the dataschema, and combining factory of combining factory is effectively a no-op.
+     * Conversion to combining factory  is a lossy conversion since combining factories typically
+     * use aggregator factory's output col name as both its input and output col names -- leading to false
+     * positives -- but it is acceptable for compaction.
+     */
     private CompactionStatus metricsSpecIsUpToDate()
     {
       final AggregatorFactory[] configuredMetricsSpec = compactionConfig.getMetricsSpec();

@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.SegmentsSplitHintSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.HumanReadableBytes;
@@ -83,6 +84,7 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
     Assert.assertEquals(config.getTuningConfig(), fromJson.getTuningConfig());
     Assert.assertEquals(config.getTaskContext(), fromJson.getTaskContext());
     Assert.assertEquals(config.getGranularitySpec(), fromJson.getGranularitySpec());
+    Assert.assertEquals(config.getEngine(), fromJson.getEngine());
   }
 
   @Test
@@ -100,7 +102,7 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
         null,
         null,
         null,
-        null,
+        CompactionEngine.MSQ,
         ImmutableMap.of("key", "val")
     );
     final String json = OBJECT_MAPPER.writeValueAsString(config);
@@ -113,6 +115,7 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
     Assert.assertEquals(config.getSkipOffsetFromLatest(), fromJson.getSkipOffsetFromLatest());
     Assert.assertEquals(config.getTuningConfig(), fromJson.getTuningConfig());
     Assert.assertEquals(config.getTaskContext(), fromJson.getTaskContext());
+    Assert.assertEquals(config.getEngine(), fromJson.getEngine());
   }
 
   @Test
@@ -150,7 +153,7 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
         null,
         null,
         null,
-        null,
+        CompactionEngine.NATIVE,
         ImmutableMap.of("key", "val")
     );
     final String json = OBJECT_MAPPER.writeValueAsString(config);
@@ -163,6 +166,7 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
     Assert.assertEquals(config.getSkipOffsetFromLatest(), fromJson.getSkipOffsetFromLatest());
     Assert.assertEquals(config.getTuningConfig(), fromJson.getTuningConfig());
     Assert.assertEquals(config.getTaskContext(), fromJson.getTaskContext());
+    Assert.assertEquals(config.getEngine(), fromJson.getEngine());
   }
 
   @Test

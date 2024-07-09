@@ -33,7 +33,7 @@ import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
-import org.apache.druid.client.indexing.ClientMsqContext;
+import org.apache.druid.client.indexing.ClientMSQContext;
 import org.apache.druid.client.indexing.ClientTaskQuery;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.common.guava.FutureUtils;
@@ -46,7 +46,6 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.LockFilterPolicy;
-import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
@@ -91,9 +90,10 @@ public class CompactSegments implements CoordinatorCustomDuty
   private static final Predicate<TaskStatusPlus> IS_COMPACTION_TASK =
       status -> null != status && COMPACTION_TASK_TYPE.equals(status.getType());
 
-  // An artificial limit imposed just to avoid taking up too many compaction task slots for a single MSQ compaction
-  // task. Can be updated if needed.
-  private static final int MAX_TASK_SLOTS_FOR_MSQ_COMPACTION_TASK = 8;
+  /**
+   * Limit to ensure that an MSQ compaction task doesn't take up all task slots in a cluster.
+   */
+  static final int MAX_TASK_SLOTS_FOR_MSQ_COMPACTION_TASK = 5;
 
   private final CompactionSegmentSearchPolicy policy;
   private final OverlordClient overlordClient;
@@ -320,7 +320,9 @@ public class CompactSegments implements CoordinatorCustomDuty
    */
   static int findMaxNumTaskSlotsUsedByOneMsqCompactionTask(@Nullable Map<String, Object> context)
   {
-    return QueryContext.of(context).getInt(ClientMsqContext.CTX_MAX_NUM_TASKS, ClientMsqContext.DEFAULT_MAX_NUM_TASKS);
+    return context == null
+           ? ClientMSQContext.DEFAULT_MAX_NUM_TASKS
+           : (int) context.getOrDefault(ClientMSQContext.CTX_MAX_NUM_TASKS, ClientMSQContext.DEFAULT_MAX_NUM_TASKS);
   }
 
 
@@ -498,17 +500,19 @@ public class CompactSegments implements CoordinatorCustomDuty
       int slotsRequiredForCurrentTask;
 
       if (compactionEngine == CompactionEngine.MSQ) {
-        if (autoCompactionContext.containsKey(ClientMsqContext.CTX_MAX_NUM_TASKS)) {
-          slotsRequiredForCurrentTask = (int) autoCompactionContext.get(ClientMsqContext.CTX_MAX_NUM_TASKS);
+        if (autoCompactionContext.containsKey(ClientMSQContext.CTX_MAX_NUM_TASKS)) {
+          slotsRequiredForCurrentTask = (int) autoCompactionContext.get(ClientMSQContext.CTX_MAX_NUM_TASKS);
         } else {
           // Since MSQ needs all task slots for the calculated #tasks to be available upfront, allot all available
           // compaction slots (upto a max of MAX_TASK_SLOTS_FOR_MSQ_COMPACTION) to current compaction task to avoid
           // stalling. Setting "taskAssignment" to "auto" has the problem of not being able to determine the actual
           // count, which is required for subsequent tasks.
-          slotsRequiredForCurrentTask = Math.min(numAvailableCompactionTaskSlots,
-                                                 MAX_TASK_SLOTS_FOR_MSQ_COMPACTION_TASK
+          slotsRequiredForCurrentTask = Math.min(
+              // Update the slots to 2 (min required for MSQ) if only 1 slot is available.
+              numAvailableCompactionTaskSlots == 1 ? 2 : numAvailableCompactionTaskSlots,
+              MAX_TASK_SLOTS_FOR_MSQ_COMPACTION_TASK
           );
-          autoCompactionContext.put(ClientMsqContext.CTX_MAX_NUM_TASKS, slotsRequiredForCurrentTask);
+          autoCompactionContext.put(ClientMSQContext.CTX_MAX_NUM_TASKS, slotsRequiredForCurrentTask);
         }
       } else {
         slotsRequiredForCurrentTask = findMaxNumTaskSlotsUsedByOneNativeCompactionTask(config.getTuningConfig());

@@ -111,13 +111,14 @@ public class MSQCompactionRunner implements CompactionRunner
 
   /**
    * Checks if the provided compaction config is supported by MSQ. The same validation is done at
-   * {@link ClientCompactionRunnerInfo#msqEngineSupportsCompactionConfig}
+   * {@link ClientCompactionRunnerInfo#MSQEngineSupportsCompactionConfig}
    * The following configs aren't supported:
    * <ul>
    * <li>partitionsSpec of type HashedParititionsSpec.</li>
    * <li>maxTotalRows in DynamicPartitionsSpec.</li>
    * <li>rollup set to false in granularitySpec when metricsSpec is specified. Null is treated as true.</li>
    * <li>queryGranularity set to ALL in granularitySpec.</li>
+   * <li>Each metric has output column name same as the input name.</li>
    * </ul>
    */
   @Override
@@ -127,17 +128,18 @@ public class MSQCompactionRunner implements CompactionRunner
   {
     List<CompactionConfigValidationResult> validationResults = new ArrayList<>();
     if (compactionTask.getTuningConfig() != null) {
-      validationResults.add(ClientCompactionRunnerInfo.validatePartitionsSpecForMsq(
+      validationResults.add(ClientCompactionRunnerInfo.validatePartitionsSpecForMSQ(
           compactionTask.getTuningConfig().getPartitionsSpec())
       );
     }
     if (compactionTask.getGranularitySpec() != null) {
-      validationResults.add(ClientCompactionRunnerInfo.validateRollupForMsq(
+      validationResults.add(ClientCompactionRunnerInfo.validateRollupForMSQ(
           compactionTask.getMetricsSpec(),
           compactionTask.getGranularitySpec().isRollup()
       ));
     }
-    validationResults.add(ClientCompactionRunnerInfo.validateMaxNumTasksForMsq(compactionTask.getContext()));
+    validationResults.add(ClientCompactionRunnerInfo.validateMaxNumTasksForMSQ(compactionTask.getContext()));
+    validationResults.add(ClientCompactionRunnerInfo.validateMetricsSpecForMSQ(compactionTask.getMetricsSpec()));
     return validationResults.stream()
                             .filter(result -> !result.isValid())
                             .findFirst()

@@ -27,6 +27,7 @@ import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.java.util.common.HumanReadableBytes;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
@@ -34,24 +35,23 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.data.CompressionFactory;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
+import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
 import org.joda.time.Duration;
 import org.joda.time.Period;
+import org.junit.Assert;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.Map;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-
 public class ClientCompactionRunnerInfoTest
 {
   @Test
-  public void testHashedPartitionsSpecs()
+  public void testMSQEngineWithHashedPartitionsSpecIsInvalid()
   {
     DataSourceCompactionConfig compactionConfig = createCompactionConfig(
         new HashedPartitionsSpec(100, null, null),
@@ -59,12 +59,23 @@ public class ClientCompactionRunnerInfoTest
         null,
         null
     );
-    assertFalse(ClientCompactionRunnerInfo.validateCompactionConfig(compactionConfig, CompactionEngine.NATIVE)
-                                          .isValid());
+    CompactionConfigValidationResult validationResult = ClientCompactionRunnerInfo.validateCompactionConfig(
+        compactionConfig,
+        CompactionEngine.NATIVE
+    );
+    Assert.assertFalse(validationResult.isValid());
+    Assert.assertEquals(
+        StringUtils.format(
+            "Invalid partitionsSpec type[%s] for MSQ engine."
+            + " Type must be either 'dynamic' or 'range'.",
+            HashedPartitionsSpec.class.getSimpleName()
+        ),
+        validationResult.getReason()
+    );
   }
 
   @Test
-  public void testrInvalidDynamicPartitionsSpecs()
+  public void testMSQEngineWithMaxTotalRowsIsInvalid()
   {
     DataSourceCompactionConfig compactionConfig = createCompactionConfig(
         new DynamicPartitionsSpec(100, 100L),
@@ -72,12 +83,19 @@ public class ClientCompactionRunnerInfoTest
         null,
         null
     );
-    assertFalse(ClientCompactionRunnerInfo.validateCompactionConfig(compactionConfig, CompactionEngine.NATIVE)
-                                          .isValid());
+    CompactionConfigValidationResult validationResult = ClientCompactionRunnerInfo.validateCompactionConfig(
+        compactionConfig,
+        CompactionEngine.NATIVE
+    );
+    Assert.assertFalse(validationResult.isValid());
+    Assert.assertEquals(StringUtils.format(
+        "maxTotalRows[%d] in DynamicPartitionsSpec not supported for MSQ engine.",
+        100
+    ), validationResult.getReason());
   }
 
   @Test
-  public void testDynamicPartitionsSpecs()
+  public void testMSQEngineWithDynamicPartitionsSpecIsValid()
   {
     DataSourceCompactionConfig compactionConfig = createCompactionConfig(
         new DynamicPartitionsSpec(100, null),
@@ -85,12 +103,12 @@ public class ClientCompactionRunnerInfoTest
         null,
         null
     );
-    assertTrue(ClientCompactionRunnerInfo.validateCompactionConfig(compactionConfig, CompactionEngine.NATIVE)
+    Assert.assertTrue(ClientCompactionRunnerInfo.validateCompactionConfig(compactionConfig, CompactionEngine.NATIVE)
                                          .isValid());
   }
 
   @Test
-  public void testDimensionRangePartitionsSpecs()
+  public void testMSQEngineWithDimensionRangePartitionsSpecIsValid()
   {
     DataSourceCompactionConfig compactionConfig = createCompactionConfig(
         new DimensionRangePartitionsSpec(100, null, ImmutableList.of("partitionDim"), false),
@@ -98,12 +116,12 @@ public class ClientCompactionRunnerInfoTest
         null,
         null
     );
-    assertTrue(ClientCompactionRunnerInfo.validateCompactionConfig(compactionConfig, CompactionEngine.NATIVE)
+    Assert.assertTrue(ClientCompactionRunnerInfo.validateCompactionConfig(compactionConfig, CompactionEngine.NATIVE)
                                          .isValid());
   }
 
   @Test
-  public void testQueryGranularityAll()
+  public void testMSQEngineWithQueryGranularityAllIsValid()
   {
     DataSourceCompactionConfig compactionConfig = createCompactionConfig(
         new DynamicPartitionsSpec(3, null),
@@ -111,12 +129,12 @@ public class ClientCompactionRunnerInfoTest
         new UserCompactionTaskGranularityConfig(Granularities.ALL, Granularities.ALL, false),
         null
     );
-    assertTrue(ClientCompactionRunnerInfo.validateCompactionConfig(compactionConfig, CompactionEngine.NATIVE)
+    Assert.assertTrue(ClientCompactionRunnerInfo.validateCompactionConfig(compactionConfig, CompactionEngine.NATIVE)
                                           .isValid());
   }
 
   @Test
-  public void testRollupFalseWithMetricsSpec()
+  public void testMSQEngineWithRollupFalseWithMetricsSpecIsInValid()
   {
     DataSourceCompactionConfig compactionConfig = createCompactionConfig(
         new DynamicPartitionsSpec(3, null),
@@ -124,12 +142,43 @@ public class ClientCompactionRunnerInfoTest
         new UserCompactionTaskGranularityConfig(null, null, false),
         new AggregatorFactory[]{new LongSumAggregatorFactory("sum", "sum")}
     );
-    assertFalse(ClientCompactionRunnerInfo.validateCompactionConfig(compactionConfig, CompactionEngine.NATIVE)
-                                          .isValid());
+    CompactionConfigValidationResult validationResult = ClientCompactionRunnerInfo.validateCompactionConfig(
+        compactionConfig,
+        CompactionEngine.NATIVE
+    );
+    Assert.assertFalse(validationResult.isValid());
+    Assert.assertEquals(
+        "rollup in granularitySpec must be set to True if metricsSpec is specifed for MSQ engine.",
+        validationResult.getReason()
+    );
   }
 
   @Test
-  public void testRollupNullWithMetricsSpec()
+  public void testMSQEngineWithUnsupportedMetricsSpecIsInValid()
+  {
+    final String inputColName = "added";
+    final String outputColName = "sum_added";
+    DataSourceCompactionConfig compactionConfig = createCompactionConfig(
+        new DynamicPartitionsSpec(3, null),
+        Collections.emptyMap(),
+        new UserCompactionTaskGranularityConfig(null, null, null),
+        new AggregatorFactory[]{new LongSumAggregatorFactory(outputColName, inputColName)}
+    );
+    CompactionConfigValidationResult validationResult = ClientCompactionRunnerInfo.validateCompactionConfig(
+        compactionConfig,
+        CompactionEngine.NATIVE
+    );
+    Assert.assertFalse(validationResult.isValid());
+    Assert.assertEquals(
+        StringUtils.format("Different name[%s] and fieldName(s)[%s] for aggregator unsupported for MSQ engine.",
+                           outputColName,
+                           Collections.singletonList(inputColName)),
+        validationResult.getReason()
+    );
+  }
+
+  @Test
+  public void testMSQEngineWithRollupNullWithMetricsSpecIsValid()
   {
     DataSourceCompactionConfig compactionConfig = createCompactionConfig(
         new DynamicPartitionsSpec(3, null),
@@ -137,7 +186,7 @@ public class ClientCompactionRunnerInfoTest
         new UserCompactionTaskGranularityConfig(null, null, null),
         new AggregatorFactory[]{new LongSumAggregatorFactory("sum", "sum")}
     );
-    assertTrue(ClientCompactionRunnerInfo.validateCompactionConfig(compactionConfig, CompactionEngine.NATIVE)
+    Assert.assertTrue(ClientCompactionRunnerInfo.validateCompactionConfig(compactionConfig, CompactionEngine.NATIVE)
                                          .isValid());
   }
 
