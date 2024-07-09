@@ -605,11 +605,15 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
     // remove any stale datasource from the map
     coldSchemaTable.keySet().retainAll(dataSources);
 
+    String executionStatsLog = String.format(
+        "Cold schema processing was slow, taking [%d] millis. "
+        + "Processed [%d] datasources, [%d] segments & [%d] datasourceWithColdSegments.",
+        stopwatch.millisElapsed(), datasources, segments, datasourceWithColdSegments
+    );
     if (stopwatch.millisElapsed() > COLD_SCHEMA_SLOWNESS_THRESHOLD_MILLIS) {
-      log.info("Cold schema processing was slow, taking [%d] millis. "
-               + "Processed [%d] datasources, [%d] segments & [%d] datasourceWithColdSegments.",
-               stopwatch.millisElapsed(), datasources, segments, datasourceWithColdSegments
-      );
+      log.info(executionStatsLog);
+    } else {
+      log.debug(executionStatsLog);
     }
   }
 
