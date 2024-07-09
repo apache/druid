@@ -192,6 +192,8 @@ export interface ExecutionValue {
 }
 
 export class Execution {
+  static USE_TASK_PAYLOAD = true;
+  static USE_TASK_REPORTS = true;
   static INLINE_DATASOURCE_MARKER = '__query_select';
 
   static validAsyncState(status: string | undefined): status is AsyncState {

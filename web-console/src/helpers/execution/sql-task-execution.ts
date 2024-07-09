@@ -25,9 +25,6 @@ import { Api } from '../../singletons';
 import { deepGet, DruidError, IntermediateQueryState, QueryManager } from '../../utils';
 import { maybeGetClusterCapacity } from '../capacity';
 
-const USE_TASK_PAYLOAD = true;
-const USE_TASK_REPORTS = true;
-
 // some executionMode has to be set on the /druid/v2/sql/statements API
 function ensureExecutionModeIsSet(context: QueryContext | undefined): QueryContext {
   if (typeof context?.executionMode === 'string') return context;
@@ -161,7 +158,7 @@ export async function getTaskExecution(
 
   let execution: Execution | undefined;
 
-  if (USE_TASK_REPORTS) {
+  if (Execution.USE_TASK_REPORTS) {
     let taskReport: any;
     try {
       taskReport = (
@@ -198,7 +195,7 @@ export async function getTaskExecution(
   }
 
   let taskPayload = taskPayloadOverride;
-  if (USE_TASK_PAYLOAD && !taskPayload) {
+  if (Execution.USE_TASK_PAYLOAD && !taskPayload) {
     try {
       taskPayload = (
         await Api.instance.get(`/druid/indexer/v1/task/${encodedId}`, {
