@@ -1,7 +1,7 @@
 ---
 id: migr-three-value-logic
-title: "Migration guide: three-value logic and null handling"
-sidebar_label: Three-value logic
+title: "Migration guide: SQL compliant mode"
+sidebar_label: SQL compliant mode
 ---
 
 <!--
@@ -29,8 +29,6 @@ The SQL standard defines any comparison to null to be unknown.
 Therefore, according to this three-value logic, `x <> 'some value'` only returns non-null values.
 
 Now, Druid stores segments in a SQL compatible null handling mode by default.
-For Druid's columnar format, this means string columns always store the null value as id 0, the first position in the value dictionary and an associated entry in the bitmap value indexes used to filter null values.
-Numeric columns also store a null value bitmap index to indicate the null valued rows, which is used to null check aggregations and for filter matching null values.
 
 The default Druid configurations for SQL compatible null handling mode is as follows:
 
@@ -64,7 +62,17 @@ The Druid configurations for the deprecated legacy mode are as follows:
 
 Note that these configurations are deprecated and scheduled for removal.
 
-## Replicate Legacy null handling and two-value logic
+## Migrate to SQL compliant mode
+
+Do I want to handle at ingestion or at query time? If at ingestion time, you are changing/losing data
+
+If you get rid of nulls at ingestion time, there are no nulls for three-value logic.
+
+
+If you don't want null, you can transform at ingest time to get rid of null values using COALESE OR NVL (numbers), NULLIF - emtpy strings to nulls
+
+What to do w/ ingestion is same as queries. For native a little bit different (Transform spec)
+
 
 If you want to retain Druid's legacy behavior, which is not compliant with the SQL standard, update your queries.
 
@@ -74,3 +82,5 @@ The following indicate some strategies to include null values when querying for 
   `x <> 'some value'` becomes `(x <> 'some value' OR x IS NULL)`.
 - Use COALESCE to replace nulls with a value:
   `x + 1` becomes ` COALESCE(numeric_value, 0)=1`
+
+  Ingestion time: If you don't want null values, you can use COALESCE or NVL
