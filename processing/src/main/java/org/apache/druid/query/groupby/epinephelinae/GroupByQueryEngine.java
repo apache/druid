@@ -211,6 +211,7 @@ public class GroupByQueryEngine
       final List<DimensionSpec> dimensions
   )
   {
+    boolean hasImplicitUnnest = false;
     for (DimensionSpec dimension : dimensions) {
       if (dimension.mustDecorate()) {
         // DimensionSpecs that decorate may turn singly-valued columns into multi-valued selectors.
@@ -219,16 +220,16 @@ public class GroupByQueryEngine
       }
 
       if (dimension.getOutputType().isArray()) {
-        return false;
+        continue;
       }
 
       // Now check column capabilities, which must be present and explicitly not multi-valued and not arrays
       final ColumnCapabilities capabilities = inspector.getColumnCapabilities(dimension.getDimension());
-      if (capabilities != null && capabilities.hasMultipleValues().isFalse() && !capabilities.isArray()) {
+      if (capabilities != null && capabilities.hasMultipleValues().isMaybeTrue() && !capabilities.isArray()) {
         return false;
       }
     }
-    return true;
+    return !hasImplicitUnnest;
   }
 
   private abstract static class GroupByEngineIterator<KeyType> implements Iterator<ResultRow>, Closeable

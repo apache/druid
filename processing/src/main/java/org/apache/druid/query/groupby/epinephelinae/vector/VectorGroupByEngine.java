@@ -29,6 +29,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.aggregation.AggregatorAdapters;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.Filter;
@@ -204,9 +205,7 @@ public class VectorGroupByEngine
     return adapter.canVectorize(filter, query.getVirtualColumns(), false)
            && canVectorizeDimensions(inspector, query.getDimensions())
            && VirtualColumns.shouldVectorize(query, query.getVirtualColumns(), adapter)
-           && query.getAggregatorSpecs()
-                   .stream()
-                   .allMatch(aggregatorFactory -> aggregatorFactory.canVectorize(inspector));
+           && canVectorizeAggregators(inspector, query.getAggregatorSpecs());
   }
 
   private static boolean canVectorizeDimensions(
@@ -233,9 +232,22 @@ public class VectorGroupByEngine
 
       // Now check column capabilities.
       final ColumnCapabilities columnCapabilities = inspector.getColumnCapabilities(dimension.getDimension());
-      if (columnCapabilities != null && columnCapabilities.hasMultipleValues().isFalse()) {
+      if (columnCapabilities != null && columnCapabilities.hasMultipleValues().isMaybeTrue()) {
         // null here currently means the column does not exist, nil columns can be vectorized
         // multi-value columns implicit unnest is not currently supported in the vector processing engine
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private static boolean canVectorizeAggregators(
+      final ColumnInspector inspector,
+      final List<AggregatorFactory> aggregatorFactories
+  )
+  {
+    for (AggregatorFactory aggregatorFactory : aggregatorFactories) {
+      if (!aggregatorFactory.canVectorize(inspector)) {
         return false;
       }
     }

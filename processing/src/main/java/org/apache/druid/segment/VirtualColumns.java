@@ -59,7 +59,7 @@ import java.util.stream.Collectors;
 /**
  * Class allowing lookup and usage of virtual columns.
  */
-public final class VirtualColumns implements Cacheable
+public class VirtualColumns implements Cacheable
 {
   public static final VirtualColumns EMPTY = new VirtualColumns(
       ImmutableList.of(),
