@@ -50,6 +50,10 @@ Other lookup types are available as extensions, including:
 - Globally cached lookups from local files, remote URIs, or JDBC through [lookups-cached-global](./lookups-cached-global.md).
 - Globally cached lookups from a Kafka topic through [kafka-extraction-namespace](./kafka-extraction-namespace.md).
 
+:::info
+[MVDs](../querying/multi-value-dimensions.md) are not supported as keys in lookups. 
+:::
+
 Query Syntax
 ------------
 
