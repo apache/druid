@@ -50,10 +50,10 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Similar to {@link SegmentLoadDropHandlerTest}. This class includes tests that cover the
+ * Similar to {@link SegmentBootstrapperTest}. This class includes tests that cover the
  * storage location layer as well.
  */
-public class SegmentLoadDropHandlerCacheTest
+public class SegmentBootstrapperCacheTest
 {
   private static final long MAX_SIZE = 1000L;
   private static final long SEGMENT_SIZE = 100L;
@@ -101,8 +101,8 @@ public class SegmentLoadDropHandlerCacheTest
         objectMapper
     );
     segmentManager = new SegmentManager(cacheManager);
-    segmentAnnouncer = new TestDataSegmentAnnouncer();
     serverAnnouncer = new TestDataServerAnnouncer();
+    segmentAnnouncer = new TestDataSegmentAnnouncer();
     coordinatorClient = new TestCoordinatorClient();
     emitter = new StubServiceEmitter();
     EmittingLogger.registerEmitter(emitter);
@@ -112,10 +112,11 @@ public class SegmentLoadDropHandlerCacheTest
   public void testLoadStartStopWithEmptyLocations() throws IOException
   {
     final List<StorageLocation> emptyLocations = ImmutableList.of();
+    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig();
     segmentManager = new SegmentManager(
         new SegmentLocalCacheManager(
             emptyLocations,
-            new SegmentLoaderConfig(),
+            loaderConfig,
             new LeastBytesUsedStorageLocationSelectorStrategy(emptyLocations),
             TestIndex.INDEX_IO,
             objectMapper
@@ -123,19 +124,26 @@ public class SegmentLoadDropHandlerCacheTest
     );
 
     final SegmentLoadDropHandler loadDropHandler = new SegmentLoadDropHandler(
-        new SegmentLoaderConfig(),
+        loaderConfig,
+        segmentAnnouncer,
+        segmentManager
+    );
+
+    final SegmentBootstrapper bootstrapper = new SegmentBootstrapper(
+        loadDropHandler,
+        loaderConfig,
         segmentAnnouncer,
         serverAnnouncer,
         segmentManager,
-        new ServerTypeConfig(ServerType.BROKER),
+        new ServerTypeConfig(ServerType.HISTORICAL),
         coordinatorClient,
         emitter
     );
 
-    loadDropHandler.start();
-    Assert.assertEquals(0, serverAnnouncer.getObservedCount());
+    bootstrapper.start();
+    Assert.assertEquals(1, serverAnnouncer.getObservedCount());
 
-    loadDropHandler.stop();
+    bootstrapper.stop();
     Assert.assertEquals(0, serverAnnouncer.getObservedCount());
   }
 
@@ -145,17 +153,24 @@ public class SegmentLoadDropHandlerCacheTest
     final SegmentLoadDropHandler loadDropHandler = new SegmentLoadDropHandler(
         loaderConfig,
         segmentAnnouncer,
+        segmentManager
+    );
+
+    final SegmentBootstrapper bootstrapper = new SegmentBootstrapper(
+        loadDropHandler,
+        loaderConfig,
+        segmentAnnouncer,
         serverAnnouncer,
         segmentManager,
-        new ServerTypeConfig(ServerType.BROKER),
+        new ServerTypeConfig(ServerType.HISTORICAL),
         coordinatorClient,
         emitter
     );
 
-    loadDropHandler.start();
+    bootstrapper.start();
     Assert.assertEquals(1, serverAnnouncer.getObservedCount());
 
-    loadDropHandler.stop();
+    bootstrapper.stop();
     Assert.assertEquals(0, serverAnnouncer.getObservedCount());
   }
 
@@ -178,6 +193,13 @@ public class SegmentLoadDropHandlerCacheTest
     final SegmentLoadDropHandler loadDropHandler = new SegmentLoadDropHandler(
         loaderConfig,
         segmentAnnouncer,
+        segmentManager
+    );
+
+    final SegmentBootstrapper bootstrapper = new SegmentBootstrapper(
+        loadDropHandler,
+        loaderConfig,
+        segmentAnnouncer,
         serverAnnouncer,
         segmentManager,
         new ServerTypeConfig(ServerType.HISTORICAL),
@@ -185,8 +207,7 @@ public class SegmentLoadDropHandlerCacheTest
         emitter
     );
 
-    // Start the load drop handler
-    loadDropHandler.start();
+    bootstrapper.start();
     Assert.assertEquals(1, serverAnnouncer.getObservedCount());
 
     // Verify the expected announcements
@@ -202,7 +223,7 @@ public class SegmentLoadDropHandlerCacheTest
     loadDropHandler.addSegment(newSegment, null);
     Assert.assertTrue(segmentAnnouncer.getObservedSegments().contains(newSegment));
 
-    loadDropHandler.stop();
+    bootstrapper.stop();
     Assert.assertEquals(0, serverAnnouncer.getObservedCount());
   }
 }
