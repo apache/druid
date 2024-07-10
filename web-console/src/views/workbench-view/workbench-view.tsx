@@ -395,7 +395,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
             WorkbenchQuery.blank()
               .changeQueryString(converted.queryString)
               .changeQueryContext(converted.queryContext || {}),
-            'Convert ' + getSpecDatasourceName(spec as any),
+            `Convert ${getSpecDatasourceName(spec as any) || 'spec'}`,
           );
         }}
         onClose={() => this.setState({ specDialogOpen: false })}

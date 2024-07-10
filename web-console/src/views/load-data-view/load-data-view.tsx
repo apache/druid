@@ -428,8 +428,8 @@ export interface LoadDataViewState {
   // for final step
   existingDatasources?: string[];
   submitting: boolean;
-  currentSpecToDiff?: Partial<IngestionSpec>;
-  currentSpecToDiffLoading: boolean;
+  currentSupervisorSpec?: Partial<IngestionSpec>;
+  showDiffWithCurrent: boolean;
 }
 
 export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDataViewState> {
@@ -481,7 +481,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
       // for final step
       submitting: false,
-      currentSpecToDiffLoading: false,
+      showDiffWithCurrent: false,
     };
   }
 
@@ -2747,7 +2747,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             ),
           );
         }}
-        confirmButtonText={`Yes - ${multiValues ? 'use MVDs' : 'ARRAYs'}`}
+        confirmButtonText={`Yes - use ${multiValues ? 'MVDs' : 'ARRAYs'}`}
         successText={`Array mode changed to ${multiValues ? 'multi-values' : 'arrays'}.`}
         failText="Could not change array mode"
         intent={Intent.WARNING}
@@ -3409,6 +3409,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   };
 
   async queryForSpec() {
+    const { spec } = this.state;
+
     let existingDatasources: string[];
     try {
       existingDatasources = (await Api.instance.get<string[]>('/druid/coordinator/v1/datasources'))
@@ -3417,14 +3419,25 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       return;
     }
 
+    let currentSupervisorSpec: Partial<IngestionSpec> | undefined;
+    const supervisorId = getSpecDatasourceName(spec);
+    if (isStreamingSpec(spec) && supervisorId) {
+      try {
+        currentSupervisorSpec = cleanSpec(
+          (await Api.instance.get(`/druid/indexer/v1/supervisor/${Api.encodePath(supervisorId)}`))
+            .data,
+        );
+      } catch {}
+    }
+
     this.setState({
       existingDatasources,
+      currentSupervisorSpec,
     });
   }
 
   renderSpecStep() {
-    const { initSupervisorId } = this.props;
-    const { spec, existingDatasources, submitting, currentSpecToDiffLoading, currentSpecToDiff } =
+    const { spec, existingDatasources, submitting, currentSupervisorSpec, showDiffWithCurrent } =
       this.state;
     const issueWithSpec = getIssueWithSpec(spec);
     const datasource = deepGet(spec, 'spec.dataSchema.dataSource');
@@ -3479,11 +3492,14 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               </FormGroup>
             )}
           <AppendToExistingIssue spec={spec} onChangeSpec={this.updateSpec} />
-          {isStreamingSpec(spec) && initSupervisorId && (
+          {isStreamingSpec(spec) && currentSupervisorSpec && (
             <Button
-              text={currentSpecToDiffLoading ? 'Loading...' : 'Diff with current'}
+              icon={IconNames.DELTA}
+              text="Diff with current supervisor spec"
               onClick={() => {
-                void this.handleDiffWithCurrent();
+                this.setState({
+                  showDiffWithCurrent: true,
+                });
               }}
             />
           )}
@@ -3523,14 +3539,14 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             />
           )}
         </div>
-        {currentSpecToDiff && (
+        {showDiffWithCurrent && currentSupervisorSpec && (
           <DiffDialog
             title="Diff with current spec"
-            oldValue={currentSpecToDiff}
+            oldValue={currentSupervisorSpec}
             newValue={spec}
             onClose={() => {
               this.setState({
-                currentSpecToDiff: undefined,
+                showDiffWithCurrent: false,
               });
             }}
           />
@@ -3561,9 +3577,12 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       intent: Intent.SUCCESS,
     });
 
-    setTimeout(() => {
-      goToSupervisor(getSpecDatasourceName(spec));
-    }, 1000);
+    const supervisorId = getSpecDatasourceName(spec);
+    if (supervisorId) {
+      setTimeout(() => {
+        goToSupervisor(supervisorId);
+      }, 1000);
+    }
   };
 
   private readonly handleSubmitTask = async () => {
@@ -3592,37 +3611,5 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     setTimeout(() => {
       goToTasks(taskResp.data.task);
     }, 1000);
-  };
-
-  private readonly handleDiffWithCurrent = async () => {
-    const { initSupervisorId } = this.props;
-    const { currentSpecToDiffLoading } = this.state;
-    if (!initSupervisorId || currentSpecToDiffLoading) return;
-
-    this.setState({
-      currentSpecToDiffLoading: true,
-    });
-
-    let spec: Partial<IngestionSpec>;
-    try {
-      spec = cleanSpec(
-        (await Api.instance.get(`/druid/indexer/v1/supervisor/${Api.encodePath(initSupervisorId)}`))
-          .data,
-      );
-    } catch (e) {
-      this.setState({
-        currentSpecToDiffLoading: false,
-      });
-      AppToaster.show({
-        message: `Could not load current spec: ${e.message}`,
-        intent: Intent.DANGER,
-      });
-      return;
-    }
-
-    this.setState({
-      currentSpecToDiffLoading: false,
-      currentSpecToDiff: spec,
-    });
   };
 }
