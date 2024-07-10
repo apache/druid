@@ -1201,10 +1201,9 @@ public class ControllerImpl implements Controller
       } else {
         // worker info is the new lock version
         if (destination.getReplaceTimeChunks().size() != 1) {
-          throw new ISE(
-              "Must have single interval in replaceTimeChunks, but got[%s]",
-              destination.getReplaceTimeChunks()
-          );
+          throw DruidException.forPersona(DruidException.Persona.USER)
+              .ofCategory(DruidException.Category.INVALID_INPUT)
+              .build("Must have single interval in replaceTimeChunks, but got [%s]", destination.getReplaceTimeChunks());
         }
         try {
           final List<TaskLock> locks;
@@ -1216,7 +1215,7 @@ public class ControllerImpl implements Controller
             }
             return retVal;
           } else {
-            throw new ISE("Got number of locks other than one: [%s]", locks);
+            throw DruidException.defensive("Got number of locks other than one: [%s]", locks);
           }
         }
         catch (IOException e) {

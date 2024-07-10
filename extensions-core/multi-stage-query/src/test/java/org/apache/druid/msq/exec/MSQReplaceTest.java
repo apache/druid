@@ -942,7 +942,6 @@ public class MSQReplaceTest extends MSQTestBase
                              + "WHERE __time >= TIMESTAMP '2000-01-01' AND __time < TIMESTAMP '2000-01-03' "
                              + "PARTITIONED BY MONTH")
                      .setExpectedDataSource("foo")
-                     .setQueryContext(DEFAULT_MSQ_CONTEXT)
                      .setExpectedRowSignature(rowSignature)
                      .setQueryContext(context)
                      .setExpectedDestinationIntervals(Collections.singletonList(Intervals.of("2000-01-01T/2002-01-01T")))
@@ -998,7 +997,6 @@ public class MSQReplaceTest extends MSQTestBase
                              + "WHERE __time >= TIMESTAMP '2000-01-01' AND __time < TIMESTAMP '2000-01-03' "
                              + "PARTITIONED BY MONTH")
                      .setExpectedDataSource("foo")
-                     .setQueryContext(DEFAULT_MSQ_CONTEXT)
                      .setExpectedRowSignature(rowSignature)
                      .setQueryContext(context)
                      .setExpectedDestinationIntervals(Collections.singletonList(Intervals.ETERNITY))
@@ -1045,7 +1043,6 @@ public class MSQReplaceTest extends MSQTestBase
                          "REPLACE INTO foo1 OVERWRITE ALL "
                          + "select  __time, dim1 , count(*) as cnt from foo  where dim1 is not null group by 1, 2 PARTITIONED by day clustered by dim1")
                      .setExpectedDataSource("foo1")
-                     .setQueryContext(DEFAULT_MSQ_CONTEXT)
                      .setExpectedShardSpec(DimensionRangeShardSpec.class)
                      .setExpectedMSQSegmentReport(
                          new MSQSegmentReport(
@@ -1093,7 +1090,6 @@ public class MSQReplaceTest extends MSQTestBase
                          + "CLUSTERED BY dim1"
                      )
                      .setExpectedDataSource("foo1")
-                     .setQueryContext(DEFAULT_MSQ_CONTEXT)
                      .setExpectedShardSpec(DimensionRangeShardSpec.class)
                      .setExpectedRowSignature(rowSignature)
                      .setQueryContext(context)

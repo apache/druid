@@ -92,6 +92,7 @@ public class MSQTaskQueryMaker implements QueryMaker
   private final PlannerContext plannerContext;
   private final ObjectMapper jsonMapper;
   private final List<Entry<Integer, String>> fieldMapping;
+  private final SegmentMorphFactoryCreator segmentMorphFactoryCreator;
 
 
   MSQTaskQueryMaker(
@@ -99,7 +100,8 @@ public class MSQTaskQueryMaker implements QueryMaker
       final OverlordClient overlordClient,
       final PlannerContext plannerContext,
       final ObjectMapper jsonMapper,
-      final List<Entry<Integer, String>> fieldMapping
+      final List<Entry<Integer, String>> fieldMapping,
+      final SegmentMorphFactoryCreator segmentMorphFactoryCreator
   )
   {
     this.targetDataSource = targetDataSource;
@@ -107,6 +109,7 @@ public class MSQTaskQueryMaker implements QueryMaker
     this.plannerContext = Preconditions.checkNotNull(plannerContext, "plannerContext");
     this.jsonMapper = Preconditions.checkNotNull(jsonMapper, "jsonMapper");
     this.fieldMapping = Preconditions.checkNotNull(fieldMapping, "fieldMapping");
+    this.segmentMorphFactoryCreator = Preconditions.checkNotNull(segmentMorphFactoryCreator, "segmentMorphFactoryCreator");
   }
 
   @Override
@@ -247,7 +250,10 @@ public class MSQTaskQueryMaker implements QueryMaker
           segmentGranularityObject,
           segmentSortOrder,
           replaceTimeChunks,
-          null
+          segmentMorphFactoryCreator == null ? null : segmentMorphFactoryCreator.createSegmentMorphFactory(
+              druidQuery,
+              plannerContext
+          )
       );
       MultiStageQueryContext.validateAndGetTaskLockType(sqlQueryContext,
                                                         dataSourceMSQDestination.isReplaceTimeChunks());

@@ -82,15 +82,26 @@ public class MSQTaskSqlEngine implements SqlEngine
 
   private final OverlordClient overlordClient;
   private final ObjectMapper jsonMapper;
+  private final SegmentMorphFactoryCreator segmentMorphFactoryCreator;
 
-  @Inject
   public MSQTaskSqlEngine(
       final OverlordClient overlordClient,
       final ObjectMapper jsonMapper
   )
   {
+    this(overlordClient, jsonMapper, null);
+  }
+
+  @Inject
+  public MSQTaskSqlEngine(
+      final OverlordClient overlordClient,
+      final ObjectMapper jsonMapper,
+      final SegmentMorphFactoryCreator segmentMorphFactoryCreator
+  )
+  {
     this.overlordClient = overlordClient;
     this.jsonMapper = jsonMapper;
+    this.segmentMorphFactoryCreator = segmentMorphFactoryCreator;
   }
 
   @Override
@@ -159,7 +170,8 @@ public class MSQTaskSqlEngine implements SqlEngine
         overlordClient,
         plannerContext,
         jsonMapper,
-        relRoot.fields
+        relRoot.fields,
+        segmentMorphFactoryCreator
     );
   }
 
@@ -193,7 +205,8 @@ public class MSQTaskSqlEngine implements SqlEngine
         overlordClient,
         plannerContext,
         jsonMapper,
-        relRoot.fields
+        relRoot.fields,
+        segmentMorphFactoryCreator
     );
   }
 

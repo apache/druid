@@ -86,6 +86,7 @@ import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.DataServerQueryHandler;
 import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
 import org.apache.druid.msq.exec.ResultsContext;
+import org.apache.druid.msq.exec.TestSegmentMorpherFrameProcessorFactory;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.guice.MSQDurableStorageModule;
 import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
@@ -208,7 +209,6 @@ import org.mockito.Mockito;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -328,6 +328,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
   protected List<ImmutableSegmentLoadInfo> loadedSegmentsMetadata = new ArrayList<>();
   // Mocks the return of data from data servers
   protected DataServerQueryHandler dataServerQueryHandler = mock(DataServerQueryHandler.class);
+  protected TestSegmentMorphFactoryCreator testSegmentMorphFactoryCreator = new TestSegmentMorphFactoryCreator();
 
   private MSQTestSegmentManager segmentManager;
   private SegmentCacheManager segmentCacheManager;
@@ -557,7 +558,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
     final SqlEngine engine = new MSQTaskSqlEngine(
         indexingServiceClient,
-        qf.queryJsonMapper().copy().registerModules(new MSQSqlModule().getJacksonModules())
+        qf.queryJsonMapper().copy().registerModules(new MSQSqlModule().getJacksonModules()),
+        testSegmentMorphFactoryCreator
     );
 
     PlannerFactory plannerFactory = new PlannerFactory(
@@ -746,6 +748,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
     DruidSecondaryModule.setupJackson(injector, mapper);
 
     mapper.registerSubtypes(new NamedType(LocalLoadSpec.class, "local"));
+    mapper.registerSubtypes(new NamedType(TestSegmentMorpherFrameProcessorFactory.class, "testSegmentMorpher"));
 
     // This should be reusing guice instead of using static classes
     InsertLockPreemptedFaultTest.LockPreemptedHelper.preempt(false);
