@@ -245,11 +245,13 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
                         return;
                       }
 
+                      int numSuccessfulLoads = 0;
                       long successfulLoadSize = 0;
                       for (DataSegmentChangeResponse e : statuses) {
                         switch (e.getStatus().getState()) {
                           case SUCCESS:
                             if (e.getRequest() instanceof SegmentChangeRequestLoad) {
+                              ++numSuccessfulLoads;
                               successfulLoadSize +=
                                   ((SegmentChangeRequestLoad) e.getRequest()).getSegment().getSize();
                             }
@@ -265,7 +267,9 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
                         }
                       }
 
-                      loadingRateTracker.incrementBytesLoadedInBatch(successfulLoadSize);
+                      if (numSuccessfulLoads > 0) {
+                        loadingRateTracker.incrementBytesLoadedInBatch(successfulLoadSize);
+                      }
                     }
                   }
                   catch (Exception ex) {
