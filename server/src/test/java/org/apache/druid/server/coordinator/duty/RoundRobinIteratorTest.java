@@ -39,7 +39,7 @@ public class RoundRobinIteratorTest
     final RoundRobinIterator rrIterator = new RoundRobinIterator()
     {
       @Override
-      int getInitialCursorPosition(int maxSize)
+      int generateRandomCursorPosition(final int maxBound)
       {
         return 1;
       }
@@ -71,7 +71,7 @@ public class RoundRobinIteratorTest
     final RoundRobinIterator rrIterator = new RoundRobinIterator()
     {
       @Override
-      int getInitialCursorPosition(int maxSize)
+      int generateRandomCursorPosition(final int maxBound)
       {
         return 0;
       }
@@ -107,7 +107,7 @@ public class RoundRobinIteratorTest
     final RoundRobinIterator rrIterator = new RoundRobinIterator()
     {
       @Override
-      int getInitialCursorPosition(int maxSize)
+      int generateRandomCursorPosition(final int maxBound)
       {
         return 0;
       }
@@ -152,18 +152,18 @@ public class RoundRobinIteratorTest
     Set<String> input = ImmutableSet.of("a", "b", "c");
     rrIterator.updateCandidates(input);
 
-    List<String> exepctedCandidates = getExepctedCandidates(input, rrIterator.getCurrentPosition(), null);
+    List<String> expectedCandidates = getexpectedCandidates(input, rrIterator.getCurrentCursorPosition(), null);
     List<String> actualCandidates = getObservedCandidates(rrIterator.getIterator(), input.size());
-    Assert.assertEquals(exepctedCandidates, actualCandidates);
+    Assert.assertEquals(expectedCandidates, actualCandidates);
     String lastValue = actualCandidates.get(actualCandidates.size() - 1);
 
     // Second update
     input = ImmutableSet.of("c", "d");
     rrIterator.updateCandidates(input);
 
-    exepctedCandidates = getExepctedCandidates(input, rrIterator.getCurrentPosition(), lastValue);
+    expectedCandidates = getexpectedCandidates(input, rrIterator.getCurrentCursorPosition(), lastValue);
     actualCandidates = getObservedCandidates(rrIterator.getIterator(), input.size());
-    Assert.assertEquals(exepctedCandidates, actualCandidates);
+    Assert.assertEquals(expectedCandidates, actualCandidates);
 
     Assert.assertNotEquals(lastValue, actualCandidates.get(0));
     lastValue = actualCandidates.get(actualCandidates.size() - 1);
@@ -172,9 +172,9 @@ public class RoundRobinIteratorTest
     input = ImmutableSet.of("d", "e");
     rrIterator.updateCandidates(ImmutableSet.of("d", "e"));
 
-    exepctedCandidates = getExepctedCandidates(input, rrIterator.getCurrentPosition(), lastValue);
+    expectedCandidates = getexpectedCandidates(input, rrIterator.getCurrentCursorPosition(), lastValue);
     actualCandidates = getObservedCandidates(rrIterator.getIterator(), input.size());
-    Assert.assertEquals(exepctedCandidates, actualCandidates);
+    Assert.assertEquals(expectedCandidates, actualCandidates);
 
     Assert.assertNotEquals(lastValue, actualCandidates.get(0));
     lastValue = actualCandidates.get(actualCandidates.size() - 1);
@@ -183,13 +183,13 @@ public class RoundRobinIteratorTest
     input = ImmutableSet.of("e", "f", "h");
     rrIterator.updateCandidates(input);
 
-    exepctedCandidates = getExepctedCandidates(input, rrIterator.getCurrentPosition(), lastValue);
+    expectedCandidates = getexpectedCandidates(input, rrIterator.getCurrentCursorPosition(), lastValue);
     actualCandidates = getObservedCandidates(rrIterator.getIterator(), input.size());
-    Assert.assertEquals(exepctedCandidates, actualCandidates);
+    Assert.assertEquals(expectedCandidates, actualCandidates);
     Assert.assertNotEquals(lastValue, actualCandidates.get(0));
   }
 
-  private List<String> getExepctedCandidates(
+  private List<String> getexpectedCandidates(
       final Set<String> input,
       final int cursorPosition,
       @Nullable final String previousValue

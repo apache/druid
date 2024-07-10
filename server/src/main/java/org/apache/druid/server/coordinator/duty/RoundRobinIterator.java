@@ -21,6 +21,7 @@ package org.apache.druid.server.coordinator.duty;
 
 import com.google.common.annotations.VisibleForTesting;
 
+import javax.annotation.concurrent.NotThreadSafe;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -31,18 +32,22 @@ import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
- * A round-robin iterator that has the following properties:
+ * A round-robin iterator that is always backed by an ordered list of candidates containing no duplicates.
+ * The iterator has the following properties:
  * <ul>
  *   <li> Starts with an initial random cursor position in an ordered list of candidates. </li>
- *   <li> Consecutive {@code next()} iterations from {@link #getIterator()} are guaranteed to be deterministic
- *   unless the set of candidates change when {@link #updateCandidates(Set)} is called. </li>
+ *   <li> Invoking {@code next()} on {@link #getIterator()} is guaranteed to be deterministic
+ *   unless the set of candidates change when {@link #updateCandidates(Set)} is called. When the candidates change,
+ *   the cursor is reset to a random position in the new list of ordered candidates. </li>
  *   <li> Guarantees that no duplicate candidates are returned in two consecutive {@code next()} iterations. </li>
  * </ul>
+ *
  */
+@NotThreadSafe
 public class RoundRobinIterator
 {
   private final List<String> candidates = new ArrayList<>();
-  private int currentPosition;
+  private int cursorPosition;
   private String previousCandidate;
 
   /**
@@ -59,7 +64,7 @@ public class RoundRobinIterator
     this.candidates.clear();
     this.candidates.addAll(input);
     Collections.sort(this.candidates);
-    this.currentPosition = getInitialCursorPosition(input.size());
+    this.cursorPosition = generateRandomCursorPosition(input.size());
   }
 
   public Iterator<String> getIterator()
@@ -93,28 +98,28 @@ public class RoundRobinIterator
 
       private String peakNextCandiate()
       {
-        final int nextPosition = currentPosition < candidates.size() ? currentPosition : 0;
+        final int nextPosition = cursorPosition < candidates.size() ? cursorPosition : 0;
         return candidates.get(nextPosition);
       }
 
       private void advanceCursor()
       {
-        if (++currentPosition >= candidates.size()) {
-          currentPosition = 0;
+        if (++cursorPosition >= candidates.size()) {
+          cursorPosition = 0;
         }
       }
     };
   }
 
   @VisibleForTesting
-  int getInitialCursorPosition(int maxSize)
+  int generateRandomCursorPosition(final int maxBound)
   {
-    return maxSize <= 0 ? 0 : ThreadLocalRandom.current().nextInt(0, maxSize);
+    return maxBound <= 0 ? 0 : ThreadLocalRandom.current().nextInt(0, maxBound);
   }
 
   @VisibleForTesting
-  int getCurrentPosition()
+  int getCurrentCursorPosition()
   {
-    return this.currentPosition;
+    return this.cursorPosition;
   }
 }

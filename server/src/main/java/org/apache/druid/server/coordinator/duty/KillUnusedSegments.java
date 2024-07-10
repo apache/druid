@@ -292,10 +292,6 @@ public class KillUnusedSegments implements CoordinatorDuty
     stats.add(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, datasourceKey, unusedSegmentIntervals.size());
 
     if (CollectionUtils.isNullOrEmpty(unusedSegmentIntervals)) {
-      log.info(
-          "No segments found to kill for datasource[%s] in [%s/%s].",
-          dataSource, minStartTime, maxEndTime
-      );
       return null;
     } else if (unusedSegmentIntervals.size() == 1) {
       return unusedSegmentIntervals.get(0);

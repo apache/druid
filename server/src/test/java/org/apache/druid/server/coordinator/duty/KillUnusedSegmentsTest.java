@@ -878,7 +878,7 @@ public class KillUnusedSegmentsTest
         new RoundRobinIterator()
         {
           @Override
-          int getInitialCursorPosition(int maxSize)
+          int generateRandomCursorPosition(final int maxBound)
           {
             return 0;
           }
