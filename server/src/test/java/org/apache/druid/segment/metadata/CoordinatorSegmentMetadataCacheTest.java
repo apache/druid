@@ -86,6 +86,7 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 import org.skife.jdbi.v2.StatementContext;
 
@@ -1868,20 +1869,22 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         segmentsMetadataManagerConfigSupplier
     );
 
-    Map<SegmentId, Map<String, SegmentReplicaCount>> replicationCountMap = new HashMap<>();
-    // Cold segment with 0 replication factor.
-    SegmentReplicaCount zeroSegmentReplicaCount = new SegmentReplicaCount();
-    replicationCountMap.put(coldSegment.getId(), Collections.singletonMap("default", zeroSegmentReplicaCount));
-    replicationCountMap.put(singleColdSegment.getId(), Collections.singletonMap("default", zeroSegmentReplicaCount));
+    SegmentReplicaCount zeroSegmentReplicaCount = Mockito.mock(SegmentReplicaCount.class);
+    SegmentReplicaCount nonZeroSegmentReplicaCount = Mockito.mock(SegmentReplicaCount.class);
+    Mockito.when(zeroSegmentReplicaCount.required()).thenReturn(0);
+    Mockito.when(nonZeroSegmentReplicaCount.required()).thenReturn(1);
+    SegmentReplicationStatus segmentReplicationStatus = Mockito.mock(SegmentReplicationStatus.class);
+    Mockito.when(segmentReplicationStatus.getReplicaCountsInCluster(ArgumentMatchers.eq(coldSegment.getId())))
+           .thenReturn(zeroSegmentReplicaCount);
+    Mockito.when(segmentReplicationStatus.getReplicaCountsInCluster(ArgumentMatchers.eq(singleColdSegment.getId())))
+           .thenReturn(zeroSegmentReplicaCount);
+    Mockito.when(segmentReplicationStatus.getReplicaCountsInCluster(ArgumentMatchers.eq(segment1.getId())))
+           .thenReturn(nonZeroSegmentReplicaCount);
 
-    // Hot segments with non-zero replication factor.
-    SegmentReplicaCount nonZeroSegmentReplicaCount = new SegmentReplicaCount();
-    nonZeroSegmentReplicaCount.setRequired(1, 1);
-    replicationCountMap.put(segment1.getId(), Collections.singletonMap("default", nonZeroSegmentReplicaCount));
-    replicationCountMap.put(segment2.getId(), Collections.singletonMap("default", nonZeroSegmentReplicaCount));
+    Mockito.when(segmentReplicationStatus.getReplicaCountsInCluster(ArgumentMatchers.eq(segment2.getId())))
+           .thenReturn(nonZeroSegmentReplicaCount);
 
-    SegmentReplicationStatus segmentReplicationStatus = new SegmentReplicationStatus(replicationCountMap);
-
+    schema.updateSegmentReplicationStatus(segmentReplicationStatus);
     schema.updateSegmentReplicationStatus(segmentReplicationStatus);
 
     return schema;
@@ -1959,13 +1962,16 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     segmentIds.add(segment2.getId());
 
     schema.refresh(segmentIds, new HashSet<>());
+    // cold datasource shouldn't be present
     Assert.assertEquals(Collections.singleton("foo"), schema.getDataSourceInformationMap().keySet());
 
+    // cold columns shouldn't be present
     verifyFooDSSchema(schema, 6);
     Assert.assertNull(schema.getDatasource("cold"));
 
     schema.coldDatasourceSchemaExec();
 
+    // could datasource should be present now
     Assert.assertEquals(new HashSet<>(Arrays.asList("foo", "cold")), schema.getDataSourceInformationMap().keySet());
 
     RowSignature coldSignature = schema.getDatasource("cold").getRowSignature();
@@ -1976,6 +1982,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     Assert.assertEquals("f2", columnNames.get(1));
     Assert.assertEquals(ColumnType.DOUBLE, coldSignature.getColumnType(columnNames.get(1)).get());
 
+    // columns from cold datasource should be present
     verifyFooDSSchema(schema, 8);
     RowSignature rowSignature = schema.getDatasource("foo").getRowSignature();
 
@@ -2055,7 +2062,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     List<ImmutableDruidDataSource> druidDataSources = new ArrayList<>();
     druidDataSources.add(
         new ImmutableDruidDataSource(
-            coldSegmentAlpha.getDataSource(),
+            "alpha",
             Collections.emptyMap(),
             Collections.singletonMap(coldSegmentAlpha.getId(), coldSegmentAlpha)
         )
@@ -2089,25 +2096,20 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         segmentsMetadataManagerConfigSupplier
     );
 
-    // The required segment count is 0 in a new instance.
-    SegmentReplicaCount segmentReplicaCount = new SegmentReplicaCount();
-    Map<SegmentId, Map<String, SegmentReplicaCount>> segmentIdSegmentReplicaCountMap = new HashMap<>();
-    Map<String, SegmentReplicaCount> segmentReplicaCountMap = Collections.singletonMap("default", segmentReplicaCount);
+    SegmentReplicaCount zeroSegmentReplicaCount = Mockito.mock(SegmentReplicaCount.class);
+    SegmentReplicaCount nonZeroSegmentReplicaCount = Mockito.mock(SegmentReplicaCount.class);
+    Mockito.when(zeroSegmentReplicaCount.required()).thenReturn(0);
+    Mockito.when(nonZeroSegmentReplicaCount.required()).thenReturn(1);
+    SegmentReplicationStatus segmentReplicationStatus = Mockito.mock(SegmentReplicationStatus.class);
+    Mockito.when(segmentReplicationStatus.getReplicaCountsInCluster(ArgumentMatchers.eq(coldSegmentAlpha.getId())))
+           .thenReturn(zeroSegmentReplicaCount);
+    Mockito.when(segmentReplicationStatus.getReplicaCountsInCluster(ArgumentMatchers.eq(coldSegmentBeta.getId())))
+           .thenReturn(zeroSegmentReplicaCount);
+    Mockito.when(segmentReplicationStatus.getReplicaCountsInCluster(ArgumentMatchers.eq(coldSegmentGamma.getId())))
+           .thenReturn(zeroSegmentReplicaCount);
 
-    SegmentReplicaCount nonZeroSegmentReplicaCount = new SegmentReplicaCount();
-    nonZeroSegmentReplicaCount.setRequired(1, 1);
-    Map<String, SegmentReplicaCount> nonZeroSegmentReplicaCountMap =
-        Collections.singletonMap("default", nonZeroSegmentReplicaCount);
-
-    // Cold segments with 0 replication factor.
-    segmentIdSegmentReplicaCountMap.put(coldSegmentAlpha.getId(), segmentReplicaCountMap);
-    segmentIdSegmentReplicaCountMap.put(coldSegmentBeta.getId(), segmentReplicaCountMap);
-    segmentIdSegmentReplicaCountMap.put(coldSegmentGamma.getId(), segmentReplicaCountMap);
-    segmentIdSegmentReplicaCountMap.put(coldSegmentGamma.getId(), segmentReplicaCountMap);
-
-    // Hot segment with non-zero replication factor.
-    segmentIdSegmentReplicaCountMap.put(hotSegmentGamma.getId(), nonZeroSegmentReplicaCountMap);
-    SegmentReplicationStatus segmentReplicationStatus = new SegmentReplicationStatus(segmentIdSegmentReplicaCountMap);
+    Mockito.when(segmentReplicationStatus.getReplicaCountsInCluster(ArgumentMatchers.eq(hotSegmentGamma.getId())))
+           .thenReturn(nonZeroSegmentReplicaCount);
 
     schema.updateSegmentReplicationStatus(segmentReplicationStatus);
 
@@ -2129,7 +2131,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     druidDataSources.clear();
     druidDataSources.add(
         new ImmutableDruidDataSource(
-            coldSegmentBeta.getDataSource(),
+            "beta",
             Collections.emptyMap(),
             Collections.singletonMap(coldSegmentBeta.getId(), coldSegmentBeta)
         )
@@ -2137,7 +2139,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
 
     druidDataSources.add(
         new ImmutableDruidDataSource(
-            hotSegmentGamma.getDataSource(),
+            "gamma",
             Collections.emptyMap(),
             Collections.singletonMap(hotSegmentGamma.getId(), hotSegmentGamma)
         )
