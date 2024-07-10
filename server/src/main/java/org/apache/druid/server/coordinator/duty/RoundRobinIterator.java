@@ -20,6 +20,7 @@
 package org.apache.druid.server.coordinator.duty;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.error.InvalidInput;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import java.util.ArrayList;
@@ -53,11 +54,14 @@ public class RoundRobinIterator
   /**
    * Update the candidates with the supplied input if the input set is different from the current candidates.
    * If the input set is the same as the existing candidates, the cursor position remains unchanged so the iteration order
-   * is determistic and resumed. If the input set is different, the cursor position is reset to a random location in
-   * the new list of sorted candidates.
+   * is determistic and resumed. If the input set is different, the cursor position is reset to a random position in
+   * the new list of sorted candidates. The supplied input must be non-null.
    */
   public void updateCandidates(final Set<String> input)
   {
+    if (input == null) {
+      throw InvalidInput.exception("Supplied input candidates must be non-null.");
+    }
     if (new HashSet<>(candidates).equals(input)) {
       return;
     }
@@ -114,7 +118,7 @@ public class RoundRobinIterator
   @VisibleForTesting
   int generateRandomCursorPosition(final int maxBound)
   {
-    return maxBound <= 0 ? 0 : ThreadLocalRandom.current().nextInt(0, maxBound);
+    return maxBound <= 0 ? 0 : ThreadLocalRandom.current().nextInt(maxBound);
   }
 
   @VisibleForTesting

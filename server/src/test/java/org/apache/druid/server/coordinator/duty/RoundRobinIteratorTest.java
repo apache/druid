@@ -21,6 +21,7 @@ package org.apache.druid.server.coordinator.duty;
 
 import com.google.common.collect.ImmutableSet;
 import junitparams.converters.Nullable;
+import org.apache.druid.error.DruidException;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -132,13 +133,20 @@ public class RoundRobinIteratorTest
   }
 
   @Test
-  public void testEmpty()
+  public void testEmptyIterator()
   {
     final RoundRobinIterator rrIterator = new RoundRobinIterator();
     final Iterator<String> it = rrIterator.getIterator();
 
     Assert.assertFalse(it.hasNext());
     Assert.assertThrows(NoSuchElementException.class, it::next);
+  }
+
+  @Test
+  public void testUpdateWithNullCandidate()
+  {
+    final RoundRobinIterator rrIterator = new RoundRobinIterator();
+    Assert.assertThrows(DruidException.class, () -> rrIterator.updateCandidates(null));
   }
 
   /**
