@@ -97,7 +97,7 @@ public class StringFieldWriter implements FieldWriter
       final boolean removeNullBytes
   )
   {
-    if (byteBuffers == null || byteBuffers.isEmpty()) {
+    if (byteBuffers == null) {
       if (maxSize < NULL_ROW_SIZE) {
         return -1;
       }

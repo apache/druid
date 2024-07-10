@@ -146,6 +146,16 @@ public class Projection
         throw new CannotBuildQueryException(project, postAggregatorRexNode);
       }
 
+      // special handle ARRAY_TO_MV to never plan into a post-agg. the reason is that post-aggs don't participate
+      // in ColumnCapabilities, rather they simply have a ColumnType, so multi-valued-ness is lost. This causes problems
+      // particularly in group-by queries because group-by results are hard-coded to never expect multi-value strings
+      // because they would have been unnested, however, ARRAY_TO_MV is effectively CAST(array as VARCHAR) meaning it
+      // can make multi-value string columns actually exist if array grouping was performed, so it is safer to just
+      // fail to plan these into post-aggs which will result in a sub-query being planned instead
+      if (postAggregatorExpression.getExpression().toLowerCase().startsWith("array_to_mv")) {
+        throw new CannotBuildQueryException(project, postAggregatorRexNode);
+      }
+
       handlePostAggregatorExpression(
           plannerContext,
           inputRowSignature,
