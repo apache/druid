@@ -27,6 +27,7 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
@@ -152,7 +153,7 @@ public class Projection
       // because they would have been unnested, however, ARRAY_TO_MV is effectively CAST(array as VARCHAR) meaning it
       // can make multi-value string columns actually exist if array grouping was performed, so it is safer to just
       // fail to plan these into post-aggs which will result in a sub-query being planned instead
-      if (postAggregatorExpression.getExpression().toLowerCase().startsWith("array_to_mv")) {
+      if (StringUtils.toLowerCase(postAggregatorExpression.getExpression()).startsWith("array_to_mv")) {
         throw new CannotBuildQueryException(project, postAggregatorRexNode);
       }
 
