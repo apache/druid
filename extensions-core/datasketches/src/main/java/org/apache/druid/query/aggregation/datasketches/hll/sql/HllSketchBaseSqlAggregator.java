@@ -116,13 +116,7 @@ public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
     if (columnArg.isDirectColumnAccess()
         && inputAccessor.getInputRowSignature()
                         .getColumnType(columnArg.getDirectColumn())
-                        .map(type -> type.is(ValueType.COMPLEX) &&
-                                     (
-                                         HllSketchMergeAggregatorFactory.TYPE.equals(type) ||
-                                         HllSketchModule.TYPE_NAME.equals(type.getComplexTypeName()) ||
-                                         HllSketchModule.BUILD_TYPE_NAME.equals(type.getComplexTypeName())
-                                     )
-                        )
+                        .map(type -> type.is(ValueType.COMPLEX) && validateInputComplexTypeName(type))
                         .orElse(false)) {
       aggregatorFactory = new HllSketchMergeAggregatorFactory(
           aggregatorName,
@@ -161,9 +155,7 @@ public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
       }
 
       if (inputType.is(ValueType.COMPLEX)) {
-        if (HllSketchMergeAggregatorFactory.TYPE.equals(inputType) ||
-            HllSketchModule.TYPE_NAME.equals(inputType.getComplexTypeName()) ||
-            HllSketchModule.BUILD_TYPE_NAME.equals(inputType.getComplexTypeName())) {
+        if (validateInputComplexTypeName(inputType)) {
           aggregatorFactory = new HllSketchMergeAggregatorFactory(
               aggregatorName,
               dimensionSpec.getOutputName(),
@@ -192,10 +184,12 @@ public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
     }
 
     if (aggregatorFactory == null) {
-      plannerContext.setPlanningError("Using APPROX_COUNT_DISTINCT() or enabling approximation with COUNT(DISTINCT) "
-                                      + "is not supported for %s column. You can disable approximation and use "
-                                      + "COUNT(DISTINCT %s) and run the query again.",
-                                      columnArg.getDruidType(), columnArg.getSimpleExtraction().getColumn());
+      plannerContext.setPlanningError(
+          "Using APPROX_COUNT_DISTINCT() or enabling approximation with COUNT(DISTINCT) is not supported for"
+          + " %s column. You can disable approximation, use COUNT(DISTINCT %s) and rerun the query.",
+          columnArg.getDruidType(),
+          columnArg.getSimpleExtraction().getColumn()
+      );
       return null;
     }
 
@@ -211,4 +205,11 @@ public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
       boolean finalizeAggregations,
       AggregatorFactory aggregatorFactory
   );
+
+  private boolean validateInputComplexTypeName(ColumnType columnType)
+  {
+    return HllSketchMergeAggregatorFactory.TYPE.equals(columnType) ||
+           HllSketchModule.TYPE_NAME.equals(columnType.getComplexTypeName()) ||
+           HllSketchModule.BUILD_TYPE_NAME.equals(columnType.getComplexTypeName());
+  }
 }

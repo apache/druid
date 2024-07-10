@@ -118,17 +118,21 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
   private void validateInputs(@Nullable ColumnCapabilities capabilities)
   {
     if (capabilities != null) {
-      if (capabilities.isArray() || (capabilities.is(ValueType.COMPLEX) && !(
+      boolean isSupportedComplexType = capabilities.is(ValueType.COMPLEX) && !(
           SketchModule.THETA_SKETCH_TYPE.equals(capabilities.toColumnType()) ||
           SketchModule.MERGE_TYPE.equals(capabilities.toColumnType()) ||
-          SketchModule.BUILD_TYPE.equals(capabilities.toColumnType())))
-      ) {
+          SketchModule.BUILD_TYPE.equals(capabilities.toColumnType())
+      );
+
+      if (capabilities.isArray() || isSupportedComplexType) {
         throw DruidException.forPersona(DruidException.Persona.USER)
                             .ofCategory(DruidException.Category.UNSUPPORTED)
-                            .build("Unsupported input [%s] of type [%s] for aggregator [%s].",
+                            .build(
+                                "Unsupported input [%s] of type [%s] for aggregator [%s].",
                                 getFieldName(),
                                 capabilities.asTypeString(),
-                                getIntermediateType());
+                                getIntermediateType()
+                            );
       }
     }
   }

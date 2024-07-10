@@ -146,8 +146,11 @@ public class HyperUniquesAggregatorFactory extends AggregatorFactory
       if (!ColumnType.UNKNOWN_COMPLEX.equals(type) && !TYPE.equals(type) && !PRECOMPUTED_TYPE.equals(type)) {
         throw DruidException.forPersona(DruidException.Persona.USER)
                             .ofCategory(DruidException.Category.UNSUPPORTED)
-                            .build("Using aggregator [%s] is not supported for complex columns with type [%s].",
-                                   getIntermediateType().getComplexTypeName(), type);
+                            .build(
+                                "Using aggregator [%s] is not supported for complex columns with type [%s].",
+                                getIntermediateType().getComplexTypeName(),
+                                type
+                            );
       }
     }
   }

@@ -96,9 +96,7 @@ public class BuiltinApproxCountDistinctSqlAggregator implements SqlAggregator
     if (arg.isDirectColumnAccess()
         && inputAccessor.getInputRowSignature()
             .getColumnType(arg.getDirectColumn())
-            .map(type -> type.is(ValueType.COMPLEX)
-                         && (Objects.equals(type.getComplexTypeName(), HyperUniquesAggregatorFactory.TYPE.getComplexTypeName()) || Objects.equals(type.getComplexTypeName(), HyperUniquesAggregatorFactory.PRECOMPUTED_TYPE.getComplexTypeName()))
-            )
+            .map(type -> type.is(ValueType.COMPLEX) && validateInputComplexTypeName(type))
             .orElse(false)) {
       aggregatorFactory = new HyperUniquesAggregatorFactory(aggregatorName, arg.getDirectColumn(), false, true);
     } else {
@@ -122,7 +120,7 @@ public class BuiltinApproxCountDistinctSqlAggregator implements SqlAggregator
       }
 
       if (inputType.is(ValueType.COMPLEX)) {
-        if ((Objects.equals(inputType.getComplexTypeName(), HyperUniquesAggregatorFactory.TYPE.getComplexTypeName()) || Objects.equals(inputType.getComplexTypeName(), HyperUniquesAggregatorFactory.PRECOMPUTED_TYPE.getComplexTypeName()))) {
+        if (validateInputComplexTypeName(inputType)) {
           aggregatorFactory = new HyperUniquesAggregatorFactory(
               aggregatorName,
               dimensionSpec.getOutputName(),
@@ -142,10 +140,12 @@ public class BuiltinApproxCountDistinctSqlAggregator implements SqlAggregator
     }
 
     if (aggregatorFactory == null) {
-      plannerContext.setPlanningError("Using APPROX_COUNT_DISTINCT() or enabling approximation with COUNT(DISTINCT) "
-                                      + "is not supported for %s column. You can disable approximation and use "
-                                      + "COUNT(DISTINCT %s) and run the query again.",
-                                      arg.getDruidType(), arg.getSimpleExtraction().getColumn());
+      plannerContext.setPlanningError(
+          "Using APPROX_COUNT_DISTINCT() or enabling approximation with COUNT(DISTINCT) is not supported for"
+          + " %s column. You can disable approximation, use COUNT(DISTINCT %s) and rerun the query.",
+          arg.getDruidType(),
+          arg.getSimpleExtraction().getColumn()
+      );
       return null;
     }
 
@@ -176,5 +176,11 @@ public class BuiltinApproxCountDistinctSqlAggregator implements SqlAggregator
           Optionality.FORBIDDEN
       );
     }
+  }
+
+  private boolean validateInputComplexTypeName(ColumnType columnType)
+  {
+    return Objects.equals(columnType.getComplexTypeName(), HyperUniquesAggregatorFactory.TYPE.getComplexTypeName()) ||
+           Objects.equals(columnType.getComplexTypeName(), HyperUniquesAggregatorFactory.PRECOMPUTED_TYPE.getComplexTypeName());
   }
 }

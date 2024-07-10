@@ -7324,16 +7324,12 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testApproxCountDistinctOnUnsupportedComplexColumn()
   {
-    try {
-      testQuery("SELECT COUNT(DISTINCT nester) FROM druid.nested", ImmutableList.of(), ImmutableList.of());
-      Assertions.fail("query planning should fail");
-    }
-    catch (DruidException e) {
-      Assertions.assertEquals("Query could not be planned. A possible reason is [Using APPROX_COUNT_DISTINCT() or enabling approximation "
-                          + "with COUNT(DISTINCT) is not supported for COMPLEX<json> column. You can disable"
-                          + " approximation and use COUNT(DISTINCT nester) and run the query again.]",
-                          e.getMessage());
-    }
+    assertQueryIsUnplannable(
+        "SELECT COUNT(DISTINCT nester) FROM druid.nested",
+        "Query could not be planned. A possible reason is [Using APPROX_COUNT_DISTINCT() or enabling "
+        + "approximation with COUNT(DISTINCT) is not supported for COMPLEX<json> column. You can disable approximation,"
+        + " use COUNT(DISTINCT nester) and rerun the query.]"
+    );
   }
 
   @Test
@@ -7344,9 +7340,11 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
       Assertions.fail("query planning should fail");
     }
     catch (DruidException e) {
-      System.out.println("e.getMessage() = " + e.getMessage());
-      Assertions.assertTrue(e.getMessage().contains(
-          "Cannot apply 'APPROX_COUNT_DISTINCT' to arguments of type 'APPROX_COUNT_DISTINCT(<COMPLEX<JSON>>)'"));
+      Assertions.assertTrue(
+          e.getMessage().contains(
+              "Cannot apply 'APPROX_COUNT_DISTINCT' to arguments of type 'APPROX_COUNT_DISTINCT(<COMPLEX<JSON>>)'"
+          )
+      );
     }
   }
 

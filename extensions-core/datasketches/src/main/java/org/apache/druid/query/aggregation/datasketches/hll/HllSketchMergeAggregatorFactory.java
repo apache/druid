@@ -158,14 +158,21 @@ public class HllSketchMergeAggregatorFactory extends HllSketchAggregatorFactory
   {
     if (capabilities != null) {
       final ColumnType type = capabilities.toColumnType();
-      boolean isUnsupportedComplexType = ValueType.COMPLEX.equals(type.getType()) &&
-                                          (HllSketchModule.TYPE_NAME.equals(type.getComplexTypeName()) ||
-                                           HllSketchModule.BUILD_TYPE_NAME.equals(type.getComplexTypeName()));
-      if (!ColumnType.UNKNOWN_COMPLEX.equals(type) && !TYPE.equals(type) && !isUnsupportedComplexType) {
+      boolean isSupportedComplexType = ValueType.COMPLEX.equals(type.getType()) &&
+                                          (
+                                              HllSketchModule.TYPE_NAME.equals(type.getComplexTypeName()) ||
+                                              HllSketchModule.BUILD_TYPE_NAME.equals(type.getComplexTypeName()) ||
+                                              HllSketchModule.MERGE_TYPE_NAME.equals(type.getComplexTypeName()) ||
+                                              type.getComplexTypeName() == null
+                                          );
+      if (!isSupportedComplexType) {
         throw DruidException.forPersona(DruidException.Persona.USER)
                             .ofCategory(DruidException.Category.UNSUPPORTED)
-                            .build("Using aggregator [%s] is not supported for complex columns with type [%s].",
-                                   getIntermediateType().getComplexTypeName(), type);
+                            .build(
+                                "Using aggregator [%s] is not supported for complex columns with type [%s].",
+                                getIntermediateType().getComplexTypeName(),
+                                type
+                            );
       }
     }
   }
