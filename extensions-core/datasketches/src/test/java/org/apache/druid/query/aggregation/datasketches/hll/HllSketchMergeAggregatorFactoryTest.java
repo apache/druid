@@ -317,7 +317,8 @@ public class HllSketchMergeAggregatorFactoryTest
     Throwable exception = Assert.assertThrows(DruidException.class, () -> targetRound.factorize(metricFactory));
     Assert.assertEquals(
         "Using aggregator [HLLSketchMerge] is not supported for complex columns with type [COMPLEX<json>].",
-        exception.getMessage());
+        exception.getMessage()
+    );
   }
 
   @Test
@@ -326,7 +327,8 @@ public class HllSketchMergeAggregatorFactoryTest
     Throwable exception = Assert.assertThrows(DruidException.class, () -> targetRound.factorizeBuffered(metricFactory));
     Assert.assertEquals(
         "Using aggregator [HLLSketchMerge] is not supported for complex columns with type [COMPLEX<json>].",
-        exception.getMessage());
+        exception.getMessage()
+    );
   }
 
   @Test
@@ -335,6 +337,7 @@ public class HllSketchMergeAggregatorFactoryTest
     Throwable exception = Assert.assertThrows(DruidException.class, () -> targetRound.factorizeVector(vectorFactory));
     Assert.assertEquals(
         "Using aggregator [HLLSketchMerge] is not supported for complex columns with type [COMPLEX<json>].",
-        exception.getMessage());
+        exception.getMessage()
+    );
   }
 }

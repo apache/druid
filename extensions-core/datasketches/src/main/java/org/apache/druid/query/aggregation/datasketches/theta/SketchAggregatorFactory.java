@@ -118,13 +118,13 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
   private void validateInputs(@Nullable ColumnCapabilities capabilities)
   {
     if (capabilities != null) {
-      boolean isSupportedComplexType = capabilities.is(ValueType.COMPLEX) && !(
+      boolean isUnsupportedComplexType = capabilities.is(ValueType.COMPLEX) && !(
           SketchModule.THETA_SKETCH_TYPE.equals(capabilities.toColumnType()) ||
           SketchModule.MERGE_TYPE.equals(capabilities.toColumnType()) ||
           SketchModule.BUILD_TYPE.equals(capabilities.toColumnType())
       );
 
-      if (capabilities.isArray() || isSupportedComplexType) {
+      if (capabilities.isArray() || isUnsupportedComplexType) {
         throw DruidException.forPersona(DruidException.Persona.USER)
                             .ofCategory(DruidException.Category.UNSUPPORTED)
                             .build(
