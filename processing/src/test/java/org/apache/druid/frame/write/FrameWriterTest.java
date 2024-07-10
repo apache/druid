@@ -182,8 +182,12 @@ public class FrameWriterTest extends InitializedNullHandlingTest
   {
     capabilitiesAdjustFn = capabilities -> capabilities.setHasMultipleValues(ColumnCapabilities.Capable.FALSE);
 
+    // input frame does not override capabilities, assumes unknown is multi-value
+    // so row output frame will be multi-value
     final FrameWriterTestData.Dataset<?> expectedReadDataset =
-        FrameWriterTestData.TEST_STRINGS_SINGLE_VALUE;
+        outputFrameType.equals(FrameType.ROW_BASED) && outputFrameType.equals(inputFrameType)
+        ? FrameWriterTestData.TEST_STRINGS_SINGLE_VALUE_WITH_EMPTY
+        : FrameWriterTestData.TEST_STRINGS_SINGLE_VALUE;
 
     testWithDataset(
         FrameWriterTestData.TEST_STRINGS_SINGLE_VALUE_WITH_EMPTY,
@@ -210,15 +214,21 @@ public class FrameWriterTest extends InitializedNullHandlingTest
   {
     capabilitiesAdjustFn = capabilities -> capabilities.setHasMultipleValues(ColumnCapabilities.Capable.FALSE);
 
-    final Throwable e = Assert.assertThrows(
-        Throwable.class,
-        () -> testWithDataset(FrameWriterTestData.TEST_STRINGS_MULTI_VALUE)
-    );
+    if (outputFrameType.equals(FrameType.ROW_BASED) && outputFrameType.equals(inputFrameType)) {
+      // input frame does not override capabilities, assumes unknown is multi-value
+      // so row output frame will be multi-value
+      testWithDataset(FrameWriterTestData.TEST_STRINGS_MULTI_VALUE);
+    } else {
+      final Throwable e = Assert.assertThrows(
+          Throwable.class,
+          () -> testWithDataset(FrameWriterTestData.TEST_STRINGS_MULTI_VALUE)
+      );
 
-    MatcherAssert.assertThat(
-        e,
-        ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("Encountered unexpected multi-value row"))
-    );
+      MatcherAssert.assertThat(
+          e,
+          ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("Encountered unexpected multi-value row"))
+      );
+    }
   }
 
   @Test
@@ -559,7 +569,7 @@ public class FrameWriterTest extends InitializedNullHandlingTest
           null,
           inputFrameType,
           HeapMemoryAllocator.unlimited(),
-          capabilitiesAdjustFn,
+          null,
           rows,
           signature,
           Collections.emptyList()
