@@ -51,7 +51,7 @@ Other lookup types are available as extensions, including:
 - Globally cached lookups from a Kafka topic through [kafka-extraction-namespace](./kafka-extraction-namespace.md).
 
 :::info
-[MVDs](../querying/multi-value-dimensions.md) are not supported as keys in lookups. 
+[MVDs](multi-value-dimensions.md) are not supported as keys in lookups. 
 :::
 
 Query Syntax
