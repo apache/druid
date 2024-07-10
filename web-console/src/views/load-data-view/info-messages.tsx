@@ -89,7 +89,7 @@ export const TimestampMessage = React.memo(function TimestampMessage() {
           combine them into one by selecting <Code>Expression</Code> and defining a transform
           expression.
         </p>
-        <LearnMore href={`${getLink('DOCS')}/ingestion/#timestampspec`} />
+        <LearnMore href={`${getLink('DOCS')}/ingestion/ingestion-spec#timestampspec`} />
       </Callout>
     </FormGroup>
   );
@@ -106,7 +106,7 @@ export const TransformMessage = React.memo(function TransformMessage() {
           </ExternalLink>{' '}
           of column values allowing you to create new derived columns or alter existing column.
         </p>
-        <LearnMore href={`${getLink('DOCS')}/ingestion/#transforms`} />
+        <LearnMore href={`${getLink('DOCS')}/ingestion/ingestion-spec#transforms`} />
       </Callout>
     </FormGroup>
   );
@@ -120,7 +120,7 @@ export const FilterMessage = React.memo(function FilterMessage() {
           Druid can filter out unwanted data by applying per-row{' '}
           <ExternalLink href={`${getLink('DOCS')}/querying/filters`}>filters</ExternalLink>.
         </p>
-        <LearnMore href={`${getLink('DOCS')}/ingestion/#filter`} />
+        <LearnMore href={`${getLink('DOCS')}/ingestion/ingestion-spec#filter`} />
       </Callout>
     </FormGroup>
   );
@@ -162,7 +162,7 @@ export const PartitionMessage = React.memo(function PartitionMessage() {
           <Code>Primary partitioning</Code>), and each time chunk contains one or more segments (
           <Code>Secondary partitioning</Code>).
         </p>
-        <LearnMore href={`${getLink('DOCS')}/ingestion/#partitioning`} />
+        <LearnMore href={`${getLink('DOCS')}/ingestion/partitioning`} />
       </Callout>
     </FormGroup>
   );
@@ -173,7 +173,7 @@ export const TuningMessage = React.memo(function TuningMessage() {
     <FormGroup>
       <Callout>
         <p>Fine tune how Druid will ingest data.</p>
-        <LearnMore href={`${getLink('DOCS')}/ingestion/#tuningconfig`} />
+        <LearnMore href={`${getLink('DOCS')}/ingestion/ingestion-spec#tuningconfig`} />
       </Callout>
     </FormGroup>
   );
@@ -199,7 +199,7 @@ export const SpecMessage = React.memo(function SpecMessage() {
           you modify any values in previous sections, this spec will automatically update.
         </p>
         <p>Submit the spec to begin loading data into Druid.</p>
-        <LearnMore href={`${getLink('DOCS')}/ingestion/#ingestion-specs`} />
+        <LearnMore href={`${getLink('DOCS')}/ingestion/ingestion-spec`} />
       </Callout>
     </FormGroup>
   );

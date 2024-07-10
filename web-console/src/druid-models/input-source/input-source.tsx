@@ -264,9 +264,7 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
     required: true,
     info: (
       <>
-        <ExternalLink href={`${getLink('DOCS')}/ingestion/native-batch#input-sources`}>
-          baseDir
-        </ExternalLink>
+        <ExternalLink href={`${getLink('DOCS')}/ingestion/input-sources`}>baseDir</ExternalLink>
         <p>Specifies the directory to search recursively for files to be ingested.</p>
       </>
     ),
@@ -344,7 +342,7 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
       <>
         <p>
           JSON array of{' '}
-          <ExternalLink href={`${getLink('DOCS')}/development/extensions-core/s3`}>
+          <ExternalLink href={`${getLink('DOCS')}/ingestion/input-sources#s3-input-source`}>
             S3 Objects
           </ExternalLink>
           .
@@ -406,7 +404,7 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
       <>
         <p>
           JSON array of{' '}
-          <ExternalLink href={`${getLink('DOCS')}/development/extensions-core/azure`}>
+          <ExternalLink href={`${getLink('DOCS')}/ingestion/input-sources#azure-input-source`}>
             S3 Objects
           </ExternalLink>
           .
@@ -480,7 +478,9 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
       <>
         <p>
           JSON array of{' '}
-          <ExternalLink href={`${getLink('DOCS')}/development/extensions-core/google`}>
+          <ExternalLink
+            href={`${getLink('DOCS')}/ingestion/input-sources#google-cloud-storage-input-source`}
+          >
             Google Cloud Storage Objects
           </ExternalLink>
           .

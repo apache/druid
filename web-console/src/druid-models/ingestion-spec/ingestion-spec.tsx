@@ -223,13 +223,13 @@ export function getIngestionDocLink(spec: Partial<IngestionSpec>): string {
 
   switch (type) {
     case 'kafka':
-      return `${getLink('DOCS')}/development/extensions-core/kafka-ingestion`;
+      return `${getLink('DOCS')}/ingestion/kafka-ingestion`;
 
     case 'kinesis':
-      return `${getLink('DOCS')}/development/extensions-core/kinesis-ingestion`;
+      return `${getLink('DOCS')}/ingestion/kinesis-ingestion`;
 
     default:
-      return `${getLink('DOCS')}/ingestion/native-batch#input-sources`;
+      return `${getLink('DOCS')}/ingestion/input-sources`;
   }
 }
 
@@ -585,7 +585,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
     info: (
       <p>
         Druid connects to raw data through{' '}
-        <ExternalLink href={`${getLink('DOCS')}/ingestion/native-batch#input-sources`}>
+        <ExternalLink href={`${getLink('DOCS')}/ingestion/input-sources`}>
           inputSources
         </ExternalLink>
         . You can change your selected inputSource here.
@@ -664,7 +664,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           required: true,
           info: (
             <>
-              <ExternalLink href={`${getLink('DOCS')}/ingestion/native-batch#input-sources`}>
+              <ExternalLink href={`${getLink('DOCS')}/ingestion/input-sources`}>
                 inputSource.baseDir
               </ExternalLink>
               <p>Specifies the directory to search recursively for files to be ingested.</p>
@@ -786,7 +786,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
             <>
               <p>
                 JSON array of{' '}
-                <ExternalLink href={`${getLink('DOCS')}/development/extensions-core/s3`}>
+                <ExternalLink href={`${getLink('DOCS')}/ingestion/input-sources#s3-input-source`}>
                   S3 Objects
                 </ExternalLink>
                 .
@@ -949,7 +949,9 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
             <>
               <p>
                 JSON array of{' '}
-                <ExternalLink href={`${getLink('DOCS')}/development/extensions-core/azure`}>
+                <ExternalLink
+                  href={`${getLink('DOCS')}/ingestion/input-sources#azure-input-source`}
+                >
                   S3 Objects
                 </ExternalLink>
                 .
@@ -1023,7 +1025,11 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
             <>
               <p>
                 JSON array of{' '}
-                <ExternalLink href={`${getLink('DOCS')}/development/extensions-core/google`}>
+                <ExternalLink
+                  href={`${getLink(
+                    'DOCS',
+                  )}/ingestion/input-sources#google-cloud-storage-input-source`}
+                >
                   Google Cloud Storage Objects
                 </ExternalLink>
                 .
@@ -1090,11 +1096,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           placeholder: 'kafka_broker_host:9092',
           info: (
             <>
-              <ExternalLink
-                href={`${getLink(
-                  'DOCS',
-                )}/development/extensions-core/kafka-ingestion#supervisor-io-configuration`}
-              >
+              <ExternalLink href={`${getLink('DOCS')}/ingestion/kafka-ingestion#io-configuration`}>
                 consumerProperties
               </ExternalLink>
               <p>
@@ -1140,11 +1142,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           defaultValue: {},
           info: (
             <>
-              <ExternalLink
-                href={`${getLink(
-                  'DOCS',
-                )}/development/extensions-core/kafka-ingestion#supervisor-io-configuration`}
-              >
+              <ExternalLink href={`${getLink('DOCS')}/ingestion/kafka-ingestion#io-configuration`}>
                 consumerProperties
               </ExternalLink>
               <p>A map of properties to be passed to the Kafka consumer.</p>
@@ -1883,7 +1881,9 @@ export function getSecondaryPartitionRelatedFormFields(
               <p>
                 This should be the first dimension in your schema which would make it first in the
                 sort order. As{' '}
-                <ExternalLink href={`${getLink('DOCS')}/ingestion/#why-partition`}>
+                <ExternalLink
+                  href={`${getLink('DOCS')}/ingestion/partitioning#partitioning-and-sorting`}
+                >
                   Partitioning and sorting are best friends!
                 </ExternalLink>
               </p>
