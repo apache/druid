@@ -224,7 +224,7 @@ public class GroupByQueryEngine
 
       // Now check column capabilities, which must be present and explicitly not multi-valued and not arrays
       final ColumnCapabilities capabilities = inspector.getColumnCapabilities(dimension.getDimension());
-      if (capabilities != null && capabilities.hasMultipleValues().isFalse() && !capabilities.isArray()){
+      if (capabilities != null && capabilities.hasMultipleValues().isFalse() && !capabilities.isArray()) {
         return false;
       }
     }
