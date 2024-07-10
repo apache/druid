@@ -59,7 +59,6 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.SchemaPayload;
 import org.apache.druid.segment.SchemaPayloadPlus;
-import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentMetadata;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
@@ -1790,6 +1789,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
 
   private CoordinatorSegmentMetadataCache setupForColdDatasourceSchemaTest()
   {
+    // foo has both hot and cold segments
     DataSegment coldSegment =
         DataSegment.builder()
                    .dataSource(DATASOURCE1)
@@ -1799,6 +1799,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
                    .size(0)
                    .build();
 
+    // cold has only cold segments
     DataSegment singleColdSegment =
         DataSegment.builder()
                    .dataSource("cold")
@@ -1881,9 +1882,15 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
 
     schema.coldDatasourceSchemaExec();
 
-    // verify that cold schema for both `foo` and `cold` is present
+    Assert.assertEquals(new HashSet<>(Arrays.asList("foo", "cold")), schema.getDataSourceInformationMap().keySet());
+
+    // verify that cold schema for both foo and cold is present
     RowSignature fooSignature = schema.getDatasource("foo").getRowSignature();
     List<String> columnNames = fooSignature.getColumnNames();
+
+    // verify that foo schema doesn't contain columns from hot segments
+    Assert.assertEquals(3, columnNames.size());
+
     Assert.assertEquals("dim1", columnNames.get(0));
     Assert.assertEquals(ColumnType.STRING, fooSignature.getColumnType(columnNames.get(0)).get());
 
@@ -1907,6 +1914,8 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
 
     schema.refresh(segmentIds, new HashSet<>());
 
+    Assert.assertEquals(new HashSet<>(Arrays.asList("foo", "cold")), schema.getDataSourceInformationMap().keySet());
+
     coldSignature = schema.getDatasource("cold").getRowSignature();
     columnNames = coldSignature.getColumnNames();
     Assert.assertEquals("f1", columnNames.get(0));
@@ -1915,9 +1924,11 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     Assert.assertEquals("f2", columnNames.get(1));
     Assert.assertEquals(ColumnType.DOUBLE, coldSignature.getColumnType(columnNames.get(1)).get());
 
+    // foo now contains schema from both hot and cold segments
     verifyFooDSSchema(schema, 8);
     RowSignature rowSignature = schema.getDatasource("foo").getRowSignature();
 
+    // cold columns should be present at the end
     columnNames = rowSignature.getColumnNames();
     Assert.assertEquals("c1", columnNames.get(6));
     Assert.assertEquals(ColumnType.STRING, rowSignature.getColumnType(columnNames.get(6)).get());
@@ -1936,11 +1947,14 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     segmentIds.add(segment2.getId());
 
     schema.refresh(segmentIds, new HashSet<>());
-    verifyFooDSSchema(schema, 6);
+    Assert.assertEquals(Collections.singleton("foo"), schema.getDataSourceInformationMap().keySet());
 
+    verifyFooDSSchema(schema, 6);
     Assert.assertNull(schema.getDatasource("cold"));
 
     schema.coldDatasourceSchemaExec();
+
+    Assert.assertEquals(new HashSet<>(Arrays.asList("foo", "cold")), schema.getDataSourceInformationMap().keySet());
 
     RowSignature coldSignature = schema.getDatasource("cold").getRowSignature();
     List<String> columnNames = coldSignature.getColumnNames();
@@ -2005,7 +2019,6 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     segmentStatsMap.put(coldSegmentBeta.getId(), new SegmentMetadata(20L, "cold"));
     segmentStatsMap.put(hotSegmentGamma.getId(), new SegmentMetadata(20L, "hot"));
     segmentStatsMap.put(coldSegmentGamma.getId(), new SegmentMetadata(20L, "cold"));
-
 
     ImmutableMap.Builder<String, SchemaPayload> schemaPayloadMap = new ImmutableMap.Builder<>();
     schemaPayloadMap.put(
@@ -2091,8 +2104,15 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     Assert.assertNotNull(schema.getDatasource("alpha"));
     // gamma has both hot and cold segment
     Assert.assertNotNull(schema.getDatasource("gamma"));
+    // assert that cold schema for gamma doesn't contain any columns from hot segment
+    RowSignature rowSignature = schema.getDatasource("gamma").getRowSignature();
+    Assert.assertTrue(rowSignature.contains("dim1"));
+    Assert.assertTrue(rowSignature.contains("c1"));
+    Assert.assertTrue(rowSignature.contains("c2"));
+    Assert.assertFalse(rowSignature.contains("c3"));
+    Assert.assertFalse(rowSignature.contains("c4"));
 
-    Assert.assertEquals(schema.getDataSourceInformationMap().keySet(), new HashSet<>(Arrays.asList("alpha", "gamma")));
+    Assert.assertEquals(new HashSet<>(Arrays.asList("alpha", "gamma")), schema.getDataSourceInformationMap().keySet());
 
     druidDataSources.clear();
     druidDataSources.add(
@@ -2121,7 +2141,9 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     // gamma just has 1 hot segment
     Assert.assertNull(schema.getDatasource("gamma"));
 
-    Assert.assertEquals(schema.getDataSourceInformationMap().keySet(), Collections.singleton("beta"));
+    Assert.assertNull(schema.getDatasource("doesnotexist"));
+
+    Assert.assertEquals(Collections.singleton("beta"), schema.getDataSourceInformationMap().keySet());
   }
 
   private void verifyFooDSSchema(CoordinatorSegmentMetadataCache schema, int columns)
