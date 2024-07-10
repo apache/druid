@@ -211,10 +211,10 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
             Segments.INCLUDING_OVERSHADOWED
     );
     // Fetch the load specs of all segments overlapping with the unused segment intervals
-    final Set<Map<String, Object>> usedSegmentLoadSpecs =
-        taskActionClient.submit(retrieveUsedSegmentsAction)
-               .stream()
-               .map(DataSegment::getLoadSpec).collect(Collectors.toSet());
+    final Set<Map<String, Object>> usedSegmentLoadSpecs = taskActionClient.submit(retrieveUsedSegmentsAction)
+                                                                          .stream()
+                                                                          .map(DataSegment::getLoadSpec)
+                                                                          .collect(Collectors.toSet());
 
     do {
       if (nextBatchSize <= 0) {
@@ -245,10 +245,11 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
       // Determine the subset of segments to be killed from deep storage based on loadspecs.
       // If the segment nuke throws an exception, then the segment cleanup is abandoned.
 
-      // Determine upgraded_from_segment_id before nuking
+      // Determine upgraded segment ids before nuking
       final Set<String> upgradedSegmentIds = unusedSegments.stream()
                                                            .map(DataSegment::getId)
-                                                           .map(SegmentId::toString).collect(Collectors.toSet());
+                                                           .map(SegmentId::toString)
+                                                           .collect(Collectors.toSet());
       final Map<String, String> upgradedFromSegmentIds = new HashMap<>();
       try {
         upgradedFromSegmentIds.putAll(

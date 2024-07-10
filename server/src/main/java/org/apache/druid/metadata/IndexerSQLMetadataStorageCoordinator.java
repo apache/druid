@@ -564,7 +564,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                 createNewIdsOfAppendSegmentsAfterReplace(handle, replaceSegments, locksHeldByReplaceTask);
 
             Map<SegmentId, SegmentMetadata> upgradeSegmentMetadata = new HashMap<>();
-            Map<SegmentId, String> upgradedFromSegmentIdMap = new HashMap<>();
+            final Map<String, String> upgradedFromSegmentIdMap = new HashMap<>();
             for (DataSegmentPlus dataSegmentPlus : upgradedSegments) {
               segmentsToInsert.add(dataSegmentPlus.getDataSegment());
               if (dataSegmentPlus.getSchemaFingerprint() != null && dataSegmentPlus.getNumRows() != null) {
@@ -575,7 +575,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
               }
               if (dataSegmentPlus.getUpgradedFromSegmentId() != null) {
                 upgradedFromSegmentIdMap.put(
-                    dataSegmentPlus.getDataSegment().getId(),
+                    dataSegmentPlus.getDataSegment().getId().toString(),
                     dataSegmentPlus.getUpgradedFromSegmentId()
                 );
               }
@@ -1416,7 +1416,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     final Set<DataSegment> allSegmentsToInsert = new HashSet<>(appendSegments);
     final Map<SegmentId, SegmentId> newVersionSegmentToParent = new HashMap<>();
     final Map<String, DataSegment> segmentIdMap = new HashMap<>();
-    final Map<SegmentId, String> upgradedFromSegmentIdMap = new HashMap<>();
+    final Map<String, String> upgradedFromSegmentIdMap = new HashMap<>();
     appendSegments.forEach(segment -> segmentIdMap.put(segment.getId().toString(), segment));
     segmentIdsForNewVersions.forEach(
         pendingSegment -> {
@@ -1424,7 +1424,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             final DataSegment oldSegment = segmentIdMap.get(pendingSegment.getUpgradedFromSegmentId());
             final SegmentId newVersionSegmentId = pendingSegment.getId().asSegmentId();
             newVersionSegmentToParent.put(newVersionSegmentId, oldSegment.getId());
-            upgradedFromSegmentIdMap.put(newVersionSegmentId, oldSegment.getId().toString());
+            upgradedFromSegmentIdMap.put(newVersionSegmentId.toString(), oldSegment.getId().toString());
             allSegmentsToInsert.add(
                 new DataSegment(
                     pendingSegment.getId().asSegmentId(),
@@ -2134,7 +2134,6 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       for (List<DataSegment> partition : partitionedSegments) {
         for (DataSegment segment : partition) {
           String segmentId = segment.getId().toString();
-          final String upgradedFromSegmentId = null;
 
           PreparedBatchPart preparedBatchPart = preparedBatch.add()
               .bind("id", segmentId)
@@ -2147,7 +2146,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
               .bind("used", usedSegments.contains(segment))
               .bind("payload", jsonMapper.writeValueAsBytes(segment))
               .bind("used_status_last_updated", now)
-              .bind("upgraded_from_segment_id", upgradedFromSegmentId);
+              .bind("upgraded_from_segment_id", (String) null);
 
           if (schemaPersistEnabled) {
             Long numRows = null;
@@ -2272,6 +2271,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                                            .shardSpec(shardSpec)
                                            .build();
 
+      // When the segment already has an upgraded_from_segment_id, reuse it for its children
+      // This ensures that the row has a single level of lineage
       final String upgradedFromSegmentId = oldSegmentMetadata.getUpgradedFromSegmentId() == null
                                            ? oldSegmentMetadata.getDataSegment().getId().toString()
                                            : oldSegmentMetadata.getUpgradedFromSegmentId();
@@ -2328,7 +2329,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       @Nullable SegmentSchemaMapping segmentSchemaMapping,
       Map<SegmentId, SegmentMetadata> upgradeSegmentMetadata,
       Map<SegmentId, SegmentId> newVersionForAppendToParent,
-      Map<SegmentId, String> upgradedFromSegmentIdMap
+      Map<String, String> upgradedFromSegmentIdMap
   ) throws IOException
   {
     boolean shouldPersistSchema = shouldPersistSchema(segmentSchemaMapping);
@@ -2365,7 +2366,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                  .bind("used", true)
                  .bind("payload", jsonMapper.writeValueAsBytes(segment))
                  .bind("used_status_last_updated", now)
-                 .bind("upgraded_from_segment_id", upgradedFromSegmentIdMap.get(segment.getId()));
+                 .bind("upgraded_from_segment_id", upgradedFromSegmentIdMap.get(segment.getId().toString()));
 
         if (schemaPersistEnabled) {
           SegmentMetadata segmentMetadata =
@@ -3009,15 +3010,13 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                                                    .bind("dataSource", dataSource);
           SqlSegmentsMetadataQuery.bindColumnValuesToQueryWithInCondition("id", segmentIdList, query);
           return query.map((index, r, ctx) -> {
-                             final String id = r.getString(1);
-                             final String upgradedFromSegmentId = r.getString(2);
-                             if (upgradedFromSegmentId != null) {
-                               upgradedFromSegmentIds.put(id, upgradedFromSegmentId);
-                             }
-                             return null;
-                           }
-                      )
-                      .list();
+            final String id = r.getString(1);
+            final String upgradedFromSegmentId = r.getString(2);
+            if (upgradedFromSegmentId != null) {
+              upgradedFromSegmentIds.put(id, upgradedFromSegmentId);
+            }
+            return null;
+          }).list();
         }
     );
     return new UpgradedFromSegmentsResponse(upgradedFromSegmentIds);
@@ -3053,14 +3052,12 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
               query
           );
           return query.map((index, r, ctx) -> {
-                             final String upgradedToId = r.getString(1);
-                             final String id = r.getString(2);
-                             upgradedToSegmentIds.computeIfAbsent(id, k -> new HashSet<>())
-                                                 .add(upgradedToId);
-                             return null;
-                           }
-                      )
-                      .list();
+            final String upgradedToId = r.getString(1);
+            final String id = r.getString(2);
+            upgradedToSegmentIds.computeIfAbsent(id, k -> new HashSet<>())
+                                .add(upgradedToId);
+            return null;
+          }).list();
         }
     );
     return new UpgradedToSegmentsResponse(upgradedToSegmentIds);

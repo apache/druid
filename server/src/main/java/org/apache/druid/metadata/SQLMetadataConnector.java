@@ -589,7 +589,8 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
 
     // upgraded_from_segment_id is the first segment to which the same load spec originally belonged
     // Load specs can be shared as a result of segment version upgrade
-    // This column is null for segments that haven't been upgraded.
+    // This column is null for segments that were not upgraded from any other
+    // or were upgraded before this column was added
     columnNameTypes.put("upgraded_from_segment_id", "VARCHAR(255)");
 
     if (centralizedDatasourceSchemaConfig.isEnabled()) {
