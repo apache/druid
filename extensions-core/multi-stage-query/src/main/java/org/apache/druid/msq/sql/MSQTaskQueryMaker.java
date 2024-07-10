@@ -101,7 +101,7 @@ public class MSQTaskQueryMaker implements QueryMaker
       final PlannerContext plannerContext,
       final ObjectMapper jsonMapper,
       final List<Entry<Integer, String>> fieldMapping,
-      final SegmentMorphFactoryCreator segmentMorphFactoryCreator
+      @Nullable final SegmentMorphFactoryCreator segmentMorphFactoryCreator
   )
   {
     this.targetDataSource = targetDataSource;
@@ -109,7 +109,7 @@ public class MSQTaskQueryMaker implements QueryMaker
     this.plannerContext = Preconditions.checkNotNull(plannerContext, "plannerContext");
     this.jsonMapper = Preconditions.checkNotNull(jsonMapper, "jsonMapper");
     this.fieldMapping = Preconditions.checkNotNull(fieldMapping, "fieldMapping");
-    this.segmentMorphFactoryCreator = Preconditions.checkNotNull(segmentMorphFactoryCreator, "segmentMorphFactoryCreator");
+    this.segmentMorphFactoryCreator = segmentMorphFactoryCreator;
   }
 
   @Override
