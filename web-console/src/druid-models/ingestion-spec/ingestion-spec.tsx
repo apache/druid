@@ -478,16 +478,9 @@ export function normalizeSpec(spec: Partial<IngestionSpec>): IngestionSpec {
 /**
  * Make sure that any extra junk in the spec other than 'type', 'spec', and 'context' is removed
  * @param spec - the spec to clean
- * @param allowSuspended - allow keeping 'suspended' also
  */
-export function cleanSpec(
-  spec: Partial<IngestionSpec>,
-  allowSuspended?: boolean,
-): Partial<IngestionSpec> {
-  return allowKeys(
-    spec,
-    ['type', 'spec', 'context'].concat(allowSuspended ? ['suspended'] : []) as any,
-  ) as IngestionSpec;
+export function cleanSpec(spec: Partial<IngestionSpec>): Partial<IngestionSpec> {
+  return allowKeys(spec, ['type', 'spec', 'context', 'suspended']) as IngestionSpec;
 }
 
 export function upgradeSpec(spec: any, yolo = false): Partial<IngestionSpec> {

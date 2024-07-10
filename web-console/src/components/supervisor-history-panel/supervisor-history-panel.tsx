@@ -52,9 +52,7 @@ export const SupervisorHistoryPanel = React.memo(function SupervisorHistoryPanel
       const resp = await Api.instance.get(
         `/druid/indexer/v1/supervisor/${Api.encodePath(supervisorId)}/history`,
       );
-      return resp.data.map((vs: SupervisorHistoryEntry) =>
-        deepSet(vs, 'spec', cleanSpec(vs.spec, true)),
-      );
+      return resp.data.map((vs: SupervisorHistoryEntry) => deepSet(vs, 'spec', cleanSpec(vs.spec)));
     },
   });
 

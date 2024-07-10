@@ -56,7 +56,7 @@ import {
   Loader,
   PopoverText,
 } from '../../components';
-import { AlertDialog, AsyncActionDialog } from '../../dialogs';
+import { AlertDialog, AsyncActionDialog, DiffDialog } from '../../dialogs';
 import type {
   ArrayMode,
   DimensionSpec,
@@ -146,6 +146,7 @@ import {
   deepMove,
   deepSet,
   deepSetMulti,
+  deleteKeys,
   EMPTY_ARRAY,
   EMPTY_OBJECT,
   filterMap,
@@ -427,6 +428,8 @@ export interface LoadDataViewState {
   // for final step
   existingDatasources?: string[];
   submitting: boolean;
+  currentSpecToDiff?: Partial<IngestionSpec>;
+  currentSpecToDiffLoading: boolean;
 }
 
 export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDataViewState> {
@@ -478,6 +481,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
       // for final step
       submitting: false,
+      currentSpecToDiffLoading: false,
     };
   }
 
@@ -3419,7 +3423,9 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   }
 
   renderSpecStep() {
-    const { spec, existingDatasources, submitting } = this.state;
+    const { initSupervisorId } = this.props;
+    const { spec, existingDatasources, submitting, currentSpecToDiffLoading, currentSpecToDiff } =
+      this.state;
     const issueWithSpec = getIssueWithSpec(spec);
     const datasource = deepGet(spec, 'spec.dataSchema.dataSource');
 
@@ -3473,12 +3479,24 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               </FormGroup>
             )}
           <AppendToExistingIssue spec={spec} onChangeSpec={this.updateSpec} />
+          {isStreamingSpec(spec) && initSupervisorId && (
+            <Button
+              text={currentSpecToDiffLoading ? 'Loading...' : 'Diff with current'}
+              onClick={() => {
+                void this.handleDiffWithCurrent();
+              }}
+            />
+          )}
           {isStreamingSpec(spec) && (
             <Switch
               className="suspended-switch"
               checked={Boolean(spec.suspended)}
               label="Submit in suspended state"
-              onChange={() => this.updateSpec({ ...spec, suspended: !spec.suspended })}
+              onChange={() =>
+                this.updateSpec(
+                  spec.suspended ? deleteKeys(spec, ['suspended']) : { ...spec, suspended: true },
+                )
+              }
             />
           )}
         </div>
@@ -3505,6 +3523,18 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             />
           )}
         </div>
+        {currentSpecToDiff && (
+          <DiffDialog
+            title="Diff with current spec"
+            oldValue={currentSpecToDiff}
+            newValue={spec}
+            onClose={() => {
+              this.setState({
+                currentSpecToDiff: undefined,
+              });
+            }}
+          />
+        )}
       </>
     );
   }
@@ -3562,5 +3592,37 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     setTimeout(() => {
       goToTasks(taskResp.data.task);
     }, 1000);
+  };
+
+  private readonly handleDiffWithCurrent = async () => {
+    const { initSupervisorId } = this.props;
+    const { currentSpecToDiffLoading } = this.state;
+    if (!initSupervisorId || currentSpecToDiffLoading) return;
+
+    this.setState({
+      currentSpecToDiffLoading: true,
+    });
+
+    let spec: Partial<IngestionSpec>;
+    try {
+      spec = cleanSpec(
+        (await Api.instance.get(`/druid/indexer/v1/supervisor/${Api.encodePath(initSupervisorId)}`))
+          .data,
+      );
+    } catch (e) {
+      this.setState({
+        currentSpecToDiffLoading: false,
+      });
+      AppToaster.show({
+        message: `Could not load current spec: ${e.message}`,
+        intent: Intent.DANGER,
+      });
+      return;
+    }
+
+    this.setState({
+      currentSpecToDiffLoading: false,
+      currentSpecToDiff: spec,
+    });
   };
 }
