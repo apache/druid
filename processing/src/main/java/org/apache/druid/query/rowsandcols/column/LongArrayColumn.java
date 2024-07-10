@@ -141,13 +141,13 @@ public class LongArrayColumn implements Column
     @Override
     public FindResult findDouble(int startIndex, int endIndex, double val)
     {
-      return findLong(startIndex, endIndex, (int) val);
+      return findLong(startIndex, endIndex, (long) val);
     }
 
     @Override
     public FindResult findFloat(int startIndex, int endIndex, float val)
     {
-      return findLong(startIndex, endIndex, (int) val);
+      return findLong(startIndex, endIndex, (long) val);
     }
 
     @Override
@@ -181,6 +181,7 @@ public class LongArrayColumn implements Column
       }
     }
 
+    @SuppressWarnings("unused")
     public FindResult findInt(int startIndex, int endIndex, int val)
     {
       return findLong(startIndex, endIndex, val);

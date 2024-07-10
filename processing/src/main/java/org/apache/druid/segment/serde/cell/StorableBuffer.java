@@ -48,24 +48,6 @@ public interface StorableBuffer
     }
   };
 
-  static StorableBuffer fromBytes(byte[] bytes)
-  {
-    return new StorableBuffer()
-    {
-      @Override
-      public void store(ByteBuffer byteBuffer)
-      {
-        byteBuffer.put(bytes);
-      }
-
-      @Override
-      public int getSerializedSize()
-      {
-        return bytes.length;
-      }
-    };
-  }
-
   void store(ByteBuffer byteBuffer);
 
   int getSerializedSize();

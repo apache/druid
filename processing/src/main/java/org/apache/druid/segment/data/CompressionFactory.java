@@ -233,6 +233,7 @@ public class CompressionFactory
 
     void write(long value) throws IOException;
 
+    @SuppressWarnings("unused")
     default void write(long[] values, int offset, int length) throws IOException
     {
       for (int i = offset; i < length; ++i) {
@@ -302,6 +303,7 @@ public class CompressionFactory
      */
     LongEncodingReader duplicate();
 
+    @SuppressWarnings("unused")
     LongEncodingStrategy getStrategy();
   }
 
