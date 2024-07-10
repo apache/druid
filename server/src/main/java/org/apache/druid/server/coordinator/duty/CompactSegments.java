@@ -234,12 +234,13 @@ public class CompactSegments implements CoordinatorCustomDuty
     Granularity configuredSegmentGranularity = dataSourceCompactionConfig.getGranularitySpec()
                                                                          .getSegmentGranularity();
     Granularity taskSegmentGranularity = compactionTaskQuery.getGranularitySpec().getSegmentGranularity();
-    if (configuredSegmentGranularity.equals(taskSegmentGranularity)) {
+    if (configuredSegmentGranularity == null
+        || configuredSegmentGranularity.equals(taskSegmentGranularity)) {
       return false;
     }
 
     LOG.info(
-        "Cancelling task [%s] as task segmentGranularity is [%s] but compaction config segmentGranularity is [%s]",
+        "Cancelling task[%s] as task segmentGranularity[%s] differs from compaction config segmentGranularity[%s].",
         compactionTaskQuery.getId(), taskSegmentGranularity, configuredSegmentGranularity
     );
     overlordClient.cancelTask(compactionTaskQuery.getId());
