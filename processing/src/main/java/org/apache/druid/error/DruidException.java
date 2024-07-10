@@ -481,10 +481,14 @@ public class DruidException extends RuntimeException
 
       StackTraceElement[] stackTrace = retVal.getStackTrace();
       int firstNonDruidExceptionIndex = 0;
-      while (stackTrace[firstNonDruidExceptionIndex].getClassName().startsWith(CLASS_NAME_STR)) {
+      while (
+          firstNonDruidExceptionIndex < stackTrace.length &&
+          stackTrace[firstNonDruidExceptionIndex].getClassName().startsWith(CLASS_NAME_STR)) {
         ++firstNonDruidExceptionIndex;
       }
-      retVal.setStackTrace(Arrays.copyOfRange(stackTrace, firstNonDruidExceptionIndex, stackTrace.length));
+      if (firstNonDruidExceptionIndex < stackTrace.length) {
+        retVal.setStackTrace(Arrays.copyOfRange(stackTrace, firstNonDruidExceptionIndex, stackTrace.length));
+      }
 
       return retVal;
     }
