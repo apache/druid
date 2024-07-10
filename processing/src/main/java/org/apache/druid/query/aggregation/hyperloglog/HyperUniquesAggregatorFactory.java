@@ -137,13 +137,14 @@ public class HyperUniquesAggregatorFactory extends AggregatorFactory
 
   /**
    * Validates whether the aggregator supports the input column type.
+   * Supported column types are complex types of hyperUnique, preComputedHyperUnique, as well as UNKNOWN_COMPLEX.
    * @param capabilities
    */
   private void validateInputs(@Nullable ColumnCapabilities capabilities)
   {
     if (capabilities != null) {
       final ColumnType type = capabilities.toColumnType();
-      if (!ColumnType.UNKNOWN_COMPLEX.equals(type) && !TYPE.equals(type) && !PRECOMPUTED_TYPE.equals(type)) {
+      if (!(ColumnType.UNKNOWN_COMPLEX.equals(type) || TYPE.equals(type) || PRECOMPUTED_TYPE.equals(type))) {
         throw DruidException.forPersona(DruidException.Persona.USER)
                             .ofCategory(DruidException.Category.UNSUPPORTED)
                             .build(

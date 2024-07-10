@@ -152,6 +152,7 @@ public class HllSketchMergeAggregatorFactory extends HllSketchAggregatorFactory
 
   /**
    * Validates whether the aggregator supports the input column type.
+   * Supported column types are complex types of HLLSketch, HLLSketchBuild, HLLSketchMerge, as well as UNKNOWN_COMPLEX.
    * @param capabilities
    */
   private void validateInputs(@Nullable ColumnCapabilities capabilities)

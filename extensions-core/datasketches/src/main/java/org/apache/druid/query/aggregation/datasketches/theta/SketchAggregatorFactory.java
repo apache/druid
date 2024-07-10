@@ -113,6 +113,11 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
 
   /**
    * Validates whether the aggregator supports the input column type.
+   * Unsupported column types are:
+   * <ul>
+   *   <li>Arrays</li>
+   *   <li>Complex types of thetaSketch, thetaSketchMerge, thetaSketchBuild.</li>
+   * </ul>
    * @param capabilities
    */
   private void validateInputs(@Nullable ColumnCapabilities capabilities)
