@@ -152,78 +152,77 @@ public class RoundRobinIteratorTest
     Set<String> input = ImmutableSet.of("a", "b", "c");
     rrIterator.updateCandidates(input);
 
-    List<String> expectedList = getExpectedList(input, rrIterator.getCurrentPosition(), null);
-    List<String> actualList = getActualList(rrIterator.getIterator(), input.size());
-    Assert.assertEquals(expectedList, actualList);
-    String lastValue = actualList.get(actualList.size() - 1);
+    List<String> exepctedCandidates = getExepctedCandidates(input, rrIterator.getCurrentPosition(), null);
+    List<String> actualCandidates = getObservedCandidates(rrIterator.getIterator(), input.size());
+    Assert.assertEquals(exepctedCandidates, actualCandidates);
+    String lastValue = actualCandidates.get(actualCandidates.size() - 1);
 
     // Second update
     input = ImmutableSet.of("c", "d");
     rrIterator.updateCandidates(input);
 
-    expectedList = getExpectedList(input, rrIterator.getCurrentPosition(), lastValue);
-    actualList = getActualList(rrIterator.getIterator(), input.size());
-    Assert.assertEquals(expectedList, actualList);
+    exepctedCandidates = getExepctedCandidates(input, rrIterator.getCurrentPosition(), lastValue);
+    actualCandidates = getObservedCandidates(rrIterator.getIterator(), input.size());
+    Assert.assertEquals(exepctedCandidates, actualCandidates);
 
-    Assert.assertNotEquals(lastValue, actualList.get(0));
-    lastValue = actualList.get(actualList.size() - 1);
+    Assert.assertNotEquals(lastValue, actualCandidates.get(0));
+    lastValue = actualCandidates.get(actualCandidates.size() - 1);
 
     // Third update
     input = ImmutableSet.of("d", "e");
     rrIterator.updateCandidates(ImmutableSet.of("d", "e"));
 
-    expectedList = getExpectedList(input, rrIterator.getCurrentPosition(), lastValue);
-    actualList = getActualList(rrIterator.getIterator(), input.size());
-    Assert.assertEquals(expectedList, actualList);
+    exepctedCandidates = getExepctedCandidates(input, rrIterator.getCurrentPosition(), lastValue);
+    actualCandidates = getObservedCandidates(rrIterator.getIterator(), input.size());
+    Assert.assertEquals(exepctedCandidates, actualCandidates);
 
-    Assert.assertNotEquals(lastValue, actualList.get(0));
-    lastValue = actualList.get(actualList.size() - 1);
+    Assert.assertNotEquals(lastValue, actualCandidates.get(0));
+    lastValue = actualCandidates.get(actualCandidates.size() - 1);
 
     // Fourth update
     input = ImmutableSet.of("e", "f", "h");
     rrIterator.updateCandidates(input);
 
-    expectedList = getExpectedList(input, rrIterator.getCurrentPosition(), lastValue);
-    actualList = getActualList(rrIterator.getIterator(), input.size());
-    Assert.assertEquals(expectedList, actualList);
-    Assert.assertNotEquals(lastValue, actualList.get(0));
+    exepctedCandidates = getExepctedCandidates(input, rrIterator.getCurrentPosition(), lastValue);
+    actualCandidates = getObservedCandidates(rrIterator.getIterator(), input.size());
+    Assert.assertEquals(exepctedCandidates, actualCandidates);
+    Assert.assertNotEquals(lastValue, actualCandidates.get(0));
   }
 
-  private List<String> getExpectedList(
+  private List<String> getExepctedCandidates(
       final Set<String> input,
       final int cursorPosition,
       @Nullable final String previousValue
   )
   {
-    final List<String> sortedList = input.stream().sorted().collect(Collectors.toList());
-    final List<String> expectedList = new ArrayList<>();
+    final List<String> sortedCandidates = input.stream().sorted().collect(Collectors.toList());
+    final List<String> expectedCandidates = new ArrayList<>();
 
     // Adjust the cursor position if the value at the cursor position from the sorted list
     // is the same as the previous value.
-    final int n = sortedList.size();
+    final int n = sortedCandidates.size();
     int adjustedCursorPosition = cursorPosition;
-    if (sortedList.get(adjustedCursorPosition % n).equals(previousValue)) {
+    if (sortedCandidates.get(adjustedCursorPosition % n).equals(previousValue)) {
       adjustedCursorPosition = (adjustedCursorPosition + 1) % n;
     }
 
     for (int i = 0; i < n; i++) {
       int index = (adjustedCursorPosition + i) % n;
-      String val = sortedList.get(index);
-      expectedList.add(val);
+      expectedCandidates.add(sortedCandidates.get(index));
     }
-    return expectedList;
+    return expectedCandidates;
   }
 
-  private List<String> getActualList(final Iterator<String> it, final int maxSize)
+  private List<String> getObservedCandidates(final Iterator<String> it, final int maxSize)
   {
-    final List<String> actualList = new ArrayList<>();
+    final List<String> observedCandidates = new ArrayList<>();
     int cnt = 0;
     while (it.hasNext()) {
-      actualList.add(it.next());
+      observedCandidates.add(it.next());
       if (++cnt >= maxSize) {
         break;
       }
     }
-    return actualList;
+    return observedCandidates;
   }
 }
