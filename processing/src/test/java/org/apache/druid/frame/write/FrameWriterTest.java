@@ -182,12 +182,8 @@ public class FrameWriterTest extends InitializedNullHandlingTest
   {
     capabilitiesAdjustFn = capabilities -> capabilities.setHasMultipleValues(ColumnCapabilities.Capable.FALSE);
 
-    // When columnar frames are in multiValue = false mode, and when they see a dataset that is all single strings and
-    // empty arrays, they write a single-valued column, replacing the empty arrays with nulls.
     final FrameWriterTestData.Dataset<?> expectedReadDataset =
-        outputFrameType == FrameType.COLUMNAR
-        ? FrameWriterTestData.TEST_STRINGS_SINGLE_VALUE
-        : FrameWriterTestData.TEST_STRINGS_SINGLE_VALUE_WITH_EMPTY;
+        FrameWriterTestData.TEST_STRINGS_SINGLE_VALUE;
 
     testWithDataset(
         FrameWriterTestData.TEST_STRINGS_SINGLE_VALUE_WITH_EMPTY,
@@ -214,19 +210,15 @@ public class FrameWriterTest extends InitializedNullHandlingTest
   {
     capabilitiesAdjustFn = capabilities -> capabilities.setHasMultipleValues(ColumnCapabilities.Capable.FALSE);
 
-    if (outputFrameType == FrameType.COLUMNAR) {
-      final IllegalStateException e = Assert.assertThrows(
-          IllegalStateException.class,
-          () -> testWithDataset(FrameWriterTestData.TEST_STRINGS_MULTI_VALUE)
-      );
+    final Throwable e = Assert.assertThrows(
+        Throwable.class,
+        () -> testWithDataset(FrameWriterTestData.TEST_STRINGS_MULTI_VALUE)
+    );
 
-      MatcherAssert.assertThat(
-          e,
-          ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith("Encountered unexpected multi-value row"))
-      );
-    } else {
-      testWithDataset(FrameWriterTestData.TEST_STRINGS_MULTI_VALUE);
-    }
+    MatcherAssert.assertThat(
+        e,
+        ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("Encountered unexpected multi-value row"))
+    );
   }
 
   @Test
@@ -567,7 +559,7 @@ public class FrameWriterTest extends InitializedNullHandlingTest
           null,
           inputFrameType,
           HeapMemoryAllocator.unlimited(),
-          null,
+          capabilitiesAdjustFn,
           rows,
           signature,
           Collections.emptyList()
