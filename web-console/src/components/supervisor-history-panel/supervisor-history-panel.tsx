@@ -87,8 +87,8 @@ export const SupervisorHistoryPanel = React.memo(function SupervisorHistoryPanel
         <DiffDialog
           title="Supervisor spec diff"
           versions={historyData.map(s => ({ label: s.version, value: s.spec }))}
-          initLeftIndex={diffIndex + 1}
-          initRightIndex={diffIndex}
+          initOldIndex={diffIndex + 1}
+          initNewIndex={diffIndex}
           onClose={() => setDiffIndex(-1)}
         />
       )}
