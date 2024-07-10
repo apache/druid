@@ -59,6 +59,7 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.SchemaPayload;
 import org.apache.druid.segment.SchemaPayloadPlus;
+import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentMetadata;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
@@ -93,6 +94,7 @@ import java.io.File;
 import java.io.IOException;
 import java.sql.ResultSet;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -1873,7 +1875,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
   }
 
   @Test
-  public void testColdDatasourceSchema_mergeSchemaInRefresh() throws IOException
+  public void testColdDatasourceSchema_refreshAfterColdSchemaExec() throws IOException
   {
     CoordinatorSegmentMetadataCache schema = setupForColdDatasourceSchemaTest();
 
@@ -1925,7 +1927,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
   }
 
   @Test
-  public void testColdDatasourceSchema_mergeSchemaInColdSchemaExec() throws IOException
+  public void testColdDatasourceSchema_coldSchemaExecAfterRefresh() throws IOException
   {
     CoordinatorSegmentMetadataCache schema = setupForColdDatasourceSchemaTest();
 
@@ -1980,32 +1982,74 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
                    .size(0)
                    .build();
 
+    DataSegment coldSegmentGamma =
+        DataSegment.builder()
+            .dataSource("gamma")
+            .interval(Intervals.of("2000/P2Y"))
+            .version("1")
+            .shardSpec(new LinearShardSpec(0))
+            .size(0)
+            .build();
+
+    DataSegment hotSegmentGamma =
+        DataSegment.builder()
+                   .dataSource("gamma")
+                   .interval(Intervals.of("2001/P2Y"))
+                   .version("1")
+                   .shardSpec(new LinearShardSpec(0))
+                   .size(0)
+                   .build();
+
     ImmutableMap.Builder<SegmentId, SegmentMetadata> segmentStatsMap = new ImmutableMap.Builder<>();
-    segmentStatsMap.put(coldSegmentAlpha.getId(), new SegmentMetadata(20L, "fp"));
-    segmentStatsMap.put(coldSegmentBeta.getId(), new SegmentMetadata(20L, "fp"));
+    segmentStatsMap.put(coldSegmentAlpha.getId(), new SegmentMetadata(20L, "cold"));
+    segmentStatsMap.put(coldSegmentBeta.getId(), new SegmentMetadata(20L, "cold"));
+    segmentStatsMap.put(hotSegmentGamma.getId(), new SegmentMetadata(20L, "hot"));
+    segmentStatsMap.put(coldSegmentGamma.getId(), new SegmentMetadata(20L, "cold"));
+
 
     ImmutableMap.Builder<String, SchemaPayload> schemaPayloadMap = new ImmutableMap.Builder<>();
     schemaPayloadMap.put(
-        "fp",
+        "cold",
         new SchemaPayload(RowSignature.builder()
                                       .add("dim1", ColumnType.STRING)
                                       .add("c1", ColumnType.STRING)
                                       .add("c2", ColumnType.LONG)
                                       .build())
     );
+    schemaPayloadMap.put(
+        "hot",
+        new SchemaPayload(RowSignature.builder()
+                                      .add("c3", ColumnType.STRING)
+                                      .add("c4", ColumnType.STRING)
+                                      .build())
+    );
     segmentSchemaCache.updateFinalizedSegmentSchema(
         new SegmentSchemaCache.FinalizedSegmentSchemaInfo(segmentStatsMap.build(), schemaPayloadMap.build())
     );
 
-    ImmutableDruidDataSource druidDataSource =
+    List<ImmutableDruidDataSource> druidDataSources = new ArrayList<>();
+    druidDataSources.add(
         new ImmutableDruidDataSource(
             coldSegmentAlpha.getDataSource(),
             Collections.emptyMap(),
             Collections.singletonMap(coldSegmentAlpha.getId(), coldSegmentAlpha)
-        );
+        )
+    );
+
+    Map<SegmentId, DataSegment> gammaSegments = new HashMap<>();
+    gammaSegments.put(hotSegmentGamma.getId(), hotSegmentGamma);
+    gammaSegments.put(coldSegmentGamma.getId(), coldSegmentGamma);
+
+    druidDataSources.add(
+        new ImmutableDruidDataSource(
+            "gamma",
+            Collections.emptyMap(),
+            gammaSegments
+        )
+    );
 
     Mockito.when(sqlSegmentsMetadataManager.getImmutableDataSourcesWithAllUsedSegments())
-           .thenReturn(Collections.singletonList(druidDataSource));
+           .thenReturn(druidDataSources);
 
     CoordinatorSegmentMetadataCache schema = new CoordinatorSegmentMetadataCache(
         getQueryLifecycleFactory(walker),
@@ -2024,29 +2068,60 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     SegmentReplicaCount segmentReplicaCount = new SegmentReplicaCount();
     Map<SegmentId, Map<String, SegmentReplicaCount>> segmentIdSegmentReplicaCountMap = new HashMap<>();
     Map<String, SegmentReplicaCount> segmentReplicaCountMap = Collections.singletonMap("default", segmentReplicaCount);
+
+    SegmentReplicaCount nonZeroSegmentReplicaCount = new SegmentReplicaCount();
+    nonZeroSegmentReplicaCount.setRequired(1, 1);
+    Map<String, SegmentReplicaCount> nonZeroSegmentReplicaCountMap =
+        Collections.singletonMap("default", nonZeroSegmentReplicaCount);
+
     // Cold segments with 0 replication factor.
     segmentIdSegmentReplicaCountMap.put(coldSegmentAlpha.getId(), segmentReplicaCountMap);
     segmentIdSegmentReplicaCountMap.put(coldSegmentBeta.getId(), segmentReplicaCountMap);
+    segmentIdSegmentReplicaCountMap.put(coldSegmentGamma.getId(), segmentReplicaCountMap);
+    segmentIdSegmentReplicaCountMap.put(coldSegmentGamma.getId(), segmentReplicaCountMap);
+
+    // Hot segment with non-zero replication factor.
+    segmentIdSegmentReplicaCountMap.put(hotSegmentGamma.getId(), nonZeroSegmentReplicaCountMap);
     SegmentReplicationStatus segmentReplicationStatus = new SegmentReplicationStatus(segmentIdSegmentReplicaCountMap);
 
     schema.updateSegmentReplicationStatus(segmentReplicationStatus);
 
     schema.coldDatasourceSchemaExec();
+    // alpha has only 1 cold segment
     Assert.assertNotNull(schema.getDatasource("alpha"));
+    // gamma has both hot and cold segment
+    Assert.assertNotNull(schema.getDatasource("gamma"));
 
-    druidDataSource =
+    Assert.assertEquals(schema.getDataSourceInformationMap().keySet(), new HashSet<>(Arrays.asList("alpha", "gamma")));
+
+    druidDataSources.clear();
+    druidDataSources.add(
         new ImmutableDruidDataSource(
             coldSegmentBeta.getDataSource(),
             Collections.emptyMap(),
             Collections.singletonMap(coldSegmentBeta.getId(), coldSegmentBeta)
-        );
+        )
+    );
+
+    druidDataSources.add(
+        new ImmutableDruidDataSource(
+            hotSegmentGamma.getDataSource(),
+            Collections.emptyMap(),
+            Collections.singletonMap(hotSegmentGamma.getId(), hotSegmentGamma)
+        )
+    );
 
     Mockito.when(sqlSegmentsMetadataManager.getImmutableDataSourcesWithAllUsedSegments())
-           .thenReturn(Collections.singletonList(druidDataSource));
+           .thenReturn(druidDataSources);
 
     schema.coldDatasourceSchemaExec();
     Assert.assertNotNull(schema.getDatasource("beta"));
+    // alpha doesn't have any segments
     Assert.assertNull(schema.getDatasource("alpha"));
+    // gamma just has 1 hot segment
+    Assert.assertNull(schema.getDatasource("gamma"));
+
+    Assert.assertEquals(schema.getDataSourceInformationMap().keySet(), Collections.singleton("beta"));
   }
 
   private void verifyFooDSSchema(CoordinatorSegmentMetadataCache schema, int columns)

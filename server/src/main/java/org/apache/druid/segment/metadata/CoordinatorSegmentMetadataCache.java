@@ -406,24 +406,56 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
   @Override
   public DataSourceInformation getDatasource(String name)
   {
-    DataSourceInformation dataSourceInformation = tables.get(name);
-    if (dataSourceInformation != null) {
-      // implies that the datasource is entirely cold
-      return dataSourceInformation;
-    }
-    return coldSchemaTable.get(name);
+    return getMergedDatasourceInformation(tables.get(name), coldSchemaTable.get(name)).orElse(null);
   }
 
   @Override
   public Map<String, DataSourceInformation> getDataSourceInformationMap()
   {
-    Map<String, DataSourceInformation> copy = new HashMap<>(tables);
+    Map<String, DataSourceInformation> hot = new HashMap<>(tables);
+    Map<String, DataSourceInformation> cold = new HashMap<>(coldSchemaTable);
+    Set<String> combinedDatasources = new HashSet<>(hot.keySet());
+    combinedDatasources.addAll(cold.keySet());
+    Map<String, DataSourceInformation> combined = new HashMap<>();
 
-    for (Map.Entry<String, DataSourceInformation> entry : coldSchemaTable.entrySet()) {
-      // add entirely cold datasource schema
-      copy.computeIfAbsent(entry.getKey(), value -> entry.getValue());
+    for (String dataSource : combinedDatasources) {
+      getMergedDatasourceInformation(hot.get(dataSource), cold.get(dataSource)).ifPresent(merged -> combined.put(
+          dataSource,
+          merged
+      ));
     }
-    return ImmutableMap.copyOf(copy);
+
+    return ImmutableMap.copyOf(combined);
+  }
+
+  private Optional<DataSourceInformation> getMergedDatasourceInformation(
+      final DataSourceInformation hot,
+      final DataSourceInformation cold
+  )
+  {
+    if (hot == null && cold == null) {
+      return Optional.empty();
+    } else if (hot != null && cold == null) {
+      return Optional.of(hot);
+    } else if (hot == null && cold != null) {
+      return Optional.of(cold);
+    } else {
+      final Map<String, ColumnType> columnTypes = new LinkedHashMap<>();
+
+      List<RowSignature> signatures = new ArrayList<>();
+      // hot datasource schema takes precedence
+      signatures.add(hot.getRowSignature());
+      signatures.add(cold.getRowSignature());
+
+      for (RowSignature signature : signatures) {
+        mergeRowSignature(columnTypes, signature);
+      }
+
+      final RowSignature.Builder builder = RowSignature.builder();
+      columnTypes.forEach(builder::add);
+
+      return Optional.of(new DataSourceInformation(hot.getDataSource(), builder.build()));
+    }
   }
 
   /**
@@ -473,24 +505,13 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
     for (String dataSource : dataSourcesToRebuild) {
       final RowSignature rowSignature = buildDataSourceRowSignature(dataSource);
 
-      RowSignature mergedSignature = rowSignature;
-
-      DataSourceInformation coldDatasourceInformation = coldSchemaTable.get(dataSource);
-      if (coldDatasourceInformation != null) {
-        if (rowSignature == null) {
-          mergedSignature = coldDatasourceInformation.getRowSignature();
-        } else {
-          mergedSignature = mergeHotAndColdSchema(rowSignature, coldDatasourceInformation.getRowSignature());
-        }
-      }
-
-      if (mergedSignature == null) {
+      if (rowSignature == null) {
         log.info("RowSignature null for dataSource [%s], implying that it no longer exists. All metadata removed.", dataSource);
         tables.remove(dataSource);
         continue;
       }
 
-      DataSourceInformation druidTable = new DataSourceInformation(dataSource, mergedSignature);
+      DataSourceInformation druidTable = new DataSourceInformation(dataSource, rowSignature);
       final DataSourceInformation oldTable = tables.put(dataSource, druidTable);
 
       if (oldTable == null || !oldTable.getRowSignature().equals(druidTable.getRowSignature())) {
@@ -538,7 +559,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
     Collection<ImmutableDruidDataSource> immutableDataSources =
         sqlSegmentsMetadataManager.getImmutableDataSourcesWithAllUsedSegments();
 
-    Set<String> dataSources = new HashSet<>();
+    Set<String> dataSourceWithColdSegments = new HashSet<>();
 
     int datasources = 0;
     int segments = 0;
@@ -546,8 +567,6 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
 
     for (ImmutableDruidDataSource dataSource : immutableDataSources) {
       String dataSourceName = dataSource.getName();
-      dataSources.add(dataSourceName);
-      datasources++;
 
       Collection<DataSegment> dataSegments = dataSource.getSegments();
 
@@ -566,44 +585,27 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
         segments++;
       }
 
+      if (columnTypes.isEmpty()) {
+        continue;
+      }
+
+      datasources++;
+
       final RowSignature.Builder builder = RowSignature.builder();
       columnTypes.forEach(builder::add);
 
       RowSignature coldSignature = builder.build();
 
-      if (coldSignature.getColumnNames().isEmpty()) {
-        // the given datasource doesn't have any cold segments
-        continue;
-      }
+      dataSourceWithColdSegments.add(dataSourceName);
+      datasourceWithColdSegments++;
 
       log.debug("[%s] signature from cold segments is [%s]", dataSourceName, coldSignature);
 
-      datasourceWithColdSegments++;
       coldSchemaTable.put(dataSourceName, new DataSourceInformation(dataSourceName, coldSignature));
-
-      // update tables map with merged schema, if signature doesn't exist we do not add entry in this table
-      // schema for entirely cold datasource is maintained separately
-      tables.computeIfPresent(
-          dataSourceName,
-          (ds, info) -> {
-            RowSignature mergedSignature = mergeHotAndColdSchema(info.getRowSignature(), coldSignature);
-
-            if (!info.getRowSignature().equals(mergedSignature)) {
-              log.info(
-                  "[%s] has new merged signature: %s. hot signature [%s], cold signature [%s].",
-                  ds, mergedSignature, info.getRowSignature(), coldSignature
-              );
-            } else {
-              log.debug("[%s] merged signature is unchanged.", ds);
-            }
-
-            return new DataSourceInformation(ds, mergedSignature);
-          }
-      );
     }
 
     // remove any stale datasource from the map
-    coldSchemaTable.keySet().retainAll(dataSources);
+    coldSchemaTable.keySet().retainAll(dataSourceWithColdSegments);
 
     String executionStatsLog = String.format(
         "Cold schema processing was slow, taking [%d] millis. "
@@ -615,25 +617,6 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
     } else {
       log.debug(executionStatsLog);
     }
-  }
-
-  private RowSignature mergeHotAndColdSchema(final RowSignature hot, final RowSignature cold)
-  {
-    final Map<String, ColumnType> columnTypes = new LinkedHashMap<>();
-
-    List<RowSignature> signatures = new ArrayList<>();
-    // hot datasource schema takes precedence
-    signatures.add(hot);
-    signatures.add(cold);
-
-    for (RowSignature signature : signatures) {
-      mergeRowSignature(columnTypes, signature);
-    }
-
-    final RowSignature.Builder builder = RowSignature.builder();
-    columnTypes.forEach(builder::add);
-
-    return builder.build();
   }
 
   private void mergeRowSignature(final Map<String, ColumnType> columnTypes, final RowSignature signature)
