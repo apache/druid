@@ -23,7 +23,6 @@ import type { AsyncStatusResponse, MsqTaskPayloadResponse, QueryContext } from '
 import { Execution } from '../../druid-models';
 import { Api } from '../../singletons';
 import { deepGet, DruidError, IntermediateQueryState, QueryManager } from '../../utils';
-import { maybeGetClusterCapacity } from '../capacity';
 
 // some executionMode has to be set on the /druid/v2/sql/statements API
 function ensureExecutionModeIsSet(context: QueryContext | undefined): QueryContext {
@@ -226,8 +225,8 @@ export async function getTaskExecution(
     }
   }
 
-  if (execution.hasPotentiallyStuckStage()) {
-    const capacityInfo = await maybeGetClusterCapacity();
+  if (Execution.getClusterCapacity && execution.hasPotentiallyStuckStage()) {
+    const capacityInfo = await Execution.getClusterCapacity();
     if (capacityInfo) {
       execution = execution.changeCapacityInfo(capacityInfo);
     }
