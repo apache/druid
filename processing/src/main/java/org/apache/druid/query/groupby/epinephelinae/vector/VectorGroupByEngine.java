@@ -214,35 +214,32 @@ public class VectorGroupByEngine
       final List<DimensionSpec> dimensions
   )
   {
-    return dimensions
-        .stream()
-        .allMatch(
-            dimension -> {
-              if (!dimension.canVectorize()) {
-                return false;
-              }
+    for (DimensionSpec dimension : dimensions) {
+      if (!dimension.canVectorize()) {
+        return false;
+      }
 
-              if (dimension.mustDecorate()) {
-                // group by on multi value dimensions are not currently supported
-                // DimensionSpecs that decorate may turn singly-valued columns into multi-valued selectors.
-                // To be safe, we must return false here.
-                return false;
-              }
+      if (dimension.mustDecorate()) {
+        // group by on multi value dimensions are not currently supported
+        // DimensionSpecs that decorate may turn singly-valued columns into multi-valued selectors.
+        // To be safe, we must return false here.
+        return false;
+      }
 
-              if (!dimension.getOutputType().isPrimitive()) {
-                // group by on arrays and complex types is not currently supported in the vector processing engine
-                return false;
-              }
+      if (!dimension.getOutputType().isPrimitive()) {
+        // group by on arrays and complex types is not currently supported in the vector processing engine
+        return false;
+      }
 
-              // Now check column capabilities.
-              final ColumnCapabilities columnCapabilities = inspector.getColumnCapabilities(dimension.getDimension());
-              // null here currently means the column does not exist, nil columns can be vectorized
-              if (columnCapabilities == null) {
-                return true;
-              }
-              // must be single valued
-              return columnCapabilities.hasMultipleValues().isFalse();
-            });
+      // Now check column capabilities.
+      final ColumnCapabilities columnCapabilities = inspector.getColumnCapabilities(dimension.getDimension());
+      if (columnCapabilities != null && columnCapabilities.hasMultipleValues().isFalse()) {
+        // null here currently means the column does not exist, nil columns can be vectorized
+        // multi-value columns implicit unnest is not currently supported in the vector processing engine
+        return false;
+      }
+    }
+    return true;
   }
 
   @VisibleForTesting

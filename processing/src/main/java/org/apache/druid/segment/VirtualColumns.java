@@ -59,7 +59,7 @@ import java.util.stream.Collectors;
 /**
  * Class allowing lookup and usage of virtual columns.
  */
-public class VirtualColumns implements Cacheable
+public final class VirtualColumns implements Cacheable
 {
   public static final VirtualColumns EMPTY = new VirtualColumns(
       ImmutableList.of(),
@@ -259,7 +259,12 @@ public class VirtualColumns implements Cacheable
   public boolean canVectorize(ColumnInspector columnInspector)
   {
     final ColumnInspector inspector = wrapInspector(columnInspector);
-    return virtualColumns.stream().allMatch(virtualColumn -> virtualColumn.canVectorize(inspector));
+    for (VirtualColumn virtualColumn : virtualColumns) {
+      if (!virtualColumn.canVectorize(inspector)) {
+        return false;
+      }
+    }
+    return true;
   }
 
   /**
