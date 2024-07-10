@@ -3473,75 +3473,94 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               </FormGroup>
             )}
           <AppendToExistingIssue spec={spec} onChangeSpec={this.updateSpec} />
-        </div>
-        <div className="next-bar">
-          {!isEmptyIngestionSpec(spec) && (
-            <Button
-              className="left"
-              icon={IconNames.RESET}
-              text="Reset spec"
-              onClick={this.handleResetConfirm}
+          {isStreamingSpec(spec) && (
+            <Switch
+              className="suspended-switch"
+              checked={Boolean(spec.suspended)}
+              label="Submit in suspended state"
+              onChange={() => this.updateSpec({ ...spec, suspended: !spec.suspended })}
             />
           )}
-          <Button
-            text={submitting ? 'Submitting...' : 'Submit'}
-            rightIcon={IconNames.CLOUD_UPLOAD}
-            intent={Intent.PRIMARY}
-            disabled={submitting || Boolean(issueWithSpec)}
-            onClick={() => void this.handleSubmit()}
-          />
+        </div>
+        <div className="next-bar">
+          {isStreamingSpec(spec) ? (
+            <Button
+              text={
+                submitting
+                  ? 'Submitting...'
+                  : `Submit supervisor (${spec.suspended ? 'suspended' : 'running'})`
+              }
+              rightIcon={IconNames.CLOUD_UPLOAD}
+              intent={Intent.PRIMARY}
+              disabled={submitting || Boolean(issueWithSpec)}
+              onClick={() => void this.handleSubmitSupervisor()}
+            />
+          ) : (
+            <Button
+              text={submitting ? 'Submitting...' : 'Submit task'}
+              rightIcon={IconNames.CLOUD_UPLOAD}
+              intent={Intent.PRIMARY}
+              disabled={submitting || Boolean(issueWithSpec)}
+              onClick={() => void this.handleSubmitTask()}
+            />
+          )}
         </div>
       </>
     );
   }
 
-  private readonly handleSubmit = async () => {
-    const { goToSupervisor, goToTasks } = this.props;
+  private readonly handleSubmitSupervisor = async () => {
+    const { goToSupervisor } = this.props;
     const { spec, submitting } = this.state;
     if (submitting) return;
 
     this.setState({ submitting: true });
-    if (isStreamingSpec(spec)) {
-      try {
-        await Api.instance.post('/druid/indexer/v1/supervisor', spec);
-      } catch (e) {
-        AppToaster.show({
-          message: `Failed to submit supervisor: ${getDruidErrorMessage(e)}`,
-          intent: Intent.DANGER,
-        });
-        this.setState({ submitting: false });
-        return;
-      }
-
+    try {
+      await Api.instance.post('/druid/indexer/v1/supervisor', spec);
+    } catch (e) {
       AppToaster.show({
-        message: 'Supervisor submitted successfully. Going to task view...',
-        intent: Intent.SUCCESS,
+        message: `Failed to submit supervisor: ${getDruidErrorMessage(e)}`,
+        intent: Intent.DANGER,
       });
-
-      setTimeout(() => {
-        goToSupervisor(getSpecDatasourceName(spec));
-      }, 1000);
-    } else {
-      let taskResp: any;
-      try {
-        taskResp = await Api.instance.post('/druid/indexer/v1/task', spec);
-      } catch (e) {
-        AppToaster.show({
-          message: `Failed to submit task: ${getDruidErrorMessage(e)}`,
-          intent: Intent.DANGER,
-        });
-        this.setState({ submitting: false });
-        return;
-      }
-
-      AppToaster.show({
-        message: 'Task submitted successfully. Going to task view...',
-        intent: Intent.SUCCESS,
-      });
-
-      setTimeout(() => {
-        goToTasks(taskResp.data.task);
-      }, 1000);
+      this.setState({ submitting: false });
+      return;
     }
+
+    AppToaster.show({
+      message: 'Supervisor submitted successfully. Going to Supervisors view...',
+      intent: Intent.SUCCESS,
+    });
+
+    setTimeout(() => {
+      goToSupervisor(getSpecDatasourceName(spec));
+    }, 1000);
+  };
+
+  private readonly handleSubmitTask = async () => {
+    const { goToTasks } = this.props;
+    const { spec, submitting } = this.state;
+    if (submitting) return;
+
+    this.setState({ submitting: true });
+    let taskResp: any;
+    try {
+      taskResp = await Api.instance.post('/druid/indexer/v1/task', spec);
+    } catch (e) {
+      AppToaster.show({
+        message: `Failed to submit task: ${getDruidErrorMessage(e)}`,
+        intent: Intent.DANGER,
+      });
+      this.setState({ submitting: false });
+      return;
+    }
+
+    AppToaster.show({
+      message: 'Task submitted successfully. Going to Tasks view...',
+      intent: Intent.SUCCESS,
+    });
+
+    setTimeout(() => {
+      goToTasks(taskResp.data.task);
+    }, 1000);
   };
 }
