@@ -43,6 +43,7 @@ public interface BaseColumn extends Closeable
     throw new UOE("Cannot make VectorObjectSelector for column with class[%s]", getClass().getName());
   }
 
+  @SuppressWarnings("unused")
   @Nullable
   default <T> T as(Class<? extends T> clazz)
   {

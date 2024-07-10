@@ -26,7 +26,6 @@ import org.junit.Test;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.io.IOException;
 import java.util.Map;
 import java.util.function.Function;
 
@@ -92,7 +91,7 @@ public class SemanticUtilsTest
     }
 
     @Override
-    public void close() throws IOException
+    public void close()
     {
     }
 
@@ -113,7 +112,7 @@ public class SemanticUtilsTest
     }
 
     @Override
-    public void close() throws IOException
+    public void close()
     {
     }
 
