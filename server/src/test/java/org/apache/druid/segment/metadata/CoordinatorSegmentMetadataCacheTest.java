@@ -1793,7 +1793,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     DataSegment coldSegment =
         DataSegment.builder()
                    .dataSource(DATASOURCE1)
-                   .interval(Intervals.of("2000/P2Y"))
+                   .interval(Intervals.of("1998/P2Y"))
                    .version("1")
                    .shardSpec(new LinearShardSpec(0))
                    .size(0)
@@ -1810,11 +1810,11 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
                    .build();
 
     ImmutableMap.Builder<SegmentId, SegmentMetadata> segmentStatsMap = new ImmutableMap.Builder<>();
-    segmentStatsMap.put(coldSegment.getId(), new SegmentMetadata(20L, "foo"));
-    segmentStatsMap.put(singleColdSegment.getId(), new SegmentMetadata(20L, "cold"));
+    segmentStatsMap.put(coldSegment.getId(), new SegmentMetadata(20L, "foo-fingerprint"));
+    segmentStatsMap.put(singleColdSegment.getId(), new SegmentMetadata(20L, "cold-fingerprint"));
     ImmutableMap.Builder<String, SchemaPayload> schemaPayloadMap = new ImmutableMap.Builder<>();
     schemaPayloadMap.put(
-        "foo",
+        "foo-fingerprint",
         new SchemaPayload(RowSignature.builder()
                                       .add("dim1", ColumnType.STRING)
                                       .add("c1", ColumnType.STRING)
@@ -1822,7 +1822,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
                                       .build())
     );
     schemaPayloadMap.put(
-        "cold",
+        "cold-fingerprint",
         new SchemaPayload(
             RowSignature.builder()
                               .add("f1", ColumnType.STRING)
@@ -1836,10 +1836,14 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     );
 
     List<ImmutableDruidDataSource> druidDataSources = new ArrayList<>();
+    Map<SegmentId, DataSegment> segmentMap = new HashMap<>();
+    segmentMap.put(coldSegment.getId(), coldSegment);
+    segmentMap.put(segment1.getId(), segment1);
+    segmentMap.put(segment2.getId(), segment2);
     druidDataSources.add(new ImmutableDruidDataSource(
         coldSegment.getDataSource(),
         Collections.emptyMap(),
-        Collections.singletonMap(coldSegment.getId(), coldSegment)
+        segmentMap
     ));
     druidDataSources.add(new ImmutableDruidDataSource(
         singleColdSegment.getDataSource(),
@@ -1866,8 +1870,16 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
 
     Map<SegmentId, Map<String, SegmentReplicaCount>> replicationCountMap = new HashMap<>();
     // Cold segment with 0 replication factor.
-    replicationCountMap.put(coldSegment.getId(), Collections.singletonMap("default", new SegmentReplicaCount()));
-    replicationCountMap.put(singleColdSegment.getId(), Collections.singletonMap("default", new SegmentReplicaCount()));
+    SegmentReplicaCount zeroSegmentReplicaCount = new SegmentReplicaCount();
+    replicationCountMap.put(coldSegment.getId(), Collections.singletonMap("default", zeroSegmentReplicaCount));
+    replicationCountMap.put(singleColdSegment.getId(), Collections.singletonMap("default", zeroSegmentReplicaCount));
+
+    // Hot segments with non-zero replication factor.
+    SegmentReplicaCount nonZeroSegmentReplicaCount = new SegmentReplicaCount();
+    nonZeroSegmentReplicaCount.setRequired(1, 1);
+    replicationCountMap.put(segment1.getId(), Collections.singletonMap("default", nonZeroSegmentReplicaCount));
+    replicationCountMap.put(segment2.getId(), Collections.singletonMap("default", nonZeroSegmentReplicaCount));
+
     SegmentReplicationStatus segmentReplicationStatus = new SegmentReplicationStatus(replicationCountMap);
 
     schema.updateSegmentReplicationStatus(segmentReplicationStatus);
