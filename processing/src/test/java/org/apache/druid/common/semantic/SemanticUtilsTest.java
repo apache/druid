@@ -96,7 +96,7 @@ public class SemanticUtilsTest
     }
 
     @SemanticCreator
-    public A toA()
+    public AInterface toAInterface()
     {
       return new A();
     }
@@ -117,13 +117,17 @@ public class SemanticUtilsTest
     }
 
     @SemanticCreator
-    public A toA(String invalidParameter)
+    public AInterface toAInterface(String invalidParameter)
     {
       return new A();
     }
   }
 
-  static class A
+  interface AInterface
+  {
+  }
+
+  static class A implements AInterface
   {
   }
 
