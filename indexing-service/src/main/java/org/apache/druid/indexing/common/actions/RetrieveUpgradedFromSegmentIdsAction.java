@@ -22,30 +22,28 @@ package org.apache.druid.indexing.common.actions;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.google.common.collect.ImmutableList;
 import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.metadata.SegmentUpgradeInfo;
+import org.apache.druid.metadata.UpgradedFromSegmentsResponse;
 
-import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
 /**
- * Task action to retrieve the segment upgrade infos of a given set of used or unused upgraded segment ids.
+ * Task action to retrieve the segment IDs from which a given set of segments were upgraded.
  */
-public class RetrieveUpgradedToSegmentsIdsAction implements TaskAction<List<SegmentUpgradeInfo>>
+public class RetrieveUpgradedFromSegmentIdsAction implements TaskAction<UpgradedFromSegmentsResponse>
 {
   private final String dataSource;
-  private final Set<String> upgradedSegmentIds;
+  private final Set<String> segmentIds;
 
   @JsonCreator
-  public RetrieveUpgradedToSegmentsIdsAction(
+  public RetrieveUpgradedFromSegmentIdsAction(
       @JsonProperty("dataSource") String dataSource,
-      @JsonProperty("upgradedSegmentIds") Set<String> upgradedSegmentIds
+      @JsonProperty("segmentIds") Set<String> segmentIds
   )
   {
     this.dataSource = dataSource;
-    this.upgradedSegmentIds = upgradedSegmentIds;
+    this.segmentIds = segmentIds;
   }
 
   @JsonProperty
@@ -55,24 +53,24 @@ public class RetrieveUpgradedToSegmentsIdsAction implements TaskAction<List<Segm
   }
 
   @JsonProperty
-  public Set<String> getUpgradedSegmentIds()
+  public Set<String> getSegmentIds()
   {
-    return upgradedSegmentIds;
+    return segmentIds;
   }
 
   @Override
-  public TypeReference<List<SegmentUpgradeInfo>> getReturnTypeReference()
+  public TypeReference<UpgradedFromSegmentsResponse> getReturnTypeReference()
   {
-    return new TypeReference<List<SegmentUpgradeInfo>>()
+    return new TypeReference<UpgradedFromSegmentsResponse>()
     {
     };
   }
 
   @Override
-  public List<SegmentUpgradeInfo> perform(Task task, TaskActionToolbox toolbox)
+  public UpgradedFromSegmentsResponse perform(Task task, TaskActionToolbox toolbox)
   {
     return toolbox.getIndexerMetadataStorageCoordinator()
-                  .retrieveUpgradedToSegmentIds(dataSource, ImmutableList.copyOf(getUpgradedSegmentIds()));
+                  .retrieveUpgradedFromSegmentIds(dataSource, segmentIds);
   }
 
   @Override
@@ -90,14 +88,14 @@ public class RetrieveUpgradedToSegmentsIdsAction implements TaskAction<List<Segm
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    RetrieveUpgradedToSegmentsIdsAction that = (RetrieveUpgradedToSegmentsIdsAction) o;
-    return Objects.equals(dataSource, that.dataSource) && Objects.equals(upgradedSegmentIds, that.upgradedSegmentIds);
+    RetrieveUpgradedFromSegmentIdsAction that = (RetrieveUpgradedFromSegmentIdsAction) o;
+    return Objects.equals(dataSource, that.dataSource) && Objects.equals(segmentIds, that.segmentIds);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(dataSource, upgradedSegmentIds);
+    return Objects.hash(dataSource, segmentIds);
   }
 
   @Override
@@ -105,7 +103,7 @@ public class RetrieveUpgradedToSegmentsIdsAction implements TaskAction<List<Segm
   {
     return getClass().getSimpleName() + "{" +
            "dataSource='" + dataSource + '\'' +
-           ", upgradedSegmentIds=" + upgradedSegmentIds +
+           ", segmentIds=" + segmentIds +
            '}';
   }
 }

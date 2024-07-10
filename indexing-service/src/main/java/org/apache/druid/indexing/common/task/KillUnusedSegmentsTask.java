@@ -34,9 +34,10 @@ import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
+import org.apache.druid.indexing.common.actions.RetrieveSegmentsByIdAction;
 import org.apache.druid.indexing.common.actions.RetrieveUnusedSegmentsAction;
-import org.apache.druid.indexing.common.actions.RetrieveUpgradedFromSegmentsIdsAction;
-import org.apache.druid.indexing.common.actions.RetrieveUpgradedToSegmentsIdsAction;
+import org.apache.druid.indexing.common.actions.RetrieveUpgradedFromSegmentIdsAction;
+import org.apache.druid.indexing.common.actions.RetrieveUpgradedToSegmentIdsAction;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.SegmentNukeAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
@@ -50,6 +51,7 @@ import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -57,6 +59,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -79,7 +82,7 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
    * Default nuke batch size. This is a small enough size that we still get value from batching, while
    * yielding as quickly as possible. In one real cluster environment backed with mysql, ~2000rows/sec,
    * with batch size of 100, means a batch should only less than a second for the task lock, and depending
-   * on the segment store latency, unoptimised S3 cleanups typically take 5-10 seconds per 100. Over time
+   * on the segment store latency, unoptimised S3 cleanups typically take 5-10 seconds per 100. Over time,
    * we expect the S3 cleanup to get quicker, so this should be < 1 second, which means we'll be yielding
    * the task lockbox every 1-2 seconds.
    */
@@ -201,6 +204,7 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
         numTotalBatches != null ? StringUtils.format(" in [%d] batches.", numTotalBatches) : "."
     );
 
+    final TaskActionClient taskActionClient = toolbox.getTaskActionClient();
     RetrieveUsedSegmentsAction retrieveUsedSegmentsAction = new RetrieveUsedSegmentsAction(
             getDataSource(),
             ImmutableList.of(getInterval()),
@@ -208,7 +212,7 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
     );
     // Fetch the load specs of all segments overlapping with the unused segment intervals
     final Set<Map<String, Object>> usedSegmentLoadSpecs =
-        toolbox.getTaskActionClient().submit(retrieveUsedSegmentsAction)
+        taskActionClient.submit(retrieveUsedSegmentsAction)
                .stream()
                .map(DataSegment::getLoadSpec).collect(Collectors.toSet());
 
@@ -242,21 +246,22 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
       // If the segment nuke throws an exception, then the segment cleanup is abandoned.
 
       // Determine upgraded_from_segment_id before nuking
-      final TaskActionClient taskActionClient = toolbox.getTaskActionClient();
       final Set<String> upgradedSegmentIds = unusedSegments.stream()
                                                            .map(DataSegment::getId)
                                                            .map(SegmentId::toString).collect(Collectors.toSet());
+      final Map<String, String> upgradedFromSegmentIds = new HashMap<>();
       try {
-        taskActionClient.submit(new RetrieveUpgradedFromSegmentsIdsAction(getDataSource(), upgradedSegmentIds))
-                        .stream()
-                        .filter(upgradeInfo -> upgradeInfo.getUpgradedFromSegmentId() != null)
-                        .forEach(upgradeInfo -> upgradedSegmentIds.add(upgradeInfo.getUpgradedFromSegmentId()));
+        upgradedFromSegmentIds.putAll(
+            taskActionClient.submit(
+                new RetrieveUpgradedFromSegmentIdsAction(getDataSource(), upgradedSegmentIds)
+            ).getUpgradedFromSegmentId()
+        );
       }
       catch (Exception e) {
         LOG.warn(
             e,
-            "Could not retrieve segment upgrade infos using task action[retrieveUpgradedFromSegmentIds]."
-            + " Overlord maybe on an older version."
+            "Could not retrieve UpgradedFromSegmentsResponse using task action[retrieveUpgradedFromSegmentIds]."
+            + " Overlord may be on an older version."
         );
       }
 
@@ -264,27 +269,12 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
       taskActionClient.submit(new SegmentNukeAction(new HashSet<>(unusedSegments)));
 
       // Determine unreferenced segments
-      final Set<String> referencedSegmentIds = new HashSet<>();
-      try {
-        taskActionClient.submit(new RetrieveUpgradedToSegmentsIdsAction(getDataSource(), upgradedSegmentIds))
-                        .forEach(upgradeInfo -> referencedSegmentIds.add(upgradeInfo.getId()));
-      }
-      catch (Exception e) {
-        LOG.warn(
-            e,
-            "Could not retrieve segment upgrade infos using task action[retrieveUpgradedFromSegmentIds]."
-            + " Overlord maybe on an older version."
-        );
-      }
-      final Set<DataSegment> unreferencedDataSegments
-          = unusedSegments.stream()
-                          .filter(unusedSegment -> !referencedSegmentIds.contains(unusedSegment.getId().toString()))
-                          .collect(Collectors.toSet());
-
+      final List<DataSegment> unreferencedSegments
+          = findUnreferencedSegments(unusedSegments, upgradedFromSegmentIds, taskActionClient);
 
       // Kill segments from the deep storage only if their load specs are not being used by any other segments
       // We still need to check with used load specs as segment upgrades were introduced before this change
-      final List<DataSegment> segmentsToBeKilled = unreferencedDataSegments
+      final List<DataSegment> segmentsToBeKilled = unreferencedSegments
           .stream()
           .filter(unusedSegment -> unusedSegment.getLoadSpec() == null
                                    || !usedSegmentLoadSpecs.contains(unusedSegment.getLoadSpec()))
@@ -342,6 +332,81 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
         }
     );
     return taskLockMap;
+  }
+
+  private List<DataSegment> findUnreferencedSegments(
+      List<DataSegment> unusedSegments,
+      Map<String, String> upgradedFromSegmentIds,
+      TaskActionClient taskActionClient
+  ) throws IOException
+  {
+    if (unusedSegments.isEmpty() || upgradedFromSegmentIds.isEmpty()) {
+      return unusedSegments;
+    }
+
+    final Set<String> upgradedSegmentIds = new HashSet<>();
+    for (DataSegment segment : unusedSegments) {
+      final String id = segment.getId().toString();
+      upgradedSegmentIds.add(id);
+      if (upgradedFromSegmentIds.containsKey(id)) {
+        upgradedSegmentIds.add(upgradedFromSegmentIds.get(id));
+      }
+    }
+
+    final Map<String, Set<String>> upgradedToSegmentIds;
+    try {
+      upgradedToSegmentIds = taskActionClient.submit(
+          new RetrieveUpgradedToSegmentIdsAction(getDataSource(), upgradedSegmentIds)
+      ).getUpgradedToSegmentIds();
+    }
+    catch (Exception e) {
+      LOG.warn(
+          e,
+          "Could not retrieve UpgradedToSegmentsResponse using task action[retrieveUpgradedToSegmentIds]."
+          + " Overlord may be on an older version."
+      );
+      return unusedSegments;
+    }
+
+    final Set<String> existingSegmentIds
+        = taskActionClient.submit(new RetrieveSegmentsByIdAction(getDataSource(), upgradedSegmentIds))
+                          .stream()
+                          .map(DataSegment::getId)
+                          .map(SegmentId::toString)
+                          .collect(Collectors.toSet());
+
+    List<DataSegment> unreferencedSegments = new ArrayList<>();
+    for (DataSegment segment : unusedSegments) {
+      final String id = segment.getId().toString();
+
+      // If the segment still exists for some reason, do not kill it
+      if (existingSegmentIds.contains(id)) {
+        break;
+      }
+
+      // If the segment is the parent of existing segments, do not kill it
+      if (upgradedToSegmentIds.containsKey(id)) {
+        break;
+      }
+
+      // If the segment has no parent, it can be killed from deep storage
+      if (!upgradedFromSegmentIds.containsKey(id)) {
+        unreferencedSegments.add(segment);
+        break;
+      }
+
+      // If the parent segment exists, do not kill it
+      final String parentId = upgradedFromSegmentIds.get(id);
+      if (existingSegmentIds.contains(parentId)) {
+        break;
+      }
+
+      // If the parent segment has no existing children, it can be killed
+      if (CollectionUtils.isNullOrEmpty(upgradedToSegmentIds.get(parentId))) {
+        unreferencedSegments.add(segment);
+      }
+    }
+    return unreferencedSegments;
   }
 
   @Override

@@ -38,6 +38,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.assertj.core.api.Assertions;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
@@ -125,6 +126,212 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         new KillTaskReport.Stats(1, 2),
         getReportedStats()
     );
+    Assert.assertEquals(ImmutableSet.of(segment3), getDataSegmentKiller().getKilledSegments());
+  }
+
+  @Test
+  public void testKillSegmentsDeleteUnreferencedSiblings() throws Exception
+  {
+    final Map<SegmentId, String> upgradeSegmentMapping = ImmutableMap.of(
+        segment1.getId(),
+        "nonExistentParent",
+        segment2.getId(),
+        "nonExistentParent"
+    );
+    getStorageCoordinator().insertUsedSegments(ImmutableSet.of(segment1, segment2), upgradeSegmentMapping);
+    getStorageCoordinator().markSegmentsAsUnusedWithinInterval(DATA_SOURCE, Intervals.ETERNITY);
+
+
+    final KillUnusedSegmentsTask task = new KillUnusedSegmentsTaskBuilder()
+        .dataSource(DATA_SOURCE)
+        .interval(Intervals.ETERNITY)
+        .build();
+
+    Assert.assertEquals(TaskState.SUCCESS, taskRunner.run(task).get().getStatusCode());
+
+    final List<DataSegment> observedUnusedSegments =
+        getMetadataStorageCoordinator().retrieveUnusedSegmentsForInterval(
+            DATA_SOURCE,
+            Intervals.ETERNITY,
+            null,
+            null,
+            null
+        );
+
+    Assert.assertEquals(Collections.emptyList(), observedUnusedSegments);
+
+    Assert.assertEquals(
+        new KillTaskReport.Stats(2, 2),
+        getReportedStats()
+    );
+    Assert.assertEquals(ImmutableSet.of(segment1, segment2), getDataSegmentKiller().getKilledSegments());
+  }
+
+  @Test
+  public void testKillSegmentsDoNotDeleteReferencedSibling() throws Exception
+  {
+    final Map<SegmentId, String> upgradeSegmentMapping = ImmutableMap.of(
+        segment1.getId(),
+        "nonExistentParent",
+        segment2.getId(),
+        "nonExistentParent"
+    );
+    getStorageCoordinator().insertUsedSegments(ImmutableSet.of(segment1, segment2), upgradeSegmentMapping);
+    getStorageCoordinator().markSegmentsAsUnusedWithinInterval(DATA_SOURCE, Intervals.ETERNITY);
+
+
+    final KillUnusedSegmentsTask task = new KillUnusedSegmentsTaskBuilder()
+        .dataSource(DATA_SOURCE)
+        .interval(segment1.getInterval())
+        .build();
+
+    Assert.assertEquals(TaskState.SUCCESS, taskRunner.run(task).get().getStatusCode());
+
+    final List<DataSegment> observedUnusedSegments =
+        getMetadataStorageCoordinator().retrieveUnusedSegmentsForInterval(
+            DATA_SOURCE,
+            Intervals.ETERNITY,
+            null,
+            null,
+            null
+        );
+
+    Assert.assertEquals(Collections.singletonList(segment2), observedUnusedSegments);
+
+    Assert.assertEquals(
+        new KillTaskReport.Stats(0, 2),
+        getReportedStats()
+    );
+    Assert.assertEquals(Collections.emptySet(), getDataSegmentKiller().getKilledSegments());
+  }
+
+  @Test
+  public void testKillSegmentsDoNotDeleteParentWithReferencedChildren() throws Exception
+  {
+    final Map<SegmentId, String> upgradeSegmentMapping = ImmutableMap.of(
+        segment1.getId(),
+        segment3.getId().toString(),
+        segment2.getId(),
+        segment3.getId().toString()
+    );
+    getStorageCoordinator().insertUsedSegments(ImmutableSet.of(segment1, segment2, segment3), upgradeSegmentMapping);
+    getSegmentsMetadataManager().markSegmentAsUnused(segment2.getId());
+    getSegmentsMetadataManager().markSegmentAsUnused(segment3.getId());
+
+
+    final KillUnusedSegmentsTask task = new KillUnusedSegmentsTaskBuilder()
+        .dataSource(DATA_SOURCE)
+        .interval(Intervals.ETERNITY)
+        .build();
+
+    Assert.assertEquals(TaskState.SUCCESS, taskRunner.run(task).get().getStatusCode());
+
+    final List<DataSegment> observedUnusedSegments =
+        getMetadataStorageCoordinator().retrieveUnusedSegmentsForInterval(
+            DATA_SOURCE,
+            Intervals.ETERNITY,
+            null,
+            null,
+            null
+        );
+    Assert.assertEquals(ImmutableList.of(), observedUnusedSegments);
+    Assertions.assertThat(
+        getMetadataStorageCoordinator().retrieveUsedSegmentsForInterval(
+            DATA_SOURCE,
+            Intervals.ETERNITY,
+            Segments.ONLY_VISIBLE
+        )
+    ).containsExactlyInAnyOrder(segment1);
+
+    Assert.assertEquals(
+        new KillTaskReport.Stats(0, 2),
+        getReportedStats()
+    );
+    Assert.assertEquals(Collections.emptySet(), getDataSegmentKiller().getKilledSegments());
+  }
+
+  @Test
+  public void testKillSegmentsDoNotDeleteChildrenWithReferencedParent() throws Exception
+  {
+    final Map<SegmentId, String> upgradeSegmentMapping = ImmutableMap.of(
+        segment1.getId(),
+        segment3.getId().toString(),
+        segment2.getId(),
+        segment3.getId().toString()
+    );
+    getStorageCoordinator().insertUsedSegments(ImmutableSet.of(segment1, segment2, segment3), upgradeSegmentMapping);
+    getSegmentsMetadataManager().markSegmentAsUnused(segment1.getId());
+    getSegmentsMetadataManager().markSegmentAsUnused(segment2.getId());
+
+
+    final KillUnusedSegmentsTask task = new KillUnusedSegmentsTaskBuilder()
+        .dataSource(DATA_SOURCE)
+        .interval(Intervals.ETERNITY)
+        .build();
+
+    Assert.assertEquals(TaskState.SUCCESS, taskRunner.run(task).get().getStatusCode());
+
+    final List<DataSegment> observedUnusedSegments =
+        getMetadataStorageCoordinator().retrieveUnusedSegmentsForInterval(
+            DATA_SOURCE,
+            Intervals.ETERNITY,
+            null,
+            null,
+            null
+        );
+    Assert.assertEquals(ImmutableList.of(), observedUnusedSegments);
+    Assertions.assertThat(
+        getMetadataStorageCoordinator().retrieveUsedSegmentsForInterval(
+            DATA_SOURCE,
+            Intervals.ETERNITY,
+            Segments.ONLY_VISIBLE
+        )
+    ).containsExactlyInAnyOrder(segment3);
+
+    Assert.assertEquals(
+        new KillTaskReport.Stats(0, 2),
+        getReportedStats()
+    );
+    Assert.assertEquals(Collections.emptySet(), getDataSegmentKiller().getKilledSegments());
+  }
+
+  @Test
+  public void testKillSegmentsDeleteChildrenAndParent() throws Exception
+  {
+    final Map<SegmentId, String> upgradeSegmentMapping = ImmutableMap.of(
+        segment1.getId(),
+        segment3.getId().toString(),
+        segment2.getId(),
+        segment3.getId().toString()
+    );
+    getStorageCoordinator().insertUsedSegments(ImmutableSet.of(segment1, segment2, segment3), upgradeSegmentMapping);
+    getSegmentsMetadataManager().markSegmentAsUnused(segment1.getId());
+    getSegmentsMetadataManager().markSegmentAsUnused(segment2.getId());
+    getSegmentsMetadataManager().markSegmentAsUnused(segment3.getId());
+
+
+    final KillUnusedSegmentsTask task = new KillUnusedSegmentsTaskBuilder()
+        .dataSource(DATA_SOURCE)
+        .interval(Intervals.ETERNITY)
+        .build();
+
+    Assert.assertEquals(TaskState.SUCCESS, taskRunner.run(task).get().getStatusCode());
+
+    final List<DataSegment> observedUnusedSegments =
+        getMetadataStorageCoordinator().retrieveUnusedSegmentsForInterval(
+            DATA_SOURCE,
+            Intervals.ETERNITY,
+            null,
+            null,
+            null
+        );
+    Assert.assertEquals(ImmutableList.of(), observedUnusedSegments);
+
+    Assert.assertEquals(
+        new KillTaskReport.Stats(3, 2),
+        getReportedStats()
+    );
+    Assert.assertEquals(ImmutableSet.of(segment1, segment2, segment3), getDataSegmentKiller().getKilledSegments());
   }
 
   @Test

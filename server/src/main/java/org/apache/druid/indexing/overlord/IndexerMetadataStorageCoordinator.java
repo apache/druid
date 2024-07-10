@@ -22,7 +22,8 @@ package org.apache.druid.indexing.overlord;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.metadata.ReplaceTaskLock;
-import org.apache.druid.metadata.SegmentUpgradeInfo;
+import org.apache.druid.metadata.UpgradedFromSegmentsResponse;
+import org.apache.druid.metadata.UpgradedToSegmentsResponse;
 import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
@@ -476,21 +477,20 @@ public interface IndexerMetadataStorageCoordinator
   List<PendingSegmentRecord> getPendingSegments(String datasource, Interval interval);
 
   /**
-   * List of SegmentUpgradeInfo  for a given datasource and a list of segment ids
-   * This method assumes that all the segments belong to the same datasource
+   * Returns a mapping from the segments ids to their parent segments ids
+   *
    * @param dataSource data source
    * @param segmentIds ids of segments
-   * @return segment upgrade infos with the given list as the ids
+   * @return UpgradedFromSegmentsResponse
    */
-  List<SegmentUpgradeInfo> retrieveUpgradedFromSegmentIds(String dataSource, List<String> segmentIds);
+  UpgradedFromSegmentsResponse retrieveUpgradedFromSegmentIds(String dataSource, Set<String> segmentIds);
 
   /**
-   * List of SegmentUpgradeInfo for a given datasource and list of upgradedFromSegmentIds
-   * Assumes that all hte upgradedFromSegmentIds are non-null and belong to the given datasource
+   * Returns a mapping from segment ids to their child segment ids
    *
    * @param dataSource             data source
    * @param upgradedFromSegmentIds ids of the first segments which had the corresponding load spec
-   * @return segment upgrade infos with the given list as upgradedFromSegmentIds
+   * @return UpgradedToSegmentsResponse
    */
-  List<SegmentUpgradeInfo> retrieveUpgradedToSegmentIds(String dataSource, List<String> upgradedFromSegmentIds);
+  UpgradedToSegmentsResponse retrieveUpgradedToSegmentIds(String dataSource, Set<String> upgradedFromSegmentIds);
 }

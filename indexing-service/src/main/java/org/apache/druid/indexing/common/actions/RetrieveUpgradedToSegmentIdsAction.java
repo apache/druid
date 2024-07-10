@@ -22,24 +22,22 @@ package org.apache.druid.indexing.common.actions;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.google.common.collect.ImmutableList;
 import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.metadata.SegmentUpgradeInfo;
+import org.apache.druid.metadata.UpgradedToSegmentsResponse;
 
-import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
 /**
- * Task action to retrieve the segment upgrade infos of a given set of used or unused segment ids.
+ * Task action to retrieve all the segment IDs to which a given set of segments were upgraded.
  */
-public class RetrieveUpgradedFromSegmentsIdsAction implements TaskAction<List<SegmentUpgradeInfo>>
+public class RetrieveUpgradedToSegmentIdsAction implements TaskAction<UpgradedToSegmentsResponse>
 {
   private final String dataSource;
   private final Set<String> segmentIds;
 
   @JsonCreator
-  public RetrieveUpgradedFromSegmentsIdsAction(
+  public RetrieveUpgradedToSegmentIdsAction(
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("segmentIds") Set<String> segmentIds
   )
@@ -61,18 +59,18 @@ public class RetrieveUpgradedFromSegmentsIdsAction implements TaskAction<List<Se
   }
 
   @Override
-  public TypeReference<List<SegmentUpgradeInfo>> getReturnTypeReference()
+  public TypeReference<UpgradedToSegmentsResponse> getReturnTypeReference()
   {
-    return new TypeReference<List<SegmentUpgradeInfo>>()
+    return new TypeReference<UpgradedToSegmentsResponse>()
     {
     };
   }
 
   @Override
-  public List<SegmentUpgradeInfo> perform(Task task, TaskActionToolbox toolbox)
+  public UpgradedToSegmentsResponse perform(Task task, TaskActionToolbox toolbox)
   {
     return toolbox.getIndexerMetadataStorageCoordinator()
-                  .retrieveUpgradedFromSegmentIds(dataSource, ImmutableList.copyOf(segmentIds));
+                  .retrieveUpgradedToSegmentIds(dataSource, segmentIds);
   }
 
   @Override
@@ -90,7 +88,7 @@ public class RetrieveUpgradedFromSegmentsIdsAction implements TaskAction<List<Se
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    RetrieveUpgradedFromSegmentsIdsAction that = (RetrieveUpgradedFromSegmentsIdsAction) o;
+    RetrieveUpgradedToSegmentIdsAction that = (RetrieveUpgradedToSegmentIdsAction) o;
     return Objects.equals(dataSource, that.dataSource) && Objects.equals(segmentIds, that.segmentIds);
   }
 

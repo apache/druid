@@ -1551,6 +1551,48 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     return Arrays.stream(updated).sum();
   }
 
+  @VisibleForTesting
+  public void insertUsedSegments(Set<DataSegment> dataSegments, Map<SegmentId, String> upgradedFromSegmentIdMap)
+  {
+    final String table = dbTables.getSegmentsTable();
+    connector.retryWithHandle(
+        handle -> {
+          PreparedBatch preparedBatch = handle.prepareBatch(
+              StringUtils.format(
+                  "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version,"
+                  + " used, payload, used_status_last_updated, upgraded_from_segment_id) "
+                  + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version,"
+                  + " :used, :payload, :used_status_last_updated, :upgraded_from_segment_id)",
+                  table,
+                  connector.getQuoteString()
+              )
+          );
+          for (DataSegment segment : dataSegments) {
+            String id = segment.getId().toString();
+            preparedBatch.add()
+                         .bind("id", id)
+                         .bind("dataSource", segment.getDataSource())
+                         .bind("created_date", DateTimes.nowUtc().toString())
+                         .bind("start", segment.getInterval().getStart().toString())
+                         .bind("end", segment.getInterval().getEnd().toString())
+                         .bind("partitioned", !(segment.getShardSpec() instanceof NoneShardSpec))
+                         .bind("version", segment.getVersion())
+                         .bind("used", true)
+                         .bind("payload", jsonMapper.writeValueAsBytes(segment))
+                         .bind("used_status_last_updated", DateTimes.nowUtc().toString())
+                         .bind("upgraded_from_segment_id", upgradedFromSegmentIdMap.get(segment.getId()));
+          }
+
+          final int[] affectedRows = preparedBatch.execute();
+          final boolean succeeded = Arrays.stream(affectedRows).allMatch(eachAffectedRows -> eachAffectedRows == 1);
+          if (!succeeded) {
+            throw new ISE("Failed to publish segments to DB");
+          }
+          return true;
+        }
+    );
+  }
+
   private void insertPendingSegmentIntoMetastore(
       Handle handle,
       SegmentIdWithShardSpec newIdentifier,
@@ -2945,74 +2987,83 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   @Override
-  public List<SegmentUpgradeInfo> retrieveUpgradedFromSegmentIds(
+  public UpgradedFromSegmentsResponse retrieveUpgradedFromSegmentIds(
       final String dataSource,
-      final List<String> segmentIds
+      final Set<String> segmentIds
   )
   {
+    final Map<String, String> upgradedFromSegmentIds = new HashMap<>();
     if (segmentIds.isEmpty()) {
-      return Collections.emptyList();
+      return new UpgradedFromSegmentsResponse(upgradedFromSegmentIds);
     }
 
+    final List<String> segmentIdList = ImmutableList.copyOf(segmentIds);
     final String sql = StringUtils.format(
         "SELECT id, upgraded_from_segment_id FROM %s WHERE dataSource = :dataSource %s",
         dbTables.getSegmentsTable(),
-        SqlSegmentsMetadataQuery.getParameterizedInConditionForColumn("id", segmentIds)
+        SqlSegmentsMetadataQuery.getParameterizedInConditionForColumn("id", segmentIdList)
     );
-    return connector.retryWithHandle(
+    connector.retryWithHandle(
         handle -> {
           Query<Map<String, Object>> query = handle.createQuery(sql)
                                                    .bind("dataSource", dataSource);
-          SqlSegmentsMetadataQuery.bindColumnValuesToQueryWithInCondition("id", segmentIds, query);
-          return query.map(
-              (index, r, ctx) -> {
-                final String id = r.getString(1);
-                final String upgradedFromSegmentId = r.getString(2);
-                return new SegmentUpgradeInfo(id, upgradedFromSegmentId);
-              }
-               )
-               .list();
+          SqlSegmentsMetadataQuery.bindColumnValuesToQueryWithInCondition("id", segmentIdList, query);
+          return query.map((index, r, ctx) -> {
+                             final String id = r.getString(1);
+                             final String upgradedFromSegmentId = r.getString(2);
+                             if (upgradedFromSegmentId != null) {
+                               upgradedFromSegmentIds.put(id, upgradedFromSegmentId);
+                             }
+                             return null;
+                           }
+                      )
+                      .list();
         }
     );
+    return new UpgradedFromSegmentsResponse(upgradedFromSegmentIds);
   }
 
   @Override
-  public List<SegmentUpgradeInfo> retrieveUpgradedToSegmentIds(
+  public UpgradedToSegmentsResponse retrieveUpgradedToSegmentIds(
       final String dataSource,
-      final List<String> upgradedFromSegmentIds
+      final Set<String> upgradedFromSegmentIds
   )
   {
+    final Map<String, Set<String>> upgradedToSegmentIds = new HashMap<>();
     if (upgradedFromSegmentIds.isEmpty()) {
-      return Collections.emptyList();
+      return new UpgradedToSegmentsResponse(upgradedToSegmentIds);
     }
 
+    final List<String> upgradedFromSegmentIdList = ImmutableList.copyOf(upgradedFromSegmentIds);
     final String sql = StringUtils.format(
         "SELECT id, upgraded_from_segment_id FROM %s WHERE dataSource = :dataSource %s",
         dbTables.getSegmentsTable(),
         SqlSegmentsMetadataQuery.getParameterizedInConditionForColumn(
             "upgraded_from_segment_id",
-            upgradedFromSegmentIds
+            upgradedFromSegmentIdList
         )
     );
-    return connector.retryWithHandle(
+    connector.retryWithHandle(
         handle -> {
           Query<Map<String, Object>> query = handle.createQuery(sql)
                                                    .bind("dataSource", dataSource);
           SqlSegmentsMetadataQuery.bindColumnValuesToQueryWithInCondition(
               "upgraded_from_segment_id",
-              upgradedFromSegmentIds,
+              upgradedFromSegmentIdList,
               query
           );
-          return query.map(
-              (index, r, ctx) -> {
-                final String id = r.getString(1);
-                final String upgradedFromSegmentId = r.getString(2);
-                return new SegmentUpgradeInfo(id, upgradedFromSegmentId);
-              }
-               )
-               .list();
+          return query.map((index, r, ctx) -> {
+                             final String upgradedToId = r.getString(1);
+                             final String id = r.getString(2);
+                             upgradedToSegmentIds.computeIfAbsent(id, k -> new HashSet<>())
+                                                 .add(upgradedToId);
+                             return null;
+                           }
+                      )
+                      .list();
         }
     );
+    return new UpgradedToSegmentsResponse(upgradedToSegmentIds);
   }
 
   private static class PendingSegmentsRecord

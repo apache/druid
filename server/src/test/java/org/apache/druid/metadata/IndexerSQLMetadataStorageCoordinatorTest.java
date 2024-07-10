@@ -31,7 +31,6 @@ import org.apache.druid.indexing.overlord.SegmentCreateRequest;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -49,7 +48,6 @@ import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
 import org.apache.druid.timeline.partition.HashBasedNumberedPartialShardSpec;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.LinearShardSpec;
-import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.timeline.partition.NumberedOverwritePartialShardSpec;
 import org.apache.druid.timeline.partition.NumberedOverwriteShardSpec;
 import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
@@ -67,12 +65,10 @@ import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.skife.jdbi.v2.Handle;
-import org.skife.jdbi.v2.PreparedBatch;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -275,17 +271,10 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
 
     Set<DataSegment> allCommittedSegments
         = new HashSet<>(retrieveUsedSegments(derbyConnectorRule.metadataTablesConfigSupplier().get()));
-    Map<String, String> upgradedFromSegmentIdMap = new HashMap<>();
-    coordinator.retrieveUpgradedFromSegmentIds(
+    Map<String, String> upgradedFromSegmentIdMap = coordinator.retrieveUpgradedFromSegmentIds(
         DS.WIKI,
-        allCommittedSegments.stream().map(DataSegment::getId).map(SegmentId::toString).collect(Collectors.toList())
-    ).forEach(
-        segmentUpgradeInfo -> {
-          if (segmentUpgradeInfo.getUpgradedFromSegmentId() != null) {
-            upgradedFromSegmentIdMap.put(segmentUpgradeInfo.getId(), segmentUpgradeInfo.getUpgradedFromSegmentId());
-          }
-        }
-    );
+        allCommittedSegments.stream().map(DataSegment::getId).map(SegmentId::toString).collect(Collectors.toSet())
+    ).getUpgradedFromSegmentId();
     // Verify the segments present in the metadata store
     Assert.assertTrue(allCommittedSegments.containsAll(appendSegments));
     for (DataSegment segment : appendSegments) {
@@ -412,17 +401,10 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     final Set<DataSegment> usedSegments
         = new HashSet<>(retrieveUsedSegments(derbyConnectorRule.metadataTablesConfigSupplier().get()));
 
-    final Map<String, String> upgradedFromSegmentIdMap = new HashMap<>();
-    coordinator.retrieveUpgradedFromSegmentIds(
+    final Map<String, String> upgradedFromSegmentIdMap = coordinator.retrieveUpgradedFromSegmentIds(
         "foo",
-        usedSegments.stream().map(DataSegment::getId).map(SegmentId::toString).collect(Collectors.toList())
-    ).forEach(
-        segmentUpgradeInfo -> {
-          if (segmentUpgradeInfo.getUpgradedFromSegmentId() != null) {
-            upgradedFromSegmentIdMap.put(segmentUpgradeInfo.getId(), segmentUpgradeInfo.getUpgradedFromSegmentId());
-          }
-        }
-    );
+        usedSegments.stream().map(DataSegment::getId).map(SegmentId::toString).collect(Collectors.toSet())
+    ).getUpgradedFromSegmentId();
 
     Assert.assertTrue(usedSegments.containsAll(segmentsAppendedWithReplaceLock));
     for (DataSegment appendSegment : segmentsAppendedWithReplaceLock) {
@@ -3449,24 +3431,25 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     final String datasource = defaultSegment.getDataSource();
     final Map<SegmentId, String> upgradedFromSegmentIdMap = new HashMap<>();
     upgradedFromSegmentIdMap.put(defaultSegment2.getId(), defaultSegment.getId().toString());
-    insertUsedSegments(ImmutableSet.of(defaultSegment, defaultSegment2), upgradedFromSegmentIdMap);
+    coordinator.insertUsedSegments(ImmutableSet.of(defaultSegment, defaultSegment2), upgradedFromSegmentIdMap);
     coordinator.markSegmentsAsUnusedWithinInterval(datasource, Intervals.ETERNITY);
     upgradedFromSegmentIdMap.clear();
     upgradedFromSegmentIdMap.put(defaultSegment3.getId(), defaultSegment.getId().toString());
-    insertUsedSegments(ImmutableSet.of(defaultSegment3, defaultSegment4), upgradedFromSegmentIdMap);
+    coordinator.insertUsedSegments(ImmutableSet.of(defaultSegment3, defaultSegment4), upgradedFromSegmentIdMap);
 
-    Set<SegmentUpgradeInfo> expected = new HashSet<>();
-    expected.add(new SegmentUpgradeInfo(defaultSegment.getId().toString(), null));
-    expected.add(new SegmentUpgradeInfo(defaultSegment2.getId().toString(), defaultSegment.getId().toString()));
-    expected.add(new SegmentUpgradeInfo(defaultSegment3.getId().toString(), defaultSegment.getId().toString()));
-    expected.add(new SegmentUpgradeInfo(defaultSegment4.getId().toString(), null));
+    Map<String, String> expected = new HashMap<>();
+    expected.put(defaultSegment2.getId().toString(), defaultSegment.getId().toString());
+    expected.put(defaultSegment3.getId().toString(), defaultSegment.getId().toString());
 
-    List<String> segmentIds = new ArrayList<>();
+    Set<String> segmentIds = new HashSet<>();
     segmentIds.add(defaultSegment.getId().toString());
     segmentIds.add(defaultSegment2.getId().toString());
     segmentIds.add(defaultSegment3.getId().toString());
     segmentIds.add(defaultSegment4.getId().toString());
-    Assert.assertEquals(expected, new HashSet<>(coordinator.retrieveUpgradedFromSegmentIds(datasource, segmentIds)));
+    Assert.assertEquals(
+        expected,
+        coordinator.retrieveUpgradedFromSegmentIds(datasource, segmentIds).getUpgradedFromSegmentId()
+    );
   }
 
   @Test
@@ -3475,60 +3458,25 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     final String datasource = defaultSegment.getDataSource();
     final Map<SegmentId, String> upgradedFromSegmentIdMap = new HashMap<>();
     upgradedFromSegmentIdMap.put(defaultSegment2.getId(), defaultSegment.getId().toString());
-    insertUsedSegments(ImmutableSet.of(defaultSegment, defaultSegment2), upgradedFromSegmentIdMap);
+    coordinator.insertUsedSegments(ImmutableSet.of(defaultSegment, defaultSegment2), upgradedFromSegmentIdMap);
     coordinator.markSegmentsAsUnusedWithinInterval(datasource, Intervals.ETERNITY);
     upgradedFromSegmentIdMap.clear();
     upgradedFromSegmentIdMap.put(defaultSegment3.getId(), defaultSegment.getId().toString());
-    insertUsedSegments(ImmutableSet.of(defaultSegment3, defaultSegment4), upgradedFromSegmentIdMap);
+    coordinator.insertUsedSegments(ImmutableSet.of(defaultSegment3, defaultSegment4), upgradedFromSegmentIdMap);
 
-    Set<SegmentUpgradeInfo> expected = new HashSet<>();
-    expected.add(new SegmentUpgradeInfo(defaultSegment2.getId().toString(), defaultSegment.getId().toString()));
-    expected.add(new SegmentUpgradeInfo(defaultSegment3.getId().toString(), defaultSegment.getId().toString()));
+    Map<String, Set<String>> expected = new HashMap<>();
+    expected.put(defaultSegment.getId().toString(), new HashSet<>());
+    expected.get(defaultSegment.getId().toString()).add(defaultSegment2.getId().toString());
+    expected.get(defaultSegment.getId().toString()).add(defaultSegment3.getId().toString());
 
-    List<String> upgradedIds = new ArrayList<>();
+    Set<String> upgradedIds = new HashSet<>();
     upgradedIds.add(defaultSegment.getId().toString());
     upgradedIds.add(defaultSegment2.getId().toString());
     upgradedIds.add(defaultSegment3.getId().toString());
     upgradedIds.add(defaultSegment4.getId().toString());
-    Assert.assertEquals(expected, new HashSet<>(coordinator.retrieveUpgradedToSegmentIds(datasource, upgradedIds)));
-  }
-
-  private boolean insertUsedSegments(Set<DataSegment> dataSegments, Map<SegmentId, String> upgradedFromSegmentIdMap)
-  {
-    final String table = derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable();
-    return derbyConnector.retryWithHandle(
-        handle -> {
-          PreparedBatch preparedBatch = handle.prepareBatch(
-              StringUtils.format(
-                  "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, payload, used_status_last_updated, upgraded_from_segment_id) "
-                  + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload, :used_status_last_updated, :upgraded_from_segment_id)",
-                  table,
-                  derbyConnector.getQuoteString()
-              )
-          );
-          for (DataSegment segment : dataSegments) {
-            String id = segment.getId().toString();
-            preparedBatch.add()
-                         .bind("id", id)
-                         .bind("dataSource", segment.getDataSource())
-                         .bind("created_date", DateTimes.nowUtc().toString())
-                         .bind("start", segment.getInterval().getStart().toString())
-                         .bind("end", segment.getInterval().getEnd().toString())
-                         .bind("partitioned", !(segment.getShardSpec() instanceof NoneShardSpec))
-                         .bind("version", segment.getVersion())
-                         .bind("used", true)
-                         .bind("payload", mapper.writeValueAsBytes(segment))
-                         .bind("used_status_last_updated", DateTimes.nowUtc().toString())
-                         .bind("upgraded_from_segment_id", upgradedFromSegmentIdMap.get(segment.getId()));
-          }
-
-          final int[] affectedRows = preparedBatch.execute();
-          final boolean succeeded = Arrays.stream(affectedRows).allMatch(eachAffectedRows -> eachAffectedRows == 1);
-          if (!succeeded) {
-            throw new ISE("Failed to publish segments to DB");
-          }
-          return true;
-        }
+    Assert.assertEquals(
+        expected,
+        coordinator.retrieveUpgradedToSegmentIds(datasource, upgradedIds).getUpgradedToSegmentIds()
     );
   }
 }
