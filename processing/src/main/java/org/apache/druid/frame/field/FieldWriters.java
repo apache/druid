@@ -132,7 +132,7 @@ public class FieldWriters
   {
     final DimensionSelector selector = selectorFactory.makeDimensionSelector(DefaultDimensionSpec.of(columnName));
     final ColumnCapabilities capabilities = selectorFactory.getColumnCapabilities(columnName);
-    return new StringFieldWriter(selector, removeNullBytes, capabilities != null && capabilities.hasMultipleValues().isTrue());
+    return new StringFieldWriter(selector, removeNullBytes, capabilities == null || capabilities.hasMultipleValues().isMaybeTrue());
   }
 
   private static FieldWriter makeStringArrayWriter(
