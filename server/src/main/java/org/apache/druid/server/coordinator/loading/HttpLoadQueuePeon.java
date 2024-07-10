@@ -207,7 +207,8 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
 
     try {
       log.trace("Sending [%d] load/drop requests to Server[%s].", newRequests.size(), serverId);
-      if (!loadingRateTracker.isLoadingBatch()) {
+      final boolean hasLoadRequests = newRequests.stream().anyMatch(r -> r instanceof SegmentChangeRequestLoad);
+      if (hasLoadRequests && !loadingRateTracker.isLoadingBatch()) {
         loadingRateTracker.markBatchLoadingStarted();
       }
 

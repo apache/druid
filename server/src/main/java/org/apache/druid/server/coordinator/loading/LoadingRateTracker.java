@@ -31,8 +31,21 @@ import java.util.concurrent.atomic.AtomicReference;
  * Tracks the current segment loading rate for a single server.
  * <p>
  * The loading rate is computed as a moving average of the last
- * {@link #MOVING_AVERAGE_WINDOW_SIZE} progress updates (or more if any of the
- * updates were smaller than {@link #MIN_ENTRY_SIZE_BYTES}).
+ * {@link #MOVING_AVERAGE_WINDOW_SIZE} batches of segment loads (or more if any
+ * of the batches were smaller than {@link #MIN_ENTRY_SIZE_BYTES}). A batch is
+ * defined as the set of all the segment loads performed between two consecutive
+ * empty states of the load queue.
+ * <pre>
+ *   batchDurationMillis
+ *   = t(load queue becomes empty) - t(first load request in batch is sent to server)
+ *
+ *   batchBytes = total bytes successfully loaded in batch
+ *
+ *   avg loading rate in batch (kbps) = (8 * batchBytes) / batchDurationMillis
+ *
+ *   overall avg loading rate (kbps)
+ *   = (8 * sumOverWindow(batchBytes)) / sumOverWindow(batchDurationMillis)
+ * </pre>
  * <p>
  * This class is currently not required to be thread-safe as the caller
  * {@link HttpLoadQueuePeon} itself ensures that the write methods of this class
@@ -42,7 +55,7 @@ import java.util.concurrent.atomic.AtomicReference;
 public class LoadingRateTracker
 {
   public static final int MOVING_AVERAGE_WINDOW_SIZE = 10;
-  public static final long MIN_ENTRY_SIZE_BYTES = 1_000_000_000;
+  public static final long MIN_ENTRY_SIZE_BYTES = 1 << 30;
 
   private final EvictingQueue<Entry> window = EvictingQueue.create(MOVING_AVERAGE_WINDOW_SIZE);
 
@@ -77,7 +90,7 @@ public class LoadingRateTracker
       delta.bytes -= evictedHead.bytes;
       delta.millisElapsed -= evictedHead.millisElapsed;
 
-      windowTotal.updateAndGet(total -> total.incrementBy(delta));
+      windowTotal.updateAndGet(delta::incrementBy);
     }
   }
 
@@ -108,7 +121,7 @@ public class LoadingRateTracker
 
     currentTail.incrementBy(delta);
     currentBatchTotal.incrementBy(delta);
-    windowTotal.updateAndGet(total -> total.incrementBy(delta));
+    windowTotal.updateAndGet(delta::incrementBy);
   }
 
   /**
