@@ -27,6 +27,7 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
 import org.apache.druid.segment.serde.ComplexMetrics;
@@ -130,7 +131,8 @@ public class FieldWriters
   )
   {
     final DimensionSelector selector = selectorFactory.makeDimensionSelector(DefaultDimensionSpec.of(columnName));
-    return new StringFieldWriter(selector, removeNullBytes);
+    final ColumnCapabilities capabilities = selectorFactory.getColumnCapabilities(columnName);
+    return new StringFieldWriter(selector, removeNullBytes, capabilities != null && capabilities.hasMultipleValues().isTrue());
   }
 
   private static FieldWriter makeStringArrayWriter(
