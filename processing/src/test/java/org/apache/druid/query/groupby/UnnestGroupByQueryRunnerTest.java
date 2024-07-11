@@ -1335,6 +1335,4 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
       expectedException.expectMessage("Cannot vectorize!");
     }
   }
-
-
 }
