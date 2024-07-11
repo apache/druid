@@ -131,7 +131,7 @@ public class UnnestDimensionCursor implements Cursor
           @Override
           public ValueMatcher makeValueMatcher(@Nullable String value)
           {
-            final int idForLookup = idLookup().lookupId(value);
+            final int idForLookup = dimSelector.idLookup().lookupId(value);
             if (idForLookup < 0) {
               return new ValueMatcher()
               {
@@ -211,7 +211,7 @@ public class UnnestDimensionCursor implements Cursor
           @Override
           public int getValueCardinality()
           {
-            return dimSelector.getValueCardinality();
+            return dimSelector.getValueCardinality() + idOffset;
           }
 
           @Nullable
@@ -231,7 +231,7 @@ public class UnnestDimensionCursor implements Cursor
           @Override
           public IdLookup idLookup()
           {
-            return dimSelector.idLookup();
+            return name -> name == null ? nullId : dimSelector.idLookup().lookupId(name) + idOffset;
           }
         };
       }
