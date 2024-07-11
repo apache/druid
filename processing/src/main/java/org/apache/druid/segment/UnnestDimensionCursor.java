@@ -144,7 +144,7 @@ public class UnnestDimensionCursor implements Cursor
                       return true;
                     }
                     final int rowId = indexedIntsForCurrentRow.get(index);
-                    return lookupName(rowId + idOffset) == null;
+                    return dimSelector.lookupName(rowId) == null;
                   }
                   return false;
                 }
@@ -169,7 +169,7 @@ public class UnnestDimensionCursor implements Cursor
                   return includeUnknown;
                 }
                 final int rowId = indexedIntsForCurrentRow.get(index);
-                return (includeUnknown && lookupName(rowId + idOffset) == null) || idForLookup == rowId;
+                return (includeUnknown && dimSelector.lookupName(rowId) == null) || idForLookup == rowId;
               }
 
               @Override
@@ -199,7 +199,7 @@ public class UnnestDimensionCursor implements Cursor
             if (indexedIntsForCurrentRow.size() == 0) {
               return null;
             }
-            return lookupName(indexedIntsForCurrentRow.get(index) + idOffset);
+            return dimSelector.lookupName(indexedIntsForCurrentRow.get(index));
           }
 
           @Override
