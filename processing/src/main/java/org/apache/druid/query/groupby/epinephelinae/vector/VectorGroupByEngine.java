@@ -241,7 +241,7 @@ public class VectorGroupByEngine
     return true;
   }
 
-  private static boolean canVectorizeAggregators(
+  public static boolean canVectorizeAggregators(
       final ColumnInspector inspector,
       final List<AggregatorFactory> aggregatorFactories
   )
