@@ -60,6 +60,10 @@ import java.util.concurrent.ConcurrentHashMap;
  * as there can be multiple unused segments with different {@code used_status_last_updated} time.
  * </p>
  * <p>
+ *  The datasources to kill during each cycle is picked using {@link #datasourceIterator}, which is refreshed as needed
+ *  during each cycle of this duty.
+ * </p>
+ * <p>
  * See {@link org.apache.druid.indexing.common.task.KillUnusedSegmentsTask}.
  * </p>
  */
@@ -91,7 +95,8 @@ public class KillUnusedSegments implements CoordinatorDuty
   private DateTime lastKillTime;
 
   /**
-   * Round-robin iterator of the datasources to kill. It's updated in every run by the duty.
+   * Round-robin iterator of the datasources to kill. It's updated in every run by the duty and must be used
+   * from a single thread.
    */
   private final RoundRobinIterator datasourceIterator;
 

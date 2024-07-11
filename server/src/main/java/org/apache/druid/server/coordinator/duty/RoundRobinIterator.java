@@ -33,16 +33,19 @@ import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
- * A round-robin iterator that is always backed by an ordered list of candidates containing no duplicates.
+ * A round-robin iterator that is backed by an ordered list of candidates containing no duplicates. The iterator
+ * iterates endlessly over all the candidates. The caller must explicitly terminate it.
  * The iterator has the following properties:
  * <ul>
  *   <li> Starts with an initial random cursor position in an ordered list of candidates. </li>
- *   <li> Invoking {@code next()} on {@link #getIterator()} is guaranteed to be deterministic
+ *   <li> Invoking {@code next()} on {@link #getIterator()} is guaranteed to result in a deterministic order
  *   unless the set of candidates change when {@link #updateCandidates(Set)} is called. When the candidates change,
  *   the cursor is reset to a random position in the new list of ordered candidates. </li>
  *   <li> Guarantees that no duplicate candidates are returned in two consecutive {@code next()} iterations. </li>
  * </ul>
  *
+ * <p>
+ * This class is not thread-safe and must be used from a single thread.
  */
 @NotThreadSafe
 public class RoundRobinIterator
@@ -71,6 +74,9 @@ public class RoundRobinIterator
     this.cursorPosition = generateRandomCursorPosition(input.size());
   }
 
+  /**
+   * Returns a round-robin iterator over the list of candidates. The caller must explicitly terminate it.
+   */
   public Iterator<String> getIterator()
   {
     return new Iterator<String>()

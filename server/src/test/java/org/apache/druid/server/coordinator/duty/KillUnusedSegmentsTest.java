@@ -225,8 +225,12 @@ public class KillUnusedSegmentsTest
     validateLastKillStateAndReset(DS2, null);
   }
 
+  /**
+   * Set up multiple datasources {@link #DS1}, {@link #DS2} and {@link #DS3} with unused segments with 2 kill task
+   * slots. Running the kill duty each time should pick a different set of datasources in a round-robin manner.
+   */
   @Test
-  public void testKillWithMultipleDatasourcesRoundRobin()
+  public void testKillMultipleDatasourcesInRoundRobinManner()
   {
     configBuilder.withIgnoreDurationToRetain(true)
                  .withMaxSegmentsToKill(2);
