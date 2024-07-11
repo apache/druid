@@ -17,31 +17,33 @@
  * under the License.
  */
 
-package org.apache.druid.metadata;
+package org.apache.druid.indexing.common.actions;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.Map;
+import java.util.Set;
 
 /**
- * Response for the RetrieveUpgradedFromSegmentIds task action
+ * Response for the RetrieveUpgradedToSegmentIds task action
  */
-public class UpgradedFromSegmentsResponse
+public class UpgradedToSegmentsResponse
 {
-  private final Map<String, String> upgradedFromSegmentIds;
+
+  private final Map<String, Set<String>> upgradedToSegmentIds;
 
   @JsonCreator
-  public UpgradedFromSegmentsResponse(
-      @JsonProperty("upgradedFromSegmentIds") Map<String, String> upgradedFromSegmentIds
+  public UpgradedToSegmentsResponse(
+      @JsonProperty("upgradedToSegmentIds") Map<String, Set<String>> upgradedToSegmentIds
   )
   {
-    this.upgradedFromSegmentIds = upgradedFromSegmentIds;
+    this.upgradedToSegmentIds = upgradedToSegmentIds;
   }
 
   @JsonProperty
-  public Map<String, String> getUpgradedFromSegmentIds()
+  public Map<String, Set<String>> getUpgradedToSegmentIds()
   {
-    return upgradedFromSegmentIds;
+    return upgradedToSegmentIds;
   }
 }
