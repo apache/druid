@@ -171,7 +171,7 @@ public @interface NotYetSupported
           Matcher m = annotation.value().getPattern().matcher(trace);
 
           if (!m.find()) {
-            throw new AssertionError("Exception stactrace doesn't match regex: " + annotation.value().regex, e);
+            throw new AssertionError("Exception stacktrace doesn't match regex: " + annotation.value().regex, e);
           }
           throw new AssumptionViolatedException("Test is not-yet supported; ignored with:" + annotation);
         }
