@@ -33,7 +33,6 @@ import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.sql.dialect.CalciteSqlDialect;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.calcite.util.Pair;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.error.InvalidSqlInput;
@@ -65,6 +64,7 @@ import javax.annotation.Nullable;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 public class MSQTaskSqlEngine implements SqlEngine
@@ -222,7 +222,7 @@ public class MSQTaskSqlEngine implements SqlEngine
    */
   private static void validateInsert(
       final RelNode rootRel,
-      final List<Pair<Integer, String>> fieldMappings,
+      final List<Entry<Integer, String>> fieldMappings,
       @Nullable Table targetTable,
       final PlannerContext plannerContext
   )
@@ -241,13 +241,13 @@ public class MSQTaskSqlEngine implements SqlEngine
    * SQL allows multiple output columns with the same name. However, we don't allow this for INSERT or REPLACE
    * queries, because we use these output names to generate columns in segments. They must be unique.
    */
-  private static void validateNoDuplicateAliases(final List<Pair<Integer, String>> fieldMappings)
+  private static void validateNoDuplicateAliases(final List<Entry<Integer, String>> fieldMappings)
   {
     final Set<String> aliasesSeen = new HashSet<>();
 
-    for (final Pair<Integer, String> field : fieldMappings) {
-      if (!aliasesSeen.add(field.right)) {
-        throw InvalidSqlInput.exception("Duplicate field in SELECT: [%s]", field.right);
+    for (final Entry<Integer, String> field : fieldMappings) {
+      if (!aliasesSeen.add(field.getValue())) {
+        throw InvalidSqlInput.exception("Duplicate field in SELECT: [%s]", field.getValue());
       }
     }
   }
@@ -353,7 +353,7 @@ public class MSQTaskSqlEngine implements SqlEngine
    */
   private static void validateTypeChanges(
       final RelNode rootRel,
-      final List<Pair<Integer, String>> fieldMappings,
+      final List<Entry<Integer, String>> fieldMappings,
       @Nullable final Table targetTable,
       final PlannerContext plannerContext
   )
@@ -366,9 +366,9 @@ public class MSQTaskSqlEngine implements SqlEngine
         MultiStageQueryContext.getColumnsExcludedFromTypeVerification(plannerContext.queryContext());
     final ArrayIngestMode arrayIngestMode = MultiStageQueryContext.getArrayIngestMode(plannerContext.queryContext());
 
-    for (Pair<Integer, String> fieldMapping : fieldMappings) {
-      final int columnIndex = fieldMapping.left;
-      final String columnName = fieldMapping.right;
+    for (Entry<Integer, String> fieldMapping : fieldMappings) {
+      final int columnIndex = fieldMapping.getKey();
+      final String columnName = fieldMapping.getValue();
       final RelDataTypeField oldSqlTypeField =
           targetTable.getRowType(DruidTypeSystem.TYPE_FACTORY).getField(columnName, true, false);
 
@@ -427,11 +427,11 @@ public class MSQTaskSqlEngine implements SqlEngine
    *
    * Returns -1 if the list does not contain a time column.
    */
-  private static int getTimeColumnIndex(final List<Pair<Integer, String>> fieldMappings)
+  private static int getTimeColumnIndex(final List<Entry<Integer, String>> fieldMappings)
   {
-    for (final Pair<Integer, String> field : fieldMappings) {
-      if (field.right.equals(ColumnHolder.TIME_COLUMN_NAME)) {
-        return field.left;
+    for (final Entry<Integer, String> field : fieldMappings) {
+      if (field.getValue().equals(ColumnHolder.TIME_COLUMN_NAME)) {
+        return field.getKey();
       }
     }
 

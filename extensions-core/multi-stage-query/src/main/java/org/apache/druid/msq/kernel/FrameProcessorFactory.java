@@ -74,7 +74,8 @@ public interface FrameProcessorFactory<T, R, ExtraInfoType>
       FrameContext frameContext,
       int maxOutstandingProcessors,
       CounterTracker counters,
-      Consumer<Throwable> warningPublisher
+      Consumer<Throwable> warningPublisher,
+      boolean removeNullBytes
   ) throws IOException;
 
   @Nullable

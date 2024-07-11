@@ -137,7 +137,10 @@ public class MultiStageQueryContext
   public static final int DEFAULT_ROWS_PER_SEGMENT = 3000000;
 
   public static final String CTX_ROWS_PER_PAGE = "rowsPerPage";
-  static final int DEFAULT_ROWS_PER_PAGE = 100000;
+  public static final int DEFAULT_ROWS_PER_PAGE = 100000;
+
+  public static final String CTX_REMOVE_NULL_BYTES = "removeNullBytes";
+  public static final boolean DEFAULT_REMOVE_NULL_BYTES = false;
 
   public static final String CTX_ROWS_IN_MEMORY = "rowsInMemory";
   // Lower than the default to minimize the impact of per-row overheads that are not accounted for by
@@ -145,6 +148,8 @@ public class MultiStageQueryContext
   static final int DEFAULT_ROWS_IN_MEMORY = 100000;
 
   public static final String CTX_IS_REINDEX = "isReindex";
+
+  public static final String CTX_MAX_NUM_SEGMENTS = "maxNumSegments";
 
   /**
    * Controls sort order within segments. Normally, this is the same as the overall order of the query (from the
@@ -291,6 +296,11 @@ public class MultiStageQueryContext
     );
   }
 
+  public static boolean removeNullBytes(final QueryContext queryContext)
+  {
+    return queryContext.getBoolean(CTX_REMOVE_NULL_BYTES, DEFAULT_REMOVE_NULL_BYTES);
+  }
+
 
   public static MSQSelectDestination getSelectDestination(final QueryContext queryContext)
   {
@@ -314,6 +324,12 @@ public class MultiStageQueryContext
   public static int getRowsInMemory(final QueryContext queryContext)
   {
     return queryContext.getInt(CTX_ROWS_IN_MEMORY, DEFAULT_ROWS_IN_MEMORY);
+  }
+
+  public static Integer getMaxNumSegments(final QueryContext queryContext)
+  {
+    // The default is null, if the context is not set.
+    return queryContext.getInt(CTX_MAX_NUM_SEGMENTS);
   }
 
   public static List<String> getSortOrder(final QueryContext queryContext)
@@ -362,7 +378,9 @@ public class MultiStageQueryContext
       try {
         // Not caching this ObjectMapper in a static, because we expect to use it infrequently (once per INSERT
         // query that uses this feature) and there is no need to keep it around longer than that.
-        return new ObjectMapper().readValue(listString, new TypeReference<List<String>>() {});
+        return new ObjectMapper().readValue(listString, new TypeReference<List<String>>()
+        {
+        });
       }
       catch (JsonProcessingException e) {
         throw QueryContexts.badValueException(keyName, "CSV or JSON array", listString);

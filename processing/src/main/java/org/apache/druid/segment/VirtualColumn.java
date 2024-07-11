@@ -24,6 +24,8 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.java.util.common.Cacheable;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.ColumnIndexSelector;
+import org.apache.druid.query.groupby.DeferExpressionDimensions;
+import org.apache.druid.query.groupby.epinephelinae.vector.GroupByVectorColumnSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.data.ReadableOffset;
@@ -241,6 +243,26 @@ public interface VirtualColumn extends Cacheable
   }
 
   /**
+   * Returns a group-by selector. Allows virtual columns to control their own grouping behavior.
+   *
+   * @param columnName                column name
+   * @param factory                   column selector factory
+   * @param deferExpressionDimensions active value of {@link org.apache.druid.query.groupby.GroupByQueryConfig#CTX_KEY_DEFER_EXPRESSION_DIMENSIONS}
+   *
+   * @return selector, or null if this virtual column does not have a specialized one
+   */
+  @SuppressWarnings("unused")
+  @Nullable
+  default GroupByVectorColumnSelector makeGroupByVectorColumnSelector(
+      String columnName,
+      VectorColumnSelectorFactory factory,
+      DeferExpressionDimensions deferExpressionDimensions
+  )
+  {
+    return null;
+  }
+
+  /**
    * This method is deprecated in favor of {@link #capabilities(ColumnInspector, String)}, which should be used whenever
    * possible and can support virtual column implementations that need to inspect other columns as inputs.
    *
@@ -265,8 +287,9 @@ public interface VirtualColumn extends Cacheable
    * Examples of this include the {@link ExpressionVirtualColumn}, which takes input from other columns and uses the
    * {@link ColumnInspector} to infer the output type of expressions based on the types of the inputs.
    *
-   * @param inspector column inspector to provide additional information of other available columns
+   * @param inspector  column inspector to provide additional information of other available columns
    * @param columnName the name this virtual column was referenced with
+   *
    * @return capabilities, must not be null
    */
   @Nullable

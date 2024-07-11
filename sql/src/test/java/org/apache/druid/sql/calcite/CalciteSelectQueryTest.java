@@ -21,7 +21,9 @@ package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.calcite.rel.RelNode;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -49,6 +51,7 @@ import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.util.CacheTestHelperModule.ResultCacheMode;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -58,6 +61,8 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class CalciteSelectQueryTest extends BaseCalciteQueryTest
 {
@@ -126,6 +131,28 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 .build()
         ),
         ImmutableList.of(new Object[]{"[\"Hello\",null]"})
+    );
+  }
+
+  @Test
+  public void testTimeCeilExpressionContainingInvalidPeriod()
+  {
+    testQueryThrows(
+        "SELECT TIME_CEIL(__time, 'PT1Y') FROM foo",
+        DruidExceptionMatcher.invalidInput().expectMessageContains(
+            "Invalid period['PT1Y'] specified for expression[timestamp_ceil(\"__time\", 'PT1Y', null, 'UTC')]"
+        )
+    );
+  }
+
+  @Test
+  public void testTimeFloorExpressionContainingInvalidPeriod()
+  {
+    testQueryThrows(
+        "SELECT TIME_FLOOR(TIMESTAMPADD(DAY, -1, __time), 'PT1D') FROM foo",
+        DruidExceptionMatcher.invalidInput().expectMessageContains(
+            "Invalid period['PT1D'] specified for expression[timestamp_floor((\"__time\" + -86400000), 'PT1D', null, 'UTC')]"
+        )
     );
   }
 
@@ -709,20 +736,11 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 .setInterval(querySegmentSpec(Filtration.eternity()))
                 .setGranularity(Granularities.ALL)
                 .setVirtualColumns(
-                    expressionVirtualColumn("v0", "strlen(\"dim1\")", ColumnType.LONG),
-                    // The two layers of CASTs here are unusual, they should really be collapsed into one
-                    expressionVirtualColumn(
-                        "v1",
-                        "CAST(CAST(strlen(\"dim1\"), 'STRING'), 'LONG')",
-                        ColumnType.LONG
-                    )
+                    expressionVirtualColumn("v0", "strlen(\"dim1\")", ColumnType.LONG)
                 )
                 .setDimensions(dimensions(new DefaultDimensionSpec("dim1", "d0")))
                 .setDimFilter(
-                    or(
-                        equality("v0", 3L, ColumnType.LONG),
-                        equality("v1", 3L, ColumnType.LONG)
-                    )
+                    equality("v0", 3L, ColumnType.LONG)
                 )
                 .setContext(QUERY_CONTEXT_DEFAULT)
                 .build()
@@ -2132,5 +2150,56 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
 
         ),
         ImmutableList.of());
+  }
+
+  @SqlTestFrameworkConfig.ResultCache(ResultCacheMode.ENABLED)
+  @Test
+  public void testCacheKeyConsistency()
+  {
+    skipVectorize();
+    // possibly pollute the cache
+    // https://github.com/apache/druid/issues/16552
+    testBuilder()
+        .sql("select dim1,d1 from numfoo where 0.0 < d1 and d1 < 1.25 group by dim1,d1")
+        .expectedResults(
+            ImmutableList.of(
+                new Object[] {"", 1.0D}
+            )
+        )
+        .run();
+
+    testBuilder()
+        .sql("select dim1,d1 from numfoo where 0.0 < d1 and d1 < 1.75 group by dim1,d1")
+        .expectedResults(
+            ImmutableList.of(
+                new Object[] {"", 1.0D},
+                new Object[] {"10.1", 1.7D}
+            )
+        )
+        .run();
+  }
+
+  @Test
+  public void testSqlToRelInConversion()
+  {
+    assertEquals(
+        "1.37.0",
+        RelNode.class.getPackage().getImplementationVersion(),
+        "Calcite version changed; check if CALCITE-6435 is fixed and remove:\n * method CalciteRulesManager#sqlToRelWorkaroundProgram\n * FixIncorrectInExpansionTypes class\n* this assertion"
+    );
+
+    testBuilder()
+        .sql(
+            "SELECT channel FROM wikipedia\n"
+                + "WHERE channel in ('#en.wikipedia') and channel = '#en.wikipedia' and\n"
+                + "isRobot = 'false'\n"
+                + "LIMIT 1"
+        )
+        .expectedResults(
+            ImmutableList.of(
+                new Object[] {"#en.wikipedia"}
+            )
+        )
+        .run();
   }
 }

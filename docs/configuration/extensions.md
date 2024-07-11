@@ -22,7 +22,6 @@ title: "Extensions"
   ~ under the License.
   -->
 
-
 Druid implements an extension system that allows for adding functionality at runtime. Extensions
 are commonly used to add support for deep storages (like HDFS and S3), metadata stores (like MySQL
 and PostgreSQL), new aggregators, new input formats, and so on.
@@ -34,37 +33,36 @@ metadata store. Many clusters will also use additional extensions.
 
 Core extensions are maintained by Druid committers.
 
-| Name                             | Description                                                                                                                                                                                                                | Docs                                                               |
-|----------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------|
-| druid-avro-extensions            | Support for data in Apache Avro data format.                                                                                                                                                                               | [link](../development/extensions-core/avro.md)                     |
-| druid-azure-extensions           | Microsoft Azure deep storage.                                                                                                                                                                                              | [link](../development/extensions-core/azure.md)                    |
-| druid-basic-security             | Support for Basic HTTP authentication and role-based access control.                                                                                                                                                       | [link](../development/extensions-core/druid-basic-security.md)     |
-| druid-bloom-filter               | Support for providing Bloom filters in druid queries.                                                                                                                                                                      | [link](../development/extensions-core/bloom-filter.md)             |
-| druid-datasketches               | Support for approximate counts and set operations with [Apache DataSketches](https://datasketches.apache.org/).                                                                                                            | [link](../development/extensions-core/datasketches-extension.md)   |
-| druid-google-extensions          | Google Cloud Storage deep storage.                                                                                                                                                                                         | [link](../development/extensions-core/google.md)                   |
-| druid-hdfs-storage               | HDFS deep storage.                                                                                                                                                                                                         | [link](../development/extensions-core/hdfs.md)                     |
-| druid-histogram                  | Approximate histograms and quantiles aggregator. Deprecated, please use the [DataSketches quantiles aggregator](../development/extensions-core/datasketches-quantiles.md) from the `druid-datasketches` extension instead. | [link](../development/extensions-core/approximate-histograms.md)   |
-| druid-kafka-extraction-namespace | Apache Kafka-based namespaced lookup. Requires namespace lookup extension.                                                                                                                                                 | [link](../querying/kafka-extraction-namespace.md)                  |
-| druid-kafka-indexing-service     | Supervised exactly-once Apache Kafka ingestion for the indexing service.                                                                                                                                                   | [link](../ingestion/kafka-ingestion.md)                            |
-| druid-kinesis-indexing-service   | Supervised exactly-once Kinesis ingestion for the indexing service.                                                                                                                                                        | [link](../ingestion/kinesis-ingestion.md)                          |
-| druid-kerberos                   | Kerberos authentication for druid processes.                                                                                                                                                                               | [link](../development/extensions-core/druid-kerberos.md)           |
-| druid-lookups-cached-global      | A module for [lookups](../querying/lookups.md) providing a jvm-global eager caching for lookups. It provides JDBC and URI implementations for fetching lookup data.                                                        | [link](../querying/lookups-cached-global.md)                       |
-| druid-lookups-cached-single      | Per lookup caching module to support the use cases where a lookup need to be isolated from the global pool of lookups                                                                                                      | [link](../development/extensions-core/druid-lookups.md)            |
-| druid-multi-stage-query          | Support for the multi-stage query architecture for Apache Druid and the multi-stage query task engine.                                                                                                                     | [link](../multi-stage-query/index.md)                              |
-| druid-orc-extensions             | Support for data in Apache ORC data format.                                                                                                                                                                                | [link](../development/extensions-core/orc.md)                      |
-| druid-parquet-extensions         | Support for data in Apache Parquet data format. Requires druid-avro-extensions to be loaded.                                                                                                                               | [link](../development/extensions-core/parquet.md)                  |
-| druid-protobuf-extensions        | Support for data in Protobuf data format.                                                                                                                                                                                  | [link](../development/extensions-core/protobuf.md)                 |
-| druid-ranger-security            | Support for access control through Apache Ranger.                                                                                                                                                                          | [link](../development/extensions-core/druid-ranger-security.md)    |
-| druid-s3-extensions              | Interfacing with data in AWS S3, and using S3 as deep storage.                                                                                                                                                             | [link](../development/extensions-core/s3.md)                       |
-| druid-ec2-extensions             | Interfacing with AWS EC2 for autoscaling middle managers                                                                                                                                                                   | UNDOCUMENTED                                                       |
-| druid-aws-rds-extensions         | Support for AWS token based access to AWS RDS DB Cluster.                                                                                                                                                                  | [link](../development/extensions-core/druid-aws-rds.md)            |
-| druid-stats                      | Statistics related module including variance and standard deviation.                                                                                                                                                       | [link](../development/extensions-core/stats.md)                    |
-| mysql-metadata-storage           | MySQL metadata store.                                                                                                                                                                                                      | [link](../development/extensions-core/mysql.md)                    |
-| postgresql-metadata-storage      | PostgreSQL metadata store.                                                                                                                                                                                                 | [link](../development/extensions-core/postgresql.md)               |
-| simple-client-sslcontext         | Simple SSLContext provider module to be used by Druid's internal HttpClient when talking to other Druid processes over HTTPS.                                                                                              | [link](../development/extensions-core/simple-client-sslcontext.md) |
-| druid-pac4j                      | OpenID Connect authentication for druid processes.                                                                                                                                                                         | [link](../development/extensions-core/druid-pac4j.md)              |
-| druid-pac4j-v5                   | OpenID Connect authentication for druid processes. Uses version 5 or above for pac4j. Incompatible with JDK8.                                                                                                              | [link](../development/extensions-core/druid-pac4j-v5.md)           |
-
+|Name|Description|Docs|
+|----|-----------|----|
+|druid-avro-extensions|Support for data in Apache Avro data format.|[link](../development/extensions-core/avro.md)|
+|druid-azure-extensions|Microsoft Azure deep storage.|[link](../development/extensions-core/azure.md)|
+|druid-basic-security|Support for Basic HTTP authentication and role-based access control.|[link](../development/extensions-core/druid-basic-security.md)|
+|druid-bloom-filter|Support for providing Bloom filters in druid queries.|[link](../development/extensions-core/bloom-filter.md)|
+|druid-datasketches|Support for approximate counts and set operations with [Apache DataSketches](https://datasketches.apache.org/).|[link](../development/extensions-core/datasketches-extension.md)|
+|druid-google-extensions|Google Cloud Storage deep storage.|[link](../development/extensions-core/google.md)|
+|druid-hdfs-storage|HDFS deep storage.|[link](../development/extensions-core/hdfs.md)|
+|druid-histogram|Approximate histograms and quantiles aggregator. Deprecated, please use the [DataSketches quantiles aggregator](../development/extensions-core/datasketches-quantiles.md) from the `druid-datasketches` extension instead.|[link](../development/extensions-core/approximate-histograms.md)|
+|druid-kafka-extraction-namespace|Apache Kafka-based namespaced lookup. Requires namespace lookup extension.|[link](../querying/kafka-extraction-namespace.md)|
+|druid-kafka-indexing-service|Supervised exactly-once Apache Kafka ingestion for the indexing service.|[link](../ingestion/kafka-ingestion.md)|
+|druid-kinesis-indexing-service|Supervised exactly-once Kinesis ingestion for the indexing service.|[link](../ingestion/kinesis-ingestion.md)|
+|druid-kerberos|Kerberos authentication for druid processes.|[link](../development/extensions-core/druid-kerberos.md)|
+|druid-lookups-cached-global|A module for [lookups](../querying/lookups.md) providing a jvm-global eager caching for lookups. It provides JDBC and URI implementations for fetching lookup data.|[link](../querying/lookups-cached-global.md)|
+|druid-lookups-cached-single| Per lookup caching module to support the use cases where a lookup need to be isolated from the global pool of lookups |[link](../development/extensions-core/druid-lookups.md)|
+|druid-multi-stage-query| Support for the multi-stage query architecture for Apache Druid and the multi-stage query task engine.|[link](../multi-stage-query/index.md)|
+|druid-orc-extensions|Support for data in Apache ORC data format.|[link](../development/extensions-core/orc.md)|
+|druid-parquet-extensions|Support for data in Apache Parquet data format. Requires druid-avro-extensions to be loaded.|[link](../development/extensions-core/parquet.md)|
+|druid-protobuf-extensions| Support for data in Protobuf data format.|[link](../development/extensions-core/protobuf.md)|
+|druid-ranger-security|Support for access control through Apache Ranger.|[link](../development/extensions-core/druid-ranger-security.md)|
+|druid-s3-extensions|Interfacing with data in Amazon S3, and using S3 as deep storage.|[link](../development/extensions-core/s3.md)|
+|druid-ec2-extensions|Interfacing with AWS EC2 for autoscaling middle managers|UNDOCUMENTED|
+|druid-aws-rds-extensions|Support for AWS token based access to AWS RDS DB Cluster.|[link](../development/extensions-core/druid-aws-rds.md)|
+|druid-stats|Statistics related module including variance and standard deviation.|[link](../development/extensions-core/stats.md)|
+|mysql-metadata-storage|MySQL metadata store.|[link](../development/extensions-core/mysql.md)|
+|postgresql-metadata-storage|PostgreSQL metadata store.|[link](../development/extensions-core/postgresql.md)|
+|simple-client-sslcontext|Simple SSLContext provider module to be used by Druid's internal HttpClient when talking to other Druid processes over HTTPS.|[link](../development/extensions-core/simple-client-sslcontext.md)|
+|druid-pac4j|OpenID Connect authentication for druid processes.|[link](../development/extensions-core/druid-pac4j.md)|                                                                                                                                                                | [link](../development/extensions-core/druid-pac4j.md)              |
+| druid-pac4j-v5| OpenID Connect authentication for druid processes. Uses version 5 or above for pac4j. Incompatible with JDK8. |                                                                                                             | [link](../development/extensions-core/druid-pac4j-v5.md)           |
 |druid-kubernetes-extensions|Druid cluster deployment on Kubernetes without Zookeeper.|[link](../development/extensions-core/kubernetes.md)|
 
 ## Community extensions
@@ -103,7 +101,7 @@ All of these community extensions can be downloaded using [pull-deps](../operati
 |druid-momentsketch|Support for approximate quantile queries using the [momentsketch](https://github.com/stanford-futuredata/momentsketch) library|[link](../development/extensions-contrib/momentsketch-quantiles.md)|
 |druid-tdigestsketch|Support for approximate sketch aggregators based on [T-Digest](https://github.com/tdunning/t-digest)|[link](../development/extensions-contrib/tdigestsketch-quantiles.md)|
 |gce-extensions|GCE Extensions|[link](../development/extensions-contrib/gce-extensions.md)|
-|prometheus-emitter|Exposes [Druid metrics](../operations/metrics.md) for Prometheus server collection (https://prometheus.io/)|[link](../development/extensions-contrib/prometheus.md)|
+|prometheus-emitter|Exposes [Druid metrics](../operations/metrics.md) for Prometheus server collection (<https://prometheus.io/>)|[link](../development/extensions-contrib/prometheus.md)|
 |druid-kubernetes-overlord-extensions|Support for launching tasks in k8s without Middle Managers|[link](../development/extensions-contrib/k8s-jobs.md)|
 |druid-spectator-histogram|Support for efficient approximate percentile queries|[link](../development/extensions-contrib/spectator-histogram.md)|
 |druid-rabbit-indexing-service|Support for creating and managing [RabbitMQ](https://www.rabbitmq.com/) indexing tasks|[link](../development/extensions-contrib/rabbit-stream-ingestion.md)|
@@ -112,7 +110,6 @@ All of these community extensions can be downloaded using [pull-deps](../operati
 
 Please post on [dev@druid.apache.org](https://lists.apache.org/list.html?dev@druid.apache.org) if you'd like an extension to be promoted to core.
 If we see a community extension actively supported by the community, we can promote it to core based on community feedback.
-
 
 For information how to create your own extension, please see [here](../development/modules.md).
 

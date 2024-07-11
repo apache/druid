@@ -73,18 +73,13 @@ public class SqlSegmentsMetadataManagerSchemaPollTest extends SqlSegmentsMetadat
         CentralizedDatasourceSchemaConfig.create()
     );
     sqlSegmentsMetadataManager.start();
-
-    publisher = new SQLMetadataSegmentPublisher(
-        jsonMapper,
-        derbyConnectorRule.metadataTablesConfigSupplier().get(),
-        connector
-    );
+    storageConfig = derbyConnectorRule.metadataTablesConfigSupplier().get();
 
     connector.createSegmentSchemasTable();
     connector.createSegmentTable();
 
-    publisher.publishSegment(segment1);
-    publisher.publishSegment(segment2);
+    publishSegment(segment1);
+    publishSegment(segment2);
   }
 
   @After
