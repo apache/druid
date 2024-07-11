@@ -607,8 +607,8 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
     coldSchemaTable.keySet().retainAll(dataSourceWithColdSegmentSet);
 
     String executionStatsLog = StringUtils.format(
-        "Cold schema processing was slow, taking [%d] millis. "
-        + "Processed [%d] datasources, [%d] segments & [%d] datasourceWithColdSegments.",
+        "Cold schema processing was too [%d] millis. "
+        + "Processed total [%d] datasources, [%d] segments. Found [%d] datasources with cold segments.",
         stopwatch.millisElapsed(), datasources, segments, dataSourceWithColdSegments
     );
     if (stopwatch.millisElapsed() > COLD_SCHEMA_SLOWNESS_THRESHOLD_MILLIS) {
