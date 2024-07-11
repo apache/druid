@@ -173,7 +173,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
       while (newRequests.size() < batchSize && queuedSegmentIterator.hasNext()) {
         final SegmentHolder holder = queuedSegmentIterator.next();
         final DataSegment segment = holder.getSegment();
-        if (hasRequestTimedOut(holder)) {
+        if (holder.hasRequestTimedOut()) {
           onRequestFailed(holder, "timed out");
           queuedSegmentIterator.remove();
           if (holder.isLoad()) {
@@ -413,7 +413,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
       if (holder == null) {
         log.trace("Server[%s] to load segment[%s] queued.", serverId, segment.getId());
         queuedSize.addAndGet(segment.getSize());
-        holder = new SegmentHolder(segment, action, callback);
+        holder = new SegmentHolder(segment, action, config.getLoadTimeout(), callback);
         segmentsToLoad.put(segment, holder);
         queuedSegments.add(holder);
         processingExecutor.execute(this::doSegmentManagement);
@@ -442,7 +442,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
 
       if (holder == null) {
         log.trace("Server[%s] to drop segment[%s] queued.", serverId, segment.getId());
-        holder = new SegmentHolder(segment, SegmentAction.DROP, callback);
+        holder = new SegmentHolder(segment, SegmentAction.DROP, config.getLoadTimeout(), callback);
         segmentsToDrop.put(segment, holder);
         queuedSegments.add(holder);
         processingExecutor.execute(this::doSegmentManagement);
@@ -515,18 +515,6 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
   public Set<DataSegment> getSegmentsMarkedToDrop()
   {
     return Collections.unmodifiableSet(segmentsMarkedToDrop);
-  }
-
-  /**
-   * A request is considered to have timed out if the time elapsed since it was
-   * first sent to the server is greater than the configured load timeout.
-   *
-   * @see HttpLoadQueuePeonConfig#getLoadTimeout()
-   */
-  private boolean hasRequestTimedOut(SegmentHolder holder)
-  {
-    return holder.isRequestSentToServer()
-           && holder.millisSinceRequestSentToServer() > config.getLoadTimeout().getMillis();
   }
 
   private void onRequestFailed(SegmentHolder holder, String failureCause)

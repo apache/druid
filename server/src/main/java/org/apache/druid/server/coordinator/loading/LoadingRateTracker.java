@@ -30,8 +30,8 @@ import java.util.concurrent.atomic.AtomicReference;
  * The loading rate is computed as a moving average of the last
  * {@link #MOVING_AVERAGE_WINDOW_SIZE} successful segment loads (or more if any
  * of the segments were smaller than {@link #MIN_ENTRY_SIZE_BYTES}). Since the
- * time taken to load individual segments are simply added up, the computed rate
- * might be incorrect if the server uses multiple loading threads.
+ * milliseconds taken to load individual segments are simply added up, the computed
+ * rate might be incorrect if the server uses multiple loading threads.
  * <p>
  * This class is currently not required to be thread-safe as the caller
  * {@link HttpLoadQueuePeon} itself ensures that the write methods of this class

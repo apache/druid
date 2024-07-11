@@ -185,7 +185,7 @@ public class CuratorLoadQueuePeon implements LoadQueuePeon
   @Override
   public void loadSegment(final DataSegment segment, SegmentAction action, @Nullable final LoadPeonCallback callback)
   {
-    SegmentHolder segmentHolder = new SegmentHolder(segment, action, callback);
+    SegmentHolder segmentHolder = new SegmentHolder(segment, action, Duration.ZERO, callback);
     final SegmentHolder existingHolder = segmentsToLoad.putIfAbsent(segment, segmentHolder);
     if (existingHolder != null) {
       existingHolder.addCallback(callback);
@@ -199,7 +199,7 @@ public class CuratorLoadQueuePeon implements LoadQueuePeon
   @Override
   public void dropSegment(final DataSegment segment, @Nullable final LoadPeonCallback callback)
   {
-    SegmentHolder segmentHolder = new SegmentHolder(segment, SegmentAction.DROP, callback);
+    SegmentHolder segmentHolder = new SegmentHolder(segment, SegmentAction.DROP, Duration.ZERO, callback);
     final SegmentHolder existingHolder = segmentsToDrop.putIfAbsent(segment, segmentHolder);
     if (existingHolder != null) {
       existingHolder.addCallback(callback);

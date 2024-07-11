@@ -26,7 +26,9 @@ import org.apache.druid.server.coordination.DataSegmentChangeRequest;
 import org.apache.druid.server.coordination.SegmentChangeRequestDrop;
 import org.apache.druid.server.coordination.SegmentChangeRequestLoad;
 import org.apache.druid.server.coordinator.DruidCoordinator;
+import org.apache.druid.server.coordinator.config.HttpLoadQueuePeonConfig;
 import org.apache.druid.timeline.DataSegment;
+import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -57,6 +59,8 @@ public class SegmentHolder implements Comparable<SegmentHolder>
   private final DataSegmentChangeRequest changeRequest;
   private final SegmentAction action;
 
+  private final Duration requestTimeout;
+
   // Guaranteed to store only non-null elements
   private final List<LoadPeonCallback> callbacks = new ArrayList<>();
   private final Stopwatch sinceRequestSentToServer = Stopwatch.createUnstarted();
@@ -65,6 +69,7 @@ public class SegmentHolder implements Comparable<SegmentHolder>
   public SegmentHolder(
       DataSegment segment,
       SegmentAction action,
+      Duration requestTimeout,
       @Nullable LoadPeonCallback callback
   )
   {
@@ -76,6 +81,7 @@ public class SegmentHolder implements Comparable<SegmentHolder>
     if (callback != null) {
       callbacks.add(callback);
     }
+    this.requestTimeout = requestTimeout;
   }
 
   public DataSegment getSegment()
@@ -129,9 +135,15 @@ public class SegmentHolder implements Comparable<SegmentHolder>
     }
   }
 
-  public boolean isRequestSentToServer()
+  /**
+   * A request is considered to have timed out if the time elapsed since it was
+   * first sent to the server is greater than the configured load timeout.
+   *
+   * @see HttpLoadQueuePeonConfig#getLoadTimeout()
+   */
+  public boolean hasRequestTimedOut()
   {
-    return sinceRequestSentToServer.isRunning();
+    return sinceRequestSentToServer.millisElapsed() > requestTimeout.getMillis();
   }
 
   public long millisSinceRequestSentToServer()
