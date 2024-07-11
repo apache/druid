@@ -252,6 +252,8 @@
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-pac4j</argument>
                                         <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions:druid-pac4j-v5</argument>
+                                        <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-ranger-security</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-kubernetes-extensions</argument>
