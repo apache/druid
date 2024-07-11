@@ -96,8 +96,8 @@ export const HistoryDialog = React.memo(function HistoryDialog(props: HistoryDia
           label: auditInfo.comment || auditTime,
           value: normalizePayload(payload),
         }))}
-        initLeftIndex={diffIndex + 1}
-        initRightIndex={diffIndex}
+        initOldIndex={diffIndex + 1}
+        initNewIndex={diffIndex}
         onClose={() => setDiffIndex(-1)}
       />
     );
