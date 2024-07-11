@@ -103,22 +103,22 @@ public class HyperUniquesAggregatorFactory extends AggregatorFactory
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    validateInputs(metricFactory.getColumnCapabilities(fieldName));
     BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(fieldName);
     if (selector instanceof NilColumnValueSelector) {
       return NoopAggregator.instance();
     }
+    validateInputs(metricFactory.getColumnCapabilities(fieldName));
     return new HyperUniquesAggregator(selector);
   }
 
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
-    validateInputs(metricFactory.getColumnCapabilities(fieldName));
     BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(fieldName);
     if (selector instanceof NilColumnValueSelector) {
       return NoopBufferAggregator.instance();
     }
+    validateInputs(metricFactory.getColumnCapabilities(fieldName));
     return new HyperUniquesBufferAggregator(selector);
   }
 
@@ -126,11 +126,10 @@ public class HyperUniquesAggregatorFactory extends AggregatorFactory
   public VectorAggregator factorizeVector(final VectorColumnSelectorFactory selectorFactory)
   {
     final ColumnCapabilities columnCapabilities = selectorFactory.getColumnCapabilities(fieldName);
-    validateInputs(columnCapabilities);
-
     if (!Types.is(columnCapabilities, ValueType.COMPLEX)) {
       return NoopVectorAggregator.instance();
     } else {
+      validateInputs(columnCapabilities);
       return new HyperUniquesVectorAggregator(selectorFactory.makeObjectSelector(fieldName));
     }
   }

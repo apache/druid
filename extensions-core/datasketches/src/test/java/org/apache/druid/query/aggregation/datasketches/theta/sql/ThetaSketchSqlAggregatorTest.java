@@ -399,13 +399,17 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
   @Test
   public void testApproxCountDistinctFunctionOnUnsupportedComplexColumn()
   {
-    try {
-      testQuery("SELECT APPROX_COUNT_DISTINCT_DS_THETA(double_first_added) FROM druid.wikipedia_first_last", ImmutableList.of(), ImmutableList.of());
-      Assert.fail("query planning should fail");
-    }
-    catch (DruidException e) {
-      Assert.assertTrue(e.getMessage().contains("Cannot apply 'APPROX_COUNT_DISTINCT_DS_THETA' to arguments of type 'APPROX_COUNT_DISTINCT_DS_THETA(<COMPLEX<SERIALIZABLEPAIRLONGDOUBLE>>)'"));
-    }
+    DruidException druidException = Assert.assertThrows(
+        DruidException.class,
+        () -> testQuery(
+            "SELECT APPROX_COUNT_DISTINCT_DS_THETA(double_first_added) FROM druid.wikipedia_first_last",
+            ImmutableList.of(),
+            ImmutableList.of()
+        )
+    );
+    Assert.assertTrue(druidException.getMessage().contains(
+        "Cannot apply 'APPROX_COUNT_DISTINCT_DS_THETA' to arguments of type 'APPROX_COUNT_DISTINCT_DS_THETA(<COMPLEX<SERIALIZABLEPAIRLONGDOUBLE>>)'"
+    ));
   }
 
   @Test

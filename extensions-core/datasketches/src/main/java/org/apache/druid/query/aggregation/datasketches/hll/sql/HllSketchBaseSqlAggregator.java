@@ -116,7 +116,7 @@ public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
     if (columnArg.isDirectColumnAccess()
         && inputAccessor.getInputRowSignature()
                         .getColumnType(columnArg.getDirectColumn())
-                        .map(type -> type.is(ValueType.COMPLEX) && validateInputComplexTypeName(type))
+                        .map(type -> type.is(ValueType.COMPLEX) && validateInputType(type))
                         .orElse(false)) {
       aggregatorFactory = new HllSketchMergeAggregatorFactory(
           aggregatorName,
@@ -155,7 +155,7 @@ public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
       }
 
       if (inputType.is(ValueType.COMPLEX)) {
-        if (validateInputComplexTypeName(inputType)) {
+        if (validateInputType(inputType)) {
           aggregatorFactory = new HllSketchMergeAggregatorFactory(
               aggregatorName,
               dimensionSpec.getOutputName(),
@@ -206,7 +206,7 @@ public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
       AggregatorFactory aggregatorFactory
   );
 
-  private boolean validateInputComplexTypeName(ColumnType columnType)
+  private boolean validateInputType(ColumnType columnType)
   {
     return HllSketchMergeAggregatorFactory.TYPE.equals(columnType) ||
            HllSketchModule.TYPE_NAME.equals(columnType.getComplexTypeName()) ||

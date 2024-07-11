@@ -96,7 +96,7 @@ public class BuiltinApproxCountDistinctSqlAggregator implements SqlAggregator
     if (arg.isDirectColumnAccess()
         && inputAccessor.getInputRowSignature()
             .getColumnType(arg.getDirectColumn())
-            .map(type -> type.is(ValueType.COMPLEX) && validateInputComplexTypeName(type))
+            .map(type -> type.is(ValueType.COMPLEX) && validateInputType(type))
             .orElse(false)) {
       aggregatorFactory = new HyperUniquesAggregatorFactory(aggregatorName, arg.getDirectColumn(), false, true);
     } else {
@@ -120,7 +120,7 @@ public class BuiltinApproxCountDistinctSqlAggregator implements SqlAggregator
       }
 
       if (inputType.is(ValueType.COMPLEX)) {
-        if (validateInputComplexTypeName(inputType)) {
+        if (validateInputType(inputType)) {
           aggregatorFactory = new HyperUniquesAggregatorFactory(
               aggregatorName,
               dimensionSpec.getOutputName(),
@@ -178,7 +178,7 @@ public class BuiltinApproxCountDistinctSqlAggregator implements SqlAggregator
     }
   }
 
-  private boolean validateInputComplexTypeName(ColumnType columnType)
+  private boolean validateInputType(ColumnType columnType)
   {
     return Objects.equals(columnType.getComplexTypeName(), HyperUniquesAggregatorFactory.TYPE.getComplexTypeName()) ||
            Objects.equals(columnType.getComplexTypeName(), HyperUniquesAggregatorFactory.PRECOMPUTED_TYPE.getComplexTypeName());

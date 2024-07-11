@@ -80,6 +80,7 @@ import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.hamcrest.CoreMatchers;
+import org.junit.Assert;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -7335,17 +7336,17 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testApproxCountDistinctFunctionOnUnsupportedComplexColumn()
   {
-    try {
-      testQuery("SELECT APPROX_COUNT_DISTINCT(nester) FROM druid.nested", ImmutableList.of(), ImmutableList.of());
-      Assertions.fail("query planning should fail");
-    }
-    catch (DruidException e) {
-      Assertions.assertTrue(
-          e.getMessage().contains(
-              "Cannot apply 'APPROX_COUNT_DISTINCT' to arguments of type 'APPROX_COUNT_DISTINCT(<COMPLEX<JSON>>)'"
-          )
-      );
-    }
+    DruidException druidException = Assert.assertThrows(
+        DruidException.class,
+        () -> testQuery(
+            "SELECT APPROX_COUNT_DISTINCT(nester) FROM druid.nested",
+            ImmutableList.of(),
+            ImmutableList.of()
+        )
+    );
+    Assert.assertTrue(druidException.getMessage().contains(
+        "Cannot apply 'APPROX_COUNT_DISTINCT' to arguments of type 'APPROX_COUNT_DISTINCT(<COMPLEX<JSON>>)'"
+    ));
   }
 
   @Test

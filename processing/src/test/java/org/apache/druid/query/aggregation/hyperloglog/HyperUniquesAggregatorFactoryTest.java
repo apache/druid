@@ -22,12 +22,17 @@ package org.apache.druid.query.aggregation.hyperloglog;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.hll.VersionZeroHyperLogLogCollector;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.NoopAggregator;
+import org.apache.druid.query.aggregation.NoopBufferAggregator;
+import org.apache.druid.query.aggregation.NoopVectorAggregator;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.TestColumnSelectorFactory;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
@@ -46,6 +51,10 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class HyperUniquesAggregatorFactoryTest
 {
+  static {
+    NullHandling.initializeForTests();
+  }
+
   static final HyperUniquesAggregatorFactory AGGREGATOR_FACTORY = new HyperUniquesAggregatorFactory(
       "hyperUnique",
       "uniques"
@@ -61,7 +70,9 @@ public class HyperUniquesAggregatorFactoryTest
   public void setup()
   {
     final ColumnCapabilitiesImpl columnCapabilities = ColumnCapabilitiesImpl.createDefault().setType(ColumnType.NESTED_DATA);
-    metricFactory = new TestColumnSelectorFactory().addCapabilities("uniques", columnCapabilities);
+    metricFactory = new TestColumnSelectorFactory()
+        .addCapabilities("uniques", columnCapabilities)
+        .addColumnSelector("uniques", null);
     vectorFactory = new TestVectorColumnSelectorFactory().addCapabilities("uniques", columnCapabilities);
   }
 
@@ -236,6 +247,20 @@ public class HyperUniquesAggregatorFactoryTest
     );
 
     Assert.assertEquals(factory, factory2);
+  }
+
+  @Test
+  public void testFactorizeOnPrimitiveColumnType()
+  {
+    final ColumnCapabilitiesImpl columnCapabilities = ColumnCapabilitiesImpl.createDefault().setType(ColumnType.LONG);
+    final ColumnSelectorFactory metricFactory = new TestColumnSelectorFactory()
+        .addCapabilities("uniques", columnCapabilities)
+        .addColumnSelector("uniques", NilColumnValueSelector.instance());
+    final VectorColumnSelectorFactory vectorFactory = new TestVectorColumnSelectorFactory().addCapabilities("uniques", columnCapabilities);
+
+    Assert.assertEquals(NoopAggregator.instance(), AGGREGATOR_FACTORY.factorize(metricFactory));
+    Assert.assertEquals(NoopBufferAggregator.instance(), AGGREGATOR_FACTORY.factorizeBuffered(metricFactory));
+    Assert.assertEquals(NoopVectorAggregator.instance(), AGGREGATOR_FACTORY.factorizeVector(vectorFactory));
   }
 
   @Test
