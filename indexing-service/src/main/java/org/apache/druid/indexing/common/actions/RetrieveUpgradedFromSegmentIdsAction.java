@@ -69,8 +69,10 @@ public class RetrieveUpgradedFromSegmentIdsAction implements TaskAction<Upgraded
   @Override
   public UpgradedFromSegmentsResponse perform(Task task, TaskActionToolbox toolbox)
   {
-    return toolbox.getIndexerMetadataStorageCoordinator()
-                  .retrieveUpgradedFromSegmentIds(dataSource, segmentIds);
+    return new UpgradedFromSegmentsResponse(
+        toolbox.getIndexerMetadataStorageCoordinator()
+               .retrieveUpgradedFromSegmentIds(dataSource, segmentIds)
+    );
   }
 
   @Override

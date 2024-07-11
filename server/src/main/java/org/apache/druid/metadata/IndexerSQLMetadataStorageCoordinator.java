@@ -2272,7 +2272,6 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                                            .build();
 
       // When the segment already has an upgraded_from_segment_id, reuse it for its children
-      // This ensures that the row has a single level of lineage
       final String upgradedFromSegmentId = oldSegmentMetadata.getUpgradedFromSegmentId() == null
                                            ? oldSegmentMetadata.getDataSegment().getId().toString()
                                            : oldSegmentMetadata.getUpgradedFromSegmentId();
@@ -2988,14 +2987,13 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   @Override
-  public UpgradedFromSegmentsResponse retrieveUpgradedFromSegmentIds(
+  public Map<String, String> retrieveUpgradedFromSegmentIds(
       final String dataSource,
       final Set<String> segmentIds
   )
   {
-    final Map<String, String> upgradedFromSegmentIds = new HashMap<>();
     if (segmentIds.isEmpty()) {
-      return new UpgradedFromSegmentsResponse(upgradedFromSegmentIds);
+      return Collections.emptyMap();
     }
 
     final List<String> segmentIdList = ImmutableList.copyOf(segmentIds);
@@ -3004,6 +3002,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         dbTables.getSegmentsTable(),
         SqlSegmentsMetadataQuery.getParameterizedInConditionForColumn("id", segmentIdList)
     );
+    final Map<String, String> upgradedFromSegmentIds = new HashMap<>();
     connector.retryWithHandle(
         handle -> {
           Query<Map<String, Object>> query = handle.createQuery(sql)
@@ -3019,21 +3018,20 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           }).list();
         }
     );
-    return new UpgradedFromSegmentsResponse(upgradedFromSegmentIds);
+    return upgradedFromSegmentIds;
   }
 
   @Override
-  public UpgradedToSegmentsResponse retrieveUpgradedToSegmentIds(
+  public Map<String, Set<String>> retrieveUpgradedToSegmentIds(
       final String dataSource,
-      final Set<String> upgradedFromSegmentIds
+      final Set<String> segmentIds
   )
   {
-    final Map<String, Set<String>> upgradedToSegmentIds = new HashMap<>();
-    if (upgradedFromSegmentIds.isEmpty()) {
-      return new UpgradedToSegmentsResponse(upgradedToSegmentIds);
+    if (segmentIds.isEmpty()) {
+      return Collections.emptyMap();
     }
 
-    final List<String> upgradedFromSegmentIdList = ImmutableList.copyOf(upgradedFromSegmentIds);
+    final List<String> upgradedFromSegmentIdList = ImmutableList.copyOf(segmentIds);
     final String sql = StringUtils.format(
         "SELECT id, upgraded_from_segment_id FROM %s WHERE dataSource = :dataSource %s",
         dbTables.getSegmentsTable(),
@@ -3042,6 +3040,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             upgradedFromSegmentIdList
         )
     );
+    final Map<String, Set<String>> upgradedToSegmentIds = new HashMap<>();
     connector.retryWithHandle(
         handle -> {
           Query<Map<String, Object>> query = handle.createQuery(sql)
@@ -3060,7 +3059,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           }).list();
         }
     );
-    return new UpgradedToSegmentsResponse(upgradedToSegmentIds);
+    return upgradedToSegmentIds;
   }
 
   private static class PendingSegmentsRecord

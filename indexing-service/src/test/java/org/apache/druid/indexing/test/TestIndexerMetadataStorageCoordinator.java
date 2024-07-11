@@ -32,8 +32,6 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.metadata.ReplaceTaskLock;
-import org.apache.druid.metadata.UpgradedFromSegmentsResponse;
-import org.apache.druid.metadata.UpgradedToSegmentsResponse;
 import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
@@ -317,21 +315,21 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   }
 
   @Override
-  public UpgradedFromSegmentsResponse retrieveUpgradedFromSegmentIds(
+  public Map<String, String> retrieveUpgradedFromSegmentIds(
       final String dataSource,
       final Set<String> segmentIds
   )
   {
-    return new UpgradedFromSegmentsResponse(Collections.emptyMap());
+    return Collections.emptyMap();
   }
 
   @Override
-  public UpgradedToSegmentsResponse retrieveUpgradedToSegmentIds(
+  public Map<String, Set<String>> retrieveUpgradedToSegmentIds(
       final String dataSource,
-      final Set<String> upgradedFromSegmentIds
+      final Set<String> segmentIds
   )
   {
-    return new UpgradedToSegmentsResponse(Collections.emptyMap());
+    return Collections.emptyMap();
   }
 
   public Set<DataSegment> getPublished()

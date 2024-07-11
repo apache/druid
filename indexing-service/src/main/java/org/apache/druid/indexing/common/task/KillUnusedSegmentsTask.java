@@ -72,6 +72,20 @@ import java.util.stream.Collectors;
  * The client representation of this task is {@link ClientKillUnusedSegmentsTaskQuery}.
  * JSON serialization fields of this class must correspond to those of {@link
  * ClientKillUnusedSegmentsTaskQuery}, except for {@link #id} and {@link #context} fields.
+ * <br/>
+ * <br/>
+ * The Kill task fetches the set of used segments for the interval and computes the set of their load specs. <br/>
+ * Until `limit` segments have been processed in total or all segments for the interval have been nuked: <br/>
+ * <ol>
+ * <li> Fetch at most `batchSize` unused segments from the metadata store. </li>
+ * <li> Determine the mapping from these segments to their parents *before* nuking the segments. </li>
+ * <li> Nuke the batch of unused segments from the metadata store. </li>
+ * <li> Determine the mapping of the set of parents to all their children. </li>
+ * <li> Check if unused or parent segments exist. </li>
+ * <li> Find the unreferenced segments. </li>
+ * <li> Filter the set of unreferenced segments using load specs from the set of used segments. </li>
+ * <li> Kill the filtered set of segments from deep storage. </li>
+ * </ol>
  */
 public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
 {
@@ -246,16 +260,16 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
       // If the segment nuke throws an exception, then the segment cleanup is abandoned.
 
       // Determine upgraded segment ids before nuking
-      final Set<String> upgradedSegmentIds = unusedSegments.stream()
-                                                           .map(DataSegment::getId)
-                                                           .map(SegmentId::toString)
-                                                           .collect(Collectors.toSet());
+      final Set<String> segmentIds = unusedSegments.stream()
+                                                   .map(DataSegment::getId)
+                                                   .map(SegmentId::toString)
+                                                   .collect(Collectors.toSet());
       final Map<String, String> upgradedFromSegmentIds = new HashMap<>();
       try {
         upgradedFromSegmentIds.putAll(
             taskActionClient.submit(
-                new RetrieveUpgradedFromSegmentIdsAction(getDataSource(), upgradedSegmentIds)
-            ).getUpgradedFromSegmentId()
+                new RetrieveUpgradedFromSegmentIdsAction(getDataSource(), segmentIds)
+            ).getUpgradedFromSegmentIds()
         );
       }
       catch (Exception e) {
@@ -280,6 +294,13 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
           .filter(unusedSegment -> unusedSegment.getLoadSpec() == null
                                    || !usedSegmentLoadSpecs.contains(unusedSegment.getLoadSpec()))
           .collect(Collectors.toList());
+
+      final Set<DataSegment> segmentsNotKilled = new HashSet<>(unusedSegments);
+      segmentsToBeKilled.forEach(segmentsNotKilled::remove);
+      LOG.infoSegments(
+          segmentsNotKilled,
+          "Skipping segment kill from deep storage as their load specs are referenced by other segments."
+      );
 
       toolbox.getDataSegmentKiller().kill(segmentsToBeKilled);
       numBatchesProcessed++;

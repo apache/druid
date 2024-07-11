@@ -29,8 +29,6 @@ import java.util.Map;
  */
 public class UpgradedFromSegmentsResponse
 {
-  // Map from a segment ID to the segment ID from which it was upgraded
-  // There should be no entry in the map for an original non-upgraded segment
   private final Map<String, String> upgradedFromSegmentIds;
 
   @JsonCreator
@@ -42,7 +40,7 @@ public class UpgradedFromSegmentsResponse
   }
 
   @JsonProperty
-  public Map<String, String> getUpgradedFromSegmentId()
+  public Map<String, String> getUpgradedFromSegmentIds()
   {
     return upgradedFromSegmentIds;
   }

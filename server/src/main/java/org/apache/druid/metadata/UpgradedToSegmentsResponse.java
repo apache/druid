@@ -31,8 +31,6 @@ import java.util.Set;
 public class UpgradedToSegmentsResponse
 {
 
-  // Map from a segment ID to a set containing
-  // all segment IDs that were upgraded from it AND are still present in the metadata store
   private final Map<String, Set<String>> upgradedToSegmentIds;
 
   @JsonCreator

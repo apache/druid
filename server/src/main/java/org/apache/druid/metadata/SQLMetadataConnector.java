@@ -587,10 +587,6 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     Map<String, String> columnNameTypes = new HashMap<>();
     columnNameTypes.put("used_status_last_updated", "VARCHAR(255)");
 
-    // upgraded_from_segment_id is the first segment to which the same load spec originally belonged
-    // Load specs can be shared as a result of segment version upgrade
-    // This column is null for segments that were not upgraded from any other
-    // or were upgraded before this column was added
     columnNameTypes.put("upgraded_from_segment_id", "VARCHAR(255)");
 
     if (centralizedDatasourceSchemaConfig.isEnabled()) {

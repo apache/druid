@@ -142,7 +142,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     final String lockVersion = "2024-01-01";
 
     final String taskAllocatorId = "appendTask";
-    final String replaceTaskId = "replaceTask";
+    final String replaceTaskId = "replaceTask1";
     final ReplaceTaskLock replaceLock = new ReplaceTaskLock(
         replaceTaskId,
         Intervals.of("2023-01-01/2023-01-03"),
@@ -274,7 +274,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     Map<String, String> upgradedFromSegmentIdMap = coordinator.retrieveUpgradedFromSegmentIds(
         DS.WIKI,
         allCommittedSegments.stream().map(DataSegment::getId).map(SegmentId::toString).collect(Collectors.toSet())
-    ).getUpgradedFromSegmentId();
+    );
     // Verify the segments present in the metadata store
     Assert.assertTrue(allCommittedSegments.containsAll(appendSegments));
     for (DataSegment segment : appendSegments) {
@@ -404,7 +404,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     final Map<String, String> upgradedFromSegmentIdMap = coordinator.retrieveUpgradedFromSegmentIds(
         "foo",
         usedSegments.stream().map(DataSegment::getId).map(SegmentId::toString).collect(Collectors.toSet())
-    ).getUpgradedFromSegmentId();
+    );
 
     Assert.assertTrue(usedSegments.containsAll(segmentsAppendedWithReplaceLock));
     for (DataSegment appendSegment : segmentsAppendedWithReplaceLock) {
@@ -3448,7 +3448,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     segmentIds.add(defaultSegment4.getId().toString());
     Assert.assertEquals(
         expected,
-        coordinator.retrieveUpgradedFromSegmentIds(datasource, segmentIds).getUpgradedFromSegmentId()
+        coordinator.retrieveUpgradedFromSegmentIds(datasource, segmentIds)
     );
   }
 
@@ -3476,7 +3476,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     upgradedIds.add(defaultSegment4.getId().toString());
     Assert.assertEquals(
         expected,
-        coordinator.retrieveUpgradedToSegmentIds(datasource, upgradedIds).getUpgradedToSegmentIds()
+        coordinator.retrieveUpgradedToSegmentIds(datasource, upgradedIds)
     );
   }
 }
