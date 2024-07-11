@@ -85,7 +85,7 @@ public class VirtualColumns implements Cacheable
   }
 
   @JsonCreator
-  public static VirtualColumns create(List<VirtualColumn> virtualColumns)
+  public static VirtualColumns create(@Nullable List<VirtualColumn> virtualColumns)
   {
     if (virtualColumns == null || virtualColumns.isEmpty()) {
       return EMPTY;
@@ -137,8 +137,6 @@ public class VirtualColumns implements Cacheable
       return true;
     }
   }
-
-
 
   // For equals, hashCode, toString, and serialization:
   private final List<VirtualColumn> virtualColumns;

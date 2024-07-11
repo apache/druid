@@ -19,8 +19,10 @@
 
 package org.apache.druid.segment.join;
 
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -305,20 +307,15 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
         baseFilter
     );
 
-    // check for virtual columns which reference stuff that isn't present on the base table, we can move
-    // them to the join table
-    final JoinVirtualColumnSplit virtualColumnSplit = JoinVirtualColumnSplit.split(
-        baseAdapter.getRowSignature(),
-        virtualColumns,
-        joinFilterSplit
-    );
-
     final Sequence<Cursor> baseCursorSequence = baseAdapter.makeCursors(
         joinFilterSplit.getBaseTableFilter().isPresent() ? joinFilterSplit.getBaseTableFilter().get() : null,
         interval,
         VirtualColumns.fromIterable(
             Iterables.concat(
-                virtualColumnSplit.getPreJoinVirtualColumns(),
+                Sets.difference(
+                    ImmutableSet.copyOf(virtualColumns.getVirtualColumns()),
+                    joinFilterPreAnalysis.getPostJoinVirtualColumns()
+                ),
                 joinFilterSplit.getPushDownVirtualColumns()
             )
         ),
@@ -340,7 +337,7 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
 
           return PostJoinCursor.wrap(
               retVal,
-              VirtualColumns.create(virtualColumnSplit.getPostJoinVirtualColumns()),
+              VirtualColumns.fromIterable(preAnalysis.getPostJoinVirtualColumns()),
               joinFilterSplit.getJoinTableFilter().orElse(null)
           );
         }

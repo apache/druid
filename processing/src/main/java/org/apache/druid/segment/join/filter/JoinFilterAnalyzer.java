@@ -91,7 +91,7 @@ public class JoinFilterAnalyzer
   public static JoinFilterPreAnalysis computeJoinFilterPreAnalysis(final JoinFilterPreAnalysisKey key)
   {
     final JoinableClauses joinableClauses = JoinableClauses.fromList(key.getJoinableClauses());
-    final List<VirtualColumn> postJoinVirtualColumns = joinableClauses.getPostJoinVirtualColumns(
+    final Set<VirtualColumn> postJoinVirtualColumns = joinableClauses.getPostJoinVirtualColumns(
         key.getVirtualColumns()
     );
 
@@ -512,7 +512,7 @@ public class JoinFilterAnalyzer
   }
 
   private static boolean isColumnFromPostJoinVirtualColumns(
-      List<VirtualColumn> postJoinVirtualColumns,
+      Set<VirtualColumn> postJoinVirtualColumns,
       String column
   )
   {
@@ -525,7 +525,7 @@ public class JoinFilterAnalyzer
   }
 
   private static boolean areSomeColumnsFromPostJoinVirtualColumns(
-      List<VirtualColumn> postJoinVirtualColumns,
+      Set<VirtualColumn> postJoinVirtualColumns,
       Collection<String> columns
   )
   {
