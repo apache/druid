@@ -323,9 +323,6 @@ public class OverlordClientImpl implements OverlordClient
     return new JsonParserIterator<>(
         jsonMapper.getTypeFactory().constructType(clazz),
         Futures.immediateFuture(in),
-        "", // We don't know URL at this point, but it's OK to use empty; it's used for logs/errors
-        null,
-        "", // We don't know host at this point, but it's OK to use empty; it's used for logs/errors
         jsonMapper
     );
   }

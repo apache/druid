@@ -46,7 +46,7 @@ import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
-import org.apache.druid.segment.realtime.FireDepartmentMetrics;
+import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
@@ -63,7 +63,7 @@ public class OpenAndClosedSegmentsAppenderatorTester implements AutoCloseable
   public static final String DATASOURCE = "foo";
 
   private final DataSchema schema;
-  private final FireDepartmentMetrics metrics;
+  private final SegmentGenerationMetrics metrics;
   private final DataSegmentPusher dataSegmentPusher;
   private final ObjectMapper objectMapper;
   private final Appenderator appenderator;
@@ -139,23 +139,21 @@ public class OpenAndClosedSegmentsAppenderatorTester implements AutoCloseable
         null,
         objectMapper
     );
-    tuningConfig =
-        new ClosedSegmensSinksBatchAppenderatorTester.TestIndexTuningConfig(
-            TuningConfig.DEFAULT_APPENDABLE_INDEX,
-            maxRowsInMemory,
-            maxSizeInBytes == 0L ? getDefaultMaxBytesInMemory() : maxSizeInBytes,
-            skipBytesInMemoryOverheadCheck,
-            IndexSpec.DEFAULT,
-            0,
-            false,
-            0L,
-            OffHeapMemorySegmentWriteOutMediumFactory.instance(),
-            IndexMerger.UNLIMITED_MAX_COLUMNS_TO_MERGE,
-            basePersistDirectory == null ? createNewBasePersistDirectory() : basePersistDirectory,
-            null
-        );
+    tuningConfig = new TestAppenderatorConfig(
+        TuningConfig.DEFAULT_APPENDABLE_INDEX,
+        maxRowsInMemory,
+        maxSizeInBytes == 0L ? getDefaultMaxBytesInMemory() : maxSizeInBytes,
+        skipBytesInMemoryOverheadCheck,
+        IndexSpec.DEFAULT,
+        0,
+        false,
+        0L,
+        OffHeapMemorySegmentWriteOutMediumFactory.instance(),
+        IndexMerger.UNLIMITED_MAX_COLUMNS_TO_MERGE,
+        basePersistDirectory == null ? createNewBasePersistDirectory() : basePersistDirectory
+    );
 
-    metrics = new FireDepartmentMetrics();
+    metrics = new SegmentGenerationMetrics();
 
     indexIO = new IndexIO(
         objectMapper,
@@ -251,7 +249,7 @@ public class OpenAndClosedSegmentsAppenderatorTester implements AutoCloseable
     return tuningConfig;
   }
 
-  public FireDepartmentMetrics getMetrics()
+  public SegmentGenerationMetrics getMetrics()
   {
     return metrics;
   }

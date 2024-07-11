@@ -56,9 +56,14 @@ public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
     }
   }
 
-  private static PeriodGranularity computeGranularity(final List<Expr> args, final Expr.ObjectBinding bindings)
+  private static PeriodGranularity computeGranularity(
+      final Expr expr,
+      final List<Expr> args,
+      final Expr.ObjectBinding bindings
+  )
   {
     return ExprUtils.toPeriodGranularity(
+        expr,
         args.get(1),
         args.size() > 2 ? args.get(2) : null,
         args.size() > 3 ? args.get(3) : null,
@@ -73,7 +78,7 @@ public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
     TimestampFloorExpr(final TimestampFloorExprMacro macro, final List<Expr> args)
     {
       super(macro, args);
-      this.granularity = computeGranularity(args, InputBindings.nilBindings());
+      this.granularity = computeGranularity(this, args, InputBindings.nilBindings());
     }
 
     /**
@@ -170,7 +175,7 @@ public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
     @Override
     public ExprEval eval(final ObjectBinding bindings)
     {
-      final PeriodGranularity granularity = computeGranularity(args, bindings);
+      final PeriodGranularity granularity = computeGranularity(this, args, bindings);
       return ExprEval.of(granularity.bucketStart(args.get(0).eval(bindings).asLong()));
     }
 

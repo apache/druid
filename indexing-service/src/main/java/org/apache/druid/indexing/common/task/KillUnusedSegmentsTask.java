@@ -198,7 +198,6 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
 
     RetrieveUsedSegmentsAction retrieveUsedSegmentsAction = new RetrieveUsedSegmentsAction(
             getDataSource(),
-            null,
             ImmutableList.of(getInterval()),
             Segments.INCLUDING_OVERSHADOWED
     );
