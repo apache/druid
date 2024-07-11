@@ -3041,6 +3041,11 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         )
     );
     final Map<String, Set<String>> upgradedToSegmentIds = new HashMap<>();
+    retrieveSegmentsById(dataSource, segmentIds)
+        .stream()
+        .map(DataSegment::getId)
+        .map(SegmentId::toString)
+        .forEach(id -> upgradedToSegmentIds.computeIfAbsent(id, k -> new HashSet<>()).add(id));
     connector.retryWithHandle(
         handle -> {
           Query<Map<String, Object>> query = handle.createQuery(sql)

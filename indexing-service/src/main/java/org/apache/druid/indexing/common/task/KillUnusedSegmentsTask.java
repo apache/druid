@@ -43,6 +43,7 @@ import org.apache.druid.indexing.common.actions.SegmentNukeAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskLocks;
 import org.apache.druid.indexing.common.actions.TimeChunkLockTryAcquireAction;
+import org.apache.druid.indexing.common.actions.UpgradedToSegmentsResponse;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -285,7 +286,7 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
 
       // Determine unreferenced segments
       final List<DataSegment> unreferencedSegments
-          = findUnreferencedSegments(unusedSegments, upgradedFromSegmentIds, taskActionClient);
+          = findUnreferencedSegmentsV2(unusedSegments, upgradedFromSegmentIds, taskActionClient);
 
       // Kill segments from the deep storage only if their load specs are not being used by any other segments
       // We still need to check with used load specs as segment upgrades were introduced before this change
@@ -403,24 +404,24 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
 
       // If the segment still exists for some reason, do not kill it
       if (existingSegmentIds.contains(id)) {
-        break;
+        continue;
       }
 
       // If the segment is the parent of existing segments, do not kill it
       if (upgradedToSegmentIds.containsKey(id)) {
-        break;
+        continue;
       }
 
       // If the segment has no parent, it can be killed from deep storage
       if (!upgradedFromSegmentIds.containsKey(id)) {
         unreferencedSegments.add(segment);
-        break;
+        continue;
       }
 
       // If the parent segment exists, do not kill it
       final String parentId = upgradedFromSegmentIds.get(id);
       if (existingSegmentIds.contains(parentId)) {
-        break;
+        continue;
       }
 
       // If the parent segment has no existing children, it can be killed
@@ -430,6 +431,46 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
     }
     return unreferencedSegments;
   }
+
+  private List<DataSegment> findUnreferencedSegmentsV2(
+      List<DataSegment> unusedSegments,
+      Map<String, String> upgradedFromSegmentIds,
+      TaskActionClient taskActionClient
+  )
+  {
+
+    // Determine parentId for each unused segment
+    final Map<String, DataSegment> parentIdToUnusedSegment = new HashMap<>();
+    for (DataSegment segment : unusedSegments) {
+      final String segmentId = segment.getId().toString();
+      parentIdToUnusedSegment.put(upgradedFromSegmentIds.getOrDefault(segmentId, segmentId), segment);
+    }
+
+    // Check if the parent or any of its children exist in metadata store
+    try {
+      UpgradedToSegmentsResponse response = taskActionClient.submit(
+          new RetrieveUpgradedToSegmentIdsAction(getDataSource(), parentIdToUnusedSegment.keySet())
+      );
+      if (response != null && response.getUpgradedToSegmentIds() != null) {
+        response.getUpgradedToSegmentIds().forEach((parent, children) -> {
+          if (!CollectionUtils.isNullOrEmpty(children)) {
+            // Do not kill segment if its parent or any of its siblings still exist in metadata store
+            parentIdToUnusedSegment.remove(parent);
+          }
+        });
+      }
+    }
+    catch (Exception e) {
+      LOG.warn(
+          e,
+          "Could not retrieve UpgradedToSegmentsResponse using task action[retrieveUpgradedToSegmentIds]."
+          + " Overlord may be on an older version."
+      );
+
+    }
+    return new ArrayList<>(parentIdToUnusedSegment.values());
+  }
+
 
   @Override
   public LookupLoadingSpec getLookupLoadingSpec()

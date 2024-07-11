@@ -3466,14 +3466,12 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
 
     Map<String, Set<String>> expected = new HashMap<>();
     expected.put(defaultSegment.getId().toString(), new HashSet<>());
+    expected.get(defaultSegment.getId().toString()).add(defaultSegment.getId().toString());
     expected.get(defaultSegment.getId().toString()).add(defaultSegment2.getId().toString());
     expected.get(defaultSegment.getId().toString()).add(defaultSegment3.getId().toString());
 
     Set<String> upgradedIds = new HashSet<>();
     upgradedIds.add(defaultSegment.getId().toString());
-    upgradedIds.add(defaultSegment2.getId().toString());
-    upgradedIds.add(defaultSegment3.getId().toString());
-    upgradedIds.add(defaultSegment4.getId().toString());
     Assert.assertEquals(
         expected,
         coordinator.retrieveUpgradedToSegmentIds(datasource, upgradedIds)
