@@ -250,7 +250,7 @@ public class CompactSegments implements CoordinatorCustomDuty
     }
 
     LOG.info(
-        "Cancelling task [%s] as task segmentGranularity is [%s] but compaction config segmentGranularity is [%s]",
+        "Cancelling task[%s] as task segmentGranularity[%s] differs from compaction config segmentGranularity[%s].",
         compactionTaskQuery.getId(), taskSegmentGranularity, configuredSegmentGranularity
     );
     overlordClient.cancelTask(compactionTaskQuery.getId());
