@@ -328,8 +328,8 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     }
   }
 
-  @Test(dataProvider = "engine")
-  public void testAutoCompactionOnlyRowsWithoutMetricShouldAddNewMetrics(CompactionEngine engine) throws Exception
+  @Test
+  public void testAutoCompactionOnlyRowsWithoutMetricShouldAddNewMetrics() throws Exception
   {
     // added = 31, count = null, sum_added = null
     loadData(INDEX_TASK_WITHOUT_ROLLUP_FOR_PRESERVE_METRICS);
@@ -356,8 +356,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           new UserCompactionTaskDimensionsConfig(DimensionsSpec.getDefaultSchemas(ImmutableList.of("language"))),
           null,
           new AggregatorFactory[] {new CountAggregatorFactory("count"), new LongSumAggregatorFactory("sum_added", "added")},
-          false,
-          engine
+          false
       );
       // should now only have 1 row after compaction
       // added = null, count = 2, sum_added = 62
@@ -377,6 +376,67 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, queryAndResultFields);
       queryAndResultFields = ImmutableMap.of(
           "%%FIELD_TO_QUERY%%", "sum_added",
+          "%%EXPECTED_COUNT_RESULT%%", 1,
+          "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(62))))
+      );
+      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, queryAndResultFields);
+
+      verifySegmentsCompacted(1, MAX_ROWS_PER_SEGMENT_COMPACTED);
+      checkCompactionIntervals(intervalsBeforeCompaction);
+
+      List<TaskResponseObject> compactTasksBefore = indexer.getCompleteTasksForDataSource(fullDatasourceName);
+      // Verify rollup segments does not get compacted again
+      forceTriggerAutoCompaction(1);
+      List<TaskResponseObject> compactTasksAfter = indexer.getCompleteTasksForDataSource(fullDatasourceName);
+      Assert.assertEquals(compactTasksAfter.size(), compactTasksBefore.size());
+    }
+  }
+
+  @Test(dataProvider = "engine")
+  public void testAutoCompactionWithMetricColumnSameAsInputColShouldOverwriteInputWithMetrics(CompactionEngine engine)
+      throws Exception
+  {
+    // added = 31, count = null, sum_added = null
+    loadData(INDEX_TASK_WITHOUT_ROLLUP_FOR_PRESERVE_METRICS);
+    // added = 31, count = null, sum_added = null
+    loadData(INDEX_TASK_WITHOUT_ROLLUP_FOR_PRESERVE_METRICS);
+    if (engine == CompactionEngine.MSQ) {
+      updateCompactionTaskSlot(0.1, 2, false);
+    }
+    try (final Closeable ignored = unloader(fullDatasourceName)) {
+      final List<String> intervalsBeforeCompaction = coordinator.getSegmentIntervals(fullDatasourceName);
+      intervalsBeforeCompaction.sort(null);
+      // 2 segments across 1 days...
+      verifySegmentsCount(2);
+      Map<String, Object> queryAndResultFields = ImmutableMap.of(
+          "%%FIELD_TO_QUERY%%", "added",
+          "%%EXPECTED_COUNT_RESULT%%", 2,
+          "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(31))), ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(31))))
+      );
+      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, queryAndResultFields);
+
+      submitCompactionConfig(
+          MAX_ROWS_PER_SEGMENT_COMPACTED,
+          NO_SKIP_OFFSET,
+          new UserCompactionTaskGranularityConfig(null, null, true),
+          new UserCompactionTaskDimensionsConfig(DimensionsSpec.getDefaultSchemas(ImmutableList.of("language"))),
+          null,
+          new AggregatorFactory[] {new CountAggregatorFactory("count"), new LongSumAggregatorFactory("added", "added")},
+          false,
+          engine
+      );
+      // should now only have 1 row after compaction
+      // count = 2, added = 62
+      forceTriggerAutoCompaction(1);
+
+      queryAndResultFields = ImmutableMap.of(
+          "%%FIELD_TO_QUERY%%", "count",
+          "%%EXPECTED_COUNT_RESULT%%", 1,
+          "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(2))))
+      );
+      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, queryAndResultFields);
+      queryAndResultFields = ImmutableMap.of(
+          "%%FIELD_TO_QUERY%%", "added",
           "%%EXPECTED_COUNT_RESULT%%", 1,
           "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(62))))
       );
@@ -1408,7 +1468,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   }
 
   @Test
-  public void testAutoCompactionDutyWithMetricsSpec() throws Exception
+  public void testAutoCompationDutyWithMetricsSpec() throws Exception
   {
     loadData(INDEX_TASK_WITH_DIMENSION_SPEC);
     try (final Closeable ignored = unloader(fullDatasourceName)) {
@@ -1601,8 +1661,11 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     submitCompactionConfig(maxRowsPerSegment, skipOffsetFromLatest, null, null);
   }
 
-  private void submitCompactionConfig(Integer maxRowsPerSegment, Period skipOffsetFromLatest, @Nullable CompactionEngine engine)
-      throws Exception
+  private void submitCompactionConfig(
+      Integer maxRowsPerSegment,
+      Period skipOffsetFromLatest,
+      @Nullable CompactionEngine engine
+  ) throws Exception
   {
     submitCompactionConfig(maxRowsPerSegment, skipOffsetFromLatest, null, engine);
   }
