@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment;
 
+import com.google.common.base.Preconditions;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
@@ -74,6 +75,8 @@ public class UnnestDimensionCursor implements Cursor
   private IndexedInts indexedIntsForCurrentRow;
   private boolean needInitialization;
   private SingleIndexInts indexIntsForRow;
+  private final int nullId;
+  private final int idOffset;
 
   public UnnestDimensionCursor(
       Cursor cursor,
@@ -92,6 +95,16 @@ public class UnnestDimensionCursor implements Cursor
     this.index = 0;
     this.outputName = outputColumnName;
     this.needInitialization = true;
+    // this shouldn't happen, but just in case...
+    final IdLookup lookup = Preconditions.checkNotNull(dimSelector.idLookup());
+    final int nullId = lookup.lookupId(null);
+    if (nullId < 0) {
+      this.idOffset = 1;
+      this.nullId = 0;
+    } else {
+      this.idOffset = 0;
+      this.nullId = nullId;
+    }
   }
 
   @Override
@@ -131,7 +144,7 @@ public class UnnestDimensionCursor implements Cursor
                       return true;
                     }
                     final int rowId = indexedIntsForCurrentRow.get(index);
-                    return lookupName(rowId) == null;
+                    return (rowId + idOffset) == nullId;
                   }
                   return false;
                 }
@@ -156,7 +169,7 @@ public class UnnestDimensionCursor implements Cursor
                   return includeUnknown;
                 }
                 final int rowId = indexedIntsForCurrentRow.get(index);
-                return (includeUnknown && lookupName(rowId) == null) || idForLookup == rowId;
+                return (includeUnknown && ((rowId + idOffset) == nullId)) || idForLookup == rowId;
               }
 
               @Override
@@ -205,7 +218,7 @@ public class UnnestDimensionCursor implements Cursor
           @Override
           public String lookupName(int id)
           {
-            return dimSelector.lookupName(id);
+            return dimSelector.lookupName(id - idOffset);
           }
 
           @Override
@@ -327,7 +340,6 @@ public class UnnestDimensionCursor implements Cursor
     }
   }
 
-
   // Helper class to help in returning
   // getRow from the dimensionSelector
   // This is set in the initialize method
@@ -343,9 +355,6 @@ public class UnnestDimensionCursor implements Cursor
     @Override
     public int size()
     {
-      if (indexedIntsForCurrentRow.size() == 0) {
-        return 0;
-      }
       // After unnest each row will have a single element
       return 1;
     }
@@ -354,7 +363,10 @@ public class UnnestDimensionCursor implements Cursor
     public int get(int idx)
     {
       // everything that calls get also checks size
-      return indexedIntsForCurrentRow.get(index);
+      if (indexedIntsForCurrentRow.size() == 0) {
+        return nullId;
+      }
+      return idOffset + indexedIntsForCurrentRow.get(index);
     }
   }
 }

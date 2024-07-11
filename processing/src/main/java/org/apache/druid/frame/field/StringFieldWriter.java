@@ -56,19 +56,17 @@ public class StringFieldWriter implements FieldWriter
 
   private final DimensionSelector selector;
   private final boolean removeNullBytes;
-  private final boolean multiValue;
 
-  public StringFieldWriter(final DimensionSelector selector, final boolean removeNullbytes, final boolean multiValue)
+  public StringFieldWriter(final DimensionSelector selector, final boolean removeNullbytes)
   {
     this.selector = selector;
     this.removeNullBytes = removeNullbytes;
-    this.multiValue = multiValue;
   }
 
   @Override
   public long writeTo(final WritableMemory memory, final long position, final long maxSize)
   {
-    final List<ByteBuffer> byteBuffers = FrameWriterUtils.getUtf8ByteBuffersFromStringSelector(selector, multiValue);
+    final List<ByteBuffer> byteBuffers = FrameWriterUtils.getUtf8ByteBuffersFromStringSelector(selector, true);
     return writeUtf8ByteBuffers(memory, position, maxSize, byteBuffers, removeNullBytes);
   }
 
