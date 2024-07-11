@@ -60,6 +60,7 @@ import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.transform.TransformSpec;
+import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -92,7 +93,7 @@ public class MSQCompactionRunnerTest
   private static final List<DimensionSchema> DIMENSIONS = ImmutableList.of(DIM1, LONG_DIMENSION_SCHEMA);
   private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
   private static final AggregatorFactory AGG1 = new CountAggregatorFactory("agg_0");
-  private static final AggregatorFactory AGG2 = new LongSumAggregatorFactory("agg_1", "long_dim_1");
+  private static final AggregatorFactory AGG2 = new LongSumAggregatorFactory("sum_added", "sum_added");
   private static final List<AggregatorFactory> AGGREGATORS = ImmutableList.of(AGG1, AGG2);
   private static final MSQCompactionRunner MSQ_COMPACTION_RUNNER = new MSQCompactionRunner(JSON_MAPPER, null);
 
@@ -116,7 +117,7 @@ public class MSQCompactionRunnerTest
   }
 
   @Test
-  public void testHashPartitionsSpec()
+  public void testHashedPartitionsSpecIsInvalid()
   {
     CompactionTask compactionTask = createCompactionTask(
         new HashedPartitionsSpec(3, null, ImmutableList.of("dummy")),
@@ -129,7 +130,7 @@ public class MSQCompactionRunnerTest
   }
 
   @Test
-  public void testDimensionRangePartitionsSpec()
+  public void testDimensionRangePartitionsSpecIsValid()
   {
     CompactionTask compactionTask = createCompactionTask(
         new DimensionRangePartitionsSpec(TARGET_ROWS_PER_SEGMENT, null, PARTITION_DIMENSIONS, false),
@@ -142,7 +143,7 @@ public class MSQCompactionRunnerTest
   }
 
   @Test
-  public void testInvalidDynamicPartitionsSpec()
+  public void testMaxTotalRowsIsInvalid()
   {
     CompactionTask compactionTask = createCompactionTask(
         new DynamicPartitionsSpec(3, 3L),
@@ -155,7 +156,7 @@ public class MSQCompactionRunnerTest
   }
 
   @Test
-  public void testDynamicPartitionsSpec()
+  public void testDynamicPartitionsSpecIsValid()
   {
     CompactionTask compactionTask = createCompactionTask(
         new DynamicPartitionsSpec(3, null),
@@ -168,7 +169,7 @@ public class MSQCompactionRunnerTest
   }
 
   @Test
-  public void testQueryGranularityAll()
+  public void testQueryGranularityAllIsValid()
   {
     CompactionTask compactionTask = createCompactionTask(
         new DynamicPartitionsSpec(3, null),
@@ -181,7 +182,7 @@ public class MSQCompactionRunnerTest
   }
 
   @Test
-  public void testRollupFalseWithMetricsSpec()
+  public void testRollupFalseWithMetricsSpecIsInValid()
   {
     CompactionTask compactionTask = createCompactionTask(
         new DynamicPartitionsSpec(3, null),
@@ -194,7 +195,28 @@ public class MSQCompactionRunnerTest
   }
 
   @Test
-  public void testRunCompactionTasksWithEmptyTaskList() throws Exception
+  public void testMSQEngineWithUnsupportedMetricsSpecIsInValid()
+  {
+    // Aggregators having different input and ouput column names are unsupported.
+    final String inputColName = "added";
+    final String outputColName = "sum_added";
+    CompactionTask compactionTask = createCompactionTask(
+        new DynamicPartitionsSpec(3, null),
+        null,
+        Collections.emptyMap(),
+        new ClientCompactionTaskGranularitySpec(null, null, null),
+        new AggregatorFactory[]{new LongSumAggregatorFactory(outputColName, inputColName)}
+    );
+    CompactionConfigValidationResult validationResult = MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask);
+    Assert.assertFalse(validationResult.isValid());
+    Assert.assertEquals(
+        "Different name[sum_added] and fieldName(s)[[added]] for aggregator unsupported for MSQ engine.",
+        validationResult.getReason()
+    );
+  }
+
+  @Test
+  public void testRunCompactionTasksWithEmptyTaskListFails() throws Exception
   {
     CompactionTask compactionTask = createCompactionTask(null, null, Collections.emptyMap(), null, null);
     TaskStatus taskStatus = MSQ_COMPACTION_RUNNER.runCompactionTasks(compactionTask, Collections.emptyMap(), null);
@@ -202,7 +224,7 @@ public class MSQCompactionRunnerTest
   }
 
   @Test
-  public void testMSQControllerTaskSpecWithScan() throws JsonProcessingException
+  public void testMSQControllerTaskSpecWithScanIsValid() throws JsonProcessingException
   {
     DimFilter dimFilter = new SelectorDimFilter("dim1", "foo", null);
 
@@ -221,7 +243,8 @@ public class MSQCompactionRunnerTest
         new AggregatorFactory[]{},
         new UniformGranularitySpec(
             SEGMENT_GRANULARITY.getDefaultGranularity(),
-            QUERY_GRANULARITY.getDefaultGranularity(),
+            null,
+            false,
             Collections.singletonList(COMPACTION_INTERVAL)
         ),
         new TransformSpec(dimFilter, Collections.emptyList())
@@ -262,15 +285,12 @@ public class MSQCompactionRunnerTest
         JSON_MAPPER.writeValueAsString(SEGMENT_GRANULARITY.toString()),
         msqControllerTask.getContext().get(DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY)
     );
-    Assert.assertEquals(
-        JSON_MAPPER.writeValueAsString(QUERY_GRANULARITY.toString()),
-        msqControllerTask.getContext().get(DruidSqlInsert.SQL_INSERT_QUERY_GRANULARITY)
-    );
+    Assert.assertNull(msqControllerTask.getContext().get(DruidSqlInsert.SQL_INSERT_QUERY_GRANULARITY));
     Assert.assertEquals(WorkerAssignmentStrategy.MAX, actualMSQSpec.getAssignmentStrategy());
   }
 
   @Test
-  public void testMSQControllerTaskSpecWithAggregators() throws JsonProcessingException
+  public void testMSQControllerTaskSpecWithAggregatorsIsValid() throws JsonProcessingException
   {
     DimFilter dimFilter = new SelectorDimFilter("dim1", "foo", null);
 
