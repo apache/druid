@@ -21,6 +21,7 @@ package org.apache.druid.server.coordinator.duty;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Predicate;
+import com.google.common.collect.Sets;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.java.util.common.DateTimes;
@@ -89,15 +90,7 @@ public class KillUnusedSegments implements CoordinatorDuty
    */
   private final Map<String, DateTime> datasourceToLastKillIntervalEnd;
 
-  /**
-   * State that is maintained in the duty to determine if the duty needs to run or not.
-   */
   private DateTime lastKillTime;
-
-  /**
-   * Round-robin iterator of the datasources to kill. It's updated in every run by the duty and must be used
-   * from a single thread.
-   */
   private final RoundRobinIterator datasourceIterator;
 
   private final SegmentsMetadataManager segmentsMetadataManager;
@@ -153,7 +146,7 @@ public class KillUnusedSegments implements CoordinatorDuty
     if (canDutyRun()) {
       return runInternal(params);
     } else {
-      log.info(
+      log.debug(
           "Skipping KillUnusedSegments until period[%s] has elapsed after lastKillTime[%s].",
           period, lastKillTime
       );
@@ -168,16 +161,15 @@ public class KillUnusedSegments implements CoordinatorDuty
 
     final int availableKillTaskSlots = getAvailableKillTaskSlots(dynamicConfig, stats);
     if (availableKillTaskSlots <= 0) {
-      log.info("Skipping KillUnusedSegments because there are no available kill task slots.");
+      log.debug("Skipping KillUnusedSegments because there are no available kill task slots.");
       return params;
     }
 
     final Set<String> dataSourcesToKill;
-    if (!CollectionUtils.isNullOrEmpty(dynamicConfig.getSpecificDataSourcesToKillUnusedSegmentsIn())) {
-      dataSourcesToKill = dynamicConfig.getSpecificDataSourcesToKillUnusedSegmentsIn();
-    } else {
-      // If no datasource has been specified, all are eligible for killing unused segments by default
+    if (CollectionUtils.isNullOrEmpty(dynamicConfig.getSpecificDataSourcesToKillUnusedSegmentsIn())) {
       dataSourcesToKill = segmentsMetadataManager.retrieveAllDataSourceNames();
+    } else {
+      dataSourcesToKill = dynamicConfig.getSpecificDataSourcesToKillUnusedSegmentsIn();
     }
 
     datasourceIterator.updateCandidates(dataSourcesToKill);
@@ -201,28 +193,23 @@ public class KillUnusedSegments implements CoordinatorDuty
   )
   {
     if (CollectionUtils.isNullOrEmpty(dataSourcesToKill)) {
-      log.info("Skipping KillUnusedSegments because there are no datasources to kill.");
+      log.debug("Skipping KillUnusedSegments because there are no datasources to kill.");
       stats.add(Stats.Kill.SUBMITTED_TASKS, 0);
       return;
     }
     final Iterator<String> dataSourcesToKillIterator = this.datasourceIterator.getIterator();
     final Set<String> remainingDatasourcesToKill = new HashSet<>(dataSourcesToKill);
-    final Set<String> datasourcesKilled = new HashSet<>();
 
     int submittedTasks = 0;
     while (dataSourcesToKillIterator.hasNext()) {
       if (remainingDatasourcesToKill.size() == 0) {
-        log.info(
-            "Submitted [%d] kill tasks for [%d] datasources. No more datasource to kill in this cycle.",
-            submittedTasks, datasourcesKilled.size()
-        );
         break;
       }
 
       if (submittedTasks >= availableKillTaskSlots) {
         log.info(
-            "Submitted [%d] kill tasks for [%d] datasources and reached kill task slot limit [%d].",
-            submittedTasks, datasourcesKilled.size(), availableKillTaskSlots
+            "Submitted [%d] kill tasks and reached kill task slot limit [%d].",
+            submittedTasks, availableKillTaskSlots
         );
         break;
       }
@@ -249,7 +236,6 @@ public class KillUnusedSegments implements CoordinatorDuty
             true
         );
         ++submittedTasks;
-        datasourcesKilled.add(dataSource);
         remainingDatasourcesToKill.remove(dataSource);
         datasourceToLastKillIntervalEnd.put(dataSource, intervalToKill.getEnd());
       }
@@ -263,8 +249,12 @@ public class KillUnusedSegments implements CoordinatorDuty
     }
 
     log.info(
-        "Submitted [%d] kill tasks for [%d] datasources: [%s]. Remaining datasources to kill: [%s]",
-        submittedTasks, datasourcesKilled.size(), datasourcesKilled, remainingDatasourcesToKill
+        "Submitted [%d] kill tasks for [%d] datasources: [%s]. Remaining [%d] datasources to kill: [%s].",
+        submittedTasks,
+        dataSourcesToKill.size() - remainingDatasourcesToKill.size(),
+        Sets.difference(dataSourcesToKill, remainingDatasourcesToKill),
+        remainingDatasourcesToKill.size(),
+        remainingDatasourcesToKill
     );
 
     stats.add(Stats.Kill.SUBMITTED_TASKS, submittedTasks);
