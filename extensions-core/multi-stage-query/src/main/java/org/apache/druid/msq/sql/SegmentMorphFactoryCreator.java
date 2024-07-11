@@ -23,8 +23,17 @@ import org.apache.druid.msq.kernel.FrameProcessorFactory;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 
+import javax.annotation.Nullable;
+
 public interface SegmentMorphFactoryCreator
 {
+  /**
+   * Creates a {@link FrameProcessorFactory} which acts as a final stage, if the {@link DruidQuery} requires one. This
+   * is generally the case with ingest queries which do not want to create new segments, but rather modify existing
+   * segments in some way.
+   * If no segment morphing stage is required, returns null.
+   */
+  @Nullable
   @SuppressWarnings("rawtypes")
   FrameProcessorFactory createSegmentMorphFactory(DruidQuery druidQuery, PlannerContext plannerContext);
 }

@@ -101,7 +101,7 @@ public class MSQTaskQueryMaker implements QueryMaker
       final PlannerContext plannerContext,
       final ObjectMapper jsonMapper,
       final List<Entry<Integer, String>> fieldMapping,
-      @Nullable final SegmentMorphFactoryCreator segmentMorphFactoryCreator
+      final SegmentMorphFactoryCreator segmentMorphFactoryCreator
   )
   {
     this.targetDataSource = targetDataSource;
@@ -250,7 +250,7 @@ public class MSQTaskQueryMaker implements QueryMaker
           segmentGranularityObject,
           segmentSortOrder,
           replaceTimeChunks,
-          segmentMorphFactoryCreator == null ? null : segmentMorphFactoryCreator.createSegmentMorphFactory(
+          segmentMorphFactoryCreator.createSegmentMorphFactory(
               druidQuery,
               plannerContext
           )
