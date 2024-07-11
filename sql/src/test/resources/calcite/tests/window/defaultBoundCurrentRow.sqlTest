@@ -9,10 +9,12 @@ sql: |
     count(*) OVER (partition by dim2 ORDER BY dim1 ROWS 1 FOLLOWING),
     count(*) OVER (partition by dim2 ORDER BY dim1 ROWS UNBOUNDED FOLLOWING)
   FROM numfoo
+  WHERE dim2 IN ('a', 'abc')
   GROUP BY dim2, dim1
 
 expectedOperators:
-  - { type: "naivePartition", partitionColumns: [ "_d0" ] }
+  - {"type":"naiveSort","columns":[{"column":"_d1","direction":"ASC"},{"column":"_d0","direction":"ASC"}]}
+  - { type: "naivePartition", partitionColumns: [ "_d1" ] }
   - type: "window"
     processor:
       type: "framedAgg"
@@ -75,9 +77,6 @@ expectedOperators:
         - { type: "count", name: "w4" }
 
 expectedResults:
-  - [null,1,1,1,2,2]
-  - [null,2,2,1,1,1]
-  - ["",1,1,1,1,1]
   - ["a",1,1,1,2,2]
   - ["a",2,2,1,1,1]
   - ["abc",1,1,1,1,1]
