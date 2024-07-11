@@ -36,7 +36,6 @@ import org.apache.druid.server.coordination.DataSegmentChangeCallback;
 import org.apache.druid.server.coordination.DataSegmentChangeHandler;
 import org.apache.druid.server.coordination.DataSegmentChangeRequest;
 import org.apache.druid.server.coordination.DataSegmentChangeResponse;
-import org.apache.druid.server.coordination.SegmentChangeRequestLoad;
 import org.apache.druid.server.coordination.SegmentChangeStatus;
 import org.apache.druid.server.coordinator.BytesAccumulatingResponseHandler;
 import org.apache.druid.server.coordinator.config.HttpLoadQueuePeonConfig;
@@ -171,11 +170,10 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
     synchronized (lock) {
       final Iterator<SegmentHolder> queuedSegmentIterator = queuedSegments.iterator();
 
-      final long currentTimeMillis = System.currentTimeMillis();
       while (newRequests.size() < batchSize && queuedSegmentIterator.hasNext()) {
         final SegmentHolder holder = queuedSegmentIterator.next();
         final DataSegment segment = holder.getSegment();
-        if (hasRequestTimedOut(holder, currentTimeMillis)) {
+        if (hasRequestTimedOut(holder)) {
           onRequestFailed(holder, "timed out");
           queuedSegmentIterator.remove();
           if (holder.isLoad()) {
@@ -190,10 +188,6 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
           activeRequestSegments.add(segment);
         }
       }
-
-      if (segmentsToLoad.isEmpty()) {
-        loadingRateTracker.markBatchLoadingFinished();
-      }
     }
 
     if (newRequests.isEmpty()) {
@@ -207,10 +201,6 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
 
     try {
       log.trace("Sending [%d] load/drop requests to Server[%s].", newRequests.size(), serverId);
-      final boolean hasLoadRequests = newRequests.stream().anyMatch(r -> r instanceof SegmentChangeRequestLoad);
-      if (hasLoadRequests && !loadingRateTracker.isLoadingBatch()) {
-        loadingRateTracker.markBatchLoadingStarted();
-      }
 
       BytesAccumulatingResponseHandler responseHandler = new BytesAccumulatingResponseHandler();
       ListenableFuture<InputStream> future = httpClient.go(
@@ -245,16 +235,9 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
                         return;
                       }
 
-                      int numSuccessfulLoads = 0;
-                      long successfulLoadSize = 0;
                       for (DataSegmentChangeResponse e : statuses) {
                         switch (e.getStatus().getState()) {
                           case SUCCESS:
-                            if (e.getRequest() instanceof SegmentChangeRequestLoad) {
-                              ++numSuccessfulLoads;
-                              successfulLoadSize +=
-                                  ((SegmentChangeRequestLoad) e.getRequest()).getSegment().getSize();
-                            }
                           case FAILED:
                             handleResponseStatus(e.getRequest(), e.getStatus());
                             break;
@@ -265,10 +248,6 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
                             scheduleNextRunImmediately = false;
                             log.error("Server[%s] returned unknown state in status[%s].", serverId, e.getStatus());
                         }
-                      }
-
-                      if (numSuccessfulLoads > 0) {
-                        loadingRateTracker.incrementBytesLoadedInBatch(successfulLoadSize);
                       }
                     }
                   }
@@ -346,6 +325,12 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
             activeRequestSegments.remove(holder.getSegment());
             if (status.getState() == SegmentChangeStatus.State.FAILED) {
               onRequestFailed(holder, status.getFailureCause());
+            } else if (holder.isLoad()) {
+              loadingRateTracker.add(
+                  holder.getSegment().getSize(),
+                  holder.millisSinceRequestSentToServer()
+              );
+              onRequestCompleted(holder, RequestStatus.SUCCESS);
             } else {
               onRequestCompleted(holder, RequestStatus.SUCCESS);
             }
@@ -538,11 +523,10 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
    *
    * @see HttpLoadQueuePeonConfig#getLoadTimeout()
    */
-  private boolean hasRequestTimedOut(SegmentHolder holder, long currentTimeMillis)
+  private boolean hasRequestTimedOut(SegmentHolder holder)
   {
     return holder.isRequestSentToServer()
-           && currentTimeMillis - holder.getFirstRequestMillis()
-              > config.getLoadTimeout().getMillis();
+           && holder.millisSinceRequestSentToServer() > config.getLoadTimeout().getMillis();
   }
 
   private void onRequestFailed(SegmentHolder holder, String failureCause)

@@ -21,6 +21,7 @@ package org.apache.druid.server.coordinator.loading;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
+import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.server.coordination.DataSegmentChangeRequest;
 import org.apache.druid.server.coordination.SegmentChangeRequestDrop;
 import org.apache.druid.server.coordination.SegmentChangeRequestLoad;
@@ -32,7 +33,6 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Represents a segment queued for a load or drop operation in a LoadQueuePeon.
@@ -59,7 +59,7 @@ public class SegmentHolder implements Comparable<SegmentHolder>
 
   // Guaranteed to store only non-null elements
   private final List<LoadPeonCallback> callbacks = new ArrayList<>();
-  private final AtomicLong firstRequestMillis = new AtomicLong(0);
+  private final Stopwatch sinceRequestSentToServer = Stopwatch.createUnstarted();
   private int runsInQueue = 0;
 
   public SegmentHolder(
@@ -124,17 +124,19 @@ public class SegmentHolder implements Comparable<SegmentHolder>
 
   public void markRequestSentToServer()
   {
-    firstRequestMillis.compareAndSet(0L, System.currentTimeMillis());
+    if (!sinceRequestSentToServer.isRunning()) {
+      sinceRequestSentToServer.start();
+    }
   }
 
   public boolean isRequestSentToServer()
   {
-    return firstRequestMillis.get() > 0;
+    return sinceRequestSentToServer.isRunning();
   }
 
-  public long getFirstRequestMillis()
+  public long millisSinceRequestSentToServer()
   {
-    return firstRequestMillis.get();
+    return sinceRequestSentToServer.millisElapsed();
   }
 
   public int incrementAndGetRunsInQueue()

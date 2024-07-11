@@ -19,10 +19,7 @@
 
 package org.apache.druid.server.coordinator.loading;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.EvictingQueue;
-import org.apache.druid.error.DruidException;
-import org.apache.druid.java.util.common.Stopwatch;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import java.util.concurrent.atomic.AtomicReference;
@@ -31,21 +28,10 @@ import java.util.concurrent.atomic.AtomicReference;
  * Tracks the current segment loading rate for a single server.
  * <p>
  * The loading rate is computed as a moving average of the last
- * {@link #MOVING_AVERAGE_WINDOW_SIZE} batches of segment loads (or more if any
- * of the batches were smaller than {@link #MIN_ENTRY_SIZE_BYTES}). A batch is
- * defined as the set of all the segment loads performed between two consecutive
- * empty states of the load queue.
- * <pre>
- *   batchDurationMillis
- *   = t(load queue becomes empty) - t(first load request in batch is sent to server)
- *
- *   batchBytes = total bytes successfully loaded in batch
- *
- *   avg loading rate in batch (kbps) = (8 * batchBytes) / batchDurationMillis
- *
- *   overall avg loading rate (kbps)
- *   = (8 * sumOverWindow(batchBytes)) / sumOverWindow(batchDurationMillis)
- * </pre>
+ * {@link #MOVING_AVERAGE_WINDOW_SIZE} successful segment loads (or more if any
+ * of the segments were smaller than {@link #MIN_ENTRY_SIZE_BYTES}). Since the
+ * time taken to load individual segments are simply added up, the computed rate
+ * might be incorrect if the server uses multiple loading threads.
  * <p>
  * This class is currently not required to be thread-safe as the caller
  * {@link HttpLoadQueuePeon} itself ensures that the write methods of this class
@@ -58,82 +44,30 @@ public class LoadingRateTracker
   public static final long MIN_ENTRY_SIZE_BYTES = 1 << 30;
 
   private final EvictingQueue<Entry> window = EvictingQueue.create(MOVING_AVERAGE_WINDOW_SIZE);
-
-  /**
-   * Total stats for the whole window. This includes the total from the current batch as well.
-   */
   private final AtomicReference<Entry> windowTotal = new AtomicReference<>(null);
 
-  private Entry currentBatchTotal;
   private Entry currentTail;
 
-  private final Stopwatch currentBatchDuration = Stopwatch.createUnstarted();
-
   /**
-   * Marks the start of loading of a batch of segments. This should be called when
-   * the first request in a batch is sent to the server.
+   * Adds the given number of bytes to the moving average window.
    */
-  public void markBatchLoadingStarted()
+  public void add(final long bytes, final long loadTimeMillis)
   {
-    if (isLoadingBatch()) {
-      // Do nothing
-      return;
-    }
-
-    currentBatchDuration.restart();
-    currentBatchTotal = new Entry();
-
-    // Add a fresh entry at the tail for this batch
+    // Add a fresh entry at the tail if it is full
     final Entry evictedHead = addNewEntryIfTailIsFull();
-    if (evictedHead != null) {
-      final Entry delta = new Entry();
-      delta.bytes -= evictedHead.bytes;
-      delta.millisElapsed -= evictedHead.millisElapsed;
-
-      windowTotal.updateAndGet(delta::incrementBy);
-    }
-  }
-
-  public boolean isLoadingBatch()
-  {
-    return currentBatchDuration.isRunning();
-  }
-
-  /**
-   * Adds the given number of bytes to the total data successfully loaded in the
-   * current batch. This causes an update of the current load rate.
-   */
-  public void incrementBytesLoadedInBatch(long loadedBytes)
-  {
-    incrementBytesLoadedInBatch(loadedBytes, currentBatchDuration.millisElapsed());
-  }
-
-  @VisibleForTesting
-  void incrementBytesLoadedInBatch(final long bytes, final long batchDurationMillis)
-  {
-    if (!isLoadingBatch()) {
-      throw DruidException.defensive("markBatchLoadingStarted() must be called before tracking load progress.");
-    }
 
     final Entry delta = new Entry();
     delta.bytes = bytes;
-    delta.millisElapsed = batchDurationMillis - currentBatchTotal.millisElapsed;
+    delta.millisElapsed = loadTimeMillis;
 
     currentTail.incrementBy(delta);
-    currentBatchTotal.incrementBy(delta);
-    windowTotal.updateAndGet(delta::incrementBy);
-  }
 
-  /**
-   * Marks the end of loading of a batch of segments. This method should be called
-   * when all the requests in the batch have been processed by the server.
-   */
-  public void markBatchLoadingFinished()
-  {
-    if (isLoadingBatch()) {
-      currentBatchDuration.reset();
-      currentBatchTotal = null;
+    // Update the window total
+    if (evictedHead != null) {
+      delta.bytes -= evictedHead.bytes;
+      delta.millisElapsed -= evictedHead.millisElapsed;
     }
+    windowTotal.updateAndGet(delta::incrementBy);
   }
 
   public void reset()
@@ -141,8 +75,6 @@ public class LoadingRateTracker
     window.clear();
     windowTotal.set(null);
     currentTail = null;
-    currentBatchTotal = null;
-    currentBatchDuration.reset();
   }
 
   /**
