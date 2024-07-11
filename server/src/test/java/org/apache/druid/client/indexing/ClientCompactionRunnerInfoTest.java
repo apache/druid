@@ -27,7 +27,6 @@ import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.java.util.common.HumanReadableBytes;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
@@ -65,11 +64,8 @@ public class ClientCompactionRunnerInfoTest
     );
     Assert.assertFalse(validationResult.isValid());
     Assert.assertEquals(
-        StringUtils.format(
-            "Invalid partitionsSpec type[%s] for MSQ engine."
-            + " Type must be either 'dynamic' or 'range'.",
-            HashedPartitionsSpec.class.getSimpleName()
-        ),
+        "Invalid partitionsSpec type[HashedPartitionsSpec] for MSQ engine."
+        + " Type must be either 'dynamic' or 'range'.",
         validationResult.getReason()
     );
   }
@@ -88,10 +84,10 @@ public class ClientCompactionRunnerInfoTest
         CompactionEngine.NATIVE
     );
     Assert.assertFalse(validationResult.isValid());
-    Assert.assertEquals(StringUtils.format(
-        "maxTotalRows[%d] in DynamicPartitionsSpec not supported for MSQ engine.",
-        100
-    ), validationResult.getReason());
+    Assert.assertEquals(
+        "maxTotalRows[100] in DynamicPartitionsSpec not supported for MSQ engine.",
+        validationResult.getReason()
+    );
   }
 
   @Test
@@ -156,6 +152,7 @@ public class ClientCompactionRunnerInfoTest
   @Test
   public void testMSQEngineWithUnsupportedMetricsSpecIsInValid()
   {
+    // Aggregators having different input and ouput column names are unsupported.
     final String inputColName = "added";
     final String outputColName = "sum_added";
     DataSourceCompactionConfig compactionConfig = createCompactionConfig(
@@ -170,9 +167,7 @@ public class ClientCompactionRunnerInfoTest
     );
     Assert.assertFalse(validationResult.isValid());
     Assert.assertEquals(
-        StringUtils.format("Different name[%s] and fieldName(s)[%s] for aggregator unsupported for MSQ engine.",
-                           outputColName,
-                           Collections.singletonList(inputColName)),
+        "Different name[sum_added] and fieldName(s)[[added]] for aggregator unsupported for MSQ engine.",
         validationResult.getReason()
     );
   }

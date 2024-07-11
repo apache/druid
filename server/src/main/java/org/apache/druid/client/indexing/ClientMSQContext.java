@@ -28,4 +28,8 @@ public class ClientMSQContext
 {
   public static final String CTX_MAX_NUM_TASKS = "maxNumTasks";
   public static final int DEFAULT_MAX_NUM_TASKS = 2;
+  /**
+   * Limit to ensure that an MSQ compaction task doesn't take up all task slots in a cluster.
+   */
+  public static final int MAX_TASK_SLOTS_FOR_MSQ_COMPACTION_TASK = 5;
 }

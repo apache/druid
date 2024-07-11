@@ -132,7 +132,7 @@ public class CompactSegmentsTest
   private static final int MAXIMUM_CAPACITY_WITH_AUTO_SCALE = 10;
   private static final NewestSegmentFirstPolicy SEARCH_POLICY = new NewestSegmentFirstPolicy(JSON_MAPPER);
 
-  @Parameterized.Parameters(name = "scenario={0}, engine={2}")
+  @Parameterized.Parameters(name = "scenario: {0}, engine: {2}")
   public static Collection<Object[]> constructorFeeder()
   {
     final MutableInt nextRangePartitionBoundary = new MutableInt(0);
@@ -154,7 +154,7 @@ public class CompactSegmentsTest
 
     final SingleDimensionPartitionsSpec singleDimensionPartitionsSpec =
         new SingleDimensionPartitionsSpec(300000, null, "dim", false);
-    final BiFunction<Integer, Integer, ShardSpec> singleDimensionShardSpeCreator =
+    final BiFunction<Integer, Integer, ShardSpec> singleDimensionShardSpecCreator =
         (bucketId, numBuckets) -> new SingleDimensionShardSpec(
             "dim",
             bucketId == 0 ? null : String.valueOf(nextRangePartitionBoundary.getAndIncrement()),
@@ -167,9 +167,9 @@ public class CompactSegmentsTest
     return ImmutableList.of(
         new Object[]{dynamicPartitionsSpec, numberedShardSpecCreator, CompactionEngine.NATIVE},
         new Object[]{hashedPartitionsSpec, hashBasedNumberedShardSpecCreator, CompactionEngine.NATIVE},
-        new Object[]{singleDimensionPartitionsSpec, singleDimensionShardSpeCreator, CompactionEngine.NATIVE},
+        new Object[]{singleDimensionPartitionsSpec, singleDimensionShardSpecCreator, CompactionEngine.NATIVE},
         new Object[]{dynamicPartitionsSpec, numberedShardSpecCreator, CompactionEngine.MSQ},
-        new Object[]{singleDimensionPartitionsSpec, singleDimensionShardSpeCreator, CompactionEngine.MSQ}
+        new Object[]{singleDimensionPartitionsSpec, singleDimensionShardSpecCreator, CompactionEngine.MSQ}
     );
   }
 
@@ -655,7 +655,8 @@ public class CompactSegmentsTest
     final CoordinatorRunStats stats = doCompactSegments(compactSegments, 3);
     Assert.assertEquals(3, stats.get(Stats.Compaction.AVAILABLE_SLOTS));
     Assert.assertEquals(3, stats.get(Stats.Compaction.MAX_SLOTS));
-    // Native takes up 1 task slot by default whereas MSQ takes up all available upto 5.
+    // Native takes up 1 task slot by default whereas MSQ takes up all available upto 5. Since there are 3 available
+    // slots, there are 3 submitted tasks for native whereas 1 for MSQ.
     if (engine == CompactionEngine.NATIVE) {
       Assert.assertEquals(3, stats.get(Stats.Compaction.SUBMITTED_TASKS));
     } else {
@@ -674,7 +675,8 @@ public class CompactSegmentsTest
         doCompactSegments(compactSegments, createCompactionConfigs(), maxCompactionSlot, true);
     Assert.assertEquals(maxCompactionSlot, stats.get(Stats.Compaction.AVAILABLE_SLOTS));
     Assert.assertEquals(maxCompactionSlot, stats.get(Stats.Compaction.MAX_SLOTS));
-    // Native takes up 1 task slot by default whereas MSQ takes up all available upto 5.
+    // Native takes up 1 task slot by default whereas MSQ takes up all available upto 5. Since there are 3 available
+    // slots, there are 3 submitted tasks for native whereas 1 for MSQ.
     if (engine == CompactionEngine.NATIVE) {
       Assert.assertEquals(maxCompactionSlot, stats.get(Stats.Compaction.SUBMITTED_TASKS));
     } else {
@@ -693,12 +695,13 @@ public class CompactSegmentsTest
         doCompactSegments(compactSegments, createCompactionConfigs(), maxCompactionSlot, true);
     Assert.assertEquals(MAXIMUM_CAPACITY_WITH_AUTO_SCALE, stats.get(Stats.Compaction.AVAILABLE_SLOTS));
     Assert.assertEquals(MAXIMUM_CAPACITY_WITH_AUTO_SCALE, stats.get(Stats.Compaction.MAX_SLOTS));
-    // Native takes up 1 task slot by default whereas MSQ takes up all available upto 5.
+    // Native takes up 1 task slot by default whereas MSQ takes up all available upto 5. Since there are 10 available
+    // slots, there are 10 submitted tasks for native whereas 2 for MSQ.
     if (engine == CompactionEngine.NATIVE) {
       Assert.assertEquals(MAXIMUM_CAPACITY_WITH_AUTO_SCALE, stats.get(Stats.Compaction.SUBMITTED_TASKS));
     } else {
       Assert.assertEquals(
-          MAXIMUM_CAPACITY_WITH_AUTO_SCALE / CompactSegments.MAX_TASK_SLOTS_FOR_MSQ_COMPACTION_TASK,
+          MAXIMUM_CAPACITY_WITH_AUTO_SCALE / ClientMSQContext.MAX_TASK_SLOTS_FOR_MSQ_COMPACTION_TASK,
           stats.get(Stats.Compaction.SUBMITTED_TASKS)
       );
     }
@@ -1210,9 +1213,9 @@ public class CompactSegmentsTest
     final CoordinatorRunStats stats;
     // Native uses maxNumConcurrentSubTasks for task slots whereas MSQ uses maxNumTasks.
     if (engine == CompactionEngine.NATIVE) {
-      stats = doCompactSegments(compactSegments, createCompactionConfigs(2, null), 4);
+      stats = doCompactSegments(compactSegments, createcompactionConfigsForNative(2), 4);
     } else {
-      stats = doCompactSegments(compactSegments, createCompactionConfigs(null, 2), 4);
+      stats = doCompactSegments(compactSegments, createcompactionConfigsForMSQ(2), 4);
     }
     Assert.assertEquals(4, stats.get(Stats.Compaction.AVAILABLE_SLOTS));
     Assert.assertEquals(4, stats.get(Stats.Compaction.MAX_SLOTS));
@@ -1245,7 +1248,7 @@ public class CompactSegmentsTest
     // is submitted for dataSource_0
     CompactSegments compactSegments = new CompactSegments(SEARCH_POLICY, overlordClient);
     final CoordinatorRunStats stats =
-        doCompactSegments(compactSegments, createCompactionConfigs(2, null), 4);
+        doCompactSegments(compactSegments, createcompactionConfigsForNative(2), 4);
     Assert.assertEquals(1, stats.get(Stats.Compaction.SUBMITTED_TASKS));
     Assert.assertEquals(1, overlordClient.submittedCompactionTasks.size());
 
@@ -1959,8 +1962,18 @@ public class CompactSegmentsTest
     return createCompactionConfigs(null, null);
   }
 
+  private List<DataSourceCompactionConfig> createcompactionConfigsForNative(@Nullable Integer maxNumConcurrentSubTasks)
+  {
+    return createCompactionConfigs(maxNumConcurrentSubTasks, null);
+  }
+
+  private List<DataSourceCompactionConfig> createcompactionConfigsForMSQ(Integer maxNumTasks)
+  {
+    return createCompactionConfigs(null, maxNumTasks);
+  }
+
   private List<DataSourceCompactionConfig> createCompactionConfigs(
-      @Nullable Integer maxNumConcurrentSubTasks,
+      @Nullable Integer maxNumConcurrentSubTasksForNative,
       @Nullable Integer maxNumTasksForMSQ
   )
   {
@@ -1986,7 +1999,7 @@ public class CompactSegmentsTest
                   null,
                   null,
                   null,
-                  maxNumConcurrentSubTasks,
+                  maxNumConcurrentSubTasksForNative,
                   null,
                   null,
                   null,

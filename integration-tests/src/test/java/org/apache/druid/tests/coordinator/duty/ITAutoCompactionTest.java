@@ -466,7 +466,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       verifySegmentsCount(4);
       verifyQuery(INDEX_QUERIES_RESOURCE);
 
-      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, Period.days(1), null);
+      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, Period.days(1));
       //...compacted into 1 new segment for 1 day. 1 day compacted and 1 day skipped/remains uncompacted. (3 total)
       forceTriggerAutoCompaction(3);
       verifyQuery(INDEX_QUERIES_RESOURCE);
@@ -484,7 +484,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           0,
           1,
           1);
-      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, NO_SKIP_OFFSET, null);
+      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, NO_SKIP_OFFSET);
       //...compacted into 1 new segment for the remaining one day. 2 day compacted and 0 day uncompacted. (2 total)
       forceTriggerAutoCompaction(2);
       verifyQuery(INDEX_QUERIES_RESOURCE);
@@ -517,9 +517,9 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       verifyQuery(INDEX_QUERIES_RESOURCE);
 
       // Dummy compaction config which will be overwritten
-      submitCompactionConfig(10000, NO_SKIP_OFFSET, null);
+      submitCompactionConfig(10000, NO_SKIP_OFFSET);
       // New compaction config should overwrites the existing compaction config
-      submitCompactionConfig(1, NO_SKIP_OFFSET, null);
+      submitCompactionConfig(1, NO_SKIP_OFFSET);
 
       LOG.info("Auto compaction test with dynamic partitioning");
 
@@ -533,7 +533,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       LOG.info("Auto compaction test with hash partitioning");
 
       final HashedPartitionsSpec hashedPartitionsSpec = new HashedPartitionsSpec(null, 3, null);
-      submitCompactionConfig(hashedPartitionsSpec, NO_SKIP_OFFSET, 1, null, null, null, null, false, null);
+      submitCompactionConfig(hashedPartitionsSpec, NO_SKIP_OFFSET, 1, null, null, null, null, false);
       // 2 segments published per day after compaction.
       forceTriggerAutoCompaction(4);
       verifyQuery(INDEX_QUERIES_RESOURCE);
@@ -548,7 +548,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           "city",
           false
       );
-      submitCompactionConfig(rangePartitionsSpec, NO_SKIP_OFFSET, 1, null, null, null, null, false, null);
+      submitCompactionConfig(rangePartitionsSpec, NO_SKIP_OFFSET, 1, null, null, null, null, false);
       forceTriggerAutoCompaction(2);
       verifyQuery(INDEX_QUERIES_RESOURCE);
       verifySegmentsCompacted(rangePartitionsSpec, 2);
@@ -593,7 +593,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       verifySegmentsCount(4);
       verifyQuery(INDEX_QUERIES_RESOURCE);
 
-      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, NO_SKIP_OFFSET, null);
+      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, NO_SKIP_OFFSET);
       // ...should remains unchanged (4 total)
       forceTriggerAutoCompaction(4);
       verifyQuery(INDEX_QUERIES_RESOURCE);
@@ -920,14 +920,14 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       verifySegmentsCount(4);
       verifyQuery(INDEX_QUERIES_RESOURCE);
 
-      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, Period.days(1), null);
+      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, Period.days(1));
       //...compacted into 1 new segment for 1 day. 1 day compacted and 1 day skipped/remains uncompacted. (3 total)
       forceTriggerAutoCompaction(3);
       verifyQuery(INDEX_QUERIES_RESOURCE);
       verifySegmentsCompacted(1, MAX_ROWS_PER_SEGMENT_COMPACTED);
 
       Granularity newGranularity = Granularities.YEAR;
-      submitCompactionConfig(1000, NO_SKIP_OFFSET, new UserCompactionTaskGranularityConfig(newGranularity, null, null), null);
+      submitCompactionConfig(1000, NO_SKIP_OFFSET, new UserCompactionTaskGranularityConfig(newGranularity, null, null));
 
       LOG.info("Auto compaction test with YEAR segment granularity");
 
@@ -959,7 +959,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       verifyQuery(INDEX_QUERIES_RESOURCE);
 
       // Compacted without SegmentGranularity in auto compaction config
-      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, NO_SKIP_OFFSET, null);
+      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, NO_SKIP_OFFSET);
       forceTriggerAutoCompaction(2);
       verifyQuery(INDEX_QUERIES_RESOURCE);
       verifySegmentsCompacted(2, MAX_ROWS_PER_SEGMENT_COMPACTED);
@@ -969,7 +969,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       // Segments were compacted and already has DAY granularity since it was initially ingested with DAY granularity.
       // Now set auto compaction with DAY granularity in the granularitySpec
       Granularity newGranularity = Granularities.DAY;
-      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, NO_SKIP_OFFSET, new UserCompactionTaskGranularityConfig(newGranularity, null, null), null);
+      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, NO_SKIP_OFFSET, new UserCompactionTaskGranularityConfig(newGranularity, null, null));
       forceTriggerAutoCompaction(2);
       verifyQuery(INDEX_QUERIES_RESOURCE);
       verifySegmentsCompacted(2, MAX_ROWS_PER_SEGMENT_COMPACTED);
@@ -991,7 +991,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       verifyQuery(INDEX_QUERIES_RESOURCE);
 
       // Compacted without SegmentGranularity in auto compaction config
-      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, NO_SKIP_OFFSET, null);
+      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, NO_SKIP_OFFSET);
       forceTriggerAutoCompaction(2);
       verifyQuery(INDEX_QUERIES_RESOURCE);
       verifySegmentsCompacted(2, MAX_ROWS_PER_SEGMENT_COMPACTED);
@@ -1001,7 +1001,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       // Segments were compacted and already has DAY granularity since it was initially ingested with DAY granularity.
       // Now set auto compaction with DAY granularity in the granularitySpec
       Granularity newGranularity = Granularities.YEAR;
-      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, NO_SKIP_OFFSET, new UserCompactionTaskGranularityConfig(newGranularity, null, null), null);
+      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, NO_SKIP_OFFSET, new UserCompactionTaskGranularityConfig(newGranularity, null, null));
       forceTriggerAutoCompaction(1);
       verifyQuery(INDEX_QUERIES_RESOURCE);
       verifySegmentsCompacted(1, MAX_ROWS_PER_SEGMENT_COMPACTED);
@@ -1595,7 +1595,13 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     queryHelper.testQueriesFromString(queryResponseTemplate);
   }
 
-  private void submitCompactionConfig(Integer maxRowsPerSegment, Period skipOffsetFromLatest, CompactionEngine engine)
+  private void submitCompactionConfig(Integer maxRowsPerSegment, Period skipOffsetFromLatest)
+      throws Exception
+  {
+    submitCompactionConfig(maxRowsPerSegment, skipOffsetFromLatest, null, null);
+  }
+
+  private void submitCompactionConfig(Integer maxRowsPerSegment, Period skipOffsetFromLatest, @Nullable CompactionEngine engine)
       throws Exception
   {
     submitCompactionConfig(maxRowsPerSegment, skipOffsetFromLatest, null, engine);
@@ -1604,8 +1610,18 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   private void submitCompactionConfig(
       Integer maxRowsPerSegment,
       Period skipOffsetFromLatest,
+      UserCompactionTaskGranularityConfig granularitySpec
+  ) throws Exception
+  {
+    submitCompactionConfig(maxRowsPerSegment, skipOffsetFromLatest, granularitySpec, false, null);
+  }
+
+
+  private void submitCompactionConfig(
+      Integer maxRowsPerSegment,
+      Period skipOffsetFromLatest,
       UserCompactionTaskGranularityConfig granularitySpec,
-      CompactionEngine engine
+      @Nullable CompactionEngine engine
   ) throws Exception
   {
     submitCompactionConfig(maxRowsPerSegment, skipOffsetFromLatest, granularitySpec, false, engine);
@@ -1629,8 +1645,15 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       @Nullable CompactionEngine engine
   ) throws Exception
   {
-    submitCompactionConfig(maxRowsPerSegment, skipOffsetFromLatest, granularitySpec, null, null, null, dropExisting,
-                           engine
+    submitCompactionConfig(
+        maxRowsPerSegment,
+        skipOffsetFromLatest,
+        granularitySpec,
+        null,
+        null,
+        null,
+        dropExisting,
+        engine
     );
   }
 
@@ -1677,6 +1700,30 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
         metricsSpec,
         dropExisting,
         engine
+    );
+  }
+
+  private void submitCompactionConfig(
+      PartitionsSpec partitionsSpec,
+      Period skipOffsetFromLatest,
+      int maxNumConcurrentSubTasks,
+      UserCompactionTaskGranularityConfig granularitySpec,
+      UserCompactionTaskDimensionsConfig dimensionsSpec,
+      UserCompactionTaskTransformConfig transformSpec,
+      AggregatorFactory[] metricsSpec,
+      boolean dropExisting
+  ) throws Exception
+  {
+    submitCompactionConfig(
+        partitionsSpec,
+        skipOffsetFromLatest,
+        maxNumConcurrentSubTasks,
+        granularitySpec,
+        dimensionsSpec,
+        transformSpec,
+        metricsSpec,
+        dropExisting,
+        null
     );
   }
 

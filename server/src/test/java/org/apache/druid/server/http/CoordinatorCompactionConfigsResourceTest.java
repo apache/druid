@@ -29,7 +29,6 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.error.ErrorResponse;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.metadata.MetadataStorageConnector;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
@@ -457,7 +456,7 @@ public class CoordinatorCompactionConfigsResourceTest
         null,
         ImmutableMap.of("key", "val")
     );
-    Response ignore = coordinatorCompactionConfigsResource.addOrUpdateCompactionConfig(
+    coordinatorCompactionConfigsResource.addOrUpdateCompactionConfig(
         newConfig,
         mockHttpServletRequest
     );
@@ -480,16 +479,6 @@ public class CoordinatorCompactionConfigsResourceTest
                      ArgumentMatchers.eq(CoordinatorCompactionConfig.empty())
                  )
     ).thenReturn(CoordinatorCompactionConfig.empty());
-    final ArgumentCaptor<byte[]> oldConfigCaptor = ArgumentCaptor.forClass(byte[].class);
-    final ArgumentCaptor<CoordinatorCompactionConfig> newConfigCaptor = ArgumentCaptor.forClass(
-        CoordinatorCompactionConfig.class);
-    Mockito.when(mockJacksonConfigManager.set(
-                     ArgumentMatchers.eq(CoordinatorCompactionConfig.CONFIG_KEY),
-                     oldConfigCaptor.capture(),
-                     newConfigCaptor.capture(),
-                     ArgumentMatchers.any()
-                 )
-    ).thenReturn(ConfigManager.SetResult.ok());
 
     int maxNumTasks = 1;
 
@@ -514,11 +503,8 @@ public class CoordinatorCompactionConfigsResourceTest
     );
     Assert.assertEquals(DruidException.Category.INVALID_INPUT.getExpectedStatus(), response.getStatus());
     Assert.assertEquals(
-        StringUtils.format(
-            "Compaction config not supported. Reason[MSQ context maxNumTasks [%,d] cannot be less than 2, "
-            + "since at least 1 controller and 1 worker is necessary.].",
-            maxNumTasks
-        ),
+        "Compaction config not supported. Reason[MSQ context maxNumTasks [1] cannot be less than 2, "
+        + "since at least 1 controller and 1 worker is necessary.].",
         ((ErrorResponse) response.getEntity()).getUnderlyingException().getMessage()
     );
   }

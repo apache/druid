@@ -299,43 +299,23 @@ public class CompactionStatus
       }
     }
 
-    /**
-     * Compares combining factories of configured and actual metricsSpec as MSQ engine in particular persists
-     * the combining factory in the dataschema, and combining factory of combining factory is effectively a no-op.
-     * Conversion to combining factory  is a lossy conversion since combining factories typically
-     * use aggregator factory's output col name as both its input and output col names -- leading to false
-     * positives -- but it is acceptable for compaction.
-     */
     private CompactionStatus metricsSpecIsUpToDate()
     {
       final AggregatorFactory[] configuredMetricsSpec = compactionConfig.getMetricsSpec();
       if (ArrayUtils.isEmpty(configuredMetricsSpec)) {
         return COMPLETE;
       }
-      final AggregatorFactory[] configuredMetricsCombiningFactorySpec =
-          Arrays.stream(configuredMetricsSpec)
-                .map(AggregatorFactory::getCombiningFactory)
-                .toArray(AggregatorFactory[]::new);
 
       final List<Object> metricSpecList = lastCompactionState.getMetricsSpec();
       final AggregatorFactory[] existingMetricsSpec
           = CollectionUtils.isNullOrEmpty(metricSpecList)
             ? null : objectMapper.convertValue(metricSpecList, AggregatorFactory[].class);
-      final AggregatorFactory[] existingMetricsCombiningFactorySpec =
-          existingMetricsSpec == null
-          ? null
-          : Arrays.stream(existingMetricsSpec)
-                  .map(AggregatorFactory::getCombiningFactory)
-                  .toArray(AggregatorFactory[]::new);
 
-      if (existingMetricsSpec == null || !Arrays.deepEquals(
-          configuredMetricsCombiningFactorySpec,
-          existingMetricsCombiningFactorySpec
-      )) {
+      if (existingMetricsSpec == null || !Arrays.deepEquals(configuredMetricsSpec, existingMetricsSpec)) {
         return CompactionStatus.configChanged(
             "metricsSpec",
-            Arrays.toString(configuredMetricsCombiningFactorySpec),
-            Arrays.toString(existingMetricsCombiningFactorySpec)
+            Arrays.toString(configuredMetricsSpec),
+            Arrays.toString(existingMetricsSpec)
         );
       } else {
         return COMPLETE;

@@ -111,7 +111,7 @@ public class MSQCompactionRunner implements CompactionRunner
 
   /**
    * Checks if the provided compaction config is supported by MSQ. The same validation is done at
-   * {@link ClientCompactionRunnerInfo#MSQEngineSupportsCompactionConfig}
+   * {@link ClientCompactionRunnerInfo#compactionConfigSupportedByMSQEngine}
    * The following configs aren't supported:
    * <ul>
    * <li>partitionsSpec of type HashedParititionsSpec.</li>

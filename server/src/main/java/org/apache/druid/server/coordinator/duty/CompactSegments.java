@@ -90,11 +90,6 @@ public class CompactSegments implements CoordinatorCustomDuty
   private static final Predicate<TaskStatusPlus> IS_COMPACTION_TASK =
       status -> null != status && COMPACTION_TASK_TYPE.equals(status.getType());
 
-  /**
-   * Limit to ensure that an MSQ compaction task doesn't take up all task slots in a cluster.
-   */
-  static final int MAX_TASK_SLOTS_FOR_MSQ_COMPACTION_TASK = 5;
-
   private final CompactionSegmentSearchPolicy policy;
   private final OverlordClient overlordClient;
 
@@ -510,7 +505,7 @@ public class CompactSegments implements CoordinatorCustomDuty
           slotsRequiredForCurrentTask = Math.min(
               // Update the slots to 2 (min required for MSQ) if only 1 slot is available.
               numAvailableCompactionTaskSlots == 1 ? 2 : numAvailableCompactionTaskSlots,
-              MAX_TASK_SLOTS_FOR_MSQ_COMPACTION_TASK
+              ClientMSQContext.MAX_TASK_SLOTS_FOR_MSQ_COMPACTION_TASK
           );
           autoCompactionContext.put(ClientMSQContext.CTX_MAX_NUM_TASKS, slotsRequiredForCurrentTask);
         }
