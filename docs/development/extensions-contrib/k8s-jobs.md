@@ -62,7 +62,7 @@ Returns a JSON object with the dynamic configuration properties.
 
 ##### URL
 
-`GET` `/druid/indexer/v1/k8s/taskRunner/executionConfig`
+`GET` `/druid/indexer/v1/k8s/taskrunner/executionconfig`
 
 ##### Responses
 
@@ -85,14 +85,14 @@ Returns a JSON object with the dynamic configuration properties.
 <TabItem value="2" label="cURL">
 
 ```shell
-curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/k8s/taskRunner/executionConfig"
+curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/k8s/taskrunner/executionconfig"
 ```
 </TabItem>
 
 <TabItem value="3" label="HTTP">
 
 ```HTTP
-GET /druid/indexer/v1/k8s/taskRunner/executionConfig HTTP/1.1
+GET /druid/indexer/v1/k8s/taskrunner/executionconfig HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
@@ -134,7 +134,7 @@ Updates the dynamic configuration for the Kubernetes Task Runner
 
 ##### URL
 
-`POST` `/druid/indexer/v1/k8s/taskRunner/executionConfig`
+`POST` `/druid/indexer/v1/k8s/taskrunner/executionconfig`
 
 ##### Header parameters
 
@@ -169,7 +169,7 @@ The endpoint supports the following optional header parameters to populate the `
 
 
 ```shell
-curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/k8s/taskRunner/executionConfig" \
+curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/k8s/taskrunner/executionconfig" \
 --header 'Content-Type: application/json' \
 --data '{
   "type": "default",
@@ -199,7 +199,7 @@ curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/k8s/taskRunner/executionConf
 
 
 ```HTTP
-POST /druid/indexer/v1/k8s/taskRunner/executionConfig HTTP/1.1
+POST /druid/indexer/v1/k8s/taskrunner/executionconfig HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 Content-Type: application/json
 
@@ -240,7 +240,7 @@ an empty array if there are no history records available.
 
 ##### URL
 
-`GET` `/druid/indexer/v1/k8s/taskRunner/executionConfig/history`
+`GET` `/druid/indexer/v1/k8s/taskrunner/executionconfig/history`
 
 ##### Query parameters
 
@@ -276,7 +276,7 @@ The endpoint supports the following optional query parameters to filter results.
 
 
 ```shell
-curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/k8s/taskRunner/executionConfig/history"
+curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/k8s/taskrunner/executionconfig/history"
 ```
 
 </TabItem>
@@ -284,7 +284,7 @@ curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/k8s/taskRunner/executionConf
 
 
 ```HTTP
-GET /druid/indexer/v1/k8s/taskRunner/executionConfig/history HTTP/1.1
+GET /druid/indexer/v1/k8s/taskrunner/executionconfig/history HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
