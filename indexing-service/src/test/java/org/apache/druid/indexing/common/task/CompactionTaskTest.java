@@ -57,8 +57,6 @@ import org.apache.druid.guice.IndexingServiceTuningConfigModule;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexing.common.LockGranularity;
-import org.apache.druid.indexing.common.RetryPolicyConfig;
-import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TestUtils;
@@ -193,7 +191,6 @@ public class CompactionTaskTest
   private static final Map<DataSegment, File> SEGMENT_MAP = new HashMap<>();
   private static final CoordinatorClient COORDINATOR_CLIENT = new TestCoordinatorClient(SEGMENT_MAP);
   private static final ObjectMapper OBJECT_MAPPER = setupInjectablesInObjectMapper(new DefaultObjectMapper());
-  private static final RetryPolicyFactory RETRY_POLICY_FACTORY = new RetryPolicyFactory(new RetryPolicyConfig());
   private static final String CONFLICTING_SEGMENT_GRANULARITY_FORMAT =
       "Conflicting segment granularities found %s(segmentGranularity) and %s(granularitySpec.segmentGranularity).\n"
       + "Remove `segmentGranularity` and set the `granularitySpec.segmentGranularity` to the expected granularity";
@@ -638,7 +635,6 @@ public class CompactionTaskTest
         toolbox.getRowIngestionMetersFactory(),
         COORDINATOR_CLIENT,
         segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY,
         toolbox.getAppenderatorsManager()
     );
 
@@ -1697,7 +1693,7 @@ public class CompactionTaskTest
         Granularities.ALL,
         Granularities.MINUTE
     );
-    Assert.assertTrue(Granularities.SECOND.equals(chooseFinestGranularityHelper(input)));
+    Assert.assertEquals(Granularities.SECOND, chooseFinestGranularityHelper(input));
   }
 
   @Test
@@ -1714,7 +1710,7 @@ public class CompactionTaskTest
         Granularities.NONE,
         Granularities.MINUTE
     );
-    Assert.assertTrue(Granularities.NONE.equals(chooseFinestGranularityHelper(input)));
+    Assert.assertEquals(Granularities.NONE, chooseFinestGranularityHelper(input));
   }
 
   @Test
@@ -2215,7 +2211,6 @@ public class CompactionTaskTest
         @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory,
         @JacksonInject CoordinatorClient coordinatorClient,
         @JacksonInject SegmentCacheManagerFactory segmentCacheManagerFactory,
-        @JacksonInject RetryPolicyFactory retryPolicyFactory,
         @JacksonInject AppenderatorsManager appenderatorsManager
     )
     {
