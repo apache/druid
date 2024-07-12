@@ -475,8 +475,8 @@ public class ExpressionSelectors
     }
 
     final Class<?> clazz = selector.classOfObject();
-    if (Number.class.isAssignableFrom(clazz) || String.class.isAssignableFrom(clazz)) {
-      // Number, String supported as-is.
+    if (Number.class.isAssignableFrom(clazz) || String.class.isAssignableFrom(clazz) || Object[].class.isAssignableFrom(clazz)) {
+      // Number, String, Arrays supported as-is.
       return selector::getObject;
     } else if (clazz.isAssignableFrom(Number.class) || clazz.isAssignableFrom(String.class)) {
       // Might be Numbers and Strings. Use a selector that double-checks.
@@ -491,21 +491,6 @@ public class ExpressionSelectors
         } else {
           return val;
         }
-      };
-    } else if (clazz.isAssignableFrom(Object[].class)) {
-      return () -> {
-        final Object val = selector.getObject();
-        if (val != null) {
-          NonnullPair<ExpressionType, Object[]> coerced = ExprEval.coerceListToArray(
-              Arrays.asList((Object[]) val),
-              homogenizeMultiValue
-          );
-          if (coerced == null) {
-            return null;
-          }
-          return coerced.rhs;
-        }
-        return null;
       };
     } else if (clazz.isAssignableFrom(List.class)) {
       return () -> {
