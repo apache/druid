@@ -23,9 +23,9 @@ import com.google.inject.Inject;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.AbstractMonitor;
-import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
-import org.apache.druid.server.coordinator.stats.CoordinatorStat;
-import org.apache.druid.server.coordinator.stats.Dimension;
+import org.apache.druid.server.stats.Dimension;
+import org.apache.druid.server.stats.DruidRunStats;
+import org.apache.druid.server.stats.DruidStat;
 
 import java.util.Map;
 
@@ -44,13 +44,7 @@ public class TaskCountStatsMonitor extends AbstractMonitor
   @Override
   public boolean doMonitor(ServiceEmitter emitter)
   {
-    emit(emitter, "task/success/count", statsProvider.getSuccessfulTaskCount());
-    emit(emitter, "task/failed/count", statsProvider.getFailedTaskCount());
-    emit(emitter, "task/running/count", statsProvider.getRunningTaskCount());
-    emit(emitter, "task/pending/count", statsProvider.getPendingTaskCount());
-    emit(emitter, "task/waiting/count", statsProvider.getWaitingTaskCount());
-
-    CoordinatorRunStats stats = statsProvider.getStats();
+    final DruidRunStats stats = statsProvider.getTaskCountStats();
     if (stats != null) {
       stats.forEachStat(
           (stat, dimensions, statValue)
@@ -61,18 +55,7 @@ public class TaskCountStatsMonitor extends AbstractMonitor
     return true;
   }
 
-  private void emit(ServiceEmitter emitter, String key, Map<String, Long> counts)
-  {
-    final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
-    if (counts != null) {
-      counts.forEach((k, v) -> {
-        builder.setDimension("dataSource", k);
-        emitter.emit(builder.setMetric(key, v));
-      });
-    }
-  }
-
-  private void emit(ServiceEmitter emitter, CoordinatorStat stat, Map<Dimension, String> dimensionValues, long value)
+  private void emit(ServiceEmitter emitter, DruidStat stat, Map<Dimension, String> dimensionValues, long value)
   {
     if (!stat.shouldEmit()) {
       return;

@@ -23,12 +23,12 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
+import org.apache.druid.server.coordinator.Stats;
 import org.apache.druid.server.coordinator.balancer.RandomBalancerStrategy;
 import org.apache.druid.server.coordinator.loading.LoadQueueTaskMaster;
 import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
-import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
-import org.apache.druid.server.coordinator.stats.Stats;
+import org.apache.druid.server.stats.DruidRunStats;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -59,7 +59,7 @@ public class CollectSegmentAndServerStatsTest
     CoordinatorDuty duty = new CollectSegmentAndServerStats(mockTaskMaster);
     DruidCoordinatorRuntimeParams params = duty.run(runtimeParams);
 
-    CoordinatorRunStats stats = params.getCoordinatorStats();
+    DruidRunStats stats = params.getCoordinatorStats();
     Assert.assertTrue(stats.hasStat(Stats.SegmentQueue.NUM_TO_LOAD));
     Assert.assertTrue(stats.hasStat(Stats.SegmentQueue.NUM_TO_DROP));
   }

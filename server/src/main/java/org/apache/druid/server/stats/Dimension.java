@@ -17,10 +17,10 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator.stats;
+package org.apache.druid.server.stats;
 
 /**
- * Dimensions used while collecting or reporting coordinator run stats.
+ * Dimensions used by {@link DruidRunStats} to collect and report a {@link DruidStat}.
  */
 public enum Dimension
 {
@@ -29,6 +29,7 @@ public enum Dimension
   DUTY("duty"),
   DUTY_GROUP("dutyGroup"),
   DESCRIPTION("description"),
+  TASK_TYPE("taskType"),
   SERVER("server");
 
   private final String reportedName;

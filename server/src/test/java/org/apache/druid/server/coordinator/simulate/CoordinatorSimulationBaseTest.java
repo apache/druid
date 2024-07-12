@@ -29,7 +29,7 @@ import org.apache.druid.server.coordinator.rules.ForeverBroadcastDistributionRul
 import org.apache.druid.server.coordinator.rules.ForeverDropRule;
 import org.apache.druid.server.coordinator.rules.ForeverLoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
-import org.apache.druid.server.coordinator.stats.Dimension;
+import org.apache.druid.server.stats.Dimension;
 import org.apache.druid.timeline.DataSegment;
 import org.junit.After;
 import org.junit.Assert;

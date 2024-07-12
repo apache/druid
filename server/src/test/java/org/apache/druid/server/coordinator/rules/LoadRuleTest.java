@@ -34,6 +34,7 @@ import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.ServerHolder;
+import org.apache.druid.server.coordinator.Stats;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategy;
 import org.apache.druid.server.coordinator.balancer.CachingCostBalancerStrategy;
 import org.apache.druid.server.coordinator.balancer.ClusterCostCache;
@@ -41,8 +42,7 @@ import org.apache.druid.server.coordinator.balancer.CostBalancerStrategy;
 import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.loading.StrategicSegmentAssigner;
 import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
-import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
-import org.apache.druid.server.coordinator.stats.Stats;
+import org.apache.druid.server.stats.DruidRunStats;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.junit.After;
@@ -59,9 +59,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
-/**
- *
- */
 @RunWith(Parameterized.class)
 public class LoadRuleTest
 {
@@ -115,18 +112,18 @@ public class LoadRuleTest
     final DataSegment segment = createDataSegment(DS_WIKI);
     LoadRule rule = loadForever(ImmutableMap.of(Tier.T1, 1, Tier.T2, 2));
     Assert.assertTrue(rule.shouldMatchingSegmentBeLoaded());
-    CoordinatorRunStats stats = runRuleAndGetStats(rule, segment, druidCluster);
+    DruidRunStats stats = runRuleAndGetStats(rule, segment, druidCluster);
 
     Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T1, DS_WIKI));
     Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T2, DS_WIKI));
   }
 
-  private CoordinatorRunStats runRuleAndGetStats(LoadRule rule, DataSegment segment, DruidCluster cluster)
+  private DruidRunStats runRuleAndGetStats(LoadRule rule, DataSegment segment, DruidCluster cluster)
   {
     return runRuleAndGetStats(rule, segment, makeCoordinatorRuntimeParams(cluster, segment));
   }
 
-  private CoordinatorRunStats runRuleAndGetStats(
+  private DruidRunStats runRuleAndGetStats(
       LoadRule rule,
       DataSegment segment,
       DruidCoordinatorRuntimeParams params
@@ -169,12 +166,12 @@ public class LoadRuleTest
 
     final LoadRule rule = loadForever(ImmutableMap.of(Tier.T1, 1));
     final DataSegment segment = createDataSegment(DS_WIKI);
-    CoordinatorRunStats firstRunStats = runRuleAndGetStats(rule, segment, druidCluster);
+    DruidRunStats firstRunStats = runRuleAndGetStats(rule, segment, druidCluster);
     Assert.assertEquals(1L, firstRunStats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T1, segment.getDataSource()));
     Assert.assertEquals(1, server1.getLoadingSegments().size() + server2.getLoadingSegments().size());
 
     // Verify that multiple runs don't assign primary segment again if at replication count
-    CoordinatorRunStats secondRunStats = runRuleAndGetStats(rule, segment, druidCluster);
+    DruidRunStats secondRunStats = runRuleAndGetStats(rule, segment, druidCluster);
     Assert.assertFalse(secondRunStats.hasStat(Stats.Segments.ASSIGNED));
     Assert.assertEquals(1, server1.getLoadingSegments().size() + server2.getLoadingSegments().size());
   }
@@ -192,13 +189,13 @@ public class LoadRuleTest
 
     final LoadRule rule = loadForever(ImmutableMap.of(Tier.T1, 1));
     final DataSegment segment = createDataSegment(DS_WIKI);
-    CoordinatorRunStats stats = runRuleAndGetStats(rule, segment, druidCluster);
+    DruidRunStats stats = runRuleAndGetStats(rule, segment, druidCluster);
 
     // Ensure that the segment is assigned to one of the historicals
     Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T1, segment.getDataSource()));
 
     // Ensure that the primary segment is assigned again in case the peon timed out on loading the segment
-    CoordinatorRunStats statsAfterLoadPrimary = runRuleAndGetStats(rule, segment, druidCluster);
+    DruidRunStats statsAfterLoadPrimary = runRuleAndGetStats(rule, segment, druidCluster);
     Assert.assertEquals(1L, statsAfterLoadPrimary.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T1, DS_WIKI));
   }
 
@@ -214,14 +211,14 @@ public class LoadRuleTest
 
     final LoadRule rule = loadForever(ImmutableMap.of(Tier.T1, 1));
     final DataSegment segment = createDataSegment(DS_WIKI);
-    CoordinatorRunStats stats = runRuleAndGetStats(rule, segment, druidCluster);
+    DruidRunStats stats = runRuleAndGetStats(rule, segment, druidCluster);
 
     // Ensure that the segment is assigned to one of the historicals
     Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T1, segment.getDataSource()));
 
     // Add the segment to the timed out list to simulate peon timeout on loading the segment
     // Default behavior is to not replicate the timed out segments on other servers
-    CoordinatorRunStats statsAfterLoadPrimary = runRuleAndGetStats(rule, segment, druidCluster);
+    DruidRunStats statsAfterLoadPrimary = runRuleAndGetStats(rule, segment, druidCluster);
 
     Assert.assertFalse(statsAfterLoadPrimary.hasStat(Stats.Segments.ASSIGNED));
   }
@@ -244,7 +241,7 @@ public class LoadRuleTest
     balancerStrategy = new CachingCostBalancerStrategy(ClusterCostCache.builder().build(), exec);
 
     LoadRule rule = loadForever(ImmutableMap.of(Tier.T1, 1));
-    CoordinatorRunStats stats = runRuleAndGetStats(
+    DruidRunStats stats = runRuleAndGetStats(
         rule,
         segments.get(1),
         makeCoordinatorRuntimeParams(druidCluster, segments.toArray(new DataSegment[0]))
@@ -269,7 +266,7 @@ public class LoadRuleTest
 
     LoadRule rule = loadForever(ImmutableMap.of(Tier.T1, 0, Tier.T2, 0));
     Assert.assertFalse(rule.shouldMatchingSegmentBeLoaded());
-    CoordinatorRunStats stats = runRuleAndGetStats(rule, segment, druidCluster);
+    DruidRunStats stats = runRuleAndGetStats(rule, segment, druidCluster);
 
     Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.DROPPED, Tier.T1, DS_WIKI));
     Assert.assertEquals(2L, stats.getSegmentStat(Stats.Segments.DROPPED, Tier.T2, DS_WIKI));
@@ -287,7 +284,7 @@ public class LoadRuleTest
     final DataSegment segment = createDataSegment(DS_WIKI);
     LoadRule rule = loadForever(ImmutableMap.of("invalidTier", 1, Tier.T1, 1));
     Assert.assertTrue(rule.shouldMatchingSegmentBeLoaded());
-    CoordinatorRunStats stats = runRuleAndGetStats(rule, segment, druidCluster);
+    DruidRunStats stats = runRuleAndGetStats(rule, segment, druidCluster);
     Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T1, DS_WIKI));
     Assert.assertEquals(0L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "invalidTier", DS_WIKI));
   }
@@ -306,7 +303,7 @@ public class LoadRuleTest
         .build();
 
     LoadRule rule = loadForever(ImmutableMap.of("invalidTier", 1, Tier.T1, 1));
-    CoordinatorRunStats stats = runRuleAndGetStats(rule, segment, druidCluster);
+    DruidRunStats stats = runRuleAndGetStats(rule, segment, druidCluster);
 
     Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.DROPPED, Tier.T1, DS_WIKI));
     Assert.assertEquals(0L, stats.getSegmentStat(Stats.Segments.DROPPED, "invalidTier", DS_WIKI));
@@ -350,9 +347,9 @@ public class LoadRuleTest
 
     final LoadRule rule = loadForever(ImmutableMap.of(Tier.T1, 1));
     Assert.assertTrue(rule.shouldMatchingSegmentBeLoaded());
-    CoordinatorRunStats stats1 = runRuleAndGetStats(rule, dataSegment1, params);
-    CoordinatorRunStats stats2 = runRuleAndGetStats(rule, dataSegment2, params);
-    CoordinatorRunStats stats3 = runRuleAndGetStats(rule, dataSegment3, params);
+    DruidRunStats stats1 = runRuleAndGetStats(rule, dataSegment1, params);
+    DruidRunStats stats2 = runRuleAndGetStats(rule, dataSegment2, params);
+    DruidRunStats stats3 = runRuleAndGetStats(rule, dataSegment3, params);
 
     Assert.assertEquals(1L, stats1.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T1, dataSegment1.getDataSource()));
     Assert.assertEquals(1L, stats2.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T1, dataSegment2.getDataSource()));
@@ -375,7 +372,7 @@ public class LoadRuleTest
     LoadRule rule = loadForever(ImmutableMap.of(Tier.T1, 1, Tier.T2, 1));
     Assert.assertTrue(rule.shouldMatchingSegmentBeLoaded());
     DataSegment segment = createDataSegment(DS_WIKI);
-    CoordinatorRunStats stats = runRuleAndGetStats(rule, segment, druidCluster);
+    DruidRunStats stats = runRuleAndGetStats(rule, segment, druidCluster);
 
     // Verify that segment is not loaded on decommissioning server
     Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T2, DS_WIKI));
@@ -401,7 +398,7 @@ public class LoadRuleTest
 
     // Load rule requires 2 replicas on each server
     LoadRule rule = loadForever(ImmutableMap.of(Tier.T1, 2, Tier.T2, 2));
-    CoordinatorRunStats stats = runRuleAndGetStats(rule, segment, druidCluster);
+    DruidRunStats stats = runRuleAndGetStats(rule, segment, druidCluster);
 
     // Verify that no replica is assigned to decommissioning server
     Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T1, DS_WIKI));
@@ -432,7 +429,7 @@ public class LoadRuleTest
     DruidCoordinatorRuntimeParams params = makeCoordinatorRuntimeParams(druidCluster, segment1, segment2);
     final LoadRule rule = loadForever(ImmutableMap.of(Tier.T1, 0));
     Assert.assertFalse(rule.shouldMatchingSegmentBeLoaded());
-    CoordinatorRunStats stats = runRuleAndGetStats(rule, segment1, params);
+    DruidRunStats stats = runRuleAndGetStats(rule, segment1, params);
     Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.DROPPED, Tier.T1, segment1.getDataSource()));
     Assert.assertTrue(server1.getPeon().getSegmentsToDrop().contains(segment1));
 
@@ -458,7 +455,7 @@ public class LoadRuleTest
 
     // Load rule requires 2 replicas
     LoadRule rule = loadForever(ImmutableMap.of(Tier.T1, 2));
-    CoordinatorRunStats stats = runRuleAndGetStats(
+    DruidRunStats stats = runRuleAndGetStats(
         rule,
         segment1,
         makeCoordinatorRuntimeParams(druidCluster, segment1)
