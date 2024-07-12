@@ -129,7 +129,7 @@ ORDER BY 1`,
       <p>
         Druid uses rules to determine what data should be retained in the cluster. The rules are
         evaluated in order from top to bottom. For more information please refer to the{' '}
-        <ExternalLink href={`${getLink('DOCS')}/operations/rule-configuration.html`}>
+        <ExternalLink href={`${getLink('DOCS')}/operations/rule-configuration`}>
           documentation
         </ExternalLink>
         .

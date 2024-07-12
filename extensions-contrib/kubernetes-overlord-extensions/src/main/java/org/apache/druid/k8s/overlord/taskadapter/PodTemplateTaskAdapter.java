@@ -39,7 +39,6 @@ import org.apache.druid.guice.IndexingServiceModuleHelper;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.k8s.overlord.KubernetesTaskRunnerConfig;
@@ -140,10 +139,6 @@ public class PodTemplateTaskAdapter implements TaskAdapter
     }
 
     PodTemplate podTemplate = podTemplateSelectStrategy.getPodTemplateForTask(task, templates);
-
-    if (podTemplate == null) {
-      throw new ISE("Pod template spec not found for task type [%s]", task.getType());
-    }
 
     return new JobBuilder()
         .withNewMetadata()

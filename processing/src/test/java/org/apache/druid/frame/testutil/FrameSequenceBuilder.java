@@ -19,6 +19,7 @@
 
 package org.apache.druid.frame.testutil;
 
+import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.HeapMemoryAllocator;
@@ -119,13 +120,23 @@ public class FrameSequenceBuilder
 
   public Sequence<Frame> frames()
   {
-    final FrameWriterFactory frameWriterFactory =
-        FrameWriters.makeFrameWriterFactory(
-            frameType,
-            new SingleMemoryAllocatorFactory(allocator),
-            signature(),
-            keyColumns
-        );
+    final FrameWriterFactory frameWriterFactory;
+    if (FrameType.ROW_BASED.equals(frameType)) {
+      frameWriterFactory = FrameWriters.makeRowBasedFrameWriterFactory(
+          new SingleMemoryAllocatorFactory(allocator),
+          signature(),
+          keyColumns,
+          false
+      );
+    } else if (FrameType.COLUMNAR.equals(frameType)) {
+      frameWriterFactory = FrameWriters.makeColumnBasedFrameWriterFactory(
+          new SingleMemoryAllocatorFactory(allocator),
+          signature(),
+          keyColumns
+      );
+    } else {
+      throw DruidException.defensive("Unrecognized frame type");
+    }
 
     final Sequence<Cursor> cursors = FrameTestUtil.makeCursorsForAdapter(adapter, populateRowNumber);
 

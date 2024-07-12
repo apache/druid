@@ -109,7 +109,7 @@ exports[`AboutDialog matches snapshot 1`] = `
             Druid is made with ❤️ by a community of passionate developers. To contribute, join in the discussion on the
              
             <a
-              href="https://lists.apache.org/list.html?dev@druid.apache.org"
+              href="https://lists.apache.org/list?dev@druid.apache.org"
               rel="noopener noreferrer"
               target="_blank"
             >

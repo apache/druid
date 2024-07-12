@@ -122,9 +122,7 @@ export const CompactionConfigDialog = React.memo(function CompactionConfigDialog
                   </p>
                   <p>
                     For more information refer to the{' '}
-                    <ExternalLink
-                      href={`${getLink('DOCS')}/ingestion/concurrent-append-replace.html`}
-                    >
+                    <ExternalLink href={`${getLink('DOCS')}/ingestion/concurrent-append-replace`}>
                       documentation
                     </ExternalLink>
                     .

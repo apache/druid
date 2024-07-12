@@ -47,6 +47,7 @@ import static org.apache.druid.msq.util.MultiStageQueryContext.CTX_FAULT_TOLERAN
 import static org.apache.druid.msq.util.MultiStageQueryContext.CTX_FINALIZE_AGGREGATIONS;
 import static org.apache.druid.msq.util.MultiStageQueryContext.CTX_MAX_NUM_TASKS;
 import static org.apache.druid.msq.util.MultiStageQueryContext.CTX_MSQ_MODE;
+import static org.apache.druid.msq.util.MultiStageQueryContext.CTX_REMOVE_NULL_BYTES;
 import static org.apache.druid.msq.util.MultiStageQueryContext.CTX_ROWS_IN_MEMORY;
 import static org.apache.druid.msq.util.MultiStageQueryContext.CTX_ROWS_PER_SEGMENT;
 import static org.apache.druid.msq.util.MultiStageQueryContext.CTX_SORT_ORDER;
@@ -245,6 +246,24 @@ public class MultiStageQueryContextTest
         BadQueryContextException.class,
         () ->
             MultiStageQueryContext.getArrayIngestMode(QueryContext.of(ImmutableMap.of(CTX_ARRAY_INGEST_MODE, "dummy")))
+    );
+  }
+
+  @Test
+  public void removeNullBytes_unset_returnsDefaultValue()
+  {
+    Assert.assertFalse(MultiStageQueryContext.removeNullBytes(QueryContext.empty()));
+  }
+
+  @Test
+  public void removeNullBytes_set_returnsCorrectValue()
+  {
+    Assert.assertTrue(
+        MultiStageQueryContext.removeNullBytes(QueryContext.of(ImmutableMap.of(CTX_REMOVE_NULL_BYTES, true)))
+    );
+
+    Assert.assertFalse(
+        MultiStageQueryContext.removeNullBytes(QueryContext.of(ImmutableMap.of(CTX_REMOVE_NULL_BYTES, false)))
     );
   }
 
