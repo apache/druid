@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-// Refer to https://www.joda.org/joda-time/key_format.html
+// Refer to https://www.joda.org/joda-time/key_format
 const TEXT = '\\w+';
 const NUMBER_2_DIGIT = '[0-9]{2}';
 const NUMBER_4_DIGIT = '[0-9]{4}';

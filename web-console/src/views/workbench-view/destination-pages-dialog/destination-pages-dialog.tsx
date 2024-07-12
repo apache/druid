@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Classes, Dialog } from '@blueprintjs/core';
+import { Button, Classes, Dialog } from '@blueprintjs/core';
 import React from 'react';
 
 import type { Execution } from '../../../druid-models';
@@ -38,6 +38,11 @@ export const DestinationPagesDialog = React.memo(function DestinationPagesDialog
     <Dialog className="destination-pages-dialog" isOpen onClose={onClose} title="Result pages">
       <div className={Classes.DIALOG_BODY}>
         <DestinationPagesPane execution={execution} />
+      </div>
+      <div className={Classes.DIALOG_FOOTER}>
+        <div className={Classes.DIALOG_FOOTER_ACTIONS}>
+          <Button onClick={onClose}>Close</Button>
+        </div>
       </div>
     </Dialog>
   );
