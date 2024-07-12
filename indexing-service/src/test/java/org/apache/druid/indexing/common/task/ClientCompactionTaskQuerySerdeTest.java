@@ -43,8 +43,6 @@ import org.apache.druid.guice.GuiceInjectableValues;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
-import org.apache.druid.indexing.common.RetryPolicyConfig;
-import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
@@ -340,8 +338,7 @@ public class ClientCompactionTaskQuerySerdeTest
   {
     CompactionTask.Builder compactionTaskBuilder = new CompactionTask.Builder(
         "datasource",
-        new SegmentCacheManagerFactory(TestIndex.INDEX_IO, MAPPER),
-        new RetryPolicyFactory(new RetryPolicyConfig())
+        new SegmentCacheManagerFactory(TestIndex.INDEX_IO, MAPPER)
     )
         .inputSpec(new CompactionIntervalSpec(Intervals.of("2019/2020"), "testSha256OfSortedSegmentIds"), true)
         .tuningConfig(
