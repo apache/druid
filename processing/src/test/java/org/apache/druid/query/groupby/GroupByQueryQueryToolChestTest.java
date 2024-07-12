@@ -98,8 +98,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
   public static void setUpClass()
   {
     NullHandling.initializeForTests();
-    //noinspection ResultOfObjectAllocationIgnored
-    new AggregatorsModule();
+    AggregatorsModule.registerComplexMetricsAndSerde();
   }
 
   @Test

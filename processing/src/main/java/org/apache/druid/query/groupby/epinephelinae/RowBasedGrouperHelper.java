@@ -1397,16 +1397,15 @@ public class RowBasedGrouperHelper
 
           while (jp.currentToken() != JsonToken.END_ARRAY) {
 
-            DruidException.conditionalDefensive(
-                dimsReadSoFar < dimsToRead,
-                "More dimensions encountered than expected [%d]",
-                dimsToRead
-            );
+            // TODO: Remove this
+            if (dimsReadSoFar >= dimsToRead) {
+              throw DruidException.defensive("For CodeQL");
+            }
 
-            DruidException.conditionalDefensive(
-                dimsReadSoFar - timestampAdjustment < serdeHelpers.length,
-                "Insufficient serde helpers present"
-            );
+            // TODO: Remove this
+            if (dimsReadSoFar - timestampAdjustment >= serdeHelpers.length) {
+              throw DruidException.defensive("For CodeQL");
+            }
 
             // Read the dimension
             serdeHelpers[dimsReadSoFar - timestampAdjustment].getClazz();

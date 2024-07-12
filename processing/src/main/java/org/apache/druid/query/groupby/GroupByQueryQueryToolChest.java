@@ -589,12 +589,24 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
       @Nullable final ObjectMapper mapper
   )
   {
+
+    for (DimensionSpec dimension : query.getDimensions()) {
+      if (dimension.getOutputType().is(ValueType.COMPLEX) && !dimension.getOutputType().equals(ColumnType.NESTED_DATA)) {
+        if (mapper == null) {
+          throw DruidException.defensive(
+              "Cannot deserialize complex dimension of type[%s] from result cache if object mapper is not provided",
+              dimension.getOutputType().getComplexTypeName()
+          );
+        }
+      }
+    }
+    final Class<?>[] dimensionClasses = createDimensionClasses(query);
+
     return new CacheStrategy<ResultRow, Object, GroupByQuery>()
     {
       private static final byte CACHE_STRATEGY_VERSION = 0x1;
       private final List<AggregatorFactory> aggs = query.getAggregatorSpecs();
       private final List<DimensionSpec> dims = query.getDimensions();
-      private final Class<?>[] dimensionClasses = createDimensionClasses(query);
 
       @Override
       public boolean isCacheable(GroupByQuery query, boolean willMergeRunners, boolean bySegment)
@@ -730,10 +742,6 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
                 if (outputType.equals(ColumnType.NESTED_DATA)) {
                   dimensionObjectCasted = StructuredData.wrap(dimensionObject);
                 } else {
-                  DruidException.conditionalDefensive(
-                      mapper != null,
-                      "Cannot deserialize complex dimension from if object mapper is not provided"
-                  );
                   dimensionObjectCasted = mapper.convertValue(dimensionObject, dimensionClasses[dimPos]);
                 }
               } else {
