@@ -396,9 +396,9 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   public void testAutoCompactionWithMetricColumnSameAsInputColShouldOverwriteInputWithMetrics(CompactionEngine engine)
       throws Exception
   {
-    // added = 31, count = null, sum_added = null
+    // added = 31
     loadData(INDEX_TASK_WITHOUT_ROLLUP_FOR_PRESERVE_METRICS);
-    // added = 31, count = null, sum_added = null
+    // added = 31
     loadData(INDEX_TASK_WITHOUT_ROLLUP_FOR_PRESERVE_METRICS);
     if (engine == CompactionEngine.MSQ) {
       updateCompactionTaskSlot(0.1, 2, false);
@@ -421,20 +421,14 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           new UserCompactionTaskGranularityConfig(null, null, true),
           new UserCompactionTaskDimensionsConfig(DimensionsSpec.getDefaultSchemas(ImmutableList.of("language"))),
           null,
-          new AggregatorFactory[] {new CountAggregatorFactory("count"), new LongSumAggregatorFactory("added", "added")},
+          new AggregatorFactory[] {new LongSumAggregatorFactory("added", "added")},
           false,
           engine
       );
       // should now only have 1 row after compaction
-      // count = 2, added = 62
+      // added = 62
       forceTriggerAutoCompaction(1);
 
-      queryAndResultFields = ImmutableMap.of(
-          "%%FIELD_TO_QUERY%%", "count",
-          "%%EXPECTED_COUNT_RESULT%%", 1,
-          "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(2))))
-      );
-      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, queryAndResultFields);
       queryAndResultFields = ImmutableMap.of(
           "%%FIELD_TO_QUERY%%", "added",
           "%%EXPECTED_COUNT_RESULT%%", 1,
