@@ -178,7 +178,7 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
      *  Future thoughts: {@link https://github.com/apache/druid/issues/16126}
      *
      *  1. We are writing 1 partition to each frame in this way. In case of high cardinality data
-     *      we will me making a large number of small frames. We can have a check to keep size of frame to a value
+     *      we will be making a large number of small frames. We can have a check to keep size of frame to a value
      *      say 20k rows and keep on adding to the same pending frame and not create a new frame
      *
      *  2. Current approach with R&C and operators materialize a single R&C for processing. In case of data

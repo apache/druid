@@ -74,7 +74,6 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
     // The size of the operators is the number of serialized stages.
     // Later we should also check if these can be parallelized.
     // Check if there is an empty OVER() clause or not.
-    List<List<OperatorFactory>> operatorList = new ArrayList<>();
     RowSignature rowSignature = originalQuery.getRowSignature();
     log.info("Row signature received for query is [%s].", rowSignature);
 
@@ -84,8 +83,8 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
                                             .map(of -> (NaivePartitioningOperatorFactory) of)
                                             .anyMatch(of -> of.getPartitionColumns().isEmpty());
 
-    populateOperatorListFromQuery(originalQuery, operatorList);
-    log.info("Populated operatorList with operator factories: [%s]", operatorList);
+    List<List<OperatorFactory>> operatorList = getOperatorListFromQuery(originalQuery);
+    log.info("Created operatorList with operator factories: [%s]", operatorList);
 
     ShuffleSpec nextShuffleSpec = findShuffleSpecForNextWindow(operatorList.get(0), maxWorkerCount);
     // add this shuffle spec to the last stage of the inner query
@@ -244,14 +243,14 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
   }
 
   /**
+   *
    * @param originalQuery
-   * @param operatorList
+   * @return A list of list of operator factories, where each list represents the operator factories for a particular
+   * window stage.
    */
-  private void populateOperatorListFromQuery(
-      WindowOperatorQuery originalQuery,
-      List<List<OperatorFactory>> operatorList
-  )
+  private List<List<OperatorFactory>> getOperatorListFromQuery(WindowOperatorQuery originalQuery)
   {
+    List<List<OperatorFactory>> operatorList = new ArrayList<>();
     final List<OperatorFactory> operators = originalQuery.getOperators();
     List<OperatorFactory> operatorFactoryList = new ArrayList<>();
     for (OperatorFactory of : operators) {
@@ -264,10 +263,11 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
           // TODO: This logic need to be revamped in the future. We probably don't need to handle empty over() cases separately.
           operatorList.clear();
           operatorList.add(originalQuery.getOperators());
-          return;
+          return operatorList;
         }
       }
     }
+    return operatorList;
   }
 
   private ShuffleSpec findShuffleSpecForNextWindow(List<OperatorFactory> operatorFactories, int maxWorkerCount)
