@@ -21,8 +21,10 @@ package org.apache.druid.segment.writeout;
 
 import com.google.common.io.ByteStreams;
 import org.apache.druid.io.Channels;
+import org.apache.druid.java.util.common.ByteBufferUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.IOE;
+import org.apache.druid.java.util.common.io.Closer;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -45,11 +47,17 @@ public final class FileWriteOutBytes extends WriteOutBytes
    */
   private final ByteBuffer buffer = ByteBuffer.allocateDirect(32768); // 32K page sized buffer
 
-  FileWriteOutBytes(File file, FileChannel ch)
+  FileWriteOutBytes(File file, FileChannel ch, Closer closer)
   {
     this.file = file;
     this.ch = ch;
     this.writeOutBytes = 0L;
+    closer.register(
+        () -> {
+          ByteBufferUtils.free(buffer);
+          buffer.clear();
+        }
+    );
   }
 
   private void flushIfNeeded(int bytesNeeded) throws IOException

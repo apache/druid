@@ -20,7 +20,9 @@
 package org.apache.druid.segment.writeout;
 
 import org.apache.commons.io.input.NullInputStream;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.io.ByteBufferInputStream;
+import org.apache.druid.java.util.common.io.Closer;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -36,15 +38,23 @@ public class LazilyAllocatingHeapWriteOutBytes extends WriteOutBytes
 
   private ByteBuffer tmpBuffer = null;
   private WriteOutBytes delegate = null;
+  boolean open = true;
 
-  public LazilyAllocatingHeapWriteOutBytes(Supplier<WriteOutBytes> delegateSupplier)
+  public LazilyAllocatingHeapWriteOutBytes(Supplier<WriteOutBytes> delegateSupplier, Closer closer)
   {
     this.delegateSupplier = delegateSupplier;
+    closer.register(() -> {
+      open = false;
+      if (tmpBuffer != null) {
+        tmpBuffer.clear();
+      }
+    });
   }
 
   @Override
   public void writeInt(int v) throws IOException
   {
+    checkOpen();
     final boolean useBuffer = ensureBytes(Integer.BYTES);
     if (useBuffer) {
       tmpBuffer.putInt(v);
@@ -67,6 +77,7 @@ public class LazilyAllocatingHeapWriteOutBytes extends WriteOutBytes
   @Override
   public void writeTo(WritableByteChannel channel) throws IOException
   {
+    checkOpen();
     if (delegate == null) {
       if (tmpBuffer == null) {
         return;
@@ -83,6 +94,7 @@ public class LazilyAllocatingHeapWriteOutBytes extends WriteOutBytes
   @Override
   public InputStream asInputStream() throws IOException
   {
+    checkOpen();
     if (delegate == null) {
       if (tmpBuffer == null) {
         return new NullInputStream();
@@ -98,6 +110,7 @@ public class LazilyAllocatingHeapWriteOutBytes extends WriteOutBytes
   @Override
   public void readFully(long pos, ByteBuffer buffer) throws IOException
   {
+    checkOpen();
     if (delegate == null) {
       if (tmpBuffer == null) {
         return;
@@ -122,6 +135,7 @@ public class LazilyAllocatingHeapWriteOutBytes extends WriteOutBytes
   @Override
   public void write(int b) throws IOException
   {
+    checkOpen();
     final boolean useBuffer = ensureBytes(1);
     if (useBuffer) {
       tmpBuffer.put((byte) b);
@@ -140,6 +154,7 @@ public class LazilyAllocatingHeapWriteOutBytes extends WriteOutBytes
   @Override
   public int write(ByteBuffer src) throws IOException
   {
+    checkOpen();
     final int numToWrite = src.remaining();
     final boolean useBuffer = ensureBytes(numToWrite);
     if (useBuffer) {
@@ -153,7 +168,14 @@ public class LazilyAllocatingHeapWriteOutBytes extends WriteOutBytes
   @Override
   public boolean isOpen()
   {
-    return delegate == null ? true : delegate.isOpen();
+    return open;
+  }
+
+  private void checkOpen()
+  {
+    if (!isOpen()) {
+      throw DruidException.defensive("WriteOutBytes is already closed.");
+    }
   }
 
   /**

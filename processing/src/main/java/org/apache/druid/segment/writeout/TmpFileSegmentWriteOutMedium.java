@@ -88,14 +88,15 @@ public final class TmpFileSegmentWriteOutMedium implements SegmentWriteOutMedium
           if (i % 1000 == 0) {
             log.info("Created [%,d] tmp files. [%s]", i, dir);
           }
-          final FileWriteOutBytes retVal = new FileWriteOutBytes(file, ch);
+          final FileWriteOutBytes retVal = new FileWriteOutBytes(file, ch, closer);
           closer.register(file::delete);
           closer.register(ch);
           closer.register(() -> {
             sizeDistribution.compute(retVal.size(), (key, val) -> val == null ? 1 : val + 1);
           });
           return retVal;
-        }
+        },
+        closer
     );
   }
 

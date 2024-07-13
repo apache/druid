@@ -20,6 +20,7 @@
 package org.apache.druid.segment.writeout;
 
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.io.Closer;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Before;
@@ -41,7 +42,7 @@ public class FileWriteOutBytesTest
   {
     mockFileChannel = EasyMock.mock(FileChannel.class);
     mockFile = EasyMock.mock(File.class);
-    fileWriteOutBytes = new FileWriteOutBytes(mockFile, mockFileChannel);
+    fileWriteOutBytes = new FileWriteOutBytes(mockFile, mockFileChannel, Closer.create());
   }
 
   @Test
