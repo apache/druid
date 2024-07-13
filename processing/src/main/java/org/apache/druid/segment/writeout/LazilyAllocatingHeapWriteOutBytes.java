@@ -38,7 +38,7 @@ public class LazilyAllocatingHeapWriteOutBytes extends WriteOutBytes
 
   private ByteBuffer tmpBuffer = null;
   private WriteOutBytes delegate = null;
-  boolean open = true;
+  private boolean open = true;
 
   public LazilyAllocatingHeapWriteOutBytes(Supplier<WriteOutBytes> delegateSupplier, Closer closer)
   {
@@ -116,7 +116,7 @@ public class LazilyAllocatingHeapWriteOutBytes extends WriteOutBytes
         return;
       }
 
-      if (pos < tmpBuffer.position()) {
+      if (pos <= tmpBuffer.position()) {
         final ByteBuffer tmpBufCopy = tmpBuffer.asReadOnlyBuffer();
         tmpBufCopy.flip().position((int) pos);
         if (tmpBufCopy.remaining() < buffer.remaining()) {
