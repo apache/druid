@@ -28,6 +28,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.nio.file.StandardOpenOption;
+import java.util.Map;
 import java.util.SortedMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -47,6 +48,7 @@ public final class TmpFileSegmentWriteOutMedium implements SegmentWriteOutMedium
   private final AtomicInteger filesCreated;
   private final SortedMap<Long, Integer> sizeDistribution;
   private int numLocallyCreated = 0;
+  private boolean root = false;
 
   private final File dir;
   private final Closer closer = Closer.create();
@@ -54,6 +56,7 @@ public final class TmpFileSegmentWriteOutMedium implements SegmentWriteOutMedium
   TmpFileSegmentWriteOutMedium(File outDir) throws IOException
   {
     this(outDir, new AtomicInteger(0), new ConcurrentSkipListMap<>());
+    root = true;
   }
 
   private TmpFileSegmentWriteOutMedium(File outDir, AtomicInteger filesCreated, SortedMap<Long, Integer> sizeDistribution) throws IOException
@@ -67,7 +70,7 @@ public final class TmpFileSegmentWriteOutMedium implements SegmentWriteOutMedium
   }
 
   @Override
-  public WriteOutBytes makeWriteOutBytes() throws IOException
+  public WriteOutBytes makeWriteOutBytes()
   {
     return new LazilyAllocatingHeapWriteOutBytes(
         () -> {
@@ -117,9 +120,16 @@ public final class TmpFileSegmentWriteOutMedium implements SegmentWriteOutMedium
   @Override
   public void close() throws IOException
   {
-    log.debug("Closing, files still open[%,d], filesBeingClosed[%,d], dir[%s]", filesCreated.get(), numLocallyCreated, dir);
+    log.info("Closing, files still open[%,d], filesBeingClosed[%,d], dir[%s]", filesCreated.get(), numLocallyCreated, dir);
     filesCreated.set(filesCreated.get() - numLocallyCreated);
     numLocallyCreated = 0;
     closer.close();
+
+    if (root) {
+      log.info("Size distribution of files:");
+      for (Map.Entry<Long, Integer> entry : sizeDistribution.entrySet()) {
+        log.info("%,15d => %,15d", entry.getKey(), entry.getValue());
+      }
+    }
   }
 }
