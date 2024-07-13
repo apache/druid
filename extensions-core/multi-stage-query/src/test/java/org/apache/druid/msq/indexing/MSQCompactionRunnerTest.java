@@ -369,7 +369,6 @@ public class MSQCompactionRunnerTest
         new ClientCompactionTaskTransformSpec(dimFilter);
     final CompactionTask.Builder builder = new CompactionTask.Builder(
         DATA_SOURCE,
-        null,
         null
     );
     IndexSpec indexSpec = createIndexSpec();

@@ -48,7 +48,6 @@ import org.apache.druid.indexer.Property;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.LockGranularity;
-import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
@@ -62,6 +61,7 @@ import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RE;
+import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
@@ -100,7 +100,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
-import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -125,8 +124,6 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
 {
   public static final String TYPE = "compact";
   private static final Logger log = new Logger(CompactionTask.class);
-  private static final Clock UTC_CLOCK = Clock.systemUTC();
-
 
   /**
    * The CompactionTask creates and runs multiple IndexTask instances. When the {@link AppenderatorsManager}
@@ -449,27 +446,12 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     return tuningConfig != null && tuningConfig.isForceGuaranteedRollup();
   }
 
-  @VisibleForTesting
-  void emitCompactIngestionModeMetrics(
-      ServiceEmitter emitter,
-      boolean isDropExisting
-  )
-  {
-
-    if (emitter == null) {
-      return;
-    }
-    emitMetric(emitter, "ingest/count", 1);
-  }
-
   @Override
   public TaskStatus runTask(TaskToolbox toolbox) throws Exception
   {
-    // emit metric for compact ingestion mode:
-    emitCompactIngestionModeMetrics(toolbox.getEmitter(), ioConfig.isDropExisting());
+    emitMetric(toolbox.getEmitter(), "ingest/count", 1);
 
     final Map<Interval, DataSchema> intervalDataSchemas = createDataSchemasForIntervals(
-        UTC_CLOCK,
         toolbox,
         getTaskLockHelper().getLockGranularityToUse(),
         segmentProvider,
@@ -489,13 +471,13 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
   }
 
   /**
-   * Generate dataschema for segments in each interval
-   * @return
-   * @throws IOException
+   * Generate dataschema for segments in each interval.
+   *
+   * @throws IOException if an exception occurs whie retrieving used segments to
+   * determine schemas.
    */
   @VisibleForTesting
   static Map<Interval, DataSchema> createDataSchemasForIntervals(
-      final Clock clock,
       final TaskToolbox toolbox,
       final LockGranularity lockGranularityInUse,
       final SegmentProvider segmentProvider,
@@ -506,13 +488,13 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       final ServiceMetricEvent.Builder metricBuilder
   ) throws IOException
   {
-    final List<TimelineObjectHolder<String, DataSegment>> timelineSegments = retrieveRelevantTimelineHolders(
+    final Iterable<DataSegment> timelineSegments = retrieveRelevantTimelineHolders(
         toolbox,
         segmentProvider,
         lockGranularityInUse
     );
 
-    if (timelineSegments.isEmpty()) {
+    if (!timelineSegments.iterator().hasNext()) {
       return Collections.emptyMap();
     }
 
@@ -524,7 +506,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
           Comparators.intervalsByStartThenEnd()
       );
 
-      for (final DataSegment dataSegment : VersionedIntervalTimeline.getAllObjects(timelineSegments)) {
+      for (final DataSegment dataSegment : timelineSegments) {
         intervalToSegments.computeIfAbsent(dataSegment.getInterval(), k -> new ArrayList<>())
                           .add(dataSegment);
       }
@@ -557,7 +539,6 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
         // creates new granularitySpec and set segmentGranularity
         Granularity segmentGranularityToUse = GranularityType.fromPeriod(interval.toPeriod()).getDefaultGranularity();
         final DataSchema dataSchema = createDataSchema(
-            clock,
             toolbox.getEmitter(),
             metricBuilder,
             segmentProvider.dataSource,
@@ -576,18 +557,17 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     } else {
       // given segment granularity
       final DataSchema dataSchema = createDataSchema(
-          clock,
           toolbox.getEmitter(),
           metricBuilder,
           segmentProvider.dataSource,
           JodaUtils.umbrellaInterval(
               Iterables.transform(
-                  VersionedIntervalTimeline.getAllObjects(timelineSegments),
+                  timelineSegments,
                   DataSegment::getInterval
               )
           ),
           lazyFetchSegments(
-              VersionedIntervalTimeline.getAllObjects(timelineSegments),
+              timelineSegments,
               toolbox.getSegmentCacheManager(),
               toolbox.getIndexIO()
           ),
@@ -600,7 +580,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     }
   }
 
-  private static List<TimelineObjectHolder<String, DataSegment>> retrieveRelevantTimelineHolders(
+  private static Iterable<DataSegment> retrieveRelevantTimelineHolders(
       TaskToolbox toolbox,
       SegmentProvider segmentProvider,
       LockGranularity lockGranularityInUse
@@ -612,11 +592,10 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     final List<TimelineObjectHolder<String, DataSegment>> timelineSegments = SegmentTimeline
         .forSegments(usedSegments)
         .lookup(segmentProvider.interval);
-    return timelineSegments;
+    return VersionedIntervalTimeline.getAllObjects(timelineSegments);
   }
 
   private static DataSchema createDataSchema(
-      Clock clock,
       ServiceEmitter emitter,
       ServiceMetricEvent.Builder metricBuilder,
       String dataSource,
@@ -636,24 +615,30 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
         dimensionsSpec == null,
         metricsSpec == null
     );
-    long start = clock.millis();
+
+    final Stopwatch stopwatch = Stopwatch.createStarted();
     try {
       existingSegmentAnalyzer.fetchAndProcessIfNeeded();
     }
     finally {
       if (emitter != null) {
-        emitter.emit(metricBuilder.setMetric("compact/segmentAnalyzer/fetchAndProcessMillis", clock.millis() - start));
+        emitter.emit(
+            metricBuilder.setMetric(
+                "compact/segmentAnalyzer/fetchAndProcessMillis",
+                stopwatch.millisElapsed()
+            )
+        );
       }
     }
 
     final Granularity queryGranularityToUse;
     if (granularitySpec.getQueryGranularity() == null) {
       queryGranularityToUse = existingSegmentAnalyzer.getQueryGranularity();
-      log.info("Generate compaction task spec with segments original query granularity [%s]", queryGranularityToUse);
+      log.info("Generate compaction task spec with segments original query granularity[%s]", queryGranularityToUse);
     } else {
       queryGranularityToUse = granularitySpec.getQueryGranularity();
       log.info(
-          "Generate compaction task spec with new query granularity overrided from input [%s]",
+          "Generate compaction task spec with new query granularity overrided from input[%s].",
           queryGranularityToUse
       );
     }
@@ -1033,7 +1018,6 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
   {
     private final String dataSource;
     private final SegmentCacheManagerFactory segmentCacheManagerFactory;
-    private final RetryPolicyFactory retryPolicyFactory;
 
     private CompactionIOConfig ioConfig;
     @Nullable
@@ -1054,13 +1038,11 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
 
     public Builder(
         String dataSource,
-        SegmentCacheManagerFactory segmentCacheManagerFactory,
-        RetryPolicyFactory retryPolicyFactory
+        SegmentCacheManagerFactory segmentCacheManagerFactory
     )
     {
       this.dataSource = dataSource;
       this.segmentCacheManagerFactory = segmentCacheManagerFactory;
-      this.retryPolicyFactory = retryPolicyFactory;
     }
 
     public Builder interval(Interval interval)
@@ -1288,7 +1270,9 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       );
     }
 
-    @Override
+    /**
+     * Creates a copy of this tuning config with the partition spec changed.
+     */
     public CompactionTuningConfig withPartitionsSpec(PartitionsSpec partitionsSpec)
     {
       return new CompactionTuningConfig(

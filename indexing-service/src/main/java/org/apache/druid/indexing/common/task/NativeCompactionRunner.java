@@ -56,11 +56,14 @@ import java.util.stream.IntStream;
 
 public class NativeCompactionRunner implements CompactionRunner
 {
-  private static final Logger log = new Logger(NativeCompactionRunner.class);
   public static final String TYPE = "native";
+
+  private static final Logger log = new Logger(NativeCompactionRunner.class);
   private static final boolean STORE_COMPACTION_STATE = true;
+
   @JsonIgnore
   private final SegmentCacheManagerFactory segmentCacheManagerFactory;
+
   @JsonIgnore
   private final CurrentSubTaskHolder currentSubTaskHolder = new CurrentSubTaskHolder(
       (taskObject, config) -> {
@@ -183,7 +186,6 @@ public class NativeCompactionRunner implements CompactionRunner
     final PartitionConfigurationManager partitionConfigurationManager =
         new NativeCompactionRunner.PartitionConfigurationManager(compactionTask.getTuningConfig());
 
-
     final List<ParallelIndexIngestionSpec> ingestionSpecs = createIngestionSpecs(
         intervalDataSchemaMap,
         taskToolbox,
@@ -278,8 +280,11 @@ public class NativeCompactionRunner implements CompactionRunner
     return failCnt == 0 ? TaskStatus.success(compactionTaskId) : TaskStatus.failure(compactionTaskId, msg);
   }
 
-  @VisibleForTesting
-  ParallelIndexSupervisorTask newTask(CompactionTask compactionTask, String baseSequenceName, ParallelIndexIngestionSpec ingestionSpec)
+  private ParallelIndexSupervisorTask newTask(
+      CompactionTask compactionTask,
+      String baseSequenceName,
+      ParallelIndexIngestionSpec ingestionSpec
+  )
   {
     return new ParallelIndexSupervisorTask(
         compactionTask.getId(),
@@ -305,7 +310,6 @@ public class NativeCompactionRunner implements CompactionRunner
   @VisibleForTesting
   static class PartitionConfigurationManager
   {
-    @Nullable
     private final CompactionTask.CompactionTuningConfig tuningConfig;
 
     PartitionConfigurationManager(@Nullable CompactionTask.CompactionTuningConfig tuningConfig)
