@@ -51,7 +51,7 @@ Other lookup types are available as extensions, including:
 - Globally cached lookups from a Kafka topic through [kafka-extraction-namespace](./kafka-extraction-namespace.md).
 
 :::info
-[Multi-value dimensions](multi-value-dimensions.md) are not supported as keys in lookups. 
+[Multi-value dimensions](multi-value-dimensions.md), MVDs, are not supported as keys in lookups. If you want to map the MVD `["A", "B", "C"]` to the value `x` in your lookup, flatten the MVD before using it as a lookup. Your lookup will have separate key-value pairs for each element of the MVD: `"A": "x"`, `"B": "x"`, and `"C": "x"`.
 :::
 
 Query Syntax
