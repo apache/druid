@@ -76,7 +76,6 @@ import org.apache.druid.indexing.common.task.AbstractFixedIntervalTask;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.IndexTask.IndexIOConfig;
 import org.apache.druid.indexing.common.task.IndexTask.IndexIngestionSpec;
-import org.apache.druid.indexing.common.task.IndexTask.IndexTuningConfig;
 import org.apache.druid.indexing.common.task.KillUnusedSegmentsTask;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.NoopTaskContextEnricher;
@@ -84,6 +83,7 @@ import org.apache.druid.indexing.common.task.NoopTestTaskReportFileWriter;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
+import org.apache.druid.indexing.common.task.TuningConfigBuilder;
 import org.apache.druid.indexing.overlord.config.DefaultTaskConfig;
 import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
@@ -730,33 +730,13 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
                 null
             ),
             new IndexIOConfig(null, new MockInputSource(), new NoopInputFormat(), false, false),
-            new IndexTuningConfig(
-                null,
-                10000,
-                null,
-                10,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                indexSpec,
-                null,
-                3,
-                false,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null
-            )
+            TuningConfigBuilder.forIndexTask()
+                               .withMaxRowsPerSegment(10000)
+                               .withMaxRowsInMemory(100)
+                               .withIndexSpec(indexSpec)
+                               .withMaxPendingPersists(3)
+                               .withForceGuaranteedRollup(false)
+                               .build()
         ),
         null
     );
@@ -815,33 +795,13 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
                 mapper
             ),
             new IndexIOConfig(null, new MockExceptionInputSource(), new NoopInputFormat(), false, false),
-            new IndexTuningConfig(
-                null,
-                10000,
-                null,
-                10,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                indexSpec,
-                null,
-                3,
-                false,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null
-            )
+            TuningConfigBuilder.forIndexTask()
+                               .withMaxRowsPerSegment(10000)
+                               .withMaxRowsInMemory(10)
+                               .withIndexSpec(indexSpec)
+                               .withMaxPendingPersists(3)
+                               .withForceGuaranteedRollup(false)
+                               .build()
         ),
         null
     );
@@ -1259,33 +1219,11 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
                 null
             ),
             new IndexIOConfig(null, new MockInputSource(), new NoopInputFormat(), false, false),
-            new IndexTuningConfig(
-                null,
-                10000,
-                null,
-                10,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                indexSpec,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null
-            )
+            TuningConfigBuilder.forIndexTask()
+                               .withMaxRowsPerSegment(10000)
+                               .withMaxRowsInMemory(10)
+                               .withIndexSpec(indexSpec)
+                               .build()
         ),
         null
     );
@@ -1371,33 +1309,13 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
                 null
             ),
             new IndexIOConfig(null, new MockInputSource(), new NoopInputFormat(), false, false),
-            new IndexTuningConfig(
-                null,
-                10000,
-                null,
-                10,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                indexSpec,
-                null,
-                3,
-                false,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null
-            )
+            TuningConfigBuilder.forIndexTask()
+                               .withMaxRowsPerSegment(10000)
+                               .withMaxRowsInMemory(10)
+                               .withIndexSpec(indexSpec)
+                               .withMaxPendingPersists(3)
+                               .withForceGuaranteedRollup(false)
+                               .build()
         ),
         null
     );

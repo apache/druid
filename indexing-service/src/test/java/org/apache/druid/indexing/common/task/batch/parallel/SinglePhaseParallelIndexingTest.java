@@ -36,6 +36,7 @@ import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.Tasks;
+import org.apache.druid.indexing.common.task.TuningConfigBuilder;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
@@ -598,40 +599,9 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
         Granularities.DAY,
         appendToExisting,
         true,
-        new ParallelIndexTuningConfig(
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            1,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null
-        ),
+        TuningConfigBuilder.forParallelIndexTask()
+                           .withMaxNumConcurrentSubTasks(1)
+                           .build(),
         VALID_INPUT_SOURCE_FILTER
     );
     task.addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, lockGranularity == LockGranularity.TIME_CHUNK);
@@ -724,40 +694,10 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
         Granularities.DAY,
         appendToExisting,
         true,
-        new ParallelIndexTuningConfig(
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            1,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            0,
-            null
-        ),
+        TuningConfigBuilder.forParallelIndexTask()
+                           .withMaxNumConcurrentSubTasks(1)
+                           .withMaxAllowedLockCount(0)
+                           .build(),
         VALID_INPUT_SOURCE_FILTER
     );
     task.addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, lockGranularity == LockGranularity.TIME_CHUNK);
@@ -786,40 +726,10 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
         Granularities.DAY,
         appendToExisting,
         true,
-        new ParallelIndexTuningConfig(
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            2,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            0,
-            null
-        ),
+        TuningConfigBuilder.forParallelIndexTask()
+                           .withMaxNumConcurrentSubTasks(2)
+                           .withMaxAllowedLockCount(0)
+                           .build(),
         VALID_INPUT_SOURCE_FILTER
     );
     task.addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, lockGranularity == LockGranularity.TIME_CHUNK);
