@@ -84,14 +84,14 @@ public class K8sDiscoveryModule implements DruidModule
     PolyBind.optionBinder(binder, Key.get(DruidLeaderSelector.class, Coordinator.class))
             .addBinding(K8S_KEY)
             .toProvider(
-                DruidLeaderSelectorProvider.CoordinatorDruidLeaderSelectorProvider.class
+                K8sDruidLeaderSelectorProvider.K8sCoordinatorDruidLeaderSelectorProvider.class
             )
             .in(LazySingleton.class);
 
     PolyBind.optionBinder(binder, Key.get(DruidLeaderSelector.class, IndexingService.class))
             .addBinding(K8S_KEY)
             .toProvider(
-                DruidLeaderSelectorProvider.IndexingServiceDruidLeaderSelectorProvider.class
+                K8sDruidLeaderSelectorProvider.K8sIndexingServiceDruidLeaderSelectorProvider.class
             )
             .in(LazySingleton.class);
   }
