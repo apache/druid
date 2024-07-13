@@ -26,9 +26,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.TimestampSpec;
-import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.java.util.common.Intervals;
@@ -40,10 +38,8 @@ import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.timeline.partition.BuildingHashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.HashPartitionFunction;
-import org.easymock.EasyMock;
 import org.joda.time.Interval;
 
-import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -125,47 +121,6 @@ class ParallelIndexTestingFactory
     return new ParallelIndexIngestionSpec(dataSchema, ioConfig, tuningConfig);
   }
 
-  static class SingleDimensionPartitionsSpecBuilder
-  {
-    @Nullable
-    private String partitionDimension = SCHEMA_DIMENSION;
-    private boolean assumeGrouped = false;
-
-    SingleDimensionPartitionsSpecBuilder partitionDimension(@Nullable String partitionDimension)
-    {
-      this.partitionDimension = partitionDimension;
-      return this;
-    }
-
-    SingleDimensionPartitionsSpecBuilder assumeGrouped(boolean assumeGrouped)
-    {
-      this.assumeGrouped = assumeGrouped;
-      return this;
-    }
-
-    SingleDimensionPartitionsSpec build()
-    {
-      return new SingleDimensionPartitionsSpec(
-          1,
-          null,
-          partitionDimension,
-          assumeGrouped
-      );
-    }
-  }
-
-  static ParallelIndexSupervisorTaskClientProvider createTaskClientFactory()
-  {
-    return (supervisorTaskId, httpTimeout, numRetries) -> createTaskClient();
-  }
-
-  private static ParallelIndexSupervisorTaskClient createTaskClient()
-  {
-    ParallelIndexSupervisorTaskClient taskClient = EasyMock.niceMock(ParallelIndexSupervisorTaskClient.class);
-    EasyMock.replay(taskClient);
-    return taskClient;
-  }
-
   static String createRow(long timestamp, Object dimensionValue)
   {
     try {
@@ -189,10 +144,5 @@ class ParallelIndexTestingFactory
     catch (JsonProcessingException e) {
       throw new RuntimeException(e);
     }
-  }
-
-  static InputFormat getInputFormat()
-  {
-    return new JsonInputFormat(null, null, null, null, null);
   }
 }

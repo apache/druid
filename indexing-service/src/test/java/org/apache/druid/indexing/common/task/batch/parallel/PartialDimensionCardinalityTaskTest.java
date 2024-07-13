@@ -29,6 +29,7 @@ import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InlineInputSource;
+import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
@@ -371,7 +372,7 @@ public class PartialDimensionCardinalityTaskTest
 
   private static class PartialDimensionCardinalityTaskBuilder
   {
-    private static final InputFormat INPUT_FORMAT = ParallelIndexTestingFactory.getInputFormat();
+    private static final InputFormat INPUT_FORMAT = new JsonInputFormat(null, null, null, null, null);
 
     private String id = ParallelIndexTestingFactory.ID;
     private InputSource inputSource = new InlineInputSource("row-with-invalid-timestamp");

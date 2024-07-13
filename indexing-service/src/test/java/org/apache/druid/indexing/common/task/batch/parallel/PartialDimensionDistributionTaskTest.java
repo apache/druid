@@ -25,6 +25,7 @@ import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.data.input.impl.InlineInputSource;
+import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
@@ -67,7 +68,7 @@ import java.util.stream.IntStream;
 public class PartialDimensionDistributionTaskTest
 {
   private static final SingleDimensionPartitionsSpec SINGLE_DIM_PARTITIONS_SPEC =
-      new ParallelIndexTestingFactory.SingleDimensionPartitionsSpecBuilder().build();
+      new SingleDimensionPartitionsSpec(null, 1000, "dim", false);
 
   public static class ConstructorTest
   {
@@ -412,7 +413,7 @@ public class PartialDimensionDistributionTaskTest
 
   private static class PartialDimensionDistributionTaskBuilder
   {
-    private static final InputFormat INPUT_FORMAT = ParallelIndexTestingFactory.getInputFormat();
+    private static final InputFormat INPUT_FORMAT = new JsonInputFormat(null, null, null, null, null);
 
     private String id = ParallelIndexTestingFactory.ID;
     private InputSource inputSource = new InlineInputSource("row-with-invalid-timestamp");

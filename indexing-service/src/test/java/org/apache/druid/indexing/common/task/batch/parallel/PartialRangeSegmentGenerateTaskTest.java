@@ -24,6 +24,7 @@ import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.data.input.impl.InlineInputSource;
+import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
@@ -132,7 +133,7 @@ public class PartialRangeSegmentGenerateTaskTest extends AbstractParallelIndexSu
   private static class PartialRangeSegmentGenerateTaskBuilder
   {
     private static final InputSource INPUT_SOURCE = new InlineInputSource("data");
-    private static final InputFormat INPUT_FORMAT = ParallelIndexTestingFactory.getInputFormat();
+    private static final InputFormat INPUT_FORMAT = new JsonInputFormat(null, null, null, null, null);
 
     private ParallelIndexTuningConfig tuningConfig = TuningConfigBuilder
         .forParallelIndexTask()
