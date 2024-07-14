@@ -275,7 +275,8 @@ public class MSQCompactionRunnerTest
             DATA_SOURCE,
             SEGMENT_GRANULARITY.getDefaultGranularity(),
             null,
-            Collections.singletonList(COMPACTION_INTERVAL)
+            Collections.singletonList(COMPACTION_INTERVAL),
+            null
         ),
         actualMSQSpec.getDestination()
     );
@@ -340,7 +341,8 @@ public class MSQCompactionRunnerTest
             DATA_SOURCE,
             SEGMENT_GRANULARITY.getDefaultGranularity(),
             null,
-            Collections.singletonList(COMPACTION_INTERVAL)
+            Collections.singletonList(COMPACTION_INTERVAL),
+            null
         ),
         actualMSQSpec.getDestination()
     );
