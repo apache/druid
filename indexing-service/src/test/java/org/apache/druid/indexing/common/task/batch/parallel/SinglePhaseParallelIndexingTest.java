@@ -158,7 +158,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
   @Test
   public void testIsReady() throws Exception
   {
-    final ParallelIndexSupervisorTask task = newTask(INTERVAL_TO_INDEX, false, true);
+    final ParallelIndexSupervisorTask task = newTask(INTERVAL_TO_INDEX, true);
     final TaskActionClient actionClient = createActionClient(task);
     final TaskToolbox toolbox = createTaskToolbox(task, actionClient);
     prepareTaskForLocking(task);
@@ -535,7 +535,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
   {
     final Interval interval = Intervals.of("2017-12/P1M");
     final boolean appendToExisting = false;
-    final ParallelIndexSupervisorTask task = newTask(interval, appendToExisting, false);
+    final ParallelIndexSupervisorTask task = newTask(interval, false);
     task.addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, lockGranularity == LockGranularity.TIME_CHUNK);
     Assert.assertEquals(TaskState.SUCCESS, getIndexingServiceClient().runAndWait(task).getStatusCode());
     assertShardSpec(task, lockGranularity, appendToExisting, Collections.emptyList());
@@ -584,7 +584,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
   @Test
   public void testPublishEmptySegments()
   {
-    final ParallelIndexSupervisorTask task = newTask(Intervals.of("2020-12/P1M"), false, true);
+    final ParallelIndexSupervisorTask task = newTask(Intervals.of("2020-12/P1M"), true);
     task.addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, lockGranularity == LockGranularity.TIME_CHUNK);
     Assert.assertEquals(TaskState.SUCCESS, getIndexingServiceClient().runAndWait(task).getStatusCode());
   }
@@ -916,11 +916,10 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
 
   private ParallelIndexSupervisorTask newTask(
       @Nullable Interval interval,
-      boolean appendToExisting,
       boolean splittableInputSource
   )
   {
-    return newTask(interval, Granularities.DAY, appendToExisting, splittableInputSource);
+    return newTask(interval, Granularities.DAY, false, splittableInputSource);
   }
 
   private ParallelIndexSupervisorTask newTask(

@@ -168,7 +168,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
   public static final ParallelIndexTuningConfig DEFAULT_TUNING_CONFIG_FOR_PARALLEL_INDEXING =
       TuningConfigBuilder.forParallelIndexTask()
                          .withMaxNumConcurrentSubTasks(2)
-                         .withMaxParseExceptions(5)
+                         .withMaxSavedParseExceptions(5)
                          .build();
 
   protected static final double DEFAULT_TRANSIENT_TASK_FAILURE_RATE = 0.2;
