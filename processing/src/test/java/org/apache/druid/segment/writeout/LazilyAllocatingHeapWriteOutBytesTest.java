@@ -34,7 +34,7 @@ public class LazilyAllocatingHeapWriteOutBytesTest
   private HeapByteBufferWriteOutBytes heapByteBufferWriteOutBytes;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     closer = Closer.create();
     heapByteBufferWriteOutBytes = new HeapByteBufferWriteOutBytes();
