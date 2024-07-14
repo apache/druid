@@ -53,10 +53,7 @@ public final class FileWriteOutBytes extends WriteOutBytes
     this.ch = ch;
     this.writeOutBytes = 0L;
     closer.register(
-        () -> {
-          ByteBufferUtils.free(buffer);
-          buffer.clear();
-        }
+        () -> ByteBufferUtils.free(buffer)
     );
   }
 

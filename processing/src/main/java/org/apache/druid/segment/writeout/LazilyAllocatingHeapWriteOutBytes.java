@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.writeout;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.io.input.NullInputStream;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.io.ByteBufferInputStream;
@@ -32,6 +33,13 @@ import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
 import java.util.function.Supplier;
 
+/**
+ * Lazily decides to use a tmpBuffer to act as WriteOutBytes, till more than certain threshold is reached. Once this is
+ * met, it switches to delegating all calls to a {@link WriteOutBytes} created by delegateSupplier.
+ * <p>
+ * This is useful if the data stored in the {@link WriteOutBytes} is small enough that buffering the changes in memory
+ * would be faster than creating some {@link WriteOutBytes}.
+ */
 public class LazilyAllocatingHeapWriteOutBytes extends WriteOutBytes
 {
   private final Supplier<WriteOutBytes> delegateSupplier;
@@ -45,9 +53,8 @@ public class LazilyAllocatingHeapWriteOutBytes extends WriteOutBytes
     this.delegateSupplier = delegateSupplier;
     closer.register(() -> {
       open = false;
-      if (tmpBuffer != null) {
-        tmpBuffer.clear();
-      }
+      tmpBuffer = null;
+      delegate = null;
     });
   }
 
@@ -236,5 +243,17 @@ public class LazilyAllocatingHeapWriteOutBytes extends WriteOutBytes
       tmpBuffer = newBuf;
       return true;
     }
+  }
+
+  @VisibleForTesting
+  ByteBuffer getTmpBuffer()
+  {
+    return tmpBuffer;
+  }
+
+  @VisibleForTesting
+  WriteOutBytes getDelegate()
+  {
+    return delegate;
   }
 }
