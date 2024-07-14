@@ -27,15 +27,18 @@ import com.google.common.base.Predicate;
 import com.google.inject.Inject;
 import org.apache.druid.client.indexing.ClientCompactionIOConfig;
 import org.apache.druid.client.indexing.ClientCompactionIntervalSpec;
+import org.apache.druid.client.indexing.ClientCompactionRunnerInfo;
 import org.apache.druid.client.indexing.ClientCompactionTaskDimensionsSpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
+import org.apache.druid.client.indexing.ClientMSQContext;
 import org.apache.druid.client.indexing.ClientTaskQuery;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.common.utils.IdUtils;
+import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.java.util.common.ISE;
@@ -167,10 +170,17 @@ public class CompactSegments implements CoordinatorCustomDuty
       final Interval interval = compactionTaskQuery.getIoConfig().getInputSpec().getInterval();
       intervalsToSkipCompaction.computeIfAbsent(status.getDataSource(), k -> new ArrayList<>())
                                .add(interval);
-
-      busyCompactionTaskSlots += findMaxNumTaskSlotsUsedByOneCompactionTask(
-          compactionTaskQuery.getTuningConfig()
-      );
+      // Note: The default compactionRunnerType used here should match the default runner used in CompactionTask when
+      // no runner is provided there.
+      CompactionEngine compactionRunnerType = compactionTaskQuery.getCompactionRunner() == null
+                                              ? CompactionEngine.NATIVE
+                                              : compactionTaskQuery.getCompactionRunner().getType();
+      if (compactionRunnerType == CompactionEngine.NATIVE) {
+        busyCompactionTaskSlots +=
+            findMaxNumTaskSlotsUsedByOneNativeCompactionTask(compactionTaskQuery.getTuningConfig());
+      } else {
+        busyCompactionTaskSlots += findMaxNumTaskSlotsUsedByOneMsqCompactionTask(compactionTaskQuery.getContext());
+      }
     }
 
     // Skip all the intervals locked by higher priority tasks for each datasource
@@ -197,7 +207,8 @@ public class CompactSegments implements CoordinatorCustomDuty
         compactionConfigs,
         currentRunAutoCompactionSnapshotBuilders,
         availableCompactionTaskSlots,
-        iterator
+        iterator,
+        dynamicConfig.getEngine()
     );
 
     final CoordinatorRunStats stats = params.getCoordinatorStats();
@@ -234,12 +245,12 @@ public class CompactSegments implements CoordinatorCustomDuty
     Granularity configuredSegmentGranularity = dataSourceCompactionConfig.getGranularitySpec()
                                                                          .getSegmentGranularity();
     Granularity taskSegmentGranularity = compactionTaskQuery.getGranularitySpec().getSegmentGranularity();
-    if (configuredSegmentGranularity.equals(taskSegmentGranularity)) {
+    if (configuredSegmentGranularity == null || configuredSegmentGranularity.equals(taskSegmentGranularity)) {
       return false;
     }
 
     LOG.info(
-        "Cancelling task [%s] as task segmentGranularity is [%s] but compaction config segmentGranularity is [%s]",
+        "Cancelling task[%s] as task segmentGranularity[%s] differs from compaction config segmentGranularity[%s].",
         compactionTaskQuery.getId(), taskSegmentGranularity, configuredSegmentGranularity
     );
     overlordClient.cancelTask(compactionTaskQuery.getId());
@@ -280,11 +291,13 @@ public class CompactSegments implements CoordinatorCustomDuty
   }
 
   /**
-   * Returns the maximum number of task slots used by one compaction task at any time when the task is issued with
-   * the given tuningConfig.
+   * Returns the maximum number of task slots used by one native compaction task at any time when the task is
+   * issued with the given tuningConfig.
    */
   @VisibleForTesting
-  static int findMaxNumTaskSlotsUsedByOneCompactionTask(@Nullable ClientCompactionTaskQueryTuningConfig tuningConfig)
+  static int findMaxNumTaskSlotsUsedByOneNativeCompactionTask(
+      @Nullable ClientCompactionTaskQueryTuningConfig tuningConfig
+  )
   {
     if (isParallelMode(tuningConfig)) {
       @Nullable
@@ -295,6 +308,18 @@ public class CompactSegments implements CoordinatorCustomDuty
       return 1;
     }
   }
+
+  /**
+   * Returns the maximum number of task slots used by one MSQ compaction task at any time when the task is
+   * issued with the given context.
+   */
+  static int findMaxNumTaskSlotsUsedByOneMsqCompactionTask(@Nullable Map<String, Object> context)
+  {
+    return context == null
+           ? ClientMSQContext.DEFAULT_MAX_NUM_TASKS
+           : (int) context.getOrDefault(ClientMSQContext.CTX_MAX_NUM_TASKS, ClientMSQContext.DEFAULT_MAX_NUM_TASKS);
+  }
+
 
   /**
    * Returns true if the compaction task can run in the parallel mode with the given tuningConfig.
@@ -354,7 +379,8 @@ public class CompactSegments implements CoordinatorCustomDuty
       Map<String, DataSourceCompactionConfig> compactionConfigs,
       Map<String, AutoCompactionSnapshot.Builder> currentRunAutoCompactionSnapshotBuilders,
       int numAvailableCompactionTaskSlots,
-      CompactionSegmentIterator iterator
+      CompactionSegmentIterator iterator,
+      CompactionEngine defaultEngine
   )
   {
     if (numAvailableCompactionTaskSlots <= 0) {
@@ -362,9 +388,9 @@ public class CompactSegments implements CoordinatorCustomDuty
     }
 
     int numSubmittedTasks = 0;
-    int numCompactionTasksAndSubtasks = 0;
+    int totalTaskSlotsAssigned = 0;
 
-    while (iterator.hasNext() && numCompactionTasksAndSubtasks < numAvailableCompactionTaskSlots) {
+    while (iterator.hasNext() && totalTaskSlotsAssigned < numAvailableCompactionTaskSlots) {
       final SegmentsToCompact entry = iterator.next();
       final List<DataSegment> segmentsToCompact = entry.getSegments();
       if (segmentsToCompact.isEmpty()) {
@@ -464,6 +490,29 @@ public class CompactSegments implements CoordinatorCustomDuty
         }
       }
 
+      final CompactionEngine compactionEngine = config.getEngine() == null ? defaultEngine : config.getEngine();
+      final Map<String, Object> autoCompactionContext = newAutoCompactionContext(config.getTaskContext());
+      int slotsRequiredForCurrentTask;
+
+      if (compactionEngine == CompactionEngine.MSQ) {
+        if (autoCompactionContext.containsKey(ClientMSQContext.CTX_MAX_NUM_TASKS)) {
+          slotsRequiredForCurrentTask = (int) autoCompactionContext.get(ClientMSQContext.CTX_MAX_NUM_TASKS);
+        } else {
+          // Since MSQ needs all task slots for the calculated #tasks to be available upfront, allot all available
+          // compaction slots (upto a max of MAX_TASK_SLOTS_FOR_MSQ_COMPACTION) to current compaction task to avoid
+          // stalling. Setting "taskAssignment" to "auto" has the problem of not being able to determine the actual
+          // count, which is required for subsequent tasks.
+          slotsRequiredForCurrentTask = Math.min(
+              // Update the slots to 2 (min required for MSQ) if only 1 slot is available.
+              numAvailableCompactionTaskSlots == 1 ? 2 : numAvailableCompactionTaskSlots,
+              ClientMSQContext.MAX_TASK_SLOTS_FOR_MSQ_COMPACTION_TASK
+          );
+          autoCompactionContext.put(ClientMSQContext.CTX_MAX_NUM_TASKS, slotsRequiredForCurrentTask);
+        }
+      } else {
+        slotsRequiredForCurrentTask = findMaxNumTaskSlotsUsedByOneNativeCompactionTask(config.getTuningConfig());
+      }
+
       final String taskId = compactSegments(
           "coordinator-issued",
           segmentsToCompact,
@@ -478,7 +527,8 @@ public class CompactSegments implements CoordinatorCustomDuty
           config.getMetricsSpec(),
           transformSpec,
           dropExisting,
-          newAutoCompactionContext(config.getTaskContext())
+          autoCompactionContext,
+          new ClientCompactionRunnerInfo(compactionEngine)
       );
 
       LOG.info(
@@ -488,7 +538,7 @@ public class CompactSegments implements CoordinatorCustomDuty
       LOG.debugSegments(segmentsToCompact, "Compacting segments");
       // Count the compaction task itself + its sub tasks
       numSubmittedTasks++;
-      numCompactionTasksAndSubtasks += findMaxNumTaskSlotsUsedByOneCompactionTask(config.getTuningConfig());
+      totalTaskSlotsAssigned += slotsRequiredForCurrentTask;
     }
 
     LOG.info("Submitted a total of [%d] compaction tasks.", numSubmittedTasks);
@@ -627,7 +677,8 @@ public class CompactSegments implements CoordinatorCustomDuty
       @Nullable AggregatorFactory[] metricsSpec,
       @Nullable ClientCompactionTaskTransformSpec transformSpec,
       @Nullable Boolean dropExisting,
-      @Nullable Map<String, Object> context
+      @Nullable Map<String, Object> context,
+      ClientCompactionRunnerInfo compactionRunner
   )
   {
     Preconditions.checkArgument(!segments.isEmpty(), "Expect non-empty segments to compact");
@@ -655,7 +706,8 @@ public class CompactSegments implements CoordinatorCustomDuty
         dimensionsSpec,
         metricsSpec,
         transformSpec,
-        context
+        context,
+        compactionRunner
     );
     FutureUtils.getUnchecked(overlordClient.runTask(taskId, taskPayload), true);
     return taskId;

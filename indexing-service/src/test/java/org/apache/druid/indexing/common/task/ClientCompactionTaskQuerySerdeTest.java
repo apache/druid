@@ -28,6 +28,7 @@ import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.client.indexing.ClientCompactionIOConfig;
 import org.apache.druid.client.indexing.ClientCompactionIntervalSpec;
+import org.apache.druid.client.indexing.ClientCompactionRunnerInfo;
 import org.apache.druid.client.indexing.ClientCompactionTaskDimensionsSpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
@@ -40,9 +41,8 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.guice.GuiceAnnotationIntrospector;
 import org.apache.druid.guice.GuiceInjectableValues;
 import org.apache.druid.guice.GuiceInjectors;
+import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
-import org.apache.druid.indexing.common.RetryPolicyConfig;
-import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
@@ -329,7 +329,8 @@ public class ClientCompactionTaskQuerySerdeTest
         new ClientCompactionTaskDimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
         METRICS_SPEC,
         transformSpec,
-        context
+        context,
+        new ClientCompactionRunnerInfo(CompactionEngine.NATIVE)
     );
   }
 
@@ -337,8 +338,7 @@ public class ClientCompactionTaskQuerySerdeTest
   {
     CompactionTask.Builder compactionTaskBuilder = new CompactionTask.Builder(
         "datasource",
-        new SegmentCacheManagerFactory(TestIndex.INDEX_IO, MAPPER),
-        new RetryPolicyFactory(new RetryPolicyConfig())
+        new SegmentCacheManagerFactory(TestIndex.INDEX_IO, MAPPER)
     )
         .inputSpec(new CompactionIntervalSpec(Intervals.of("2019/2020"), "testSha256OfSortedSegmentIds"), true)
         .tuningConfig(

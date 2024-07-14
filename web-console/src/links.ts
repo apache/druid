@@ -40,7 +40,7 @@ const DEFAULT_LINKS: Links = {
   communityHref: 'https://druid.apache.org/community/',
   slackHref: 'https://druid.apache.org/community/join-slack',
   userGroup: 'https://groups.google.com/forum/#!forum/druid-user',
-  developerGroup: 'https://lists.apache.org/list.html?dev@druid.apache.org',
+  developerGroup: 'https://lists.apache.org/list?dev@druid.apache.org',
 };
 
 const links = DEFAULT_LINKS;
@@ -76,13 +76,13 @@ export function getLink(linkName: LinkNames): string {
     case 'DOCS':
       return links.docsHref;
     case 'DOCS_SQL':
-      return `${links.docsHref}/querying/sql.html`;
+      return `${links.docsHref}/querying/sql`;
     case 'DOCS_RUNE':
-      return `${links.docsHref}/querying/querying.html`;
+      return `${links.docsHref}/querying/querying`;
     case 'DOCS_API':
-      return `${links.docsHref}/api-reference/api-reference.html`;
+      return `${links.docsHref}/api-reference/api-reference`;
     case 'DOCS_MSQ_ERROR':
-      return `${links.docsHref}/multi-stage-query/reference.html`;
+      return `${links.docsHref}/multi-stage-query/reference`;
     case 'COMMUNITY':
       return links.communityHref;
     case 'SLACK':

@@ -56,7 +56,7 @@ import {
   Loader,
   PopoverText,
 } from '../../components';
-import { AlertDialog, AsyncActionDialog } from '../../dialogs';
+import { AlertDialog, AsyncActionDialog, DiffDialog } from '../../dialogs';
 import type {
   ArrayMode,
   DimensionSpec,
@@ -146,6 +146,7 @@ import {
   deepMove,
   deepSet,
   deepSetMulti,
+  deleteKeys,
   EMPTY_ARRAY,
   EMPTY_OBJECT,
   filterMap,
@@ -427,6 +428,8 @@ export interface LoadDataViewState {
   // for final step
   existingDatasources?: string[];
   submitting: boolean;
+  currentSupervisorSpec?: Partial<IngestionSpec>;
+  showDiffWithCurrent: boolean;
 }
 
 export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDataViewState> {
@@ -478,6 +481,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
       // for final step
       submitting: false,
+      showDiffWithCurrent: false,
     };
   }
 
@@ -1006,7 +1010,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         return (
           <p>
             If you do not see your source of raw data here, you can try to ingest it by submitting a{' '}
-            <ExternalLink href={`${getLink('DOCS')}/ingestion/index.html`}>
+            <ExternalLink href={`${getLink('DOCS')}/ingestion/`}>
               JSON task or supervisor spec
             </ExternalLink>
             .
@@ -1707,7 +1711,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           />
           <AnchorButton
             icon={IconNames.INFO_SIGN}
-            href={`${getLink('DOCS')}/ingestion/data-formats.html#flattenspec`}
+            href={`${getLink('DOCS')}/ingestion/data-formats#flattenspec`}
             target="_blank"
             minimal
           />
@@ -2377,12 +2381,12 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                     <p>
                       Select whether or not you want to set an explicit list of{' '}
                       <ExternalLink
-                        href={`${getLink('DOCS')}/ingestion/ingestion-spec.html#dimensionsspec`}
+                        href={`${getLink('DOCS')}/ingestion/ingestion-spec#dimensionsspec`}
                       >
                         dimensions
                       </ExternalLink>{' '}
                       and{' '}
-                      <ExternalLink href={`${getLink('DOCS')}/querying/aggregations.html`}>
+                      <ExternalLink href={`${getLink('DOCS')}/querying/aggregations`}>
                         metrics
                       </ExternalLink>
                       . Explicitly setting dimensions and metrics can lead to better compression and
@@ -2437,7 +2441,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                   <PopoverText>
                     <p>
                       If you enable{' '}
-                      <ExternalLink href={`${getLink('DOCS')}/tutorials/tutorial-rollup.html`}>
+                      <ExternalLink href={`${getLink('DOCS')}/tutorials/tutorial-rollup`}>
                         roll-up
                       </ExternalLink>
                       , Druid will try to pre-aggregate data before indexing it to conserve storage.
@@ -2446,12 +2450,12 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                     </p>
                     <p>
                       If you enable rollup, you must specify which columns are{' '}
-                      <a href={`${getLink('DOCS')}/ingestion/ingestion-spec.html#dimensionsspec`}>
+                      <a href={`${getLink('DOCS')}/ingestion/ingestion-spec#dimensionsspec`}>
                         dimensions
                       </a>{' '}
                       (fields you want to group and filter on), and which are{' '}
-                      <a href={`${getLink('DOCS')}/querying/aggregations.html`}>metrics</a> (fields
-                      you want to aggregate on).
+                      <a href={`${getLink('DOCS')}/querying/aggregations`}>metrics</a> (fields you
+                      want to aggregate on).
                     </p>
                   </PopoverText>
                 }
@@ -2708,7 +2712,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               <ExternalLink
                 href={`${getLink(
                   'DOCS',
-                )}/ingestion/schema-design.html#schema-auto-discovery-for-dimensions`}
+                )}/ingestion/schema-design#schema-auto-discovery-for-dimensions`}
               >
                 documentation
               </ExternalLink>
@@ -2743,7 +2747,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             ),
           );
         }}
-        confirmButtonText={`Yes - ${multiValues ? 'use MVDs' : 'ARRAYs'}`}
+        confirmButtonText={`Yes - use ${multiValues ? 'MVDs' : 'ARRAYs'}`}
         successText={`Array mode changed to ${multiValues ? 'multi-values' : 'arrays'}.`}
         failText="Could not change array mode"
         intent={Intent.WARNING}
@@ -3283,9 +3287,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 </p>
                 <p>
                   For more information refer to the{' '}
-                  <ExternalLink
-                    href={`${getLink('DOCS')}/ingestion/concurrent-append-replace.html`}
-                  >
+                  <ExternalLink href={`${getLink('DOCS')}/ingestion/concurrent-append-replace`}>
                     documentation
                   </ExternalLink>
                   .
@@ -3407,6 +3409,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   };
 
   async queryForSpec() {
+    const { spec } = this.state;
+
     let existingDatasources: string[];
     try {
       existingDatasources = (await Api.instance.get<string[]>('/druid/coordinator/v1/datasources'))
@@ -3415,13 +3419,26 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       return;
     }
 
+    let currentSupervisorSpec: Partial<IngestionSpec> | undefined;
+    const supervisorId = getSpecDatasourceName(spec);
+    if (isStreamingSpec(spec) && supervisorId) {
+      try {
+        currentSupervisorSpec = cleanSpec(
+          (await Api.instance.get(`/druid/indexer/v1/supervisor/${Api.encodePath(supervisorId)}`))
+            .data,
+        );
+      } catch {}
+    }
+
     this.setState({
       existingDatasources,
+      currentSupervisorSpec,
     });
   }
 
   renderSpecStep() {
-    const { spec, existingDatasources, submitting } = this.state;
+    const { spec, existingDatasources, submitting, currentSupervisorSpec, showDiffWithCurrent } =
+      this.state;
     const issueWithSpec = getIssueWithSpec(spec);
     const datasource = deepGet(spec, 'spec.dataSchema.dataSource');
 
@@ -3465,7 +3482,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                     <ExternalLink
                       href={`${getLink(
                         'DOCS',
-                      )}/ingestion/schema-design.html#schema-auto-discovery-for-dimensions`}
+                      )}/ingestion/schema-design#schema-auto-discovery-for-dimensions`}
                     >
                       documentation
                     </ExternalLink>
@@ -3475,75 +3492,124 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               </FormGroup>
             )}
           <AppendToExistingIssue spec={spec} onChangeSpec={this.updateSpec} />
-        </div>
-        <div className="next-bar">
-          {!isEmptyIngestionSpec(spec) && (
+          {isStreamingSpec(spec) && currentSupervisorSpec && (
             <Button
-              className="left"
-              icon={IconNames.RESET}
-              text="Reset spec"
-              onClick={this.handleResetConfirm}
+              icon={IconNames.DELTA}
+              text="Diff with current supervisor spec"
+              onClick={() => {
+                this.setState({
+                  showDiffWithCurrent: true,
+                });
+              }}
             />
           )}
-          <Button
-            text={submitting ? 'Submitting...' : 'Submit'}
-            rightIcon={IconNames.CLOUD_UPLOAD}
-            intent={Intent.PRIMARY}
-            disabled={submitting || Boolean(issueWithSpec)}
-            onClick={() => void this.handleSubmit()}
-          />
+          {isStreamingSpec(spec) && (
+            <Switch
+              className="suspended-switch"
+              checked={Boolean(spec.suspended)}
+              label="Submit in suspended state"
+              onChange={() =>
+                this.updateSpec(
+                  spec.suspended ? deleteKeys(spec, ['suspended']) : { ...spec, suspended: true },
+                )
+              }
+            />
+          )}
         </div>
+        <div className="next-bar">
+          {isStreamingSpec(spec) ? (
+            <Button
+              text={
+                submitting
+                  ? 'Submitting...'
+                  : `Submit supervisor (${spec.suspended ? 'suspended' : 'running'})`
+              }
+              rightIcon={IconNames.CLOUD_UPLOAD}
+              intent={Intent.PRIMARY}
+              disabled={submitting || Boolean(issueWithSpec)}
+              onClick={() => void this.handleSubmitSupervisor()}
+            />
+          ) : (
+            <Button
+              text={submitting ? 'Submitting...' : 'Submit task'}
+              rightIcon={IconNames.CLOUD_UPLOAD}
+              intent={Intent.PRIMARY}
+              disabled={submitting || Boolean(issueWithSpec)}
+              onClick={() => void this.handleSubmitTask()}
+            />
+          )}
+        </div>
+        {showDiffWithCurrent && currentSupervisorSpec && (
+          <DiffDialog
+            title="Diff with current spec"
+            oldValue={currentSupervisorSpec}
+            newValue={spec}
+            onClose={() => {
+              this.setState({
+                showDiffWithCurrent: false,
+              });
+            }}
+          />
+        )}
       </>
     );
   }
 
-  private readonly handleSubmit = async () => {
-    const { goToSupervisor, goToTasks } = this.props;
+  private readonly handleSubmitSupervisor = async () => {
+    const { goToSupervisor } = this.props;
     const { spec, submitting } = this.state;
     if (submitting) return;
 
     this.setState({ submitting: true });
-    if (isStreamingSpec(spec)) {
-      try {
-        await Api.instance.post('/druid/indexer/v1/supervisor', spec);
-      } catch (e) {
-        AppToaster.show({
-          message: `Failed to submit supervisor: ${getDruidErrorMessage(e)}`,
-          intent: Intent.DANGER,
-        });
-        this.setState({ submitting: false });
-        return;
-      }
-
+    try {
+      await Api.instance.post('/druid/indexer/v1/supervisor', spec);
+    } catch (e) {
       AppToaster.show({
-        message: 'Supervisor submitted successfully. Going to task view...',
-        intent: Intent.SUCCESS,
+        message: `Failed to submit supervisor: ${getDruidErrorMessage(e)}`,
+        intent: Intent.DANGER,
       });
+      this.setState({ submitting: false });
+      return;
+    }
 
+    AppToaster.show({
+      message: 'Supervisor submitted successfully. Going to Supervisors view...',
+      intent: Intent.SUCCESS,
+    });
+
+    const supervisorId = getSpecDatasourceName(spec);
+    if (supervisorId) {
       setTimeout(() => {
-        goToSupervisor(getSpecDatasourceName(spec));
-      }, 1000);
-    } else {
-      let taskResp: any;
-      try {
-        taskResp = await Api.instance.post('/druid/indexer/v1/task', spec);
-      } catch (e) {
-        AppToaster.show({
-          message: `Failed to submit task: ${getDruidErrorMessage(e)}`,
-          intent: Intent.DANGER,
-        });
-        this.setState({ submitting: false });
-        return;
-      }
-
-      AppToaster.show({
-        message: 'Task submitted successfully. Going to task view...',
-        intent: Intent.SUCCESS,
-      });
-
-      setTimeout(() => {
-        goToTasks(taskResp.data.task);
+        goToSupervisor(supervisorId);
       }, 1000);
     }
+  };
+
+  private readonly handleSubmitTask = async () => {
+    const { goToTasks } = this.props;
+    const { spec, submitting } = this.state;
+    if (submitting) return;
+
+    this.setState({ submitting: true });
+    let taskResp: any;
+    try {
+      taskResp = await Api.instance.post('/druid/indexer/v1/task', spec);
+    } catch (e) {
+      AppToaster.show({
+        message: `Failed to submit task: ${getDruidErrorMessage(e)}`,
+        intent: Intent.DANGER,
+      });
+      this.setState({ submitting: false });
+      return;
+    }
+
+    AppToaster.show({
+      message: 'Task submitted successfully. Going to Tasks view...',
+      intent: Intent.SUCCESS,
+    });
+
+    setTimeout(() => {
+      goToTasks(taskResp.data.task);
+    }, 1000);
   };
 }

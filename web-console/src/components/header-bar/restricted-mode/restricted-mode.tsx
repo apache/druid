@@ -128,7 +128,7 @@ export const RestrictedMode = React.memo(function RestrictedMode(props: Restrict
           {message}
           <p>
             For more info refer to the{' '}
-            <ExternalLink href={`${getLink('DOCS')}/operations/web-console.html`}>
+            <ExternalLink href={`${getLink('DOCS')}/operations/web-console`}>
               web console documentation
             </ExternalLink>
             .

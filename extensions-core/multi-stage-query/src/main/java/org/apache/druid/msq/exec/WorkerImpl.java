@@ -1772,6 +1772,7 @@ public class WorkerImpl implements Worker
             @Override
             public void onSuccess(final ClusterByStatisticsCollector result)
             {
+              result.logSketches();
               kernelManipulationQueue.add(
                   holder ->
                       holder.getStageKernelMap().get(stageDefinition.getId())

@@ -123,6 +123,6 @@ public abstract class NestedCommonFormatColumnSerializer implements GenericColum
    */
   public static String getInternalFileName(String fileNameBase, String field)
   {
-    return StringUtils.format("%s.%s", fileNameBase, field);
+    return fileNameBase + "." + field;
   }
 }

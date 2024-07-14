@@ -569,6 +569,8 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
     RowSignature modifiedRowSignature = useNestedForUnknownTypes
                                         ? FrameWriterUtils.replaceUnknownTypesWithNestedColumns(rowSignature)
                                         : rowSignature;
+    FrameCursorUtils.throwIfColumnsHaveUnknownType(modifiedRowSignature);
+
     FrameWriterFactory frameWriterFactory = FrameWriters.makeColumnBasedFrameWriterFactory(
         memoryAllocatorFactory,
         rowSignature,
