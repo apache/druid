@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.frame.key.KeyOrder;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.exec.Limits;
 import org.apache.druid.msq.input.stage.StageInputSpec;
@@ -176,6 +177,12 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
                 ColumnType columnType = rowSignature.getColumnType(indexInRowSignature).get();
                 bob.add(columnName, columnType);
                 log.info("Added column [%s] of type [%s] to row signature for window stage.", columnName, columnType);
+              } else {
+                throw new ISE(
+                    "Found unexpected column [%s] already present in row signature [%s].",
+                    columnName,
+                    rowSignature
+                );
               }
             }
           }

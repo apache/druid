@@ -278,7 +278,7 @@ public abstract class WindowQueryTestBase extends BaseCalciteQueryTest
 
   private static Object parseLongValue(final String val)
   {
-    if ("".equals(val)) {
+    if (val.isEmpty()) {
       return null;
     }
     try {
