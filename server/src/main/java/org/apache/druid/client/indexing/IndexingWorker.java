@@ -34,6 +34,7 @@ public class IndexingWorker
   private final String ip;
   private final int capacity;
   private final String version;
+  private final String category;
 
   @JsonCreator
   public IndexingWorker(
@@ -41,7 +42,8 @@ public class IndexingWorker
       @JsonProperty("host") String host,
       @JsonProperty("ip") String ip,
       @JsonProperty("capacity") int capacity,
-      @JsonProperty("version") String version
+      @JsonProperty("version") String version,
+      @JsonProperty("category") String category
   )
   {
     this.scheme = scheme;
@@ -49,6 +51,7 @@ public class IndexingWorker
     this.ip = ip;
     this.capacity = capacity;
     this.version = version;
+    this.category = category;
   }
 
   @JsonProperty
@@ -81,6 +84,12 @@ public class IndexingWorker
     return version;
   }
 
+  @JsonProperty
+  public String getCategory()
+  {
+    return category;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -94,13 +103,13 @@ public class IndexingWorker
     return capacity == that.capacity && Objects.equals(scheme, that.scheme) && Objects.equals(
         host,
         that.host
-    ) && Objects.equals(ip, that.ip) && Objects.equals(version, that.version);
+    ) && Objects.equals(ip, that.ip) && Objects.equals(version, that.version) && Objects.equals(category, that.category);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(scheme, host, ip, capacity, version);
+    return Objects.hash(scheme, host, ip, capacity, version, category);
   }
 
   @Override
@@ -112,6 +121,7 @@ public class IndexingWorker
            ", ip='" + ip + '\'' +
            ", capacity=" + capacity +
            ", version='" + version + '\'' +
+           ", category='" + category + '\'' +
            '}';
   }
 }

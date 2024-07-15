@@ -38,6 +38,7 @@ import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.client.indexing.ClientMSQContext;
 import org.apache.druid.client.indexing.ClientTaskQuery;
+import org.apache.druid.client.indexing.IndexingCategoryCapacityInfo;
 import org.apache.druid.client.indexing.IndexingTotalWorkerCapacityInfo;
 import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
@@ -1142,7 +1143,7 @@ public class CompactSegmentsTest
     Mockito.when(mockClient.cancelTask(conflictTaskId))
            .thenReturn(Futures.immediateFuture(null));
     Mockito.when(mockClient.getTotalWorkerCapacity())
-           .thenReturn(Futures.immediateFuture(new IndexingTotalWorkerCapacityInfo(0, 0)));
+           .thenReturn(Futures.immediateFuture(new IndexingTotalWorkerCapacityInfo(0, 0, null)));
     Mockito.when(mockClient.taskPayload(ArgumentMatchers.eq(conflictTaskId)))
            .thenReturn(Futures.immediateFuture(runningConflictCompactionTaskPayload));
 
@@ -2089,7 +2090,15 @@ public class CompactSegmentsTest
     @Override
     public ListenableFuture<IndexingTotalWorkerCapacityInfo> getTotalWorkerCapacity()
     {
-      return Futures.immediateFuture(new IndexingTotalWorkerCapacityInfo(5, 10));
+      return Futures.immediateFuture(new IndexingTotalWorkerCapacityInfo(
+          5,
+          10,
+          ImmutableMap.of(
+              "c1",
+              new IndexingCategoryCapacityInfo(ImmutableList.of("compact"),
+                                               10)
+          )
+      ));
     }
 
     private void compactSegments(
@@ -2265,7 +2274,7 @@ public class CompactSegmentsTest
     Mockito.when(mockClient.findLockedIntervals(ArgumentMatchers.any()))
            .thenReturn(Futures.immediateFuture(Collections.emptyMap()));
     Mockito.when(mockClient.getTotalWorkerCapacity())
-           .thenReturn(Futures.immediateFuture(new IndexingTotalWorkerCapacityInfo(0, 0)));
+           .thenReturn(Futures.immediateFuture(new IndexingTotalWorkerCapacityInfo(0, 0, null)));
     Mockito.when(mockClient.runTask(ArgumentMatchers.anyString(), payloadCaptor.capture()))
            .thenReturn(Futures.immediateFuture(null));
     return payloadCaptor;

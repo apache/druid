@@ -23,10 +23,13 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.overlord.CategoryCapacityInfo;
 import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
 import org.apache.druid.indexing.overlord.config.WorkerTaskRunnerConfig;
 
 import javax.annotation.Nullable;
+
+import java.util.Collection;
 import java.util.Objects;
 
 public class EqualDistributionWithCategorySpecWorkerSelectStrategy implements WorkerSelectStrategy
@@ -62,6 +65,15 @@ public class EqualDistributionWithCategorySpecWorkerSelectStrategy implements Wo
         workerCategorySpec,
         EqualDistributionWorkerSelectStrategy::selectFromEligibleWorkers
     );
+  }
+
+  @Nullable
+  @Override
+  public ImmutableMap<String, CategoryCapacityInfo> getWorkerCategoryCapacity(
+      Collection<ImmutableWorkerInfo> workers
+  )
+  {
+    return WorkerSelectUtils.getWorkerCategoryCapacity(workers, workerCategorySpec);
   }
 
   @Override

@@ -265,7 +265,7 @@ public class KillUnusedSegments implements CoordinatorDuty
   private int getAvailableKillTaskSlots(final CoordinatorDynamicConfig config, final CoordinatorRunStats stats)
   {
     final int killTaskCapacity = Math.min(
-        (int) (CoordinatorDutyUtils.getTotalWorkerCapacity(overlordClient) * Math.min(config.getKillTaskSlotRatio(), 1.0)),
+        (int) (CoordinatorDutyUtils.getTotalWorkerCapacity(overlordClient, Math.min(config.getKillTaskSlotRatio(), 1.0), "kill")),
         config.getMaxKillTaskSlots()
     );
 
