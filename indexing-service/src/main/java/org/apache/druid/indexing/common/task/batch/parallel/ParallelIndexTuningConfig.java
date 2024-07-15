@@ -276,45 +276,6 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
   }
 
   @Override
-  public ParallelIndexTuningConfig withPartitionsSpec(PartitionsSpec partitionsSpec)
-  {
-    return new ParallelIndexTuningConfig(
-        null,
-        null,
-        getAppendableIndexSpec(),
-        getMaxRowsInMemory(),
-        getMaxBytesInMemory(),
-        isSkipBytesInMemoryOverheadCheck(),
-        null,
-        null,
-        getSplitHintSpec(),
-        partitionsSpec,
-        getIndexSpec(),
-        getIndexSpecForIntermediatePersists(),
-        getMaxPendingPersists(),
-        isForceGuaranteedRollup(),
-        isReportParseExceptions(),
-        getPushTimeout(),
-        getSegmentWriteOutMediumFactory(),
-        null,
-        getMaxNumConcurrentSubTasks(),
-        getMaxRetry(),
-        getTaskStatusCheckPeriodMs(),
-        getChatHandlerTimeout(),
-        getChatHandlerNumRetries(),
-        getMaxNumSegmentsToMerge(),
-        getTotalNumMergeTasks(),
-        isLogParseExceptions(),
-        getMaxParseExceptions(),
-        getMaxSavedParseExceptions(),
-        getMaxColumnsToMerge(),
-        getAwaitSegmentAvailabilityTimeoutMillis(),
-        getMaxAllowedLockCount(),
-        getNumPersistThreads()
-    );
-  }
-
-  @Override
   public boolean equals(Object o)
   {
     if (this == o) {
