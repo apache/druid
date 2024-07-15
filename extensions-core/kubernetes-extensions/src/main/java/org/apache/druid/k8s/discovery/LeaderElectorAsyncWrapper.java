@@ -36,7 +36,7 @@ public class LeaderElectorAsyncWrapper implements Closeable
   private static final Logger LOGGER = new Logger(LeaderElectorAsyncWrapper.class);
 
   private ExecutorService executor;
-  private final AtomicReference<Future> futureRef = new AtomicReference<>();
+  private final AtomicReference<Future<?>> futureRef = new AtomicReference<>();
 
   private final K8sLeaderElector k8sLeaderElector;
 
@@ -46,7 +46,6 @@ public class LeaderElectorAsyncWrapper implements Closeable
       String candidateId,
       String lockResourceName,
       String lockResourceNamespace,
-      K8sDiscoveryConfig discoveryConfig,
       K8sLeaderElectorFactory k8sLeaderElectorFactory
   )
   {

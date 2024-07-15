@@ -49,7 +49,6 @@ public class K8sDruidLeaderSelectorTest
         testNode1.getDruidNode(),
         lockResourceName,
         discoveryConfig.getCoordinatorLeaderElectionConfigMapNamespace(),
-        discoveryConfig,
         new K8sLeaderElectorFactory()
         {
           @Override
@@ -113,7 +112,6 @@ public class K8sDruidLeaderSelectorTest
         testNode1.getDruidNode(),
         lockResourceName,
         discoveryConfig.getCoordinatorLeaderElectionConfigMapNamespace(),
-        discoveryConfig,
         new K8sLeaderElectorFactory()
         {
           @Override

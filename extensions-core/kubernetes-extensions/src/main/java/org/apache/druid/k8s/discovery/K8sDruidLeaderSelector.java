@@ -49,7 +49,6 @@ public class K8sDruidLeaderSelector implements DruidLeaderSelector
       @Self DruidNode self,
       String lockResourceName,
       String lockResourceNamespace,
-      K8sDiscoveryConfig discoveryConfig,
       K8sLeaderElectorFactory k8sLeaderElectorFactory
   )
   {
@@ -57,7 +56,6 @@ public class K8sDruidLeaderSelector implements DruidLeaderSelector
         self.getServiceScheme() + "://" + self.getHostAndPortToUse(),
         lockResourceName,
         lockResourceNamespace,
-        discoveryConfig,
         k8sLeaderElectorFactory
     );
   }
