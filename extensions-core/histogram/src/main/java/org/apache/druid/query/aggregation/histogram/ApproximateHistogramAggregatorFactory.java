@@ -31,7 +31,6 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorFactoryNotMergeableException;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
-import org.apache.druid.query.aggregation.HistogramAggregatorFactory;
 import org.apache.druid.query.aggregation.ObjectAggregateCombiner;
 import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
@@ -43,6 +42,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.Comparator;
@@ -52,7 +52,7 @@ import java.util.Objects;
 @JsonTypeName("approxHistogram")
 public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
 {
-  public static final ColumnType TYPE = ColumnType.ofComplex("approximateHistogram");
+  public static final ColumnType TYPE = ApproximateHistogram.TYPE;
   protected final String name;
   protected final String fieldName;
 
@@ -322,7 +322,7 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
   @Override
   public ColumnType getResultType()
   {
-    return finalizeAsBase64Binary ? TYPE : HistogramAggregatorFactory.TYPE;
+    return finalizeAsBase64Binary ? ApproximateHistogram.TYPE : Histogram.TYPE;
   }
 
   @Override

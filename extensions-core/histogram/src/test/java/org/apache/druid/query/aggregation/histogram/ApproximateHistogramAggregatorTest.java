@@ -24,7 +24,6 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.aggregation.BufferAggregator;
-import org.apache.druid.query.aggregation.HistogramAggregatorFactory;
 import org.apache.druid.query.aggregation.TestFloatColumnSelector;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
@@ -39,6 +38,10 @@ import java.nio.ByteBuffer;
 
 public class ApproximateHistogramAggregatorTest extends InitializedNullHandlingTest
 {
+  static {
+    ApproximateHistogramDruidModule.registerSerde();
+  }
+
   private void aggregateBuffer(TestFloatColumnSelector selector, BufferAggregator agg, ByteBuffer buf, int position)
   {
     agg.aggregate(buf, position);
@@ -147,7 +150,7 @@ public class ApproximateHistogramAggregatorTest extends InitializedNullHandlingT
                     .add("approxHisto", null)
                     .add("approxHistoBin", ApproximateHistogramAggregatorFactory.TYPE)
                     .add("approxHisto-access", ApproximateHistogramAggregatorFactory.TYPE)
-                    .add("approxHisto-finalize", HistogramAggregatorFactory.TYPE)
+                    .add("approxHisto-finalize", Histogram.TYPE)
                     .add("approxHistoBin-access", ApproximateHistogramAggregatorFactory.TYPE)
                     .add("approxHistoBin-finalize", ApproximateHistogramAggregatorFactory.TYPE)
                     .build(),

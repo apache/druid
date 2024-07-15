@@ -20,6 +20,7 @@
 package org.apache.druid.query.aggregation;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.jackson.AggregatorsModule;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.js.JavaScriptConfig;
 import org.apache.druid.query.Druids;
@@ -57,6 +58,11 @@ import java.util.List;
  */
 public class AggregatorFactoryTest extends InitializedNullHandlingTest
 {
+
+  static {
+    new AggregatorsModule();
+  }
+
 
   @Test
   public void testMergeAggregators()
@@ -261,7 +267,7 @@ public class AggregatorFactoryTest extends InitializedNullHandlingTest
                     .add("stringAny-finalize", ColumnType.STRING)
                     .add("cardinality-finalize", ColumnType.DOUBLE)
                     .add("hyperUnique-finalize", ColumnType.DOUBLE)
-                    .add("histogram-finalize", HistogramAggregatorFactory.TYPE_VISUAL)
+                    .add("histogram-finalize", HistogramVisual.TYPE)
                     .add("filtered-finalize", ColumnType.DOUBLE)
                     .add("suppressed-finalize", ColumnType.DOUBLE)
                     .build(),
