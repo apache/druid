@@ -268,7 +268,7 @@ public class Windowing
 
     // sort the processors to optimise the order of window operators
     // currently we are moving the empty groups to the front
-    windowGroupProcessors.sort(WindowComputationProcessor.MOVE_EMPTY_GROUPS_FIRST);
+    windowGroupProcessors.sort(WindowComputationProcessor.PREFIX_COMPARATOR);
 
     for (WindowComputationProcessor windowComputationProcessor : windowGroupProcessors) {
       final WindowGroup group = windowComputationProcessor.getGroup();
@@ -319,19 +319,39 @@ public class Windowing
     }
 
     /**
-     * Comparator to move the empty windows to the front
+     * Comparator to keep together, the group with list of columns which qualify as prefix to another group's list
      */
-    public static final Comparator<WindowComputationProcessor> MOVE_EMPTY_GROUPS_FIRST = (o1, o2) -> {
-      if (o1.getGroup().getPartitionColumns().isEmpty() && o2.getGroup().getPartitionColumns().isEmpty()) {
-        return 0;
+    public static final Comparator<WindowComputationProcessor> PREFIX_COMPARATOR = (o1, o2) -> {
+      // Initialise column lists with partition columns with defaulting to direction asc
+      // and add the order by columns with preserving the direction information
+      final LinkedHashSet<ColumnWithDirection> columns1 = new LinkedHashSet<>();
+      for (String partitionColumn : o1.getGroup().getPartitionColumns()) {
+        columns1.add(ColumnWithDirection.ascending(partitionColumn));
       }
-      if (o1.getGroup().getPartitionColumns().isEmpty()) {
-        return -1;
+      columns1.addAll(o1.getGroup().getOrdering());
+
+      final LinkedHashSet<ColumnWithDirection> columns2 = new LinkedHashSet<>();
+      for (String partitionColumn : o2.getGroup().getPartitionColumns()) {
+        columns2.add(ColumnWithDirection.ascending(partitionColumn));
       }
-      if (o2.getGroup().getPartitionColumns().isEmpty()) {
-        return 1;
+      columns2.addAll(o2.getGroup().getOrdering());
+
+      int minLength = Math.min(columns1.size(), columns2.size());
+      final Iterator<ColumnWithDirection> columnIterator1 = columns1.iterator();
+      final Iterator<ColumnWithDirection> columnIterator2 = columns2.iterator();
+
+      for (int i = 0; i < minLength; i++) {
+        int comparison = columnIterator1.next().toString().compareTo(columnIterator2.next().toString());
+        if (comparison != 0) {
+          return comparison;
+        }
       }
-      return 0;
+
+      if (columns1.size() == columns2.size()) {
+        return Integer.compare(o1.getGroup().getPartitionColumns().size(), o2.getGroup().getPartitionColumns().size());
+      }
+
+      return Integer.compare(columns1.size(), columns2.size());
     };
 
     @Override

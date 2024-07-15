@@ -29,7 +29,7 @@ expectedOperators:
         - { "type": "offset", "inputColumn": "d1", "outputColumn": "w2", "offset": -2 }
         - { "type": "offset", "inputColumn": "d1", "outputColumn": "w3", "offset": 1 }
         - { "type": "first", "inputColumn": "a0", "outputColumn": "w4" }
-        - { "type": "offset", "inputColumn": "a0", "outputColumn": "w4", "offset": 0 }
+        - { "type": "offset", "inputColumn": "a0", "outputColumn": "w5", "offset": 0 }
         - { "type": "percentile", "outputColumn": "w1", "numBuckets": 3 }
 
 expectedResults:
