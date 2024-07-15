@@ -299,6 +299,12 @@ public class TypeStrategies
     {
       return a.equals(b);
     }
+
+    @Override
+    public Class<?> getClazz()
+    {
+      return Long.class;
+    }
   }
 
   /**
@@ -367,6 +373,12 @@ public class TypeStrategies
     public boolean equals(Float a, Float b)
     {
       return a.equals(b);
+    }
+
+    @Override
+    public Class<?> getClazz()
+    {
+      return Float.class;
     }
   }
 
@@ -437,6 +449,12 @@ public class TypeStrategies
     public boolean equals(Double a, Double b)
     {
       return a.equals(b);
+    }
+
+    @Override
+    public Class<?> getClazz()
+    {
+      return Double.class;
     }
   }
 
@@ -518,6 +536,12 @@ public class TypeStrategies
     public boolean equals(String a, String b)
     {
       return a.equals(b);
+    }
+
+    @Override
+    public Class<?> getClazz()
+    {
+      return String.class;
     }
   }
 
@@ -663,6 +687,12 @@ public class TypeStrategies
       } else {
         return false;
       }
+    }
+
+    @Override
+    public Class<?> getClazz()
+    {
+      return Object[].class;
     }
   }
 }
