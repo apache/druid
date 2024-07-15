@@ -447,7 +447,13 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
     if (workItem == null) {
       return TaskLocation.unknown();
     } else {
-      return workItem.getLocation();
+      try {
+        return workItem.getLocation();
+      }
+      catch (Exception e) {
+        log.warn("Unable to find location for task [%s]", taskId);
+        return TaskLocation.unknown();
+      }
     }
   }
 

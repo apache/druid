@@ -254,15 +254,7 @@ public class KubernetesPeonLifecycle
     if we decide we need to change this later.
     **/
     if (taskLocation == null) {
-      Optional<Pod> maybePod = Optional.absent();
-      try {
-        maybePod = kubernetesClient.getPeonPod(taskId.getK8sJobName());
-      }
-      catch (Exception e) {
-        log.makeAlert("Unable to get location for task", e)
-           .addData("taskId", taskId);
-      }
-
+      Optional<Pod> maybePod = kubernetesClient.getPeonPod(taskId.getK8sJobName());
       if (!maybePod.isPresent()) {
         return TaskLocation.unknown();
       }
