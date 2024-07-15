@@ -24,9 +24,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.Map;
 
-/**
- * Response for the RetrieveUpgradedFromSegmentIds task action
- */
 public class UpgradedFromSegmentsResponse
 {
   private final Map<String, String> upgradedFromSegmentIds;

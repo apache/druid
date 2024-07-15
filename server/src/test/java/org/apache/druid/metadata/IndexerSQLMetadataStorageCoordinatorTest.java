@@ -3429,13 +3429,13 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   public void testRetrieveUpgradedFromSegmentIds()
   {
     final String datasource = defaultSegment.getDataSource();
-    final Map<SegmentId, String> upgradedFromSegmentIdMap = new HashMap<>();
-    upgradedFromSegmentIdMap.put(defaultSegment2.getId(), defaultSegment.getId().toString());
-    coordinator.insertUsedSegments(ImmutableSet.of(defaultSegment, defaultSegment2), upgradedFromSegmentIdMap);
+    final Map<String, String> upgradedFromSegmentIdMap = new HashMap<>();
+    upgradedFromSegmentIdMap.put(defaultSegment2.getId().toString(), defaultSegment.getId().toString());
+    insertUsedSegments(ImmutableSet.of(defaultSegment, defaultSegment2), upgradedFromSegmentIdMap);
     coordinator.markSegmentsAsUnusedWithinInterval(datasource, Intervals.ETERNITY);
     upgradedFromSegmentIdMap.clear();
-    upgradedFromSegmentIdMap.put(defaultSegment3.getId(), defaultSegment.getId().toString());
-    coordinator.insertUsedSegments(ImmutableSet.of(defaultSegment3, defaultSegment4), upgradedFromSegmentIdMap);
+    upgradedFromSegmentIdMap.put(defaultSegment3.getId().toString(), defaultSegment.getId().toString());
+    insertUsedSegments(ImmutableSet.of(defaultSegment3, defaultSegment4), upgradedFromSegmentIdMap);
 
     Map<String, String> expected = new HashMap<>();
     expected.put(defaultSegment2.getId().toString(), defaultSegment.getId().toString());
@@ -3456,13 +3456,13 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   public void testRetrieveUpgradedToSegmentIds()
   {
     final String datasource = defaultSegment.getDataSource();
-    final Map<SegmentId, String> upgradedFromSegmentIdMap = new HashMap<>();
-    upgradedFromSegmentIdMap.put(defaultSegment2.getId(), defaultSegment.getId().toString());
-    coordinator.insertUsedSegments(ImmutableSet.of(defaultSegment, defaultSegment2), upgradedFromSegmentIdMap);
+    final Map<String, String> upgradedFromSegmentIdMap = new HashMap<>();
+    upgradedFromSegmentIdMap.put(defaultSegment2.getId().toString(), defaultSegment.getId().toString());
+    insertUsedSegments(ImmutableSet.of(defaultSegment, defaultSegment2), upgradedFromSegmentIdMap);
     coordinator.markSegmentsAsUnusedWithinInterval(datasource, Intervals.ETERNITY);
     upgradedFromSegmentIdMap.clear();
-    upgradedFromSegmentIdMap.put(defaultSegment3.getId(), defaultSegment.getId().toString());
-    coordinator.insertUsedSegments(ImmutableSet.of(defaultSegment3, defaultSegment4), upgradedFromSegmentIdMap);
+    upgradedFromSegmentIdMap.put(defaultSegment3.getId().toString(), defaultSegment.getId().toString());
+    insertUsedSegments(ImmutableSet.of(defaultSegment3, defaultSegment4), upgradedFromSegmentIdMap);
 
     Map<String, Set<String>> expected = new HashMap<>();
     expected.put(defaultSegment.getId().toString(), new HashSet<>());
@@ -3476,5 +3476,11 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         expected,
         coordinator.retrieveUpgradedToSegmentIds(datasource, upgradedIds)
     );
+  }
+
+  private void insertUsedSegments(Set<DataSegment> segments, Map<String, String> upgradedFromSegmentIdMap)
+  {
+    final String table = derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable();
+    insertUsedSegments(segments, upgradedFromSegmentIdMap, derbyConnector, table, mapper);
   }
 }

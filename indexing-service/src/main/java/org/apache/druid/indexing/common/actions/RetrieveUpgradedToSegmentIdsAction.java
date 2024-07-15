@@ -28,7 +28,12 @@ import java.util.Objects;
 import java.util.Set;
 
 /**
- * Task action to retrieve all the segment IDs to which a given set of segments were upgraded.
+ * Task action to determine the set of all segments containing the same load spec given the parent id. <br/>
+ * Returns a map from a segment ID to a set containing:
+ * <ol>
+ * <li> all segment IDs that were upgraded from it AND are still present in the metadata store </li>
+ * <li> the segment ID itself if and only if it is still present in the metadata store </li>
+ * </ol>
  */
 public class RetrieveUpgradedToSegmentIdsAction implements TaskAction<UpgradedToSegmentsResponse>
 {

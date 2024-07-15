@@ -479,16 +479,15 @@ public interface IndexerMetadataStorageCoordinator
    * There should be no entry in the map for an original non-upgraded segment
    * @param dataSource data source
    * @param segmentIds ids of segments
-   * @return map from child id to parent id
    */
   Map<String, String> retrieveUpgradedFromSegmentIds(String dataSource, Set<String> segmentIds);
 
   /**
    * Map from a segment ID to a set containing
-   * all segment IDs that were upgraded from it AND are still present in the metadata store
+   * 1) all segment IDs that were upgraded from it AND are still present in the metadata store
+   * 2) the segment ID itself if and only if it is still present in the metadata store
    * @param dataSource data source
    * @param segmentIds ids of the first segments which had the corresponding load spec
-   * @return map from parent id to set of all its children
    */
   Map<String, Set<String>> retrieveUpgradedToSegmentIds(String dataSource, Set<String> segmentIds);
 }

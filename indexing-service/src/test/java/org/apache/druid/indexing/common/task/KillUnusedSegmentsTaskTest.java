@@ -36,9 +36,9 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
+import org.apache.druid.metadata.IndexerSqlMetadataStorageCoordinatorTestBase;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.SegmentId;
 import org.assertj.core.api.Assertions;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
@@ -73,10 +73,10 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
     taskRunner = new TestTaskRunner();
 
     final String version = DateTimes.nowUtc().toString();
-    segment1 = newSegment(Intervals.of("2019-01-01/2019-02-01"), version);
-    segment2 = newSegment(Intervals.of("2019-02-01/2019-03-01"), version);
-    segment3 = newSegment(Intervals.of("2019-03-01/2019-04-01"), version);
-    segment4 = newSegment(Intervals.of("2019-04-01/2019-05-01"), version);
+    segment1 = newSegment(Intervals.of("2019-01-01/2019-02-01"), version).withLoadSpec(ImmutableMap.of("k", 1));
+    segment2 = newSegment(Intervals.of("2019-02-01/2019-03-01"), version).withLoadSpec(ImmutableMap.of("k", 2));
+    segment3 = newSegment(Intervals.of("2019-03-01/2019-04-01"), version).withLoadSpec(ImmutableMap.of("k", 3));
+    segment4 = newSegment(Intervals.of("2019-04-01/2019-05-01"), version).withLoadSpec(ImmutableMap.of("k", 4));
   }
 
   @Test
@@ -132,13 +132,13 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
   @Test
   public void testKillSegmentsDeleteUnreferencedSiblings() throws Exception
   {
-    final Map<SegmentId, String> upgradeSegmentMapping = ImmutableMap.of(
-        segment1.getId(),
+    final Map<String, String> upgradeSegmentMapping = ImmutableMap.of(
+        segment1.getId().toString(),
         "nonExistentParent",
-        segment2.getId(),
+        segment2.getId().toString(),
         "nonExistentParent"
     );
-    getStorageCoordinator().insertUsedSegments(ImmutableSet.of(segment1, segment2), upgradeSegmentMapping);
+    insertUsedSegments(ImmutableSet.of(segment1, segment2), upgradeSegmentMapping);
     getStorageCoordinator().markSegmentsAsUnusedWithinInterval(DATA_SOURCE, Intervals.ETERNITY);
 
 
@@ -170,13 +170,13 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
   @Test
   public void testKillSegmentsDoNotDeleteReferencedSibling() throws Exception
   {
-    final Map<SegmentId, String> upgradeSegmentMapping = ImmutableMap.of(
-        segment1.getId(),
+    final Map<String, String> upgradeSegmentMapping = ImmutableMap.of(
+        segment1.getId().toString(),
         "nonExistentParent",
-        segment2.getId(),
+        segment2.getId().toString(),
         "nonExistentParent"
     );
-    getStorageCoordinator().insertUsedSegments(ImmutableSet.of(segment1, segment2), upgradeSegmentMapping);
+    insertUsedSegments(ImmutableSet.of(segment1, segment2), upgradeSegmentMapping);
     getStorageCoordinator().markSegmentsAsUnusedWithinInterval(DATA_SOURCE, Intervals.ETERNITY);
 
 
@@ -208,13 +208,13 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
   @Test
   public void testKillSegmentsDoNotDeleteParentWithReferencedChildren() throws Exception
   {
-    final Map<SegmentId, String> upgradeSegmentMapping = ImmutableMap.of(
-        segment1.getId(),
+    final Map<String, String> upgradeSegmentMapping = ImmutableMap.of(
+        segment1.getId().toString(),
         segment3.getId().toString(),
-        segment2.getId(),
+        segment2.getId().toString(),
         segment3.getId().toString()
     );
-    getStorageCoordinator().insertUsedSegments(ImmutableSet.of(segment1, segment2, segment3), upgradeSegmentMapping);
+    insertUsedSegments(ImmutableSet.of(segment1, segment2, segment3), upgradeSegmentMapping);
     getSegmentsMetadataManager().markSegmentAsUnused(segment2.getId());
     getSegmentsMetadataManager().markSegmentAsUnused(segment3.getId());
 
@@ -253,13 +253,13 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
   @Test
   public void testKillSegmentsDoNotDeleteChildrenWithReferencedParent() throws Exception
   {
-    final Map<SegmentId, String> upgradeSegmentMapping = ImmutableMap.of(
-        segment1.getId(),
+    final Map<String, String> upgradeSegmentMapping = ImmutableMap.of(
+        segment1.getId().toString(),
         segment3.getId().toString(),
-        segment2.getId(),
+        segment2.getId().toString(),
         segment3.getId().toString()
     );
-    getStorageCoordinator().insertUsedSegments(ImmutableSet.of(segment1, segment2, segment3), upgradeSegmentMapping);
+    insertUsedSegments(ImmutableSet.of(segment1, segment2, segment3), upgradeSegmentMapping);
     getSegmentsMetadataManager().markSegmentAsUnused(segment1.getId());
     getSegmentsMetadataManager().markSegmentAsUnused(segment2.getId());
 
@@ -298,13 +298,13 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
   @Test
   public void testKillSegmentsDeleteChildrenAndParent() throws Exception
   {
-    final Map<SegmentId, String> upgradeSegmentMapping = ImmutableMap.of(
-        segment1.getId(),
+    final Map<String, String> upgradeSegmentMapping = ImmutableMap.of(
+        segment1.getId().toString(),
         segment3.getId().toString(),
-        segment2.getId(),
+        segment2.getId().toString(),
         segment3.getId().toString()
     );
-    getStorageCoordinator().insertUsedSegments(ImmutableSet.of(segment1, segment2, segment3), upgradeSegmentMapping);
+    insertUsedSegments(ImmutableSet.of(segment1, segment2, segment3), upgradeSegmentMapping);
     getSegmentsMetadataManager().markSegmentAsUnused(segment1.getId());
     getSegmentsMetadataManager().markSegmentAsUnused(segment2.getId());
     getSegmentsMetadataManager().markSegmentAsUnused(segment3.getId());
@@ -1452,6 +1452,18 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         null,
         9,
         10L
+    );
+  }
+
+  private void insertUsedSegments(Set<DataSegment> segments, Map<String, String> upgradedFromSegmentIdMap)
+  {
+    final String table = derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable();
+    IndexerSqlMetadataStorageCoordinatorTestBase.insertUsedSegments(
+        segments,
+        upgradedFromSegmentIdMap,
+        derbyConnectorRule.getConnector(),
+        table,
+        getObjectMapper()
     );
   }
 }

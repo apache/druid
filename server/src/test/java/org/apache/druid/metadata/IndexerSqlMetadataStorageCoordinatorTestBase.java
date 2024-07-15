@@ -323,6 +323,7 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
                       .version(version)
                       .shardSpec(shardSpec)
                       .size(100)
+                      // hash to get a unique load spec as segmentId has not yet been generated
                       .loadSpec(ImmutableMap.of("hash", Objects.hash(interval, version, shardSpec)))
                       .build();
   }
@@ -556,6 +557,52 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
           final boolean succeeded = Arrays.stream(affectedRows).allMatch(eachAffectedRows -> eachAffectedRows == 1);
           if (!succeeded) {
             throw new ISE("Failed to insert upgrade segments in DB");
+          }
+          return true;
+        }
+    );
+  }
+
+  public static void insertUsedSegments(
+      Set<DataSegment> dataSegments,
+      Map<String, String> upgradedFromSegmentIdMap,
+      SQLMetadataConnector connector,
+      String table,
+      ObjectMapper jsonMapper
+  )
+  {
+    connector.retryWithHandle(
+        handle -> {
+          PreparedBatch preparedBatch = handle.prepareBatch(
+              StringUtils.format(
+                  "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version,"
+                  + " used, payload, used_status_last_updated, upgraded_from_segment_id) "
+                  + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version,"
+                  + " :used, :payload, :used_status_last_updated, :upgraded_from_segment_id)",
+                  table,
+                  connector.getQuoteString()
+              )
+          );
+          for (DataSegment segment : dataSegments) {
+            String id = segment.getId().toString();
+            preparedBatch.add()
+                         .bind("id", id)
+                         .bind("dataSource", segment.getDataSource())
+                         .bind("created_date", DateTimes.nowUtc().toString())
+                         .bind("start", segment.getInterval().getStart().toString())
+                         .bind("end", segment.getInterval().getEnd().toString())
+                         .bind("partitioned", !(segment.getShardSpec() instanceof NoneShardSpec))
+                         .bind("version", segment.getVersion())
+                         .bind("used", true)
+                         .bind("payload", jsonMapper.writeValueAsBytes(segment))
+                         .bind("used_status_last_updated", DateTimes.nowUtc().toString())
+                         .bind("upgraded_from_segment_id", upgradedFromSegmentIdMap.get(segment.getId().toString()));
+          }
+
+          final int[] affectedRows = preparedBatch.execute();
+          final boolean succeeded = Arrays.stream(affectedRows).allMatch(eachAffectedRows -> eachAffectedRows == 1);
+          if (!succeeded) {
+            throw new ISE("Failed to publish segments to DB");
           }
           return true;
         }
