@@ -348,6 +348,15 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
     return taskLockMap;
   }
 
+  /**
+   * Determines subset of segments without referenced load specs that can be safely killed by
+   * looking at the segment upgrades and used segment load specs
+   * @param unusedSegments input segments
+   * @param upgradedFromSegmentIds segment to parent mapping
+   * @param usedSegmentLoadSpecs load specs of used segments
+   * @param taskActionClient task action client
+   * @return list of segments to kill from deep storage
+   */
   private List<DataSegment> getKillableSegments(
       List<DataSegment> unusedSegments,
       Map<String, String> upgradedFromSegmentIds,
