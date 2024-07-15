@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.druid.indexing.common.task.Task;
 
-import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -78,25 +77,6 @@ public class RetrieveUpgradedFromSegmentIdsAction implements TaskAction<Upgraded
   public boolean isAudited()
   {
     return false;
-  }
-
-  @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    RetrieveUpgradedFromSegmentIdsAction that = (RetrieveUpgradedFromSegmentIdsAction) o;
-    return Objects.equals(dataSource, that.dataSource) && Objects.equals(segmentIds, that.segmentIds);
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return Objects.hash(dataSource, segmentIds);
   }
 
   @Override
