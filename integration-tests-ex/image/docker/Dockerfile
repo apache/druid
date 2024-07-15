@@ -46,13 +46,15 @@ ARG MARIADB_VERSION
 ENV MARIADB_VERSION=$MARIADB_VERSION
 ARG MYSQL_DRIVER_CLASSNAME=com.mysql.jdbc.Driver
 ENV MYSQL_DRIVER_CLASSNAME=$MYSQL_DRIVER_CLASSNAME
+ARG DRUID_TESTING_TOOLS_VERSION
+ENV DRUID_TESTING_TOOLS_VERSION=$DRUID_TESTING_TOOLS_VERSION
 
 ENV DRUID_HOME=/usr/local/druid
 
 # Populate build artifacts
 
 COPY apache-druid-${DRUID_VERSION}-bin.tar.gz /usr/local/
-COPY druid-it-tools-${DRUID_VERSION}.jar /tmp/druid/extensions/druid-it-tools/
+COPY druid-it-tools-${DRUID_TESTING_TOOLS_VERSION}.jar /tmp/druid/extensions/druid-it-tools/
 COPY kafka-protobuf-provider-${CONFLUENT_VERSION}.jar /tmp/druid/lib/
 COPY mysql-connector-j-${MYSQL_VERSION}.jar /tmp/druid/lib/
 COPY mariadb-java-client-${MARIADB_VERSION}.jar /tmp/druid/lib/
@@ -71,3 +73,4 @@ RUN bash /test-setup.sh
 USER druid:druid
 WORKDIR /
 ENTRYPOINT [ "bash", "/launch.sh" ]
+

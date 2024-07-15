@@ -26,7 +26,7 @@ services:
   # See https://hub.docker.com/_/zookeeper
   zookeeper:
     # Uncomment the following when running on Apple Silicon processors:
-    # platform: linux/x86_64
+    platform: linux/x86_64
     image: zookeeper:${ZK_VERSION}
     container_name: zookeeper
     labels:
@@ -46,7 +46,7 @@ services:
   kafka:
     image: bitnami/kafka:${KAFKA_VERSION}
     container_name: kafka
-    # platform: linux/x86_64
+    platform: linux/x86_64
     labels:
       druid-int-test: "true"
     ports:
@@ -73,7 +73,7 @@ services:
   # The image will intialize the user and DB upon first start.
   metadata:
     # Uncomment the following when running on Apple Silicon processors:
-    # platform: linux/x86_64
+    platform: linux/x86_64
     image: mysql:$MYSQL_IMAGE_VERSION
     container_name: metadata
     labels:

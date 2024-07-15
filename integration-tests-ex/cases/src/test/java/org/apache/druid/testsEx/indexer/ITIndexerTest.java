@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
 import org.apache.druid.testing.utils.ITRetryUtil;
+import org.apache.druid.testsEx.categories.BackwardCompatibility;
 import org.apache.druid.testsEx.categories.BatchIndex;
 import org.apache.druid.testsEx.config.DruidTestRunner;
 import org.joda.time.Interval;
@@ -43,7 +44,7 @@ import java.util.Map;
 import java.util.function.Function;
 
 @RunWith(DruidTestRunner.class)
-@Category(BatchIndex.class)
+@Category({BackwardCompatibility.class})
 public class ITIndexerTest extends AbstractITBatchIndexTest
 {
   private static final String INDEX_TASK = "/indexer/wikipedia_index_task.json";

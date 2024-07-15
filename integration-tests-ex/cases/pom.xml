@@ -460,6 +460,15 @@
             </properties>
         </profile>
         <profile>
+            <id>IT-BackwardCompatibility</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <properties>
+                <it.category>BackwardCompatibility</it.category>
+            </properties>
+        </profile>
+        <profile>
             <id>docker-tests</id>
             <activation>
                 <activeByDefault>false</activeByDefault>
@@ -489,7 +498,7 @@
                                 <!-- Turning on logs so that travis does not time out tests for not providing any output.  -->
                                 <redirectTestOutputToFile>False</redirectTestOutputToFile>
                                 <!-- Can run only one test category per Maven run. -->
-                                <groups>org.apache.druid.testsEx.categories.${it.category}</groups>
+                                <!-- groups>org.apache.druid.testsEx.categories.${it.category}</groups> -->
                              </configuration>
                           </execution>
                           <execution>
