@@ -443,17 +443,17 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   @Override
   public TaskLocation getTaskLocation(String taskId)
   {
-    final KubernetesWorkItem workItem = tasks.get(taskId);
-    if (workItem == null) {
-      return TaskLocation.unknown();
-    } else {
-      try {
+    try {
+      final KubernetesWorkItem workItem = tasks.get(taskId);
+      if (workItem == null) {
+        return TaskLocation.unknown();
+      } else {
         return workItem.getLocation();
       }
-      catch (Exception e) {
-        log.warn("Unable to find location for task [%s]", taskId);
-        return TaskLocation.unknown();
-      }
+    }
+    catch (Exception e) {
+      log.warn("Unable to find location for task [%s]", taskId);
+      return TaskLocation.unknown();
     }
   }
 
