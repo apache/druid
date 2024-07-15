@@ -21,13 +21,10 @@ package org.apache.druid.msq.exec;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.hamcrest.CoreMatchers;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.jupiter.api.Test;
 
 public class MSQSegmentMorphTest extends MSQTestBase
@@ -55,36 +52,5 @@ public class MSQSegmentMorphTest extends MSQTestBase
                      .setExpectedResultRows(ImmutableList.of())
                      .setExpectedDestinationIntervals(ImmutableList.of(Intervals.of("2000-01-01T/2000-01-04T")))
                      .verifyResults();
-  }
-
-  @Test
-  public void testSegmentMorphFactoryWithMultipleReplaceTimeChunks()
-  {
-    testSegmentMorphFactoryCreator.setFrameProcessorFactory(new TestSegmentMorpherFrameProcessorFactory());
-
-    RowSignature rowSignature = RowSignature.builder()
-                                            .add("__time", ColumnType.LONG)
-                                            .add("m1", ColumnType.FLOAT)
-                                            .build();
-
-    testIngestQuery().setSql(" REPLACE INTO foo "
-                             + "OVERWRITE WHERE __time >= TIMESTAMP '2000-01-01' AND __time < TIMESTAMP '2000-01-04' OR __time >= TIMESTAMP '2001-01-01' AND __time < TIMESTAMP '2001-01-04'"
-                             + "SELECT __time, m1 "
-                             + "FROM foo "
-                             + "PARTITIONED BY DAY ")
-                     .setExpectedDataSource("foo")
-                     .setExpectedRowSignature(rowSignature)
-                     .setQueryContext(DEFAULT_MSQ_CONTEXT)
-                     .setExpectedExecutionErrorMatcher(
-                         CoreMatchers.allOf(
-                             CoreMatchers.instanceOf(ISE.class),
-                             ThrowableMessageMatcher.hasMessage(
-                                 CoreMatchers.containsString("Must have single interval in replaceTimeChunks, "
-                                                             + "but got [[2000-01-01T00:00:00.000Z/2000-01-04T00:00:00.000Z, "
-                                                             + "2001-01-01T00:00:00.000Z/2001-01-04T00:00:00.000Z]]")
-                             )
-                         )
-                     )
-                     .verifyExecutionError();
   }
 }

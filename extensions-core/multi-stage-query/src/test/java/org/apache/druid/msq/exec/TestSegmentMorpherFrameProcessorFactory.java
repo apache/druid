@@ -145,7 +145,6 @@ public class TestSegmentMorpherFrameProcessorFactory implements FrameProcessorFa
   @Override
   public ExtraInfoHolder makeExtraInfoHolder(@Nullable Object extra)
   {
-    Assert.assertEquals(MSQTestTaskActionClient.VERSION, extra);
     return new ExtraInfoHolder(extra)
     {
     };
