@@ -1396,17 +1396,8 @@ public class RowBasedGrouperHelper
           }
 
           while (jp.currentToken() != JsonToken.END_ARRAY) {
-
-            int serdeHelpersIndex = dimsReadSoFar - timestampAdjustment;
-            // TODO: Remove this
-            if (serdeHelpersIndex >= serdeHelpers.length) {
-              throw DruidException.defensive("For CodeQL");
-            }
-
-            // Read the dimension
-            serdeHelpers[serdeHelpersIndex].getClazz();
             objects[dimsReadSoFar] =
-                codec.readValue(jp, serdeHelpers[serdeHelpersIndex].getClazz());
+                codec.readValue(jp, serdeHelpers[dimsReadSoFar - timestampAdjustment].getClazz());
 
             ++dimsReadSoFar;
             jp.nextToken();
