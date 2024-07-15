@@ -35,6 +35,7 @@ public class ComposingProcessorTest
     final ProcessorForTesting secondProcessor = new ProcessorForTesting();
 
     ComposingProcessor proc = new ComposingProcessor(firstProcessor, secondProcessor);
+    Assert.assertTrue(proc.getOutputColumnNames().isEmpty());
 
     proc.process(null);
     Assert.assertEquals(1, firstProcessor.processCounter);

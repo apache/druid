@@ -28,8 +28,10 @@ import org.apache.druid.query.rowsandcols.column.DoubleArrayColumn;
 import org.apache.druid.query.rowsandcols.column.IntArrayColumn;
 import org.apache.druid.query.rowsandcols.column.ObjectArrayColumn;
 import org.apache.druid.segment.column.ColumnType;
+import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -49,6 +51,7 @@ public class WindowRowNumberProcessorTest
     MapOfColumnsRowsAndColumns rac = MapOfColumnsRowsAndColumns.fromMap(map);
 
     Processor processor = new WindowRowNumberProcessor("rowRow");
+    Assert.assertEquals(Collections.singletonList("rowRow"), processor.getOutputColumnNames());
 
     final RowsAndColumnsHelper expectations = new RowsAndColumnsHelper()
         .expectColumn("intCol", new int[]{88, 1, 2, 3, 4, 5, 6, 7, 8, 9})
