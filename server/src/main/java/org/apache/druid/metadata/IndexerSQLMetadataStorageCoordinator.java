@@ -2954,28 +2954,30 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       return Collections.emptyMap();
     }
 
-    final List<String> segmentIdList = ImmutableList.copyOf(segmentIds);
-    final String sql = StringUtils.format(
-        "SELECT id, upgraded_from_segment_id FROM %s WHERE dataSource = :dataSource %s",
-        dbTables.getSegmentsTable(),
-        SqlSegmentsMetadataQuery.getParameterizedInConditionForColumn("id", segmentIdList)
-    );
     final Map<String, String> upgradedFromSegmentIds = new HashMap<>();
-    connector.retryWithHandle(
-        handle -> {
-          Query<Map<String, Object>> query = handle.createQuery(sql)
-                                                   .bind("dataSource", dataSource);
-          SqlSegmentsMetadataQuery.bindColumnValuesToQueryWithInCondition("id", segmentIdList, query);
-          return query.map((index, r, ctx) -> {
-            final String id = r.getString(1);
-            final String upgradedFromSegmentId = r.getString(2);
-            if (upgradedFromSegmentId != null) {
-              upgradedFromSegmentIds.put(id, upgradedFromSegmentId);
-            }
-            return null;
-          }).list();
-        }
-    );
+    final List<List<String>> partitions = Lists.partition(ImmutableList.copyOf(segmentIds), 100);
+    for (List<String> partition : partitions) {
+      final String sql = StringUtils.format(
+          "SELECT id, upgraded_from_segment_id FROM %s WHERE dataSource = :dataSource %s",
+          dbTables.getSegmentsTable(),
+          SqlSegmentsMetadataQuery.getParameterizedInConditionForColumn("id", partition)
+      );
+      connector.retryWithHandle(
+          handle -> {
+            Query<Map<String, Object>> query = handle.createQuery(sql)
+                                                     .bind("dataSource", dataSource);
+            SqlSegmentsMetadataQuery.bindColumnValuesToQueryWithInCondition("id", partition, query);
+            return query.map((index, r, ctx) -> {
+              final String id = r.getString(1);
+              final String upgradedFromSegmentId = r.getString(2);
+              if (upgradedFromSegmentId != null) {
+                upgradedFromSegmentIds.put(id, upgradedFromSegmentId);
+              }
+              return null;
+            }).list();
+          }
+      );
+    }
     return upgradedFromSegmentIds;
   }
 
@@ -2989,39 +2991,40 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       return Collections.emptyMap();
     }
 
-    final List<String> upgradedFromSegmentIdList = ImmutableList.copyOf(segmentIds);
-    final String sql = StringUtils.format(
-        "SELECT id, upgraded_from_segment_id FROM %s WHERE dataSource = :dataSource %s",
-        dbTables.getSegmentsTable(),
-        SqlSegmentsMetadataQuery.getParameterizedInConditionForColumn(
-            "upgraded_from_segment_id",
-            upgradedFromSegmentIdList
-        )
-    );
     final Map<String, Set<String>> upgradedToSegmentIds = new HashMap<>();
     retrieveSegmentsById(dataSource, segmentIds)
         .stream()
         .map(DataSegment::getId)
         .map(SegmentId::toString)
         .forEach(id -> upgradedToSegmentIds.computeIfAbsent(id, k -> new HashSet<>()).add(id));
-    connector.retryWithHandle(
-        handle -> {
-          Query<Map<String, Object>> query = handle.createQuery(sql)
-                                                   .bind("dataSource", dataSource);
-          SqlSegmentsMetadataQuery.bindColumnValuesToQueryWithInCondition(
-              "upgraded_from_segment_id",
-              upgradedFromSegmentIdList,
-              query
-          );
-          return query.map((index, r, ctx) -> {
-            final String upgradedToId = r.getString(1);
-            final String id = r.getString(2);
-            upgradedToSegmentIds.computeIfAbsent(id, k -> new HashSet<>())
-                                .add(upgradedToId);
-            return null;
-          }).list();
-        }
-    );
+
+    final List<List<String>> partitions = Lists.partition(ImmutableList.copyOf(segmentIds), 100);
+    for (List<String> partition : partitions) {
+      final String sql = StringUtils.format(
+          "SELECT id, upgraded_from_segment_id FROM %s WHERE dataSource = :dataSource %s",
+          dbTables.getSegmentsTable(),
+          SqlSegmentsMetadataQuery.getParameterizedInConditionForColumn("upgraded_from_segment_id", partition)
+      );
+
+      connector.retryWithHandle(
+          handle -> {
+            Query<Map<String, Object>> query = handle.createQuery(sql)
+                                                     .bind("dataSource", dataSource);
+            SqlSegmentsMetadataQuery.bindColumnValuesToQueryWithInCondition(
+                "upgraded_from_segment_id",
+                partition,
+                query
+            );
+            return query.map((index, r, ctx) -> {
+              final String upgradedToId = r.getString(1);
+              final String id = r.getString(2);
+              upgradedToSegmentIds.computeIfAbsent(id, k -> new HashSet<>())
+                                  .add(upgradedToId);
+              return null;
+            }).list();
+          }
+      );
+    }
     return upgradedToSegmentIds;
   }
 

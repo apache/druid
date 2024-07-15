@@ -3453,6 +3453,48 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   }
 
   @Test
+  public void testRetrieveUpgradedFromSegmentIdsInBatches()
+  {
+    final int size = 500;
+    final int batchSize = 100;
+
+    List<DataSegment> segments = new ArrayList<>();
+    for (int i = 0; i < size; i++) {
+      segments.add(
+          new DataSegment(
+              "DS",
+              Intervals.ETERNITY,
+              "v " + (i % 5),
+              ImmutableMap.of("num", i / 5),
+              ImmutableList.of("dim"),
+              ImmutableList.of("agg"),
+              new NumberedShardSpec(i / 5, 0),
+              0,
+              100L
+          )
+      );
+    }
+    Map<String, String> expected = new HashMap<>();
+    for (int i = 0; i < batchSize; i++) {
+      for (int j = 1; j < 5; j++) {
+        expected.put(
+            segments.get(5 * i + j).getId().toString(),
+            segments.get(5 * i).getId().toString()
+        );
+      }
+    }
+    insertUsedSegments(ImmutableSet.copyOf(segments), expected);
+
+    Map<String, String> actual = coordinator.retrieveUpgradedFromSegmentIds(
+        "DS",
+        segments.stream().map(DataSegment::getId).map(SegmentId::toString).collect(Collectors.toSet())
+    );
+
+    Assert.assertEquals(400, actual.size());
+    Assert.assertEquals(expected, actual);
+  }
+
+  @Test
   public void testRetrieveUpgradedToSegmentIds()
   {
     final String datasource = defaultSegment.getDataSource();
@@ -3476,6 +3518,57 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         expected,
         coordinator.retrieveUpgradedToSegmentIds(datasource, upgradedIds)
     );
+  }
+
+  @Test
+  public void testRetrieveUpgradedToSegmentIdsInBatches()
+  {
+    final int size = 500;
+    final int batchSize = 100;
+
+    List<DataSegment> segments = new ArrayList<>();
+    for (int i = 0; i < size; i++) {
+      segments.add(
+          new DataSegment(
+              "DS",
+              Intervals.ETERNITY,
+              "v " + (i % 5),
+              ImmutableMap.of("num", i / 5),
+              ImmutableList.of("dim"),
+              ImmutableList.of("agg"),
+              new NumberedShardSpec(i / 5, 0),
+              0,
+              100L
+          )
+      );
+    }
+
+    Map<String, Set<String>> expected = new HashMap<>();
+    for (DataSegment segment : segments) {
+      final String id = segment.getId().toString();
+      expected.put(id, new HashSet<>());
+      expected.get(id).add(id);
+    }
+    Map<String, String> upgradeMap = new HashMap<>();
+    for (int i = 0; i < batchSize; i++) {
+      for (int j = 1; j < 5; j++) {
+        upgradeMap.put(
+            segments.get(5 * i + j).getId().toString(),
+            segments.get(5 * i).getId().toString()
+        );
+        expected.get(segments.get(5 * i).getId().toString())
+                .add(segments.get(5 * i + j).getId().toString());
+      }
+    }
+    insertUsedSegments(ImmutableSet.copyOf(segments), upgradeMap);
+
+    Map<String, Set<String>> actual = coordinator.retrieveUpgradedToSegmentIds(
+        "DS",
+        segments.stream().map(DataSegment::getId).map(SegmentId::toString).collect(Collectors.toSet())
+    );
+
+    Assert.assertEquals(500, actual.size());
+    Assert.assertEquals(expected, actual);
   }
 
   private void insertUsedSegments(Set<DataSegment> segments, Map<String, String> upgradedFromSegmentIdMap)
