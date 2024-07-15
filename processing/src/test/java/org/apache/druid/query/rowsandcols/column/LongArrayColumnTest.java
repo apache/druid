@@ -74,7 +74,7 @@ public class LongArrayColumnTest
     Assert.assertEquals(3, findResult.getStartRow());
     Assert.assertEquals(4, findResult.getEndRow());
 
-    findResult = accessor.findFloat(0, accessor.numRows(), 1.0fgi);
+    findResult = accessor.findFloat(0, accessor.numRows(), 1.0f);
     Assert.assertTrue(findResult.wasFound());
     Assert.assertEquals(1, findResult.getStartRow());
     Assert.assertEquals(2, findResult.getEndRow());
