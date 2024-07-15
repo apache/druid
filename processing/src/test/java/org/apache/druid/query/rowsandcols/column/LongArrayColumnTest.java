@@ -74,14 +74,9 @@ public class LongArrayColumnTest
     Assert.assertEquals(3, findResult.getStartRow());
     Assert.assertEquals(4, findResult.getEndRow());
 
-    findResult = accessor.findString(0, accessor.numRows(), "4");
+    findResult = accessor.findFloat(0, accessor.numRows(), 1.0fgi);
     Assert.assertTrue(findResult.wasFound());
-    Assert.assertEquals(4, findResult.getStartRow());
-    Assert.assertEquals(5, findResult.getEndRow());
-
-    findResult = accessor.findComplex(0, accessor.numRows(), String.valueOf(Long.MAX_VALUE));
-    Assert.assertTrue(findResult.wasFound());
-    Assert.assertEquals(6, findResult.getStartRow());
-    Assert.assertEquals(7, findResult.getEndRow());
+    Assert.assertEquals(1, findResult.getStartRow());
+    Assert.assertEquals(2, findResult.getEndRow());
   }
 }

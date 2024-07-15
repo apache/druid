@@ -20,7 +20,7 @@
 package org.apache.druid.query.rowsandcols.column;
 
 import org.apache.druid.error.DruidException;
-import org.apache.druid.java.util.common.Numbers;
+import org.apache.druid.error.NotYetImplemented;
 import org.apache.druid.query.rowsandcols.util.FindResult;
 import org.apache.druid.segment.column.ColumnType;
 
@@ -192,13 +192,13 @@ public class LongArrayColumn implements Column
     @Override
     public FindResult findString(int startIndex, int endIndex, String val)
     {
-      return findLong(startIndex, endIndex, Numbers.tryParseLong(val, 0));
+      throw NotYetImplemented.ex("findString is not currently supported for LongArrayColumns");
     }
 
     @Override
     public FindResult findComplex(int startIndex, int endIndex, Object val)
     {
-      return findLong(startIndex, endIndex, Numbers.tryParseLong(val, 0));
+      throw NotYetImplemented.ex("findComplex is not currently supported for LongArrayColumns");
     }
   }
 }
