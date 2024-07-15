@@ -116,7 +116,7 @@ public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
     if (columnArg.isDirectColumnAccess()
         && inputAccessor.getInputRowSignature()
                         .getColumnType(columnArg.getDirectColumn())
-                        .map(type -> type.is(ValueType.COMPLEX) && validateInputType(type))
+                        .map(this::validateInputType)
                         .orElse(false)) {
       aggregatorFactory = new HllSketchMergeAggregatorFactory(
           aggregatorName,

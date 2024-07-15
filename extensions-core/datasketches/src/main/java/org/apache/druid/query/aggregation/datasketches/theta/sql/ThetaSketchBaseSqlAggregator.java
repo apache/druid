@@ -96,7 +96,7 @@ public abstract class ThetaSketchBaseSqlAggregator implements SqlAggregator
     if (columnArg.isDirectColumnAccess()
         && inputAccessor.getInputRowSignature()
                         .getColumnType(columnArg.getDirectColumn())
-                        .map(type -> type.is(ValueType.COMPLEX) && (
+                        .map(type -> (
                             SketchModule.THETA_SKETCH_TYPE.equals(type) ||
                             SketchModule.MERGE_TYPE.equals(type) ||
                             SketchModule.BUILD_TYPE.equals(type)

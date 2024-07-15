@@ -96,7 +96,7 @@ public class BuiltinApproxCountDistinctSqlAggregator implements SqlAggregator
     if (arg.isDirectColumnAccess()
         && inputAccessor.getInputRowSignature()
             .getColumnType(arg.getDirectColumn())
-            .map(type -> type.is(ValueType.COMPLEX) && validateInputType(type))
+            .map(this::validateInputType)
             .orElse(false)) {
       aggregatorFactory = new HyperUniquesAggregatorFactory(aggregatorName, arg.getDirectColumn(), false, true);
     } else {
