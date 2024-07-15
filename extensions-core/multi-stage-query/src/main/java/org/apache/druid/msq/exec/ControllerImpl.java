@@ -1197,33 +1197,9 @@ public class ControllerImpl implements Controller
       if (!destination.doesSegmentMorphing()) {
         // noinspection unchecked,rawtypes
         return (Int2ObjectMap) makeSegmentGeneratorWorkerFactoryInfos(workerInputs, segmentsToGenerate);
-      } else {
-        // worker info is the new lock version
-        if (destination.getReplaceTimeChunks().size() != 1) {
-          throw DruidException.forPersona(DruidException.Persona.USER)
-              .ofCategory(DruidException.Category.INVALID_INPUT)
-              .build("Must have single interval in replaceTimeChunks, but got [%s]", destination.getReplaceTimeChunks());
-        }
-        try {
-          final List<TaskLock> locks;
-          locks = context.taskActionClient().submit(new LockListAction());
-          if (locks.size() == 1) {
-            final Int2ObjectMap<Object> retVal = new Int2ObjectAVLTreeMap<>();
-            for (int worker : workerInputs.workers()) {
-              retVal.put(worker, locks.get(0).getVersion());
-            }
-            return retVal;
-          } else {
-            throw DruidException.defensive("Got number of locks other than one: [%s]", locks);
-          }
-        }
-        catch (IOException e) {
-          throw new RuntimeException(e);
-        }
       }
-    } else {
-      return null;
     }
+    return null;
   }
 
   @SuppressWarnings("rawtypes")
