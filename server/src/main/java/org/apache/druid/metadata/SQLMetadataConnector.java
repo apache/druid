@@ -587,6 +587,8 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     Map<String, String> columnNameTypes = new HashMap<>();
     columnNameTypes.put("used_status_last_updated", "VARCHAR(255)");
 
+    columnNameTypes.put("upgraded_from_segment_id", "VARCHAR(255)");
+
     if (centralizedDatasourceSchemaConfig.isEnabled()) {
       columnNameTypes.put("schema_fingerprint", "VARCHAR(255)");
       columnNameTypes.put("num_rows", "BIGINT");
@@ -619,6 +621,14 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     }
 
     alterTable(tableName, alterCommands);
+
+    final Set<String> createdIndexSet = getIndexOnTable(tableName);
+    createIndex(
+        tableName,
+        StringUtils.format("idx_%1$s_datasource_upgraded_from_segment_id", tableName),
+        ImmutableList.of("dataSource", "upgraded_from_segment_id"),
+        createdIndexSet
+    );
   }
 
   @Override
