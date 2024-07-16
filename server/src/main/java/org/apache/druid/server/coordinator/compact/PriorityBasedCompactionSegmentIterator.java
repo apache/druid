@@ -42,7 +42,7 @@ import java.util.PriorityQueue;
 public class PriorityBasedCompactionSegmentIterator implements CompactionSegmentIterator
 {
   private final PriorityQueue<SegmentsToCompact> queue;
-  private final Map<String, DatasourceCompactibleSegmentIterator> timelineIterators;
+  private final Map<String, DatasourceCompactibleSegmentIterator> datasourceIterators;
 
   public PriorityBasedCompactionSegmentIterator(
       Map<String, DataSourceCompactionConfig> compactionConfigs,
@@ -59,9 +59,9 @@ public class PriorityBasedCompactionSegmentIterator implements CompactionSegment
       }
     });
 
-    this.timelineIterators = Maps.newHashMapWithExpectedSize(dataSources.size());
+    this.datasourceIterators = Maps.newHashMapWithExpectedSize(dataSources.size());
     dataSources.forEach((datasource, timeline) -> {
-      timelineIterators.put(
+      datasourceIterators.put(
           datasource,
           new DatasourceCompactibleSegmentIterator(
               compactionConfigs.get(datasource),
@@ -79,7 +79,7 @@ public class PriorityBasedCompactionSegmentIterator implements CompactionSegment
   public Map<String, CompactionStatistics> totalCompactedStatistics()
   {
     return CollectionUtils.mapValues(
-        timelineIterators,
+        datasourceIterators,
         DatasourceCompactibleSegmentIterator::totalCompactedStatistics
     );
   }
@@ -88,7 +88,7 @@ public class PriorityBasedCompactionSegmentIterator implements CompactionSegment
   public Map<String, CompactionStatistics> totalSkippedStatistics()
   {
     return CollectionUtils.mapValues(
-        timelineIterators,
+        datasourceIterators,
         DatasourceCompactibleSegmentIterator::totalSkippedStatistics
     );
   }
@@ -118,7 +118,7 @@ public class PriorityBasedCompactionSegmentIterator implements CompactionSegment
 
   private void addNextItemForDatasourceToQueue(String dataSourceName)
   {
-    final DatasourceCompactibleSegmentIterator iterator = timelineIterators.get(dataSourceName);
+    final DatasourceCompactibleSegmentIterator iterator = datasourceIterators.get(dataSourceName);
     if (iterator.hasNext()) {
       final SegmentsToCompact segmentsToCompact = iterator.next();
       if (!segmentsToCompact.isEmpty()) {
