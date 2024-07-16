@@ -262,13 +262,13 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
           // if they have the same partition key
           // keep adding them after checking
           // guardrails
+          objectsOfASingleRac.add(currentRow);
           if (objectsOfASingleRac.size() > maxRowsMaterialized) {
             throw new MSQException(new TooManyRowsInAWindowFault(
                 objectsOfASingleRac.size(),
                 maxRowsMaterialized
             ));
           }
-          objectsOfASingleRac.add(currentRow);
         } else {
           // key change noted
           // create rac from the rows seen before
