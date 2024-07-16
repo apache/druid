@@ -54,7 +54,6 @@ import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.compact.CompactionSegmentIterator;
 import org.apache.druid.server.coordinator.compact.CompactionSegmentSearchPolicy;
-import org.apache.druid.server.coordinator.compact.CompactionStatistics;
 import org.apache.druid.server.coordinator.compact.SegmentsToCompact;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Dimension;
@@ -87,6 +86,7 @@ public class CompactSegments implements CoordinatorCustomDuty
 
   private static final Logger LOG = new Logger(CompactSegments.class);
 
+  private static final String TASK_ID_PREFIX = "coordinator-issued";
   private static final Predicate<TaskStatusPlus> IS_COMPACTION_TASK =
       status -> null != status && COMPACTION_TASK_TYPE.equals(status.getType());
 
@@ -95,7 +95,8 @@ public class CompactSegments implements CoordinatorCustomDuty
 
   // This variable is updated by the Coordinator thread executing duties and
   // read by HTTP threads processing Coordinator API calls.
-  private final AtomicReference<Map<String, AutoCompactionSnapshot>> autoCompactionSnapshotPerDataSource = new AtomicReference<>();
+  private final AtomicReference<Map<String, AutoCompactionSnapshot>>
+      autoCompactionSnapshotPerDataSource = new AtomicReference<>();
 
   @Inject
   @JsonCreator
@@ -196,7 +197,7 @@ public class CompactSegments implements CoordinatorCustomDuty
     // Get iterator over segments to compact and submit compaction tasks
     Map<String, SegmentTimeline> dataSources = params.getUsedSegmentsTimelinesPerDataSource();
     final CompactionSegmentIterator iterator =
-        policy.reset(compactionConfigs, dataSources, intervalsToSkipCompaction);
+        policy.createIterator(compactionConfigs, dataSources, intervalsToSkipCompaction);
 
     final int compactionTaskCapacity = getCompactionTaskCapacity(dynamicConfig);
     final int availableCompactionTaskSlots
@@ -215,7 +216,7 @@ public class CompactSegments implements CoordinatorCustomDuty
     stats.add(Stats.Compaction.MAX_SLOTS, compactionTaskCapacity);
     stats.add(Stats.Compaction.AVAILABLE_SLOTS, availableCompactionTaskSlots);
     stats.add(Stats.Compaction.SUBMITTED_TASKS, numSubmittedCompactionTasks);
-    addCompactionSnapshotStats(currentRunAutoCompactionSnapshotBuilders, iterator, stats);
+    updateCompactionSnapshotStats(currentRunAutoCompactionSnapshotBuilders, iterator, stats);
 
     return params;
   }
@@ -392,28 +393,19 @@ public class CompactSegments implements CoordinatorCustomDuty
 
     while (iterator.hasNext() && totalTaskSlotsAssigned < numAvailableCompactionTaskSlots) {
       final SegmentsToCompact entry = iterator.next();
-      final List<DataSegment> segmentsToCompact = entry.getSegments();
-      if (segmentsToCompact.isEmpty()) {
+      if (entry.isEmpty()) {
         throw new ISE("segmentsToCompact is empty?");
       }
 
-      final String dataSourceName = segmentsToCompact.get(0).getDataSource();
+      final String dataSourceName = entry.getFirst().getDataSource();
 
       // As these segments will be compacted, we will aggregate the statistic to the Compacted statistics
-      AutoCompactionSnapshot.Builder snapshotBuilder = currentRunAutoCompactionSnapshotBuilders.computeIfAbsent(
-          dataSourceName,
-          AutoCompactionSnapshot::builder
-      );
-      snapshotBuilder
-          .incrementBytesCompacted(
-              segmentsToCompact.stream().mapToLong(DataSegment::getSize).sum()
-          )
-          .incrementIntervalCountCompacted(
-              segmentsToCompact.stream().map(DataSegment::getInterval).distinct().count()
-          )
-          .incrementSegmentCountCompacted(segmentsToCompact.size());
+      currentRunAutoCompactionSnapshotBuilders
+          .computeIfAbsent(dataSourceName, AutoCompactionSnapshot::builder)
+          .incrementCompactedStats(entry.getStats());
 
       final DataSourceCompactionConfig config = compactionConfigs.get(dataSourceName);
+      final List<DataSegment> segmentsToCompact = entry.getSegments();
 
       // Create granularitySpec to send to compaction task
       ClientCompactionTaskGranularitySpec granularitySpec;
@@ -422,7 +414,7 @@ public class CompactSegments implements CoordinatorCustomDuty
         // Determines segmentGranularity from the segmentsToCompact
         // Each batch of segmentToCompact from CompactionSegmentIterator will contain the same interval as
         // segmentGranularity is not set in the compaction config
-        Interval interval = segmentsToCompact.get(0).getInterval();
+        Interval interval = entry.getFirst().getInterval();
         if (segmentsToCompact.stream().allMatch(segment -> interval.overlaps(segment.getInterval()))) {
           try {
             segmentGranularityToUse = GranularityType.fromPeriod(interval.toPeriod()).getDefaultGranularity();
@@ -514,7 +506,6 @@ public class CompactSegments implements CoordinatorCustomDuty
       }
 
       final String taskId = compactSegments(
-          "coordinator-issued",
           segmentsToCompact,
           config.getTaskPriority(),
           ClientCompactionTaskQueryTuningConfig.from(
@@ -533,10 +524,9 @@ public class CompactSegments implements CoordinatorCustomDuty
 
       LOG.info(
           "Submitted a compaction task[%s] for [%d] segments in datasource[%s], umbrella interval[%s].",
-          taskId, segmentsToCompact.size(), dataSourceName, entry.getUmbrellaInterval()
+          taskId, entry.size(), dataSourceName, entry.getUmbrellaInterval()
       );
       LOG.debugSegments(segmentsToCompact, "Compacting segments");
-      // Count the compaction task itself + its sub tasks
       numSubmittedTasks++;
       totalTaskSlotsAssigned += slotsRequiredForCurrentTask;
     }
@@ -554,7 +544,7 @@ public class CompactSegments implements CoordinatorCustomDuty
     return newContext;
   }
 
-  private void addCompactionSnapshotStats(
+  private void updateCompactionSnapshotStats(
       Map<String, AutoCompactionSnapshot.Builder> currentRunAutoCompactionSnapshotBuilders,
       CompactionSegmentIterator iterator,
       CoordinatorRunStats stats
@@ -563,77 +553,45 @@ public class CompactSegments implements CoordinatorCustomDuty
     // Mark all the segments remaining in the iterator as "awaiting compaction"
     while (iterator.hasNext()) {
       final SegmentsToCompact entry = iterator.next();
-      final List<DataSegment> segmentsToCompact = entry.getSegments();
-      if (!segmentsToCompact.isEmpty()) {
-        final String dataSourceName = segmentsToCompact.get(0).getDataSource();
-        AutoCompactionSnapshot.Builder snapshotBuilder = currentRunAutoCompactionSnapshotBuilders.computeIfAbsent(
-            dataSourceName,
-            AutoCompactionSnapshot::builder
-        );
-        snapshotBuilder
-            .incrementBytesAwaitingCompaction(
-                segmentsToCompact.stream().mapToLong(DataSegment::getSize).sum()
-            )
-            .incrementIntervalCountAwaitingCompaction(
-                segmentsToCompact.stream().map(DataSegment::getInterval).distinct().count()
-            )
-            .incrementSegmentCountAwaitingCompaction(segmentsToCompact.size());
+      if (!entry.isEmpty()) {
+        final String dataSourceName = entry.getFirst().getDataSource();
+        currentRunAutoCompactionSnapshotBuilders
+            .computeIfAbsent(dataSourceName, AutoCompactionSnapshot::builder)
+            .incrementWaitingStats(entry.getStats());
       }
     }
 
     // Statistics of all segments considered compacted after this run
-    Map<String, CompactionStatistics> allCompactedStatistics = iterator.totalCompactedStatistics();
-    for (Map.Entry<String, CompactionStatistics> compactionStatisticsEntry : allCompactedStatistics.entrySet()) {
-      final String dataSource = compactionStatisticsEntry.getKey();
-      final CompactionStatistics dataSourceCompactedStatistics = compactionStatisticsEntry.getValue();
-      AutoCompactionSnapshot.Builder builder = currentRunAutoCompactionSnapshotBuilders.computeIfAbsent(
-          dataSource,
-          AutoCompactionSnapshot::builder
-      );
-      builder.incrementBytesCompacted(dataSourceCompactedStatistics.getTotalBytes());
-      builder.incrementSegmentCountCompacted(dataSourceCompactedStatistics.getNumSegments());
-      builder.incrementIntervalCountCompacted(dataSourceCompactedStatistics.getNumIntervals());
-    }
+    iterator.totalCompactedStatistics().forEach((dataSource, compactedStats) -> {
+      currentRunAutoCompactionSnapshotBuilders
+          .computeIfAbsent(dataSource, AutoCompactionSnapshot::builder)
+          .incrementCompactedStats(compactedStats);
+    });
 
     // Statistics of all segments considered skipped after this run
-    Map<String, CompactionStatistics> allSkippedStatistics = iterator.totalSkippedStatistics();
-    for (Map.Entry<String, CompactionStatistics> compactionStatisticsEntry : allSkippedStatistics.entrySet()) {
-      final String dataSource = compactionStatisticsEntry.getKey();
-      final CompactionStatistics dataSourceSkippedStatistics = compactionStatisticsEntry.getValue();
-      AutoCompactionSnapshot.Builder builder = currentRunAutoCompactionSnapshotBuilders.computeIfAbsent(
-          dataSource,
-          AutoCompactionSnapshot::builder
-      );
-      builder.incrementBytesSkipped(dataSourceSkippedStatistics.getTotalBytes())
-             .incrementSegmentCountSkipped(dataSourceSkippedStatistics.getNumSegments())
-             .incrementIntervalCountSkipped(dataSourceSkippedStatistics.getNumIntervals());
-    }
+    iterator.totalSkippedStatistics().forEach((dataSource, dataSourceSkippedStatistics) -> {
+      currentRunAutoCompactionSnapshotBuilders
+          .computeIfAbsent(dataSource, AutoCompactionSnapshot::builder)
+          .incrementSkippedStats(dataSourceSkippedStatistics);
+    });
 
     final Map<String, AutoCompactionSnapshot> currentAutoCompactionSnapshotPerDataSource = new HashMap<>();
-    for (Map.Entry<String, AutoCompactionSnapshot.Builder> autoCompactionSnapshotBuilderEntry
-        : currentRunAutoCompactionSnapshotBuilders.entrySet()) {
-      final String dataSource = autoCompactionSnapshotBuilderEntry.getKey();
-      final AutoCompactionSnapshot.Builder builder = autoCompactionSnapshotBuilderEntry.getValue();
-
-      // Build the complete snapshot for the datasource
-      AutoCompactionSnapshot autoCompactionSnapshot = builder.build();
+    currentRunAutoCompactionSnapshotBuilders.forEach((dataSource, builder) -> {
+      final AutoCompactionSnapshot autoCompactionSnapshot = builder.build();
       currentAutoCompactionSnapshotPerDataSource.put(dataSource, autoCompactionSnapshot);
-
-      // Use the complete snapshot to emit metrics
-      addStatsForDatasource(dataSource, autoCompactionSnapshot, stats);
-    }
+      collectSnapshotStats(autoCompactionSnapshot, stats);
+    });
 
     // Atomic update of autoCompactionSnapshotPerDataSource with the latest from this coordinator run
     autoCompactionSnapshotPerDataSource.set(currentAutoCompactionSnapshotPerDataSource);
   }
 
-  private void addStatsForDatasource(
-      String dataSource,
+  private void collectSnapshotStats(
       AutoCompactionSnapshot autoCompactionSnapshot,
       CoordinatorRunStats stats
   )
   {
-    final RowKey rowKey = RowKey.of(Dimension.DATASOURCE, dataSource);
+    final RowKey rowKey = RowKey.of(Dimension.DATASOURCE, autoCompactionSnapshot.getDataSource());
 
     stats.add(Stats.Compaction.PENDING_BYTES, rowKey, autoCompactionSnapshot.getBytesAwaitingCompaction());
     stats.add(Stats.Compaction.PENDING_SEGMENTS, rowKey, autoCompactionSnapshot.getSegmentCountAwaitingCompaction());
@@ -668,7 +626,6 @@ public class CompactSegments implements CoordinatorCustomDuty
   }
 
   private String compactSegments(
-      String idPrefix,
       List<DataSegment> segments,
       int compactionTaskPriority,
       @Nullable ClientCompactionTaskQueryTuningConfig tuningConfig,
@@ -692,7 +649,7 @@ public class CompactSegments implements CoordinatorCustomDuty
     context = context == null ? new HashMap<>() : context;
     context.put("priority", compactionTaskPriority);
 
-    final String taskId = IdUtils.newTaskId(idPrefix, ClientCompactionTaskQuery.TYPE, dataSource, null);
+    final String taskId = IdUtils.newTaskId(TASK_ID_PREFIX, ClientCompactionTaskQuery.TYPE, dataSource, null);
     final Granularity segmentGranularity = granularitySpec == null ? null : granularitySpec.getSegmentGranularity();
     final ClientTaskQuery taskPayload = new ClientCompactionTaskQuery(
         taskId,

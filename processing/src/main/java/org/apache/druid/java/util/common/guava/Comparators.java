@@ -101,12 +101,6 @@ public class Comparators
     }
   };
 
-  @Deprecated
-  public static Comparator<Interval> intervals()
-  {
-    return intervalsByStartThenEnd();
-  }
-
   public static Comparator<Interval> intervalsByStartThenEnd()
   {
     return INTERVAL_BY_START_THEN_END;

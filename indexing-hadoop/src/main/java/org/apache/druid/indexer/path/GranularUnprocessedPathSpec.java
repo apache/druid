@@ -87,7 +87,7 @@ public class GranularUnprocessedPathSpec extends GranularityPathSpec
       inputModifiedTimes.put(key.getMillis(), currVal == null ? mTime : Math.max(currVal, mTime));
     }
 
-    Set<Interval> bucketsToRun = new TreeSet<>(Comparators.intervals());
+    Set<Interval> bucketsToRun = new TreeSet<>(Comparators.intervalsByStartThenEnd());
     for (Map.Entry<Long, Long> entry : inputModifiedTimes.entrySet()) {
       DateTime timeBucket = DateTimes.utc(entry.getKey());
       long mTime = entry.getValue();

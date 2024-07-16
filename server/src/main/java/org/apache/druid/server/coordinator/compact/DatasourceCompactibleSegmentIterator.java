@@ -23,9 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -56,47 +54,53 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.PriorityQueue;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 /**
- * This class iterates all segments of the dataSources configured for compaction from the newest to the oldest.
+ * Iterator over compactible segments of a datasource in order of specified priority.
  */
-public class NewestSegmentFirstIterator implements CompactionSegmentIterator
+public class DatasourceCompactibleSegmentIterator implements Iterator<SegmentsToCompact>
 {
-  private static final Logger log = new Logger(NewestSegmentFirstIterator.class);
+  private static final Logger log = new Logger(DatasourceCompactibleSegmentIterator.class);
 
+  private final String dataSource;
   private final ObjectMapper objectMapper;
-  private final Map<String, DataSourceCompactionConfig> compactionConfigs;
-  private final Map<String, CompactionStatistics> compactedSegmentStats = new HashMap<>();
-  private final Map<String, CompactionStatistics> skippedSegmentStats = new HashMap<>();
+  private final DataSourceCompactionConfig config;
+  private final CompactionStatistics compactedSegmentStats = new CompactionStatistics();
+  private final CompactionStatistics skippedSegmentStats = new CompactionStatistics();
 
-  private final Map<String, CompactibleSegmentIterator> timelineIterators;
+  private final AtomicReference<CompactibleSegmentIterator> timelineIterator;
 
   // This is needed for datasource that has segmentGranularity configured
   // If configured segmentGranularity in config is finer than current segmentGranularity, the same set of segments
   // can belong to multiple intervals in the timeline. We keep track of the compacted intervals between each
   // run of the compaction job and skip any interval that was already previously compacted.
-  private final Map<String, Set<Interval>> intervalCompactedForDatasource = new HashMap<>();
+  private final Set<Interval> compactedIntervals = new HashSet<>();
 
-  private final PriorityQueue<SegmentsToCompact> queue = new PriorityQueue<>(
-      (o1, o2) -> Comparators.intervalsByStartThenEnd().compare(o2.getUmbrellaInterval(), o1.getUmbrellaInterval())
-  );
+  private final PriorityQueue<SegmentsToCompact> queue;
 
-  NewestSegmentFirstIterator(
-      ObjectMapper objectMapper,
-      Map<String, DataSourceCompactionConfig> compactionConfigs,
-      Map<String, SegmentTimeline> dataSources,
-      Map<String, List<Interval>> skipIntervals
+  public DatasourceCompactibleSegmentIterator(
+      DataSourceCompactionConfig config,
+      SegmentTimeline timeline,
+      List<Interval> skipIntervals,
+      Comparator<SegmentsToCompact> segmentPriority,
+      ObjectMapper objectMapper
   )
   {
     this.objectMapper = objectMapper;
-    this.compactionConfigs = compactionConfigs;
-    this.timelineIterators = Maps.newHashMapWithExpectedSize(dataSources.size());
+    this.config = config;
+    this.timelineIterator = new AtomicReference<>();
+    this.dataSource = config.getDataSource();
+    this.queue = new PriorityQueue<>(segmentPriority);
+    populateQueue(timeline, skipIntervals);
+  }
 
-    dataSources.forEach((dataSource, timeline) -> {
-      final DataSourceCompactionConfig config = compactionConfigs.get(dataSource);
+  private void populateQueue(SegmentTimeline timeline, List<Interval> skipIntervals)
+  {
+    if (dataSource != null) {
       Granularity configuredSegmentGranularity = null;
-      if (config != null && !timeline.isEmpty()) {
+      if (!timeline.isEmpty()) {
         SegmentTimeline originalTimeline = null;
         if (config.getGranularitySpec() != null && config.getGranularitySpec().getSegmentGranularity() != null) {
           String temporaryVersion = DateTimes.nowUtc().toString();
@@ -154,33 +158,25 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
             timeline,
             config.getSkipOffsetFromLatest(),
             configuredSegmentGranularity,
-            skipIntervals.get(dataSource)
+            skipIntervals
         );
         if (!searchIntervals.isEmpty()) {
-          timelineIterators.put(
-              dataSource,
+          timelineIterator.set(
               new CompactibleSegmentIterator(timeline, searchIntervals, originalTimeline)
           );
         }
       }
-    });
+    }
 
-    compactionConfigs.forEach((dataSourceName, config) -> {
-      if (config == null) {
-        throw new ISE("Unknown dataSource[%s]", dataSourceName);
-      }
-      updateQueue(dataSourceName, config);
-    });
+    findSegmentsToCompact(dataSource);
   }
 
-  @Override
-  public Map<String, CompactionStatistics> totalCompactedStatistics()
+  public CompactionStatistics totalCompactedStatistics()
   {
     return compactedSegmentStats;
   }
 
-  @Override
-  public Map<String, CompactionStatistics> totalSkippedStatistics()
+  public CompactionStatistics totalSkippedStatistics()
   {
     return skippedSegmentStats;
   }
@@ -206,23 +202,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     final List<DataSegment> resultSegments = entry.getSegments();
     Preconditions.checkState(!resultSegments.isEmpty(), "Queue entry must not be empty");
 
-    final String dataSource = resultSegments.get(0).getDataSource();
-    updateQueue(dataSource, compactionConfigs.get(dataSource));
-
     return entry;
-  }
-
-  /**
-   * Find the next segments to compact for the given dataSource and add them to the queue.
-   * {@link #timelineIterators} is updated according to the found segments. That is, the found segments are removed from
-   * the timeline of the given dataSource.
-   */
-  private void updateQueue(String dataSourceName, DataSourceCompactionConfig config)
-  {
-    final SegmentsToCompact segmentsToCompact = findSegmentsToCompact(dataSourceName, config);
-    if (!segmentsToCompact.isEmpty()) {
-      queue.add(segmentsToCompact);
-    }
   }
 
   /**
@@ -315,23 +295,18 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
   }
 
   /**
-   * Finds segments to compact together for the given datasource.
-   *
-   * @return An empty {@link SegmentsToCompact} if there are no eligible candidates.
+   * Finds segments to compact together for the given datasource and adds them to
+   * the priority queue.
    */
-  private SegmentsToCompact findSegmentsToCompact(
-      final String dataSourceName,
-      final DataSourceCompactionConfig config
-  )
+  private void findSegmentsToCompact(String dataSourceName)
   {
-    final CompactibleSegmentIterator compactibleSegmentIterator
-        = timelineIterators.get(dataSourceName);
+    final CompactibleSegmentIterator compactibleSegmentIterator = timelineIterator.get();
     if (compactibleSegmentIterator == null) {
       log.warn(
           "Skipping compaction for datasource[%s] as there is no compactible segment in its timeline.",
           dataSourceName
       );
-      return SegmentsToCompact.empty();
+      return;
     }
 
     final long inputSegmentSize = config.getInputSegmentSizeBytes();
@@ -357,9 +332,9 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
       }
 
       if (compactionStatus.isComplete()) {
-        addSegmentStatsTo(compactedSegmentStats, dataSourceName, candidates);
+        compactedSegmentStats.increment(candidates.getStats());
       } else if (candidates.getTotalBytes() > inputSegmentSize) {
-        addSegmentStatsTo(skippedSegmentStats, dataSourceName, candidates);
+        skippedSegmentStats.increment(candidates.getStats());
         log.warn(
             "Skipping compaction for datasource[%s], interval[%s] as total segment size[%d]"
             + " is larger than allowed inputSegmentSize[%d].",
@@ -367,32 +342,18 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
         );
       } else if (config.getGranularitySpec() != null
                  && config.getGranularitySpec().getSegmentGranularity() != null) {
-        Set<Interval> compactedIntervals = intervalCompactedForDatasource
-            .computeIfAbsent(dataSourceName, k -> new HashSet<>());
-
         if (compactedIntervals.contains(interval)) {
           // Skip these candidate segments as we have already compacted this interval
         } else {
           compactedIntervals.add(interval);
-          return candidates;
+          queue.add(candidates);
         }
       } else {
-        return candidates;
+        queue.add(candidates);
       }
     }
 
     log.debug("No more segments to compact for datasource[%s].", dataSourceName);
-    return SegmentsToCompact.empty();
-  }
-
-  private void addSegmentStatsTo(
-      Map<String, CompactionStatistics> statisticsMap,
-      String dataSourceName,
-      SegmentsToCompact segments
-  )
-  {
-    statisticsMap.computeIfAbsent(dataSourceName, v -> CompactionStatistics.create())
-                 .addFrom(segments);
   }
 
   /**
@@ -428,7 +389,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
       final List<DataSegment> segments = new ArrayList<>(
           timeline.findNonOvershadowedObjectsInInterval(skipInterval, Partitions.ONLY_COMPLETE)
       );
-      addSegmentStatsTo(skippedSegmentStats, dataSourceName, SegmentsToCompact.from(segments));
+      skippedSegmentStats.increment(SegmentsToCompact.from(segments).getStats());
     }
 
     final Interval totalInterval = new Interval(first.getInterval().getStart(), last.getInterval().getEnd());
