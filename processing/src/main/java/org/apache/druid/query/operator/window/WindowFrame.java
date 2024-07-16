@@ -21,159 +21,230 @@ package org.apache.druid.query.operator.window;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import org.apache.druid.query.operator.ColumnWithDirection;
+
+import javax.annotation.Nullable;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-public class WindowFrame
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = "unbounded", value = WindowFrame.Unbounded.class),
+    @JsonSubTypes.Type(name = "rows", value = WindowFrame.Rows.class),
+    @JsonSubTypes.Type(name = "groups", value = WindowFrame.Groups.class),
+})
+public interface WindowFrame
 {
-  public static WindowFrame unbounded()
+  static WindowFrame unbounded()
   {
-    return new WindowFrame(PeerType.ROWS, true, 0, true, 0, null);
+    return new WindowFrame.Unbounded();
   }
 
-  @SuppressWarnings("unused")
-  public enum PeerType
+  static Rows rows(Integer lowerOffset, Integer upperOffset)
   {
-    ROWS,
-    RANGE
+    return new WindowFrame.Rows(lowerOffset, upperOffset);
   }
 
-  // Will likely need to add the order by columns to also be able to deal with RANGE peer type.
-  private final PeerType peerType;
-  private final boolean lowerUnbounded;
-  private final int lowerOffset;
-  private final boolean upperUnbounded;
-  private final int upperOffset;
-  private final List<ColumnWithDirection> orderBy;
-
-  @JsonCreator
-  public WindowFrame(
-      @JsonProperty("peerType") PeerType peerType,
-      @JsonProperty("lowUnbounded") boolean lowerUnbounded,
-      @JsonProperty("lowOffset") int lowerOffset,
-      @JsonProperty("uppUnbounded") boolean upperUnbounded,
-      @JsonProperty("uppOffset") int upperOffset,
-      @JsonProperty("orderBy") List<ColumnWithDirection> orderBy
-  )
+  static Groups groups(
+      final Integer lowerOffset,
+      final Integer upperOffset,
+      final List<ColumnWithDirection> orderBy)
   {
-    this.peerType = peerType;
-    this.lowerUnbounded = lowerUnbounded;
-    this.lowerOffset = lowerOffset;
-    this.upperUnbounded = upperUnbounded;
-    this.upperOffset = upperOffset;
-    this.orderBy = orderBy;
+    return new WindowFrame.Groups(lowerOffset, upperOffset, orderBy);
+
   }
 
-  @JsonProperty("peerType")
-  public PeerType getPeerType()
+  static WindowFrame forOrderBy(ColumnWithDirection... orderBy)
   {
-    return peerType;
+    return groups(null, 0, Lists.newArrayList(orderBy));
   }
 
-  @JsonProperty("lowUnbounded")
-  public boolean isLowerUnbounded()
+  class Unbounded implements WindowFrame
   {
-    return lowerUnbounded;
-  }
-
-  @JsonProperty("lowOffset")
-  public int getLowerOffset()
-  {
-    return lowerOffset;
-  }
-
-  @JsonProperty("uppUnbounded")
-  public boolean isUpperUnbounded()
-  {
-    return upperUnbounded;
-  }
-
-  @JsonProperty("uppOffset")
-  public int getUpperOffset()
-  {
-    return upperOffset;
-  }
-
-  @JsonProperty("orderBy")
-  public List<ColumnWithDirection> getOrderBy()
-  {
-    return orderBy;
-  }
-
-  @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
+    @JsonCreator
+    public Unbounded()
+    {
     }
-    if (!(o instanceof WindowFrame)) {
-      return false;
+
+    @Override
+    public boolean equals(Object obj)
+    {
+      if (obj == null) {
+        return false;
+      }
+      return getClass() == obj.getClass();
     }
-    WindowFrame that = (WindowFrame) o;
-    return lowerUnbounded == that.lowerUnbounded
-           && lowerOffset == that.lowerOffset
-           && upperUnbounded == that.upperUnbounded
-           && upperOffset == that.upperOffset
-           && peerType == that.peerType
-           && Objects.equals(orderBy, that.orderBy);
-  }
 
-  @Override
-  public int hashCode()
-  {
-    return Objects.hash(peerType, lowerUnbounded, lowerOffset, upperUnbounded, upperOffset, orderBy);
-  }
-
-  @Override
-  public String toString()
-  {
-    return "WindowFrame{" +
-           "peerType=" + peerType +
-           ", lowerUnbounded=" + lowerUnbounded +
-           ", lowerOffset=" + lowerOffset +
-           ", upperUnbounded=" + upperUnbounded +
-           ", upperOffset=" + upperOffset +
-           ", orderBy=" + orderBy +
-           '}';
-  }
-
-  public static WindowFrame forOrderBy(ColumnWithDirection... orderBy)
-  {
-    return new WindowFrame(PeerType.RANGE, true, 0, false, 0, Lists.newArrayList(orderBy));
-  }
-
-  public List<String> getOrderByColNames()
-  {
-    if (orderBy == null) {
-      return Collections.emptyList();
+    @Override
+    public int hashCode()
+    {
+      return 0;
     }
-    return orderBy.stream().map(ColumnWithDirection::getColumn).collect(Collectors.toList());
+
+    @Override
+    public String toString()
+    {
+      return "WindowFrame.Unbounded []";
+    }
   }
 
-  /**
-   * Calculates the applicable lower offset if the max number of rows is known.
-   */
-  public int getLowerOffsetClamped(int maxRows)
+  abstract class OffsetFrame implements WindowFrame
   {
-    if (lowerUnbounded) {
-      return -maxRows;
+    @JsonProperty
+    public final Integer lowerOffset;
+    @JsonProperty
+    public final Integer upperOffset;
+
+    @JsonCreator
+    public OffsetFrame(
+        @JsonProperty("lowerOffset") Integer lowerOffset,
+        @JsonProperty("upperOffset") Integer upperOffset)
+    {
+      this.lowerOffset = lowerOffset;
+      this.upperOffset = upperOffset;
     }
-    return Math.max(-maxRows, lowerOffset);
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hash(lowerOffset, upperOffset);
+    }
+
+    /**
+     * Calculates the applicable lower offset if the max number of rows is
+     * known.
+     */
+    public int getLowerOffsetClamped(int maxRows)
+    {
+      if (lowerOffset == null) {
+        return -maxRows;
+      }
+      return Math.max(-maxRows, lowerOffset);
+    }
+
+    /**
+     * Calculates the applicable upper offset if the max number of rows is
+     * known.
+     */
+    public int getUpperOffsetClamped(int maxRows)
+    {
+      if (upperOffset == null) {
+        return maxRows;
+      }
+      return Math.min(maxRows, upperOffset);
+    }
+
+    @Override
+    public boolean equals(Object obj)
+    {
+      if (this == obj) {
+        return true;
+      }
+      if (obj == null) {
+        return false;
+      }
+      if (getClass() != obj.getClass()) {
+        return false;
+      }
+      OffsetFrame other = (OffsetFrame) obj;
+      return Objects.equals(lowerOffset, other.lowerOffset) && Objects.equals(upperOffset, other.upperOffset);
+    }
+
+    @Override
+    public abstract String toString();
   }
 
-  /**
-   * Calculates the applicable upper offset if the max number of rows is known.
-   */
-  public int getUpperOffsetClamped(int maxRows)
+  class Rows extends OffsetFrame
   {
-    if (upperUnbounded) {
-      return maxRows;
+    @JsonCreator
+    public Rows(
+        @JsonProperty("lowerOffset") Integer lowerOffset,
+        @JsonProperty("upperOffset") Integer upperOffset)
+    {
+      super(lowerOffset, upperOffset);
     }
-    return Math.min(maxRows, upperOffset);
+
+    @Override
+    public String toString()
+    {
+      return "WindowFrame.Rows ["
+          + "lowerOffset=" + lowerOffset +
+          ", upperOffset=" + upperOffset +
+          "]";
+    }
+  }
+
+  class Groups extends OffsetFrame
+  {
+    @JsonProperty
+    private final ImmutableList<ColumnWithDirection> orderBy;
+
+    @JsonCreator
+    public Groups(
+        @JsonProperty("lowerOffset") Integer lowerOffset,
+        @JsonProperty("upperOffset") Integer upperOffset,
+        @JsonProperty("orderBy") List<ColumnWithDirection> orderBy)
+    {
+      super(lowerOffset, upperOffset);
+      this.orderBy = ImmutableList.copyOf(orderBy);
+    }
+
+    public List<String> getOrderByColNames()
+    {
+      if (orderBy == null) {
+        return Collections.emptyList();
+      }
+      return orderBy.stream().map(ColumnWithDirection::getColumn).collect(Collectors.toList());
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hash(lowerOffset, orderBy, upperOffset);
+    }
+
+    @Override
+    public boolean equals(Object obj)
+    {
+      if (this == obj) {
+        return true;
+      }
+      if (obj == null) {
+        return false;
+      }
+      if (getClass() != obj.getClass()) {
+        return false;
+      }
+      Groups other = (Groups) obj;
+      return Objects.equals(lowerOffset, other.lowerOffset)
+          && Objects.equals(orderBy, other.orderBy)
+          && Objects.equals(upperOffset, other.upperOffset);
+    }
+
+    @Override
+    public String toString()
+    {
+      return "WindowFrame.Groups [" +
+          "lowerOffset=" + lowerOffset +
+          ", upperOffset=" + upperOffset +
+          ", orderBy=" + orderBy + "]";
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  @Nullable
+  default <T extends WindowFrame> T unwrap(Class<T> clazz)
+  {
+    if (clazz.isInstance(this)) {
+      return (T) this;
+    }
+    return null;
   }
 }
