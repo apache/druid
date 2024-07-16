@@ -30,7 +30,7 @@ import org.junit.Test;
 
 import java.util.List;
 
-public class NewestSegmentFirstIteratorTest
+public class DatasourceCompactibleSegmentIteratorTest
 {
   @Test
   public void testFilterSkipIntervals()
