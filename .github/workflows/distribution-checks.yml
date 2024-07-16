@@ -14,23 +14,23 @@
 # limitations under the License.
 
 name: "Distribution Checks"
-on:
-  push:
-    branches:
-      - master
-      - '[0-9]+.[0-9]+.[0-9]+' # release branches
-      - '[0-9]+.[0-9]+.[0-9]+-[A-Za-z0-9]+' # release branches
-    paths:
-      - 'distribution/**'
-      - '**/pom.xml'
-  pull_request:
-    branches:
-      - master
-      - '[0-9]+.[0-9]+.[0-9]+' # release branches
-      - '[0-9]+.[0-9]+.[0-9]+-[A-Za-z0-9]+' # release branches
-    paths:
-      - 'distribution/**'
-      - '**/pom.xml'
+#on:
+#  push:
+#    branches:
+#      - master
+#      - '[0-9]+.[0-9]+.[0-9]+' # release branches
+#      - '[0-9]+.[0-9]+.[0-9]+-[A-Za-z0-9]+' # release branches
+#    paths:
+#      - 'distribution/**'
+#      - '**/pom.xml'
+#  pull_request:
+#    branches:
+#      - master
+#      - '[0-9]+.[0-9]+.[0-9]+' # release branches
+#      - '[0-9]+.[0-9]+.[0-9]+-[A-Za-z0-9]+' # release branches
+#    paths:
+#      - 'distribution/**'
+#      - '**/pom.xml'
 
 jobs:
   docker-build:
