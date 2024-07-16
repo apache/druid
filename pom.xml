@@ -145,7 +145,7 @@
         <skipITs>${skipTests}</skipITs>
 
         <!-- build docker image -->
-        <branch.tag>v4</branch.tag>
+        <branch.tag>v3</branch.tag>
         <docker.image.version>${project.version}-dev-${branch.tag}</docker.image.version>
 
 
