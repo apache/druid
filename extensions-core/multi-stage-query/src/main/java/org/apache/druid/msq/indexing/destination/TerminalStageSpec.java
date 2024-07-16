@@ -17,23 +17,15 @@
  * under the License.
  */
 
-package org.apache.druid.msq.sql;
+package org.apache.druid.msq.indexing.destination;
 
-import org.apache.druid.msq.kernel.FrameProcessorFactory;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.rel.DruidQuery;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
-import javax.annotation.Nullable;
-
-public interface SegmentMorphFactoryCreator
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = SegmentGenerationStageSpec.TYPE, value = SegmentGenerationStageSpec.class)
+})
+public interface TerminalStageSpec
 {
-  /**
-   * Creates a {@link FrameProcessorFactory} which acts as a final stage, if the {@link DruidQuery} requires one. This
-   * is generally the case with ingest queries which do not want to create new segments, but rather modify existing
-   * segments in some way.
-   * If no segment morphing stage is required, returns null.
-   */
-  @Nullable
-  @SuppressWarnings("rawtypes")
-  FrameProcessorFactory createSegmentMorphFactory(DruidQuery druidQuery, PlannerContext plannerContext);
 }

@@ -64,7 +64,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-public class SegmentGenerationUtils
+public final class SegmentGenerationUtils
 {
   private static final Logger log = new Logger(SegmentGenerationUtils.class);
 
@@ -127,7 +127,6 @@ public class SegmentGenerationUtils
       return new ArbitraryGranularitySpec(Granularities.NONE, false, Intervals.ONLY_ETERNITY);
     }
   }
-
 
   /**
    * Checks that a {@link GroupByQuery} is grouping on the primary time column.
@@ -326,5 +325,9 @@ public class SegmentGenerationUtils
     return query instanceof GroupByQuery
            && !MultiStageQueryContext.isFinalizeAggregations(query.context())
            && !query.context().getBoolean(GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING, true);
+  }
+
+  private SegmentGenerationUtils()
+  {
   }
 }

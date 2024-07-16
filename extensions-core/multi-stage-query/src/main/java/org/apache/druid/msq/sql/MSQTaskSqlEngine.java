@@ -39,6 +39,7 @@ import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.msq.guice.MSQTerminalStageSpecFactory;
 import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.msq.util.ArrayIngestMode;
 import org.apache.druid.msq.util.DimensionSchemaUtils;
@@ -82,7 +83,7 @@ public class MSQTaskSqlEngine implements SqlEngine
 
   private final OverlordClient overlordClient;
   private final ObjectMapper jsonMapper;
-  private final SegmentMorphFactoryCreator segmentMorphFactoryCreator;
+  private final MSQTerminalStageSpecFactory terminalStageSpecFactory;
 
   public MSQTaskSqlEngine(
       final OverlordClient overlordClient,
@@ -96,12 +97,12 @@ public class MSQTaskSqlEngine implements SqlEngine
   public MSQTaskSqlEngine(
       final OverlordClient overlordClient,
       final ObjectMapper jsonMapper,
-      final SegmentMorphFactoryCreator segmentMorphFactoryCreator
+      final MSQTerminalStageSpecFactory terminalStageSpecFactory
   )
   {
     this.overlordClient = overlordClient;
     this.jsonMapper = jsonMapper;
-    this.segmentMorphFactoryCreator = segmentMorphFactoryCreator;
+    this.terminalStageSpecFactory = terminalStageSpecFactory;
   }
 
   @Override
@@ -171,7 +172,7 @@ public class MSQTaskSqlEngine implements SqlEngine
         plannerContext,
         jsonMapper,
         relRoot.fields,
-        segmentMorphFactoryCreator
+        terminalStageSpecFactory
     );
   }
 
@@ -206,7 +207,7 @@ public class MSQTaskSqlEngine implements SqlEngine
         plannerContext,
         jsonMapper,
         relRoot.fields,
-        segmentMorphFactoryCreator
+        terminalStageSpecFactory
     );
   }
 

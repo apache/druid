@@ -92,6 +92,7 @@ import org.apache.druid.msq.guice.MSQDurableStorageModule;
 import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
 import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.msq.guice.MSQSqlModule;
+import org.apache.druid.msq.guice.MSQTerminalStageSpecFactory;
 import org.apache.druid.msq.guice.MultiStageQuery;
 import org.apache.druid.msq.indexing.InputChannelFactory;
 import org.apache.druid.msq.indexing.MSQControllerTask;
@@ -328,7 +329,6 @@ public class MSQTestBase extends BaseCalciteQueryTest
   protected List<ImmutableSegmentLoadInfo> loadedSegmentsMetadata = new ArrayList<>();
   // Mocks the return of data from data servers
   protected DataServerQueryHandler dataServerQueryHandler = mock(DataServerQueryHandler.class);
-  protected TestSegmentMorphFactoryCreator testSegmentMorphFactoryCreator = new TestSegmentMorphFactoryCreator();
 
   private MSQTestSegmentManager segmentManager;
   private SegmentCacheManager segmentCacheManager;
@@ -559,7 +559,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
     final SqlEngine engine = new MSQTaskSqlEngine(
         indexingServiceClient,
         qf.queryJsonMapper().copy().registerModules(new MSQSqlModule().getJacksonModules()),
-        testSegmentMorphFactoryCreator
+        new MSQTerminalStageSpecFactory()
     );
 
     PlannerFactory plannerFactory = new PlannerFactory(

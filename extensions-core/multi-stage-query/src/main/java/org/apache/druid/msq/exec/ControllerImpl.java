@@ -30,7 +30,6 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Ordering;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
-import it.unimi.dsi.fastutil.ints.Int2ObjectAVLTreeMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntArraySet;
@@ -39,7 +38,6 @@ import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.data.input.StringTuple;
-import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.discovery.BrokerClient;
 import org.apache.druid.error.DruidException;
@@ -100,7 +98,8 @@ import org.apache.druid.msq.indexing.WorkerCount;
 import org.apache.druid.msq.indexing.client.ControllerChatHandler;
 import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
 import org.apache.druid.msq.indexing.destination.ExportMSQDestination;
-import org.apache.druid.msq.indexing.destination.SegmentGenerationUtils;
+import org.apache.druid.msq.indexing.destination.SegmentGenerationStageSpec;
+import org.apache.druid.msq.indexing.destination.TerminalStageSpec;
 import org.apache.druid.msq.indexing.error.CanceledFault;
 import org.apache.druid.msq.indexing.error.CannotParseExternalDataFault;
 import org.apache.druid.msq.indexing.error.FaultsExceededChecker;
@@ -129,7 +128,6 @@ import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.msq.input.InputSpec;
 import org.apache.druid.msq.input.InputSpecSlicer;
 import org.apache.druid.msq.input.InputSpecSlicerFactory;
-import org.apache.druid.msq.input.InputSpecs;
 import org.apache.druid.msq.input.MapInputSpecSlicer;
 import org.apache.druid.msq.input.external.ExternalInputSpec;
 import org.apache.druid.msq.input.external.ExternalInputSpecSlicer;
@@ -138,12 +136,9 @@ import org.apache.druid.msq.input.inline.InlineInputSpecSlicer;
 import org.apache.druid.msq.input.lookup.LookupInputSpec;
 import org.apache.druid.msq.input.lookup.LookupInputSpecSlicer;
 import org.apache.druid.msq.input.stage.InputChannels;
-import org.apache.druid.msq.input.stage.ReadablePartition;
-import org.apache.druid.msq.input.stage.StageInputSlice;
 import org.apache.druid.msq.input.stage.StageInputSpec;
 import org.apache.druid.msq.input.stage.StageInputSpecSlicer;
 import org.apache.druid.msq.input.table.TableInputSpec;
-import org.apache.druid.msq.kernel.FrameProcessorFactory;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.QueryDefinitionBuilder;
 import org.apache.druid.msq.kernel.StageDefinition;
@@ -166,25 +161,19 @@ import org.apache.druid.msq.querykit.scan.ScanQueryKit;
 import org.apache.druid.msq.shuffle.input.DurableStorageInputChannelFactory;
 import org.apache.druid.msq.shuffle.input.WorkerInputChannelFactory;
 import org.apache.druid.msq.statistics.PartialKeyStatisticsInformation;
-import org.apache.druid.msq.util.ArrayIngestMode;
-import org.apache.druid.msq.util.DimensionSchemaUtils;
 import org.apache.druid.msq.util.IntervalUtils;
 import org.apache.druid.msq.util.MSQFutureUtils;
 import org.apache.druid.msq.util.MSQTaskQueryMakerUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
-import org.apache.druid.msq.util.PassthroughAggregatorFactory;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.operator.WindowOperatorQuery;
 import org.apache.druid.query.scan.ScanQuery;
-import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
@@ -202,7 +191,6 @@ import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.utils.CloseableUtils;
-import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -215,7 +203,6 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -1190,9 +1177,12 @@ public class ControllerImpl implements Controller
     if (MSQControllerTask.isIngestion(querySpec) &&
         stageNumber == queryDef.getFinalStageDefinition().getStageNumber()) {
       final DataSourceMSQDestination destination = (DataSourceMSQDestination) querySpec.getDestination();
-      if (!destination.doesSegmentMorphing()) {
-        // noinspection unchecked,rawtypes
-        return (Int2ObjectMap) makeSegmentGeneratorWorkerFactoryInfos(workerInputs, segmentsToGenerate);
+      TerminalStageSpec terminalStageSpec = destination.getTerminalStageSpec();
+      if (destination.getTerminalStageSpec() instanceof SegmentGenerationStageSpec) {
+        return (Int2ObjectMap) ((SegmentGenerationStageSpec) terminalStageSpec).makeSegmentGeneratorWorkerFactoryInfos(
+            workerInputs,
+            segmentsToGenerate
+        );
       }
     }
     return null;
@@ -1209,35 +1199,6 @@ public class ControllerImpl implements Controller
                     .build();
 
     return new MultiQueryKit(kitMap);
-  }
-
-  private Int2ObjectMap<List<SegmentIdWithShardSpec>> makeSegmentGeneratorWorkerFactoryInfos(
-      final WorkerInputs workerInputs,
-      final List<SegmentIdWithShardSpec> segmentsToGenerate
-  )
-  {
-    final Int2ObjectMap<List<SegmentIdWithShardSpec>> retVal = new Int2ObjectAVLTreeMap<>();
-
-    // Empty segments validation already happens when the stages are started -- so we cannot have both
-    // isFailOnEmptyInsertEnabled and segmentsToGenerate.isEmpty() be true here.
-    if (segmentsToGenerate.isEmpty()) {
-      return retVal;
-    }
-
-    for (final int workerNumber : workerInputs.workers()) {
-      // SegmentGenerator stage has a single input from another stage.
-      final StageInputSlice stageInputSlice =
-          (StageInputSlice) Iterables.getOnlyElement(workerInputs.inputsForWorker(workerNumber));
-
-      final List<SegmentIdWithShardSpec> workerSegments = new ArrayList<>();
-      retVal.put(workerNumber, workerSegments);
-
-      for (final ReadablePartition partition : stageInputSlice.getPartitions()) {
-        workerSegments.add(segmentsToGenerate.get(partition.getPartitionNumber()));
-      }
-    }
-
-    return retVal;
   }
 
   /**
@@ -1781,87 +1742,14 @@ public class ControllerImpl implements Controller
     }
 
     if (MSQControllerTask.isIngestion(querySpec)) {
-      final RowSignature querySignature = queryDef.getFinalStageDefinition().getSignature();
-      final ClusterBy queryClusterBy = queryDef.getFinalStageDefinition().getClusterBy();
-
-      // Find the stage that provides shuffled input to the final segment-generation stage.
-      StageDefinition finalShuffleStageDef = queryDef.getFinalStageDefinition();
-
-      while (!finalShuffleStageDef.doesShuffle()
-             && InputSpecs.getStageNumbers(finalShuffleStageDef.getInputSpecs()).size() == 1) {
-        finalShuffleStageDef = queryDef.getStageDefinition(
-            Iterables.getOnlyElement(InputSpecs.getStageNumbers(finalShuffleStageDef.getInputSpecs()))
-        );
+      DataSourceMSQDestination destination = (DataSourceMSQDestination) querySpec.getDestination();
+      TerminalStageSpec terminalStageSpec = destination.getTerminalStageSpec();
+      if (terminalStageSpec instanceof SegmentGenerationStageSpec) {
+        return ((SegmentGenerationStageSpec) terminalStageSpec).constructFinalStage(queryId, queryDef, querySpec, jsonMapper);
+      } else {
+        throw DruidException.defensive("Unknown segment generation strategy [%s]", terminalStageSpec);
       }
 
-      if (!finalShuffleStageDef.doesShuffle()) {
-        finalShuffleStageDef = null;
-      }
-
-      // Add all query stages.
-      // Set shuffleCheckHasMultipleValues on the stage that serves as input to the final segment-generation stage.
-      final QueryDefinitionBuilder builder = QueryDefinition.builder(queryId);
-
-      for (final StageDefinition stageDef : queryDef.getStageDefinitions()) {
-        if (stageDef.equals(finalShuffleStageDef)) {
-          builder.add(StageDefinition.builder(stageDef).shuffleCheckHasMultipleValues(true));
-        } else {
-          builder.add(StageDefinition.builder(stageDef));
-        }
-      }
-
-      // Possibly add a segment morpher stage.
-      if (((DataSourceMSQDestination) querySpec.getDestination()).doesSegmentMorphing()) {
-        final DataSourceMSQDestination destination = (DataSourceMSQDestination) querySpec.getDestination();
-        final FrameProcessorFactory segmentMorphFactory = destination.getSegmentMorphFactory();
-
-        if (!destination.isReplaceTimeChunks()) {
-          throw new MSQException(UnknownFault.forMessage("segmentMorphFactory requires replaceTimeChunks"));
-        }
-
-        builder.add(
-            StageDefinition.builder(queryDef.getNextStageNumber())
-                           .inputs(
-                               new TableInputSpec(
-                                   destination.getDataSource(),
-                                   destination.getReplaceTimeChunks(),
-                                   null,
-                                   null
-                               ),
-                               new StageInputSpec(queryDef.getFinalStageDefinition().getStageNumber())
-                           )
-                           .broadcastInputs(IntSet.of(1))
-                           .maxWorkerCount(tuningConfig.getMaxNumWorkers())
-                           .processorFactory(segmentMorphFactory)
-        );
-
-        // If there was a segment morpher, return immediately; don't add a segment-generation stage.
-        return builder.build();
-      }
-
-      // Then, add a segment-generation stage.
-      final DataSchema dataSchema = SegmentGenerationUtils.makeDataSchemaForIngestion(
-          querySpec,
-          querySignature,
-          queryClusterBy,
-          columnMappings,
-          jsonMapper
-      );
-
-      builder.add(
-          StageDefinition.builder(queryDef.getNextStageNumber())
-                         .inputs(new StageInputSpec(queryDef.getFinalStageDefinition().getStageNumber()))
-                         .maxWorkerCount(tuningConfig.getMaxNumWorkers())
-                         .processorFactory(
-                             new SegmentGeneratorFrameProcessorFactory(
-                                 dataSchema,
-                                 columnMappings,
-                                 tuningConfig
-                             )
-                         )
-      );
-
-      return builder.build();
     } else if (MSQControllerTask.writeFinalResultsToTaskReport(querySpec)) {
       return queryDef;
     } else if (MSQControllerTask.writeFinalStageResultsToDurableStorage(querySpec)) {
@@ -2018,164 +1906,6 @@ public class ControllerImpl implements Controller
     }
 
     return new StringTuple(array);
-  }
-
-  private static Pair<List<DimensionSchema>, List<AggregatorFactory>> makeDimensionsAndAggregatorsForIngestion(
-      final RowSignature querySignature,
-      final ClusterBy queryClusterBy,
-      final List<String> segmentSortOrder,
-      final ColumnMappings columnMappings,
-      final boolean isRollupQuery,
-      final Query<?> query
-  )
-  {
-    // Log a warning unconditionally if arrayIngestMode is MVD, since the behaviour is incorrect, and is subject to
-    // deprecation and removal in future
-    if (MultiStageQueryContext.getArrayIngestMode(query.context()) == ArrayIngestMode.MVD) {
-      log.warn(
-          "%s[mvd] is active for this task. This causes string arrays (VARCHAR ARRAY in SQL) to be ingested as "
-          + "multi-value strings rather than true arrays. This behavior may change in a future version of Druid. To be "
-          + "compatible with future behavior changes, we recommend setting %s to[array], which creates a clearer "
-          + "separation between multi-value strings and true arrays. In either[mvd] or[array] mode, you can write "
-          + "out multi-value string dimensions using ARRAY_TO_MV. "
-          + "See https://druid.apache.org/docs/latest/querying/arrays#arrayingestmode for more details.",
-          MultiStageQueryContext.CTX_ARRAY_INGEST_MODE,
-          MultiStageQueryContext.CTX_ARRAY_INGEST_MODE
-      );
-    }
-
-    final List<DimensionSchema> dimensions = new ArrayList<>();
-    final List<AggregatorFactory> aggregators = new ArrayList<>();
-
-    // During ingestion, segment sort order is determined by the order of fields in the DimensionsSchema. We want
-    // this to match user intent as dictated by the declared segment sort order and CLUSTERED BY, so add things in
-    // that order.
-
-    // Start with segmentSortOrder.
-    final Set<String> outputColumnsInOrder = new LinkedHashSet<>(segmentSortOrder);
-
-    // Then the query-level CLUSTERED BY.
-    // Note: this doesn't work when CLUSTERED BY specifies an expression that is not being selected.
-    // Such fields in CLUSTERED BY still control partitioning as expected, but do not affect sort order of rows
-    // within an individual segment.
-    for (final KeyColumn clusterByColumn : queryClusterBy.getColumns()) {
-      final IntList outputColumns = columnMappings.getOutputColumnsForQueryColumn(clusterByColumn.columnName());
-      for (final int outputColumn : outputColumns) {
-        outputColumnsInOrder.add(columnMappings.getOutputColumnName(outputColumn));
-      }
-    }
-
-    // Then all other columns.
-    outputColumnsInOrder.addAll(columnMappings.getOutputColumnNames());
-
-    Map<String, AggregatorFactory> outputColumnAggregatorFactories = new HashMap<>();
-
-    if (isRollupQuery) {
-      // Populate aggregators from the native query when doing an ingest in rollup mode.
-      for (AggregatorFactory aggregatorFactory : ((GroupByQuery) query).getAggregatorSpecs()) {
-        for (final int outputColumn : columnMappings.getOutputColumnsForQueryColumn(aggregatorFactory.getName())) {
-          final String outputColumnName = columnMappings.getOutputColumnName(outputColumn);
-          if (outputColumnAggregatorFactories.containsKey(outputColumnName)) {
-            throw new ISE("There can only be one aggregation for column [%s].", outputColumn);
-          } else {
-            outputColumnAggregatorFactories.put(
-                outputColumnName,
-                aggregatorFactory.withName(outputColumnName).getCombiningFactory()
-            );
-          }
-        }
-      }
-    }
-
-    // Each column can be of either time, dimension, aggregator. For this method. we can ignore the time column.
-    // For non-complex columns, If the aggregator factory of the column is not available, we treat the column as
-    // a dimension. For complex columns, certains hacks are in place.
-    for (final String outputColumnName : outputColumnsInOrder) {
-      // CollectionUtils.getOnlyElement because this method is only called during ingestion, where we require
-      // that output names be unique.
-      final int outputColumn = CollectionUtils.getOnlyElement(
-          columnMappings.getOutputColumnsByName(outputColumnName),
-          xs -> new ISE("Expected single output column for name [%s], but got [%s]", outputColumnName, xs)
-      );
-      final String queryColumn = columnMappings.getQueryColumnName(outputColumn);
-      final ColumnType type =
-          querySignature.getColumnType(queryColumn)
-                        .orElseThrow(() -> new ISE("No type for column [%s]", outputColumnName));
-
-      if (!outputColumnName.equals(ColumnHolder.TIME_COLUMN_NAME)) {
-
-        if (!type.is(ValueType.COMPLEX)) {
-          // non complex columns
-          populateDimensionsAndAggregators(
-              dimensions,
-              aggregators,
-              outputColumnAggregatorFactories,
-              outputColumnName,
-              type,
-              query.context()
-          );
-        } else {
-          // complex columns only
-          if (DimensionHandlerUtils.DIMENSION_HANDLER_PROVIDERS.containsKey(type.getComplexTypeName())) {
-            dimensions.add(
-                DimensionSchemaUtils.createDimensionSchema(
-                    outputColumnName,
-                    type,
-                    MultiStageQueryContext.useAutoColumnSchemas(query.context()),
-                    MultiStageQueryContext.getArrayIngestMode(query.context())
-                )
-            );
-          } else if (!isRollupQuery) {
-            aggregators.add(new PassthroughAggregatorFactory(outputColumnName, type.getComplexTypeName()));
-          } else {
-            populateDimensionsAndAggregators(
-                dimensions,
-                aggregators,
-                outputColumnAggregatorFactories,
-                outputColumnName,
-                type,
-                query.context()
-            );
-          }
-        }
-      }
-    }
-
-    return Pair.of(dimensions, aggregators);
-  }
-
-
-  /**
-   * If the output column is present in the outputColumnAggregatorFactories that means we already have the aggregator information for this column.
-   * else treat this column as a dimension.
-   *
-   * @param dimensions                      list is poulated if the output col is deemed to be a dimension
-   * @param aggregators                     list is populated with the aggregator if the output col is deemed to be a aggregation column.
-   * @param outputColumnAggregatorFactories output col -> AggregatorFactory map
-   * @param outputColumn                    column name
-   * @param type                            columnType
-   */
-  private static void populateDimensionsAndAggregators(
-      List<DimensionSchema> dimensions,
-      List<AggregatorFactory> aggregators,
-      Map<String, AggregatorFactory> outputColumnAggregatorFactories,
-      String outputColumn,
-      ColumnType type,
-      QueryContext context
-  )
-  {
-    if (outputColumnAggregatorFactories.containsKey(outputColumn)) {
-      aggregators.add(outputColumnAggregatorFactories.get(outputColumn));
-    } else {
-      dimensions.add(
-          DimensionSchemaUtils.createDimensionSchema(
-              outputColumn,
-              type,
-              MultiStageQueryContext.useAutoColumnSchemas(context),
-              MultiStageQueryContext.getArrayIngestMode(context)
-          )
-      );
-    }
   }
 
   private static DateTime getBucketDateTime(
@@ -2656,7 +2386,7 @@ public class ControllerImpl implements Controller
           // Allocate segments, if this is the final stage of an ingestion.
           if (MSQControllerTask.isIngestion(querySpec)
               && stageId.getStageNumber() == queryDef.getFinalStageDefinition().getStageNumber()
-              && !((DataSourceMSQDestination) querySpec.getDestination()).doesSegmentMorphing()) {
+              && (((DataSourceMSQDestination) querySpec.getDestination()).getTerminalStageSpec() instanceof SegmentGenerationStageSpec)) {
             populateSegmentsToGenerate();
           }
 

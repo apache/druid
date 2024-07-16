@@ -27,17 +27,12 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.annotations.LoadScope;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.metadata.input.InputSourceModule;
-import org.apache.druid.msq.kernel.FrameProcessorFactory;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
-import org.apache.druid.msq.sql.SegmentMorphFactoryCreator;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.SqlToolbox;
 import org.apache.druid.sql.calcite.external.ExternalOperatorConversion;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.guice.SqlBindings;
 
-import javax.annotation.Nullable;
 import java.util.List;
 
 /**
@@ -61,16 +56,7 @@ public class MSQSqlModule implements DruidModule
 
     // Currently, there are no supported segment morph factories, so bind an implementation which always
     // returns an empty morph factory.
-    binder.bind(SegmentMorphFactoryCreator.class).toInstance(
-        new SegmentMorphFactoryCreator()
-        {
-          @Nullable
-          @Override
-          public FrameProcessorFactory createSegmentMorphFactory(DruidQuery druidQuery, PlannerContext plannerContext)
-          {
-            return null;
-          }
-        });
+    binder.bind(MSQTerminalStageSpecFactory.class).toInstance(new MSQTerminalStageSpecFactory());
 
     binder.bind(MSQTaskSqlEngine.class).in(LazySingleton.class);
 

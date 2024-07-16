@@ -19,23 +19,28 @@
 
 package org.apache.druid.msq.test;
 
-import org.apache.druid.msq.kernel.FrameProcessorFactory;
-import org.apache.druid.msq.sql.SegmentMorphFactoryCreator;
+import org.apache.druid.msq.guice.MSQTerminalStageSpecFactory;
+import org.apache.druid.msq.indexing.destination.TerminalStageSpec;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 
-public class TestSegmentMorphFactoryCreator implements SegmentMorphFactoryCreator
+public class TestTerminalStageSpecFactory extends MSQTerminalStageSpecFactory
 {
-  private FrameProcessorFactory frameProcessorFactory;
+  private TerminalStageSpec terminalStageSpec;
 
-  public void setFrameProcessorFactory(FrameProcessorFactory frameProcessorFactory)
+  public TestTerminalStageSpecFactory(TerminalStageSpec terminalStageSpec)
   {
-    this.frameProcessorFactory = frameProcessorFactory;
+    this.terminalStageSpec = terminalStageSpec;
+  }
+
+  public void setTerminalStageSpec(TerminalStageSpec terminalStageSpec)
+  {
+    this.terminalStageSpec = terminalStageSpec;
   }
 
   @Override
-  public FrameProcessorFactory createSegmentMorphFactory(DruidQuery druidQuery, PlannerContext plannerContext)
+  public TerminalStageSpec createTerminalStageSpec(DruidQuery druidQuery, PlannerContext plannerContext)
   {
-    return frameProcessorFactory;
+    return terminalStageSpec;
   }
 }
