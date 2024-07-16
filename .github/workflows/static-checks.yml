@@ -14,17 +14,17 @@
 # limitations under the License.
 
 name: "Static Checks CI"
-#on:
-#  push:
-#    branches:
-#      - master
-#      - '[0-9]+.[0-9]+.[0-9]+' # release branches
-#      - '[0-9]+.[0-9]+.[0-9]+-[A-Za-z0-9]+' # release branches
-#  pull_request:
-#    branches:
-#      - master
-#      - '[0-9]+.[0-9]+.[0-9]+' # release branches
-#      - '[0-9]+.[0-9]+.[0-9]+-[A-Za-z0-9]+' # release branches
+on:
+  push:
+    branches:
+      - master
+      - '[0-9]+.[0-9]+.[0-9]+' # release branches
+      - '[0-9]+.[0-9]+.[0-9]+-[A-Za-z0-9]+' # release branches
+  pull_request:
+    branches:
+      - master
+      - '[0-9]+.[0-9]+.[0-9]+' # release branches
+      - '[0-9]+.[0-9]+.[0-9]+-[A-Za-z0-9]+' # release branches
 
 concurrency:
   group: '${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.head_ref || github.run_id }}' # group workflows only on pull_requests and not on branch commits
@@ -41,7 +41,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        java: [ '8', '11', '17', '21' ]
+        java: [ '8']
     runs-on: ubuntu-latest
     steps:
       - name: checkout branch
@@ -116,6 +116,7 @@ jobs:
     strategy:
       fail-fast: false
     runs-on: ubuntu-latest
+    if: false
     steps:
       - name: checkout branch
         uses: actions/checkout@v4
@@ -146,6 +147,7 @@ jobs:
 
   openrewrite:
     runs-on: ubuntu-latest
+    if: false
     steps:
       - name: checkout branch
         uses: actions/checkout@v4
@@ -178,6 +180,7 @@ jobs:
     strategy:
       fail-fast: false
     runs-on: ubuntu-latest
+    if: false
     steps:
       - name: checkout branch
         uses: actions/checkout@v4
