@@ -15578,6 +15578,36 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testDistinctNotSupportedWithWindow()
+  {
+    assumeFeatureAvailable(EngineFeature.WINDOW_FUNCTIONS);
+
+    DruidException e = assertThrows(
+        DruidException.class,
+        () -> testBuilder()
+            .queryContext(ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, true))
+            .sql("SELECT count(distinct dim1) OVER () from druid.foo")
+            .run()
+    );
+
+    assertThat(e, invalidSqlContains("DISTINCT is not supported for window functions"));
+  }
+
+  @Test
+  public void testDistinctSumNotSupportedWithApproximation()
+  {
+    DruidException e = assertThrows(
+        DruidException.class,
+        () -> testBuilder()
+            .queryContext(ImmutableMap.of(PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, true))
+            .sql("SELECT sum(distinct m1) from druid.foo")
+            .run()
+    );
+
+    assertThat(e, invalidSqlContains("Only COUNT with DISTINCT is supported"));
+  }
+
+  @Test
   public void testInGroupByLimitOutGroupByOrderBy()
   {
     testBuilder()

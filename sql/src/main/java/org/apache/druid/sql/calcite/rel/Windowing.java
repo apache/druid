@@ -166,9 +166,7 @@ public class Windowing
           if (aggregation == null
               || aggregation.getPostAggregator() != null
               || aggregation.getAggregatorFactories().size() != 1) {
-            if (null == plannerContext.getPlanningError()) {
-              plannerContext.setPlanningError("Aggregation [%s] is not supported", aggregateCall);
-            }
+            plannerContext.setPlanningError("Aggregation [%s] is currently not supported for window functions", aggregateCall.getAggregation().getName());
             throw new CannotBuildQueryException(window, aggregateCall);
           }
 

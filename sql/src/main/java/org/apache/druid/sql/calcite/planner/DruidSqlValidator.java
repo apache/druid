@@ -36,6 +36,7 @@ import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlOperatorTable;
 import org.apache.calcite.sql.SqlSelect;
+import org.apache.calcite.sql.SqlSelectKeyword;
 import org.apache.calcite.sql.SqlUpdate;
 import org.apache.calcite.sql.SqlUtil;
 import org.apache.calcite.sql.SqlWindow;
@@ -110,6 +111,10 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
   @Override
   public void validateWindow(SqlNode windowOrId, SqlValidatorScope scope, @Nullable SqlCall call)
   {
+    if (call.getFunctionQuantifier() != null && call.getFunctionQuantifier().getValue() == SqlSelectKeyword.DISTINCT) {
+      throw buildCalciteContextException("DISTINCT is not supported for window functions", windowOrId);
+    }
+
     final SqlWindow targetWindow;
     switch (windowOrId.getKind()) {
       case IDENTIFIER:
@@ -771,6 +776,15 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
         throw buildCalciteContextException("ASCENDING ordering with NULLS LAST is not supported!", call);
       }
     }
+
+    if (plannerContext.getPlannerConfig().isUseApproximateCountDistinct()) {
+      if (isSqlCallDistinct(call) && call.getOperator().getKind() != SqlKind.COUNT) {
+        throw buildCalciteContextException(
+            "Only COUNT with DISTINCT is supported when useApproximateCountDistinct is enabled. Run with disabling it.",
+            call
+        );
+      }
+    }
     super.validateCall(call, scope);
   }
 
@@ -856,5 +870,12 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
       }
     }
     return src;
+  }
+
+  private boolean isSqlCallDistinct(@Nullable SqlCall call)
+  {
+    return call != null
+           && call.getFunctionQuantifier() != null
+           && call.getFunctionQuantifier().getValue() == SqlSelectKeyword.DISTINCT;
   }
 }
