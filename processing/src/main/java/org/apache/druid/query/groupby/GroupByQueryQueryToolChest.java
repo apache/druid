@@ -509,16 +509,23 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
             throw DruidException.defensive("Expected start token, received [%s]", jp.currentToken());
           }
 
-          ObjectCodec codec = jp.getCodec();
-
           jp.nextToken();
 
           int numObjects = 0;
           while (jp.currentToken() != JsonToken.END_ARRAY) {
             if (numObjects >= query.getResultRowDimensionStart() && numObjects < query.getResultRowAggregatorStart()) {
-              objectArray[numObjects] = codec.readValue(jp, dimensionClasses[numObjects - query.getResultRowDimensionStart()]);
+              objectArray[numObjects] = JacksonUtils.readObjectUsingDeserializationContext(
+                  jp,
+                  ctxt,
+                  dimensionClasses[numObjects - query.getResultRowDimensionStart()]
+              );
+
             } else {
-              objectArray[numObjects] = codec.readValue(jp, Object.class);
+              objectArray[numObjects] = JacksonUtils.readObjectUsingDeserializationContext(
+                  jp,
+                  ctxt,
+                  Object.class
+              );
             }
             jp.nextToken();
             ++numObjects;

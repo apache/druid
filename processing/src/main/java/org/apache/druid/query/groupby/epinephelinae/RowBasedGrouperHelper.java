@@ -45,6 +45,7 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.AllGranularity;
 import org.apache.druid.java.util.common.guava.Accumulator;
 import org.apache.druid.java.util.common.guava.Comparators;
+import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.ColumnSelectorPlus;
 import org.apache.druid.query.DimensionComparisonUtils;
@@ -1378,7 +1379,6 @@ public class RowBasedGrouperHelper
           }
           jp.nextToken();
 
-          final ObjectCodec codec = jp.getCodec();
           final int timestampAdjustment = includeTimestamp ? 1 : 0;
           final int dimsToRead = timestampAdjustment + serdeHelpers.length;
           int dimsReadSoFar = 0;
@@ -1389,15 +1389,19 @@ public class RowBasedGrouperHelper
                 jp.currentToken() != JsonToken.END_ARRAY,
                 "Unexpected end of array when deserializing timestamp from the spilled files"
             );
-            objects[dimsReadSoFar] = codec.readValue(jp, Long.class);
+            objects[dimsReadSoFar] = JacksonUtils.readObjectUsingDeserializationContext(jp, deserializationContext, Long.class);
 
             ++dimsReadSoFar;
             jp.nextToken();
           }
 
           while (jp.currentToken() != JsonToken.END_ARRAY) {
-            objects[dimsReadSoFar] =
-                codec.readValue(jp, serdeHelpers[dimsReadSoFar - timestampAdjustment].getClazz());
+            objects[dimsReadSoFar] = JacksonUtils.readObjectUsingDeserializationContext(
+                jp,
+                deserializationContext,
+                serdeHelpers[dimsReadSoFar - timestampAdjustment].getClazz()
+            );
+
 
             ++dimsReadSoFar;
             jp.nextToken();

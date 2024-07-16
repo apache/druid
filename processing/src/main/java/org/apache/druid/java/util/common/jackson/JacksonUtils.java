@@ -20,8 +20,10 @@
 package org.apache.druid.java.util.common.jackson;
 
 import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonSerializer;
@@ -120,6 +122,15 @@ public final class JacksonUtils
       final JsonSerializer<Object> serializer = getSerializer(serializers, o.getClass());
       serializer.serialize(o, jsonGenerator, serializers);
     }
+  }
+  
+  public static <T> T readObjectUsingDeserializationContext(
+      final JsonParser jp,
+      final DeserializationContext deserializationContext,
+      final Class<T> clazz
+  ) throws IOException
+  {
+    return deserializationContext.readValue(jp, clazz);
   }
 
   /**
