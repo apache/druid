@@ -483,34 +483,55 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
       @Override
       public ResultRow deserialize(final JsonParser jp, final DeserializationContext ctxt) throws IOException
       {
-        Object[] objectArray = new Object[query.getResultRowSizeWithPostAggregators()];
-
-        if (!jp.isExpectedStartArrayToken()) {
-          throw DruidException.defensive("Expected start token, received [%s]", jp.currentToken());
-        }
-
-        jp.nextToken();
-
-        int numObjects = 0;
-        while (jp.currentToken() != JsonToken.END_ARRAY) {
-          if (numObjects >= query.getResultRowDimensionStart() && numObjects < query.getResultRowAggregatorStart()) {
-            objectArray[numObjects] = JacksonUtils.readObjectUsingDeserializationContext(
-                jp,
-                ctxt,
-                dimensionClasses[numObjects - query.getResultRowDimensionStart()]
-            );
-
-          } else {
-            objectArray[numObjects] = JacksonUtils.readObjectUsingDeserializationContext(
-                jp,
-                ctxt,
-                Object.class
-            );
+        if (jp.isExpectedStartObjectToken()) {
+          final Row row = jp.readValueAs(Row.class);
+          final ResultRow resultRow = ResultRow.fromLegacyRow(row, query);
+          if (containsComplexDimensions) {
+            final List<DimensionSpec> queryDimensions = query.getDimensions();
+            for (int i = 0; i < queryDimensions.size(); ++i) {
+              if (queryDimensions.get(i).getOutputType().is(ValueType.COMPLEX)) {
+                final int dimensionIndexInResultRow = query.getResultRowDimensionStart() + i;
+                resultRow.set(
+                    dimensionIndexInResultRow,
+                    objectMapper.convertValue(
+                        resultRow.get(dimensionIndexInResultRow),
+                        dimensionClasses[i]
+                    )
+                );
+              }
+            }
           }
+          return resultRow;
+        } else {
+          Object[] objectArray = new Object[query.getResultRowSizeWithPostAggregators()];
+
+          if (!jp.isExpectedStartArrayToken()) {
+            throw DruidException.defensive("Expected start token, received [%s]", jp.currentToken());
+          }
+
           jp.nextToken();
-          ++numObjects;
+
+          int numObjects = 0;
+          while (jp.currentToken() != JsonToken.END_ARRAY) {
+            if (numObjects >= query.getResultRowDimensionStart() && numObjects < query.getResultRowAggregatorStart()) {
+              objectArray[numObjects] = JacksonUtils.readObjectUsingDeserializationContext(
+                  jp,
+                  ctxt,
+                  dimensionClasses[numObjects - query.getResultRowDimensionStart()]
+              );
+
+            } else {
+              objectArray[numObjects] = JacksonUtils.readObjectUsingDeserializationContext(
+                  jp,
+                  ctxt,
+                  Object.class
+              );
+            }
+            jp.nextToken();
+            ++numObjects;
+          }
+          return ResultRow.of(objectArray);
         }
-        return ResultRow.of(objectArray);
       }
     };
 
