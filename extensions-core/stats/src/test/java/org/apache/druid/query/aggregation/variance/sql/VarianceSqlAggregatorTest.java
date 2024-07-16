@@ -712,8 +712,7 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
             + "group by dim4, dim5, mod(m1, 3)")
         .queryContext(ImmutableMap.of(
             PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
-            QueryContexts.ENABLE_DEBUG, true,
-            QueryContexts.WINDOWING_STRICT_VALIDATION, false
+            QueryContexts.ENABLE_DEBUG, true
         ))
         .expectedResults(ImmutableList.of(
             new Object[]{"a", "aa", 1.0D, 0.0D},

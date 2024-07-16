@@ -342,40 +342,27 @@ public class ClientCompactionTaskQuerySerdeTest
     )
         .inputSpec(new CompactionIntervalSpec(Intervals.of("2019/2020"), "testSha256OfSortedSegmentIds"), true)
         .tuningConfig(
-            new ParallelIndexTuningConfig(
-                null,
-                null,
-                new OnheapIncrementalIndex.Spec(true),
-                40000,
-                2000L,
-                null,
-                null,
-                null,
-                SEGMENTS_SPLIT_HINT_SPEC,
-                DYNAMIC_PARTITIONS_SPEC,
-                INDEX_SPEC,
-                INDEX_SPEC_FOR_INTERMEDIATE_PERSISTS,
-                2,
-                null,
-                null,
-                1000L,
-                TmpFileSegmentWriteOutMediumFactory.instance(),
-                null,
-                100,
-                5,
-                1000L,
-                new Duration(3000L),
-                7,
-                1000,
-                100,
-                null,
-                null,
-                null,
-                2,
-                null,
-                null,
-                null
-            )
+            TuningConfigBuilder
+                .forParallelIndexTask()
+                .withAppendableIndexSpec(new OnheapIncrementalIndex.Spec(true))
+                .withMaxRowsInMemory(40000)
+                .withMaxBytesInMemory(2000L)
+                .withSplitHintSpec(SEGMENTS_SPLIT_HINT_SPEC)
+                .withPartitionsSpec(DYNAMIC_PARTITIONS_SPEC)
+                .withIndexSpec(INDEX_SPEC)
+                .withIndexSpecForIntermediatePersists(INDEX_SPEC_FOR_INTERMEDIATE_PERSISTS)
+                .withMaxPendingPersists(2)
+                .withPushTimeout(1000L)
+                .withSegmentWriteOutMediumFactory(TmpFileSegmentWriteOutMediumFactory.instance())
+                .withMaxNumConcurrentSubTasks(100)
+                .withMaxRetry(5)
+                .withTaskStatusCheckPeriodMs(1000L)
+                .withChatHandlerTimeout(new Duration(3000L))
+                .withChatHandlerNumRetries(7)
+                .withMaxNumSegmentsToMerge(1000)
+                .withTotalNumMergeTasks(100)
+                .withMaxColumnsToMerge(2)
+                .build()
         )
         .granularitySpec(CLIENT_COMPACTION_TASK_GRANULARITY_SPEC)
         .dimensionsSpec(

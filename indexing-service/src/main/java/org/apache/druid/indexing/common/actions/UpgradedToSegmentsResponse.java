@@ -17,33 +17,30 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.test;
+package org.apache.druid.indexing.common.actions;
 
-import org.apache.druid.segment.loading.DataSegmentKiller;
-import org.apache.druid.timeline.DataSegment;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
-public class TestDataSegmentKiller implements DataSegmentKiller
+public class UpgradedToSegmentsResponse
 {
 
-  private final Set<DataSegment> killedSegments = new HashSet<>();
+  private final Map<String, Set<String>> upgradedToSegmentIds;
 
-  @Override
-  public void kill(DataSegment segment)
+  @JsonCreator
+  public UpgradedToSegmentsResponse(
+      @JsonProperty("upgradedToSegmentIds") Map<String, Set<String>> upgradedToSegmentIds
+  )
   {
-    killedSegments.add(segment);
+    this.upgradedToSegmentIds = upgradedToSegmentIds;
   }
 
-  @Override
-  public void killAll()
+  @JsonProperty
+  public Map<String, Set<String>> getUpgradedToSegmentIds()
   {
-    throw new UnsupportedOperationException("not implemented");
-  }
-
-  public Set<DataSegment> getKilledSegments()
-  {
-    return killedSegments;
+    return upgradedToSegmentIds;
   }
 }

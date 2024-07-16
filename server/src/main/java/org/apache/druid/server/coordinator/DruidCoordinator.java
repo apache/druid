@@ -816,6 +816,9 @@ public class DruidCoordinator
     {
       broadcastSegments = params.getBroadcastSegments();
       segmentReplicationStatus = params.getSegmentReplicationStatus();
+      if (coordinatorSegmentMetadataCache != null) {
+        coordinatorSegmentMetadataCache.updateSegmentReplicationStatus(segmentReplicationStatus);
+      }
 
       // Collect stats for unavailable and under-replicated segments
       final CoordinatorRunStats stats = params.getCoordinatorStats();

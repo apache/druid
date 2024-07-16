@@ -324,44 +324,21 @@ public class CompactionTaskTest
 
   private static CompactionTask.CompactionTuningConfig createTuningConfig()
   {
-    return new CompactionTask.CompactionTuningConfig(
-        null,
-        null, // null to compute maxRowsPerSegment automatically
-        null,
-        500000,
-        1000000L,
-        null,
-        null,
-        null,
-        null,
-        null,
-        IndexSpec.builder()
-                 .withBitmapSerdeFactory(RoaringBitmapSerdeFactory.getInstance())
-                 .withDimensionCompression(CompressionStrategy.LZ4)
-                 .withMetricCompression(CompressionStrategy.LZF)
-                 .withLongEncoding(LongEncodingStrategy.LONGS)
-                 .build(),
-        null,
-        null,
-        true,
-        false,
-        5000L,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
-    );
+    return TuningConfigBuilder.forCompactionTask()
+        .withMaxRowsInMemory(500_000)
+        .withMaxBytesInMemory(1_000_000L)
+        .withIndexSpec(
+            IndexSpec.builder()
+                     .withBitmapSerdeFactory(RoaringBitmapSerdeFactory.getInstance())
+                     .withDimensionCompression(CompressionStrategy.LZ4)
+                     .withMetricCompression(CompressionStrategy.LZF)
+                     .withLongEncoding(LongEncodingStrategy.LONGS)
+                     .build()
+        )
+        .withForceGuaranteedRollup(true)
+        .withReportParseExceptions(false)
+        .withPushTimeout(5000L)
+        .build();
   }
 
   @Rule
@@ -596,38 +573,21 @@ public class CompactionTaskTest
         null,
         null,
         null,
-        new IndexTuningConfig(
-            null,
-            null, // null to compute maxRowsPerSegment automatically
-            null,
-            500000,
-            1000000L,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            IndexSpec.builder()
-                     .withBitmapSerdeFactory(RoaringBitmapSerdeFactory.getInstance())
-                     .withDimensionCompression(CompressionStrategy.LZ4)
-                     .withMetricCompression(CompressionStrategy.LZF)
-                     .withLongEncoding(LongEncodingStrategy.LONGS)
-                     .build(),
-            null,
-            null,
-            true,
-            false,
-            5000L,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null
-        ),
+        TuningConfigBuilder
+            .forIndexTask()
+            .withMaxRowsInMemory(500000)
+            .withIndexSpec(
+                IndexSpec.builder()
+                         .withBitmapSerdeFactory(RoaringBitmapSerdeFactory.getInstance())
+                         .withDimensionCompression(CompressionStrategy.LZ4)
+                         .withMetricCompression(CompressionStrategy.LZF)
+                         .withLongEncoding(LongEncodingStrategy.LONGS)
+                         .build()
+            )
+            .withForceGuaranteedRollup(true)
+            .withReportParseExceptions(false)
+            .withPublishTimeout(5000L)
+            .build(),
         null,
         toolbox.getJsonMapper(),
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
@@ -676,77 +636,37 @@ public class CompactionTaskTest
   @Test
   public void testGetTuningConfigWithIndexTuningConfig()
   {
-    IndexTuningConfig indexTuningConfig = new IndexTuningConfig(
-        null,
-        null, // null to compute maxRowsPerSegment automatically
-        null,
-        500000,
-        1000000L,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        IndexSpec.builder()
-                 .withBitmapSerdeFactory(RoaringBitmapSerdeFactory.getInstance())
-                 .withDimensionCompression(CompressionStrategy.LZ4)
-                 .withMetricCompression(CompressionStrategy.LZF)
-                 .withLongEncoding(LongEncodingStrategy.LONGS)
-                 .build(),
-        null,
-        null,
-        true,
-        false,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
-    );
+    IndexTuningConfig indexTuningConfig = TuningConfigBuilder
+        .forIndexTask()
+        .withMaxRowsInMemory(500000)
+        .withMaxBytesInMemory(1000000L)
+        .withIndexSpec(
+            IndexSpec.builder()
+                     .withBitmapSerdeFactory(RoaringBitmapSerdeFactory.getInstance())
+                     .withDimensionCompression(CompressionStrategy.LZ4)
+                     .withMetricCompression(CompressionStrategy.LZF)
+                     .withLongEncoding(LongEncodingStrategy.LONGS)
+                     .build()
+        )
+        .withForceGuaranteedRollup(true)
+        .withReportParseExceptions(false)
+        .build();
 
-    CompactionTask.CompactionTuningConfig compactionTuningConfig = new CompactionTask.CompactionTuningConfig(
-        null,
-        null,
-        null,
-        500000,
-        1000000L,
-        null,
-        null,
-        null,
-        null,
-        null,
-        IndexSpec.builder()
-                 .withBitmapSerdeFactory(RoaringBitmapSerdeFactory.getInstance())
-                 .withDimensionCompression(CompressionStrategy.LZ4)
-                 .withMetricCompression(CompressionStrategy.LZF)
-                 .withLongEncoding(LongEncodingStrategy.LONGS)
-                 .build(),
-        null,
-        null,
-        true,
-        false,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
-    );
+    CompactionTask.CompactionTuningConfig compactionTuningConfig = TuningConfigBuilder
+        .forCompactionTask()
+        .withMaxRowsInMemory(500000)
+        .withMaxBytesInMemory(1000000L)
+        .withIndexSpec(
+            IndexSpec.builder()
+                     .withBitmapSerdeFactory(RoaringBitmapSerdeFactory.getInstance())
+                     .withDimensionCompression(CompressionStrategy.LZ4)
+                     .withMetricCompression(CompressionStrategy.LZF)
+                     .withLongEncoding(LongEncodingStrategy.LONGS)
+                     .build()
+        )
+        .withForceGuaranteedRollup(true)
+        .withReportParseExceptions(false)
+        .build();
 
     Assert.assertEquals(compactionTuningConfig, CompactionTask.getTuningConfig(indexTuningConfig));
 
@@ -755,84 +675,39 @@ public class CompactionTaskTest
   @Test
   public void testGetTuningConfigWithParallelIndexTuningConfig()
   {
-    ParallelIndexTuningConfig parallelIndexTuningConfig = new ParallelIndexTuningConfig(
-        null,
-        null, // null to compute maxRowsPerSegment automatically
-        null,
-        500000,
-        1000000L,
-        null,
-        null,
-        null,
-        null,
-        null,
-        IndexSpec.builder()
-                 .withBitmapSerdeFactory(RoaringBitmapSerdeFactory.getInstance())
-                 .withDimensionCompression(CompressionStrategy.LZ4)
-                 .withMetricCompression(CompressionStrategy.LZF)
-                 .withLongEncoding(LongEncodingStrategy.LONGS)
-                 .build(),
-        null,
-        null,
-        true,
-        false,
-        5000L,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
-    );
+    ParallelIndexTuningConfig parallelIndexTuningConfig = TuningConfigBuilder
+        .forParallelIndexTask()
+        .withMaxRowsInMemory(500000)
+        .withMaxBytesInMemory(1000000L)
+        .withIndexSpec(
+            IndexSpec.builder()
+                     .withBitmapSerdeFactory(RoaringBitmapSerdeFactory.getInstance())
+                     .withDimensionCompression(CompressionStrategy.LZ4)
+                     .withMetricCompression(CompressionStrategy.LZF)
+                     .withLongEncoding(LongEncodingStrategy.LONGS)
+                     .build()
+        )
+        .withForceGuaranteedRollup(true)
+        .withReportParseExceptions(false)
+        .withPushTimeout(5000L)
+        .build();
 
-    CompactionTask.CompactionTuningConfig compactionTuningConfig = new CompactionTask.CompactionTuningConfig(
-        null,
-        null, // null to compute maxRowsPerSegment automatically
-        null,
-        500000,
-        1000000L,
-        null,
-        null,
-        null,
-        null,
-        null,
-        IndexSpec.builder()
-                 .withBitmapSerdeFactory(RoaringBitmapSerdeFactory.getInstance())
-                 .withDimensionCompression(CompressionStrategy.LZ4)
-                 .withMetricCompression(CompressionStrategy.LZF)
-                 .withLongEncoding(LongEncodingStrategy.LONGS)
-                 .build(),
-        null,
-        null,
-        true,
-        false,
-        5000L,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
-    );
+    CompactionTask.CompactionTuningConfig compactionTuningConfig = TuningConfigBuilder
+        .forCompactionTask()
+        .withMaxRowsInMemory(500000)
+        .withMaxBytesInMemory(1000000L)
+        .withIndexSpec(
+            IndexSpec.builder()
+                     .withBitmapSerdeFactory(RoaringBitmapSerdeFactory.getInstance())
+                     .withDimensionCompression(CompressionStrategy.LZ4)
+                     .withMetricCompression(CompressionStrategy.LZF)
+                     .withLongEncoding(LongEncodingStrategy.LONGS)
+                     .build()
+        )
+        .withForceGuaranteedRollup(true)
+        .withReportParseExceptions(false)
+        .withPushTimeout(5000L)
+        .build();
 
     Assert.assertEquals(compactionTuningConfig, CompactionTask.getTuningConfig(parallelIndexTuningConfig));
   }
@@ -909,44 +784,24 @@ public class CompactionTaskTest
   @Test
   public void testCreateIngestionSchemaWithTargetPartitionSize() throws IOException
   {
-    final CompactionTask.CompactionTuningConfig tuningConfig = new CompactionTask.CompactionTuningConfig(
-        100000,
-        null,
-        null,
-        500000,
-        1000000L,
-        null,
-        null,
-        null,
-        null,
-        null,
-        IndexSpec.builder()
-                 .withBitmapSerdeFactory(RoaringBitmapSerdeFactory.getInstance())
-                 .withDimensionCompression(CompressionStrategy.LZ4)
-                 .withMetricCompression(CompressionStrategy.LZF)
-                 .withLongEncoding(LongEncodingStrategy.LONGS)
-                 .build(),
-        null,
-        null,
-        true,
-        false,
-        null,
-        null,
-        null,
-        10,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
-    );
+    final CompactionTask.CompactionTuningConfig tuningConfig = TuningConfigBuilder
+        .forCompactionTask()
+        .withTargetPartitionSize(100000)
+        .withMaxRowsInMemory(500000)
+        .withMaxBytesInMemory(1000000L)
+        .withIndexSpec(
+            IndexSpec.builder()
+                     .withBitmapSerdeFactory(RoaringBitmapSerdeFactory.getInstance())
+                     .withDimensionCompression(CompressionStrategy.LZ4)
+                     .withMetricCompression(CompressionStrategy.LZF)
+                     .withLongEncoding(LongEncodingStrategy.LONGS)
+                     .build()
+        )
+        .withForceGuaranteedRollup(true)
+        .withReportParseExceptions(false)
+        .withMaxNumConcurrentSubTasks(10)
+        .build();
+
     final Map<Interval, DataSchema> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
         toolbox,
         LockGranularity.TIME_CHUNK,
@@ -991,44 +846,24 @@ public class CompactionTaskTest
   @Test
   public void testCreateIngestionSchemaWithMaxTotalRows() throws IOException
   {
-    final CompactionTask.CompactionTuningConfig tuningConfig = new CompactionTask.CompactionTuningConfig(
-        null,
-        null,
-        null,
-        500000,
-        1000000L,
-        null,
-        1000000L,
-        null,
-        null,
-        null,
-        IndexSpec.builder()
-                 .withBitmapSerdeFactory(RoaringBitmapSerdeFactory.getInstance())
-                 .withDimensionCompression(CompressionStrategy.LZ4)
-                 .withMetricCompression(CompressionStrategy.LZF)
-                 .withLongEncoding(LongEncodingStrategy.LONGS)
-                 .build(),
-        null,
-        null,
-        false,
-        false,
-        5000L,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
-    );
+    final CompactionTask.CompactionTuningConfig tuningConfig = TuningConfigBuilder
+        .forCompactionTask()
+        .withMaxRowsInMemory(500000)
+        .withMaxBytesInMemory(1000000L)
+        .withMaxTotalRows(1000000L)
+        .withIndexSpec(
+            IndexSpec.builder()
+                     .withBitmapSerdeFactory(RoaringBitmapSerdeFactory.getInstance())
+                     .withDimensionCompression(CompressionStrategy.LZ4)
+                     .withMetricCompression(CompressionStrategy.LZF)
+                     .withLongEncoding(LongEncodingStrategy.LONGS)
+                     .build()
+        )
+        .withForceGuaranteedRollup(false)
+        .withReportParseExceptions(false)
+        .withPushTimeout(5000L)
+        .build();
+
     final Map<Interval, DataSchema> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
         toolbox,
         LockGranularity.TIME_CHUNK,
@@ -1073,44 +908,25 @@ public class CompactionTaskTest
   @Test
   public void testCreateIngestionSchemaWithNumShards() throws IOException
   {
-    final CompactionTask.CompactionTuningConfig tuningConfig = new CompactionTask.CompactionTuningConfig(
-        null,
-        null,
-        null,
-        500000,
-        1000000L,
-        null,
-        null,
-        null,
-        null,
-        new HashedPartitionsSpec(null, 3, null),
-        IndexSpec.builder()
-                 .withBitmapSerdeFactory(RoaringBitmapSerdeFactory.getInstance())
-                 .withDimensionCompression(CompressionStrategy.LZ4)
-                 .withMetricCompression(CompressionStrategy.LZF)
-                 .withLongEncoding(LongEncodingStrategy.LONGS)
-                 .build(),
-        null,
-        null,
-        true,
-        false,
-        5000L,
-        null,
-        null,
-        10,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
-    );
+    final CompactionTask.CompactionTuningConfig tuningConfig = TuningConfigBuilder
+        .forCompactionTask()
+        .withMaxRowsInMemory(500000)
+        .withMaxBytesInMemory(1000000L)
+        .withPartitionsSpec(new HashedPartitionsSpec(null, 3, null))
+        .withIndexSpec(
+            IndexSpec.builder()
+                     .withBitmapSerdeFactory(RoaringBitmapSerdeFactory.getInstance())
+                     .withDimensionCompression(CompressionStrategy.LZ4)
+                     .withMetricCompression(CompressionStrategy.LZF)
+                     .withLongEncoding(LongEncodingStrategy.LONGS)
+                     .build()
+        )
+        .withForceGuaranteedRollup(true)
+        .withReportParseExceptions(false)
+        .withPushTimeout(5000L)
+        .withMaxNumConcurrentSubTasks(10)
+        .build();
+
     final Map<Interval, DataSchema> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
         toolbox,
         LockGranularity.TIME_CHUNK,
@@ -1821,44 +1637,24 @@ public class CompactionTaskTest
         expectedDimensionsSpecs,
         expectedMetricsSpec,
         expectedSegmentIntervals,
-        new CompactionTask.CompactionTuningConfig(
-            null,
-            null,
-            null,
-            500000,
-            1000000L,
-            null,
-            Long.MAX_VALUE,
-            null,
-            null,
-            new HashedPartitionsSpec(5000000, null, null), // automatically computed targetPartitionSize
-            IndexSpec.builder()
-                     .withBitmapSerdeFactory(RoaringBitmapSerdeFactory.getInstance())
-                     .withDimensionCompression(CompressionStrategy.LZ4)
-                     .withMetricCompression(CompressionStrategy.LZF)
-                     .withLongEncoding(LongEncodingStrategy.LONGS)
-                     .build(),
-            null,
-            null,
-            true,
-            false,
-            5000L,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null
-        ),
+        TuningConfigBuilder
+            .forCompactionTask()
+            .withMaxRowsInMemory(500000)
+            .withMaxBytesInMemory(1000000L)
+            .withMaxTotalRows(Long.MAX_VALUE)
+            .withPartitionsSpec(new HashedPartitionsSpec(5000000, null, null))
+            .withIndexSpec(
+                IndexSpec.builder()
+                         .withBitmapSerdeFactory(RoaringBitmapSerdeFactory.getInstance())
+                         .withDimensionCompression(CompressionStrategy.LZ4)
+                         .withMetricCompression(CompressionStrategy.LZF)
+                         .withLongEncoding(LongEncodingStrategy.LONGS)
+                         .build()
+            )
+            .withForceGuaranteedRollup(true)
+            .withReportParseExceptions(false)
+            .withPushTimeout(5000L)
+            .build(),
         expectedSegmentGranularity,
         expectedQueryGranularity,
         expectedDropExisting
