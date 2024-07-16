@@ -24,6 +24,8 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.avatica.util.TimeUnit;
 import org.apache.calcite.avatica.util.TimeUnitRange;
 import org.apache.calcite.rex.RexBuilder;
+import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.rex.RexWindowBounds;
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlIntervalQualifier;
 import org.apache.calcite.sql.SqlOperator;
@@ -33,6 +35,7 @@ import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExpressionType;
@@ -73,6 +76,7 @@ import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.DruidTypeSystem;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
+import org.hamcrest.MatcherAssert;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
 import org.junit.Assert;
@@ -2825,6 +2829,36 @@ public class ExpressionsTest extends CalciteTestBase
         makeExpression("human_readable_decimal_byte_format(45678,3)"),
         "45.678 KB"
     );
+  }
+
+  @Test
+  public void testPresenceOfOverIsInvalid()
+  {
+    final RexBuilder rexBuilder = new RexBuilder(DruidTypeSystem.TYPE_FACTORY);
+    final PlannerContext plannerContext = Mockito.mock(PlannerContext.class);
+    Mockito.when(plannerContext.getTimeZone()).thenReturn(DateTimeZone.UTC);
+
+    RexNode rexNode = rexBuilder.makeOver(
+        testHelper.createSqlType(SqlTypeName.BIGINT),
+        SqlStdOperatorTable.SUM,
+        Collections.emptyList(),
+        Collections.emptyList(),
+        ImmutableList.of(),
+        RexWindowBounds.CURRENT_ROW,
+        RexWindowBounds.CURRENT_ROW,
+        false,
+        true,
+        false,
+        false,
+        false
+    );
+
+    DruidException t = Assert.assertThrows(
+        DruidException.class,
+        () -> testHelper.testExpression(rexNode, null, plannerContext)
+    );
+
+    MatcherAssert.assertThat(t, DruidExceptionMatcher.defensive().expectMessageContains("Encountered an OVER"));
   }
 
   @Test
