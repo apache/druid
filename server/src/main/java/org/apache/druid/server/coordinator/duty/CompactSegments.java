@@ -95,8 +95,7 @@ public class CompactSegments implements CoordinatorCustomDuty
 
   // This variable is updated by the Coordinator thread executing duties and
   // read by HTTP threads processing Coordinator API calls.
-  private final AtomicReference<Map<String, AutoCompactionSnapshot>>
-      autoCompactionSnapshotPerDataSource = new AtomicReference<>();
+  private final AtomicReference<Map<String, AutoCompactionSnapshot>> autoCompactionSnapshotPerDataSource = new AtomicReference<>();
 
   @Inject
   @JsonCreator
@@ -414,7 +413,7 @@ public class CompactSegments implements CoordinatorCustomDuty
         // Determines segmentGranularity from the segmentsToCompact
         // Each batch of segmentToCompact from CompactionSegmentIterator will contain the same interval as
         // segmentGranularity is not set in the compaction config
-        Interval interval = entry.getFirst().getInterval();
+        Interval interval = segmentsToCompact.get(0).getInterval();
         if (segmentsToCompact.stream().allMatch(segment -> interval.overlaps(segment.getInterval()))) {
           try {
             segmentGranularityToUse = GranularityType.fromPeriod(interval.toPeriod()).getDefaultGranularity();
@@ -524,7 +523,7 @@ public class CompactSegments implements CoordinatorCustomDuty
 
       LOG.info(
           "Submitted a compaction task[%s] for [%d] segments in datasource[%s], umbrella interval[%s].",
-          taskId, entry.size(), dataSourceName, entry.getUmbrellaInterval()
+          taskId, segmentsToCompact.size(), dataSourceName, entry.getUmbrellaInterval()
       );
       LOG.debugSegments(segmentsToCompact, "Compacting segments");
       numSubmittedTasks++;

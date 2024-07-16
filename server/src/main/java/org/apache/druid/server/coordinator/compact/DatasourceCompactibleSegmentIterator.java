@@ -313,7 +313,7 @@ public class DatasourceCompactibleSegmentIterator implements Iterator<SegmentsTo
       if (!compactionStatus.isComplete()) {
         log.debug(
             "Datasource[%s], interval[%s] has [%d] segments that need to be compacted because [%s].",
-            dataSourceName, interval, candidates.size(), compactionStatus.getReasonToCompact()
+            dataSource, interval, candidates.size(), compactionStatus.getReasonToCompact()
         );
       }
 
@@ -324,7 +324,7 @@ public class DatasourceCompactibleSegmentIterator implements Iterator<SegmentsTo
         log.warn(
             "Skipping compaction for datasource[%s], interval[%s] as total segment size[%d]"
             + " is larger than allowed inputSegmentSize[%d].",
-            dataSourceName, interval, candidates.getTotalBytes(), inputSegmentSize
+            dataSource, interval, candidates.getTotalBytes(), inputSegmentSize
         );
       } else if (config.getGranularitySpec() != null
                  && config.getGranularitySpec().getSegmentGranularity() != null) {
@@ -339,7 +339,7 @@ public class DatasourceCompactibleSegmentIterator implements Iterator<SegmentsTo
       }
     }
 
-    log.debug("No more segments to compact for datasource[%s].", dataSourceName);
+    log.debug("No more segments to compact for datasource[%s].", dataSource);
   }
 
   /**
