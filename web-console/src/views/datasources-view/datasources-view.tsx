@@ -1614,6 +1614,7 @@ GROUP BY 1, 2`;
                   }}
                   disableDetail={unused}
                   actions={datasourceActions}
+                  menuTitle={datasource}
                 />
               );
             },
