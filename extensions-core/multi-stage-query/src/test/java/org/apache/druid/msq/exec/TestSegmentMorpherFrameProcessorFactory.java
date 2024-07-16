@@ -50,7 +50,6 @@ import org.apache.druid.msq.test.MSQTestTaskActionClient;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
-import org.junit.Assert;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
