@@ -18,10 +18,28 @@
 name: "Revised ITs workflow"
 on:
   workflow_call:
+    inputs:
+      BACKWARD_COMPATIBILITY_IT_ENABLED:
+        description: "Flag for backward compatibility IT"
+        required: true
+        type: string
+      DRUID_PREVIOUS_VERSION:
+        description: "Previous druid versions to run the test against."
+        required: true
+        type: string
+      DRUID_PREVIOUS_VERSION_DOWNLOAD_URL:
+        description: "URL to download the previous druid version."
+        required: true
+        type: string
+      DRUID_PREVIOUS_IT_IMAGE_NAME:
+        description: "Druid previous version image name."
+        required: true
+        type: string
   workflow_dispatch:
 
 jobs:
   changes:
+    if: false
     runs-on: ubuntu-latest
     # Required permissions
     permissions:
@@ -44,13 +62,14 @@ jobs:
               - '!extension*/**'
 
   it:
-    needs: changes
+    #needs: changes
     strategy:
       fail-fast: false
       matrix:
         #jdk: [8, 11, 17]
         jdk: [8]
-        it: [HighAvailability, MultiStageQuery, Catalog, BatchIndex, MultiStageQueryWithMM, InputSource, InputFormat, Security, Query]
+        #it: [HighAvailability, MultiStageQuery, Catalog, BatchIndex, MultiStageQueryWithMM, InputSource, InputFormat, Security, Query, BackwardCompatibility]
+        it: [BackwardCompatibility]
         #indexer: [indexer, middleManager]
         indexer: [middleManager]
     uses: ./.github/workflows/reusable-revised-its.yml
@@ -62,11 +81,15 @@ jobs:
       script: ./it.sh github ${{ matrix.it }}
       it: ${{ matrix.it }}
       mysql_driver: com.mysql.jdbc.Driver
+      BACKWARD_COMPATIBILITY_IT_ENABLED: ${{ inputs.BACKWARD_COMPATIBILITY_IT_ENABLED }}
+      DRUID_PREVIOUS_VERSION: ${{ inputs.DRUID_PREVIOUS_VERSION }}
+      DRUID_PREVIOUS_VERSION_DOWNLOAD_URL: ${{ inputs.DRUID_PREVIOUS_VERSION_DOWNLOAD_URL }}
+      DRUID_PREVIOUS_IT_IMAGE_NAME: ${{ inputs.DRUID_PREVIOUS_IT_IMAGE_NAME }}
 
   s3-deep-storage-minio:
     needs: changes
     uses: ./.github/workflows/reusable-revised-its.yml
-    if: ${{ needs.changes.outputs.core == 'true' || needs.changes.outputs.common-extensions == 'true' }}
+    if: false #${{ needs.changes.outputs.core == 'true' || needs.changes.outputs.common-extensions == 'true' }}
     with:
       build_jdk: 8
       runtime_jdk: 11

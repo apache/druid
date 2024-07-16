@@ -1,0 +1,16 @@
+
+name: "A1"
+
+env:
+  MYSQL_DRIVER_CLASSNAME: com.mysql.jdbc.Driver # Used to set druid config in docker image for revised ITs
+  SEGMENT_DOWNLOAD_TIMEOUT_MINS: 5
+  PREVIOUS_DRUID_VERSIONS: '["30.0.0", "29.0.0"]'
+  TEST_VAR: 2
+
+
+jobs:
+  mop:
+    if: true
+    uses: ./.github/workflows/file2.yml
+    with:
+      previous_versions: ${{ env.PREVIOUS_DRUID_VERSIONS }}

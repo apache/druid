@@ -29,6 +29,7 @@ import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
 import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.testsEx.categories.BackwardCompatibility;
 import org.apache.druid.testsEx.categories.BatchIndex;
+import org.apache.druid.testsEx.categories.InputSource;
 import org.apache.druid.testsEx.config.DruidTestRunner;
 import org.joda.time.Interval;
 import org.junit.Assert;

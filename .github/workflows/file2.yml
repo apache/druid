@@ -1,0 +1,20 @@
+
+name: "A2"
+on:
+  workflow_call:
+    inputs:
+      previous_versions:
+        description: "Previous druid versions to run the test against."
+        required: true
+        type: string
+  workflow_dispatch:
+
+jobs:
+  echo_array_var_json:
+    runs-on: ubuntu-latest  # You can choose a different runner if needed
+    steps:
+      - name: Echo environment variable (array as JSON)
+        run: | 
+          echo $TEST_VAR
+          echo "printing var"
+          echo "${{inputs.previous_versions}}"

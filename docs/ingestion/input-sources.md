@@ -87,7 +87,7 @@ Sample specs:
         "type": "s3",
         "objectGlob": "**.json",
         "objects": [
-          { "bucket": "foo", "path": "bar/file1.json"},
+          { "bucket": "foo", "path": "bar/file1.yml.json"},
           { "bucket": "bar", "path": "foo/file2.json"}
         ]
       },
@@ -275,7 +275,7 @@ Sample specs:
         "type": "google",
         "objectGlob": "**.json",
         "objects": [
-          { "bucket": "foo", "path": "bar/file1.json"},
+          { "bucket": "foo", "path": "bar/file1.yml.json"},
           { "bucket": "bar", "path": "foo/file2.json"}
         ]
       },
@@ -362,7 +362,7 @@ Sample specs:
         "type": "azureStorage",
         "objectGlob": "**.json",
         "objects": [
-          { "bucket": "storageAccount", "path": "container/prefix1/file1.json"},
+          { "bucket": "storageAccount", "path": "container/prefix1/file1.yml.json"},
           { "bucket": "storageAccount", "path": "container/prefix2/file2.json"}
         ],
         "properties": {
@@ -459,7 +459,7 @@ Sample specs:
         "type": "azure",
         "objectGlob": "**.json",
         "objects": [
-          { "bucket": "container", "path": "prefix1/file1.json"},
+          { "bucket": "container", "path": "prefix1/file1.yml.json"},
           { "bucket": "container", "path": "prefix2/file2.json"}
         ]
       },

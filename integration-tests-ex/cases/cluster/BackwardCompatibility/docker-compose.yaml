@@ -35,7 +35,7 @@ services:
     extends:
       file: ../Common/druid.yaml
       service: coordinator
-    image: ${DRUID_PREV_IT_IMAGE_NAME}
+    image: ${DRUID_PREVIOUS_IT_IMAGE_NAME}
     container_name: coordinator
     environment:
       - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
@@ -52,6 +52,7 @@ services:
     extends:
       file: ../Common/druid.yaml
       service: overlord
+    image: ${DRUID_PREVIOUS_IT_IMAGE_NAME}
     container_name: overlord
     environment:
       - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
