@@ -63,76 +63,76 @@ jobs:
       - name: "Echo"
         run: |
           echo "run dummy-step"
-#
-#  build:
-#    name: "build (jdk${{ matrix.jdk }})"
-#    strategy:
-#      fail-fast: false
-#      matrix:
-#        jdk: [ '8' ]
-#    runs-on: ubuntu-latest
-#    steps:
-#      - name: Checkout branch
-#        uses: actions/checkout@v4
-#
-#      # skip the "cache: maven" step from setup-java. We explicitly use a
-#      # different cache key since we cannot reuse it across commits.
-#      - uses: actions/setup-java@v4
-#        with:
-#          distribution: 'zulu'
-#          java-version: ${{ matrix.jdk }}
-#
-#      # the build step produces SNAPSHOT artifacts into the local maven repository,
-#      # we include github.sha in the cache key to make it specific to that build/jdk
-#      - name: Cache Maven m2 repository
-#        id: maven
-#        uses: actions/cache@v4
-#        with:
-#          path: ~/.m2/repository
-#          key: maven-${{ runner.os }}-${{ matrix.jdk }}-${{ github.sha }}
-#          restore-keys: setup-java-Linux-maven-${{ hashFiles('**/pom.xml') }}
-#
-#      - name: Cache targets
-#        id: target
-#        uses: actions/cache@v4
-#        with:
-#          path: |
-#            ./**/target
-#          key: maven-${{ runner.os }}-${{ matrix.jdk }}-targets-${{ github.sha }}
-#
-#      - name: Cache image
-#        id: docker_container
-#        uses: actions/cache@v4
-#        with:
-#          key: druid-container-jdk${{ matrix.jdk }}.tar.gz-${{ github.sha }}
-#          path: |
-#            ./druid-container-jdk${{ matrix.jdk }}.tar.gz
-#            ./integration-tests-ex/image/target/env.sh
-#
-#      - name: Maven build
-#        id: maven_build
-#        run: |
-#          ./it.sh ci
-#
-#      - name: Container build
-#        run: |
-#          ./it.sh image
-#          source ./integration-tests-ex/image/target/env.sh
-#          docker tag $DRUID_IT_IMAGE_NAME $DRUID_IT_IMAGE_NAME-jdk${{ matrix.jdk }}
-#
-#      - name: Save docker container to archive
-#        run: |
-#          source ./integration-tests-ex/image/target/env.sh
-#          echo $DRUID_IT_IMAGE_NAME
-#          docker save "$DRUID_IT_IMAGE_NAME" | gzip > druid-container-jdk${{ matrix.jdk }}.tar.gz
-#
-#      - name: Save old version docker image
-#        if: ${{ env.BACKWARD_COMPATIBILITY_IT_ENABLED == "true" }}
-#        run: |
-#          docker tag $DRUID_PREVIOUS_IT_IMAGE_NAME $DRUID_PREVIOUS_IT_IMAGE_NAME-jdk${{ inputs.build_jdk }}-version${{ inputs.DRUID_PREVIOUS_VERSION }}
-#          echo $DRUID_PREVIOUS_IT_IMAGE_NAME
-#          docker save "$DRUID_PREVIOUS_IT_IMAGE_NAME" | gzip > druid-container-jdk${{ inputs.build_jdk }}-version${{ inputs.DRUID_PREVIOUS_VERSION }}.tar.gz
-#
+
+  build:
+    name: "build (jdk${{ matrix.jdk }})"
+    strategy:
+      fail-fast: false
+      matrix:
+        jdk: [ '8' ]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+
+      # skip the "cache: maven" step from setup-java. We explicitly use a
+      # different cache key since we cannot reuse it across commits.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: ${{ matrix.jdk }}
+
+      # the build step produces SNAPSHOT artifacts into the local maven repository,
+      # we include github.sha in the cache key to make it specific to that build/jdk
+      - name: Cache Maven m2 repository
+        id: maven
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: maven-${{ runner.os }}-${{ matrix.jdk }}-${{ github.sha }}
+          restore-keys: setup-java-Linux-maven-${{ hashFiles('**/pom.xml') }}
+
+      - name: Cache targets
+        id: target
+        uses: actions/cache@v4
+        with:
+          path: |
+            ./**/target
+          key: maven-${{ runner.os }}-${{ matrix.jdk }}-targets-${{ github.sha }}
+
+      - name: Cache image
+        id: docker_container
+        uses: actions/cache@v4
+        with:
+          key: druid-container-jdk${{ matrix.jdk }}.tar.gz-${{ github.sha }}
+          path: |
+            ./druid-container-jdk${{ matrix.jdk }}.tar.gz
+            ./integration-tests-ex/image/target/env.sh
+
+      - name: Maven build
+        id: maven_build
+        run: |
+          ./it.sh ci
+
+      - name: Container build
+        run: |
+          ./it.sh image
+          source ./integration-tests-ex/image/target/env.sh
+          docker tag $DRUID_IT_IMAGE_NAME $DRUID_IT_IMAGE_NAME-jdk${{ matrix.jdk }}
+
+      - name: Save docker container to archive
+        run: |
+          source ./integration-tests-ex/image/target/env.sh
+          echo $DRUID_IT_IMAGE_NAME
+          docker save "$DRUID_IT_IMAGE_NAME" | gzip > druid-container-jdk${{ matrix.jdk }}.tar.gz
+
+      - name: Save old version docker image
+        if: ${{ env.BACKWARD_COMPATIBILITY_IT_ENABLED == "true" }}
+        run: |
+          docker tag $DRUID_PREVIOUS_IT_IMAGE_NAME $DRUID_PREVIOUS_IT_IMAGE_NAME-jdk${{ inputs.build_jdk }}-version${{ inputs.DRUID_PREVIOUS_VERSION }}
+          echo $DRUID_PREVIOUS_IT_IMAGE_NAME
+          docker save "$DRUID_PREVIOUS_IT_IMAGE_NAME" | gzip > druid-container-jdk${{ inputs.build_jdk }}-version${{ inputs.DRUID_PREVIOUS_VERSION }}.tar.gz
+
 #  unit-tests-phase2:
 #    strategy:
 #      fail-fast: false
@@ -165,12 +165,12 @@ jobs:
 #    uses: ./.github/workflows/standard-its.yml
 #
 #
-#  revised-its:
-#    needs: build
-#    if: true #${{ always() && (needs.unit-tests.result == 'success' || needs.unit-tests.outputs.continue_tests) }}
-#    uses: ./.github/workflows/revised-its.yml
-#    with:
-#      BACKWARD_COMPATIBILITY_IT_ENABLED: ${{ env.BACKWARD_COMPATIBILITY_IT_ENABLED }}
-#      DRUID_PREVIOUS_VERSION: ${{ env.DRUID_PREVIOUS_VERSION }}
-#      DRUID_PREVIOUS_VERSION_DOWNLOAD_URL: ${{ env.DRUID_PREVIOUS_VERSION_DOWNLOAD_URL }}
-#      DRUID_PREVIOUS_IT_IMAGE_NAME: ${{ env.DRUID_PREVIOUS_IT_IMAGE_NAME }}
+  revised-its:
+    needs: build
+    if: true #${{ always() && (needs.unit-tests.result == 'success' || needs.unit-tests.outputs.continue_tests) }}
+    uses: ./.github/workflows/revised-its.yml
+    with:
+      BACKWARD_COMPATIBILITY_IT_ENABLED: ${{ env.BACKWARD_COMPATIBILITY_IT_ENABLED }}
+      DRUID_PREVIOUS_VERSION: ${{ env.DRUID_PREVIOUS_VERSION }}
+      DRUID_PREVIOUS_VERSION_DOWNLOAD_URL: ${{ env.DRUID_PREVIOUS_VERSION_DOWNLOAD_URL }}
+      DRUID_PREVIOUS_IT_IMAGE_NAME: ${{ env.DRUID_PREVIOUS_IT_IMAGE_NAME }}
