@@ -164,6 +164,14 @@ jobs:
     if: false #${{ always() && (needs.unit-tests.result == 'success' || needs.unit-tests.outputs.continue_tests) }}
     uses: ./.github/workflows/standard-its.yml
 
+  dummy-step:
+    runs-on: ubuntu-latest
+    name: "Dummy step"
+    steps:
+      - name: "Echo"
+        run: |
+          echo "run dummy-step"
+
   revised-its:
     needs: build
     if: true #${{ always() && (needs.unit-tests.result == 'success' || needs.unit-tests.outputs.continue_tests) }}
