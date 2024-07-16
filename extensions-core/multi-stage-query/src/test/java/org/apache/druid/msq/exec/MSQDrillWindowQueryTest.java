@@ -38,6 +38,7 @@ import org.apache.druid.sql.calcite.QueryTestBuilder;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.run.SqlEngine;
+import org.junit.jupiter.api.Test;
 
 @SqlTestFrameworkConfig.ComponentSupplier(DrillWindowQueryMSQComponentSupplier.class)
 public class MSQDrillWindowQueryTest extends DrillWindowQueryTest
@@ -90,5 +91,15 @@ public class MSQDrillWindowQueryTest extends DrillWindowQueryTest
         .addCustomRunner(new ExtractResultsFactory(() -> (MSQTestOverlordServiceClient) ((MSQTaskSqlEngine) queryFramework().engine()).overlordClient()))
         .skipVectorize(true)
         .verifyNativeQueries(new VerifyMSQSupportedNativeQueriesPredicate());
+  }
+
+  // This test gives the following error on sql-native engine:
+  // Column[w0] of type[class org.apache.druid.query.rowsandcols.column.ColumnAccessorBasedColumn] cannot be sorted.
+  // Move this to DrillWindowQueryTest once the above issue is resolved.
+  @DrillTest("druid_queries/empty_and_non_empty_over/wikipedia_query_1")
+  @Test
+  public void test_empty_and_non_empty_over_wikipedia_query_1()
+  {
+    windowQueryTest();
   }
 }
