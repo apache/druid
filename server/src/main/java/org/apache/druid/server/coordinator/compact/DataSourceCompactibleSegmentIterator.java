@@ -59,9 +59,9 @@ import java.util.stream.Collectors;
 /**
  * Iterator over compactible segments of a datasource in order of specified priority.
  */
-public class DatasourceCompactibleSegmentIterator implements Iterator<SegmentsToCompact>
+public class DataSourceCompactibleSegmentIterator implements Iterator<SegmentsToCompact>
 {
-  private static final Logger log = new Logger(DatasourceCompactibleSegmentIterator.class);
+  private static final Logger log = new Logger(DataSourceCompactibleSegmentIterator.class);
 
   private final String dataSource;
   private final ObjectMapper objectMapper;
@@ -77,7 +77,7 @@ public class DatasourceCompactibleSegmentIterator implements Iterator<SegmentsTo
 
   private final PriorityQueue<SegmentsToCompact> queue;
 
-  public DatasourceCompactibleSegmentIterator(
+  public DataSourceCompactibleSegmentIterator(
       DataSourceCompactionConfig config,
       SegmentTimeline timeline,
       List<Interval> skipIntervals,
@@ -157,7 +157,7 @@ public class DatasourceCompactibleSegmentIterator implements Iterator<SegmentsTo
             skipIntervals
         );
         if (!searchIntervals.isEmpty()) {
-          findSegmentsToCompact(
+          findAndEnqueueSegmentsToCompact(
               new CompactibleSegmentIterator(timeline, searchIntervals, originalTimeline)
           );
         } else {
@@ -294,7 +294,7 @@ public class DatasourceCompactibleSegmentIterator implements Iterator<SegmentsTo
    * Finds segments to compact together for the given datasource and adds them to
    * the priority queue.
    */
-  private void findSegmentsToCompact(CompactibleSegmentIterator compactibleSegmentIterator)
+  private void findAndEnqueueSegmentsToCompact(CompactibleSegmentIterator compactibleSegmentIterator)
   {
     final long inputSegmentSize = config.getInputSegmentSizeBytes();
     while (compactibleSegmentIterator.hasNext()) {

@@ -22,7 +22,6 @@ package org.apache.druid.indexing.common.task;
 import org.apache.curator.shaded.com.google.common.base.Verify;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
-import org.apache.druid.server.coordinator.compact.DatasourceCompactibleSegmentIterator;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
 
 import java.util.concurrent.TimeUnit;
@@ -64,10 +63,8 @@ public class Tasks
   public static final String USE_MAX_MEMORY_ESTIMATES = "useMaxMemoryEstimates";
 
   /**
-   * This context is used in compaction. When it is set in the context, the segments created by the task
-   * will fill 'lastCompactionState' in its metadata. This will be used to track what segments are compacted or not.
-   * See {@link org.apache.druid.timeline.DataSegment} and {@link
-   * DatasourceCompactibleSegmentIterator} for more details.
+   * Context flag to denote if segments published to metadata by a task should
+   * have the {@code lastCompactionState} field set.
    */
   public static final String STORE_COMPACTION_STATE_KEY = "storeCompactionState";
 

@@ -30,7 +30,7 @@ import org.junit.Test;
 
 import java.util.List;
 
-public class DatasourceCompactibleSegmentIteratorTest
+public class DataSourceCompactibleSegmentIteratorTest
 {
   @Test
   public void testFilterSkipIntervals()
@@ -42,7 +42,7 @@ public class DatasourceCompactibleSegmentIteratorTest
         Intervals.of("2018-10-02/2018-12-25"),
         Intervals.of("2018-12-31/2019-01-01")
     );
-    final List<Interval> skipIntervals = DatasourceCompactibleSegmentIterator.filterSkipIntervals(
+    final List<Interval> skipIntervals = DataSourceCompactibleSegmentIterator.filterSkipIntervals(
         totalInterval,
         Lists.newArrayList(
             Intervals.of("2017-12-01/2018-01-15"),
@@ -62,7 +62,7 @@ public class DatasourceCompactibleSegmentIteratorTest
         Intervals.of("2018-12-24/2018-12-25"),
         Intervals.of("2018-12-29/2019-01-01")
     );
-    final List<Interval> fullSkipIntervals = DatasourceCompactibleSegmentIterator.sortAndAddSkipIntervalFromLatest(
+    final List<Interval> fullSkipIntervals = DataSourceCompactibleSegmentIterator.sortAndAddSkipIntervalFromLatest(
         DateTimes.of("2019-01-01"),
         new Period(72, 0, 0, 0),
         null,
