@@ -39,7 +39,6 @@ on:
 
 jobs:
   changes:
-    if: false
     runs-on: ubuntu-latest
     # Required permissions
     permissions:
@@ -62,7 +61,7 @@ jobs:
               - '!extension*/**'
 
   it:
-    #needs: changes
+    needs: changes
     strategy:
       fail-fast: false
       matrix:
