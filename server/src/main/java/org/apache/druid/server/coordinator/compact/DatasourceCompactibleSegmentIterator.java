@@ -54,7 +54,6 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.PriorityQueue;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 /**
@@ -69,8 +68,6 @@ public class DatasourceCompactibleSegmentIterator implements Iterator<SegmentsTo
   private final DataSourceCompactionConfig config;
   private final CompactionStatistics compactedSegmentStats = new CompactionStatistics();
   private final CompactionStatistics skippedSegmentStats = new CompactionStatistics();
-
-  private final AtomicReference<CompactibleSegmentIterator> timelineIterator;
 
   // This is needed for datasource that has segmentGranularity configured
   // If configured segmentGranularity in config is finer than current segmentGranularity, the same set of segments
@@ -90,7 +87,6 @@ public class DatasourceCompactibleSegmentIterator implements Iterator<SegmentsTo
   {
     this.objectMapper = objectMapper;
     this.config = config;
-    this.timelineIterator = new AtomicReference<>();
     this.dataSource = config.getDataSource();
     this.queue = new PriorityQueue<>(segmentPriority);
     populateQueue(timeline, skipIntervals);
@@ -161,14 +157,14 @@ public class DatasourceCompactibleSegmentIterator implements Iterator<SegmentsTo
             skipIntervals
         );
         if (!searchIntervals.isEmpty()) {
-          timelineIterator.set(
+          findSegmentsToCompact(
               new CompactibleSegmentIterator(timeline, searchIntervals, originalTimeline)
           );
+        } else {
+          log.warn("Skipping compaction for datasource[%s] as it has no compactible segments.", dataSource);
         }
       }
     }
-
-    findSegmentsToCompact(dataSource);
   }
 
   public CompactionStatistics totalCompactedStatistics()
@@ -298,19 +294,9 @@ public class DatasourceCompactibleSegmentIterator implements Iterator<SegmentsTo
    * Finds segments to compact together for the given datasource and adds them to
    * the priority queue.
    */
-  private void findSegmentsToCompact(String dataSourceName)
+  private void findSegmentsToCompact(CompactibleSegmentIterator compactibleSegmentIterator)
   {
-    final CompactibleSegmentIterator compactibleSegmentIterator = timelineIterator.get();
-    if (compactibleSegmentIterator == null) {
-      log.warn(
-          "Skipping compaction for datasource[%s] as there is no compactible segment in its timeline.",
-          dataSourceName
-      );
-      return;
-    }
-
     final long inputSegmentSize = config.getInputSegmentSizeBytes();
-
     while (compactibleSegmentIterator.hasNext()) {
       List<DataSegment> segments = compactibleSegmentIterator.next();
 
