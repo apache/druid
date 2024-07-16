@@ -111,7 +111,7 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
   @Override
   public void validateWindow(SqlNode windowOrId, SqlValidatorScope scope, @Nullable SqlCall call)
   {
-    if (call.getFunctionQuantifier() != null && call.getFunctionQuantifier().getValue() == SqlSelectKeyword.DISTINCT) {
+    if (isSqlCallDistinct(call)) {
       throw buildCalciteContextException("DISTINCT is not supported for window functions", windowOrId);
     }
 
