@@ -22,7 +22,8 @@ package org.apache.druid.server.coordinator.compact;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
-import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.utils.CollectionUtils;
@@ -41,26 +42,31 @@ import java.util.PriorityQueue;
  */
 public class PriorityBasedCompactionSegmentIterator implements CompactionSegmentIterator
 {
+  private static final Logger log = new Logger(PriorityBasedCompactionSegmentIterator.class);
+
   private final PriorityQueue<SegmentsToCompact> queue;
   private final Map<String, DatasourceCompactibleSegmentIterator> datasourceIterators;
 
   public PriorityBasedCompactionSegmentIterator(
       Map<String, DataSourceCompactionConfig> compactionConfigs,
-      Map<String, SegmentTimeline> dataSources,
+      Map<String, SegmentTimeline> datasourceToTimeline,
       Map<String, List<Interval>> skipIntervals,
       Comparator<SegmentsToCompact> segmentPriority,
       ObjectMapper objectMapper
   )
   {
     this.queue = new PriorityQueue<>(segmentPriority);
-    compactionConfigs.forEach((dataSourceName, config) -> {
+    this.datasourceIterators = Maps.newHashMapWithExpectedSize(datasourceToTimeline.size());
+    compactionConfigs.forEach((datasource, config) -> {
       if (config == null) {
-        throw new ISE("Unknown dataSource[%s]", dataSourceName);
+        throw DruidException.defensive("Invalid null compaction config for dataSource[%s].", datasource);
       }
-    });
+      final SegmentTimeline timeline = datasourceToTimeline.get(datasource);
+      if (timeline == null) {
+        log.warn("Skipping compaction for datasource[%s] as it has no timeline.", datasource);
+        return;
+      }
 
-    this.datasourceIterators = Maps.newHashMapWithExpectedSize(dataSources.size());
-    dataSources.forEach((datasource, timeline) -> {
       datasourceIterators.put(
           datasource,
           new DatasourceCompactibleSegmentIterator(

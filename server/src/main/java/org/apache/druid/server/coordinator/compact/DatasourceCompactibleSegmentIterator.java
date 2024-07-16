@@ -94,7 +94,7 @@ public class DatasourceCompactibleSegmentIterator implements Iterator<SegmentsTo
 
   private void populateQueue(SegmentTimeline timeline, List<Interval> skipIntervals)
   {
-    if (dataSource != null) {
+    if (timeline != null) {
       Granularity configuredSegmentGranularity = null;
       if (!timeline.isEmpty()) {
         SegmentTimeline originalTimeline = null;
