@@ -1212,7 +1212,7 @@ GROUP BY 1, 2`;
                       num_segments !== num_zero_replica_segments
                         ? `Fully ${descriptor}`
                         : undefined,
-                      hasZeroReplicationRule ? `${percentZeroReplica}% async only` : '',
+                      hasZeroReplicationRule ? `${percentZeroReplica}% deep storage only` : '',
                     ).join(', ')}{' '}
                     ({segmentsEl})
                   </span>
@@ -1228,7 +1228,7 @@ GROUP BY 1, 2`;
                       {numAvailableSegments ? '\u25cf' : '\u25cb'}&nbsp;
                     </span>
                     {`${percentAvailable}% ${descriptor}${
-                      hasZeroReplicationRule ? `, ${percentZeroReplica}% async only` : ''
+                      hasZeroReplicationRule ? `, ${percentZeroReplica}% deep storage only` : ''
                     }`}{' '}
                     ({segmentsEl})
                   </span>
