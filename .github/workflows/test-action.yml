@@ -1,0 +1,57 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: "Test action"
+#on:
+#  push:
+#    paths-ignore:
+#      - '**/*.md'
+#      - 'dev/**'
+#      - 'docs/**'
+#      - 'examples/**/jupyter-notebooks/**'
+#      - 'web-console/**'
+#      - 'website/**'
+#    branches:
+#      - master
+#      - '[0-9]+.[0-9]+.[0-9]+' # release branches
+#      - '[0-9]+.[0-9]+.[0-9]+-[A-Za-z0-9]+' # release branches
+#  pull_request:
+#    paths-ignore:
+#      - '**/*.md'
+#      - 'dev/**'
+#      - 'docs/**'
+#      - 'examples/**/jupyter-notebooks/**'
+#      - 'web-console/**'
+#      - 'website/**'
+#    branches:
+#      - master
+#      - '[0-9]+.[0-9]+.[0-9]+' # release branches
+#      - '[0-9]+.[0-9]+.[0-9]+-[A-Za-z0-9]+' # release branches
+on:
+  # Trigger on push events to any branch
+  push: {}  # Empty curly braces indicate all branches
+#
+#concurrency:
+#  group: '${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.head_ref || github.run_id }}' # group workflows only on pull_requests and not on branch commits
+#  cancel-in-progress: true
+
+jobs:
+  dummy-step:
+    runs-on: ubuntu-latest
+    name: "Dummy step"
+    steps:
+      - name: "Echo"
+        run: |
+          echo "run dummy-step"
