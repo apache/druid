@@ -28,7 +28,7 @@ sidebar_label: "All functions"
  This document describes the SQL language.
 :::
 
-This page provides a reference of all Druid SQL functions in alphabetical order. The **Learn More** at the end of each function section provides further documentation on the function type.
+This page provides a reference of all Druid SQL functions in alphabetical order. The **Learn More** at the end of each function section provides further documentation.
 
 The examples for each function uses the following datasets that come included with Apache Druid:
 * `flight-carriers`: `FlightCarrierOnTime (1 month)` 
@@ -43,7 +43,7 @@ Calculates the absolute value of a numeric expression.
 
 <details><summary>Example</summary>
 
-The following applies the `ABS` function to the `ArrDelay` column, from the `flight-carriers` datasource.
+The following applies the ABS function to the `ArrDelay` column, from the `flight-carriers` datasource.
 
 ```sql
 SELECT
@@ -449,18 +449,18 @@ Rounds up to the smallest integer value greater than or equal to the numeric exp
 
 <details><summary>Example</summary>
 
-The following example applies the `CEIL` function to the `fare_amount` column, from the `trips_xaa` datasource.
+The following example applies the CEIL function to the `fare_amount` column, from the `trips_xaa` datasource.
 
 ```sql
 SELECT
   "fare_amount",
-  CEIL("fare_amount") AS "ceiling"
+  CEIL("fare_amount") AS "Ceiling"
 FROM "trips_xaa"
 LIMIT 1
 ```
 Returns the following:
 
-| `fare_amount` | `ceiling` | 
+| `fare_amount` | `Ceiling` | 
 | -- | -- | 
 | `21.25` | `22` | 
 </details>
@@ -753,15 +753,13 @@ SELECT
   "trip_id" AS "exponent_value",
   EXP(trip_id) AS "Exp"
 FROM "trips_xaa"
-LIMIT 3
+LIMIT 1
 ```
 Returns the following:
 
 | `exponent_value` | `Exp` | 
 | -- | -- | 
 | `1` | `2.7182818284590455` | 
-| `2` | `7.38905609893065` | 
-| `3` | `20.085536923187668` | 
 </details>
 
 [Learn more](sql-scalar.md#numeric-functions)
@@ -799,7 +797,7 @@ Rounds down to the largest integer value less than or equal to the numeric expre
 
 <details><summary>Example</summary>
 
-The following example applies the `FLOOR` function to the `fare_amount` column, from the `trips_xaa` datasource.
+The following example applies the FLOOR function to the `fare_amount` column, from the `trips_xaa` datasource.
 
 ```sql
 SELECT
@@ -1043,16 +1041,14 @@ Returns the length of the expression in UTF-16 encoding.
 
 ## LN
 
-`LN(expr)`
-
 Calculates the natural logarithm of the numeric expression.
 
-* **Syntax:** `LN(exp)`
+* **Syntax:** `LN(<NUMERIC>)`
 * **Function type:** Scalar, numeric
 
 <details><summary>Example</summary>
 
-The following example applies the `LN` function to the `max_temperature` column, from the `trips_xaa` datasource.
+The following example applies the LN function to the `max_temperature` column, from the `trips_xaa` datasource.
 
 ```sql
 SELECT
