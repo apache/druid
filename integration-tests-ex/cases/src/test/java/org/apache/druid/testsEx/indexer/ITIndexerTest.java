@@ -48,6 +48,7 @@ import java.util.function.Function;
 @Category({BackwardCompatibility.class})
 public class ITIndexerTest extends AbstractITBatchIndexTest
 {
+  
   private static final String INDEX_TASK = "/indexer/wikipedia_index_task.json";
   private static final String INDEX_QUERIES_RESOURCE = "/indexer/wikipedia_index_queries.json";
   private static final String INDEX_DATASOURCE = "wikipedia_index_test";
