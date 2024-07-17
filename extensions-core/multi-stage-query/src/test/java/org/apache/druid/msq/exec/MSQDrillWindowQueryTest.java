@@ -55,9 +55,7 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Escalator;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.SqlToolbox;
-import org.apache.druid.sql.avatica.AvaticaServerConfig;
 import org.apache.druid.sql.avatica.DruidMeta;
-import org.apache.druid.sql.avatica.ErrorHandler;
 import org.apache.druid.sql.calcite.DrillWindowQueryTest;
 import org.apache.druid.sql.calcite.QueryTestBuilder;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
@@ -153,30 +151,12 @@ public class MSQDrillWindowQueryTest extends DrillWindowQueryTest
         return new MSQTaskSqlEngine(indexingServiceClient, queryJsonMapper);
       }
 
-
-//      @Override
-//      public void configure(Binder binder)
-//      {
-//        binder.bind(DruidMeta.class).to(MSQDruidMeta.class).in(LazySingleton.class);
-//      }
-
-@Provides
-@LazySingleton
-public DruidMeta createMeta(
-    MSQDruidMeta druidMeta)
-{
-  return druidMeta;
-}
-
-//      @Provides
+      @Provides
       @LazySingleton
       public DruidMeta createMeta(
-          final @MultiStageQuery SqlStatementFactory sqlStatementFactory,
-          final AvaticaServerConfig config,
-          final ErrorHandler errorHandler,
-          final AuthenticatorMapper authMapper)
+          MSQDruidMeta druidMeta)
       {
-        return new MSQDruidMeta(sqlStatementFactory, config, errorHandler, authMapper);
+        return druidMeta;
       }
     }
 
@@ -187,27 +167,7 @@ public DruidMeta createMeta(
         Injector injector
     )
     {
-      if(true) {
-        return injector.getInstance(MSQTaskSqlEngine.class);
-      } else {
-        final WorkerMemoryParameters workerMemoryParameters =
-            WorkerMemoryParameters.createInstance(
-                WorkerMemoryParameters.PROCESSING_MINIMUM_BYTES * 50,
-                2,
-                10,
-                2,
-                0,
-                0
-            );
-        final MSQTestOverlordServiceClient indexingServiceClient = new MSQTestOverlordServiceClient(
-            queryJsonMapper,
-            injector,
-            new MSQTestTaskActionClient(queryJsonMapper, injector),
-            workerMemoryParameters,
-            ImmutableList.of()
-        );
-        return new MSQTaskSqlEngine(indexingServiceClient, queryJsonMapper);
-      }
+      return injector.getInstance(MSQTaskSqlEngine.class);
     }
   }
 
