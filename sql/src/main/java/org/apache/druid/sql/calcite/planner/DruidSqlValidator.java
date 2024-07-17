@@ -882,11 +882,13 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
   /** Returns whether an AST tree contains a call that matches a given
    * predicate. */
   private static boolean containsCall(SqlNode node,
-      Predicate<SqlCall> callPredicate) {
+      Predicate<SqlCall> callPredicate)
+  {
     try {
       SqlVisitor<Void> visitor =
           new SqlBasicVisitor<Void>() {
-            @Override public Void visit(SqlCall call) {
+            @Override public Void visit(SqlCall call)
+            {
               if (callPredicate.test(call)) {
                 throw new Util.FoundOne(call);
               }
@@ -895,7 +897,8 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
           };
       node.accept(visitor);
       return false;
-    } catch (Util.FoundOne e) {
+    }
+    catch (Util.FoundOne e) {
       Util.swallow(e, null);
       return true;
     }
