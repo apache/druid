@@ -127,7 +127,7 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
       // empty over clause found
       // moving everything to a single partition
       // TODO: This logic needs to be revamped and corrected in the future.
-      //  This should likely cause issues for cases where we have a mix of empty over() and non-empty over().
+      // This should likely cause issues for cases where we have a mix of empty over() and non-empty over().
       queryDefBuilder.add(
           StageDefinition.builder(firstStageNumber)
                          .inputs(new StageInputSpec(firstStageNumber - 1))
