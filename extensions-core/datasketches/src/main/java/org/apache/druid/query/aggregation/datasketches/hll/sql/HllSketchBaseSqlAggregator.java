@@ -110,13 +110,13 @@ public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
       tgtHllType = HllSketchAggregatorFactory.DEFAULT_TGT_HLL_TYPE.name();
     }
 
-    AggregatorFactory aggregatorFactory = null;
+    final AggregatorFactory aggregatorFactory;
     final String aggregatorName = finalizeAggregations ? Calcites.makePrefixedName(name, "a") : name;
 
     if (columnArg.isDirectColumnAccess()
         && inputAccessor.getInputRowSignature()
                         .getColumnType(columnArg.getDirectColumn())
-                        .map(this::validateInputType)
+                        .map(this::isValidComplexInputType)
                         .orElse(false)) {
       aggregatorFactory = new HllSketchMergeAggregatorFactory(
           aggregatorName,
@@ -155,21 +155,28 @@ public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
       }
 
       if (inputType.is(ValueType.COMPLEX)) {
-        if (validateInputType(inputType)) {
-          aggregatorFactory = new HllSketchMergeAggregatorFactory(
-              aggregatorName,
-              dimensionSpec.getOutputName(),
-              logK,
-              tgtHllType,
-
-              // For HllSketchMergeAggregatorFactory, stringEncoding is only advisory to aid in detection of mismatched
-              // merges. It does not affect the results of the aggregator. At this point in the code, we do not know what
-              // the input encoding of the original sketches was, so we set it to the default.
-              HllSketchAggregatorFactory.DEFAULT_STRING_ENCODING,
-              finalizeSketch || SketchQueryContext.isFinalizeOuterSketches(plannerContext),
-              ROUND
+        if (!isValidComplexInputType(inputType)) {
+          plannerContext.setPlanningError(
+              "Using APPROX_COUNT_DISTINCT() or enabling approximation with COUNT(DISTINCT) is not supported for"
+              + " column type [%s]. You can disable approximation, use COUNT(DISTINCT %s) and rerun the query.",
+              columnArg.getDruidType(),
+              columnArg.getSimpleExtraction().getColumn()
           );
+          return null;
         }
+        aggregatorFactory = new HllSketchMergeAggregatorFactory(
+            aggregatorName,
+            dimensionSpec.getOutputName(),
+            logK,
+            tgtHllType,
+
+            // For HllSketchMergeAggregatorFactory, stringEncoding is only advisory to aid in detection of mismatched
+            // merges. It does not affect the results of the aggregator. At this point in the code, we do not know what
+            // the input encoding of the original sketches was, so we set it to the default.
+            HllSketchAggregatorFactory.DEFAULT_STRING_ENCODING,
+            finalizeSketch || SketchQueryContext.isFinalizeOuterSketches(plannerContext),
+            ROUND
+        );
       } else {
         aggregatorFactory = new HllSketchBuildAggregatorFactory(
             aggregatorName,
@@ -181,16 +188,6 @@ public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
             ROUND
         );
       }
-    }
-
-    if (aggregatorFactory == null) {
-      plannerContext.setPlanningError(
-          "Using APPROX_COUNT_DISTINCT() or enabling approximation with COUNT(DISTINCT) is not supported for"
-          + " %s column. You can disable approximation, use COUNT(DISTINCT %s) and rerun the query.",
-          columnArg.getDruidType(),
-          columnArg.getSimpleExtraction().getColumn()
-      );
-      return null;
     }
 
     return toAggregation(
@@ -206,7 +203,7 @@ public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
       AggregatorFactory aggregatorFactory
   );
 
-  private boolean validateInputType(ColumnType columnType)
+  private boolean isValidComplexInputType(ColumnType columnType)
   {
     return HllSketchMergeAggregatorFactory.TYPE.equals(columnType) ||
            HllSketchModule.TYPE_NAME.equals(columnType.getComplexTypeName()) ||

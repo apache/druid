@@ -90,13 +90,13 @@ public class BuiltinApproxCountDistinctSqlAggregator implements SqlAggregator
       return null;
     }
 
-    AggregatorFactory aggregatorFactory = null;
+    final AggregatorFactory aggregatorFactory;
     final String aggregatorName = finalizeAggregations ? Calcites.makePrefixedName(name, "a") : name;
 
     if (arg.isDirectColumnAccess()
         && inputAccessor.getInputRowSignature()
             .getColumnType(arg.getDirectColumn())
-            .map(this::validateInputType)
+            .map(this::isValidComplexInputType)
             .orElse(false)) {
       aggregatorFactory = new HyperUniquesAggregatorFactory(aggregatorName, arg.getDirectColumn(), false, true);
     } else {
@@ -120,14 +120,21 @@ public class BuiltinApproxCountDistinctSqlAggregator implements SqlAggregator
       }
 
       if (inputType.is(ValueType.COMPLEX)) {
-        if (validateInputType(inputType)) {
-          aggregatorFactory = new HyperUniquesAggregatorFactory(
-              aggregatorName,
-              dimensionSpec.getOutputName(),
-              false,
-              true
+        if (!isValidComplexInputType(inputType)) {
+          plannerContext.setPlanningError(
+              "Using APPROX_COUNT_DISTINCT() or enabling approximation with COUNT(DISTINCT) is not supported for"
+              + " column type [%s]. You can disable approximation, use COUNT(DISTINCT %s) and rerun the query.",
+              arg.getDruidType(),
+              arg.getSimpleExtraction().getColumn()
           );
+          return null;
         }
+        aggregatorFactory = new HyperUniquesAggregatorFactory(
+            aggregatorName,
+            dimensionSpec.getOutputName(),
+            false,
+            true
+        );
       } else {
         aggregatorFactory = new CardinalityAggregatorFactory(
             aggregatorName,
@@ -137,16 +144,6 @@ public class BuiltinApproxCountDistinctSqlAggregator implements SqlAggregator
             true
         );
       }
-    }
-
-    if (aggregatorFactory == null) {
-      plannerContext.setPlanningError(
-          "Using APPROX_COUNT_DISTINCT() or enabling approximation with COUNT(DISTINCT) is not supported for"
-          + " %s column. You can disable approximation, use COUNT(DISTINCT %s) and rerun the query.",
-          arg.getDruidType(),
-          arg.getSimpleExtraction().getColumn()
-      );
-      return null;
     }
 
     return Aggregation.create(
@@ -178,7 +175,7 @@ public class BuiltinApproxCountDistinctSqlAggregator implements SqlAggregator
     }
   }
 
-  private boolean validateInputType(ColumnType columnType)
+  private boolean isValidComplexInputType(ColumnType columnType)
   {
     return Objects.equals(columnType.getComplexTypeName(), HyperUniquesAggregatorFactory.TYPE.getComplexTypeName()) ||
            Objects.equals(columnType.getComplexTypeName(), HyperUniquesAggregatorFactory.PRECOMPUTED_TYPE.getComplexTypeName());

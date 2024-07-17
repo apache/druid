@@ -58,7 +58,7 @@ public class ThetaSketchApproxCountDistinctSqlAggregator extends ThetaSketchBase
                          .operandTypeChecker(
                              OperandTypes.or(
                                  // APPROX_COUNT_DISTINCT_DS_THETA(expr)
-                                 OperandTypes.and(AGGREGATED_COLUMN_TYPE_CHECKER, OperandTypes.family(SqlTypeFamily.ANY)),
+                                 AGGREGATED_COLUMN_TYPE_CHECKER,
                                  // APPROX_COUNT_DISTINCT_DS_THETA(expr, size)
                                  OperandTypes.and(
                                      OperandTypes.sequence(

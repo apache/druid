@@ -90,7 +90,7 @@ public abstract class ThetaSketchBaseSqlAggregator implements SqlAggregator
       sketchSize = SketchAggregatorFactory.DEFAULT_MAX_SKETCH_SIZE;
     }
 
-    AggregatorFactory aggregatorFactory = null;
+    final AggregatorFactory aggregatorFactory;
     final String aggregatorName = finalizeAggregations ? Calcites.makePrefixedName(name, "a") : name;
 
     if (columnArg.isDirectColumnAccess()
@@ -121,38 +121,36 @@ public abstract class ThetaSketchBaseSqlAggregator implements SqlAggregator
         );
       }
 
-      if (!inputType.is(ValueType.COMPLEX)) {
-        final DimensionSpec dimensionSpec;
-
-        if (columnArg.isDirectColumnAccess()) {
-          dimensionSpec = columnArg.getSimpleExtraction().toDimensionSpec(null, inputType);
-        } else {
-          String virtualColumnName = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
-              columnArg,
-              dataType
-          );
-          dimensionSpec = new DefaultDimensionSpec(virtualColumnName, null, inputType);
-        }
-
-        aggregatorFactory = new SketchMergeAggregatorFactory(
-            aggregatorName,
-            dimensionSpec.getDimension(),
-            sketchSize,
-            finalizeSketch || SketchQueryContext.isFinalizeOuterSketches(plannerContext),
-            null,
-            null
+      if (inputType.is(ValueType.COMPLEX)) {
+        plannerContext.setPlanningError(
+            "Using APPROX_COUNT_DISTINCT() or enabling approximation with COUNT(DISTINCT) is not supported for"
+            + " column type [%s]. You can disable approximation, use COUNT(DISTINCT %s) and rerun the query.",
+            columnArg.getDruidType(),
+            columnArg.getSimpleExtraction().getColumn()
         );
+        return null;
       }
-    }
 
-    if (aggregatorFactory == null) {
-      plannerContext.setPlanningError(
-          "Using APPROX_COUNT_DISTINCT() or enabling approximation with COUNT(DISTINCT) is not supported for"
-          + " %s column. You can disable approximation, use COUNT(DISTINCT %s) and rerun the query.",
-          columnArg.getDruidType(),
-          columnArg.getSimpleExtraction().getColumn()
+      final DimensionSpec dimensionSpec;
+
+      if (columnArg.isDirectColumnAccess()) {
+        dimensionSpec = columnArg.getSimpleExtraction().toDimensionSpec(null, inputType);
+      } else {
+        String virtualColumnName = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
+            columnArg,
+            dataType
+        );
+        dimensionSpec = new DefaultDimensionSpec(virtualColumnName, null, inputType);
+      }
+
+      aggregatorFactory = new SketchMergeAggregatorFactory(
+          aggregatorName,
+          dimensionSpec.getDimension(),
+          sketchSize,
+          finalizeSketch || SketchQueryContext.isFinalizeOuterSketches(plannerContext),
+          null,
+          null
       );
-      return null;
     }
 
     return toAggregation(
