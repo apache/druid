@@ -235,7 +235,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
   private final String taskStorageType;
 
   private ObjectMapper mapper;
-  private TaskStorageQueryAdapter tsqa = null;
+  private TaskQueryTool tsqa = null;
   private TaskStorage taskStorage = null;
   private TaskLockbox taskLockbox = null;
   private TaskQueue taskQueue = null;
@@ -478,7 +478,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     TaskMaster taskMaster = EasyMock.createMock(TaskMaster.class);
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.absent()).anyTimes();
     EasyMock.replay(taskMaster);
-    tsqa = new TaskStorageQueryAdapter(taskStorage, taskLockbox, taskMaster);
+    tsqa = new TaskQueryTool(taskStorage, taskLockbox, taskMaster);
     return taskStorage;
   }
 
