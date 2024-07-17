@@ -161,9 +161,9 @@ public class WindowFrame
   public int getLowerOffsetClamped(int maxRows)
   {
     if (lowerUnbounded) {
-      return maxRows;
+      return -maxRows;
     }
-    return Math.min(maxRows, lowerOffset);
+    return Math.max(-maxRows, lowerOffset);
   }
 
   /**

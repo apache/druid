@@ -43,8 +43,8 @@ public enum SecondaryPartitionType
   /**
    * Range partitioning partitions segments in the same time chunk based on the value range of the partition dimension.
    *
-   * @see SingleDimensionPartitionsSpec
-   * @see org.apache.druid.timeline.partition.SingleDimensionShardSpec
+   * @see DimensionRangePartitionsSpec
+   * @see org.apache.druid.timeline.partition.DimensionRangeShardSpec
    */
   RANGE
 }

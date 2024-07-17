@@ -61,7 +61,6 @@ import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.column.ValueType;
@@ -123,7 +122,6 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
         throw Util.unexpected(windowOrId.getKind());
     }
 
-
     @Nullable
     SqlNode lowerBound = targetWindow.getLowerBound();
     @Nullable
@@ -135,14 +133,15 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
       );
     }
 
-    if (isPrecedingOrFollowing(lowerBound) &&
-        isPrecedingOrFollowing(upperBound) &&
-        lowerBound.getKind() == upperBound.getKind()) {
-      // this limitation can be lifted when https://github.com/apache/druid/issues/15739 is addressed
-      throw buildCalciteContextException(
-          "Query bounds with both lower and upper bounds as PRECEDING or FOLLOWING is not supported.",
-          windowOrId
-      );
+    if (lowerBound != null && upperBound == null) {
+      if (lowerBound.getKind() == SqlKind.FOLLOWING || SqlWindow.isUnboundedFollowing(lowerBound)) {
+        upperBound = lowerBound;
+        lowerBound = SqlWindow.createCurrentRow(SqlParserPos.ZERO);
+      } else {
+        upperBound = SqlWindow.createCurrentRow(SqlParserPos.ZERO);
+      }
+      targetWindow.setLowerBound(lowerBound);
+      targetWindow.setUpperBound(upperBound);
     }
 
     boolean hasBounds = lowerBound != null || upperBound != null;
@@ -162,19 +161,13 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
       }
     }
 
-
-    if (plannerContext.queryContext().isWindowingStrictValidation()) {
-      if (!targetWindow.isRows() &&
-          (!isUnboundedOrCurrent(lowerBound) || !isUnboundedOrCurrent(upperBound))) {
-        // this limitation can be lifted when https://github.com/apache/druid/issues/15767 is addressed
-        throw buildCalciteContextException(
-            StringUtils.format(
-                "The query contains a window frame which may return incorrect results. To disregard this warning, set [%s] to false in the query context.",
-                QueryContexts.WINDOWING_STRICT_VALIDATION
-            ),
-            windowOrId
-        );
-      }
+    if (!targetWindow.isRows() &&
+        (!isUnboundedOrCurrent(lowerBound) || !isUnboundedOrCurrent(upperBound))) {
+      // this limitation can be lifted when https://github.com/apache/druid/issues/15767 is addressed
+      throw buildCalciteContextException(
+          "Order By with RANGE clause currently supports only UNBOUNDED or CURRENT ROW. Use ROWS clause instead.",
+          windowOrId
+      );
     }
 
     super.validateWindow(windowOrId, scope, call);

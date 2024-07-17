@@ -24,22 +24,16 @@ import com.google.inject.Inject;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
-import org.apache.druid.indexing.common.actions.SegmentInsertAction;
-import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
-import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.metadata.TaskLookup;
 import org.apache.druid.metadata.TaskLookup.ActiveTaskLookup;
 import org.apache.druid.metadata.TaskLookup.TaskLookupType;
-import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * Wraps a {@link TaskStorage}, providing a useful collection of read-only methods.
@@ -126,27 +120,4 @@ public class TaskStorageQueryAdapter
     return storage.getTaskInfo(taskId);
   }
 
-  /**
-   * Returns all segments created by this task.
-   *
-   * This method is useful when you want to figure out all of the things a single task spawned.  It does pose issues
-   * with the result set perhaps growing boundlessly and we do not do anything to protect against that.  Use at your
-   * own risk and know that at some point, we might adjust this to actually enforce some sort of limits.
-   *
-   * @param taskid task ID
-   * @return set of segments created by the specified task
-   */
-  @Deprecated
-  public Set<DataSegment> getInsertedSegments(final String taskid)
-  {
-    final Set<DataSegment> segments = new HashSet<>();
-    for (final TaskAction action : storage.getAuditLogs(taskid)) {
-      if (action instanceof SegmentInsertAction) {
-        segments.addAll(((SegmentInsertAction) action).getSegments());
-      } else if (action instanceof SegmentTransactionalInsertAction) {
-        segments.addAll(((SegmentTransactionalInsertAction) action).getSegments());
-      }
-    }
-    return segments;
-  }
 }

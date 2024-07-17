@@ -299,11 +299,12 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
       }
       /*
       each row has 8 entries.
-      unnest 2 rows -> 16 entries also the value cardinality
+      unnest 2 rows -> 16 entries also the value cardinality, but null is not present in the dictionary and so is
+                       fabricated so cardinality is 17
       unnest of unnest -> 16*8 = 128 rows
        */
       Assert.assertEquals(count, 128);
-      Assert.assertEquals(dimSelector.getValueCardinality(), 16);
+      Assert.assertEquals(dimSelector.getValueCardinality(), 17);
       return null;
     });
   }

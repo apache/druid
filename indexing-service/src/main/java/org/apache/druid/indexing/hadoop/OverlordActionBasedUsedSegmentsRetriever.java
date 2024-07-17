@@ -53,6 +53,6 @@ public class OverlordActionBasedUsedSegmentsRetriever implements UsedSegmentsRet
   {
     return toolbox
         .getTaskActionClient()
-        .submit(new RetrieveUsedSegmentsAction(dataSource, null, intervals, visibility));
+        .submit(new RetrieveUsedSegmentsAction(dataSource, intervals, visibility));
   }
 }

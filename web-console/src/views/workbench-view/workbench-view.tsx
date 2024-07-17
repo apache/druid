@@ -20,12 +20,19 @@ import { Button, ButtonGroup, Intent, Menu, MenuDivider, MenuItem } from '@bluep
 import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
 import type { SqlQuery } from '@druid-toolkit/query';
+import { SqlExpression } from '@druid-toolkit/query';
 import classNames from 'classnames';
 import copy from 'copy-to-clipboard';
 import React from 'react';
 
 import { SpecDialog, StringInputDialog } from '../../dialogs';
-import type { DruidEngine, Execution, QueryWithContext, TabEntry } from '../../druid-models';
+import type {
+  CapacityInfo,
+  DruidEngine,
+  Execution,
+  QueryWithContext,
+  TabEntry,
+} from '../../druid-models';
 import { guessDataSourceNameFromInputSource, WorkbenchQuery } from '../../druid-models';
 import type { Capabilities } from '../../helpers';
 import { convertSpecToSql, getSpecDatasourceName, getTaskExecution } from '../../helpers';
@@ -63,6 +70,8 @@ import { WorkbenchHistoryDialog } from './workbench-history-dialog/workbench-his
 
 import './workbench-view.scss';
 
+const LAST_DAY = SqlExpression.parse(`__time >= CURRENT_TIMESTAMP - INTERVAL '1' DAY`);
+
 function cleanupTabEntry(tabEntry: TabEntry): void {
   const discardedId = tabEntry.id;
   WorkbenchRunningPromises.deletePromise(discardedId);
@@ -84,6 +93,7 @@ export interface WorkbenchViewProps {
   queryEngines: DruidEngine[];
   allowExplain: boolean;
   goToTask(taskId: string): void;
+  getClusterCapacity: (() => Promise<CapacityInfo | undefined>) | undefined;
 }
 
 export interface WorkbenchViewState {
@@ -385,7 +395,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
             WorkbenchQuery.blank()
               .changeQueryString(converted.queryString)
               .changeQueryContext(converted.queryContext || {}),
-            'Convert ' + getSpecDatasourceName(spec as any),
+            `Convert ${getSpecDatasourceName(spec as any) || 'spec'}`,
           );
         }}
         onClose={() => this.setState({ specDialogOpen: false })}
@@ -625,8 +635,14 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
   }
 
   private renderCenterPanel() {
-    const { capabilities, mandatoryQueryContext, queryEngines, allowExplain, goToTask } =
-      this.props;
+    const {
+      capabilities,
+      mandatoryQueryContext,
+      queryEngines,
+      allowExplain,
+      goToTask,
+      getClusterCapacity,
+    } = this.props;
     const { columnMetadataState } = this.state;
     const currentTabEntry = this.getCurrentTabEntry();
     const effectiveEngine = currentTabEntry.query.getEffectiveEngine();
@@ -647,8 +663,9 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
           onQueryTab={this.handleNewTab}
           onDetails={this.handleDetails}
           queryEngines={queryEngines}
-          clusterCapacity={capabilities.getClusterCapacity()}
+          clusterCapacity={capabilities.getMaxTaskSlots()}
           goToTask={goToTask}
+          getClusterCapacity={getClusterCapacity}
           runMoreMenu={
             <Menu>
               {allowExplain &&
@@ -786,6 +803,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
             columnMetadata={columnMetadataState.data}
             onQueryChange={this.handleSqlQueryChange}
             defaultSchema={defaultSchema ? defaultSchema : 'druid'}
+            defaultWhere={LAST_DAY}
             defaultTable={defaultTable}
             highlightTable={undefined}
           />

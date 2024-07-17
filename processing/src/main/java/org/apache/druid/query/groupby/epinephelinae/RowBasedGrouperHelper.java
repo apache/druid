@@ -19,9 +19,14 @@
 
 package org.apache.druid.query.groupby.epinephelinae;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonToken;
+import com.fasterxml.jackson.core.ObjectCodec;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.primitives.Ints;
@@ -84,6 +89,7 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -664,22 +670,6 @@ public class RowBasedGrouperHelper
     RowBasedKey(final Object[] key)
     {
       this.key = key;
-    }
-
-    @JsonCreator
-    public static RowBasedKey fromJsonArray(final Object[] key)
-    {
-      // Type info is lost during serde:
-      // Floats may be deserialized as doubles, Longs may be deserialized as integers, convert them back
-      for (int i = 0; i < key.length; i++) {
-        if (key[i] instanceof Integer) {
-          key[i] = ((Integer) key[i]).longValue();
-        } else if (key[i] instanceof Double) {
-          key[i] = ((Double) key[i]).floatValue();
-        }
-      }
-
-      return new RowBasedKey(key);
     }
 
     @JsonValue
@@ -1372,6 +1362,65 @@ public class RowBasedGrouperHelper
     }
 
     @Override
+    public ObjectMapper decorateObjectMapper(ObjectMapper spillMapper)
+    {
+
+      final JsonDeserializer<RowBasedKey> deserializer = new JsonDeserializer<RowBasedKey>()
+      {
+        @Override
+        public RowBasedKey deserialize(
+            JsonParser jp,
+            DeserializationContext deserializationContext
+        ) throws IOException
+        {
+          if (!jp.isExpectedStartArrayToken()) {
+            throw DruidException.defensive("Expected array start token, received [%s]", jp.getCurrentToken());
+          }
+          jp.nextToken();
+
+          final ObjectCodec codec = jp.getCodec();
+          final int timestampAdjustment = includeTimestamp ? 1 : 0;
+          final int dimsToRead = timestampAdjustment + serdeHelpers.length;
+          int dimsReadSoFar = 0;
+          final Object[] objects = new Object[dimsToRead];
+
+          if (includeTimestamp) {
+            DruidException.conditionalDefensive(
+                jp.currentToken() != JsonToken.END_ARRAY,
+                "Unexpected end of array when deserializing timestamp from the spilled files"
+            );
+            objects[dimsReadSoFar] = codec.readValue(jp, Long.class);
+
+            ++dimsReadSoFar;
+            jp.nextToken();
+          }
+
+          while (jp.currentToken() != JsonToken.END_ARRAY) {
+            objects[dimsReadSoFar] =
+                codec.readValue(jp, serdeHelpers[dimsReadSoFar - timestampAdjustment].getClazz());
+
+            ++dimsReadSoFar;
+            jp.nextToken();
+          }
+
+          return new RowBasedKey(objects);
+        }
+      };
+
+      class SpillModule extends SimpleModule
+      {
+        public SpillModule()
+        {
+          addDeserializer(RowBasedKey.class, deserializer);
+        }
+      }
+
+      final ObjectMapper newObjectMapper = spillMapper.copy();
+      newObjectMapper.registerModule(new SpillModule());
+      return newObjectMapper;
+    }
+
+    @Override
     public void reset()
     {
       if (enableRuntimeDictionaryGeneration) {
@@ -1588,6 +1637,7 @@ public class RowBasedGrouperHelper
     {
       final BufferComparator bufferComparator;
       final String columnTypeName;
+      final Class<?> clazz;
 
       final List<Object> dictionary;
       final Object2IntMap<Object> reverseDictionary;
@@ -1613,6 +1663,7 @@ public class RowBasedGrouperHelper
                 dictionary.get(lhsBuffer.getInt(lhsPosition + keyBufferPosition)),
                 dictionary.get(rhsBuffer.getInt(rhsPosition + keyBufferPosition))
             );
+        clazz = columnType.getNullableStrategy().getClazz();
       }
 
       // Asserts that we don't entertain any complex types without a typename, to prevent intermixing dictionaries of
@@ -1644,6 +1695,12 @@ public class RowBasedGrouperHelper
       public Object2IntMap<Object> getReverseDictionary()
       {
         return reverseDictionary;
+      }
+
+      @Override
+      public Class<?> getClazz()
+      {
+        return clazz;
       }
     }
 
@@ -1726,6 +1783,14 @@ public class RowBasedGrouperHelper
       {
         return reverseDictionary;
       }
+
+      @Override
+      public Class<?> getClazz()
+      {
+        // Jackson deserializes Object[] containing longs to Object[] containing string if Object[].class is returned
+        // Therefore we are using Object.class
+        return Object.class;
+      }
     }
 
     private class ArrayStringRowBasedKeySerdeHelper extends DictionaryBuildingSingleValuedRowBasedKeySerdeHelper
@@ -1769,6 +1834,12 @@ public class RowBasedGrouperHelper
       public Object2IntMap<Object[]> getReverseDictionary()
       {
         return reverseStringArrayDictionary;
+      }
+
+      @Override
+      public Class<?> getClazz()
+      {
+        return Object[].class;
       }
     }
 
@@ -1818,6 +1889,12 @@ public class RowBasedGrouperHelper
       public BufferComparator getBufferComparator()
       {
         return bufferComparator;
+      }
+
+      @Override
+      public Class<?> getClazz()
+      {
+        return String.class;
       }
     }
 
@@ -1937,6 +2014,12 @@ public class RowBasedGrouperHelper
       {
         return bufferComparator;
       }
+
+      @Override
+      public Class<?> getClazz()
+      {
+        return Long.class;
+      }
     }
 
     private class FloatRowBasedKeySerdeHelper implements RowBasedKeySerdeHelper
@@ -1982,6 +2065,12 @@ public class RowBasedGrouperHelper
       {
         return bufferComparator;
       }
+
+      @Override
+      public Class<?> getClazz()
+      {
+        return Float.class;
+      }
     }
 
     private class DoubleRowBasedKeySerdeHelper implements RowBasedKeySerdeHelper
@@ -2026,6 +2115,12 @@ public class RowBasedGrouperHelper
       public BufferComparator getBufferComparator()
       {
         return bufferComparator;
+      }
+
+      @Override
+      public Class<?> getClazz()
+      {
+        return Double.class;
       }
     }
 
@@ -2081,6 +2176,12 @@ public class RowBasedGrouperHelper
       public BufferComparator getBufferComparator()
       {
         return comparator;
+      }
+
+      @Override
+      public Class<?> getClazz()
+      {
+        return delegate.getClazz();
       }
     }
   }
