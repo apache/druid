@@ -43,7 +43,6 @@ import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TestUtils;
-import org.apache.druid.indexing.common.actions.SegmentInsertAction;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
@@ -353,7 +352,8 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
   public class TestLocalTaskActionClient extends CountingLocalTaskActionClientForTest
   {
     private final Set<DataSegment> publishedSegments = new HashSet<>();
-    private SegmentSchemaMapping segmentSchemaMapping = new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
+    private final SegmentSchemaMapping segmentSchemaMapping
+        = new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
 
     private TestLocalTaskActionClient(Task task)
     {
@@ -365,11 +365,9 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     {
       final RetType result = super.submit(taskAction);
       if (taskAction instanceof SegmentTransactionalInsertAction) {
-        publishedSegments.addAll(((SegmentTransactionalInsertAction) taskAction).getSegments());
-        segmentSchemaMapping.merge(((SegmentTransactionalInsertAction) taskAction).getSegmentSchemaMapping());
-      } else if (taskAction instanceof SegmentInsertAction) {
-        publishedSegments.addAll(((SegmentInsertAction) taskAction).getSegments());
-        segmentSchemaMapping.merge(((SegmentInsertAction) taskAction).getSegmentSchemaMapping());
+        SegmentTransactionalInsertAction insertAction = (SegmentTransactionalInsertAction) taskAction;
+        publishedSegments.addAll(insertAction.getSegments());
+        segmentSchemaMapping.merge(insertAction.getSegmentSchemaMapping());
       }
       return result;
     }

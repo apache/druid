@@ -84,7 +84,6 @@ import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.tasklogs.TaskLogStreamer;
-import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 
@@ -400,8 +399,12 @@ public class OverlordResource
   @ResourceFilters(TaskResourceFilter.class)
   public Response getTaskSegments(@PathParam("taskid") String taskid)
   {
-    final Set<DataSegment> segments = taskQueryTool.getInsertedSegments(taskid);
-    return Response.ok().entity(segments).build();
+    final String errorMsg =
+        "Segment IDs committed by a task action are not persisted anymore."
+        + " Use the metric 'segment/added/bytes' to identify the segments created by a task.";
+    return Response.status(Status.NOT_FOUND)
+                   .entity(Collections.singletonMap("error", errorMsg))
+                   .build();
   }
 
   @POST
