@@ -339,7 +339,8 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                                       F.max(C('__time')).as('max_time'),
                                     ])
                                     .changeGroupByExpressions([])
-                                    .changeWhereExpression(getWhere(true)),
+                                    .changeWhereExpression(getWhere(true))
+                                    .removeColumnFromWhere('__time'),
                                   true,
                                 );
                               }}

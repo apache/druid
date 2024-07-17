@@ -656,7 +656,7 @@ ORDER BY
               const { worker } = value;
               const disabled = worker.version === '';
               const workerActions = this.getWorkerActions(worker.host, disabled);
-              return <ActionCell actions={workerActions} />;
+              return <ActionCell actions={workerActions} menuTitle={worker.host} />;
             },
             Aggregated: () => '',
           },
