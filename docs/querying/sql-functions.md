@@ -27,8 +27,14 @@ sidebar_label: "All functions"
  Apache Druid supports two query languages: Druid SQL and [native queries](querying.md).
  This document describes the SQL language.
 :::
-
-This page provides a reference of all Druid SQL functions in alphabetical order. The **Learn More** at the end of each function section provides further documentation.
+<!-- The **Learn More** at the end of each function section provides further documentation. -->
+This page provides a reference of Apache Druid&circledR; SQL functions in alphabetical order. For more detail on a function, refer to the following:
+* [Scalar functions](sql-scalar.md)
+* [Aggregation functions](sql-aggregations.md)
+* [Window functions](sql-window-functions.md)
+* [Array functions](sql-array-functions.md)
+* [Multi-value string functions](sql-multivalue-string-functions.md)
+* [JSON functions](sql-json-functions.md)
 
 The examples for each function uses the following datasets that come included with Apache Druid:
 * `flight-carriers`: `FlightCarrierOnTime (1 month)` 
