@@ -44,10 +44,13 @@ export interface MaxTasksButtonProps extends Omit<ButtonProps, 'text' | 'rightIc
   clusterCapacity: number | undefined;
   queryContext: QueryContext;
   changeQueryContext(queryContext: QueryContext): void;
+  menuHeader?: JSX.Element;
+  maxNumLabelFn?: (maxNum: number) => { text: string; label?: string };
 }
 
 export const MaxTasksButton = function MaxTasksButton(props: MaxTasksButtonProps) {
-  const { clusterCapacity, queryContext, changeQueryContext, ...rest } = props;
+  const { clusterCapacity, queryContext, changeQueryContext, menuHeader, maxNumLabelFn, ...rest } =
+    props;
   const [customMaxNumTasksDialogOpen, setCustomMaxNumTasksDialogOpen] = useState(false);
 
   const maxNumTasks = getMaxNumTasks(queryContext);
@@ -69,6 +72,7 @@ export const MaxTasksButton = function MaxTasksButton(props: MaxTasksButtonProps
         position={Position.BOTTOM_LEFT}
         content={
           <Menu>
+            {menuHeader || null}
             <MenuDivider title="Maximum number of tasks to launch" />
             {Boolean(fullClusterCapacity) && (
               <MenuItem
@@ -77,15 +81,24 @@ export const MaxTasksButton = function MaxTasksButton(props: MaxTasksButtonProps
                 onClick={() => changeQueryContext(changeMaxNumTasks(queryContext, undefined))}
               />
             )}
-            {shownMaxNumTaskOptions.map(m => (
-              <MenuItem
-                key={String(m)}
-                icon={tickIcon(m === maxNumTasks)}
-                text={formatInteger(m)}
-                label={`(1 controller + ${m === 2 ? '1 worker' : `max ${m - 1} workers`})`}
-                onClick={() => changeQueryContext(changeMaxNumTasks(queryContext, m))}
-              />
-            ))}
+            {shownMaxNumTaskOptions.map(m => {
+              const { text, label } = maxNumLabelFn
+                ? maxNumLabelFn(m)
+                : {
+                    text: formatInteger(m),
+                    label: `(1 controller + ${m === 2 ? '1 worker' : `max ${m - 1} workers`})`,
+                  };
+
+              return (
+                <MenuItem
+                  key={String(m)}
+                  icon={tickIcon(m === maxNumTasks)}
+                  text={text}
+                  label={label}
+                  onClick={() => changeQueryContext(changeMaxNumTasks(queryContext, m))}
+                />
+              );
+            })}
             <MenuItem
               icon={tickIcon(
                 typeof maxNumTasks === 'number' && !shownMaxNumTaskOptions.includes(maxNumTasks),
