@@ -332,8 +332,7 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
              + "group by countryName, cityName, channel")
         .queryContext(ImmutableMap.of(
             PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
-            QueryContexts.ENABLE_DEBUG, true,
-            QueryContexts.WINDOWING_STRICT_VALIDATION, false
+            QueryContexts.ENABLE_DEBUG, true
         ))
         .expectedResults(
             ResultMatchMode.RELAX_NULLS,
