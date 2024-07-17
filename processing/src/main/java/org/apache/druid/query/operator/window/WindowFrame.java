@@ -25,6 +25,8 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import org.apache.druid.annotations.SubclassesMustOverrideEqualsAndHashCode;
+
 import javax.annotation.Nullable;
 
 import java.util.List;
@@ -36,6 +38,7 @@ import java.util.Objects;
     @JsonSubTypes.Type(name = "rows", value = WindowFrame.Rows.class),
     @JsonSubTypes.Type(name = "groups", value = WindowFrame.Groups.class),
 })
+@SubclassesMustOverrideEqualsAndHashCode
 public interface WindowFrame
 {
   static WindowFrame unbounded()
