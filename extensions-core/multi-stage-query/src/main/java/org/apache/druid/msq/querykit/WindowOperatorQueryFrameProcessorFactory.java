@@ -194,12 +194,13 @@ public class WindowOperatorQueryFrameProcessorFactory extends BaseFrameProcessor
            && maxRowsMaterializedInWindow == that.maxRowsMaterializedInWindow
            && Objects.equals(query, that.query)
            && Objects.equals(operatorList, that.operatorList)
+           && Objects.equals(partitionColumnNames, that.partitionColumnNames)
            && Objects.equals(stageRowSignature, that.stageRowSignature);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(query, operatorList, stageRowSignature, isEmptyOver, maxRowsMaterializedInWindow);
+    return Objects.hash(query, operatorList, partitionColumnNames, stageRowSignature, isEmptyOver, maxRowsMaterializedInWindow);
   }
 }
