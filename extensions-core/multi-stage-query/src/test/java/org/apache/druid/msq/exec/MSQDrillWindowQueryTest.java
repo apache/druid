@@ -116,7 +116,7 @@ public class MSQDrillWindowQueryTest extends DrillWindowQueryTest
       @Provides
       @MultiStageQuery
       @LazySingleton
-      public SqlStatementFactory makeNativeSqlStatementFactory(
+      public SqlStatementFactory makeMSQSqlStatementFactory(
           final MSQTaskSqlEngine sqlEngine,
           SqlToolbox toolbox
       )
@@ -129,18 +129,25 @@ public class MSQDrillWindowQueryTest extends DrillWindowQueryTest
       public MSQTaskSqlEngine createEngine(
           QueryLifecycleFactory qlf,
           ObjectMapper queryJsonMapper,
-          Injector injector
+          Injector injector,
+          MSQTestOverlordServiceClient indexingServiceClient
       )
       {
-        final WorkerMemoryParameters workerMemoryParameters =
-            WorkerMemoryParameters.createInstance(
-                WorkerMemoryParameters.PROCESSING_MINIMUM_BYTES * 50,
-                2,
-                10,
-                2,
-                0,
-                0
-            );
+        return new MSQTaskSqlEngine(indexingServiceClient, queryJsonMapper);
+      }
+
+      @Provides
+      @LazySingleton
+      private MSQTestOverlordServiceClient extracted(ObjectMapper queryJsonMapper, Injector injector)
+      {
+        final WorkerMemoryParameters workerMemoryParameters = WorkerMemoryParameters.createInstance(
+            WorkerMemoryParameters.PROCESSING_MINIMUM_BYTES * 50,
+            2,
+            10,
+            2,
+            0,
+            0
+        );
         final MSQTestOverlordServiceClient indexingServiceClient = new MSQTestOverlordServiceClient(
             queryJsonMapper,
             injector,
@@ -148,7 +155,7 @@ public class MSQDrillWindowQueryTest extends DrillWindowQueryTest
             workerMemoryParameters,
             ImmutableList.of()
         );
-        return new MSQTaskSqlEngine(indexingServiceClient, queryJsonMapper);
+        return indexingServiceClient;
       }
 
       @Provides
