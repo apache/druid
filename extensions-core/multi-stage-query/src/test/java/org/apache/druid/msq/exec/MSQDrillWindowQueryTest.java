@@ -153,7 +153,22 @@ public class MSQDrillWindowQueryTest extends DrillWindowQueryTest
         return new MSQTaskSqlEngine(indexingServiceClient, queryJsonMapper);
       }
 
-      @Provides
+
+//      @Override
+//      public void configure(Binder binder)
+//      {
+//        binder.bind(DruidMeta.class).to(MSQDruidMeta.class).in(LazySingleton.class);
+//      }
+
+@Provides
+@LazySingleton
+public DruidMeta createMeta(
+    MSQDruidMeta druidMeta)
+{
+  return druidMeta;
+}
+
+//      @Provides
       @LazySingleton
       public DruidMeta createMeta(
           final @MultiStageQuery SqlStatementFactory sqlStatementFactory,
@@ -161,7 +176,7 @@ public class MSQDrillWindowQueryTest extends DrillWindowQueryTest
           final ErrorHandler errorHandler,
           final AuthenticatorMapper authMapper)
       {
-        return new DruidMeta(sqlStatementFactory, config, errorHandler, authMapper);
+        return new MSQDruidMeta(sqlStatementFactory, config, errorHandler, authMapper);
       }
     }
 
