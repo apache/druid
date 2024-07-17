@@ -746,7 +746,6 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
     @Override
     protected QueryMaker buildQueryMaker(final RelRoot rootQueryRel) throws ValidationException
     {
-      System.out.println("SelectHandler.buildQueryMaker");
       return handlerContext.engine().buildQueryMakerForSelect(
           rootQueryRel,
           handlerContext.plannerContext()

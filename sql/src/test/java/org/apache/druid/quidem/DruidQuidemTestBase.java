@@ -123,7 +123,6 @@ public abstract class DruidQuidemTestBase
     File inFile = new File(getTestRoot(), testFileName);
 
     final File outFile = new File(inFile.getParentFile(), inFile.getName() + ".out");
-    System.out.println("druidQuidemRunner = " + druidQuidemRunner);
     druidQuidemRunner.run(inFile, outFile);
   }
 
