@@ -2,7 +2,7 @@
 
 exports[`TableColumnSelector matches snapshot 1`] = `
 <span
-  class="bp5-popover2-target table-column-selector bp5-popover-target"
+  class="table-column-selector bp5-popover-target"
 >
   <button
     aria-expanded="false"

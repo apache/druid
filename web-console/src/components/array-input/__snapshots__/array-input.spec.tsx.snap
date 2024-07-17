@@ -11,7 +11,7 @@ exports[`ArrayInput matches snapshot 1`] = `
     apple, banana, pear
   </textarea>
   <span
-    class="bp5-popover2-target suggestion-button bp5-popover-target"
+    class="suggestion-button bp5-popover-target"
   >
     <button
       aria-expanded="false"

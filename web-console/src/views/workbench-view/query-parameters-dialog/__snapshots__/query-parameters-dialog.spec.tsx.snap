@@ -24,7 +24,9 @@ exports[`QueryParametersDialog matches snapshot 1`] = `
       <Blueprint5.ControlGroup
         fill={true}
       >
-        <Popover2
+        <Blueprint5.Popover
+          boundary="clippingParents"
+          captureDismiss={false}
           content={
             <Blueprint5.Menu>
               <Blueprint5.MenuItem
@@ -79,14 +81,29 @@ exports[`QueryParametersDialog matches snapshot 1`] = `
               />
             </Blueprint5.Menu>
           }
+          defaultIsOpen={false}
+          disabled={false}
+          fill={false}
+          hasBackdrop={false}
+          hoverCloseDelay={300}
+          hoverOpenDelay={150}
+          inheritDarkTheme={true}
+          interactionKind="click"
+          matchTargetWidth={false}
           minimal={true}
+          openOnTargetFocus={true}
           position="bottom-left"
+          positioningStrategy="absolute"
+          shouldReturnFocusOnClose={false}
+          targetTagName="span"
+          transitionDuration={300}
+          usePortal={true}
         >
           <Blueprint5.Button
             rightIcon="caret-down"
             text="VARCHAR"
           />
-        </Popover2>
+        </Blueprint5.Popover>
         <Blueprint5.InputGroup
           fill={true}
           onChange={[Function]}
@@ -105,7 +122,9 @@ exports[`QueryParametersDialog matches snapshot 1`] = `
       <Blueprint5.ControlGroup
         fill={true}
       >
-        <Popover2
+        <Blueprint5.Popover
+          boundary="clippingParents"
+          captureDismiss={false}
           content={
             <Blueprint5.Menu>
               <Blueprint5.MenuItem
@@ -160,14 +179,29 @@ exports[`QueryParametersDialog matches snapshot 1`] = `
               />
             </Blueprint5.Menu>
           }
+          defaultIsOpen={false}
+          disabled={false}
+          fill={false}
+          hasBackdrop={false}
+          hoverCloseDelay={300}
+          hoverOpenDelay={150}
+          inheritDarkTheme={true}
+          interactionKind="click"
+          matchTargetWidth={false}
           minimal={true}
+          openOnTargetFocus={true}
           position="bottom-left"
+          positioningStrategy="absolute"
+          shouldReturnFocusOnClose={false}
+          targetTagName="span"
+          transitionDuration={300}
+          usePortal={true}
         >
           <Blueprint5.Button
             rightIcon="caret-down"
             text="TIMESTAMP"
           />
-        </Popover2>
+        </Blueprint5.Popover>
         <Blueprint5.InputGroup
           fill={true}
           onChange={[Function]}
@@ -186,7 +220,9 @@ exports[`QueryParametersDialog matches snapshot 1`] = `
       <Blueprint5.ControlGroup
         fill={true}
       >
-        <Popover2
+        <Blueprint5.Popover
+          boundary="clippingParents"
+          captureDismiss={false}
           content={
             <Blueprint5.Menu>
               <Blueprint5.MenuItem
@@ -241,14 +277,29 @@ exports[`QueryParametersDialog matches snapshot 1`] = `
               />
             </Blueprint5.Menu>
           }
+          defaultIsOpen={false}
+          disabled={false}
+          fill={false}
+          hasBackdrop={false}
+          hoverCloseDelay={300}
+          hoverOpenDelay={150}
+          inheritDarkTheme={true}
+          interactionKind="click"
+          matchTargetWidth={false}
           minimal={true}
+          openOnTargetFocus={true}
           position="bottom-left"
+          positioningStrategy="absolute"
+          shouldReturnFocusOnClose={false}
+          targetTagName="span"
+          transitionDuration={300}
+          usePortal={true}
         >
           <Blueprint5.Button
             rightIcon="caret-down"
             text="BIGINT"
           />
-        </Popover2>
+        </Blueprint5.Popover>
         <Memo(FancyNumericInput)
           arbitraryPrecision={false}
           fill={true}
@@ -267,7 +318,9 @@ exports[`QueryParametersDialog matches snapshot 1`] = `
       <Blueprint5.ControlGroup
         fill={true}
       >
-        <Popover2
+        <Blueprint5.Popover
+          boundary="clippingParents"
+          captureDismiss={false}
           content={
             <Blueprint5.Menu>
               <Blueprint5.MenuItem
@@ -322,14 +375,29 @@ exports[`QueryParametersDialog matches snapshot 1`] = `
               />
             </Blueprint5.Menu>
           }
+          defaultIsOpen={false}
+          disabled={false}
+          fill={false}
+          hasBackdrop={false}
+          hoverCloseDelay={300}
+          hoverOpenDelay={150}
+          inheritDarkTheme={true}
+          interactionKind="click"
+          matchTargetWidth={false}
           minimal={true}
+          openOnTargetFocus={true}
           position="bottom-left"
+          positioningStrategy="absolute"
+          shouldReturnFocusOnClose={false}
+          targetTagName="span"
+          transitionDuration={300}
+          usePortal={true}
         >
           <Blueprint5.Button
             rightIcon="caret-down"
             text="DOUBLE"
           />
-        </Popover2>
+        </Blueprint5.Popover>
         <Memo(FancyNumericInput)
           arbitraryPrecision={true}
           fill={true}

@@ -2,7 +2,9 @@
 
 exports[`MaxTasksButton matches snapshot 1`] = `
 <React.Fragment>
-  <Popover2
+  <Blueprint5.Popover
+    boundary="clippingParents"
+    captureDismiss={false}
     className="max-tasks-button"
     content={
       <Blueprint5.Menu>
@@ -123,12 +125,28 @@ exports[`MaxTasksButton matches snapshot 1`] = `
         </Blueprint5.MenuItem>
       </Blueprint5.Menu>
     }
+    defaultIsOpen={false}
+    disabled={false}
+    fill={false}
+    hasBackdrop={false}
+    hoverCloseDelay={300}
+    hoverOpenDelay={150}
+    inheritDarkTheme={true}
+    interactionKind="click"
+    matchTargetWidth={false}
+    minimal={false}
+    openOnTargetFocus={true}
     position="bottom-left"
+    positioningStrategy="absolute"
+    shouldReturnFocusOnClose={false}
+    targetTagName="span"
+    transitionDuration={300}
+    usePortal={true}
   >
     <Blueprint5.Button
       rightIcon="caret-down"
       text="Max tasks: 6 (full cluster capacity)"
     />
-  </Popover2>
+  </Blueprint5.Popover>
 </React.Fragment>
 `;

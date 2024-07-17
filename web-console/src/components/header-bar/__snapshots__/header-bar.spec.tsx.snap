@@ -22,7 +22,9 @@ exports[`HeaderBar matches snapshot 1`] = `
       minimal={true}
       text="Query"
     />
-    <Popover2
+    <Blueprint5.Popover
+      boundary="clippingParents"
+      captureDismiss={false}
       content={
         <Blueprint5.Menu>
           <Blueprint5.MenuItem
@@ -72,8 +74,23 @@ exports[`HeaderBar matches snapshot 1`] = `
           />
         </Blueprint5.Menu>
       }
+      defaultIsOpen={false}
       disabled={false}
+      fill={false}
+      hasBackdrop={false}
+      hoverCloseDelay={300}
+      hoverOpenDelay={150}
+      inheritDarkTheme={true}
+      interactionKind="click"
+      matchTargetWidth={false}
+      minimal={false}
+      openOnTargetFocus={true}
       position="bottom-left"
+      positioningStrategy="absolute"
+      shouldReturnFocusOnClose={false}
+      targetTagName="span"
+      transitionDuration={300}
+      usePortal={true}
     >
       <Blueprint5.Button
         active={false}
@@ -83,7 +100,7 @@ exports[`HeaderBar matches snapshot 1`] = `
         minimal={true}
         text="Load data"
       />
-    </Popover2>
+    </Blueprint5.Popover>
     <Blueprint5.NavbarDivider />
     <Blueprint5.AnchorButton
       active={false}
@@ -130,7 +147,9 @@ exports[`HeaderBar matches snapshot 1`] = `
       minimal={true}
       text="Services"
     />
-    <Popover2
+    <Blueprint5.Popover
+      boundary="clippingParents"
+      captureDismiss={false}
       content={
         <Blueprint5.Menu>
           <Blueprint5.MenuItem
@@ -159,7 +178,23 @@ exports[`HeaderBar matches snapshot 1`] = `
           />
         </Blueprint5.Menu>
       }
+      defaultIsOpen={false}
+      disabled={false}
+      fill={false}
+      hasBackdrop={false}
+      hoverCloseDelay={300}
+      hoverOpenDelay={150}
+      inheritDarkTheme={true}
+      interactionKind="click"
+      matchTargetWidth={false}
+      minimal={false}
+      openOnTargetFocus={true}
       position="bottom-left"
+      positioningStrategy="absolute"
+      shouldReturnFocusOnClose={false}
+      targetTagName="span"
+      transitionDuration={300}
+      usePortal={true}
     >
       <Blueprint5.Button
         active={false}
@@ -167,7 +202,7 @@ exports[`HeaderBar matches snapshot 1`] = `
         icon="more"
         minimal={true}
       />
-    </Popover2>
+    </Blueprint5.Popover>
   </Blueprint5.NavbarGroup>
   <Blueprint5.NavbarGroup
     align="right"
@@ -184,7 +219,9 @@ exports[`HeaderBar matches snapshot 1`] = `
       }
       onUnrestrict={[Function]}
     />
-    <Popover2
+    <Blueprint5.Popover
+      boundary="clippingParents"
+      captureDismiss={false}
       content={
         <Blueprint5.Menu>
           <Blueprint5.MenuItem
@@ -276,15 +313,33 @@ exports[`HeaderBar matches snapshot 1`] = `
           </Blueprint5.MenuItem>
         </Blueprint5.Menu>
       }
+      defaultIsOpen={false}
+      disabled={false}
+      fill={false}
+      hasBackdrop={false}
+      hoverCloseDelay={300}
+      hoverOpenDelay={150}
+      inheritDarkTheme={true}
+      interactionKind="click"
+      matchTargetWidth={false}
+      minimal={false}
+      openOnTargetFocus={true}
       position="bottom-right"
+      positioningStrategy="absolute"
+      shouldReturnFocusOnClose={false}
+      targetTagName="span"
+      transitionDuration={300}
+      usePortal={true}
     >
       <Blueprint5.Button
         className="header-entry"
         icon="cog"
         minimal={true}
       />
-    </Popover2>
-    <Popover2
+    </Blueprint5.Popover>
+    <Blueprint5.Popover
+      boundary="clippingParents"
+      captureDismiss={false}
       content={
         <Blueprint5.Menu>
           <Blueprint5.MenuItem
@@ -343,14 +398,30 @@ exports[`HeaderBar matches snapshot 1`] = `
           />
         </Blueprint5.Menu>
       }
+      defaultIsOpen={false}
+      disabled={false}
+      fill={false}
+      hasBackdrop={false}
+      hoverCloseDelay={300}
+      hoverOpenDelay={150}
+      inheritDarkTheme={true}
+      interactionKind="click"
+      matchTargetWidth={false}
+      minimal={false}
+      openOnTargetFocus={true}
       position="bottom-right"
+      positioningStrategy="absolute"
+      shouldReturnFocusOnClose={false}
+      targetTagName="span"
+      transitionDuration={300}
+      usePortal={true}
     >
       <Blueprint5.Button
         className="header-entry"
         icon="help"
         minimal={true}
       />
-    </Popover2>
+    </Blueprint5.Popover>
   </Blueprint5.NavbarGroup>
 </Blueprint5.Navbar>
 `;

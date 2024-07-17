@@ -16,9 +16,16 @@
  * limitations under the License.
  */
 
-import { Button, ButtonGroup, Intent, Menu, MenuDivider, MenuItem } from '@blueprintjs/core';
+import {
+  Button,
+  ButtonGroup,
+  Intent,
+  Menu,
+  MenuDivider,
+  MenuItem,
+  Popover,
+} from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { Popover2 } from '@blueprintjs/popover2';
 import type { SqlQuery } from '@druid-toolkit/query';
 import { SqlExpression } from '@druid-toolkit/query';
 import classNames from 'classnames';
@@ -478,7 +485,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
           return (
             <div key={i} className={classNames('tab-button', { active })}>
               {active ? (
-                <Popover2
+                <Popover
                   position="bottom"
                   content={
                     <Menu>
@@ -557,7 +564,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
                     minimal
                     onDoubleClick={() => this.setState({ renamingTab: tabEntry })}
                   />
-                </Popover2>
+                </Popover>
               ) : (
                 <Button
                   className="tab-name"

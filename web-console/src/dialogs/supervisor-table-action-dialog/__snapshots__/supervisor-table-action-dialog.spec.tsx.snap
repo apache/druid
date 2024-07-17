@@ -224,7 +224,7 @@ exports[`SupervisorTableActionDialog matches snapshot 1`] = `
             class="footer-actions-left"
           >
             <span
-              class="bp5-popover2-target bp5-popover-target"
+              class="bp5-popover-target"
             >
               <button
                 aria-expanded="false"

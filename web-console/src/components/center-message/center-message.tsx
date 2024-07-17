@@ -16,6 +16,8 @@
  * limitations under the License.
  */
 
+import { Classes } from '@blueprintjs/core';
+import classNames from 'classnames';
 import type { ReactNode } from 'react';
 import React from 'react';
 
@@ -29,7 +31,7 @@ export const CenterMessage = React.memo(function CenterMessage(props: CenterMess
   const { children } = props;
 
   return (
-    <div className="center-message bp4-input">
+    <div className={classNames('center-message', Classes.INPUT)}>
       <div className="center-message-inner">{children}</div>
     </div>
   );

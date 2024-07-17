@@ -225,7 +225,9 @@ exports[`SupervisorsView matches snapshot 1`] = `
           "Header": <React.Fragment>
             Stats
             <br />
-            <Popover2
+            <Blueprint5.Popover
+              boundary="clippingParents"
+              captureDismiss={false}
               content={
                 <Blueprint5.Menu>
                   <Blueprint5.MenuItem
@@ -260,7 +262,23 @@ exports[`SupervisorsView matches snapshot 1`] = `
                   />
                 </Blueprint5.Menu>
               }
+              defaultIsOpen={false}
+              disabled={false}
+              fill={false}
+              hasBackdrop={false}
+              hoverCloseDelay={300}
+              hoverOpenDelay={150}
+              inheritDarkTheme={true}
+              interactionKind="click"
+              matchTargetWidth={false}
+              minimal={false}
+              openOnTargetFocus={true}
               position="bottom"
+              positioningStrategy="absolute"
+              shouldReturnFocusOnClose={false}
+              targetTagName="span"
+              transitionDuration={300}
+              usePortal={true}
             >
               <i
                 className="title-button"
@@ -273,7 +291,7 @@ exports[`SupervisorsView matches snapshot 1`] = `
                   tagName="span"
                 />
               </i>
-            </Popover2>
+            </Blueprint5.Popover>
           </React.Fragment>,
           "accessor": "stats",
           "className": "padded",

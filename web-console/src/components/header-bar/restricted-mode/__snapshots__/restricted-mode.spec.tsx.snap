@@ -1,7 +1,9 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`RestrictedMode matches snapshot when in auto capability detection mode 1`] = `
-<Popover2
+<Blueprint5.Popover
+  boundary="clippingParents"
+  captureDismiss={false}
   className="restricted-mode"
   content={
     <Memo(PopoverText)>
@@ -42,7 +44,23 @@ exports[`RestrictedMode matches snapshot when in auto capability detection mode 
       </p>
     </Memo(PopoverText)>
   }
+  defaultIsOpen={false}
+  disabled={false}
+  fill={false}
+  hasBackdrop={false}
+  hoverCloseDelay={300}
+  hoverOpenDelay={150}
+  inheritDarkTheme={true}
+  interactionKind="click"
+  matchTargetWidth={false}
+  minimal={false}
+  openOnTargetFocus={true}
   position="bottom-right"
+  positioningStrategy="absolute"
+  shouldReturnFocusOnClose={false}
+  targetTagName="span"
+  transitionDuration={300}
+  usePortal={true}
 >
   <Blueprint5.Button
     icon="warning-sign"
@@ -50,11 +68,13 @@ exports[`RestrictedMode matches snapshot when in auto capability detection mode 
     minimal={true}
     text="Coordinator/Overlord mode"
   />
-</Popover2>
+</Blueprint5.Popover>
 `;
 
 exports[`RestrictedMode matches snapshot when in manual capability detection mode 1`] = `
-<Popover2
+<Blueprint5.Popover
+  boundary="clippingParents"
+  captureDismiss={false}
   className="restricted-mode"
   content={
     <Memo(PopoverText)>
@@ -95,7 +115,23 @@ exports[`RestrictedMode matches snapshot when in manual capability detection mod
       </p>
     </Memo(PopoverText)>
   }
+  defaultIsOpen={false}
+  disabled={false}
+  fill={false}
+  hasBackdrop={false}
+  hoverCloseDelay={300}
+  hoverOpenDelay={150}
+  inheritDarkTheme={true}
+  interactionKind="click"
+  matchTargetWidth={false}
+  minimal={false}
+  openOnTargetFocus={true}
   position="bottom-right"
+  positioningStrategy="absolute"
+  shouldReturnFocusOnClose={false}
+  targetTagName="span"
+  transitionDuration={300}
+  usePortal={true}
 >
   <Blueprint5.Button
     icon="warning-sign"
@@ -103,5 +139,5 @@ exports[`RestrictedMode matches snapshot when in manual capability detection mod
     minimal={true}
     text="Coordinator/Overlord mode"
   />
-</Popover2>
+</Blueprint5.Popover>
 `;

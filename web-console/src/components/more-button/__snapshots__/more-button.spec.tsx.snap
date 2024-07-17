@@ -2,7 +2,7 @@
 
 exports[`MoreButton matches snapshot (empty) 1`] = `
 <span
-  class="bp5-popover2-target more-button bp5-popover-target"
+  class="more-button bp5-popover-target"
 >
   <button
     aria-expanded="false"
@@ -36,7 +36,7 @@ exports[`MoreButton matches snapshot (empty) 1`] = `
 
 exports[`MoreButton matches snapshot (full) 1`] = `
 <span
-  class="bp5-popover2-target more-button bp5-popover-target"
+  class="more-button bp5-popover-target"
 >
   <button
     aria-expanded="false"

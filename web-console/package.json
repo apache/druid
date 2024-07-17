@@ -64,10 +64,8 @@
   ],
   "dependencies": {
     "@blueprintjs/core": "^5.10.5",
-    "@blueprintjs/datetime": "^5.3.7",
     "@blueprintjs/datetime2": "^2.3.7",
     "@blueprintjs/icons": "^5.10.0",
-    "@blueprintjs/popover2": "^2.1.7",
     "@blueprintjs/select": "^5.2.1",
     "@druid-toolkit/query": "^0.22.20",
     "@druid-toolkit/visuals-core": "^0.3.3",

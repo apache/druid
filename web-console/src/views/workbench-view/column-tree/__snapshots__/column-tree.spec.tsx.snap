@@ -31,7 +31,9 @@ exports[`ColumnTree matches snapshot 1`] = `
       <Blueprint5.ButtonGroup
         minimal={true}
       >
-        <Popover2
+        <Blueprint5.Popover
+          boundary="clippingParents"
+          captureDismiss={false}
           content={
             <Blueprint5.Menu>
               <Blueprint5.MenuDivider
@@ -69,12 +71,28 @@ exports[`ColumnTree matches snapshot 1`] = `
               />
             </Blueprint5.Menu>
           }
+          defaultIsOpen={false}
+          disabled={false}
+          fill={false}
+          hasBackdrop={false}
+          hoverCloseDelay={300}
+          hoverOpenDelay={150}
+          inheritDarkTheme={true}
+          interactionKind="click"
+          matchTargetWidth={false}
+          minimal={false}
+          openOnTargetFocus={true}
           position="bottom-left"
+          positioningStrategy="absolute"
+          shouldReturnFocusOnClose={false}
+          targetTagName="span"
+          transitionDuration={300}
+          usePortal={true}
         >
           <Blueprint5.Button
             icon="settings"
           />
-        </Popover2>
+        </Blueprint5.Popover>
       </Blueprint5.ButtonGroup>
     }
     value=""
@@ -98,17 +116,35 @@ exports[`ColumnTree matches snapshot 1`] = `
                   title="TIMESTAMP"
                 />,
                 "id": "__time",
-                "label": <Popover2
+                "label": <Blueprint5.Popover
                   autoFocus={false}
+                  boundary="clippingParents"
+                  captureDismiss={false}
                   content={
                     <Memo(Deferred)
                       content={[Function]}
                     />
                   }
+                  defaultIsOpen={false}
+                  disabled={false}
+                  fill={false}
+                  hasBackdrop={false}
+                  hoverCloseDelay={300}
+                  hoverOpenDelay={150}
+                  inheritDarkTheme={true}
+                  interactionKind="click"
+                  matchTargetWidth={false}
+                  minimal={false}
+                  openOnTargetFocus={true}
                   position="right"
+                  positioningStrategy="absolute"
+                  shouldReturnFocusOnClose={false}
+                  targetTagName="span"
+                  transitionDuration={300}
+                  usePortal={true}
                 >
                   __time
-                </Popover2>,
+                </Blueprint5.Popover>,
               },
               {
                 "icon": <Blueprint5.Icon
@@ -121,17 +157,35 @@ exports[`ColumnTree matches snapshot 1`] = `
                   title="BIGINT"
                 />,
                 "id": "added",
-                "label": <Popover2
+                "label": <Blueprint5.Popover
                   autoFocus={false}
+                  boundary="clippingParents"
+                  captureDismiss={false}
                   content={
                     <Memo(Deferred)
                       content={[Function]}
                     />
                   }
+                  defaultIsOpen={false}
+                  disabled={false}
+                  fill={false}
+                  hasBackdrop={false}
+                  hoverCloseDelay={300}
+                  hoverOpenDelay={150}
+                  inheritDarkTheme={true}
+                  interactionKind="click"
+                  matchTargetWidth={false}
+                  minimal={false}
+                  openOnTargetFocus={true}
                   position="right"
+                  positioningStrategy="absolute"
+                  shouldReturnFocusOnClose={false}
+                  targetTagName="span"
+                  transitionDuration={300}
+                  usePortal={true}
                 >
                   added
-                </Popover2>,
+                </Blueprint5.Popover>,
               },
               {
                 "icon": <Blueprint5.Icon
@@ -144,33 +198,69 @@ exports[`ColumnTree matches snapshot 1`] = `
                   title="FLOAT"
                 />,
                 "id": "addedBy10",
-                "label": <Popover2
+                "label": <Blueprint5.Popover
                   autoFocus={false}
+                  boundary="clippingParents"
+                  captureDismiss={false}
                   content={
                     <Memo(Deferred)
                       content={[Function]}
                     />
                   }
+                  defaultIsOpen={false}
+                  disabled={false}
+                  fill={false}
+                  hasBackdrop={false}
+                  hoverCloseDelay={300}
+                  hoverOpenDelay={150}
+                  inheritDarkTheme={true}
+                  interactionKind="click"
+                  matchTargetWidth={false}
+                  minimal={false}
+                  openOnTargetFocus={true}
                   position="right"
+                  positioningStrategy="absolute"
+                  shouldReturnFocusOnClose={false}
+                  targetTagName="span"
+                  transitionDuration={300}
+                  usePortal={true}
                 >
                   addedBy10
-                </Popover2>,
+                </Blueprint5.Popover>,
               },
             ],
             "className": undefined,
             "icon": "th",
             "id": "wikipedia",
             "isExpanded": true,
-            "label": <Popover2
+            "label": <Blueprint5.Popover
+              boundary="clippingParents"
+              captureDismiss={false}
               content={
                 <Memo(Deferred)
                   content={[Function]}
                 />
               }
+              defaultIsOpen={false}
+              disabled={false}
+              fill={false}
+              hasBackdrop={false}
+              hoverCloseDelay={300}
+              hoverOpenDelay={150}
+              inheritDarkTheme={true}
+              interactionKind="click"
+              matchTargetWidth={false}
+              minimal={false}
+              openOnTargetFocus={true}
               position="right"
+              positioningStrategy="absolute"
+              shouldReturnFocusOnClose={false}
+              targetTagName="span"
+              transitionDuration={300}
+              usePortal={true}
             >
               wikipedia
-            </Popover2>,
+            </Blueprint5.Popover>,
           },
         ]
       }

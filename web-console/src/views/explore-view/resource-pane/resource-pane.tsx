@@ -16,9 +16,8 @@
  * limitations under the License.
  */
 
-import { Classes, Icon, InputGroup, Menu, MenuItem } from '@blueprintjs/core';
+import { Classes, Icon, InputGroup, Menu, MenuItem, Popover } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { Popover2 } from '@blueprintjs/popover2';
 import type { ExpressionMeta } from '@druid-toolkit/visuals-core';
 import classNames from 'classnames';
 import React, { useState } from 'react';
@@ -53,7 +52,7 @@ export const ResourcePane = function ResourcePane(props: ResourcePaneProps) {
         {filterMap(columns, (c, i) => {
           if (!caseInsensitiveContains(c.name, columnSearch)) return;
           return (
-            <Popover2
+            <Popover
               className="resource-item"
               key={i}
               position="right"
@@ -85,7 +84,7 @@ export const ResourcePane = function ResourcePane(props: ResourcePaneProps) {
                   {c.name}
                 </div>
               </div>
-            </Popover2>
+            </Popover>
           );
         })}
       </div>

@@ -24,9 +24,9 @@ import {
   Intent,
   Radio,
   RadioGroup,
+  Tooltip,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { Tooltip2 } from '@blueprintjs/popover2';
 import classNames from 'classnames';
 import React, { useState } from 'react';
 
@@ -88,9 +88,9 @@ export const DestinationForm = React.memo(function DestinationForm(props: Destin
             placeholder="Choose a name"
             rightElement={
               existingTables.includes(table) ? (
-                <Tooltip2 content="Table name already exists">
+                <Tooltip content="Table name already exists">
                   <Button icon={IconNames.DELETE} intent={Intent.DANGER} minimal />
-                </Tooltip2>
+                </Tooltip>
               ) : undefined
             }
           />

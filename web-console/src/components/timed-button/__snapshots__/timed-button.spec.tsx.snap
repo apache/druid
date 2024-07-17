@@ -7,7 +7,9 @@ exports[`TimedButton matches snapshot 1`] = `
   <Blueprint5.Button
     onClick={[Function]}
   />
-  <Popover2
+  <Blueprint5.Popover
+    boundary="clippingParents"
+    captureDismiss={false}
     content={
       <Blueprint5.Menu>
         <Blueprint5.MenuDivider
@@ -25,10 +27,26 @@ exports[`TimedButton matches snapshot 1`] = `
         />
       </Blueprint5.Menu>
     }
+    defaultIsOpen={false}
+    disabled={false}
+    fill={false}
+    hasBackdrop={false}
+    hoverCloseDelay={300}
+    hoverOpenDelay={150}
+    inheritDarkTheme={true}
+    interactionKind="click"
+    matchTargetWidth={false}
+    minimal={false}
+    openOnTargetFocus={true}
+    positioningStrategy="absolute"
+    shouldReturnFocusOnClose={false}
+    targetTagName="span"
+    transitionDuration={300}
+    usePortal={true}
   >
     <Blueprint5.Button
       rightIcon="caret-down"
     />
-  </Popover2>
+  </Blueprint5.Popover>
 </Blueprint5.ButtonGroup>
 `;

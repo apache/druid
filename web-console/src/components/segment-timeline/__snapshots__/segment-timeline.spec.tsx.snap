@@ -136,37 +136,36 @@ exports[`SegmentTimeline matches snapshot 1`] = `
       <div
         class="bp5-form-content"
       >
-        <span
-          class="bp5-popover2-target date-range-selector bp5-popover-target"
+        <div
+          aria-expanded="false"
+          aria-haspopup="menu"
+          class="bp5-control-group bp5-date-range-input bp5-popover-target bp5-fill"
         >
           <div
-            class="bp5-input-group bp5-read-only"
+            class="bp5-input-group bp5-fill"
           >
             <input
-              aria-expanded="false"
-              aria-haspopup="menu"
+              aria-disabled="false"
+              autocomplete="off"
               class="bp5-input"
-              readonly=""
-              style="padding-right: 0px;"
+              placeholder="Start date"
               type="text"
-              value="2021-03-09 ➔ 2021-06-09"
+              value="2021-03-08"
             />
-            <span
-              class="bp5-input-action"
-            >
-              <button
-                class="bp5-button bp5-minimal"
-                type="button"
-              >
-                <span
-                  aria-hidden="true"
-                  class="bp5-icon bp5-icon-standard bp5-icon-calendar"
-                  data-icon="calendar"
-                />
-              </button>
-            </span>
           </div>
-        </span>
+          <div
+            class="bp5-input-group bp5-fill"
+          >
+            <input
+              aria-disabled="false"
+              autocomplete="off"
+              class="bp5-input"
+              placeholder="End date"
+              type="text"
+              value="2021-06-08"
+            />
+          </div>
+        </div>
       </div>
     </div>
   </div>

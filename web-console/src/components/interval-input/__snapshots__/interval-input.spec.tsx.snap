@@ -16,7 +16,7 @@ exports[`IntervalInput matches snapshot 1`] = `
   >
     <div>
       <span
-        class="bp5-popover2-target bp5-popover-target"
+        class="bp5-popover-target"
       >
         <button
           aria-expanded="false"

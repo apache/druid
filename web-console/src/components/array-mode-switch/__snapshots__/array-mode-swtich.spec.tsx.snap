@@ -20,7 +20,7 @@ exports[`ArrayModeSwitch matches snapshot 1`] = `
       Store ARRAYs as MVDs
     </label>
     <span
-      class="bp5-popover2-target info-popover bp5-popover-target"
+      class="info-popover bp5-popover-target"
     >
       <span
         aria-expanded="false"

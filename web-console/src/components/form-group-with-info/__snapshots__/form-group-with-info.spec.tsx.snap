@@ -13,7 +13,7 @@ exports[`FormGroupWithInfo matches snapshot 1`] = `
       class="bp5-text-muted"
     >
       <span
-        class="bp5-popover2-target info-popover bp5-popover-target"
+        class="info-popover bp5-popover-target"
       >
         <span
           aria-expanded="false"

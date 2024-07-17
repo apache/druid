@@ -271,7 +271,7 @@ exports[`RetentionDialog matches snapshot 1`] = `
                                       class="bp5-input-action"
                                     >
                                       <span
-                                        class="bp5-popover2-target bp5-popover-target"
+                                        class="bp5-popover-target"
                                       >
                                         <button
                                           aria-expanded="false"
