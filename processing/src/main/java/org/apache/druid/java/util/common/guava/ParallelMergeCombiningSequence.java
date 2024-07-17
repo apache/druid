@@ -125,7 +125,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
           new SequenceWrapper()
           {
             @Override
-            public void after(boolean isDone, Throwable thrown) throws Exception
+            public void after(boolean isDone, Throwable thrown)
             {
               cancellationFuture.set(true);
             }
