@@ -22,7 +22,6 @@ package org.apache.druid.java.util.common.guava;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
-import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QueryTimeoutException;
@@ -182,7 +181,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
         new BaseSequence.IteratorMaker<T, Iterator<T>>()
         {
           private boolean shouldCancelOnCleanup = true;
-
+          
           @Override
           public Iterator<T> make()
           {
@@ -195,7 +194,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
               {
                 final long thisTimeoutNanos = timeoutAtNanos - System.nanoTime();
                 if (hasTimeout && thisTimeoutNanos < 0) {
-                  throw new QueryTimeoutException();
+                  throw cancellationGizmo.cancelAndThrow(new QueryTimeoutException());
                 }
 
                 if (currentBatch != null && !currentBatch.isTerminalResult() && !currentBatch.isDrained()) {
@@ -210,7 +209,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
                     }
                   }
                   if (currentBatch == null) {
-                    throw new QueryTimeoutException();
+                    throw cancellationGizmo.cancelAndThrow(new QueryTimeoutException());
                   }
 
                   if (cancellationGizmo.isCancelled()) {
@@ -224,7 +223,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
                   return true;
                 }
                 catch (InterruptedException e) {
-                  throw new RE(e);
+                  throw cancellationGizmo.cancelAndThrow(e);
                 }
               }
 
@@ -236,7 +235,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
                 }
 
                 if (currentBatch == null || currentBatch.isDrained() || currentBatch.isTerminalResult()) {
-                  throw new NoSuchElementException();
+                  throw cancellationGizmo.cancelAndThrow(new NoSuchElementException());
                 }
                 return currentBatch.next();
               }
@@ -338,7 +337,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
               parallelTaskCount
           );
 
-          QueuePusher<ResultBatch<T>> resultsPusher = new QueuePusher<>(out, hasTimeout, timeoutAt);
+          QueuePusher<ResultBatch<T>> resultsPusher = new QueuePusher<>(out, cancellationGizmo, hasTimeout, timeoutAt);
 
           for (Sequence<T> s : sequences) {
             sequenceCursors.add(new YielderBatchedResultsCursor<>(new SequenceBatcher<>(s, batchSize), orderingFn));
@@ -367,9 +366,6 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       catch (Throwable t) {
         closeAllCursors(sequenceCursors);
         cancellationGizmo.cancel(t);
-        // Should be the following, but can' change due to lack of
-        // unit tests.
-        // out.offer((ParallelMergeCombiningSequence.ResultBatch<T>) ResultBatch.TERMINAL);
         out.offer(ResultBatch.TERMINAL);
       }
     }
@@ -387,7 +383,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       for (List<Sequence<T>> partition : partitions) {
         BlockingQueue<ResultBatch<T>> outputQueue = new ArrayBlockingQueue<>(queueSize);
         intermediaryOutputs.add(outputQueue);
-        QueuePusher<ResultBatch<T>> pusher = new QueuePusher<>(outputQueue, hasTimeout, timeoutAt);
+        QueuePusher<ResultBatch<T>> pusher = new QueuePusher<>(outputQueue, cancellationGizmo, hasTimeout, timeoutAt);
 
         List<BatchedResultsCursor<T>> partitionCursors = new ArrayList<>(sequences.size());
         for (Sequence<T> s : partition) {
@@ -415,11 +411,11 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
         getPool().execute(task);
       }
 
-      QueuePusher<ResultBatch<T>> outputPusher = new QueuePusher<>(out, hasTimeout, timeoutAt);
+      QueuePusher<ResultBatch<T>> outputPusher = new QueuePusher<>(out, cancellationGizmo, hasTimeout, timeoutAt);
       List<BatchedResultsCursor<T>> intermediaryOutputsCursors = new ArrayList<>(intermediaryOutputs.size());
       for (BlockingQueue<ResultBatch<T>> queue : intermediaryOutputs) {
         intermediaryOutputsCursors.add(
-            new BlockingQueueuBatchedResultsCursor<>(queue, orderingFn, hasTimeout, timeoutAt)
+            new BlockingQueueuBatchedResultsCursor<>(queue, cancellationGizmo, orderingFn, hasTimeout, timeoutAt)
         );
       }
       MergeCombineActionMetricsAccumulator finalMergeMetrics = new MergeCombineActionMetricsAccumulator();
@@ -550,6 +546,10 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
     @Override
     protected void compute()
     {
+      if (cancellationGizmo.isCancelled()) {
+        cleanup();
+        return;
+      }
       try {
         long start = System.nanoTime();
         long startCpuNanos = JvmUtils.safeGetThreadCpuTime();
@@ -655,8 +655,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
           // allow downstream stuff to stop
           LOG.debug("cancelled after %s tasks", metricsAccumulator.getTaskCount());
           // make sure to close underlying cursors
-          closeAllCursors(pQueue);
-          outputQueue.offer(ResultBatch.TERMINAL);
+          cleanup();
         } else {
           // if priority queue is empty, push the final accumulated value into the output batch and push it out
           outputBatch.add(currentCombinedValue);
@@ -668,10 +667,15 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
         }
       }
       catch (Throwable t) {
-        closeAllCursors(pQueue);
         cancellationGizmo.cancel(t);
-        outputQueue.offer(ResultBatch.TERMINAL);
+        cleanup();
       }
+    }
+
+    private void cleanup()
+    {
+      closeAllCursors(pQueue);
+      outputQueue.offer(ResultBatch.TERMINAL);
     }
   }
 
@@ -744,7 +748,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
             cursor.close();
           }
         }
-        if (cursors.size() > 0) {
+        if (!cancellationGizmo.isCancelled() && !cursors.isEmpty()) {
           getPool().execute(new MergeCombineAction<T>(
               cursors,
               outputQueue,
@@ -777,14 +781,17 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
    */
   static class QueuePusher<E> implements ForkJoinPool.ManagedBlocker
   {
+    static final long BLOCK_TIMEOUT = TimeUnit.MILLISECONDS.convert(500, TimeUnit.NANOSECONDS);
     final boolean hasTimeout;
     final long timeoutAtNanos;
     final BlockingQueue<E> queue;
+    final CancellationGizmo gizmo;
     volatile E item = null;
 
-    QueuePusher(BlockingQueue<E> q, boolean hasTimeout, long timeoutAtNanos)
+    QueuePusher(BlockingQueue<E> q, CancellationGizmo gizmo, boolean hasTimeout, long timeoutAtNanos)
     {
       this.queue = q;
+      this.gizmo = gizmo;
       this.hasTimeout = hasTimeout;
       this.timeoutAtNanos = timeoutAtNanos;
     }
@@ -795,14 +802,16 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       boolean success = false;
       if (item != null) {
         if (hasTimeout) {
-          final long thisTimeoutNanos = timeoutAtNanos - System.nanoTime();
-          if (thisTimeoutNanos < 0) {
+          final long remainingNanos = timeoutAtNanos - System.nanoTime();
+          if (remainingNanos < 0) {
             item = null;
-            throw new QueryTimeoutException("QueuePusher timed out offering data");
+            throw gizmo.cancelAndThrow(new QueryTimeoutException("QueuePusher timed out offering data"));
           }
-          success = queue.offer(item, thisTimeoutNanos, TimeUnit.NANOSECONDS);
+          final long blockTimeoutNanos = Math.min(remainingNanos, BLOCK_TIMEOUT);
+          success = queue.offer(item, blockTimeoutNanos, TimeUnit.NANOSECONDS);
         } else {
-          success = queue.offer(item);
+          queue.put(item);
+          success = true;
         }
         if (success) {
           item = null;
@@ -855,19 +864,16 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
 
     public void add(E in)
     {
-      assert values != null;
       values.offer(in);
     }
 
     public E get()
     {
-      assert values != null;
       return values.peek();
     }
 
     public E next()
     {
-      assert values != null;
       return values.poll();
     }
 
@@ -925,6 +931,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
     Yielder<ResultBatch<E>> getBatchYielder()
     {
       try {
+        batchYielder = null;
         ForkJoinPool.managedBlock(this);
         return batchYielder;
       }
@@ -1033,8 +1040,8 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
     @Override
     public void initialize()
     {
-      yielder = batcher.getBatchYielder();
-      resultBatch = yielder.get();
+      yielder = null;
+      nextBatch();
     }
 
     @Override
@@ -1059,6 +1066,10 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
     @Override
     public boolean block()
     {
+      if (yielder == null) {
+        yielder = batcher.getBatchYielder();
+        resultBatch = yielder.get();
+      }
       if (yielder.isDone()) {
         return true;
       }
@@ -1073,7 +1084,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
     @Override
     public boolean isReleasable()
     {
-      return yielder.isDone() || (resultBatch != null && !resultBatch.isDrained());
+      return (yielder != null && yielder.isDone()) || (resultBatch != null && !resultBatch.isDrained());
     }
 
     @Override
@@ -1091,12 +1102,15 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
    */
   static class BlockingQueueuBatchedResultsCursor<E> extends BatchedResultsCursor<E>
   {
+    static final long BLOCK_TIMEOUT = TimeUnit.MILLISECONDS.convert(500, TimeUnit.NANOSECONDS);
     final BlockingQueue<ResultBatch<E>> queue;
+    final CancellationGizmo gizmo;
     final boolean hasTimeout;
     final long timeoutAtNanos;
 
     BlockingQueueuBatchedResultsCursor(
         BlockingQueue<ResultBatch<E>> blockingQueue,
+        CancellationGizmo cancellationGizmo,
         Ordering<E> ordering,
         boolean hasTimeout,
         long timeoutAtNanos
@@ -1104,6 +1118,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
     {
       super(ordering);
       this.queue = blockingQueue;
+      this.gizmo = cancellationGizmo;
       this.hasTimeout = hasTimeout;
       this.timeoutAtNanos = timeoutAtNanos;
     }
@@ -1142,17 +1157,18 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
     {
       if (resultBatch == null || resultBatch.isDrained()) {
         if (hasTimeout) {
-          final long thisTimeoutNanos = timeoutAtNanos - System.nanoTime();
-          if (thisTimeoutNanos < 0) {
+          final long remainingNanos = timeoutAtNanos - System.nanoTime();
+          if (remainingNanos < 0) {
             resultBatch = ResultBatch.TERMINAL;
-            throw new QueryTimeoutException("BlockingQueue cursor timed out waiting for data");
+            throw gizmo.cancelAndThrow(new QueryTimeoutException("BlockingQueue cursor timed out waiting for data"));
           }
-          resultBatch = queue.poll(thisTimeoutNanos, TimeUnit.NANOSECONDS);
+          final long blockTimeoutNanos = Math.min(remainingNanos, BLOCK_TIMEOUT);
+          resultBatch = queue.poll(blockTimeoutNanos, TimeUnit.NANOSECONDS);
         } else {
           resultBatch = queue.take();
         }
       }
-      return resultBatch != null;
+      return resultBatch != null && !resultBatch.isDrained();
     }
 
     @Override
@@ -1164,7 +1180,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       }
       // if we can get a result immediately without blocking, also no need to block
       resultBatch = queue.poll();
-      return resultBatch != null;
+      return resultBatch != null && !resultBatch.isDrained();
     }
   }
 
@@ -1175,6 +1191,12 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
   static class CancellationGizmo
   {
     private final AtomicReference<Throwable> throwable = new AtomicReference<>(null);
+
+    RuntimeException cancelAndThrow(Throwable t)
+    {
+      throwable.compareAndSet(null, t);
+      return wrapRuntimeException(t);
+    }
 
     void cancel(Throwable t)
     {
@@ -1188,11 +1210,15 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
 
     RuntimeException getRuntimeException()
     {
-      Throwable ex = throwable.get();
-      if (ex instanceof RuntimeException) {
-        return (RuntimeException) ex;
+      return wrapRuntimeException(throwable.get());
+    }
+
+    private static RuntimeException wrapRuntimeException(Throwable t)
+    {
+      if (t instanceof RuntimeException) {
+        return (RuntimeException) t;
       }
-      return new RE(ex);
+      return new RuntimeException(t);
     }
   }
 
