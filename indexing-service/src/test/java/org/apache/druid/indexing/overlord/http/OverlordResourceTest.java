@@ -231,7 +231,6 @@ public class OverlordResourceTest
     EasyMock.expect(taskMaster.isLeader()).andReturn(false).once();
     replayAll();
 
-
     // true
     final Response response1 = overlordResource.isLeader();
     Assert.assertEquals(ImmutableMap.of("leader", true), response1.getEntity());
@@ -269,7 +268,6 @@ public class OverlordResourceTest
     );
 
     replayAll();
-
 
     List<TaskStatusPlus> responseObjects = (List<TaskStatusPlus>) overlordResource.getWaitingTasks(req)
                                                                                   .getEntity();
@@ -496,7 +494,6 @@ public class OverlordResourceTest
 
     replayAll();
 
-
     List<TaskStatusPlus> responseObjects = (List) overlordResource
         .getTasks("running", "allow", null, null, null, req)
         .getEntity();
@@ -538,7 +535,6 @@ public class OverlordResourceTest
     EasyMock.expect(taskRunner.getRunnerTaskState("id_4")).andStubReturn(RunnerTaskState.RUNNING);
 
     replayAll();
-
 
     List<TaskStatusPlus> responseObjects = (List<TaskStatusPlus>) overlordResource
         .getTasks("pending", null, null, null, null, req)
@@ -642,7 +638,6 @@ public class OverlordResourceTest
     EasyMock.expect(taskRunner.getRunnerTaskState("id_1")).andReturn(RunnerTaskState.RUNNING);
 
     replayAll();
-
 
     // Verify that only the tasks of read access datasource are returned
     List<TaskStatusPlus> responseObjects = (List<TaskStatusPlus>) overlordResource
@@ -798,7 +793,6 @@ public class OverlordResourceTest
 
     replayAll();
 
-
     Task task = new KillUnusedSegmentsTask("kill_all", "allow", Intervals.ETERNITY, null, null, 10, null, null);
     overlordResource.taskPost(task, req);
 
@@ -817,7 +811,6 @@ public class OverlordResourceTest
     EasyMock.expect(authConfig.isEnableInputSourceSecurity()).andReturn(false);
 
     replayAll();
-
 
     // Verify that taskPost fails for user who has only datasource read access
     Task task = NoopTask.forDatasource(Datasources.WIKIPEDIA);
@@ -843,7 +836,6 @@ public class OverlordResourceTest
 
     replayAll();
 
-
     Response response = overlordResource
         .killPendingSegments("allow", new Interval(DateTimes.MIN, DateTimes.nowUtc()).toString(), req);
     Assert.assertEquals(200, response.getStatus());
@@ -868,7 +860,6 @@ public class OverlordResourceTest
         .once();
 
     replayAll();
-
 
     Response response = overlordResource
         .killPendingSegments("allow", new Interval(DateTimes.MIN, DateTimes.nowUtc()).toString(), req);
@@ -896,7 +887,6 @@ public class OverlordResourceTest
 
     replayAll();
 
-
     Response response = overlordResource
         .killPendingSegments("allow", new Interval(DateTimes.MIN, DateTimes.nowUtc()).toString(), req);
 
@@ -923,7 +913,6 @@ public class OverlordResourceTest
 
     replayAll();
 
-
     Response response = overlordResource
         .killPendingSegments("allow", new Interval(DateTimes.MIN, DateTimes.nowUtc()).toString(), req);
 
@@ -939,7 +928,6 @@ public class OverlordResourceTest
     EasyMock.expect(taskMaster.isLeader()).andReturn(false);
 
     replayAll();
-
 
     Response response = overlordResource
         .killPendingSegments("allow", new Interval(DateTimes.MIN, DateTimes.nowUtc()).toString(), req);
@@ -963,7 +951,6 @@ public class OverlordResourceTest
             .andReturn(Optional.absent());
 
     replayAll();
-
 
     final Response response1 = overlordResource.getTaskPayload("mytask");
     final TaskPayloadResponse taskPayloadResponse1 = TestHelper.makeJsonMapper().readValue(
@@ -1007,7 +994,6 @@ public class OverlordResourceTest
         .andReturn(ImmutableList.of());
 
     replayAll();
-
 
     final Response response1 = overlordResource.getTaskStatus(taskId);
     final TaskStatusResponse taskStatusResponse1 = TestHelper.makeJsonMapper().readValue(
@@ -1060,7 +1046,6 @@ public class OverlordResourceTest
             .andReturn(expectedLockedIntervals);
     replayAll();
 
-
     final Response response = overlordResource.getDatasourceLockedIntervals(minTaskPriority);
     Assert.assertEquals(200, response.getStatus());
 
@@ -1079,7 +1064,6 @@ public class OverlordResourceTest
   public void testGetLockedIntervalsWithEmptyBody()
   {
     replayAll();
-
 
     Response response = overlordResource.getDatasourceLockedIntervals(null);
     Assert.assertEquals(400, response.getStatus());
@@ -1107,7 +1091,6 @@ public class OverlordResourceTest
 
     replayAll();
     EasyMock.replay(mockQueue);
-
 
     final Map<String, Integer> response = (Map<String, Integer>) overlordResource
         .doShutdown("id_1")
@@ -1153,7 +1136,6 @@ public class OverlordResourceTest
     replayAll();
     EasyMock.replay(mockQueue);
 
-
     final Map<String, Integer> response = (Map<String, Integer>) overlordResource
         .shutdownTasksForDataSource("datasource")
         .getEntity();
@@ -1182,7 +1164,6 @@ public class OverlordResourceTest
     EasyMock.expectLastCall().once();
 
     replayAll();
-
 
     final Response response = overlordResource.enableWorker(host);
 
