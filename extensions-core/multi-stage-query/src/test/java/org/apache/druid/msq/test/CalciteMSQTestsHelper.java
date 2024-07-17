@@ -388,6 +388,9 @@ public class CalciteMSQTestsHelper
                             .inputTmpDir(tempFolderProducer.apply("tmpDir"))
                             .buildMMappedIndex();
         break;
+      case CalciteTests.WIKIPEDIA:
+        index = TestDataBuilder.makeWikipediaIndex(tempFolderProducer.apply("tmpDir"));
+        break;
       case CalciteTests.WIKIPEDIA_FIRST_LAST:
         index = TestDataBuilder.makeWikipediaIndexWithAggregation(tempFolderProducer.apply("tmpDir"));
         break;
