@@ -40,7 +40,7 @@ const TASK_ASSIGNMENT_DESCRIPTION: Record<string, string> = {
   auto: `Use as few tasks as possible without exceeding 512 MiB or 10,000 files per task, unless exceeding these limits is necessary to stay within 'maxNumTasks'. When calculating the size of files, the weighted size is used, which considers the file format and compression format used if any. When file sizes cannot be determined through directory listing (for example: http), behaves the same as 'max'.`,
 };
 
-const AUTO_MAX_NUM_LABEL_FN = (maxNum: number) => {
+const DEFAULT_MAX_NUM_LABEL_FN = (maxNum: number) => {
   if (maxNum === 2) return { text: 'Auto', label: '(1 controller + 1 worker)' };
   return { text: 'Auto', label: `(1 controller + max ${maxNum - 1} workers)` };
 };
@@ -59,7 +59,7 @@ export const MaxTasksButton = function MaxTasksButton(props: MaxTasksButtonProps
     queryContext,
     changeQueryContext,
     menuHeader,
-    maxNumLabelFn = AUTO_MAX_NUM_LABEL_FN,
+    maxNumLabelFn = DEFAULT_MAX_NUM_LABEL_FN,
     ...rest
   } = props;
   const [customMaxNumTasksDialogOpen, setCustomMaxNumTasksDialogOpen] = useState(false);
