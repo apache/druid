@@ -61,7 +61,6 @@ import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.RowAdapters;
 import org.apache.druid.segment.RowBasedColumnSelectorFactory;
-import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.joda.time.DateTime;
 
@@ -427,7 +426,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
   @Override
   public RowSignature resultArraySignature(TimeseriesQuery query)
   {
-    return resultSignature(query, RowSignature.Finalization.UNKNOWN);
+    return query.getResultSignature(RowSignature.Finalization.UNKNOWN);
   }
 
   @Override
@@ -468,8 +467,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
   )
   {
     final RowSignature rowSignature =
-        resultSignature(
-            query,
+        query.getResultSignature(
             query.context().isFinalize(true) ? RowSignature.Finalization.YES : RowSignature.Finalization.NO
         );
     final Pair<Cursor, Closeable> cursorAndCloseable = IterableRowsCursorHelper.getCursorFromSequence(
@@ -531,17 +529,5 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
           new TimeseriesResultValue(values)
       );
     };
-  }
-
-  private RowSignature resultSignature(final TimeseriesQuery query, final RowSignature.Finalization finalization)
-  {
-    RowSignature.Builder rowSignatureBuilder = RowSignature.builder();
-    rowSignatureBuilder.addTimeColumn();
-    if (StringUtils.isNotEmpty(query.getTimestampResultField())) {
-      rowSignatureBuilder.add(query.getTimestampResultField(), ColumnType.LONG);
-    }
-    rowSignatureBuilder.addAggregators(query.getAggregatorSpecs(), finalization);
-    rowSignatureBuilder.addPostAggregators(query.getPostAggregatorSpecs());
-    return rowSignatureBuilder.build();
   }
 }
