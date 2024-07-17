@@ -44,6 +44,7 @@ public class TestSqlModule extends TestDruidModule
     binder.bind(QueryScheduler.class)
         .toProvider(QuerySchedulerProvider.class)
         .in(LazySingleton.class);
+    binder.bind(QuerySchedulerProvider.class).in(LazySingleton.class);
     binder.bind(AuthenticatorMapper.class).toInstance(CalciteTests.TEST_AUTHENTICATOR_MAPPER);
     binder.bind(AuthorizerMapper.class).toInstance(CalciteTests.TEST_AUTHORIZER_MAPPER);
     binder.bind(Escalator.class).toInstance(CalciteTests.TEST_AUTHENTICATOR_ESCALATOR);

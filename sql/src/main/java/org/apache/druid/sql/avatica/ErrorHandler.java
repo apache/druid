@@ -34,7 +34,7 @@ import org.apache.druid.server.security.ForbiddenException;
 /**
  * ErrorHandler is a utility class that is used to sanitize exceptions.
  */
-class ErrorHandler
+public /*FIXME*/ class ErrorHandler
 {
   private final ErrorResponseTransformStrategy errorResponseTransformStrategy;
 

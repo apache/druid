@@ -44,7 +44,6 @@ import org.apache.druid.msq.test.MSQTestTaskActionClient;
 import org.apache.druid.msq.test.VerifyMSQSupportedNativeQueriesPredicate;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.groupby.TestGroupByBuffers;
-import org.apache.druid.quidem.TestSqlModule;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QuerySchedulerProvider;
@@ -56,6 +55,9 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Escalator;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.SqlToolbox;
+import org.apache.druid.sql.avatica.AvaticaServerConfig;
+import org.apache.druid.sql.avatica.DruidMeta;
+import org.apache.druid.sql.avatica.ErrorHandler;
 import org.apache.druid.sql.calcite.DrillWindowQueryTest;
 import org.apache.druid.sql.calcite.QueryTestBuilder;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
@@ -82,11 +84,10 @@ public class MSQDrillWindowQueryTest extends DrillWindowQueryTest
     {
       super.configureGuice(builder);
       builder.addModules(CalciteMSQTestsHelper.fetchModules(tempDirProducer::newTempFolder, TestGroupByBuffers.createDefault()).toArray(new Module[0]));
-      builder.addModule(new TestSqlModule());
       builder.addModule(new TestMSQSqlModule());
     }
 
-    static class TestSqlModule0 extends TestDruidModule
+    private static class TestSqlModule0 extends TestDruidModule
     {
       @Override
       public void configure(Binder binder)
@@ -150,6 +151,17 @@ public class MSQDrillWindowQueryTest extends DrillWindowQueryTest
             ImmutableList.of()
         );
         return new MSQTaskSqlEngine(indexingServiceClient, queryJsonMapper);
+      }
+
+      @Provides
+      @LazySingleton
+      public DruidMeta createMeta(
+          final @MultiStageQuery SqlStatementFactory sqlStatementFactory,
+          final AvaticaServerConfig config,
+          final ErrorHandler errorHandler,
+          final AuthenticatorMapper authMapper)
+      {
+        return new DruidMeta(sqlStatementFactory, config, errorHandler, authMapper);
       }
     }
 
