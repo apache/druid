@@ -111,6 +111,14 @@ const ARRAY_INGEST_MODE_DESCRIPTION: Record<ArrayIngestMode, JSX.Element> = {
   ),
 };
 
+const DEFAULT_ENGINES_LABEL_FN = (engine: DruidEngine | undefined) => {
+  if (!engine) return { text: 'auto' };
+  return {
+    text: engine,
+    label: engine === 'sql-msq-task' ? 'multi-stage-query' : undefined,
+  };
+};
+
 export interface RunPanelProps {
   query: WorkbenchQuery;
   onQueryChange(query: WorkbenchQuery): void;
@@ -137,7 +145,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
     clusterCapacity,
     maxTaskMenuHeader,
     maxTaskLabelFn,
-    enginesLabelFn,
+    enginesLabelFn = DEFAULT_ENGINES_LABEL_FN,
   } = props;
   const [editContextDialogOpen, setEditContextDialogOpen] = useState(false);
   const [editParametersDialogOpen, setEditParametersDialogOpen] = useState(false);
@@ -231,6 +239,9 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
   const intent = overloadWarning ? Intent.WARNING : undefined;
 
   const effectiveEngine = query.getEffectiveEngine();
+
+  const autoEngineLabel = enginesLabelFn(undefined);
+
   return (
     <div className="run-panel">
       <Button
@@ -265,18 +276,14 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                     <MenuItem
                       key="auto"
                       icon={tickIcon(queryEngine === undefined)}
-                      text={enginesLabelFn ? enginesLabelFn(undefined).text : 'auto'}
-                      label={enginesLabelFn ? enginesLabelFn(undefined).label : undefined}
+                      text={autoEngineLabel.text}
+                      label={autoEngineLabel.label}
                       onClick={() => onQueryChange(query.changeEngine(undefined))}
                       shouldDismissPopover={false}
                     />
                     {queryEngines.map(engine => {
-                      const { text, label } = enginesLabelFn
-                        ? enginesLabelFn(engine)
-                        : {
-                            text: String(engine),
-                            label: engine === 'sql-msq-task' ? 'multi-stage-query' : undefined,
-                          };
+                      const { text, label } = enginesLabelFn(engine);
+
                       return (
                         <MenuItem
                           key={String(engine)}

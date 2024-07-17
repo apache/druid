@@ -40,6 +40,11 @@ const TASK_ASSIGNMENT_DESCRIPTION: Record<string, string> = {
   auto: `Use as few tasks as possible without exceeding 512 MiB or 10,000 files per task, unless exceeding these limits is necessary to stay within 'maxNumTasks'. When calculating the size of files, the weighted size is used, which considers the file format and compression format used if any. When file sizes cannot be determined through directory listing (for example: http), behaves the same as 'max'.`,
 };
 
+const AUTO_MAX_NUM_LABEL_FN = (maxNum: number) => {
+  if (maxNum === 2) return { text: 'Auto', label: '(1 controller + 1 worker)' };
+  return { text: 'Auto', label: `(1 controller + max ${maxNum - 1} workers)` };
+};
+
 export interface MaxTasksButtonProps extends Omit<ButtonProps, 'text' | 'rightIcon'> {
   clusterCapacity: number | undefined;
   queryContext: QueryContext;
@@ -49,8 +54,14 @@ export interface MaxTasksButtonProps extends Omit<ButtonProps, 'text' | 'rightIc
 }
 
 export const MaxTasksButton = function MaxTasksButton(props: MaxTasksButtonProps) {
-  const { clusterCapacity, queryContext, changeQueryContext, menuHeader, maxNumLabelFn, ...rest } =
-    props;
+  const {
+    clusterCapacity,
+    queryContext,
+    changeQueryContext,
+    menuHeader,
+    maxNumLabelFn = AUTO_MAX_NUM_LABEL_FN,
+    ...rest
+  } = props;
   const [customMaxNumTasksDialogOpen, setCustomMaxNumTasksDialogOpen] = useState(false);
 
   const maxNumTasks = getMaxNumTasks(queryContext);
@@ -72,7 +83,7 @@ export const MaxTasksButton = function MaxTasksButton(props: MaxTasksButtonProps
         position={Position.BOTTOM_LEFT}
         content={
           <Menu>
-            {menuHeader || null}
+            {menuHeader}
             <MenuDivider title="Maximum number of tasks to launch" />
             {Boolean(fullClusterCapacity) && (
               <MenuItem
@@ -82,12 +93,7 @@ export const MaxTasksButton = function MaxTasksButton(props: MaxTasksButtonProps
               />
             )}
             {shownMaxNumTaskOptions.map(m => {
-              const { text, label } = maxNumLabelFn
-                ? maxNumLabelFn(m)
-                : {
-                    text: formatInteger(m),
-                    label: `(1 controller + ${m === 2 ? '1 worker' : `max ${m - 1} workers`})`,
-                  };
+              const { text, label } = maxNumLabelFn(m);
 
               return (
                 <MenuItem
