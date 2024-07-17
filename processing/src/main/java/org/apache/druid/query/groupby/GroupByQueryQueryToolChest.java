@@ -25,11 +25,14 @@ import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.core.ObjectCodec;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.JsonDeserializer;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
@@ -474,6 +477,8 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
     final JsonDeserializer<ResultRow> deserializer = new JsonDeserializer<ResultRow>()
     {
       final Class<?>[] dimensionClasses = createDimensionClasses(query);
+      final JsonDeserializer<Object>[] rootValueDeserializers = createRootValueDeserializers(dimensionClasses);
+      final JsonDeserializer<Obj
       boolean containsComplexDimensions = query.getDimensions()
                                                .stream()
                                                .anyMatch(
@@ -514,12 +519,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
           int numObjects = 0;
           while (jp.currentToken() != JsonToken.END_ARRAY) {
             if (numObjects >= query.getResultRowDimensionStart() && numObjects < query.getResultRowAggregatorStart()) {
-              objectArray[numObjects] = JacksonUtils.readObjectUsingDeserializationContext(
-                  jp,
-                  ctxt,
-                  dimensionClasses[numObjects - query.getResultRowDimensionStart()]
-              );
-
+              objectArray[numObjects] = rootValueDeserializers[numObjects - query.getResultRowDimensionStart()].deserialize(jp, ctxt);
             } else {
               objectArray[numObjects] = JacksonUtils.readObjectUsingDeserializationContext(
                   jp,
@@ -907,5 +907,20 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
       }
     }
     return classes;
+  }
+
+  private static Class<?> createRootValueDeserializers(final Class<?>[] classes, final JsonParser parser, DeserializationContext ctxt)
+      throws JsonMappingException
+  {
+    final TypeFactory typeFactory = TypeFactory.defaultInstance();
+    JsonDeserializer<Object>[] rootValueDeserializers = new JsonDeserializer[classes.length];
+
+    for (int i = 0; i < classes.length; ++i) {
+      Class<?> clazz = classes[i];
+      JavaType type = typeFactory.constructType(clazz);
+      rootValueDeserializers[i] = ctxt.findRootValueDeserializer(type);
+    }
+
+    return rootValueDeserializers;
   }
 }
