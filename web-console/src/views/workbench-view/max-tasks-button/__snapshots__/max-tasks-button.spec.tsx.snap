@@ -2,27 +2,24 @@
 
 exports[`MaxTasksButton matches snapshot 1`] = `
 <React.Fragment>
-  <Blueprint4.Popover2
-    boundary="clippingParents"
-    captureDismiss={false}
+  <Popover2
     className="max-tasks-button"
     content={
-      <Blueprint4.Menu>
-        <Blueprint4.MenuDivider
+      <Blueprint5.Menu>
+        <Blueprint5.MenuDivider
           title="Maximum number of tasks to launch"
         />
-        <Blueprint4.MenuItem
+        <Blueprint5.MenuItem
           active={false}
           disabled={false}
           icon="tick"
           multiline={false}
           onClick={[Function]}
           popoverProps={{}}
-          selected={false}
           shouldDismissPopover={true}
           text="6 (full cluster capacity)"
         />
-        <Blueprint4.MenuItem
+        <Blueprint5.MenuItem
           active={false}
           disabled={false}
           icon="blank"
@@ -30,11 +27,10 @@ exports[`MaxTasksButton matches snapshot 1`] = `
           multiline={false}
           onClick={[Function]}
           popoverProps={{}}
-          selected={false}
           shouldDismissPopover={true}
           text="2"
         />
-        <Blueprint4.MenuItem
+        <Blueprint5.MenuItem
           active={false}
           disabled={false}
           icon="blank"
@@ -42,11 +38,10 @@ exports[`MaxTasksButton matches snapshot 1`] = `
           multiline={false}
           onClick={[Function]}
           popoverProps={{}}
-          selected={false}
           shouldDismissPopover={true}
           text="3"
         />
-        <Blueprint4.MenuItem
+        <Blueprint5.MenuItem
           active={false}
           disabled={false}
           icon="blank"
@@ -54,11 +49,10 @@ exports[`MaxTasksButton matches snapshot 1`] = `
           multiline={false}
           onClick={[Function]}
           popoverProps={{}}
-          selected={false}
           shouldDismissPopover={true}
           text="4"
         />
-        <Blueprint4.MenuItem
+        <Blueprint5.MenuItem
           active={false}
           disabled={false}
           icon="blank"
@@ -66,41 +60,37 @@ exports[`MaxTasksButton matches snapshot 1`] = `
           multiline={false}
           onClick={[Function]}
           popoverProps={{}}
-          selected={false}
           shouldDismissPopover={true}
           text="5"
         />
-        <Blueprint4.MenuItem
+        <Blueprint5.MenuItem
           active={false}
           disabled={false}
           icon="blank"
           multiline={false}
           onClick={[Function]}
           popoverProps={{}}
-          selected={false}
           shouldDismissPopover={true}
           text="Custom"
         />
-        <Blueprint4.MenuDivider />
-        <Blueprint4.MenuItem
+        <Blueprint5.MenuDivider />
+        <Blueprint5.MenuItem
           active={false}
           disabled={false}
           icon="flow-branch"
           label="max"
           multiline={false}
           popoverProps={{}}
-          selected={false}
           shouldDismissPopover={true}
           text="Task assignment"
         >
-          <Blueprint4.MenuItem
+          <Blueprint5.MenuItem
             active={false}
             disabled={false}
             icon="tick"
             multiline={true}
             onClick={[Function]}
             popoverProps={{}}
-            selected={false}
             shouldDismissPopover={false}
             text={
               <React.Fragment>
@@ -112,14 +102,13 @@ exports[`MaxTasksButton matches snapshot 1`] = `
               </React.Fragment>
             }
           />
-          <Blueprint4.MenuItem
+          <Blueprint5.MenuItem
             active={false}
             disabled={false}
             icon="blank"
             multiline={true}
             onClick={[Function]}
             popoverProps={{}}
-            selected={false}
             shouldDismissPopover={false}
             text={
               <React.Fragment>
@@ -131,31 +120,15 @@ exports[`MaxTasksButton matches snapshot 1`] = `
               </React.Fragment>
             }
           />
-        </Blueprint4.MenuItem>
-      </Blueprint4.Menu>
+        </Blueprint5.MenuItem>
+      </Blueprint5.Menu>
     }
-    defaultIsOpen={false}
-    disabled={false}
-    fill={false}
-    hasBackdrop={false}
-    hoverCloseDelay={300}
-    hoverOpenDelay={150}
-    inheritDarkTheme={true}
-    interactionKind="click"
-    matchTargetWidth={false}
-    minimal={false}
-    openOnTargetFocus={true}
     position="bottom-left"
-    positioningStrategy="absolute"
-    shouldReturnFocusOnClose={false}
-    targetTagName="span"
-    transitionDuration={300}
-    usePortal={true}
   >
-    <Blueprint4.Button
+    <Blueprint5.Button
       rightIcon="caret-down"
       text="Max tasks: 6 (full cluster capacity)"
     />
-  </Blueprint4.Popover2>
+  </Popover2>
 </React.Fragment>
 `;

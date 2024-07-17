@@ -2,11 +2,12 @@
 
 exports[`MoreButton matches snapshot (empty) 1`] = `
 <span
-  aria-haspopup="true"
-  class="more-button bp4-popover2-target"
+  class="bp5-popover2-target more-button bp5-popover-target"
 >
   <button
-    class="bp4-button bp4-disabled"
+    aria-expanded="false"
+    aria-haspopup="menu"
+    class="bp5-button bp5-disabled"
     disabled=""
     tabindex="-1"
     title="More actions"
@@ -14,8 +15,7 @@ exports[`MoreButton matches snapshot (empty) 1`] = `
   >
     <span
       aria-hidden="true"
-      class="bp4-icon bp4-icon-more"
-      icon="more"
+      class="bp5-icon bp5-icon-more"
     >
       <svg
         data-icon="more"
@@ -36,32 +36,20 @@ exports[`MoreButton matches snapshot (empty) 1`] = `
 
 exports[`MoreButton matches snapshot (full) 1`] = `
 <span
-  aria-haspopup="true"
-  class="more-button bp4-popover2-target"
+  class="bp5-popover2-target more-button bp5-popover-target"
 >
   <button
-    class="bp4-button"
+    aria-expanded="false"
+    aria-haspopup="menu"
+    class="bp5-button"
     title="More actions"
     type="button"
   >
     <span
       aria-hidden="true"
-      class="bp4-icon bp4-icon-more"
-      icon="more"
-    >
-      <svg
-        data-icon="more"
-        height="16"
-        role="img"
-        viewBox="0 0 16 16"
-        width="16"
-      >
-        <path
-          d="M2 6.03a2 2 0 100 4 2 2 0 100-4zM14 6.03a2 2 0 100 4 2 2 0 100-4zM8 6.03a2 2 0 100 4 2 2 0 100-4z"
-          fill-rule="evenodd"
-        />
-      </svg>
-    </span>
+      class="bp5-icon bp5-icon-standard bp5-icon-more"
+      data-icon="more"
+    />
   </button>
 </span>
 `;
