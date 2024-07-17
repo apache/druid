@@ -44,6 +44,7 @@ import org.apache.druid.msq.test.MSQTestTaskActionClient;
 import org.apache.druid.msq.test.VerifyMSQSupportedNativeQueriesPredicate;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.groupby.TestGroupByBuffers;
+import org.apache.druid.quidem.TestSqlModule;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QuerySchedulerProvider;
@@ -53,7 +54,6 @@ import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.AuthenticatorMapper;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Escalator;
-import org.apache.druid.sql.SqlLifecycleManager;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.SqlToolbox;
 import org.apache.druid.sql.calcite.DrillWindowQueryTest;
@@ -62,7 +62,6 @@ import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
-import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidSchemaName;
 import org.apache.druid.sql.calcite.util.CalciteTests;
@@ -87,7 +86,7 @@ public class MSQDrillWindowQueryTest extends DrillWindowQueryTest
       builder.addModule(new TestMSQSqlModule());
     }
 
-    static class TestSqlModule extends TestDruidModule
+    static class TestSqlModule0 extends TestDruidModule
     {
       @Override
       public void configure(Binder binder)
@@ -111,31 +110,9 @@ public class MSQDrillWindowQueryTest extends DrillWindowQueryTest
         binder.bind(AuthorizerMapper.class).toInstance(CalciteTests.TEST_AUTHORIZER_MAPPER);
         binder.bind(Escalator.class).toInstance(CalciteTests.TEST_AUTHENTICATOR_ESCALATOR);
       }
-
     }
-    static class TestMSQSqlModule extends TestDruidModule {
 
-//      @Provides
-      @LazySingleton
-      public SqlToolbox makeSqlToolbox(
-          final PlannerFactory plannerFactory,
-          final ServiceEmitter emitter,
-          final RequestLogger requestLogger,
-          final QueryScheduler queryScheduler,
-          final Supplier<DefaultQueryConfig> defaultQueryConfig,
-          final SqlLifecycleManager sqlLifecycleManager
-      )
-      {
-        return new SqlToolbox(
-            null,
-            plannerFactory,
-            emitter,
-            requestLogger,
-            queryScheduler,
-            defaultQueryConfig.get(),
-            sqlLifecycleManager
-        );
-      }
+    static class TestMSQSqlModule extends TestDruidModule {
 
       @Provides
       @MultiStageQuery
