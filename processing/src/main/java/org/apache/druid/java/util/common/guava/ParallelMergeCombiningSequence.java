@@ -22,6 +22,9 @@ package org.apache.druid.java.util.common.guava;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
+import com.google.common.util.concurrent.AbstractFuture;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.SettableFuture;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QueryTimeoutException;
@@ -83,7 +86,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
   private final long targetTimeNanos;
   private final Consumer<MergeCombineMetrics> metricsReporter;
 
-  private final CancellationGizmo cancellationGizmo;
+  private final CancellationFuture cancellationFuture;
 
   public ParallelMergeCombiningSequence(
       ForkJoinPool workerPool,
@@ -113,14 +116,24 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
     this.targetTimeNanos = TimeUnit.NANOSECONDS.convert(targetTimeMillis, TimeUnit.MILLISECONDS);
     this.queueSize = (1 << 15) / batchSize; // each queue can by default hold ~32k rows
     this.metricsReporter = reporter;
-    this.cancellationGizmo = new CancellationGizmo();
+    this.cancellationFuture = new CancellationFuture(new CancellationGizmo());
   }
 
   @Override
   public <OutType> Yielder<OutType> toYielder(OutType initValue, YieldingAccumulator<OutType, T> accumulator)
   {
     if (inputSequences.isEmpty()) {
-      return Sequences.<T>empty().toYielder(initValue, accumulator);
+      return Sequences.wrap(
+          Sequences.<T>empty(),
+          new SequenceWrapper()
+          {
+            @Override
+            public void after(boolean isDone, Throwable thrown) throws Exception
+            {
+              cancellationFuture.set(true);
+            }
+          }
+      ).toYielder(initValue, accumulator);
     }
     // we make final output queue larger than the merging queues so if downstream readers are slower to read there is
     // less chance of blocking the merge
@@ -143,27 +156,43 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
         hasTimeout,
         timeoutAtNanos,
         metricsAccumulator,
-        cancellationGizmo
+        cancellationFuture.cancellationGizmo
     );
     workerPool.execute(mergeCombineAction);
-    Sequence<T> finalOutSequence = makeOutputSequenceForQueue(
-        outputQueue,
-        hasTimeout,
-        timeoutAtNanos,
-        cancellationGizmo
-    ).withBaggage(() -> {
-      if (metricsReporter != null) {
-        metricsAccumulator.setTotalWallTime(System.nanoTime() - startTimeNanos);
-        metricsReporter.accept(metricsAccumulator.build());
-      }
-    });
+
+    final Sequence<T> finalOutSequence = Sequences.wrap(
+        makeOutputSequenceForQueue(
+            outputQueue,
+            hasTimeout,
+            timeoutAtNanos,
+            cancellationFuture.cancellationGizmo
+        ),
+        new SequenceWrapper()
+        {
+          @Override
+          public void after(boolean isDone, Throwable thrown)
+          {
+            if (isDone) {
+              cancellationFuture.set(true);
+            } else {
+              cancellationFuture.cancel(true);
+            }
+            if (metricsReporter != null) {
+              metricsAccumulator.setTotalWallTime(System.nanoTime() - startTimeNanos);
+              metricsReporter.accept(metricsAccumulator.build());
+            }
+          }
+        }
+    );
     return finalOutSequence.toYielder(initValue, accumulator);
   }
 
-  @VisibleForTesting
-  public CancellationGizmo getCancellationGizmo()
+  /**
+   *
+   */
+  public CancellationFuture getCancellationFuture()
   {
-    return cancellationGizmo;
+    return cancellationFuture;
   }
 
   /**
@@ -180,8 +209,6 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
     return new BaseSequence<>(
         new BaseSequence.IteratorMaker<T, Iterator<T>>()
         {
-          private boolean shouldCancelOnCleanup = true;
-          
           @Override
           public Iterator<T> make()
           {
@@ -217,7 +244,6 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
                   }
 
                   if (currentBatch.isTerminalResult()) {
-                    shouldCancelOnCleanup = false;
                     return false;
                   }
                   return true;
@@ -245,9 +271,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
           @Override
           public void cleanup(Iterator<T> iterFromMake)
           {
-            if (shouldCancelOnCleanup) {
-              cancellationGizmo.cancel(new RuntimeException("Already closed"));
-            }
+            // nothing to cleanup
           }
         }
     );
@@ -1219,6 +1243,41 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
         return (RuntimeException) t;
       }
       return new RuntimeException(t);
+    }
+  }
+
+  public static class CancellationFuture extends AbstractFuture<Boolean>
+  {
+    private final CancellationGizmo cancellationGizmo;
+
+    public CancellationFuture(CancellationGizmo cancellationGizmo)
+    {
+      this.cancellationGizmo = cancellationGizmo;
+    }
+
+    public CancellationGizmo getCancellationGizmo()
+    {
+      return cancellationGizmo;
+    }
+
+    @Override
+    public boolean set(Boolean value)
+    {
+      return super.set(value);
+    }
+
+    @Override
+    public boolean setException(Throwable throwable)
+    {
+      cancellationGizmo.cancel(throwable);
+      return super.setException(throwable);
+    }
+
+    @Override
+    public boolean cancel(boolean mayInterruptIfRunning)
+    {
+      cancellationGizmo.cancel(new RuntimeException("Sequence cancelled"));
+      return super.cancel(mayInterruptIfRunning);
     }
   }
 

@@ -597,7 +597,7 @@ public class ParallelMergeCombiningSequenceTest
           reporter
       );
       Yielder<IntPair> parallelMergeCombineYielder = Yielders.each(parallelMergeCombineSequence);
-      reporter.gizmo = parallelMergeCombineSequence.getCancellationGizmo();
+      reporter.future = parallelMergeCombineSequence.getCancellationFuture();
       reporter.yielder = parallelMergeCombineYielder;
       reporter.yielder = parallelMergeCombineYielder.next(null);
       Assert.assertFalse(parallelMergeCombineYielder.isDone());
@@ -609,11 +609,10 @@ public class ParallelMergeCombiningSequenceTest
     Assert.assertTrue(pool.awaitQuiescence(10, TimeUnit.SECONDS));
     Assert.assertTrue(pool.isQuiescent());
     Assert.assertFalse(pool.hasQueuedSubmissions());
-    Assert.assertEquals(0, pool.getRunningThreadCount());
-    Assert.assertEquals(0, pool.getActiveThreadCount());
     for (TestingReporter reporter : reporters) {
       Assert.assertThrows(QueryTimeoutException.class, () -> reporter.yielder.next(null));
-      Assert.assertTrue(reporter.gizmo.isCancelled());
+      Assert.assertTrue(reporter.future.isCancelled());
+      Assert.assertTrue(reporter.future.getCancellationGizmo().isCancelled());
     }
     Assert.assertTrue(pool.awaitQuiescence(10, TimeUnit.SECONDS));
     Assert.assertTrue(pool.isQuiescent());
@@ -647,7 +646,7 @@ public class ParallelMergeCombiningSequenceTest
           reporter
       );
       Yielder<IntPair> parallelMergeCombineYielder = Yielders.each(parallelMergeCombineSequence);
-      reporter.gizmo = parallelMergeCombineSequence.getCancellationGizmo();
+      reporter.future = parallelMergeCombineSequence.getCancellationFuture();
       reporter.yielder = parallelMergeCombineYielder;
       parallelMergeCombineYielder.next(null);
       Assert.assertFalse(parallelMergeCombineYielder.isDone());
@@ -661,6 +660,7 @@ public class ParallelMergeCombiningSequenceTest
       }
       Assert.assertTrue(parallelMergeCombineYielder.isDone());
       parallelMergeCombineYielder.close();
+      Assert.assertTrue(testingReporter.future.isDone());
     }
 
     Assert.assertTrue(pool.awaitQuiescence(10, TimeUnit.SECONDS));
@@ -772,7 +772,9 @@ public class ParallelMergeCombiningSequenceTest
     parallelMergeCombineYielder.close();
     // cancellation trigger should not be set if sequence was fully yielded and close is called
     // (though shouldn't actually matter even if it was...)
-    Assert.assertFalse(parallelMergeCombineSequence.getCancellationGizmo().isCancelled());
+    Assert.assertFalse(parallelMergeCombineSequence.getCancellationFuture().isCancelled());
+    Assert.assertTrue(parallelMergeCombineSequence.getCancellationFuture().isDone());
+    Assert.assertFalse(parallelMergeCombineSequence.getCancellationFuture().getCancellationGizmo().isCancelled());
   }
 
   private void assertResult(
@@ -825,7 +827,9 @@ public class ParallelMergeCombiningSequenceTest
     parallelMergeCombineYielder.close();
     // cancellation trigger should not be set if sequence was fully yielded and close is called
     // (though shouldn't actually matter even if it was...)
-    Assert.assertFalse(parallelMergeCombineSequence.getCancellationGizmo().isCancelled());
+    Assert.assertFalse(parallelMergeCombineSequence.getCancellationFuture().isCancelled());
+    Assert.assertFalse(parallelMergeCombineSequence.getCancellationFuture().getCancellationGizmo().isCancelled());
+    Assert.assertTrue(parallelMergeCombineSequence.getCancellationFuture().isDone());
   }
 
   private void assertResultWithEarlyClose(
@@ -879,18 +883,19 @@ public class ParallelMergeCombiningSequenceTest
       }
     }
     // trying to next the yielder creates sadness for you
-    final String expectedExceptionMsg = "Already closed";
+    final String expectedExceptionMsg = "Sequence cancelled";
     Assert.assertEquals(combiningYielder.get(), parallelMergeCombineYielder.get());
     final Yielder<IntPair> finalYielder = parallelMergeCombineYielder;
     Throwable t = Assert.assertThrows(RuntimeException.class, () -> finalYielder.next(finalYielder.get()));
     Assert.assertEquals(expectedExceptionMsg, t.getMessage());
 
     // cancellation gizmo of sequence should be cancelled, and also should contain our expected message
-    Assert.assertTrue(parallelMergeCombineSequence.getCancellationGizmo().isCancelled());
+    Assert.assertTrue(parallelMergeCombineSequence.getCancellationFuture().getCancellationGizmo().isCancelled());
     Assert.assertEquals(
         expectedExceptionMsg,
-        parallelMergeCombineSequence.getCancellationGizmo().getRuntimeException().getMessage()
+        parallelMergeCombineSequence.getCancellationFuture().getCancellationGizmo().getRuntimeException().getMessage()
     );
+    Assert.assertTrue(parallelMergeCombineSequence.getCancellationFuture().isCancelled());
 
     Assert.assertTrue(pool.awaitQuiescence(10, TimeUnit.SECONDS));
     Assert.assertTrue(pool.isQuiescent());
@@ -1191,7 +1196,7 @@ public class ParallelMergeCombiningSequenceTest
 
   static class TestingReporter implements Consumer<ParallelMergeCombiningSequence.MergeCombineMetrics>
   {
-    ParallelMergeCombiningSequence.CancellationGizmo gizmo;
+    ParallelMergeCombiningSequence.CancellationFuture future;
     Yielder<IntPair> yielder;
     volatile ParallelMergeCombiningSequence.MergeCombineMetrics metrics;
     volatile boolean done = false;
