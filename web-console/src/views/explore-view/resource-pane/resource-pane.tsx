@@ -16,10 +16,11 @@
  * limitations under the License.
  */
 
-import { Icon, InputGroup, Menu, MenuItem } from '@blueprintjs/core';
+import { Classes, Icon, InputGroup, Menu, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
 import type { ExpressionMeta } from '@druid-toolkit/visuals-core';
+import classNames from 'classnames';
 import React, { useState } from 'react';
 
 import { caseInsensitiveContains, dataTypeToIcon, filterMap } from '../../../utils';
@@ -68,7 +69,7 @@ export const ResourcePane = function ResourcePane(props: ResourcePaneProps) {
               }
             >
               <div
-                className="bp4-menu-item"
+                className={Classes.MENU_ITEM}
                 draggable
                 onDragStart={e => {
                   e.dataTransfer.effectAllowed = 'all';
@@ -77,10 +78,12 @@ export const ResourcePane = function ResourcePane(props: ResourcePaneProps) {
                 }}
               >
                 <Icon
-                  className="bp4-menu-item-icon"
+                  className={Classes.MENU_ITEM_ICON}
                   icon={c.sqlType ? dataTypeToIcon(c.sqlType) : IconNames.BLANK}
                 />
-                <div className="bp4-fill bp4-text-overflow-ellipsis">{c.name}</div>
+                <div className={classNames(Classes.FILL, Classes.TEXT_OVERFLOW_ELLIPSIS)}>
+                  {c.name}
+                </div>
               </div>
             </Popover2>
           );

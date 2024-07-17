@@ -16,8 +16,10 @@
  * limitations under the License.
  */
 
+@import '../../../variables';
+
 .control-pane {
-  .bp4-tag-input-values .bp4-tag {
+  .#{$ns}-tag-input-values .#{$ns}-tag {
     vertical-align: top;
   }
 }
