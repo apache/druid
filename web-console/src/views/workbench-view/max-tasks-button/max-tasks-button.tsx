@@ -41,8 +41,8 @@ const TASK_ASSIGNMENT_DESCRIPTION: Record<string, string> = {
 };
 
 const DEFAULT_MAX_NUM_LABEL_FN = (maxNum: number) => {
-  if (maxNum === 2) return { text: 'Auto', label: '(1 controller + 1 worker)' };
-  return { text: 'Auto', label: `(1 controller + max ${maxNum - 1} workers)` };
+  if (maxNum === 2) return { text: formatInteger(maxNum), label: '(1 controller + 1 worker)' };
+  return { text: formatInteger(maxNum), label: `(1 controller + max ${maxNum - 1} workers)` };
 };
 
 export interface MaxTasksButtonProps extends Omit<ButtonProps, 'text' | 'rightIcon'> {
