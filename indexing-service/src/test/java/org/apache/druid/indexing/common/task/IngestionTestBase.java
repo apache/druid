@@ -61,6 +61,7 @@ import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
+import org.apache.druid.indexing.test.TestDataSegmentKiller;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RE;
@@ -81,7 +82,6 @@ import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
-import org.apache.druid.segment.loading.NoopDataSegmentKiller;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.SegmentSchemaCache;
@@ -130,6 +130,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
   private SegmentSchemaManager segmentSchemaManager;
   private SegmentSchemaCache segmentSchemaCache;
   private SupervisorManager supervisorManager;
+  private TestDataSegmentKiller dataSegmentKiller;
   protected File reportsFile;
 
   @Before
@@ -169,6 +170,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     lockbox = new TaskLockbox(taskStorage, storageCoordinator);
     segmentCacheManagerFactory = new SegmentCacheManagerFactory(TestIndex.INDEX_IO, getObjectMapper());
     reportsFile = temporaryFolder.newFile();
+    dataSegmentKiller = new TestDataSegmentKiller();
   }
 
   @After
@@ -243,6 +245,11 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     return testUtils.getRowIngestionMetersFactory();
   }
 
+  public TestDataSegmentKiller getDataSegmentKiller()
+  {
+    return dataSegmentKiller;
+  }
+
   public TaskActionToolbox createTaskActionToolbox()
   {
     storageCoordinator.start();
@@ -265,7 +272,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         .taskExecutorNode(new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false))
         .taskActionClient(createActionClient(task))
         .segmentPusher(new LocalDataSegmentPusher(new LocalDataSegmentPusherConfig()))
-        .dataSegmentKiller(new NoopDataSegmentKiller())
+        .dataSegmentKiller(dataSegmentKiller)
         .joinableFactory(NoopJoinableFactory.INSTANCE)
         .jsonMapper(objectMapper)
         .taskWorkDir(baseDir)
@@ -450,7 +457,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
             .taskExecutorNode(new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false))
             .taskActionClient(taskActionClient)
             .segmentPusher(new LocalDataSegmentPusher(new LocalDataSegmentPusherConfig()))
-            .dataSegmentKiller(new NoopDataSegmentKiller())
+            .dataSegmentKiller(dataSegmentKiller)
             .joinableFactory(NoopJoinableFactory.INSTANCE)
             .jsonMapper(objectMapper)
             .taskWorkDir(baseDir)

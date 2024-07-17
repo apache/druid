@@ -1499,33 +1499,16 @@ public class IndexTaskTest extends IngestionTestBase
       writer.write("this is not JSON\n"); // invalid JSON
     }
 
-    final IndexTuningConfig tuningConfig = new IndexTuningConfig(
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        new HashedPartitionsSpec(2, null, null),
-        INDEX_SPEC,
-        null,
-        null,
-        true,
-        false,
-        null,
-        null,
-        null,
-        true,
-        7,
-        7,
-        null,
-        null,
-        null
-    );
+    final IndexTuningConfig tuningConfig = TuningConfigBuilder
+        .forIndexTask()
+        .withPartitionsSpec(new HashedPartitionsSpec(2, null, null))
+        .withIndexSpec(INDEX_SPEC)
+        .withForceGuaranteedRollup(true)
+        .withReportParseExceptions(false)
+        .withLogParseExceptions(true)
+        .withMaxParseExceptions(7)
+        .withMaxSavedParseExceptions(7)
+        .build();
 
     final TimestampSpec timestampSpec = new TimestampSpec("time", "auto", null);
     final DimensionsSpec dimensionsSpec = new DimensionsSpec(
@@ -1668,33 +1651,16 @@ public class IndexTaskTest extends IngestionTestBase
     }
 
     // Allow up to 3 parse exceptions, and save up to 2 parse exceptions
-    final IndexTuningConfig tuningConfig = new IndexTuningConfig(
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        new DynamicPartitionsSpec(2, null),
-        INDEX_SPEC,
-        null,
-        null,
-        false,
-        false,
-        null,
-        null,
-        null,
-        true,
-        2,
-        5,
-        null,
-        null,
-        null
-    );
+    final IndexTuningConfig tuningConfig = TuningConfigBuilder
+        .forIndexTask()
+        .withPartitionsSpec(new DynamicPartitionsSpec(2, null))
+        .withIndexSpec(INDEX_SPEC)
+        .withForceGuaranteedRollup(false)
+        .withReportParseExceptions(false)
+        .withLogParseExceptions(true)
+        .withMaxParseExceptions(2)
+        .withMaxSavedParseExceptions(5)
+        .build();
 
     final TimestampSpec timestampSpec = new TimestampSpec("time", "auto", null);
     final DimensionsSpec dimensionsSpec = new DimensionsSpec(
@@ -1804,33 +1770,16 @@ public class IndexTaskTest extends IngestionTestBase
     }
 
     // Allow up to 3 parse exceptions, and save up to 2 parse exceptions
-    final IndexTuningConfig tuningConfig = new IndexTuningConfig(
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        new HashedPartitionsSpec(2, null, null),
-        INDEX_SPEC,
-        null,
-        null,
-        true,
-        false,
-        null,
-        null,
-        null,
-        true,
-        2,
-        5,
-        null,
-        null,
-        null
-    );
+    final IndexTuningConfig tuningConfig = TuningConfigBuilder
+        .forIndexTask()
+        .withPartitionsSpec(new HashedPartitionsSpec(2, null, null))
+        .withIndexSpec(INDEX_SPEC)
+        .withForceGuaranteedRollup(true)
+        .withReportParseExceptions(false)
+        .withLogParseExceptions(true)
+        .withMaxParseExceptions(2)
+        .withMaxSavedParseExceptions(5)
+        .build();
 
     final TimestampSpec timestampSpec = new TimestampSpec("time", "auto", null);
     final DimensionsSpec dimensionsSpec = new DimensionsSpec(
@@ -2611,33 +2560,17 @@ public class IndexTaskTest extends IngestionTestBase
       boolean reportParseException
   )
   {
-    return new IndexTuningConfig(
-        null,
-        maxRowsPerSegment,
-        null,
-        maxRowsInMemory,
-        null,
-        null,
-        maxTotalRows,
-        null,
-        null,
-        null,
-        partitionsSpec,
-        INDEX_SPEC,
-        null,
-        null,
-        forceGuaranteedRollup,
-        reportParseException,
-        null,
-        null,
-        null,
-        null,
-        null,
-        1,
-        null,
-        null,
-        null
-    );
+    return TuningConfigBuilder
+        .forIndexTask()
+        .withMaxRowsPerSegment(maxRowsPerSegment)
+        .withMaxRowsInMemory(maxRowsInMemory)
+        .withMaxTotalRows(maxTotalRows)
+        .withPartitionsSpec(partitionsSpec)
+        .withIndexSpec(INDEX_SPEC)
+        .withForceGuaranteedRollup(forceGuaranteedRollup)
+        .withReportParseExceptions(reportParseException)
+        .withMaxSavedParseExceptions(1)
+        .build();
   }
 
   @SuppressWarnings("unchecked")
