@@ -69,7 +69,6 @@ import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.Builder;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.PlannerComponentSupplier;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.QueryComponentSupplier;
-import org.apache.druid.sql.guice.SqlModule;
 import org.apache.http.client.utils.URIBuilder;
 import org.eclipse.jetty.server.Server;
 
@@ -259,7 +258,7 @@ public class DruidAvaticaTestDriver implements Driver
             binder.bind(QueryScheduler.class)
                 .toProvider(QuerySchedulerProvider.class)
                 .in(LazySingleton.class);
-            binder.install(new SqlModule.SqlStatementFactoryModule());
+//            binder.install(new SqlModule.SqlStatementFactoryModule());
             binder.bind(new TypeLiteral<Supplier<DefaultQueryConfig>>()
             {
             }).toInstance(Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of())));
