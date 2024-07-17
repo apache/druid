@@ -7328,8 +7328,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
     assertQueryIsUnplannable(
         "SELECT COUNT(DISTINCT nester) FROM druid.nested",
         "Query could not be planned. A possible reason is [Using APPROX_COUNT_DISTINCT() or enabling "
-        + "approximation with COUNT(DISTINCT) is not supported for column type [COMPLEX<json>]. You can disable "
-        + "approximation, use COUNT(DISTINCT nester) and rerun the query.]"
+        + "approximation with COUNT(DISTINCT) is not supported for column type [COMPLEX<json>]. "
+        + "You can disable approximation by setting [useApproximateCountDistinct: false] in the query context."
     );
   }
 

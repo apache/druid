@@ -39,6 +39,7 @@ import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.Calcites;
+import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.InputAccessor;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
@@ -124,9 +125,9 @@ public abstract class ThetaSketchBaseSqlAggregator implements SqlAggregator
       if (inputType.is(ValueType.COMPLEX)) {
         plannerContext.setPlanningError(
             "Using APPROX_COUNT_DISTINCT() or enabling approximation with COUNT(DISTINCT) is not supported for"
-            + " column type [%s]. You can disable approximation, use COUNT(DISTINCT %s) and rerun the query.",
+            + " column type [%s]. You can disable approximation by setting [%s: false] in the query context.",
             columnArg.getDruidType(),
-            columnArg.getSimpleExtraction().getColumn()
+            PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT
         );
         return null;
       }

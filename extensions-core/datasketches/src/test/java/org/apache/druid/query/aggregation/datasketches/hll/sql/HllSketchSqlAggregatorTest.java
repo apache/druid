@@ -531,7 +531,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
         "SELECT COUNT(distinct double_first_added) FROM druid.wikipedia_first_last",
         "Query could not be planned. A possible reason is [Using APPROX_COUNT_DISTINCT() or enabling "
         + "approximation with COUNT(DISTINCT) is not supported for column type [COMPLEX<serializablePairLongDouble>]."
-        + " You can disable approximation, use COUNT(DISTINCT double_first_added) and rerun the query.]"
+        + " You can disable approximation by setting [useApproximateCountDistinct: false] in the query context."
     );
   }
 
