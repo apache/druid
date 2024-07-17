@@ -1390,8 +1390,8 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
    */
   static class MergeCombineMetricsAccumulator
   {
-    List<MergeCombineActionMetricsAccumulator> partitionMetrics;
-    MergeCombineActionMetricsAccumulator mergeMetrics;
+    List<MergeCombineActionMetricsAccumulator> partitionMetrics = Collections.emptyList();
+    MergeCombineActionMetricsAccumulator mergeMetrics = new MergeCombineActionMetricsAccumulator();
 
     private long totalWallTime;
 
@@ -1425,8 +1425,8 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       // partition
       long totalPoolTasks = 1 + 1 + partitionMetrics.size();
 
-      long fastestPartInitialized = partitionMetrics.size() > 0 ? Long.MAX_VALUE : mergeMetrics.getPartitionInitializedtime();
-      long slowestPartInitialied = partitionMetrics.size() > 0 ? Long.MIN_VALUE : mergeMetrics.getPartitionInitializedtime();
+      long fastestPartInitialized = !partitionMetrics.isEmpty() ? Long.MAX_VALUE : mergeMetrics.getPartitionInitializedtime();
+      long slowestPartInitialied = !partitionMetrics.isEmpty() ? Long.MIN_VALUE : mergeMetrics.getPartitionInitializedtime();
 
       // accumulate input row count, cpu time, and total number of tasks from each partition
       for (MergeCombineActionMetricsAccumulator partition : partitionMetrics) {
