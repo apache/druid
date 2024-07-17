@@ -1033,12 +1033,7 @@ public class MSQWindowTest extends MSQTestBase
                                             .add("m2", ColumnType.DOUBLE)
                                             .build();
 
-    final WindowFrame theFrame = WindowFrame.forOrderBy(
-        new ColumnWithDirection(
-            "m1",
-            ColumnWithDirection.Direction.ASC
-        )
-    );
+    final WindowFrame theFrame = WindowFrame.forOrderBy("m1");
     final AggregatorFactory[] theAggs = {
         new DoubleSumAggregatorFactory("w0", "m1")
     };

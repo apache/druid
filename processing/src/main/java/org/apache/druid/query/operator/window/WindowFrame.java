@@ -25,14 +25,10 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import org.apache.druid.query.operator.ColumnWithDirection;
-
 import javax.annotation.Nullable;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
@@ -55,15 +51,15 @@ public interface WindowFrame
   static Groups groups(
       final Integer lowerOffset,
       final Integer upperOffset,
-      final List<ColumnWithDirection> orderBy)
+      final List<String> orderByColumns)
   {
-    return new WindowFrame.Groups(lowerOffset, upperOffset, orderBy);
+    return new WindowFrame.Groups(lowerOffset, upperOffset, orderByColumns);
 
   }
 
-  static WindowFrame forOrderBy(ColumnWithDirection... orderBy)
+  static WindowFrame forOrderBy(String... orderByColumns)
   {
-    return groups(null, 0, Lists.newArrayList(orderBy));
+    return groups(null, 0, Lists.newArrayList(orderByColumns));
   }
 
   class Unbounded implements WindowFrame
@@ -184,30 +180,27 @@ public interface WindowFrame
   class Groups extends OffsetFrame
   {
     @JsonProperty
-    private final ImmutableList<ColumnWithDirection> orderBy;
+    private final ImmutableList<String> orderByColumns;
 
     @JsonCreator
     public Groups(
         @JsonProperty("lowerOffset") Integer lowerOffset,
         @JsonProperty("upperOffset") Integer upperOffset,
-        @JsonProperty("orderBy") List<ColumnWithDirection> orderBy)
+        @JsonProperty("orderByColumns") List<String> orderByColumns)
     {
       super(lowerOffset, upperOffset);
-      this.orderBy = ImmutableList.copyOf(orderBy);
+      this.orderByColumns = ImmutableList.copyOf(orderByColumns);
     }
 
-    public List<String> getOrderByColNames()
+    public List<String> getOrderByColumns()
     {
-      if (orderBy == null) {
-        return Collections.emptyList();
-      }
-      return orderBy.stream().map(ColumnWithDirection::getColumn).collect(Collectors.toList());
+      return orderByColumns;
     }
 
     @Override
     public int hashCode()
     {
-      return Objects.hash(lowerOffset, orderBy, upperOffset);
+      return Objects.hash(lowerOffset, orderByColumns, upperOffset);
     }
 
     @Override
@@ -224,7 +217,7 @@ public interface WindowFrame
       }
       Groups other = (Groups) obj;
       return Objects.equals(lowerOffset, other.lowerOffset)
-          && Objects.equals(orderBy, other.orderBy)
+          && Objects.equals(orderByColumns, other.orderByColumns)
           && Objects.equals(upperOffset, other.upperOffset);
     }
 
@@ -234,7 +227,7 @@ public interface WindowFrame
       return "WindowFrame.Groups [" +
           "lowerOffset=" + lowerOffset +
           ", upperOffset=" + upperOffset +
-          ", orderBy=" + orderBy + "]";
+          ", orderByColumns=" + orderByColumns + "]";
     }
   }
 
