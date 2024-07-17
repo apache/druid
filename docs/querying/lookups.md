@@ -271,7 +271,7 @@ You can save the configuration across restarts so a process doesn't have to wait
 
 The Broker provides an API for lookup introspection if the lookup type implements a `LookupIntrospectHandler`.
 
-A `GET` request to `/druid/v1/lookups/introspect/{lookupId}` returns the map of complete values. For example:
+Send a `GET` request to `/druid/v1/lookups/introspect/{lookupId}` to return the map of complete values. For example:
 
 `GET /druid/v1/lookups/introspect/nato-phonetic`
 ```
@@ -287,9 +287,9 @@ A `GET` request to `/druid/v1/lookups/introspect/{lookupId}` returns the map of 
 
 ```
 
-The list of keys can be retrieved via `GET` to `/druid/v1/lookups/introspect/{lookupId}/keys"`
+Send a `GET` request to `/druid/v1/lookups/introspect/{lookupId}/keys` to return the list of keys. For example:
 
-ex: `GET /druid/v1/lookups/introspect/nato-phonetic/keys`
+`GET /druid/v1/lookups/introspect/nato-phonetic/keys`
 ```
 [
     "A",
@@ -302,9 +302,9 @@ ex: `GET /druid/v1/lookups/introspect/nato-phonetic/keys`
 ]
 ```
 
-A `GET` request to `/druid/v1/lookups/introspect/{lookupId}/values"` will return the list of values.
+Send a `GET` request to `/druid/v1/lookups/introspect/{lookupId}/values` to return the list of values. For example:
 
-ex: `GET /druid/v1/lookups/introspect/nato-phonetic/values`
+`GET /druid/v1/lookups/introspect/nato-phonetic/values`
 ```
 [
     "Alfa",
