@@ -20,6 +20,8 @@
 package org.apache.druid.sql.avatica;
 //package org.apache.druid.msq.exec;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import org.apache.calcite.avatica.Meta;
@@ -35,6 +37,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.server.security.AuthenticatorMapper;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.calcite.planner.DruidTypeSystem;
+import org.apache.druid.sql.calcite.run.DruidHook;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import java.util.Collections;
@@ -43,6 +46,7 @@ import java.util.List;
 public class MSQDruidMeta extends DruidMeta
 {
   protected final MSQTestOverlordServiceClient overlordClient;
+  private final ObjectMapper objectMapper;
 
   @Inject
   public MSQDruidMeta(
@@ -50,10 +54,13 @@ public class MSQDruidMeta extends DruidMeta
       final AvaticaServerConfig config,
       final ErrorHandler errorHandler,
       final AuthenticatorMapper authMapper,
-      final MSQTestOverlordServiceClient overlordClient)
+      final MSQTestOverlordServiceClient overlordClient,
+      final ObjectMapper objectMapper
+      )
   {
     super(sqlStatementFactory, config, errorHandler, authMapper);
     this.overlordClient = overlordClient;
+    this.objectMapper = objectMapper;
   }
 
   @Override
@@ -84,6 +91,16 @@ public class MSQDruidMeta extends DruidMeta
 //            convertColumnAndTypeToRowSignature(payload.getResults().getSignature()), resultRows
 //        )
 //    );
+    try {
+      String str = objectMapper
+          .writerWithDefaultPrettyPrinter()
+          .writeValueAsString(payload.getStages());
+      DruidHook.dispatch(DruidHook.MSQ_PLAN, str);
+    }
+    catch (JsonProcessingException e) {
+      DruidHook.dispatch(DruidHook.MSQ_PLAN, "error happened during json serialization");
+    }
+
 
     Signature signature = makeSignature(druidStatement, payload.getResults().getSignature());
     @SuppressWarnings("unchecked")

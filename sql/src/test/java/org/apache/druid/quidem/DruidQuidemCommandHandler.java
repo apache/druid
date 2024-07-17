@@ -64,6 +64,9 @@ public class DruidQuidemCommandHandler implements CommandHandler
     if (line.startsWith("nativePlan")) {
       return new NativePlanCommand(lines, content);
     }
+    if (line.startsWith("msqPlan")) {
+      return new MSQPlanCommand(lines, content);
+    }
     return null;
   }
 
@@ -186,6 +189,33 @@ public class DruidQuidemCommandHandler implements CommandHandler
     }
   }
 
+  /**
+   * Handles plan commands captured via {@link Hook}.
+   */
+  abstract static class AbstractXPlanCommand extends AbstractPlanCommand
+  {
+    HookKey<String> hook;
+
+    AbstractXPlanCommand(List<String> lines, List<String> content, DruidHook.HookKey<String> hook)
+    {
+      super(lines, content);
+      this.hook = hook;
+    }
+
+    @Override
+    protected final void executeExplain(Context x) throws IOException
+    {
+      List<String> logged = new ArrayList<>();
+      try (Closeable unhook = DruidHook.withHook(hook, (key, relNode) -> {
+        logged.add(relNode);
+      })) {
+        executeQuery(x);
+      }
+
+      x.echo(logged);
+    }
+  }
+
   static class LogicalPlanCommand extends AbstractRelPlanCommand
   {
     LogicalPlanCommand(List<String> lines, List<String> content)
@@ -207,6 +237,13 @@ public class DruidQuidemCommandHandler implements CommandHandler
     ConvertedPlanCommand(List<String> lines, List<String> content)
     {
       super(lines, content, DruidHook.CONVERTED_PLAN);
+    }
+  }
+  static class MSQPlanCommand extends AbstractXPlanCommand
+  {
+    MSQPlanCommand(List<String> lines, List<String> content)
+    {
+      super(lines, content, DruidHook.MSQ_PLAN);
     }
   }
 }
