@@ -56,6 +56,7 @@ import org.apache.druid.server.security.Escalator;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.SqlToolbox;
 import org.apache.druid.sql.avatica.DruidMeta;
+import org.apache.druid.sql.avatica.MSQDruidMeta;
 import org.apache.druid.sql.calcite.DrillWindowQueryTest;
 import org.apache.druid.sql.calcite.QueryTestBuilder;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
