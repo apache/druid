@@ -766,7 +766,7 @@ public class AggregationTestHelper implements Closeable
           String resultStr = mapper.writer().writeValueAsString(yielder);
 
           List<ResultRow> resultRows = Lists.transform(
-              readQueryResultArrayFromString(resultStr),
+              readQueryResultArrayFromString(resultStr, queryPlus.getQuery()),
               toolChest.makePreComputeManipulatorFn(
                   queryPlus.getQuery(),
                   MetricManipulatorFns.deserializing()
@@ -798,11 +798,13 @@ public class AggregationTestHelper implements Closeable
     };
   }
 
-  private List readQueryResultArrayFromString(String str) throws Exception
+  private List readQueryResultArrayFromString(String str, Query query) throws Exception
   {
     List result = new ArrayList();
 
-    JsonParser jp = mapper.getFactory().createParser(str);
+    ObjectMapper decoratedMapper = toolChest.decorateObjectMapper(mapper, query);
+
+    JsonParser jp = decoratedMapper.getFactory().createParser(str);
 
     if (jp.nextToken() != JsonToken.START_ARRAY) {
       throw new IAE("not an array [%s]", str);

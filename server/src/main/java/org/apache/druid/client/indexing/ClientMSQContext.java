@@ -17,30 +17,19 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.common.actions;
-
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
+package org.apache.druid.client.indexing;
 
 /**
- * The configuration for task audit logging.
- * This class will be removed in future releases. See https://github.com/apache/druid/issues/5859.
+ * This class copies over MSQ context parameters from the MSQ extension. This is required to validate the submitted
+ * compaction config at the coordinator. The values used here should be kept in sync with those in
+ * {@link org.apache.druid.msq.util.MultiStageQueryContext}
  */
-@Deprecated
-public class TaskAuditLogConfig
+public class ClientMSQContext
 {
-  @JsonProperty
-  private final boolean enabled;
-
-  @JsonCreator
-  public TaskAuditLogConfig(@JsonProperty("enabled") boolean enabled)
-  {
-    this.enabled = enabled;
-  }
-
-  @JsonProperty("enabled")
-  public boolean isEnabled()
-  {
-    return enabled;
-  }
+  public static final String CTX_MAX_NUM_TASKS = "maxNumTasks";
+  public static final int DEFAULT_MAX_NUM_TASKS = 2;
+  /**
+   * Limit to ensure that an MSQ compaction task doesn't take up all task slots in a cluster.
+   */
+  public static final int MAX_TASK_SLOTS_FOR_MSQ_COMPACTION_TASK = 5;
 }

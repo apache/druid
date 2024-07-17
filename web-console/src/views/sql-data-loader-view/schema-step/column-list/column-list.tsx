@@ -76,7 +76,7 @@ export const ColumnList = function ColumnList(props: ColumnListProps) {
                       aggregated at query time. They are always single Strings, arrays of Strings,
                       single Longs, single Doubles or single Floats.
                     </p>
-                    <LearnMore href={`${getLink('DOCS')}/ingestion/schema-design.html`} />
+                    <LearnMore href={`${getLink('DOCS')}/ingestion/schema-design`} />
                   </PopoverText>
                 }
                 position="left-bottom"
@@ -122,7 +122,7 @@ export const ColumnList = function ColumnList(props: ColumnListProps) {
                     (integers or floats) but can also be stored as complex objects like HyperLogLog
                     sketches or approximate quantile sketches.
                   </p>
-                  <LearnMore href={`${getLink('DOCS')}/ingestion/schema-design.html`} />
+                  <LearnMore href={`${getLink('DOCS')}/ingestion/schema-design`} />
                 </PopoverText>
               }
               position="left-bottom"

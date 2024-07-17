@@ -78,7 +78,6 @@ import org.apache.druid.indexing.common.actions.LocalTaskActionClientFactory;
 import org.apache.druid.indexing.common.actions.RemoteTaskActionClientFactory;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.actions.TaskActionToolbox;
-import org.apache.druid.indexing.common.actions.TaskAuditLogConfig;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
@@ -125,6 +124,7 @@ import org.apache.druid.segment.realtime.firehose.ServiceAnnouncingChatHandlerPr
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.ResponseContextConfig;
 import org.apache.druid.server.SegmentManager;
+import org.apache.druid.server.coordination.SegmentBootstrapper;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordination.ZkCoordinator;
 import org.apache.druid.server.http.HistoricalResource;
@@ -482,7 +482,6 @@ public class CliPeon extends GuiceRunnable
     binder.bind(TaskToolboxFactory.class).in(LazySingleton.class);
 
     JsonConfigProvider.bind(binder, "druid.indexer.task", TaskConfig.class);
-    JsonConfigProvider.bind(binder, "druid.indexer.auditlog", TaskAuditLogConfig.class);
     JsonConfigProvider.bind(binder, "druid.peon.taskActionClient.retry", RetryPolicyConfig.class);
 
     configureTaskActionClient(binder);
@@ -553,6 +552,7 @@ public class CliPeon extends GuiceRunnable
       if (isZkEnabled) {
         LifecycleModule.register(binder, ZkCoordinator.class);
       }
+      LifecycleModule.register(binder, SegmentBootstrapper.class);
     }
 
     @Provides
