@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.writeout;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.io.Closer;
@@ -132,5 +133,17 @@ public final class TmpFileSegmentWriteOutMedium implements SegmentWriteOutMedium
         log.info("%,15d => %,15d", entry.getKey(), entry.getValue());
       }
     }
+  }
+
+  @VisibleForTesting
+  int getFilesCreated()
+  {
+    return filesCreated.get();
+  }
+
+  @VisibleForTesting
+  int getNumLocallyCreated()
+  {
+    return numLocallyCreated;
   }
 }
