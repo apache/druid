@@ -302,18 +302,10 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
     List<KeyColumn> keyColsOfWindow = new ArrayList<>();
     for (String partitionColumn : partition.getPartitionColumns()) {
       KeyColumn kc;
-      if (sortColumnsMap.containsKey(partitionColumn)) {
-        if (sortColumnsMap.get(partitionColumn) == ColumnWithDirection.Direction.ASC) {
-          kc = new KeyColumn(partitionColumn, KeyOrder.ASCENDING);
-        } else {
-          kc = new KeyColumn(partitionColumn, KeyOrder.DESCENDING);
-        }
+      if (sortColumnsMap.get(partitionColumn) == ColumnWithDirection.Direction.DESC) {
+        kc = new KeyColumn(partitionColumn, KeyOrder.DESCENDING);
       } else {
-        throw new ISE(
-            "Found unexpected partition column [%s] not present in sort columns [%s].",
-            partitionColumn,
-            sortColumnsMap
-        );
+        kc = new KeyColumn(partitionColumn, KeyOrder.ASCENDING);
       }
       keyColsOfWindow.add(kc);
     }
