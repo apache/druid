@@ -51,6 +51,8 @@ public class SqlToolbox
   )
   {
     this.engine = engine;
+    System.out.println("SqlToolbox.SqlToolbox");
+    System.out.println("engine = " + engine);
     this.plannerFactory = plannerFactory;
     this.emitter = emitter;
     this.requestLogger = requestLogger;

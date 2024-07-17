@@ -527,6 +527,7 @@ public class SqlTestFrameworkConfig
       Set<Class<? extends QueryComponentSupplier>> availableSuppliers = componentSupplierClassCache.get(pkg);
       for (Class<? extends QueryComponentSupplier> cl : availableSuppliers) {
         if (cl.getSimpleName().equals(name)) {
+          System.out.println("cl = " + cl);
           return cl;
         }
       }

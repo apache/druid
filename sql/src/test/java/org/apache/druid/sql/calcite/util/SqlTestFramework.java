@@ -688,6 +688,7 @@ public class SqlTestFramework
 
     this.injector = serviceInjector.build();
     this.engine = builder.componentSupplier.createEngine(queryLifecycleFactory(), queryJsonMapper(), injector);
+    System.out.println("engine = " + this.engine);
     componentSupplier.configureJsonMapper(queryJsonMapper());
     componentSupplier.finalizeTestFramework(this);
   }
