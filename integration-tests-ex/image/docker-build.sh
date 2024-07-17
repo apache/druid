@@ -26,8 +26,6 @@
 
 SCRIPT_DIR=$(cd $(dirname $0) && pwd)
 
-echo "script_dir is $SCRIPT_DIR"
-
 # Maven should have created the docker dir with the needed
 # dependency jars. If doing this by hand, run Maven once to
 # populate these jars.
@@ -61,8 +59,6 @@ docker build -t $DRUID_IT_IMAGE_NAME \
 if [ $BACKWARD_COMPATIBILITY_IT_ENABLED != "true" ]; then
   exit 1
 fi
-
-echo "Building previous docker image"
 
 # Download the previous druid tar
 curl -L $DRUID_PREVIOUS_VERSION_DOWNLOAD_URL --output apache-druid-$DRUID_PREV_VERSION-bin.tar.gz

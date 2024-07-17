@@ -14,38 +14,36 @@
 # limitations under the License.
 
 name: "Unit & Integration tests CI"
-#on:
-#  push:
-#    paths-ignore:
-#      - '**/*.md'
-#      - 'dev/**'
-#      - 'docs/**'
-#      - 'examples/**/jupyter-notebooks/**'
-#      - 'web-console/**'
-#      - 'website/**'
-#    branches:
-#      - master
-#      - '[0-9]+.[0-9]+.[0-9]+' # release branches
-#      - '[0-9]+.[0-9]+.[0-9]+-[A-Za-z0-9]+' # release branches
-#  pull_request:
-#    paths-ignore:
-#      - '**/*.md'
-#      - 'dev/**'
-#      - 'docs/**'
-#      - 'examples/**/jupyter-notebooks/**'
-#      - 'web-console/**'
-#      - 'website/**'
-#    branches:
-#      - master
-#      - '[0-9]+.[0-9]+.[0-9]+' # release branches
-#      - '[0-9]+.[0-9]+.[0-9]+-[A-Za-z0-9]+' # release branches
 on:
-  # Trigger on push events to any branch
-  push: {}  # Empty curly braces indicate all branches
-#
-#concurrency:
-#  group: '${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.head_ref || github.run_id }}' # group workflows only on pull_requests and not on branch commits
-#  cancel-in-progress: true
+  push:
+    paths-ignore:
+      - '**/*.md'
+      - 'dev/**'
+      - 'docs/**'
+      - 'examples/**/jupyter-notebooks/**'
+      - 'web-console/**'
+      - 'website/**'
+    branches:
+      - master
+      - '[0-9]+.[0-9]+.[0-9]+' # release branches
+      - '[0-9]+.[0-9]+.[0-9]+-[A-Za-z0-9]+' # release branches
+  pull_request:
+    paths-ignore:
+      - '**/*.md'
+      - 'dev/**'
+      - 'docs/**'
+      - 'examples/**/jupyter-notebooks/**'
+      - 'web-console/**'
+      - 'website/**'
+    branches:
+      - master
+      - '[0-9]+.[0-9]+.[0-9]+' # release branches
+      - '[0-9]+.[0-9]+.[0-9]+-[A-Za-z0-9]+' # release branches
+
+
+concurrency:
+  group: '${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.head_ref || github.run_id }}' # group workflows only on pull_requests and not on branch commits
+  cancel-in-progress: true
 
 env:
   MYSQL_DRIVER_CLASSNAME: com.mysql.jdbc.Driver # Used to set druid config in docker image for revised ITs
@@ -133,38 +131,37 @@ jobs:
           echo $DRUID_PREVIOUS_IT_IMAGE_NAME
           docker save "$DRUID_PREVIOUS_IT_IMAGE_NAME" | gzip > druid-container-jdk${{ inputs.build_jdk }}-version${{ inputs.DRUID_PREVIOUS_VERSION }}.tar.gz
 
-#  unit-tests-phase2:
-#    strategy:
-#      fail-fast: false
-#      matrix:
-#        jdk: [ 11, 17, 21 ]
-#    name: "unit tests (jdk${{ matrix.jdk }}, sql-compat=true)"
-#    uses: ./.github/workflows/unit-tests.yml
-#    needs: unit-tests
-#    if: false #${{ always() && (needs.unit-tests.result == 'success' || needs.unit-tests.outputs.continue_tests) }}
-#    with:
-#      jdk: ${{ matrix.jdk }}
-#      sql_compatibility: true
-#
-#  unit-tests:
-#    if: false
-#    strategy:
-#      fail-fast: false
-#      matrix:
-#        sql_compatibility: [ false, true ]
-#    name: "unit tests (jdk8, sql-compat=${{ matrix.sql_compatibility }})"
-#    uses: ./.github/workflows/unit-tests.yml
-#    needs: build
-#    with:
-#      jdk: 8
-#      sql_compatibility: ${{ matrix.sql_compatibility }}
-#
-#  standard-its:
-#    needs: unit-tests
-#    if: false #${{ always() && (needs.unit-tests.result == 'success' || needs.unit-tests.outputs.continue_tests) }}
-#    uses: ./.github/workflows/standard-its.yml
-#
-#
+  unit-tests-phase2:
+    strategy:
+      fail-fast: false
+      matrix:
+        jdk: [ 11, 17, 21 ]
+    name: "unit tests (jdk${{ matrix.jdk }}, sql-compat=true)"
+    uses: ./.github/workflows/unit-tests.yml
+    needs: unit-tests
+    if: false #${{ always() && (needs.unit-tests.result == 'success' || needs.unit-tests.outputs.continue_tests) }}
+    with:
+      jdk: ${{ matrix.jdk }}
+      sql_compatibility: true
+
+  unit-tests:
+    if: false
+    strategy:
+      fail-fast: false
+      matrix:
+        sql_compatibility: [ false, true ]
+    name: "unit tests (jdk8, sql-compat=${{ matrix.sql_compatibility }})"
+    uses: ./.github/workflows/unit-tests.yml
+    needs: build
+    with:
+      jdk: 8
+      sql_compatibility: ${{ matrix.sql_compatibility }}
+
+  standard-its:
+    needs: unit-tests
+    if: false #${{ always() && (needs.unit-tests.result == 'success' || needs.unit-tests.outputs.continue_tests) }}
+    uses: ./.github/workflows/standard-its.yml
+
   revised-its:
     needs: build
     if: true #${{ always() && (needs.unit-tests.result == 'success' || needs.unit-tests.outputs.continue_tests) }}

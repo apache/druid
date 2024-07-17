@@ -106,8 +106,6 @@ import java.util.stream.StreamSupport;
  */
 public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformation>
 {
-
-
   private static final EmittingLogger log = new EmittingLogger(AbstractSegmentMetadataCache.class);
   private static final int MAX_SEGMENTS_PER_QUERY = 15000;
   private static final long DEFAULT_NUM_ROWS = 0;
