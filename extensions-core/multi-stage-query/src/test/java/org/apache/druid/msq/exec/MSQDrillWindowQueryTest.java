@@ -31,7 +31,6 @@ import org.apache.druid.guice.annotations.NativeQuery;
 import org.apache.druid.initialization.ServerInjectorBuilderTest.TestDruidModule;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.msq.exec.MSQDrillWindowQueryTest.DrillWindowQueryMSQComponentSupplier;
-import org.apache.druid.msq.guice.MSQSqlModule;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
 import org.apache.druid.msq.test.CalciteMSQTestsHelper;
 import org.apache.druid.msq.test.ExtractResultsFactory;
@@ -71,9 +70,6 @@ public class MSQDrillWindowQueryTest extends DrillWindowQueryTest
       builder.addModule(new TestMSQSqlModule());
     }
 
-    /**
-     * More or less {@link MSQSqlModule} but for tests.
-     */
     static class TestMSQSqlModule extends TestDruidModule {
 
       @Provides
@@ -112,16 +108,10 @@ public class MSQDrillWindowQueryTest extends DrillWindowQueryTest
       @Provides
       @LazySingleton
       public MSQTaskSqlEngine createEngine(
+          QueryLifecycleFactory qlf,
           ObjectMapper queryJsonMapper,
-          MSQTestOverlordServiceClient indexingServiceClient
+          Injector injector
       )
-      {
-        return new MSQTaskSqlEngine(indexingServiceClient, queryJsonMapper);
-      }
-
-      @Provides
-      @LazySingleton
-      private MSQTestOverlordServiceClient createOverlordClient(ObjectMapper queryJsonMapper, Injector injector)
       {
         final WorkerMemoryParameters workerMemoryParameters =
             WorkerMemoryParameters.createInstance(
@@ -139,7 +129,7 @@ public class MSQDrillWindowQueryTest extends DrillWindowQueryTest
             workerMemoryParameters,
             ImmutableList.of()
         );
-        return indexingServiceClient;
+        return new MSQTaskSqlEngine(indexingServiceClient, queryJsonMapper);
       }
     }
 
@@ -150,23 +140,7 @@ public class MSQDrillWindowQueryTest extends DrillWindowQueryTest
         Injector injector
     )
     {
-      final WorkerMemoryParameters workerMemoryParameters =
-          WorkerMemoryParameters.createInstance(
-              WorkerMemoryParameters.PROCESSING_MINIMUM_BYTES * 50,
-              2,
-              10,
-              2,
-              0,
-              0
-          );
-      final MSQTestOverlordServiceClient indexingServiceClient = new MSQTestOverlordServiceClient(
-          queryJsonMapper,
-          injector,
-          new MSQTestTaskActionClient(queryJsonMapper, injector),
-          workerMemoryParameters,
-          ImmutableList.of()
-      );
-      return new MSQTaskSqlEngine(indexingServiceClient, queryJsonMapper);
+      return injector.getInstance(MSQTaskSqlEngine.class);
     }
   }
 
