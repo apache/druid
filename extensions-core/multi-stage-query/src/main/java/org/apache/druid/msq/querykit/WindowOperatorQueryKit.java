@@ -126,8 +126,6 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
     if (isEmptyOverPresent) {
       // empty over clause found
       // moving everything to a single partition
-      // TODO: This logic needs to be revamped and corrected in the future.
-      // This should likely cause issues for cases where we have a mix of empty over() and non-empty over().
       queryDefBuilder.add(
           StageDefinition.builder(firstStageNumber)
                          .inputs(new StageInputSpec(firstStageNumber - 1))
@@ -267,7 +265,6 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
         operatorFactoryList = new ArrayList<>();
       } else if (of instanceof NaivePartitioningOperatorFactory) {
         if (((NaivePartitioningOperatorFactory) of).getPartitionColumns().isEmpty()) {
-          // TODO: This logic need to be revamped in the future. We probably don't need to handle empty over() cases separately.
           operatorList.clear();
           operatorList.add(originalQuery.getOperators());
           return operatorList;
@@ -312,7 +309,11 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
           kc = new KeyColumn(partitionColumn, KeyOrder.DESCENDING);
         }
       } else {
-        kc = new KeyColumn(partitionColumn, KeyOrder.ASCENDING);
+        throw new ISE(
+            "Found unexpected partition column [%s] not present in sort columns [%s].",
+            partitionColumn,
+            sortColumnsMap
+        );
       }
       keyColsOfWindow.add(kc);
     }
