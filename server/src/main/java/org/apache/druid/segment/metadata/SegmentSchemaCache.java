@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.metadata;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import org.apache.druid.guice.LazySingleton;
@@ -145,6 +146,12 @@ public class SegmentSchemaCache
   public void updateFinalizedSegmentSchema(FinalizedSegmentSchemaInfo finalizedSegmentSchemaInfo)
   {
     this.finalizedSegmentSchemaInfo = finalizedSegmentSchemaInfo;
+
+    // remove metadata for segments which have been polled in the last database poll
+    temporaryPublishedMetadataQueryResults
+        .keySet()
+        .removeAll(finalizedSegmentSchemaInfo.getFinalizedSegmentMetadata().keySet());
+
     setInitialized();
   }
 
@@ -183,14 +190,6 @@ public class SegmentSchemaCache
     }
 
     temporaryMetadataQueryResults.remove(segmentId);
-  }
-
-  /**
-   * temporaryPublishedMetadataQueryResults is reset after each DB poll.
-   */
-  public void resetTemporaryPublishedMetadataQueryResultOnDBPoll()
-  {
-    temporaryPublishedMetadataQueryResults.clear();
   }
 
   /**
@@ -323,6 +322,12 @@ public class SegmentSchemaCache
                      temporaryPublishedMetadataQueryResults.size()
                  )
     );
+  }
+
+  @VisibleForTesting
+  SchemaPayloadPlus getTemporaryPublishedMetadataQueryResults(SegmentId id)
+  {
+    return temporaryPublishedMetadataQueryResults.get(id);
   }
 
   /**

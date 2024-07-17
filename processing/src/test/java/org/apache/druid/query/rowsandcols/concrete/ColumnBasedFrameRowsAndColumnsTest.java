@@ -23,6 +23,7 @@ import org.apache.druid.query.operator.OffsetLimit;
 import org.apache.druid.query.rowsandcols.LazilyDecoratedRowsAndColumns;
 import org.apache.druid.query.rowsandcols.MapOfColumnsRowsAndColumns;
 import org.apache.druid.query.rowsandcols.RowsAndColumnsTestBase;
+
 import java.util.function.Function;
 
 public class ColumnBasedFrameRowsAndColumnsTest extends RowsAndColumnsTestBase

@@ -174,6 +174,12 @@ public class DruidCoordinator
    */
   private volatile SegmentReplicationStatus segmentReplicationStatus = null;
 
+  /**
+   * Set of broadcast segments determined in the latest coordinator run of the {@link RunRules} duty.
+   * This might contain stale information if the Coordinator duties haven't run or are delayed.
+   */
+  private volatile Set<DataSegment> broadcastSegments = null;
+
   public static final String HISTORICAL_MANAGEMENT_DUTIES_DUTY_GROUP = "HistoricalManagementDuties";
   private static final String METADATA_STORE_MANAGEMENT_DUTIES_DUTY_GROUP = "MetadataStoreManagementDuties";
   private static final String INDEXING_SERVICE_DUTIES_DUTY_GROUP = "IndexingServiceDuties";
@@ -313,6 +319,16 @@ public class DruidCoordinator
     }
 
     return loadStatus;
+  }
+
+  /**
+   * @return Set of broadcast segments determined by the latest run of the {@link RunRules} duty.
+   * If the coordinator runs haven't triggered or are delayed, this information may be stale.
+   */
+  @Nullable
+  public Set<DataSegment> getBroadcastSegments()
+  {
+    return broadcastSegments;
   }
 
   @Nullable
@@ -798,7 +814,11 @@ public class DruidCoordinator
     @Override
     public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
     {
+      broadcastSegments = params.getBroadcastSegments();
       segmentReplicationStatus = params.getSegmentReplicationStatus();
+      if (coordinatorSegmentMetadataCache != null) {
+        coordinatorSegmentMetadataCache.updateSegmentReplicationStatus(segmentReplicationStatus);
+      }
 
       // Collect stats for unavailable and under-replicated segments
       final CoordinatorRunStats stats = params.getCoordinatorStats();

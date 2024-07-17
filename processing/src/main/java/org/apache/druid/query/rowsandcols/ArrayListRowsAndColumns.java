@@ -259,8 +259,8 @@ public class ArrayListRowsAndColumns<RowType> implements AppendableRowsAndColumn
         rowSignature,
         extraColumns,
         columnNames,
-        startOffset,
-        endOffset
+        this.startOffset + startOffset,
+        this.startOffset + endOffset
     );
   }
 

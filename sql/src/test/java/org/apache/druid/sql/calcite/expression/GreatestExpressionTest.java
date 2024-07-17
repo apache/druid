@@ -214,7 +214,7 @@ public class GreatestExpressionTest extends CalciteTestBase
   }
 
   @Test
-  public void testDecimalWithNullShouldReturnString()
+  public void testDecimalWithNullShouldNotReturnString()
   {
     testExpression(
         Arrays.asList(
@@ -227,7 +227,7 @@ public class GreatestExpressionTest extends CalciteTestBase
             null,
             3.4
         ),
-        "3.4"
+        3.4
     );
   }
   @Test

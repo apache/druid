@@ -900,7 +900,7 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
                     of a column you can cast it to a specific type. You can do that by clicking on a
                     column header.
                   </p>
-                  <LearnMore href={`${getLink('DOCS')}/ingestion/schema-design.html`} />
+                  <LearnMore href={`${getLink('DOCS')}/ingestion/schema-design`} />
                 </Callout>
               </FormGroup>
             )}
@@ -961,7 +961,7 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
                 <AnchorButton
                   icon={IconNames.HELP}
                   text="Learn more..."
-                  href={`${getLink('DOCS')}/ingestion/schema-model.html#primary-timestamp`}
+                  href={`${getLink('DOCS')}/ingestion/schema-model#primary-timestamp`}
                   target="_blank"
                   intent={Intent.WARNING}
                   minimal

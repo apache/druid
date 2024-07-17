@@ -49,7 +49,6 @@ import org.reflections.util.ConfigurationBuilder;
 import org.reflections.util.FilterBuilder;
 
 import javax.annotation.Nonnull;
-
 import java.io.Closeable;
 import java.lang.annotation.Annotation;
 import java.lang.annotation.ElementType;

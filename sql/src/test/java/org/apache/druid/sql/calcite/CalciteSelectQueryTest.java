@@ -21,7 +21,9 @@ package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.calcite.rel.RelNode;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -59,6 +61,8 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class CalciteSelectQueryTest extends BaseCalciteQueryTest
 {
@@ -127,6 +131,28 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 .build()
         ),
         ImmutableList.of(new Object[]{"[\"Hello\",null]"})
+    );
+  }
+
+  @Test
+  public void testTimeCeilExpressionContainingInvalidPeriod()
+  {
+    testQueryThrows(
+        "SELECT TIME_CEIL(__time, 'PT1Y') FROM foo",
+        DruidExceptionMatcher.invalidInput().expectMessageContains(
+            "Invalid period['PT1Y'] specified for expression[timestamp_ceil(\"__time\", 'PT1Y', null, 'UTC')]"
+        )
+    );
+  }
+
+  @Test
+  public void testTimeFloorExpressionContainingInvalidPeriod()
+  {
+    testQueryThrows(
+        "SELECT TIME_FLOOR(TIMESTAMPADD(DAY, -1, __time), 'PT1D') FROM foo",
+        DruidExceptionMatcher.invalidInput().expectMessageContains(
+            "Invalid period['PT1D'] specified for expression[timestamp_floor((\"__time\" + -86400000), 'PT1D', null, 'UTC')]"
+        )
     );
   }
 
@@ -2148,6 +2174,30 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
             ImmutableList.of(
                 new Object[] {"", 1.0D},
                 new Object[] {"10.1", 1.7D}
+            )
+        )
+        .run();
+  }
+
+  @Test
+  public void testSqlToRelInConversion()
+  {
+    assertEquals(
+        "1.37.0",
+        RelNode.class.getPackage().getImplementationVersion(),
+        "Calcite version changed; check if CALCITE-6435 is fixed and remove:\n * method CalciteRulesManager#sqlToRelWorkaroundProgram\n * FixIncorrectInExpansionTypes class\n* this assertion"
+    );
+
+    testBuilder()
+        .sql(
+            "SELECT channel FROM wikipedia\n"
+                + "WHERE channel in ('#en.wikipedia') and channel = '#en.wikipedia' and\n"
+                + "isRobot = 'false'\n"
+                + "LIMIT 1"
+        )
+        .expectedResults(
+            ImmutableList.of(
+                new Object[] {"#en.wikipedia"}
             )
         )
         .run();

@@ -22,6 +22,7 @@ package org.apache.druid.storage.s3.output;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
 import org.apache.druid.java.util.common.HumanReadableBytes;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.DruidProcessingConfigTest;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 import org.apache.druid.utils.RuntimeInfo;
@@ -43,14 +44,16 @@ public class S3UploadManagerTest
   private S3UploadManager s3UploadManager;
   private S3OutputConfig s3OutputConfig;
   private S3ExportConfig s3ExportConfig;
+  private StubServiceEmitter serviceEmitter;
 
   @Before
   public void setUp()
   {
     s3OutputConfig = new S3OutputConfig("bucket", "prefix", EasyMock.mock(File.class), new HumanReadableBytes("100MiB"), 1);
     s3ExportConfig = new S3ExportConfig("tempDir", new HumanReadableBytes("200MiB"), 1, null);
+    serviceEmitter = new StubServiceEmitter();
     final RuntimeInfo runtimeInfo = new DruidProcessingConfigTest.MockRuntimeInfo(8, 0, 0);
-    s3UploadManager = new S3UploadManager(s3OutputConfig, s3ExportConfig, runtimeInfo);
+    s3UploadManager = new S3UploadManager(s3OutputConfig, s3ExportConfig, runtimeInfo, serviceEmitter);
   }
 
   @Test
@@ -75,6 +78,10 @@ public class S3UploadManagerTest
     UploadPartResult futureResult = result.get();
     Assert.assertEquals(chunkId, futureResult.getPartNumber());
     Assert.assertEquals("etag", futureResult.getETag());
+
+    serviceEmitter.verifyEmitted("s3/upload/part/queuedTime", 1);
+    serviceEmitter.verifyEmitted("s3/upload/part/queueSize", 1);
+    serviceEmitter.verifyEmitted("s3/upload/part/time", 1);
   }
 
   @Test

@@ -27,11 +27,10 @@ import SplitterLayout from 'react-splitter-layout';
 import { useStore } from 'zustand';
 
 import { Loader, QueryErrorPane } from '../../../components';
-import type { DruidEngine, LastExecution, QueryContext } from '../../../druid-models';
+import type { CapacityInfo, DruidEngine, LastExecution, QueryContext } from '../../../druid-models';
 import { Execution, WorkbenchQuery } from '../../../druid-models';
 import {
   executionBackgroundStatusCheck,
-  maybeGetClusterCapacity,
   reattachTaskExecution,
   submitTaskQuery,
 } from '../../../helpers';
@@ -82,6 +81,7 @@ export interface QueryTabProps {
   runMoreMenu: JSX.Element;
   clusterCapacity: number | undefined;
   goToTask(taskId: string): void;
+  getClusterCapacity: (() => Promise<CapacityInfo | undefined>) | undefined;
 }
 
 export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
@@ -97,6 +97,7 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
     runMoreMenu,
     clusterCapacity,
     goToTask,
+    getClusterCapacity,
   } = props;
   const [alertElement, setAlertElement] = useState<JSX.Element | undefined>();
 
@@ -336,7 +337,7 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
         ? effectiveQuery.makePreview()
         : effectiveQuery.setMaxNumTasksIfUnset(clusterCapacity);
 
-      const capacityInfo = await maybeGetClusterCapacity();
+      const capacityInfo = await getClusterCapacity?.();
 
       const effectiveMaxNumTasks = effectiveQuery.queryContext.maxNumTasks ?? 2;
       if (capacityInfo && capacityInfo.availableTaskSlots < effectiveMaxNumTasks) {

@@ -26,9 +26,14 @@ import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.audit.AuditManager;
+import org.apache.druid.client.indexing.ClientCompactionRunnerInfo;
 import org.apache.druid.common.config.ConfigManager.SetResult;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidInput;
+import org.apache.druid.error.NotFound;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
 import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
@@ -119,6 +124,12 @@ public class CoordinatorCompactionConfigsResource
           .getCompactionConfigs()
           .stream()
           .collect(Collectors.toMap(DataSourceCompactionConfig::getDataSource, Function.identity()));
+      CompactionConfigValidationResult validationResult =
+          ClientCompactionRunnerInfo.validateCompactionConfig(newConfig, current.getEngine());
+      if (!validationResult.isValid()) {
+        throw InvalidInput.exception("Compaction config not supported. Reason[%s].", validationResult.getReason());
+      }
+      // Don't persist config with the default engine if engine not specified, to enable update of the default.
       newConfigs.put(newConfig.getDataSource(), newConfig);
       newCompactionConfig = CoordinatorCompactionConfig.from(current, ImmutableList.copyOf(newConfigs.values()));
 
@@ -206,7 +217,7 @@ public class CoordinatorCompactionConfigsResource
 
       final DataSourceCompactionConfig config = configs.remove(dataSource);
       if (config == null) {
-        throw new NoSuchElementException("datasource not found");
+        throw NotFound.exception("datasource not found");
       }
 
       return CoordinatorCompactionConfig.from(current, ImmutableList.copyOf(configs.values()));
@@ -231,9 +242,8 @@ public class CoordinatorCompactionConfigsResource
         updateRetryDelay();
       }
     }
-    catch (NoSuchElementException e) {
-      LOG.warn(e, "Update compaction config failed");
-      return Response.status(Response.Status.NOT_FOUND).build();
+    catch (DruidException e) {
+      return ServletResourceUtils.buildErrorResponseFrom(e);
     }
     catch (Exception e) {
       LOG.warn(e, "Update compaction config failed");

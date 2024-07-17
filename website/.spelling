@@ -216,6 +216,7 @@ ROUTINE_TYPE
 Rackspace
 Redis
 S3
+SAS
 SDK
 SIGAR
 SPNEGO
@@ -1664,7 +1665,6 @@ Filesystem
 JVMMonitor
 jvmVersion
 QueryCountStatsMonitor
-RealtimeMetricsMonitor
 Sys
 SysMonitor
 TaskCountStatsMonitor
