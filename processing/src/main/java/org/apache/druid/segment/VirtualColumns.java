@@ -266,7 +266,12 @@ public class VirtualColumns implements Cacheable
   public boolean canVectorize(ColumnInspector columnInspector)
   {
     final ColumnInspector inspector = wrapInspector(columnInspector);
-    return virtualColumns.stream().allMatch(virtualColumn -> virtualColumn.canVectorize(inspector));
+    for (VirtualColumn virtualColumn : virtualColumns) {
+      if (!virtualColumn.canVectorize(inspector)) {
+        return false;
+      }
+    }
+    return true;
   }
 
   /**

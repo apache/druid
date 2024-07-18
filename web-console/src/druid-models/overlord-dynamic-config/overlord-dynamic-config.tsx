@@ -20,6 +20,8 @@ import { Callout } from '@blueprintjs/core';
 import React from 'react';
 
 import type { Field } from '../../components';
+import { ExternalLink } from '../../components';
+import { getLink } from '../../links';
 import { deepGet, oneOf } from '../../utils';
 
 export interface OverlordDynamicConfig {
@@ -92,6 +94,11 @@ export const OVERLORD_DYNAMIC_CONFIG_FIELDS: Field<OverlordDynamicConfig>[] = [
   "datasource2": ["host3:port"]
 }`}
         </Callout>
+        <p>
+          <ExternalLink href={`${getLink('DOCS')}/configuration/#affinityconfig`}>
+            Learn more
+          </ExternalLink>
+        </p>
       </>
     ),
   },
@@ -131,6 +138,11 @@ export const OVERLORD_DYNAMIC_CONFIG_FIELDS: Field<OverlordDynamicConfig>[] = [
   }
 }`}
         </Callout>
+        <p>
+          <ExternalLink href={`${getLink('DOCS')}/configuration/#workercategoryspec`}>
+            Learn more
+          </ExternalLink>
+        </p>
       </>
     ),
   },

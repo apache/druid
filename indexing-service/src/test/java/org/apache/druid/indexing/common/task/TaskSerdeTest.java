@@ -243,33 +243,14 @@ public class TaskSerdeTest
                 null
             ),
             new IndexIOConfig(null, new LocalInputSource(new File("lol"), "rofl"), new NoopInputFormat(), true, false),
-            new IndexTuningConfig(
-                null,
-                null,
-                null,
-                10,
-                null,
-                null,
-                null,
-                9999,
-                null,
-                null,
-                new DynamicPartitionsSpec(10000, null),
-                indexSpec,
-                null,
-                3,
-                false,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                1L,
-                null
-            )
+            TuningConfigBuilder.forIndexTask()
+                               .withMaxRowsInMemory(10)
+                               .withPartitionsSpec(new DynamicPartitionsSpec(10000, null))
+                               .withIndexSpec(indexSpec)
+                               .withMaxPendingPersists(3)
+                               .withForceGuaranteedRollup(false)
+                               .withAwaitSegmentAvailabilityTimeoutMillis(1L)
+                               .build()
         ),
         null
     );
@@ -330,33 +311,13 @@ public class TaskSerdeTest
                 null
             ),
             new IndexIOConfig(null, new LocalInputSource(new File("lol"), "rofl"), new NoopInputFormat(), true, false),
-            new IndexTuningConfig(
-                null,
-                null,
-                null,
-                10,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                new DynamicPartitionsSpec(10000, null),
-                indexSpec,
-                null,
-                3,
-                false,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null
-            )
+            TuningConfigBuilder.forIndexTask()
+                               .withMaxRowsInMemory(10)
+                               .withForceGuaranteedRollup(false)
+                               .withPartitionsSpec(new DynamicPartitionsSpec(10000, null))
+                               .withIndexSpec(indexSpec)
+                               .withMaxPendingPersists(3)
+                               .build()
         ),
         null
     );

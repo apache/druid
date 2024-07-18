@@ -177,7 +177,7 @@ export const DestinationPagesPane = React.memo(function DestinationPagesPane(
             Header: '',
             id: 'download',
             accessor: 'id',
-            width: 300,
+            width: 130,
             Cell: ({ value }) => (
               <AnchorButton
                 className="download-button"

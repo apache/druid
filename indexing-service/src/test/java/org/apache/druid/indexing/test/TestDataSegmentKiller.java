@@ -22,17 +22,28 @@ package org.apache.druid.indexing.test;
 import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.timeline.DataSegment;
 
+import java.util.HashSet;
+import java.util.Set;
+
 public class TestDataSegmentKiller implements DataSegmentKiller
 {
+
+  private final Set<DataSegment> killedSegments = new HashSet<>();
+
   @Override
   public void kill(DataSegment segment)
   {
-    // do nothing
+    killedSegments.add(segment);
   }
 
   @Override
   public void killAll()
   {
     throw new UnsupportedOperationException("not implemented");
+  }
+
+  public Set<DataSegment> getKilledSegments()
+  {
+    return killedSegments;
   }
 }

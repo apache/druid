@@ -38,7 +38,9 @@ exports[`ExecutionDetailsPane matches snapshot no init tab 1`] = `
     ]
   }
 >
-  <div>
+  <div
+    className="execution-details-pane-general"
+  >
     <p>
       General info for query-26d490c6-c06d-4cd2-938f-bc5f7f982754 ingesting into "kttm-blank-lines"
     </p>
