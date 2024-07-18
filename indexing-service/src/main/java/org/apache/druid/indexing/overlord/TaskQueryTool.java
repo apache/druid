@@ -27,7 +27,6 @@ import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.metadata.TaskLookup;
-import org.apache.druid.metadata.TaskLookup.ActiveTaskLookup;
 import org.apache.druid.metadata.TaskLookup.TaskLookupType;
 import org.joda.time.Interval;
 
@@ -36,25 +35,23 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Wraps a {@link TaskStorage}, providing a useful collection of read-only methods.
+ * Provides read-only methods to fetch information related to tasks.
+ * This class may serve information that is cached in memory in {@link TaskQueue}
+ * or {@link TaskLockbox}. If not present in memory, then the underlying
+ * {@link TaskStorage} is queried.
  */
-public class TaskStorageQueryAdapter
+public class TaskQueryTool
 {
   private final TaskStorage storage;
   private final TaskLockbox taskLockbox;
-  private final Optional<TaskQueue> taskQueue;
+  private final TaskMaster taskMaster;
 
   @Inject
-  public TaskStorageQueryAdapter(TaskStorage storage, TaskLockbox taskLockbox, TaskMaster taskMaster)
+  public TaskQueryTool(TaskStorage storage, TaskLockbox taskLockbox, TaskMaster taskMaster)
   {
     this.storage = storage;
     this.taskLockbox = taskLockbox;
-    this.taskQueue = taskMaster.getTaskQueue();
-  }
-
-  public List<Task> getActiveTasks()
-  {
-    return storage.getActiveTasks();
+    this.taskMaster = taskMaster;
   }
 
   /**
@@ -85,7 +82,7 @@ public class TaskStorageQueryAdapter
   public List<TaskInfo<Task, TaskStatus>> getActiveTaskInfo(@Nullable String dataSource)
   {
     return storage.getTaskInfos(
-        ActiveTaskLookup.getInstance(),
+        TaskLookup.activeTasksOnly(),
         dataSource
     );
   }
@@ -98,20 +95,21 @@ public class TaskStorageQueryAdapter
     return storage.getTaskStatusPlusList(taskLookups, dataSource);
   }
 
-  public Optional<Task> getTask(final String taskid)
+  public Optional<Task> getTask(final String taskId)
   {
+    final Optional<TaskQueue> taskQueue = taskMaster.getTaskQueue();
     if (taskQueue.isPresent()) {
-      Optional<Task> activeTask = taskQueue.get().getActiveTask(taskid);
+      Optional<Task> activeTask = taskQueue.get().getActiveTask(taskId);
       if (activeTask.isPresent()) {
         return activeTask;
       }
     }
-    return storage.getTask(taskid);
+    return storage.getTask(taskId);
   }
 
-  public Optional<TaskStatus> getStatus(final String taskid)
+  public Optional<TaskStatus> getStatus(final String taskId)
   {
-    return storage.getStatus(taskid);
+    return storage.getStatus(taskId);
   }
 
   @Nullable
