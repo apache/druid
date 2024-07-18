@@ -32,7 +32,7 @@ It provides strategies to emulate legacy null handling mode while operating Drui
 ## SQL compliant null handling in Druid
 
 Now, Druid writes segments in a SQL compatible null handling mode by default.
-This means that Druid stores null values distinctly from empty strings for string dimensions and distictly from 0 for numeric dimensions.
+This means that Druid stores null values distinctly from empty strings for string dimensions and distinctly from 0 for numeric dimensions.
 
 This can impact your application behavior because SQL the standard defines any comparison to null to be unknown.
 According to this three-value logic, `x <> 'some value'` only returns non-null values.
@@ -90,7 +90,7 @@ Consider the following input data:
 {"time":"2024-01-03T00:00:00.000Z","string_example":null,"number_example":null}
 ```
  
-The following example illustrates how to use COALESE and NVL at ingestion time to avoid null values in Druid:
+The following example illustrates how to use COALESCE and NVL at ingestion time to avoid null values in Druid:
 
 <Tabs>
 
@@ -215,7 +215,7 @@ FROM "null_example"
 WHERE "string_example"<> 'my_string'
 ```
 
-Druid returns 1 because null is considered unknown: neither equal nor inequal to the value.
+Druid returns 1 because null is considered unknown: neither equal nor unequal to the value.
 
 To count null values in the result, you can use an OR operator:
 
