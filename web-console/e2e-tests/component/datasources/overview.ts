@@ -131,7 +131,7 @@ export class DatasourcesOverview {
   }
 
   private async waitForPopupMenu(): Promise<void> {
-    await this.page.waitForSelector('ul.bp4-menu');
+    await this.page.waitForSelector('ul.bp5-menu');
   }
 
   async triggerCompaction(): Promise<void> {
