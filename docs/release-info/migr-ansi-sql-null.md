@@ -25,10 +25,14 @@ sidebar_label: SQL compliant mode
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-In Apache Druid 28.0.0, the default [null handling](../querying/sql-data-types.md#null-values) mode changed to be compliant with the SQL standard:
+In Apache Druid 28.0.0, the default [null handling](../querying/sql-data-types.md#null-values) mode changed to be compliant with the SQL standard.
+This guide provides strategies for Druid operators who rely on the legacy Druid null handling behavior in their applications.
+It provides strategies to emulate legacy null handling mode while operating Druid in SQL compliant null handling mode.
+
+## SQL compliant null handling in Druid
 
 The SQL standard defines any comparison to null to be unknown.
-Therefore, according to this three-value logic, `x <> 'some value'` only returns non-null values.
+According to this three-value logic, `x <> 'some value'` only returns non-null values.
 
 Now, Druid stores segments in a SQL compatible null handling mode by default.
 
@@ -38,24 +42,16 @@ The default Druid configurations for SQL compatible null handling mode is as fol
 * `druid.expressions.useStrictBooleans=true`
 * `druid.generic.useThreeValueLogicForNativeFilters=true` 
 
-Note Druid has always applied three-value logic by default to expressions.
-Therefore, queries such as `(x+y) <> ‘some value’` exclude null values even prior to Druid 28.0.0.
-
-At query time, Druid treats data from segments written with the legacy two-value logic as follows:
-- Empty strings, `''` are non-null values.
-- 0 is a non-null value.
-
 Follow the [Null handling tutorial](../tutorials/tutorial-sql-null.md) to learn how the default null handling works in Druid.
 
 ## Legacy null handling and two-value logic
 
-Prior to Druid 28.0.0, Druid defaulted to a legacy mode which used default values instead of nulls.
+Prior to Druid 28.0.0, Druid defaulted to a legacy mode which stored default values instead of nulls.
 In legacy mode, Druid segments created at ingestion time have the following characteristics:
 
-- String columns can not distinguish an empty string, '', from null. Therefore, Druid treats them both as interchangeable values.
-- Numeric columns can not represent null valued rows. Gherefore Druid stores 0 instead of null.
-
-In legacy mode, numeric columns do not have a null value bitmap, and so can have slightly decreased segment sizes.
+- String columns can not distinguish an empty string, '', from null.
+    Therefore, Druid treats them both as interchangeable values.
+- Numeric columns can not represent null valued rows. Therefore Druid stores 0 instead of null.
 
 The Druid configurations for the deprecated legacy mode are as follows:
 
@@ -67,7 +63,8 @@ Note that these configurations are deprecated and scheduled for removal.
 
 ## Migrate to SQL compliant mode
 
-If your business logic relies on the behavior of legacy mode, you can emulate the behavior in the following ways:
+If your business logic relies on the behavior of legacy mode, you can emulate the null handling behavior while operating Druid in SQL compatible null handling mode.
+You can:
 
 * Modify your ingestion SQL and ingestion specs to handle nulls at ingestion time.
     This means that you are modifying incoming data.
@@ -75,7 +72,7 @@ If your business logic relies on the behavior of legacy mode, you can emulate th
     However, it means that your existing queries should operate as if Druid were in legacy mode.
     If you do not care about preserving null values, this is a good option for you.
 * Update your SQL queries to handle the new behavior at query time.
-    This means you preserve the incoming data with nulls in tact.
+    This means you preserve the incoming data with nulls intact.
     However, you must rewrite any affected client-side queries.
     If you may want to convert to SQL-compliant behavior in the future, or if you have a requirement to preserve null values, choose this option.
 
@@ -196,9 +193,9 @@ Druid ingests the data with no null values as follows:
 If you want to maintain null values in your data within Druid, you can emulate the legacy null handling mode mode as follows:
 
 - Modify inequality queries to include null values.
-  `x <> 'some value'` becomes `(x <> 'some value' OR x IS NULL)`.
-- Use COALESCE to replace nulls with a value.
-  `x + 1` becomes ` COALESCE(numeric_value, 0)+1`
+  For example, `x <> 'some value'` becomes `(x <> 'some value' OR x IS NULL)`.
+- Use COALESCE or NVL to replace nulls with a value.
+  For example, `x + 1` becomes `NVL(numeric_value, 0)+1`
 
 Consider the following Druid datasource `null_example`:
 
@@ -218,7 +215,7 @@ WHERE "string_example"<> 'my_string'
 
 Druid returns 1 because null is considered unknown: neither equal nor inequal to the value.
 
-To count null values in the result, use an OR operator:
+To count null values in the result, you can use an OR operator:
 
 ```sql
 SELECT COUNT(*) AS count_example
@@ -227,8 +224,15 @@ WHERE ("string_example"<> 'my_string') OR "string_example" IS NULL
 ```
 
 Druid returns 2.
+To achieve the same result, you could use IS DISTINCT FROM for null-safe comparison:
 
-Similarly, arithmatec operators on null return null. For example:
+```sql
+SELECT COUNT(*) as count_example
+FROM "null_example"
+WHERE "string_example" IS DISTINCT FROM 'my_string'
+```
+
+Similarly, arithmetic operators on null return null. For example:
 
 ```sql
 SELECT "number_example" + 1 AS additon_example
@@ -247,7 +251,7 @@ Use NVL to avoid nulls with arithmetic. For example:
 
 ```sql
 SELECT NVL("number_example",0) + 1 AS additon_example
-FROM"null_example"
+FROM "null_example"
 ```
 
 Druid returns the following:
