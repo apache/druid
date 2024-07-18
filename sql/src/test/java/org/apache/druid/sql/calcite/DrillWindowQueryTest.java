@@ -7727,6 +7727,16 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
+  // This test gives the following error on sql-native engine:
+  // Column[w0] of type[class org.apache.druid.query.rowsandcols.column.ColumnAccessorBasedColumn] cannot be sorted.
+  @DrillTest("druid_queries/empty_and_non_empty_over/wikipedia_query_1")
+  @Test
+  public void test_empty_and_non_empty_over_wikipedia_query_1()
+  {
+    sqlNativeIncompatible();
+    windowQueryTest();
+  }
+
   @DrillTest("druid_queries/empty_and_non_empty_over/wikipedia_query_2")
   @Test
   public void test_empty_and_non_empty_over_wikipedia_query_2()
