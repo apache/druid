@@ -53,7 +53,7 @@ The following example applies the ABS function to the `ArrDelay` column from the
 
 ```sql
 SELECT
-  "ArrDelay" AS "arrival-delay",
+  "ArrDelay" AS "arrival_delay",
   ABS("ArrDelay") AS "absolute_arrival_delay"
 FROM "flight-carriers"
 WHERE "ArrDelay" < 0
