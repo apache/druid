@@ -751,7 +751,7 @@ Calculates _e_ raised to the power of the numeric expression.
 
 <details><summary>Example</summary>
 
-The following example calculates _e_ to the power of 2.
+The following example calculates _e_ to the power of 1.
 
 ```sql
 SELECT EXP(1) AS "exponential" 
