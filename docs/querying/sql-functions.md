@@ -754,13 +754,13 @@ Calculates _e_ raised to the power of the numeric expression.
 The following example calculates _e_ to the power of 2.
 
 ```sql
-SELECT EXP(2) AS "exponential" 
+SELECT EXP(1) AS "exponential" 
 ```
 Returns the following:
 
 | `exponential` |
 | -- |
-| `7.38905609893065` |
+| `2.7182818284590455` |
 </details>
 
 [Learn more](sql-scalar.md#numeric-functions)
