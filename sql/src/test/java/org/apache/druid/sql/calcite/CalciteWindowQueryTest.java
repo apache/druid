@@ -22,6 +22,7 @@ package org.apache.druid.sql.calcite;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.ISE;
@@ -37,6 +38,7 @@ import org.apache.druid.sql.calcite.QueryTestRunner.QueryResults;
 import org.apache.druid.sql.calcite.QueryVerification.QueryResultsVerifier;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.junit.Assert;
+import org.junit.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -227,6 +229,36 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
           .addCustomVerification(QueryVerification.ofResults(testCase))
           .run();
     }
+  }
+
+  @Test
+  public void testWithArrayConcat()
+  {
+    testBuilder()
+        .sql("select countryName, cityName, channel, "
+             + "array_concat_agg(ARRAY['abc', channel], 10000) over (partition by cityName order by countryName) as c\n"
+             + "from wikipedia\n"
+             + "where countryName in ('Austria', 'Republic of Korea') "
+             + "and (cityName in ('Vienna', 'Seoul') or cityName is null)\n"
+             + "group by countryName, cityName, channel")
+        .queryContext(ImmutableMap.of(
+            PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
+            QueryContexts.ENABLE_DEBUG, true
+        ))
+        .expectedResults(
+            ResultMatchMode.RELAX_NULLS,
+            ImmutableList.of(
+              new Object[]{"Austria", null, "#de.wikipedia", "[\"abc\",\"#de.wikipedia\"]"},
+              new Object[]{"Republic of Korea", null, "#en.wikipedia", "[\"abc\",\"#de.wikipedia\",\"abc\",\"#en.wikipedia\",\"abc\",\"#ja.wikipedia\",\"abc\",\"#ko.wikipedia\"]"},
+              new Object[]{"Republic of Korea", null, "#ja.wikipedia", "[\"abc\",\"#de.wikipedia\",\"abc\",\"#en.wikipedia\",\"abc\",\"#ja.wikipedia\",\"abc\",\"#ko.wikipedia\"]"},
+              new Object[]{"Republic of Korea", null, "#ko.wikipedia", "[\"abc\",\"#de.wikipedia\",\"abc\",\"#en.wikipedia\",\"abc\",\"#ja.wikipedia\",\"abc\",\"#ko.wikipedia\"]"},
+              new Object[]{"Republic of Korea", "Seoul", "#ko.wikipedia", "[\"abc\",\"#ko.wikipedia\"]"},
+              new Object[]{"Austria", "Vienna", "#de.wikipedia", "[\"abc\",\"#de.wikipedia\",\"abc\",\"#es.wikipedia\",\"abc\",\"#tr.wikipedia\"]"},
+              new Object[]{"Austria", "Vienna", "#es.wikipedia", "[\"abc\",\"#de.wikipedia\",\"abc\",\"#es.wikipedia\",\"abc\",\"#tr.wikipedia\"]"},
+              new Object[]{"Austria", "Vienna", "#tr.wikipedia", "[\"abc\",\"#de.wikipedia\",\"abc\",\"#es.wikipedia\",\"abc\",\"#tr.wikipedia\"]"}
+            )
+        )
+        .run();
   }
 
   private WindowOperatorQuery getWindowOperatorQuery(List<Query<?>> queries)
