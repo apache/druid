@@ -35,7 +35,6 @@ import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExpressionType;
@@ -75,8 +74,10 @@ import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.DruidTypeSystem;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.rel.CannotBuildQueryException;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.hamcrest.MatcherAssert;
+import org.hamcrest.core.StringContains;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
 import org.junit.Assert;
@@ -2853,12 +2854,12 @@ public class ExpressionsTest extends CalciteTestBase
         false
     );
 
-    DruidException t = Assert.assertThrows(
-        DruidException.class,
+    CannotBuildQueryException t = Assert.assertThrows(
+        CannotBuildQueryException.class,
         () -> testHelper.testExpression(rexNode, null, plannerContext)
     );
 
-    MatcherAssert.assertThat(t, DruidExceptionMatcher.defensive().expectMessageContains("Encountered an OVER"));
+    MatcherAssert.assertThat(t.getMessage(), StringContains.containsString("Encountered an OVER"));
   }
 
   @Test

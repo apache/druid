@@ -35,9 +35,9 @@ import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExpressionType;
@@ -68,6 +68,7 @@ import org.apache.druid.sql.calcite.filtration.Ranges;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.ExpressionParser;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.rel.CannotBuildQueryException;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.joda.time.Interval;
@@ -241,7 +242,9 @@ public class Expressions
     if (kind == SqlKind.INPUT_REF) {
       return inputRefToDruidExpression(rowSignature, rexNode);
     } else if (rexNode instanceof RexOver) {
-      throw DruidException.defensive("Encountered an OVER during Filter translation [%s].", rexNode);
+      throw new CannotBuildQueryException(
+          StringUtils.format("Encountered an OVER during Filter translation [%s].", rexNode)
+      );
     } else if (rexNode instanceof RexCall) {
       return rexCallToDruidExpression(plannerContext, rowSignature, rexNode, postAggregatorVisitor);
     } else if (kind == SqlKind.LITERAL) {
