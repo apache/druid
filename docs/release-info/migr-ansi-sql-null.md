@@ -26,8 +26,8 @@ import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
 In Apache Druid 28.0.0, the default [null handling](../querying/sql-data-types.md#null-values) mode changed to be compliant with the SQL standard.
-This guide provides strategies for Druid operators who rely on the legacy Druid null handling behavior in their applications to transition to SQL compliant mode.
-Legacy is scheduled to be removed from Druid. 
+This guide provides strategies for Druid operators who rely on legacy Druid null handling behavior in their applications to transition to SQL compliant mode.
+Legacy mode is scheduled to be removed from Druid. 
 
 ## SQL compliant null handling in Druid
 
