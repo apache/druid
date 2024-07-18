@@ -46,6 +46,7 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -150,7 +151,6 @@ public class TaskQueryTool
   }
 
   public List<TaskStatusPlus> getTaskStatusPlusList(
-      TaskRunner taskRunner,
       TaskStateLookup state,
       @Nullable String dataSource,
       @Nullable String createdTimeInterval,
@@ -158,6 +158,12 @@ public class TaskQueryTool
       @Nullable String type
   )
   {
+    Optional<TaskRunner> taskRunnerOptional = taskMaster.getTaskRunner();
+    if (!taskRunnerOptional.isPresent()) {
+      return Collections.emptyList();
+    }
+    final TaskRunner taskRunner = taskRunnerOptional.get();
+
     final Duration createdTimeDuration;
     if (createdTimeInterval != null) {
       final Interval theInterval = Intervals.of(StringUtils.replace(createdTimeInterval, "_", "/"));

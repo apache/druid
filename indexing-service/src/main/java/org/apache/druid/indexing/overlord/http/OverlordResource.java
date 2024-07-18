@@ -639,7 +639,6 @@ public class OverlordResource
         taskRunner -> {
           final List<TaskStatusPlus> authorizedList = securedTaskStatusPlus(
               taskQueryTool.getTaskStatusPlusList(
-                  taskRunner,
                   TaskStateLookup.fromString(state),
                   dataSource,
                   createdTimeInterval,
