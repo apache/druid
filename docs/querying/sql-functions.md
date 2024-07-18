@@ -36,9 +36,9 @@ This page provides a reference of Apache Druid&circledR; SQL functions in alphab
 * [Scalar functions](sql-scalar.md)
 * [Window functions](sql-window-functions.md)
 
-The examples for each function uses the following datasets that come included with Apache Druid:
-* `flight-carriers`: `FlightCarrierOnTime (1 month)` 
-* `trips_xaa`: `NYC Taxi cabs (3 files)`
+The examples on this page use the following example datasources:
+* `flight-carriers` using `FlightCarrierOnTime (1 month)` 
+* `taxi-trips` using `NYC Taxi cabs (3 files)`
 
 ## ABS
 
@@ -49,19 +49,19 @@ Calculates the absolute value of a numeric expression.
 
 <details><summary>Example</summary>
 
-The following applies the ABS function to the `ArrDelay` column, from the `flight-carriers` datasource.
+The following example applies the ABS function to the `ArrDelay` column from the `flight-carriers` datasource.
 
 ```sql
 SELECT
-  "ArrDelay",
-  ABS("ArrDelay") AS "Abs"
+  "ArrDelay" AS "arrival-delay",
+  ABS("ArrDelay") AS "absolute_arrival_delay"
 FROM "flight-carriers"
 WHERE "ArrDelay" < 0
 LIMIT 1
 ```
 Returns the following:
 
-| `ArrDelay` | `Abs` | 
+| `arrival_delay` | `absolute_arrival_delay` | 
 | -- | -- | 
 | `-27` | `27` | 
 </details>
@@ -448,25 +448,25 @@ Rounds up a timestamp by a given time unit.
 
 ## CEIL (numeric)
 
-Rounds up to the smallest integer value greater than or equal to the numeric expression.
+Calculates the smallest integer value greater than or equal to the numeric expression.
 
 * **Syntax:** `CEIL(<NUMERIC>)`
 * **Function type:** Scalar, numeric
 
 <details><summary>Example</summary>
 
-The following example applies the CEIL function to the `fare_amount` column, from the `trips_xaa` datasource.
+The following example applies the CEIL function to the `fare_amount` column from the `taxi-trips` datasource.
 
 ```sql
 SELECT
-  "fare_amount",
-  CEIL("fare_amount") AS "Ceiling"
-FROM "trips_xaa"
+  "fare_amount" AS "fare_amount",
+  CEIL("fare_amount") AS "ceiling_fare_amount"
+FROM "taxi-trips"
 LIMIT 1
 ```
 Returns the following:
 
-| `fare_amount` | `Ceiling` | 
+| `fare_amount` | `ceiling_fare_amount` | 
 | -- | -- | 
 | `21.25` | `22` | 
 </details>
@@ -752,20 +752,16 @@ Calculates _e_ raised to the power of the numeric expression.
 
 <details><summary>Example</summary>
 
-The following example raise _e_ to the power of `trip_id`, from the `trips_xaa` datasource.
+The following example raises _e_ to the power of 2.
 
 ```sql
-SELECT
-  "trip_id" AS "exponent_value",
-  EXP(trip_id) AS "Exp"
-FROM "trips_xaa"
-LIMIT 1
+SELECT EXP(2) AS "exponential" 
 ```
 Returns the following:
 
-| `exponent_value` | `Exp` | 
-| -- | -- | 
-| `1` | `2.7182818284590455` | 
+| `exponential` |
+| -- |
+| `7.38905609893065` |
 </details>
 
 [Learn more](sql-scalar.md#numeric-functions)
@@ -796,25 +792,25 @@ Rounds down a timestamp by a given time unit.
 
 ## FLOOR (numeric)
 
-Rounds down to the largest integer value less than or equal to the numeric expression.
+Calculates the largest integer less than or equal to the numeric expression.
 
-* **Syntax:** `Floor(<NUMERIC>)`
+* **Syntax:** `FLOOR(<NUMERIC>)`
 * **Function type:** Scalar, numeric
 
 <details><summary>Example</summary>
 
-The following example applies the FLOOR function to the `fare_amount` column, from the `trips_xaa` datasource.
+The following example applies the FLOOR function to the `fare_amount` column from the `taxi-trips` datasource.
 
 ```sql
 SELECT
-  "fare_amount",
-  FLOOR("fare_amount") AS "Floor"
-FROM "trips_xaa"
+  "fare_amount" AS "fare_amount",
+  FLOOR("fare_amount") AS "floor_fare_amount"
+FROM "taxi-trips"
 LIMIT 1
 ```
 Returns the following:
 
-| `fare_amount` | `Floor` | 
+| `fare_amount` | `floor_fare_amount` | 
 | -- | -- | 
 | `21.25` | `21` | 
 </details>
@@ -1049,23 +1045,23 @@ Returns the length of the expression in UTF-16 encoding.
 
 Calculates the natural logarithm of the numeric expression.
 
-* **Syntax:** `LN(<NUMERIC>)`
+* **Syntax:** `LN(expr)`
 * **Function type:** Scalar, numeric
 
 <details><summary>Example</summary>
 
-The following example applies the LN function to the `max_temperature` column, from the `trips_xaa` datasource.
+The following example applies the LN function to the `max_temperature` column from the `taxi-trips` datasource.
 
 ```sql
 SELECT
-  "max_temperature",
-  LN("max_temperature") AS "Ln"
-FROM "trips_xaa"
+  "max_temperature" AS "max_temperature",
+  LN("max_temperature") AS "natural_log_max_temp"
+FROM "taxi-trips"
 LIMIT 1
 ```
 Returns the following:
 
-| `max_temperature` | `Ln` | 
+| `max_temperature` | `natural_log_max_temp` | 
 | -- | -- | 
 | `76` | `4.330733340286331` | 
 </details>
