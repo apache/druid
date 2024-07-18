@@ -776,15 +776,6 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
         throw buildCalciteContextException("ASCENDING ordering with NULLS LAST is not supported!", call);
       }
     }
-
-    if (plannerContext.getPlannerConfig().isUseApproximateCountDistinct()) {
-      if (isSqlCallDistinct(call) && call.getOperator().getKind() != SqlKind.COUNT) {
-        throw buildCalciteContextException(
-            "Only COUNT with DISTINCT is supported when useApproximateCountDistinct is enabled. Run with disabling it.",
-            call
-        );
-      }
-    }
     super.validateCall(call, scope);
   }
 

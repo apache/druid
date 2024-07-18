@@ -160,7 +160,7 @@ public class Windowing
               Collections.emptyList(),
               aggName,
               aggregateCall,
-              false // Windowed aggregations don't currently finalize.  This means that sketches won't work as expected.
+              false // Windowed aggregations finalize later when we write the computed value to result RAC
           );
 
           if (aggregation == null

@@ -28,7 +28,6 @@ import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
-import org.apache.calcite.rex.RexOver;
 import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
@@ -239,9 +238,6 @@ public class Expressions
     final SqlKind kind = rexNode.getKind();
     if (kind == SqlKind.INPUT_REF) {
       return inputRefToDruidExpression(rowSignature, rexNode);
-    } else if (rexNode instanceof RexOver) {
-      plannerContext.setPlanningError("Encountered an OVER during Filter translation [%s].", rexNode);
-      return null;
     } else if (rexNode instanceof RexCall) {
       return rexCallToDruidExpression(plannerContext, rowSignature, rexNode, postAggregatorVisitor);
     } else if (kind == SqlKind.LITERAL) {

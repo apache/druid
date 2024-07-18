@@ -75,8 +75,8 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SqlTestFrameworkConfig.ComponentSupplier(VarianceComponentSupplier.class)
 public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
@@ -743,6 +743,9 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
             .run()
     );
 
-    assertTrue(e.getMessage().contains("Aggregation [STDDEV] is currently not supported for window functions"));
+    assertEquals(
+        "Query could not be planned. A possible reason is [Aggregation [STDDEV] is currently not supported for window functions]",
+        e.getMessage()
+    );
   }
 }
