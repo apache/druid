@@ -97,6 +97,7 @@ public interface DruidHook<T>
     };
   }
 
+  @SuppressWarnings({"rawtypes", "unchecked"})
   static <T> void dispatch(HookKey<T> key, T object)
   {
     List<DruidHook<?>> hooks = GLOBAL.get(key);
