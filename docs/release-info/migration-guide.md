@@ -42,6 +42,6 @@ Druid allows you to set a byte-based limit on subquery size to prevent Brokers f
 
 ## Migrate to SQL compliant null handling mode
 
-BY default the Druid [null handling](../querying/sql-data-types.md#null-values) mode is now compliant with the SQL standard.
-This guide provides strategies for Druid operators who rely on the legacy Druid null handling behavior in their applications to transition to SQL compliant mode.  See [Migration guide: SQL compliant mode](./migr-ansi-sql-null.md
+By default, the Druid [null handling](../querying/sql-data-types.md#null-values) mode is now compliant with ANSI SQL.
+This guide provides strategies for Druid operators and users who rely on the legacy Druid null handling behavior in their applications to transition to ANSI SQL compliant mode.  See [Migration guide: SQL compliant mode](./migr-ansi-sql-null.md
 ) for more information.
