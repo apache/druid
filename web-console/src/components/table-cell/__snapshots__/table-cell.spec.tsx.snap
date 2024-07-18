@@ -31,9 +31,21 @@ exports[`TableCell matches snapshot array long 1`] = `
   7, 98, 99]
   <span
     aria-hidden="true"
-    class="bp5-icon bp5-icon-standard bp5-icon-more action-icon"
-    data-icon="more"
-  />
+    class="bp5-icon bp5-icon-more action-icon"
+  >
+    <svg
+      data-icon="more"
+      height="16"
+      role="img"
+      viewBox="0 0 16 16"
+      width="16"
+    >
+      <path
+        d="M2 6.03a2 2 0 100 4 2 2 0 100-4zM14 6.03a2 2 0 100 4 2 2 0 100-4zM8 6.03a2 2 0 100 4 2 2 0 100-4z"
+        fill-rule="evenodd"
+      />
+    </svg>
+  </span>
 </div>
 `;
 

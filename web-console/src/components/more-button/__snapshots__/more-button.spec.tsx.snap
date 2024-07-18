@@ -47,9 +47,21 @@ exports[`MoreButton matches snapshot (full) 1`] = `
   >
     <span
       aria-hidden="true"
-      class="bp5-icon bp5-icon-standard bp5-icon-more"
-      data-icon="more"
-    />
+      class="bp5-icon bp5-icon-more"
+    >
+      <svg
+        data-icon="more"
+        height="16"
+        role="img"
+        viewBox="0 0 16 16"
+        width="16"
+      >
+        <path
+          d="M2 6.03a2 2 0 100 4 2 2 0 100-4zM14 6.03a2 2 0 100 4 2 2 0 100-4zM8 6.03a2 2 0 100 4 2 2 0 100-4z"
+          fill-rule="evenodd"
+        />
+      </svg>
+    </span>
   </button>
 </span>
 `;
