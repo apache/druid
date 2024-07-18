@@ -59,7 +59,7 @@ public class BalancingStrategiesTest extends CoordinatorSimulationBaseTest
   {
     final List<DruidServer> historicals = new ArrayList<>();
     for (int i = 0; i < 5; i++) {
-      historicals.add(createHistorical(i, Tier.T1, SIZE_1TB));
+      historicals.add(createHistorical(Tier.T1, SIZE_1TB));
     }
 
     CoordinatorSimulation sim =
@@ -93,7 +93,7 @@ public class BalancingStrategiesTest extends CoordinatorSimulationBaseTest
   {
     final List<DruidServer> historicals = new ArrayList<>();
     for (int i = 0; i < 4; i++) {
-      historicals.add(createHistorical(i, Tier.T1, SIZE_1TB));
+      historicals.add(createHistorical(Tier.T1, SIZE_1TB));
     }
 
     CoordinatorSimulation sim =
@@ -117,7 +117,7 @@ public class BalancingStrategiesTest extends CoordinatorSimulationBaseTest
     }
 
     // Add another historical
-    final DruidServer newHistorical = createHistorical(4, Tier.T1, SIZE_1TB);
+    final DruidServer newHistorical = createHistorical(Tier.T1, SIZE_1TB);
     addServer(newHistorical);
     historicals.add(newHistorical);
 
@@ -139,7 +139,7 @@ public class BalancingStrategiesTest extends CoordinatorSimulationBaseTest
   {
     final List<DruidServer> historicals = new ArrayList<>();
     for (int i = 0; i < 5; i++) {
-      historicals.add(createHistorical(i, Tier.T1, SIZE_1TB));
+      historicals.add(createHistorical(Tier.T1, SIZE_1TB));
     }
 
     CoordinatorSimulation sim =
