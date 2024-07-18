@@ -130,7 +130,7 @@ public class TaskLookupTest
     @Test
     public void testGetType()
     {
-      Assert.assertEquals(TaskLookupType.ACTIVE, ActiveTaskLookup.getInstance().getType());
+      Assert.assertEquals(TaskLookupType.ACTIVE, TaskLookup.activeTasksOnly().getType());
     }
   }
 }

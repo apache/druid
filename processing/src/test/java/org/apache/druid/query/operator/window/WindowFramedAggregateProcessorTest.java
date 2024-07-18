@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.operator.window;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.common.config.NullHandling;
@@ -51,6 +52,7 @@ public class WindowFramedAggregateProcessorTest
         new DoubleSumAggregatorFactory("cummSum", "doubleCol")
     };
     WindowFramedAggregateProcessor proc = new WindowFramedAggregateProcessor(theFrame, theAggs);
+    Assert.assertEquals(ImmutableList.of("cummMax", "cummSum"), proc.getOutputColumnNames());
 
     final MapOfColumnsRowsAndColumns rac = MapOfColumnsRowsAndColumns.fromMap(ImmutableMap.of(
         "yay", new IntArrayColumn(new int[]{1, 2, 3})
