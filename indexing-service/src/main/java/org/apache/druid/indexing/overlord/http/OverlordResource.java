@@ -302,6 +302,21 @@ public class OverlordResource
   }
 
   @GET
+  @Path("/datasourceLocks/{datasource}")
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(StateResourceFilter.class)
+  public Response getLocksForDatasource(@PathParam("datasource") String datasource)
+  {
+    if (datasource == null) {
+      return Response.status(Status.BAD_REQUEST).entity("No Datasource provided").build();
+    }
+
+    // Build the response
+    return Response.ok(taskQueryTool.getLocksForDatasource(datasource)).build();
+  }
+
+
+  @GET
   @Path("/task/{taskid}")
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(TaskResourceFilter.class)

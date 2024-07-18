@@ -20,10 +20,12 @@
 package org.apache.druid.indexing.overlord;
 
 import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
+import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.metadata.TaskLookup;
@@ -105,6 +107,11 @@ public class TaskQueryTool
       }
     }
     return storage.getTask(taskId);
+  }
+
+  public List<TaskLock> getLocksForDatasource(final String datasource)
+  {
+    return ImmutableList.copyOf(taskLockbox.getLocksForDatasource(datasource));
   }
 
   public Optional<TaskStatus> getStatus(final String taskId)

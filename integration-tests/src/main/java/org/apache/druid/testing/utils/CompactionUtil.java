@@ -19,9 +19,13 @@
 
 package org.apache.druid.testing.utils;
 
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.MaxSizeSplitHintSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
+import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskIOConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
 import org.joda.time.Period;
@@ -35,6 +39,58 @@ public class CompactionUtil
   private CompactionUtil()
   {
     // no instantiation
+  }
+
+  public static DataSourceCompactionConfig createConcurrentCompactionConfig(
+      String fullDatasourceName,
+      Granularity segmentGranularity
+  )
+  {
+    final UserCompactionTaskGranularityConfig granularitySpec;
+    if (segmentGranularity != null) {
+      granularitySpec = new UserCompactionTaskGranularityConfig(
+          segmentGranularity,
+          Granularities.NONE,
+          false
+      );
+    } else {
+      granularitySpec = null;
+    }
+    return new DataSourceCompactionConfig(
+        fullDatasourceName,
+        null,
+        null,
+        null,
+        Period.ZERO,
+        new UserCompactionTaskQueryTuningConfig(
+            null,
+            null,
+            null,
+            null,
+            new MaxSizeSplitHintSpec(null, 1),
+            new DynamicPartitionsSpec(null, null),
+            null,
+            null,
+            null,
+            null,
+            null,
+            1,
+            null,
+            null,
+            null,
+            null,
+            null,
+            1,
+            null
+        ),
+        granularitySpec,
+        null,
+        null,
+        null,
+        new UserCompactionTaskIOConfig(true),
+        null,
+        ImmutableMap.of("useConcurrentLocks", true)
+    );
   }
 
   public static DataSourceCompactionConfig createCompactionConfig(

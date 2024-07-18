@@ -1359,6 +1359,20 @@ public class TaskLockbox
     return running;
   }
 
+  Set<TaskLock> getLocksForDatasource(final String datasource)
+  {
+    if (datasource == null || !running.containsKey(datasource)) {
+      return Collections.emptySet();
+    }
+    return running.get(datasource)
+                  .values()
+                  .stream()
+                  .flatMap(map -> map.values().stream())
+                  .flatMap(Collection::stream)
+                  .map(TaskLockPosse::getTaskLock)
+                  .collect(Collectors.toSet());
+  }
+
   /**
    * Check if the lock for a given request can coexist with a given set of conflicting posses without any revocation.
    * @param conflictPosses conflict lock posses
