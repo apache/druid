@@ -2,7 +2,7 @@
 
 exports[`SegmentTimeline matches snapshot 1`] = `
 <div
-  class="segment-timeline app-view"
+  class="segment-timeline"
 >
   <div>
     <div
@@ -45,49 +45,10 @@ exports[`SegmentTimeline matches snapshot 1`] = `
     <div
       class="bp5-form-group"
     >
-      <div
-        class="bp5-form-content"
-      >
-        <div
-          class="bp5-radio-group"
-        >
-          <label
-            class="bp5-control bp5-radio"
-          >
-            <input
-              checked=""
-              name="Blueprint5.RadioGroup-0"
-              type="radio"
-              value="sizeData"
-            />
-            <span
-              class="bp5-control-indicator"
-            />
-            Total size
-          </label>
-          <label
-            class="bp5-control bp5-radio"
-          >
-            <input
-              name="Blueprint5.RadioGroup-0"
-              type="radio"
-              value="countData"
-            />
-            <span
-              class="bp5-control-indicator"
-            />
-            Segment count
-          </label>
-        </div>
-      </div>
-    </div>
-    <div
-      class="bp5-form-group"
-    >
       <label
         class="bp5-label"
       >
-        Datasource
+        Show
          
         <span
           class="bp5-text-muted"
@@ -97,26 +58,27 @@ exports[`SegmentTimeline matches snapshot 1`] = `
         class="bp5-form-content"
       >
         <div
-          aria-controls="listbox-1"
-          aria-expanded="false"
-          aria-haspopup="listbox"
-          class="bp5-popover-target bp5-fill"
-          role="combobox"
+          class="bp5-segmented-control bp5-fill"
         >
           <button
-            class="bp5-button bp5-fill"
+            class="bp5-button"
             type="button"
           >
             <span
               class="bp5-button-text"
             >
-              Show all
+              Total size
             </span>
+          </button>
+          <button
+            class="bp5-button bp5-minimal"
+            type="button"
+          >
             <span
-              aria-hidden="true"
-              class="bp5-icon bp5-icon-standard bp5-icon-caret-down"
-              data-icon="caret-down"
-            />
+              class="bp5-button-text"
+            >
+              Segment count
+            </span>
           </button>
         </div>
       </div>
@@ -165,6 +127,46 @@ exports[`SegmentTimeline matches snapshot 1`] = `
               value="2021-06-08"
             />
           </div>
+        </div>
+      </div>
+    </div>
+    <div
+      class="bp5-form-group"
+    >
+      <label
+        class="bp5-label"
+      >
+        Datasource
+         
+        <span
+          class="bp5-text-muted"
+        />
+      </label>
+      <div
+        class="bp5-form-content"
+      >
+        <div
+          aria-controls="listbox-1"
+          aria-expanded="false"
+          aria-haspopup="listbox"
+          class="bp5-popover-target bp5-fill"
+          role="combobox"
+        >
+          <button
+            class="bp5-button bp5-fill"
+            type="button"
+          >
+            <span
+              class="bp5-button-text"
+            >
+              Show all
+            </span>
+            <span
+              aria-hidden="true"
+              class="bp5-icon bp5-icon-standard bp5-icon-caret-down"
+              data-icon="caret-down"
+            />
+          </button>
         </div>
       </div>
     </div>
