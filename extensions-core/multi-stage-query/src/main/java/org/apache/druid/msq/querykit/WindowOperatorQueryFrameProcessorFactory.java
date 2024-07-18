@@ -61,6 +61,7 @@ public class WindowOperatorQueryFrameProcessorFactory extends BaseFrameProcessor
   private final RowSignature stageRowSignature;
   private final boolean isEmptyOver;
   private final int maxRowsMaterializedInWindow;
+  private final List<String> partitionColumnNames;
 
   @JsonCreator
   public WindowOperatorQueryFrameProcessorFactory(
@@ -68,7 +69,8 @@ public class WindowOperatorQueryFrameProcessorFactory extends BaseFrameProcessor
       @JsonProperty("operatorList") List<OperatorFactory> operatorFactoryList,
       @JsonProperty("stageRowSignature") RowSignature stageRowSignature,
       @JsonProperty("emptyOver") boolean emptyOver,
-      @JsonProperty("maxRowsMaterializedInWindow") int maxRowsMaterializedInWindow
+      @JsonProperty("maxRowsMaterializedInWindow") int maxRowsMaterializedInWindow,
+      @JsonProperty("partitionColumnNames") List<String> partitionColumnNames
   )
   {
     this.query = Preconditions.checkNotNull(query, "query");
@@ -76,6 +78,7 @@ public class WindowOperatorQueryFrameProcessorFactory extends BaseFrameProcessor
     this.stageRowSignature = Preconditions.checkNotNull(stageRowSignature, "stageSignature");
     this.isEmptyOver = emptyOver;
     this.maxRowsMaterializedInWindow = maxRowsMaterializedInWindow;
+    this.partitionColumnNames = partitionColumnNames;
   }
 
   @JsonProperty("query")
@@ -88,6 +91,12 @@ public class WindowOperatorQueryFrameProcessorFactory extends BaseFrameProcessor
   public List<OperatorFactory> getOperators()
   {
     return operatorList;
+  }
+
+  @JsonProperty("partitionColumnNames")
+  public List<String> getPartitionColumnNames()
+  {
+    return partitionColumnNames;
   }
 
   @JsonProperty("stageRowSignature")
@@ -148,7 +157,6 @@ public class WindowOperatorQueryFrameProcessorFactory extends BaseFrameProcessor
         readableInput -> {
           final OutputChannel outputChannel =
               outputChannels.get(readableInput.getStagePartition().getPartitionNumber());
-
           return new WindowOperatorQueryFrameProcessor(
               query,
               readableInput.getChannel(),
@@ -159,7 +167,8 @@ public class WindowOperatorQueryFrameProcessorFactory extends BaseFrameProcessor
               operatorList,
               stageRowSignature,
               isEmptyOver,
-              maxRowsMaterializedInWindow
+              maxRowsMaterializedInWindow,
+              partitionColumnNames
           );
         }
     );
@@ -185,12 +194,13 @@ public class WindowOperatorQueryFrameProcessorFactory extends BaseFrameProcessor
            && maxRowsMaterializedInWindow == that.maxRowsMaterializedInWindow
            && Objects.equals(query, that.query)
            && Objects.equals(operatorList, that.operatorList)
+           && Objects.equals(partitionColumnNames, that.partitionColumnNames)
            && Objects.equals(stageRowSignature, that.stageRowSignature);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(query, operatorList, stageRowSignature, isEmptyOver, maxRowsMaterializedInWindow);
+    return Objects.hash(query, operatorList, partitionColumnNames, stageRowSignature, isEmptyOver, maxRowsMaterializedInWindow);
   }
 }
