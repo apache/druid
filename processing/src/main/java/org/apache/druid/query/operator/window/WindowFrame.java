@@ -51,13 +51,9 @@ public interface WindowFrame
     return new WindowFrame.Rows(lowerOffset, upperOffset);
   }
 
-  static Groups groups(
-      final Integer lowerOffset,
-      final Integer upperOffset,
-      final List<String> orderByColumns)
+  static Groups groups(Integer lowerOffset, Integer upperOffset, List<String> orderByColumns)
   {
     return new WindowFrame.Groups(lowerOffset, upperOffset, orderByColumns);
-
   }
 
   static WindowFrame forOrderBy(String... orderByColumns)
