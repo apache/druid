@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, FormGroup, MenuItem, Radio, RadioGroup, ResizeSensor } from '@blueprintjs/core';
+import { Button, FormGroup, MenuItem, ResizeSensor, SegmentedControl } from '@blueprintjs/core';
 import type { DateRange, NonNullDateRange } from '@blueprintjs/datetime';
 import { DateRangeInput3 } from '@blueprintjs/datetime2';
 import { IconNames } from '@blueprintjs/icons';
@@ -478,7 +478,7 @@ ORDER BY "start" DESC`;
     if (data![activeDataType].length === 0) {
       return (
         <div>
-          <span className="no-data-text">No data available for the time span selected</span>
+          <span className="no-data-text">There are no segments for the selected interval</span>
         </div>
       );
     }
@@ -587,17 +587,27 @@ ORDER BY "start" DESC`;
     };
 
     return (
-      <div className="segment-timeline app-view">
+      <div className="segment-timeline">
         {this.renderStackedBarChart()}
         <div className="side-control">
-          <FormGroup>
-            <RadioGroup
-              onChange={(e: any) => this.setState({ activeDataType: e.target.value })}
-              selectedValue={activeDataType}
-            >
-              <Radio label="Total size" value="sizeData" />
-              <Radio label="Segment count" value="countData" />
-            </RadioGroup>
+          <FormGroup label="Show">
+            <SegmentedControl
+              value={activeDataType}
+              onValueChange={activeDataType =>
+                this.setState({ activeDataType: activeDataType as ActiveDataType })
+              }
+              options={[
+                {
+                  label: 'Total size',
+                  value: 'sizeData',
+                },
+                {
+                  label: 'Segment count',
+                  value: 'countData',
+                },
+              ]}
+              fill
+            />
           </FormGroup>
           <FormGroup label="Interval">
             <DateRangeInput3

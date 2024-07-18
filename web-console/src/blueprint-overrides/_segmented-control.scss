@@ -16,13 +16,7 @@
  * limitations under the License.
  */
 
-@import 'common/colors';
-@import 'common/color-aliases';
-@import 'common/variables';
-@import 'components/button/common';
-@import 'components/button/button-group';
-@import 'components/forms/common';
-@import 'components/navbar/navbar';
-@import 'components/card/card';
-@import 'special-switch-modes';
-@import 'segmented-control';
+// Adding div explicitly to make this selector slightly stronger
+.#{$ns}-dark div.#{$ns}-segmented-control {
+  background-color: $dark-gray3-half;
+}
