@@ -62,6 +62,7 @@ import java.util.function.Consumer;
 public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
 {
   private static final Logger LOG = new Logger(ParallelMergeCombiningSequence.class);
+  private static final long BLOCK_TIMEOUT = TimeUnit.NANOSECONDS.convert(500, TimeUnit.MILLISECONDS);
 
   // these values were chosen carefully via feedback from benchmarks,
   // see PR https://github.com/apache/druid/pull/8578 for details
@@ -790,7 +791,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       catch (Throwable t) {
         closeAllCursors(partition);
         cancellationGizmo.cancel(t);
-        outputQueue.offer(ResultBatch.TERMINAL);
+        outputQueue.tryOffer(ResultBatch.TERMINAL);
       }
     }
   }
@@ -802,7 +803,6 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
    */
   static class QueuePusher<E> implements ForkJoinPool.ManagedBlocker
   {
-    static final long BLOCK_TIMEOUT = TimeUnit.MILLISECONDS.convert(500, TimeUnit.NANOSECONDS);
     final boolean hasTimeout;
     final long timeoutAtNanos;
     final BlockingQueue<E> queue;
@@ -826,7 +826,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
           final long remainingNanos = timeoutAtNanos - System.nanoTime();
           if (remainingNanos < 0) {
             item = null;
-            throw gizmo.cancelAndThrow(new QueryTimeoutException("QueuePusher timed out offering data"));
+            throw gizmo.cancelAndThrow(new QueryTimeoutException());
           }
           final long blockTimeoutNanos = Math.min(remainingNanos, BLOCK_TIMEOUT);
           success = queue.offer(item, blockTimeoutNanos, TimeUnit.NANOSECONDS);
@@ -857,6 +857,11 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
         this.item = null;
         throw new RuntimeException("Failed to offer result to output queue", e);
       }
+    }
+
+    public void tryOffer(E item)
+    {
+      this.queue.offer(item);
     }
   }
 
@@ -1123,7 +1128,6 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
    */
   static class BlockingQueueuBatchedResultsCursor<E> extends BatchedResultsCursor<E>
   {
-    static final long BLOCK_TIMEOUT = TimeUnit.MILLISECONDS.convert(500, TimeUnit.NANOSECONDS);
     final BlockingQueue<ResultBatch<E>> queue;
     final CancellationGizmo gizmo;
     final boolean hasTimeout;
@@ -1181,7 +1185,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
           final long remainingNanos = timeoutAtNanos - System.nanoTime();
           if (remainingNanos < 0) {
             resultBatch = ResultBatch.TERMINAL;
-            throw gizmo.cancelAndThrow(new QueryTimeoutException("BlockingQueue cursor timed out waiting for data"));
+            throw gizmo.cancelAndThrow(new QueryTimeoutException());
           }
           final long blockTimeoutNanos = Math.min(remainingNanos, BLOCK_TIMEOUT);
           resultBatch = queue.poll(blockTimeoutNanos, TimeUnit.NANOSECONDS);
