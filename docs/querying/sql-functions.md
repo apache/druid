@@ -28,7 +28,7 @@ sidebar_label: "All functions"
  This document describes the SQL language.
 :::
 <!-- The **Learn More** at the end of each function section provides further documentation. -->
-This page provides a reference of Apache Druid&circledR; SQL functions in alphabetical order. For more detail on a function, refer to the following:
+This page provides a reference of Apache Druid&circledR; SQL functions in alphabetical order. For more details on a function, refer to the following:
 * [Aggregation functions](sql-aggregations.md)
 * [Array functions](sql-array-functions.md)
 * [JSON functions](sql-json-functions.md)
