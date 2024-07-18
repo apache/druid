@@ -27,11 +27,11 @@ import TabItem from '@theme/TabItem';
 
 In Apache Druid 28.0.0, the default [null handling](../querying/sql-data-types.md#null-values) mode changed to be compliant with the SQL standard.
 This guide provides strategies for Druid operators who rely on the legacy Druid null handling behavior in their applications to transition to SQL compliant mode.
-It provides strategies to emulate legacy null handling mode while operating Druid in SQL compliant null handling mode.
+Legacy is scheduled to be removed from Druid. 
 
 ## SQL compliant null handling in Druid
 
-Now, Druid writes segments in a SQL compatible null handling mode by default.
+As of Druid 28.0.0, Druid writes segments in a SQL compatible null handling mode by default.
 This means that Druid stores null values distinctly from empty strings for string dimensions and distinctly from 0 for numeric dimensions.
 
 This can impact your application behavior because SQL the standard defines any comparison to null to be unknown.
@@ -61,22 +61,21 @@ The Druid configurations for the deprecated legacy mode are as follows:
 * `druid.expressions.useStrictBooleans=false`
 * `druid.generic.useThreeValueLogicForNativeFilters=true`
 
-Note that these configurations are deprecated and scheduled for removal.
+These configurations are deprecated and scheduled for removal.
 
 ## Migrate to SQL compliant mode
 
-If your business logic relies on the behavior of legacy mode, you can emulate the null handling behavior while operating Druid in SQL compatible null handling mode.
-You can:
+If your business logic relies on the behavior of legacy mode, you have the following options to operate Druid in SQL compatible null handling mode:
 
 * Modify your ingestion SQL and ingestion specs to handle nulls at ingestion time.
     This means that you are modifying incoming data.
     For example, replacing a null for a string column with an empty string or a 0 for a numeric column.
     However, it means that your existing queries should operate as if Druid were in legacy mode.
     If you do not care about preserving null values, this is a good option for you.
-* Update your SQL queries to handle the new behavior at query time.
-    This means you preserve the incoming data with nulls intact.
-    However, you must rewrite any affected client-side queries.
-    If you may want to convert to SQL-compliant behavior in the future, or if you have a requirement to preserve null values, choose this option.
+* Update your SQL queries to be SQL compliant.
+    This means you can preserve the incoming data with nulls intact.
+    However, you must rewrite any affected client-side queries to be SQL compliant.
+    If you have a requirement to preserve null values, choose this option.
 
 ### Replace null values at ingestion time
 
@@ -94,7 +93,7 @@ The following example illustrates how to use COALESCE and NVL at ingestion time 
 
 <Tabs>
 
-<TabItem value="0" label="SQL-based batcn">
+<TabItem value="0" label="SQL-based batch">
 
 ```sql
 REPLACE INTO "no_nulls_example" OVERWRITE ALL
@@ -190,9 +189,123 @@ Druid ingests the data with no null values as follows:
 | `2024-01-02T00:00:00.000Z`| `empty`| 0 |
 | `2024-01-03T00:00:00.000Z`| `empty`| 0 |
 
-### Handle null values at query time
+### Coerce empty strings to null at ingestion time
 
-If you want to maintain null values in your data within Druid, you can emulate the legacy null handling mode mode as follows:
+In legacy mode, Druid recognizes empty strings as nulls for equality comparison.
+If your queries rely on empty strings to represent nulls, you can coerce empty strings to null at ingestion time using NULLIF.
+
+For example, consider the following sample input data:
+
+```json
+{"time":"2024-01-01T00:00:00.000Z","string_example":"my_string"}
+{"time":"2024-01-02T00:00:00.000Z","string_example":""}
+{"time":"2024-01-03T00:00:00.000Z","string_example":null}
+```
+
+In legacy mode, Druid would write an empty string for the third record.
+Therefore the following query would return 2:
+
+```sql
+SELECT count(*)
+FROM "null_string"
+WHERE "string_example" IS NULL
+```
+
+In SQL compliant mode, Druid differentiates between empty strings and nulls, so the same query would return 1.
+The following example shows how to coerce empty strings into null to accommodate IS NULL comparisons:
+
+<Tabs>
+
+<TabItem value="0" label="SQL-based batcn">
+
+```sql
+REPLACE INTO "null_string" OVERWRITE ALL
+WITH "ext" AS (
+  SELECT *
+  FROM TABLE(
+    EXTERN(
+      '{"type":"inline","data":"{\"time\":\"2024-01-01T00:00:00.000Z\",\"string_example\":\"my_string\"}\n{\"time\":\"2024-01-02T00:00:00.000Z\",\"string_example\":\"\"}\n{\"time\":\"2024-01-03T00:00:00.000Z\",\"string_example\":null}"}',
+      '{"type":"json"}'
+    )
+  ) EXTEND ("time" VARCHAR, "string_example" VARCHAR)
+)
+SELECT
+  TIME_PARSE("time") AS "__time",
+  NULLIF("string_example",'') AS "string_example"
+FROM "ext"
+PARTITIONED BY MONTH
+```
+
+</TabItem>
+
+<TabItem value="1" label="JSON-based batch">
+
+```json
+{
+  "type": "index_parallel",
+  "spec": {
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "inline",
+        "data": "{\"time\":\"2024-01-01T00:00:00.000Z\",\"string_example\":\"my_string\"}\n{\"time\":\"2024-01-02T00:00:00.000Z\",\"string_example\":\"\"}\n{\"time\":\"2024-01-03T00:00:00.000Z\",\"string_example\":null}"
+      },
+      "inputFormat": {
+        "type": "json"
+      }
+    },
+    "tuningConfig": {
+      "type": "index_parallel",
+      "partitionsSpec": {
+        "type": "dynamic"
+      }
+    },
+    "dataSchema": {
+      "dataSource": "null_string",
+      "timestampSpec": {
+        "column": "time",
+        "format": "iso"
+      },
+      "transformSpec": {
+        "transforms": [
+          {
+            "type": "expression",
+            "expression": "case_searched((\"string_example\" == ''),null,\"string_example\")",
+            "name": "string_example"
+          }
+        ]
+      },
+      "dimensionsSpec": {
+        "dimensions": [
+          "string_example"
+        ]
+      },
+      "granularitySpec": {
+        "queryGranularity": "none",
+        "rollup": false,
+        "segmentGranularity": "month"
+      }
+    }
+  }
+}
+```
+
+</TabItem>
+</Tabs>
+
+Druid ingests the data with no empty strings as follows:
+
+| `__time` | `string_examle` |
+| -- | -- | -- |
+| `2024-01-01T00:00:00.000Z`| `my_string`|
+| `2024-01-02T00:00:00.000Z`| `null`|
+| `2024-01-03T00:00:00.000Z`| `null`|
+
+Therefore `SELECT count(*) FROM "null_string" WHERE "string_example" IS NULL` returns 2.
+
+### Rewrite your queries to be SQL compliant
+
+If you want to maintain null values in your data within Druid, you can use the following SQL compliant querying strategies to achieve the same results as legacy null handling:
 
 - Modify inequality queries to include null values.
   For example, `x <> 'some value'` becomes `(x <> 'some value' OR x IS NULL)`.
