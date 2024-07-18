@@ -17,11 +17,11 @@
  */
 
 import { Button, FormGroup, MenuItem, Radio, RadioGroup, ResizeSensor } from '@blueprintjs/core';
-import type { DateRange, NonNullDateRange } from '@blueprintjs/datetime2';
+import type { DateRange, NonNullDateRange } from '@blueprintjs/datetime';
 import { DateRangeInput3 } from '@blueprintjs/datetime2';
 import { IconNames } from '@blueprintjs/icons';
 import type { ItemPredicate, ItemRenderer } from '@blueprintjs/select';
-import { Select2 } from '@blueprintjs/select';
+import { Select } from '@blueprintjs/select';
 import type { AxisScale } from 'd3-axis';
 import { scaleLinear, scaleUtc } from 'd3-scale';
 import React from 'react';
@@ -569,7 +569,7 @@ ORDER BY "start" DESC`;
       };
       const datasourcesWzAll = [showAll].concat(datasources);
       return (
-        <Select2<string>
+        <Select<string>
           items={datasourcesWzAll}
           onItemSelect={handleItemSelected}
           itemRenderer={datasourceRenderer}
@@ -582,7 +582,7 @@ ORDER BY "start" DESC`;
             fill
             rightIcon={IconNames.CARET_DOWN}
           />
-        </Select2>
+        </Select>
       );
     };
 
@@ -599,11 +599,6 @@ ORDER BY "start" DESC`;
               <Radio label="Segment count" value="countData" />
             </RadioGroup>
           </FormGroup>
-
-          <FormGroup label="Datasource">
-            <DatasourceSelect />
-          </FormGroup>
-
           <FormGroup label="Interval">
             <DateRangeInput3
               value={selectedDateRange || dateRange}
@@ -615,6 +610,9 @@ ORDER BY "start" DESC`;
               }}
               fill
             />
+          </FormGroup>
+          <FormGroup label="Datasource">
+            <DatasourceSelect />
           </FormGroup>
         </div>
       </div>

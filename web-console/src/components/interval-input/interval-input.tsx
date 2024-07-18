@@ -18,7 +18,7 @@
 
 import type { Intent } from '@blueprintjs/core';
 import { Button, InputGroup, Popover, Position } from '@blueprintjs/core';
-import type { DateRange } from '@blueprintjs/datetime2';
+import type { DateRange } from '@blueprintjs/datetime';
 import { DateRangePicker3 } from '@blueprintjs/datetime2';
 import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
