@@ -21,7 +21,6 @@ package org.apache.druid.indexing.overlord.http;
 
 import com.google.common.base.Optional;
 import org.apache.druid.indexing.overlord.DruidOverlord;
-import org.apache.druid.indexing.overlord.TaskMaster;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Before;
@@ -39,7 +38,7 @@ public class OverlordRedirectInfoTest
   @Before
   public void setUp()
   {
-    overlord = EasyMock.createMock(TaskMaster.class);
+    overlord = EasyMock.createMock(DruidOverlord.class);
     redirectInfo = new OverlordRedirectInfo(overlord);
   }
 
