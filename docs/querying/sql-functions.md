@@ -449,7 +449,6 @@ Rounds up a timestamp by a given time unit.
 ## CEIL (numeric)
 
 Calculates the smallest integer value greater than or equal to the numeric expression.
-
 * **Syntax:** `CEIL(<NUMERIC>)`
 * **Function type:** Scalar, numeric
 
@@ -1045,7 +1044,7 @@ Returns the length of the expression in UTF-16 encoding.
 
 Calculates the natural logarithm of the numeric expression.
 
-* **Syntax:** `LN(expr)`
+* **Syntax:** `LN(<NUMERIC>)`
 * **Function type:** Scalar, numeric
 
 <details><summary>Example</summary>
