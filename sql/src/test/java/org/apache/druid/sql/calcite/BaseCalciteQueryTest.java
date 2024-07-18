@@ -1214,7 +1214,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   protected void sqlNativeIncompatible()
   {
-    assumeFalse(!testBuilder().config.isRunningMSQ(), "test case is not SQL native compatible");
+    assumeTrue(testBuilder().config.isRunningMSQ(), "test case is not SQL native compatible");
   }
 
   protected void msqIncompatible()
