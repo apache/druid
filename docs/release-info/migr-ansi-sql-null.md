@@ -31,10 +31,11 @@ It provides strategies to emulate legacy null handling mode while operating Drui
 
 ## SQL compliant null handling in Druid
 
-The SQL standard defines any comparison to null to be unknown.
-According to this three-value logic, `x <> 'some value'` only returns non-null values.
+Now, Druid writes segments in a SQL compatible null handling mode by default.
+This means that Druid stores null values distinctly from empty strings for string dimensions and distictly from 0 for numeric dimensions.
 
-Now, Druid stores segments in a SQL compatible null handling mode by default.
+This can impact your application behavior because SQL the standard defines any comparison to null to be unknown.
+According to this three-value logic, `x <> 'some value'` only returns non-null values.
 
 The default Druid configurations for SQL compatible null handling mode is as follows:
 
@@ -51,7 +52,8 @@ In legacy mode, Druid segments created at ingestion time have the following char
 
 - String columns can not distinguish an empty string, '', from null.
     Therefore, Druid treats them both as interchangeable values.
-- Numeric columns can not represent null valued rows. Therefore Druid stores 0 instead of null.
+- Numeric columns can not represent null valued rows.
+    Therefore Druid stores 0 instead of null. 
 
 The Druid configurations for the deprecated legacy mode are as follows:
 
