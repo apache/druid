@@ -25,6 +25,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.collect.Iterators;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Comparators;
@@ -40,16 +41,31 @@ import java.util.TreeSet;
 public abstract class BaseGranularitySpec implements GranularitySpec
 {
   public static final Boolean DEFAULT_ROLLUP = Boolean.TRUE;
+  public static final Boolean DEFAULT_SAFE = Boolean.FALSE;
   public static final Granularity DEFAULT_SEGMENT_GRANULARITY = Granularities.DAY;
   public static final Granularity DEFAULT_QUERY_GRANULARITY = Granularities.NONE;
+  public static final DateTime DEFAULT_SAFE_START = DateTimes.of("1000-01-01T00:00:00+00:00");
+  public static final DateTime DEFAULT_SAFE_END = DateTimes.nowUtc().plusYears(1);
 
   protected final List<Interval> inputIntervals;
   protected final Boolean rollup;
+  protected final Boolean safeInput;
+  protected final DateTime safeStartTime;
+  protected final DateTime safeEndTime;
 
-  public BaseGranularitySpec(List<Interval> inputIntervals, Boolean rollup)
+  public BaseGranularitySpec(
+      List<Interval> inputIntervals,
+      Boolean rollup,
+      Boolean safeInput,
+      DateTime safeStartTime,
+      DateTime safeEndTime
+  )
   {
     this.inputIntervals = inputIntervals == null ? Collections.emptyList() : inputIntervals;
     this.rollup = rollup == null ? DEFAULT_ROLLUP : rollup;
+    this.safeInput = safeInput == null ? DEFAULT_SAFE : safeInput;
+    this.safeStartTime = safeStartTime == null ? DEFAULT_SAFE_START : safeStartTime;
+    this.safeEndTime = safeEndTime == null ? DEFAULT_SAFE_END : safeEndTime;
   }
 
   @Override
@@ -64,6 +80,27 @@ public abstract class BaseGranularitySpec implements GranularitySpec
   public boolean isRollup()
   {
     return rollup;
+  }
+
+  @Override
+  @JsonProperty("safeInput")
+  public boolean isSafeInput()
+  {
+    return safeInput;
+  }
+
+  @Override
+  @JsonProperty("safeStart")
+  public DateTime getSafeStart()
+  {
+    return safeStartTime;
+  }
+
+  @Override
+  @JsonProperty("safeEnd")
+  public DateTime getSafeEnd()
+  {
+    return safeEndTime;
   }
 
   @Override
@@ -85,7 +122,9 @@ public abstract class BaseGranularitySpec implements GranularitySpec
   {
     return objectMapper.convertValue(
         this,
-        new TypeReference<Map<String, Object>>() {}
+        new TypeReference<Map<String, Object>>()
+        {
+        }
     );
   }
 
@@ -102,13 +141,37 @@ public abstract class BaseGranularitySpec implements GranularitySpec
     /**
      * @param intervalIterable The intervals to materialize
      */
-    public LookupIntervalBuckets(Iterable<Interval> intervalIterable)
+    public LookupIntervalBuckets(
+        Iterable<Interval> intervalIterable,
+        Boolean safeInput,
+        DateTime safeStartTime,
+        DateTime safeEndTime
+    )
     {
       this.intervalIterable = intervalIterable;
+
+      if (safeInput && intervalIterable != null) {
+        this.checkIntervals(safeStartTime, safeEndTime);
+      }
+
       // The tree set will be materialized on demand (see below) to avoid client code
       // blowing up when constructing this data structure and when the
       // number of intervals is very large...
       this.intervals = new TreeSet<>(Comparators.intervalsByStartThenEnd());
+    }
+
+    public void checkIntervals(DateTime safeStartTime, DateTime safeEndTime)
+    {
+      for (Interval i : intervalIterable) {
+        if (i.getStart().isBefore(safeStartTime) || i.getEnd().isAfter(safeEndTime)) {
+          throw new IAE(
+              "Detected invalid interval [%s]. Allowed interval is from [%s] to [%s]",
+              i,
+              safeStartTime,
+              safeEndTime
+          );
+        }
+      }
     }
 
     /**

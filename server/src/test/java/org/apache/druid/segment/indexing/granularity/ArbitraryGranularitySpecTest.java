@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.joda.time.Interval;
@@ -34,7 +35,7 @@ import org.junit.Test;
 import java.util.List;
 import java.util.Map;
 
-public class ArbitraryGranularityTest
+public class ArbitraryGranularitySpecTest
 {
   private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
 
@@ -52,6 +53,80 @@ public class ArbitraryGranularityTest
         )
     );
     Assert.assertNotNull(spec.getQueryGranularity());
+  }
+
+  @Test
+  public void testIntervalAfterNowThrowsException()
+  {
+    final List<Interval> invalidIntervals = Lists.newArrayList(
+        Intervals.of("999-01-08T00Z/2012-01-11T00Z"),
+        Intervals.of("2012-01-01T00Z/2012-01-03T00Z")
+    );
+
+    Assert.assertThrows(IAE.class, () -> {
+      final GranularitySpec failSpec = new ArbitraryGranularitySpec(
+          Granularities.NONE,
+          true,
+          true,
+          null,
+          null,
+          invalidIntervals
+      );
+    });
+
+    final List<Interval> inputIntervals = Lists.newArrayList(
+        Intervals.of("2024-01-01T00Z/20240-01-11T00Z"),
+        Intervals.of("2012-01-01T00Z/2012-01-03T00Z")
+    );
+
+    final GranularitySpec spec = new ArbitraryGranularitySpec(
+        Granularities.NONE,
+        inputIntervals
+    );
+
+    Assert.assertEquals(inputIntervals, Lists.newArrayList(spec.inputIntervals()));
+  }
+
+  @Test
+  public void testIntervalRestrictions()
+  {
+    final List<Interval> inputIntervals = Lists.newArrayList(
+        Intervals.of("2024-01-01T00Z/20240-02-01T00Z"),
+        Intervals.of("2023-01-01T00Z/2023-02-02T00Z")
+    );
+
+    Assert.assertThrows(IAE.class, () -> {
+      final GranularitySpec failSpec = new ArbitraryGranularitySpec(
+          Granularities.NONE,
+          true,
+          true,
+          null,
+          DateTimes.of("2025-01-01"),
+          inputIntervals
+      );
+    });
+
+    Assert.assertThrows(IAE.class, () -> {
+      final GranularitySpec failSpec = new ArbitraryGranularitySpec(
+          Granularities.NONE,
+          true,
+          true,
+          DateTimes.of("2023-02-01"),
+          DateTimes.of("20250-01-01"),
+          inputIntervals
+      );
+    });
+
+    final GranularitySpec spec = new ArbitraryGranularitySpec(
+        Granularities.NONE,
+        true,
+        true,
+        null,
+        DateTimes.of("20250-01-01"),
+        inputIntervals
+    );
+
+    Assert.assertEquals(inputIntervals, Lists.newArrayList(spec.inputIntervals()));
   }
 
   @Test

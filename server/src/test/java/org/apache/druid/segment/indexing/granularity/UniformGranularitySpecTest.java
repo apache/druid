@@ -26,6 +26,7 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.DurationGranularity;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -41,9 +42,88 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-public class UniformGranularityTest
+public class UniformGranularitySpecTest
 {
   private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
+
+  @Test
+  public void testIntervalAfterNowThrowsException()
+  {
+    final List<Interval> inputIntervals = Lists.newArrayList(
+        Intervals.of("20120-01-08T00Z/20120-01-11T00Z"),
+        Intervals.of("2012-01-01T00Z/2012-01-03T00Z")
+    );
+
+    final GranularitySpec spec = new UniformGranularitySpec(
+        Granularities.DAY,
+        Granularities.NONE,
+        inputIntervals
+    );
+
+    Assert.assertEquals(inputIntervals, Lists.newArrayList(spec.inputIntervals()));
+
+    final List<Interval> invalidEnd = Lists.newArrayList(
+        Intervals.of("2024-01-01T00Z/20240-01-11T00Z"),
+        Intervals.of("2012-01-01T00Z/2012-01-03T00Z")
+    );
+
+    Assert.assertThrows(IAE.class, () -> {
+      final GranularitySpec failSpec = new UniformGranularitySpec(
+          Granularities.DAY,
+          Granularities.NONE,
+          true,
+          true,
+          null,
+          null,
+          invalidEnd
+      );
+    });
+  }
+
+  @Test
+  public void testIntervalRestrictions()
+  {
+    final List<Interval> inputIntervals = Lists.newArrayList(
+        Intervals.of("2024-01-01T00Z/20240-02-01T00Z"),
+        Intervals.of("2023-01-01T00Z/2023-02-02T00Z")
+    );
+
+    Assert.assertThrows(IAE.class, () -> {
+      final GranularitySpec failSpec = new UniformGranularitySpec(
+          Granularities.DAY,
+          Granularities.NONE,
+          true,
+          true,
+          null,
+          DateTimes.of("2025-01-01"),
+          inputIntervals
+      );
+    });
+
+    Assert.assertThrows(IAE.class, () -> {
+      final GranularitySpec failSpec = new UniformGranularitySpec(
+          Granularities.DAY,
+          Granularities.NONE,
+          true,
+          true,
+          DateTimes.of("2023-02-01"),
+          DateTimes.of("20250-01-01"),
+          inputIntervals
+      );
+    });
+
+    final GranularitySpec spec = new UniformGranularitySpec(
+        Granularities.DAY,
+        Granularities.NONE,
+        true,
+        true,
+        DateTimes.of("2020-01-01"),
+        DateTimes.of("20250-01-01"),
+        inputIntervals
+    );
+
+    Assert.assertEquals(inputIntervals, Lists.newArrayList(spec.inputIntervals()));
+  }
 
   @Test
   public void testSimple()

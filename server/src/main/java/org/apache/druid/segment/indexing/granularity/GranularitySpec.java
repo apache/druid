@@ -52,7 +52,7 @@ public interface GranularitySpec
   /**
    * Returns user provided intervals as-is state. used for configuring granular path spec
    *
-   * @return
+   * @return User provided intervals as-is state.
    */
   List<Interval> inputIntervals();
 
@@ -75,6 +75,12 @@ public interface GranularitySpec
   Granularity getSegmentGranularity();
 
   boolean isRollup();
+
+  boolean isSafeInput();
+
+  DateTime getSafeStart();
+
+  DateTime getSafeEnd();
 
   Granularity getQueryGranularity();
 
