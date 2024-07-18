@@ -193,6 +193,7 @@ import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.http.ResultFormat;
@@ -1557,7 +1558,7 @@ public class ControllerImpl implements Controller
         if (!destination.isReplaceTimeChunks()) {
           // Store compaction state only for replace queries.
           log.warn(
-              "storeCompactionState flag set for a non-REPLACE query [%s]. Ignoring the flag for now.",
+              "Ignoring storeCompactionState flag since it is set for a non-REPLACE query[%s].",
               queryDef.getQueryId()
           );
         } else {
@@ -1657,9 +1658,11 @@ public class ControllerImpl implements Controller
 
     GranularitySpec granularitySpec = new UniformGranularitySpec(
         segmentGranularity,
-        dataSchema.getGranularitySpec().getQueryGranularity(),
+        QueryContext.of(querySpec.getQuery().getContext())
+                    .getGranularity(DruidSqlInsert.SQL_INSERT_QUERY_GRANULARITY, jsonMapper),
         dataSchema.getGranularitySpec().isRollup(),
-        dataSchema.getGranularitySpec().inputIntervals()
+        // Not using dataSchema.getGranularitySpec().inputIntervals() as that always has ETERNITY
+        ((DataSourceMSQDestination) querySpec.getDestination()).getReplaceTimeChunks()
     );
 
     DimensionsSpec dimensionsSpec = dataSchema.getDimensionsSpec();
@@ -1671,9 +1674,9 @@ public class ControllerImpl implements Controller
     List<Object> metricsSpec = dataSchema.getAggregators() == null
                                ? null
                                : jsonMapper.convertValue(
-                                   dataSchema.getAggregators(), new TypeReference<List<Object>>()
-                                   {
-                                   });
+                                   dataSchema.getAggregators(),
+                                   new TypeReference<List<Object>>() {}
+                               );
 
 
     IndexSpec indexSpec = tuningConfig.getIndexSpec();
