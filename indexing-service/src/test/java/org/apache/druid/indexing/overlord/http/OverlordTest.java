@@ -52,12 +52,12 @@ import org.apache.druid.indexing.overlord.IndexerMetadataStorageAdapter;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TaskLockbox;
 import org.apache.druid.indexing.overlord.TaskMaster;
+import org.apache.druid.indexing.overlord.TaskQueryTool;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerFactory;
 import org.apache.druid.indexing.overlord.TaskRunnerListener;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.TaskStorage;
-import org.apache.druid.indexing.overlord.TaskStorageQueryAdapter;
 import org.apache.druid.indexing.overlord.WorkerTaskRunnerQueryAdapter;
 import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
 import org.apache.druid.indexing.overlord.config.DefaultTaskConfig;
@@ -269,14 +269,14 @@ public class OverlordTest
     Assert.assertEquals(taskMaster.getCurrentLeader(), druidNode.getHostAndPort());
     Assert.assertEquals(Optional.absent(), taskMaster.getRedirectLocation());
 
-    final TaskStorageQueryAdapter taskStorageQueryAdapter = new TaskStorageQueryAdapter(taskStorage, taskLockbox, taskMaster);
+    final TaskQueryTool taskQueryTool = new TaskQueryTool(taskStorage, taskLockbox, taskMaster);
     final WorkerTaskRunnerQueryAdapter workerTaskRunnerQueryAdapter = new WorkerTaskRunnerQueryAdapter(taskMaster, null);
     // Test Overlord resource stuff
     AuditManager auditManager = EasyMock.createNiceMock(AuditManager.class);
     overlordResource = new OverlordResource(
         taskMaster,
-        taskStorageQueryAdapter,
-        new IndexerMetadataStorageAdapter(taskStorageQueryAdapter, null),
+        taskQueryTool,
+        new IndexerMetadataStorageAdapter(taskStorage, null),
         null,
         null,
         auditManager,

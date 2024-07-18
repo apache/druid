@@ -7533,4 +7533,78 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   {
     windowQueryTest();
   }
+
+  /*
+  Druid query tests
+   */
+
+  @DrillTest("druid_queries/same_window_across_columns/wikipedia_query_1")
+  @Test
+  public void test_same_window_wikipedia_query_1()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/same_window_across_columns/wikipedia_query_1_named_window")
+  @Test
+  public void test_same_window_wikipedia_query_1_named_window()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/multiple_windows/wikipedia_query_1")
+  @Test
+  public void test_multiple_windows_wikipedia_query_1()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/multiple_windows/wikipedia_query_1_named_windows")
+  @Test
+  public void test_multiple_windows_wikipedia_query_1_named_windows()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/shuffle_columns/wikipedia_query_1")
+  @Test
+  public void test_shuffle_columns_wikipedia_query_1()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/shuffle_columns/wikipedia_query_1_shuffle_1")
+  @Test
+  public void test_shuffle_columns_wikipedia_query_1_shuffle_1()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/shuffle_columns/wikipedia_query_2")
+  @Test
+  public void test_shuffle_columns_wikipedia_query_2()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/shuffle_columns/wikipedia_query_2_shuffle_1")
+  @Test
+  public void test_shuffle_columns_wikipedia_query_2_shuffle_1()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/partition_by_multiple_columns/wikipedia_query_1")
+  @Test
+  public void test_partition_by_multiple_columns_wikipedia_query_1()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/partition_by_multiple_columns/wikipedia_query_2")
+  @Test
+  public void test_partition_by_multiple_columns_wikipedia_query_2()
+  {
+    windowQueryTest();
+  }
 }

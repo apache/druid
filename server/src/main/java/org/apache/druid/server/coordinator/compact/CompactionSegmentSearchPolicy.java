@@ -33,9 +33,9 @@ import java.util.Map;
 public interface CompactionSegmentSearchPolicy
 {
   /**
-   * Reset the current states of this policy. This method should be called whenever iterating starts.
+   * Creates an iterator that returns compactible segments.
    */
-  CompactionSegmentIterator reset(
+  CompactionSegmentIterator createIterator(
       Map<String, DataSourceCompactionConfig> compactionConfigs,
       Map<String, SegmentTimeline> dataSources,
       Map<String, List<Interval>> skipIntervals
