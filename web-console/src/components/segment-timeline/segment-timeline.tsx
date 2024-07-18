@@ -249,7 +249,7 @@ ORDER BY "start" DESC`;
 
   constructor(props: SegmentTimelineProps) {
     super(props);
-    const dateRange = getDefautlDateRange();
+    const dateRange = getDefaultDateRange();
 
     this.state = {
       chartWidth: 1, // Dummy init values to be replaced
