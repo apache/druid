@@ -32,9 +32,12 @@ import {
   ceilToUtcDay,
   formatBytes,
   formatInteger,
+  isNonNullRange,
+  localToUtcDateRange,
   queryDruidSql,
   QueryManager,
   uniq,
+  utcToLocalDateRange,
 } from '../../utils';
 import { Loader } from '../loader/loader';
 
@@ -42,10 +45,6 @@ import type { BarUnitData } from './stacked-bar-chart';
 import { StackedBarChart } from './stacked-bar-chart';
 
 import './segment-timeline.scss';
-
-export function isNonNullRange(range: DateRange): range is NonNullDateRange {
-  return range[0] != null && range[1] != null;
-}
 
 interface SegmentTimelineProps {
   capabilities: Capabilities;
@@ -85,6 +84,13 @@ interface IntervalRow {
 }
 
 const DEFAULT_TIME_SPAN_MONTHS = 3;
+
+function getDefautlDateRange(): NonNullDateRange {
+  const start = ceilToUtcDay(new Date());
+  const end = new Date(start.valueOf());
+  start.setUTCMonth(start.getUTCMonth() - DEFAULT_TIME_SPAN_MONTHS);
+  return [start, end];
+}
 
 export class SegmentTimeline extends React.PureComponent<
   SegmentTimelineProps,
@@ -243,10 +249,7 @@ ORDER BY "start" DESC`;
 
   constructor(props: SegmentTimelineProps) {
     super(props);
-    const start = ceilToUtcDay(new Date());
-    const end = new Date(start.valueOf());
-    start.setUTCMonth(start.getUTCMonth() - DEFAULT_TIME_SPAN_MONTHS);
-    const dateRange: NonNullDateRange = [start, end];
+    const dateRange = getDefautlDateRange();
 
     this.state = {
       chartWidth: 1, // Dummy init values to be replaced
@@ -611,11 +614,12 @@ ORDER BY "start" DESC`;
           </FormGroup>
           <FormGroup label="Interval">
             <DateRangeInput3
-              value={selectedDateRange || dateRange}
+              value={utcToLocalDateRange(selectedDateRange || dateRange)}
               onChange={newDateRange => {
-                if (!isNonNullRange(newDateRange)) return;
-                this.setState({ dateRange: newDateRange, selectedDateRange: undefined }, () => {
-                  this.dataQueryManager.runQuery({ capabilities, dateRange: newDateRange });
+                const newUtcDateRange = localToUtcDateRange(newDateRange);
+                if (!isNonNullRange(newUtcDateRange)) return;
+                this.setState({ dateRange: newUtcDateRange, selectedDateRange: undefined }, () => {
+                  this.dataQueryManager.runQuery({ capabilities, dateRange: newUtcDateRange });
                 });
               }}
               fill

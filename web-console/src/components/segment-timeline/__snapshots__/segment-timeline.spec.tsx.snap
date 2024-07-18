@@ -112,7 +112,7 @@ exports[`SegmentTimeline matches snapshot 1`] = `
               class="bp5-input"
               placeholder="Start date"
               type="text"
-              value="2021-03-08"
+              value="2021-03-09"
             />
           </div>
           <div
@@ -124,7 +124,7 @@ exports[`SegmentTimeline matches snapshot 1`] = `
               class="bp5-input"
               placeholder="End date"
               type="text"
-              value="2021-06-08"
+              value="2021-06-09"
             />
           </div>
         </div>
