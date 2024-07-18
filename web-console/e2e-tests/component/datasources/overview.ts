@@ -125,7 +125,7 @@ export class DatasourcesOverview {
       throw new Error(`Could not find datasource: ${datasourceName}`);
     }
 
-    const editActions = await this.page.$$('.action-cell span[icon=more]');
+    const editActions = await this.page.$$('.action-cell span.bp5-icon-more');
     await editActions[index].click();
     await this.waitForPopupMenu();
   }
