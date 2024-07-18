@@ -874,6 +874,9 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
 
   private boolean containsOver(SqlNode having)
   {
+    if (having == null) {
+      return false;
+    }
     final Predicate<SqlCall> callPredicate = call -> call.getOperator() instanceof SqlOverOperator;
     return containsCall(having, callPredicate);
   }
