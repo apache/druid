@@ -1210,10 +1210,11 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
   }
 
   /**
-   * Token to allow any {@link RecursiveAction} signal the others and the output sequence that something bad happened
-   * and processing should cancel, such as a timeout or connection loss.
+   * Token used to stop internal parallel processing across all tasks in the merge pool. Allows any
+   * {@link RecursiveAction} signal the others and the output sequence that something bad happened and
+   * processing should cancel, such as a timeout, error, or connection loss.
    */
-  static class CancellationGizmo
+  public static class CancellationGizmo
   {
     private final AtomicReference<Throwable> throwable = new AtomicReference<>(null);
 
@@ -1247,6 +1248,16 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
     }
   }
 
+  /**
+   * {@link com.google.common.util.concurrent.ListenableFuture} that allows {@link ParallelMergeCombiningSequence} to be
+   * registered with {@link org.apache.druid.query.QueryWatcher#registerQueryFuture} to participate in query
+   * cancellation or anything else that has a need to watch the activity on the merge pool. Wraps a
+   * {@link CancellationGizmo} to allow for external threads to signal cancellation of parallel processing on the pool
+   * by triggering {@link CancellationGizmo#cancel(Throwable)} whenever {@link #cancel(boolean)} is called.
+   *
+   * This is not used internally by workers on the pool in favor of using the much simpler {@link CancellationGizmo}
+   * directly instead.
+   */
   public static class CancellationFuture extends AbstractFuture<Boolean>
   {
     private final CancellationGizmo cancellationGizmo;
