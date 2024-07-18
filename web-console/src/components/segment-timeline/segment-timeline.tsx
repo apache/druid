@@ -85,7 +85,7 @@ interface IntervalRow {
 
 const DEFAULT_TIME_SPAN_MONTHS = 3;
 
-function getDefautlDateRange(): NonNullDateRange {
+function getDefaultDateRange(): NonNullDateRange {
   const start = ceilToUtcDay(new Date());
   const end = new Date(start.valueOf());
   start.setUTCMonth(start.getUTCMonth() - DEFAULT_TIME_SPAN_MONTHS);
