@@ -27,7 +27,7 @@ Can be used to write tests against existing test backends (ComponentSupplier) - 
 ### Install java&maven (if needed)
 
 If you don't have java&maven - one way to set that up is by using sdkman like this:
-```
+```bash
 # install sdkman
 curl -s "https://get.sdkman.io" | bash
 # at the end of installation either open a new terminal; or follow the instructions at the end
@@ -54,16 +54,16 @@ git clone --branch quidem-record https://github.com/kgyrtkirk/druid
 ### Launching a test generating broker
 
 * make sure to build the project first; one way to do that is:
-  ```
+  ```bash
   mvn install -pl quidem-it/ -am -DskipTests -Pskip-static-checks
   ```
 * launch the broker instance with:
-  ```
+  ```bash
   mvn exec:exec -pl quidem-it -Dquidem.record.autostart=true
   ```
   * the broker will be running at http://localhost:12345
   * the used test configuration backend can configured by supplying `quidem.uri`
-    ```
+    ```bash
     mvn exec:exec -pl quidem-it -Dquidem.uri=druidtest:///?componentSupplier=ThetaSketchComponentSupplier
     ``` 
   * new record files can be started by calling http://localhost:12345/quidem/start
