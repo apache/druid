@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite.run;
 
+import com.google.errorprone.annotations.Immutable;
 import org.apache.calcite.rel.RelNode;
 import java.io.Closeable;
 import java.util.ArrayList;
@@ -30,10 +31,11 @@ import java.util.Objects;
 @FunctionalInterface
 public interface DruidHook<T>
 {
+  @Immutable
   class HookKey<T>
   {
-    private String label;
-    private Class<T> type;
+    private final String label;
+    private final Class<T> type;
 
     public HookKey(String label, Class<T> type)
     {
